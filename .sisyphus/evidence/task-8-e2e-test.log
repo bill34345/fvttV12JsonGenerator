@@ -1,0 +1,134 @@
+bun test v1.3.8 (b64edcb4)
+
+tests\e2e.test.ts:
+Loaded 205 spells from spells.ldb
+Parsed: {
+  "name": "成年红龙",
+  "type": "npc",
+  "abilities": {
+    "str": 27,
+    "dex": 10,
+    "con": 25,
+    "int": 16,
+    "wis": 15,
+    "cha": 22
+  },
+  "attributes": {
+    "init": 0,
+    "hp": {
+      "value": 256,
+      "max": 256,
+      "formula": "19d12+133"
+    },
+    "ac": {
+      "value": 19,
+      "calc": "natural"
+    },
+    "movement": {
+      "climb": 40,
+      "fly": 80
+    }
+  },
+  "details": {
+    "biography": "# 成年红龙 (Adult Red Dragon)\n\n红龙是最贪婪的真龙，它们不知疲倦地寻求增加自己的财宝。它们非常自负，这体现在它们高傲的态度和对他人的蔑视上。",
+    "creatureType": "龙类",
+    "alignment": "混乱邪恶",
+    "cr": 17,
+    "xp": 18000
+  },
+  "traits": {
+    "size": "超巨型",
+    "di": [
+      "fire"
+    ],
+    "dv": [
+      "lightning"
+    ],
+    "dm": {
+      "amount": {
+        "fire": "-5"
+      },
+      "bypasses": []
+    },
+    "ci": [
+      "confrightened",
+      "concharmed"
+    ],
+    "senses": {
+      "盲视": "60尺",
+      "黑暗视觉": "120尺",
+      "被动察觉": 23
+    },
+    "languages": [
+      "通用语",
+      "龙语"
+    ]
+  },
+  "skills": {
+    "prc": 2,
+    "ste": 1,
+    "his": 0.5
+  },
+  "saves": [
+    "dex",
+    "con",
+    "wis",
+    "cha"
+  ],
+  "items": [],
+  "spellcasting": [
+    "火球术",
+    "侦测魔法"
+  ],
+  "actions": [
+    {
+      "啮咬 [近战武器攻击]": "+14命中, 触及10尺, 2d10+8穿刺 + 2d6火焰"
+    },
+    {
+      "爪击 [近战武器攻击]": "+14命中, 触及5尺, 2d6+8挥砍"
+    },
+    {
+      "尾击 [近战武器攻击]": "+14命中, 触及15尺, 2d8+8钝击"
+    },
+    {
+      "骇人威仪": {
+        "豁免": "DC19感知",
+        "失败": "恐慌",
+        "成功": "免疫"
+      }
+    },
+    {
+      "火焰吐息 [充能5-6]": {
+        "豁免": "DC21敏捷",
+        "失败": "18d6火焰",
+        "成功": "减半"
+      }
+    }
+  ],
+  "legendary_actions": [
+    {
+      "侦测 (消耗1)": "龙进行一次感知（察觉）检定"
+    },
+    {
+      "尾击 (消耗1)": "龙进行一次尾击"
+    },
+    {
+      "振翅 (消耗2)": "10尺内生物DC22敏捷，失败受2d6+8钝击并击倒"
+    }
+  ],
+  "lair_actions": [
+    {
+      "崩塌": "巨石坠落..."
+    }
+  ],
+  "regional_effects": [
+    {
+      "清爽水体": "巢穴内的水..."
+    }
+  ]
+}
+
+ 2 pass
+ 0 fail
+ 28 expect() calls
+Ran 2 tests across 1 file. [67.00ms]

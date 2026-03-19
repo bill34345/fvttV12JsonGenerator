@@ -1,0 +1,286 @@
+{
+  "system": "dnd5e",
+  "map": [
+    {
+      "name": "死亡",
+      "icon": "systems/dnd5e/icons/svg/statuses/dead.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "流血",
+      "icon": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "目盲",
+      "icon": "systems/dnd5e/icons/svg/statuses/blinded.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.0b8N4FymGGfbZGpJ]{Blinded}",
+      "options": {
+        "blindToken": true
+      },
+      "isNew": false,
+      "isChanged": true,
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "挖掘",
+      "icon": "icons/svg/cave.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "魅惑",
+      "icon": "systems/dnd5e/icons/svg/statuses/charmed.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.zZaEBrKkr66OWJvD]{Charmed}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "专注",
+      "icon": "systems/dnd5e/icons/svg/statuses/concentrating.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.QvPDSUsAiEn3hD8s.JournalEntryPage.wre9ECSVuEyJBYhr#concentration]{Concentration}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "诅咒",
+      "icon": "icons/svg/sun.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "耳聋",
+      "icon": "systems/dnd5e/icons/svg/statuses/deafened.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.6G8JSjhn701cBITY]{Deafened}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "疾病",
+      "icon": "icons/svg/biohazard.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "闪避",
+      "icon": "systems/dnd5e/icons/svg/statuses/dodging.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "力竭",
+      "icon": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.cspWveykstnu3Zcv]{Exhaustion}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "飞行",
+      "icon": "icons/svg/wing.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "恐慌",
+      "icon": "systems/dnd5e/icons/svg/statuses/frightened.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.oreoyaFKnvZCrgij]{Frightened}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "擒抱",
+      "icon": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.gYDAhd02ryUmtwZn]{Grappled}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "隐藏",
+      "icon": "icons/svg/cowled.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "失能",
+      "icon": "systems/dnd5e/icons/svg/statuses/incapacitated.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.TpkZgLfxCmSndmpb]{Incapacitated}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "隐形",
+      "icon": "systems/dnd5e/icons/svg/statuses/invisible.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.3UU5GCTVeRDbZy9u]{Invisible}",
+      "options": {
+        "markInvisible": true
+      },
+      "isNew": false,
+      "isChanged": true,
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "标记",
+      "icon": "systems/dnd5e/icons/svg/statuses/marked.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "麻痹",
+      "icon": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.xnSV5hLJIMaTABXP]{Paralyzed}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "石化",
+      "icon": "systems/dnd5e/icons/svg/statuses/petrified.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.xaNDaW6NwQTgHSmi]{Petrified}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "中毒",
+      "icon": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.lq3TRI6ZlED8ABMx]{Poisoned}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "倒地",
+      "icon": "systems/dnd5e/icons/svg/statuses/prone.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.y0TkcdyoZlOTmAFT]{Prone}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "束缚",
+      "icon": "systems/dnd5e/icons/svg/statuses/restrained.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.cSVcyZyNe2iG1fIc]{Restrained}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "沉默",
+      "icon": "systems/dnd5e/icons/svg/statuses/silenced.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "睡眠",
+      "icon": "icons/svg/sleep.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "眩晕",
+      "icon": "systems/dnd5e/icons/svg/statuses/stunned.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.ZyZMUwA2rboh4ObS]{Stunned}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "受惊",
+      "icon": "systems/dnd5e/icons/svg/statuses/surprised.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "变形",
+      "icon": "icons/svg/pawprint.svg",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    },
+    {
+      "name": "昏迷",
+      "icon": "systems/dnd5e/icons/svg/statuses/unconscious.svg",
+      "referenceId": "@UUID[Compendium.dnd5e.rules.w7eitkpD7QQTB6j0.JournalEntryPage.UWw13ISmMxDzmwbd]{Unconscious}",
+      "isNew": false,
+      "isChanged": true,
+      "options": {},
+      "enrichedReference": "",
+      "hidden": false
+    }
+  ]
+}

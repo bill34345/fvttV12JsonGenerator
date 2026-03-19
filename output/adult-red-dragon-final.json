@@ -1,0 +1,296 @@
+{
+  "name": "成年红龙",
+  "type": "npc",
+  "system": {
+    "abilities": {
+      "str": {
+        "value": 27
+      },
+      "dex": {
+        "value": 10,
+        "proficient": 1
+      },
+      "con": {
+        "value": 25,
+        "proficient": 1
+      },
+      "int": {
+        "value": 16
+      },
+      "wis": {
+        "value": 13,
+        "proficient": 1
+      },
+      "cha": {
+        "value": 21,
+        "proficient": 1
+      }
+    },
+    "attributes": {
+      "hp": {
+        "value": 256,
+        "max": 256,
+        "formula": "19d12+133"
+      },
+      "ac": {
+        "flat": 19,
+        "calc": "natural"
+      },
+      "movement": {
+        "climb": 40,
+        "fly": 80
+      },
+      "init": {
+        "bonus": 0
+      }
+    },
+    "details": {
+      "cr": 17,
+      "xp": {
+        "value": 18000
+      },
+      "biography": {
+        "value": "# 成年红龙 (Adult Red Dragon)\n\n红龙是最贪婪的真龙，它们不知疲倦地寻求增加自己的财宝。它们非常自负，这体现在它们高傲的态度和对他人的蔑视上。"
+      },
+      "alignment": "混乱邪恶",
+      "type": {
+        "value": "龙类"
+      }
+    },
+    "traits": {
+      "dr": {
+        "value": []
+      },
+      "di": {
+        "value": [
+          "damagefire"
+        ]
+      },
+      "ci": {
+        "value": [
+          "confrightened",
+          "concharmed"
+        ]
+      },
+      "languages": {
+        "value": [
+          "通用语",
+          "龙语"
+        ]
+      },
+      "senses": {
+        "盲视": "60尺",
+        "黑暗视觉": "120尺",
+        "被动察觉": 23
+      },
+      "size": "超巨型"
+    },
+    "skills": {
+      "ste": {
+        "value": 1
+      },
+      "prc": {
+        "value": 2
+      }
+    }
+  },
+  "items": [
+    {
+      "name": "啮咬",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p></p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1
+        },
+        "activities": {
+          "dnd5eactivityc54": {
+            "_id": "dnd5eactivityc54",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "14",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 10,
+                  "bonus": "8",
+                  "types": [
+                    "piercing"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                },
+                {
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "fire"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true
+      }
+    },
+    {
+      "name": "爪击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p></p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1
+        },
+        "activities": {
+          "dnd5eactivity78a": {
+            "_id": "dnd5eactivity78a",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "14",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "8",
+                  "types": [
+                    "slashing"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true
+      }
+    },
+    {
+      "name": "尾击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p></p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1
+        },
+        "activities": {
+          "dnd5eactivity7e5": {
+            "_id": "dnd5eactivity7e5",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "14",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 8,
+                  "bonus": "8",
+                  "types": [
+                    "bludgeoning"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "bonebreaker-dorokor.md": {
+    "hash": "678fa8a5d2ed2660d63054d564d9f76d19e9a7ea53895520d9c2a45423f7ea33",
+    "output": "output/bonebreaker-dorokor.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.946Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.946Z"
+  },
+  "faldric-the-archer.md": {
+    "hash": "e66f4987909100f255c8759373b6e6c55b9ac18b3e0721be555ea16fc6750d0b",
+    "output": "output/faldric-the-archer.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.953Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.953Z"
+  },
+  "oregg-steeltwister.md": {
+    "hash": "3199405dadc7e8f54b7c6aed92975d3aa79340458b92344d3af6e565a302e12d",
+    "output": "output/oregg-steeltwister.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.962Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.962Z"
+  },
+  "pinna.md": {
+    "hash": "a5ddd926967c450d6fb4c42ef39a2a366bc2a672b4c3ae947a022d031e104224",
+    "output": "output/pinna.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.968Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.968Z"
+  },
+  "white-tusk-bloodrager.md": {
+    "hash": "0a499004bbeacfd199b21802c5884ce6e057e84d528d53f4294f1e70b5d91d72",
+    "output": "output/white-tusk-bloodrager.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.975Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.975Z"
+  },
+  "white-tusk-juggernaut.md": {
+    "hash": "8cd8b70230a9facd6127ea9a1fc754439a7e3a9c3f3a4c52fa40cd6ee7fe2e06",
+    "output": "output/white-tusk-juggernaut.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.981Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.981Z"
+  },
+  "white-tusk-orc.md": {
+    "hash": "33be0555b9f904da85fe7e1a79bd8e35e79097c052055b3f476a1048b7a21551",
+    "output": "output/white-tusk-orc.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.988Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.988Z"
+  },
+  "white-tusk-shaman.md": {
+    "hash": "aa8f0ea8fb1e505b0b0869abf06fb986d05ce079b20cd085da13e881fd3eb24f",
+    "output": "output/white-tusk-shaman.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:47.995Z",
+    "lastAttemptAt": "2026-02-17T11:07:47.995Z"
+  },
+  "white-tusk-warspeaker.md": {
+    "hash": "12af58f30aa069bbdf6bed72c4c5a5d3d9afb8156d9b34d74b76452a853c7fb6",
+    "output": "output/white-tusk-warspeaker.json",
+    "fvttVersion": "13",
+    "status": "success",
+    "lastSuccessAt": "2026-02-17T11:07:48.002Z",
+    "lastAttemptAt": "2026-02-17T11:07:48.002Z"
+  }
+}

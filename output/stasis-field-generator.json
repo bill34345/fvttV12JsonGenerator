@@ -1,0 +1,183 @@
+{
+  "name": "静态防御场 (Stasis Field Generator)",
+  "type": "feat",
+  "img": "icons/magic/defensive/shield-barrier-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>这是曾用于稳定崩塌建筑的宏大协议的单兵战术版本。作为动作，你可以花费4 发充能，激活护甲内的重力稳定锚，创造一个以你为中心、半径 15 尺 的球形力场。该力场持续10 分钟，你需要像维持法术一样对其进行专注（Concentration）。</p><p><strong>绝对稳定：</strong>力场内充满了高密度的重力波。你以及力场内你选择的生物，免疫倒地（Prone）状态，并且免疫任何将其强制移动的效果（如推撞、雷鸣波等）。</p><p><strong>物理偏转：</strong>力场扭曲了弹道轨迹。力场内你选择的生物，对于来自力场外部的攻击或法术效应视为拥有半掩护（Half Cover）（AC 与敏捷豁免 +2）。</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Custom Armor Ability"
+    },
+    "activation": {
+      "type": "action",
+      "cost": 1,
+      "condition": ""
+    },
+    "duration": {
+      "value": "10",
+      "units": "minute"
+    },
+    "cover": null,
+    "crewed": false,
+    "target": {
+      "value": 15,
+      "width": null,
+      "units": "ft",
+      "type": "sphere",
+      "prompt": true
+    },
+    "range": {
+      "value": 0,
+      "long": null,
+      "units": "ft"
+    },
+    "uses": {
+      "spent": 0,
+      "max": "4",
+      "recovery": [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        }
+      ]
+    },
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "requirements": "",
+    "properties": [
+      "concentration"
+    ],
+    "activities": {
+      "d5eactStasis0000": {
+        "_id": "d5eactStasis0000",
+        "type": "save",
+        "save": {
+          "ability": [],
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        },
+        "activation": {
+          "type": "action",
+          "value": 1,
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "4",
+              "scaling": {
+                "mode": "amount",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "minute",
+          "value": "10",
+          "concentration": true,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "effStasisField00"
+          }
+        ],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "sphere",
+            "size": "15",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": true,
+            "special": ""
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "name": "",
+          "formula": ""
+        },
+        "sort": 0
+      }
+    }
+  },
+  "effects": [
+    {
+      "name": "Static Defense Field",
+      "img": "icons/magic/defensive/shield-barrier-blue.webp",
+      "_id": "effStasisField00",
+      "type": "base",
+      "changes": [
+        {
+          "key": "system.traits.ci.value",
+          "mode": 2,
+          "value": "prone",
+          "priority": 20
+        },
+        {
+          "key": "system.attributes.ac.bonus",
+          "mode": 2,
+          "value": "2",
+          "priority": 20
+        },
+        {
+          "key": "system.abilities.dex.bonuses.save",
+          "mode": 2,
+          "value": "2",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p><strong>Half Cover:</strong> +2 AC and Dex Saves (Applies to Ranged Attacks/Effects - Toggle off if not applicable).</p><p><strong>Stability:</strong> Immune to Prone and forced movement.</p>",
+      "transfer": false,
+      "statuses": [],
+      "flags": {},
+      "tint": "#ffffff"
+    }
+  ],
+  "flags": {}
+}

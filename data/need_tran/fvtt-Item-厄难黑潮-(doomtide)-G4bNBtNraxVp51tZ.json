@@ -1,0 +1,274 @@
+{
+  "folder": "1BjU6TmQ2hnV4PZF",
+  "name": "厄难黑潮 (Doomtide)",
+  "type": "spell",
+  "img": "icons/magic/air/fog-gas-smoke-swirling-gray.webp",
+  "system": {
+    "description": {
+      "value": "<p>你指定施法距离内一点，在以该点为中心、半径 <strong>20尺球状区域</strong> 内，创造一片墨色雾气。黑雾在法术持续时间内维持存在，其区域视为<strong>魔法黑暗</strong>。但仍会被强风吹散（比如造风术 Gust of Wind）并解除法术。</p><p>黑雾出现时，每名位于其区域内的生物都进行一次<strong>体质豁免</strong>：</p><ul><li><strong>豁免失败：</strong>受到 5d6点心灵伤害，且在进行豁免检定受 <strong>1d6 减值</strong>，直至其下一回合结束。</li><li><strong>豁免成功：</strong>仅受半数伤害，且无减值。</li></ul><p>每当球状区域移动到一名生物区域内时、一名生物进入球状区域时或是在该区域结束其回合时，该生物同样需要进行一次豁免。一名生物一回合只进行一次该豁免。</p><p>在你的每个回合开始时，球状区域会往远离你的方向移动 <strong>10尺</strong>。</p><hr /><p><strong>结阵施法</strong></p><p>将该法术被作为结阵法术施展需要至少五名辅施法者参与。除了通常的法术成分，你还需要提供一项特殊成分（三枚来自喧癫空隧的黑珍珠，串成串），作为该法术的耗材。</p><ul><li>该法术的施法距离增加至 <strong>1英里</strong>。</li><li>持续时间增加为 <strong>直至被解除</strong>（无需维持专注）。</li><li>施展该法术时，每一名辅施法者都必须消耗一枚 <strong>三环及以上</strong> 的法术位，否则法术失败。</li></ul><p>如果该法术的任意一名施法者参与施展了另一道作为结阵法术施展的<em>厄难黑潮 Doomtide</em>，则该法术会提前结束。</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Homebrew / Custom",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "choice": false
+      },
+      "template": {
+        "units": "ft",
+        "type": "sphere",
+        "size": "20",
+        "contiguous": false
+      }
+    },
+    "range": {
+      "value": "120",
+      "units": "ft"
+    },
+    "uses": {
+      "max": "0",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 4,
+    "school": "con",
+    "materials": {
+      "value": "煤灰或烟灰，以及一片鳗鱼干",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "activities": {
+      "oaotMJAM55K08REV": {
+        "type": "save",
+        "_id": "oaotMJAM55K08REV",
+        "sort": 0,
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "sVJvNfQgnOhmwTDu",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "damage": {
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 5,
+              "denomination": 6,
+              "bonus": "",
+              "types": [
+                "psychic"
+              ],
+              "scaling": {
+                "mode": "",
+                "number": 1
+              }
+            }
+          ],
+          "critical": {
+            "allow": false
+          },
+          "onSave": "half"
+        },
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "identifier": ""
+        },
+        "name": ""
+      }
+    },
+    "identifier": "",
+    "properties": [
+      "vocal",
+      "somatic",
+      "material",
+      "concentration"
+    ]
+  },
+  "effects": [
+    {
+      "name": "厄难黑潮：意志受挫",
+      "img": "icons/magic/air/fog-gas-smoke-swirling-gray.webp",
+      "origin": "Item.G4bNBtNraxVp51tZ",
+      "transfer": false,
+      "_id": "sVJvNfQgnOhmwTDu",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.bonuses.abilities.save",
+          "mode": 2,
+          "value": "-1d6",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": 1,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p>由于厄难黑潮的影响，豁免检定受到 1d6 的减值。</p>",
+      "tint": "#191919",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": []
+        },
+        "dnd5e": {
+          "riders": {
+            "statuses": []
+          }
+        },
+        "core": {
+          "overlay": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "12.331",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.9",
+        "createdTime": 1765130126969,
+        "modifiedTime": 1765214870486,
+        "lastModifiedBy": "FccwB5HfAhy1F49a"
+      }
+    }
+  ],
+  "flags": {
+    "dnd5e": {
+      "migratedProperties": [
+        "vocal",
+        "somatic",
+        "material",
+        "concentration",
+        "value"
+      ],
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "exportSource": {
+      "world": "cor-cotn",
+      "system": "dnd5e",
+      "coreVersion": "12.331",
+      "systemVersion": "4.3.9"
+    }
+  },
+  "_stats": {
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.9",
+    "createdTime": 1748872565120,
+    "modifiedTime": 1765130169925,
+    "lastModifiedBy": "FccwB5HfAhy1F49a"
+  }
+}
