@@ -1,4 +1,4 @@
-import { ActionData, Damage } from '../parser/action';
+import type { ActionData, Damage } from '../parser/action';
 
 export class ActivityGenerator {
   public generate(action: ActionData): Record<string, any> {
@@ -85,7 +85,7 @@ export class ActivityGenerator {
     // Modern dnd5e uses `system.damage.parts` as `DamagePart[]`.
     // Let's try to parse "2d10+8".
     const match = damage.formula.match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/);
-    if (match) {
+    if (match && match[1] && match[2]) {
       return {
         number: parseInt(match[1]),
         denomination: parseInt(match[2]),

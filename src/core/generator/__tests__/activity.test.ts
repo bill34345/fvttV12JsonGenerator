@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { ActivityGenerator } from '../activity';
-import { ActionData } from '../../parser/action';
+import type { ActionData } from '../../parser/action';
 
 describe('ActivityGenerator', () => {
   const generator = new ActivityGenerator();
@@ -18,7 +18,7 @@ describe('ActivityGenerator', () => {
     };
     
     const activities = generator.generate(action);
-    const id = Object.keys(activities)[0];
+    const id = Object.keys(activities)[0]!;
     const activity = activities[id];
     
     expect(activity.type).toBe('attack');
@@ -41,7 +41,7 @@ describe('ActivityGenerator', () => {
     };
 
     const activities = generator.generate(action);
-    const id = Object.keys(activities)[0];
+    const id = Object.keys(activities)[0]!;
     const activity = activities[id];
 
     expect(activity.type).toBe('save');

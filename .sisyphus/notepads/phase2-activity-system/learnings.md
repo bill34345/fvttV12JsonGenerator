@@ -15,3 +15,10 @@
 - Normalizes spaces by converting full-width spaces to half-width, replacing multiple spaces with a single space, and trimming.
 - Verified with `npx bun test src/core/parser/__tests__/utils/normalize.test.ts`.
 - Example: `命中：+5（钝击）` -> `命中:+5(钝击)`.
+
+## ActionParser Updates (2026-03-20)
+- Extracted `ActionData` and `Damage` interfaces to `src/core/models/action.ts` to avoid circular dependencies and improve organization.
+- Updated `ActionData` to include `reach`, `versatile` (under `attack`), and `target` fields.
+- Integrated `normalizeChineseText` and `CHINESE_ACTION_REGEX` into `ActionParser.parse()`.
+- Successfully extracted `recharge`, `reach`, `range`, `versatile`, and `target` (AOE) from Chinese action descriptions.
+- Verified with `npx bun test src/core/parser/__tests__/chinese-robustness.test.ts`.

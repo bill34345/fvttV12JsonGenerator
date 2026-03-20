@@ -14,8 +14,8 @@ describe('ActionParser', () => {
       expect(result.attack.type).toBe('mwak');
       expect(result.attack.toHit).toBe(14);
       expect(result.attack.range).toBe('触及10尺');
-      expect(result.attack.damage[0].formula).toBe('2d10+8');
-      expect(result.attack.damage[0].type).toBe('piercing'); // "穿刺" -> "piercing"
+      expect(result.attack.damage[0]?.formula).toBe('2d10+8');
+      expect(result.attack.damage[0]?.type).toBe('piercing'); // "穿刺" -> "piercing"
     }
   });
 

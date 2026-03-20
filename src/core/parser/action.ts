@@ -1,37 +1,9 @@
 import { i18n } from '../mapper/i18n';
+import type { ActionData, Damage } from '../models/action';
+import { normalizeChineseText } from './utils/normalize';
+import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 
-export interface Damage {
-  formula: string;
-  type: string;
-}
-
-export interface ActionData {
-  name: string;
-  englishName?: string;
-  type: "attack" | "save" | "utility";
-  desc?: string; 
-  
-  attack?: {
-    type: "mwak" | "rwak";
-    toHit: number;
-    range: string;
-    damage: Damage[];
-  };
-
-  save?: {
-    dc: number;
-    ability: string;
-    onSave?: string;
-    onFail?: string;
-  };
-
-  recharge?: {
-    value: number;
-    charged: boolean;
-  };
-  
-  damage?: Damage[];
-}
+export type { ActionData, Damage };
 
 export class ActionParser {
 
@@ -59,8 +31,18 @@ export class ActionParser {
   }
 
   public parse(line: string): ActionData | null {
-    line = line.trim();
+    line = normalizeChineseText(line);
     if (!line) return null;
+
+    let recharge: ActionData['recharge'] | undefined;
+    const rechargeMatch = line.match(CHINESE_ACTION_REGEX.RECHARGE);
+    if (rechargeMatch && rechargeMatch[1]) {
+      recharge = {
+        value: parseInt(rechargeMatch[1]),
+        charged: true
+      };
+      line = line.replace(CHINESE_ACTION_REGEX.RECHARGE, '');
+    }
 
     // 1. Attack pattern (Standard & Compact)
     const attackMatch = line.match(/^(.+?)\s*\[(.+?)\]:\s*\+?(\d+)\s*(?:命中|hit),\s*(.+?),\s*(.+)$/i);
@@ -85,7 +67,26 @@ export class ActionParser {
       
       const isRanged = typeStr.includes('远程') || typeStr.includes('Ranged');
       
-      return {
+      let reach: string | undefined;
+      let range = rangeStr.trim();
+      
+      const reachMatch = rangeStr.match(CHINESE_ACTION_REGEX.REACH);
+      if (reachMatch && reachMatch[1]) {
+        reach = reachMatch[1];
+      }
+      
+      const rangeMatch = rangeStr.match(CHINESE_ACTION_REGEX.RANGE);
+      if (rangeMatch && rangeMatch[1]) {
+        range = rangeMatch[2] ? `${rangeMatch[1]}/${rangeMatch[2]}` : rangeMatch[1];
+      }
+
+      let versatile: { formula: string } | undefined;
+      const versatileMatch = dmgPart.match(CHINESE_ACTION_REGEX.VERSATILE_DAMAGE);
+      if (versatileMatch && versatileMatch[1]) {
+        versatile = { formula: versatileMatch[1] };
+      }
+
+      const data: ActionData = {
         name,
         englishName,
         type: 'attack',
@@ -93,18 +94,22 @@ export class ActionParser {
         attack: {
           type: isRanged ? 'rwak' : 'mwak',
           toHit: parseInt(hitStr),
-          range: rangeStr.trim(),
-          damage: damages
+          range,
+          reach,
+          damage: damages,
+          versatile
         }
       };
+      if (recharge) data.recharge = recharge;
+      return data;
     }
 
-    // 2. Recharge pattern
-    const rechargeMatch = line.match(/^(.+?)\s*\[(?:充能|Recharge)\s*(\d+)(?:-\d+)?\]:/);
-    if (rechargeMatch && rechargeMatch[1] && rechargeMatch[2]) {
-      const { name, englishName } = this.splitName(rechargeMatch[1].trim());
-      const rechargeVal = parseInt(rechargeMatch[2]);
-      const rest = line.substring(rechargeMatch[0].length).trim();
+    // 2. Recharge pattern (Legacy for English or other formats)
+    const oldRechargeMatch = line.match(/^(.+?)\s*\[(?:充能|Recharge)\s*(\d+)(?:-\d+)?\]:/);
+    if (oldRechargeMatch && oldRechargeMatch[1] && oldRechargeMatch[2]) {
+      const { name, englishName } = this.splitName(oldRechargeMatch[1].trim());
+      const rechargeVal = parseInt(oldRechargeMatch[2]);
+      const rest = line.substring(oldRechargeMatch[0].length).trim();
       
       if (rest.startsWith('{')) {
         const data = this.parseObjectSyntax(name, rest);
@@ -123,6 +128,7 @@ export class ActionParser {
       const data = this.parseObjectSyntax(name, objectMatch[2].trim());
       if (data) {
         data.englishName = englishName;
+        if (recharge) data.recharge = recharge;
         return data;
       }
     }
@@ -139,6 +145,22 @@ export class ActionParser {
         type: 'utility',
         desc
       };
+      if (recharge) data.recharge = recharge;
+
+      // Extract AOE
+      const aoeMatch = desc.match(CHINESE_ACTION_REGEX.AOE);
+      if (aoeMatch && aoeMatch[1] && aoeMatch[2]) {
+        const value = parseInt(aoeMatch[1]);
+        const shapeMap: Record<string, string> = {
+          '锥形': 'cone',
+          '线形': 'line',
+          '球形': 'sphere',
+          '立方体': 'cube',
+          '圆柱形': 'cylinder'
+        };
+        const type = shapeMap[aoeMatch[2]] || 'cone';
+        data.target = { value, type, units: 'ft' };
+      }
 
       // Extract DC Save
       const dcMatch = desc.match(/DC\s*(\d+)\s*(?:的)?\s*([\u4e00-\u9fa5]{2})/i);
