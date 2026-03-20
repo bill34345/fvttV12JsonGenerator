@@ -1,8 +1,19 @@
 {
-  "active_plan": "I:\\OpenCode\\fvttV12JsonGenerator\\.sisyphus\\plans\\bestiary-english-pipeline.md",
-  "started_at": "2026-02-15T08:37:41.806Z",
+  "active_plan": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\.sisyphus\\plans\\fvtt-npc-importer-optimization-v2.md",
+  "started_at": "2026-03-20T08:40:54.918Z",
   "session_ids": [
-    "ses_3a00e324fffeo1yNd0KNR4iQfs"
+    "ses_2f5b6121bffeEeT7Ybqo5W4PWt",
+    "ses_2f5966ba3ffeDe9jvoAgCqya34",
+    "ses_2f5968085ffeMql5WZJF7ZcDQO",
+    "ses_2f5968b56ffeFnv7hB0lZxyxsi",
+    "ses_2f5967536ffec5328QXQLVVYbN",
+    "ses_2f57cd02bffeemVzm6Rk50fxd1",
+    "ses_2f57e0076ffeOEM6wqhM4QnuBc",
+    "ses_2f57e295dffepn44reMZ6ED388",
+    "ses_2f57e1544ffe8FXwMfXL57ipKm",
+    "ses_2f57e3d45ffegPh0iRdtuS8le2",
+    "ses_2f56ca9cbffeCCys370oD9NGjv"
   ],
-  "plan_name": "bestiary-english-pipeline"
+  "plan_name": "fvtt-npc-importer-optimization-v2",
+  "agent": "atlas"
 }

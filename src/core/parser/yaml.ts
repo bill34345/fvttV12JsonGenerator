@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml';
 import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../config/mapping';
 import { i18n } from '../mapper/i18n';
+import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 
 export class YamlParser {
   public parse(content: string): ParsedNPC {
@@ -13,7 +14,7 @@ export class YamlParser {
       abilities: {},
       attributes: {},
       details: {},
-      traits: {},
+      traits: { bypasses: [] },
       skills: {},
       saves: [],
       items: []
@@ -29,22 +30,21 @@ export class YamlParser {
   }
 
   private splitContent(content: string): { frontmatter: string; body: string } {
-    content = content.trim(); // Normalize
-    const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+    const normalized = content.trim();
+    
+    // Case 1: Standard Jekyll-style frontmatter
+    const match = normalized.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
     if (match) {
-      return { frontmatter: match[1]!, body: match[2]! };
+      return { frontmatter: match[1]!, body: match[2]!.trim() };
     }
-    // Handle case where --- separates YAML and Body, but no leading ---
-    // (Non-standard but convenient)
-    const separatorIndex = content.indexOf('\n---\n');
-    if (separatorIndex !== -1) {
-      return {
-        frontmatter: content.substring(0, separatorIndex),
-        body: content.substring(separatorIndex + 5) // Skip \n---\n
-      };
+
+    // Case 2: No leading ---, but has a separator
+    const sepMatch = normalized.match(/^([\s\S]*?)\n---\s*([\s\S]*)$/);
+    if (sepMatch) {
+      return { frontmatter: sepMatch[1]!, body: sepMatch[2]!.trim() };
     }
     
-    return { frontmatter: content, body: '' };
+    return { frontmatter: normalized, body: '' };
   }
 
   private traverse(obj: any, result: ParsedNPC) {
@@ -107,8 +107,26 @@ export class YamlParser {
       if (internalKey === 'actions') result.actions = processedValue;
       if (internalKey === 'reactions') result.reactions = processedValue;
       if (internalKey === 'bonus_actions') result.bonus_actions = processedValue;
-      if (internalKey === 'legendary_actions') result.legendary_actions = processedValue;
-      if (internalKey === 'lair_actions') result.lair_actions = processedValue;
+      if (internalKey === 'legendary_actions') {
+        result.legendary_actions = processedValue;
+        if (Array.isArray(processedValue) && processedValue.length > 0) {
+          const first = processedValue[0];
+          if (typeof first === 'string') {
+            const match = first.match(CHINESE_ACTION_REGEX.CHINESE_LEGENDARY_ACTION_COUNT) || 
+                          first.match(CHINESE_ACTION_REGEX.LEGENDARY_ACTION_COUNT);
+            if (match && match[1]) {
+              const count = parseInt(match[1]);
+              if (!result.attributes.legact) {
+                result.attributes.legact = { value: count, max: count };
+              }
+            }
+          }
+        }
+      }
+      if (internalKey === 'lair_actions') {
+        result.lair_actions = processedValue;
+        result.lairInitiative = this.extractLairInitiative(processedValue);
+      }
       if (internalKey === 'regional_effects') result.regional_effects = processedValue;
       if (internalKey === 'spellcasting') result.spellcasting = processedValue;
     } else if (path.startsWith('system.traits')) {
@@ -128,7 +146,24 @@ export class YamlParser {
         result.traits.dm = this.parseDamageMod(processedValue);
       } else {
         // dr, di, ci, languages -> array
-        result.traits[internalKey as keyof ParsedNPC['traits']] = processedValue;
+        if (['dr', 'di', 'dv'].includes(internalKey) && Array.isArray(processedValue)) {
+          const bypasses: string[] = [];
+          const filtered = processedValue.filter((v: any) => {
+            if (typeof v !== 'string') return true;
+            const b = this.detectBypasses(v);
+            if (b) {
+              bypasses.push(b);
+              return false;
+            }
+            return true;
+          });
+          result.traits[internalKey as 'dr' | 'di' | 'dv'] = filtered;
+          if (bypasses.length > 0) {
+            result.traits.bypasses = Array.from(new Set([...(result.traits.bypasses || []), ...bypasses]));
+          }
+        } else {
+          result.traits[internalKey as keyof ParsedNPC['traits']] = processedValue;
+        }
       }
 
     } else if (path.startsWith('system.skills')) {
@@ -138,6 +173,21 @@ export class YamlParser {
       // Values: "专精" -> 2
       result.skills = this.parseSkills(processedValue);
     }
+  }
+
+  private extractLairInitiative(lairActions: any): number | undefined {
+    if (!Array.isArray(lairActions)) return undefined;
+    const regex = /(?:on\s+)?initiative\s+(?:count\s+)?(\d+)/i;
+    const cnRegex = /(?:在)?先攻(?:顺位|项)?\s*(\d+)/;
+    
+    for (const action of lairActions) {
+      const text = typeof action === 'string' ? action : JSON.stringify(action);
+      const match = text.match(regex) || text.match(cnRegex);
+      if (match && match[1]) {
+        return parseInt(match[1]);
+      }
+    }
+    return undefined;
   }
 
   private processValue(mapping: FieldDefinition, value: any): any {
@@ -298,5 +348,13 @@ export class YamlParser {
       result[skillKey] = skillValue; 
     }
     return result;
+  }
+
+  private detectBypasses(text: string): string | null {
+    const t = text.toLowerCase();
+    if (t.includes('非魔法') || t.includes('nonmagical')) return 'mgc';
+    if (t.includes('精金') || t.includes('adamantine')) return 'ada';
+    if (t.includes('镀银') || t.includes('silvered')) return 'sil';
+    return null;
   }
 }

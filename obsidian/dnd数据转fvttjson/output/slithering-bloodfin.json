@@ -748,58 +748,7 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "56d0191c2e092566",
-          "name": "束缚 (Restrained)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "restrained"
-          ],
-          "flags": {}
-        },
-        {
-          "_id": "367923d4504d945f",
-          "name": "擒抱 (Grappled)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "grappled"
-          ],
-          "flags": {}
-        }
-      ]
+      "effects": []
     },
     {
       "name": "死亡爆裂",
@@ -824,33 +773,7 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "6633ff58c9881b7e",
-          "name": "中毒 (Poisoned)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "poisoned"
-          ],
-          "flags": {}
-        }
-      ]
+      "effects": []
     },
     {
       "name": "多重攻击",
@@ -870,8 +793,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye45": {
-            "_id": "dnd5eactivitye45",
+          "dnd5eactivity46e": {
+            "_id": "dnd5eactivity46e",
             "type": "utility"
           }
         },
@@ -900,8 +823,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity704": {
-            "_id": "dnd5eactivity704",
+          "dnd5eactivityccd": {
+            "_id": "dnd5eactivityccd",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -936,10 +859,10 @@
             },
             "effects": [
               {
-                "_id": "cfd562633357ce7f"
+                "_id": "550a5be1d669132c"
               },
               {
-                "_id": "d4cd030be908952e"
+                "_id": "826c26fe5f76467c"
               }
             ]
           }
@@ -952,7 +875,7 @@
       },
       "effects": [
         {
-          "_id": "cfd562633357ce7f",
+          "_id": "550a5be1d669132c",
           "name": "束缚 (Restrained)",
           "type": "base",
           "system": {},
@@ -977,7 +900,7 @@
           "flags": {}
         },
         {
-          "_id": "d4cd030be908952e",
+          "_id": "826c26fe5f76467c",
           "name": "擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1021,8 +944,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity670": {
-            "_id": "dnd5eactivity670",
+          "dnd5eactivity22f": {
+            "_id": "dnd5eactivity22f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1057,10 +980,10 @@
             },
             "effects": [
               {
-                "_id": "82e22a1afeb55f5e"
+                "_id": "91d7727f520a01a7"
               },
               {
-                "_id": "ce6f7b157ed27f88"
+                "_id": "ccb80ec055c3df75"
               }
             ]
           }
@@ -1073,7 +996,7 @@
       },
       "effects": [
         {
-          "_id": "82e22a1afeb55f5e",
+          "_id": "91d7727f520a01a7",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1098,7 +1021,7 @@
           "flags": {}
         },
         {
-          "_id": "ce6f7b157ed27f88",
+          "_id": "ccb80ec055c3df75",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1144,8 +1067,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity493": {
-            "_id": "dnd5eactivity493",
+          "dnd5eactivityfbc": {
+            "_id": "dnd5eactivityfbc",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1180,10 +1103,10 @@
             },
             "effects": [
               {
-                "_id": "76326d45ad0be578"
+                "_id": "ddb70cbe861b31fe"
               },
               {
-                "_id": "1da394558a3dd5ca"
+                "_id": "40a4236879699efe"
               }
             ]
           }
@@ -1195,7 +1118,7 @@
       },
       "effects": [
         {
-          "_id": "76326d45ad0be578",
+          "_id": "ddb70cbe861b31fe",
           "name": "束缚 (Restrained)",
           "type": "base",
           "system": {},
@@ -1220,7 +1143,7 @@
           "flags": {}
         },
         {
-          "_id": "1da394558a3dd5ca",
+          "_id": "40a4236879699efe",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1245,7 +1168,7 @@
           "flags": {}
         },
         {
-          "_id": "98a40b85a2b09f1a",
+          "_id": "bfff21b4314ce494",
           "name": "吞咽中 (Swallowed)",
           "type": "base",
           "system": {},
@@ -1289,8 +1212,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity206": {
-            "_id": "dnd5eactivity206",
+          "dnd5eactivityc69": {
+            "_id": "dnd5eactivityc69",
             "type": "utility"
           }
         },
@@ -1302,7 +1225,7 @@
       "effects": []
     },
     {
-      "name": "远洋尖啸 [1/日]",
+      "name": "远洋尖啸",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1319,8 +1242,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity46c": {
-            "_id": "dnd5eactivity46c",
+          "dnd5eactivitycf4": {
+            "_id": "dnd5eactivitycf4",
             "type": "save",
             "save": {
               "ability": [
@@ -1337,10 +1260,15 @@
             },
             "effects": [
               {
-                "_id": "f1f0e22fefb32bd4"
+                "_id": "9c20173677f30bb9"
               }
             ]
           }
+        },
+        "uses": {
+          "value": 1,
+          "max": 1,
+          "per": "lr"
         },
         "type": {
           "value": "monster",
@@ -1349,7 +1277,7 @@
       },
       "effects": [
         {
-          "_id": "f1f0e22fefb32bd4",
+          "_id": "9c20173677f30bb9",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1377,30 +1305,13 @@
     }
   ],
   "effects": [],
-  "folder": "ZGZiNmEzMjFmNzhh",
-  "flags": {
-    "dnd5e": {},
-    "babele": {
-      "translated": true,
-      "hasTranslation": true,
-      "originalName": "Ancient Brass Dragon"
-    },
-    "mcdm-flee-mortals-where-evil-lives": {
-      "role": "solo"
-    },
-    "exportSource": {
-      "world": "cor-cotn",
-      "system": "dnd5e",
-      "coreVersion": "12.331",
-      "systemVersion": "4.3.9"
-    }
-  },
+  "folder": null,
+  "flags": {},
   "_stats": {
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1769442424069,
-    "modifiedTime": 1769443264235,
-    "lastModifiedBy": "FccwB5HfAhy1F49a"
+    "createdTime": 1773985459185,
+    "modifiedTime": 1773985459185
   }
 }

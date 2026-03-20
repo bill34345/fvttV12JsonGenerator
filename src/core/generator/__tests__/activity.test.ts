@@ -92,6 +92,28 @@ describe('ActivityGenerator', () => {
     expect(activity.target.template.units).toBe('ft');
   });
 
+  it('should map all AOE shapes correctly', () => {
+    const shapes = [
+      { input: 'cone', expected: 'cone' },
+      { input: 'cube', expected: 'cube' },
+      { input: 'cylinder', expected: 'cylinder' },
+      { input: 'line', expected: 'line' },
+      { input: 'sphere', expected: 'sphere' },
+      { input: 'rect', expected: 'rect' }
+    ];
+
+    for (const { input, expected } of shapes) {
+      const action: ActionData = {
+        name: `Test ${input}`,
+        type: 'utility',
+        target: { value: 20, type: input, units: 'ft' }
+      };
+      const activities = generator.generate(action);
+      const id = Object.keys(activities)[0]!;
+      expect(activities[id].target.template.type).toBe(expected);
+    }
+  });
+
   it('should generate cast activity with correct structure', () => {
     const spellUuid = 'Compendium.dnd5e.spells.Item.59v9K9K9K9K9K9K9';
     const activities = generator.generateCast(spellUuid);

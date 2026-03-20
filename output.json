@@ -1,113 +1,697 @@
 {
-  "name": "成年红龙",
+  "name": "毁灭月石尖啸者",
   "type": "npc",
+  "img": "",
   "system": {
+    "currency": {
+      "pp": 0,
+      "gp": 0,
+      "ep": 0,
+      "sp": 0,
+      "cp": 0
+    },
     "abilities": {
       "str": {
-        "value": 27
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
       },
       "dex": {
         "value": 10,
-        "proficient": 1
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
       },
       "con": {
-        "value": 25,
-        "proficient": 1
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
       },
       "int": {
-        "value": 16
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
       },
       "wis": {
-        "value": 13,
-        "proficient": 1
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
       },
       "cha": {
-        "value": 21,
-        "proficient": 1
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      }
+    },
+    "bonuses": {
+      "mwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "msak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rsak": {
+        "attack": "",
+        "damage": ""
+      },
+      "abilities": {
+        "check": "",
+        "save": "",
+        "skill": ""
+      },
+      "spell": {
+        "dc": ""
+      }
+    },
+    "skills": {
+      "acr": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ani": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "arc": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ath": {
+        "ability": "str",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "dec": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "his": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ins": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "itm": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "inv": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "med": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "nat": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prc": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prf": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "per": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "rel": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "slt": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ste": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "sur": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "value": []
+    },
+    "tools": {},
+    "spells": {
+      "spell1": {
+        "value": 0,
+        "override": null
+      },
+      "spell2": {
+        "value": 0,
+        "override": null
+      },
+      "spell3": {
+        "value": 0,
+        "override": null
+      },
+      "spell4": {
+        "value": 0,
+        "override": null
+      },
+      "spell5": {
+        "value": 0,
+        "override": null
+      },
+      "spell6": {
+        "value": 0,
+        "override": null
+      },
+      "spell7": {
+        "value": 0,
+        "override": null
+      },
+      "spell8": {
+        "value": 0,
+        "override": null
+      },
+      "spell9": {
+        "value": 0,
+        "override": null
+      },
+      "pact": {
+        "value": 0,
+        "override": null
       }
     },
     "attributes": {
-      "hp": {
-        "value": 256,
-        "max": 256,
-        "formula": "19d12+133"
-      },
-      "ac": {
-        "flat": 19,
-        "calc": "natural"
+      "init": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonus": "@prof * 2"
       },
       "movement": {
-        "0": "4",
-        "1": "0",
-        "2": "尺",
-        "3": ",",
-        "4": " ",
-        "5": "攀",
-        "6": "爬",
-        "7": "4",
-        "8": "0",
-        "9": "尺",
-        "10": ",",
-        "11": " ",
-        "12": "飞",
-        "13": "行",
-        "14": "8",
-        "15": "0",
-        "16": "尺"
+        "walk": null,
+        "fly": null,
+        "swim": null,
+        "climb": null,
+        "burrow": null,
+        "hover": false
       },
-      "init": {
-        "bonus": 0
+      "attunement": {
+        "max": 3
+      },
+      "senses": {
+        "darkvision": null,
+        "blindsight": null,
+        "tremorsense": null,
+        "truesight": null,
+        "special": ""
+      },
+      "spellcasting": "",
+      "exhaustion": 0,
+      "concentration": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonuses": {
+          "save": ""
+        },
+        "limit": 1
+      },
+      "ac": {
+        "flat": 20,
+        "calc": "natural"
+      },
+      "hd": {
+        "spent": 0
+      },
+      "hp": {
+        "value": 332,
+        "max": 332,
+        "temp": null,
+        "tempmax": null,
+        "formula": "19d20 + 133"
+      },
+      "death": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "success": 0,
+        "failure": 0,
+        "bonuses": {
+          "save": ""
+        }
+      },
+      "spell": {
+        "level": 0
+      },
+      "loyalty": {
+        "value": null
       }
     },
     "details": {
-      "cr": 17,
-      "xp": {
-        "value": 18000
-      },
       "biography": {
-        "value": "# 成年红龙 (Adult Red Dragon)\n\n红龙是最贪婪的真龙，它们不知疲倦地寻求增加自己的财宝。它们非常自负，这体现在它们高傲的态度和对他人的蔑视上。"
+        "value": "# 背景\n这是一条测试用的复杂怪物。",
+        "public": ""
       },
-      "alignment": "混乱邪恶",
+      "alignment": "",
+      "ideal": "",
+      "bond": "",
+      "flaw": "",
+      "race": null,
       "type": {
-        "value": "龙类"
-      }
-    },
-    "traits": {
-      "dr": {
+        "value": ""
+      },
+      "cr": 15,
+      "habitat": {
+        "value": [],
+        "custom": ""
+      },
+      "treasure": {
         "value": []
       },
+      "spellLevel": 0
+    },
+    "resources": {
+      "legact": {
+        "value": 0,
+        "max": 0
+      },
+      "legres": {
+        "value": 0,
+        "max": 0
+      },
+      "lair": {
+        "value": false,
+        "initiative": null,
+        "inside": false
+      }
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "traits": {
+      "size": "med",
       "di": {
-        "value": [
-          "火焰"
-        ]
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dr": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dv": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dm": {
+        "amount": {},
+        "bypasses": []
       },
       "ci": {
-        "value": [
-          "恐慌",
-          "魅惑"
-        ]
+        "value": [],
+        "custom": ""
       },
       "languages": {
-        "value": [
-          "通用语",
-          "龙语"
-        ]
+        "value": [],
+        "custom": ""
       },
-      "senses": {
-        "盲视": "60尺",
-        "黑暗视觉": "120尺",
-        "被动察觉": 23
-      },
-      "size": "超巨型"
-    },
-    "skills": {
-      "ste": {
-        "value": 0
-      },
-      "prc": {
-        "value": 0
-      }
+      "important": false
     }
+  },
+  "prototypeToken": {
+    "name": "毁灭月石尖啸者",
+    "displayName": 0,
+    "actorLink": false,
+    "appendNumber": false,
+    "prependAdjective": false,
+    "width": 1,
+    "height": 1,
+    "texture": {
+      "src": "",
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "offsetX": 0,
+      "offsetY": 0,
+      "fit": "contain",
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "tint": "#ffffff",
+      "alphaThreshold": 0.75
+    },
+    "lockRotation": true,
+    "rotation": 0,
+    "alpha": 1,
+    "disposition": -1,
+    "displayBars": 0,
+    "bar1": {
+      "attribute": "attributes.hp"
+    },
+    "bar2": {
+      "attribute": null
+    },
+    "light": {
+      "negative": false,
+      "priority": 0,
+      "alpha": 0.5,
+      "angle": 360,
+      "bright": 0,
+      "color": null,
+      "coloration": 1,
+      "dim": 0,
+      "attenuation": 0.5,
+      "luminosity": 0.5,
+      "saturation": 0,
+      "contrast": 0,
+      "shadows": 0,
+      "animation": {
+        "type": null,
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      },
+      "darkness": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    "sight": {
+      "enabled": false,
+      "range": 0,
+      "angle": 360,
+      "visionMode": "basic",
+      "color": null,
+      "attenuation": 0.1,
+      "brightness": 0,
+      "saturation": 0,
+      "contrast": 0
+    },
+    "detectionModes": [],
+    "occludable": {
+      "radius": 0
+    },
+    "ring": {
+      "enabled": true,
+      "colors": {
+        "ring": null,
+        "background": null
+      },
+      "effects": 1,
+      "subject": {
+        "scale": 2,
+        "texture": null
+      }
+    },
+    "flags": {},
+    "randomImg": false,
+    "hexagonalShape": 0
   },
   "items": [
     {
@@ -116,7 +700,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p></p>",
+          "value": "<p>19 (2d10+8) 穿刺伤害外加 7 (2d6) 火焰伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -124,11 +708,12 @@
         },
         "activation": {
           "type": "action",
-          "cost": 1
+          "cost": 1,
+          "condition": ""
         },
         "activities": {
-          "dnd5eactivity966": {
-            "_id": "dnd5eactivity966",
+          "dnd5eactivitycd7": {
+            "_id": "dnd5eactivitycd7",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -146,7 +731,7 @@
                   "denomination": 10,
                   "bonus": "8",
                   "types": [
-                    "piercing"
+                    "bludgeoning"
                   ],
                   "custom": {
                     "enabled": false,
@@ -163,7 +748,7 @@
                   "denomination": 6,
                   "bonus": "",
                   "types": [
-                    "fire"
+                    "bludgeoning"
                   ],
                   "custom": {
                     "enabled": false,
@@ -177,6 +762,11 @@
                 }
               ],
               "includeBase": true
+            },
+            "range": {
+              "value": "10",
+              "units": "ft",
+              "special": ""
             }
           }
         },
@@ -185,15 +775,16 @@
           "classification": "weapon"
         },
         "equipped": true
-      }
+      },
+      "effects": []
     },
     {
-      "name": "爪击",
+      "name": "长剑",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p></p>",
+          "value": "<p>15 (2d6+8) 挥砍伤害,双手使用时为 17 (2d8+8) 挥砍伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -201,11 +792,12 @@
         },
         "activation": {
           "type": "action",
-          "cost": 1
+          "cost": 1,
+          "condition": ""
         },
         "activities": {
-          "dnd5eactivityb8c": {
-            "_id": "dnd5eactivityb8c",
+          "dnd5eactivity0e5": {
+            "_id": "dnd5eactivity0e5",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -234,56 +826,13 @@
                     "number": 1,
                     "formula": ""
                   }
-                }
-              ],
-              "includeBase": true
-            }
-          }
-        },
-        "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true
-      }
-    },
-    {
-      "name": "尾击",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
-      "system": {
-        "description": {
-          "value": "<p></p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1
-        },
-        "activities": {
-          "dnd5eactivity6a8": {
-            "_id": "dnd5eactivity6a8",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "14",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
+                },
                 {
                   "number": 2,
                   "denomination": 8,
                   "bonus": "8",
                   "types": [
-                    "bludgeoning"
+                    "slashing"
                   ],
                   "custom": {
                     "enabled": false,
@@ -296,7 +845,29 @@
                   }
                 }
               ],
-              "includeBase": true
+              "includeBase": true,
+              "versatile": {
+                "number": 2,
+                "denomination": 8,
+                "bonus": "8",
+                "types": [
+                  "slashing"
+                ],
+                "custom": {
+                  "enabled": false,
+                  "formula": ""
+                },
+                "scaling": {
+                  "mode": "whole",
+                  "number": 1,
+                  "formula": ""
+                }
+              }
+            },
+            "range": {
+              "value": "5",
+              "units": "ft",
+              "special": ""
             }
           }
         },
@@ -305,7 +876,107 @@
           "classification": "weapon"
         },
         "equipped": true
-      }
+      },
+      "effects": []
+    },
+    {
+      "name": "毁灭吐息",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>覆盖 90 尺锥形区域,DC 21 敏捷豁免,失败 63 (18d6) 火焰伤害,成功减半.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityee5": {
+            "_id": "dnd5eactivityee5",
+            "type": "save",
+            "save": {
+              "ability": [
+                "dex"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "21",
+                "value": 21
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 18,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "fire"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
+            },
+            "target": {
+              "template": {
+                "count": 1,
+                "contiguous": false,
+                "type": "cone",
+                "size": "90",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": []
     }
-  ]
+  ],
+  "effects": [],
+  "folder": null,
+  "flags": {},
+  "_stats": {
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.9",
+    "createdTime": 1773992843333,
+    "modifiedTime": 1773992843333
+  }
 }

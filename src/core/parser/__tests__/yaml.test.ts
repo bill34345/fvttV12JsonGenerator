@@ -31,6 +31,19 @@ This is a dragon.
     expect(result.details.biography).toContain('This is a dragon');
   });
 
+  it('should extract lair initiative from lair actions', () => {
+    const yaml = `
+名称: 成年红龙
+类型: npc
+巢穴动作:
+  - "在先攻顺位20（initiative count 20）时，该龙可以采取一个巢穴动作..."
+  - "动作1: ..."
+---
+`;
+    const result = parser.parse(yaml);
+    expect(result.lairInitiative).toBe(20);
+  });
+
   it('should throw on unknown field', () => {
     const yaml = `
 名称: Test

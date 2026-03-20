@@ -75,6 +75,7 @@ export interface ParsedNPC {
     movement?: Record<string, number>;
     init?: number;
     prof?: number;
+    legact?: { value: number; max: number };
   };
 
   details: {
@@ -94,10 +95,12 @@ export interface ParsedNPC {
     ci?: string[];
     languages?: string[];
     senses?: Record<string, number>;
+    bypasses?: string[];
   };
 
   skills?: Record<string, number>; // key (e.g. 'ste') -> value (1 or 2)
   saves?: string[]; // list of ability keys (e.g. 'str')
+  lairInitiative?: number;
 
   actions?: string[];
   bonus_actions?: any;

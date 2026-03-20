@@ -156,7 +156,8 @@ export class ActionParser {
           '线形': 'line',
           '球形': 'sphere',
           '立方体': 'cube',
-          '圆柱形': 'cylinder'
+          '圆柱形': 'cylinder',
+          '正方形': 'rect'
         };
         const type = shapeMap[aoeMatch[2]] || 'cone';
         data.target = { value, type, units: 'ft' };

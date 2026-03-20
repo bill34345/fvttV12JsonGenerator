@@ -146,4 +146,27 @@ describe('ActorGenerator', () => {
     expect(itemEn.system.source.custom).toBe('Imported');
     expect(itemEn.system.activities).toEqual({});
   });
+
+  it('extracts lair initiative from lair actions description', () => {
+    const input: ParsedNPC = {
+      name: 'Dragon',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      lair_actions: [
+        'On initiative count 20 (losing initiative ties), the dragon takes a lair action to cause one of the following effects; the dragon can’t use the same effect two rounds in a row:',
+        'Action 1: ...'
+      ],
+      lairInitiative: 20
+    };
+
+    const actor = generator.generate(input);
+    expect(actor.system.resources.lair.value).toBe(true);
+    expect(actor.system.resources.lair.initiative).toBe(20);
+  });
 });

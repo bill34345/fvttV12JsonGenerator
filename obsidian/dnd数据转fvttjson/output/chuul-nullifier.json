@@ -608,7 +608,7 @@
       },
       "languages": {
         "value": [
-          "深渊语"
+          "deep"
         ],
         "custom": ""
       },
@@ -797,8 +797,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2c5": {
-            "_id": "dnd5eactivity2c5",
+          "dnd5eactivity1a2": {
+            "_id": "dnd5eactivity1a2",
             "type": "utility"
           }
         },
@@ -815,7 +815,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p></p>",
+          "value": "<p>12 (2d6+5) 点钝击伤害. 命中：如果目标是大型或更小的生物，则其被抓取（逃脱DC 15），且甲伏怪此时抓取的生物不能超过两个。</p>",
           "chat": ""
         },
         "source": {
@@ -827,8 +827,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf5d": {
-            "_id": "dnd5eactivityf5d",
+          "dnd5eactivitye48": {
+            "_id": "dnd5eactivitye48",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -889,8 +889,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd93": {
-            "_id": "dnd5eactivityd93",
+          "dnd5eactivity9fc": {
+            "_id": "dnd5eactivity9fc",
             "type": "save",
             "save": {
               "ability": [
@@ -907,10 +907,10 @@
             },
             "effects": [
               {
-                "_id": "2c36e354b5cb084d"
+                "_id": "2ae08176bf59df9b"
               },
               {
-                "_id": "1347984a93c70cae"
+                "_id": "425546b5e1bc6e47"
               }
             ]
           }
@@ -922,8 +922,8 @@
       },
       "effects": [
         {
-          "_id": "2c36e354b5cb084d",
-          "name": "中毒",
+          "_id": "2ae08176bf59df9b",
+          "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -947,8 +947,8 @@
           "flags": {}
         },
         {
-          "_id": "1347984a93c70cae",
-          "name": "麻痹",
+          "_id": "425546b5e1bc6e47",
+          "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -975,30 +975,13 @@
     }
   ],
   "effects": [],
-  "folder": "ZGZiNmEzMjFmNzhh",
-  "flags": {
-    "dnd5e": {},
-    "babele": {
-      "translated": true,
-      "hasTranslation": true,
-      "originalName": "Ancient Brass Dragon"
-    },
-    "mcdm-flee-mortals-where-evil-lives": {
-      "role": "solo"
-    },
-    "exportSource": {
-      "world": "cor-cotn",
-      "system": "dnd5e",
-      "coreVersion": "12.331",
-      "systemVersion": "4.3.9"
-    }
-  },
+  "folder": null,
+  "flags": {},
   "_stats": {
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1769442424069,
-    "modifiedTime": 1769443264235,
-    "lastModifiedBy": "FccwB5HfAhy1F49a"
+    "createdTime": 1773985427932,
+    "modifiedTime": 1773985427932
   }
 }

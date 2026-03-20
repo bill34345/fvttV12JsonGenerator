@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import type { ParsedNPC } from '../../config/mapping';
 import { i18n } from '../mapper/i18n';
+import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import type { ParserStrategy } from './types';
 
 const require = createRequire(import.meta.url);
@@ -114,6 +115,15 @@ const DAMAGE_ALIASES: Record<string, string> = {
   thunder: 'thunder',
 };
 
+const BYPASS_ALIASES: Record<string, string> = {
+  nonmagical: 'mgc',
+  nonmagicalweapons: 'mgc',
+  nonmagicalattacks: 'mgc',
+  nonmagicalweaponsattacks: 'mgc',
+  adamantine: 'ada',
+  silvered: 'sil',
+};
+
 const CONDITION_ALIASES: Record<string, string> = {
   blinded: 'blinded',
   charmed: 'charmed',
@@ -193,7 +203,7 @@ export class EnglishBestiaryParser implements ParserStrategy {
       abilities: {},
       attributes: {},
       details: {},
-      traits: {},
+      traits: { bypasses: [] },
       skills: {},
       saves: [],
       items: [],
@@ -218,9 +228,19 @@ export class EnglishBestiaryParser implements ParserStrategy {
       }
       if (extracted.legendary_actions.length > 0) {
         result.legendary_actions = extracted.legendary_actions;
+        const first = extracted.legendary_actions[0];
+        if (typeof first === 'string') {
+          const match = first.match(CHINESE_ACTION_REGEX.LEGENDARY_ACTION_COUNT) || 
+                        first.match(CHINESE_ACTION_REGEX.CHINESE_LEGENDARY_ACTION_COUNT);
+          if (match && match[1]) {
+            const count = parseInt(match[1]);
+            result.attributes.legact = { value: count, max: count };
+          }
+        }
       }
       if (extracted.lair_actions.length > 0) {
         result.lair_actions = extracted.lair_actions;
+        result.lairInitiative = this.extractLairInitiative(extracted.lair_actions);
       }
       if (extracted.spellcasting.length > 0) {
         result.spellcasting = extracted.spellcasting;
@@ -230,11 +250,26 @@ export class EnglishBestiaryParser implements ParserStrategy {
     return result;
   }
 
+  private extractLairInitiative(lairActions: any): number | undefined {
+    if (!Array.isArray(lairActions)) return undefined;
+    const regex = /(?:on\s+)?initiative\s+(?:count\s+)?(\d+)/i;
+    const cnRegex = /(?:在)?先攻(?:顺位|项)?\s*(\d+)/;
+    
+    for (const action of lairActions) {
+      const text = typeof action === 'string' ? action : JSON.stringify(action);
+      const match = text.match(regex) || text.match(cnRegex);
+      if (match && match[1]) {
+        return parseInt(match[1]);
+      }
+    }
+    return undefined;
+  }
+
   private splitContent(content: string): { frontmatter: string; body: string } {
     const normalized = content.trim();
-    const match = normalized.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+    const match = normalized.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
     if (match?.[1] !== undefined && match[2] !== undefined) {
-      return { frontmatter: match[1], body: match[2] };
+      return { frontmatter: match[1], body: match[2].trim() };
     }
 
     const separatorIndex = normalized.indexOf('\n---\n');
@@ -557,17 +592,58 @@ export class EnglishBestiaryParser implements ParserStrategy {
     const languages = this.parseTerms(this.getValue(raw, ['languages']), LANGUAGE_ALIASES);
     if (languages.length > 0) result.traits.languages = languages;
 
-    const dr = this.parseTerms(this.getValue(raw, ['damage_resistances']), DAMAGE_ALIASES);
-    if (dr.length > 0) result.traits.dr = dr;
+    const dr = this.parseDamageTerms(this.getValue(raw, ['damage_resistances']));
+    if (dr.terms.length > 0) result.traits.dr = dr.terms;
+    if (dr.bypasses.length > 0) {
+      result.traits.bypasses = Array.from(new Set([...(result.traits.bypasses || []), ...dr.bypasses]));
+    }
 
-    const dv = this.parseTerms(this.getValue(raw, ['damage_vulnerabilities']), DAMAGE_ALIASES);
-    if (dv.length > 0) result.traits.dv = dv;
+    const dv = this.parseDamageTerms(this.getValue(raw, ['damage_vulnerabilities']));
+    if (dv.terms.length > 0) result.traits.dv = dv.terms;
+    if (dv.bypasses.length > 0) {
+      result.traits.bypasses = Array.from(new Set([...(result.traits.bypasses || []), ...dv.bypasses]));
+    }
 
-    const di = this.parseTerms(this.getValue(raw, ['damage_immunities']), DAMAGE_ALIASES);
-    if (di.length > 0) result.traits.di = di;
+    const di = this.parseDamageTerms(this.getValue(raw, ['damage_immunities']));
+    if (di.terms.length > 0) result.traits.di = di.terms;
+    if (di.bypasses.length > 0) {
+      result.traits.bypasses = Array.from(new Set([...(result.traits.bypasses || []), ...di.bypasses]));
+    }
 
     const ci = this.parseTerms(this.getValue(raw, ['condition_immunities']), CONDITION_ALIASES);
     if (ci.length > 0) result.traits.ci = ci;
+  }
+
+  private parseDamageTerms(value: unknown): { terms: string[]; bypasses: string[] } {
+    const terms = new Set<string>();
+    const bypasses = new Set<string>();
+
+    const addTerm = (candidate: string) => {
+      const normalizedDamage = this.normalizeAlias(candidate, DAMAGE_ALIASES);
+      if (normalizedDamage) {
+        terms.add(normalizedDamage);
+      }
+      const normalizedBypass = this.normalizeAlias(candidate, BYPASS_ALIASES);
+      if (normalizedBypass) {
+        bypasses.add(normalizedBypass);
+      }
+    };
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string') {
+          for (const token of item.split(/[,;，]/)) {
+            addTerm(token);
+          }
+        }
+      }
+    } else if (typeof value === 'string') {
+      for (const token of value.split(/[,;，]/)) {
+        addTerm(token);
+      }
+    }
+
+    return { terms: Array.from(terms), bypasses: Array.from(bypasses) };
   }
 
   private loadFrontmatter(frontmatter: string): Record<string, unknown> {

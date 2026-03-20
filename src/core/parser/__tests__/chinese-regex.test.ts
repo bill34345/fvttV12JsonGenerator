@@ -24,6 +24,11 @@ describe("Chinese Action Regex", () => {
     expect(match3).not.toBeNull();
     expect(match3![1]).toBe("90");
     expect(match3![2]).toBe("锥形");
+
+    const match4 = "20尺正方形".match(CHINESE_ACTION_REGEX.AOE);
+    expect(match4).not.toBeNull();
+    expect(match4![1]).toBe("20");
+    expect(match4![2]).toBe("正方形");
   });
 
   it("should parse reach", () => {

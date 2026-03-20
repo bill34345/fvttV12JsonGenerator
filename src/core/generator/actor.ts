@@ -251,6 +251,10 @@ export class ActorGenerator {
           units: parsed.attributes.movement.units ?? 'ft'
         };
       }
+      if (parsed.attributes.legact) {
+        actor.system.resources.legact.value = parsed.attributes.legact.value;
+        actor.system.resources.legact.max = parsed.attributes.legact.max;
+      }
     }
 
     // Patch Details
@@ -271,13 +275,22 @@ export class ActorGenerator {
       actor.system.details.treasure = { value: [] };
     }
 
+    // Patch Lair Initiative
+    if (parsed.lairInitiative !== undefined) {
+      if (!actor.system.resources) actor.system.resources = {};
+      if (!actor.system.resources.lair) actor.system.resources.lair = {};
+      actor.system.resources.lair.value = true;
+      actor.system.resources.lair.initiative = parsed.lairInitiative;
+    }
+
     // Patch Traits
     if (parsed.traits) {
       if (parsed.traits.size) actor.system.traits.size = parsed.traits.size;
-      actor.system.traits.dr = { value: parsed.traits.dr || [], custom: '', bypasses: [] };
-      actor.system.traits.di = { value: parsed.traits.di || [], custom: '', bypasses: [] };
+      const bypasses = parsed.traits.bypasses || [];
+      actor.system.traits.dr = { value: parsed.traits.dr || [], custom: '', bypasses };
+      actor.system.traits.di = { value: parsed.traits.di || [], custom: '', bypasses };
       actor.system.traits.ci = { value: parsed.traits.ci || [], custom: '' };
-      actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses: [] };
+      actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
       actor.system.traits.languages = { value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''), custom: '' };
       
