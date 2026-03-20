@@ -20,7 +20,8 @@ export class ActivityGenerator {
         },
         damage: {
           parts: action.attack.damage.map(d => this.formatDamage(d)),
-          includeBase: true
+          includeBase: true,
+          ...(action.attack.versatile ? { versatile: this.formatDamage({ formula: action.attack.versatile.formula, type: action.attack.damage[0]?.type || '' }) } : {})
         }
       };
     } else if (action.save) {
@@ -54,11 +55,55 @@ export class ActivityGenerator {
       };
     }
 
-    // Add Range if present (Activity level in 4.3?)
-    // Actually, Range is often on the Activity in 4.3.
-    if (action.attack?.range) {
-       // Parse "10 ft" or "150/600 ft"
-       // TODO: Range parsing logic
+    // Add Range if present
+    if (action.attack) {
+      if (action.attack.type === 'mwak' && action.attack.reach) {
+        activities[id].range = {
+          value: action.attack.reach,
+          units: 'ft',
+          special: ''
+        };
+      } else if (action.attack.range) {
+        const rangeMatch = action.attack.range.match(/^(\d+)(?:\/(\d+))?/);
+        if (rangeMatch) {
+          activities[id].range = {
+            value: rangeMatch[1],
+            long: rangeMatch[2] || '',
+            units: 'ft',
+            special: ''
+          };
+        }
+      }
+    }
+
+    if (action.recharge) {
+      activities[id].uses = {
+        spent: 0,
+        max: "1",
+        recovery: [
+          { period: "recharge", type: "recoverAll", formula: action.recharge.value.toString() }
+        ]
+      };
+    }
+
+    if (action.target) {
+      activities[id].target = {
+        template: {
+          count: 1,
+          contiguous: false,
+          type: action.target.type,
+          size: action.target.value.toString(),
+          width: "",
+          height: "",
+          units: action.target.units
+        },
+        affects: {
+          count: "",
+          type: "",
+          choice: false,
+          special: ""
+        }
+      };
     }
 
     return activities;

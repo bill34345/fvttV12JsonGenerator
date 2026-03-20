@@ -22,3 +22,10 @@
 - Integrated `normalizeChineseText` and `CHINESE_ACTION_REGEX` into `ActionParser.parse()`.
 - Successfully extracted `recharge`, `reach`, `range`, `versatile`, and `target` (AOE) from Chinese action descriptions.
 - Verified with `npx bun test src/core/parser/__tests__/chinese-robustness.test.ts`.
+
+## ActivityGenerator Updates (2026-03-20)
+- Mapped `actionData.recharge` to `uses.recovery` and `uses.max` on the activity level.
+- Mapped `actionData.target` to `target.template` with `type`, `size`, and `units`.
+- Mapped `actionData.attack.reach` to `range.value` for melee attacks (`mwak`).
+- Mapped `actionData.attack.versatile` to a versatile damage part using `formatDamage`.
+- Verified with `npx bun test src/core/generator/__tests__/activity.test.ts`.
