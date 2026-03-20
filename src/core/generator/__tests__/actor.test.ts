@@ -113,4 +113,37 @@ describe('ActorGenerator', () => {
     expect(spellItems.map((item: { name: string }) => item.name)).toContain('minor illusion');
     expect(spellItems.map((item: { name: string }) => item.name)).toContain('magic missile');
   });
+
+  it('should generate regional effects with localization-aware flags and system fields', () => {
+    const input: ParsedNPC = {
+      name: 'Dragon',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      regional_effects: [
+        'Water: The water is clear.'
+      ]
+    };
+
+    // Chinese route (default)
+    const actorCn = generator.generate(input, { route: 'chinese' });
+    const itemCn = actorCn.items.find((i: any) => i.name === 'Water');
+    expect(itemCn).toBeDefined();
+    expect(itemCn.flags['tidy5e-sheet'].section).toBe('巢穴效应');
+    expect(itemCn.system.source.custom).toBe('Imported');
+    expect(itemCn.system.activities).toEqual({});
+
+    // English route
+    const actorEn = generator.generate(input, { route: 'english' });
+    const itemEn = actorEn.items.find((i: any) => i.name === 'Water');
+    expect(itemEn).toBeDefined();
+    expect(itemEn.flags['tidy5e-sheet'].section).toBe('Regional Effects');
+    expect(itemEn.system.source.custom).toBe('Imported');
+    expect(itemEn.system.activities).toEqual({});
+  });
 });

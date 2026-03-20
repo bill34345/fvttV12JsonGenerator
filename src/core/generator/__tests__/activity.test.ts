@@ -91,4 +91,18 @@ describe('ActivityGenerator', () => {
     expect(activity.target.template.size).toBe('15');
     expect(activity.target.template.units).toBe('ft');
   });
+
+  it('should generate cast activity with correct structure', () => {
+    const spellUuid = 'Compendium.dnd5e.spells.Item.59v9K9K9K9K9K9K9';
+    const activities = generator.generateCast(spellUuid);
+    const id = Object.keys(activities)[0]!;
+    const activity = activities[id];
+
+    expect(activity.type).toBe('cast');
+    // Old structure: cast: { spell: uuid }
+    // New structure: spell: { uuid: uuid }
+    expect(activity.spell).toBeDefined();
+    expect(activity.spell.uuid).toBe(spellUuid);
+    expect(activity.cast).toBeUndefined();
+  });
 });

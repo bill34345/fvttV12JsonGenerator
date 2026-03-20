@@ -26,7 +26,87 @@ interface ActorGeneratorOptions {
 interface GenerateOptions {
   resetDefaults?: boolean;
   spellcastingMode?: 'legacy' | 'description';
+  route?: ParserRoute;
 }
+
+const LANGUAGE_CODE_MAP: Record<string, string> = {
+  // 中文 → Foundry VTT dnd5e code
+  '通用语': 'common',
+  '通用': 'common',
+  '龙语': 'draconic',
+  '精灵语': 'elvish',
+  '精灵': 'elvish',
+  '矮人语': 'dwarvish',
+  '矮人': 'dwarvish',
+  '巨人语': 'giant',
+  '巨人': 'giant',
+  '地精语': 'goblin',
+  '地精': 'goblin',
+  '兽人语': 'orc',
+  '兽人': 'orc',
+  '深渊语': 'deep',
+  '深渊': 'deep',
+  '炼狱语': 'infernal',
+  '炼狱': 'infernal',
+  '天界语': 'celestial',
+  '天界': 'celestial',
+  '木族语': 'sylvan',
+  '木族': 'sylvan',
+  '地下通用语': 'undercommon',
+  '水族语': 'aquan',
+  '水族': 'aquan',
+  '风族语': 'auran',
+  '风族': 'auran',
+  '火族语': 'ignan',
+  '火族': 'ignan',
+  '土族语': 'terran',
+  '土族': 'terran',
+  '狗头人语': 'draconic',
+  '地底侏儒语': 'gnomish',
+  '半身人语': 'halfling',
+  '半身人': 'halfling',
+  '恐爪怪语': 'deep',
+  '泛语言': 'all',
+  '无': '',
+  // 英文 → Foundry code (pass-through)
+  'common': 'common',
+  'draconic': 'draconic',
+  'elvish': 'elvish',
+  'dwarvish': 'dwarvish',
+  'giant': 'giant',
+  'goblin': 'goblin',
+  'orc': 'orc',
+  'deep': 'deep',
+  'infernal': 'infernal',
+  'celestial': 'celestial',
+  'sylvan': 'sylvan',
+  'undercommon': 'undercommon',
+  'aquan': 'aquan',
+  'auran': 'auran',
+  'ignan': 'ignan',
+  'terran': 'terran',
+};
+
+const SKILL_ABILITIES: Record<string, string> = {
+  acr: 'dex',
+  ani: 'wis',
+  arc: 'int',
+  ath: 'str',
+  dec: 'cha',
+  his: 'int',
+  ins: 'wis',
+  itm: 'cha',
+  inv: 'int',
+  med: 'wis',
+  nat: 'int',
+  prc: 'wis',
+  prf: 'cha',
+  per: 'cha',
+  rel: 'int',
+  slt: 'dex',
+  ste: 'dex',
+  sur: 'wis',
+};
 
 const LOCAL_NAME_TRANSLATIONS: Record<string, string> = {
   'adult red dragon': '成年红龙',
@@ -84,6 +164,7 @@ export class ActorGenerator {
   private goldenMaster: any;
   private translationService?: TranslationServiceLike;
   private fvttVersion: '12' | '13';
+  private route: ParserRoute = 'chinese';
 
   constructor(options: ActorGeneratorOptions = {}) {
     this.translationService =
@@ -98,6 +179,7 @@ export class ActorGenerator {
     const actor = this.generate(parsed, {
       resetDefaults: route === 'english',
       spellcastingMode: route === 'english' ? 'description' : 'legacy',
+      route,
     });
     if (route !== 'english') {
       return actor;
@@ -118,6 +200,7 @@ export class ActorGenerator {
   }
 
   public generate(parsed: ParsedNPC, options: GenerateOptions = {}): any {
+    this.route = options.route ?? 'chinese';
     // Clone Base
     const actor = this.goldenMaster 
       ? JSON.parse(JSON.stringify(this.goldenMaster)) 
@@ -196,7 +279,7 @@ export class ActorGenerator {
       actor.system.traits.ci = { value: parsed.traits.ci || [], custom: '' };
       actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses: [] };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
-      actor.system.traits.languages = { value: parsed.traits.languages || [], custom: '' };
+      actor.system.traits.languages = { value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''), custom: '' };
       
       if (parsed.traits.senses) {
         actor.system.attributes.senses = {
@@ -214,9 +297,14 @@ export class ActorGenerator {
     if (parsed.skills) {
       // Map "ste": 1 -> system.skills.ste.value = 1
       for (const [key, val] of Object.entries(parsed.skills)) {
-        if (actor.system.skills[key]) {
-          actor.system.skills[key].value = val;
+        if (!actor.system.skills[key]) {
+          actor.system.skills[key] = {
+            value: 0,
+            ability: SKILL_ABILITIES[key] || 'int',
+            bonuses: { check: "", passive: "" }
+          };
         }
+        actor.system.skills[key].value = val;
       }
     }
 
@@ -263,6 +351,7 @@ export class ActorGenerator {
           }
         }
         
+        const section = this.route === 'chinese' ? '巢穴效应' : 'Regional Effects';
         newItems.push({
           name: name,
           type: 'feat',
@@ -270,10 +359,12 @@ export class ActorGenerator {
           system: {
             description: { value: `<p>${desc}</p>`, chat: '' },
             type: { value: 'monster', subtype: 'regional' },
-            activation: { type: '', cost: null }
+            source: { custom: 'Imported' },
+            activation: { type: '', cost: null },
+            activities: {}
           },
           flags: {
-            "tidy5e-sheet": { section: "巢穴效应", actionSection: "巢穴效应" }
+            "tidy5e-sheet": { section: section, actionSection: section }
           }
         });
       }
@@ -357,6 +448,22 @@ export class ActorGenerator {
   private resetActorDefaults(actor: any): void {
     this.resetTokenDefaults(actor);
 
+    // Clean template pollution from golden-master.json
+    // flags: remove all template flags (babele, mcdm-flee-mortals, exportSource etc.)
+    actor.flags = {};
+    // _stats: only keep core/system version info, remove user-specific fields
+    actor._stats = {
+      coreVersion: actor._stats?.coreVersion || '12.331',
+      systemId: actor._stats?.systemId || 'dnd5e',
+      systemVersion: actor._stats?.systemVersion || '4.3.9',
+      createdTime: Date.now(),
+      modifiedTime: Date.now(),
+    };
+    // folder: clear template folder reference
+    actor.folder = null;
+    // effects: clear template effects
+    if (Array.isArray(actor.effects)) actor.effects.length = 0;
+
     const details = actor.system?.details;
     if (details) {
       if (details.biography && typeof details.biography === 'object') {
@@ -427,6 +534,22 @@ export class ActorGenerator {
         if (skill && typeof skill === 'object') {
           skill.value = 0;
         }
+      }
+    }
+
+    const spells = actor.system?.spells;
+    if (spells && typeof spells === 'object') {
+      for (const spellLvl of Object.values(spells) as any[]) {
+        if (spellLvl && typeof spellLvl === 'object') {
+          spellLvl.value = 0;
+          spellLvl.override = null;
+        }
+      }
+    }
+    if (actor.system?.attributes) {
+      actor.system.attributes.spellcasting = '';
+      if (actor.system.details) {
+        actor.system.details.spellLevel = 0;
       }
     }
   }
@@ -616,9 +739,21 @@ export class ActorGenerator {
     const isNonWeaponActivation = activationType === 'bonus' || activationType === 'reaction';
     const isWeapon = !!action.attack && !isNonWeaponActivation && !isPassive;
 
-    const itemName = action.englishName
+    let itemName = action.englishName
       ? `${action.name} (${action.englishName})`
-      : action.name;
+      : action.name || '';
+
+    let uses = null;
+    const usesMatch = itemName.match(/\s*\[(\d+)\/(?:日|Day)\]/);
+    if (usesMatch && usesMatch[1]) {
+      const n = parseInt(usesMatch[1], 10);
+      uses = {
+        value: n,
+        max: n,
+        per: 'lr'
+      };
+      itemName = itemName.replace(/\s*\[\d+\/(?:日|Day)\]/, '').trim();
+    }
 
     const item = {
       name: itemName,
@@ -633,14 +768,15 @@ export class ActorGenerator {
           condition: '' 
         },
         activities: activities,
+        ...(uses ? { uses } : {}),
         ...(isWeapon ? {
           type: { value: 'natural', classification: 'weapon' },
           equipped: true
         } : {
-          type: { value: 'monster', subtype: '' }
+          type: { value: 'monster', subtype: activationType === 'lair' ? 'lair' : '' }
         })
       },
-      effects: this.generateConditionEffects(action.desc || '', activities, action.name)
+      effects: resolvedActivationType ? this.generateConditionEffects(action.desc || '', activities, action.name) : []
     };
 
     this.applyActivityActivationByVersion(item.system.activities, resolvedActivationType, metadata.legendaryCost ?? 1);

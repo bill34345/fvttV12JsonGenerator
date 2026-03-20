@@ -115,8 +115,8 @@ export class ActivityGenerator {
       [id]: {
         _id: id,
         type: 'cast',
-        cast: {
-          spell: spellUuid
+        spell: {
+          uuid: spellUuid
         },
         sort: 0
       }
