@@ -71,7 +71,7 @@ graph TD
     ```
 
 #### Wave 2: TDD Test Setup
-- [ ] 3. **Setup Parser Test Suite**
+- [x] 3. **Setup Parser Test Suite**
   - Category: `unspecified-high`
   - Skills: `Code`
   - Command:
@@ -80,14 +80,14 @@ graph TD
     ```
 
 #### Wave 3: Core Logic Implementation
-- [ ] 4. **Enhance ActionData & ActionParser**
+- [x] 4. **Enhance ActionData & ActionParser**
   - Category: `ultrabrain`
   - Skills: `architecture-designer`
   - Command:
     ```typescript
     task(category="ultrabrain", load_skills=["architecture-designer"], run_in_background=false, prompt="Task 4 & 5: Expand ActionData interface and implement regex parsing logic in ActionParser using ChineseActionRegex.")
     ```
-- [ ] 5. **Upgrade ActivityGenerator & ActorGenerator**
+- [x] 5. **Upgrade ActivityGenerator & ActorGenerator**
   - Category: `ultrabrain`
   - Skills: `architecture-designer`
   - Command:
@@ -139,6 +139,6 @@ graph TD
 ---
 
 ## Final Verification Wave
-- [ ] 7. 运行完整单元测试，确保覆盖所有新加的高级特性解析，并且无回归错误。
-- [ ] 8. 使用包含所有特性的复杂中文怪物（如之前的“毁灭月石尖啸者”）进行端到端 JSON 生成，验证输出结构的完整性。
-- [ ] 9. [DECISION NEEDED] 用户确认 Phase 2 成果，准备进入后续阶段。
+- [x] 7. 运行完整单元测试，确保覆盖所有新加的高级特性解析，并且无回归错误。
+- [x] 8. 使用包含所有特性的复杂中文怪物（如之前的“毁灭月石尖啸者”）进行端到端 JSON 生成，验证输出结构的完整性。
+- [x] 9. [DECISION NEEDED] 用户确认 Phase 2 成果，准备进入后续阶段。
