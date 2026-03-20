@@ -29,3 +29,11 @@
 - Mapped `actionData.attack.reach` to `range.value` for melee attacks (`mwak`).
 - Mapped `actionData.attack.versatile` to a versatile damage part using `formatDamage`.
 - Verified with `npx bun test src/core/generator/__tests__/activity.test.ts`.
+
+## End-to-End JSON Generation Verification
+- Successfully verified the end-to-end JSON generation for complex Chinese monster actions.
+- `uses.recovery` is correctly populated for recharge actions (e.g., `[充能 5-6]`).
+- `target.template` is correctly populated for AOE actions (e.g., `覆盖 90 尺锥形区域`).
+- `range.value` is correctly populated for reach actions (e.g., `触及10尺`).
+- `versatile` damage is correctly populated for versatile weapons (e.g., `双手使用时为 17 (2d8+8) 挥砍伤害`).
+- The generated JSON structure perfectly matches the expected dnd5e 4.3.x format.
