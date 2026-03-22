@@ -940,7 +940,7 @@ export class ActorGenerator {
       activationType === ''
         ? this.inferPassiveActivationType(action)
         : activationType === 'legendary'
-          ? 'action'
+          ? 'legendary'
           : this.resolveActivationType(action, activationType);
 
     const passiveTraits = ['两栖', '感知魔法', '反魔场光环', 'Amphibious', 'Sense Magic', 'Antimagic Aura'];
@@ -996,6 +996,7 @@ export class ActorGenerator {
       resolvedActivationType,
       activationCondition,
       item.system.uses,
+      resolvedActivationType === 'legendary' ? (action.legendaryCost ?? 1) : null,
     );
     this.applyNarrativeActivityTargeting(item, action);
     this.applyHeavyHitAutomation(item, action);
@@ -1004,7 +1005,7 @@ export class ActorGenerator {
   }
 
   private resolveItemActivationCost(
-    activationType: 'action' | 'bonus' | 'reaction' | 'lair' | '' | 'special',
+    activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' | 'special',
     legendaryCost?: number,
   ): number | null {
     if (!activationType || activationType === 'special') {
@@ -2253,9 +2254,10 @@ export class ActorGenerator {
 
   private applyActivityMetadata(
     activities: Record<string, any>,
-    activationType: 'action' | 'bonus' | 'reaction' | 'lair' | '' | 'special',
+    activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' | 'special',
     condition: string,
     uses?: Record<string, any> | null,
+    activationValue: number | null = null,
   ): void {
     if (!activities || typeof activities !== 'object') {
       return;
@@ -2269,7 +2271,7 @@ export class ActorGenerator {
 
       activity.activation = {
         type: activationType,
-        value: null,
+        value: activationValue,
         override: false,
         condition,
       };

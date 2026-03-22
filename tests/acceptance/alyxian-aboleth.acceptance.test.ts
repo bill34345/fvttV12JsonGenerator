@@ -111,16 +111,38 @@ describe('Alyxian Aboleth acceptance gate', () => {
     const mentalFog = findLegendaryItem(actor, 'Mental Fog');
     expect(mentalFog.system.activation).toEqual(
       expect.objectContaining({
+        type: 'legendary',
         cost: 2,
       }),
     );
     const saveActivity = getActivities(mentalFog).find((activity) => activity.type === 'save');
+    expect(saveActivity.activation).toEqual(
+      expect.objectContaining({
+        type: 'legendary',
+        value: 2,
+      }),
+    );
     expect(saveActivity.damage.parts).toHaveLength(1);
     expect(mentalFog.flags?.fvttJsonGenerator?.rules).toEqual(
       expect.objectContaining({
         onFailedSave: expect.arrayContaining([
           expect.objectContaining({ kind: 'savePenalty', dice: '1d6' }),
         ]),
+      }),
+    );
+
+    const compel = findLegendaryItem(actor, 'Compel');
+    expect(compel.system.activation).toEqual(
+      expect.objectContaining({
+        type: 'legendary',
+        cost: 1,
+      }),
+    );
+    const compelActivity = getActivities(compel)[0];
+    expect(compelActivity.activation).toEqual(
+      expect.objectContaining({
+        type: 'legendary',
+        value: 1,
       }),
     );
   });

@@ -49,6 +49,40 @@ describe('ActorGenerator Upgrade', () => {
     expect(item.system.activation.cost).toBe(1);
   });
 
+  it('should generate legendary actions with legendary activation and a default cost of 1', () => {
+    const input: ParsedNPC = {
+      name: 'Test Legendary',
+      type: 'npc',
+      abilities: {},
+      attributes: {
+        legact: { value: 3, max: 3 },
+      },
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      legendary_actions: [
+        'Tail Swipe. Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 11 (2d6 + 4) bludgeoning damage.',
+      ],
+    };
+
+    const actor = generator.generate(input, { route: 'english' });
+    const item = actor.items.find((i: any) => i.name === 'Tail Swipe');
+    expect(item).toBeTruthy();
+    expect(item.system.activation.type).toBe('legendary');
+    expect(item.system.activation.cost).toBe(1);
+
+    const activity = Object.values(item.system.activities ?? {})[0] as any;
+    expect(activity).toBeDefined();
+    expect(activity.activation).toEqual(
+      expect.objectContaining({
+        type: 'legendary',
+        value: 1,
+      }),
+    );
+  });
+
   it('should generate regional effects with flags', () => {
     const input: ParsedNPC = {
       name: 'Test Regional',
