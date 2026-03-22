@@ -330,7 +330,7 @@
         "value": 2,
         "bonuses": {
           "check": "",
-          "passive": ""
+          "passive": "+6"
         }
       },
       "prf": {
@@ -486,7 +486,7 @@
         "special": "",
         "units": "ft"
       },
-      "spellcasting": "cha",
+      "spellcasting": "",
       "exhaustion": 0,
       "concentration": {
         "ability": "",
@@ -535,7 +535,7 @@
     },
     "details": {
       "biography": {
-        "value": "### 特质",
+        "value": "<ul><li>### 特质</li><li>**两栖.*** 该甲伏怪可以在空气和水中呼吸。</li><li>**反魔法光环.*** 甲伏怪随意在其周围 10 尺范围内创造一个反魔法区域。该特性的运作方式类似于反魔法场 (Antimagic Field) 术式，但其本身并非魔法。</li><li>**绝望共鸣.*** 瑞金的绝望情绪环绕着甲伏怪。任何在甲伏怪 10 尺范围内开始其回合的敌对生物，在进行任何攻击检定、属性检定或豁免检定时，无法获得优势 (Advantage)。</li><li>**腐化反噬.*** 如果在任何攻击检定或豁免检定中掷出 1，它必须进行一次 DC 20 的魅力 (Charisma) 豁免。失败则立即增加 1 级力竭。</li><li>**感知魔法.*** 甲伏怪可以随意感知 120 尺范围内的魔法或瑞金矿石。该特性的运作方式类似于检测魔法 (Detect Magic)，但本身并非魔法。</li></ul>",
         "public": ""
       },
       "alignment": "混乱邪恶",
@@ -544,7 +544,7 @@
       "flaw": "",
       "race": null,
       "type": {
-        "value": "异怪"
+        "value": "aberration"
       },
       "cr": 7,
       "habitat": {
@@ -554,6 +554,7 @@
       "treasure": {
         "value": []
       },
+      "spellLevel": 0,
       "xp": {
         "value": 2900
       }
@@ -610,7 +611,7 @@
       },
       "languages": {
         "value": [
-          "深渊语"
+          "deep"
         ],
         "custom": ""
       },
@@ -675,8 +676,8 @@
       }
     },
     "sight": {
-      "enabled": false,
-      "range": 0,
+      "enabled": true,
+      "range": 60,
       "angle": 360,
       "visionMode": "basic",
       "color": null,
@@ -712,24 +713,44 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>该甲伏怪可以在空气和水中呼吸。</p>",
+          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸.</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "",
+          "type": "special",
           "cost": null,
           "condition": ""
         },
-        "activities": {},
+        "activities": {
+          "dnd5eactivity0e6": {
+            "_id": "dnd5eactivity0e6",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
         "type": {
           "value": "monster",
           "subtype": ""
         }
       },
-      "effects": []
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
       "name": "反魔法光环",
@@ -737,7 +758,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>甲伏怪随意在其周围 10 尺范围内创造一个反魔法区域。该特性的运作方式类似于反魔法场 (Antimagic Field) 术式，但其本身并非魔法。</p>",
+          "value": "<ul><li>甲伏怪随意在其周围 10 尺范围内创造一个反魔法区域.该特性的运作方式类似于反魔法场 (Antimagic Field) 术式,但其本身并非魔法.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -748,13 +769,33 @@
           "cost": null,
           "condition": ""
         },
-        "activities": {},
+        "activities": {
+          "dnd5eactivity533": {
+            "_id": "dnd5eactivity533",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
         "type": {
           "value": "monster",
           "subtype": ""
         }
       },
-      "effects": []
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
       "name": "绝望共鸣",
@@ -762,24 +803,44 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>瑞金的绝望情绪环绕着甲伏怪。任何在甲伏怪 10 尺范围内开始其回合的敌对生物，在进行任何攻击检定、属性检定或豁免检定时，无法获得优势 (Advantage)。</p>",
+          "value": "<ul><li>瑞金的绝望情绪环绕着甲伏怪.任何在甲伏怪 10 尺范围内开始其回合的敌对生物,在进行任何攻击检定、属性检定或豁免检定时,无法获得优势 (Advantage).</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "",
+          "type": "special",
           "cost": null,
           "condition": ""
         },
-        "activities": {},
+        "activities": {
+          "dnd5eactivity3eb": {
+            "_id": "dnd5eactivity3eb",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
         "type": {
           "value": "monster",
           "subtype": ""
         }
       },
-      "effects": []
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
       "name": "腐化反噬",
@@ -787,102 +848,32 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>如果在任何攻击检定或豁免检定中掷出 1，它必须进行一次 DC 20 的魅力 (Charisma) 豁免。失败则立即增加 1 级力竭。</p>",
+          "value": "<ul><li>如果在任何攻击检定或豁免检定中掷出 1,它必须进行一次 DC 20 的魅力 (Charisma) 豁免.失败则立即增加 1 级力竭.</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "",
+          "type": "special",
           "cost": null,
-          "condition": ""
-        },
-        "activities": {},
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [
-        {
-          "_id": "5edcc5be8ceb824c",
-          "name": "力竭",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "exhaustion"
-          ],
-          "flags": {}
-        }
-      ]
-    },
-    {
-      "name": "感知魔法",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>甲伏怪可以随意感知 120 尺范围内的魔法或瑞金矿石。该特性的运作方式类似于检测魔法 (Detect Magic)，但本身并非魔法。</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "",
-          "cost": null,
-          "condition": ""
-        },
-        "activities": {},
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": []
-    },
-    {
-      "name": "多重攻击",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>该甲伏怪发动一次钳击。如果甲伏怪正擒抱一个生物，它还可以额外使用一次触须。</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb25": {
-            "_id": "dnd5eactivityb25",
+          "dnd5eactivity7e1": {
+            "_id": "dnd5eactivity7e1",
             "type": "utility",
             "effects": [
               {
-                "_id": "7d0078d756ce7120"
+                "_id": "004b00cbba527782"
               }
-            ]
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
@@ -892,8 +883,8 @@
       },
       "effects": [
         {
-          "_id": "7d0078d756ce7120",
-          "name": "擒抱",
+          "_id": "004b00cbba527782",
+          "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -911,20 +902,75 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
-            "grappled"
+            "exhaustion"
           ],
           "flags": {}
         }
-      ]
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
-      "name": "钳击",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "感知魔法",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>12 (2d6+5) 点钝击伤害, 外加 5 (1d8) 点心灵伤害. 命中：如果目标是体型为大型或更小的生物，则目标被擒抱（逃脱DC 16）。直到擒抱结束前，目标处于束缚状态。甲伏怪同一时间最多可擒抱两个生物。</p>",
+          "value": "<ul><li>甲伏怪可以随意感知 120 尺范围内的魔法或瑞金矿石.该特性的运作方式类似于检测魔法 (Detect Magic),但本身并非魔法.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity6a6": {
+            "_id": "dnd5eactivity6a6",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "多重攻击",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>该甲伏怪发动一次钳击.如果甲伏怪正擒抱一个生物,它还可以额外使用一次触须.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -936,8 +982,53 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye36": {
-            "_id": "dnd5eactivitye36",
+          "dnd5eactivitybc2": {
+            "_id": "dnd5eactivitybc2",
+            "type": "utility",
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "钳击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p>12 (2d6+5) 点钝击伤害, 外加 5 (1d8) 点心灵伤害.</p><ul><li>命中:如果目标是体型为大型或更小的生物,则目标被擒抱(逃脱DC 16).直到擒抱结束前,目标处于束缚状态.甲伏怪同一时间最多可擒抱两个生物.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity723": {
+            "_id": "dnd5eactivity723",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -972,7 +1063,7 @@
                   "denomination": 8,
                   "bonus": "",
                   "types": [
-                    "psychic"
+                    "bludgeoning"
                   ],
                   "custom": {
                     "enabled": false,
@@ -987,26 +1078,62 @@
               ],
               "includeBase": true
             },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
             "effects": [
               {
-                "_id": "0ba92bcaab89c014"
-              },
-              {
-                "_id": "2cde3284e23feca6"
+                "_id": "c68549976b68fb88"
               }
-            ]
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
           "value": "natural",
           "classification": "weapon"
         },
-        "equipped": true
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
+        }
       },
       "effects": [
         {
-          "_id": "0ba92bcaab89c014",
-          "name": "束缚",
+          "_id": "c68549976b68fb88",
+          "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -1024,37 +1151,22 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "statuses": [
-            "restrained"
-          ],
-          "flags": {}
-        },
-        {
-          "_id": "2cde3284e23feca6",
-          "name": "擒抱",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
           ],
           "flags": {}
         }
-      ]
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
       "name": "触须",
@@ -1062,7 +1174,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>一个被甲伏怪擒抱的生物必须成功通过一次 DC 14 的体质豁免，否则将中毒1分钟。在中持续期间，目标处于麻痹状态。此外，目标在每次其回合开始时受到 5 (1d8) 点心灵伤害。目标在其每回合结束时可以重复该豁免，成功则结束该效果。</p>",
+          "value": "<ul><li>一个被甲伏怪擒抱的生物必须成功通过一次 DC 14 的体质豁免,否则将中毒1分钟.在中持续期间,目标处于麻痹状态.此外,目标在每次其回合开始时受到 5 (1d8) 点心灵伤害.目标在其每回合结束时可以重复该豁免,成功则结束该效果.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1074,8 +1186,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity13f": {
-            "_id": "dnd5eactivity13f",
+          "dnd5eactivityd19": {
+            "_id": "dnd5eactivityd19",
             "type": "save",
             "save": {
               "ability": [
@@ -1110,15 +1222,18 @@
             },
             "effects": [
               {
-                "_id": "c4d4b1addf8929bb"
+                "_id": "3b0901845db7311b"
               },
               {
-                "_id": "b7fde966c61c737a"
-              },
-              {
-                "_id": "481d375d945b825c"
+                "_id": "dec93080ecd2c157"
               }
-            ]
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
@@ -1128,8 +1243,8 @@
       },
       "effects": [
         {
-          "_id": "c4d4b1addf8929bb",
-          "name": "中毒",
+          "_id": "3b0901845db7311b",
+          "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -1147,14 +1262,15 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
           ],
           "flags": {}
         },
         {
-          "_id": "b7fde966c61c737a",
-          "name": "麻痹",
+          "_id": "dec93080ecd2c157",
+          "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -1172,64 +1288,35 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
           ],
           "flags": {}
-        },
-        {
-          "_id": "481d375d945b825c",
-          "name": "擒抱",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "grappled"
-          ],
-          "flags": {}
         }
-      ]
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "repeatSaveOnDamage": true
+          }
+        }
+      }
     }
   ],
   "effects": [],
-  "folder": "ZGZiNmEzMjFmNzhh",
-  "flags": {
-    "dnd5e": {},
-    "babele": {
-      "translated": true,
-      "hasTranslation": true,
-      "originalName": "Ancient Brass Dragon"
-    },
-    "mcdm-flee-mortals-where-evil-lives": {
-      "role": "solo"
-    },
-    "exportSource": {
-      "world": "cor-cotn",
-      "system": "dnd5e",
-      "coreVersion": "12.331",
-      "systemVersion": "4.3.9"
-    }
-  },
+  "folder": null,
+  "flags": {},
   "_stats": {
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1769442424069,
-    "modifiedTime": 1769443264235,
-    "lastModifiedBy": "FccwB5HfAhy1F49a"
+    "createdTime": 1774201410707,
+    "modifiedTime": 1774201410707
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "Bonebreaker Dorokor",
+  "name": "底栖魔鱼衍体 (Aboleth Spawn)",
   "type": "npc",
   "img": "",
   "system": {
@@ -13,7 +13,7 @@
     "abilities": {
       "str": {
         "value": 19,
-        "proficient": 1,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -35,8 +35,8 @@
         }
       },
       "dex": {
-        "value": 15,
-        "proficient": 1,
+        "value": 12,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 12,
+        "value": 5,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,8 +104,8 @@
         }
       },
       "wis": {
-        "value": 17,
-        "proficient": 1,
+        "value": 12,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 17,
+        "value": 9,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -223,7 +223,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -275,7 +275,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -327,10 +327,10 @@
           "max": null,
           "mode": 0
         },
-        "value": 0,
+        "value": 2,
         "bonuses": {
           "check": "",
-          "passive": ""
+          "passive": "+6"
         }
       },
       "prf": {
@@ -353,7 +353,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,18 +458,12 @@
     },
     "attributes": {
       "init": {
-        "ability": "",
-        "roll": {
-          "min": null,
-          "max": null,
-          "mode": 0
-        },
-        "bonus": "@prof * 2"
+        "bonus": 3
       },
       "movement": {
         "walk": 30,
         "fly": null,
-        "swim": null,
+        "swim": 30,
         "climb": null,
         "burrow": null,
         "hover": false,
@@ -508,11 +502,11 @@
         "spent": 0
       },
       "hp": {
-        "value": 82,
-        "max": 82,
+        "value": 93,
+        "max": 93,
         "temp": null,
         "tempmax": null,
-        "formula": "11d8 + 33"
+        "formula": ""
       },
       "death": {
         "roll": {
@@ -535,18 +529,18 @@
     },
     "details": {
       "biography": {
-        "value": "",
+        "value": "<ul><li>感知魔法 (Sense Magic)：底栖魔鱼衍体可以随意感知其 120 尺范围内的魔法。除此以外，该特性运作方式如同 侦测魔法 (Detect Magic) 法术，但其本身不属于魔法。</li><li>脆弱心智 (Brittle Mind)：若该底栖魔鱼衍体从单一来源受到 15 点或以上的心灵伤害 (Psychic Damage)，其 AC 降至 13，直到其完成一次短休 (Short Rest) 或长休 (Long Rest)，并且失去 狂乱冲动 (Frenzied Impulse)。</li><li>狂乱冲动 (Frenzied Impulse)：由该衍体发动的攻击，以及对该衍体发动的攻击，皆具有优势 (Advantage)。</li></ul>",
         "public": ""
       },
-      "alignment": "neutral evil",
+      "alignment": "守序邪恶",
       "ideal": "",
       "bond": "",
       "flaw": "",
       "race": null,
       "type": {
-        "value": ""
+        "value": "aberration"
       },
-      "cr": 6,
+      "cr": 5,
       "habitat": {
         "value": [],
         "custom": ""
@@ -556,7 +550,7 @@
       },
       "spellLevel": 0,
       "xp": {
-        "value": 2300
+        "value": 1800
       }
     },
     "resources": {
@@ -587,7 +581,7 @@
       },
       "dr": {
         "value": [
-          "fire"
+          "psychic"
         ],
         "custom": "",
         "bypasses": []
@@ -602,13 +596,15 @@
         "bypasses": []
       },
       "ci": {
-        "value": [],
+        "value": [
+          "charmed",
+          "frightened"
+        ],
         "custom": ""
       },
       "languages": {
         "value": [
-          "orc",
-          "common"
+          "deep"
         ],
         "custom": ""
       },
@@ -616,7 +612,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Bonebreaker Dorokor",
+    "name": "底栖魔鱼衍体 (Aboleth Spawn)",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -705,28 +701,28 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "感知魔法 (Sense Magic)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<ul><li>底栖魔鱼衍体可以随意感知其 120 尺范围内的魔法.除此以外,该特性运作方式如同 侦测魔法 (Detect Magic) 法术,但其本身不属于魔法.</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "bonus",
-          "cost": 1,
+          "type": "special",
+          "cost": null,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6eb": {
-            "_id": "dnd5eactivity6eb",
+          "dnd5eactivityb60": {
+            "_id": "dnd5eactivityb60",
             "type": "utility",
             "activation": {
-              "type": "bonus",
+              "type": "special",
               "value": null,
               "override": false,
               "condition": ""
@@ -741,8 +737,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -750,12 +746,57 @@
       }
     },
     {
-      "name": "Wielder of Wound",
+      "name": "脆弱心智 (Brittle Mind)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor wields the magical greataxe Wound.</p>",
+          "value": "<ul><li>若该底栖魔鱼衍体从单一来源受到 15 点或以上的心灵伤害 (Psychic Damage),其 AC 降至 13,直到其完成一次短休 (Short Rest) 或长休 (Long Rest),并且失去 狂乱冲动 (Frenzied Impulse).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitye48": {
+            "_id": "dnd5eactivitye48",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "狂乱冲动 (Frenzied Impulse)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>由该衍体发动的攻击,以及对该衍体发动的攻击,皆具有优势 (Advantage).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -767,8 +808,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb06": {
-            "_id": "dnd5eactivityb06",
+          "dnd5eactivity273": {
+            "_id": "dnd5eactivity273",
             "type": "utility",
             "activation": {
               "type": "",
@@ -786,8 +827,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -795,12 +836,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "多重攻击 (Multiattack)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.</p>",
+          "value": "<ul><li>衍体进行一次 绯晶长矛 (Ruidium Spear) 攻击、一次 心灵鞭笞 (Psychic Lash),以及两次 触手 (Tentacle) 攻击.它可以将一次 心灵鞭笞 (Psychic Lash) 替换为一次 心灵探究 (Mind Delve).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -812,8 +853,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd2b": {
-            "_id": "dnd5eactivityd2b",
+          "dnd5eactivitye6b": {
+            "_id": "dnd5eactivitye6b",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -831,8 +872,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -840,12 +881,12 @@
       }
     },
     {
-      "name": "Wound",
+      "name": "绯晶长矛 (Ruidium Spear)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 11(1d12 + 5) 挥砍伤害 外加 7 (2d6) necrotic damage. The target’s maximum hit points are decreased in equal amount to the necrotic damage dealt. The target’s hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.</p>",
+          "value": "<p>近战或远程武器攻击：命中 +7，触及 5 尺或射程 20/60 尺，单一目标。</p><ul><li>命中：8（`1d8 + 4`）点穿刺伤害 (Piercing Damage)。 重击 (Critical Hit)：目标必须进行一次对抗 绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -857,12 +898,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf81": {
-            "_id": "dnd5eactivityf81",
+          "dnd5eactivityef4": {
+            "_id": "dnd5eactivityef4",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "8",
+              "bonus": "7",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -873,27 +914,10 @@
               "parts": [
                 {
                   "number": 1,
-                  "denomination": 12,
-                  "bonus": "5",
+                  "denomination": 8,
+                  "bonus": "4",
                   "types": [
-                    "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "necrotic"
+                    "piercing"
                   ],
                   "custom": {
                     "enabled": false,
@@ -958,8 +982,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -967,12 +991,12 @@
       }
     },
     {
-      "name": "Longbow",
+      "name": "心灵鞭笞 (Psychic Lash)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 6 (1d8 + 2) 穿刺伤害.</p>",
+          "value": "<p>远程法术攻击：命中 +7，射程 120 尺，单一目标。</p><ul><li>命中：18（`4d8`）点心灵伤害 (Psychic Damage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -984,12 +1008,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity016": {
-            "_id": "dnd5eactivity016",
+          "dnd5eactivitya55": {
+            "_id": "dnd5eactivitya55",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "5",
+              "bonus": "7",
               "flat": true,
               "type": {
                 "value": "rwak",
@@ -999,11 +1023,11 @@
             "damage": {
               "parts": [
                 {
-                  "number": 1,
+                  "number": 4,
                   "denomination": 8,
-                  "bonus": "2",
+                  "bonus": "",
                   "types": [
-                    "piercing"
+                    "psychic"
                   ],
                   "custom": {
                     "enabled": false,
@@ -1020,8 +1044,8 @@
             },
             "range": {
               "override": false,
-              "value": 150,
-              "long": 600,
+              "value": 120,
+              "long": null,
               "reach": null,
               "units": "ft",
               "special": ""
@@ -1059,8 +1083,8 @@
         },
         "equipped": true,
         "range": {
-          "value": 150,
-          "long": 600,
+          "value": 120,
+          "long": null,
           "reach": null,
           "units": "ft"
         }
@@ -1068,8 +1092,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1077,12 +1101,12 @@
       }
     },
     {
-      "name": "War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
+      "name": "触手 (Tentacle)",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.</p>",
+          "value": "<p>近战武器攻击：命中 +7，触及 10 尺，单一目标。</p><ul><li>命中：目标被 擒抱 (Grappled)（逃脱 DC 14），并在其每个回合开始时受到 9（`2d8`）点心灵伤害。 该衍体共有 4 条触手，每条触手都可以维持一次擒抱。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1094,9 +1118,164 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity18c": {
-            "_id": "dnd5eactivity18c",
-            "type": "utility",
+          "dnd5eactivity34e": {
+            "_id": "dnd5eactivity34e",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "7",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 8,
+                  "bonus": "",
+                  "types": [
+                    "psychic"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "effects": [
+              {
+                "_id": "708634812865f3ff"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
+        }
+      },
+      "effects": [
+        {
+          "_id": "708634812865f3ff",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "心灵探究 (Mind Delve)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>一个被该衍体擒抱的目标必须进行一次 DC 14 的智力 (Intelligence) 豁免检定.</p><ul><li>豁免失败:直到该底栖魔鱼衍体的下一回合结束前,对该目标的攻击在掷出 15–20 时即造成 重击 (Critical Hit).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityf57": {
+            "_id": "dnd5eactivityf57",
+            "type": "save",
+            "save": {
+              "ability": [
+                "int"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "14",
+                "value": 14
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "activation": {
               "type": "action",
               "value": null,
@@ -1113,143 +1292,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Focus",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityec8": {
-            "_id": "dnd5eactivityec8",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Charge",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityda2": {
-            "_id": "dnd5eactivityda2",
-            "type": "utility",
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Villain Ability: Warlord",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>As a reaction, when a minion dies, Dorokor can issue a command to her other minions. Those who can hear her gain a reaction they can use to immediately take another movement.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity2aa": {
-            "_id": "dnd5eactivity2aa",
-            "type": "utility",
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1264,7 +1308,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410643,
-    "modifiedTime": 1774201410643
+    "createdTime": 1774201410621,
+    "modifiedTime": 1774201410621
   }
 }

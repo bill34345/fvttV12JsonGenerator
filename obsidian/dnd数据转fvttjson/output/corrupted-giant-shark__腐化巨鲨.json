@@ -1,5 +1,5 @@
 {
-  "name": "Bonebreaker Dorokor",
+  "name": "腐化巨鲨 (Corrupted Giant Shark)",
   "type": "npc",
   "img": "",
   "system": {
@@ -12,8 +12,8 @@
     },
     "abilities": {
       "str": {
-        "value": 19,
-        "proficient": 1,
+        "value": 23,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -35,8 +35,8 @@
         }
       },
       "dex": {
-        "value": 15,
-        "proficient": 1,
+        "value": 11,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -58,7 +58,7 @@
         }
       },
       "con": {
-        "value": 18,
+        "value": 21,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 12,
+        "value": 1,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,8 +104,8 @@
         }
       },
       "wis": {
-        "value": 17,
-        "proficient": 1,
+        "value": 10,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 17,
+        "value": 5,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -223,7 +223,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -275,7 +275,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -327,10 +327,10 @@
           "max": null,
           "mode": 0
         },
-        "value": 0,
+        "value": 1,
         "bonuses": {
           "check": "",
-          "passive": ""
+          "passive": "+4"
         }
       },
       "prf": {
@@ -353,7 +353,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,18 +458,12 @@
     },
     "attributes": {
       "init": {
-        "ability": "",
-        "roll": {
-          "min": null,
-          "max": null,
-          "mode": 0
-        },
-        "bonus": "@prof * 2"
+        "bonus": 4
       },
       "movement": {
-        "walk": 30,
+        "walk": 0,
         "fly": null,
-        "swim": null,
+        "swim": 50,
         "climb": null,
         "burrow": null,
         "hover": false,
@@ -479,8 +473,8 @@
         "max": 3
       },
       "senses": {
-        "darkvision": 60,
-        "blindsight": 0,
+        "darkvision": 0,
+        "blindsight": 60,
         "tremorsense": 0,
         "truesight": 0,
         "special": "",
@@ -501,18 +495,18 @@
         "limit": 1
       },
       "ac": {
-        "flat": 16,
-        "calc": "flat"
+        "flat": 13,
+        "calc": "natural"
       },
       "hd": {
         "spent": 0
       },
       "hp": {
-        "value": 82,
-        "max": 82,
+        "value": 126,
+        "max": 126,
         "temp": null,
         "tempmax": null,
-        "formula": "11d8 + 33"
+        "formula": ""
       },
       "death": {
         "roll": {
@@ -535,18 +529,18 @@
     },
     "details": {
       "biography": {
-        "value": "",
+        "value": "<ul><li>再生 (Regeneration)：若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit)，则它在其回合开始时恢复 10 点生命值。</li><li>血之狂暴 (Blood Frenzy)：腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage)。</li><li>心灵漩涡 (Psychic Maelstrom)：任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。 豁免失败：受到 11（`2d10`）点心灵伤害 (Psychic Damage)。</li><li>电击敏感 (Electrosensitive)：若腐化巨鲨受到闪电伤害 (Lightning Damage)，则它在下个回合的攻击检定具有劣势 (Disadvantage)。</li><li>嗅觉过敏 (Hyperosmia)：腐化巨鲨对基于气味的效果具有劣势。 攻击者可以承受劣势，并额外承受 -5 命中罚值 来瞄准其吻部 (Snout)。若命中，则不造成伤害，但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物，且直到其下回合结束前，它接下来的 3 次 d20 掷骰（属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack）皆具有劣势。</li></ul>",
         "public": ""
       },
-      "alignment": "neutral evil",
+      "alignment": "无阵营",
       "ideal": "",
       "bond": "",
       "flaw": "",
       "race": null,
       "type": {
-        "value": ""
+        "value": "aberration"
       },
-      "cr": 6,
+      "cr": 9,
       "habitat": {
         "value": [],
         "custom": ""
@@ -556,7 +550,7 @@
       },
       "spellLevel": 0,
       "xp": {
-        "value": 2300
+        "value": 5000
       }
     },
     "resources": {
@@ -579,16 +573,14 @@
       "rules": "2024"
     },
     "traits": {
-      "size": "med",
+      "size": "huge",
       "di": {
         "value": [],
         "custom": "",
         "bypasses": []
       },
       "dr": {
-        "value": [
-          "fire"
-        ],
+        "value": [],
         "custom": "",
         "bypasses": []
       },
@@ -606,23 +598,20 @@
         "custom": ""
       },
       "languages": {
-        "value": [
-          "orc",
-          "common"
-        ],
+        "value": [],
         "custom": ""
       },
       "important": false
     }
   },
   "prototypeToken": {
-    "name": "Bonebreaker Dorokor",
+    "name": "腐化巨鲨 (Corrupted Giant Shark)",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
     "prependAdjective": false,
-    "width": 1,
-    "height": 1,
+    "width": 3,
+    "height": 3,
     "texture": {
       "src": "",
       "anchorX": 0.5,
@@ -683,7 +672,13 @@
       "saturation": 0,
       "contrast": 0
     },
-    "detectionModes": [],
+    "detectionModes": [
+      {
+        "id": "blindsight",
+        "enabled": true,
+        "range": 60
+      }
+    ],
     "occludable": {
       "radius": 0
     },
@@ -705,28 +700,28 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "再生 (Regeneration)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<ul><li>若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit),则它在其回合开始时恢复 10 点生命值.</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "bonus",
-          "cost": 1,
+          "type": "special",
+          "cost": null,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6eb": {
-            "_id": "dnd5eactivity6eb",
+          "dnd5eactivityfcf": {
+            "_id": "dnd5eactivityfcf",
             "type": "utility",
             "activation": {
-              "type": "bonus",
+              "type": "special",
               "value": null,
               "override": false,
               "condition": ""
@@ -741,8 +736,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -750,12 +745,12 @@
       }
     },
     {
-      "name": "Wielder of Wound",
+      "name": "血之狂暴 (Blood Frenzy)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor wields the magical greataxe Wound.</p>",
+          "value": "<ul><li>腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -767,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb06": {
-            "_id": "dnd5eactivityb06",
+          "dnd5eactivityf21": {
+            "_id": "dnd5eactivityf21",
             "type": "utility",
             "activation": {
               "type": "",
@@ -786,8 +781,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -795,28 +790,28 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "心灵漩涡 (Psychic Maelstrom)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.</p>",
+          "value": "<p>任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:受到 11(`2d10`)点心灵伤害 (Psychic Damage).</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "action",
-          "cost": 1,
+          "type": "special",
+          "cost": null,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd2b": {
-            "_id": "dnd5eactivityd2b",
+          "dnd5eactivity3db": {
+            "_id": "dnd5eactivity3db",
             "type": "utility",
             "activation": {
-              "type": "action",
+              "type": "special",
               "value": null,
               "override": false,
               "condition": ""
@@ -831,8 +826,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -840,12 +835,103 @@
       }
     },
     {
-      "name": "Wound",
+      "name": "电击敏感 (Electrosensitive)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>若腐化巨鲨受到闪电伤害 (Lightning Damage),则它在下个回合的攻击检定具有劣势 (Disadvantage).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity73b": {
+            "_id": "dnd5eactivity73b",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "嗅觉过敏 (Hyperosmia)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>腐化巨鲨对基于气味的效果具有劣势. 攻击者可以承受劣势,并额外承受 -5</p><ul><li>命中罚值 来瞄准其吻部 (Snout).若命中,则不造成伤害,但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物,且直到其下回合结束前,它接下来的 3 次 d20 掷骰(属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack)皆具有劣势.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity350": {
+            "_id": "dnd5eactivity350",
+            "type": "utility",
+            "effects": [],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "咬击 (Bite)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 11(1d12 + 5) 挥砍伤害 外加 7 (2d6) necrotic damage. The target’s maximum hit points are decreased in equal amount to the necrotic damage dealt. The target’s hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.</p>",
+          "value": "<p>近战武器攻击：命中 +9，触及 5 尺，单一目标。</p><ul><li>命中：22（`3d10 + 6`）点穿刺伤害 (Piercing Damage)，且目标被擒抱 (Grappled)（逃脱 DC 17）。 若此攻击使目标陷入重伤 / 濒血 (Bloodied)，则目标必须进行一次 DC 17 的魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -854,15 +940,15 @@
         "activation": {
           "type": "action",
           "cost": 1,
-          "condition": ""
+          "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivityf81": {
-            "_id": "dnd5eactivityf81",
+          "dnd5eactivity88c": {
+            "_id": "dnd5eactivity88c",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "8",
+              "bonus": "9",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -872,28 +958,11 @@
             "damage": {
               "parts": [
                 {
-                  "number": 1,
-                  "denomination": 12,
-                  "bonus": "5",
+                  "number": 3,
+                  "denomination": 10,
+                  "bonus": "6",
                   "types": [
-                    "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "necrotic"
+                    "piercing"
                   ],
                   "custom": {
                     "enabled": false,
@@ -935,11 +1004,16 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "e6501fd7f1c2255b"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
               "override": false,
-              "condition": ""
+              "condition": "bloodied"
             }
           }
         },
@@ -955,11 +1029,38 @@
           "units": "ft"
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "e6501fd7f1c2255b",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -967,12 +1068,12 @@
       }
     },
     {
-      "name": "Longbow",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "撞击 (Ram)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 6 (1d8 + 2) 穿刺伤害.</p>",
+          "value": "<p>腐化巨鲨朝一个生物直线移动至少 20 尺并进行一次咬击 (Bite);若命中,则目标必须进行一次 DC 17 的体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:目标陷入恍惚 (Dazed). 恍惚 (Dazed):直到其下一回合结束前,目标不能进行反应,且在其回合中只能执行以下三者之一:移动、执行一个动作、或执行一个附赠动作.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -984,15 +1085,163 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity016": {
-            "_id": "dnd5eactivity016",
+          "dnd5eactivityfc7": {
+            "_id": "dnd5eactivityfc7",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "17",
+                "value": 17
+              }
+            },
+            "damage": {
+              "parts": []
+            },
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
+            },
+            "effects": [
+              {
+                "_id": "76eda8876a12c297"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "76eda8876a12c297",
+          "name": "恍惚 (Dazed)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
+          "statuses": [
+            "dazed"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {
+            "dazed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "快速撤退 (Quick Retreat)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>若腐化巨鲨的咬击 (Bite) 未命中,它可以立即游动最多 25 尺,且该移动不会引发借机攻击 (Opportunity Attacks).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "bonus",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity35c": {
+            "_id": "dnd5eactivity35c",
+            "type": "utility",
+            "activation": {
+              "type": "bonus",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "附赠动作",
+          "actionSection": "附赠动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "尾部猛击 (Tail Crash)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>近战武器攻击：命中 +10，触及 10 尺，单一目标。</p><ul><li>命中：12（`1d10 + 6`）点钝击伤害 (Bludgeoning Damage)，且目标必须进行一次 DC 17 的力量 (Strength) 豁免检定。</li><li>豁免失败：目标被推开 10 尺。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "bonus",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity16e": {
+            "_id": "dnd5eactivity16e",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "5",
+              "bonus": "10",
               "flat": true,
               "type": {
-                "value": "rwak",
+                "value": "mwak",
                 "classification": "weapon"
               }
             },
@@ -1000,10 +1249,10 @@
               "parts": [
                 {
                   "number": 1,
-                  "denomination": 8,
-                  "bonus": "2",
+                  "denomination": 10,
+                  "bonus": "6",
                   "types": [
-                    "piercing"
+                    "bludgeoning"
                   ],
                   "custom": {
                     "enabled": false,
@@ -1020,9 +1269,9 @@
             },
             "range": {
               "override": false,
-              "value": 150,
-              "long": 600,
-              "reach": null,
+              "value": null,
+              "long": null,
+              "reach": 10,
               "units": "ft",
               "special": ""
             },
@@ -1046,59 +1295,7 @@
               }
             },
             "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": 150,
-          "long": 600,
-          "reach": null,
-          "units": "ft"
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity18c": {
-            "_id": "dnd5eactivity18c",
-            "type": "utility",
-            "activation": {
-              "type": "action",
+              "type": "bonus",
               "value": null,
               "override": false,
               "condition": ""
@@ -1113,66 +1310,30 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "附赠动作",
+          "actionSection": "附赠动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Focus",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityec8": {
-            "_id": "dnd5eactivityec8",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
+          "effectHints": {},
+          "rules": {
+            "onFailedSave": [
+              {
+                "kind": "push",
+                "distance": 10,
+                "units": "ft"
+              }
+            ]
           }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
         }
       }
     },
     {
-      "name": "Charge",
+      "name": "肉盾 (Meatshield)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.</p>",
+          "value": "<ul><li>当腐化巨鲨正擒抱一个目标,且被它能看见的生物攻击时,它可以将该被擒抱目标拉到攻击轨迹前;被擒抱目标承受该次本应由腐化巨鲨承受伤害的一半.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1184,9 +1345,14 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityda2": {
-            "_id": "dnd5eactivityda2",
+          "dnd5eactivity2e7": {
+            "_id": "dnd5eactivity2e7",
             "type": "utility",
+            "effects": [
+              {
+                "_id": "ec01cd6cc92b9e26"
+              }
+            ],
             "activation": {
               "type": "reaction",
               "value": null,
@@ -1200,11 +1366,38 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "ec01cd6cc92b9e26",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "反应",
+          "actionSection": "反应"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1212,12 +1405,12 @@
       }
     },
     {
-      "name": "Villain Ability: Warlord",
+      "name": "盘旋威胁 (Circling Threat)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a reaction, when a minion dies, Dorokor can issue a command to her other minions. Those who can hear her gain a reaction they can use to immediately take another movement.</p>",
+          "value": "<p>当腐化巨鲨的生命值降至重伤 / 濒血 (Bloodied) 时,它立即为撞击 (Ram) 充能,并可立即移动最多其一半速度的距离,且该移动不会引发借机攻击.随后,以它自身为中心 50 尺范围内的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:陷入恐惧 (Fear),直到其下一回合结束.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1226,17 +1419,38 @@
         "activation": {
           "type": "reaction",
           "cost": 1,
-          "condition": ""
+          "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity2aa": {
-            "_id": "dnd5eactivity2aa",
-            "type": "utility",
+          "dnd5eactivity9fe": {
+            "_id": "dnd5eactivity9fe",
+            "type": "save",
+            "save": {
+              "ability": [
+                "wis"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "17",
+                "value": 17
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "activation": {
               "type": "reaction",
               "value": null,
               "override": false,
-              "condition": ""
+              "condition": "bloodied"
+            },
+            "range": {
+              "override": false,
+              "value": 50,
+              "long": null,
+              "reach": null,
+              "units": "ft",
+              "special": ""
             }
           }
         },
@@ -1248,8 +1462,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "反应",
+          "actionSection": "反应"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1264,7 +1478,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410643,
-    "modifiedTime": 1774201410643
+    "createdTime": 1774201410668,
+    "modifiedTime": 1774201410668
   }
 }

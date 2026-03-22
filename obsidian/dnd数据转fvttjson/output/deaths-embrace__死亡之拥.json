@@ -1,5 +1,5 @@
 {
-  "name": "Bonebreaker Dorokor",
+  "name": "死亡之拥 (Death's Embrace)",
   "type": "npc",
   "img": "",
   "system": {
@@ -12,7 +12,7 @@
     },
     "abilities": {
       "str": {
-        "value": 19,
+        "value": 23,
         "proficient": 1,
         "max": null,
         "bonuses": {
@@ -36,7 +36,7 @@
       },
       "dex": {
         "value": 15,
-        "proficient": 1,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -58,7 +58,7 @@
         }
       },
       "con": {
-        "value": 18,
+        "value": 19,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 12,
+        "value": 6,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,7 +104,7 @@
         }
       },
       "wis": {
-        "value": 17,
+        "value": 9,
         "proficient": 1,
         "max": null,
         "bonuses": {
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 17,
+        "value": 4,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -223,7 +223,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -275,7 +275,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -353,7 +353,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,18 +458,12 @@
     },
     "attributes": {
       "init": {
-        "ability": "",
-        "roll": {
-          "min": null,
-          "max": null,
-          "mode": 0
-        },
-        "bonus": "@prof * 2"
+        "bonus": 10
       },
       "movement": {
         "walk": 30,
         "fly": null,
-        "swim": null,
+        "swim": 20,
         "climb": null,
         "burrow": null,
         "hover": false,
@@ -479,8 +473,8 @@
         "max": 3
       },
       "senses": {
-        "darkvision": 60,
-        "blindsight": 0,
+        "darkvision": 0,
+        "blindsight": 60,
         "tremorsense": 0,
         "truesight": 0,
         "special": "",
@@ -501,18 +495,18 @@
         "limit": 1
       },
       "ac": {
-        "flat": 16,
-        "calc": "flat"
+        "flat": 14,
+        "calc": "natural"
       },
       "hd": {
         "spent": 0
       },
       "hp": {
-        "value": 82,
-        "max": 82,
+        "value": 210,
+        "max": 210,
         "temp": null,
         "tempmax": null,
-        "formula": "11d8 + 33"
+        "formula": ""
       },
       "death": {
         "roll": {
@@ -535,18 +529,18 @@
     },
     "details": {
       "biography": {
-        "value": "",
+        "value": "<ul><li>无骨 (Boneless)：死亡之拥可以穿过窄至 10 尺宽的空间，而无需挤行 (Squeezing)。</li><li>剧毒钟罩 (Toxifying Bell)：生物可以存在于死亡之拥占据的空间内；若它们处于其下方，则受到以下效果影响： 该区域视为困难地形 (Difficult Terrain)。 所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage)。 从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD，例如 石化触须 (Petrifying Tendrils)。 此外，若死亡之拥受到毒素伤害 (Poison Damage)，它自身不承受该伤害，而是将其任意分配给占据其空间的生物。</li><li>石化触须 (Petrifying Tendrils)：在被擒抱 (Grappled) 生物的回合开始时，该生物失去 2 个已消耗的生命骰 (Hit Dice, HD)；若该生物位于死亡之拥占据的空间内，则改为失去 3 个。 若该生物无法再失去更多 HD，则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定；豁免失败则陷入瘫痪 (Paralyzed) 状态，直到该目标的下回合开始。 若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态，则其必须重复进行相同豁免以对抗石化 (Petrified)。 攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值，尝试切断一条触手。若命中，则该次攻击只造成一半伤害并切断该触手；任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放。 只有当死亡之拥的触手数量降至 2 条或更少 时，它的攻击次数才会因此受到影响。</li></ul>",
         "public": ""
       },
-      "alignment": "neutral evil",
+      "alignment": "混乱邪恶",
       "ideal": "",
       "bond": "",
       "flaw": "",
       "race": null,
       "type": {
-        "value": ""
+        "value": "aberration"
       },
-      "cr": 6,
+      "cr": 13,
       "habitat": {
         "value": [],
         "custom": ""
@@ -556,7 +550,7 @@
       },
       "spellLevel": 0,
       "xp": {
-        "value": 2300
+        "value": 10000
       }
     },
     "resources": {
@@ -579,16 +573,16 @@
       "rules": "2024"
     },
     "traits": {
-      "size": "med",
+      "size": "huge",
       "di": {
-        "value": [],
+        "value": [
+          "poison"
+        ],
         "custom": "",
         "bypasses": []
       },
       "dr": {
-        "value": [
-          "fire"
-        ],
+        "value": [],
         "custom": "",
         "bypasses": []
       },
@@ -602,27 +596,29 @@
         "bypasses": []
       },
       "ci": {
-        "value": [],
+        "value": [
+          "exhaustion",
+          "paralyzed",
+          "petrified",
+          "prone"
+        ],
         "custom": ""
       },
       "languages": {
-        "value": [
-          "orc",
-          "common"
-        ],
+        "value": [],
         "custom": ""
       },
       "important": false
     }
   },
   "prototypeToken": {
-    "name": "Bonebreaker Dorokor",
+    "name": "死亡之拥 (Death's Embrace)",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
     "prependAdjective": false,
-    "width": 1,
-    "height": 1,
+    "width": 3,
+    "height": 3,
     "texture": {
       "src": "",
       "anchorX": 0.5,
@@ -683,7 +679,13 @@
       "saturation": 0,
       "contrast": 0
     },
-    "detectionModes": [],
+    "detectionModes": [
+      {
+        "id": "blindsight",
+        "enabled": true,
+        "range": 60
+      }
+    ],
     "occludable": {
       "radius": 0
     },
@@ -705,73 +707,28 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "无骨 (Boneless)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<ul><li>死亡之拥可以穿过窄至 10 尺宽的空间,而无需挤行 (Squeezing).</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "bonus",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity6eb": {
-            "_id": "dnd5eactivity6eb",
-            "type": "utility",
-            "activation": {
-              "type": "bonus",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Wielder of Wound",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>Bonebreaker Dorokor wields the magical greataxe Wound.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "",
+          "type": "special",
           "cost": null,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb06": {
-            "_id": "dnd5eactivityb06",
+          "dnd5eactivity437": {
+            "_id": "dnd5eactivity437",
             "type": "utility",
             "activation": {
-              "type": "",
+              "type": "special",
               "value": null,
               "override": false,
               "condition": ""
@@ -786,8 +743,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -795,12 +752,253 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "剧毒钟罩 (Toxifying Bell)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.</p>",
+          "value": "<ul><li>生物可以存在于死亡之拥占据的空间内;若它们处于其下方,则受到以下效果影响: 该区域视为困难地形 (Difficult Terrain). 所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage). 从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD,例如 石化触须 (Petrifying Tendrils). 此外,若死亡之拥受到毒素伤害 (Poison Damage),它自身不承受该伤害,而是将其任意分配给占据其空间的生物.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity46f": {
+            "_id": "dnd5eactivity46f",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "4a8b0545b8fb1e18"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "4a8b0545b8fb1e18",
+          "name": "石化 (Petrified)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/petrified.svg",
+          "statuses": [
+            "petrified"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "石化触须 (Petrifying Tendrils)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>在被擒抱 (Grappled) 生物的回合开始时,该生物失去 2 个已消耗的生命骰 (Hit Dice, HD);若该生物位于死亡之拥占据的空间内,则改为失去 3 个. 若该生物无法再失去更多 HD,则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定;豁免失败则陷入瘫痪 (Paralyzed) 状态,直到该目标的下回合开始. 若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态,则其必须重复进行相同豁免以对抗石化 (Petrified). 攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值,尝试切断一条触手.若命中,则该次攻击只造成一半伤害并切断该触手;任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放. 只有当死亡之拥的触手数量降至 2 条或更少 时,它的攻击次数才会因此受到影响.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity9d2": {
+            "_id": "dnd5eactivity9d2",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "83b306f12aec5f5b"
+              },
+              {
+                "_id": "24a8787990846982"
+              },
+              {
+                "_id": "7666f76559f38d12"
+              },
+              {
+                "_id": "06a27636d7dcda85"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "83b306f12aec5f5b",
+          "name": "麻痹 (Paralyzed)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
+          "statuses": [
+            "paralyzed"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "24a8787990846982",
+          "name": "受限 (Restrained)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
+          "statuses": [
+            "restrained"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "7666f76559f38d12",
+          "name": "石化 (Petrified)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/petrified.svg",
+          "statuses": [
+            "petrified"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "06a27636d7dcda85",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "多重攻击 (Multiattack)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>死亡之拥使用一次 拖拽 (Reel),然后进行三次 触须鞭笞 (Tentacle Lash) 攻击;它可以将其中任意一次攻击替换为一次 投掷 (Fling),并将其中一次攻击替换为第二次 拖拽 (Reel).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -812,8 +1010,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd2b": {
-            "_id": "dnd5eactivityd2b",
+          "dnd5eactivityb5b": {
+            "_id": "dnd5eactivityb5b",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -831,8 +1029,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -840,12 +1038,12 @@
       }
     },
     {
-      "name": "Wound",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "拖拽 (Reel)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 11(1d12 + 5) 挥砍伤害 外加 7 (2d6) necrotic damage. The target’s maximum hit points are decreased in equal amount to the necrotic damage dealt. The target’s hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.</p>",
+          "value": "<ul><li>死亡之拥将每个被其擒抱 (Grappled) 的生物向自己拉近最多 20 尺.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -857,12 +1055,89 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf81": {
-            "_id": "dnd5eactivityf81",
+          "dnd5eactivity7d0": {
+            "_id": "dnd5eactivity7d0",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "59fbceaf39c87173"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "59fbceaf39c87173",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "触须鞭笞 (Tentacle Lash)",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p>近战武器攻击：命中 +11，触及 60 尺，单一目标。</p><ul><li>命中：13（`2d6 + 6`）点穿刺伤害 (Piercing Damage) 外加 11（`2d10`）点心灵伤害 (Psychic Damage)。若目标体型为大型或更小，则其被擒抱 (Grappled)（逃脱 DC 17）。 被擒抱的目标可以在其回合中花费 15 尺移动力并承受 11（`2d10`）点毒素伤害 (Poison Damage)，来尝试挣脱该擒抱，作为其该回合的自由动作 (Free Action)，而非消耗常规动作。每次失败的尝试会使其承受的该毒素伤害增加 `1d10`。 死亡之拥共有 6 条触手，每条可各自擒抱 1 个目标。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity671": {
+            "_id": "dnd5eactivity671",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "8",
+              "bonus": "11",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -872,11 +1147,11 @@
             "damage": {
               "parts": [
                 {
-                  "number": 1,
-                  "denomination": 12,
-                  "bonus": "5",
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "6",
                   "types": [
-                    "slashing"
+                    "piercing"
                   ],
                   "custom": {
                     "enabled": false,
@@ -890,10 +1165,10 @@
                 },
                 {
                   "number": 2,
-                  "denomination": 6,
+                  "denomination": 10,
                   "bonus": "",
                   "types": [
-                    "necrotic"
+                    "psychic"
                   ],
                   "custom": {
                     "enabled": false,
@@ -912,7 +1187,7 @@
               "override": false,
               "value": null,
               "long": null,
-              "reach": 5,
+              "reach": 60,
               "units": "ft",
               "special": ""
             },
@@ -935,6 +1210,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "d02f071ed1365144"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -951,15 +1231,42 @@
         "range": {
           "value": null,
           "long": null,
-          "reach": 5,
+          "reach": 60,
           "units": "ft"
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "d02f071ed1365144",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -967,12 +1274,12 @@
       }
     },
     {
-      "name": "Longbow",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "投掷 (Fling)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 6 (1d8 + 2) 穿刺伤害.</p>",
+          "value": "<p>死亡之拥将一个被其擒抱 (Grappled) 的物体或生物投掷最多 60 尺.若该生物与另一个生物或表面碰撞,则其因未飞满 60 尺的部分,每差 10 尺便受到 3(`1d6`)点钝击伤害 (Bludgeoning Damage). 被作为抛射物击中的生物必须进行一次 DC 17 的力量 (Strength) 豁免检定.</p><ul><li>豁免失败:被推开 10 尺,并受到等量伤害.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -984,26 +1291,27 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity016": {
-            "_id": "dnd5eactivity016",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "5",
-              "flat": true,
-              "type": {
-                "value": "rwak",
-                "classification": "weapon"
+          "dnd5eactivityfcf": {
+            "_id": "dnd5eactivityfcf",
+            "type": "save",
+            "save": {
+              "ability": [
+                "str"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "17",
+                "value": 17
               }
             },
             "damage": {
               "parts": [
                 {
                   "number": 1,
-                  "denomination": 8,
-                  "bonus": "2",
+                  "denomination": 6,
+                  "bonus": "",
                   "types": [
-                    "piercing"
+                    "bludgeoning"
                   ],
                   "custom": {
                     "enabled": false,
@@ -1015,178 +1323,282 @@
                     "formula": ""
                   }
                 }
-              ],
-              "includeBase": true
+              ]
             },
-            "range": {
+            "effects": [
+              {
+                "_id": "ed66f26986305943"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
               "override": false,
-              "value": 150,
-              "long": 600,
-              "reach": null,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "ed66f26986305943",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "onFailedSave": [
+              {
+                "kind": "push",
+                "distance": 10,
                 "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "反应触手 (Reactive Tentacles)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>死亡之拥最多可以采取 6 次反应,每条触手各 1 次.除借机攻击外,所有反应的名称中都标有额外的反应消耗 (Reaction Cost).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "reaction",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd11": {
+            "_id": "dnd5eactivityd11",
+            "type": "utility",
+            "activation": {
+              "type": "reaction",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "反应",
+          "actionSection": "反应"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "肉盾 (Body Shield)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>当死亡之拥即将被一次攻击命中时,它可以令一个正被其擒抱 (Grappled) 的生物代替自己承受该伤害.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "reaction",
+          "cost": 2,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity41b": {
+            "_id": "dnd5eactivity41b",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "a1341b8f7328f4b4"
+              }
+            ],
+            "activation": {
+              "type": "reaction",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "a1341b8f7328f4b4",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "反应",
+          "actionSection": "反应"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "散射魔法 (Scatter Magic)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>作为反应,当死亡之拥需要进行一次豁免以对抗一个仅以它为目标的法术时,它可以使该法术额外将其 10 尺内的每个生物都作为目标. 该法术每以此方式增加一个目标,其豁免 DC 就降低 1.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "reaction",
+          "cost": 3,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity1d3": {
+            "_id": "dnd5eactivity1d3",
+            "type": "utility",
+            "activation": {
+              "type": "reaction",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "反应",
+          "actionSection": "反应"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "毒液休克 (Venoshock)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>死亡之拥立即使用一次 拖拽 (Reel).任何位于其占据空间内的目标都必须进行一次 具有劣势的 DC 17 体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:陷入中毒 (Poisoned) 状态,直到其下回合结束. 此外,死亡之拥可以对任意数量被其擒抱 (Grappled) 的目标使用 投掷 (Fling).</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "reaction",
+          "cost": 3,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityc62": {
+            "_id": "dnd5eactivityc62",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "17",
+                "value": 17
               }
             },
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": 150,
-          "long": 600,
-          "reach": null,
-          "units": "ft"
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity18c": {
-            "_id": "dnd5eactivity18c",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Focus",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityec8": {
-            "_id": "dnd5eactivityec8",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Charge",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityda2": {
-            "_id": "dnd5eactivityda2",
-            "type": "utility",
+            "damage": {
+              "parts": []
+            },
+            "effects": [
+              {
+                "_id": "313ee93ae7691446"
+              },
+              {
+                "_id": "1684815d64f31374"
+              }
+            ],
             "activation": {
               "type": "reaction",
               "value": null,
@@ -1200,56 +1612,64 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "313ee93ae7691446",
+          "name": "中毒 (Poisoned)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
+          "statuses": [
+            "poisoned"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "1684815d64f31374",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Villain Ability: Warlord",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>As a reaction, when a minion dies, Dorokor can issue a command to her other minions. Those who can hear her gain a reaction they can use to immediately take another movement.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity2aa": {
-            "_id": "dnd5eactivity2aa",
-            "type": "utility",
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "反应",
+          "actionSection": "反应"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1264,7 +1684,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410643,
-    "modifiedTime": 1774201410643
+    "createdTime": 1774201410671,
+    "modifiedTime": 1774201410671
   }
 }

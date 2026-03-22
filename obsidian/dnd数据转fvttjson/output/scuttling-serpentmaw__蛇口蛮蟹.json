@@ -1,5 +1,5 @@
 {
-  "name": "Bonebreaker Dorokor",
+  "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
   "type": "npc",
   "img": "",
   "system": {
@@ -12,8 +12,8 @@
     },
     "abilities": {
       "str": {
-        "value": 19,
-        "proficient": 1,
+        "value": 16,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -35,8 +35,8 @@
         }
       },
       "dex": {
-        "value": 15,
-        "proficient": 1,
+        "value": 14,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -58,7 +58,7 @@
         }
       },
       "con": {
-        "value": 18,
+        "value": 16,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 12,
+        "value": 3,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,8 +104,8 @@
         }
       },
       "wis": {
-        "value": 17,
-        "proficient": 1,
+        "value": 11,
+        "proficient": 0,
         "max": null,
         "bonuses": {
           "check": "",
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 17,
+        "value": 3,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -223,7 +223,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -275,7 +275,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -353,7 +353,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -392,7 +392,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 0,
+        "value": 1,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,13 +458,7 @@
     },
     "attributes": {
       "init": {
-        "ability": "",
-        "roll": {
-          "min": null,
-          "max": null,
-          "mode": 0
-        },
-        "bonus": "@prof * 2"
+        "bonus": 3
       },
       "movement": {
         "walk": 30,
@@ -479,11 +473,11 @@
         "max": 3
       },
       "senses": {
-        "darkvision": 60,
-        "blindsight": 0,
+        "darkvision": 0,
+        "blindsight": 60,
         "tremorsense": 0,
         "truesight": 0,
-        "special": "",
+        "special": "盲视: 超出该范围则视为目盲",
         "units": "ft"
       },
       "spellcasting": "",
@@ -501,18 +495,18 @@
         "limit": 1
       },
       "ac": {
-        "flat": 16,
+        "flat": 17,
         "calc": "flat"
       },
       "hd": {
         "spent": 0
       },
       "hp": {
-        "value": 82,
-        "max": 82,
+        "value": 75,
+        "max": 75,
         "temp": null,
         "tempmax": null,
-        "formula": "11d8 + 33"
+        "formula": ""
       },
       "death": {
         "roll": {
@@ -535,18 +529,18 @@
     },
     "details": {
       "biography": {
-        "value": "",
+        "value": "<ul><li>群猎战术 (Pack Tactics)：只要蛇吻至少有一个盟友位于目标生物 5 尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。</li><li>脆壳反震 (Brittle Shell)：若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage)，则它的 AC 降至 14，直到其完成一次短休或长休。</li></ul>",
         "public": ""
       },
-      "alignment": "neutral evil",
+      "alignment": "无阵营",
       "ideal": "",
       "bond": "",
       "flaw": "",
       "race": null,
       "type": {
-        "value": ""
+        "value": "aberration"
       },
-      "cr": 6,
+      "cr": 5,
       "habitat": {
         "value": [],
         "custom": ""
@@ -556,7 +550,7 @@
       },
       "spellLevel": 0,
       "xp": {
-        "value": 2300
+        "value": 1800
       }
     },
     "resources": {
@@ -579,16 +573,14 @@
       "rules": "2024"
     },
     "traits": {
-      "size": "med",
+      "size": "sm",
       "di": {
         "value": [],
         "custom": "",
         "bypasses": []
       },
       "dr": {
-        "value": [
-          "fire"
-        ],
+        "value": [],
         "custom": "",
         "bypasses": []
       },
@@ -606,17 +598,14 @@
         "custom": ""
       },
       "languages": {
-        "value": [
-          "orc",
-          "common"
-        ],
+        "value": [],
         "custom": ""
       },
       "important": false
     }
   },
   "prototypeToken": {
-    "name": "Bonebreaker Dorokor",
+    "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -683,7 +672,13 @@
       "saturation": 0,
       "contrast": 0
     },
-    "detectionModes": [],
+    "detectionModes": [
+      {
+        "id": "blindsight",
+        "enabled": true,
+        "range": 60
+      }
+    ],
     "occludable": {
       "radius": 0
     },
@@ -705,57 +700,12 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "群猎战术 (Pack Tactics)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "bonus",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity6eb": {
-            "_id": "dnd5eactivity6eb",
-            "type": "utility",
-            "activation": {
-              "type": "bonus",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Wielder of Wound",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>Bonebreaker Dorokor wields the magical greataxe Wound.</p>",
+          "value": "<ul><li>只要蛇吻至少有一个盟友位于目标生物 5 尺内,且该盟友未处于失能状态,则蛇吻对该生物的攻击检定具有优势.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -767,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb06": {
-            "_id": "dnd5eactivityb06",
+          "dnd5eactivity871": {
+            "_id": "dnd5eactivity871",
             "type": "utility",
             "activation": {
               "type": "",
@@ -786,8 +736,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Traits",
-          "actionSection": "Traits"
+          "section": "特性",
+          "actionSection": "特性"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -795,12 +745,57 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "脆壳反震 (Brittle Shell)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.</p>",
+          "value": "<ul><li>若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage),则它的 AC 降至 14,直到其完成一次短休或长休.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd52": {
+            "_id": "dnd5eactivityd52",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "多重攻击 (Multiattack)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>蛇吻进行一次毒液咬击 (Venomous Bite) 和一次爪击 (Claw).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -812,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd2b": {
-            "_id": "dnd5eactivityd2b",
+          "dnd5eactivity411": {
+            "_id": "dnd5eactivity411",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -831,8 +826,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -840,12 +835,12 @@
       }
     },
     {
-      "name": "Wound",
+      "name": "爪击 (Claw)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 11(1d12 + 5) 挥砍伤害 外加 7 (2d6) necrotic damage. The target’s maximum hit points are decreased in equal amount to the necrotic damage dealt. The target’s hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.</p>",
+          "value": "<p>近战武器攻击：命中 +6，单一目标。</p><ul><li>命中：8（`1d8 + 3`）点挥砍伤害 (Slashing Damage) 或穿刺伤害 (Piercing Damage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -857,12 +852,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf81": {
-            "_id": "dnd5eactivityf81",
+          "dnd5eactivity718": {
+            "_id": "dnd5eactivity718",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "8",
+              "bonus": "6",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -873,27 +868,10 @@
               "parts": [
                 {
                   "number": 1,
-                  "denomination": 12,
-                  "bonus": "5",
+                  "denomination": 8,
+                  "bonus": "3",
                   "types": [
                     "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "necrotic"
                   ],
                   "custom": {
                     "enabled": false,
@@ -958,8 +936,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -967,12 +945,12 @@
       }
     },
     {
-      "name": "Longbow",
+      "name": "毒液咬击 (Venomous Bite)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 6 (1d8 + 2) 穿刺伤害.</p>",
+          "value": "<p>近战武器攻击：命中 +6，触及 15 尺，单一目标。</p><ul><li>命中：10（`2d6 + 3`）点穿刺伤害 (Piercing Damage)。若此次攻击具有优势 (Advantage)，则改为造成 17 点穿刺伤害。 蛇吻每次长休可分别使用以下每种毒液各一次。以下毒液效果的豁免 DC 均为 14，且重伤 / 濒血 (Bloodied) 的目标在进行该豁免时具有劣势 (Disadvantage)。 盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。 针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw)</li><li>命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。 吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -981,27 +959,27 @@
         "activation": {
           "type": "action",
           "cost": 1,
-          "condition": ""
+          "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity016": {
-            "_id": "dnd5eactivity016",
+          "dnd5eactivity324": {
+            "_id": "dnd5eactivity324",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "5",
+              "bonus": "6",
               "flat": true,
               "type": {
-                "value": "rwak",
+                "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
               "parts": [
                 {
-                  "number": 1,
-                  "denomination": 8,
-                  "bonus": "2",
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "3",
                   "types": [
                     "piercing"
                   ],
@@ -1020,9 +998,9 @@
             },
             "range": {
               "override": false,
-              "value": 150,
-              "long": 600,
-              "reach": null,
+              "value": null,
+              "long": null,
+              "reach": 15,
               "units": "ft",
               "special": ""
             },
@@ -1045,11 +1023,19 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "c9eb19b933bcbd60"
+              },
+              {
+                "_id": "396299767154dd2b"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
               "override": false,
-              "condition": ""
+              "condition": "bloodied"
             }
           }
         },
@@ -1059,120 +1045,93 @@
         },
         "equipped": true,
         "range": {
-          "value": 150,
-          "long": 600,
-          "reach": null,
+          "value": null,
+          "long": null,
+          "reach": 15,
           "units": "ft"
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "c9eb19b933bcbd60",
+          "name": "中毒 (Poisoned)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
+          "statuses": [
+            "poisoned"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "396299767154dd2b",
+          "name": "流血 (Bleeding)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
+          "statuses": [
+            "bleeding"
+          ],
+          "flags": {
+            "midi-qol.OverTime": "turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)"
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity18c": {
-            "_id": "dnd5eactivity18c",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
+          "effectHints": {
+            "bleed": true
+          },
+          "rules": {
+            "onDropToZero": {
+              "healFormula": "2d6",
+              "maintainWithoutConcentration": false
             }
           }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
         }
       }
     },
     {
-      "name": "Focus",
+      "name": "缩壳防御 (Retract)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityec8": {
-            "_id": "dnd5eactivityec8",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "Actions",
-          "actionSection": "Actions"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "Charge",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.</p>",
+          "value": "<ul><li>当蛇吻成为一次攻击的目标时,它可以令自身 AC 提高 +4,并获得四分之三掩护 (Three-Quarters Cover),直到其下一回合开始.该效果总计提供 +9 AC.在其接下来的回合中,蛇吻不能进行毒液咬击 (Venomous Bite).</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1184,8 +1143,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityda2": {
-            "_id": "dnd5eactivityda2",
+          "dnd5eactivityb1b": {
+            "_id": "dnd5eactivityb1b",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1203,8 +1162,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "反应",
+          "actionSection": "反应"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1212,12 +1171,12 @@
       }
     },
     {
-      "name": "Villain Ability: Warlord",
+      "name": "急窜脱离 (Scuttle)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a reaction, when a minion dies, Dorokor can issue a command to her other minions. Those who can hear her gain a reaction they can use to immediately take another movement.</p>",
+          "value": "<ul><li>当蛇吻被迫进行一次对抗法术或魔法效果的豁免检定时,它可以移动至多其速度的一半.若该移动使其离开该法术或魔法效果的作用范围或区域,则它不受该效果影响.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1229,8 +1188,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2aa": {
-            "_id": "dnd5eactivity2aa",
+          "dnd5eactivityf3e": {
+            "_id": "dnd5eactivityf3e",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1248,8 +1207,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "Reactions",
-          "actionSection": "Reactions"
+          "section": "反应",
+          "actionSection": "反应"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1264,7 +1223,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410643,
-    "modifiedTime": 1774201410643
+    "createdTime": 1774201410716,
+    "modifiedTime": 1774201410716
   }
 }

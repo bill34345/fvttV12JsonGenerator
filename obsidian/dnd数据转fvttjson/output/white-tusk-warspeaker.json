@@ -1,5 +1,5 @@
 {
-  "name": "白牙战语者White Tusk Warspeaker",
+  "name": "White Tusk Warspeaker",
   "type": "npc",
   "img": "",
   "system": {
@@ -467,20 +467,26 @@
         "bonus": "@prof * 2"
       },
       "movement": {
-        "walk": 30
+        "walk": 30,
+        "fly": null,
+        "swim": null,
+        "climb": null,
+        "burrow": null,
+        "hover": false,
+        "units": "ft"
       },
       "attunement": {
         "max": 3
       },
       "senses": {
-        "darkvision": 120,
-        "blindsight": 60,
-        "tremorsense": null,
-        "truesight": null,
-        "units": null,
-        "special": ""
+        "darkvision": 60,
+        "blindsight": 0,
+        "tremorsense": 0,
+        "truesight": 0,
+        "special": "",
+        "units": "ft"
       },
-      "spellcasting": "cha",
+      "spellcasting": "",
       "exhaustion": 0,
       "concentration": {
         "ability": "",
@@ -548,6 +554,7 @@
       "treasure": {
         "value": []
       },
+      "spellLevel": 0,
       "xp": {
         "value": 700
       }
@@ -574,19 +581,19 @@
     "traits": {
       "size": "med",
       "di": {
-        "bypasses": [],
         "value": [],
-        "custom": ""
+        "custom": "",
+        "bypasses": []
       },
       "dr": {
-        "bypasses": [],
         "value": [],
-        "custom": ""
+        "custom": "",
+        "bypasses": []
       },
       "dv": {
-        "bypasses": [],
         "value": [],
-        "custom": ""
+        "custom": "",
+        "bypasses": []
       },
       "dm": {
         "amount": {},
@@ -599,17 +606,14 @@
       "languages": {
         "value": [
           "orc"
-        ]
+        ],
+        "custom": ""
       },
-      "important": false,
-      "senses": {
-        "darkvision": 60,
-        "passive": 13
-      }
+      "important": false
     }
   },
   "prototypeToken": {
-    "name": "白牙战语者White Tusk Warspeaker",
+    "name": "White Tusk Warspeaker",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -666,8 +670,8 @@
       }
     },
     "sight": {
-      "enabled": false,
-      "range": 0,
+      "enabled": true,
+      "range": 60,
       "angle": 360,
       "visionMode": "basic",
       "color": null,
@@ -698,12 +702,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
           "chat": ""
         },
         "source": {
@@ -715,12 +719,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity86b": {
-            "_id": "dnd5eactivity86b",
+          "dnd5eactivity55a": {
+            "_id": "dnd5eactivity55a",
             "type": "utility",
             "activation": {
               "type": "bonus",
-              "value": 1,
+              "value": null,
+              "override": false,
               "condition": ""
             }
           }
@@ -729,15 +734,25 @@
           "value": "monster",
           "subtype": ""
         }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
       }
     },
     {
-      "name": "随从Minion",
+      "name": "Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
+          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
           "chat": ""
         },
         "source": {
@@ -745,16 +760,17 @@
         },
         "activation": {
           "type": "",
-          "cost": 1,
+          "cost": null,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfd5": {
-            "_id": "dnd5eactivityfd5",
+          "dnd5eactivity489": {
+            "_id": "dnd5eactivity489",
             "type": "utility",
             "activation": {
               "type": "",
               "value": null,
+              "override": false,
               "condition": ""
             }
           }
@@ -762,6 +778,16 @@
         "type": {
           "value": "monster",
           "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
         }
       }
     },
@@ -771,7 +797,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>白獠牙战语者进行一次挑衅鞭击攻击和两次带刺狼牙棒攻击。</p>",
+          "value": "<p>The White Tusk warspeaker makes a goading lash attack and two spiked club attacks.</p>",
           "chat": ""
         },
         "source": {
@@ -783,12 +809,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity034": {
-            "_id": "dnd5eactivity034",
+          "dnd5eactivity13a": {
+            "_id": "dnd5eactivity13a",
             "type": "utility",
             "activation": {
               "type": "action",
-              "value": 1,
+              "value": null,
+              "override": false,
               "condition": ""
             }
           }
@@ -797,15 +824,25 @@
           "value": "monster",
           "subtype": ""
         }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Actions",
+          "actionSection": "Actions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
       }
     },
     {
-      "name": "挑衅之鞭Goading Lash",
+      "name": "Goading Lash",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +5，射程 5 英尺，目标为一名友方。命中：5（1d4 + 3）挥砍伤害。该目标在其下一回合结束前所做的下一次近战武器攻击具有优势，并额外造成 10（3d6）点伤害。</p>",
+          "value": "<p>近战武器攻击: +5 命中, 触及 5 ft., one allied target. 命中： 5 (1d4 + 3) 挥砍伤害. The next 近战武器攻击 the target makes before the end of its next turn has advantage and deals an extra 10 (3d6) damage.</p>",
           "chat": ""
         },
         "source": {
@@ -817,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity71e": {
-            "_id": "dnd5eactivity71e",
+          "dnd5eactivityeec": {
+            "_id": "dnd5eactivityeec",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -851,9 +888,37 @@
               ],
               "includeBase": true
             },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 5,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
             "activation": {
               "type": "action",
-              "value": 1,
+              "value": null,
+              "override": false,
               "condition": ""
             }
           }
@@ -862,16 +927,32 @@
           "value": "natural",
           "classification": "weapon"
         },
-        "equipped": true
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 5,
+          "units": "ft"
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Actions",
+          "actionSection": "Actions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
       }
     },
     {
-      "name": "尖刺狼牙棒Spiked Club",
+      "name": "Spiked Club",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：+5 命中，攻击距离 5 英尺，单一目标。命中：10（2d6 + 3）点穿刺伤害。</p>",
+          "value": "<p>近战武器攻击: +5 命中, 触及 5 ft., 一个目标. 命中： 10 (2d6 + 3) 穿刺伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -883,8 +964,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity88d": {
-            "_id": "dnd5eactivity88d",
+          "dnd5eactivity4e6": {
+            "_id": "dnd5eactivity4e6",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -917,9 +998,37 @@
               ],
               "includeBase": true
             },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 5,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
             "activation": {
               "type": "action",
-              "value": 1,
+              "value": null,
+              "override": false,
               "condition": ""
             }
           }
@@ -928,7 +1037,23 @@
           "value": "natural",
           "classification": "weapon"
         },
-        "equipped": true
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 5,
+          "units": "ft"
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Actions",
+          "actionSection": "Actions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
       }
     },
     {
@@ -937,7 +1062,7 @@
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>The orc is a 5th-level 施法者spellcaster.<br>Its 施法属性spellcasting ability is Wisdom (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). The orc has the<br>following cleric spells prepared:<br>戏法Cantrips (随意at will): 抵抗resistance, 神圣烈焰sacred flame, 神奇术thaumaturgy<br>1st level (4 法术位slots): 治愈伤口cure wounds, 引导之矢guiding bolt, 施加创伤inflict wounds<br>2nd level (3 法术位slots): 致盲/致聋blindness/deafness, 灵能武器（大斧）spiritual weapon (greataxe)<br>3rd level (2 法术位slots): 赋予诅咒bestow curse, 守护灵spirit guardians</p>",
+          "value": "<p>The orc is a 5th-level 施法者spellcaster.<br>Its 施法属性spellcasting ability is Wisdom (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). The orc has the<br>following cleric spells prepared:<br>戏法Cantrips (随意at will): resistance, sacred flame, thaumaturgy<br>1st level (4 法术位slots): cure wounds, guiding bolt, inflict wounds<br>2nd level (3 法术位slots): blindness/deafness, spiritual weapon (greataxe)<br>3rd level (2 法术位slots): bestow curse, spirit guardians</p>",
           "chat": ""
         },
         "source": {
@@ -952,34 +1077,23 @@
           "value": "monster",
           "subtype": "spellcasting"
         }
+      },
+      "effects": [],
+      "flags": {
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
       }
     }
   ],
   "effects": [],
-  "folder": "ZGZiNmEzMjFmNzhh",
-  "flags": {
-    "dnd5e": {},
-    "babele": {
-      "translated": true,
-      "hasTranslation": true,
-      "originalName": "Ancient Brass Dragon"
-    },
-    "mcdm-flee-mortals-where-evil-lives": {
-      "role": "solo"
-    },
-    "exportSource": {
-      "world": "cor-cotn",
-      "system": "dnd5e",
-      "coreVersion": "12.331",
-      "systemVersion": "4.3.9"
-    }
-  },
+  "folder": null,
+  "flags": {},
   "_stats": {
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1769442424069,
-    "modifiedTime": 1769443264235,
-    "lastModifiedBy": "FccwB5HfAhy1F49a"
+    "createdTime": 1774201410761,
+    "modifiedTime": 1774201410761
   }
 }

@@ -330,7 +330,7 @@
         "value": 1,
         "bonuses": {
           "check": "",
-          "passive": ""
+          "passive": "+4"
         }
       },
       "prf": {
@@ -486,7 +486,7 @@
         "special": "",
         "units": "ft"
       },
-      "spellcasting": "cha",
+      "spellcasting": "",
       "exhaustion": 0,
       "concentration": {
         "ability": "",
@@ -535,7 +535,7 @@
     },
     "details": {
       "biography": {
-        "value": "",
+        "value": "<ul><li>**两栖.*** 该甲伏怪可以在空气和水中呼吸。</li><li>**感知魔法.*** 该甲伏怪可以随意感应到120尺范围内的魔法。该特性除了不具有魔法性外，其效果等同于检测魔法法术。</li></ul>",
         "public": ""
       },
       "alignment": "混乱邪恶",
@@ -544,7 +544,7 @@
       "flaw": "",
       "race": null,
       "type": {
-        "value": "异怪"
+        "value": "aberration"
       },
       "cr": 4,
       "habitat": {
@@ -554,6 +554,7 @@
       "treasure": {
         "value": []
       },
+      "spellLevel": 0,
       "xp": {
         "value": 1100
       }
@@ -610,7 +611,7 @@
       },
       "languages": {
         "value": [
-          "深渊语"
+          "deep"
         ],
         "custom": ""
       },
@@ -675,8 +676,8 @@
       }
     },
     "sight": {
-      "enabled": false,
-      "range": 0,
+      "enabled": true,
+      "range": 60,
       "angle": 360,
       "visionMode": "basic",
       "color": null,
@@ -712,71 +713,27 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>该甲伏怪可以在空气和水中呼吸。</p>",
+          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸.</li></ul>",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "",
+          "type": "special",
           "cost": null,
-          "condition": ""
-        },
-        "activities": {},
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": []
-    },
-    {
-      "name": "感知魔法",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>该甲伏怪可以随意感应到120尺范围内的魔法。该特性除了不具有魔法性外，其效果等同于检测魔法法术。</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "",
-          "cost": null,
-          "condition": ""
-        },
-        "activities": {},
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": []
-    },
-    {
-      "name": "多重攻击",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<p>该甲伏怪进行两次钳击攻击。如果该甲伏怪正在抓取一个生物，它可以再使用一次触须。</p>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc4f": {
-            "_id": "dnd5eactivityc4f",
-            "type": "utility"
+          "dnd5eactivityb2a": {
+            "_id": "dnd5eactivityb2a",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
@@ -784,15 +741,69 @@
           "subtype": ""
         }
       },
-      "effects": []
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
-      "name": "钳击",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "感知魔法",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p></p>",
+          "value": "<ul><li>该甲伏怪可以随意感应到120尺范围内的魔法.该特性除了不具有魔法性外,其效果等同于检测魔法法术.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityb37": {
+            "_id": "dnd5eactivityb37",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "多重攻击",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>该甲伏怪进行两次钳击攻击.如果该甲伏怪正在抓取一个生物,它可以再使用一次触须.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -804,8 +815,53 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf93": {
-            "_id": "dnd5eactivityf93",
+          "dnd5eactivitybcb": {
+            "_id": "dnd5eactivitybcb",
+            "type": "utility",
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "钳击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<p>11 (2d6+4) 点钝击伤害.</p><ul><li>命中:如果目标是大型或更小的生物,则其被抓取(逃脱DC 14),且甲伏怪此时抓取的生物不能超过两个.</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitycc2": {
+            "_id": "dnd5eactivitycc2",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -837,6 +893,39 @@
                 }
               ],
               "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
             }
           }
         },
@@ -844,17 +933,32 @@
           "value": "natural",
           "classification": "weapon"
         },
-        "equipped": true
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
+        }
       },
-      "effects": []
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     },
     {
-      "name": "尖啸 [充能5-6]",
+      "name": "尖啸",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>该甲伏怪发出高频尖叫，覆盖90尺锥形区域。区域内的每个生物必须进行一次 DC 13 的体质豁免。豁免失败者受到 9 (2d8) 点雷鸣伤害并陷入眩晕直到其回合结束。豁免成功则伤害减半且不被眩晕。</p>",
+          "value": "<ul><li>该甲伏怪发出高频尖叫,覆盖90尺锥形区域.区域内的每个生物必须进行一次 DC 13 的体质豁免.豁免失败者受到 9 (2d8) 点雷鸣伤害并陷入眩晕直到其回合结束.豁免成功则伤害减半且不被眩晕.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -866,8 +970,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9e7": {
-            "_id": "dnd5eactivity9e7",
+          "dnd5eactivityd73": {
+            "_id": "dnd5eactivityd73",
             "type": "save",
             "save": {
               "ability": [
@@ -882,11 +986,42 @@
             "damage": {
               "parts": []
             },
-            "effects": [
-              {
-                "_id": "f2772da910b0072c"
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": 1,
+                "contiguous": false,
+                "type": "cone",
+                "size": "90",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
               }
-            ]
+            },
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
@@ -894,33 +1029,19 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "f2772da910b0072c",
-          "name": "眩晕",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "statuses": [
-            "stunned"
-          ],
-          "flags": {}
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "halfDamageOnSave": true
+          }
         }
-      ]
+      }
     },
     {
       "name": "触须",
@@ -928,7 +1049,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>一个被该甲伏怪抓取的生物必须成功通过一次 DC 13 的体质豁免，否则将中毒1分钟。在该中毒效果结束前，目标处于麻痹状态。目标可以在其每个回合结束时重复该豁免，成功则结束该效果。</p>",
+          "value": "<ul><li>一个被该甲伏怪抓取的生物必须成功通过一次 DC 13 的体质豁免,否则将中毒1分钟.在该中毒效果结束前,目标处于麻痹状态.目标可以在其每个回合结束时重复该豁免,成功则结束该效果.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -940,8 +1061,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd83": {
-            "_id": "dnd5eactivityd83",
+          "dnd5eactivityb3a": {
+            "_id": "dnd5eactivityb3a",
             "type": "save",
             "save": {
               "ability": [
@@ -958,12 +1079,18 @@
             },
             "effects": [
               {
-                "_id": "0cc953c808d530ed"
+                "_id": "5f8f9d336d5771f3"
               },
               {
-                "_id": "0b426481ad52ec78"
+                "_id": "6c2996b2301e96fb"
               }
-            ]
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
           }
         },
         "type": {
@@ -973,8 +1100,8 @@
       },
       "effects": [
         {
-          "_id": "0cc953c808d530ed",
-          "name": "中毒",
+          "_id": "5f8f9d336d5771f3",
+          "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -992,14 +1119,15 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
           ],
           "flags": {}
         },
         {
-          "_id": "0b426481ad52ec78",
-          "name": "麻痹",
+          "_id": "6c2996b2301e96fb",
+          "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -1017,39 +1145,32 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
           ],
           "flags": {}
         }
-      ]
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
     }
   ],
   "effects": [],
-  "folder": "ZGZiNmEzMjFmNzhh",
-  "flags": {
-    "dnd5e": {},
-    "babele": {
-      "translated": true,
-      "hasTranslation": true,
-      "originalName": "Ancient Brass Dragon"
-    },
-    "mcdm-flee-mortals-where-evil-lives": {
-      "role": "solo"
-    },
-    "exportSource": {
-      "world": "cor-cotn",
-      "system": "dnd5e",
-      "coreVersion": "12.331",
-      "systemVersion": "4.3.9"
-    }
-  },
+  "folder": null,
+  "flags": {},
   "_stats": {
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1769442424069,
-    "modifiedTime": 1769443264235,
-    "lastModifiedBy": "FccwB5HfAhy1F49a"
+    "createdTime": 1774201410665,
+    "modifiedTime": 1774201410665
   }
 }
