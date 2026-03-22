@@ -1,0 +1,817 @@
+TypeDataModel | Foundry Virtual Tabletop - API Documentation - Version 12
+
+Preparing search index...
+
+The search index is not available
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ foundry
+
+ abstract
+
+ TypeDataModel
+
+Class TypeDataModel
+
+A specialized subclass of DataModel, intended to represent a Document's type-specific data.
+Systems or Modules that provide DataModel implementations for sub-types of Documents (such as Actors or Items)
+should subclass this class instead of the base DataModel class.
+
+See
+
+ Document
+
+Abstract
+
+Example: Registering a custom sub-type for a Module.
+
+ module.json
+
+ {
+ "id" : "my-module" ,
+ "esmodules" : [ "main.mjs" ],
+ "documentTypes" : {
+ "Actor" : {
+ "sidekick" : {},
+ "villain" : {}
+ },
+ "JournalEntryPage" : {
+ "dossier" : {},
+ "quest" : {
+ "htmlFields" : [ "description" ]
+ }
+ }
+ }
+ }
+ Copy
+
+ main.mjs
+
+ Hooks . on ( "init" , () => {
+ Object . assign ( CONFIG . Actor . dataModels , {
+ "my-module.sidekick" : SidekickModel ,
+ "my-module.villain" : VillainModel
+ });
+ Object . assign ( CONFIG . JournalEntryPage . dataModels , {
+ "my-module.dossier" : DossierModel ,
+ "my-module.quest" : QuestModel
+ });
+ });
+
+ class QuestModel extends foundry . abstract . TypeDataModel {
+ static defineSchema () {
+ const fields = foundry . data . fields ;
+ return {
+ description: new fields . HTMLField ({ required: false , blank: true , initial: "" }),
+ steps: new fields . ArrayField ( new fields . StringField ())
+ };
+ }
+
+ prepareDerivedData () {
+ this . totalSteps = this . steps . length ;
+ }
+ }
+ Copy
+
+Hierarchy ( view full )
+
+ DataModel
+
+ TypeDataModel
+
+ RegionBehaviorType
+
+ Index
+
+Constructors
+
+ constructor
+
+Properties
+
+ _source
+ parent
+ LOCALIZATION_ PREFIXES
+
+Accessors
+
+ schema
+ invalid
+ validation Failures
+ schema
+
+Methods
+
+ prepare Base Data
+ prepare Derived Data
+ to Embed
+ _pre Create
+ reset
+ clone
+ validate
+ update Source
+ to Object
+ toJSON
+ _on Create
+ _pre Update
+ _on Update
+ _pre Delete
+ _on Delete
+ _configure
+ _initialize Source
+ _initialize
+ define Schema
+ clean Data
+ validate Joint
+ from Source
+ fromJSON
+ migrate Data
+ migrate Data Safe
+ shim Data
+ _initialization Order
+
+Constructors
+
+ constructor
+
+ new Type Data Model ( data ? , options ? ) : TypeDataModel
+
+Parameters
+
+ data : {} = {}
+
+ options : {} = {}
+
+Returns TypeDataModel
+
+Inherit Doc
+
+Overrides DataModel.constructor
+
+Properties
+
+ _source
+
+ _source : object
+
+The source data object for this DataModel instance.
+Once constructed, the source object is sealed such that no keys may be added nor removed.
+
+Inherited from DataModel . _source
+
+ parent
+
+ parent : DataModel
+
+An immutable reverse-reference to a parent DataModel to which this model belongs.
+
+Inherited from DataModel . parent
+
+ Static LOCALIZATION_ PREFIXES
+
+ LOCALIZATION_ PREFIXES : string [] = []
+
+A set of localization prefix paths which are used by this data model.
+
+Overrides DataModel . LOCALIZATION_PREFIXES
+
+Accessors
+
+ schema
+
+ get schema ( ) : SchemaField
+
+Define the data schema for this document instance.
+
+Returns SchemaField
+
+Inherited from DataModel.schema
+
+ invalid
+
+ get invalid ( ) : boolean
+
+Is the current state of this DataModel invalid?
+The model is invalid if there is any unresolved failure.
+
+Returns boolean
+
+Inherited from DataModel.invalid
+
+ validation Failures
+
+ get validationFailures ( ) : {
+      fields : DataModelValidationFailure ;
+      joint : DataModelValidationFailure ;
+ }
+
+An array of validation failure instances which may have occurred when this instance was last validated.
+
+Returns {
+      fields : DataModelValidationFailure ;
+      joint : DataModelValidationFailure ;
+ }
+
+ fields : DataModelValidationFailure
+
+ joint : DataModelValidationFailure
+
+Inherited from DataModel.validationFailures
+
+ Static schema
+
+ get schema ( ) : SchemaField
+
+Returns SchemaField
+
+Overrides DataModel.schema
+
+Methods
+
+ prepare Base Data
+
+ prepare Base Data ( ) : void
+
+Prepare data related to this DataModel itself, before any derived data is computed.
+
+Called before ClientDocument#prepareBaseData in ClientDocument#prepareData.
+
+Returns void
+
+ prepare Derived Data
+
+ prepare Derived Data ( ) : void
+
+Apply transformations of derivations to the values of the source data object.
+Compute data fields whose values are not stored to the database.
+
+Called before ClientDocument#prepareDerivedData in ClientDocument#prepareData.
+
+Returns void
+
+ to Embed
+
+ to Embed ( config , options ? ) : Promise < HTMLElement | HTMLCollection >
+
+Convert this Document to some HTML display for embedding purposes.
+
+Parameters
+
+ config : DocumentHTMLEmbedConfig
+
+Configuration for embedding behavior.
+
+ Optional options : EnrichmentOptions = {}
+
+The original enrichment options for cases where the Document embed content
+ also contains text that must be enriched.
+
+Returns Promise < HTMLElement | HTMLCollection >
+
+ _pre Create
+
+ _pre Create ( data , options , user ) : Promise < boolean | void >
+
+ Internal
+
+Called by ClientDocument#_preCreate.
+
+Parameters
+
+ data : object
+
+The initial data object provided to the document creation request
+
+ options : object
+
+Additional options which modify the creation request
+
+ user : BaseUser
+
+The User requesting the document creation
+
+Returns Promise < boolean | void >
+
+Return false to exclude this Document from the creation operation
+
+ reset
+
+ reset ( ) : void
+
+Reset the state of this data instance back to mirror the contained source data, erasing any changes.
+
+Returns void
+
+Inherited from DataModel . reset
+
+ clone
+
+ clone ( data ? , context ? ) : Document | Promise < Document >
+
+Clone a model, creating a new data model by combining current data with provided overrides.
+
+Parameters
+
+ Optional data : Object = {}
+
+Additional data which overrides current document data at the time of creation
+
+ Optional context : object = {}
+
+Context options passed to the data model constructor
+
+Returns Document | Promise < Document >
+
+The cloned Document instance
+
+Inherited from DataModel . clone
+
+ validate
+
+ validate ( options ? ) : boolean
+
+Validate the data contained in the document to check for type and content
+This function throws an error if data within the document is not valid
+
+Parameters
+
+ options : {
+      changes : object ;
+      clean : boolean ;
+      fallback : boolean ;
+      dropInvalidEmbedded : boolean ;
+      strict : boolean ;
+      fields : boolean ;
+      joint : boolean ;
+ } = {}
+
+Optional parameters which customize how validation occurs.
+
+ changes : object
+
+A specific set of proposed changes to validate, rather than the full
+ source data of the model.
+
+ clean : boolean
+
+If changes are provided, attempt to clean the changes before validating
+ them?
+
+ fallback : boolean
+
+Allow replacement of invalid values with valid defaults?
+
+ drop Invalid Embedded : boolean
+
+If true, invalid embedded documents will emit a warning and
+ be placed in the invalidDocuments collection rather than
+ causing the parent to be considered invalid.
+
+ strict : boolean
+
+Throw if an invalid value is encountered, otherwise log a warning?
+
+ fields : boolean
+
+Perform validation on individual fields?
+
+ joint : boolean
+
+Perform joint validation on the full data model?
+ Joint validation will be performed by default if no changes are passed.
+ Joint validation will be disabled by default if changes are passed.
+ Joint validation can be performed on a complete set of changes (for
+ example testing a complete data model) by explicitly passing true.
+
+Returns boolean
+
+An indicator for whether the document contains valid data
+
+Inherited from DataModel . validate
+
+ update Source
+
+ update Source ( changes ? , options ? ) : object
+
+Update the DataModel locally by applying an object of changes to its source data.
+The provided changes are cleaned, validated, and stored to the source data object for this model.
+The source data is then re-initialized to apply those changes to the prepared data.
+The method returns an object of differential changes which modified the original data.
+
+Parameters
+
+ changes : object = {}
+
+New values which should be applied to the data model
+
+ Optional options : object = {}
+
+Options which determine how the new data is merged
+
+Returns object
+
+An object containing the changed keys and values
+
+Inherited from DataModel . updateSource
+
+ to Object
+
+ to Object ( source ? ) : object
+
+Copy and transform the DataModel into a plain object.
+Draw the values of the extracted object from the data source (by default) otherwise from its transformed values.
+
+Parameters
+
+ Optional source : boolean = true
+
+Draw values from the underlying data source rather than transformed values
+
+Returns object
+
+The extracted primitive object
+
+Inherited from DataModel . toObject
+
+ toJSON
+
+ toJSON ( ) : object
+
+Extract the source data for the DataModel into a simple object format that can be serialized.
+
+Returns object
+
+The document source data expressed as a plain object
+
+Inherited from DataModel . toJSON
+
+ Protected _on Create
+
+ _on Create ( data , options , userId ) : void
+
+ Protected Internal
+
+Called by ClientDocument#_onCreate.
+
+Parameters
+
+ data : object
+
+The initial data object provided to the document creation request
+
+ options : object
+
+Additional options which modify the creation request
+
+ userId : string
+
+The id of the User requesting the document update
+
+Returns void
+
+ Protected _pre Update
+
+ _pre Update ( changes , options , user ) : Promise < boolean | void >
+
+ Protected Internal
+
+Called by ClientDocument#_preUpdate.
+
+Parameters
+
+ changes : object
+
+The candidate changes to the Document
+
+ options : object
+
+Additional options which modify the update request
+
+ user : BaseUser
+
+The User requesting the document update
+
+Returns Promise < boolean | void >
+
+A return value of false indicates the update operation should be cancelled.
+
+ Protected _on Update
+
+ _on Update ( changed , options , userId ) : void
+
+ Protected Internal
+
+Called by ClientDocument#_onUpdate.
+
+Parameters
+
+ changed : object
+
+The differential data that was changed relative to the documents prior values
+
+ options : object
+
+Additional options which modify the update request
+
+ userId : string
+
+The id of the User requesting the document update
+
+Returns void
+
+ Protected _pre Delete
+
+ _pre Delete ( options , user ) : Promise < boolean | void >
+
+ Protected Internal
+
+Called by ClientDocument#_preDelete.
+
+Parameters
+
+ options : object
+
+Additional options which modify the deletion request
+
+ user : BaseUser
+
+The User requesting the document deletion
+
+Returns Promise < boolean | void >
+
+A return value of false indicates the deletion operation should be cancelled.
+
+ Protected _on Delete
+
+ _on Delete ( options , userId ) : void
+
+ Protected Internal
+
+Called by ClientDocument#_onDelete.
+
+Parameters
+
+ options : object
+
+Additional options which modify the deletion request
+
+ userId : string
+
+The id of the User requesting the document update
+
+Returns void
+
+ Protected _configure
+
+ _configure ( options ? ) : void
+
+ Protected
+
+Configure the data model instance before validation and initialization workflows are performed.
+
+Parameters
+
+ options : {} = {}
+
+Returns void
+
+Inherited from DataModel . _configure
+
+ Protected _initialize Source
+
+ _initialize Source ( data , options ? ) : object
+
+ Protected
+
+Initialize the source data for a new DataModel instance.
+One-time migrations and initial cleaning operations are applied to the source data.
+
+Parameters
+
+ data : object | DataModel
+
+The candidate source data from which the model will be constructed
+
+ Optional options : object = {}
+
+Options provided to the model constructor
+
+Returns object
+
+Migrated and cleaned source data which will be stored to the model instance
+
+Inherited from DataModel . _initializeSource
+
+ Protected _initialize
+
+ _initialize ( options ? ) : void
+
+ Protected
+
+Initialize the instance by copying data from the source object to instance attributes.
+This mirrors the workflow of SchemaField#initialize but with some added functionality.
+
+Parameters
+
+ Optional options : object = {}
+
+Options provided to the model constructor
+
+Returns void
+
+Inherited from DataModel . _initialize
+
+ Static define Schema
+
+ define Schema ( ) : DataSchema
+
+Define the data schema for documents of this type.
+The schema is populated the first time it is accessed and cached for future reuse.
+
+Returns DataSchema
+
+Inherited from DataModel . defineSchema
+
+ Static clean Data
+
+ clean Data ( source ? , options ? ) : object
+
+Clean a data source object to conform to a specific provided schema.
+
+Parameters
+
+ Optional source : object = {}
+
+The source data object
+
+ Optional options : object = {}
+
+Additional options which are passed to field cleaning methods
+
+Returns object
+
+The cleaned source data
+
+Inherited from DataModel . cleanData
+
+ Static validate Joint
+
+ validate Joint ( data ) : any
+
+Evaluate joint validation rules which apply validation conditions across multiple fields of the model.
+Field-specific validation rules should be defined as part of the DataSchema for the model.
+This method allows for testing aggregate rules which impose requirements on the overall model.
+
+Parameters
+
+ data : object
+
+Candidate data for the model
+
+Returns any
+
+Throws
+
+An error if a validation failure is detected
+
+Inherited from DataModel . validateJoint
+
+ Static from Source
+
+ from Source ( source , context ? ) : DataModel
+
+Create a new instance of this DataModel from a source record.
+The source is presumed to be trustworthy and is not strictly validated.
+
+Parameters
+
+ source : object
+
+Initial document data which comes from a trusted source.
+
+ Optional context : any = {}
+
+Model construction context
+
+Returns DataModel
+
+Inherited from DataModel . fromSource
+
+ Static fromJSON
+
+ fromJSON ( json ) : DataModel
+
+Create a DataModel instance using a provided serialized JSON string.
+
+Parameters
+
+ json : string
+
+Serialized document data in string format
+
+Returns DataModel
+
+A constructed data model instance
+
+Inherited from DataModel . fromJSON
+
+ Static migrate Data
+
+ migrate Data ( source ) : object
+
+Migrate candidate source data for this DataModel which may require initial cleaning or transformations.
+
+Parameters
+
+ source : object
+
+The candidate source data from which the model will be constructed
+
+Returns object
+
+Migrated source data, if necessary
+
+Inherited from DataModel . migrateData
+
+ Static migrate Data Safe
+
+ migrate Data Safe ( source ) : object
+
+Wrap data migration in a try/catch which attempts it safely
+
+Parameters
+
+ source : object
+
+The candidate source data from which the model will be constructed
+
+Returns object
+
+Migrated source data, if necessary
+
+Inherited from DataModel . migrateDataSafe
+
+ Static shim Data
+
+ shim Data ( data , options ? ) : object
+
+Take data which conforms to the current data schema and add backwards-compatible accessors to it in order to
+support older code which uses this data.
+
+Parameters
+
+ data : object
+
+Data which matches the current schema
+
+ Optional options : {
+      embedded : boolean ;
+ } = {}
+
+Additional shimming options
+
+ embedded : boolean
+
+Apply shims to embedded models?
+
+Returns object
+
+Data with added backwards-compatible properties
+
+Inherited from DataModel . shimData
+
+ Static Protected _initialization Order
+
+ _initialization Order ( ) : Generator < [ string , DataField ] , any , any >
+
+ Protected
+
+A generator that orders the DataFields in the DataSchema into an expected initialization order.
+
+Returns Generator < [ string , DataField ] , any , any >
+
+Inherited from DataModel . _initializationOrder
+
+ Settings
+
+Member Visibility
+
+ Protected
+
+ Private
+
+ Inherited
+
+Theme
+ OS Light Dark
+
+ On This Page
+
+ constructor _source parent LOCALIZATION_ PREFIXES schema invalid validation Failures schema prepare Base Data prepare Derived Data to Embed _pre Create reset clone validate update Source to Object toJSON _on Create _pre Update _on Update _pre Delete _on Delete _configure _initialize Source _initialize define Schema clean Data validate Joint from Source fromJSON migrate Data migrate Data Safe shim Data _initialization Order
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+Loading...

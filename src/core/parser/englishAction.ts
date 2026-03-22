@@ -200,7 +200,7 @@ export class EnglishActionParser {
       type: attackType,
       toHit: Number.parseInt(match[2], 10),
       range,
-      damage: this.parseDamages(body),
+      damage: this.parseDamages(this.extractAttackDamageText(body)),
     };
   }
 
@@ -260,5 +260,30 @@ export class EnglishActionParser {
     }
 
     return parts;
+  }
+
+  private extractAttackDamageText(body: string): string {
+    const hitIndex = body.search(/\bHit:/i);
+    if (hitIndex === -1) {
+      return body;
+    }
+
+    const hitText = body.slice(hitIndex);
+    const boundaries = [
+      /\bHeavy Hit:/i,
+      /\bIf the attack total exceeds\b/i,
+      /\bIf the [^.]+ takes\b/i,
+      /\bOn a failed save\b/i,
+    ];
+
+    let endIndex = hitText.length;
+    for (const boundary of boundaries) {
+      const matchIndex = hitText.search(boundary);
+      if (matchIndex > 0) {
+        endIndex = Math.min(endIndex, matchIndex);
+      }
+    }
+
+    return hitText.slice(0, endIndex);
   }
 }

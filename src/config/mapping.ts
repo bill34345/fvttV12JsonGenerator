@@ -94,12 +94,15 @@ export interface ParsedNPC {
     dm?: any;
     ci?: string[];
     languages?: string[];
-    senses?: Record<string, number>;
+    senses?: Record<string, number | string>;
     bypasses?: string[];
   };
 
   skills?: Record<string, number>; // key (e.g. 'ste') -> value (1 or 2)
+  skillBonuses?: Record<string, number>; // key (e.g. 'ste') -> extra check bonus beyond inferred proficiency
+  skillPassives?: Record<string, number>; // key (e.g. 'prc') -> target passive score from source text
   saves?: string[]; // list of ability keys (e.g. 'str')
+  saveBonuses?: Record<string, number>; // key (e.g. 'con') -> extra save bonus beyond base + proficiency
   lairInitiative?: number;
 
   actions?: string[];

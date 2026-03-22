@@ -1,0 +1,1005 @@
+CompendiumCollection | Foundry Virtual Tabletop - API Documentation - Version 12
+
+Preparing search index...
+
+The search index is not available
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ client
+
+ CompendiumCollection
+
+Class CompendiumCollection
+
+A collection of Document objects contained within a specific compendium pack.
+Each Compendium pack has its own associated instance of the CompendiumCollection class which contains its contents.
+
+Abstract
+
+See
+
+Param: metadata
+
+The compendium metadata, an object provided by game.data
+
+Hierarchy ( view full )
+
+ DocumentCollection < this >
+
+ CompendiumCollection
+
+ Index
+
+Properties
+
+ metadata
+ index
+ application Class
+ apps
+ invalid Document Ids
+ #folders
+ #indexed Fields
+ CACHE_ LIFETIME_ SECONDS
+ CONFIG_ SETTING
+ document Name
+
+Accessors
+
+ collection
+ banner
+ max Folder Depth
+ folder
+ sort
+ config
+ document Name
+ locked
+ ownership
+ visible
+ title
+ index Fields
+ indexed
+ document Class
+ name
+
+Methods
+
+ set Folder
+ _get Visible Tree Contents
+ get
+ set
+ delete
+ clear
+ get Index
+ get Document
+ get Documents
+ get User Level
+ test User Permission
+ import Document
+ import Folder
+ import Folders
+ import All
+ import Dialog
+ index Document
+ configure Ownership Dialog
+ get Uuid
+ configure
+ delete Compendium
+ duplicate Compendium
+ migrate
+ update All
+ _on Modify Contents
+ create Document
+ get Invalid
+ render
+ search
+ #assert User Can Manage
+ _sort Standard
+ _activate Socket Listeners
+ create Compendium
+ get Searchable Fields
+ #handle Create Compendium
+ #handle Delete Compendium
+
+Properties
+
+ metadata
+
+ metadata : object
+
+The compendium metadata which defines the compendium content and location
+
+ index
+
+ index : Collection < string , object >
+
+A subsidiary collection which contains the more minimal index of the pack
+
+ application Class
+
+ application Class : typeof Application = Compendium
+
+A reference to the Application class which provides an interface to interact with this compendium content.
+
+ apps
+
+ apps : Application []
+
+An Array of application references which will be automatically updated when the collection content changes
+
+Inherited from DocumentCollection . apps
+
+ invalid Document Ids
+
+ invalid Document Ids : Set < string > = ...
+
+Record the set of document ids where the Document was not initialized because of invalid source data
+
+Inherited from DocumentCollection . invalidDocumentIds
+
+ Private #folders
+
+ #folders : CompendiumFolderCollection
+
+The set of Compendium Folders
+
+ Private #indexed Fields
+
+ #indexed Fields : Set < string >
+
+Track which document fields have been indexed for this compendium pack
+
+ Static CACHE_ LIFETIME_ SECONDS
+
+ CACHE_ LIFETIME_ SECONDS : number = 300
+
+The amount of time that Document instances within this CompendiumCollection are held in memory.
+Accessing the contents of the Compendium pack extends the duration of this lifetime.
+
+ Static CONFIG_ SETTING
+
+ CONFIG_ SETTING : string = "compendiumConfiguration"
+
+The named game setting which contains Compendium configurations.
+
+ Static document Name
+
+ document Name : string
+
+The base Document type which is contained within this DocumentCollection
+
+Inherited from DocumentCollection . documentName
+
+Accessors
+
+ collection
+
+ get collection ( ) : string
+
+The canonical Compendium name - comprised of the originating package and the pack name
+
+Returns string
+
+ banner
+
+ get banner ( ) : string | void
+
+The banner image for this Compendium pack, or the default image for the pack type if no image is set.
+
+Returns string | void
+
+ max Folder Depth
+
+ get maxFolderDepth ( ) : number
+
+Returns number
+
+ folder
+
+ get folder ( ) : Folder
+
+Get the Folder that this Compendium is displayed within
+
+Returns Folder
+
+ sort
+
+ get sort ( ) : number
+
+Get the sort order for this Compendium
+
+Returns number
+
+ config
+
+ get config ( ) : object
+
+Access the compendium configuration data for this pack
+
+Returns object
+
+ document Name
+
+ get documentName ( ) : any
+
+Returns any
+
+Inherit Doc
+
+Overrides DirectoryCollectionMixin(DocumentCollection).documentName
+
+ locked
+
+ get locked ( ) : boolean
+
+Track whether the Compendium Collection is locked for editing
+
+Returns boolean
+
+ ownership
+
+ get ownership ( ) : Record < USER_ROLES , DOCUMENT_OWNERSHIP_LEVELS >
+
+The visibility configuration of this compendium pack.
+
+Returns Record < USER_ROLES , DOCUMENT_OWNERSHIP_LEVELS >
+
+ visible
+
+ get visible ( ) : boolean
+
+Is this Compendium pack visible to the current game User?
+
+Returns boolean
+
+ title
+
+ get title ( ) : string
+
+A convenience reference to the label which should be used as the title for the Compendium pack.
+
+Returns string
+
+ index Fields
+
+ get indexFields ( ) : Set < string >
+
+The index fields which should be loaded for this compendium pack
+
+Returns Set < string >
+
+ indexed
+
+ get indexed ( ) : boolean
+
+Has this compendium pack been fully indexed?
+
+Returns boolean
+
+ document Class
+
+ get documentClass ( ) : typeof Document
+
+A reference to the Document class definition which is contained within this DocumentCollection.
+
+Returns typeof Document
+
+Inherited from DirectoryCollectionMixin(DocumentCollection).documentClass
+
+ name
+
+ get name ( ) : string
+
+The Collection class name
+
+Returns string
+
+Inherited from DirectoryCollectionMixin(DocumentCollection).name
+
+Methods
+
+ set Folder
+
+ set Folder ( folder ) : Promise < void >
+
+Assign this CompendiumCollection to be organized within a specific Folder.
+
+Parameters
+
+ folder : string | Folder
+
+The desired Folder within the World or null to clear the folder
+
+Returns Promise < void >
+
+A promise which resolves once the transaction is complete
+
+ _get Visible Tree Contents
+
+ _get Visible Tree Contents ( ) : any
+
+Returns any
+
+ get
+
+ get ( key , options ) : Document
+
+Get an element from the DocumentCollection by its ID.
+
+Parameters
+
+ key : any
+
+The ID of the Document to retrieve.
+
+ options : any
+
+Additional options to configure retrieval.
+
+Returns Document
+
+Throws
+
+If strict is true and the Document cannot be found.
+
+Overrides DocumentCollection . get
+
+ set
+
+ set ( id , document ) : void
+
+Parameters
+
+ id : any
+
+ document : any
+
+Returns void
+
+Inherit Doc
+
+Overrides DocumentCollection . set
+
+ delete
+
+ delete ( id ) : boolean
+
+Parameters
+
+ id : any
+
+Returns boolean
+
+Inherit Doc
+
+Overrides DocumentCollection . delete
+
+ clear
+
+ clear ( ) : void
+
+Returns void
+
+Inherit Doc
+
+ get Index
+
+ get Index ( options ? ) : Promise < Collection >
+
+Load the Compendium index and cache it as the keys and values of the Collection.
+
+Parameters
+
+ Optional options : {
+      fields : string [] ;
+ } = {}
+
+Options which customize how the index is created
+
+ fields : string []
+
+An array of fields to return as part of the index
+
+Returns Promise < Collection >
+
+ get Document
+
+ get Document ( id ) : Promise < Document >
+
+Get a single Document from this Compendium by ID.
+The document may already be locally cached, otherwise it is retrieved from the server.
+
+Parameters
+
+ id : string
+
+The requested Document id
+
+Returns Promise < Document >
+
+The retrieved Document instance
+
+ get Documents
+
+ get Documents ( query ? ) : Promise < Document [] >
+
+Load multiple documents from the Compendium pack using a provided query object.
+
+Parameters
+
+ query : object = {}
+
+A database query used to retrieve documents from the underlying database
+
+Returns Promise < Document [] >
+
+The retrieved Document instances
+
+Example: Get Documents that match the given value only.
+
+ await pack . getDocuments ({ type: "weapon" });
+ Copy
+
+Example: Get several Documents by their IDs.
+
+ await pack . getDocuments ({ _id__in: arrayOfIds });
+ Copy
+
+Example: Get Documents by their sub-types.
+
+ await pack . getDocuments ({ type__in: [ "weapon" , "armor" ] });
+ Copy
+
+ get User Level
+
+ get User Level ( user ? ) : number
+
+Get the ownership level that a User has for this Compendium pack.
+
+Parameters
+
+ user : User = game.user
+
+The user being tested
+
+Returns number
+
+The ownership level in CONST.DOCUMENT_OWNERSHIP_LEVELS
+
+ test User Permission
+
+ test User Permission ( user , permission , options ? ) : boolean
+
+Test whether a certain User has a requested permission level (or greater) over the Compendium pack
+
+Parameters
+
+ user : BaseUser
+
+The User being tested
+
+ permission : string | number
+
+The permission level from DOCUMENT_OWNERSHIP_LEVELS to test
+
+ options : {
+      exact : boolean ;
+ } = {}
+
+Additional options involved in the permission test
+
+ exact : boolean
+
+Require the exact permission level requested?
+
+Returns boolean
+
+Does the user have this permission level over the Compendium pack?
+
+ import Document
+
+ import Document ( document , options ? ) : Promise < Document >
+
+Import a Document into this Compendium Collection.
+
+Parameters
+
+ document : Document
+
+The existing Document you wish to import
+
+ Optional options : object = {}
+
+Additional options which modify how the data is imported.
+ See ClientDocumentMixin#toCompendium
+
+Returns Promise < Document >
+
+The imported Document instance
+
+ import Folder
+
+ import Folder ( folder , options ? ) : Promise < void >
+
+Import a Folder into this Compendium Collection.
+
+Parameters
+
+ folder : Folder
+
+The existing Folder you wish to import
+
+ Optional options : {
+      importParents : boolean ;
+ } = {}
+
+Additional options which modify how the data is imported.
+
+ import Parents : boolean
+
+Import any parent folders which are not already present in the Compendium
+
+Returns Promise < void >
+
+ import Folders
+
+ import Folders ( folders , options ? ) : Promise < void >
+
+Import an array of Folders into this Compendium Collection.
+
+Parameters
+
+ folders : Folder []
+
+The existing Folders you wish to import
+
+ Optional options : {
+      importParents : boolean ;
+ } = {}
+
+Additional options which modify how the data is imported.
+
+ import Parents : boolean
+
+Import any parent folders which are not already present in the Compendium
+
+Returns Promise < void >
+
+ import All
+
+ import All ( options ? ) : Promise < Document [] >
+
+Fully import the contents of a Compendium pack into a World folder.
+
+Parameters
+
+ Optional options : {
+      folderId : string ;
+      folderName : string ;
+ } = {}
+
+Options which modify the import operation. Additional options are forwarded to
+ WorldCollection#fromCompendium and Document.createDocuments
+
+ folder Id : string
+
+An existing Folder _id to use.
+
+ folder Name : string
+
+A new Folder name to create.
+
+Returns Promise < Document [] >
+
+The imported Documents, now existing within the World
+
+ import Dialog
+
+ import Dialog ( options ? ) : Promise < boolean | Document [] >
+
+Provide a dialog form that prompts the user to import the full contents of a Compendium pack into the World.
+
+Parameters
+
+ Optional options : object = {}
+
+Additional options passed to the Dialog.confirm method
+
+Returns Promise < boolean | Document [] >
+
+A promise which resolves in the following ways: an array of imported
+ Documents if the "yes" button was pressed, false if the "no" button was pressed, or
+ null if the dialog was closed without making a choice.
+
+ index Document
+
+ index Document ( document ) : void
+
+Add a Document to the index, capturing its relevant index attributes
+
+Parameters
+
+ document : Document
+
+The document to index
+
+Returns void
+
+ configure Ownership Dialog
+
+ configure Ownership Dialog ( ) : Promise < Record < string , string > >
+
+Prompt the gamemaster with a dialog to configure ownership of this Compendium pack.
+
+Returns Promise < Record < string , string > >
+
+The configured ownership for the pack
+
+ get Uuid
+
+ get Uuid ( id ) : string
+
+Generate a UUID for a given primary document ID within this Compendium pack
+
+Parameters
+
+ id : string
+
+The document ID to generate a UUID for
+
+Returns string
+
+The generated UUID, in the form of "Compendium. . . "
+
+ configure
+
+ configure ( configuration ? ) : Promise < any >
+
+Assign configuration metadata settings to the compendium pack
+
+Parameters
+
+ configuration : object = {}
+
+The object of compendium settings to define
+
+Returns Promise < any >
+
+A Promise which resolves once the setting is updated
+
+ delete Compendium
+
+ delete Compendium ( ) : Promise < CompendiumCollection >
+
+Delete an existing world-level Compendium Collection.
+This action may only be performed for world-level packs by a Gamemaster User.
+
+Returns Promise < CompendiumCollection >
+
+ duplicate Compendium
+
+ duplicate Compendium ( label ? ) : Promise < CompendiumCollection >
+
+Duplicate a compendium pack to the current World.
+
+Parameters
+
+ label : string = {}
+
+A new Compendium label
+
+Returns Promise < CompendiumCollection >
+
+ migrate
+
+ migrate ( ) : Promise < CompendiumCollection >
+
+Migrate a compendium pack.
+This operation re-saves all documents within the compendium pack to disk, applying the current data model.
+If the document type has system data, the latest system data template will also be applied to all documents.
+
+Returns Promise < CompendiumCollection >
+
+ update All
+
+ update All ( transformation , condition ? , options ? ) : Promise < Document [] >
+
+Update all objects in this DocumentCollection with a provided transformation.
+Conditionally filter to only apply to Entities which match a certain condition.
+
+Parameters
+
+ transformation : any
+
+An object of data or function to apply to all matched objects
+
+ condition : any = null
+
+A function which tests whether to target each object
+
+ options : {} = {}
+
+Additional options passed to Document.updateDocuments
+
+Returns Promise < Document [] >
+
+An array of updated data once the operation is complete
+
+Overrides DocumentCollection . updateAll
+
+ _on Modify Contents
+
+ _on Modify Contents ( action , documents , result , operation , user ) : void
+
+ Internal
+
+Follow-up actions to take when a database operation modifies Documents in this DocumentCollection.
+
+Parameters
+
+ action : any
+
+The database action performed
+
+ documents : any
+
+The array of modified Documents
+
+ result : any
+
+The result of the database operation
+
+ operation : any
+
+Database operation details
+
+ user : any
+
+The User who performed the operation
+
+Returns void
+
+Overrides DocumentCollection . _onModifyContents
+
+ create Document
+
+ create Document ( data , context ? ) : Document
+
+Instantiate a Document for inclusion in the Collection.
+
+Parameters
+
+ data : object
+
+The Document data.
+
+ Optional context : object = {}
+
+Document creation context.
+
+Returns Document
+
+Inherited from DocumentCollection . createDocument
+
+ get Invalid
+
+ get Invalid ( id , options ? ) : Document
+
+Obtain a temporary Document instance for a document id which currently has invalid source data.
+
+Parameters
+
+ id : string
+
+A document ID with invalid source data.
+
+ Optional options : {
+      strict : boolean ;
+ } = {}
+
+Additional options to configure retrieval.
+
+ strict : boolean
+
+Throw an Error if the requested ID is not in the set of invalid IDs for
+ this collection.
+
+Returns Document
+
+An in-memory instance for the invalid Document
+
+Throws
+
+If strict is true and the requested ID is not in the set of invalid IDs for this collection.
+
+Inherited from DocumentCollection . getInvalid
+
+ render
+
+ render ( force , options ) : void
+
+Render any Applications associated with this DocumentCollection.
+
+Parameters
+
+ force : any
+
+ options : any
+
+Returns void
+
+Inherited from DocumentCollection . render
+
+ search
+
+ search ( search ) : string []
+
+Find all Documents which match a given search term using a full-text search against their indexed HTML fields and their name.
+If filters are provided, results are filtered to only those that match the provided values.
+
+Parameters
+
+ search : {
+      query : string ;
+      filters : FieldFilter [] ;
+      exclude : string [] ;
+ }
+
+An object configuring the search
+
+ query : string
+
+A case-insensitive search string
+
+ filters : FieldFilter []
+
+An array of filters to apply
+
+ exclude : string []
+
+An array of document IDs to exclude from search results
+
+Returns string []
+
+Inherited from DocumentCollection . search
+
+ Private #assert User Can Manage
+
+ #assert User Can Manage ( __namedParameters ? ) : boolean
+
+ Private
+
+Validate that the current user is able to modify content of this Compendium pack
+
+Parameters
+
+ __namedParameters : {
+      requireUnlocked : boolean ;
+ } = {}
+
+ require Unlocked : boolean
+
+Returns boolean
+
+ Static _sort Standard
+
+ _sort Standard ( a , b ) : number
+
+Parameters
+
+ a : any
+
+ b : any
+
+Returns number
+
+ Static _activate Socket Listeners
+
+ _activate Socket Listeners ( socket ) : void
+
+ Internal
+
+Activate the Socket event listeners used to receive responses to compendium management events.
+
+Parameters
+
+ socket : Socket
+
+The active game socket.
+
+Returns void
+
+ Static create Compendium
+
+ create Compendium ( metadata , options ? ) : Promise < CompendiumCollection >
+
+Create a new Compendium Collection using provided metadata.
+
+Parameters
+
+ metadata : object
+
+The compendium metadata used to create the new pack
+
+ options : object = {}
+
+Additional options which modify the Compendium creation request
+
+Returns Promise < CompendiumCollection >
+
+ Static get Searchable Fields
+
+ get Searchable Fields ( documentName , documentSubtype ? , isEmbedded ? ) : Set < string >
+
+Get the searchable fields for a given document or index, based on its data model
+
+Parameters
+
+ documentName : string
+
+The document type name
+
+ Optional documentSubtype : string = ""
+
+The document subtype name
+
+ Optional isEmbedded : boolean = false
+
+Whether the document is an embedded object
+
+Returns Set < string >
+
+The dot-delimited property paths of searchable fields
+
+Inherited from DocumentCollection . getSearchableFields
+
+ Static Private #handle Create Compendium
+
+ #handle Create Compendium ( response ) : CompendiumCollection
+
+Handle a response from the server where a compendium was created.
+
+Parameters
+
+ response : SocketResponse
+
+The server response.
+
+Returns CompendiumCollection
+
+ Static Private #handle Delete Compendium
+
+ #handle Delete Compendium ( response ) : CompendiumCollection
+
+Handle a response from the server where a compendium was deleted.
+
+Parameters
+
+ response : SocketResponse
+
+The server response.
+
+Returns CompendiumCollection
+
+ Settings
+
+Member Visibility
+
+ Protected
+
+ Private
+
+ Inherited
+
+Theme
+ OS Light Dark
+
+ On This Page
+
+ metadata index application Class apps invalid Document Ids #folders #indexed Fields CACHE_ LIFETIME_ SECONDS CONFIG_ SETTING document Name collection banner max Folder Depth folder sort config document Name locked ownership visible title index Fields indexed document Class name set Folder _get Visible Tree Contents get set delete clear get Index get Document get Documents get User Level test User Permission import Document import Folder import Folders import All import Dialog index Document configure Ownership Dialog get Uuid configure delete Compendium duplicate Compendium migrate update All _on Modify Contents create Document get Invalid render search #assert User Can Manage _sort Standard _activate Socket Listeners create Compendium get Searchable Fields #handle Create Compendium #handle Delete Compendium
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+Loading...

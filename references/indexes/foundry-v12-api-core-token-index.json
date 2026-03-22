@@ -1,0 +1,2498 @@
+{
+  "activeeffect": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.Item.html"
+  ],
+  "classes": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "client": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "api": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "documentation": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "foundry": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "tabletop": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "version": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "virtual": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "class": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "mixes": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "see": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "full": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "hierarchy": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "view": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "index": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "constructors": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "properties": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "accessors": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "methods": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "constructor": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "parameters": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "returns": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "source": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "parent": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "metadata": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "static": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "localization": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "prefixes": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "suppressed": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "boolean": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "target": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "document": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "active": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "actor": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "modifies": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "temporary": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html"
+  ],
+  "name": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "string": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "embedded": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "uuid": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "schema": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "schemafield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "invalid": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "failures": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "validation": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "datamodelvalidationfailure": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "fields": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "joint": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "database": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "databasebackend": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "implementation": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "typeof": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "base": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "collection": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "types": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "data": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "has": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "type": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "any": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "readonly": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "record": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "prepare": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "void": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "doc": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "inherit": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "derived": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "duration": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "update": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "effectdurationdata": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "label": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "number": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "remaining": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "apply": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html"
+  ],
+  "flag": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "get": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "create": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "pre": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "promise": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "delete": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "can": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "modify": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "user": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "permission": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "test": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "exact": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "configure": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "pack": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "initialize": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "level": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "clone": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "migrate": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "system": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "object": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "documentcollection": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "strict": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "throws": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "documents": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "traverse": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "generator": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "set": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "unset": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "reset": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "validate": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "changes": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "clean": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "fallback": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "drop": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "tojson": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "protected": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "requires": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "legacy": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "display": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "scrolling": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "status": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "combat": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "private": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "index.html"
+  ],
+  "time": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "cast": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "delta": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "array": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "parse": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "add": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "multiply": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "override": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "upgrade": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "custom": [
+    "classes/client.ActiveEffect.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "effect": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "from": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "field": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "initial": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "starttime": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "start": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "define": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "arrayfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "booleanfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "colorfield": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "description": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "disabled": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "documentidfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "documentstatsfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html"
+  ],
+  "documenttypefield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html"
+  ],
+  "filepathfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html"
+  ],
+  "flags": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "htmlfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.ChatMessage.html"
+  ],
+  "img": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.Item.html"
+  ],
+  "integersortfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.Item.html"
+  ],
+  "objectfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "origin": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "setfield": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "sort": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "stats": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html"
+  ],
+  "statuses": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html"
+  ],
+  "stringfield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "tint": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "transfer": [
+    "classes/client.ActiveEffect.html"
+  ],
+  "typedatafield": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html"
+  ],
+  "shim": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "initialization": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "order": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "unknown": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "example": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "single": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "multiple": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "within": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "compendium": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "item": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html",
+    "index.html"
+  ],
+  "world": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "owned": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "existing": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "passing": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "operation": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "migration": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "datamodel": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "fromjson": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "safe": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "log": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "settings": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "member": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "visibility": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "theme": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "page": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "this": [
+    "classes/client.ActiveEffect.html",
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html",
+    "index.html"
+  ],
+  "events": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "hook": [
+    "classes/client.Actor.html"
+  ],
+  "new": [
+    "classes/client.Actor.html"
+  ],
+  "retrieve": [
+    "classes/client.Actor.html"
+  ],
+  "overrides": [
+    "classes/client.Actor.html"
+  ],
+  "last": [
+    "classes/client.Actor.html"
+  ],
+  "wildcard": [
+    "classes/client.Actor.html"
+  ],
+  "images": [
+    "classes/client.Actor.html"
+  ],
+  "token": [
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "index.html"
+  ],
+  "default": [
+    "classes/client.Actor.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "icon": [
+    "classes/client.Actor.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "thumbnail": [
+    "classes/client.Actor.html",
+    "classes/client.Item.html"
+  ],
+  "applied": [
+    "classes/client.Actor.html"
+  ],
+  "effects": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.Item.html",
+    "index.html"
+  ],
+  "tokendocument": [
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "tokens": [
+    "classes/client.Actor.html"
+  ],
+  "all": [
+    "classes/client.Actor.html",
+    "classes/client.CompendiumCollection.html"
+  ],
+  "applicable": [
+    "classes/client.Actor.html"
+  ],
+  "yields": [
+    "classes/client.Actor.html"
+  ],
+  "roll": [
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "index.html"
+  ],
+  "attribute": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "initiative": [
+    "classes/client.Actor.html"
+  ],
+  "combatants": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "reroll": [
+    "classes/client.Actor.html"
+  ],
+  "options": [
+    "classes/client.Actor.html",
+    "classes/foundry.abstract.DataModel.html"
+  ],
+  "toggle": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "overlay": [
+    "classes/client.Actor.html",
+    "index.html"
+  ],
+  "dependent": [
+    "classes/client.Actor.html"
+  ],
+  "scene": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.ChatMessage.html",
+    "index.html"
+  ],
+  "scenes": [
+    "classes/client.Actor.html"
+  ],
+  "linked": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "register": [
+    "classes/client.Actor.html"
+  ],
+  "unregister": [
+    "classes/client.Actor.html"
+  ],
+  "descendant": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "change": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "documentownershipfield": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.Item.html"
+  ],
+  "embeddedcollectionfield": [
+    "classes/client.Actor.html",
+    "classes/client.Item.html"
+  ],
+  "embeddeddatafield": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "folder": [
+    "classes/client.Actor.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html",
+    "index.html"
+  ],
+  "foreigndocumentfield": [
+    "classes/client.Actor.html",
+    "classes/client.ChatMessage.html",
+    "classes/client.Item.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "items": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html"
+  ],
+  "ownership": [
+    "classes/client.Actor.html",
+    "classes/client.ActorDelta.html",
+    "classes/client.CompendiumCollection.html",
+    "classes/client.Item.html"
+  ],
+  "prototypetoken": [
+    "classes/client.Actor.html"
+  ],
+  "prototype": [
+    "classes/client.Actor.html"
+  ],
+  "artwork": [
+    "classes/client.Actor.html",
+    "classes/client.Item.html"
+  ],
+  "src": [
+    "classes/client.Actor.html"
+  ],
+  "texture": [
+    "classes/client.Actor.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "request": [
+    "classes/client.Actor.html",
+    "index.html"
+  ],
+  "actordelta": [
+    "classes/client.ActorDelta.html"
+  ],
+  "synthetic": [
+    "classes/client.ActorDelta.html"
+  ],
+  "collections": [
+    "classes/client.ActorDelta.html",
+    "index.html"
+  ],
+  "reinitialize": [
+    "classes/client.ActorDelta.html"
+  ],
+  "restore": [
+    "classes/client.ActorDelta.html"
+  ],
+  "handle": [
+    "classes/client.ActorDelta.html",
+    "classes/client.CompendiumCollection.html"
+  ],
+  "updates": [
+    "classes/client.ActorDelta.html"
+  ],
+  "dispatch": [
+    "classes/client.ActorDelta.html"
+  ],
+  "embeddedcollectiondeltafield": [
+    "classes/client.ActorDelta.html"
+  ],
+  "chatmessage": [
+    "classes/client.ChatMessage.html"
+  ],
+  "logged": [
+    "classes/client.ChatMessage.html"
+  ],
+  "expanded": [
+    "classes/client.ChatMessage.html"
+  ],
+  "alias": [
+    "classes/client.ChatMessage.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "author": [
+    "classes/client.ChatMessage.html"
+  ],
+  "content": [
+    "classes/client.ChatMessage.html"
+  ],
+  "visible": [
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html"
+  ],
+  "mode": [
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "gethtml": [
+    "classes/client.ChatMessage.html"
+  ],
+  "jquery": [
+    "classes/client.ChatMessage.html"
+  ],
+  "export": [
+    "classes/client.ChatMessage.html"
+  ],
+  "render": [
+    "classes/client.ChatMessage.html",
+    "classes/client.CompendiumCollection.html"
+  ],
+  "rollhtml": [
+    "classes/client.ChatMessage.html"
+  ],
+  "speaker": [
+    "classes/client.ChatMessage.html"
+  ],
+  "recipients": [
+    "classes/client.ChatMessage.html"
+  ],
+  "whisper": [
+    "classes/client.ChatMessage.html"
+  ],
+  "blind": [
+    "classes/client.ChatMessage.html"
+  ],
+  "emote": [
+    "classes/client.ChatMessage.html"
+  ],
+  "flavor": [
+    "classes/client.ChatMessage.html"
+  ],
+  "numberfield": [
+    "classes/client.ChatMessage.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "rolls": [
+    "classes/client.ChatMessage.html"
+  ],
+  "sound": [
+    "classes/client.ChatMessage.html",
+    "index.html"
+  ],
+  "style": [
+    "classes/client.ChatMessage.html"
+  ],
+  "timestamp": [
+    "classes/client.ChatMessage.html"
+  ],
+  "compendiumcollection": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "abstract": [
+    "classes/client.CompendiumCollection.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "param": [
+    "classes/client.CompendiumCollection.html",
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html"
+  ],
+  "application": [
+    "classes/client.CompendiumCollection.html",
+    "index.html"
+  ],
+  "apps": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "ids": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "folders": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "indexed": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "cache": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "lifetime": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "seconds": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "config": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "setting": [
+    "classes/client.CompendiumCollection.html",
+    "index.html"
+  ],
+  "banner": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "depth": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "max": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "locked": [
+    "classes/client.CompendiumCollection.html",
+    "classes/client.TokenDocument.html"
+  ],
+  "levels": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "roles": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "title": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "contents": [
+    "classes/client.CompendiumCollection.html",
+    "index.html"
+  ],
+  "tree": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "clear": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "given": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "match": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "only": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "that": [
+    "classes/client.CompendiumCollection.html",
+    "index.html"
+  ],
+  "the": [
+    "classes/client.CompendiumCollection.html",
+    "index.html"
+  ],
+  "value": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "several": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "their": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "sub": [
+    "classes/client.CompendiumCollection.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "import": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "parents": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "dialog": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "duplicate": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "search": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "query": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "fieldfilter": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "filters": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "exclude": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "assert": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "manage": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "require": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "unlocked": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "standard": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "activate": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "listeners": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "socket": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "searchable": [
+    "classes/client.CompendiumCollection.html"
+  ],
+  "transferred": [
+    "classes/client.Item.html"
+  ],
+  "actors": [
+    "classes/client.TokenDocument.html"
+  ],
+  "regions": [
+    "classes/client.TokenDocument.html"
+  ],
+  "owner": [
+    "classes/client.TokenDocument.html"
+  ],
+  "secret": [
+    "classes/client.TokenDocument.html"
+  ],
+  "combatant": [
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "bar": [
+    "classes/client.TokenDocument.html"
+  ],
+  "alternative": [
+    "classes/client.TokenDocument.html"
+  ],
+  "vision": [
+    "classes/client.TokenDocument.html"
+  ],
+  "infer": [
+    "classes/client.TokenDocument.html"
+  ],
+  "ring": [
+    "classes/client.TokenDocument.html"
+  ],
+  "subject": [
+    "classes/client.TokenDocument.html"
+  ],
+  "detection": [
+    "classes/client.TokenDocument.html"
+  ],
+  "modes": [
+    "classes/client.TokenDocument.html"
+  ],
+  "could": [
+    "classes/client.TokenDocument.html"
+  ],
+  "related": [
+    "classes/client.TokenDocument.html"
+  ],
+  "move": [
+    "classes/client.TokenDocument.html"
+  ],
+  "region": [
+    "classes/client.TokenDocument.html"
+  ],
+  "trigger": [
+    "classes/client.TokenDocument.html"
+  ],
+  "elevation": [
+    "classes/client.TokenDocument.html"
+  ],
+  "identify": [
+    "classes/client.TokenDocument.html"
+  ],
+  "attributes": [
+    "classes/client.TokenDocument.html"
+  ],
+  "tracked": [
+    "classes/client.TokenDocument.html"
+  ],
+  "trackedattributesdescription": [
+    "classes/client.TokenDocument.html"
+  ],
+  "choices": [
+    "classes/client.TokenDocument.html"
+  ],
+  "actordeltafield": [
+    "classes/client.TokenDocument.html"
+  ],
+  "actorid": [
+    "classes/client.TokenDocument.html"
+  ],
+  "actorlink": [
+    "classes/client.TokenDocument.html"
+  ],
+  "alpha": [
+    "classes/client.TokenDocument.html"
+  ],
+  "alphafield": [
+    "classes/client.TokenDocument.html"
+  ],
+  "anglefield": [
+    "classes/client.TokenDocument.html"
+  ],
+  "appendnumber": [
+    "classes/client.TokenDocument.html"
+  ],
+  "bar1": [
+    "classes/client.TokenDocument.html"
+  ],
+  "bar2": [
+    "classes/client.TokenDocument.html"
+  ],
+  "detectionmodes": [
+    "classes/client.TokenDocument.html"
+  ],
+  "displaybars": [
+    "classes/client.TokenDocument.html"
+  ],
+  "displayname": [
+    "classes/client.TokenDocument.html"
+  ],
+  "disposition": [
+    "classes/client.TokenDocument.html"
+  ],
+  "height": [
+    "classes/client.TokenDocument.html"
+  ],
+  "hexagonalshape": [
+    "classes/client.TokenDocument.html"
+  ],
+  "hidden": [
+    "classes/client.TokenDocument.html"
+  ],
+  "light": [
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "lockrotation": [
+    "classes/client.TokenDocument.html"
+  ],
+  "occludable": [
+    "classes/client.TokenDocument.html"
+  ],
+  "prependadjective": [
+    "classes/client.TokenDocument.html"
+  ],
+  "rotation": [
+    "classes/client.TokenDocument.html"
+  ],
+  "sight": [
+    "classes/client.TokenDocument.html"
+  ],
+  "texturedata": [
+    "classes/client.TokenDocument.html"
+  ],
+  "width": [
+    "classes/client.TokenDocument.html"
+  ],
+  "link": [
+    "classes/client.TokenDocument.html"
+  ],
+  "append": [
+    "classes/client.TokenDocument.html"
+  ],
+  "adjective": [
+    "classes/client.TokenDocument.html"
+  ],
+  "prepend": [
+    "classes/client.TokenDocument.html"
+  ],
+  "hexagonal": [
+    "classes/client.TokenDocument.html"
+  ],
+  "shape": [
+    "classes/client.TokenDocument.html"
+  ],
+  "lock": [
+    "classes/client.TokenDocument.html"
+  ],
+  "bars": [
+    "classes/client.TokenDocument.html"
+  ],
+  "internal": [
+    "classes/client.TokenDocument.html",
+    "index.html"
+  ],
+  "configured": [
+    "classes/client.TokenDocument.html"
+  ],
+  "movement": [
+    "classes/client.TokenDocument.html"
+  ],
+  "dataschema": [
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.Document.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "datafield": [
+    "classes/foundry.abstract.DataModel.html",
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "memberof": [
+    "classes/foundry.abstract.Document.html"
+  ],
+  "context": [
+    "classes/foundry.abstract.Document.html"
+  ],
+  "typedatamodel": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "for": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "module": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "registering": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "embed": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "htmlcollection": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "htmlelement": [
+    "classes/foundry.abstract.TypeDataModel.html"
+  ],
+  "table": [
+    "index.html"
+  ],
+  "docs": [
+    "index.html"
+  ],
+  "reading": [
+    "index.html"
+  ],
+  "these": [
+    "index.html"
+  ],
+  "public": [
+    "index.html"
+  ],
+  "about": [
+    "index.html"
+  ],
+  "are": [
+    "index.html"
+  ],
+  "things": [
+    "index.html"
+  ],
+  "unclear": [
+    "index.html"
+  ],
+  "what": [
+    "index.html"
+  ],
+  "code": [
+    "index.html"
+  ],
+  "guidelines": [
+    "index.html"
+  ],
+  "annotations": [
+    "index.html"
+  ],
+  "conventions": [
+    "index.html"
+  ],
+  "naming": [
+    "index.html"
+  ],
+  "faq": [
+    "index.html"
+  ],
+  "breaking": [
+    "index.html"
+  ],
+  "and": [
+    "index.html"
+  ],
+  "expansions": [
+    "index.html"
+  ],
+  "how": [
+    "index.html"
+  ],
+  "abstraction": [
+    "index.html"
+  ],
+  "operations": [
+    "index.html"
+  ],
+  "primary": [
+    "index.html"
+  ],
+  "cards": [
+    "index.html"
+  ],
+  "chat": [
+    "index.html"
+  ],
+  "message": [
+    "index.html"
+  ],
+  "encounter": [
+    "index.html"
+  ],
+  "exploration": [
+    "index.html"
+  ],
+  "fog": [
+    "index.html"
+  ],
+  "entry": [
+    "index.html"
+  ],
+  "journal": [
+    "index.html"
+  ],
+  "macro": [
+    "index.html"
+  ],
+  "playlist": [
+    "index.html"
+  ],
+  "rollable": [
+    "index.html"
+  ],
+  "result": [
+    "index.html"
+  ],
+  "ambient": [
+    "index.html"
+  ],
+  "drawing": [
+    "index.html"
+  ],
+  "measured": [
+    "index.html"
+  ],
+  "template": [
+    "index.html"
+  ],
+  "note": [
+    "index.html"
+  ],
+  "tile": [
+    "index.html"
+  ],
+  "wall": [
+    "index.html"
+  ],
+  "canvas": [
+    "index.html"
+  ],
+  "game": [
+    "index.html"
+  ],
+  "blocks": [
+    "index.html"
+  ],
+  "building": [
+    "index.html"
+  ],
+  "groups": [
+    "index.html"
+  ],
+  "layers": [
+    "index.html"
+  ],
+  "group": [
+    "index.html"
+  ],
+  "interface": [
+    "index.html"
+  ],
+  "objects": [
+    "index.html"
+  ],
+  "hud": [
+    "index.html"
+  ],
+  "dice": [
+    "index.html"
+  ],
+  "rolling": [
+    "index.html"
+  ],
+  "term": [
+    "index.html"
+  ],
+  "components": [
+    "index.html"
+  ],
+  "major": [
+    "index.html"
+  ],
+  "other": [
+    "index.html"
+  ],
+  "audio": [
+    "index.html"
+  ],
+  "video": [
+    "index.html"
+  ],
+  "management": [
+    "index.html"
+  ],
+  "voice": [
+    "index.html"
+  ],
+  "interactivity": [
+    "index.html"
+  ]
+}

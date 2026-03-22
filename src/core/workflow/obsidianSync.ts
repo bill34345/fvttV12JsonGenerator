@@ -11,18 +11,28 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ActorGenerator } from '../generator/actor';
+import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ParserFactory } from '../parser/router';
+import type { TranslationContext } from '../translation';
 
 export interface ObsidianSyncOptions {
   vaultPath: string;
   clearBackup?: boolean;
   fvttVersion?: '12' | '13';
+  effectProfile?: EffectProfile;
+  excludeInputPaths?: string[];
+  forceInputPaths?: string[];
+}
+
+interface TranslationServiceLike {
+  translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
 }
 
 interface ManifestEntry {
   hash: string;
   output: string;
   fvttVersion?: '12' | '13';
+  effectProfile?: EffectProfile;
   status: 'success' | 'failed' | 'stale';
   lastSuccessAt?: string;
   lastAttemptAt: string;
@@ -49,9 +59,18 @@ export interface ObsidianSyncResult {
 export class ObsidianSyncWorkflow {
   private parserFactory = new ParserFactory();
 
+  constructor(
+    private readonly options: { translationService?: TranslationServiceLike | null } = {},
+  ) {}
+
   public async sync(options: ObsidianSyncOptions): Promise<ObsidianSyncResult> {
     const fvttVersion = options.fvttVersion ?? '12';
-    const generator = new ActorGenerator({ fvttVersion });
+    const effectProfile = options.effectProfile ?? 'core';
+    const generator = new ActorGenerator({
+      fvttVersion,
+      translationService: this.options.translationService,
+      effectProfile,
+    });
     const vaultDir = this.resolvePath(options.vaultPath);
     const inputDir = join(vaultDir, 'input');
     const examplesDir = join(vaultDir, 'examples');
@@ -89,7 +108,10 @@ export class ObsidianSyncWorkflow {
     result.createdExample = this.ensureExampleFile(examplesDir);
 
     const manifest = this.loadManifest(manifestPath);
-    const markdownFiles = this.collectMarkdownFiles(inputDir);
+    const markdownFiles = this.collectMarkdownFiles(inputDir, options.excludeInputPaths ?? []);
+    const forcedInputs = new Set(
+      (options.forceInputPaths ?? []).map((path) => this.normalizeForComparison(this.resolvePath(path))),
+    );
     const seen = new Set<string>();
 
     for (const inputPath of markdownFiles) {
@@ -100,10 +122,18 @@ export class ObsidianSyncWorkflow {
 
       try {
         const content = readFileSync(inputPath, 'utf-8');
-        const hash = this.hashContent(`${content}\n#fvttVersion=${fvttVersion}`);
+        if (!this.isProjectMarkdown(content)) {
+          delete manifest[relInput];
+          result.skipped++;
+          continue;
+        }
+        const hash = this.hashContent(
+          `${content}\n#fvttVersion=${fvttVersion}\n#effectProfile=${effectProfile}`,
+        );
         const prev = manifest[relInput];
+        const forceProcess = forcedInputs.has(this.normalizeForComparison(inputPath));
 
-        if (prev?.status === 'success' && prev.hash === hash && existsSync(outputPath)) {
+        if (!forceProcess && prev?.status === 'success' && prev.hash === hash && existsSync(outputPath)) {
           result.skipped++;
           continue;
         }
@@ -128,6 +158,7 @@ export class ObsidianSyncWorkflow {
           hash,
           output: this.normalizeRelPath(relative(vaultDir, outputPath)),
           fvttVersion,
+          effectProfile,
           status: 'success',
           lastSuccessAt: new Date().toISOString(),
           lastAttemptAt: new Date().toISOString(),
@@ -139,6 +170,7 @@ export class ObsidianSyncWorkflow {
           hash: '',
           output: this.normalizeRelPath(relative(vaultDir, outputPath)),
           fvttVersion,
+          effectProfile,
           status: 'failed',
           lastAttemptAt: new Date().toISOString(),
           lastError: message,
@@ -150,6 +182,12 @@ export class ObsidianSyncWorkflow {
 
     for (const [key, entry] of Object.entries(manifest)) {
       if (seen.has(key)) continue;
+      const staleOutputPath = isAbsolute(entry.output)
+        ? entry.output
+        : resolve(vaultDir, entry.output);
+      if (existsSync(staleOutputPath)) {
+        rmSync(staleOutputPath, { force: true });
+      }
       manifest[key] = {
         ...entry,
         status: 'stale',
@@ -194,9 +232,12 @@ export class ObsidianSyncWorkflow {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   }
 
-  private collectMarkdownFiles(dir: string): string[] {
+  private collectMarkdownFiles(dir: string, excludeInputPaths: string[]): string[] {
     if (!existsSync(dir)) return [];
 
+    const excluded = new Set(
+      excludeInputPaths.map((path) => this.normalizeForComparison(this.resolvePath(path))),
+    );
     const files: string[] = [];
     const entries = readdirSync(dir, { withFileTypes: true });
 
@@ -205,7 +246,7 @@ export class ObsidianSyncWorkflow {
       const full = join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        files.push(...this.collectMarkdownFiles(full));
+        files.push(...this.collectMarkdownFiles(full, excludeInputPaths));
         continue;
       }
 
@@ -213,6 +254,7 @@ export class ObsidianSyncWorkflow {
       if (!entry.name.toLowerCase().endsWith('.md')) continue;
 
       if (statSync(full).size === 0) continue;
+      if (excluded.has(this.normalizeForComparison(full))) continue;
       files.push(full);
     }
 
@@ -221,6 +263,10 @@ export class ObsidianSyncWorkflow {
 
   private hashContent(content: string): string {
     return createHash('sha256').update(content, 'utf-8').digest('hex');
+  }
+
+  private isProjectMarkdown(content: string): boolean {
+    return content.trimStart().startsWith('---');
   }
 
   private ensureDir(path: string): void {
@@ -233,5 +279,9 @@ export class ObsidianSyncWorkflow {
 
   private normalizeRelPath(path: string): string {
     return path.replace(/\\/g, '/');
+  }
+
+  private normalizeForComparison(path: string): string {
+    return resolve(path).replace(/\\/g, '/').toLowerCase();
   }
 }

@@ -226,12 +226,17 @@ describe('ActorGenerator english bilingual integration', () => {
     expect(parryActivity.activation.type).toBe('reaction');
   });
 
-  it('keeps v12 output without activity-level activation fields', async () => {
+  it('writes activity-level activation fields for fvtt v12 output when semantic sections depend on them', async () => {
     const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(createEnglishParsed(), 'english');
     const firstActivity = Object.values(actor.items[0].system.activities)[0] as any;
 
-    expect(firstActivity.activation).toBeUndefined();
+    expect(firstActivity.activation).toEqual(
+      expect.objectContaining({
+        type: 'action',
+        value: null,
+      }),
+    );
   });
 
   it('infers bonus/reaction activation from trait text outside action sections', async () => {

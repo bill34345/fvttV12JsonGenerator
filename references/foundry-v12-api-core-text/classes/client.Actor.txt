@@ -1,0 +1,2412 @@
+Actor | Foundry Virtual Tabletop - API Documentation - Version 12
+
+Preparing search index...
+
+The search index is not available
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+ client
+
+ Actor
+
+Class Actor
+
+The client-side Actor document which extends the common BaseActor model.
+
+ Hook Events
+
+hookEvents.applyCompendiumArt
+
+Mixes
+
+ClientDocumentMixin
+
+See
+
+ Actors The world-level collection of Actor documents
+
+ ActorSheet The Actor configuration application
+
+Example: Create a new Actor
+
+ let actor = await Actor . create ({
+ name: "New Test Actor" ,
+ type: "character" ,
+ img: "artwork/character-profile.jpg"
+ });
+ Copy
+
+Example: Retrieve an existing Actor
+
+ let actor = game . actors . get ( actorId );
+ Copy
+
+Hierarchy ( view full )
+
+ BaseActor < this >
+
+ Actor
+
+ Index
+
+Constructors
+
+ constructor
+
+Properties
+
+ overrides
+ statuses
+ _last Wildcard
+ _source
+ parent
+ _token Images
+ metadata
+ DEFAULT_ ICON
+ LOCALIZATION_ PREFIXES
+
+Accessors
+
+ thumbnail
+ item Types
+ is Token
+ applied Effects
+ temporary Effects
+ token
+ in Combat
+ id
+ is Embedded
+ uuid
+ schema
+ invalid
+ validation Failures
+ schema
+ database
+ implementation
+ base Document
+ collection Name
+ document Name
+ TYPES
+ has Type Data
+ hierarchy
+
+Methods
+
+ _configure
+ _initialize Source
+ apply Active Effects
+ get Active Tokens
+ all Applicable Effects
+ get Roll Data
+ get Token Document
+ get Token Images
+ modify Token Attribute
+ prepare Data
+ prepare Embedded Documents
+ roll Initiative
+ toggle Status Effect
+ get Dependent Tokens
+ _register Dependent Token
+ _unregister Dependent Token
+ _unregister Dependent Scene
+ _on Update
+ _on Create Descendant Documents
+ _on Update Descendant Documents
+ _on Delete Descendant Documents
+ _pre Create
+ _pre Update
+ _initialize
+ _get Parent Collection
+ get User Level
+ test User Permission
+ can User Modify
+ clone
+ migrate System Data
+ to Object
+ update
+ delete
+ get Embedded Collection
+ get Embedded Document
+ create Embedded Documents
+ update Embedded Documents
+ delete Embedded Documents
+ traverse Embedded Documents
+ get Flag
+ set Flag
+ unset Flag
+ _on Create
+ _pre Delete
+ _on Delete
+ reset
+ validate
+ update Source
+ toJSON
+ _on Embedded Document Change
+ _update Dependent Tokens
+ define Schema
+ get Default Artwork
+ can User Create
+ migrate Data
+ _initialization Order
+ create Documents
+ update Documents
+ delete Documents
+ create
+ get
+ get Collection Name
+ _pre Create Operation
+ _on Create Operation
+ _pre Update Operation
+ _on Update Operation
+ _pre Delete Operation
+ _on Delete Operation
+ _add Data Field Migration
+ clean Data
+ validate Joint
+ from Source
+ fromJSON
+ migrate Data Safe
+ shim Data
+ _log Data Field Migration
+ _request Token Images
+
+Constructors
+
+ constructor
+
+ new Actor ( data , context ) : Actor
+
+Construct an Actor document using provided data and context.
+
+Parameters
+
+ data : Partial < ActorData >
+
+Initial data from which to construct the Actor
+
+ context : DocumentConstructionContext
+
+Construction context options
+
+Returns Actor
+
+Inherited from BaseActor . constructor
+
+Properties
+
+ overrides
+
+ overrides : object = ...
+
+An object that tracks which tracks the changes to the data model which were applied by active effects
+
+ statuses
+
+ statuses : Set < string > = ...
+
+The statuses that are applied to this actor by active effects
+
+ _last Wildcard
+
+ _last Wildcard : string = null
+
+Cache the last drawn wildcard token to avoid repeat draws
+
+ _source
+
+ _source : object
+
+The source data object for this DataModel instance.
+Once constructed, the source object is sealed such that no keys may be added nor removed.
+
+Inherited from BaseActor . _source
+
+ parent
+
+ parent : DataModel
+
+An immutable reverse-reference to a parent DataModel to which this model belongs.
+
+Inherited from BaseActor . parent
+
+ Private _token Images
+
+ _token Images : string [] = null
+
+A cached array of image paths which can be used for this Actor's token.
+Null if the list has not yet been populated.
+
+ Static metadata
+
+ metadata : object = ...
+
+Default metadata which applies to each instance of this Document type.
+
+Inherited from BaseActor . metadata
+
+ Static DEFAULT_ ICON
+
+ DEFAULT_ ICON : string = CONST.DEFAULT_TOKEN
+
+The default icon used for newly created Actor documents.
+
+Inherited from BaseActor . DEFAULT_ICON
+
+ Static LOCALIZATION_ PREFIXES
+
+ LOCALIZATION_ PREFIXES : string [] = []
+
+A set of localization prefix paths which are used by this DataModel.
+
+Inherited from BaseActor . LOCALIZATION_PREFIXES
+
+Accessors
+
+ thumbnail
+
+ get thumbnail ( ) : string
+
+Provide a thumbnail image path used to represent this document.
+
+Returns string
+
+ item Types
+
+ get itemTypes ( ) : Record < string , Item [] >
+
+Provide an object which organizes all embedded Item instances by their type
+
+Returns Record < string , Item [] >
+
+ is Token
+
+ get isToken ( ) : boolean
+
+Test whether an Actor document is a synthetic representation of a Token (if true) or a full Document (if false)
+
+Returns boolean
+
+ applied Effects
+
+ get appliedEffects ( ) : ActiveEffect []
+
+Retrieve the list of ActiveEffects that are currently applied to this Actor.
+
+Returns ActiveEffect []
+
+ temporary Effects
+
+ get temporaryEffects ( ) : ActiveEffect []
+
+An array of ActiveEffect instances which are present on the Actor which have a limited duration.
+
+Returns ActiveEffect []
+
+ token
+
+ get token ( ) : TokenDocument
+
+Return a reference to the TokenDocument which owns this Actor as a synthetic override
+
+Returns TokenDocument
+
+ in Combat
+
+ get inCombat ( ) : boolean
+
+Whether the Actor has at least one Combatant in the active Combat that represents it.
+
+Returns boolean
+
+ id
+
+ get id ( ) : string
+
+The canonical identifier for this Document.
+
+Returns string
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).id
+
+ is Embedded
+
+ get isEmbedded ( ) : boolean
+
+Test whether this Document is embedded within a parent Document
+
+Returns boolean
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).isEmbedded
+
+ uuid
+
+ get uuid ( ) : string
+
+A Universally Unique Identifier (uuid) for this Document instance.
+
+Returns string
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).uuid
+
+ schema
+
+ get schema ( ) : SchemaField
+
+Define the data schema for this document instance.
+
+Returns SchemaField
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).schema
+
+ invalid
+
+ get invalid ( ) : boolean
+
+Is the current state of this DataModel invalid?
+The model is invalid if there is any unresolved failure.
+
+Returns boolean
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).invalid
+
+ validation Failures
+
+ get validationFailures ( ) : {
+      fields : DataModelValidationFailure ;
+      joint : DataModelValidationFailure ;
+ }
+
+An array of validation failure instances which may have occurred when this instance was last validated.
+
+Returns {
+      fields : DataModelValidationFailure ;
+      joint : DataModelValidationFailure ;
+ }
+
+ fields : DataModelValidationFailure
+
+ joint : DataModelValidationFailure
+
+Inherited from ClientDocumentMixin(foundry.documents.BaseActor).validationFailures
+
+ Static schema
+
+ get schema ( ) : SchemaField
+
+Ensure that all Document classes share the same schema of their base declaration.
+
+Returns SchemaField
+
+ Static database
+
+ get database ( ) : DatabaseBackend
+
+The database backend used to execute operations and handle results.
+
+Returns DatabaseBackend
+
+ Static implementation
+
+ get implementation ( ) : typeof Document
+
+Return a reference to the configured subclass of this base Document type.
+
+Returns typeof Document
+
+ Static base Document
+
+ get baseDocument ( ) : typeof Document
+
+The base document definition that this document class extends from.
+
+Returns typeof Document
+
+ Static collection Name
+
+ get collectionName ( ) : string
+
+The named collection to which this Document belongs.
+
+Returns string
+
+ Static document Name
+
+ get documentName ( ) : string
+
+The canonical name of this Document type, for example "Actor".
+
+Returns string
+
+ Static TYPES
+
+ get TYPES ( ) : string []
+
+The allowed types which may exist for this Document class.
+
+Returns string []
+
+ Static has Type Data
+
+ get hasTypeData ( ) : boolean
+
+Does this Document support additional subtypes?
+
+Returns boolean
+
+ Static hierarchy
+
+ get hierarchy ( ) : Readonly < Record < string , any > >
+
+The Embedded Document hierarchy for this Document.
+
+Returns Readonly < Record < string , any > >
+
+Methods
+
+ _configure
+
+ _configure ( options ? ) : void
+
+Parameters
+
+ options : {} = {}
+
+Returns void
+
+Overrides BaseActor . _configure
+
+ _initialize Source
+
+ _initialize Source ( source , options ? ) : any
+
+Initialize the source data for a new DataModel instance.
+One-time migrations and initial cleaning operations are applied to the source data.
+
+Parameters
+
+ source : any
+
+The candidate source data from which the model will be constructed
+
+ options : {} = {}
+
+Options provided to the model constructor
+
+Returns any
+
+Migrated and cleaned source data which will be stored to the model instance
+
+Overrides BaseActor . _initializeSource
+
+ apply Active Effects
+
+ apply Active Effects ( ) : void
+
+Apply any transformations to the Actor data which are caused by ActiveEffects.
+
+Returns void
+
+ get Active Tokens
+
+ get Active Tokens ( linked ? , document ? ) : ( TokenDocument | Token ) []
+
+Retrieve an Array of active tokens which represent this Actor in the current canvas Scene.
+If the canvas is not currently active, or there are no linked actors, the returned Array will be empty.
+If the Actor is a synthetic token actor, only the exact Token which it represents will be returned.
+
+Parameters
+
+ Optional linked : boolean = false
+
+Limit results to Tokens which are linked to the Actor. Otherwise, return all
+ Tokens even those which are not linked.
+
+ Optional document : boolean = false
+
+Return the Document instance rather than the PlaceableObject
+
+Returns ( TokenDocument | Token ) []
+
+An array of Token instances in the current Scene which reference this Actor.
+
+ all Applicable Effects
+
+ all Applicable Effects ( ) : Generator < ActiveEffect , void , void >
+
+Get all ActiveEffects that may apply to this Actor.
+If CONFIG.ActiveEffect.legacyTransferral is true, this is equivalent to actor.effects.contents.
+If CONFIG.ActiveEffect.legacyTransferral is false, this will also return all the transferred ActiveEffects on any
+of the Actor's owned Items.
+
+Returns Generator < ActiveEffect , void , void >
+
+Yields
+
+ get Roll Data
+
+ get Roll Data ( ) : object
+
+Return a data object which defines the data schema against which dice rolls can be evaluated.
+By default, this is directly the Actor's system data, but systems may extend this to include additional properties.
+If overriding or extending this method to add additional properties, care must be taken not to mutate the original
+object.
+
+Returns object
+
+ get Token Document
+
+ get Token Document ( data ? , options ? ) : Promise < TokenDocument >
+
+Create a new Token document, not yet saved to the database, which represents the Actor.
+
+Parameters
+
+ Optional data : object = {}
+
+Additional data, such as x, y, rotation, etc. for the created token data
+
+ Optional options : object = {}
+
+The options passed to the TokenDocument constructor
+
+Returns Promise < TokenDocument >
+
+The created TokenDocument instance
+
+ get Token Images
+
+ get Token Images ( ) : Promise < string [] >
+
+Get an Array of Token images which could represent this Actor
+
+Returns Promise < string [] >
+
+ modify Token Attribute
+
+ modify Token Attribute ( attribute , value , isDelta ? , isBar ? ) : Promise < Actor >
+
+Handle how changes to a Token attribute bar are applied to the Actor.
+This allows for game systems to override this behavior and deploy special logic.
+
+Parameters
+
+ attribute : string
+
+The attribute path
+
+ value : number
+
+The target attribute value
+
+ isDelta : boolean = false
+
+Whether the number represents a relative change (true) or an absolute change (false)
+
+ isBar : boolean = true
+
+Whether the new value is part of an attribute bar, or just a direct value
+
+Returns Promise < Actor >
+
+The updated Actor document
+
+ prepare Data
+
+ prepare Data ( ) : void
+
+Returns void
+
+Inherit Doc
+
+ prepare Embedded Documents
+
+ prepare Embedded Documents ( ) : void
+
+Returns void
+
+Inherit Doc
+
+ roll Initiative
+
+ roll Initiative ( options ? ) : Promise < any >
+
+Roll initiative for all Combatants in the currently active Combat encounter which are associated with this Actor.
+If viewing a full Actor document, all Tokens which map to that actor will be targeted for initiative rolls.
+If viewing a synthetic Token actor, only that particular Token will be targeted for an initiative roll.
+
+Parameters
+
+ options : {
+      createCombatants : boolean ;
+      rerollInitiative : boolean ;
+      initiativeOptions : object ;
+ } = {}
+
+Configuration for how initiative for this Actor is rolled.
+
+ create Combatants : boolean
+
+Create new Combatant entries for Tokens associated with
+ this actor.
+
+ reroll Initiative : boolean
+
+Re-roll the initiative for this Actor if it has already
+ been rolled.
+
+ initiative Options : object
+
+Additional options passed to the Combat#rollInitiative method.
+
+Returns Promise < any >
+
+A promise which resolves to the Combat document once rolls
+ are complete.
+
+ toggle Status Effect
+
+ toggle Status Effect ( statusId , options ? ) : Promise < boolean | ActiveEffect >
+
+Toggle a configured status effect for the Actor.
+
+Parameters
+
+ statusId : string
+
+A status effect ID defined in CONFIG.statusEffects
+
+ Optional options : {
+      active : boolean ;
+      overlay : boolean ;
+ } = {}
+
+Additional options which modify how the effect is created
+
+ active : boolean
+
+Force the effect to be active or inactive regardless of its current state
+
+ overlay : boolean
+
+Display the toggled effect as an overlay
+
+Returns Promise < boolean | ActiveEffect >
+
+A promise which resolves to one of the following values:
+ - ActiveEffect if a new effect need to be created
+ - true if was already an existing effect
+ - false if an existing effect needed to be removed
+ - undefined if no changes need to be made
+
+ get Dependent Tokens
+
+ get Dependent Tokens ( options ? ) : TokenDocument []
+
+Get this actor's dependent tokens.
+If the actor is a synthetic token actor, only the exact Token which it represents will be returned.
+
+Parameters
+
+ Optional options : {
+      scenes : Scene | Scene [] ;
+      linked : boolean ;
+ } = {}
+
+ scenes : Scene | Scene []
+
+A single Scene, or list of Scenes to filter by.
+
+ linked : boolean
+
+Limit the results to tokens that are linked to the actor.
+
+Returns TokenDocument []
+
+ _register Dependent Token
+
+ _register Dependent Token ( token ) : void
+
+ Internal
+
+Register a token as a dependent of this actor.
+
+Parameters
+
+ token : TokenDocument
+
+The token.
+
+Returns void
+
+ _unregister Dependent Token
+
+ _unregister Dependent Token ( token ) : void
+
+ Internal
+
+Remove a token from this actor's dependents.
+
+Parameters
+
+ token : TokenDocument
+
+The token.
+
+Returns void
+
+ _unregister Dependent Scene
+
+ _unregister Dependent Scene ( scene ) : void
+
+ Internal
+
+Prune a whole scene from this actor's dependent tokens.
+
+Parameters
+
+ scene : Scene
+
+The scene.
+
+Returns void
+
+ _on Update
+
+ _on Update ( changed , options , userId ) : void
+
+ Internal
+
+Post-process an update operation for a single Document instance. Post-operation events occur for all connected
+clients.
+
+Parameters
+
+ changed : any
+
+The differential data that was changed relative to the documents prior values
+
+ options : any
+
+Additional options which modify the update request
+
+ userId : any
+
+The id of the User requesting the document update
+
+Returns void
+
+Overrides BaseActor . _onUpdate
+
+ _on Create Descendant Documents
+
+ _on Create Descendant Documents ( parent , collection , documents , data , options , userId ) : void
+
+Parameters
+
+ parent : any
+
+ collection : any
+
+ documents : any
+
+ data : any
+
+ options : any
+
+ userId : any
+
+Returns void
+
+Inherit Doc
+
+ _on Update Descendant Documents
+
+ _on Update Descendant Documents ( parent , collection , documents , changes , options , userId ) : void
+
+Parameters
+
+ parent : any
+
+ collection : any
+
+ documents : any
+
+ changes : any
+
+ options : any
+
+ userId : any
+
+Returns void
+
+Inherit Doc
+
+ _on Delete Descendant Documents
+
+ _on Delete Descendant Documents ( parent , collection , documents , ids , options , userId ) : void
+
+Parameters
+
+ parent : any
+
+ collection : any
+
+ documents : any
+
+ ids : any
+
+ options : any
+
+ userId : any
+
+Returns void
+
+Inherit Doc
+
+ _pre Create
+
+ _pre Create ( data , options , user ) : Promise < boolean >
+
+ Internal
+
+Pre-process a creation operation for a single Document instance. Pre-operation events only occur for the client
+which requested the operation.
+
+Modifications to the pending Document instance must be performed using Document#updateSource .
+
+Parameters
+
+ data : any
+
+The initial data object provided to the document creation request
+
+ options : any
+
+Additional options which modify the creation request
+
+ user : any
+
+The User requesting the document creation
+
+Returns Promise < boolean >
+
+Return false to exclude this Document from the creation operation
+
+Inherited from BaseActor . _preCreate
+
+ _pre Update
+
+ _pre Update ( changed , options , user ) : Promise < boolean >
+
+ Internal
+
+Pre-process an update operation for a single Document instance. Pre-operation events only occur for the client
+which requested the operation.
+
+Parameters
+
+ changed : any
+
+The candidate changes to the Document
+
+ options : any
+
+Additional options which modify the update request
+
+ user : any
+
+The User requesting the document update
+
+Returns Promise < boolean >
+
+A return value of false indicates the update operation should be cancelled.
+
+Inherited from BaseActor . _preUpdate
+
+ _initialize
+
+ _initialize ( options ? ) : void
+
+Initialize the instance by copying data from the source object to instance attributes.
+This mirrors the workflow of SchemaField#initialize but with some added functionality.
+
+Parameters
+
+ options : {} = {}
+
+Options provided to the model constructor
+
+Returns void
+
+Inherited from BaseActor . _initialize
+
+ _get Parent Collection
+
+ _get Parent Collection ( parentCollection ? ) : string
+
+ Internal
+
+Identify the collection in a parent Document that this Document belongs to, if any.
+
+Parameters
+
+ Optional parentCollection : string
+
+An explicitly provided parent collection name.
+
+Returns string
+
+Inherited from BaseActor . _getParentCollection
+
+ get User Level
+
+ get User Level ( user ? ) : number
+
+Get the explicit permission level that a User has over this Document, a value in CONST.DOCUMENT_OWNERSHIP_LEVELS.
+This method returns the value recorded in Document ownership, regardless of the User's role.
+To test whether a user has a certain capability over the document, testUserPermission should be used.
+
+Parameters
+
+ Optional user : BaseUser
+
+The User being tested
+
+Returns number
+
+A numeric permission level from CONST.DOCUMENT_OWNERSHIP_LEVELS or null
+
+Inherited from BaseActor . getUserLevel
+
+ test User Permission
+
+ test User Permission ( user , permission , options ? ) : boolean
+
+Test whether a certain User has a requested permission level (or greater) over the Document
+
+Parameters
+
+ user : BaseUser
+
+The User being tested
+
+ permission : string | number
+
+The permission level from DOCUMENT_OWNERSHIP_LEVELS to test
+
+ options : {
+      exact : boolean ;
+ } = {}
+
+Additional options involved in the permission test
+
+ exact : boolean
+
+Require the exact permission level requested?
+
+Returns boolean
+
+Does the user have this permission level over the Document?
+
+Inherited from BaseActor . testUserPermission
+
+ can User Modify
+
+ can User Modify ( user , action , data ? ) : boolean
+
+Test whether a given User has permission to perform some action on this Document
+
+Parameters
+
+ user : BaseUser
+
+The User attempting modification
+
+ action : string
+
+The attempted action
+
+ Optional data : object = {}
+
+Data involved in the attempted action
+
+Returns boolean
+
+Does the User have permission?
+
+Inherited from BaseActor . canUserModify
+
+ clone
+
+ clone ( data ? , context ? ) : Document | Promise < Document >
+
+Clone a document, creating a new document by combining current data with provided overrides.
+The cloned document is ephemeral and not yet saved to the database.
+
+Parameters
+
+ Optional data : Object = {}
+
+Additional data which overrides current document data at the time
+ of creation
+
+ Optional context : DocumentConstructionContext = {}
+
+Additional context options passed to the create method
+
+Returns Document | Promise < Document >
+
+The cloned Document instance
+
+Inherited from BaseActor . clone
+
+ migrate System Data
+
+ migrate System Data ( ) : object
+
+For Documents which include game system data, migrate the system data object to conform to its latest data model.
+The data model is defined by the template.json specification included by the game system.
+
+Returns object
+
+The migrated system data object
+
+Inherited from BaseActor . migrateSystemData
+
+ to Object
+
+ to Object ( source ? ) : any
+
+Copy and transform the DataModel into a plain object.
+Draw the values of the extracted object from the data source (by default) otherwise from its transformed values.
+
+Parameters
+
+ source : boolean = true
+
+Draw values from the underlying data source rather than transformed values
+
+Returns any
+
+The extracted primitive object
+
+Inherited from BaseActor . toObject
+
+ update
+
+ update ( data ? , operation ? ) : Promise < Document >
+
+Update this Document using incremental data, saving it to the database.
+
+Parameters
+
+ Optional data : object = {}
+
+Differential update data which modifies the existing values of this document
+
+ Optional operation : Partial < Omit < DatabaseUpdateOperation , "updates" > > = {}
+
+Parameters of the update operation
+
+Returns Promise < Document >
+
+The updated Document instance
+
+See
+
+Document.updateDocuments
+
+Inherited from BaseActor . update
+
+ delete
+
+ delete ( operation ? ) : Promise < Document >
+
+Delete this Document, removing it from the database.
+
+Parameters
+
+ Optional operation : Partial < Omit < DatabaseDeleteOperation , "ids" > > = {}
+
+Parameters of the deletion operation
+
+Returns Promise < Document >
+
+The deleted Document instance
+
+See
+
+Document.deleteDocuments
+
+Inherited from BaseActor . delete
+
+ get Embedded Collection
+
+ get Embedded Collection ( embeddedName ) : DocumentCollection
+
+Obtain a reference to the Array of source data within the data object for a certain embedded Document name
+
+Parameters
+
+ embeddedName : string
+
+The name of the embedded Document type
+
+Returns DocumentCollection
+
+The Collection instance of embedded Documents of the requested type
+
+Inherited from BaseActor . getEmbeddedCollection
+
+ get Embedded Document
+
+ get Embedded Document ( embeddedName , id , options ? ) : Document
+
+Get an embedded document by its id from a named collection in the parent document.
+
+Parameters
+
+ embeddedName : string
+
+The name of the embedded Document type
+
+ id : string
+
+The id of the child document to retrieve
+
+ Optional options : {
+      strict : boolean ;
+      invalid : boolean ;
+ } = {}
+
+Additional options which modify how embedded documents are retrieved
+
+ strict : boolean
+
+Throw an Error if the requested id does not exist. See Collection#get
+
+ invalid : boolean
+
+Allow retrieving an invalid Embedded Document.
+
+Returns Document
+
+The retrieved embedded Document instance, or undefined
+
+Throws
+
+If the embedded collection does not exist, or if strict is true and the Embedded Document could not be
+ found.
+
+Inherited from BaseActor . getEmbeddedDocument
+
+ create Embedded Documents
+
+ create Embedded Documents ( embeddedName , data ? , operation ? ) : Promise < Document [] >
+
+Create multiple embedded Document instances within this parent Document using provided input data.
+
+Parameters
+
+ embeddedName : string
+
+The name of the embedded Document type
+
+ data : object [] = []
+
+An array of data objects used to create multiple documents
+
+ Optional operation : DatabaseCreateOperation = {}
+
+Parameters of the database creation workflow
+
+Returns Promise < Document [] >
+
+An array of created Document instances
+
+See
+
+Document.createDocuments
+
+Inherited from BaseActor . createEmbeddedDocuments
+
+ update Embedded Documents
+
+ update Embedded Documents ( embeddedName , updates ? , operation ? ) : Promise < Document [] >
+
+Update multiple embedded Document instances within a parent Document using provided differential data.
+
+Parameters
+
+ embeddedName : string
+
+The name of the embedded Document type
+
+ updates : object [] = []
+
+An array of differential data objects, each used to update a
+ single Document
+
+ Optional operation : DatabaseUpdateOperation = {}
+
+Parameters of the database update workflow
+
+Returns Promise < Document [] >
+
+An array of updated Document instances
+
+See
+
+Document.updateDocuments
+
+Inherited from BaseActor . updateEmbeddedDocuments
+
+ delete Embedded Documents
+
+ delete Embedded Documents ( embeddedName , ids , operation ? ) : Promise < Document [] >
+
+Delete multiple embedded Document instances within a parent Document using provided string ids.
+
+Parameters
+
+ embeddedName : string
+
+The name of the embedded Document type
+
+ ids : string []
+
+An array of string ids for each Document to be deleted
+
+ Optional operation : DatabaseDeleteOperation = {}
+
+Parameters of the database deletion workflow
+
+Returns Promise < Document [] >
+
+An array of deleted Document instances
+
+See
+
+Document.deleteDocuments
+
+Inherited from BaseActor . deleteEmbeddedDocuments
+
+ traverse Embedded Documents
+
+ traverse Embedded Documents ( _parentPath ? ) : Generator < [ string , Document ] , any , any >
+
+Iterate over all embedded Documents that are hierarchical children of this Document.
+
+Parameters
+
+ Optional _parentPath : string
+
+A parent field path already traversed
+
+Returns Generator < [ string , Document ] , any , any >
+
+Inherited from BaseActor . traverseEmbeddedDocuments
+
+ get Flag
+
+ get Flag ( scope , key ) : any
+
+Get the value of a "flag" for this document
+See the setFlag method for more details on flags
+
+Parameters
+
+ scope : string
+
+The flag scope which namespaces the key
+
+ key : string
+
+The flag key
+
+Returns any
+
+The flag value
+
+Inherited from BaseActor . getFlag
+
+ set Flag
+
+ set Flag ( scope , key , value ) : Promise < Document >
+
+Assign a "flag" to this document.
+Flags represent key-value type data which can be used to store flexible or arbitrary data required by either
+the core software, game systems, or user-created modules.
+
+Each flag should be set using a scope which provides a namespace for the flag to help prevent collisions.
+
+Flags set by the core software use the "core" scope.
+Flags set by game systems or modules should use the canonical name attribute for the module
+Flags set by an individual world should "world" as the scope.
+
+Flag values can assume almost any data type. Setting a flag value to null will delete that flag.
+
+Parameters
+
+ scope : string
+
+The flag scope which namespaces the key
+
+ key : string
+
+The flag key
+
+ value : any
+
+The flag value
+
+Returns Promise < Document >
+
+A Promise resolving to the updated document
+
+Inherited from BaseActor . setFlag
+
+ unset Flag
+
+ unset Flag ( scope , key ) : Promise < Document >
+
+Remove a flag assigned to the document
+
+Parameters
+
+ scope : string
+
+The flag scope which namespaces the key
+
+ key : string
+
+The flag key
+
+Returns Promise < Document >
+
+The updated document instance
+
+Inherited from BaseActor . unsetFlag
+
+ _on Create
+
+ _on Create ( data , options , userId ) : void
+
+ Internal
+
+Post-process a creation operation for a single Document instance. Post-operation events occur for all connected
+clients.
+
+Parameters
+
+ data : object
+
+The initial data object provided to the document creation request
+
+ options : object
+
+Additional options which modify the creation request
+
+ userId : string
+
+The id of the User requesting the document update
+
+Returns void
+
+Inherited from BaseActor . _onCreate
+
+ _pre Delete
+
+ _pre Delete ( options , user ) : Promise < boolean | void >
+
+ Internal
+
+Pre-process a deletion operation for a single Document instance. Pre-operation events only occur for the client
+which requested the operation.
+
+Parameters
+
+ options : object
+
+Additional options which modify the deletion request
+
+ user : BaseUser
+
+The User requesting the document deletion
+
+Returns Promise < boolean | void >
+
+A return value of false indicates the deletion operation should be cancelled.
+
+Inherited from BaseActor . _preDelete
+
+ _on Delete
+
+ _on Delete ( options , userId ) : void
+
+ Internal
+
+Post-process a deletion operation for a single Document instance. Post-operation events occur for all connected
+clients.
+
+Parameters
+
+ options : object
+
+Additional options which modify the deletion request
+
+ userId : string
+
+The id of the User requesting the document update
+
+Returns void
+
+Inherited from BaseActor . _onDelete
+
+ reset
+
+ reset ( ) : void
+
+Reset the state of this data instance back to mirror the contained source data, erasing any changes.
+
+Returns void
+
+Inherited from BaseActor . reset
+
+ validate
+
+ validate ( options ? ) : boolean
+
+Validate the data contained in the document to check for type and content
+This function throws an error if data within the document is not valid
+
+Parameters
+
+ options : {
+      changes : object ;
+      clean : boolean ;
+      fallback : boolean ;
+      dropInvalidEmbedded : boolean ;
+      strict : boolean ;
+      fields : boolean ;
+      joint : boolean ;
+ } = {}
+
+Optional parameters which customize how validation occurs.
+
+ changes : object
+
+A specific set of proposed changes to validate, rather than the full
+ source data of the model.
+
+ clean : boolean
+
+If changes are provided, attempt to clean the changes before validating
+ them?
+
+ fallback : boolean
+
+Allow replacement of invalid values with valid defaults?
+
+ drop Invalid Embedded : boolean
+
+If true, invalid embedded documents will emit a warning and
+ be placed in the invalidDocuments collection rather than
+ causing the parent to be considered invalid.
+
+ strict : boolean
+
+Throw if an invalid value is encountered, otherwise log a warning?
+
+ fields : boolean
+
+Perform validation on individual fields?
+
+ joint : boolean
+
+Perform joint validation on the full data model?
+ Joint validation will be performed by default if no changes are passed.
+ Joint validation will be disabled by default if changes are passed.
+ Joint validation can be performed on a complete set of changes (for
+ example testing a complete data model) by explicitly passing true.
+
+Returns boolean
+
+An indicator for whether the document contains valid data
+
+Inherited from BaseActor . validate
+
+ update Source
+
+ update Source ( changes ? , options ? ) : object
+
+Update the DataModel locally by applying an object of changes to its source data.
+The provided changes are cleaned, validated, and stored to the source data object for this model.
+The source data is then re-initialized to apply those changes to the prepared data.
+The method returns an object of differential changes which modified the original data.
+
+Parameters
+
+ changes : object = {}
+
+New values which should be applied to the data model
+
+ Optional options : object = {}
+
+Options which determine how the new data is merged
+
+Returns object
+
+An object containing the changed keys and values
+
+Inherited from BaseActor . updateSource
+
+ toJSON
+
+ toJSON ( ) : object
+
+Extract the source data for the DataModel into a simple object format that can be serialized.
+
+Returns object
+
+The document source data expressed as a plain object
+
+Inherited from BaseActor . toJSON
+
+ Protected _on Embedded Document Change
+
+ _on Embedded Document Change ( ) : void
+
+ Protected
+
+Additional workflows to perform when any descendant document within this Actor changes.
+
+Returns void
+
+ Protected _update Dependent Tokens
+
+ _update Dependent Tokens ( ... args ) : void
+
+ Protected
+
+Update the active TokenDocument instances which represent this Actor.
+
+Parameters
+
+ Rest ... args : any []
+
+Arguments forwarded to Token#_onUpdateBaseActor
+
+Returns void
+
+ Static define Schema
+
+ define Schema ( ) : {
+      _id : DocumentIdField ;
+      name : StringField ;
+      img : FilePathField ;
+      type : DocumentTypeField ;
+      system : TypeDataField ;
+      prototypeToken : EmbeddedDataField ;
+      items : EmbeddedCollectionField ;
+      effects : EmbeddedCollectionField ;
+      folder : ForeignDocumentField ;
+      sort : IntegerSortField ;
+      ownership : DocumentOwnershipField ;
+      flags : ObjectField ;
+      _stats : DocumentStatsField ;
+ }
+
+Define the data schema for documents of this type.
+The schema is populated the first time it is accessed and cached for future reuse.
+
+Returns {
+      _id : DocumentIdField ;
+      name : StringField ;
+      img : FilePathField ;
+      type : DocumentTypeField ;
+      system : TypeDataField ;
+      prototypeToken : EmbeddedDataField ;
+      items : EmbeddedCollectionField ;
+      effects : EmbeddedCollectionField ;
+      folder : ForeignDocumentField ;
+      sort : IntegerSortField ;
+      ownership : DocumentOwnershipField ;
+      flags : ObjectField ;
+      _stats : DocumentStatsField ;
+ }
+
+ _id : DocumentIdField
+
+ name : StringField
+
+ img : FilePathField
+
+ type : DocumentTypeField
+
+ system : TypeDataField
+
+ prototype Token : EmbeddedDataField
+
+ items : EmbeddedCollectionField
+
+ effects : EmbeddedCollectionField
+
+ folder : ForeignDocumentField
+
+ sort : IntegerSortField
+
+ ownership : DocumentOwnershipField
+
+ flags : ObjectField
+
+ _stats : DocumentStatsField
+
+Inherited from BaseActor . defineSchema
+
+ Static get Default Artwork
+
+ get Default Artwork ( actorData ) : {
+      img : string ;
+      texture : {
+          src : string ;
+      } ;
+ }
+
+Determine default artwork based on the provided actor data.
+
+Parameters
+
+ actorData : ActorData
+
+The source actor data.
+
+Returns {
+      img : string ;
+      texture : {
+          src : string ;
+      } ;
+ }
+
+Candidate actor image and prototype token artwork.
+
+ img : string
+
+ texture : {
+      src : string ;
+ }
+
+ src : string
+
+Inherited from BaseActor . getDefaultArtwork
+
+ Static can User Create
+
+ can User Create ( user ) : any
+
+Parameters
+
+ user : any
+
+Returns any
+
+Inherited from BaseActor . canUserCreate
+
+ Static migrate Data
+
+ migrate Data ( source ) : object
+
+Migrate candidate source data for this DataModel which may require initial cleaning or transformations.
+
+Parameters
+
+ source : any
+
+The candidate source data from which the model will be constructed
+
+Returns object
+
+Migrated source data, if necessary
+
+Inherited from BaseActor . migrateData
+
+ Static _initialization Order
+
+ _initialization Order ( ) : Generator < any [] , void , unknown >
+
+Returns Generator < any [] , void , unknown >
+
+Inherited from BaseActor . _initializationOrder
+
+ Static create Documents
+
+ create Documents ( data ? , operation ? ) : Promise < Document [] >
+
+Create multiple Documents using provided input data.
+Data is provided as an array of objects where each individual object becomes one new Document.
+
+Parameters
+
+ data : ( object | Document ) [] = []
+
+An array of data objects or existing Documents to persist.
+
+ Optional operation : Partial < Omit < DatabaseCreateOperation , "data" > > = {}
+
+Parameters of the requested creation
+ operation
+
+Returns Promise < Document [] >
+
+An array of created Document instances
+
+Example: Create a single Document
+
+ const data = [{ name: "New Actor" , type: "character" , img: "path/to/profile.jpg" }];
+ const created = await Actor . createDocuments ( data );
+ Copy
+
+Example: Create multiple Documents
+
+ const data = [{ name: "Tim" , type: "npc" ], [{name: "Tom" , type: "npc" }];
+ const created = await Actor.createDocuments(data);
+ Copy
+
+Example: Create multiple embedded Documents within a parent
+
+ const actor = game . actors . getName ( "Tim" );
+ const data = [{ name: "Sword" , type: "weapon" }, { name: "Breastplate" , type: "equipment" }];
+ const created = await Item . createDocuments ( data , { parent: actor });
+ Copy
+
+Example: Create a Document within a Compendium pack
+
+ const data = [{ name: "Compendium Actor" , type: "character" , img: "path/to/profile.jpg" }];
+ const created = await Actor . createDocuments ( data , { pack: "mymodule.mypack" });
+ Copy
+
+Inherited from BaseActor . createDocuments
+
+ Static update Documents
+
+ update Documents ( updates ? , operation ? ) : Promise < Document [] >
+
+Update multiple Document instances using provided differential data.
+Data is provided as an array of objects where each individual object updates one existing Document.
+
+Parameters
+
+ updates : object [] = []
+
+An array of differential data objects, each used to update a single Document
+
+ Optional operation : Partial < Omit < DatabaseUpdateOperation , "updates" > > = {}
+
+Parameters of the database update
+ operation
+
+Returns Promise < Document [] >
+
+An array of updated Document instances
+
+Example: Update a single Document
+
+ const updates = [{ _id: "12ekjf43kj2312ds" , name: "Timothy" }];
+ const updated = await Actor . updateDocuments ( updates );
+ Copy
+
+Example: Update multiple Documents
+
+ const updates = [{ _id: "12ekjf43kj2312ds" , name: "Timothy" }, { _id: "kj549dk48k34jk34" , name: "Thomas" }]};
+ const updated = await Actor . updateDocuments ( updates );
+ Copy
+
+Example: Update multiple embedded Documents within a parent
+
+ const actor = game . actors . getName ( "Timothy" );
+ const updates = [{ _id: sword . id , name: "Magic Sword" }, { _id: shield . id , name: "Magic Shield" }];
+ const updated = await Item . updateDocuments ( updates , { parent: actor });
+ Copy
+
+Example: Update Documents within a Compendium pack
+
+ const actor = await pack . getDocument ( documentId );
+ const updated = await Actor . updateDocuments ([{ _id: actor . id , name: "New Name" }], { pack: "mymodule.mypack" });
+ Copy
+
+Inherited from BaseActor . updateDocuments
+
+ Static delete Documents
+
+ delete Documents ( ids ? , operation ? ) : Promise < Document [] >
+
+Delete one or multiple existing Documents using an array of provided ids.
+Data is provided as an array of string ids for the documents to delete.
+
+Parameters
+
+ ids : string [] = []
+
+An array of string ids for the documents to be deleted
+
+ Optional operation : Partial < Omit < DatabaseDeleteOperation , "ids" > > = {}
+
+Parameters of the database deletion
+ operation
+
+Returns Promise < Document [] >
+
+An array of deleted Document instances
+
+Example: Delete a single Document
+
+ const tim = game . actors . getName ( "Tim" );
+ const deleted = await Actor . deleteDocuments ([ tim . id ]);
+ Copy
+
+Example: Delete multiple Documents
+
+ const tim = game . actors . getName ( "Tim" );
+ const tom = game . actors . getName ( "Tom" );
+ const deleted = await Actor . deleteDocuments ([ tim . id , tom . id ]);
+ Copy
+
+Example: Delete multiple embedded Documents within a parent
+
+ const tim = game . actors . getName ( "Tim" );
+ const sword = tim . items . getName ( "Sword" );
+ const shield = tim . items . getName ( "Shield" );
+ const deleted = await Item . deleteDocuments ([ sword . id , shield . id ], parent : actor });
+ Copy
+
+Example: Delete Documents within a Compendium pack
+
+ const actor = await pack . getDocument ( documentId );
+ const deleted = await Actor . deleteDocuments ([ actor . id ], { pack: "mymodule.mypack" });
+ Copy
+
+Inherited from BaseActor . deleteDocuments
+
+ Static create
+
+ create ( data ? , operation ? ) : Promise < Document | Document [] >
+
+Create a new Document using provided input data, saving it to the database.
+
+Parameters
+
+ Optional data : object | Document | ( object | Document ) []
+
+Initial data used to create this Document, or a Document
+ instance to persist.
+
+ Optional operation : Partial < Omit < DatabaseCreateOperation , "data" > > = {}
+
+Parameters of the creation operation
+
+Returns Promise < Document | Document [] >
+
+The created Document instance
+
+See
+
+Document.createDocuments
+
+Example: Create a World-level Item
+
+ const data = [{ name: "Special Sword" , type: "weapon" }];
+ const created = await Item . create ( data );
+ Copy
+
+Example: Create an Actor-owned Item
+
+ const data = [{ name: "Special Sword" , type: "weapon" }];
+ const actor = game . actors . getName ( "My Hero" );
+ const created = await Item . create ( data , { parent: actor });
+ Copy
+
+Example: Create an Item in a Compendium pack
+
+ const data = [{ name: "Special Sword" , type: "weapon" }];
+ const created = await Item . create ( data , { pack: "mymodule.mypack" });
+ Copy
+
+Inherited from BaseActor . create
+
+ Static get
+
+ get ( documentId , operation ? ) : any
+
+Get a World-level Document of this type by its id.
+
+Parameters
+
+ documentId : string
+
+The Document ID
+
+ Optional operation : DatabaseGetOperation = {}
+
+Parameters of the get operation
+
+Returns any
+
+The retrieved Document, or null
+
+Inherited from BaseActor . get
+
+ Static get Collection Name
+
+ get Collection Name ( name ) : string
+
+A compatibility method that returns the appropriate name of an embedded collection within this Document.
+
+Parameters
+
+ name : string
+
+An existing collection name or a document name.
+
+Returns string
+
+The provided collection name if it exists, the first available collection for the
+ document name provided, or null if no appropriate embedded collection could be found.
+
+Example: Passing an existing collection name.
+
+ Actor . getCollectionName ( "items" );
+ // returns "items"
+ Copy
+
+Example: Passing a document name.
+
+ Actor . getCollectionName ( "Item" );
+ // returns "items"
+ Copy
+
+Inherited from BaseActor . getCollectionName
+
+ Static _pre Create Operation
+
+ _pre Create Operation ( documents , operation , user ) : Promise < boolean | void >
+
+ Internal
+
+Pre-process a creation operation, potentially altering its instructions or input data. Pre-operation events only
+occur for the client which requested the operation.
+
+This batch-wise workflow occurs after individual Document#_preCreate workflows and provides a final
+pre-flight check before a database operation occurs.
+
+Modifications to pending documents must mutate the documents array or alter individual document instances using
+ Document#updateSource .
+
+Parameters
+
+ documents : Document []
+
+Pending document instances to be created
+
+ operation : DatabaseCreateOperation
+
+Parameters of the database creation operation
+
+ user : BaseUser
+
+The User requesting the creation operation
+
+Returns Promise < boolean | void >
+
+Return false to cancel the creation operation entirely
+
+Inherited from BaseActor . _preCreateOperation
+
+ Static _on Create Operation
+
+ _on Create Operation ( documents , operation , user ) : Promise < void >
+
+ Internal
+
+Post-process a creation operation, reacting to database changes which have occurred. Post-operation events occur
+for all connected clients.
+
+This batch-wise workflow occurs after individual Document#_onCreate workflows.
+
+Parameters
+
+ documents : Document []
+
+The Document instances which were created
+
+ operation : DatabaseCreateOperation
+
+Parameters of the database creation operation
+
+ user : BaseUser
+
+The User who performed the creation operation
+
+Returns Promise < void >
+
+Inherited from BaseActor . _onCreateOperation
+
+ Static _pre Update Operation
+
+ _pre Update Operation ( documents , operation , user ) : Promise < boolean | void >
+
+ Internal
+
+Pre-process an update operation, potentially altering its instructions or input data. Pre-operation events only
+occur for the client which requested the operation.
+
+This batch-wise workflow occurs after individual Document#_preUpdate workflows and provides a final
+pre-flight check before a database operation occurs.
+
+Modifications to the requested updates are performed by mutating the data array of the operation.
+ Document#updateSource .
+
+Parameters
+
+ documents : Document []
+
+Document instances to be updated
+
+ operation : DatabaseUpdateOperation
+
+Parameters of the database update operation
+
+ user : BaseUser
+
+The User requesting the update operation
+
+Returns Promise < boolean | void >
+
+Return false to cancel the update operation entirely
+
+Inherited from BaseActor . _preUpdateOperation
+
+ Static _on Update Operation
+
+ _on Update Operation ( documents , operation , user ) : Promise < void >
+
+ Internal
+
+Post-process an update operation, reacting to database changes which have occurred. Post-operation events occur
+for all connected clients.
+
+This batch-wise workflow occurs after individual Document#_onUpdate workflows.
+
+Parameters
+
+ documents : Document []
+
+The Document instances which were updated
+
+ operation : DatabaseUpdateOperation
+
+Parameters of the database update operation
+
+ user : BaseUser
+
+The User who performed the update operation
+
+Returns Promise < void >
+
+Inherited from BaseActor . _onUpdateOperation
+
+ Static _pre Delete Operation
+
+ _pre Delete Operation ( documents , operation , user ) : Promise < boolean | void >
+
+ Internal
+
+Pre-process a deletion operation, potentially altering its instructions or input data. Pre-operation events only
+occur for the client which requested the operation.
+
+This batch-wise workflow occurs after individual Document#_preDelete workflows and provides a final
+pre-flight check before a database operation occurs.
+
+Modifications to the requested deletions are performed by mutating the operation object.
+ Document#updateSource .
+
+Parameters
+
+ documents : Document []
+
+Document instances to be deleted
+
+ operation : DatabaseDeleteOperation
+
+Parameters of the database update operation
+
+ user : BaseUser
+
+The User requesting the deletion operation
+
+Returns Promise < boolean | void >
+
+Return false to cancel the deletion operation entirely
+
+Inherited from BaseActor . _preDeleteOperation
+
+ Static _on Delete Operation
+
+ _on Delete Operation ( documents , operation , user ) : Promise < void >
+
+ Internal
+
+Post-process a deletion operation, reacting to database changes which have occurred. Post-operation events occur
+for all connected clients.
+
+This batch-wise workflow occurs after individual Document#_onDelete workflows.
+
+Parameters
+
+ documents : Document []
+
+The Document instances which were deleted
+
+ operation : DatabaseDeleteOperation
+
+Parameters of the database deletion operation
+
+ user : BaseUser
+
+The User who performed the deletion operation
+
+Returns Promise < void >
+
+Inherited from BaseActor . _onDeleteOperation
+
+ Static _add Data Field Migration
+
+ _add Data Field Migration ( data , oldKey , newKey , apply ) : boolean
+
+ Internal
+
+Define a simple migration from one field name to another.
+The value of the data can be transformed during the migration by an optional application function.
+
+Parameters
+
+ data : object
+
+The data object being migrated
+
+ oldKey : string
+
+The old field name
+
+ newKey : string
+
+The new field name
+
+ apply : any
+
+An application function, otherwise the old value is applied
+
+Returns boolean
+
+Whether a migration was applied.
+
+Inherited from BaseActor . _addDataFieldMigration
+
+ Static clean Data
+
+ clean Data ( source ? , options ? ) : object
+
+Clean a data source object to conform to a specific provided schema.
+
+Parameters
+
+ Optional source : object = {}
+
+The source data object
+
+ Optional options : object = {}
+
+Additional options which are passed to field cleaning methods
+
+Returns object
+
+The cleaned source data
+
+Inherited from BaseActor . cleanData
+
+ Static validate Joint
+
+ validate Joint ( data ) : any
+
+Evaluate joint validation rules which apply validation conditions across multiple fields of the model.
+Field-specific validation rules should be defined as part of the DataSchema for the model.
+This method allows for testing aggregate rules which impose requirements on the overall model.
+
+Parameters
+
+ data : object
+
+Candidate data for the model
+
+Returns any
+
+Throws
+
+An error if a validation failure is detected
+
+Inherited from BaseActor . validateJoint
+
+ Static from Source
+
+ from Source ( source , context ? ) : DataModel
+
+Create a new instance of this DataModel from a source record.
+The source is presumed to be trustworthy and is not strictly validated.
+
+Parameters
+
+ source : object
+
+Initial document data which comes from a trusted source.
+
+ Optional context : any = {}
+
+Model construction context
+
+Returns DataModel
+
+Inherited from BaseActor . fromSource
+
+ Static fromJSON
+
+ fromJSON ( json ) : DataModel
+
+Create a DataModel instance using a provided serialized JSON string.
+
+Parameters
+
+ json : string
+
+Serialized document data in string format
+
+Returns DataModel
+
+A constructed data model instance
+
+Inherited from BaseActor . fromJSON
+
+ Static migrate Data Safe
+
+ migrate Data Safe ( source ) : object
+
+Wrap data migration in a try/catch which attempts it safely
+
+Parameters
+
+ source : object
+
+The candidate source data from which the model will be constructed
+
+Returns object
+
+Migrated source data, if necessary
+
+Inherited from BaseActor . migrateDataSafe
+
+ Static shim Data
+
+ shim Data ( data , options ? ) : object
+
+Take data which conforms to the current data schema and add backwards-compatible accessors to it in order to
+support older code which uses this data.
+
+Parameters
+
+ data : object
+
+Data which matches the current schema
+
+ Optional options : {
+      embedded : boolean ;
+ } = {}
+
+Additional shimming options
+
+ embedded : boolean
+
+Apply shims to embedded models?
+
+Returns object
+
+Data with added backwards-compatible properties
+
+Inherited from BaseActor . shimData
+
+ Static Protected _log Data Field Migration
+
+ _log Data Field Migration ( oldKey , newKey , options ? ) : void
+
+ Protected
+
+Parameters
+
+ oldKey : any
+
+ newKey : any
+
+ options : {} = {}
+
+Returns void
+
+Inherited from BaseActor . _logDataFieldMigration
+
+ Static Private _request Token Images
+
+ _request Token Images ( actorId , options ? ) : Promise < string [] >
+
+ Private
+
+Request wildcard token images from the server and return them.
+
+Parameters
+
+ actorId : string
+
+The actor whose prototype token contains the wildcard image path.
+
+ Optional options : {
+      pack : string ;
+ } = {}
+
+ pack : string
+
+The name of the compendium the actor is in.
+
+Returns Promise < string [] >
+
+The list of filenames to token images that match the wildcard search.
+
+ Settings
+
+Member Visibility
+
+ Protected
+
+ Private
+
+ Inherited
+
+Theme
+ OS Light Dark
+
+ On This Page
+
+ Hook Events
+
+ constructor overrides statuses _last Wildcard _source parent _token Images metadata DEFAULT_ ICON LOCALIZATION_ PREFIXES thumbnail item Types is Token applied Effects temporary Effects token in Combat id is Embedded uuid schema invalid validation Failures schema database implementation base Document collection Name document Name TYPES has Type Data hierarchy _configure _initialize Source apply Active Effects get Active Tokens all Applicable Effects get Roll Data get Token Document get Token Images modify Token Attribute prepare Data prepare Embedded Documents roll Initiative toggle Status Effect get Dependent Tokens _register Dependent Token _unregister Dependent Token _unregister Dependent Scene _on Update _on Create Descendant Documents _on Update Descendant Documents _on Delete Descendant Documents _pre Create _pre Update _initialize _get Parent Collection get User Level test User Permission can User Modify clone migrate System Data to Object update delete get Embedded Collection get Embedded Document create Embedded Documents update Embedded Documents delete Embedded Documents traverse Embedded Documents get Flag set Flag unset Flag _on Create _pre Delete _on Delete reset validate update Source toJSON _on Embedded Document Change _update Dependent Tokens define Schema get Default Artwork can User Create migrate Data _initialization Order create Documents update Documents delete Documents create get get Collection Name _pre Create Operation _on Create Operation _pre Update Operation _on Update Operation _pre Delete Operation _on Delete Operation _add Data Field Migration clean Data validate Joint from Source fromJSON migrate Data Safe shim Data _log Data Field Migration _request Token Images
+
+ Foundry Virtual Tabletop - API Documentation - Version 12
+
+Loading...

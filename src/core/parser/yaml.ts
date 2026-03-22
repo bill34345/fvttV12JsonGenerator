@@ -3,6 +3,23 @@ import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../confi
 import { i18n } from '../mapper/i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 
+type YamlBodySectionKey =
+  | 'traits'
+  | 'actions'
+  | 'bonus_actions'
+  | 'reactions'
+  | 'legendary_actions'
+  | 'raw_notes';
+
+type YamlBodyExtractionResult = {
+  biography: string;
+  traits: string[];
+  actions: string[];
+  bonus_actions: string[];
+  reactions: string[];
+  legendary_actions: string[];
+};
+
 export class YamlParser {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
@@ -16,15 +33,65 @@ export class YamlParser {
       details: {},
       traits: { bypasses: [] },
       skills: {},
+      skillBonuses: {},
+      skillPassives: {},
       saves: [],
+      saveBonuses: {},
       items: []
     };
 
     if (body.trim()) {
-      result.details.biography = body.trim();
+      const extracted = this.extractBodySections(body);
+      const biographyParts = [extracted.biography, ...extracted.traits].filter((part) => part.trim());
+      if (biographyParts.length > 0) {
+        result.details.biography = biographyParts.join('\n').trim();
+      }
+      if (extracted.actions.length > 0) {
+        result.actions = extracted.actions;
+      }
+      if (extracted.bonus_actions.length > 0) {
+        result.bonus_actions = extracted.bonus_actions;
+      }
+      if (extracted.reactions.length > 0) {
+        result.reactions = extracted.reactions;
+      }
+      if (extracted.legendary_actions.length > 0) {
+        result.legendary_actions = extracted.legendary_actions;
+        const first = extracted.legendary_actions[0];
+        if (typeof first === 'string') {
+          const match =
+            first.match(CHINESE_ACTION_REGEX.CHINESE_LEGENDARY_ACTION_COUNT) ??
+            first.match(CHINESE_ACTION_REGEX.LEGENDARY_ACTION_COUNT);
+          if (match?.[1]) {
+            const count = parseInt(match[1]);
+            if (!result.attributes.legact) {
+              result.attributes.legact = { value: count, max: count };
+            }
+          }
+        }
+      }
     }
 
     this.traverse(rawData, result);
+
+    if (rawData && typeof rawData === 'object') {
+      if ('豁免熟练' in rawData) {
+        this.parseSavingThrows((rawData as Record<string, unknown>)['豁免熟练'], result);
+      }
+      if ('技能' in rawData) {
+        this.parseSkills((rawData as Record<string, Record<string, string | number>>)['技能'], result);
+      }
+      if ('感官' in rawData) {
+        const parsedSenses = this.parseSenses((rawData as Record<string, unknown>)['感官']);
+        result.traits.senses = parsedSenses.senses;
+        if (parsedSenses.passivePerception !== undefined) {
+          result.skillPassives = {
+            ...(result.skillPassives || {}),
+            prc: parsedSenses.passivePerception,
+          };
+        }
+      }
+    }
     
     return result;
   }
@@ -77,7 +144,7 @@ export class YamlParser {
       // ignore, fixed to npc
     } else if (path.startsWith('system.abilities')) {
       if (internalKey === 'saves') {
-        result.saves = processedValue;
+        this.parseSavingThrows(processedValue, result);
       } else {
         // system.abilities.str.value -> abilities.str
         // internalKey is "str"
@@ -131,7 +198,14 @@ export class YamlParser {
       if (internalKey === 'spellcasting') result.spellcasting = processedValue;
     } else if (path.startsWith('system.traits')) {
       if (internalKey === 'senses') {
-        result.traits.senses = this.parseSenses(processedValue); 
+        const parsedSenses = this.parseSenses(processedValue);
+        result.traits.senses = parsedSenses.senses;
+        if (parsedSenses.passivePerception !== undefined) {
+          result.skillPassives = {
+            ...(result.skillPassives || {}),
+            prc: parsedSenses.passivePerception,
+          };
+        }
       } else if (internalKey === 'size') {
         const sizeMap: Record<string, string> = {
           '微型': 'tiny', '极小': 'tiny',
@@ -171,8 +245,179 @@ export class YamlParser {
       // Map keys and values?
       // Keys: "察觉" -> "prc"
       // Values: "专精" -> 2
-      result.skills = this.parseSkills(processedValue);
+      this.parseSkills(processedValue, result);
     }
+  }
+
+  private extractBodySections(body: string): YamlBodyExtractionResult {
+    const sectionLines: Record<YamlBodySectionKey, string[]> = {
+      traits: [],
+      actions: [],
+      bonus_actions: [],
+      reactions: [],
+      legendary_actions: [],
+      raw_notes: [],
+    };
+    const biographyLines: string[] = [];
+
+    let currentSection: YamlBodySectionKey | undefined;
+    let currentSectionLevel = 0;
+
+    for (const rawLine of body.split(/\r?\n/)) {
+      const heading = this.parseMarkdownHeading(rawLine);
+      if (heading) {
+        if (currentSection && heading.level > currentSectionLevel) {
+          sectionLines[currentSection].push(rawLine);
+          continue;
+        }
+
+        const detectedSection = this.classifyBodySectionHeading(heading.title);
+        if (detectedSection) {
+          currentSection = detectedSection;
+          currentSectionLevel = heading.level;
+        } else {
+          currentSection = undefined;
+          currentSectionLevel = 0;
+          biographyLines.push(rawLine);
+        }
+        continue;
+      }
+
+      if (currentSection) {
+        sectionLines[currentSection].push(rawLine);
+      } else {
+        biographyLines.push(rawLine);
+      }
+    }
+
+    return {
+      biography: biographyLines.join('\n').trim(),
+      traits: this.normalizeBodySectionLines(sectionLines.traits),
+      actions: this.normalizeBodySectionLines(sectionLines.actions),
+      bonus_actions: this.normalizeBodySectionLines(sectionLines.bonus_actions),
+      reactions: this.normalizeBodySectionLines(sectionLines.reactions),
+      legendary_actions: this.normalizeBodySectionLines(sectionLines.legendary_actions),
+    };
+  }
+
+  private parseMarkdownHeading(line: string): { level: number; title: string } | undefined {
+    const match = line.match(/^\s{0,3}(#{1,6})\s*(.+?)\s*#*\s*$/);
+    if (!match?.[1] || !match[2]) {
+      return undefined;
+    }
+
+    return {
+      level: match[1].length,
+      title: match[2].trim(),
+    };
+  }
+
+  private classifyBodySectionHeading(title: string): YamlBodySectionKey | undefined {
+    const normalized = title.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    if (normalized.includes('传奇动作') || normalized.includes('legendary actions')) {
+      return 'legendary_actions';
+    }
+
+    if (normalized.includes('附赠动作') || normalized.includes('bonus actions')) {
+      return 'bonus_actions';
+    }
+
+    if (normalized.includes('反应') || normalized.includes('reactions')) {
+      return 'reactions';
+    }
+
+    if (normalized.includes('特性') || normalized.includes('traits')) {
+      return 'traits';
+    }
+
+    if (normalized.includes('动作') || normalized === 'actions') {
+      return 'actions';
+    }
+
+    if (normalized.includes('原始备注') || normalized.includes('raw notes')) {
+      return 'raw_notes';
+    }
+
+    return undefined;
+  }
+
+  private normalizeBodySectionLines(lines: string[]): string[] {
+    const merged: string[] = [];
+
+    for (const rawLine of lines) {
+      const cleaned = this.cleanBodySectionLine(rawLine);
+      if (!cleaned) {
+        continue;
+      }
+
+      const previous = merged[merged.length - 1];
+      if (this.shouldMergeBodySectionLine(previous, cleaned, rawLine)) {
+        merged[merged.length - 1] = `${previous} ${cleaned}`.replace(/\s+/g, ' ').trim();
+        continue;
+      }
+
+      merged.push(cleaned);
+    }
+
+    return merged;
+  }
+
+  private cleanBodySectionLine(line: string): string {
+    let text = line.trim();
+    if (!text) {
+      return '';
+    }
+
+    while (text.startsWith('>')) {
+      text = text.slice(1).trimStart();
+    }
+
+    text = text.replace(/^[-*+]\s*/, '');
+    text = text.replace(/^\d+[.)]\s*/, '');
+
+    const nestedHeading = this.parseMarkdownHeading(text);
+    if (nestedHeading) {
+      text = nestedHeading.title;
+    }
+
+    text = text.replace(/\*\*\*([^*]+)\*\*\*/g, '$1');
+    text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+    text = text.replace(/\*([^*]+)\*/g, '$1');
+    text = text.replace(/\*/g, '');
+
+    return text.trim();
+  }
+
+  private shouldMergeBodySectionLine(
+    previous: string | undefined,
+    current: string,
+    rawLine: string,
+  ): boolean {
+    if (!previous) {
+      return false;
+    }
+
+    if (!current.trim()) {
+      return false;
+    }
+
+    if (/^\s{2,}/.test(rawLine)) {
+      return true;
+    }
+
+    if (!/[。！？.!?)]$/.test(previous.trim())) {
+      return true;
+    }
+
+    if (/^(命中|豁免失败|豁免成功|强击|若|并且|且|成功|失败|直到|目标|该目标|它|其|此后|额外|Bleed|Dazed|\(|\+|-|\d)/.test(current)) {
+      return true;
+    }
+
+    return false;
   }
 
   private extractLairInitiative(lairActions: any): number | undefined {
@@ -262,12 +507,20 @@ export class YamlParser {
 
   private parseHP(value: string | number): { value: number; max: number; formula?: string } {
     if (typeof value === 'number') return { value, max: value };
-    // "256 (19d12+133)"
-    const match = value.match(/^(\d+)\s*\(?(.+?)\)?$/);
-    if (match) {
-      return { value: parseInt(match[1]!), max: parseInt(match[1]!), formula: match[2] };
+    const trimmed = value.trim();
+    const exact = trimmed.match(/^(\d+)$/);
+    if (exact?.[1]) {
+      const numeric = parseInt(exact[1], 10);
+      return { value: numeric, max: numeric };
     }
-    return { value: parseInt(value), max: parseInt(value) };
+
+    const withFormula = trimmed.match(/^(\d+)\s*\(([^)]+)\)$/);
+    if (withFormula?.[1] && withFormula[2]) {
+      const numeric = parseInt(withFormula[1], 10);
+      return { value: numeric, max: numeric, formula: withFormula[2].trim() };
+    }
+
+    return { value: parseInt(trimmed), max: parseInt(trimmed) };
   }
 
   private parseAC(value: string | number): { value: number; calc: "flat" | "natural" | "default" } {
@@ -278,25 +531,41 @@ export class YamlParser {
     return { value: val, calc: isNatural ? "natural" : "flat" };
   }
 
-  private parseSenses(senses: any): Record<string, number> {
-    const result: Record<string, number> = {};
-    if (typeof senses !== 'object' || senses === null) return result;
+  private parseSenses(senses: any): { senses: Record<string, number | string>; passivePerception?: number } {
+    const result: Record<string, number | string> = {};
+    let passivePerception: number | undefined;
+    if (typeof senses !== 'object' || senses === null) return { senses: result, passivePerception };
 
     const senseMap: Record<string, string> = {
       '黑暗视觉': 'darkvision',
       '盲视': 'blindsight',
       '震颤感知': 'tremorsense',
-      '真实视觉': 'truesight'
+      '真实视觉': 'truesight',
+      '被动察觉': 'passiveperception',
+      '特殊': 'special',
     };
 
     for (const [k, v] of Object.entries(senses)) {
       const key = senseMap[k] || k;
+      if (key === 'special') {
+        const text = String(v).trim();
+        if (text) {
+          result.special = text;
+        }
+        continue;
+      }
       const val = parseInt(String(v));
+      if (key === 'passiveperception') {
+        if (!isNaN(val)) {
+          passivePerception = val;
+        }
+        continue;
+      }
       if (!isNaN(val)) {
         result[key] = val;
       }
     }
-    return result;
+    return { senses: result, passivePerception };
   }
 
   private parseDamageMod(value: any): { amount: Record<string, string>; bypasses: string[] } {
@@ -320,8 +589,11 @@ export class YamlParser {
     return result;
   }
 
-  private parseSkills(skills: Record<string, string | number>): Record<string, number> {
-    const result: Record<string, number> = {};
+  private parseSkills(skills: Record<string, string | number>, result: ParsedNPC): void {
+    const parsedSkills: Record<string, number> = {};
+    const skillBonuses: Record<string, number> = {};
+    const profBonus = this.getProficiencyBonus(result);
+
     for (const [key, val] of Object.entries(skills)) {
       // Map key: "察觉" -> "prc"
       const i18nKey = i18n.getKey(key);
@@ -330,7 +602,7 @@ export class YamlParser {
         // "DND5E.SkillPrc" -> "prc"
         skillKey = i18nKey.replace('DND5E.Skill', '').toLowerCase();
       }
-      
+
       let skillValue = 0.5;
       const valStr = String(val);
 
@@ -342,12 +614,204 @@ export class YamlParser {
         skillValue = 0.5;
       } else {
         const num = parseFloat(valStr);
-        if (!isNaN(num)) skillValue = num;
+        if (!isNaN(num)) {
+          if (num >= 0 && num <= 2) {
+            skillValue = num;
+          } else {
+            skillValue = this.inferSkillProficiency(skillKey, num, result, profBonus);
+            const expected = this.expectedSkillModifier(skillKey, skillValue, result, profBonus);
+            const delta = num - expected;
+            if (delta !== 0) {
+              skillBonuses[skillKey] = delta;
+            }
+          }
+        }
       }
-      
-      result[skillKey] = skillValue; 
+
+      parsedSkills[skillKey] = skillValue;
     }
-    return result;
+
+    result.skills = parsedSkills;
+    result.skillBonuses = skillBonuses;
+  }
+
+  private parseSavingThrows(value: unknown, result: ParsedNPC): void {
+    const saves = new Set<string>();
+    const saveBonuses: Record<string, number> = {};
+    const profBonus = this.getProficiencyBonus(result);
+
+    const applyEntry = (rawKey: unknown, rawValue?: unknown) => {
+      const ability = this.normalizeAbility(rawKey);
+      if (!ability) return;
+
+      if (rawValue === undefined) {
+        saves.add(ability);
+        return;
+      }
+
+      const numeric = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
+      if (!Number.isNaN(numeric)) {
+        const baseMod = this.abilityModifier(result.abilities[ability] ?? 10);
+        const proficient = numeric >= baseMod + (profBonus ?? 0) - 0.25;
+        if (proficient) {
+          saves.add(ability);
+        }
+        const expected = baseMod + (proficient ? profBonus ?? 0 : 0);
+        const delta = numeric - expected;
+        if (delta !== 0) {
+          saveBonuses[ability] = delta;
+        }
+        return;
+      }
+
+      saves.add(ability);
+    };
+
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        applyEntry(entry);
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      for (const [key, rawValue] of Object.entries(value)) {
+        applyEntry(key, rawValue);
+      }
+    } else if (typeof value === 'string') {
+      const entries = value.split(/[,;，]/).map((entry) => entry.trim()).filter(Boolean);
+      for (const entry of entries) {
+        const match = entry.match(/^(.+?)\s*([+-]?\d+)\s*$/);
+        if (match?.[1] && match[2]) {
+          applyEntry(match[1], Number.parseInt(match[2], 10));
+        } else {
+          applyEntry(entry);
+        }
+      }
+    }
+
+    result.saves = Array.from(saves);
+    result.saveBonuses = saveBonuses;
+  }
+
+  private getProficiencyBonus(result: ParsedNPC): number | undefined {
+    if (typeof result.attributes.prof === 'number' && Number.isFinite(result.attributes.prof)) {
+      return result.attributes.prof;
+    }
+
+    if (typeof result.details.cr === 'number' && Number.isFinite(result.details.cr)) {
+      if (result.details.cr >= 17) return 6;
+      if (result.details.cr >= 13) return 5;
+      if (result.details.cr >= 9) return 4;
+      if (result.details.cr >= 5) return 3;
+      return 2;
+    }
+
+    return undefined;
+  }
+
+  private inferSkillProficiency(
+    skillKey: string,
+    modifier: number,
+    result: ParsedNPC,
+    profBonus: number | undefined,
+  ): number {
+    const abilityKey = this.getSkillAbility(skillKey);
+    if (!abilityKey || !profBonus) {
+      return 1;
+    }
+
+    const baseMod = this.abilityModifier(result.abilities[abilityKey] ?? 10);
+    const level = (modifier - baseMod) / profBonus;
+    if (!Number.isFinite(level)) return 1;
+    if (level >= 1.75) return 2;
+    if (level >= 0.75) return 1;
+    if (level >= 0.25) return 0.5;
+    return 0;
+  }
+
+  private expectedSkillModifier(
+    skillKey: string,
+    proficiency: number,
+    result: ParsedNPC,
+    profBonus: number | undefined,
+  ): number {
+    const abilityKey = this.getSkillAbility(skillKey);
+    const baseMod = this.abilityModifier(abilityKey ? result.abilities[abilityKey] ?? 10 : 10);
+    if (!profBonus) {
+      return baseMod;
+    }
+    return baseMod + proficiency * profBonus;
+  }
+
+  private getSkillAbility(skillKey: string): keyof ParsedNPC['abilities'] | undefined {
+    const map: Record<string, keyof ParsedNPC['abilities']> = {
+      acr: 'dex',
+      ani: 'wis',
+      arc: 'int',
+      ath: 'str',
+      dec: 'cha',
+      his: 'int',
+      ins: 'wis',
+      itm: 'cha',
+      inv: 'int',
+      med: 'wis',
+      nat: 'int',
+      prc: 'wis',
+      prf: 'cha',
+      per: 'cha',
+      rel: 'int',
+      slt: 'dex',
+      ste: 'dex',
+      sur: 'wis',
+    };
+
+    return map[skillKey];
+  }
+
+  private abilityModifier(score: number): number {
+    return Math.floor((score - 10) / 2);
+  }
+
+  private normalizeAbility(value: unknown): keyof ParsedNPC['abilities'] | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const normalized = value
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/[^a-z\u4e00-\u9fff]+/g, ' ')
+      .trim();
+
+    const map: Record<string, keyof ParsedNPC['abilities']> = {
+      str: 'str',
+      strength: 'str',
+      力量: 'str',
+      dex: 'dex',
+      dexterity: 'dex',
+      敏捷: 'dex',
+      con: 'con',
+      constitution: 'con',
+      体质: 'con',
+      int: 'int',
+      intelligence: 'int',
+      智力: 'int',
+      wis: 'wis',
+      wisdom: 'wis',
+      感知: 'wis',
+      cha: 'cha',
+      charisma: 'cha',
+      魅力: 'cha',
+    };
+
+    if (map[normalized]) {
+      return map[normalized];
+    }
+
+    const i18nKey = i18n.getKey(value);
+    if (i18nKey?.startsWith('DND5E.Ability')) {
+      return i18nKey.replace('DND5E.Ability', '').toLowerCase() as keyof ParsedNPC['abilities'];
+    }
+
+    return undefined;
   }
 
   private detectBypasses(text: string): string | null {

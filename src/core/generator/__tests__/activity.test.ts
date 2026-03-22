@@ -72,8 +72,16 @@ describe('ActivityGenerator', () => {
     const activity = activities[id];
 
     // Check reach mapping
-    expect(activity.range.value).toBe('10');
-    expect(activity.range.units).toBe('ft');
+    expect(activity.range).toEqual(
+      expect.objectContaining({
+        override: false,
+        reach: 10,
+        value: null,
+        long: null,
+        units: 'ft',
+        special: '',
+      }),
+    );
 
     // Check versatile mapping
     expect(activity.damage.versatile).toBeDefined();
@@ -87,9 +95,67 @@ describe('ActivityGenerator', () => {
     expect(activity.uses.max).toBe('1');
 
     // Check target mapping
-    expect(activity.target.template.type).toBe('cone');
-    expect(activity.target.template.size).toBe('15');
-    expect(activity.target.template.units).toBe('ft');
+    expect(activity.target).toEqual(
+      expect.objectContaining({
+        override: false,
+        prompt: true,
+        template: expect.objectContaining({
+          type: 'cone',
+          size: '15',
+          units: 'ft',
+          contiguous: false,
+        }),
+        affects: expect.objectContaining({
+          count: '',
+          type: '',
+          choice: false,
+          special: '',
+        }),
+      }),
+    );
+  });
+
+  it('creates default targeting scaffolding for melee attacks instead of falling back to self-only activity defaults', () => {
+    const action: ActionData = {
+      name: 'Tail Crash',
+      type: 'attack',
+      attack: {
+        type: 'mwak',
+        toHit: 9,
+        range: '10 ft',
+        reach: '10',
+        damage: [{ formula: '4d6+5', type: 'bludgeoning' }]
+      }
+    };
+
+    const activities = generator.generate(action);
+    const id = Object.keys(activities)[0]!;
+    const activity = activities[id];
+
+    expect(activity.range).toEqual(
+      expect.objectContaining({
+        override: false,
+        reach: 10,
+        value: null,
+        long: null,
+        units: 'ft',
+      }),
+    );
+    expect(activity.target).toEqual(
+      expect.objectContaining({
+        override: false,
+        prompt: true,
+        template: expect.objectContaining({
+          contiguous: false,
+          units: 'ft',
+          type: '',
+        }),
+        affects: expect.objectContaining({
+          choice: false,
+          type: '',
+        }),
+      }),
+    );
   });
 
   it('should map all AOE shapes correctly', () => {

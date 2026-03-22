@@ -1,0 +1,388 @@
+<!DOCTYPE html><html class="default" lang="en"><head><meta charSet="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Foundry Virtual Tabletop - API Documentation - Version 12</title><meta name="description" content="Documentation for Foundry Virtual Tabletop - API Documentation - Version 12"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><link rel="stylesheet" href="assets/custom.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><div class="table-cell" id="tsd-search" data-base="."><div class="field"><label for="tsd-search-field" class="tsd-widget tsd-toolbar-icon search no-caption"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><use href="assets/icons.svg#icon-search"></use></svg></label><input type="text" id="tsd-search-field" aria-label="Search"/></div><div class="field"><div id="tsd-toolbar-links"></div></div><ul class="results"><li class="state loading">Preparing search index...</li><li class="state failure">The search index is not available</li></ul><a href="index.html" class="title">Foundry Virtual Tabletop - API Documentation - Version 12</a></div><div class="table-cell" id="tsd-widgets"><a href="#" class="tsd-widget tsd-toolbar-icon menu no-caption" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h2>Foundry Virtual Tabletop - API Documentation - Version 12</h2></div><div class="tsd-panel tsd-typography"><p>Welcome to the documentation for the client-side API of <strong><a href="https://foundryvtt.com/">Foundry Virtual Tabletop</a></strong>, a JavaScript application for running tabletop role-playing games within a self-hosted web framework. The goal of this documentation is to empower developers to create amazing game systems, add-on modules, and scripts which augment and extend the base functionality of the Foundry Virtual Tabletop platform.</p>
+<a id="md:table-of-contents" class="tsd-anchor"></a><h2><a href="#md:table-of-contents">Table of Contents</a></h2><!-- https://ecotrust-canada.github.io/markdown-toc/ -->
+<ul>
+<li><a href="#md:reading-these-api-docs">Reading these API Docs</a></li>
+<li><a href="#md:documents-and-data">Documents and Data</a><ul>
+<li><a href="#md:document-abstraction">Document Abstraction</a></li>
+<li><a href="#md:database-operations">Database Operations</a></li>
+<li><a href="#md:collections">Collections</a></li>
+<li><a href="#md:primary-document-types">Primary Document Types</a><ul>
+<li><a href="#md:actor">Actor</a></li>
+<li><a href="#md:chat-message">Chat Message</a></li>
+<li><a href="#md:combat-encounter">Combat Encounter</a></li>
+<li><a href="#md:item">Item</a></li>
+<li><a href="#md:fog-exploration">Fog Exploration</a></li>
+<li><a href="#md:folder">Folder</a></li>
+<li><a href="#md:journal-entry">Journal Entry</a></li>
+<li><a href="#md:macro">Macro</a></li>
+<li><a href="#md:playlist">Playlist</a></li>
+<li><a href="#md:rollable-table">Rollable Table</a></li>
+<li><a href="#md:scene">Scene</a></li>
+<li><a href="#md:setting">Setting</a></li>
+<li><a href="#md:user">User</a></li>
+</ul>
+</li>
+<li><a href="#md:embedded-document-types">Embedded Document Types</a><ul>
+<li><a href="#md:active-effect">Active Effect</a></li>
+<li><a href="#md:combatant">Combatant</a></li>
+<li><a href="#md:playlist-sound">Playlist Sound</a></li>
+<li><a href="#md:table-result">Table Result</a></li>
+<li><a href="#md:ambient-light">Ambient Light</a></li>
+<li><a href="#md:ambient-sound">Ambient Sound</a></li>
+<li><a href="#md:drawing">Drawing</a></li>
+<li><a href="#md:measured-template">Measured Template</a></li>
+<li><a href="#md:note">Note</a></li>
+<li><a href="#md:tile">Tile</a></li>
+<li><a href="#md:token">Token</a></li>
+<li><a href="#md:wall">Wall</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#md:the-game-canvas">The Game Canvas</a><ul>
+<li><a href="#md:canvas-building-blocks">Canvas Building Blocks</a></li>
+<li><a href="#md:canvas-layers">Canvas Layers</a></li>
+<li><a href="#md:canvas-objects">Canvas Objects</a></li>
+<li><a href="#md:hud-overlay">HUD Overlay</a></li>
+</ul>
+</li>
+<li><a href="#md:user-interface">User Interface</a><ul>
+<li><a href="#md:application-building-blocks">Application Building Blocks</a></li>
+</ul>
+</li>
+<li><a href="#md:dice-rolling">Dice Rolling</a><ul>
+<li><a href="#md:roll-term-types">Roll Term Types</a></li>
+<li><a href="#md:dice-types">Dice Types</a></li>
+</ul>
+</li>
+<li><a href="#md:other-major-components">Other Major Components</a><ul>
+<li><a href="#md:audio-and-video">Audio and Video</a></li>
+<li><a href="#md:game-management">Game Management</a></li>
+<li><a href="#md:video-and-voice-chat">Video and Voice Chat</a></li>
+<li><a href="#md:interactivity">Interactivity</a></li>
+</ul>
+</li>
+</ul>
+<a id="md:reading-these-api-docs" class="tsd-anchor"></a><h1><a href="#md:reading-these-api-docs">Reading these API Docs</a></h1><a id="md:public-vs-private-api" class="tsd-anchor"></a><h2><a href="#md:public-vs-private-api">Public vs Private API</a></h2><a id="md:the-public-api" class="tsd-anchor"></a><h3><a href="#md:the-public-api">The Public API</a></h3><p>The Public API is our set of methods and properties that we officially support and recommend Package developers to use in their integrations. The Public API comes with a set of promises from Foundry:</p>
+<ol>
+<li>We will provide guidance, documentation, and help with using the Public API</li>
+<li>We will provide deprecation periods when breaking changes are made when possible</li>
+<li>We will make breaking changes to the public API only during certain Phases of a Version, as outlined <a href="https://foundryvtt.com/article/versioning/">here</a></li>
+</ol>
+<p>As a team we endeavour to maintain the public API in a state that is as stable and reliable as possible.</p>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0">* Part of the Public API, call externally</span><br/><span class="hl-0">* </span><span class="hl-1">@public</span><br/><span class="hl-0">*/</span><br/><span class="hl-2">async</span><span class="hl-3"> </span><span class="hl-4">doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0">* Part of the Public API, don&#39;t call externally</span><br/><span class="hl-0">* </span><span class="hl-1">@protected</span><br/><span class="hl-0">*/</span><br/><span class="hl-2">async</span><span class="hl-3"> </span><span class="hl-4">_doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<a id="md:the-private-api" class="tsd-anchor"></a><h3><a href="#md:the-private-api">The Private API</a></h3><p>The Private API is the set of methods and properties that Foundry uses internally to power the software, and explicitly do not support and recommend <em>against</em> Package developers using.</p>
+<ol>
+<li>We may not provide guidance nor help, and documentation will only be our internal docs</li>
+<li>We will not provide deprecation periods or compatibility layers when these functions change</li>
+<li>We <em>may</em> make breaking changes at any point of development, including during the Stable phase</li>
+</ol>
+<p>Any modification, overriding, or usage of private API methods should be done at the developers own risk. Packages which touch these private API methods are likely to be inherently less stable and more prone to breakage than packages which only engage with our provided public API.</p>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0">* Part of the Private API, don&#39;t call at all</span><br/><span class="hl-0">* </span><span class="hl-1">@private</span><br/><span class="hl-0">*/</span><br/><span class="hl-2">async</span><span class="hl-3"> </span><span class="hl-4">_doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0">* Implied part of the Private API, don&#39;t call at all</span><br/><span class="hl-0">*/</span><br/><span class="hl-2">async</span><span class="hl-3"> </span><span class="hl-4">_doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0">* Part of the Private API, JS prevents you from calling</span><br/><span class="hl-0">* </span><span class="hl-1">@private</span><br/><span class="hl-0">*/</span><br/><span class="hl-2">async</span><span class="hl-3"> #</span><span class="hl-4">doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<pre><code class="language-js"><span class="hl-0">/**</span><br/><span class="hl-0"> * Able to be called externally, but treated as part of the private API</span><br/><span class="hl-0"> * </span><span class="hl-1">@internal</span><br/><span class="hl-0"> */</span><br/><span class="hl-2">async</span><span class="hl-3"> </span><span class="hl-4">_doThing</span><span class="hl-3">() {}</span>
+</code><button>Copy</button></pre>
+<a id="md:what-about-things-that-are-unclear" class="tsd-anchor"></a><h3><a href="#md:what-about-things-that-are-unclear">What about things that are unclear?</a></h3><p>A lot of the Foundry codebase is not explicitly annotated one way or another as to which API it belongs to. The following Code Guidelines will help you navigate our API. As always, please reach out to us on Discord for clarification as well.</p>
+<a id="md:code-guidelines" class="tsd-anchor"></a><h1><a href="#md:code-guidelines">Code Guidelines</a></h1><a id="md:annotations" class="tsd-anchor"></a><h2><a href="#md:annotations">Annotations</a></h2><a id="md:public" class="tsd-anchor"></a><h3><a href="#md:public"><code>@public</code></a></h3><p>Methods and properties marked <code>@public</code> may be called both externally and internally. They may only be modified within the class that defines them or a subclass of that parent class.</p>
+<a id="md:protected" class="tsd-anchor"></a><h3><a href="#md:protected"><code>@protected</code></a></h3><p>Methods and properties marked <code>@protected</code> may only be used or modified within the class that defines them or a subclass of that parent class. We do intend for API users to override <code>@protected</code> properties when they are defining a subclass which replaces or extends the behavior of its parent class.</p>
+<a id="md:private" class="tsd-anchor"></a><h3><a href="#md:private"><code>@private</code></a></h3><p>Methods and properties marked <code>@private</code> should not be used or modified except by the class which defined them. For API users, this means that you should not reference or override this property. We may make breaking changes to the code for <code>@private</code> attributes without warning or advance notice, even in software versions which are marked &quot;Stable&quot;. Now that JavaScript offers true private methods like <code>#privateMethod</code> we are moving our codebase away from use of the <code>@private</code> annotation entirely. Methods which were previously <code>@private</code> will be, at some point, migrated to become true private methods.</p>
+<a id="md:internal" class="tsd-anchor"></a><h3><a href="#md:internal"><code>@internal</code></a></h3><p>Methods and properties marked <code>@internal</code> should only be used by the core Foundry VTT codebase and should not be referenced or overridden by external code. This is effectively similar to <code>@private</code> except that <code>@internal</code> methods may be called outside of the context of the class which defines them.</p>
+<a id="md:naming-conventions" class="tsd-anchor"></a><h2><a href="#md:naming-conventions">Naming Conventions</a></h2><a id="md:_-naming" class="tsd-anchor"></a><h3><a href="#md:_-naming"><code>_</code> naming</a></h3><p>Methods and properties which begin with an underscore <code>_</code> and are not otherwise documented with one of the above tags should be treated as <code>@private</code>.</p>
+<a id="md:-naming" class="tsd-anchor"></a><h3><a href="#md:-naming"><code>#</code> naming</a></h3><p>Methods and properties which begin with a <code>#</code> are truly private, and cannot be accessed outside their declaring class. This is enforced by Javascript itself - any attempt to read or write these will cause a syntax error.
+<a href="developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields">MDN reference</a></p>
+<a id="md:faq" class="tsd-anchor"></a><h2><a href="#md:faq">FAQ</a></h2><a id="md:what-is-a-breaking-change" class="tsd-anchor"></a><h3><a href="#md:what-is-a-breaking-change">What is a breaking change?</a></h3><p>A breaking change is one that makes existing calls to the API incompatible with the new version.</p>
+<p>Periodically it is necessary to make breaking changes to Public API functions in order to introduce new features or correct bugs in existing ones. These breaking changes can make an existing call to the Public API invalid, such as change in return type, removing a parameter, or renaming a method without providing an alias.</p>
+<p>Adding a new optional parameter or updating TypeDocs are not considered to be &quot;Breaking&quot; changes. Interior implementation or behavioral changes are also not considered to be &quot;Breaking&quot; changes, such as changing the order elements in a list are returned in, or refactoring a large method to have smaller interior methods.</p>
+<a id="md:how-can-i-request-changes-and-expansions-to-the-public-api" class="tsd-anchor"></a><h3><a href="#md:how-can-i-request-changes-and-expansions-to-the-public-api">How can I request changes and expansions to the Public API?</a></h3><p>If something you would like to do can only be done via the Private API, please reach out to us via our Discord channels such as <a href="https://discord.com/channels/170995199584108546/811676497965613117">#dev-support</a> and/or create an Issue on our <a href="https://github.com/foundryvtt/foundryvtt/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">Github</a> outlining what you&#39;re trying to do and what issues you&#39;re facing, and we will try our best to help or scope future work to better enable what you&#39;re doing.</p>
+<a id="md:documents-and-data" class="tsd-anchor"></a><h1><a href="#md:documents-and-data">Documents and Data</a></h1><p>Data in Foundry Virtual Tabletop is organized around the concept of Documents. Each document represents a single coherent piece of data which represents a specific object within the framework. The term <code>Document</code> refers to both the definition of a specific type of data (the Document class) as well as a uniquely identified instance of that data type (an instance of that class).</p>
+<a id="md:document-abstraction" class="tsd-anchor"></a><h2><a href="#md:document-abstraction">Document Abstraction</a></h2><ul>
+<li><a href="classes/foundry.abstract.DataModel.html">DataModel</a> - The abstract base class which defines a data model with corresponding schema and state.</li>
+<li><a href="classes/foundry.abstract.Document.html">Document</a> - The abstract base class shared by both client and server-side which defines the model for a single document type.</li>
+</ul>
+<a id="md:database-operations" class="tsd-anchor"></a><h2><a href="#md:database-operations">Database Operations</a></h2><ul>
+<li><a href="classes/foundry.abstract.DatabaseBackend.html">DatabaseBackend</a> - An interface shared by both the client and server-side which defines how creation, update, and deletion operations are transacted.</li>
+<li><a href="classes/client.ClientDatabaseBackend.html">ClientDatabaseBackend</a> - An implementation of the abstract backend which performs client-side CRUD operations.</li>
+</ul>
+<a id="md:collections" class="tsd-anchor"></a><h2><a href="#md:collections">Collections</a></h2><ul>
+<li><a href="classes/client.DocumentCollection.html">DocumentCollection</a> - An abstract subclass of the Collection container which defines a collection of Document instances.</li>
+<li><a href="classes/client.WorldCollection.html">WorldCollection</a> - A collection of world-level Document objects with a singleton instance per primary Document type.</li>
+<li><a href="classes/client.CompendiumCollection.html">CompendiumCollection</a> - A collection of Document objects contained within a specific compendium pack.</li>
+</ul>
+<a id="md:primary-document-types" class="tsd-anchor"></a><h2><a href="#md:primary-document-types">Primary Document Types</a></h2><p>Foundry Virtual Tabletop includes the following primary Document types, each of which is saved to its own database table with within the active World.</p>
+<a id="md:actor" class="tsd-anchor"></a><h3><a href="#md:actor">Actor</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseActor.html">BaseActor</a> - The base Actor model definition which defines common behavior of an Actor document between both client and server.</li>
+<li><a href="classes/client.Actor.html">Actor</a> - The client-side Actor document which extends the common BaseActor model.</li>
+<li><a href="classes/client.Actors.html">Actors</a> - The singleton collection of Actor documents which exist within the active World.</li>
+<li><a href="classes/client.ActorSheet.html">ActorSheet</a> - The Application responsible for displaying and editing a single Actor document.</li>
+<li><a href="classes/client.ActorDirectory.html">ActorDirectory</a> - The sidebar directory which organizes and displays world-level Actor documents.</li>
+</ul>
+<a id="md:cards" class="tsd-anchor"></a><h3><a href="#md:cards">Cards</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseCards.html">BaseCards</a> - The base Cards model definition which defines common behavior of an Cards document between both client and server.</li>
+<li><a href="classes/client.Cards.html">Cards</a> - The client-side Cards document which extends the common BaseCards model.</li>
+<li><a href="classes/client.CardStacks.html">CardStacks</a> - The singleton collection of Cards documents which exist within the active World.</li>
+<li><a href="classes/client.CardsConfig.html">CardsConfig</a> - The base Application responsible for displaying and editing a single Cards document.</li>
+<li><a href="classes/client.CardsDirectory.html">CardsDirectory</a> - The sidebar directory which organizes and displays world-level Cards documents.</li>
+</ul>
+<a id="md:chat-message" class="tsd-anchor"></a><h3><a href="#md:chat-message">Chat Message</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseChatMessage.html">BaseChatMessage</a> - The base ChatMessage model definition which defines common behavior of an ChatMessage document between both client and server.</li>
+<li><a href="classes/client.ChatMessage.html">ChatMessage</a> - The client-side ChatMessage document which extends the common BaseChatMessage model.</li>
+<li><a href="classes/client.Messages.html">Messages</a> - The singleton collection of ChatMessage documents which exist within the active World.</li>
+<li><a href="classes/client.ChatLog.html">ChatLog</a> - The sidebar directory which organizes and displays world-level ChatMessage documents.</li>
+</ul>
+<a id="md:combat-encounter" class="tsd-anchor"></a><h3><a href="#md:combat-encounter">Combat Encounter</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseCombat.html">BaseCombat</a> - The base Combat model definition which defines common behavior of an Combat document between both client and server.</li>
+<li><a href="classes/client.Combat.html">Combat</a> - The client-side Combat document which extends the common BaseCombat model.</li>
+<li><a href="classes/client.CombatEncounters.html">CombatEncounters</a> - The singleton collection of Combat documents which exist within the active World.</li>
+<li><a href="classes/client.CombatTracker.html">CombatTracker</a> - The sidebar directory which organizes and displays world-level Combat documents.</li>
+<li><a href="classes/client.CombatTrackerConfig.html">CombatTracker</a> - The Application responsible for configuring the CombatTracker and its contents.</li>
+</ul>
+<a id="md:item" class="tsd-anchor"></a><h3><a href="#md:item">Item</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseItem.html">BaseItem</a> - The base Item model definition which defines common behavior of an Item document between both client and server.</li>
+<li><a href="classes/client.Item.html">Item</a> - The client-side Item document which extends the common BaseItem model.</li>
+<li><a href="classes/client.Items.html">Items</a> - The singleton collection of Item documents which exist within the active World.</li>
+<li><a href="classes/client.ItemSheet.html">ItemSheet</a> - The Application responsible for displaying and editing a single Item document.</li>
+<li><a href="classes/client.ItemDirectory.html">ItemDirectory</a> - The sidebar directory which organizes and displays world-level Item documents.</li>
+</ul>
+<a id="md:fog-exploration" class="tsd-anchor"></a><h3><a href="#md:fog-exploration">Fog Exploration</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseFogExploration.html">BaseFogExploration</a> - The base FogExploration model definition which defines common behavior of an FogExploration document between both client and server.</li>
+<li><a href="classes/client.FogExploration.html">FogExploration</a> - The client-side FogExploration document which extends the common BaseFogExploration model.</li>
+<li><a href="classes/client.FogExplorations.html">FogExplorations</a> - The singleton collection of FogExploration documents which exist within the active World.</li>
+</ul>
+<a id="md:folder" class="tsd-anchor"></a><h3><a href="#md:folder">Folder</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseFolder.html">BaseFolder</a> - The base Folder model definition which defines common behavior of an Folder document between both client and server.</li>
+<li><a href="classes/client.Folder.html">Folder</a> - The client-side Folder document which extends the common BaseFolder model.</li>
+<li><a href="classes/client.Folders.html">Folders</a> - The singleton collection of Folder documents which exist within the active World.</li>
+<li><a href="classes/client.FolderConfig.html">FolderConfig</a> - The Application responsible for configuring a single Folder document.</li>
+</ul>
+<a id="md:journal-entry" class="tsd-anchor"></a><h3><a href="#md:journal-entry">Journal Entry</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseJournalEntry.html">BaseJournalEntry</a> - The base JournalEntry model definition which defines common behavior of an JournalEntry document between both client and server.</li>
+<li><a href="classes/client.JournalEntry.html">JournalEntry</a> - The client-side JournalEntry document which extends the common BaseJournalEntry model.</li>
+<li><a href="classes/client.Journal.html">Journal</a> - The singleton collection of JournalEntry documents which exist within the active World.</li>
+<li><a href="classes/client.JournalSheet.html">JournalSheet</a> - The Application responsible for displaying and editing a single JournalEntry document.</li>
+<li><a href="classes/client.JournalDirectory.html">JournalDirectory</a> - The sidebar directory which organizes and displays world-level JournalEntry documents.</li>
+</ul>
+<a id="md:macro" class="tsd-anchor"></a><h3><a href="#md:macro">Macro</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseMacro.html">BaseMacro</a> - The base Macro model definition which defines common behavior of an Macro document between both client and server.</li>
+<li><a href="classes/client.Macro.html">Macro</a> - The client-side Macro document which extends the common BaseMacro model.</li>
+<li><a href="classes/client.Macros.html">Macros</a> - The singleton collection of Macro documents which exist within the active World.</li>
+<li><a href="classes/client.MacroConfig.html">MacroConfig</a> - The Application responsible for displaying and editing a single Macro document.</li>
+<li><a href="classes/client.MacroDirectory.html">MacroDirectory</a> - The directory, not displayed in the sidebar, which organizes and displays world-level Macro documents.</li>
+</ul>
+<a id="md:playlist" class="tsd-anchor"></a><h3><a href="#md:playlist">Playlist</a></h3><ul>
+<li><a href="classes/foundry.documents.BasePlaylist.html">BasePlaylist</a> - The base Playlist model definition which defines common behavior of an Playlist document between both client and server.</li>
+<li><a href="classes/client.Playlist.html">Playlist</a> - The client-side Playlist document which extends the common BasePlaylist model.</li>
+<li><a href="classes/client.Playlists.html">Playlists</a> - The singleton collection of Playlist documents which exist within the active World.</li>
+<li><a href="classes/client.PlaylistConfig.html">PlaylistConfig</a> - The Application responsible for configuring a single Playlist document.</li>
+<li><a href="classes/client.PlaylistDirectory.html">PlaylistDirectory</a> - The sidebar directory which organizes and displays world-level Playlist documents.</li>
+</ul>
+<a id="md:rollable-table" class="tsd-anchor"></a><h3><a href="#md:rollable-table">Rollable Table</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseRollTable.html">BaseRollTable</a> - The base RollTable model definition which defines common behavior of an RollTable document between both client and server.</li>
+<li><a href="classes/client.RollTable.html">RollTable</a> - The client-side RollTable document which extends the common BaseRollTable model.</li>
+<li><a href="classes/client.RollTables.html">RollTables</a> - The singleton collection of RollTable documents which exist within the active World.</li>
+<li><a href="classes/client.RollTableConfig.html">RollTableConfig</a> - The Application responsible for displaying and editing a single RollTable document.</li>
+<li><a href="classes/client.RollTableDirectory.html">RollTableDirectory</a> - The sidebar directory which organizes and displays world-level RollTable documents.</li>
+</ul>
+<a id="md:scene" class="tsd-anchor"></a><h3><a href="#md:scene">Scene</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseScene.html">BaseScene</a> - The base Scene model definition which defines common behavior of an Scene document between both client and server.</li>
+<li><a href="classes/client.Scene.html">Scene</a> - The client-side Scene document which extends the common BaseScene model.</li>
+<li><a href="classes/client.Scenes.html">Scenes</a> - The singleton collection of Scene documents which exist within the active World.</li>
+<li><a href="classes/client.SceneConfig.html">SceneConfig</a> - The Application responsible for configuring a single Scene document.</li>
+<li><a href="classes/client.SceneDirectory.html">SceneDirectory</a> - The sidebar directory which organizes and displays world-level Scene documents.</li>
+<li><a href="classes/client.SceneNavigation.html">SceneNavigation</a> - The UI element which displays the Scene documents which are currently enabled for quick navigation.</li>
+</ul>
+<a id="md:setting" class="tsd-anchor"></a><h3><a href="#md:setting">Setting</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseSetting.html">BaseSetting</a> - The base Setting model definition which defines common behavior of an Setting document between both client and server.</li>
+<li><a href="classes/client.ClientSettings.html">ClientSettings</a> - A class responsible for managing defined game settings or settings menus.</li>
+<li><a href="classes/client.Settings.html">Settings</a> - The sidebar tab which displays various game settings, help messages, and configuration options.</li>
+<li><a href="classes/client.SettingsConfig.html">SettingConfig</a> - The Application responsible for displaying and configuring registered game Setting documents.</li>
+</ul>
+<a id="md:user" class="tsd-anchor"></a><h3><a href="#md:user">User</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseUser.html">BaseUser</a> - The base User model definition which defines common behavior of an User document between both client and server.</li>
+<li><a href="classes/client.User.html">User</a> - The client-side User document which extends the common BaseUser model.</li>
+<li><a href="classes/client.Users.html">Users</a> - The singleton collection of User documents which exist within the active World.</li>
+<li><a href="classes/foundry.applications.sheets.UserConfig.html">UserConfig</a> - The Application responsible for configuring a single User document.</li>
+<li><a href="classes/client.PlayerList.html">PlayerList</a> - The UI element which displays the list of Users who are currently playing within the active World.</li>
+</ul>
+<a id="md:embedded-document-types" class="tsd-anchor"></a><h2><a href="#md:embedded-document-types">Embedded Document Types</a></h2><p>In addition to the above primary document types, each of which are indexed within their own tables, there are several additional document types which only exist as embedded documents within a parent Document. These embedded documents cannot exist on their own (outside of the context of a parent).</p>
+<a id="md:active-effect" class="tsd-anchor"></a><h3><a href="#md:active-effect">Active Effect</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseActiveEffect.html">BaseActiveEffect</a> - The base ActiveEffect model definition which defines common behavior of an ActiveEffect document between both client and server.</li>
+<li><a href="classes/client.ActiveEffect.html">ActiveEffect</a> - The client-side ActiveEffect document which extends the common BaseActiveEffect model.</li>
+<li><a href="classes/client.ActiveEffectConfig.html">ActiveEffectConfig</a> - The Application responsible for configuring a single ActiveEffect document within a parent Actor or Item.</li>
+</ul>
+<a id="md:combatant" class="tsd-anchor"></a><h3><a href="#md:combatant">Combatant</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseCombatant.html">BaseCombatant</a> - The base Combatant model definition which defines common behavior of an Combatant document between both client and server.</li>
+<li><a href="classes/client.Combatant.html">Combatant</a> - The client-side Combatant document which extends the common BaseCombatant model.</li>
+<li><a href="classes/client.CombatantConfig.html">CombatantConfig</a> - The Application responsible for configuring a single Combatant document within a parent Combat.</li>
+</ul>
+<a id="md:playlist-sound" class="tsd-anchor"></a><h3><a href="#md:playlist-sound">Playlist Sound</a></h3><ul>
+<li><a href="classes/foundry.documents.BasePlaylistSound.html">BasePlaylistSound</a> - The base PlaylistSound model definition which defines common behavior of an PlaylistSound document between both client and server.</li>
+<li><a href="classes/client.PlaylistSound.html">PlaylistSound</a> - The client-side PlaylistSound document which extends the common BasePlaylistSound model.</li>
+<li><a href="classes/client.PlaylistSoundConfig.html">PlaylistSoundConfig</a> - The Application responsible for configuring a single PlaylistSound document within a parent Playlist.</li>
+</ul>
+<a id="md:table-result" class="tsd-anchor"></a><h3><a href="#md:table-result">Table Result</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseTableResult.html">BaseTableResult</a> - The base TableResult model definition which defines common behavior of an TableResult document between both client and server.</li>
+<li><a href="classes/client.TableResult.html">TableResult</a> - The client-side TableResult document which extends the common BaseTableResult model.</li>
+</ul>
+<a id="md:ambient-light" class="tsd-anchor"></a><h3><a href="#md:ambient-light">Ambient Light</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseAmbientLight.html">BaseAmbientLight</a> - The base AmbientLight model definition which defines common behavior of an AmbientLight document between both client and server.</li>
+<li><a href="classes/client.AmbientLightDocument.html">AmbientLightDocument</a> - The client-side AmbientLight document which extends the common BaseAmbientLight model.</li>
+<li><a href="classes/foundry.applications.sheets.AmbientLightConfig.html">AmbientLightConfig</a> - The Application responsible for configuring a single AmbientLight document within a parent Scene.</li>
+</ul>
+<a id="md:ambient-sound" class="tsd-anchor"></a><h3><a href="#md:ambient-sound">Ambient Sound</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseAmbientSound.html">BaseAmbientSound</a> - The base AmbientSound model definition which defines common behavior of an AmbientSound document between both client and server.</li>
+<li><a href="classes/client.AmbientSoundDocument.html">AmbientSoundDocument</a> - The client-side AmbientSound document which extends the common BaseAmbientSound model.</li>
+<li><a href="classes/foundry.applications.sheets.AmbientSoundConfig.html">AmbientSoundConfig</a> - The Application responsible for configuring a single AmbientSound document within a parent Scene.</li>
+</ul>
+<a id="md:drawing" class="tsd-anchor"></a><h3><a href="#md:drawing">Drawing</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseDrawing.html">BaseDrawing</a> - The base Drawing model definition which defines common behavior of an Drawing document between both client and server.</li>
+<li><a href="classes/client.DrawingDocument.html">DrawingDocument</a> - The client-side Drawing document which extends the common BaseDrawing model.</li>
+<li><a href="classes/client.DrawingConfig.html">DrawingConfig</a> - The Application responsible for configuring a single Drawing document within a parent Scene.</li>
+</ul>
+<a id="md:measured-template" class="tsd-anchor"></a><h3><a href="#md:measured-template">Measured Template</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseMeasuredTemplate.html">BaseMeasuredTemplate</a> - The base MeasuredTemplate model definition which defines common behavior of an MeasuredTemplate document between both client and server.</li>
+<li><a href="classes/client.MeasuredTemplateDocument.html">MeasuredTemplateDocument</a> - The client-side MeasuredTemplate document which extends the common BaseMeasuredTemplate model.</li>
+<li><a href="classes/client.MeasuredTemplateConfig.html">MeasuredTemplateConfig</a> - The Application responsible for configuring a single MeasuredTemplate document within a parent Scene.</li>
+</ul>
+<a id="md:note" class="tsd-anchor"></a><h3><a href="#md:note">Note</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseNote.html">BaseNote</a> - The base Note model definition which defines common behavior of an Note document between both client and server.</li>
+<li><a href="classes/client.NoteDocument.html">NoteDocument</a> - The client-side Note document which extends the common BaseNote model.</li>
+<li><a href="classes/client.NoteConfig.html">NoteConfig</a> - The Application responsible for configuring a single Note document within a parent Scene.</li>
+</ul>
+<a id="md:tile" class="tsd-anchor"></a><h3><a href="#md:tile">Tile</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseTile.html">BaseTile</a> - The base Tile model definition which defines common behavior of an Tile document between both client and server.</li>
+<li><a href="classes/client.TileDocument.html">TileDocument</a> - The client-side Tile document which extends the common BaseTile model.</li>
+<li><a href="classes/client.TileConfig.html">TileConfig</a> - The Application responsible for configuring a single Tile document within a parent Scene.</li>
+</ul>
+<a id="md:token" class="tsd-anchor"></a><h3><a href="#md:token">Token</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseToken.html">BaseToken</a> - The base Token model definition which defines common behavior of an Token document between both client and server.</li>
+<li><a href="classes/client.TokenDocument.html">TokenDocument</a> - The client-side Token document which extends the common BaseToken model.</li>
+<li><a href="classes/client.TokenConfig.html">TokenConfig</a> - The Application responsible for configuring a single Token document within a parent Scene.</li>
+</ul>
+<a id="md:wall" class="tsd-anchor"></a><h3><a href="#md:wall">Wall</a></h3><ul>
+<li><a href="classes/foundry.documents.BaseWall.html">BaseWall</a> - The base Wall model definition which defines common behavior of an Wall document between both client and server.</li>
+<li><a href="classes/client.WallDocument.html">WallDocument</a> - The client-side Wall document which extends the common BaseWall model.</li>
+<li><a href="classes/client.WallConfig.html">WallConfig</a> - The Application responsible for configuring a single Wall document within a parent Scene.</li>
+</ul>
+<a id="md:the-game-canvas" class="tsd-anchor"></a><h1><a href="#md:the-game-canvas">The Game Canvas</a></h1><p>The visual game surface in Foundry Virtual Tabletop is managed by a WebGL-powered canvas which uses the <a href="https://www.pixijs.com/">PixiJS</a> library.</p>
+<a id="md:canvas-building-blocks" class="tsd-anchor"></a><h2><a href="#md:canvas-building-blocks">Canvas Building Blocks</a></h2><p>The game canvas is constructed using several core building blocks.</p>
+<ul>
+<li><a href="classes/client.Canvas.html">Canvas</a> - The master controller of the canvas element upon which the tabletop is rendered.</li>
+<li><a href="classes/client.CanvasLayer.html">CanvasLayer</a> - An abstract pattern for primary layers of the game canvas to implement.</li>
+<li><a href="classes/client.PlaceablesLayer.html">PlaceablesLayer</a> - A subclass of Canvas Layer which is specifically designed to contain multiple PlaceableObject instances, each corresponding to an embedded Document.</li>
+<li><a href="classes/client.CanvasDocumentMixin.html">CanvasDocumentMixin</a> - A specialized sub-class of the ClientDocumentMixin which is used for document types that are intended to be represented upon the game Canvas.</li>
+<li><a href="classes/client.PlaceableObject.html">PlaceableObject</a></li>
+<li><a href="classes/client.CanvasAnimation.html">CanvasAnimation</a></li>
+</ul>
+<a id="md:canvas-groups" class="tsd-anchor"></a><h2><a href="#md:canvas-groups">Canvas Groups</a></h2><p>The first level of canvas hierarchy is the concept of groups which provide top-level containers for various concepts.</p>
+<ul>
+<li><a href="classes/client.HiddenCanvasGroup.html">HiddenCanvasGroup</a> - A container for objects which are transformed but not rendered.</li>
+<li><a href="classes/client.RenderedCanvasGroup.html">RenderedCanvasGroup</a> - A container for objects which are rendered on the canvas.</li>
+<li><a href="classes/client.PrimaryCanvasGroup.html">PrimaryCanvasGroup</a> - Tangible objects which exist within the Scene and are affected by lighting and other effects.</li>
+<li><a href="classes/client.EffectsCanvasGroup.html">EffectsCanvasGroup</a> - Visual effects which modify the appearance of objects in the PrimaryCanvasGroup.</li>
+<li><a href="classes/client.InterfaceCanvasGroup.html">InterfaceCanvasGroup</a> - User interface elements which provide interactivity and context but are not tangible objects within the Scene.</li>
+</ul>
+<a id="md:canvas-layers" class="tsd-anchor"></a><h2><a href="#md:canvas-layers">Canvas Layers</a></h2><p>Within each of the above canvas groups there are a number of layers which provide specific functionality. Canvas layers utilize the following base classes.</p>
+<ul>
+<li><a href="classes/client.CanvasLayer.html">CanvasLayer</a> A base class for all canvas layers.</li>
+<li><a href="classes/client.InteractionLayer.html">InteractionLayer</a> An extension of CanvasLayer which provides user interactivity for its contained objects.</li>
+<li><a href="classes/client.InteractionLayer.html">PlaceablesLayer</a> An extension of InteractionLayer specifically designed for drawing Documents to the canvas.</li>
+</ul>
+<p>The following are implementations of canvas layers:</p>
+<a id="md:within-the-effects-canvas-group" class="tsd-anchor"></a><h3><a href="#md:within-the-effects-canvas-group">Within the Effects Canvas Group</a></h3><ul>
+<li><a href="classes/client.CanvasBackgroundAlterationEffects.html">CanvasBackgroundAlterationEffects</a></li>
+<li><a href="classes/client.CanvasColorationEffects.html">CanvasColorationEffects</a></li>
+<li><a href="classes/client.CanvasIlluminationEffects.html">CanvasIlluminationEffects</a></li>
+<li><a href="classes/client.CanvasVisibility.html">CanvasVisibility</a></li>
+<li><a href="classes/client.WeatherEffects.html">WeatherEffects</a></li>
+</ul>
+<a id="md:within-the-interface-canvas-group" class="tsd-anchor"></a><h3><a href="#md:within-the-interface-canvas-group">Within the Interface Canvas Group</a></h3><ul>
+<li><a href="classes/client.GridLayer.html">GridLayer</a></li>
+<li><a href="classes/client.ControlsLayer.html">ControlsLayer</a></li>
+<li><a href="classes/client.DrawingsLayer.html">DrawingsLayer</a></li>
+<li><a href="classes/client.LightingLayer.html">LightingLayer</a></li>
+<li><a href="classes/client.NotesLayer.html">NotesLayer</a></li>
+<li><a href="classes/client.SoundsLayer.html">SoundsLayer</a></li>
+<li><a href="classes/client.TemplateLayer.html">TemplateLayer</a></li>
+<li><a href="classes/client.TilesLayer.html">TilesLayer</a></li>
+<li><a href="classes/client.TokenLayer.html">TokenLayer</a></li>
+<li><a href="classes/client.WallsLayer.html">WallsLayer</a></li>
+</ul>
+<a id="md:canvas-objects" class="tsd-anchor"></a><h2><a href="#md:canvas-objects">Canvas Objects</a></h2><p>Canvas layers contain <a href="classes/client.PlaceableObject.html">PlaceableObject</a> instances which are rendered within that layer. The following are the available object types which may be placed.</p>
+<ul>
+<li><a href="classes/client.AmbientLight.html">AmbientLight</a></li>
+<li><a href="classes/client.AmbientSound.html">AmbientSound</a></li>
+<li><a href="classes/client.Drawing.html">Drawing</a></li>
+<li><a href="classes/client.MeasuredTemplate.html">MeasuredTemplate</a></li>
+<li><a href="classes/client.Tile.html">Tile</a></li>
+<li><a href="classes/client.Token.html">Token</a></li>
+<li><a href="classes/client.Note.html">Note</a></li>
+<li><a href="classes/client.Wall.html">Wall</a></li>
+</ul>
+<a id="md:hud-overlay" class="tsd-anchor"></a><h2><a href="#md:hud-overlay">HUD Overlay</a></h2><p>In addition to WebGL canvas layers, there is also support for HTML-based canvas overlay known as &quot;HUD&quot; objects.</p>
+<ul>
+<li><a href="classes/client.DrawingHUD.html">Drawing HUD</a></li>
+<li><a href="classes/client.TileHUD.html">Tile HUD</a></li>
+<li><a href="classes/client.TokenHUD.html">Token HUD</a></li>
+</ul>
+<a id="md:user-interface" class="tsd-anchor"></a><h1><a href="#md:user-interface">User Interface</a></h1><p>In addition to the underlying data and the visual representation of that data on the Canvas, Foundry VTT renders many HTML Applications which represent modular interface components for browsing, editing, or configuring elements of the virtual tabletop.</p>
+<a id="md:application-building-blocks" class="tsd-anchor"></a><h2><a href="#md:application-building-blocks">Application Building Blocks</a></h2><p>The following classes provide high-level building blocks for defining HTML applications within Foundry Virtual Tabletop.</p>
+<ul>
+<li><a href="classes/client.Application.html">Application</a> (<a href="classes/foundry.applications.api.ApplicationV2.html">V2</a>)</li>
+<li><a href="classes/client.FormApplication.html">FormApplication</a></li>
+<li><a href="classes/client.DocumentSheet.html">DocumentSheet</a> (<a href="classes/foundry.applications.api.DocumentSheetV2.html">V2</a>)</li>
+<li><a href="classes/client.Dialog.html">Dialog</a> (<a href="classes/foundry.applications.api.DialogV2.html">V2</a>)</li>
+<li><a href="classes/client.ContextMenu.html">ContextMenu</a></li>
+<li><a href="classes/client.FilePicker.html">FilePicker</a></li>
+<li><a href="classes/client.Tabs.html">Tabs</a></li>
+<li><a href="classes/client.TextEditor.html">TextEditor</a></li>
+<li><a href="classes/client.DragDrop.html">DragDrop</a></li>
+</ul>
+<a id="md:dice-rolling" class="tsd-anchor"></a><h1><a href="#md:dice-rolling">Dice Rolling</a></h1><p>As a developer, you may often want to trigger dice rolls or customize the behavior of dice rolling. Foundry Virtual Tabletop provides a set of API concepts dedicated towards working with dice.</p>
+<ul>
+<li><a href="classes/foundry.dice.Roll.html">Roll</a> - An interface and API for constructing and evaluating dice rolls.</li>
+<li><a href="classes/foundry.dice.terms.RollTerm.html">RollTerm</a> - An abstract class which represents a single token that can be used as part of a Roll formula.</li>
+<li><a href="classes/foundry.dice.MersenneTwister.html">MersenneTwister</a> - A standalone, pure JavaScript implementation of the Mersenne Twister pseudo random number generator.</li>
+</ul>
+<a id="md:roll-term-types" class="tsd-anchor"></a><h2><a href="#md:roll-term-types">Roll Term Types</a></h2><ul>
+<li><a href="classes/foundry.dice.terms.DiceTerm.html">DiceTerm</a> - An abstract base class for any type of RollTerm which involves randomized input from dice, coins, or other devices.</li>
+<li><a href="classes/foundry.dice.terms.FunctionTerm.html">FunctionTerm</a> - A type of RollTerm used to apply a function.</li>
+<li><a href="classes/foundry.dice.terms.NumericTerm.html">NumericTerm</a> - A type of RollTerm used to represent static numbers.</li>
+<li><a href="classes/foundry.dice.terms.OperatorTerm.html">OperatorTerm</a> - A type of RollTerm used to denote and perform an arithmetic operation.</li>
+<li><a href="classes/foundry.dice.terms.ParentheticalTerm.html">ParentheticalTerm</a> - A type of RollTerm used to enclose a parenthetical expression to be recursively evaluated.</li>
+<li><a href="classes/foundry.dice.terms.PoolTerm.html">PoolTerm</a> - A type of RollTerm which encloses a pool of multiple inner Rolls which are evaluated jointly.</li>
+<li><a href="classes/foundry.dice.terms.StringTerm.html">StringTerm</a> - A type of RollTerm used to represent strings which have not yet been matched.</li>
+</ul>
+<a id="md:dice-types" class="tsd-anchor"></a><h2><a href="#md:dice-types">Dice Types</a></h2><ul>
+<li><a href="classes/foundry.dice.terms.Die.html">Die</a> - A type of DiceTerm used to represent rolling a fair n-sided die.</li>
+<li><a href="classes/foundry.dice.terms.Coin.html">Coin</a> - A type of DiceTerm used to represent flipping a two-sided coin.</li>
+<li><a href="classes/foundry.dice.terms.FateDie.html">FateDie</a> - A type of DiceTerm used to represent a three-sided Fate/Fudge die.</li>
+</ul>
+<a id="md:other-major-components" class="tsd-anchor"></a><h1><a href="#md:other-major-components">Other Major Components</a></h1><p>In addition to the outlined structure above, there are many additional miscellaneous elements of the Foundry Virtual Tabletop API for you to explore. Please browse the sidebar for a complete listing of classes and functions. Some specific classes which are noteworthy or commonly used include:</p>
+<a id="md:audio-and-video" class="tsd-anchor"></a><h2><a href="#md:audio-and-video">Audio and Video</a></h2><ul>
+<li><a href="classes/foundry.audio.AudioHelper.html">AudioHelper</a> - Utilities for working with Audio files.</li>
+<li><a href="classes/client.ImageHelper.html">ImageHelper</a> - Utilities for working with Image files.</li>
+<li><a href="classes/foundry.audio.Sound.html">Sound</a> - The Sound class is used to control the playback of audio sources using the Web Audio API.</li>
+<li><a href="classes/client.VideoHelper.html">VideoHelper</a> - Utilities for working with Video files.</li>
+</ul>
+<a id="md:game-management" class="tsd-anchor"></a><h2><a href="#md:game-management">Game Management</a></h2><ul>
+<li><a href="classes/client.Game.html">Game</a> - The master controller for the active game instance</li>
+<li><a href="classes/client.GameTime.html">GameTime</a> - A singleton class which keeps the official Server and World time stamps.</li>
+</ul>
+<a id="md:video-and-voice-chat" class="tsd-anchor"></a><h2><a href="#md:video-and-voice-chat">Video and Voice Chat</a></h2><ul>
+<li><a href="classes/client.AVMaster.html">AVMaster</a> - The master Audio/Video controller instance.</li>
+<li><a href="classes/client.AVClient.html">AVClient</a> - An interface for an Audio/Video client which is extended to provide broadcasting functionality.</li>
+<li><a href="classes/client.SimplePeerAVClient.html">SimplePeerAVClient</a> - An implementation of the AVClient which uses the simple-peer library and the Foundry socket server for signaling.</li>
+</ul>
+<a id="md:interactivity" class="tsd-anchor"></a><h2><a href="#md:interactivity">Interactivity</a></h2><ul>
+<li><a href="classes/client.Hooks.html">Hooks</a> - An infrastructure for registering event handlers which fire under specific conditions.</li>
+<li><a href="classes/client.KeyboardManager.html">KeyboardManager</a> - A set of helpers and management functions for dealing with user input from keyboard events.</li>
+<li><a href="classes/client.SocketInterface.html">SocketInterface</a> - Helper functions for dispatching and receiving socket events in a standardized way.</li>
+</ul>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-index-accordion"><summary class="tsd-accordion-summary"><h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><use href="assets/icons.svg#icon-chevronDown"></use></svg>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><h4 class="uppercase">Member Visibility</h4><form><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-private" name="private"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Private</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li></ul></form></div><div class="tsd-theme-toggle"><h4 class="uppercase">Theme</h4><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-index-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><use href="assets/icons.svg#icon-chevronDown"></use></svg>On This Page</h3></summary><div class="tsd-accordion-details"><ul><li><a href="#md:table-of-contents"><span>Table of <wbr/>Contents</span></a></li></ul><a href="#md:reading-these-api-docs"><span>Reading these API <wbr/>Docs</span></a><ul><li><a href="#md:public-vs-private-api"><span>Public vs <wbr/>Private API</span></a></li><li><ul><li><a href="#md:the-public-api"><span>The <wbr/>Public API</span></a></li><li><a href="#md:the-private-api"><span>The <wbr/>Private API</span></a></li><li><a href="#md:what-about-things-that-are-unclear"><span>What about things that are unclear?</span></a></li></ul></li></ul><a href="#md:code-guidelines"><span>Code <wbr/>Guidelines</span></a><ul><li><a href="#md:annotations"><span>Annotations</span></a></li><li><ul><li><a href="#md:public"><span>@public</span></a></li><li><a href="#md:protected"><span>@protected</span></a></li><li><a href="#md:private"><span>@private</span></a></li><li><a href="#md:internal"><span>@internal</span></a></li></ul></li><li><a href="#md:naming-conventions"><span>Naming <wbr/>Conventions</span></a></li><li><ul><li><a href="#md:_-naming"><span>_ naming</span></a></li><li><a href="#md:-naming"><span># naming</span></a></li></ul></li><li><a href="#md:faq"><span>FAQ</span></a></li><li><ul><li><a href="#md:what-is-a-breaking-change"><span>What is a breaking change?</span></a></li><li><a href="#md:how-can-i-request-changes-and-expansions-to-the-public-api"><span>How can <wbr/>I request changes and expansions to the <wbr/>Public API?</span></a></li></ul></li></ul><a href="#md:documents-and-data"><span>Documents and <wbr/>Data</span></a><ul><li><a href="#md:document-abstraction"><span>Document <wbr/>Abstraction</span></a></li><li><a href="#md:database-operations"><span>Database <wbr/>Operations</span></a></li><li><a href="#md:collections"><span>Collections</span></a></li><li><a href="#md:primary-document-types"><span>Primary <wbr/>Document <wbr/>Types</span></a></li><li><ul><li><a href="#md:actor"><span>Actor</span></a></li><li><a href="#md:cards"><span>Cards</span></a></li><li><a href="#md:chat-message"><span>Chat <wbr/>Message</span></a></li><li><a href="#md:combat-encounter"><span>Combat <wbr/>Encounter</span></a></li><li><a href="#md:item"><span>Item</span></a></li><li><a href="#md:fog-exploration"><span>Fog <wbr/>Exploration</span></a></li><li><a href="#md:folder"><span>Folder</span></a></li><li><a href="#md:journal-entry"><span>Journal <wbr/>Entry</span></a></li><li><a href="#md:macro"><span>Macro</span></a></li><li><a href="#md:playlist"><span>Playlist</span></a></li><li><a href="#md:rollable-table"><span>Rollable <wbr/>Table</span></a></li><li><a href="#md:scene"><span>Scene</span></a></li><li><a href="#md:setting"><span>Setting</span></a></li><li><a href="#md:user"><span>User</span></a></li></ul></li><li><a href="#md:embedded-document-types"><span>Embedded <wbr/>Document <wbr/>Types</span></a></li><li><ul><li><a href="#md:active-effect"><span>Active <wbr/>Effect</span></a></li><li><a href="#md:combatant"><span>Combatant</span></a></li><li><a href="#md:playlist-sound"><span>Playlist <wbr/>Sound</span></a></li><li><a href="#md:table-result"><span>Table <wbr/>Result</span></a></li><li><a href="#md:ambient-light"><span>Ambient <wbr/>Light</span></a></li><li><a href="#md:ambient-sound"><span>Ambient <wbr/>Sound</span></a></li><li><a href="#md:drawing"><span>Drawing</span></a></li><li><a href="#md:measured-template"><span>Measured <wbr/>Template</span></a></li><li><a href="#md:note"><span>Note</span></a></li><li><a href="#md:tile"><span>Tile</span></a></li><li><a href="#md:token"><span>Token</span></a></li><li><a href="#md:wall"><span>Wall</span></a></li></ul></li></ul><a href="#md:the-game-canvas"><span>The <wbr/>Game <wbr/>Canvas</span></a><ul><li><a href="#md:canvas-building-blocks"><span>Canvas <wbr/>Building <wbr/>Blocks</span></a></li><li><a href="#md:canvas-groups"><span>Canvas <wbr/>Groups</span></a></li><li><a href="#md:canvas-layers"><span>Canvas <wbr/>Layers</span></a></li><li><ul><li><a href="#md:within-the-effects-canvas-group"><span>Within the <wbr/>Effects <wbr/>Canvas <wbr/>Group</span></a></li><li><a href="#md:within-the-interface-canvas-group"><span>Within the <wbr/>Interface <wbr/>Canvas <wbr/>Group</span></a></li></ul></li><li><a href="#md:canvas-objects"><span>Canvas <wbr/>Objects</span></a></li><li><a href="#md:hud-overlay"><span>HUD <wbr/>Overlay</span></a></li></ul><a href="#md:user-interface"><span>User <wbr/>Interface</span></a><ul><li><a href="#md:application-building-blocks"><span>Application <wbr/>Building <wbr/>Blocks</span></a></li></ul><a href="#md:dice-rolling"><span>Dice <wbr/>Rolling</span></a><ul><li><a href="#md:roll-term-types"><span>Roll <wbr/>Term <wbr/>Types</span></a></li><li><a href="#md:dice-types"><span>Dice <wbr/>Types</span></a></li></ul><a href="#md:other-major-components"><span>Other <wbr/>Major <wbr/>Components</span></a><ul><li><a href="#md:audio-and-video"><span>Audio and <wbr/>Video</span></a></li><li><a href="#md:game-management"><span>Game <wbr/>Management</span></a></li><li><a href="#md:video-and-voice-chat"><span>Video and <wbr/>Voice <wbr/>Chat</span></a></li><li><a href="#md:interactivity"><span>Interactivity</span></a></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="index.html" class="current"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="assets/icons.svg#icon-1"></use></svg><span>Foundry Virtual Tabletop - API Documentation - Version 12</span></a><ul class="tsd-small-nested-navigation" id="tsd-nav-container" data-base="."><li>Loading...</li></ul></nav></div></div></div><footer></footer><div class="overlay"></div></body></html>

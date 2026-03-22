@@ -9,7 +9,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { parseCreatureBlock, splitCollection } from "../../ingest/plaintext";
 import { ObsidianSyncWorkflow } from "../obsidianSync";
 
 function listFilesRecursive(dir: string): string[] {
@@ -49,7 +50,7 @@ describe("ObsidianSyncWorkflow", () => {
 	let inputFile: string;
 
 	beforeEach(async () => {
-		workflow = new ObsidianSyncWorkflow();
+		workflow = new ObsidianSyncWorkflow({ translationService: null });
 		vaultPath = mkdtempSync(join(tmpdir(), "fvtt-obsidian-sync-"));
 		roots.push(vaultPath);
 
@@ -292,5 +293,78 @@ describe("ObsidianSyncWorkflow", () => {
 			name?: string;
 		};
 		expect(afterUpdate.name).toBe("Frost Drake Alpha");
+	});
+
+	it("removes stale output json when the source markdown is deleted", async () => {
+		const first = await workflow.sync({ vaultPath });
+		expect(first.processed).toBe(1);
+
+		const outputPath = join(vaultPath, "output", "test-npc.json");
+		expect(existsSync(outputPath)).toBe(true);
+
+		rmSync(inputFile, { force: true });
+
+		const second = await workflow.sync({ vaultPath });
+		expect(second.processed).toBe(0);
+		expect(second.failed).toBe(0);
+		expect(existsSync(outputPath)).toBe(false);
+
+		const manifest = JSON.parse(
+			readFileSync(join(vaultPath, ".fvtt-sync-manifest.json"), "utf-8"),
+		) as Record<string, { status?: string }>;
+		expect(manifest["test-npc.md"]?.status).toBe("stale");
+	});
+
+	it("skips non-project markdown collections without failing sync", async () => {
+		const collectionPath = join(vaultPath, "input", "raw-collection.md");
+		writeFileSync(
+			collectionPath,
+			[
+				"# **Raw Collection**",
+				"",
+				"**Hit Points (Hit Points)**: 10",
+				"",
+			].join("\n"),
+		);
+
+		const result = await workflow.sync({ vaultPath });
+		expect(result.processed).toBe(1);
+		expect(result.failed).toBe(0);
+		expect(result.skipped).toBe(1);
+		expect(existsSync(join(vaultPath, "output", "raw-collection.json"))).toBe(false);
+	});
+
+	it("defaults sync to core effect profile without midi-qol automation", async () => {
+		const fixturePath = resolve(
+			process.cwd(),
+			"tests/fixtures/plaintext/月蚀矿腐化生物数据.md",
+		);
+		const collection = readFileSync(fixturePath, "utf-8");
+		const bloodfinBlock = splitCollection(collection).find(
+			(block) => block.englishName === "Slithering Bloodfin",
+		);
+		expect(bloodfinBlock).toBeDefined();
+		if (!bloodfinBlock) {
+			throw new Error("Expected Slithering Bloodfin block");
+		}
+
+		const generated = parseCreatureBlock(bloodfinBlock.rawBlock);
+		writeFileSync(join(vaultPath, "input", generated.fileName), generated.markdown);
+
+		const result = await workflow.sync({ vaultPath });
+		expect(result.processed).toBe(2);
+		expect(result.failed).toBe(0);
+
+		const actor = JSON.parse(
+			readFileSync(
+				join(vaultPath, "output", generated.fileName.replace(/\.md$/i, ".json")),
+				"utf-8",
+			),
+		) as { items: Array<{ effects?: any[] }> };
+		expect(
+			actor.items.some((item) =>
+				(item.effects ?? []).some((effect) => Boolean(effect?.flags?.["midi-qol.OverTime"])),
+			),
+		).toBe(false);
 	});
 });

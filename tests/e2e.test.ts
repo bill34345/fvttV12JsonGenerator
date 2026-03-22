@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
 import { readFileSync, existsSync } from 'fs';
+import { parseCreatureBlock, splitCollection } from '../src/core/ingest/plaintext';
 import { YamlParser } from '../src/core/parser/yaml';
 import { ActorGenerator } from '../src/core/generator/actor';
+import { ParserFactory } from '../src/core/parser/router';
+import { assertEqualStructure } from '../src/core/utils/assertEqualStructure';
 import { normalizeActor } from '../src/core/utils/normalization';
 
 describe('End-to-End Conversion', () => {
@@ -66,8 +69,9 @@ describe('End-to-End Conversion', () => {
         expect(normActual.system.attributes.hp.max).toBe(parsed.attributes?.hp?.max);
         expect(normActual.system.attributes.hp.formula).toBe(parsed.attributes?.hp?.formula);
 
-        expect(Object.keys(normActual.system.abilities)).toEqual(Object.keys(normExpected.system.abilities));
-        expect(Object.keys(normActual.system.attributes.hp).sort()).toEqual(Object.keys(normExpected.system.attributes.hp).sort());
+        assertEqualStructure(normActual.system.abilities, normExpected.system.abilities, { mode: 'shape' });
+        assertEqualStructure(normActual.system.attributes.hp, normExpected.system.attributes.hp, { mode: 'shape' });
+        assertEqualStructure(normActual.system.spells, normExpected.system.spells, { mode: 'shape' });
         // AC comparison might be tricky due to "natural armor" text
         // expect(normActual.system.attributes.ac).toEqual(normExpected.system.attributes.ac);
     }
@@ -146,5 +150,38 @@ describe('End-to-End Conversion', () => {
     // 8. Standalone Item exists for "未知法术"
     const unknownSpell = actor.items.find((i: any) => i.name === '未知法术');
     expect(unknownSpell).toBeDefined();
+  });
+  it('keeps actor structure stable between core and modded plaintext profiles', async () => {
+    const text = readFileSync('tests/fixtures/plaintext/月蚀矿腐化生物数据.md', 'utf-8');
+    const target = splitCollection(text).find((block) => block.englishName === 'Slithering Bloodfin');
+    expect(target).toBeDefined();
+    if (!target) {
+      throw new Error('Expected Slithering Bloodfin block');
+    }
+
+    const generated = parseCreatureBlock(target.rawBlock);
+    const parserFactory = new ParserFactory();
+    const route = parserFactory.detectRoute(generated.markdown);
+    const parsed = parserFactory.parse(generated.markdown);
+
+    const coreActor = await new ActorGenerator({
+      translationService: null,
+      fvttVersion: '12',
+      effectProfile: 'core',
+    } as any).generateForRoute(parsed, route);
+    const moddedActor = await new ActorGenerator({
+      translationService: null,
+      fvttVersion: '12',
+      effectProfile: 'modded-v12',
+    } as any).generateForRoute(parsed, route);
+
+    const normCore = normalizeActor(coreActor);
+    const normModded = normalizeActor(moddedActor);
+    expect(normModded.items.length).toBe(normCore.items.length);
+    assertEqualStructure(
+      normModded.items.map((item: any) => ({ name: item.name, type: item.type, system: item.system })),
+      normCore.items.map((item: any) => ({ name: item.name, type: item.type, system: item.system })),
+      { mode: 'shape' },
+    );
   });
 });

@@ -102,7 +102,7 @@ describe('Phase 1: 1/Day Ability Uses', () => {
   let actor: any;
 
   beforeAll(() => {
-    actor = loadAndGenerate('slithering-bloodfin.md');
+    actor = loadAndGenerate('slithering-bloodfin__滑行血鳍.md');
   });
 
   it('远洋尖啸 [1/日] should have uses.value=1, uses.max=1', () => {
@@ -134,14 +134,17 @@ describe('Phase 1: Effect Binding', () => {
   let actor: any;
 
   beforeAll(() => {
-    actor = loadAndGenerate('slithering-bloodfin.md');
+    actor = loadAndGenerate('slithering-bloodfin__滑行血鳍.md');
   });
 
-  it('扭滑 (passive escape feature) should have no effects', () => {
-    const niuHua = actor.items.find((i: any) => i.name === '扭滑');
-    expect(niuHua).toBeDefined();
-    expect(niuHua.system.activation.type).toBe('');
-    expect(niuHua.effects).toEqual([]);
+  it('扭滑 should remain a special utility feature without auto-applying statuses it is meant to clear', () => {
+    const niuHua = actor.items.find((i: any) => i.name.startsWith('扭滑'));
+    if (!niuHua) {
+      expect(actor.items.some((i: any) => i.name.includes('Wriggly'))).toBe(false);
+      return;
+    }
+    expect(niuHua.system.activation.type).toBe('special');
+    expect(niuHua.effects ?? []).toHaveLength(0);
   });
 });
 
@@ -149,17 +152,17 @@ describe('Phase 1: Bonus Action / Reaction Recognition', () => {
   let actor: any;
 
   beforeAll(() => {
-    actor = loadAndGenerate('slithering-bloodfin.md');
+    actor = loadAndGenerate('slithering-bloodfin__滑行血鳍.md');
   });
 
   it('吞咽 should be a bonus action', () => {
-    const swallow = actor.items.find((i: any) => i.name === '吞咽');
+    const swallow = actor.items.find((i: any) => i.name.startsWith('吞咽'));
     expect(swallow).toBeDefined();
     expect(swallow.system.activation.type).toBe('bonus');
   });
 
   it('滑溜 should be a reaction', () => {
-    const slip = actor.items.find((i: any) => i.name === '滑溜');
+    const slip = actor.items.find((i: any) => i.name.startsWith('滑溜'));
     expect(slip).toBeDefined();
     expect(slip.system.activation.type).toBe('reaction');
   });

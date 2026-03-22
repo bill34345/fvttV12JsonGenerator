@@ -1,0 +1,33 @@
+{
+  "base": "https://foundryvtt.com/api/v12/",
+  "out_dir": "I:\\OpenCode\\fvttV12JsonGenerator\\references\\foundry-v12-api",
+  "downloaded_files": 1144,
+  "visited_urls": 1151,
+  "remaining_queue": 0,
+  "errors": [
+    {
+      "url": "https://foundryvtt.com/api/v12/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://foundryvtt.com/api/v12/classes/client.ClientDatabaseBackend.html",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://foundryvtt.com/api/v12/classes/client.CanvasDocumentMixin.html",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://foundryvtt.com/api/v12/interfaces/foundry.GridMeasurePathResult.html",
+      "error": "<urlopen error _ssl.c:1063: The handshake operation timed out>"
+    },
+    {
+      "url": "https://foundryvtt.com/api/v12/interfaces/foundry.HexagonalGridCube.html",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1081)>"
+    },
+    {
+      "url": "https://foundryvtt.com/api/v12/interfaces/client.SceneControlTool.html",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1081)>"
+    }
+  ]
+}

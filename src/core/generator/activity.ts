@@ -55,25 +55,9 @@ export class ActivityGenerator {
       };
     }
 
-    // Add Range if present
     if (action.attack) {
-      if (action.attack.type === 'mwak' && action.attack.reach) {
-        activities[id].range = {
-          value: action.attack.reach,
-          units: 'ft',
-          special: ''
-        };
-      } else if (action.attack.range) {
-        const rangeMatch = action.attack.range.match(/^(\d+)(?:\/(\d+))?/);
-        if (rangeMatch) {
-          activities[id].range = {
-            value: rangeMatch[1],
-            long: rangeMatch[2] || '',
-            units: 'ft',
-            special: ''
-          };
-        }
-      }
+      activities[id].range = this.buildAttackRange(action.attack);
+      activities[id].target = this.buildTargetSchema();
     }
 
     if (action.recharge) {
@@ -88,6 +72,8 @@ export class ActivityGenerator {
 
     if (action.target) {
       activities[id].target = {
+        override: false,
+        prompt: true,
         template: {
           count: 1,
           contiguous: false,
@@ -159,5 +145,67 @@ export class ActivityGenerator {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+  }
+
+  private buildAttackRange(attack: NonNullable<ActionData['attack']>): Record<string, unknown> {
+    if (attack.type === 'mwak') {
+      return {
+        override: false,
+        value: null,
+        long: null,
+        reach: this.parseNumericDistance(attack.reach ?? attack.range) ?? 5,
+        units: 'ft',
+        special: '',
+      };
+    }
+
+    const [value, long] = this.parseRangeValues(attack.range);
+    return {
+      override: false,
+      value,
+      long,
+      reach: null,
+      units: 'ft',
+      special: '',
+    };
+  }
+
+  private buildTargetSchema(): Record<string, unknown> {
+    return {
+      override: false,
+      prompt: true,
+      template: {
+        count: '',
+        contiguous: false,
+        type: '',
+        size: '',
+        width: '',
+        height: '',
+        units: 'ft',
+      },
+      affects: {
+        count: '',
+        type: '',
+        choice: false,
+        special: '',
+      },
+    };
+  }
+
+  private parseRangeValues(range: string | undefined): [number | null, number | null] {
+    const match = range?.match(/(\d+)(?:\s*\/\s*(\d+))?/);
+    if (!match?.[1]) {
+      return [null, null];
+    }
+
+    return [
+      Number.parseInt(match[1], 10),
+      match[2] ? Number.parseInt(match[2], 10) : null,
+    ];
+  }
+
+  private parseNumericDistance(value: string | undefined): number | null {
+    const match = value?.match(/(\d+)/);
+    return match?.[1] ? Number.parseInt(match[1], 10) : null;
   }
 }
