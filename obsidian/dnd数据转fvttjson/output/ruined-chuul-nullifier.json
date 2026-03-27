@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "两栖",
+      "name": "两栖 (Amphibious)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity0e6": {
-            "_id": "dnd5eactivity0e6",
+          "dnd5eactivityd83": {
+            "_id": "dnd5eactivityd83",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "反魔法光环",
+      "name": "反魔法光环 (Anti Magic Aura)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity533": {
-            "_id": "dnd5eactivity533",
+          "dnd5eactivity90e": {
+            "_id": "dnd5eactivity90e",
             "type": "utility",
             "activation": {
               "type": "",
@@ -798,7 +798,7 @@
       }
     },
     {
-      "name": "绝望共鸣",
+      "name": "绝望共鸣 (Despair Resonance)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3eb": {
-            "_id": "dnd5eactivity3eb",
+          "dnd5eactivity4f5": {
+            "_id": "dnd5eactivity4f5",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -843,7 +843,7 @@
       }
     },
     {
-      "name": "腐化反噬",
+      "name": "腐化反噬 (Corruption backlash)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -860,12 +860,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7e1": {
-            "_id": "dnd5eactivity7e1",
+          "dnd5eactivitye8d": {
+            "_id": "dnd5eactivitye8d",
             "type": "utility",
             "effects": [
               {
-                "_id": "004b00cbba527782"
+                "_id": "7e79cc4799966e4e"
               }
             ],
             "activation": {
@@ -883,7 +883,7 @@
       },
       "effects": [
         {
-          "_id": "004b00cbba527782",
+          "_id": "7e79cc4799966e4e",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -905,8 +905,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
             "exhaustion"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -920,7 +919,7 @@
       }
     },
     {
-      "name": "感知魔法",
+      "name": "感知魔法 (Perception Magic)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -937,8 +936,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6a6": {
-            "_id": "dnd5eactivity6a6",
+          "dnd5eactivity1aa": {
+            "_id": "dnd5eactivity1aa",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -965,7 +964,7 @@
       }
     },
     {
-      "name": "多重攻击",
+      "name": "多重攻击 (Multiple Attack)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -982,8 +981,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybc2": {
-            "_id": "dnd5eactivitybc2",
+          "dnd5eactivityb2a": {
+            "_id": "dnd5eactivityb2a",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1010,7 +1009,7 @@
       }
     },
     {
-      "name": "钳击",
+      "name": "钳击 (Clamping)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
@@ -1027,8 +1026,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity723": {
-            "_id": "dnd5eactivity723",
+          "dnd5eactivity4f4": {
+            "_id": "dnd5eactivity4f4",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1107,7 +1106,7 @@
             },
             "effects": [
               {
-                "_id": "c68549976b68fb88"
+                "_id": "dfdffdda2c150fe9"
               }
             ],
             "activation": {
@@ -1132,7 +1131,7 @@
       },
       "effects": [
         {
-          "_id": "c68549976b68fb88",
+          "_id": "dfdffdda2c150fe9",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1154,8 +1153,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1169,7 +1167,7 @@
       }
     },
     {
-      "name": "触须",
+      "name": "触须 (Tentacle)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1186,8 +1184,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd19": {
-            "_id": "dnd5eactivityd19",
+          "dnd5eactivity525": {
+            "_id": "dnd5eactivity525",
             "type": "save",
             "save": {
               "ability": [
@@ -1222,10 +1220,10 @@
             },
             "effects": [
               {
-                "_id": "3b0901845db7311b"
+                "_id": "1d24b909a529ec97"
               },
               {
-                "_id": "dec93080ecd2c157"
+                "_id": "5eeaa8085a60146c"
               }
             ],
             "activation": {
@@ -1243,7 +1241,7 @@
       },
       "effects": [
         {
-          "_id": "3b0901845db7311b",
+          "_id": "1d24b909a529ec97",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1265,11 +1263,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "dec93080ecd2c157",
+          "_id": "5eeaa8085a60146c",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1291,8 +1288,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1316,7 +1312,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410707,
-    "modifiedTime": 1774201410707
+    "createdTime": 1774273722563,
+    "modifiedTime": 1774273722563
   }
 }

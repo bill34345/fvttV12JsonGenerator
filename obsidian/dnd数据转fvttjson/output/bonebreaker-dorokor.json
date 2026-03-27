@@ -1,5 +1,5 @@
 {
-  "name": "Bonebreaker Dorokor",
+  "name": "碎骨者多罗科尔Bonebreaker Dorokor",
   "type": "npc",
   "img": "",
   "system": {
@@ -616,7 +616,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Bonebreaker Dorokor",
+    "name": "碎骨者多罗科尔Bonebreaker Dorokor",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -705,12 +705,12 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "攻击性Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -722,8 +722,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6eb": {
-            "_id": "dnd5eactivity6eb",
+          "dnd5eactivitye82": {
+            "_id": "dnd5eactivitye82",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -750,12 +750,12 @@
       }
     },
     {
-      "name": "Wielder of Wound",
+      "name": "创伤操控者Wielder of Wound",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor wields the magical greataxe Wound.</p>",
+          "value": "<p>碎骨者多罗科尔挥舞着名为“伤口”的魔法巨斧。</p>",
           "chat": ""
         },
         "source": {
@@ -767,8 +767,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb06": {
-            "_id": "dnd5eactivityb06",
+          "dnd5eactivity8cd": {
+            "_id": "dnd5eactivity8cd",
             "type": "utility",
             "activation": {
               "type": "",
@@ -800,7 +800,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.</p>",
+          "value": "<p>Bonebreaker Dorokor 会进行三次武器攻击，或者在战吼可用时进行两次攻击并发出一次战吼。</p>",
           "chat": ""
         },
         "source": {
@@ -812,8 +812,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd2b": {
-            "_id": "dnd5eactivityd2b",
+          "dnd5eactivity264": {
+            "_id": "dnd5eactivity264",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -840,12 +840,12 @@
       }
     },
     {
-      "name": "Wound",
+      "name": "伤口Wound",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 11(1d12 + 5) 挥砍伤害 外加 7 (2d6) necrotic damage. The target’s maximum hit points are decreased in equal amount to the necrotic damage dealt. The target’s hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.</p>",
+          "value": "<p>近战武器攻击：命中 +8，射程 5 英尺，单一目标。命中：造成 11（1d12 + 5）点挥砍伤害，外加 7（2d6）点死灵伤害。目标的最大生命值会减少，减少的数值等同于所造成的死灵伤害。目标的最大生命值在完成一次长休之前，或直到其严重创伤被一次强效复原术抚平之前，均不会恢复正常。</p>",
           "chat": ""
         },
         "source": {
@@ -857,8 +857,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf81": {
-            "_id": "dnd5eactivityf81",
+          "dnd5eactivity6a9": {
+            "_id": "dnd5eactivity6a9",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -967,12 +967,12 @@
       }
     },
     {
-      "name": "Longbow",
+      "name": "长弓Longbow",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 6 (1d8 + 2) 穿刺伤害.</p>",
+          "value": "<p>远程武器攻击：+5 命中，射程 150/600 英尺，对一个目标。命中：6（1d8 + 2）穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -984,8 +984,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity016": {
-            "_id": "dnd5eactivity016",
+          "dnd5eactivitye96": {
+            "_id": "dnd5eactivitye96",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1077,12 +1077,12 @@
       }
     },
     {
-      "name": "War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory",
+      "name": "战吼 Dorokor 吼出兽人的战语，鼓舞她的战士走向胜利。 (War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.</p>",
+          "value": "<p>选择以下效果之一：振奋：在30英尺内能听到Dorokor的声音的所有随从获得22（4d10）点临时生命值。</p>",
           "chat": ""
         },
         "source": {
@@ -1094,8 +1094,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity18c": {
-            "_id": "dnd5eactivity18c",
+          "dnd5eactivity881": {
+            "_id": "dnd5eactivity881",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1122,12 +1122,12 @@
       }
     },
     {
-      "name": "Focus",
+      "name": "专注Focus",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.</p>",
+          "value": "<p>多洛科尔30英尺范围内所有能听到她的爪牙，在它们下一个回合结束前进行的下一次攻击掷骰将获得优势。</p>",
           "chat": ""
         },
         "source": {
@@ -1139,8 +1139,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityec8": {
-            "_id": "dnd5eactivityec8",
+          "dnd5eactivityb1e": {
+            "_id": "dnd5eactivityb1e",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1167,12 +1167,12 @@
       }
     },
     {
-      "name": "Charge",
+      "name": "冲锋Charge",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.</p>",
+          "value": "<p>所有在30英尺范围内能听到多罗科尔的爪牙可以作为一次反应移动至多相当于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -1184,8 +1184,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityda2": {
-            "_id": "dnd5eactivityda2",
+          "dnd5eactivity630": {
+            "_id": "dnd5eactivity630",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1212,12 +1212,12 @@
       }
     },
     {
-      "name": "Villain Ability: Warlord",
+      "name": "反派能力：军阀Villain Ability: Warlord",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a reaction, when a minion dies, Dorokor can issue a command to her other minions. Those who can hear her gain a reaction they can use to immediately take another movement.</p>",
+          "value": "<p>作为一次反应，当一个随从死亡时，Dorokor 可以向她其他的随从发出命令。能听到她的随从获得一个反应，可用以立即进行一次额外移动。</p>",
           "chat": ""
         },
         "source": {
@@ -1229,8 +1229,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2aa": {
-            "_id": "dnd5eactivity2aa",
+          "dnd5eactivitybfc": {
+            "_id": "dnd5eactivitybfc",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1264,7 +1264,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410643,
-    "modifiedTime": 1774201410643
+    "createdTime": 1774273704427,
+    "modifiedTime": 1774273704427
   }
 }

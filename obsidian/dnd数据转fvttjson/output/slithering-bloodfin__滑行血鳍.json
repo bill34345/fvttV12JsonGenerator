@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity187": {
-            "_id": "dnd5eactivity187",
+          "dnd5eactivity585": {
+            "_id": "dnd5eactivity585",
             "type": "utility",
             "activation": {
               "type": "",
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityaee": {
-            "_id": "dnd5eactivityaee",
+          "dnd5eactivity43c": {
+            "_id": "dnd5eactivity43c",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -810,8 +810,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity74c": {
-            "_id": "dnd5eactivity74c",
+          "dnd5eactivity435": {
+            "_id": "dnd5eactivity435",
             "type": "save",
             "save": {
               "ability": [
@@ -846,7 +846,7 @@
             },
             "effects": [
               {
-                "_id": "6091f3f639f330dd"
+                "_id": "3df7ad6bff441d5e"
               }
             ],
             "activation": {
@@ -875,8 +875,8 @@
               }
             }
           },
-          "dnd5eactivity3a8": {
-            "_id": "dnd5eactivity3a8",
+          "dnd5eactivity040": {
+            "_id": "dnd5eactivity040",
             "type": "save",
             "save": {
               "ability": [
@@ -926,7 +926,7 @@
       },
       "effects": [
         {
-          "_id": "6091f3f639f330dd",
+          "_id": "3df7ad6bff441d5e",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -948,8 +948,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -980,8 +979,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity74e": {
-            "_id": "dnd5eactivity74e",
+          "dnd5eactivityc19": {
+            "_id": "dnd5eactivityc19",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1025,8 +1024,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity90f": {
-            "_id": "dnd5eactivity90f",
+          "dnd5eactivity4bd": {
+            "_id": "dnd5eactivity4bd",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1088,10 +1087,10 @@
             },
             "effects": [
               {
-                "_id": "7e01c0b983ec4bdb"
+                "_id": "e2799de9af492c0c"
               },
               {
-                "_id": "5c626663b234bf7f"
+                "_id": "cb6381ca1b644aed"
               }
             ],
             "activation": {
@@ -1116,7 +1115,7 @@
       },
       "effects": [
         {
-          "_id": "7e01c0b983ec4bdb",
+          "_id": "e2799de9af492c0c",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1138,11 +1137,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
           "statuses": [
             "restrained"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "5c626663b234bf7f",
+          "_id": "cb6381ca1b644aed",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1164,8 +1162,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1196,8 +1193,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7ba": {
-            "_id": "dnd5eactivity7ba",
+          "dnd5eactivityd6c": {
+            "_id": "dnd5eactivityd6c",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1270,11 +1267,11 @@
             },
             "macroData": {
               "name": "Heavy Hit",
-              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivityc06\",\"dnd5eactivitycc2\",\"dnd5eactivity848\"],\"branches\":[{\"activityId\":\"dnd5eactivityc06\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivitycc2\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivity848\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
+              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivityd4d\",\"dnd5eactivity910\",\"dnd5eactivity709\"],\"branches\":[{\"activityId\":\"dnd5eactivityd4d\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivity910\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivity709\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
             }
           },
-          "dnd5eactivityc06": {
-            "_id": "dnd5eactivityc06",
+          "dnd5eactivityd4d": {
+            "_id": "dnd5eactivityd4d",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1304,7 +1301,7 @@
                   "label": "Bleeding Wound",
                   "kind": "damage"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivityc06"
+                "heavyHitBranchActivityId": "dnd5eactivityd4d"
               }
             },
             "effects": [],
@@ -1328,8 +1325,8 @@
               "targets": []
             }
           },
-          "dnd5eactivitycc2": {
-            "_id": "dnd5eactivitycc2",
+          "dnd5eactivity910": {
+            "_id": "dnd5eactivity910",
             "type": "save",
             "save": {
               "ability": [
@@ -1351,7 +1348,7 @@
                   "label": "Reeling Impact",
                   "kind": "save"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivitycc2"
+                "heavyHitBranchActivityId": "dnd5eactivity910"
               }
             },
             "effects": [],
@@ -1375,8 +1372,8 @@
               "targets": []
             }
           },
-          "dnd5eactivity848": {
-            "_id": "dnd5eactivity848",
+          "dnd5eactivity709": {
+            "_id": "dnd5eactivity709",
             "type": "utility",
             "flags": {
               "fvttJsonGenerator": {
@@ -1385,7 +1382,7 @@
                   "label": "Push",
                   "kind": "utility"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivity848"
+                "heavyHitBranchActivityId": "dnd5eactivity709"
               }
             },
             "effects": [],
@@ -1440,25 +1437,25 @@
             "acMargin": 5,
             "dieFormula": "1d3",
             "branchActivityIds": [
-              "dnd5eactivityc06",
-              "dnd5eactivitycc2",
-              "dnd5eactivity848"
+              "dnd5eactivityd4d",
+              "dnd5eactivity910",
+              "dnd5eactivity709"
             ],
             "branches": [
               {
-                "activityId": "dnd5eactivityc06",
+                "activityId": "dnd5eactivityd4d",
                 "label": "Bleeding Wound",
                 "kind": "damage",
                 "index": 1
               },
               {
-                "activityId": "dnd5eactivitycc2",
+                "activityId": "dnd5eactivity910",
                 "label": "Reeling Impact",
                 "kind": "save",
                 "index": 2
               },
               {
-                "activityId": "dnd5eactivity848",
+                "activityId": "dnd5eactivity709",
                 "label": "Push",
                 "kind": "utility",
                 "index": 3
@@ -1486,8 +1483,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2b4": {
-            "_id": "dnd5eactivity2b4",
+          "dnd5eactivityc8f": {
+            "_id": "dnd5eactivityc8f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1531,10 +1528,10 @@
             },
             "effects": [
               {
-                "_id": "a3c5fddc4f2de1da"
+                "_id": "fd72d2b3cba20f67"
               },
               {
-                "_id": "a16cd81a2c894296"
+                "_id": "5c576b59a20ef1c4"
               }
             ],
             "activation": {
@@ -1544,8 +1541,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity8dd": {
-            "_id": "dnd5eactivity8dd",
+          "dnd5eactivity957": {
+            "_id": "dnd5eactivity957",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1576,8 +1573,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity5bf": {
-            "_id": "dnd5eactivity5bf",
+          "dnd5eactivity724": {
+            "_id": "dnd5eactivity724",
             "type": "save",
             "save": {
               "ability": [
@@ -1608,7 +1605,7 @@
       },
       "effects": [
         {
-          "_id": "a3c5fddc4f2de1da",
+          "_id": "fd72d2b3cba20f67",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1630,11 +1627,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
           "statuses": [
             "restrained"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "a16cd81a2c894296",
+          "_id": "5c576b59a20ef1c4",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1656,8 +1652,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1690,8 +1685,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity94d": {
-            "_id": "dnd5eactivity94d",
+          "dnd5eactivity1dd": {
+            "_id": "dnd5eactivity1dd",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1735,8 +1730,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivityc11": {
-            "_id": "dnd5eactivityc11",
+          "dnd5eactivityd4e": {
+            "_id": "dnd5eactivityd4e",
             "type": "save",
             "save": {
               "ability": [
@@ -1753,7 +1748,7 @@
             },
             "effects": [
               {
-                "_id": "5fce48b636e24e24"
+                "_id": "40aed67e02061979"
               }
             ],
             "activation": {
@@ -1805,7 +1800,7 @@
       },
       "effects": [
         {
-          "_id": "5fce48b636e24e24",
+          "_id": "40aed67e02061979",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1827,8 +1822,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
           "statuses": [
             "dazed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1851,7 +1845,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410726,
-    "modifiedTime": 1774201410726
+    "createdTime": 1774273722592,
+    "modifiedTime": 1774273722592
   }
 }

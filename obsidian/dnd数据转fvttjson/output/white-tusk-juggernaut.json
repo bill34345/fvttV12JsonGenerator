@@ -1,5 +1,5 @@
 {
-  "name": "White Tusk Juggernaut",
+  "name": "白牙巨像White Tusk Juggernaut",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "White Tusk Juggernaut",
+    "name": "白牙巨像White Tusk Juggernaut",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "攻击性Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity916": {
-            "_id": "dnd5eactivity916",
+          "dnd5eactivity1c9": {
+            "_id": "dnd5eactivity1c9",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -747,12 +747,12 @@
       }
     },
     {
-      "name": "Minion",
+      "name": "随从Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
+          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3ce": {
-            "_id": "dnd5eactivity3ce",
+          "dnd5eactivitycc4": {
+            "_id": "dnd5eactivitycc4",
             "type": "utility",
             "activation": {
               "type": "",
@@ -797,7 +797,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>The White Tusk juggernaut makes one tusk attack and one longsword attack.</p>",
+          "value": "<p>白牙巨兽进行一次獠牙攻击和一次长剑攻击。</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3f0": {
-            "_id": "dnd5eactivity3f0",
+          "dnd5eactivity6f2": {
+            "_id": "dnd5eactivity6f2",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -837,12 +837,12 @@
       }
     },
     {
-      "name": "Tusk",
+      "name": "獠牙Tusk",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +6 命中, 触及 10 ft., 一个目标. 命中： 11 (2d6 + 4) 穿刺伤害. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be knocked prone.</p>",
+          "value": "<p>近战武器攻击：命中 +6，攻击距离 10 英尺，一个目标。命中：造成 11（2d6 + 4）点穿刺伤害。如果目标是生物，必须通过 DC 14 的力量豁免检定，否则被击倒。</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity212": {
-            "_id": "dnd5eactivity212",
+          "dnd5eactivityc3b": {
+            "_id": "dnd5eactivityc3b",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -917,7 +917,7 @@
             },
             "effects": [
               {
-                "_id": "4986407da9481981"
+                "_id": "66ea3f4ae84629e0"
               }
             ],
             "activation": {
@@ -942,7 +942,7 @@
       },
       "effects": [
         {
-          "_id": "4986407da9481981",
+          "_id": "66ea3f4ae84629e0",
           "name": "倒地 (Prone)",
           "type": "base",
           "system": {},
@@ -964,8 +964,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/prone.svg",
           "statuses": [
             "prone"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -979,12 +978,12 @@
       }
     },
     {
-      "name": "Longsword",
+      "name": "长剑Longsword",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +6 命中, 触及 10 ft., 一个目标. 命中： 13 (2d8 + 4) 挥砍伤害.</p>",
+          "value": "<p>近战武器攻击：+6 命中，触及 10 英尺，一个目标。命中：13（2d8 + 4）点挥砍伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -996,8 +995,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8e9": {
-            "_id": "dnd5eactivity8e9",
+          "dnd5eactivityf34": {
+            "_id": "dnd5eactivityf34",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1089,12 +1088,12 @@
       }
     },
     {
-      "name": "Horde Protector",
+      "name": "部落守护者Horde Protector",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>When a creature within 5 feet of the orc is attacked by a creature the orc can see and the orc is wielding a shield, the orc can impose disadvantage on that attack roll.</p>",
+          "value": "<p>当靠近兽人5英尺内的生物被一个兽人能看到的生物攻击，且兽人持有盾牌时，兽人可以使该次攻击检定处于劣势。</p>",
           "chat": ""
         },
         "source": {
@@ -1106,8 +1105,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd50": {
-            "_id": "dnd5eactivityd50",
+          "dnd5eactivityea7": {
+            "_id": "dnd5eactivityea7",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1141,7 +1140,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410741,
-    "modifiedTime": 1774201410741
+    "createdTime": 1774273722610,
+    "modifiedTime": 1774273722610
   }
 }

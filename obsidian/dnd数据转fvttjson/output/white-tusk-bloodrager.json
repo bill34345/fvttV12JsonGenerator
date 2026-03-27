@@ -1,5 +1,5 @@
 {
-  "name": "White Tusk Bloodrager",
+  "name": "白獠牙血怒者White Tusk Bloodrager",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "White Tusk Bloodrager",
+    "name": "白獠牙血怒者White Tusk Bloodrager",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "攻击性Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity449": {
-            "_id": "dnd5eactivity449",
+          "dnd5eactivitye45": {
+            "_id": "dnd5eactivitye45",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -747,12 +747,12 @@
       }
     },
     {
-      "name": "Minion",
+      "name": "随从Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
+          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityeb4": {
-            "_id": "dnd5eactivityeb4",
+          "dnd5eactivity2de": {
+            "_id": "dnd5eactivity2de",
             "type": "utility",
             "activation": {
               "type": "",
@@ -797,7 +797,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>The White Tusk Bloodrager makes three falchion attacks.</p>",
+          "value": "<p>白牙血怒者发动三次弯刀攻击。</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd02": {
-            "_id": "dnd5eactivityd02",
+          "dnd5eactivityb0c": {
+            "_id": "dnd5eactivityb0c",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -837,12 +837,12 @@
       }
     },
     {
-      "name": "Falchion",
+      "name": "阔刃剑Falchion",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +6 命中, 触及 5 ft., 一个目标. 命中： 8 (2d4 + 3) 挥砍伤害.</p>",
+          "value": "<p>近战武器攻击：+6 命中，5 英尺射程，单个目标。命中：8（2d4 + 3）点挥砍伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya2e": {
-            "_id": "dnd5eactivitya2e",
+          "dnd5eactivity3f4": {
+            "_id": "dnd5eactivity3f4",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -954,7 +954,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410734,
-    "modifiedTime": 1774201410734
+    "createdTime": 1774273722600,
+    "modifiedTime": 1774273722600
   }
 }

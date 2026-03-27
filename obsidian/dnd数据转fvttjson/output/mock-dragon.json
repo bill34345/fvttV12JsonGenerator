@@ -1,5 +1,5 @@
 {
-  "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
+  "name": "毁灭月石尖啸者 (Moonstone Shrieker of Destruction)",
   "type": "npc",
   "img": "",
   "system": {
@@ -12,7 +12,7 @@
     },
     "abilities": {
       "str": {
-        "value": 16,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -35,7 +35,7 @@
         }
       },
       "dex": {
-        "value": 14,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -58,7 +58,7 @@
         }
       },
       "con": {
-        "value": 16,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 3,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,7 +104,7 @@
         }
       },
       "wis": {
-        "value": 11,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 3,
+        "value": 10,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -392,7 +392,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 1,
+        "value": 0,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,27 +458,31 @@
     },
     "attributes": {
       "init": {
-        "bonus": 3
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonus": "@prof * 2"
       },
       "movement": {
-        "walk": 30,
+        "walk": null,
         "fly": null,
         "swim": null,
         "climb": null,
         "burrow": null,
-        "hover": false,
-        "units": "ft"
+        "hover": false
       },
       "attunement": {
         "max": 3
       },
       "senses": {
-        "darkvision": 0,
-        "blindsight": 60,
-        "tremorsense": 0,
-        "truesight": 0,
-        "special": "盲视: 超出该范围则视为目盲",
-        "units": "ft"
+        "darkvision": null,
+        "blindsight": null,
+        "tremorsense": null,
+        "truesight": null,
+        "special": ""
       },
       "spellcasting": "",
       "exhaustion": 0,
@@ -495,18 +499,18 @@
         "limit": 1
       },
       "ac": {
-        "flat": 17,
-        "calc": "flat"
+        "flat": 20,
+        "calc": "natural"
       },
       "hd": {
         "spent": 0
       },
       "hp": {
-        "value": 75,
-        "max": 75,
+        "value": 332,
+        "max": 332,
         "temp": null,
         "tempmax": null,
-        "formula": ""
+        "formula": "19d20 + 133"
       },
       "death": {
         "roll": {
@@ -529,18 +533,18 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>群猎战术 (Pack Tactics)：只要蛇吻至少有一个盟友位于目标生物 5 尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。</li><li>脆壳反震 (Brittle Shell)：若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage)，则它的 AC 降至 14，直到其完成一次短休或长休。</li></ul>",
+        "value": "<ul><li># 背景</li><li>这是一条测试用的复杂怪物。</li></ul>",
         "public": ""
       },
-      "alignment": "无阵营",
+      "alignment": "",
       "ideal": "",
       "bond": "",
       "flaw": "",
       "race": null,
       "type": {
-        "value": "aberration"
+        "value": ""
       },
-      "cr": 5,
+      "cr": 15,
       "habitat": {
         "value": [],
         "custom": ""
@@ -548,10 +552,7 @@
       "treasure": {
         "value": []
       },
-      "spellLevel": 0,
-      "xp": {
-        "value": 1800
-      }
+      "spellLevel": 0
     },
     "resources": {
       "legact": {
@@ -573,7 +574,7 @@
       "rules": "2024"
     },
     "traits": {
-      "size": "sm",
+      "size": "med",
       "di": {
         "value": [],
         "custom": "",
@@ -605,7 +606,7 @@
     }
   },
   "prototypeToken": {
-    "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
+    "name": "毁灭月石尖啸者",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -662,8 +663,8 @@
       }
     },
     "sight": {
-      "enabled": true,
-      "range": 60,
+      "enabled": false,
+      "range": 0,
       "angle": 360,
       "visionMode": "basic",
       "color": null,
@@ -672,13 +673,7 @@
       "saturation": 0,
       "contrast": 0
     },
-    "detectionModes": [
-      {
-        "id": "blindsight",
-        "enabled": true,
-        "range": 60
-      }
-    ],
+    "detectionModes": [],
     "occludable": {
       "radius": 0
     },
@@ -700,138 +695,12 @@
   },
   "items": [
     {
-      "name": "群猎战术 (Pack Tactics)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
+      "name": "啮咬 (Bite)",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<ul><li>只要蛇吻至少有一个盟友位于目标生物 5 尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。</li></ul>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "",
-          "cost": null,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity336": {
-            "_id": "dnd5eactivity336",
-            "type": "utility",
-            "activation": {
-              "type": "",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "特性",
-          "actionSection": "特性"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "脆壳反震 (Brittle Shell)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<ul><li>若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage)，则它的 AC 降至 14，直到其完成一次短休或长休。</li></ul>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "special",
-          "cost": null,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity050": {
-            "_id": "dnd5eactivity050",
-            "type": "utility",
-            "effects": [
-              {
-                "_id": "b446a5ed8c9b8b00"
-              }
-            ],
-            "activation": {
-              "type": "special",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [
-        {
-          "_id": "b446a5ed8c9b8b00",
-          "name": "脆壳反震 (Brittle Shell)",
-          "type": "base",
-          "system": {},
-          "changes": [
-            {
-              "key": "system.attributes.ac.flat",
-              "mode": 5,
-              "value": "14",
-              "priority": null
-            }
-          ],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/downgrade.svg",
-          "statuses": []
-        }
-      ],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "特性",
-          "actionSection": "特性"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "多重攻击 (Multiattack)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<ul><li>蛇吻进行一次毒液咬击 (Venomous Bite) 和一次爪击 (Claw)。</li></ul>",
+          "value": "<ul><li>19 (2d10+8) 穿刺伤害外加 7 (2d6) 火焰伤害.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -843,9 +712,84 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity90b": {
-            "_id": "dnd5eactivity90b",
-            "type": "utility",
+          "dnd5eactivity40f": {
+            "_id": "dnd5eactivity40f",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "14",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 10,
+                  "bonus": "8",
+                  "types": [
+                    "bludgeoning"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                },
+                {
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "bludgeoning"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
             "activation": {
               "type": "action",
               "value": null,
@@ -855,8 +799,15 @@
           }
         },
         "type": {
-          "value": "monster",
-          "subtype": ""
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
         }
       },
       "effects": [],
@@ -871,12 +822,12 @@
       }
     },
     {
-      "name": "爪击 (Claw)",
+      "name": "长剑 (Longsword)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<ul><li>近战武器攻击：命中 +6，单一目标。</li><li>命中：8（`1d8 + 3`）点挥砍伤害 (Slashing Damage) 或穿刺伤害 (Piercing Damage)。</li></ul>",
+          "value": "<ul><li>15 (2d6+8) 挥砍伤害,双手使用时为 17 (2d8+8) 挥砍伤害.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -888,12 +839,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity76b": {
-            "_id": "dnd5eactivity76b",
+          "dnd5eactivityf9e": {
+            "_id": "dnd5eactivityf9e",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "6",
+              "bonus": "14",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -903,9 +854,26 @@
             "damage": {
               "parts": [
                 {
-                  "number": 1,
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "8",
+                  "types": [
+                    "slashing"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                },
+                {
+                  "number": 2,
                   "denomination": 8,
-                  "bonus": "3",
+                  "bonus": "8",
                   "types": [
                     "slashing"
                   ],
@@ -920,7 +888,24 @@
                   }
                 }
               ],
-              "includeBase": true
+              "includeBase": true,
+              "versatile": {
+                "number": 2,
+                "denomination": 8,
+                "bonus": "8",
+                "types": [
+                  "slashing"
+                ],
+                "custom": {
+                  "enabled": false,
+                  "formula": ""
+                },
+                "scaling": {
+                  "mode": "whole",
+                  "number": 1,
+                  "formula": ""
+                }
+              }
             },
             "range": {
               "override": false,
@@ -981,12 +966,12 @@
       }
     },
     {
-      "name": "毒液咬击 (Venomous Bite)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "毁灭吐息 (Breath of Destruction)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>近战武器攻击：命中 +6，触及 15 尺，单一目标。</li><li>命中：10（`2d6 + 3`）点穿刺伤害 (Piercing Damage)。若此次攻击具有优势 (Advantage)，则改为造成 17 点穿刺伤害。</li><li>蛇吻每次长休可分别使用以下每种毒液各一次。以下毒液效果的豁免 DC 均为 14，且重伤 / 濒血 (Bloodied) 的目标在进行该豁免时具有劣势 (Disadvantage)。</li><li>盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。</li><li>针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw) 命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
+          "value": "<ul><li>覆盖 90 尺锥形区域,DC 21 敏捷豁免,失败 63 (18d6) 火焰伤害,成功减半.</li></ul>",
           "chat": ""
         },
         "source": {
@@ -998,26 +983,27 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf84": {
-            "_id": "dnd5eactivityf84",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
+          "dnd5eactivityb9a": {
+            "_id": "dnd5eactivityb9a",
+            "type": "save",
+            "save": {
+              "ability": [
+                "dex"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "21",
+                "value": 21
               }
             },
             "damage": {
               "parts": [
                 {
-                  "number": 2,
+                  "number": 18,
                   "denomination": 6,
-                  "bonus": "3",
+                  "bonus": "",
                   "types": [
-                    "piercing"
+                    "fire"
                   ],
                   "custom": {
                     "enabled": false,
@@ -1029,25 +1015,27 @@
                     "formula": ""
                   }
                 }
-              ],
-              "includeBase": true
+              ]
             },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 15,
-              "units": "ft",
-              "special": ""
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
             },
             "target": {
               "override": false,
               "prompt": true,
               "template": {
-                "count": "",
+                "count": 1,
                 "contiguous": false,
-                "type": "",
-                "size": "",
+                "type": "cone",
+                "size": "90",
                 "width": "",
                 "height": "",
                 "units": "ft"
@@ -1065,341 +1053,6 @@
               "override": false,
               "condition": ""
             }
-          },
-          "dnd5eactivity55e": {
-            "_id": "dnd5eactivity55e",
-            "type": "save",
-            "save": {
-              "ability": [
-                "con"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "14",
-                "value": 14
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "poison"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ]
-            },
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "brine-shock",
-                "bloodiedTargetSaveDisadvantage": true
-              }
-            },
-            "effects": [
-              {
-                "_id": "15d391a7d95c48b3"
-              }
-            ],
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity110": {
-            "_id": "dnd5eactivity110",
-            "type": "damage",
-            "damage": {
-              "parts": [
-                {
-                  "number": 1,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ]
-            },
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "needling-bite",
-                "bloodiedTargetSaveDisadvantage": true
-              }
-            },
-            "effects": [
-              {
-                "_id": "c96fb1f6512e817d"
-              }
-            ],
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity486": {
-            "_id": "dnd5eactivity486",
-            "type": "utility",
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "vampiric-bite",
-                "bloodiedTargetSaveDisadvantage": true,
-                "losesHitDie": 1,
-                "grantsTempHp": 10,
-                "corruptionSaveOnHitDieZero": true
-              }
-            },
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 15,
-          "units": "ft"
-        }
-      },
-      "effects": [
-        {
-          "_id": "15d391a7d95c48b3",
-          "name": "中毒 (Poisoned)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
-          "statuses": [
-            "poisoned"
-          ]
-        },
-        {
-          "_id": "c96fb1f6512e817d",
-          "name": "流血 (Bleeding)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
-          "statuses": [
-            "bleeding"
-          ]
-        }
-      ],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "动作",
-          "actionSection": "动作"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {
-            "bleed": true
-          }
-        }
-      }
-    },
-    {
-      "name": "缩壳防御 (Retract)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<ul><li>当蛇吻成为一次攻击的目标时，它可以令自身 AC 提高 +4，并获得四分之三掩护 (Three-Quarters Cover)，直到其下一回合开始。该效果总计提供 +9 AC。在其接下来的回合中，蛇吻不能进行毒液咬击 (Venomous Bite)。</li></ul>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivity95f": {
-            "_id": "dnd5eactivity95f",
-            "type": "utility",
-            "effects": [
-              {
-                "_id": "3682020f028a50bf"
-              }
-            ],
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [
-        {
-          "_id": "3682020f028a50bf",
-          "name": "缩壳防御 (Retract)",
-          "type": "base",
-          "system": {},
-          "changes": [
-            {
-              "key": "system.attributes.ac.bonus",
-              "mode": 2,
-              "value": "9",
-              "priority": null
-            }
-          ],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": 1,
-            "turns": 0,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
-          "statuses": []
-        }
-      ],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "反应",
-          "actionSection": "反应"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "急窜脱离 (Scuttle)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<ul><li>当蛇吻被迫进行一次对抗法术或魔法效果的豁免检定时，它可以移动至多其速度的一半。若该移动使其离开该法术或魔法效果的作用范围或区域，则它不受该效果影响。</li></ul>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivitybe7": {
-            "_id": "dnd5eactivitybe7",
-            "type": "utility",
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
           }
         },
         "type": {
@@ -1410,8 +1063,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "反应",
-          "actionSection": "反应"
+          "section": "动作",
+          "actionSection": "动作"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -1426,7 +1079,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274948701,
-    "modifiedTime": 1774274948701
+    "createdTime": 1774273722549,
+    "modifiedTime": 1774273722549
   }
 }

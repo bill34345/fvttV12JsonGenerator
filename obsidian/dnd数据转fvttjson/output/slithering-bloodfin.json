@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "血狂",
+      "name": "血狂 (Blood Frenzy)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity722": {
-            "_id": "dnd5eactivity722",
+          "dnd5eactivity95d": {
+            "_id": "dnd5eactivity95d",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "扭滑",
+      "name": "扭滑 (Twist and slide)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity179": {
-            "_id": "dnd5eactivity179",
+          "dnd5eactivityfdc": {
+            "_id": "dnd5eactivityfdc",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,7 +798,7 @@
       }
     },
     {
-      "name": "死亡爆裂",
+      "name": "死亡爆裂 (Death Explosion)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -815,12 +815,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf2b": {
-            "_id": "dnd5eactivityf2b",
+          "dnd5eactivityd42": {
+            "_id": "dnd5eactivityd42",
             "type": "utility",
             "effects": [
               {
-                "_id": "658794bc01c7bf5e"
+                "_id": "8dfcdabeb143ac45"
               }
             ],
             "activation": {
@@ -838,7 +838,7 @@
       },
       "effects": [
         {
-          "_id": "658794bc01c7bf5e",
+          "_id": "8dfcdabeb143ac45",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -860,8 +860,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -875,7 +874,7 @@
       }
     },
     {
-      "name": "多重攻击",
+      "name": "多重攻击 (Multiple Attacks)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -892,8 +891,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc9d": {
-            "_id": "dnd5eactivityc9d",
+          "dnd5eactivityfa9": {
+            "_id": "dnd5eactivityfa9",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -920,7 +919,7 @@
       }
     },
     {
-      "name": "啃咬",
+      "name": "啃咬 (Bite)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
@@ -937,8 +936,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd51": {
-            "_id": "dnd5eactivityd51",
+          "dnd5eactivityce1": {
+            "_id": "dnd5eactivityce1",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1000,7 +999,7 @@
             },
             "effects": [
               {
-                "_id": "f14934cf7ca72687"
+                "_id": "8f865dfd63c812ce"
               }
             ],
             "activation": {
@@ -1025,7 +1024,7 @@
       },
       "effects": [
         {
-          "_id": "f14934cf7ca72687",
+          "_id": "8f865dfd63c812ce",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1047,8 +1046,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1062,7 +1060,7 @@
       }
     },
     {
-      "name": "尾击",
+      "name": "尾击 (Backstab)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
@@ -1079,8 +1077,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityabb": {
-            "_id": "dnd5eactivityabb",
+          "dnd5eactivity39e": {
+            "_id": "dnd5eactivity39e",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1148,8 +1146,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivitycdf": {
-            "_id": "dnd5eactivitycdf",
+          "dnd5eactivity1cc": {
+            "_id": "dnd5eactivity1cc",
             "type": "save",
             "save": {
               "ability": [
@@ -1210,7 +1208,7 @@
       }
     },
     {
-      "name": "吞咽",
+      "name": "吞咽 (Swallowing)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1227,8 +1225,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity922": {
-            "_id": "dnd5eactivity922",
+          "dnd5eactivity39b": {
+            "_id": "dnd5eactivity39b",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1290,7 +1288,7 @@
             },
             "effects": [
               {
-                "_id": "35557eddd0602dfc"
+                "_id": "92c0a517e32523ee"
               }
             ],
             "activation": {
@@ -1300,8 +1298,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity863": {
-            "_id": "dnd5eactivity863",
+          "dnd5eactivityc90": {
+            "_id": "dnd5eactivityc90",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1340,7 +1338,7 @@
       },
       "effects": [
         {
-          "_id": "35557eddd0602dfc",
+          "_id": "92c0a517e32523ee",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1362,8 +1360,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1379,7 +1376,7 @@
       }
     },
     {
-      "name": "滑溜",
+      "name": "滑溜 (slippery)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1396,8 +1393,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye9e": {
-            "_id": "dnd5eactivitye9e",
+          "dnd5eactivity4bf": {
+            "_id": "dnd5eactivity4bf",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1424,7 +1421,7 @@
       }
     },
     {
-      "name": "远洋尖啸",
+      "name": "远洋尖啸 (Oceanic Howl)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1441,8 +1438,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydac": {
-            "_id": "dnd5eactivitydac",
+          "dnd5eactivity9a0": {
+            "_id": "dnd5eactivity9a0",
             "type": "save",
             "save": {
               "ability": [
@@ -1459,7 +1456,7 @@
             },
             "effects": [
               {
-                "_id": "935eaeda6aff904c"
+                "_id": "6c06bfa3cb0b85a8"
               }
             ],
             "activation": {
@@ -1511,7 +1508,7 @@
       },
       "effects": [
         {
-          "_id": "935eaeda6aff904c",
+          "_id": "6c06bfa3cb0b85a8",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1533,8 +1530,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
           "statuses": [
             "dazed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1557,7 +1553,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410722,
-    "modifiedTime": 1774201410722
+    "createdTime": 1774273722583,
+    "modifiedTime": 1774273722583
   }
 }

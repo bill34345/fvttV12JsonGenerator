@@ -218,4 +218,17 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(parsed.name.length).toBeGreaterThan(0);
     expect(parsed.type).toBe('npc');
   });
+
+  it('preserves nested Venomous Bite rider lines as multiline action text for Scuttling Serpentmaw', () => {
+    const generated = parseCreatureBlock(getBlock('Scuttling Serpentmaw').rawBlock);
+    const parsed = new ParserFactory().parse(generated.markdown);
+    const venomousBite = parsed.actions?.find(
+      (entry) => typeof entry === 'string' && entry.startsWith('毒液咬击 (Venomous Bite)'),
+    );
+
+    expect(venomousBite).toBeDefined();
+    expect(venomousBite).toContain('\n盐水电击 (Brine-shock)');
+    expect(venomousBite).toContain('\n针刺噬咬 (Needling Bite)');
+    expect(venomousBite).toContain('\n吸血噬咬 (Vampiric Bite)');
+  });
 });

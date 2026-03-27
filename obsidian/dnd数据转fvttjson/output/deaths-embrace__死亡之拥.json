@@ -724,8 +724,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity437": {
-            "_id": "dnd5eactivity437",
+          "dnd5eactivity545": {
+            "_id": "dnd5eactivity545",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -769,12 +769,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity46f": {
-            "_id": "dnd5eactivity46f",
+          "dnd5eactivitycfb": {
+            "_id": "dnd5eactivitycfb",
             "type": "utility",
             "effects": [
               {
-                "_id": "4a8b0545b8fb1e18"
+                "_id": "438c0cd18b7ec055"
               }
             ],
             "activation": {
@@ -792,7 +792,7 @@
       },
       "effects": [
         {
-          "_id": "4a8b0545b8fb1e18",
+          "_id": "438c0cd18b7ec055",
           "name": "石化 (Petrified)",
           "type": "base",
           "system": {},
@@ -814,8 +814,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/petrified.svg",
           "statuses": [
             "petrified"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -846,21 +845,21 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9d2": {
-            "_id": "dnd5eactivity9d2",
+          "dnd5eactivityae9": {
+            "_id": "dnd5eactivityae9",
             "type": "utility",
             "effects": [
               {
-                "_id": "83b306f12aec5f5b"
+                "_id": "087e3029b8da042b"
               },
               {
-                "_id": "24a8787990846982"
+                "_id": "e78dc2d08b55adcc"
               },
               {
-                "_id": "7666f76559f38d12"
+                "_id": "161f2c79225c0f0b"
               },
               {
-                "_id": "06a27636d7dcda85"
+                "_id": "cca27685fee88373"
               }
             ],
             "activation": {
@@ -878,7 +877,7 @@
       },
       "effects": [
         {
-          "_id": "83b306f12aec5f5b",
+          "_id": "087e3029b8da042b",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -900,11 +899,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "24a8787990846982",
+          "_id": "e78dc2d08b55adcc",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -926,11 +924,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
           "statuses": [
             "restrained"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "7666f76559f38d12",
+          "_id": "161f2c79225c0f0b",
           "name": "石化 (Petrified)",
           "type": "base",
           "system": {},
@@ -952,11 +949,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/petrified.svg",
           "statuses": [
             "petrified"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "06a27636d7dcda85",
+          "_id": "cca27685fee88373",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -978,8 +974,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1010,8 +1005,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb5b": {
-            "_id": "dnd5eactivityb5b",
+          "dnd5eactivity19a": {
+            "_id": "dnd5eactivity19a",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1055,12 +1050,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7d0": {
-            "_id": "dnd5eactivity7d0",
+          "dnd5eactivityde9": {
+            "_id": "dnd5eactivityde9",
             "type": "utility",
             "effects": [
               {
-                "_id": "59fbceaf39c87173"
+                "_id": "fb500e96f4442bb2"
               }
             ],
             "activation": {
@@ -1078,7 +1073,7 @@
       },
       "effects": [
         {
-          "_id": "59fbceaf39c87173",
+          "_id": "fb500e96f4442bb2",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1100,8 +1095,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1132,8 +1126,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity671": {
-            "_id": "dnd5eactivity671",
+          "dnd5eactivity51e": {
+            "_id": "dnd5eactivity51e",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1212,7 +1206,7 @@
             },
             "effects": [
               {
-                "_id": "d02f071ed1365144"
+                "_id": "8f59e427c5c3349a"
               }
             ],
             "activation": {
@@ -1237,7 +1231,7 @@
       },
       "effects": [
         {
-          "_id": "d02f071ed1365144",
+          "_id": "8f59e427c5c3349a",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1259,8 +1253,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1291,8 +1284,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfcf": {
-            "_id": "dnd5eactivityfcf",
+          "dnd5eactivityded": {
+            "_id": "dnd5eactivityded",
             "type": "save",
             "save": {
               "ability": [
@@ -1327,7 +1320,7 @@
             },
             "effects": [
               {
-                "_id": "ed66f26986305943"
+                "_id": "a3254373d13ed292"
               }
             ],
             "activation": {
@@ -1345,7 +1338,7 @@
       },
       "effects": [
         {
-          "_id": "ed66f26986305943",
+          "_id": "a3254373d13ed292",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1367,8 +1360,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1408,8 +1400,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd11": {
-            "_id": "dnd5eactivityd11",
+          "dnd5eactivity479": {
+            "_id": "dnd5eactivity479",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1453,12 +1445,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity41b": {
-            "_id": "dnd5eactivity41b",
+          "dnd5eactivity803": {
+            "_id": "dnd5eactivity803",
             "type": "utility",
             "effects": [
               {
-                "_id": "a1341b8f7328f4b4"
+                "_id": "6f7855b273f99b9a"
               }
             ],
             "activation": {
@@ -1476,7 +1468,7 @@
       },
       "effects": [
         {
-          "_id": "a1341b8f7328f4b4",
+          "_id": "6f7855b273f99b9a",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1498,8 +1490,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1530,8 +1521,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity1d3": {
-            "_id": "dnd5eactivity1d3",
+          "dnd5eactivity8b7": {
+            "_id": "dnd5eactivity8b7",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1575,8 +1566,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc62": {
-            "_id": "dnd5eactivityc62",
+          "dnd5eactivity6e6": {
+            "_id": "dnd5eactivity6e6",
             "type": "save",
             "save": {
               "ability": [
@@ -1593,10 +1584,10 @@
             },
             "effects": [
               {
-                "_id": "313ee93ae7691446"
+                "_id": "115eab12573beb70"
               },
               {
-                "_id": "1684815d64f31374"
+                "_id": "a726abe054b31178"
               }
             ],
             "activation": {
@@ -1614,7 +1605,7 @@
       },
       "effects": [
         {
-          "_id": "313ee93ae7691446",
+          "_id": "115eab12573beb70",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1636,11 +1627,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "1684815d64f31374",
+          "_id": "a726abe054b31178",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1662,8 +1652,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1684,7 +1673,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410671,
-    "modifiedTime": 1774201410671
+    "createdTime": 1774273722526,
+    "modifiedTime": 1774273722526
   }
 }

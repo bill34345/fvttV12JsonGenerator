@@ -1,5 +1,5 @@
 {
-  "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
+  "name": "鲁迪姆腐化的楚尔尖叫者 (Ruidium Corrupted Chuul Screecher)",
   "type": "npc",
   "img": "",
   "system": {
@@ -12,7 +12,7 @@
     },
     "abilities": {
       "str": {
-        "value": 16,
+        "value": 19,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -59,7 +59,7 @@
       },
       "con": {
         "value": 16,
-        "proficient": 0,
+        "proficient": 1,
         "max": null,
         "bonuses": {
           "check": "",
@@ -81,7 +81,7 @@
         }
       },
       "int": {
-        "value": 3,
+        "value": 5,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -104,8 +104,8 @@
         }
       },
       "wis": {
-        "value": 11,
-        "proficient": 0,
+        "value": 12,
+        "proficient": 1,
         "max": null,
         "bonuses": {
           "check": "",
@@ -127,7 +127,7 @@
         }
       },
       "cha": {
-        "value": 3,
+        "value": 8,
         "proficient": 0,
         "max": null,
         "bonuses": {
@@ -327,7 +327,7 @@
           "max": null,
           "mode": 0
         },
-        "value": 0,
+        "value": 1,
         "bonuses": {
           "check": "",
           "passive": ""
@@ -458,12 +458,18 @@
     },
     "attributes": {
       "init": {
-        "bonus": 3
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonus": "@prof * 2"
       },
       "movement": {
         "walk": 30,
         "fly": null,
-        "swim": null,
+        "swim": 40,
         "climb": null,
         "burrow": null,
         "hover": false,
@@ -473,11 +479,11 @@
         "max": 3
       },
       "senses": {
-        "darkvision": 0,
-        "blindsight": 60,
+        "darkvision": 60,
+        "blindsight": 0,
         "tremorsense": 0,
         "truesight": 0,
-        "special": "盲视: 超出该范围则视为目盲",
+        "special": "",
         "units": "ft"
       },
       "spellcasting": "",
@@ -496,14 +502,14 @@
       },
       "ac": {
         "flat": 17,
-        "calc": "flat"
+        "calc": "natural"
       },
       "hd": {
         "spent": 0
       },
       "hp": {
-        "value": 75,
-        "max": 75,
+        "value": 127,
+        "max": 127,
         "temp": null,
         "tempmax": null,
         "formula": ""
@@ -529,10 +535,10 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>群猎战术 (Pack Tactics)：只要蛇吻至少有一个盟友位于目标生物 5 尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。</li><li>脆壳反震 (Brittle Shell)：若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage)，则它的 AC 降至 14，直到其完成一次短休或长休。</li></ul>",
+        "value": "<ul><li>## Traits</li></ul>",
         "public": ""
       },
-      "alignment": "无阵营",
+      "alignment": "chaotic evil",
       "ideal": "",
       "bond": "",
       "flaw": "",
@@ -540,7 +546,7 @@
       "type": {
         "value": "aberration"
       },
-      "cr": 5,
+      "cr": 6,
       "habitat": {
         "value": [],
         "custom": ""
@@ -550,7 +556,7 @@
       },
       "spellLevel": 0,
       "xp": {
-        "value": 1800
+        "value": 2300
       }
     },
     "resources": {
@@ -573,14 +579,18 @@
       "rules": "2024"
     },
     "traits": {
-      "size": "sm",
+      "size": "lg",
       "di": {
-        "value": [],
+        "value": [
+          "poison"
+        ],
         "custom": "",
         "bypasses": []
       },
       "dr": {
-        "value": [],
+        "value": [
+          "thunder"
+        ],
         "custom": "",
         "bypasses": []
       },
@@ -594,24 +604,28 @@
         "bypasses": []
       },
       "ci": {
-        "value": [],
+        "value": [
+          "poisoned"
+        ],
         "custom": ""
       },
       "languages": {
-        "value": [],
+        "value": [
+          "deep"
+        ],
         "custom": ""
       },
       "important": false
     }
   },
   "prototypeToken": {
-    "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
+    "name": "Ruidium Corrupted Chuul Screecher",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
     "prependAdjective": false,
-    "width": 1,
-    "height": 1,
+    "width": 2,
+    "height": 2,
     "texture": {
       "src": "",
       "anchorX": 0.5,
@@ -672,13 +686,7 @@
       "saturation": 0,
       "contrast": 0
     },
-    "detectionModes": [
-      {
-        "id": "blindsight",
-        "enabled": true,
-        "range": 60
-      }
-    ],
+    "detectionModes": [],
     "occludable": {
       "radius": 0
     },
@@ -700,12 +708,12 @@
   },
   "items": [
     {
-      "name": "群猎战术 (Pack Tactics)",
+      "name": "两栖Amphibious",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>只要蛇吻至少有一个盟友位于目标生物 5 尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。</li></ul>",
+          "value": "尖叫者可以在空气和水中呼吸。",
           "chat": ""
         },
         "source": {
@@ -717,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity336": {
-            "_id": "dnd5eactivity336",
+          "dnd5eactivityd01": {
+            "_id": "dnd5eactivityd01",
             "type": "utility",
             "activation": {
               "type": "",
@@ -736,8 +744,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "特性",
-          "actionSection": "特性"
+          "section": "Traits",
+          "actionSection": "Traits"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -745,12 +753,57 @@
       }
     },
     {
-      "name": "脆壳反震 (Brittle Shell)",
+      "name": "感知魔法 (Sense Magic)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若蛇吻受到来自单一来源 10 点或以上的钝击伤害 (Bludgeoning Damage)，则它的 AC 降至 14，直到其完成一次短休或长休。</li></ul>",
+          "value": "尖叫者可以在120英尺内感知魔法，就像施展了*侦测魔法*法术一样，但这个特性并不是魔法。",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya8f": {
+            "_id": "dnd5eactivitya8f",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "脆弱的鲁伊迪姆外壳 如果尖叫者从单一来源受到15点或更多的钝击伤害，它的护甲等级将变为14，直到它完成一次短休或长休。 (Brittle Ruidium Shell: If the screecher takes 15 or more bludgeoning damage from a single source, its AC becomes 14 until it finishes a short or long rest)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "虽然以这种方式降低了其交流电压，但它失去了对雷电的抵抗力。",
           "chat": ""
         },
         "source": {
@@ -762,12 +815,102 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity050": {
-            "_id": "dnd5eactivity050",
+          "dnd5eactivity458": {
+            "_id": "dnd5eactivity458",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "血腥的高潮 当尖叫者的生命值首次降至57点或更少时，它立即充能鲁伊迪姆尖叫。 (Bloodied Crescendo: The first time the screecher is reduced to 57 HP or fewer, it immediately recharges Ruidium Screech)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "下次使用鲁迪姆尖啸时，范围将增加到60英尺的锥形，而不是30英尺的锥形。",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityf46": {
+            "_id": "dnd5eactivityf46",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "鲁迪姆腐化 当生物因此尖叫者的特性或行为需要进行鲁迪姆腐化豁免时，该生物必须成功通过DC 15的魅力豁免，否则将遭受鲁迪姆腐化。 (Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this screecher, the creature must succeed on a DC 15 Charisma saving throw or suffer Ruidium Corruption)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "如果生物已经受到鲁伊迪姆腐化的影响，则它将获得1级疲惫。",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityff6": {
+            "_id": "dnd5eactivityff6",
             "type": "utility",
             "effects": [
               {
-                "_id": "b446a5ed8c9b8b00"
+                "_id": "4441ec6234535851"
               }
             ],
             "activation": {
@@ -785,18 +928,11 @@
       },
       "effects": [
         {
-          "_id": "b446a5ed8c9b8b00",
-          "name": "脆壳反震 (Brittle Shell)",
+          "_id": "4441ec6234535851",
+          "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
-          "changes": [
-            {
-              "key": "system.attributes.ac.flat",
-              "mode": 5,
-              "value": "14",
-              "priority": null
-            }
-          ],
+          "changes": [],
           "disabled": false,
           "duration": {
             "startTime": null,
@@ -811,14 +947,16 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/downgrade.svg",
-          "statuses": []
+          "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
+          "statuses": [
+            "exhaustion"
+          ]
         }
       ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "特性",
-          "actionSection": "特性"
+          "section": "Traits",
+          "actionSection": "Traits"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -826,12 +964,12 @@
       }
     },
     {
-      "name": "多重攻击 (Multiattack)",
+      "name": "多重攻击Multiattack",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>蛇吻进行一次毒液咬击 (Venomous Bite) 和一次爪击 (Claw)。</li></ul>",
+          "value": "尖叫者进行两次撕裂爪攻击。如果它正在抓住一个生物，它可以用触手攻击替代其中一次攻击。",
           "chat": ""
         },
         "source": {
@@ -843,8 +981,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity90b": {
-            "_id": "dnd5eactivity90b",
+          "dnd5eactivity207": {
+            "_id": "dnd5eactivity207",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -862,8 +1000,8 @@
       "effects": [],
       "flags": {
         "tidy5e-sheet": {
-          "section": "动作",
-          "actionSection": "动作"
+          "section": "Actions",
+          "actionSection": "Actions"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -871,12 +1009,12 @@
       }
     },
     {
-      "name": "爪击 (Claw)",
+      "name": "撕裂爪 (Rending Claw)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<ul><li>近战武器攻击：命中 +6，单一目标。</li><li>命中：8（`1d8 + 3`）点挥砍伤害 (Slashing Damage) 或穿刺伤害 (Piercing Damage)。</li></ul>",
+          "value": "近战武器攻击：+7命中，范围10英尺，目标一个。命中：造成13（2d8 + 4）斩击伤害加3（1d6）雷鸣伤害。如果目标是大型或更小，则被抓住（逃脱DC 14）：尖叫者一次只能抓住一个生物。",
           "chat": ""
         },
         "source": {
@@ -888,12 +1026,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity76b": {
-            "_id": "dnd5eactivity76b",
+          "dnd5eactivity27d": {
+            "_id": "dnd5eactivity27d",
             "type": "attack",
             "attack": {
               "ability": "",
-              "bonus": "6",
+              "bonus": "7",
               "flat": true,
               "type": {
                 "value": "mwak",
@@ -903,9 +1041,9 @@
             "damage": {
               "parts": [
                 {
-                  "number": 1,
+                  "number": 2,
                   "denomination": 8,
-                  "bonus": "3",
+                  "bonus": "4",
                   "types": [
                     "slashing"
                   ],
@@ -918,6 +1056,23 @@
                     "number": 1,
                     "formula": ""
                   }
+                },
+                {
+                  "number": 1,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "thunder"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
                 }
               ],
               "includeBase": true
@@ -926,7 +1081,7 @@
               "override": false,
               "value": null,
               "long": null,
-              "reach": 5,
+              "reach": 10,
               "units": "ft",
               "special": ""
             },
@@ -949,6 +1104,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "6c0b18cb3a4bf1c6"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -965,15 +1125,41 @@
         "range": {
           "value": null,
           "long": null,
-          "reach": 5,
+          "reach": 10,
           "units": "ft"
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "6c0b18cb3a4bf1c6",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ]
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "动作",
-          "actionSection": "动作"
+          "section": "Actions",
+          "actionSection": "Actions"
         },
         "fvttJsonGenerator": {
           "effectHints": {}
@@ -981,12 +1167,12 @@
       }
     },
     {
-      "name": "毒液咬击 (Venomous Bite)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "触手Tentacles",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>近战武器攻击：命中 +6，触及 15 尺，单一目标。</li><li>命中：10（`2d6 + 3`）点穿刺伤害 (Piercing Damage)。若此次攻击具有优势 (Advantage)，则改为造成 17 点穿刺伤害。</li><li>蛇吻每次长休可分别使用以下每种毒液各一次。以下毒液效果的豁免 DC 均为 14，且重伤 / 濒血 (Bloodied) 的目标在进行该豁免时具有劣势 (Disadvantage)。</li><li>盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。</li><li>针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw) 命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
+          "value": "被尖叫者抓住的生物必须成功进行一次DC 15的体质豁免检定，否则将中毒，直到其下一个回合结束。在这种中毒状态下，对它的攻击在掷骰结果为17-20时会造成致命一击。如果目标已经受到鲁伊迪姆腐化的影响，则它将变得瘫痪，直到其下一个回合结束。",
           "chat": ""
         },
         "source": {
@@ -998,76 +1184,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf84": {
-            "_id": "dnd5eactivityf84",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "3",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 15,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity55e": {
-            "_id": "dnd5eactivity55e",
+          "dnd5eactivity3f5": {
+            "_id": "dnd5eactivity3f5",
             "type": "save",
             "save": {
               "ability": [
@@ -1075,139 +1193,24 @@
               ],
               "dc": {
                 "calculation": "",
-                "formula": "14",
-                "value": 14
+                "formula": "15",
+                "value": 15
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "poison"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ]
-            },
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "brine-shock",
-                "bloodiedTargetSaveDisadvantage": true
-              }
+              "parts": []
             },
             "effects": [
               {
-                "_id": "15d391a7d95c48b3"
-              }
-            ],
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity110": {
-            "_id": "dnd5eactivity110",
-            "type": "damage",
-            "damage": {
-              "parts": [
-                {
-                  "number": 1,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ]
-            },
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "needling-bite",
-                "bloodiedTargetSaveDisadvantage": true
-              }
-            },
-            "effects": [
+                "_id": "f9e261338dcee33f"
+              },
               {
-                "_id": "c96fb1f6512e817d"
+                "_id": "b9ceca5d6ef26883"
+              },
+              {
+                "_id": "72887d16b61f1cba"
               }
             ],
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity486": {
-            "_id": "dnd5eactivity486",
-            "type": "utility",
-            "uses": {
-              "spent": 0,
-              "value": 1,
-              "max": 1,
-              "per": "day",
-              "recovery": [
-                {
-                  "period": "day",
-                  "type": "recoverAll"
-                }
-              ]
-            },
-            "flags": {
-              "fvttJsonGenerator": {
-                "serpentmawVenom": "vampiric-bite",
-                "bloodiedTargetSaveDisadvantage": true,
-                "losesHitDie": 1,
-                "grantsTempHp": 10,
-                "corruptionSaveOnHitDieZero": true
-              }
-            },
             "activation": {
               "type": "action",
               "value": null,
@@ -1217,20 +1220,13 @@
           }
         },
         "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 15,
-          "units": "ft"
+          "value": "monster",
+          "subtype": ""
         }
       },
       "effects": [
         {
-          "_id": "15d391a7d95c48b3",
+          "_id": "f9e261338dcee33f",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1255,8 +1251,8 @@
           ]
         },
         {
-          "_id": "c96fb1f6512e817d",
-          "name": "流血 (Bleeding)",
+          "_id": "b9ceca5d6ef26883",
+          "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
           "changes": [],
@@ -1274,55 +1270,137 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
-            "bleeding"
+            "paralyzed"
+          ]
+        },
+        {
+          "_id": "72887d16b61f1cba",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
           ]
         }
       ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "动作",
-          "actionSection": "动作"
+          "section": "Actions",
+          "actionSection": "Actions"
         },
         "fvttJsonGenerator": {
-          "effectHints": {
-            "bleed": true
-          }
+          "effectHints": {}
         }
       }
     },
     {
-      "name": "缩壳防御 (Retract)",
+      "name": "鲁迪姆尖叫 尖叫者释放出一种充满鲁迪姆共鸣的震耳欲聋的尖叫。 (Ruidium Screech : The screecher releases a deafening screech infused with ruidium resonance)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当蛇吻成为一次攻击的目标时，它可以令自身 AC 提高 +4，并获得四分之三掩护 (Three-Quarters Cover)，直到其下一回合开始。该效果总计提供 +9 AC。在其接下来的回合中，蛇吻不能进行毒液咬击 (Venomous Bite)。</li></ul>",
+          "value": "在30英尺的锥形区域内，每个生物必须成功进行DC 15的体质豁免，否则将受到18（4d8）点雷鸣伤害和7（2d6）点精神伤害，并且在尖叫者的下一个回合结束之前将失聪且无法进行反应。如果它正在集中注意力，则必须立即进行一次体质豁免以维持集中，且处于劣势状态。如果尖叫者受伤且目标未能成功豁免，目标还必须进行一次鲁伊迪姆腐化豁免。成功豁免时，目标将受到一半伤害且没有其他效果。",
           "chat": ""
         },
         "source": {
           "custom": "Imported"
         },
         "activation": {
-          "type": "reaction",
+          "type": "action",
           "cost": 1,
-          "condition": ""
+          "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity95f": {
-            "_id": "dnd5eactivity95f",
-            "type": "utility",
+          "dnd5eactivitye9e": {
+            "_id": "dnd5eactivitye9e",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "15",
+                "value": 15
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 4,
+                  "denomination": 8,
+                  "bonus": "",
+                  "types": [
+                    "thunder"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                },
+                {
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "psychic"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
+            },
             "effects": [
               {
-                "_id": "3682020f028a50bf"
+                "_id": "0d85940b420636de"
               }
             ],
             "activation": {
-              "type": "reaction",
+              "type": "action",
               "value": null,
               "override": false,
-              "condition": ""
+              "condition": "bloodied"
             }
           }
         },
@@ -1333,25 +1411,18 @@
       },
       "effects": [
         {
-          "_id": "3682020f028a50bf",
-          "name": "缩壳防御 (Retract)",
+          "_id": "0d85940b420636de",
+          "name": "耳聋 (Deafened)",
           "type": "base",
           "system": {},
-          "changes": [
-            {
-              "key": "system.attributes.ac.bonus",
-              "mode": 2,
-              "value": "9",
-              "priority": null
-            }
-          ],
+          "changes": [],
           "disabled": false,
           "duration": {
             "startTime": null,
             "seconds": null,
             "combat": null,
-            "rounds": 1,
-            "turns": 0,
+            "rounds": null,
+            "turns": null,
             "startRound": null,
             "startTurn": null
           },
@@ -1359,62 +1430,23 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
-          "statuses": []
+          "img": "systems/dnd5e/icons/svg/statuses/deafened.svg",
+          "statuses": [
+            "deafened"
+          ]
         }
       ],
       "flags": {
         "tidy5e-sheet": {
-          "section": "反应",
-          "actionSection": "反应"
+          "section": "Actions",
+          "actionSection": "Actions"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "急窜脱离 (Scuttle)",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "<ul><li>当蛇吻被迫进行一次对抗法术或魔法效果的豁免检定时，它可以移动至多其速度的一半。若该移动使其离开该法术或魔法效果的作用范围或区域，则它不受该效果影响。</li></ul>",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "reaction",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivitybe7": {
-            "_id": "dnd5eactivitybe7",
-            "type": "utility",
-            "activation": {
-              "type": "reaction",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
+          "effectHints": {},
+          "rules": {
+            "requiresConcentration": true,
+            "halfDamageOnSave": true
           }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "反应",
-          "actionSection": "反应"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
         }
       }
     }
@@ -1426,7 +1458,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274948701,
-    "modifiedTime": 1774274948701
+    "createdTime": 1774274369970,
+    "modifiedTime": 1774274369970
   }
 }

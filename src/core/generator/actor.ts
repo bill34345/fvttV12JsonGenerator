@@ -947,7 +947,8 @@ export class ActorGenerator {
     const isPassive = activationType === '' || passiveTraits.some(t => action.name.includes(t));
     const isNonWeaponActivation = activationType === 'bonus' || activationType === 'reaction';
     const isWeapon = !!action.attack && !isNonWeaponActivation && !isPassive;
-    const activationCondition = this.extractActivationCondition(action.desc ?? '');
+    const semanticDesc = this.extractSemanticDescription(action);
+    const activationCondition = this.extractActivationCondition(semanticDesc);
 
     let itemName = action.englishName
       ? `${action.name} (${action.englishName})`
@@ -989,7 +990,9 @@ export class ActorGenerator {
     };
 
     this.appendSupplementalActivities(item.system.activities, action);
-    item.effects = resolvedActivationType ? this.generateEnhancedConditionEffects(action.desc || '', item.system.activities, itemName) : [];
+    item.effects = resolvedActivationType
+      ? this.generateEnhancedConditionEffects(semanticDesc, item.system.activities, itemName)
+      : [];
     this.applySpecializedActivityOverrides(item, action);
     this.applyActivityMetadata(
       item.system.activities,
@@ -1183,6 +1186,24 @@ export class ActorGenerator {
     }
 
     return '';
+  }
+
+  private extractSemanticDescription(action: GeneratedActionData): string {
+    const desc = String(action.desc ?? '').replace(/\s+/g, ' ').trim();
+    if (!desc || !action.attack) {
+      return desc;
+    }
+
+    const cutIndexes = [
+      desc.search(/(?:每次(?:长|短)休|可分别使用以下|以下毒液效果)/),
+      desc.search(/(?:each|once per)\s+(?:long|short)\s+rest/i),
+    ].filter((index) => index >= 0);
+
+    if (cutIndexes.length === 0) {
+      return desc;
+    }
+
+    return desc.slice(0, Math.min(...cutIndexes)).trim();
   }
 
   private appendSupplementalActivities(activities: Record<string, any>, action: GeneratedActionData): void {
@@ -1535,7 +1556,9 @@ export class ActorGenerator {
     action: GeneratedActionData,
     text: string,
   ): Record<string, unknown> | null {
-    const dropsToZero = /\b0\b|\bzero\b|\u964d\u81f3\s*0/i.test(text);
+    const dropsToZero =
+      /(?:hit points?|生命值|hp)[^。.;]{0,24}(?:降至|to)\s*0/i.test(text)
+      || /(?:reduced|reduce|drop(?:s|ped)?)[^。.;]{0,20}to\s*0(?:\s+hit\s+points?)?/i.test(text);
     if (!dropsToZero) {
       return null;
     }
@@ -1872,6 +1895,14 @@ export class ActorGenerator {
       return;
     }
 
+    if (this.isScuttlingSerpentmawVenomAction(action)) {
+      this.appendSerpentmawVenomActivities(item, action);
+    }
+
+    if (this.isTriggeredAcUtility(action)) {
+      this.applyTriggeredAcEffect(item, action);
+    }
+
     for (const [, activity] of activityEntries) {
       const parts = activity?.damage?.parts;
       if (!Array.isArray(parts) || parts.length < 2) {
@@ -1979,6 +2010,244 @@ export class ActorGenerator {
         });
       }
     }
+  }
+
+  private isScuttlingSerpentmawVenomAction(action: GeneratedActionData): boolean {
+    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
+    return /Venomous Bite|毒液咬击/i.test(text) && /Brine-shock|盐水电击/i.test(text);
+  }
+
+  private isTriggeredAcUtility(action: GeneratedActionData): boolean {
+    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
+    return /Brittle Shell|脆壳反震|Retract|缩壳防御/i.test(text);
+  }
+
+  private appendSerpentmawVenomActivities(item: any, action: GeneratedActionData): void {
+    const activities = item?.system?.activities;
+    if (!activities || typeof activities !== 'object') {
+      return;
+    }
+
+    const existingVenom = Object.values(activities).filter((activity: any) =>
+      activity?.flags?.fvttJsonGenerator?.serpentmawVenom,
+    );
+    if (existingVenom.length > 0) {
+      return;
+    }
+
+    const desc = String(action.desc ?? '');
+    const brineText = this.extractDelimitedSegment(desc, /盐水电击 \(Brine-shock\)|Brine-shock/i, [
+      /针刺噬咬 \(Needling Bite\)|Needling Bite/i,
+    ]);
+    const needlingText = this.extractDelimitedSegment(desc, /针刺噬咬 \(Needling Bite\)|Needling Bite/i, [
+      /吸血噬咬 \(Vampiric Bite\)|Vampiric Bite/i,
+    ]);
+    const vampiricText = this.extractDelimitedSegment(desc, /吸血噬咬 \(Vampiric Bite\)|Vampiric Bite/i, []);
+
+    const baseDamage = action.attack?.damage?.[0];
+    const extraDie = baseDamage?.formula.match(/\d+d(\d+)/i)?.[1];
+    const extraNeedlingDamage = extraDie ? `1d${extraDie}` : '1d6';
+    const extraNeedlingType = baseDamage?.type || 'piercing';
+
+    const venomRiders = [
+      {
+        key: 'brine-shock',
+        generated: this.activityGenerator.generate({
+          name: '盐水电击',
+          englishName: 'Brine-shock',
+          type: 'save',
+          desc: brineText,
+          save: { dc: 14, ability: 'con' },
+          damage: [{ formula: '2d6', type: 'poison' }],
+        }),
+        effect: this.createCustomEffect({
+          name: '中毒 (Poisoned)',
+          statuses: ['poisoned'],
+          img: 'systems/dnd5e/icons/svg/statuses/poisoned.svg',
+        }),
+      },
+      {
+        key: 'needling-bite',
+        generated: this.activityGenerator.generate({
+          name: '针刺噬咬',
+          englishName: 'Needling Bite',
+          type: 'utility',
+          desc: needlingText,
+          damage: [{ formula: extraNeedlingDamage, type: extraNeedlingType }],
+        }),
+        effect: this.createCustomEffect({
+          name: '流血 (Bleeding)',
+          statuses: ['bleeding'],
+          img: 'systems/dnd5e/icons/svg/statuses/bleeding.svg',
+          flags: {
+            'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+          },
+        }),
+      },
+      {
+        key: 'vampiric-bite',
+        generated: this.activityGenerator.generate({
+          name: '吸血噬咬',
+          englishName: 'Vampiric Bite',
+          type: 'utility',
+          desc: vampiricText,
+        }),
+      },
+    ] as const;
+
+    for (const rider of venomRiders) {
+      for (const activity of Object.values(rider.generated) as any[]) {
+        activity.uses = this.createDailyUses(1);
+        activity.flags = {
+          ...(activity.flags ?? {}),
+          fvttJsonGenerator: {
+            ...(activity.flags?.fvttJsonGenerator ?? {}),
+            serpentmawVenom: rider.key,
+            bloodiedTargetSaveDisadvantage: true,
+          },
+        };
+
+        if (rider.key === 'needling-bite') {
+          activity.type = 'damage';
+        }
+
+        if (rider.key === 'vampiric-bite') {
+          activity.flags.fvttJsonGenerator = {
+            ...(activity.flags.fvttJsonGenerator ?? {}),
+            losesHitDie: 1,
+            grantsTempHp: 10,
+            corruptionSaveOnHitDieZero: true,
+          };
+        }
+
+        Object.assign(activities, { [activity._id]: activity });
+      }
+
+      if (rider.effect) {
+        item.effects = item.effects ?? [];
+        item.effects.push(rider.effect);
+        const targetActivity = Object.values(rider.generated)[0] as any;
+        targetActivity.effects = [{ _id: rider.effect._id }];
+      }
+    }
+  }
+
+  private applyTriggeredAcEffect(item: any, action: GeneratedActionData): void {
+    const activities = Object.values(item?.system?.activities ?? {}) as any[];
+    if (activities.length === 0) {
+      return;
+    }
+
+    const itemName = `${action.name} ${action.englishName ?? ''}`;
+    const isBrittleShell = /Brittle Shell|脆壳反震/i.test(itemName);
+    const isRetract = /Retract|缩壳防御/i.test(itemName);
+    if (!isBrittleShell && !isRetract) {
+      return;
+    }
+
+    const existing = (item.effects ?? []).find((effect: any) =>
+      /Brittle Shell|脆壳反震|Retract|缩壳防御/i.test(String(effect?.name ?? '')),
+    );
+    if (existing) {
+      return;
+    }
+
+    const effect = isBrittleShell
+      ? this.createCustomEffect({
+          name: '脆壳反震 (Brittle Shell)',
+          img: 'systems/dnd5e/icons/svg/statuses/downgrade.svg',
+          changes: [
+            {
+              key: 'system.attributes.ac.flat',
+              mode: 5,
+              value: '14',
+              priority: null,
+            },
+          ],
+        })
+      : this.createCustomEffect({
+          name: '缩壳防御 (Retract)',
+          img: 'systems/dnd5e/icons/svg/statuses/shield.svg',
+          changes: [
+            {
+              key: 'system.attributes.ac.bonus',
+              mode: 2,
+              value: '9',
+              priority: null,
+            },
+          ],
+          duration: {
+            startTime: null,
+            seconds: null,
+            combat: null,
+            rounds: 1,
+            turns: 0,
+            startRound: null,
+            startTurn: null,
+          },
+        });
+
+    item.effects = [...(item.effects ?? []), effect];
+    const firstActivity = activities[0];
+    firstActivity.effects = [...(firstActivity.effects ?? []), { _id: effect._id }];
+  }
+
+  private extractDelimitedSegment(text: string, startPattern: RegExp, endPatterns: RegExp[]): string {
+    const startMatch = startPattern.exec(text);
+    if (!startMatch || startMatch.index === undefined) {
+      return text.trim();
+    }
+
+    const afterStart = text.slice(startMatch.index).trim();
+    const endIndexes = endPatterns
+      .map((pattern) => afterStart.search(pattern))
+      .filter((index) => index > 0);
+
+    const raw = endIndexes.length > 0 ? afterStart.slice(0, Math.min(...endIndexes)) : afterStart;
+    return raw.trim();
+  }
+
+  private createCustomEffect(options: {
+    name: string;
+    img: string;
+    statuses?: string[];
+    changes?: Array<Record<string, unknown>>;
+    duration?: Record<string, unknown>;
+    flags?: Record<string, unknown>;
+  }): any {
+    return {
+      _id: this.createRandomId(),
+      name: options.name,
+      type: 'base',
+      system: {},
+      changes: options.changes ?? [],
+      disabled: false,
+      duration: options.duration ?? {
+        startTime: null,
+        seconds: null,
+        combat: null,
+        rounds: null,
+        turns: null,
+        startRound: null,
+        startTurn: null,
+      },
+      description: '',
+      origin: null,
+      tint: '#ffffff',
+      transfer: false,
+      img: options.img,
+      statuses: options.statuses ?? [],
+      ...(options.flags ? { flags: options.flags } : {}),
+    };
+  }
+
+  private createRandomId(): string {
+    const chars = 'abcdef0123456789';
+    let res = '';
+    for (let i = 0; i < 16; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
   }
 
   private isSwallowLikeAction(action: GeneratedActionData): boolean {
@@ -2308,13 +2577,13 @@ export class ActorGenerator {
   }
 
   private parseLocalizedAttackLine(line: string): ActionData | null {
-    const match = line.match(/^(.+?):\s*(.+)$/);
-    if (!match?.[1] || !match[2]) {
+    const split = this.splitHeadlineAndBody(line);
+    if (!split?.header || !split.body) {
       return null;
     }
 
-    const header = match[1].trim();
-    const desc = match[2].trim();
+    const header = split.header;
+    const desc = split.body;
     const attackPrefixMatch = desc.match(/^(近战或远程武器攻击|近战武器攻击|远程武器攻击|近战法术攻击|远程法术攻击)[:：]/);
     if (!attackPrefixMatch?.[1]) {
       return null;
@@ -2504,24 +2773,41 @@ export class ActorGenerator {
 
     const normalized = this.normalizeActionHeaderDelimiter(trimmed);
     const candidate = normalized !== trimmed ? normalized : trimmed;
+    const headlineSplit =
+      /[\r\n]/.test(candidate) || /[\u4e00-\u9fff]/.test(candidate)
+        ? this.splitHeadlineAndBody(candidate)
+        : null;
+    const parsingCandidate = headlineSplit
+      ? `${headlineSplit.header}: ${headlineSplit.body.replace(/\n+/g, ' ')}`
+      : candidate;
 
-    const directAttack = this.parseLocalizedAttackLine(candidate);
+    const directAttack = this.parseLocalizedAttackLine(parsingCandidate);
     if (directAttack) {
+      if (headlineSplit?.body) {
+        directAttack.desc = headlineSplit.body;
+      }
       return this.enrichGeneratedAction(directAttack, trimmed);
     }
 
-    const englishFirst = this.isLikelyEnglishAction(candidate);
-    const primary = englishFirst ? this.englishActionParser.parse(candidate) : this.actionParser.parse(candidate);
+    const englishFirst = this.isLikelyEnglishAction(parsingCandidate);
+    const primary = englishFirst ? this.englishActionParser.parse(parsingCandidate) : this.actionParser.parse(parsingCandidate);
     if (primary) {
+      if (headlineSplit?.body) {
+        primary.desc = headlineSplit.body;
+      }
       return this.enrichGeneratedAction(primary, trimmed);
     }
 
-    const secondary = englishFirst ? this.actionParser.parse(candidate) : this.englishActionParser.parse(candidate);
+    const secondary = englishFirst ? this.actionParser.parse(parsingCandidate) : this.englishActionParser.parse(parsingCandidate);
     if (secondary) {
+      if (headlineSplit?.body) {
+        secondary.desc = headlineSplit.body;
+      }
       return this.enrichGeneratedAction(secondary, trimmed);
     }
 
     const split =
+      (headlineSplit ? [headlineSplit.raw, headlineSplit.header, headlineSplit.body] : null) ??
       normalized.match(/^(.+?)\.\s+(.+)$/) ??
       normalized.match(/^(.+?):\s+(.+)$/) ??
       normalized.match(/^(.+?)[。.:：]\s*(.+)$/);
@@ -2538,6 +2824,36 @@ export class ActorGenerator {
       type: 'utility',
       desc: trimmed,
     }, trimmed);
+  }
+
+  private splitHeadlineAndBody(text: string): { raw: string; header: string; body: string } | null {
+    const normalized = text.replace(/\r\n/g, '\n');
+    const [firstLine, ...restLines] = normalized.split('\n');
+    const first = firstLine?.trim() ?? '';
+    if (!first) {
+      return null;
+    }
+
+    const match =
+      first.match(/^(.+?\))[\u3002\uFF1A.:]\s*(.*)$/) ??
+      first.match(/^([^.\u3002:\uFF1A]+)[\u3002\uFF1A.:]\s*(.*)$/);
+    if (!match?.[1]) {
+      return null;
+    }
+
+    const body = [match[2]?.trim() ?? '', restLines.join('\n').trim()]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+    if (!body) {
+      return null;
+    }
+
+    return {
+      raw: match[0],
+      header: match[1].trim(),
+      body,
+    };
   }
 
   private enrichGeneratedAction(action: ActionData, rawLine: string): GeneratedActionData {

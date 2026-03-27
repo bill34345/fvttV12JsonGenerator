@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfcf": {
-            "_id": "dnd5eactivityfcf",
+          "dnd5eactivityc23": {
+            "_id": "dnd5eactivityc23",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf21": {
-            "_id": "dnd5eactivityf21",
+          "dnd5eactivity2ef": {
+            "_id": "dnd5eactivity2ef",
             "type": "utility",
             "activation": {
               "type": "",
@@ -807,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3db": {
-            "_id": "dnd5eactivity3db",
+          "dnd5eactivity3be": {
+            "_id": "dnd5eactivity3be",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -852,8 +852,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity73b": {
-            "_id": "dnd5eactivity73b",
+          "dnd5eactivity45e": {
+            "_id": "dnd5eactivity45e",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -897,8 +897,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity350": {
-            "_id": "dnd5eactivity350",
+          "dnd5eactivityed2": {
+            "_id": "dnd5eactivityed2",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -943,8 +943,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity88c": {
-            "_id": "dnd5eactivity88c",
+          "dnd5eactivityf94": {
+            "_id": "dnd5eactivityf94",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1006,7 +1006,7 @@
             },
             "effects": [
               {
-                "_id": "e6501fd7f1c2255b"
+                "_id": "d88d01d9878a536b"
               }
             ],
             "activation": {
@@ -1031,7 +1031,7 @@
       },
       "effects": [
         {
-          "_id": "e6501fd7f1c2255b",
+          "_id": "d88d01d9878a536b",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1053,8 +1053,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1085,8 +1084,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfc7": {
-            "_id": "dnd5eactivityfc7",
+          "dnd5eactivity762": {
+            "_id": "dnd5eactivity762",
             "type": "save",
             "save": {
               "ability": [
@@ -1114,7 +1113,7 @@
             },
             "effects": [
               {
-                "_id": "76eda8876a12c297"
+                "_id": "2ad5587f95889f0c"
               }
             ],
             "activation": {
@@ -1132,7 +1131,7 @@
       },
       "effects": [
         {
-          "_id": "76eda8876a12c297",
+          "_id": "2ad5587f95889f0c",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1154,8 +1153,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
           "statuses": [
             "dazed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1188,8 +1186,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity35c": {
-            "_id": "dnd5eactivity35c",
+          "dnd5eactivitye83": {
+            "_id": "dnd5eactivitye83",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1233,8 +1231,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity16e": {
-            "_id": "dnd5eactivity16e",
+          "dnd5eactivity017": {
+            "_id": "dnd5eactivity017",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1345,12 +1343,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2e7": {
-            "_id": "dnd5eactivity2e7",
+          "dnd5eactivity376": {
+            "_id": "dnd5eactivity376",
             "type": "utility",
             "effects": [
               {
-                "_id": "ec01cd6cc92b9e26"
+                "_id": "0a89fa5bb004718c"
               }
             ],
             "activation": {
@@ -1368,7 +1366,7 @@
       },
       "effects": [
         {
-          "_id": "ec01cd6cc92b9e26",
+          "_id": "0a89fa5bb004718c",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1390,8 +1388,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1422,8 +1419,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity9fe": {
-            "_id": "dnd5eactivity9fe",
+          "dnd5eactivity2a6": {
+            "_id": "dnd5eactivity2a6",
             "type": "save",
             "save": {
               "ability": [
@@ -1478,7 +1475,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410668,
-    "modifiedTime": 1774201410668
+    "createdTime": 1774273722515,
+    "modifiedTime": 1774273722515
   }
 }

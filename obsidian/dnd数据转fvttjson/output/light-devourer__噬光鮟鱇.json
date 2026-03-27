@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc86": {
-            "_id": "dnd5eactivityc86",
+          "dnd5eactivityf2a": {
+            "_id": "dnd5eactivityf2a",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity102": {
-            "_id": "dnd5eactivity102",
+          "dnd5eactivity376": {
+            "_id": "dnd5eactivity376",
             "type": "utility",
             "activation": {
               "type": "",
@@ -807,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd55": {
-            "_id": "dnd5eactivityd55",
+          "dnd5eactivity41f": {
+            "_id": "dnd5eactivity41f",
             "type": "utility",
             "activation": {
               "type": "",
@@ -852,8 +852,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity542": {
-            "_id": "dnd5eactivity542",
+          "dnd5eactivitye12": {
+            "_id": "dnd5eactivitye12",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -897,8 +897,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfa1": {
-            "_id": "dnd5eactivityfa1",
+          "dnd5eactivityf15": {
+            "_id": "dnd5eactivityf15",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -977,13 +977,13 @@
             },
             "effects": [
               {
-                "_id": "a03f3d0c555a2049"
+                "_id": "812da1b349de7599"
               },
               {
-                "_id": "8e4fa6b1d5dd308e"
+                "_id": "4455d655a511684e"
               },
               {
-                "_id": "0682ca0d50c2fd7d"
+                "_id": "f62c15b376bf5f09"
               }
             ],
             "activation": {
@@ -1008,7 +1008,7 @@
       },
       "effects": [
         {
-          "_id": "a03f3d0c555a2049",
+          "_id": "812da1b349de7599",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1030,11 +1030,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "8e4fa6b1d5dd308e",
+          "_id": "4455d655a511684e",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1056,11 +1055,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "0682ca0d50c2fd7d",
+          "_id": "f62c15b376bf5f09",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1082,10 +1080,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
           "statuses": [
             "bleeding"
-          ],
-          "flags": {
-            "midi-qol.OverTime": "turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)"
-          }
+          ]
         }
       ],
       "flags": {
@@ -1118,8 +1113,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity210": {
-            "_id": "dnd5eactivity210",
+          "dnd5eactivitycfb": {
+            "_id": "dnd5eactivitycfb",
             "type": "save",
             "save": {
               "ability": [
@@ -1136,7 +1131,7 @@
             },
             "effects": [
               {
-                "_id": "770eb47fcb1f5772"
+                "_id": "2da49b219be7d27e"
               }
             ],
             "activation": {
@@ -1162,7 +1157,7 @@
       },
       "effects": [
         {
-          "_id": "770eb47fcb1f5772",
+          "_id": "2da49b219be7d27e",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1184,8 +1179,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/charmed.svg",
           "statuses": [
             "charmed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1216,8 +1210,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf71": {
-            "_id": "dnd5eactivityf71",
+          "dnd5eactivity7d8": {
+            "_id": "dnd5eactivity7d8",
             "type": "save",
             "save": {
               "ability": [
@@ -1252,7 +1246,7 @@
             },
             "effects": [
               {
-                "_id": "6f013a208e56b1ff"
+                "_id": "e8ae2c8879f7ba7e"
               }
             ],
             "activation": {
@@ -1304,7 +1298,7 @@
       },
       "effects": [
         {
-          "_id": "6f013a208e56b1ff",
+          "_id": "e8ae2c8879f7ba7e",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1326,8 +1320,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1358,8 +1351,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb03": {
-            "_id": "dnd5eactivityb03",
+          "dnd5eactivity287": {
+            "_id": "dnd5eactivity287",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1403,8 +1396,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity56c": {
-            "_id": "dnd5eactivity56c",
+          "dnd5eactivity1c5": {
+            "_id": "dnd5eactivity1c5",
             "type": "save",
             "save": {
               "ability": [
@@ -1439,7 +1432,7 @@
             },
             "effects": [
               {
-                "_id": "ca3969fe8d9e9882"
+                "_id": "ce0710998dae4a05"
               }
             ],
             "activation": {
@@ -1476,7 +1469,7 @@
       },
       "effects": [
         {
-          "_id": "ca3969fe8d9e9882",
+          "_id": "ce0710998dae4a05",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1498,8 +1491,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1530,8 +1522,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity146": {
-            "_id": "dnd5eactivity146",
+          "dnd5eactivity6b9": {
+            "_id": "dnd5eactivity6b9",
             "type": "save",
             "save": {
               "ability": [
@@ -1607,8 +1599,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf27": {
-            "_id": "dnd5eactivityf27",
+          "dnd5eactivity10d": {
+            "_id": "dnd5eactivity10d",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1652,8 +1644,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf31": {
-            "_id": "dnd5eactivityf31",
+          "dnd5eactivity486": {
+            "_id": "dnd5eactivity486",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1690,7 +1682,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410682,
-    "modifiedTime": 1774201410682
+    "createdTime": 1774273722542,
+    "modifiedTime": 1774273722542
   }
 }

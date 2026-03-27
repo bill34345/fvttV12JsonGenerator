@@ -1,5 +1,5 @@
 {
-  "name": "Faldric the Archer",
+  "name": "弓箭手法尔德里克Faldric the Archer",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Faldric the Archer",
+    "name": "弓箭手法尔德里克Faldric the Archer",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "Acute Sight",
+      "name": "敏锐之眼Acute Sight",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Faldric has advantage on 感知（察觉）检定s that rely on sight.</p>",
+          "value": "<p>Faldric 在依赖视力的智慧（感知）检定上具有优势。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf2e": {
-            "_id": "dnd5eactivityf2e",
+          "dnd5eactivity48b": {
+            "_id": "dnd5eactivity48b",
             "type": "utility",
             "activation": {
               "type": "",
@@ -752,7 +752,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Faldric makes two attacks with either his longbow or his shortsword.</p>",
+          "value": "<p>Faldric 用他的长弓或短剑进行两次攻击。</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf22": {
-            "_id": "dnd5eactivityf22",
+          "dnd5eactivity122": {
+            "_id": "dnd5eactivity122",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -792,12 +792,12 @@
       }
     },
     {
-      "name": "Longbow",
+      "name": "长弓Longbow",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击: +5 命中, 射程 150/600 ft., 一个目标. 命中： 7 (1d8 + 3) 穿刺伤害.</p>",
+          "value": "<p>远程武器攻击：+5 命中，射程 150/600 英尺，一个目标。命中：7（1d8 + 3）点穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6e0": {
-            "_id": "dnd5eactivity6e0",
+          "dnd5eactivity70c": {
+            "_id": "dnd5eactivity70c",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -902,12 +902,12 @@
       }
     },
     {
-      "name": "Shortsword",
+      "name": "短剑Shortsword",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +5 命中, 触及 5 ft., 一个目标. 命中： 6 (1d6 + 3) 穿刺伤害.</p>",
+          "value": "<p>近战武器攻击：命中 +5，攻击距离 5 英尺，一个目标。命中：6（1d6 + 3）点穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -919,8 +919,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb04": {
-            "_id": "dnd5eactivityb04",
+          "dnd5eactivity632": {
+            "_id": "dnd5eactivity632",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1012,12 +1012,12 @@
       }
     },
     {
-      "name": "Pelliton’s Archer",
+      "name": "佩利顿之弓手Pelliton’s Archer",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>When a creature Faldric can see enters a space adjacent to Sir Pelliton, Faldric may use his reaction to make a longbow attack against that creature. If this attack is successful, the target is also knocked prone.</p>",
+          "value": "<p>当法得里克能看见的生物进入佩利顿爵士相邻的格子时，法得里克可以用反应对该生物进行一次长弓攻击。如果该攻击命中，目标还会被击倒，倒地并处于俯卧状态。</p>",
           "chat": ""
         },
         "source": {
@@ -1029,12 +1029,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5ed": {
-            "_id": "dnd5eactivity5ed",
+          "dnd5eactivity500": {
+            "_id": "dnd5eactivity500",
             "type": "utility",
             "effects": [
               {
-                "_id": "8c48d0cbfb956d4d"
+                "_id": "e8291b25eca6953b"
               }
             ],
             "activation": {
@@ -1052,7 +1052,7 @@
       },
       "effects": [
         {
-          "_id": "8c48d0cbfb956d4d",
+          "_id": "e8291b25eca6953b",
           "name": "倒地 (Prone)",
           "type": "base",
           "system": {},
@@ -1074,8 +1074,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/prone.svg",
           "statuses": [
             "prone"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1096,7 +1095,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410680,
-    "modifiedTime": 1774201410680
+    "createdTime": 1774273722536,
+    "modifiedTime": 1774273722536
   }
 }

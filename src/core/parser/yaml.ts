@@ -347,6 +347,16 @@ export class YamlParser {
 
   private normalizeBodySectionLines(lines: string[]): string[] {
     const merged: string[] = [];
+    let currentLines: string[] = [];
+
+    const flushCurrent = () => {
+      if (currentLines.length === 0) {
+        return;
+      }
+
+      merged.push(currentLines.join('\n').trim());
+      currentLines = [];
+    };
 
     for (const rawLine of lines) {
       const cleaned = this.cleanBodySectionLine(rawLine);
@@ -354,14 +364,26 @@ export class YamlParser {
         continue;
       }
 
-      const previous = merged[merged.length - 1];
-      if (this.shouldMergeBodySectionLine(previous, cleaned, rawLine)) {
-        merged[merged.length - 1] = `${previous} ${cleaned}`.replace(/\s+/g, ' ').trim();
+      const indent = rawLine.match(/^\s*/)?.[0]?.length ?? 0;
+      const trimmedRaw = rawLine.trimStart();
+      const isTopLevelEntry =
+        indent < 2 && (/^[-*+]\s+/.test(trimmedRaw) || /^\d+[.)]\s+/.test(trimmedRaw));
+
+      if (isTopLevelEntry) {
+        flushCurrent();
+        currentLines.push(cleaned);
         continue;
       }
 
-      merged.push(cleaned);
+      if (currentLines.length === 0) {
+        currentLines.push(cleaned);
+        continue;
+      }
+
+      currentLines.push(cleaned);
     }
+
+    flushCurrent();
 
     return merged;
   }

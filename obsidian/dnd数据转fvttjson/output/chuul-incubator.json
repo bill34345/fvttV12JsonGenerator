@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "两栖",
+      "name": "两栖 (Amphibious)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity225": {
-            "_id": "dnd5eactivity225",
+          "dnd5eactivity754": {
+            "_id": "dnd5eactivity754",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "感知魔法",
+      "name": "感知魔法 (Sense Magic)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityff3": {
-            "_id": "dnd5eactivityff3",
+          "dnd5eactivitydea": {
+            "_id": "dnd5eactivitydea",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,7 +798,7 @@
       }
     },
     {
-      "name": "多重攻击",
+      "name": "多重攻击 (Multiattack)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity122": {
-            "_id": "dnd5eactivity122",
+          "dnd5eactivity263": {
+            "_id": "dnd5eactivity263",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -843,7 +843,7 @@
       }
     },
     {
-      "name": "钳击",
+      "name": "钳击 (Pincer Strike)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity002": {
-            "_id": "dnd5eactivity002",
+          "dnd5eactivitybec": {
+            "_id": "dnd5eactivitybec",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -953,7 +953,7 @@
       }
     },
     {
-      "name": "触须",
+      "name": "触须 (Tentacle)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -970,8 +970,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybc7": {
-            "_id": "dnd5eactivitybc7",
+          "dnd5eactivity5cd": {
+            "_id": "dnd5eactivity5cd",
             "type": "save",
             "save": {
               "ability": [
@@ -988,10 +988,10 @@
             },
             "effects": [
               {
-                "_id": "3fecc4a7d8037405"
+                "_id": "cf8cd11e4996cd6c"
               },
               {
-                "_id": "0527c45a6192ddd8"
+                "_id": "d4a7997021f90701"
               }
             ],
             "activation": {
@@ -1009,7 +1009,7 @@
       },
       "effects": [
         {
-          "_id": "3fecc4a7d8037405",
+          "_id": "cf8cd11e4996cd6c",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1031,11 +1031,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "0527c45a6192ddd8",
+          "_id": "d4a7997021f90701",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1057,8 +1056,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1072,7 +1070,7 @@
       }
     },
     {
-      "name": "排出子嗣",
+      "name": "排出子嗣 (Disown Offspring)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1089,8 +1087,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity0ab": {
-            "_id": "dnd5eactivity0ab",
+          "dnd5eactivityb72": {
+            "_id": "dnd5eactivityb72",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1150,7 +1148,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410655,
-    "modifiedTime": 1774201410655
+    "createdTime": 1774273722489,
+    "modifiedTime": 1774273722489
   }
 }

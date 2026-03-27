@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9c3": {
-            "_id": "dnd5eactivity9c3",
+          "dnd5eactivitydef": {
+            "_id": "dnd5eactivitydef",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity45a": {
-            "_id": "dnd5eactivity45a",
+          "dnd5eactivity099": {
+            "_id": "dnd5eactivity099",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -819,8 +819,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity928": {
-            "_id": "dnd5eactivity928",
+          "dnd5eactivitybdf": {
+            "_id": "dnd5eactivitybdf",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -898,8 +898,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity392": {
-            "_id": "dnd5eactivity392",
+          "dnd5eactivitye98": {
+            "_id": "dnd5eactivitye98",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -943,8 +943,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfa5": {
-            "_id": "dnd5eactivityfa5",
+          "dnd5eactivityfbd": {
+            "_id": "dnd5eactivityfbd",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -992,8 +992,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity4ae": {
-            "_id": "dnd5eactivity4ae",
+          "dnd5eactivityafc": {
+            "_id": "dnd5eactivityafc",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1123,8 +1123,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya3f": {
-            "_id": "dnd5eactivitya3f",
+          "dnd5eactivity67c": {
+            "_id": "dnd5eactivity67c",
             "type": "save",
             "save": {
               "ability": [
@@ -1141,7 +1141,7 @@
             },
             "effects": [
               {
-                "_id": "88b083e8e3e48332"
+                "_id": "b2e1eaec2aec0bcb"
               }
             ],
             "activation": {
@@ -1167,7 +1167,7 @@
       },
       "effects": [
         {
-          "_id": "88b083e8e3e48332",
+          "_id": "b2e1eaec2aec0bcb",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1189,8 +1189,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/charmed.svg",
           "statuses": [
             "charmed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1236,8 +1235,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc64": {
-            "_id": "dnd5eactivityc64",
+          "dnd5eactivity63c": {
+            "_id": "dnd5eactivity63c",
             "type": "save",
             "save": {
               "ability": [
@@ -1332,8 +1331,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9eb": {
-            "_id": "dnd5eactivity9eb",
+          "dnd5eactivityc50": {
+            "_id": "dnd5eactivityc50",
             "type": "save",
             "save": {
               "ability": [
@@ -1456,8 +1455,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye56": {
-            "_id": "dnd5eactivitye56",
+          "dnd5eactivity7a7": {
+            "_id": "dnd5eactivity7a7",
             "type": "save",
             "save": {
               "ability": [
@@ -1548,8 +1547,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity617": {
-            "_id": "dnd5eactivity617",
+          "dnd5eactivity5c7": {
+            "_id": "dnd5eactivity5c7",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -1601,8 +1600,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityaa6": {
-            "_id": "dnd5eactivityaa6",
+          "dnd5eactivitya3d": {
+            "_id": "dnd5eactivitya3d",
             "type": "utility",
             "activation": {
               "type": "legendary",
@@ -1636,7 +1635,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410629,
-    "modifiedTime": 1774201410629
+    "createdTime": 1774273704408,
+    "modifiedTime": 1774273704408
   }
 }

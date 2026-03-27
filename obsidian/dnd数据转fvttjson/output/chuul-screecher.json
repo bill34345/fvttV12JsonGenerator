@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "两栖",
+      "name": "两栖 (Amphibious)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb2a": {
-            "_id": "dnd5eactivityb2a",
+          "dnd5eactivity39d": {
+            "_id": "dnd5eactivity39d",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "感知魔法",
+      "name": "感知魔法 (Sense Magic)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb37": {
-            "_id": "dnd5eactivityb37",
+          "dnd5eactivity888": {
+            "_id": "dnd5eactivity888",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,7 +798,7 @@
       }
     },
     {
-      "name": "多重攻击",
+      "name": "多重攻击 (Multiattack)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybcb": {
-            "_id": "dnd5eactivitybcb",
+          "dnd5eactivity3b4": {
+            "_id": "dnd5eactivity3b4",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -843,7 +843,7 @@
       }
     },
     {
-      "name": "钳击",
+      "name": "钳击 (Pincer Strike)",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycc2": {
-            "_id": "dnd5eactivitycc2",
+          "dnd5eactivity498": {
+            "_id": "dnd5eactivity498",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -953,7 +953,7 @@
       }
     },
     {
-      "name": "尖啸",
+      "name": "尖啸 (Piercing Shriek)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -970,8 +970,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd73": {
-            "_id": "dnd5eactivityd73",
+          "dnd5eactivity622": {
+            "_id": "dnd5eactivity622",
             "type": "save",
             "save": {
               "ability": [
@@ -1044,7 +1044,7 @@
       }
     },
     {
-      "name": "触须",
+      "name": "触须 (Tentacle)",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -1061,8 +1061,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb3a": {
-            "_id": "dnd5eactivityb3a",
+          "dnd5eactivityb93": {
+            "_id": "dnd5eactivityb93",
             "type": "save",
             "save": {
               "ability": [
@@ -1079,10 +1079,10 @@
             },
             "effects": [
               {
-                "_id": "5f8f9d336d5771f3"
+                "_id": "0eebf0452d85d0f4"
               },
               {
-                "_id": "6c2996b2301e96fb"
+                "_id": "74db83c569dbc84d"
               }
             ],
             "activation": {
@@ -1100,7 +1100,7 @@
       },
       "effects": [
         {
-          "_id": "5f8f9d336d5771f3",
+          "_id": "0eebf0452d85d0f4",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1122,11 +1122,10 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ],
-          "flags": {}
+          ]
         },
         {
-          "_id": "6c2996b2301e96fb",
+          "_id": "74db83c569dbc84d",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1148,8 +1147,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1170,7 +1168,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410665,
-    "modifiedTime": 1774201410665
+    "createdTime": 1774273722507,
+    "modifiedTime": 1774273722507
   }
 }

@@ -718,8 +718,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb60": {
-            "_id": "dnd5eactivityb60",
+          "dnd5eactivitye4f": {
+            "_id": "dnd5eactivitye4f",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -763,8 +763,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye48": {
-            "_id": "dnd5eactivitye48",
+          "dnd5eactivity3d9": {
+            "_id": "dnd5eactivity3d9",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -808,8 +808,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity273": {
-            "_id": "dnd5eactivity273",
+          "dnd5eactivity9c2": {
+            "_id": "dnd5eactivity9c2",
             "type": "utility",
             "activation": {
               "type": "",
@@ -853,8 +853,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye6b": {
-            "_id": "dnd5eactivitye6b",
+          "dnd5eactivity063": {
+            "_id": "dnd5eactivity063",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -898,8 +898,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityef4": {
-            "_id": "dnd5eactivityef4",
+          "dnd5eactivity3f2": {
+            "_id": "dnd5eactivity3f2",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1008,8 +1008,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya55": {
-            "_id": "dnd5eactivitya55",
+          "dnd5eactivitya7b": {
+            "_id": "dnd5eactivitya7b",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1118,8 +1118,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity34e": {
-            "_id": "dnd5eactivity34e",
+          "dnd5eactivityc1f": {
+            "_id": "dnd5eactivityc1f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1181,7 +1181,7 @@
             },
             "effects": [
               {
-                "_id": "708634812865f3ff"
+                "_id": "bb6e0fcec89b9ce6"
               }
             ],
             "activation": {
@@ -1206,7 +1206,7 @@
       },
       "effects": [
         {
-          "_id": "708634812865f3ff",
+          "_id": "bb6e0fcec89b9ce6",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1228,8 +1228,7 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ],
-          "flags": {}
+          ]
         }
       ],
       "flags": {
@@ -1260,8 +1259,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf57": {
-            "_id": "dnd5eactivityf57",
+          "dnd5eactivitye1e": {
+            "_id": "dnd5eactivitye1e",
             "type": "save",
             "save": {
               "ability": [
@@ -1308,7 +1307,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410621,
-    "modifiedTime": 1774201410621
+    "createdTime": 1774273704389,
+    "modifiedTime": 1774273704389
   }
 }

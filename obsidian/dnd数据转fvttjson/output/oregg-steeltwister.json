@@ -1,5 +1,5 @@
 {
-  "name": "Oregg Steeltwister",
+  "name": "奥雷格·斯蒂尔特威斯特Oregg Steeltwister",
   "type": "npc",
   "img": "",
   "system": {
@@ -614,7 +614,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Oregg Steeltwister",
+    "name": "奥雷格·斯蒂尔特威斯特Oregg Steeltwister",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -703,12 +703,12 @@
   },
   "items": [
     {
-      "name": "Aggressive",
+      "name": "攻击性Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
+          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -720,8 +720,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity12a": {
-            "_id": "dnd5eactivity12a",
+          "dnd5eactivitydff": {
+            "_id": "dnd5eactivitydff",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -748,12 +748,12 @@
       }
     },
     {
-      "name": "Rune-Tattooed",
+      "name": "符文纹身Rune-Tattooed",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Whenever Oregg casts a spell of 1st level or higher, he gains a number of temporary hit points equal to Xd10, where X is the level of the spell.</p>",
+          "value": "<p>每当 Oregg 施放 1 级或更高等级的法术时，他会获得等同于 Xd10 点的临时生命值，其中 X 为该法术的等级。</p>",
           "chat": ""
         },
         "source": {
@@ -765,8 +765,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2f8": {
-            "_id": "dnd5eactivity2f8",
+          "dnd5eactivityd6f": {
+            "_id": "dnd5eactivityd6f",
             "type": "utility",
             "activation": {
               "type": "",
@@ -798,7 +798,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Oregg makes two longsword attacks and can cast a cantrip as a bonus action.</p>",
+          "value": "<p>Oregg 会进行两次长剑攻击，并可作为附赠动作施放一项戏法。</p>",
           "chat": ""
         },
         "source": {
@@ -810,8 +810,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5fc": {
-            "_id": "dnd5eactivity5fc",
+          "dnd5eactivity6f2": {
+            "_id": "dnd5eactivity6f2",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -838,12 +838,12 @@
       }
     },
     {
-      "name": "Longsword",
+      "name": "长剑Longsword",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击: +5 命中, 触及 5 ft., 一个目标. 命中： 7 (1d10 + 2) 挥砍伤害.</p>",
+          "value": "<p>近战武器攻击：+5 命中，触及 5 英尺，一个目标。命中：7（1d10 + 2）挥砍伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -855,8 +855,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity089": {
-            "_id": "dnd5eactivity089",
+          "dnd5eactivityebd": {
+            "_id": "dnd5eactivityebd",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -948,12 +948,12 @@
       }
     },
     {
-      "name": "Firebolt",
+      "name": "火焰箭Firebolt",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>射程d Spell Attack: +7 命中, 射程 120 ft., 一个目标. 命中： 11 (2d10) 火焰伤害.</p>",
+          "value": "<p>远程法术攻击：+7 命中，射程 120 英尺，单一目标。命中：11（2d10）点火焰伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -965,8 +965,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9d5": {
-            "_id": "dnd5eactivity9d5",
+          "dnd5eactivity3ec": {
+            "_id": "dnd5eactivity3ec",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -993,12 +993,12 @@
       }
     },
     {
-      "name": "Poison Spray",
+      "name": "毒液喷射Poison Spray",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>One creature within 10 feet of Oregg must make a successful DC 15 体质豁免检定 or take 13 (2d12) poison damage.</p>",
+          "value": "<p>距离 Oregg 10 英尺内的一个生物必须进行一次 DC 15 的体质豁免检定，失败则受到 13（2d12）点毒素伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -1010,8 +1010,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc56": {
-            "_id": "dnd5eactivityc56",
+          "dnd5eactivityb01": {
+            "_id": "dnd5eactivityb01",
             "type": "save",
             "save": {
               "ability": [
@@ -1082,7 +1082,7 @@
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>Oregg Steeltwister is a 5th-level<br>施法者spellcaster. His 施法属性spellcasting ability is Charisma<br>(法术豁免DCspell save DC 15, +7 to hit with 法术攻击spell attack). He<br>has the following sorcerer spells prepared:<br>戏法Cantrips (随意at will): firebolt, message, poison spray, true strike<br>1st level (4 法术位slots): magic missile, shield<br>2nd level (3 法术位slots): heat metal<br>3rd level (2 法术位slots): fly, fireball</p>",
+          "value": "<p>Oregg Steeltwister is a 5th-level<br>施法者spellcaster. His 施法属性spellcasting ability is Charisma<br>(法术豁免DCspell save DC 15, +7 to hit with 法术攻击spell attack). He<br>has the following sorcerer spells prepared:<br>戏法Cantrips (随意at will): 火焰箭firebolt, 密语message, 毒液喷射poison spray, 真实打击true strike<br>1st level (4 法术位slots): 魔法飞弹magic missile, 护盾shield<br>2nd level (3 法术位slots): 热金属heat metal<br>3rd level (2 法术位slots): 飞行术fly, 火球术fireball</p>",
           "chat": ""
         },
         "source": {
@@ -1113,7 +1113,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410693,
-    "modifiedTime": 1774201410693
+    "createdTime": 1774273722553,
+    "modifiedTime": 1774273722553
   }
 }

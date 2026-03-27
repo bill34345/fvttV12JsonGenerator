@@ -1,0 +1,3368 @@
+{
+  "name": "远古黄铜龙Ancient Brass Dragon",
+  "type": "npc",
+  "img": "",
+  "system": {
+    "currency": {
+      "pp": 0,
+      "gp": 0,
+      "ep": 0,
+      "sp": 0,
+      "cp": 0
+    },
+    "abilities": {
+      "str": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "dex": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "con": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "int": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "wis": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "cha": {
+        "value": 10,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      }
+    },
+    "bonuses": {
+      "mwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "msak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rsak": {
+        "attack": "",
+        "damage": ""
+      },
+      "abilities": {
+        "check": "",
+        "save": "",
+        "skill": ""
+      },
+      "spell": {
+        "dc": ""
+      }
+    },
+    "skills": {
+      "acr": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ani": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "arc": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ath": {
+        "ability": "str",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "dec": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "his": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ins": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "itm": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "inv": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "med": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "nat": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prc": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prf": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "per": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "rel": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "slt": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ste": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "sur": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "value": []
+    },
+    "tools": {},
+    "spells": {
+      "spell1": {
+        "value": 0,
+        "override": null
+      },
+      "spell2": {
+        "value": 0,
+        "override": null
+      },
+      "spell3": {
+        "value": 0,
+        "override": null
+      },
+      "spell4": {
+        "value": 0,
+        "override": null
+      },
+      "spell5": {
+        "value": 0,
+        "override": null
+      },
+      "spell6": {
+        "value": 0,
+        "override": null
+      },
+      "spell7": {
+        "value": 0,
+        "override": null
+      },
+      "spell8": {
+        "value": 0,
+        "override": null
+      },
+      "spell9": {
+        "value": 0,
+        "override": null
+      },
+      "pact": {
+        "value": 0,
+        "override": null
+      }
+    },
+    "attributes": {
+      "init": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonus": "@prof * 2"
+      },
+      "movement": {
+        "walk": null,
+        "fly": null,
+        "swim": null,
+        "climb": null,
+        "burrow": null,
+        "hover": false
+      },
+      "attunement": {
+        "max": 3
+      },
+      "senses": {
+        "darkvision": null,
+        "blindsight": null,
+        "tremorsense": null,
+        "truesight": null,
+        "special": ""
+      },
+      "spellcasting": "",
+      "exhaustion": 0,
+      "concentration": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonuses": {
+          "save": ""
+        },
+        "limit": 1
+      },
+      "ac": {
+        "flat": 20,
+        "calc": "natural"
+      },
+      "hd": {
+        "spent": 0
+      },
+      "hp": {
+        "value": 332,
+        "max": 332,
+        "temp": null,
+        "tempmax": null,
+        "formula": "19d20 + 133"
+      },
+      "death": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "success": 0,
+        "failure": 0,
+        "bonuses": {
+          "save": ""
+        }
+      },
+      "spell": {
+        "level": 0
+      },
+      "loyalty": {
+        "value": null
+      }
+    },
+    "details": {
+      "biography": {
+        "value": "<ul><li># **月蚀腐化虚寂者 (Ruidium Corrupted Chuul Nullifier)**</li><li>_大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_</li></ul>",
+        "public": ""
+      },
+      "alignment": "",
+      "ideal": "",
+      "bond": "",
+      "flaw": "",
+      "race": null,
+      "type": {
+        "value": ""
+      },
+      "cr": 0,
+      "habitat": {
+        "value": [],
+        "custom": ""
+      },
+      "treasure": {
+        "value": []
+      },
+      "spellLevel": 0
+    },
+    "resources": {
+      "legact": {
+        "value": 0,
+        "max": 0
+      },
+      "legres": {
+        "value": 0,
+        "max": 0
+      },
+      "lair": {
+        "value": false,
+        "initiative": null,
+        "inside": false
+      }
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "traits": {
+      "size": "med",
+      "di": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dr": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dv": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dm": {
+        "amount": {},
+        "bypasses": []
+      },
+      "ci": {
+        "value": [],
+        "custom": ""
+      },
+      "languages": {
+        "value": [],
+        "custom": ""
+      },
+      "important": false
+    }
+  },
+  "prototypeToken": {
+    "name": "远古黄铜龙Ancient Brass Dragon",
+    "displayName": 0,
+    "actorLink": false,
+    "appendNumber": false,
+    "prependAdjective": false,
+    "width": 1,
+    "height": 1,
+    "texture": {
+      "src": "",
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "offsetX": 0,
+      "offsetY": 0,
+      "fit": "contain",
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "tint": "#ffffff",
+      "alphaThreshold": 0.75
+    },
+    "lockRotation": true,
+    "rotation": 0,
+    "alpha": 1,
+    "disposition": -1,
+    "displayBars": 0,
+    "bar1": {
+      "attribute": "attributes.hp"
+    },
+    "bar2": {
+      "attribute": null
+    },
+    "light": {
+      "negative": false,
+      "priority": 0,
+      "alpha": 0.5,
+      "angle": 360,
+      "bright": 0,
+      "color": null,
+      "coloration": 1,
+      "dim": 0,
+      "attenuation": 0.5,
+      "luminosity": 0.5,
+      "saturation": 0,
+      "contrast": 0,
+      "shadows": 0,
+      "animation": {
+        "type": null,
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      },
+      "darkness": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    "sight": {
+      "enabled": false,
+      "range": 0,
+      "angle": 360,
+      "visionMode": "basic",
+      "color": null,
+      "attenuation": 0.1,
+      "brightness": 0,
+      "saturation": 0,
+      "contrast": 0
+    },
+    "detectionModes": [],
+    "occludable": {
+      "radius": 0
+    },
+    "ring": {
+      "enabled": true,
+      "colors": {
+        "ring": null,
+        "background": null
+      },
+      "effects": 1,
+      "subject": {
+        "scale": 2,
+        "texture": null
+      }
+    },
+    "flags": {},
+    "randomImg": false,
+    "hexagonalShape": 0
+  },
+  "items": [
+    {
+      "name": "*护甲等级 (Armor Class)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>18（天生护甲）</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity5a4": {
+            "_id": "dnd5eactivity5a4",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*先攻 (Initiative)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>6</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityef5": {
+            "_id": "dnd5eactivityef5",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*生命值 (Hit Points)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>一百四十四</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity507": {
+            "_id": "dnd5eactivity507",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*速度 (Speed)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>30 尺,游泳 (Swim) 30 尺 |**STR**|**DEX**|**CON**|**INT**|**WIS**|**CHA**| |---|---|---|---|---|---| |21 (+5)|10 (+0)|17 (+3)|7 (-2)|13 (+1)|7 (-2)|</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya16": {
+            "_id": "dnd5eactivitya16",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*豁免 (Saving Throws)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>体质 (CON) +6，感知 (WIS) +4</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityb75": {
+            "_id": "dnd5eactivityb75",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*技能 (Skills)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>运动 +8，察觉 +4</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity91e": {
+            "_id": "dnd5eactivity91e",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*伤害抗性 (Damage Resistances)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>心灵（心灵）</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity076": {
+            "_id": "dnd5eactivity076",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*伤害免疫 (Damage Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>毒素</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity8f8": {
+            "_id": "dnd5eactivity8f8",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*状态免疫 (Condition Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>中毒</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityc8b": {
+            "_id": "dnd5eactivityc8b",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*感官 (Senses)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>黑暗视觉 60 尺，被动察觉 14</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity605": {
+            "_id": "dnd5eactivity605",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*语言 (Languages)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>能理解深潜语，但不能说话</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity1b3": {
+            "_id": "dnd5eactivity1b3",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*挑战等级 (Challenge)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>8（3,900 经验值）</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity261": {
+            "_id": "dnd5eactivity261",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*熟练加值 (Proficiency Bonus)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>3 -- ### 特性</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity6a0": {
+            "_id": "dnd5eactivity6a0",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "两栖 (Amphibious)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该虚寂者可以在空气和水中呼吸。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitye2c": {
+            "_id": "dnd5eactivitye2c",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "感知魔法 (Sense Magic)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该虚寂者能感知 120 尺内的魔法 (Magic),效果如同 **侦测魔法 (Detect Magic)**,但此特性并非魔法 (isn't magical).</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya3f": {
+            "_id": "dnd5eactivitya3f",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "月蚀脆壳 (Brittle Ruidium Shell)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>若该虚寂者受到来自单一来源 **20 点或以上的钝击伤害 (Bludgeoning Damage)**,则它的 **护甲等级 (AC)** 降至 **15**,直到其完成一次短休 (Short Rest) 或长休 (Long Rest).当其 AC 以此方式降低时,它失去**心灵伤害抗性 (Psychic Resistance)**.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitye3a": {
+            "_id": "dnd5eactivitye3a",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "虚寂力场 (Nullifying Field)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该虚寂者周围 **10 尺**范围内存在压制魔法的虚寂力场。处于该区域内的生物进行**维持专注 (Concentration)** 的体质豁免 (Constitution Saving Throw) 时具有**劣势 (Disadvantage)**。此外，当一个处于该区域内的生物施放一个 **1 环或更高环阶法术 (a spell of 1st level or higher)**，或启动一个会造成伤害、恢复生命值、传送、施加状态的**魔法物品 (Magic Item)** 效果时，必须先进行一次 **DC 15 的施法属性检定 (Spellcasting Ability Check)**；若失败，则该效果失效，但法术位 (Spell Slot)、充能 (Charge) 或其他资源照常消耗。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity063": {
+            "_id": "dnd5eactivity063",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "requiresConcentration": true
+          }
+        }
+      }
+    },
+    {
+      "name": "月蚀矿腐化 (Ruidium Corruption)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>当一个生物因该虚寂者的特性或动作被要求进行**月蚀矿腐化豁免 (Ruidium Corruption Save)** 时，该生物进行一次 **DC 15 魅力豁免 (Charisma Saving Throw)**。失败则：若其尚未受到月蚀矿腐化 (Ruidium Corruption)，则它受到月蚀矿腐化；若其已经受到月蚀矿腐化，则它获得 **1 级力竭 (1 level of Exhaustion)**。 -- # **月蚀矿腐化尖啸者 (Ruidium Corrupted Chuul Screecher)** _大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya24": {
+            "_id": "dnd5eactivitya24",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "5e425352ceafc135"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "5e425352ceafc135",
+          "name": "力竭 (Exhaustion)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
+          "statuses": [
+            "exhaustion"
+          ]
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*护甲等级 (Armor Class)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>17(天生护甲 / Natural Armor)</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity27d": {
+            "_id": "dnd5eactivity27d",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*先攻 (Initiative)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>2</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity513": {
+            "_id": "dnd5eactivity513",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*生命值 (Hit Points)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>127</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd20": {
+            "_id": "dnd5eactivityd20",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*速度 (Speed)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>30 尺,游泳 (Swim) 40 尺 |**STR**|**DEX**|**CON**|**INT**|**WIS**|**CHA**| |---|---|---|---|---|---| |19 (+4)|14 (+2)|16 (+3)|5 (-3)|12 (+1)|8 (-1)|</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd0b": {
+            "_id": "dnd5eactivityd0b",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*豁免 (Saving Throws)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>体质 (CON) +6，感知 (WIS) +4</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity91f": {
+            "_id": "dnd5eactivity91f",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*技能 (Skills)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>察觉 (Perception) +4,隐匿 (Stealth) +5</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity7c5": {
+            "_id": "dnd5eactivity7c5",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*伤害抗性 (Damage Resistances)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>雷鸣 (Thunder)</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityc07": {
+            "_id": "dnd5eactivityc07",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*伤害免疫 (Damage Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>毒素</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitycdc": {
+            "_id": "dnd5eactivitycdc",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*状态免疫 (Condition Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>中毒</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity128": {
+            "_id": "dnd5eactivity128",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*感官 (Senses)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>黑暗视觉 60 尺，被动察觉 14</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity780": {
+            "_id": "dnd5eactivity780",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*语言 (Languages)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>能理解深潜语，但不能说话</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitye0e": {
+            "_id": "dnd5eactivitye0e",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*挑战等级 (Challenge)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>6(2,300经验)</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity728": {
+            "_id": "dnd5eactivity728",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*熟练加值 (Proficiency Bonus)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>3 -- ### 特性</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity7d6": {
+            "_id": "dnd5eactivity7d6",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "两栖 (Amphibious)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该尖啸者可以在空气 (Air) 和水中 (Water) 呼吸.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity877": {
+            "_id": "dnd5eactivity877",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "感知魔法 (Sense Magic)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该尖啸者能感知 120 尺内的魔法 (Magic),效果如同 **侦测魔法 (Detect Magic)**,但此特性并非魔法 (isn't magical).</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity16d": {
+            "_id": "dnd5eactivity16d",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "月蚀脆壳 (Brittle Ruidium Shell)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>若该尖啸者受到来自单一来源 **15 点或以上的钝击伤害 (Bludgeoning Damage)**,则它的 **护甲等级 (AC)** 降至 **14**,直到其完成一次短休 (Short Rest) 或长休 (Long Rest).当其 AC 以此方式降低时,它失去**雷鸣伤害抗性 (Thunder Resistance)**.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityeb3": {
+            "_id": "dnd5eactivityeb3",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "濒血谐振 (Bloodied Crescendo)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>当该尖啸者**首次**被降至 **57 点生命值或以下 (57 Hit Points or Fewer)** 时,它立刻为 **月蚀尖啸 (Ruidium Screech)** 充能.并且在其下一次使用 **月蚀尖啸 (Ruidium Screech)** 时,该能力的范围扩大为 **60 尺锥形 (60-foot Cone)**,而非 **30 尺锥形 (30-foot Cone)**.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity1a2": {
+            "_id": "dnd5eactivity1a2",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "月蚀矿腐化 (Ruidium Corruption)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>当一个生物因该尖啸者的特性或动作被要求进行**月蚀矿腐化豁免 (Ruidium Corruption Save)** 时，该生物进行一次 **DC 15 魅力豁免 (Charisma Saving Throw)**。失败则：若其尚未受到月蚀矿腐化 (Ruidium Corruption)，则它受到月蚀矿腐化；若其已经受到月蚀矿腐化，则它获得 **1 级力竭 (1 level of Exhaustion)**。 -- # **月蚀矿腐化孵育者 (Ruidium Corrupted Chuul Incubator)** _大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity28f": {
+            "_id": "dnd5eactivity28f",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "d2ac6df89c4fafbd"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "d2ac6df89c4fafbd",
+          "name": "力竭 (Exhaustion)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
+          "statuses": [
+            "exhaustion"
+          ]
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*护甲等级 (Armor Class)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>16(天生护甲 / Natural Armor)</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityf32": {
+            "_id": "dnd5eactivityf32",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*先攻 (Initiative)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>2</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd54": {
+            "_id": "dnd5eactivityd54",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*生命值 (Hit Points)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>105</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity173": {
+            "_id": "dnd5eactivity173",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*速度 (Speed)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>30 尺,游泳 (Swim) 30 尺 |**STR**|**DEX**|**CON**|**INT**|**WIS**|**CHA**| |---|---|---|---|---|---| |19 (+4)|8 (-1)|18 (+4)|5 (-3)|11 (+0)|6 (-2)|</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd35": {
+            "_id": "dnd5eactivityd35",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*豁免 (Saving Throws)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>体质 (CON) +7</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity07b": {
+            "_id": "dnd5eactivity07b",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*技能 (Skills)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>运动 (Athletics) +7,察觉 (Perception) +3</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya1d": {
+            "_id": "dnd5eactivitya1d",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*伤害免疫 (Damage Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>毒素</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity3c2": {
+            "_id": "dnd5eactivity3c2",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*状态免疫 (Condition Immunities)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>中毒</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitya99": {
+            "_id": "dnd5eactivitya99",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*感官 (Senses)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>黑暗视觉 (Darkvision) 60 尺,被动察觉 (Passive Perception) 13</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity173": {
+            "_id": "dnd5eactivity173",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*语言 (Languages)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>能理解深潜语，但不能说话</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity45a": {
+            "_id": "dnd5eactivity45a",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*挑战等级 (Challenge)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>5(1,800经验值)</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitye5e": {
+            "_id": "dnd5eactivitye5e",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "*熟练加值 (Proficiency Bonus)**",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>3 -- ### 特性</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity9c5": {
+            "_id": "dnd5eactivity9c5",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "两栖 (Amphibious)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该孵育者可以在空气 (Air) 和水中 (Water) 呼吸.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity989": {
+            "_id": "dnd5eactivity989",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "感知魔法 (Sense Magic)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该孵育者能感知 120 尺内的魔法 (Magic),效果如同**侦测魔法 (Detect Magic)**,但此特性并非魔法 (isn't magical).</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityf2c": {
+            "_id": "dnd5eactivityf2c",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "月蚀脆壳 (Brittle Ruidium Shell)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>若该孵育者受到来自单一来源 **15 点或以上的钝击伤害 (Bludgeoning Damage)**,则它的**护甲等级 (AC)** 降至 **13**,直到其完成一次短休 (Short Rest) 或长休 (Long Rest).</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity891": {
+            "_id": "dnd5eactivity891",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "濒血裂巢 (Bloodied Brood-Rupture)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>当该孵育者**首次**被降至 **52 点生命值或以下 (52 Hit Points or Fewer)** 时,它立刻为**月蚀孵巢 (Ruidium Brood Patch)** 充能.并且它下一次使用**月蚀孵巢 (Ruidium Brood Patch)** 时,若有生物在该区域内豁免失败,则该生物还必须进行一次**月蚀矿腐化豁免 (Ruidium Corruption Save)**.</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityaa7": {
+            "_id": "dnd5eactivityaa7",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "月蚀矿腐化 (Ruidium Corruption)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>当一个生物因该孵育者的特性或动作被要求进行**月蚀矿腐化豁免 (Ruidium Corruption Save)** 时，该生物进行一次 **DC 14 魅力豁免 (Charisma Saving Throw)**。失败则：若其尚未受到**月蚀矿腐化 (Ruidium Corruption)**，则它受到月蚀矿腐化；若其已经受到月蚀矿腐化，则它获得 **1 级力竭 (1 level of Exhaustion)**。 --</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivityd29": {
+            "_id": "dnd5eactivityd29",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "8de2d7ae58092b6e"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "8de2d7ae58092b6e",
+          "name": "力竭 (Exhaustion)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
+          "statuses": [
+            "exhaustion"
+          ]
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Traits",
+          "actionSection": "Traits"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "多重攻击 (Multiattack)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>该虚寂者进行一次钩握螯 (Seizing Claw) 和一次粉碎螯 (Crushing Claw) 攻击。若它正擒抱 (Grappling) 一个生物，它还可以额外进行一次触须 (Tentacles) 攻击。 钩握螯 (Seizing Claw)：近战武器攻击 (Melee Weapon Attack)：命中 +8，触及 (Reach) 10 尺，单一目标 (one target)。 命中 (Hit)：14（`2d8 + 5`）点钝击伤害 (Bludgeoning Damage) 外加 4（`1d8`）点心灵伤害 (Psychic Damage)。若目标为大型 (Large) 或更小体型，则其被擒抱 (Grappled)（逃脱 DC 16 / Escape DC 16），并被拉向该虚寂者至多 10 尺。该虚寂者同一时间只能以此方式擒抱一个生物。 粉碎螯 (Crushing Claw)：近战武器攻击 (Melee Weapon Attack)：命中 +8，触及 (Reach) 5 尺，单一目标 (one target)。 命中 (Hit)：18（`3d8 + 5`）点钝击伤害 (Bludgeoning Damage) 外加 7（`2d6`）点心灵伤害 (Psychic Damage)。目标必须成功通过一次 DC 15 体质豁免 (Constitution Saving Throw)，否则直到该虚寂者的下一回合开始前，它不能发动反应 (can’t take Reactions)。若目标正在维持专注 (Concentration)，则它必须立刻以劣势 (Disadvantage) 进行一次专注检定。 触须 (Tentacles)：一个被该虚寂者擒抱 (Grappled) 的生物必须成功通过一次 DC 15 体质豁免 (Constitution Saving Throw)，否则直到其下一回合结束前处于中毒 (Poisoned) 与耳聋 (Deafened) 状态。 当目标以此方式中毒时，它进行维持专注 (Concentration) 的体质豁免具有劣势 (Disadvantage)。 若目标已经受到月蚀矿腐化 (Ruidium Corruption)，则其失败时，直到其下一回合结束前处于麻痹 (Paralyzed) 状态。 -- 多重攻击 (Multiattack)：该尖啸者进行两次撕裂螯 (Rending Claw) 攻击。若它正擒抱 (Grappling) 一个生物，则它可以将其中一次攻击替换为触须 (Tentacles)。 撕裂螯 (Rending Claw)：近战武器攻击 (Melee Weapon Attack)：命中 +7，触及 (Reach) 10 尺，单一目标 (one target)。 命中 (Hit)：13（`2d8 + 4`）点挥砍伤害 (Slashing Damage) 外加 3（`1d6`）点雷鸣伤害 (Thunder Damage)。若目标为大型 (Large) 或更小体型，则其被擒抱 (Grappled)（逃脱 DC 14 / Escape DC 14）。该尖啸者同一时间只能以此方式擒抱一个生物。 触须 (Tentacles)：一个被该尖啸者擒抱 (Grappled) 的生物必须成功通过一次 DC 15 体质豁免 (Constitution Saving Throw)，否则直到其下一回合结束前处于中毒 (Poisoned) 状态。 当目标以此方式中毒时，对其进行的攻击在 17–20 时造成重击 (Critical Hit)。 若目标已经受到月蚀矿腐化 (Ruidium Corruption)，则其失败时，直到其下一回合结束前处于麻痹 (Paralyzed) 状态。 月蚀尖啸 (Ruidium Screech)（充能 5–6 / Recharge 5–6）：该尖啸者释放一道灌注月蚀矿谐振的刺耳尖啸。它前方 30 尺锥形 (30-foot Cone) 内每个能听见它的生物都必须进行一次 DC 15 体质豁免 (Constitution Saving Throw)。 失败 (Failure)：受到 18（`4d8`）点雷鸣伤害 (Thunder Damage) 外加 7（`2d6`）点心灵伤害 (Psychic Damage)，直到该尖啸者下一回合结束前处于耳聋 (Deafened) 状态，且不能发动反应 (can’t take Reactions)。若目标正在维持专注 (Concentration)，则它必须立刻以劣势 (Disadvantage) 进行一次专注检定。 若该尖啸者当前处于濒血 (Bloodied) 状态，且目标此次豁免失败，则该目标还必须进行一次月蚀矿腐化豁免 (Ruidium Corruption Save)。 成功 (Success)：受到一半伤害 (Half Damage)，且无其他效果。 多重攻击 (Multiattack)：该孵育者进行两次攻击：一次钩握螯 (Seizing Claw) 和一次粉碎螯 (Crushing Claw)。若它正擒抱 (Grappling) 一个生物，则它可以将粉碎螯 (Crushing Claw) 替换为触须 (Tentacles)，并使用月蚀孵巢 (Ruidium Brood Patch)若可用。 钩握螯 (Seizing Claw)：近战武器攻击 (Melee Weapon Attack)：命中 +7，触及 (Reach) 10 尺，单一目标 (one target)。 命中 (Hit)：11（`2d6 + 4`）点钝击伤害 (Bludgeoning Damage)。若目标为大型 (Large) 或更小体型，则其被擒抱 (Grappled)（逃脱 DC 15 / Escape DC 15），并被拉向该孵育者至多 5 尺。该孵育者同一时间只能以此方式擒抱一个生物。 粉碎螯 (Crushing Claw)：近战武器攻击 (Melee Weapon Attack)：命中 +7，触及 (Reach) 5 尺，单一目标 (one target)。 命中 (Hit)：13（`2d8 + 4`）点钝击伤害 (Bludgeoning Damage)。目标必须成功通过一次 DC 14 体质豁免 (Constitution Saving Throw)，否则直到其下一回合结束前其基于力量的攻击检定具有劣势。 触须 (Tentacles)：一个被该孵育者擒抱 (Grappled) 的生物必须成功通过一次 DC 14 体质豁免 (Constitution Saving Throw)，否则直到其下一回合结束前处于中毒 (Poisoned) 状态。 若目标已经受到月蚀矿腐化 (Ruidium Corruption)，则其失败时，直到其下一回合结束前处于麻痹 (Paralyzed) 状态。 月蚀孵巢 (Ruidium Brood Patch)（充能 4–6 / Recharge 4–6）：该孵育者在 30 尺内一点制造一个半径 5 尺的月蚀孵巢区 (Brood Patch)，持续一分钟。 该区域为困难地形 (Difficult Terrain)。 一个生物在每回合内首次进入该区域时，或在该区域内开始其回合时，必须进行一次 DC 14 体质豁免 (Constitution Saving Throw)。 失败 (Failure)：受到 6（`1d12`）点毒素伤害 (Poison Damage) 外加 6（`1d12`）点心灵伤害 (Psychic Damage)，且直到该回合结束前速度变为 0 (Speed becomes 0 until the end of the turn)。 成功 (Success)：只受到一半伤害 (Half Damage)，且无其他效果。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": "bloodied"
+        },
+        "activities": {
+          "dnd5eactivity30f": {
+            "_id": "dnd5eactivity30f",
+            "type": "utility",
+            "effects": [],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": "bloodied"
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Actions",
+          "actionSection": "Actions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "requiresConcentration": true,
+            "halfDamageOnSave": true,
+            "aura": {
+              "radius": 5,
+              "units": "ft",
+              "terrain": "difficult"
+            },
+            "onDropToZero": {
+              "healFormula": "2d8",
+              "maintainWithoutConcentration": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "反魔法场瞬激 (Anti Magic Field Instant Activation)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>直到其下一回合开始前，该虚寂者自身以及其周围 5 尺范围内的区域变为反魔法区域。若该虚寂者已处于濒血 (Bloodied) 状态（72 点生命值或以下 / 72 Hit Points or Fewer），则该范围改为 10 尺。 --</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "bonus",
+          "cost": 1,
+          "condition": "bloodied"
+        },
+        "activities": {
+          "dnd5eactivity4bc": {
+            "_id": "dnd5eactivity4bc",
+            "type": "utility",
+            "activation": {
+              "type": "bonus",
+              "value": null,
+              "override": false,
+              "condition": "bloodied"
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Bonus Actions",
+          "actionSection": "Bonus Actions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "虚寂坍缩 (Null Collapse)（1/日 / 1/day）：当该虚寂者首次被降至 72 点生命值或以下 (72 Hit Points or Fewer) 时，它可以立刻释放一阵月蚀矿与心灵噪讯交织而成的虚寂坍缩波。直到其下一回合结束前，它的虚寂力场 (Nullifying Field) 半径扩大至 20 尺。该区域内由它选择的生物必须进行一次 DC 15 智力豁免 (Intelligence Saving Throw)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<p>失败 (Failure)：受到 22（`4d10`）点心灵伤害 (Psychic Damage)，直到其下一回合结束前不能发动反应 (can’t take Reactions)。若其正在维持专注 (Concentration)，则专注立即结束。该生物还必须进行一次月蚀矿腐化豁免 (Ruidium Corruption Save)。 成功 (Success)：受到一半伤害 (Half Damage)，且无其他效果。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "reaction",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity82e": {
+            "_id": "dnd5eactivity82e",
+            "type": "utility",
+            "activation": {
+              "type": "reaction",
+              "value": null,
+              "override": false,
+              "condition": ""
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false
+              },
+              "spellSlot": true,
+              "targets": [
+                {
+                  "type": "itemUses",
+                  "value": "1",
+                  "target": "",
+                  "scaling": {}
+                }
+              ]
+            }
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "value": 1,
+          "max": 1,
+          "per": "day",
+          "recovery": [
+            {
+              "period": "day",
+              "type": "recoverAll"
+            }
+          ]
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "Reactions",
+          "actionSection": "Reactions"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "rules": {
+            "requiresConcentration": true,
+            "halfDamageOnSave": true
+          }
+        }
+      }
+    }
+  ],
+  "effects": [],
+  "folder": null,
+  "flags": {},
+  "_stats": {
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.9",
+    "createdTime": 1774273102027,
+    "modifiedTime": 1774273102027
+  }
+}

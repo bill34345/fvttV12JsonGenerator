@@ -1,5 +1,5 @@
 {
-  "name": "Pinna",
+  "name": "皮纳Pinna",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Pinna",
+    "name": "皮纳Pinna",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -707,7 +707,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战或远程武器攻击: +2 命中, 触及 5 ft. or 射程 20/60 ft., 一个目标. 命中： 2 (1d4) 穿刺伤害.</p>",
+          "value": "<p>近战或远程武器攻击：+2 命中，触及5英尺或射程20/60英尺，针对一名目标。命中：2（1d4）点穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity81c": {
-            "_id": "dnd5eactivity81c",
+          "dnd5eactivityd1a": {
+            "_id": "dnd5eactivityd1a",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -817,7 +817,7 @@
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>Pinna is a 3rd-level 施法者spellcaster. Her<br>施法属性spellcasting ability is Intelligence (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). Pinna has the<br>following wizard spells prepared:<br>戏法Cantrips (随意at will): minor illusion, mage hand, dancing lights, fire bolt<br>1st level (4 法术位slots): color spray, silent image, identify, magic missile<br>2nd level (2 法术位slots): blur, web</p>",
+          "value": "<p>Pinna is a 3rd-level 施法者spellcaster. Her<br>施法属性spellcasting ability is Intelligence (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). Pinna has the<br>following wizard spells prepared:<br>戏法Cantrips (随意at will): 小型幻象minor illusion, 法师之手mage hand, 舞动的光芒dancing lights, 火焰弹fire bolt<br>1st level (4 法术位slots): 色彩喷射color spray, 无声幻象silent image, 鉴定identify, 魔法飞弹magic missile<br>2nd level (2 法术位slots): 模糊术blur, 蛛网术web</p>",
           "chat": ""
         },
         "source": {
@@ -848,7 +848,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774201410701,
-    "modifiedTime": 1774201410701
+    "createdTime": 1774273722559,
+    "modifiedTime": 1774273722559
   }
 }
