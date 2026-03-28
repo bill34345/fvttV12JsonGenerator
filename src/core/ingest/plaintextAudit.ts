@@ -115,7 +115,7 @@ export function validateAction(action: any, creatureName: string, section: strin
 }
 
 export class PlainTextAuditWorkflow {
-  public audit(middleDir: string, sourcePath: string): PlainTextAuditWorkflowResult {
+  public audit(middleDir: string, sourcePath: string, auditDir?: string): PlainTextAuditWorkflowResult {
     const files = readdirSync(middleDir).filter(f => f.endsWith('.md'));
     const allIssues: AuditIssue[] = [];
     let creatureCount = 0;
@@ -139,7 +139,7 @@ export class PlainTextAuditWorkflow {
       }
     }
 
-    const reportPath = this.getReportPath(sourcePath);
+    const reportPath = this.getReportPath(sourcePath, auditDir);
     const report = this.generateReport(sourcePath, creatureCount, allIssues);
     const markdown = emitAuditMarkdown(report);
 
@@ -168,10 +168,11 @@ export class PlainTextAuditWorkflow {
     }
   }
 
-  private getReportPath(sourcePath: string): string {
+  private getReportPath(sourcePath: string, auditDir?: string): string {
     const date = new Date().toISOString().split('T')[0]!;
     const slug = basename(sourcePath, '.md').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    return join(process.cwd(), 'audits', `${date}-${slug}-audit.md`);
+    const dir = auditDir ?? join(process.cwd(), 'audits');
+    return join(dir, `${date}-${slug}-audit.md`);
   }
 
   private generateReport(sourcePath: string, creatureCount: number, issues: AuditIssue[]): AuditReport {
