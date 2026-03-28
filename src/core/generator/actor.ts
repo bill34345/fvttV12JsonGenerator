@@ -12,6 +12,7 @@ import {
 import type { TranslationContext } from '../translation';
 import { ActivityGenerator } from './activity';
 import type { ParsedNPC } from '../../config/mapping';
+import type { StructuredActionData } from '../models/action';
 import { spellsMapper } from '../mapper/spells';
 import { i18n } from '../mapper/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';
@@ -411,11 +412,15 @@ export class ActorGenerator {
     actor.system.details.biography.value = this.formatStructuredHtml(extracted.biography);
     this.appendActionItems(newItems, extracted.features, 'passive');
 
-    this.appendActionItems(newItems, parsed.actions, 'action');
-    this.appendActionItems(newItems, parsed.bonus_actions, 'bonus');
-    this.appendActionItems(newItems, parsed.reactions, 'reaction');
-    this.appendActionItems(newItems, parsed.legendary_actions, 'legendary');
-    this.appendActionItems(newItems, parsed.lair_actions, 'lair');
+    if (parsed.structuredActions) {
+      this.appendStructuredActionItems(newItems, parsed.structuredActions);
+    } else {
+      this.appendActionItems(newItems, parsed.actions, 'action');
+      this.appendActionItems(newItems, parsed.bonus_actions, 'bonus');
+      this.appendActionItems(newItems, parsed.reactions, 'reaction');
+      this.appendActionItems(newItems, parsed.legendary_actions, 'legendary');
+      this.appendActionItems(newItems, parsed.lair_actions, 'lair');
+    }
 
     // Regional Effects
     if (parsed.regional_effects) {
@@ -723,6 +728,151 @@ export class ActorGenerator {
       const item = this.createItemFromAction(actionData, activities, isPassive ? '' : activationType);
       items.push(item);
     }
+  }
+
+  private appendStructuredActionItems(items: any[], structured: ParsedNPC['structuredActions']): void {
+    if (!structured) return;
+
+    const sectionMap: Array<{ key: keyof NonNullable<ParsedNPC['structuredActions']>; activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive' }> = [
+      { key: '特性', activationType: 'passive' },
+      { key: '动作', activationType: 'action' },
+      { key: '附赠动作', activationType: 'bonus' },
+      { key: '反应', activationType: 'reaction' },
+      { key: '传奇动作', activationType: 'legendary' },
+    ];
+
+    for (const { key, activationType } of sectionMap) {
+      const actions = structured[key];
+      if (!actions || !Array.isArray(actions)) continue;
+
+      for (const action of actions) {
+        this.appendSingleStructuredAction(items, action, activationType);
+      }
+    }
+  }
+
+  private appendSingleStructuredAction(items: any[], action: StructuredActionData, activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive'): void {
+    const activityData = this.structuredActionToActivityData(action);
+    const activities = this.activityGenerator.generate(activityData);
+    const item = this.createItemFromAction(
+      { name: action.name, type: action.type, desc: action.describe } as any,
+      activities,
+      activationType === 'passive' ? '' : activationType,
+    );
+
+    if (action.subActions && action.subActions.length > 0) {
+      this.attachSubActivities(item, action.subActions);
+    }
+
+    if (action.embeddedEffects && action.embeddedEffects.length > 0) {
+      this.attachEmbeddedEffects(item, action.embeddedEffects);
+    }
+
+    if (action.recharge) {
+      item.system.uses = { value: 0, max: '', per: 'recharge' };
+      item.system.activation.type = activationType === 'legendary' ? 'legendary' : activationType;
+    }
+
+    if (action.concentration) {
+      item.system.concentration = true;
+    }
+
+    if (action.perLongRest) {
+      item.system.uses = { value: action.perLongRest, max: action.perLongRest, per: 'lr' };
+    }
+
+    items.push(item);
+  }
+
+  private structuredActionToActivityData(action: StructuredActionData): any {
+    const base: any = {
+      name: action.name,
+      englishName: action.englishName,
+      type: action.type,
+      desc: action.describe || '',
+    };
+
+    if (action.type === 'attack' && action.attackType) {
+      base.attack = { type: action.attackType };
+      if (action.toHit !== undefined) base.attack.damage = [];
+      if (action.damage && action.damage.length > 0) {
+        base.attack.damage = action.damage.map(d => ({ formula: d.formula, type: d.type }));
+      }
+      if (action.toHit !== undefined) {
+        base.attack.toHit = action.toHit;
+      }
+      if (action.range) base.range = action.range;
+    }
+
+    if ((action.type === 'save' || action.DC) && action.DC) {
+      base.save = { dc: action.DC, ability: action.ability || 'str' };
+      if (action.aoe) {
+        base.save.dc = action.DC;
+        base.aoe = { type: action.aoe.shape, template: { distance: action.aoe.range, type: action.aoe.shape } };
+      }
+    }
+
+    if (action.target) {
+      base.target = { count: action.target.count === 'all' ? 'all' : (typeof action.target.count === 'number' ? action.target.count : 1), type: action.target.type };
+      if (action.target.special) base.target.affects = { text: action.target.special };
+    }
+
+    if (action.failEffects && action.failEffects.length > 0) {
+      const failEffect = action.failEffects[0];
+      if (failEffect.formula) {
+        base.damage = base.damage || [];
+        base.damage.push({ formula: failEffect.formula, type: failEffect.type || 'damage' });
+      }
+      if (failEffect.state) {
+        base.saveFailure = failEffect.state;
+      }
+    }
+
+    return base;
+  }
+
+  private attachSubActivities(item: any, subActions: StructuredActionData['subActions']): void {
+    if (!subActions || !subActions.length) return;
+    const activities = item?.system?.activities;
+    if (!activities) return;
+
+    const mainActivityKey = Object.keys(activities)[0];
+    if (!mainActivityKey) return;
+
+    const mainActivity = activities[mainActivityKey];
+    if (!mainActivity) return;
+
+    for (const sub of subActions) {
+      const subData = this.structuredActionToActivityData(sub as StructuredActionData);
+      const subActivity = this.activityGenerator.generate(subData);
+      const subKey = Object.keys(subActivity)[0];
+      if (subKey && subActivity[subKey]) {
+        activities[subKey] = subActivity[subKey];
+        if (sub.trigger) {
+          activities[subKey].trigger = { type: this.mapTriggerType(sub.trigger) };
+        }
+        if (sub.threshold !== undefined) {
+          activities[subKey].damageThreshold = sub.threshold;
+        }
+      }
+    }
+  }
+
+  private attachEmbeddedEffects(item: any, embeddedEffects: StructuredActionData['embeddedEffects']): void {
+    if (!embeddedEffects || !embeddedEffects.length) return;
+  }
+
+  private mapTriggerType(trigger: string): string {
+    const map: Record<string, string> = {
+      '命中后': 'hit',
+      '失败': 'saveFailure',
+      '成功': 'saveSuccess',
+      '低值': 'damageThreshold',
+      '降至0': 'reduceHP',
+      '濒血': 'halfHP',
+      'special': 'special',
+    };
+    return map[trigger] || 'special';
   }
 
   private extractInlineFeatureLinesFromBiography(biography: unknown): { biography: string; features: string[] } {
