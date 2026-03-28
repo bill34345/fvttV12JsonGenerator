@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import yaml from 'js-yaml';
+import { PlainTextAuditWorkflow } from './plaintextAudit';
 import {
   OpenAICompatibleTranslator,
   createTranslationConfigFromEnv,
@@ -217,28 +218,54 @@ export class PlainTextIngestionWorkflow {
   public async ingest(options: PlainTextIngestionOptions): Promise<PlainTextIngestionResult> {
     const sourcePath = this.resolvePath(options.sourcePath);
     const emitDir = this.resolvePath(options.emitDir);
+    const middleDir = join(dirname(emitDir), 'middle');
+    const auditDir = join(dirname(emitDir), 'audits');
     const raw = readFileSync(sourcePath, 'utf-8');
     const blocks = splitCollection(raw);
     const files: IngestedCreatureFile[] = [];
 
     for (const block of blocks) {
-      const normalized = await this.normalizeBlock(block.rawBlock, Boolean(options.enableAiNormalize));
-      const creature = parseCreatureBlock(normalized);
+      let normalized = normalizeBlock(block.rawBlock);
+
+      // 如果启用 AI normalization
+      if (options.enableAiNormalize && this.aiNormalizer) {
+        try {
+          const aiText = await this.aiNormalizer.normalizeBlock(normalized);
+          normalized = aiText;
+        } catch {
+          // 回退到基于规则的 normalization
+        }
+      }
+
+      // CRITICAL: 检测 normalized 是 YAML-only 还是 markdown
+      let creature: IngestedCreatureFile;
+      if (normalized.trim().startsWith('---') || normalized.includes('名称:')) {
+        // AI 输出的纯 YAML - 不同的解析方式
+        creature = parseYamlNormalizedBlock(normalized, block.heading);
+      } else {
+        // 标准 markdown 格式
+        creature = parseCreatureBlock(normalized);
+      }
       files.push(creature);
     }
 
     if (!options.dryRun) {
-      mkdirSync(emitDir, { recursive: true });
+      mkdirSync(middleDir, { recursive: true });
+      mkdirSync(auditDir, { recursive: true });
       for (const file of files) {
-        const outputPath = join(emitDir, file.fileName);
+        const outputPath = join(middleDir, file.fileName);
         mkdirSync(dirname(outputPath), { recursive: true });
         writeFileSync(outputPath, file.markdown);
       }
+
+      // 触发审计
+      const auditWorkflow = new PlainTextAuditWorkflow();
+      auditWorkflow.audit(middleDir, sourcePath);
     }
 
     return {
       sourcePath,
-      emitDir,
+      emitDir: middleDir,
       dryRun: Boolean(options.dryRun),
       usedAi: Boolean(options.enableAiNormalize && this.aiNormalizer),
       files,
@@ -382,6 +409,31 @@ export function parseCreatureBlock(block: string): IngestedCreatureFile {
     frontmatter,
     sections,
     rawNotes,
+  };
+}
+
+export function parseYamlNormalizedBlock(yamlContent: string, heading: string): IngestedCreatureFile {
+  // yamlContent 是 AI 输出的纯 YAML
+  // heading 是 AI 调用前提取的原始块标题
+
+  const frontmatter = yaml.load(yamlContent) as Frontmatter;
+
+  // 从 heading 提取名称 (使用原有逻辑)
+  const names = parseNamesFromHeading(heading);
+  const slug = slugifyEnglishName(names.englishName || names.chineseName);
+
+  // 始终使用 {slug}__{chinese-name}.md 格式
+  const fileName = `${slug}__${sanitizeFileName(names.chineseName)}.md`;
+
+  return {
+    chineseName: names.chineseName,
+    englishName: names.englishName,
+    slug,
+    fileName,
+    markdown: `---\n${yaml.dump(frontmatter, { lineWidth: -1, noRefs: true, sortKeys: false })}---\n`,
+    frontmatter,
+    sections: {}, // AI 输出没有 section body - 都在 YAML 中
+    rawNotes: [],
   };
 }
 
