@@ -1,0 +1,234 @@
+{
+  "name": "滑行血鳍 (Slithering Bloodfin)",
+  "slug": "slithering-bloodfin",
+  "structuredActions": {
+    "特性": [
+      {
+        "name": "血狂",
+        "englishName": "Blood Frenzy",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "滑行血鳍对生命值未满的生物进行近战攻击时具有优势。"
+      },
+      {
+        "name": "扭滑",
+        "englishName": "Wriggly",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "滑行血鳍可以消耗5尺移动距离，以摆脱自身的束缚效果；若你需要直接落地执行，可以将其视为结束自身的被擒抱或受限状态。"
+      },
+      {
+        "name": "死亡爆裂",
+        "englishName": "Death Burst",
+        "type": "save",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "当滑行血鳍死亡时，它会在自身周围10尺半径内爆出一团有毒血雾。区域内每个生物必须进行一次DC 16的体质豁免检定。",
+        "DC": 16,
+        "ability": "con",
+        "failEffects": [
+          {
+            "formula": "3d6",
+            "type": "毒素",
+            "state": "中毒",
+            "describe": "受到10（3d6）点毒素伤害，并陷入中毒状态"
+          }
+        ],
+        "specialEffects": [
+          {
+            "trigger": "豁免失败",
+            "describe": "目标还需进行一次魅力豁免检定以抵抗绯晶腐化"
+          }
+        ]
+      }
+    ],
+    "动作": [
+      {
+        "name": "多重攻击",
+        "englishName": "Multiattack",
+        "type": "utility",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "发动一次啃咬攻击和一次尾击攻击。"
+      },
+      {
+        "name": "啃咬",
+        "englishName": "Bite",
+        "type": "attack",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "近战武器攻击：命中+9，触及5尺，单一目标。命中：14（2d8+5）点穿刺伤害，且目标被擒抱（逃脱DC 15），并同时陷入受限状态。",
+        "attackType": "mwak",
+        "toHit": 9,
+        "range": "触及5尺",
+        "damage": [
+          {
+            "formula": "2d8+5",
+            "type": "穿刺"
+          }
+        ],
+        "target": {
+          "count": 1,
+          "type": "creature"
+        },
+        "embeddedEffects": [
+          {
+            "type": "擒抱",
+            "describe": "目标被擒抱（逃脱DC 15）",
+            "duration": "持续"
+          },
+          {
+            "type": "受限",
+            "describe": "目标同时陷入受限状态",
+            "duration": "持续"
+          }
+        ]
+      },
+      {
+        "name": "尾击",
+        "englishName": "Tail Crash",
+        "type": "attack",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "近战武器攻击：命中+9，触及10尺，单一目标（不能是与啃咬相同的目标）。命中：19（4d6+5）点钝击伤害。强击：命中结果高出目标AC 5或更多时，额外造成以下一种效果。",
+        "attackType": "mwak",
+        "toHit": 9,
+        "range": "触及10尺",
+        "damage": [
+          {
+            "formula": "4d6+5",
+            "type": "钝击"
+          }
+        ],
+        "target": {
+          "count": 1,
+          "type": "creature",
+          "special": "不能是与啃咬相同的目标"
+        },
+        "subActions": [
+          {
+            "name": "流血创口 (Bleeding Wound)",
+            "type": "damage",
+            "trigger": "强击",
+            "damage": [
+              {
+                "formula": "1d6",
+                "type": "流血"
+              }
+            ],
+            "describe": "目标流血1d6。目标在其每个回合开始时受到1d6点伤害；流血层数可以叠加，若目标恢复任意生命值，或自身/5尺内一名生物使用一个动作替其止血，则该效果结束。"
+          },
+          {
+            "name": "震荡冲击 (Reeling Impact)",
+            "type": "save",
+            "trigger": "强击",
+            "DC": 15,
+            "ability": "con",
+            "describe": "目标必须进行一次DC 15的体质豁免检定，豁免失败则陷入恍惚。恍惚：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。"
+          },
+          {
+            "name": "击退 (Push)",
+            "type": "utility",
+            "trigger": "强击",
+            "describe": "目标被推出10尺。"
+          }
+        ]
+      }
+    ],
+    "附赠动作": [
+      {
+        "name": "吞咽",
+        "englishName": "Swallow",
+        "type": "attack",
+        "activation": {
+          "type": "bonus"
+        },
+        "describe": "近战武器攻击：命中+9，触及5尺，单一被滑行血鳍擒抱的生物。命中：目标被吞下。被吞下的目标不再处于被擒抱状态，但陷入目盲和受限状态，并且对来自滑行血鳍体外的攻击和其他效应视为处于完全掩护。目标立刻受到14（4d6）点死灵伤害，之后还会再次受到同样伤害；滑行血鳍恢复等同于造成伤害的生命值。若滑行血鳍在单一回合内累计受到30点来自其体内的伤害，或累计受到20点钝击伤害，则它必须在该回合结束时进行一次DC 15的体质豁免检定。豁免失败时，它会吐出被吞下的生物；该生物出现在滑行血鳍周围5尺内，并陷入倒地状态。",
+        "attackType": "mwak",
+        "toHit": 9,
+        "range": "触及5尺",
+        "damage": [
+          {
+            "formula": "4d6",
+            "type": "死灵"
+          }
+        ],
+        "target": {
+          "count": 1,
+          "type": "creature",
+          "special": "已被擒抱的生物"
+        },
+        "specialEffects": [
+          {
+            "trigger": "累计受到30点来自体内的伤害或20点钝击伤害",
+            "describe": "在该回合结束时进行一次DC 15的体质豁免检定。豁免失败时吐出被吞下的生物。"
+          },
+          {
+            "trigger": "命中",
+            "describe": "目标立刻受到14（4d6）点死灵伤害，之后还会再次受到同样伤害；滑行血鳍恢复等同于造成伤害的生命值"
+          }
+        ],
+        "embeddedEffects": [
+          {
+            "type": "目盲",
+            "describe": "被吞下的目标陷入目盲状态",
+            "duration": "持续"
+          },
+          {
+            "type": "受限",
+            "describe": "被吞下的目标陷入受限状态",
+            "duration": "持续"
+          },
+          {
+            "type": "完全掩护",
+            "describe": "对来自滑行血鳍体外的攻击和其他效应视为处于完全掩护",
+            "duration": "持续"
+          }
+        ]
+      }
+    ],
+    "反应": [
+      {
+        "name": "滑溜",
+        "englishName": "Slippery",
+        "type": "utility",
+        "activation": {
+          "type": "reaction"
+        },
+        "describe": "当一次近战攻击未命中滑行血鳍时，它可以移动至多10尺，且该移动不会引发借机攻击。"
+      },
+      {
+        "name": "远洋尖啸",
+        "englishName": "Pelagic Screech",
+        "type": "save",
+        "activation": {
+          "type": "reaction",
+          "condition": "濒血时，每日1次"
+        },
+        "describe": "滑行血鳍发出一道穿透海水的灵能尖啸。与它处于同一片水体、且位于其300尺内的每个其他生物都必须进行一次DC 15的感知豁免检定。豁免失败：目标陷入恍惚。恍惚：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。",
+        "DC": 15,
+        "ability": "wis",
+        "target": {
+          "count": "all",
+          "type": "creature",
+          "special": "同处一片水体、300尺范围内的其他生物"
+        },
+        "perLongRest": 1,
+        "failEffects": [
+          {
+            "state": "恍惚",
+            "describe": "直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。"
+          }
+        ]
+      }
+    ]
+  }
+}

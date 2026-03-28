@@ -1,0 +1,223 @@
+{
+  "name": "底栖魔鱼\"阿利克辛\" (Alyxian Aboleth)",
+  "slug": "alyxian-aboleth",
+  "structuredActions": {
+    "特性": [
+      {
+        "name": "探测心灵感应",
+        "englishName": "Probing Telepathy",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "若一个生物通过心灵感应与底栖魔鱼交流，且底栖魔鱼能看见该生物，底栖魔鱼即可获知该生物最深层的渴望 (Greatest Desires)。"
+      },
+      {
+        "name": "恶毒黏液",
+        "englishName": "Vicious Mucous",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "在水下时，底栖魔鱼周围半径 10 尺的区域对非异怪生物视为困难地形 (Difficult Terrain)。受此黏液影响的生物若尝试在回合内进行除第一次以外的攻击，需进行一次 DC 14 的力量 (Strength) 豁免检定，豁免失败则该次攻击失效。"
+      },
+      {
+        "name": "夺心者韧性",
+        "englishName": "Mindtaker Resilience",
+        "type": "utility",
+        "activation": {
+          "type": "special",
+          "condition": "3次/日"
+        },
+        "describe": "若底栖魔鱼豁免失败，它可以选择直接豁免成功。当它使用此特性时，每个被底栖魔鱼支配 (Dominated) 的生物都可以进行一次具有优势 (Advantage) 的 DC 19 感知 (Wisdom) 豁免检定，成功则摆脱控制。"
+      }
+    ],
+    "动作": [
+      {
+        "name": "多重攻击",
+        "englishName": "Multiattack",
+        "type": "utility",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "底栖魔鱼进行三次触手 (Tentacle) 攻击；它可以将其中一次替换为使用支配 (Dominate) 或迫使 (Compel)。"
+      },
+      {
+        "name": "迫使",
+        "englishName": "Compel",
+        "type": "utility",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "一个被底栖魔鱼魅惑 (Charmed) 的生物对底栖魔鱼指定的一个生物进行一次武器攻击或施放一个戏法 (Cantrip)。"
+      },
+      {
+        "name": "触手",
+        "englishName": "Tentacle",
+        "type": "attack",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "",
+        "attackType": "mwak",
+        "toHit": 10,
+        "range": "触及 10 尺",
+        "damage": [
+          {
+            "formula": "3d6+5",
+            "type": "钝击"
+          }
+        ],
+        "subActions": [
+          {
+            "name": "触手 - 疾病 (Tentacle - Disease)",
+            "type": "save",
+            "trigger": "命中后",
+            "DC": 16,
+            "ability": "con",
+            "describe": ""
+          }
+        ]
+      },
+      {
+        "name": "支配",
+        "englishName": "Dominate",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "condition": "需专注 / Concentration"
+        },
+        "describe": "",
+        "DC": 18,
+        "ability": "wis",
+        "target": {
+          "count": 1,
+          "type": "creature",
+          "special": "视线内"
+        },
+        "failEffects": [
+          {
+            "describe": "目标被魔法魅惑 (Charmed) 并受底栖魔鱼控制。每当被魅惑的目标受到伤害时，可重复该豁免。"
+          }
+        ],
+        "lowValueEffects": [
+          {
+            "describe": "目标陷入恍惚 (Dazed)，直到其下回合结束。"
+          }
+        ]
+      },
+      {
+        "name": "奴役",
+        "englishName": "Enslave",
+        "type": "save",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "",
+        "DC": 17,
+        "ability": "wis",
+        "target": {
+          "count": 1,
+          "type": "creature",
+          "special": "仅限被魅惑的目标"
+        },
+        "recharge": [
+          5,
+          6
+        ],
+        "failEffects": [
+          {
+            "formula": "15d10",
+            "type": "心灵",
+            "describe": "若此伤害使被魅惑生物的生命值降至 0，则其恢复 98（15d10）点生命值，并且底栖魔鱼不再需要专注即可维持对其的支配。"
+          }
+        ],
+        "successEffects": [
+          {
+            "describe": "伤害减半。"
+          }
+        ]
+      },
+      {
+        "name": "触手旋风",
+        "englishName": "Tentacle Whirlwind",
+        "type": "save",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "",
+        "DC": 17,
+        "ability": "dex",
+        "aoe": {
+          "shape": "sphere",
+          "range": 15,
+          "width": 0,
+          "height": 0
+        },
+        "target": {
+          "count": "all",
+          "type": "creature"
+        },
+        "recharge": [
+          5,
+          6
+        ],
+        "failEffects": [
+          {
+            "formula": "10d6",
+            "type": "钝击",
+            "describe": "受到 35（10d6）点钝击伤害，并被推开 20 尺。"
+          }
+        ],
+        "successEffects": [
+          {
+            "describe": "伤害减半，且不会被推开。"
+          }
+        ]
+      }
+    ],
+    "传奇动作": [
+      {
+        "name": "精神迷雾",
+        "englishName": "Mental Fog",
+        "type": "save",
+        "activation": {
+          "type": "legendary",
+          "condition": "消耗 2 动作"
+        },
+        "describe": "",
+        "DC": 17,
+        "ability": "int",
+        "target": {
+          "count": 1,
+          "type": "creature"
+        },
+        "failEffects": [
+          {
+            "formula": "4d6",
+            "type": "心灵",
+            "describe": "目标受到 14（4d6）点心灵伤害，并且在其于底栖魔鱼下个回合结束前进行的下一次豁免检定中减去 1d6。"
+          }
+        ]
+      },
+      {
+        "name": "魂缚互换",
+        "englishName": "Soulbound Swap",
+        "type": "utility",
+        "activation": {
+          "type": "legendary"
+        },
+        "describe": "底栖魔鱼和至多一个被其魅惑的生物进行传送，互换位置。"
+      },
+      {
+        "name": "迫使",
+        "englishName": "Compel",
+        "type": "utility",
+        "activation": {
+          "type": "legendary"
+        },
+        "describe": "底栖魔鱼使用其迫使 (Compel) 能力。"
+      }
+    ]
+  }
+}

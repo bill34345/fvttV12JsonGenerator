@@ -1,0 +1,129 @@
+{
+  "name": "蛇口蛮蟹 (Scuttling Serpentmaw)",
+  "slug": "scuttling-serpentmaw",
+  "structuredActions": {
+    "特性": [
+      {
+        "name": "群猎战术",
+        "englishName": "Pack Tactics",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "只要蛇吻至少有一个盟友位于目标生物5尺内，且该盟友未处于失能状态，则蛇吻对该生物的攻击检定具有优势。"
+      },
+      {
+        "name": "脆壳反震",
+        "englishName": "Brittle Shell",
+        "type": "utility",
+        "activation": {
+          "type": "special"
+        },
+        "describe": "若蛇吻受到来自单一来源10点或以上的钝击伤害，则它的AC降至14，直到其完成一次短休或长休。"
+      }
+    ],
+    "动作": [
+      {
+        "name": "多重攻击",
+        "englishName": "Multiattack",
+        "type": "utility",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "蛇吻进行一次毒液咬击和一次爪击。"
+      },
+      {
+        "name": "爪击",
+        "englishName": "Claw",
+        "type": "attack",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "近战武器攻击：命中+6，单一目标。命中造成8（1d8+3）点挥砍伤害或穿刺伤害。",
+        "attackType": "mwak",
+        "toHit": 6,
+        "range": "触及 5 尺",
+        "damage": [
+          {
+            "formula": "1d8+3",
+            "type": "挥砍"
+          }
+        ]
+      },
+      {
+        "name": "毒液咬击",
+        "englishName": "Venomous Bite",
+        "type": "attack",
+        "activation": {
+          "type": "action"
+        },
+        "describe": "近战武器攻击：命中+6，触及15尺，单一目标。命中造成10（2d6+3）点穿刺伤害。若此次攻击具有优势，则改为造成17点穿刺伤害。",
+        "attackType": "mwak",
+        "toHit": 6,
+        "range": "触及 15 尺",
+        "damage": [
+          {
+            "formula": "2d6+3",
+            "type": "穿刺"
+          }
+        ],
+        "target": {
+          "count": 1,
+          "type": "creature"
+        },
+        "subActions": [
+          {
+            "name": "盐水电击 (Brine-shock)",
+            "type": "save",
+            "trigger": "special",
+            "DC": 14,
+            "ability": "con",
+            "describe": ""
+          },
+          {
+            "name": "针刺噬咬 (Needling Bite)",
+            "type": "damage",
+            "trigger": "special",
+            "damage": [
+              {
+                "formula": "1d6",
+                "type": "穿刺"
+              }
+            ],
+            "describe": "只能对本回合已被爪击命中的目标使用。该次咬击额外造成1颗伤害骰的伤害，且目标开始流血1d6。"
+          },
+          {
+            "name": "吸血噬咬 (Vampiric Bite)",
+            "type": "save",
+            "trigger": "special",
+            "DC": 14,
+            "ability": "con",
+            "describe": "目标失去1颗未消耗的生命骰。若目标以此方式失去生命骰，则蛇吻获得10点临时生命值。若此效果使目标的生命骰降为0，则目标必须立即进行一次对抗绯晶腐化的豁免检定。"
+          }
+        ]
+      }
+    ],
+    "反应": [
+      {
+        "name": "缩壳防御",
+        "englishName": "Retract",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "condition": "成为一次攻击的目标时"
+        },
+        "describe": "蛇吻令自身AC提高+4，并获得四分之三掩护，直到其下一回合开始。该效果总计提供+9 AC。在其接下来的回合中，蛇吻不能进行毒液咬击。"
+      },
+      {
+        "name": "急窜脱离",
+        "englishName": "Scuttle",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "condition": "进行一次对抗法术或魔法效果的豁免检定时"
+        },
+        "describe": "蛇吻可以移动至多其速度的一半。若该移动使其离开该法术或魔法效果的作用范围或区域，则它不受该效果影响。"
+      }
+    ]
+  }
+}
