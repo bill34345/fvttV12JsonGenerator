@@ -225,25 +225,25 @@ export class PlainTextIngestionWorkflow {
     const files: IngestedCreatureFile[] = [];
 
     for (const block of blocks) {
-      let normalized = normalizeBlock(block.rawBlock);
+      const ruleBasedNormalized = normalizeBlock(block.rawBlock);
+      let normalized = ruleBasedNormalized;
 
-      // 如果启用 AI normalization
       if (options.enableAiNormalize && this.aiNormalizer) {
         try {
-          const aiText = await this.aiNormalizer.normalizeBlock(normalized);
-          normalized = aiText;
+          const aiText = await this.aiNormalizer.normalizeBlock(ruleBasedNormalized);
+          const isYaml = aiText.trim().startsWith('---');
+          const isMarkdown = aiText.includes('# **');
+          if (isYaml || isMarkdown) {
+            normalized = aiText;
+          }
         } catch {
-          // 回退到基于规则的 normalization
         }
       }
 
-      // CRITICAL: 检测 normalized 是 YAML-only 还是 markdown
       let creature: IngestedCreatureFile;
-      if (normalized.trim().startsWith('---') || normalized.includes('名称:')) {
-        // AI 输出的纯 YAML - 不同的解析方式
+      if (normalized.trim().startsWith('---')) {
         creature = parseYamlNormalizedBlock(normalized, block.heading);
       } else {
-        // 标准 markdown 格式
         creature = parseCreatureBlock(normalized);
       }
       files.push(creature);
@@ -413,16 +413,26 @@ export function parseCreatureBlock(block: string): IngestedCreatureFile {
 }
 
 export function parseYamlNormalizedBlock(yamlContent: string, heading: string): IngestedCreatureFile {
-  // yamlContent 是 AI 输出的纯 YAML
-  // heading 是 AI 调用前提取的原始块标题
+  let frontmatterData: string = yamlContent.trim();
 
-  const frontmatter = yaml.load(yamlContent) as Frontmatter;
+  const fenceMatch = frontmatterData.match(/^```(?:json)?\s*\n?([\s\S]+?)\n?```$/);
+  if (fenceMatch?.[1]) {
+    frontmatterData = fenceMatch[1].trim();
+  }
 
-  // 从 heading 提取名称 (使用原有逻辑)
+  try {
+    const parsed = JSON.parse(frontmatterData);
+    if (parsed && typeof parsed === 'object' && 'frontmatter' in parsed) {
+      frontmatterData = parsed.frontmatter as string;
+    }
+  } catch {
+  }
+
+  const frontmatterArray = yaml.loadAll(frontmatterData) as Frontmatter[];
+  const frontmatter = frontmatterArray[0] as Frontmatter;
+
   const names = parseNamesFromHeading(heading);
   const slug = slugifyEnglishName(names.englishName || names.chineseName);
-
-  // 始终使用 {slug}__{chinese-name}.md 格式
   const fileName = `${slug}__${sanitizeFileName(names.chineseName)}.md`;
 
   return {
@@ -432,7 +442,7 @@ export function parseYamlNormalizedBlock(yamlContent: string, heading: string): 
     fileName,
     markdown: `---\n${yaml.dump(frontmatter, { lineWidth: -1, noRefs: true, sortKeys: false })}---\n`,
     frontmatter,
-    sections: {}, // AI 输出没有 section body - 都在 YAML 中
+    sections: {},
     rawNotes: [],
   };
 }
@@ -1010,7 +1020,7 @@ function normalizeInlineText(value: string): string {
     .replace(/[’]/g, "'");
 }
 
-class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
+export class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
   private readonly translator: OpenAICompatibleTranslator;
 
   constructor(options: { apiKey: string; baseUrl: string; model: string; timeoutMs: number }) {
@@ -1158,13 +1168,26 @@ class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
       namespace: 'plaintext-ingest',
     });
 
+    const cleaned = response.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+    let jsonContent = cleaned;
+    const jsonMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]+?)\n?```$/);
+    if (jsonMatch?.[1]) {
+      jsonContent = jsonMatch[1].trim();
+    }
+
     try {
-      const parsed = JSON.parse(response);
+      const parsed = JSON.parse(jsonContent);
       if (parsed.frontmatter) {
-        return parsed.frontmatter;
+        const frontmatter = parsed.frontmatter as string;
+        const yamlStart = frontmatter.indexOf('---');
+        if (yamlStart > 0) {
+          return frontmatter.substring(yamlStart);
+        }
+        return frontmatter;
       }
     } catch {
     }
-    return response;
+    return cleaned;
   }
 }

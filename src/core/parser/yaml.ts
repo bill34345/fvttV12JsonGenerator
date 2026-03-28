@@ -173,10 +173,10 @@ export class YamlParser {
       if (internalKey === 'creatureType') result.details.creatureType = processedValue;
       // biography handled via body
     } else if (path === 'items') {
-      if (internalKey === 'actions') result.actions = processedValue;
-      if (internalKey === 'reactions') result.reactions = processedValue;
-      if (internalKey === 'bonus_actions') result.bonus_actions = processedValue;
-      if (internalKey === 'legendary_actions') {
+      if (internalKey === 'actions' || internalKey === '动作') result.actions = processedValue;
+      if (internalKey === 'reactions' || internalKey === '反应') result.reactions = processedValue;
+      if (internalKey === 'bonus_actions' || internalKey === '附赠动作') result.bonus_actions = processedValue;
+      if (internalKey === 'legendary_actions' || internalKey === '传奇动作') {
         result.legendary_actions = processedValue;
         if (Array.isArray(processedValue) && processedValue.length > 0) {
           const first = processedValue[0];
@@ -192,12 +192,12 @@ export class YamlParser {
           }
         }
       }
-      if (internalKey === 'lair_actions') {
+      if (internalKey === 'lair_actions' || internalKey === '巢穴动作') {
         result.lair_actions = processedValue;
         result.lairInitiative = this.extractLairInitiative(processedValue);
       }
-      if (internalKey === 'regional_effects') result.regional_effects = processedValue;
-      if (internalKey === 'spellcasting') result.spellcasting = processedValue;
+      if (internalKey === 'regional_effects' || internalKey === '巢穴效应') result.regional_effects = processedValue;
+      if (internalKey === 'spellcasting' || internalKey === '施法') result.spellcasting = processedValue;
       if (['特性', '动作', '附赠动作', '反应', '传奇动作'].includes(internalKey)) {
         const structuredParser = new StructuredActionParser();
         const sectionMap: Record<string, string> = {

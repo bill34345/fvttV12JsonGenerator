@@ -37,10 +37,11 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "背景": { key: "biography", path: "system.details.biography.value", type: "html" }, // Alias
 
   // Items / Actions
-  "动作": { key: "actions", path: "items", type: "array" },
-  "反应": { key: "reactions", path: "items", type: "array" },
-  "附赠动作": { key: "bonus_actions", path: "items", type: "array" },
-  "传奇动作": { key: "legendary_actions", path: "items", type: "array" },
+  "特性": { key: "特性", path: "items", type: "array" },
+  "动作": { key: "动作", path: "items", type: "array" },
+  "反应": { key: "反应", path: "items", type: "array" },
+  "附赠动作": { key: "附赠动作", path: "items", type: "array" },
+  "传奇动作": { key: "传奇动作", path: "items", type: "array" },
   "巢穴动作": { key: "lair_actions", path: "items", type: "array" },
   "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
   "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
