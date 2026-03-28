@@ -978,7 +978,7 @@ class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
               {
                 role: 'system',
                 content:
-                  'Normalize a D&D creature statblock excerpt into stable markdown. Preserve all facts. Do not invent numbers. Keep the original heading. Normalize section headings to Traits, Actions, Bonus Actions, Reactions, or Legendary Actions. Return only markdown.',
+                  'You are a D&D 5e monster statblock normalizer. Convert bilingual creature text to structured Chinese template format.\n\nOUTPUT FORMAT: Return a JSON object with two fields:\n- "frontmatter": YAML frontmatter as a string (starting with --- and ending with ---)\n- "slug": URL-safe slug derived from the creature name\n\nFrontmatter must follow this structure:\n```yaml\n名称: <bilingual name>\n类型: npc\n体型: <size in Chinese>\n生物类型: <creature type in Chinese>\n阵营: <alignment in Chinese>\n能力:\n  力量: <number>\n  敏捷: <number>\n  体质: <number>\n  智力: <number>\n  感知: <number>\n  魅力: <number>\n护甲等级: <value>\n生命值: <value>\n速度: <value>\n感官: <object or string>\n挑战等级: <number>\n动作:\n  - 名称: <string>\n    类型: attack|save|utility\n    攻击类型: mwak|rwak|msak|rsak  # only if 类型 is attack\n    命中: <string>  # e.g., "+8"\n    范围: <string>  # e.g., "触及10尺" or "射程30/120尺"\n    伤害:\n      - 公式: <string>  # e.g., "2d8+5"\n        类型: 钝击|穿刺|挥砍|毒素|火焰|寒冷|闪电|雷鸣|光耀|暗蚀|力场|心灵|强酸\n    目标:\n      数量: <string>\n      类型: creature|object|creatureOrObject\n      特殊: <string>\n    充能:\n      最小: <number>\n      最大: <number>\n    每日: <number>\n    需专注: <boolean>\n    传奇消耗: <number>\n    描述: <string>\n附赠动作:\n  - <same structure as 动作>\n反应:\n  - <same structure as 动作>\n传奇动作:\n  - <same structure as 动作>\n    激活类型: legendary|action|bonus|reaction|minute|hour|day\n```\n\nRULES:\n- 把动作格式 from `**名称**：近战武器攻击 (Melee Weapon Attack)：** to `**名称** [近战武器攻击]`\n- 把 `**命中 (Hit)**：` to 动作条目中的独立字段\n- 把充能格式 `**充能 5-6 / Recharge 5-6**` to `充能: {最小: 5, 最大: 6}`\n- 把每日格式 `**1/日 / 1/day**` to `每日: 1`\n- 把传奇消耗格式 `**消耗 2 动作**` to `传奇消耗: 2`\n- 把 "仅限被魅惑的目标" to `目标.特殊`\n- 伤害类型映射：Bludgeoning→钝击, Piercing→穿刺, Slashing→挥砍, Poison→毒素, Fire→火焰, Cold→寒冷, Lightning→闪电, Thunder→雷鸣, Radiant→光耀, Necrotic→暗蚀, Force→力场, Psychic→心灵, Acid→强酸\n- Target types must be: creature|object|creatureOrObject (NOT "space")\n\nReturn ONLY a JSON object with "frontmatter" and "slug" fields. No explanations.',
               },
               {
                 role: 'user',
@@ -998,10 +998,19 @@ class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
   }
 
   public async normalizeBlock(block: string): Promise<string> {
-    return this.translator.translate(block, {
+    const response = await this.translator.translate(block, {
       sourceLanguage: 'markdown',
       targetLanguage: 'markdown',
       namespace: 'plaintext-ingest',
     });
+
+    try {
+      const parsed = JSON.parse(response);
+      if (parsed.frontmatter) {
+        return parsed.frontmatter;
+      }
+    } catch {
+    }
+    return response;
   }
 }
