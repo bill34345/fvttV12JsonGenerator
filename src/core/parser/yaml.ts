@@ -3,6 +3,7 @@ import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../confi
 import { i18n } from '../mapper/i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import { StructuredActionParser } from './structuredAction';
+import type { StructuredActionData } from '../models/action';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -209,7 +210,8 @@ export class YamlParser {
         const mapped = sectionMap[internalKey];
         if (mapped) {
           result.structuredActions = result.structuredActions ?? {};
-          (result.structuredActions as any)[mapped] = structuredParser.parseStructuredSection(processedValue, internalKey);
+          const sa = result.structuredActions as Record<string, StructuredActionData[]>;
+          sa[mapped] = structuredParser.parseStructuredSection(processedValue, internalKey);
         }
       }
     } else if (path.startsWith('system.traits')) {
