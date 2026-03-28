@@ -1030,7 +1030,109 @@ class OpenAICompatibleIngestNormalizer implements PlainTextAiNormalizer {
               {
                 role: 'system',
                 content:
-                  'You are a D&D 5e monster statblock normalizer. Convert bilingual creature text to structured Chinese template format.\n\nOUTPUT FORMAT: Return a JSON object with two fields:\n- "frontmatter": YAML frontmatter as a string (starting with --- and ending with ---)\n- "slug": URL-safe slug derived from the creature name\n\nFrontmatter must follow this structure:\n```yaml\n名称: <bilingual name>\n类型: npc\n体型: <size in Chinese>\n生物类型: <creature type in Chinese>\n阵营: <alignment in Chinese>\n能力:\n  力量: <number>\n  敏捷: <number>\n  体质: <number>\n  智力: <number>\n  感知: <number>\n  魅力: <number>\n护甲等级: <value>\n生命值: <value>\n速度: <value>\n感官: <object or string>\n挑战等级: <number>\n动作:\n  - 名称: <string>\n    类型: attack|save|utility\n    攻击类型: mwak|rwak|msak|rsak  # only if 类型 is attack\n    命中: <string>  # e.g., "+8"\n    范围: <string>  # e.g., "触及10尺" or "射程30/120尺"\n    伤害:\n      - 公式: <string>  # e.g., "2d8+5"\n        类型: 钝击|穿刺|挥砍|毒素|火焰|寒冷|闪电|雷鸣|光耀|暗蚀|力场|心灵|强酸\n    目标:\n      数量: <string>\n      类型: creature|object|creatureOrObject\n      特殊: <string>\n    充能:\n      最小: <number>\n      最大: <number>\n    每日: <number>\n    需专注: <boolean>\n    传奇消耗: <number>\n    描述: <string>\n附赠动作:\n  - <same structure as 动作>\n反应:\n  - <same structure as 动作>\n传奇动作:\n  - <same structure as 动作>\n    激活类型: legendary|action|bonus|reaction|minute|hour|day\n```\n\nRULES:\n- 把动作格式 from `**名称**：近战武器攻击 (Melee Weapon Attack)：** to `**名称** [近战武器攻击]`\n- 把 `**命中 (Hit)**：` to 动作条目中的独立字段\n- 把充能格式 `**充能 5-6 / Recharge 5-6**` to `充能: {最小: 5, 最大: 6}`\n- 把每日格式 `**1/日 / 1/day**` to `每日: 1`\n- 把传奇消耗格式 `**消耗 2 动作**` to `传奇消耗: 2`\n- 把 "仅限被魅惑的目标" to `目标.特殊`\n- 伤害类型映射：Bludgeoning→钝击, Piercing→穿刺, Slashing→挥砍, Poison→毒素, Fire→火焰, Cold→寒冷, Lightning→闪电, Thunder→雷鸣, Radiant→光耀, Necrotic→暗蚀, Force→力场, Psychic→心灵, Acid→强酸\n- Target types must be: creature|object|creatureOrObject (NOT "space")\n\nReturn ONLY a JSON object with "frontmatter" and "slug" fields. No explanations.',
+                  'You are a D&D 5e monster statblock-to-YAML converter. Convert creature markdown into structured YAML.\n\n' +
+                  'OUTPUT FORMAT: Return a JSON object with two fields:\n' +
+                  '- "frontmatter": YAML frontmatter as a string (starting with --- and ending with ---)\n' +
+                  '- "slug": URL-safe slug derived from the creature name\n\n' +
+                  'Frontmatter must follow this structure:\n' +
+                  '```yaml\n' +
+                  '名称: <bilingual name>\n' +
+                  '类型: npc\n' +
+                  '体型: <size in Chinese>\n' +
+                  '生物类型: <creature type in Chinese>\n' +
+                  '阵营: <alignment in Chinese>\n' +
+                  '能力:\n' +
+                  '  力量: <number>\n' +
+                  '  敏捷: <number>\n' +
+                  '  体质: <number>\n' +
+                  '  智力: <number>\n' +
+                  '  感知: <number>\n' +
+                  '  魅力: <number>\n' +
+                  '护甲等级: <value>\n' +
+                  '生命值: <value>\n' +
+                  '速度: <value>\n' +
+                  '感官: <object or string>\n' +
+                  '挑战等级: <number>\n' +
+                  '特性:  # or 动作 / 附赠动作 / 反应 / 传奇动作\n' +
+                  '  - 名称: <中文名> (<英文名>)\n' +
+                  '    类型: attack | save | damage | utility\n' +
+                  '    activation:\n' +
+                  '      type: action | bonus | reaction | legendary | special\n' +
+                  '      condition: <触发条件文字>  # optional\n' +
+                  '    描述: <原文描述>\n' +
+                  '    # --- 攻击类 ---\n' +
+                  '    攻击类型: mwak | rwak | msak | rsak\n' +
+                  '    命中: <数字>\n' +
+                  '    范围: <文字>  # "触及 10 尺" / "30/60 尺"\n' +
+                  '    伤害:\n' +
+                  '      - 公式: <骰子>  # "3d6+5"，永远用公式不用结果\n' +
+                  '        类型: 钝击 | 穿刺 | 心灵 | ...\n' +
+                  '    # --- 豁免类 ---\n' +
+                  '    DC: <数字>\n' +
+                  '    属性: 力量 | 敏捷 | 体质 | 智力 | 感知 | 魅力\n' +
+                  '    AoE:\n' +
+                  '      形状: 球形 | 锥形 | 线形 | 立方体 | 圆柱形 | 矩形\n' +
+                  '      范围: <数字>  # 尺\n' +
+                  '    # --- 目标 ---\n' +
+                  '    目标:\n' +
+                  '      数量: <数字> | all | <文字>  # "1" / "所有生物" / "所有非异怪生物"\n' +
+                  '      类型: creature | object\n' +
+                  '      特殊: <文字>  # "仅限被魅惑的目标" / "半径15尺范围内"\n' +
+                  '    # --- 资源 ---\n' +
+                  '    充能: [5, 6]  # [最小, 最大]，没有充能则省略\n' +
+                  '    每日: <数字>\n' +
+                  '    需专注: true | false\n' +
+                  '    # --- 子活动（触发型）---\n' +
+                  '    子活动:\n' +
+                  '      - 名称: <子活动名>\n' +
+                  '        类型: attack | save | damage | utility\n' +
+                  '        触发: 命中后 | 失败 | 成功 | 低值 | 降至0 | 濒血 | special\n' +
+                  '        阈值: <数字>  # 可选\n' +
+                  '        DC: <数字>\n' +
+                  '        属性: 力量 | 敏捷 | ...\n' +
+                  '        伤害:\n' +
+                  '          - 公式: <骰子>\n' +
+                  '            类型: <伤害类型>\n' +
+                  '        内嵌效果:\n' +
+                  '          - 类型: 流血 | 疾病 | 减速 | ...\n' +
+                  '            描述: <原文>\n' +
+                  '            持续: <轮数> | 1分钟 | 专注\n' +
+                  '    # --- 效果 ---\n' +
+                  '    失败效果:\n' +
+                  '      - 公式: <骰子>  # 有伤害时\n' +
+                  '        类型: <伤害类型>\n' +
+                  '        状态: <状态名>  # 如 "中毒" / "魅惑"\n' +
+                  '        描述: <原文>\n' +
+                  '    成功效果:\n' +
+                  '      - 描述: <文字>\n' +
+                  '        状态: <状态名>\n' +
+                  '    低值效果:\n' +
+                  '      - 阈值: <数字>\n' +
+                  '        描述: <原文>\n' +
+                  '        状态: <状态名>\n' +
+                  '    特殊效果:\n' +
+                  '      - 触发: <触发条件>\n' +
+                  '        描述: <原文>\n' +
+                  '```\n\n' +
+                  '判断规则（必须严格遵守）:\n' +
+                  '- 有 DC → 类型: save\n' +
+                  '- 无 DC、有 伤害 → 类型: damage\n' +
+                  '- 无 DC、无 伤害 → 类型: utility\n\n' +
+                  'activation.type 判断:\n' +
+                  '- 特性（被动/触发） → activation.type: special 或省略\n' +
+                  '- 动作 → activation.type: action\n' +
+                  '- 附赠动作 → activation.type: bonus\n' +
+                  '- 反应 → activation.type: reaction\n' +
+                  '- 传奇动作 → activation.type: legendary\n\n' +
+                  '关键规则:\n' +
+                  '1. 伤害永远用公式：原文 "14（4d6）点心灵伤害" → 公式: 4d6，不是 14\n' +
+                  '2. DC 14 无伤害 = 纯豁免：类型 save，无 伤害 字段\n' +
+                  '3. 命中后带 DC：拆成 子活动，父活动无 DC\n' +
+                  '4. condition 文字保留：原文 "濒血时"、"每日 1 次" 保留在 activation.condition\n' +
+                  '5. 流血/减益作为内嵌效果：不生成独立 activity\n' +
+                  '6. 多重攻击：类型: utility，描述 列出触发了哪些动作\n\n' +
+                  '伤害类型映射：Bludgeoning→钝击, Piercing→穿刺, Slashing→挥砍, Poison→毒素, Fire→火焰, Cold→寒冷, Lightning→闪电, Thunder→雷鸣, Radiant→光耀, Necrotic→暗蚀, Force→力场, Psychic→心灵, Acid→强酸\n\n' +
+                  'Return ONLY a JSON object with "frontmatter" and "slug" fields. No explanations.',
               },
               {
                 role: 'user',
