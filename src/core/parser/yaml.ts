@@ -2,6 +2,7 @@ import * as yaml from 'js-yaml';
 import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../config/mapping';
 import { i18n } from '../mapper/i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
+import { StructuredActionParser } from './structuredAction';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -196,6 +197,21 @@ export class YamlParser {
       }
       if (internalKey === 'regional_effects') result.regional_effects = processedValue;
       if (internalKey === 'spellcasting') result.spellcasting = processedValue;
+      if (['特性', '动作', '附赠动作', '反应', '传奇动作'].includes(internalKey)) {
+        const structuredParser = new StructuredActionParser();
+        const sectionMap: Record<string, string> = {
+          '特性': '特性',
+          '动作': '动作',
+          '附赠动作': '附赠动作',
+          '反应': '反应',
+          '传奇动作': '传奇动作',
+        };
+        const mapped = sectionMap[internalKey];
+        if (mapped) {
+          result.structuredActions = result.structuredActions ?? {};
+          (result.structuredActions as any)[mapped] = structuredParser.parseStructuredSection(processedValue, internalKey);
+        }
+      }
     } else if (path.startsWith('system.traits')) {
       if (internalKey === 'senses') {
         const parsedSenses = this.parseSenses(processedValue);

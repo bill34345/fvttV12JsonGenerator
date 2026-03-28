@@ -1,3 +1,5 @@
+import type { StructuredActionData } from "../core/models/action";
+
 export interface FieldDefinition {
   key: string;       // Internal simplified key (e.g., "str", "hp")
   path: string;      // Foundry VTT target path (e.g., "system.abilities.str.value")
@@ -112,6 +114,14 @@ export interface ParsedNPC {
   lair_actions?: any;
   regional_effects?: any;
   spellcasting?: any;
+
+  structuredActions?: {
+    特性?: StructuredActionData[];
+    动作?: StructuredActionData[];
+    附赠动作?: StructuredActionData[];
+    反应?: StructuredActionData[];
+    传奇动作?: StructuredActionData[];
+  };
 
   items: any[]; // Placeholders for actions/spells
 }
