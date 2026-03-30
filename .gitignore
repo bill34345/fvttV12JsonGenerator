@@ -32,3 +32,16 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Generated artifacts (Obsidian sync outputs)
+obsidian/dnd数据转fvttjson/output/
+obsidian/dnd数据转fvttjson/output_backup/
+obsidian/dnd数据转fvttjson/middle/
+obsidian/dnd数据转fvttjson/middle-test/
+
+# Agent working files
+audits/
+middle/
+
+# Accidental files
+nul
