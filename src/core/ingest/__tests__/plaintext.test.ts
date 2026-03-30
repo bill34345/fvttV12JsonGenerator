@@ -169,7 +169,7 @@ describe('PlainTextIngestionWorkflow', () => {
     });
     expect(parsed.skillPassives?.prc).toBe(14);
     expect(actor.system.attributes.senses.blindsight).toBe(100);
-    expect(actor.system.skills.prc.bonuses.passive).toBe('+4');
+    expect(actor.system.skills.prc.bonuses.passive).toBe('');
   });
 
   it('captures Bloodfin saving throws from the bilingual Saves line in plaintext input', async () => {

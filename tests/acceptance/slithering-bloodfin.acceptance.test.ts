@@ -102,7 +102,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
 
   it('retains Bloodfin senses and passive perception data', () => {
     expect(actor.system.attributes.senses.blindsight).toBe(100);
-    expect(actor.system.skills.prc.bonuses.passive).toBe('+4');
+    expect(actor.system.skills.prc.bonuses.passive).toBe('');
     expect(actor.prototypeToken.detectionModes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

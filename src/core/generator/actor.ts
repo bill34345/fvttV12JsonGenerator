@@ -292,6 +292,9 @@ export class ActorGenerator {
         actor.system.resources.legact.value = parsed.attributes.legact.value;
         actor.system.resources.legact.max = parsed.attributes.legact.max;
       }
+      if (typeof parsed.attributes.prof === 'number' && Number.isFinite(parsed.attributes.prof)) {
+        actor.system.attributes.prof = parsed.attributes.prof;
+      }
     }
 
     if ((!actor.system.resources.legact?.max || !actor.system.resources.legact?.value) && Array.isArray(parsed.legendary_actions)) {
