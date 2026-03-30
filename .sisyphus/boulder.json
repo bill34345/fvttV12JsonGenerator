@@ -12,8 +12,20 @@
     "ses_2f57e295dffepn44reMZ6ED388",
     "ses_2f57e1544ffe8FXwMfXL57ipKm",
     "ses_2f57e3d45ffegPh0iRdtuS8le2",
-    "ses_2f56ca9cbffeCCys370oD9NGjv"
+    "ses_2f56ca9cbffeCCys370oD9NGjv",
+    "ses_2c7298116ffeQ05M8S0JF0tFM1"
   ],
   "plan_name": "fvtt-npc-importer-optimization-v2",
-  "agent": "atlas"
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Update parseSkillsLine to use inferSkillProficiency and compute skillBonuses",
+      "session_id": "ses_2c54bcadbffeoZG3Rp869JinqM",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-29T18:01:01.955Z"
+    }
+  }
 }
