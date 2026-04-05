@@ -20,6 +20,14 @@ import {
   buildHeavyHitAutomationSpec,
   buildHeavyHitMacroCommand,
 } from './heavyHitAutomation';
+import {
+  LANGUAGE_CODE_MAP,
+  SKILL_ABILITIES,
+  CREATURE_TYPE_VALUE_MAP,
+  LOCAL_NAME_TRANSLATIONS,
+  LOCAL_DESCRIPTION_REPLACEMENTS,
+  SPELLCASTING_TERM_REPLACEMENTS,
+} from './actor-consts';
 
 interface TranslationServiceLike {
   translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
@@ -43,151 +51,6 @@ type GeneratedActionData = ActionData & {
   requiresConcentration?: boolean;
   targetCondition?: string;
 };
-
-const LANGUAGE_CODE_MAP: Record<string, string> = {
-  // 中文 → Foundry VTT dnd5e code
-  '通用语': 'common',
-  '通用': 'common',
-  '龙语': 'draconic',
-  '精灵语': 'elvish',
-  '精灵': 'elvish',
-  '矮人语': 'dwarvish',
-  '矮人': 'dwarvish',
-  '巨人语': 'giant',
-  '巨人': 'giant',
-  '地精语': 'goblin',
-  '地精': 'goblin',
-  '兽人语': 'orc',
-  '兽人': 'orc',
-  '深渊语': 'deep',
-  '深渊': 'deep',
-  '炼狱语': 'infernal',
-  '炼狱': 'infernal',
-  '天界语': 'celestial',
-  '天界': 'celestial',
-  '木族语': 'sylvan',
-  '木族': 'sylvan',
-  '地下通用语': 'undercommon',
-  '水族语': 'aquan',
-  '水族': 'aquan',
-  '风族语': 'auran',
-  '风族': 'auran',
-  '火族语': 'ignan',
-  '火族': 'ignan',
-  '土族语': 'terran',
-  '土族': 'terran',
-  '狗头人语': 'draconic',
-  '地底侏儒语': 'gnomish',
-  '半身人语': 'halfling',
-  '半身人': 'halfling',
-  '恐爪怪语': 'deep',
-  '泛语言': 'all',
-  '无': '',
-  // 英文 → Foundry code (pass-through)
-  'common': 'common',
-  'draconic': 'draconic',
-  'elvish': 'elvish',
-  'dwarvish': 'dwarvish',
-  'giant': 'giant',
-  'goblin': 'goblin',
-  'orc': 'orc',
-  'deep': 'deep',
-  'infernal': 'infernal',
-  'celestial': 'celestial',
-  'sylvan': 'sylvan',
-  'undercommon': 'undercommon',
-  'aquan': 'aquan',
-  'auran': 'auran',
-  'ignan': 'ignan',
-  'terran': 'terran',
-};
-
-const SKILL_ABILITIES: Record<string, string> = {
-  acr: 'dex',
-  ani: 'wis',
-  arc: 'int',
-  ath: 'str',
-  dec: 'cha',
-  his: 'int',
-  ins: 'wis',
-  itm: 'cha',
-  inv: 'int',
-  med: 'wis',
-  nat: 'int',
-  prc: 'wis',
-  prf: 'cha',
-  per: 'cha',
-  rel: 'int',
-  slt: 'dex',
-  ste: 'dex',
-  sur: 'wis',
-};
-
-const CREATURE_TYPE_VALUE_MAP: Record<string, string> = {
-  异怪: 'aberration',
-  野兽: 'beast',
-  天界生物: 'celestial',
-  构装体: 'construct',
-  龙: 'dragon',
-  元素: 'elemental',
-  精类: 'fey',
-  邪魔: 'fiend',
-  巨人: 'giant',
-  类人生物: 'humanoid',
-  怪物: 'monstrosity',
-  软泥怪: 'ooze',
-  植物: 'plant',
-  亡灵: 'undead',
-};
-
-const LOCAL_NAME_TRANSLATIONS: Record<string, string> = {
-  'adult red dragon': '成年红龙',
-  bite: '啮咬',
-  dagger: '匕首',
-  claw: '爪击',
-  tail: '尾击',
-  'tail attack': '尾击',
-  multiattack: '多重攻击',
-  'frightful presence': '骇人威仪',
-  'fire breath': '火焰吐息',
-  detect: '侦测',
-  'wing attack': '振翅',
-  spellcasting: '施法',
-};
-
-const LOCAL_DESCRIPTION_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/Melee or Ranged Weapon Attack/gi, '近战或远程武器攻击'],
-  [/Melee Weapon Attack/gi, '近战武器攻击'],
-  [/Ranged Weapon Attack/gi, '远程武器攻击'],
-  [/Hit:/gi, '命中：'],
-  [/to hit/gi, '命中'],
-  [/reach/gi, '触及'],
-  [/range/gi, '射程'],
-  [/one target/gi, '一个目标'],
-  [/piercing damage/gi, '穿刺伤害'],
-  [/slashing damage/gi, '挥砍伤害'],
-  [/bludgeoning damage/gi, '钝击伤害'],
-  [/fire damage/gi, '火焰伤害'],
-  [/plus/gi, '外加'],
-  [/Dexterity saving throw/gi, '敏捷豁免检定'],
-  [/Constitution saving throw/gi, '体质豁免检定'],
-  [/Wisdom saving throw/gi, '感知豁免检定'],
-  [/Charisma saving throw/gi, '魅力豁免检定'],
-  [/half as much damage/gi, '伤害减半'],
-  [/The dragon makes/gi, '该龙进行'],
-  [/Wisdom \(Perception\) check/gi, '感知（察觉）检定'],
-];
-
-const SPELLCASTING_TERM_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/\bspellcasting ability\b/gi, '施法属性spellcasting ability'],
-  [/\bspell save DC\b/gi, '法术豁免DCspell save DC'],
-  [/\bspell attacks?\b/gi, '法术攻击spell attack'],
-  [/\bspellcaster\b/gi, '施法者spellcaster'],
-  [/^Spellcasting\b/i, '施法Spellcasting'],
-  [/\bCantrips\b/gi, '戏法Cantrips'],
-  [/\bat will\b/gi, '随意at will'],
-  [/\bslots\b/gi, '法术位slots'],
-];
 
 export class ActorGenerator {
   private actionParser = new ActionParser();
