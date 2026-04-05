@@ -78,6 +78,12 @@ import {
   isDeathTriggeredSaveTrait as isDeathTriggeredSaveTraitExt,
   isStatusRemovalUtility as isStatusRemovalUtilityExt,
 } from './actor-special';
+import {
+  extractSpellNames as extractSpellNamesExt,
+  extractSpellcastingLines as extractSpellcastingLinesExt,
+  createSpellcastingDescriptionItem as createSpellcastingDescriptionItemExt,
+  appendLegacySpellItems as appendLegacySpellItemsExt,
+} from './actor-legacy';
 
 interface TranslationServiceLike {
   translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
@@ -597,44 +603,7 @@ export class ActorGenerator {
   }
 
   private extractSpellNames(spellcasting: ParsedNPC['spellcasting']): string[] {
-    const entries: string[] = [];
-    if (Array.isArray(spellcasting)) {
-      entries.push(...spellcasting.filter((line): line is string => typeof line === 'string'));
-    } else if (spellcasting && typeof spellcasting === 'object') {
-      entries.push(...Object.keys(spellcasting));
-    }
-
-    const names: string[] = [];
-    for (const entry of entries) {
-      const cleaned = entry
-        .replace(/<[^>]*>/g, '')
-        .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
-        .replace(/\*\*([^*]+)\*\*/g, '$1')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .trim();
-
-      if (!cleaned) {
-        continue;
-      }
-
-      const split = cleaned.split(':');
-      if (split.length > 1) {
-        const list = split.slice(1).join(':');
-        for (const rawName of list.split(',')) {
-          const spellName = rawName.trim().replace(/[.;]$/g, '');
-          if (spellName) {
-            names.push(spellName);
-          }
-        }
-        continue;
-      }
-
-      if (!/[.!?]/.test(cleaned) && cleaned.length <= 64) {
-        names.push(cleaned.replace(/[.;]$/g, ''));
-      }
-    }
-
-    return Array.from(new Set(names));
+    return extractSpellNamesExt(spellcasting);
   }
 
   private resetActorDefaults(actor: any): void {
@@ -905,76 +874,15 @@ export class ActorGenerator {
   }
 
   private appendLegacySpellItems(items: any[], spellcasting: ParsedNPC['spellcasting']): void {
-    const spellcastingItem = {
-      name: '施法',
-      type: 'feat',
-      img: 'icons/svg/d20-highlight.svg',
-      system: {
-        description: { value: '<p>The creature is a spellcaster.</p>', chat: '' },
-        type: { value: 'monster', subtype: 'spellcasting' },
-        activities: {} as Record<string, any>,
-      },
-    };
-
-    const spells = this.extractSpellNames(spellcasting);
-
-    let hasLinkedSpells = false;
-    for (const spellName of spells) {
-      const info = spellsMapper.get(spellName);
-      if (info) {
-        const act = this.activityGenerator.generateCast(info.uuid);
-        Object.assign(spellcastingItem.system.activities, act);
-        hasLinkedSpells = true;
-      } else if (spellName) {
-        items.push({
-          name: spellName,
-          type: 'spell',
-          img: 'icons/svg/mystery-man.svg',
-          system: {
-            preparation: { mode: 'innate' },
-            level: 0,
-          },
-        });
-      }
-    }
-
-    if (hasLinkedSpells) {
-      items.push(spellcastingItem);
-    }
+    appendLegacySpellItemsExt(items, spellcasting, this.activityGenerator);
   }
 
   private createSpellcastingDescriptionItem(lines: string[]): any {
-    const description = lines
-      .map((line) => line.replace(/<[^>]*>/g, '').trim())
-      .filter(Boolean)
-      .join('\n');
-
-    return {
-      name: 'Spellcasting',
-      type: 'feat',
-      img: 'icons/svg/d20-highlight.svg',
-      system: {
-        description: { value: `<p>${description.replace(/\n/g, '<br>')}</p>`, chat: '' },
-        source: { custom: 'Imported' },
-        activation: { type: '', cost: null },
-        activities: {},
-        type: { value: 'monster', subtype: 'spellcasting' },
-      },
-    };
+    return createSpellcastingDescriptionItemExt(lines);
   }
 
   private extractSpellcastingLines(spellcasting: ParsedNPC['spellcasting']): string[] {
-    if (Array.isArray(spellcasting)) {
-      return spellcasting.filter((line): line is string => typeof line === 'string').map((line) => line.trim()).filter(Boolean);
-    }
-
-    if (spellcasting && typeof spellcasting === 'object') {
-      return Object.entries(spellcasting)
-        .map(([key, value]) => `${key}: ${String(value)}`.trim())
-        .filter(Boolean);
-    }
-
-    return [];
+    return extractSpellcastingLinesExt(spellcasting);
   }
 
   private createItemFromAction(
