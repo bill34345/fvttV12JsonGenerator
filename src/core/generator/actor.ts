@@ -71,6 +71,13 @@ import {
   attachEmbeddedEffects as attachEmbeddedEffectsExt,
   resolveActivationType as resolveActivationTypeExt,
 } from './actor-item-builder';
+import {
+  isScuttlingSerpentmawVenomAction as isScuttlingSerpentmawVenomActionExt,
+  isTriggeredAcUtility as isTriggeredAcUtilityExt,
+  isSwallowLikeAction as isSwallowLikeActionExt,
+  isDeathTriggeredSaveTrait as isDeathTriggeredSaveTraitExt,
+  isStatusRemovalUtility as isStatusRemovalUtilityExt,
+} from './actor-special';
 
 interface TranslationServiceLike {
   translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
@@ -1824,13 +1831,11 @@ export class ActorGenerator {
   }
 
   private isScuttlingSerpentmawVenomAction(action: GeneratedActionData): boolean {
-    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-    return /Venomous Bite|毒液咬击/i.test(text) && /Brine-shock|盐水电击/i.test(text);
+    return isScuttlingSerpentmawVenomActionExt(action);
   }
 
   private isTriggeredAcUtility(action: GeneratedActionData): boolean {
-    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-    return /Brittle Shell|脆壳反震|Retract|缩壳防御/i.test(text);
+    return isTriggeredAcUtilityExt(action);
   }
 
   private appendSerpentmawVenomActivities(item: any, action: GeneratedActionData): void {
@@ -2023,29 +2028,15 @@ export class ActorGenerator {
   }
 
   private isSwallowLikeAction(action: GeneratedActionData): boolean {
-    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-    return /(?:Swallow|吞咽|吞下|被吞下)/i.test(text);
+    return isSwallowLikeActionExt(action);
   }
 
   private isDeathTriggeredSaveTrait(action: GeneratedActionData): boolean {
-    if (action.attack) {
-      return false;
-    }
-
-    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-    return /(?:Death Burst|\u6b7b\u4ea1\u7206\u88c2|\u6b7b\u4ea1\u65f6|when .* dies|when .* die)/i.test(text)
-      && this.extractSavingThrowsWithInheritedDcFromText(text).length > 0;
+    return isDeathTriggeredSaveTraitExt(action);
   }
 
   private isStatusRemovalUtility(action: GeneratedActionData): boolean {
-    if (action.attack || action.save) {
-      return false;
-    }
-
-    const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-    const mentionsStatus = /(?:grappled|restrained|poisoned|blinded|paralyzed|dazed|被擒抱|受限|中毒|目盲|麻痹|恍惚)/i.test(text);
-    const indicatesRemoval = /(?:escape|end|remove|摆脱|结束|脱离|结束自身)/i.test(text);
-    return mentionsStatus && indicatesRemoval;
+    return isStatusRemovalUtilityExt(action);
   }
 
   private extractSwallowDamage(action: GeneratedActionData): Damage | undefined {
