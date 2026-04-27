@@ -9,6 +9,7 @@ import { detectItemRoute } from './core/parser/item-router';
 import { ObsidianSyncWorkflow } from './core/workflow/obsidianSync';
 import { JsonTranslationSyncWorkflow } from './core/workflow/jsonTranslationSync';
 import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
+import { ItemTextWorkflow } from './core/workflow/itemTextWorkflow';
 import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 
@@ -95,6 +96,7 @@ program
   .option('--ingest-plaintext <source>', 'Split a plain-text creature collection into project markdown files')
   .option('--ingest-plaintext-actors <source>', 'Generate project markdown and actor JSON from a plain-text creature collection')
   .option('--ingest-items <source>', 'Split a plain-text item collection into project markdown files')
+  .option('--ingest-items-json <source>', 'Generate project item markdown and Item JSON from a plain-text item collection')
   .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', 'obsidian/dnd数据转fvttjson/input')
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
   .option('--dry-run', 'Preview outputs without writing files')
@@ -222,6 +224,35 @@ program
           console.log(`Skipped: ${result.sync.skipped}`);
           console.log(`Failed: ${result.sync.failed}`);
           console.log(`Backed up: ${result.sync.backedUp}`);
+        }
+
+        if (result.sync.failures.length > 0) {
+          for (const failure of result.sync.failures) {
+            console.error(`Failed: ${failure.input} -> ${failure.error}`);
+          }
+          process.exit(1);
+        }
+
+        return;
+      }
+
+      if (options.ingestItemsJson) {
+        const workflow = new ItemTextWorkflow();
+        const result = await workflow.run({
+          sourcePath: options.ingestItemsJson,
+          vaultPath: options.vault,
+          dryRun: Boolean(options.dryRun),
+          fvttVersion,
+        });
+
+        console.log(`Ingested items from: ${result.ingestion.sourcePath}`);
+        console.log(`Detected items: ${result.ingestion.files.length}`);
+        console.log(`Markdown dir: ${result.ingestion.emitDir}`);
+        console.log(`JSON dir: ${join(options.vault, "output", "items")}`);
+        console.log(`Dry run: ${result.ingestion.dryRun ? 'yes' : 'no'}`);
+
+        for (const file of result.ingestion.files) {
+          console.log(`- ${file.fileName}`);
         }
 
         if (result.sync.failures.length > 0) {
