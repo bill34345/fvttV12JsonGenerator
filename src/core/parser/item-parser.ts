@@ -893,19 +893,19 @@ export class ItemParser implements ItemParserStrategy {
       });
     }
 
-    const ability = 'con';
+    let ability = 'con';
     if (/力量豁免/.test(text)) {
-      ability.match(/str/);
+      ability = 'str';
     } else if (/敏捷豁免/.test(text)) {
-      ability.match(/dex/);
+      ability = 'dex';
     } else if (/体质豁免/.test(text)) {
-      ability.match(/con/);
+      ability = 'con';
     } else if (/智力豁免/.test(text)) {
-      ability.match(/int/);
+      ability = 'int';
     } else if (/感知豁免/.test(text)) {
-      ability.match(/wis/);
+      ability = 'wis';
     } else if (/魅力豁免/.test(text)) {
-      ability.match(/cha/);
+      ability = 'cha';
     }
 
     let name = '保存效应';
@@ -1089,40 +1089,71 @@ export class ItemParser implements ItemParserStrategy {
   private parseAttackDamage(description: string): Damage[] {
     const damages: Damage[] = [];
 
-    const attrMap: Record<string, string> = {
-      '你力量调整值的': '@str',
-      '你敏捷调整值的': '@dex',
-      '你体质调整值的': '@con',
-      '你智力调整值的': '@int',
-      '你感知调整值的': '@wis',
-      '你魅力调整值的': '@cha',
+    const abilityPhrases: Record<string, string> = {
+      '你力量调整值': '@str',
+      '你的力量调整值': '@str',
+      '力量调整值': '@str',
+      '你敏捷调整值': '@dex',
+      '你的敏捷调整值': '@dex',
+      '敏捷调整值': '@dex',
+      '你体质调整值': '@con',
+      '你的体质调整值': '@con',
+      '体质调整值': '@con',
+      '你智力调整值': '@int',
+      '你的智力调整值': '@int',
+      '智力调整值': '@int',
+      '你感知调整值': '@wis',
+      '你的感知调整值': '@wis',
+      '感知调整值': '@wis',
+      '你魅力调整值': '@cha',
+      '你的魅力调整值': '@cha',
+      '魅力调整值': '@cha',
+      '浣犲姏閲忚皟鏁村€?': '@str',
+      '浣犲姏閲忚皟鏁村€肩殑': '@str',
+      '浣犳晱鎹疯皟鏁村€?': '@dex',
+      '浣犳晱鎹疯皟鏁村€肩殑': '@dex',
+      '浣犱綋璐ㄨ皟鏁村€?': '@con',
+      '浣犱綋璐ㄨ皟鏁村€肩殑': '@con',
+      '浣犳櫤鍔涜皟鏁村€?': '@int',
+      '浣犳櫤鍔涜皟鏁村€肩殑': '@int',
+      '浣犳劅鐭ヨ皟鏁村€?': '@wis',
+      '浣犳劅鐭ヨ皟鏁村€肩殑': '@wis',
+      '浣犻瓍鍔涜皟鏁村€?': '@cha',
+      '浣犻瓍鍔涜皟鏁村€肩殑': '@cha',
     };
 
-    const damagePattern = /(\d+d\d+(?:\s*[+\-]\s*(?:\d+|@\w+))*)\s*(?:[+\-]\s*)?((?:你(?:力量|敏捷|体质|智力|感知|魅力)调整值的?)?)([\u4e00-\u9fa5]+)伤害|(\d+d\d+(?:\s*[+\-]\s*\d+)*)\s*(?:点?)?([\u4e00-\u9fa5]+)伤害|(?<=的)([\u4e00-\u9fa5]+)伤害/gi;
+    const abilityPhrasePattern = [
+      '你的?(?:力量|敏捷|体质|智力|感知|魅力)调整值的?',
+      '浣犲姏閲忚皟鏁村€肩殑?',
+      '浣犳晱鎹疯皟鏁村€肩殑?',
+      '浣犱綋璐ㄨ皟鏁村€肩殑?',
+      '浣犳櫤鍔涜皟鏁村€肩殑?',
+      '浣犳劅鐭ヨ皟鏁村€肩殑?',
+      '浣犻瓍鍔涜皟鏁村€肩殑?',
+    ].join('|');
+    const formulaTerm = `(?:\\d+|@\\w+|${abilityPhrasePattern})`;
+    const damagePattern = new RegExp(
+      `(\\d+d\\d+(?:\\s*[+\\-]\\s*${formulaTerm})*)\\s*(?:点|鐐?)?\\s*([\\u4e00-\\u9fa5]+?)(?:伤害|浼ゅ)`,
+      'g',
+    );
 
     for (const match of description.matchAll(damagePattern)) {
-      let formula: string;
-      let typeRaw: string;
+      const rawFormula = match[1]?.trim();
+      const typeRaw = match[2]?.trim();
+      if (!rawFormula || !typeRaw) {
+        continue;
+      }
 
-      if (match[1] !== undefined) {
-        formula = match[1]?.trim() ?? '';
-        const attrRef = match[2]?.trim() ?? '';
-        typeRaw = match[3]?.trim() ?? '';
+      let formula = rawFormula;
+      for (const [phrase, replacement] of Object.entries(abilityPhrases)) {
+        formula = formula.replaceAll(phrase, replacement);
+      }
+      formula = formula
+        .replace(/的/g, '')
+        .replace(/\s*([+\-])\s*/g, '$1')
+        .replace(/\s+/g, '');
 
-        if (attrRef && attrMap[attrRef]) {
-          formula = formula + '+' + attrMap[attrRef];
-        }
-        formula = formula.replace(/\s*([+\-])\s*/g, '$1');
-      } else if (match[4] !== undefined) {
-        formula = match[4]?.trim() ?? '';
-        typeRaw = match[5]?.trim() ?? '';
-      } else if (match[6] !== undefined) {
-        typeRaw = match[6].trim();
-        const typeIndex = match.index ?? 0;
-        const formulaPart = description.slice(0, typeIndex);
-        const formulaMatch = formulaPart.match(/(\d+d\d+(?:\s*[+\-]\s*(?:\d+|[\u4e00-\u9fa5]+(?!\w)))*)\s*$/);
-        formula = formulaMatch?.[1] ?? formulaPart.trim();
-      } else {
+      if (!formula || /[\u4e00-\u9fa5]/.test(formula)) {
         continue;
       }
 
@@ -1134,21 +1165,35 @@ export class ItemParser implements ItemParserStrategy {
       } else {
         const directMap: Record<string, string> = {
           '穿刺': 'piercing',
+          '绌垮埡': 'piercing',
           '钝击': 'bludgeoning',
+          '閽濆嚮': 'bludgeoning',
           '挥砍': 'slashing',
+          '鎸ョ爫': 'slashing',
           '火焰': 'fire',
+          '鐏劙': 'fire',
           '寒冷': 'cold',
+          '瀵掑喎': 'cold',
           '闪电': 'lightning',
+          '闂數': 'lightning',
           '雷鸣': 'thunder',
+          '闆烽福': 'thunder',
           '光耀': 'radiant',
-          '暗蚀': 'necrotic',
+          '鍏夎€€': 'radiant',
+          '黯蚀': 'necrotic',
+          '鏆楄殌': 'necrotic',
           '力场': 'force',
+          '鍔涘満': 'force',
           '毒素': 'poison',
+          '姣掔礌': 'poison',
           '强酸': 'acid',
+          '寮洪吀': 'acid',
           '心灵': 'psychic',
+          '蹇冪伒': 'psychic',
         };
-        type = directMap[typeRaw] || 'bludgeoning';
+        type = directMap[typeRaw] ?? 'bludgeoning';
       }
+
       damages.push({ formula, type });
     }
 

@@ -185,6 +185,28 @@ describe('ItemParser', () => {
       expect(attack!.attack?.toHit).toBe(0);
     });
 
+    it('converts Chinese ability modifier damage phrases into Foundry formulas', () => {
+      const content = [
+        '---',
+        'layout: item',
+        '名称: 骑士之盾',
+        '类型: 护甲',
+        '稀有度: 极珍稀',
+        'require-attunement: true',
+        '---',
+        '## 骑士之盾（Shield of the Cavalier）',
+        '*护甲（盾牌），极珍稀（需同调）*',
+        '**强力猛击（Forceful Bash）.** 当你执行攻击动作时，你可以使用这面盾牌进行其中一次攻击，这次攻击的目标必须在你 5 尺之内。将你的熟练加值和力量调整值加入攻击检定。若命中，盾牌会对目标造成 2d6 + 2 + 你力量调整值的力场伤害。',
+      ].join('\n');
+
+      const result = parser.parse(content);
+      const attack = result.structuredActions?.attacks?.find((entry) => entry.name === '强力猛击');
+
+      expect(attack?.attack?.damage).toEqual([
+        { formula: '2d6+2+@str', type: 'force' },
+      ]);
+    });
+
     it('parses attack with explicit to-hit bonus', () => {
       const content = [
         '---',
