@@ -529,7 +529,7 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>光芒吸收 (Light Absorption)：噬光者 120 尺范围内的任何光源半径减半，且所有明亮光照 (Bright Light) 变为微光光照 (Dim Light)。</li><li>深渊潜伏者 (Lurker in the Depths)：噬光者在伪装成自然地形或其他水生生物时，其隐匿 (Stealth) 和欺瞒 (Deception) 检定具有优势 (Advantage)。此外，噬光者对处于恐慌 (Frightened) 状态的生物进行的攻击检定具有优势。</li><li>辐射 (Radiating)：该潜伏者在使用 熄灯 (Lights Out) 后会进入辐射 (Radiating) 状态；否则它处于潜伏 (Lurking) 状态。 处于辐射 (Radiating) 状态时，它无法使用 水下伪装 (Underwater Camouflage)、引诱 (Lure) 与 熄灯 (Lights Out)。 它对抗所有远程攻击时获得四分之三掩护 (Three-Quarters Cover)，因为其闪耀、频闪的光芒会刺激攻击者的眼睛。 它的光耀免疫 (Radiant Immunity) 变为光耀抗性 (Radiant Resistance)。</li></ul>",
+        "value": "<ul><li>光芒吸收 (Light Absorption)：噬光者 120 尺范围内的任何光源半径减半，且所有明亮光照 (Bright Light) 变为微光光照 (Dim Light)。</li><li>深渊潜伏者 (Lurker in the Depths)：噬光者在伪装成自然地形或其他水生生物时，其隐匿 (Stealth) 和欺瞒 (Deception) 检定具有优势 (Advantage)。此外，噬光者对处于恐慌 (Frightened) 状态的生物进行的攻击检定具有优势。</li><li>辐射 (Radiating)：该潜伏者在使用 熄灯 (Lights Out) 后会进入辐射 (Radiating) 状态；否则它处于潜伏 (Lurking) 状态。</li><li>处于辐射 (Radiating) 状态时，它无法使用 水下伪装 (Underwater Camouflage)、引诱 (Lure) 与 熄灯 (Lights Out)。</li><li>它对抗所有远程攻击时获得四分之三掩护 (Three-Quarters Cover)，因为其闪耀、频闪的光芒会刺激攻击者的眼睛。</li><li>它的光耀免疫 (Radiant Immunity) 变为光耀抗性 (Radiant Resistance)。</li></ul>",
         "public": ""
       },
       "alignment": "无阵营",
@@ -705,7 +705,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>噬光者 120 尺范围内的任何光源半径减半,且所有明亮光照 (Bright Light) 变为微光光照 (Dim Light).</li></ul>",
+          "value": "<ul><li>噬光者 120 尺范围内的任何光源半径减半，且所有明亮光照 (Bright Light) 变为微光光照 (Dim Light)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf2a": {
-            "_id": "dnd5eactivityf2a",
+          "dnd5eactivity618": {
+            "_id": "dnd5eactivity618",
             "type": "utility",
             "activation": {
               "type": "",
@@ -750,7 +750,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>噬光者在伪装成自然地形或其他水生生物时,其隐匿 (Stealth) 和欺瞒 (Deception) 检定具有优势 (Advantage).此外,噬光者对处于恐慌 (Frightened) 状态的生物进行的攻击检定具有优势.</li></ul>",
+          "value": "<ul><li>噬光者在伪装成自然地形或其他水生生物时，其隐匿 (Stealth) 和欺瞒 (Deception) 检定具有优势 (Advantage)。此外，噬光者对处于恐慌 (Frightened) 状态的生物进行的攻击检定具有优势。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity376": {
-            "_id": "dnd5eactivity376",
+          "dnd5eactivity173": {
+            "_id": "dnd5eactivity173",
             "type": "utility",
             "activation": {
               "type": "",
@@ -795,7 +795,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该潜伏者在使用 熄灯 (Lights Out) 后会进入辐射 (Radiating) 状态;否则它处于潜伏 (Lurking) 状态. 处于辐射 (Radiating) 状态时,它无法使用 水下伪装 (Underwater Camouflage)、引诱 (Lure) 与 熄灯 (Lights Out). 它对抗所有远程攻击时获得四分之三掩护 (Three-Quarters Cover),因为其闪耀、频闪的光芒会刺激攻击者的眼睛. 它的光耀免疫 (Radiant Immunity) 变为光耀抗性 (Radiant Resistance).</li></ul>",
+          "value": "<ul><li>该潜伏者在使用 熄灯 (Lights Out) 后会进入辐射 (Radiating) 状态；否则它处于潜伏 (Lurking) 状态。 处于辐射 (Radiating) 状态时，它无法使用 水下伪装 (Underwater Camouflage)、引诱 (Lure) 与 熄灯 (Lights Out)。 它对抗所有远程攻击时获得四分之三掩护 (Three-Quarters Cover)，因为其闪耀、频闪的光芒会刺激攻击者的眼睛。 它的光耀免疫 (Radiant Immunity) 变为光耀抗性 (Radiant Resistance)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -807,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity41f": {
-            "_id": "dnd5eactivity41f",
+          "dnd5eactivityb1f": {
+            "_id": "dnd5eactivityb1f",
             "type": "utility",
             "activation": {
               "type": "",
@@ -840,7 +840,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>噬光者进行一次 千针齿 (Thousand-Needles Teeth) 攻击,并且可以使用 引诱 (Lure) 或 光芒脉冲 (Light Pulse).</li></ul>",
+          "value": "<ul><li>噬光者进行一次 千针齿 (Thousand-Needles Teeth) 攻击，并且可以使用 引诱 (Lure) 或 光芒脉冲 (Light Pulse)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -852,8 +852,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye12": {
-            "_id": "dnd5eactivitye12",
+          "dnd5eactivitya15": {
+            "_id": "dnd5eactivitya15",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -885,7 +885,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +8，触及 5 尺，单一目标。</p><ul><li>命中：造成 `5d6 + 4` 点穿刺伤害 (Piercing Damage)，且目标开始流血 (Bleeding) `2d6`。 若噬光者处于辐射 (Radiating) 状态，则额外造成 `2d6` 点光耀伤害 (Radiant Damage)。 若目标为中型或更小体型，且噬光者本回合使用了 耀光巨口 (Flare Mouth)，则目标被擒抱 (Grappled)（逃脱 DC 14）；在被擒抱期间，目标陷入目盲 (Blinded) 状态，且无法说话或呼吸。 流血 (Bleeding)：目标在其每个回合开始时受到 `2d6` 点伤害；若其恢复任意生命值，或有生物在其 5 尺内使用一个动作替其止血，则该效果结束。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +8，触及 5 尺，单一目标。</li><li>命中：造成 `5d6 + 4` 点穿刺伤害 (Piercing Damage)，且目标开始流血 (Bleeding) `2d6`。</li><li>若噬光者处于辐射 (Radiating) 状态，则额外造成 `2d6` 点光耀伤害 (Radiant Damage)。</li><li>若目标为中型或更小体型，且噬光者本回合使用了 耀光巨口 (Flare Mouth)，则目标被擒抱 (Grappled)（逃脱 DC 14）；在被擒抱期间，目标陷入目盲 (Blinded) 状态，且无法说话或呼吸。</li><li>流血 (Bleeding)：目标在其每个回合开始时受到 `2d6` 点伤害；若其恢复任意生命值，或有生物在其 5 尺内使用一个动作替其止血，则该效果结束。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -897,8 +897,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf15": {
-            "_id": "dnd5eactivityf15",
+          "dnd5eactivity3ac": {
+            "_id": "dnd5eactivity3ac",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -977,13 +977,13 @@
             },
             "effects": [
               {
-                "_id": "812da1b349de7599"
+                "_id": "fc0b01482131eafb"
               },
               {
-                "_id": "4455d655a511684e"
+                "_id": "bc17ecc68882894c"
               },
               {
-                "_id": "f62c15b376bf5f09"
+                "_id": "47151f08da54f9dc"
               }
             ],
             "activation": {
@@ -1008,7 +1008,7 @@
       },
       "effects": [
         {
-          "_id": "812da1b349de7599",
+          "_id": "fc0b01482131eafb",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1033,7 +1033,7 @@
           ]
         },
         {
-          "_id": "4455d655a511684e",
+          "_id": "bc17ecc68882894c",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1058,7 +1058,7 @@
           ]
         },
         {
-          "_id": "f62c15b376bf5f09",
+          "_id": "47151f08da54f9dc",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1101,7 +1101,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>120 尺内的一个目标必须进行一次 DC 16 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:目标被噬光者魅惑 (Charmed),直到该目标的下回合结束.被魅惑期间: 该生物必须使用其所有移动力靠近噬光者. 在接下来的 1 分钟内,该生物无法感知盟友或与其互动.若其一名盟友使用一个动作摇晃它,则受影响生物可以重复此豁免,成功则结束该效果.</li></ul>",
+          "value": "<ul><li>120 尺内的一个目标必须进行一次 DC 16 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：目标被噬光者魅惑 (Charmed)，直到该目标的下回合结束。被魅惑期间：</li><li>该生物必须使用其所有移动力靠近噬光者。</li><li>在接下来的 1 分钟内，该生物无法感知盟友或与其互动。若其一名盟友使用一个动作摇晃它，则受影响生物可以重复此豁免，成功则结束该效果。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1113,8 +1113,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycfb": {
-            "_id": "dnd5eactivitycfb",
+          "dnd5eactivity7c8": {
+            "_id": "dnd5eactivity7c8",
             "type": "save",
             "save": {
               "ability": [
@@ -1131,7 +1131,7 @@
             },
             "effects": [
               {
-                "_id": "2da49b219be7d27e"
+                "_id": "637df334e6b41141"
               }
             ],
             "activation": {
@@ -1157,7 +1157,7 @@
       },
       "effects": [
         {
-          "_id": "2da49b219be7d27e",
+          "_id": "637df334e6b41141",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1198,7 +1198,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>射程 100 尺,单一目标. 目标进行一次体质 (Constitution) 豁免检定以对抗 `5d12` 点光耀伤害 (Radiant Damage),并进行一次 DC 14 的体质 (Constitution) 豁免检定以避免陷入中毒 (Poisoned) 状态 1 分钟. 无论豁免成功与否,目标都会受到 妖火 (Faerie Fire) 效果影响,直到噬光者的下回合结束. 使用后,噬光者进入潜伏 (Lurking) 状态.</li></ul>",
+          "value": "<ul><li>射程 100 尺，单一目标。</li><li>目标进行一次体质 (Constitution) 豁免检定以对抗 `5d12` 点光耀伤害 (Radiant Damage)，并进行一次 DC 14 的体质 (Constitution) 豁免检定以避免陷入中毒 (Poisoned) 状态 1 分钟。</li><li>无论豁免成功与否，目标都会受到 妖火 (Faerie Fire) 效果影响，直到噬光者的下回合结束。</li><li>使用后，噬光者进入潜伏 (Lurking) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1210,8 +1210,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7d8": {
-            "_id": "dnd5eactivity7d8",
+          "dnd5eactivitydf1": {
+            "_id": "dnd5eactivitydf1",
             "type": "save",
             "save": {
               "ability": [
@@ -1246,7 +1246,7 @@
             },
             "effects": [
               {
-                "_id": "e8ae2c8879f7ba7e"
+                "_id": "d011d5946af3cbe1"
               }
             ],
             "activation": {
@@ -1298,7 +1298,7 @@
       },
       "effects": [
         {
-          "_id": "e8ae2c8879f7ba7e",
+          "_id": "d011d5946af3cbe1",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1339,7 +1339,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>噬光者可以用附赠动作执行隐蔽 (Hide) 动作.</li></ul>",
+          "value": "<ul><li>噬光者可以用附赠动作执行隐蔽 (Hide) 动作。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1351,8 +1351,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity287": {
-            "_id": "dnd5eactivity287",
+          "dnd5eactivity297": {
+            "_id": "dnd5eactivity297",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1384,7 +1384,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>光芒从噬光者体内爆发,影响以其自身为中心半径 20 尺的范围.范围内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:受到 `7d6` 点光耀伤害 (Radiant Damage). 若豁免结果为 11 或更低:目标陷入目盲 (Blinded) 状态,直到其下回合结束. 使用后,噬光者进入潜伏 (Lurking) 状态.</li></ul>",
+          "value": "<ul><li>光芒从噬光者体内爆发，影响以其自身为中心半径 20 尺的范围。范围内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定。</li><li>豁免失败：受到 `7d6` 点光耀伤害 (Radiant Damage)。</li><li>若豁免结果为 11 或更低：目标陷入目盲 (Blinded) 状态，直到其下回合结束。</li><li>使用后，噬光者进入潜伏 (Lurking) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1396,8 +1396,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity1c5": {
-            "_id": "dnd5eactivity1c5",
+          "dnd5eactivitycaa": {
+            "_id": "dnd5eactivitycaa",
             "type": "save",
             "save": {
               "ability": [
@@ -1432,7 +1432,7 @@
             },
             "effects": [
               {
-                "_id": "ce0710998dae4a05"
+                "_id": "e1e6a883f5c09fae"
               }
             ],
             "activation": {
@@ -1469,7 +1469,7 @@
       },
       "effects": [
         {
-          "_id": "ce0710998dae4a05",
+          "_id": "e1e6a883f5c09fae",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1510,7 +1510,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>当噬光者即将被攻击命中时,或在它进行攻击之前,它可以张开大口并闪烁频闪光芒.以其自身为中心 15 尺范围内的生物必须进行一次 DC 16 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:目标陷入恐惧 (Fear) 状态,直到其下回合结束.</li></ul>",
+          "value": "<ul><li>当噬光者即将被攻击命中时，或在它进行攻击之前，它可以张开大口并闪烁频闪光芒。以其自身为中心 15 尺范围内的生物必须进行一次 DC 16 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：目标陷入恐惧 (Fear) 状态，直到其下回合结束。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1522,8 +1522,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6b9": {
-            "_id": "dnd5eactivity6b9",
+          "dnd5eactivityb18": {
+            "_id": "dnd5eactivityb18",
             "type": "save",
             "save": {
               "ability": [
@@ -1587,7 +1587,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当针对噬光者的近战攻击未命中时,它可以游动最多其一半速度的距离,且不会引发借机攻击 (Opportunity Attacks),然后进行一次隐匿 (Stealth) 检定. 使用后,噬光者进入潜伏 (Lurking) 状态.</li></ul>",
+          "value": "<ul><li>当针对噬光者的近战攻击未命中时，它可以游动最多其一半速度的距离，且不会引发借机攻击 (Opportunity Attacks)，然后进行一次隐匿 (Stealth) 检定。</li><li>使用后，噬光者进入潜伏 (Lurking) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1599,8 +1599,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity10d": {
-            "_id": "dnd5eactivity10d",
+          "dnd5eactivity44b": {
+            "_id": "dnd5eactivity44b",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1632,7 +1632,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>噬光者也可以在其回合开始时使用此能力,且无需消耗反应. 当噬光者能看见的生物造成光耀伤害 (Radiant Damage) 时;或者当它在其自身光源以外的任何光源中开始回合时,它可以消耗反应使该伤害减半. 使用此反应后,它可以选择进入辐射 (Radiating) 状态.</li></ul>",
+          "value": "<ul><li>噬光者也可以在其回合开始时使用此能力，且无需消耗反应。</li><li>当噬光者能看见的生物造成光耀伤害 (Radiant Damage) 时；或者当它在其自身光源以外的任何光源中开始回合时，它可以消耗反应使该伤害减半。</li><li>使用此反应后，它可以选择进入辐射 (Radiating) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1644,8 +1644,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity486": {
-            "_id": "dnd5eactivity486",
+          "dnd5eactivity703": {
+            "_id": "dnd5eactivity703",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1682,7 +1682,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722542,
-    "modifiedTime": 1774273722542
+    "createdTime": 1775752086220,
+    "modifiedTime": 1775752086220
   }
 }

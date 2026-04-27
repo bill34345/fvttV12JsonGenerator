@@ -1,0 +1,115 @@
+{
+  "_id": "c5fd67e4ebc2e6fa",
+  "name": "骑士之盾 (Shield of the Cavalier)",
+  "type": "equipment",
+  "img": "icons/svg/item-bag.svg",
+  "system": {
+    "description": {
+      "value": "持握这面盾牌期间，你的护甲等级获得 +2 加值。\n**强力猛击（Forceful Bash）.** 当你执行攻击动作时，你可以使用这面盾牌进行其中一次攻击，这次攻击的目标必须在你 5 尺之内。将你的熟练加值和力量调整值加入攻击检定。若命中，盾牌会对目标造成 2d6 + 2 + 你力量调整值的力场伤害。如果目标是生物，你可以将其推离至多 10 尺。",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "book": "SRD 5.1",
+      "page": "",
+      "license": "CC-BY-4.0",
+      "rules": "2014"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "equipped": false,
+    "rarity": "common",
+    "identified": true,
+    "cover": null,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "activities": {
+      "dnd5eactivity95d": {
+        "_id": "dnd5eactivity95d",
+        "type": "attack",
+        "attack": {
+          "ability": "",
+          "bonus": "0",
+          "flat": true,
+          "type": {
+            "value": "mwak",
+            "classification": "weapon"
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "number": null,
+              "denomination": null,
+              "bonus": "",
+              "types": [
+                "force"
+              ],
+              "custom": {
+                "enabled": true,
+                "formula": "2d6 + 2 + 你力量调整值的"
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 1
+              }
+            }
+          ],
+          "includeBase": true
+        },
+        "range": {
+          "override": false,
+          "value": null,
+          "long": null,
+          "reach": 5,
+          "units": "ft",
+          "special": ""
+        },
+        "target": {
+          "override": false,
+          "prompt": true,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          }
+        },
+        "sort": 100000
+      }
+    },
+    "attuned": true,
+    "identifier": ""
+  },
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.0.0",
+    "createdTime": 1775413175697,
+    "modifiedTime": 1775413175697,
+    "lastModifiedBy": "fvttJsonGenerator"
+  }
+}

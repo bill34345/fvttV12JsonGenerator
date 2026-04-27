@@ -1,0 +1,447 @@
+{
+  "_id": "ba4b7423f41c7199",
+  "name": "三祷之坠 (Awakened) (Jewel of Three Prayers)",
+  "type": "equipment",
+  "img": "icons/equipment/neck/pendant-faceted-red.webp",
+  "system": {
+    "description": {
+      "value": "三祷之坠是一件诀别遗物（见\"诀别遗物 Vestiges of Divergence\"边栏）。在古老的时代里，\"近神者\"阿利克辛佩戴着这件饰物，作为他和三位正神——\"织月者\"莎罕妮、\"万变使者\"艾梵德拉和\"至高之心\"科瑞隆——立下契约的象征。当这件坠饰被寻得时，只有莎罕妮的力量尚在它休眠的心中跳动。另外两位神灵的力量等待着一位——或几位追随阿利克辛脚步的英雄来唤醒。\n**休眠态（Dormant State）.** 在这个状态下，三祷之坠是一面闪闪发光的黄金圆盘，系在一条精致的金链上。链条可以魔法般调整大小，变成适合佩戴者的项链尺寸。\n在休眠状态下，这件坠饰有着以下属性：\n- 当佩戴这件饰物时，你的 AC 获得 +1 加值。\n- 当佩戴或手握这件坠饰时，你可以用一个动作令它发出 15 尺半径的明亮光照，以及在此之外 15 尺的微光光照。光照会持续到你将其熄灭（无需动作）。\n- 这件饰物具有 3 发充能，并且在每天黎明恢复所有被消耗的充能。当手握这件坠饰时，你可以消耗 1 发充能施展 *隐形术*（*Invisibility*）。\n**觉醒态（Awakened State）.** 在这个状态下，这件坠饰已经重获了\"万变使者\"艾梵德拉的祝福。三个精致的尖瓣自宝石的中心绽放，宛如春日盛开的花蕾，三颗天青石宛如露珠一般落在花瓣上。\n坠饰的以下增益得到了提升：\n- 饰物提供的额外 AC 加值增加到 +2。\n- 它的充能数增加到 5。\n坠饰额外获得以下属性；当你手持或佩戴它时，你可以使用这些力量：\n- 你可以消耗 1 点饰物的充能（无需动作），结束你自己身上的以下一项状态：擒抱、麻痹或束缚。\n- 当另一个位于你 60 尺内且你能看见的生物豁免检定失败时，作为一个反应，你可以消耗 1 点饰物的充能，令该生物重新进行豁免。这可能使其变为成功。该生物必须使用新的结果。\n**升华态（Exalted State）.** 在这个状态下，这件坠饰已经重获了\"至高之心\"科瑞隆的祝福。一块金光环绕的闪耀绿宝石出现在饰物之上。\n坠饰的以下增益得到了提升：\n- 饰物提供的额外 AC 加值增加到 +3。\n- 它的充能数增加到 7。\n坠饰额外获得以下属性；当你手持或佩戴它时，你可以使用这些力量：\n- 你获得在水中呼吸的能力，以及等同于你行走速度的游泳速度。\n- 你 30 尺内的每一位盟友都获得在水中呼吸的能力，以及等同于其行走速度的游泳速度。\n- 以一个附赠动作，你可以消耗 1 发充能，并以你自己或 15 尺内你能看见的一个自愿生物为目标。目标和其穿戴与携带的所有装备一同被传送至一个由你选择、位于你 15 尺内的未占据空间中。目标会在一束金色的闪光中现身，其新位置周围 5 尺内每个由你选择的生物必须进行一次 DC 18 的体质豁免。豁免失败时，该生物受到 4d10 光耀伤害，并直到下个你的回合开始陷入目盲状态。豁免成功时，该生物受到一半伤害，且不会陷入目盲状态。\n<p>当佩戴这件饰物时，你的 AC 获得 +1 加值。</p><p>当佩戴或手握这件坠饰时，你可以用一个动作令它发出 15 尺半径的明亮光照，以及在此之外 15 尺的微光光照。光照会持续到你将其熄灭（无需动作）。</p><p>这件饰物具有 3 发充能，并且在每天黎明恢复所有被消耗的充能。当手握这件坠饰时，你可以消耗 1 发充能施展 *隐形术*（*Invisibility*）。</p><p>饰物提供的额外 AC 加值增加到 +2。</p><p>它的充能数增加到 5。</p><p>你可以消耗 1 点饰物的充能（无需动作），结束你自己身上的以下一项状态：擒抱、麻痹或束缚。</p><p>当另一个位于你 60 尺内且你能看见的生物豁免检定失败时，作为一个反应，你可以消耗 1 点饰物的充能，令该生物重新进行豁免。这可能使其变为成功。该生物必须使用新的结果。</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "book": "SRD 5.1",
+      "page": "",
+      "license": "CC-BY-4.0",
+      "rules": "2014"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 8000,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "equipped": false,
+    "rarity": "legendary",
+    "identified": true,
+    "cover": null,
+    "uses": {
+      "max": "5",
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "recoverAll"
+        }
+      ]
+    },
+    "armor": {
+      "value": 0,
+      "dex": 0,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": null,
+    "proficient": null,
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "crewed": false,
+    "properties": [
+      "mgc"
+    ],
+    "activities": {
+      "dnd5eactivity7ea": {
+        "_id": "dnd5eactivity7ea",
+        "type": "save",
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "18",
+            "value": 18
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "number": 4,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "radiant"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 1,
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "sort": 100000
+      },
+      "dnd5eactivity37f": {
+        "_id": "dnd5eactivity37f",
+        "type": "utility",
+        "activation": {
+          "type": "passive",
+          "value": null,
+          "override": false
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 200000
+      },
+      "dnd5eactivityd05": {
+        "_id": "dnd5eactivityd05",
+        "type": "utility",
+        "activation": {
+          "type": "passive",
+          "value": null,
+          "override": false
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 300000
+      },
+      "dnd5eactivitye65": {
+        "_id": "dnd5eactivitye65",
+        "type": "utility",
+        "activation": {
+          "type": "passive",
+          "value": null,
+          "override": false
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 400000
+      },
+      "dnd5eactivityd9d": {
+        "_id": "dnd5eactivityd9d",
+        "type": "utility",
+        "activation": {
+          "type": "free",
+          "value": 0,
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 500000
+      },
+      "dnd5eactivitya79": {
+        "_id": "dnd5eactivitya79",
+        "type": "utility",
+        "activation": {
+          "type": "free",
+          "value": 0,
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 600000
+      },
+      "dnd5eactivity6c5": {
+        "_id": "dnd5eactivity6c5",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 700000
+      }
+    },
+    "attuned": true,
+    "identifier": "-awakened"
+  },
+  "effects": [],
+  "folder": "aJgMxnZED9XdoN2W",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.0.0",
+    "createdTime": 1725037262170,
+    "modifiedTime": 1725992537919,
+    "lastModifiedBy": "dnd5ebuilder0000"
+  },
+  "_key": "!items!iiQxTvDOhPGW5spF"
+}

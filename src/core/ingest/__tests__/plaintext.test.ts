@@ -78,32 +78,37 @@ describe('PlainTextIngestionWorkflow', () => {
   it('writes 7 markdown files when not in dry-run mode', async () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-plaintext-ingest-'));
     roots.push(root);
+    const inputDir = join(root, 'input');
 
     const workflow = new PlainTextIngestionWorkflow({ aiNormalizer: null });
     const result = await workflow.ingest({
       sourcePath: SOURCE_PATH,
-      emitDir: root,
+      emitDir: inputDir,
       dryRun: false,
     });
 
     expect(result.files).toHaveLength(7);
-    expect(existsSync(join(root, 'scuttling-serpentmaw__蛇口蛮蟹.md'))).toBe(true);
-    expect(existsSync(join(root, 'slithering-bloodfin__滑行血鳍.md'))).toBe(true);
+    expect(result.emitDir).toBe(join(root, 'middle'));
+    expect(existsSync(join(root, result.files[0]!.fileName))).toBe(false);
+    expect(existsSync(join(result.emitDir, result.files[0]!.fileName))).toBe(true);
+    expect(existsSync(join(result.emitDir, result.files[1]!.fileName))).toBe(true);
   });
 
   it('does not write files in dry-run mode', async () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-plaintext-dry-run-'));
     roots.push(root);
+    const inputDir = join(root, 'input');
 
     const workflow = new PlainTextIngestionWorkflow({ aiNormalizer: null });
     const result = await workflow.ingest({
       sourcePath: SOURCE_PATH,
-      emitDir: root,
+      emitDir: inputDir,
       dryRun: true,
     });
 
     expect(result.files).toHaveLength(7);
-    expect(existsSync(join(root, 'scuttling-serpentmaw__蛇口蛮蟹.md'))).toBe(false);
+    expect(result.emitDir).toBe(join(root, 'middle'));
+    expect(existsSync(join(result.emitDir, result.files[0]!.fileName))).toBe(false);
   });
 
   it('falls back to rule-based normalization when AI normalization fails', async () => {

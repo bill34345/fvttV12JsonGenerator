@@ -1,5 +1,5 @@
 {
-  "name": "皮纳Pinna",
+  "name": "<think>\nThe user wants me to translate \"Pinna\" from English to Chinese (zh-CN).\n\n\"Pinna\" is a name. When translating names, they are typically kept as is or transliterated phonetically. In Chinese, foreign names like \"Pinna\" would typically be transliterated.\n\nThe most common transliteration for \"Pinna\" in Chinese would be:\n- 皮纳 (Pí Nà)\n- 皮娜 (Pí Nà)\n- 平纳 (Píng Nà)\n\nWithout additional context, I'll provide the most common transliteration which would be 皮纳.\n</think>\n\n皮纳",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "皮纳Pinna",
+    "name": "<think>\nThe user wants me to translate \"Pinna\" from English to Chinese (zh-CN).\n\n\"Pinna\" is a name. When translating names, they are typically kept as is or transliterated phonetically. In Chinese, foreign names like \"Pinna\" would typically be transliterated.\n\nThe most common transliteration for \"Pinna\" in Chinese would be:\n- 皮纳 (Pí Nà)\n- 皮娜 (Pí Nà)\n- 平纳 (Píng Nà)\n\nWithout additional context, I'll provide the most common transliteration which would be 皮纳.\n</think>\n\n皮纳",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "匕首Dagger",
+      "name": "<think>\nThe user wants me to translate \"Dagger\" from English to Simplified Chinese (zh-CN).\n\n\"Dagger\" is a noun that means a short pointed knife used as a weapon.\n\nIn Simplified Chinese, \"Dagger\" is translated as \"匕首\" (bǐ shǒu).\n\nThis is a straightforward translation request for a single word.\n</think>\n\n匕首",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战或远程武器攻击：+2 命中，触及5英尺或射程20/60英尺，针对一名目标。命中：2（1d4）点穿刺伤害。</p>",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Chinese (zh-CN). This appears to be a game item description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n\"Melee or Ranged Weapon Attack: +2 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 2 (1d4) piercing damage.\"\n\nKey terms to translate:\n- Melee - 近战\n- Ranged - 远程\n- Weapon Attack - 武器攻击\n- to hit - 命中\n- reach - 触及\n- range - 射程\n- one target - 一个目标\n- Hit - 命中\n- piercing damage - 穿刺伤害\n- ft. (feet) - 尺\n\nNote: In Chinese D&D translations, \"尺\" (chi) is the standard unit. 1 chi ≈ 1 foot.\n\nLet me put it together:\n\n近战或远程武器攻击：+2命中，近战触及5尺或远程射程20/60尺，一个目标。命中：2（1d4）点穿刺伤害。\n</think>\n\n近战或远程武器攻击：+2命中，近战触及5尺或远程射程20/60尺，一个目标。命中：2（1d4）点穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd1a": {
-            "_id": "dnd5eactivityd1a",
+          "dnd5eactivity342": {
+            "_id": "dnd5eactivity342",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -812,12 +812,12 @@
       }
     },
     {
-      "name": "施法Spellcasting",
+      "name": "<think>\nThe user wants me to translate \"Spellcasting\" from English to zh-CN (Simplified Chinese).\n\n\"Spellcasting\" in the context of games (like D&D, video games, etc.) refers to the act of casting spells.\n\nThe translation would be:\n- 施法 (shī fǎ) - literally \"casting spells\" or \"spell casting\"\n\nThis is the standard term used in Chinese for spellcasting in gaming contexts.\n</think>\n\n施法",
       "type": "feat",
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>Pinna is a 3rd-level 施法者spellcaster. Her<br>施法属性spellcasting ability is Intelligence (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). Pinna has the<br>following wizard spells prepared:<br>戏法Cantrips (随意at will): 小型幻象minor illusion, 法师之手mage hand, 舞动的光芒dancing lights, 火焰弹fire bolt<br>1st level (4 法术位slots): 色彩喷射color spray, 无声幻象silent image, 鉴定identify, 魔法飞弹magic missile<br>2nd level (2 法术位slots): 模糊术blur, 蛛网术web</p>",
+          "value": "<p>Pinna is a 3rd-level 施法者spellcaster. Her<br>施法属性spellcasting ability is Intelligence (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). Pinna has the<br>following wizard spells prepared:<br>戏法Cantrips (随意at will): <think>\nThe user wants me to translate \"minor illusion\" from English to zh-CN (Simplified Chinese).\n\n\"minor illusion\" is a term from D&D (Dungeons & Dragons) - it's a cantrip spell that creates illusory effects.\n\nTranslation:\n- minor = 次级/小型\n- illusion = 幻象/幻觉\n\nIn D&D context, this is usually translated as \"次级幻影\" or \"小幻象\" in Chinese.\n\nLooking at standard D&D translations:\n- Minor Illusion = 次级幻象\n- This is the most commonly used translation in Chinese D&D communities\n\nI'll provide the translation as \"次级幻象\".\n</think>\n\n次级幻象, <think>\nThe user wants me to translate \"mage hand\" from English to Simplified Chinese (zh-CN). This is a spell name from tabletop RPGs like Dungeons & Dragons.\n\n\"Mage hand\" translates to \"法师之手\" or \"奥术之手\" in Chinese, depending on the context and translation convention used in different D&D Chinese editions.\n\nThe most common and standard translation used in Chinese editions of D&D is \"法师之手\".\n\nLet me return just the translated text as requested.\n</think>\n\n法师之手, <think>\nThe user wants me to translate \"dancing lights\" from English to Chinese (zh-CN). This appears to be a spell name from a game context (based on the domain \"item.spellName\").\n\n\"dancing lights\" in the context of spells (likely from D&D or similar RPG) is a cantrip that creates moving lights. \n\nThe translation for \"dancing lights\" as a spell name in Chinese would typically be:\n- 舞光术 (wǔ guāng shù) - literally \"dancing light technique/sorcery\"\n- 魔光 (mó guāng) - magic light (less common)\n- 舞蹈之光 - too literal\n\nThe most commonly used translation in D&D Chinese versions is \"舞光术\".\n\nLet me provide the translation.\n</think>\n\n舞光术, <think>\nThe user wants me to translate \"fire bolt\" from English to Simplified Chinese (zh-CN). This appears to be from a game context (Domain: item.spellName).\n\n\"fire bolt\" in gaming context typically translates to:\n- 火球 (fireball)\n- 火弹 (fire bolt/dart)\n- 火焰弹\n\nIn most RPG games, \"fire bolt\" is commonly translated as \"火球术\" or \"火焰弹\". Let me think about which is more appropriate for a spell name:\n\n- 火球术 (fireball spell) - more common\n- 火弹 (fire bolt) - more literal\n- 火焰弹 (flame bolt/dart)\n\nFor a spell name, \"火球术\" is the most commonly used translation in Chinese gaming context for fire bolt/ball spells. However, \"fire bolt\" specifically might be better as \"火弹\" or \"火焰弹\" to distinguish from the larger \"fireball\".\n\nActually, looking at popular games like D&D and various RPGs, \"fire bolt\" is commonly translated as \"火球术\" or simply \"火球\".\n\nI'll go with \"火球术\" as it's the most common translation for this spell in Chinese gaming context.\n</think>\n\n火球术<br>1st level (4 法术位slots): <think>\nThe user wants me to translate \"color spray\" from English to Chinese (Simplified).\n\n\"Color spray\" is a term that appears in various contexts, most notably as a spell in Dungeons & Dragons (D&D). In D&D, this is typically translated as \"七彩喷涌\" or \"彩色喷射\" in Chinese translations.\n\nGiven the context hint \"item.spellName\" in the system prompt, this appears to be a game-related translation request.\n\nThe standard Chinese translation for the D&D spell \"Color Spray\" is:\n七彩喷射 (qī cǎi pēn shè)\n\nHowever, looking at popular Chinese translations of D&D:\n- 七彩喷泉\n- 彩色喷雾\n- 七彩射线\n\nThe most commonly used translation in Chinese D&D communities is \"七彩喷射\" or sometimes \"彩色喷泉\".\n\nLet me go with the most standard translation: 七彩喷射\n</think>\n\n七彩喷射, <think>\nThis is a simple translation request from English to Simplified Chinese. The domain is \"item.spellName\" which suggests this is likely a game term, likely from D&D or a similar RPG.\n\n\"silent image\" is a spell name, typically translated in Chinese as:\n\nIn D&D and similar games, \"Silent Image\" is commonly translated as:\n- 无声幻影 (wúshēng huànyǐng)\n- or 沉默幻象 (chénmò huànxiàng)\n\nThe more common and standard translation in Chinese editions of D&D is \"无声幻影\" (Silent Image).\n\nLet me translate this:\nsilent = 沉默/无声\nimage = 图像/幻影/幻象\n\nThe most common translation for this spell in Chinese is \"无声幻影\".\n</think>\n\n无声幻影, <think>\nThe user wants me to translate \"identify\" from English to zh-CN (Simplified Chinese). This appears to be a game item spell name.\n\n\"identify\" in English means to recognize or determine what something is.\n\nIn the context of RPG games (like Diablo, D&D, etc.), \"Identify\" is a common spell that reveals the properties of unidentified items.\n\nThe Chinese translation for \"identify\" in gaming context is typically:\n- 鉴定 (jiàn dìng) - this is the most common gaming term for item identification\n\nLet me return just the translated text.\n</think>\n\n鉴定, <think>\nThe user wants me to translate \"magic missile\" from English to Simplified Chinese (zh-CN). This is a gaming/fantasy term, commonly known in Chinese gaming communities.\n\n\"Magic missile\" is typically translated as \"魔法飞弹\" or \"魔导弹\" in Chinese gaming context.\n\nLet me think about the most common translations:\n1. 魔法飞弹 (most common in RPGs)\n2. 魔导弹\n3. 魔法导弹\n\nThe most standard and widely accepted translation would be \"魔法飞弹\".\n</think>\n\n魔法飞弹<br>2nd level (2 法术位slots): <think>\nThe user wants me to translate \"blur\" from English to Chinese (zh-CN).\n\n\"blur\" in the context of item.spellName typically means a blurring effect or the word blur itself.\n\nIn Chinese, \"blur\" could be translated as:\n- 模糊 (móhu) - blur, vague\n- 残影 (cányǐng) - afterimage, ghost image\n- 遮蔽 (zhēbì) - cover, hide\n\nFor a spell name like \"blur\", the most common translations in gaming contexts would be:\n- 模糊\n- 残影\n\nI should provide a simple, direct translation suitable for a game spell name.\n</think>\n\n模糊, <think>\nThis is a simple translation request from English to Simplified Chinese. The domain is \"item.spellName\" which suggests this is for a game or application where spell names are used.\n\nThe word \"web\" in English can be translated to Chinese as:\n- 网络 (wǎngluò) - network\n- 网页 (wǎngyè) - webpage\n- 网 (wǎng) - net/web\n\nGiven the domain \"item.spellName\" which suggests this is for a game spell/item name, the most appropriate translation would likely be:\n- 网络 (wǎngluò) - as in \"Web\" spell, commonly seen in games like \"Web\" ability\n- 蛛网 (zhūwǎng) - spider web\n\nHowever, without more context about the specific game or application, \"网络\" or \"网\" would be the most common translations. But in gaming context, \"Web\" is often translated as \"蛛网\" (spider web) for spider-related abilities, or \"网\" for generic web spells.\n\nGiven this is likely for a game database or item list, I'll provide \"网络\" as the standard translation.\n</think>\n\n网络</p>",
           "chat": ""
         },
         "source": {
@@ -848,7 +848,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722559,
-    "modifiedTime": 1774273722559
+    "createdTime": 1775752086243,
+    "modifiedTime": 1775752086243
   }
 }

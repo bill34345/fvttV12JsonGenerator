@@ -1,5 +1,5 @@
 {
-  "name": "鲁迪姆腐化的楚尔消除器 (Ruidium Corrupted Chuul Nullifier)",
+  "name": "Ruidium Corrupted Chuul Nullifier",
   "type": "npc",
   "img": "",
   "system": {
@@ -708,12 +708,12 @@
   },
   "items": [
     {
-      "name": "两栖Amphibious",
+      "name": "<think>\nThe user wants me to translate \"Amphibious\" from English to Simplified Chinese (zh-CN).\n\n\"Amphibious\" in English means:\n1. Relating to or affecting both land and water\n2. (of a vehicle or person) able to operate on both land and water\n\nIn Chinese, this translates to:\n\"两栖的\" (liǎng qī de)\n\nFor example:\n- Amphibious vehicle = 两栖车辆\n- Amphibious operation = 两栖作战\n\nSince the domain is \"item.name\" (物品名称), the translation should be the standard term for this type of item/category.\n</think>\n\n两栖的",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "消除器可以在空气和水中呼吸。",
+          "value": "<p>The nullifier can breathe air and water.</p>",
           "chat": ""
         },
         "source": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydb1": {
-            "_id": "dnd5eactivitydb1",
+          "dnd5eactivity39a": {
+            "_id": "dnd5eactivity39a",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,12 +753,12 @@
       }
     },
     {
-      "name": "感知魔法 (Sense Magic)",
+      "name": "<think>\nThe user wants me to translate \"Sense Magic\" from English to zh-CN (Simplified Chinese).\n\n\"Sense Magic\" - this appears to be a game term, likely from a video game or RPG context. It could refer to:\n1. A spell/ability name - \"感知魔法\" or \"魔法感知\"\n2. A general concept - \"感知魔法\" (to sense magic)\n\nIn gaming contexts, this is typically translated as:\n- \"感知魔法\" (gǎnzhī mófǎ) - to sense/perceive magic\n- \"魔法感知\" (mófǎ gǎnzhī) - magic sensing/awareness\n\nGiven this is likely from a game item or ability name context (Domain: item.name), the most common translation would be \"感知魔法\" or \"魔法感知\".\n\nI'll go with \"感知魔法\" as it's the more natural reading when used as an item name.\n</think>\n\n感知魔法",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "无效器可以在120英尺内感知魔法，就像施展了*侦测魔法*法术一样，但这个特性并不是魔法。",
+          "value": "<p>The nullifier can sense magic within 120 feet as if it had the *detect magic* spell cast on it, except this trait isn't magical.</p>",
           "chat": ""
         },
         "source": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity04f": {
-            "_id": "dnd5eactivity04f",
+          "dnd5eactivity684": {
+            "_id": "dnd5eactivity684",
             "type": "utility",
             "activation": {
               "type": "",
@@ -798,12 +798,12 @@
       }
     },
     {
-      "name": "脆弱的鲁伊迪姆外壳 如果无效者从单一来源受到20点或更多钝击伤害，其护甲等级在完成短暂休息或长时间休息之前变为15。 (Brittle Ruidium Shell: If the nullifier takes 20 or more bludgeoning damage from a single source, its AC becomes 15 until it finishes a short or long rest)",
+      "name": "Brittle Ruidium Shell: If the nullifier takes 20 or more bludgeoning damage from a single source, its AC becomes 15 until it finishes a short or long rest",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "虽然以这种方式降低了其AC，但它失去了精神抗性。",
+          "value": "<p>While its AC is reduced this way, it loses psychic resistance.</p>",
           "chat": ""
         },
         "source": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity720": {
-            "_id": "dnd5eactivity720",
+          "dnd5eactivitye7e": {
+            "_id": "dnd5eactivitye7e",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -843,7 +843,7 @@
       }
     },
     {
-      "name": "无效场 无效器发出一个无效场，在10英尺的半径内抑制魔法。 (Nullifying Field: The nullifier emits a nullifying field that suppresses magic in a 10-foot radius)",
+      "name": "Nullifying Field: The nullifier emits a nullifying field that suppresses magic in a 10-foot radius",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye04": {
-            "_id": "dnd5eactivitye04",
+          "dnd5eactivitycdd": {
+            "_id": "dnd5eactivitycdd",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -891,12 +891,12 @@
       }
     },
     {
-      "name": "鲁迪姆腐化 当生物因此消除者的特性或行为需要进行鲁迪姆腐化豁免时，该生物必须成功通过DC 15的魅力豁免，否则将遭受鲁迪姆腐化。 (Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this nullifier, the creature must succeed on a DC 15 Charisma saving throw or suffer Ruidium Corruption)",
+      "name": "Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this nullifier, the creature must succeed on a DC 15 Charisma saving throw or suffer Ruidium Corruption",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "如果生物已经受到鲁伊迪姆腐化的影响，则它将获得1级疲惫。",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). The text is:\n\n\"If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.\"\n\nThis appears to be game-related text, possibly from Dungeons & Dragons or a similar RPG system, referring to a status effect called \"Ruidium Corruption\" and \"exhaustion\" levels.\n\nLet me translate this:\n\n- \"If the creature\" = 如果该生物\n- \"is already affected by\" = 已经受到...影响\n- \"Ruidium Corruption\" = 锐毒侵蚀（或保持Ruidium Corruption不变，因为是专有名词）\n- \"it\" = 它\n- \"instead gains\" = 则改为获得\n- \"1 level of exhaustion\" = 1级力竭\n\nLet me put it together:\n如果该生物已经受到锐毒侵蚀的影响，则改为获得1级力竭。\n\nOr more naturally:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n\nActually, looking at game terminology more carefully:\n- \"Ruidium Corruption\" is likely a specific game term that might be kept as \"Ruidium Corruption\" or translated as \"锐毒侵蚀\"\n- \"exhaustion\" in D&D context is \"力竭\"\n\nI'll go with:\n如果该生物已受Ruidium Corruption影响，则改为获得1级力竭。\n\nOr fully translated:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n</think>\n\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。</p>",
           "chat": ""
         },
         "source": {
@@ -908,12 +908,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity1c9": {
-            "_id": "dnd5eactivity1c9",
+          "dnd5eactivity235": {
+            "_id": "dnd5eactivity235",
             "type": "utility",
             "effects": [
               {
-                "_id": "451280fb5f97a830"
+                "_id": "7fde7eb7a233b871"
               }
             ],
             "activation": {
@@ -931,7 +931,7 @@
       },
       "effects": [
         {
-          "_id": "451280fb5f97a830",
+          "_id": "7fde7eb7a233b871",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -967,12 +967,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "无效者进行一次抓取爪攻击和一次压制爪攻击。如果它正在抓住一个生物，它还可以进行一次触手攻击。",
+          "value": "<p>The nullifier makes one Seizing Claw attack and one Crushing Claw attack. If it's grappling a creature, it can also make one Tentacles attack.</p>",
           "chat": ""
         },
         "source": {
@@ -984,8 +984,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity55e": {
-            "_id": "dnd5eactivity55e",
+          "dnd5eactivityb1c": {
+            "_id": "dnd5eactivityb1c",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1012,12 +1012,12 @@
       }
     },
     {
-      "name": "抓取爪 (Seizing Claw)",
+      "name": "<think>\nThe user wants me to translate \"Seizing Claw\" from English to Chinese (zh-CN).\n\n\"Seizing\" means to grab, take hold of, or grasp - in Chinese this can be translated as \"抓取\", \"攫取\", or \" seizing in the sense of taking control.\"\n\n\"Claw\" is a noun meaning a sharp, curved nail on an animal's foot, or something shaped like this - in Chinese this is \"爪\", \"爪子\", or \"利爪\".\n\nFor a game item name like \"Seizing Claw\", a common translation would be:\n- 抓取之爪\n- 攫取利爪\n- 夺爪\n- 掠爪\n\nI think \"攫取利爪\" or \"抓取利爪\" would be good translations as it maintains the powerful, aggressive tone of the original name.\n\nActually, looking at this as a game item name, a more concise translation might be:\n- 攫爪\n- 夺爪\n\nLet me go with \"攫取利爪\" as it more directly translates \"seizing\" (攫取) + \"claw\" (利爪).\n</think>\n\n攫取利爪",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "近战武器攻击：+8命中，范围10英尺，目标一个。命中：造成14（2d8 + 5）钝击伤害加上4（1d8）精神伤害。如果目标是大型或更小，则被抓住（逃脱DC 16）并被拉向无效者最多10英尺。无效者一次只能抓住一个生物。",
+          "value": "<p>Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 14 (2d8 + 5) bludgeoning damage plus 4 (1d8) psychic damage. If the target is Large or smaller, it's grappled (escape DC 16) and pulled up to 10 feet toward the nullifier. The nullifier can have only one creature grappled this way at a time.</p>",
           "chat": ""
         },
         "source": {
@@ -1029,8 +1029,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity22f": {
-            "_id": "dnd5eactivity22f",
+          "dnd5eactivityc00": {
+            "_id": "dnd5eactivityc00",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1109,7 +1109,7 @@
             },
             "effects": [
               {
-                "_id": "db6d421d7bddd0be"
+                "_id": "c195c98bfa5472f5"
               }
             ],
             "activation": {
@@ -1134,7 +1134,7 @@
       },
       "effects": [
         {
-          "_id": "db6d421d7bddd0be",
+          "_id": "c195c98bfa5472f5",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1170,12 +1170,12 @@
       }
     },
     {
-      "name": "压碎爪 (Crushing Claw)",
+      "name": "<think>\nThe user wants me to translate \"Crushing Claw\" from English to Simplified Chinese (zh-CN). This appears to be a game term, likely from a game like Pokémon or similar.\n\nIn Pokémon, \"Crushing Claw\" (or the Japanese version \"哈欠\") - wait, let me think again. \"Crushing Claw\" could be from various games.\n\nActually, looking at this more carefully, this is likely \"Crushing Claw\" from the Pokémon series. In Pokémon games, \"Crushing Claw\" was a move that could be learned by certain Pokémon.\n\nIn Chinese (Simplified), \"Crushing Claw\" is typically translated as \"撕裂爪\" or \"碎裂爪\" or \"压碎爪\".\n\nLet me think about common translations:\n- \"Crushing Claw\" is often translated as \"撕裂爪\" (Sīliè zhuǎ) in Pokémon contexts\n\nActually, I believe the standard translation for \"Crushing Claw\" in Simplified Chinese (for Pokémon) is \"撕裂爪\".\n\nBut let me consider if this might be from another context. The instruction says \"item.name\" which suggests it could be a game item or move name.\n\nGiven the domain \"item.name\" and the game context likely being Pokémon, the most common translation would be:\n- 撕裂爪 (Sīliè zhuǎ) - literally \"Tearing Claw\" or \"Rending Claw\"\n\nOr it could be:\n- 碎裂爪 (Suìliè zhuǎ) - literally \"Shattering Claw\"\n- 压碎爪 (Yāsuì zhuǎ) - literally \"Crushing Claw\"\n\nFor Pokémon specifically, \"Crushing Claw\" is translated as \"撕裂爪\".\n\nI'll go with the most standard translation in this context.\n</think>\n\n撕裂爪",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "近战武器攻击：+8命中，范围5英尺，目标一个。命中：18（3d8 + 5）钝击伤害加上7（2d6）精神伤害。目标必须成功进行DC 15的体质豁免，否则在无效者的下一个回合开始之前无法进行反应。如果目标正在集中注意力，它必须立即进行一次体质豁免，且带有劣势，以维持集中。",
+          "value": "<p>Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage plus 7 (2d6) psychic damage. The target must succeed on a DC 15 Constitution saving throw or can't take reactions until the start of the nullifier's next turn. If it's concentrating, it must immediately make a Constitution saving throw to maintain concentration with disadvantage.</p>",
           "chat": ""
         },
         "source": {
@@ -1187,8 +1187,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye28": {
-            "_id": "dnd5eactivitye28",
+          "dnd5eactivityd99": {
+            "_id": "dnd5eactivityd99",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1300,12 +1300,12 @@
       }
     },
     {
-      "name": "触手Tentacles",
+      "name": "<think>\nThe user wants me to translate \"Tentacles\" from English to Chinese (zh-CN).\n\n\"Tentacles\" in Chinese can be translated as:\n- 触手 (chùshǒu) - tentacles (of an animal)\n- 触须 (chùxū) - tentacles, feelers\n- 触角 (chùjiǎo) - antennae, tentacles\n\nFor a general term \"tentacles\" (like those of an octopus, jellyfish, etc.), the most common translation is:\n触手 (chùshǒu)\n\nLet me return only the translated text.\n</think>\n\n触手",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "被无效者抓住的生物必须成功通过DC 15的体质豁免，否则将中毒并失聪，直到其下一个回合结束。在这种中毒状态下，它在维持专注的体质豁免上会有劣势。如果目标已经受到鲁伊迪姆腐化的影响，则会变得瘫痪，直到其下一个回合结束。",
+          "value": "<p>A creature grappled by the nullifier must succeed on a DC 15 Constitution saving throw or be poisoned and deafened until the end of its next turn. While poisoned this way, it has disadvantage on Constitution saving throws to maintain concentration. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
           "chat": ""
         },
         "source": {
@@ -1317,8 +1317,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity28a": {
-            "_id": "dnd5eactivity28a",
+          "dnd5eactivity0ec": {
+            "_id": "dnd5eactivity0ec",
             "type": "save",
             "save": {
               "ability": [
@@ -1335,16 +1335,16 @@
             },
             "effects": [
               {
-                "_id": "0bb797015db0e538"
+                "_id": "fa3a1ea78489105a"
               },
               {
-                "_id": "f6bd73c75f23d6a7"
+                "_id": "21d3f059607f5386"
               },
               {
-                "_id": "fab3dc93ceefe435"
+                "_id": "684690359f7e91d5"
               },
               {
-                "_id": "a7e31982a504739e"
+                "_id": "2d9c848d5202ee04"
               }
             ],
             "activation": {
@@ -1362,7 +1362,7 @@
       },
       "effects": [
         {
-          "_id": "0bb797015db0e538",
+          "_id": "fa3a1ea78489105a",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1387,7 +1387,7 @@
           ]
         },
         {
-          "_id": "f6bd73c75f23d6a7",
+          "_id": "21d3f059607f5386",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1412,7 +1412,7 @@
           ]
         },
         {
-          "_id": "fab3dc93ceefe435",
+          "_id": "684690359f7e91d5",
           "name": "耳聋 (Deafened)",
           "type": "base",
           "system": {},
@@ -1437,7 +1437,7 @@
           ]
         },
         {
-          "_id": "a7e31982a504739e",
+          "_id": "2d9c848d5202ee04",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1476,12 +1476,12 @@
       }
     },
     {
-      "name": "反魔法脉冲 无效者将其无效领域压缩成一个短暂的反魔法领域 (Antimagic Pulse : The nullifier compresses its nullifying field into a brief antimagic field)",
+      "name": "Antimagic Pulse : The nullifier compresses its nullifying field into a brief antimagic field",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "直到它下一个回合开始，消除者及其周围5英尺内的生物处于反魔法区域。如果消除者的生命值低于或等于72（血量受损），该区域扩大至10英尺。",
+          "value": "<p>Until the start of its next turn, the nullifier and creatures within 5 feet of it are in an antimagic area. If the nullifier is bloodied (72 HP or fewer), the area increases to 10 feet.</p>",
           "chat": ""
         },
         "source": {
@@ -1493,8 +1493,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity5da": {
-            "_id": "dnd5eactivity5da",
+          "dnd5eactivity924": {
+            "_id": "dnd5eactivity924",
             "type": "utility",
             "uses": {
               "spent": 0,
@@ -1532,12 +1532,12 @@
       }
     },
     {
-      "name": "虚空崩溃（每日一次） 当无效者的生命值首次降至72点或更少时，它可以立即释放一波崩溃的虚空能量。 (Null Collapse (1/day): The first time the nullifier is reduced to 72 HP or fewer, it can immediately release a wave of collapsing null energy)",
+      "name": "Null Collapse (1/day): The first time the nullifier is reduced to 72 HP or fewer, it can immediately release a wave of collapsing null energy",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "直到其下一个回合结束，其无效场半径增加到20英尺。在该区域内，选择的生物必须成功进行DC 15智力豁免，否则将受到22（4d10）点精神伤害，并且在下一个回合结束之前无法进行反应。如果它们正在集中，则集中立即结束。生物还必须进行鲁伊迪姆腐化豁免。成功豁免时，受到的伤害减半且没有其他效果。",
+          "value": "<p>Until the end of its next turn, its Nullifying Field radius increases to 20 feet. Creatures of the nullifier's choice in that area must succeed on a DC 15 Intelligence saving throw or take 22 (4d10) psychic damage and can't take reactions until the end of their next turn, and if they're concentrating, their concentration immediately ends. The creature must also make a Ruidium Corruption save. On a successful save, it takes half damage with no other effects.</p>",
           "chat": ""
         },
         "source": {
@@ -1549,8 +1549,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity892": {
-            "_id": "dnd5eactivity892",
+          "dnd5eactivity4d8": {
+            "_id": "dnd5eactivity4d8",
             "type": "save",
             "save": {
               "ability": [
@@ -1645,7 +1645,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274369950,
-    "modifiedTime": 1774274369950
+    "createdTime": 1775752086390,
+    "modifiedTime": 1775752086390
   }
 }

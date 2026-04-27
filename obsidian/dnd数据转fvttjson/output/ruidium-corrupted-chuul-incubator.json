@@ -1,5 +1,5 @@
 {
-  "name": "鲁迪姆腐化的楚尔孵化器 (Ruidium Corrupted Chuul Incubator)",
+  "name": "<think>\nThe user wants me to translate \"Ruidium Corrupted Chuul Incubator\" from English to Simplified Chinese (zh-CN).\n\nLet me break this down:\n- \"Ruidium Corrupted\" - This refers to a corruption by Ruidium, a fictional material from Dungeons & Dragons\n- \"Chuul Incubator\" - Chuul is a creature from D&D, and an incubator is a device for hatching eggs\n\nFor D&D terms, I should:\n1. Keep \"Ruidium\" as a proper noun (鲁伊迪乌姆 or similar transliteration)\n2. Translate \"Corrupted\" - could be \"腐化\", \"堕落\", \"被污染的\"\n3. Translate \"Chuul\" - this is a creature name, often transliterated as \"丘尔\" or kept as is\n4. Translate \"Incubator\" - \"孵化器\"\n\nCommon translations in D&D Chinese materials:\n- Corrupted = 腐化/被腐化的\n- Chuul = 丘尔 (common transliteration)\n- Incubator = 孵化器\n\nSo: 鲁伊迪乌姆腐化丘尔孵化器 or 被鲁伊迪乌姆腐化的丘尔孵化器\n\nI think the more natural translation would be:\n被鲁伊迪乌姆腐化的丘尔孵化器\n\nOr simply: 腐化丘尔孵化器 (if we want to be more concise)\n\nBut to be most accurate to the original, I'll go with:\n鲁伊迪乌姆腐化丘尔孵化器\n</think>\n\n被鲁伊迪乌姆腐化的丘尔孵化器",
   "type": "npc",
   "img": "",
   "system": {
@@ -617,7 +617,7 @@
     }
   },
   "prototypeToken": {
-    "name": "Ruidium Corrupted Chuul Incubator",
+    "name": "<think>\nThe user wants me to translate \"Ruidium Corrupted Chuul Incubator\" from English to Simplified Chinese (zh-CN).\n\nLet me break this down:\n- \"Ruidium Corrupted\" - This refers to a corruption by Ruidium, a fictional material from Dungeons & Dragons\n- \"Chuul Incubator\" - Chuul is a creature from D&D, and an incubator is a device for hatching eggs\n\nFor D&D terms, I should:\n1. Keep \"Ruidium\" as a proper noun (鲁伊迪乌姆 or similar transliteration)\n2. Translate \"Corrupted\" - could be \"腐化\", \"堕落\", \"被污染的\"\n3. Translate \"Chuul\" - this is a creature name, often transliterated as \"丘尔\" or kept as is\n4. Translate \"Incubator\" - \"孵化器\"\n\nCommon translations in D&D Chinese materials:\n- Corrupted = 腐化/被腐化的\n- Chuul = 丘尔 (common transliteration)\n- Incubator = 孵化器\n\nSo: 鲁伊迪乌姆腐化丘尔孵化器 or 被鲁伊迪乌姆腐化的丘尔孵化器\n\nI think the more natural translation would be:\n被鲁伊迪乌姆腐化的丘尔孵化器\n\nOr simply: 腐化丘尔孵化器 (if we want to be more concise)\n\nBut to be most accurate to the original, I'll go with:\n鲁伊迪乌姆腐化丘尔孵化器\n</think>\n\n被鲁伊迪乌姆腐化的丘尔孵化器",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -706,12 +706,12 @@
   },
   "items": [
     {
-      "name": "两栖Amphibious",
+      "name": "<think>\nThe user wants me to translate \"Amphibious\" from English to Simplified Chinese (zh-CN).\n\n\"Amphibious\" in English means:\n1. Relating to or affecting both land and water\n2. (of a vehicle or person) able to operate on both land and water\n\nIn Chinese, this translates to:\n\"两栖的\" (liǎng qī de)\n\nFor example:\n- Amphibious vehicle = 两栖车辆\n- Amphibious operation = 两栖作战\n\nSince the domain is \"item.name\" (物品名称), the translation should be the standard term for this type of item/category.\n</think>\n\n两栖的",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "孵化器可以呼吸空气和水。",
+          "value": "<p><think>\nThis is a simple translation request from English to Simplified Chinese (zh-CN). The text to translate is:\n\n\"The incubator can breathe air and water.\"\n\nLet me translate this:\n- \"The incubator\" = \"培养箱\" or \"孵化器\" or \"恒温箱\" - depending on context, but \"培养箱\" is commonly used in scientific/lab settings\n- \"can breathe\" = \"可以呼吸\" or \"能够透气\" - \"可以呼吸\" is more literal\n- \"air and water\" = \"空气和水\"\n\nA natural translation would be:\n\"培养箱可以呼吸空气和水。\"\n\nOr more naturally: \"该培养箱能够透气（允许空气和水通过）。\"\n\nBut the simplest and most direct translation would be:\n\"培养箱可以呼吸空气和水。\"\n\nActually, looking at this more carefully, the phrase \"breathe air and water\" is a bit unusual. It might be a translation of some scientific description or a metaphorical description. Let me provide a straightforward translation:\n\n\"培养箱可以呼吸空气和水。\"\n\nOr if it's more about the incubator having ventilation for both air and water:\n\"培养箱可以通入空气和水。\"\n\nGiven the domain is \"item.description\", I'll provide a clear, descriptive translation:\n\"培养箱可以通入空气和水。\"\n</think>\n\n培养箱可以通入空气和水。</p>",
           "chat": ""
         },
         "source": {
@@ -723,8 +723,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity71c": {
-            "_id": "dnd5eactivity71c",
+          "dnd5eactivity0c8": {
+            "_id": "dnd5eactivity0c8",
             "type": "utility",
             "activation": {
               "type": "",
@@ -751,12 +751,12 @@
       }
     },
     {
-      "name": "感知魔法 (Sense Magic)",
+      "name": "<think>\nThe user wants me to translate \"Sense Magic\" from English to zh-CN (Simplified Chinese).\n\n\"Sense Magic\" - this appears to be a game term, likely from a video game or RPG context. It could refer to:\n1. A spell/ability name - \"感知魔法\" or \"魔法感知\"\n2. A general concept - \"感知魔法\" (to sense magic)\n\nIn gaming contexts, this is typically translated as:\n- \"感知魔法\" (gǎnzhī mófǎ) - to sense/perceive magic\n- \"魔法感知\" (mófǎ gǎnzhī) - magic sensing/awareness\n\nGiven this is likely from a game item or ability name context (Domain: item.name), the most common translation would be \"感知魔法\" or \"魔法感知\".\n\nI'll go with \"感知魔法\" as it's the more natural reading when used as an item name.\n</think>\n\n感知魔法",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "孵化器可以在120英尺内感知魔法，就像施展了*侦测魔法*法术一样，但这个特性并不是魔法。",
+          "value": "<p><think>\nThe user wants me to translate the given English text to Simplified Chinese (zh-CN). This appears to be a game-related description, likely from a tabletop RPG like Dungeons & Dragons.\n\nLet me translate this carefully:\n\n\"The incubator can sense magic within 120 feet as if it had the *detect magic* spell cast on it, except this trait isn't magical.\"\n\nKey terms to translate:\n- incubator - 孵化器/培养器 (in D&D context, this is likely a creature type, so I'll use 孵化器)\n- sense - 感知\n- magic - 魔法\n- within 120 feet - 在120英尺内\n- detect magic - 侦测魔法 (this is the standard Chinese translation for detect magic in D&D)\n- spell - 法术\n- trait - 特质\n- magical - 魔法的/魔法\n\nTranslation:\n这个孵化器能像被施放了*侦测魔法*法术一样感知120英尺内的魔法，但此特质并非魔法。\n\nWait, let me reconsider. The phrase \"except this trait isn't magical\" is a bit tricky. It means that even though it can detect magic like the spell does, the ability itself is NOT magical (so it wouldn't be suppressed by anti-magic fields, etc.).\n\n更准确的翻译：\n这个孵化器能像被施放了*侦测魔法*法术一样感知120英尺内的魔法，但此特质并非魔法性质。\n\nOr more naturally:\n这个孵化器能像身上施放了*侦测魔法*法术一般，在120英尺范围内感知魔法，但这一特质并不具有魔法特性。\n \nI'll opt for the most straightforward and precise translation that captures the essence of the original text. The key is maintaining the nuanced meaning while presenting it in clear, natural Chinese. The translation needs to convey both the magical sensing ability and its non-magical nature accurately.\n\n这个孵化器能像被施放了*侦测魔法*法术一样感知120英尺内的魔法，但此特质并非魔法。\n</think>\n\n这个孵化器能像被施放了*侦测魔法*法术一样感知120英尺内的魔法，但此特质并非魔法。</p>",
           "chat": ""
         },
         "source": {
@@ -768,8 +768,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc15": {
-            "_id": "dnd5eactivityc15",
+          "dnd5eactivity1b6": {
+            "_id": "dnd5eactivity1b6",
             "type": "utility",
             "activation": {
               "type": "",
@@ -796,12 +796,12 @@
       }
     },
     {
-      "name": "脆弱的鲁伊迪姆壳 (Brittle Ruidium Shell)",
+      "name": "<think>\nThe user wants me to translate \"Brittle Ruidium Shell\" from English to Chinese (Simplified Chinese).\n\nLet me break this down:\n- \"Brittle\" = 脆的 / 易碎的\n- \"Ruidium\" = This appears to be a fantasy/game term. In translation of fantasy/game terms, we usually keep the transliteration or translate it consistently with how similar terms are translated.\n- \"Shell\" = 壳 / 外壳\n\nIn fantasy/game contexts, \"Ruidium\" seems to be a made-up material name. Looking at how similar fantasy materials are translated:\n- If it's a proper noun/fantasy term, it might be transliterated\n- \"Ruidium\" could be transliterated as \"瑞迪乌姆\" or similar\n\nHowever, in many game translations, especially for materials like this, the pattern seems to be:\n- \"Ruidium\" → \"瑞迪姆\" or keeping it as is\n\nLooking at common fantasy material translations:\n- \"Orichalcum\" → 山铜\n- \"Adamantine\" → 精金\n\nActually, looking at the context, this might be from Baldur's Gate 3 where \"Ruidium\" appears as a material. In that game, Ruidium is translated as \"瑞迪姆\" or kept as \"Ruidium\".\n\nLet me reconsider:\n- Brittle = 脆的 or 易碎的\n- Ruidium = 瑞迪姆 (common translation in Chinese)\n- Shell = 壳 or 外壳\n\nThe most natural translation would be:\n\"易碎的瑞迪姆壳\" or \"脆瑞迪姆外壳\"\n\nActually, looking at typical game material naming conventions in Chinese, a more natural phrasing would be:\n\"脆瑞迪姆壳\" or \"易碎瑞迪姆壳\"\n\n\nI'll confirm the most accurate translation. The preferred rendering is \"脆瑞迪姆壳\", as it directly translates the material's fragile nature while preserving the unique fantasy term. This approach maintains the game's linguistic nuance and ensures clarity for Chinese-speaking players.\n</think>\n\n脆瑞迪姆壳",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "如果孵化器从单一来源受到15点或更多的钝击伤害，它的护甲等级将变为13，直到它完成一次短暂休息或长时间休息。",
+          "value": "<p><think>\nThe user wants me to translate text from English to Chinese (Simplified). The text is:\n\n\"If the incubator takes 15 or more bludgeoning damage from a single source, its AC becomes 13 until it finishes a short or long rest.\"\n\nI need to translate this RPG/game-related text accurately. Let me break it down:\n\n- \"incubator\" = 孵化器\n- \"takes\" = 受到\n- \"15 or more\" = 15点或以上\n- \"bludgeoning damage\" = 钝击伤害\n- \"from a single source\" = 来自单一来源\n- \"its AC becomes\" = 它的AC变为\n- \"13\" = 13\n- \"until it finishes\" = 直到它完成\n- \"a short or long rest\" = 短休或长休\n\nPutting it together:\n如果孵化器在单一来源中受到15点或以上的钝击伤害，它的AC在它完成短休或长休之前变为13。\n</think>\n\n如果孵化器在单一攻击中受到15点或以上的钝击伤害，它的AC变为13，直到它完成短休或长休。</p>",
           "chat": ""
         },
         "source": {
@@ -813,8 +813,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb5b": {
-            "_id": "dnd5eactivityb5b",
+          "dnd5eactivityf6b": {
+            "_id": "dnd5eactivityf6b",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -841,12 +841,12 @@
       }
     },
     {
-      "name": "血腥的幼虫破裂 当孵化器首次减少到52点生命值或更少时，它会立即重新充能鲁伊迪姆幼虫补丁。 (Bloodied Brood-Rupture: The first time the incubator is reduced to 52 HP or fewer, it immediately recharges Ruidium Brood Patch)",
+      "name": "<think>\nThe user wants me to translate a text from English to Simplified Chinese (zh-CN). The text is:\n\n\"Bloodied Brood-Rupture: The first time the incubator is reduced to 52 HP or fewer, it immediately recharges Ruidium Brood Patch\"\n\nThis appears to be a game mechanic description, likely from Dungeons & Dragons or a similar tabletop RPG, given the mention of \"HP\" (Hit Points), \"incubator\", and \"Ruidium Brood Patch\".\n\nLet me translate this:\n\n- \"Bloodied Brood-Rupture\" - This is a special ability name. I'll translate it as \"血染的幼体破裂\" (Bloodied Brood-Rupture)\n- \"the first time\" - 第一次\n- \"the incubator\" - 孵化器\n- \"is reduced to\" - 降低至\n- \"52 HP or fewer\" - 52点生命值或更少\n- \"it immediately recharges\" - 它立即充能\n- \"Ruidium Brood Patch\" - This is likely a proper noun/specific game term. \"Ruidium\" is a substance from D&D 5e (Rime of the Frostmaiden). \"Brood Patch\" is a term. I'll transliterate \"Ruidium\" as \"瑞迪姆\" and translate \"Brood Patch\" as \"幼体斑块\" or keep it as a proper noun.\n\nActually, looking at this more carefully, \"Ruidium Brood Patch\" seems to be a specific item or ability name from the game. In D&D contexts, these are often kept as proper nouns. But the user asked me to translate, so I should provide a reasonable translation.\n\nLet me refine:\n- Bloodied Brood-Rupture: 血染幼体破裂 or 染血幼体破裂\n- incubator: 孵化器\n- reduced to: 降至\n- HP: 生命值\n- immediately recharges: 立即充能\n\n\n- Ruidium Brood Patch: 瑞迪姆幼体斑 or 瑞迪乌姆幼体斑\n\nI'll carefully transliterate the game term, considering both the established \"瑞迪姆\" and alternative \"瑞迪乌姆\" versions. The key is maintaining consistency with previous translations while capturing the unique sound of the proper noun.\n</think>\n\n血染幼体破裂：第一次当孵化器降至52点生命值或更少时，它立即充能瑞迪姆幼体斑块",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "下次使用鲁伊迪姆幼虫补丁时，区域内未成功通过豁免的生物还必须进行鲁伊迪姆腐化豁免。",
+          "value": "<p><think>\nThe user wants me to translate a text from English to Simplified Chinese. The text is:\n\n\"The next time it uses Ruidium Brood Patch, creatures that fail their saves in the area must also make a Ruidium Corruption save.\"\n\nThis appears to be a game-related text, likely from Dungeons & Dragons 5th edition, mentioning \"Ruidium Brood Patch\" and \"Ruidium Corruption\" which are specific game mechanics/items.\n\nLet me translate this:\n\n\"下一次它使用鲁伊迪姆虫巢斑时，在该区域内未能通过豁免的生物还必须进行一次鲁伊迪姆腐化豁免。\"\n\nWait, let me reconsider the translation:\n\n- \"The next time it uses\" = \"下一次它使用\"\n- \"Ruidium Brood Patch\" = \"鲁伊迪姆虫巢斑\" (this is a specific game term, I'll keep the transliteration)\n- \"creatures that fail their saves\" = \"未能通过豁免的生物\"\n- \"in the area\" = \"在该区域内\"\n- \"must also make\" = \"还必须进行\"\n- \"a Ruidium Corruption save\" = \"一次鲁伊迪姆腐化豁免\"\n\nActually, I should reconsider whether these are established terms. In D&D 5e, Ruidium is indeed a material/substance. \n\nLet me provide a more natural translation:\n\n\"下一次它使用鲁伊迪姆虫巢斑时，在该区域内豁免失败的生物还必须进行一次鲁伊迪姆腐化豁免。\"\n \nI'll explore alternative translations for the game-specific terms. While direct transliterations exist, they may not fully capture the nuanced terminology. The key challenge is maintaining accuracy while ensuring readability for Chinese-speaking players. Game localization requires balancing technical precision with natural language flow.\n</think>\n\n下一次它使用鲁伊迪姆虫巢斑时，在该区域内豁免失败的生物还必须进行一次鲁伊迪姆腐化豁免。</p>",
           "chat": ""
         },
         "source": {
@@ -858,8 +858,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity857": {
-            "_id": "dnd5eactivity857",
+          "dnd5eactivityc62": {
+            "_id": "dnd5eactivityc62",
             "type": "utility",
             "activation": {
               "type": "",
@@ -886,12 +886,12 @@
       }
     },
     {
-      "name": "鲁迪姆腐化 当生物因此孵化器的特性或行动需要进行鲁迪姆腐化豁免时，该生物必须成功通过DC 14的魅力豁免，否则将遭受鲁迪姆腐化。 (Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this incubator, the creature must succeed on a DC 14 Charisma saving throw or suffer Ruidium Corruption)",
+      "name": "<think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). This is a D&D 5e game text about a game mechanic called \"Ruidium Corruption\".\n\nLet me translate this:\n\n\"Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this incubator, the creature must succeed on a DC 14 Charisma saving throw or suffer Ruidium Corruption\"\n\nKey terms to translate:\n- Ruidium Corruption - 瑞迪姆腐化 (this is a proper noun/game term, typically kept in transliteration or as proper noun)\n- When - 当\n- creature - 生物\n- is required to make - 需要进行\n- save - 豁免\n- due to - 由于\n- trait - 特性\n- action - 动作\n- incubator - 孵化者 (this is a creature type in D&D)\n- must succeed on - 必须成功通过\n- DC 14 - DC 14 (Difficulty Class 14)\n- Charisma saving throw - 魅力豁免\n- or - 或\n- suffer - 遭受\n\nLet me put it together:\n\n瑞迪姆腐化：当生物由于本孵化者的特性或动作而被要求进行瑞迪姆腐化豁免时，该生物必须成功通过DC 14的魅力豁免，否则遭受瑞迪姆腐化。\n\nWait, I need to reconsider the translation. Let me check:\n- \"must succeed on a DC 14 Charisma saving throw or suffer Ruidium Corruption\" - should be \"必须成功通过DC 14的魅力豁免，否则遭受瑞迪姆腐化\" or \"必须成功通过DC 14的魅力豁免，否则陷入瑞迪姆腐化\"\n\n\n- I'll break down the key gaming mechanics carefully, ensuring precise translation of each component.\n\nI'll translate the remaining phrases, focusing on the specific gaming terminology and precise meaning. The goal is to capture both the literal and contextual nuances of the game mechanic.\n\nThe translation requires careful attention to the mechanical details, especially how the saving throw and corruption interact. Each word matters in capturing the exact game mechanics.\n</think>\n\n瑞迪姆腐化：当生物由于本孵化者的特性或动作而被要求进行瑞迪姆腐化豁免时，该生物必须成功通过DC 14的魅力豁免，否则遭受瑞迪姆腐化。",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "如果生物已经受到鲁伊迪姆腐化的影响，则它将获得1级疲惫。",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). The text is:\n\n\"If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.\"\n\nThis appears to be game-related text, possibly from Dungeons & Dragons or a similar RPG system, referring to a status effect called \"Ruidium Corruption\" and \"exhaustion\" levels.\n\nLet me translate this:\n\n- \"If the creature\" = 如果该生物\n- \"is already affected by\" = 已经受到...影响\n- \"Ruidium Corruption\" = 锐毒侵蚀（或保持Ruidium Corruption不变，因为是专有名词）\n- \"it\" = 它\n- \"instead gains\" = 则改为获得\n- \"1 level of exhaustion\" = 1级力竭\n\nLet me put it together:\n如果该生物已经受到锐毒侵蚀的影响，则改为获得1级力竭。\n\nOr more naturally:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n\nActually, looking at game terminology more carefully:\n- \"Ruidium Corruption\" is likely a specific game term that might be kept as \"Ruidium Corruption\" or translated as \"锐毒侵蚀\"\n- \"exhaustion\" in D&D context is \"力竭\"\n\nI'll go with:\n如果该生物已受Ruidium Corruption影响，则改为获得1级力竭。\n\nOr fully translated:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n</think>\n\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。</p>",
           "chat": ""
         },
         "source": {
@@ -903,12 +903,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity834": {
-            "_id": "dnd5eactivity834",
+          "dnd5eactivityda7": {
+            "_id": "dnd5eactivityda7",
             "type": "utility",
             "effects": [
               {
-                "_id": "57f8f96da64b6ca6"
+                "_id": "b3eb75d30c266632"
               }
             ],
             "activation": {
@@ -926,7 +926,7 @@
       },
       "effects": [
         {
-          "_id": "57f8f96da64b6ca6",
+          "_id": "b3eb75d30c266632",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -962,12 +962,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "孵化器进行两次攻击：一次抓取爪和一次压碎爪。如果它正在抓住一个生物，它可以用触手替换压碎爪，并在可用时使用鲁伊迪姆幼虫补丁。",
+          "value": "<p><think>\nThe user wants me to translate the given text from English to zh-CN (Simplified Chinese).\n\nLet me break down the text:\n- \"The incubator makes two attacks: one Seizing Claw and one Crushing Claw.\"\n- \"If it's grappling a creature, it can replace Crushing Claw with Tentacles and use Ruidium Brood Patch if available.\"\n\nKey terms to translate:\n- incubator - 孵化体\n- attacks - 攻击\n- Seizing Claw - 擒拿爪\n- Crushing Claw - 碾压爪\n- grappling - 擒抱\n- creature - 生物\n- replace - 替换\n- Tentacles - 触手\n- Ruidium Brood Patch - 瑞迪姆育幼斑（这是一个专有名词/地名，应该音译或保留原名）\n\nLet me translate this:\n\n孵化体进行两次攻击：一次擒拿爪和一次碾压爪。如果它正在擒抱一个生物，可以用触手替换碾压爪，并在可用时使用瑞迪姆育幼斑。\n\nHmm, \"Ruidium Brood Patch\" seems to be a specific game term. I should keep it as a proper noun. Let me reconsider:\n\n孵化体进行两次攻击：一次擒拿爪和一次碾压爪。如果它正在擒抱一个生物，可以用触手替换碾压爪，并在可用时使用瑞迪姆育幼斑。\n\nThis looks correct.\n</think>\n\n孵化体进行两次攻击：一次擒拿爪和一次碾压爪。如果它正在擒抱一个生物，可以用触手替换碾压爪，并在可用时使用瑞迪姆育幼斑。</p>",
           "chat": ""
         },
         "source": {
@@ -979,8 +979,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityeb9": {
-            "_id": "dnd5eactivityeb9",
+          "dnd5eactivityfc8": {
+            "_id": "dnd5eactivityfc8",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1007,12 +1007,12 @@
       }
     },
     {
-      "name": "夺取之爪Seizing Claw",
+      "name": "<think>\nThe user wants me to translate \"Seizing Claw\" from English to Chinese (zh-CN).\n\n\"Seizing\" means to grab, take hold of, or grasp - in Chinese this can be translated as \"抓取\", \"攫取\", or \" seizing in the sense of taking control.\"\n\n\"Claw\" is a noun meaning a sharp, curved nail on an animal's foot, or something shaped like this - in Chinese this is \"爪\", \"爪子\", or \"利爪\".\n\nFor a game item name like \"Seizing Claw\", a common translation would be:\n- 抓取之爪\n- 攫取利爪\n- 夺爪\n- 掠爪\n\nI think \"攫取利爪\" or \"抓取利爪\" would be good translations as it maintains the powerful, aggressive tone of the original name.\n\nActually, looking at this as a game item name, a more concise translation might be:\n- 攫爪\n- 夺爪\n\nLet me go with \"攫取利爪\" as it more directly translates \"seizing\" (攫取) + \"claw\" (利爪).\n</think>\n\n攫取利爪",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "近战武器攻击：+7命中，范围10英尺，目标一个。命中：11（2d6 + 4）钝击伤害。如果目标是大型或更小，则被抓住（逃脱DC 15）并被拉向孵化器最多5英尺。孵化器一次只能抓住一个生物。",
+          "value": "<p><think>\nThe user wants me to translate the given text from English to Simplified Chinese (zh-CN). This appears to be a game-related text describing a melee weapon attack, likely from Dungeons & Dragons or similar tabletop RPG.\n\nLet me translate this carefully:\n\n- Melee Weapon Attack: +7 to hit, reach 10 ft., one target.\n  - 近战武器攻击：+7命中，触及10尺，一个目标。\n\n- Hit: 11 (2d6 + 4) bludgeoning damage.\n  - 命中：11（2d6+4）钝击伤害。\n\n- If the target is Large or smaller, it's grappled (escape DC 15) and pulled up to 5 feet toward the incubator.\n  - 如果目标为大型或更小，则它被擒抱（逃脱DC 15）并被向孵化器拉近最多5尺。\n\n- The incubator can have only one creature grappled this way at a time.\n  - 孵化器一次只能以这种方式擒抱一个生物。\n\nLet me refine:\n- \"reach 10 ft.\" should be \"触及10尺\"\n- \"Large or smaller\" should be \"大型或更小\"\n- \"pulled up to 5 feet toward the incubator\" - \"up to\" indicates maximum distance, so \"最多5尺\" or \"直至5尺\" would work\n\nFinal translation:\n</think>\n\n近战武器攻击：+7命中，触及10尺，一个目标。命中：11（2d6+4）钝击伤害。如果目标为大型或更小，则其被擒抱（逃脱DC 15）并被向孵化器拉近最多5尺。孵化器一次只能以此方式擒抱一个生物。</p>",
           "chat": ""
         },
         "source": {
@@ -1024,8 +1024,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity27a": {
-            "_id": "dnd5eactivity27a",
+          "dnd5eactivity2eb": {
+            "_id": "dnd5eactivity2eb",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1087,7 +1087,7 @@
             },
             "effects": [
               {
-                "_id": "e2f6359c7831acc2"
+                "_id": "9a7b9930573a12e7"
               }
             ],
             "activation": {
@@ -1112,7 +1112,7 @@
       },
       "effects": [
         {
-          "_id": "e2f6359c7831acc2",
+          "_id": "9a7b9930573a12e7",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1148,12 +1148,12 @@
       }
     },
     {
-      "name": "压碎爪 (Crushing Claw)",
+      "name": "<think>\nThe user wants me to translate \"Crushing Claw\" from English to Simplified Chinese (zh-CN). This appears to be a game term, likely from a game like Pokémon or similar.\n\nIn Pokémon, \"Crushing Claw\" (or the Japanese version \"哈欠\") - wait, let me think again. \"Crushing Claw\" could be from various games.\n\nActually, looking at this more carefully, this is likely \"Crushing Claw\" from the Pokémon series. In Pokémon games, \"Crushing Claw\" was a move that could be learned by certain Pokémon.\n\nIn Chinese (Simplified), \"Crushing Claw\" is typically translated as \"撕裂爪\" or \"碎裂爪\" or \"压碎爪\".\n\nLet me think about common translations:\n- \"Crushing Claw\" is often translated as \"撕裂爪\" (Sīliè zhuǎ) in Pokémon contexts\n\nActually, I believe the standard translation for \"Crushing Claw\" in Simplified Chinese (for Pokémon) is \"撕裂爪\".\n\nBut let me consider if this might be from another context. The instruction says \"item.name\" which suggests it could be a game item or move name.\n\nGiven the domain \"item.name\" and the game context likely being Pokémon, the most common translation would be:\n- 撕裂爪 (Sīliè zhuǎ) - literally \"Tearing Claw\" or \"Rending Claw\"\n\nOr it could be:\n- 碎裂爪 (Suìliè zhuǎ) - literally \"Shattering Claw\"\n- 压碎爪 (Yāsuì zhuǎ) - literally \"Crushing Claw\"\n\nFor Pokémon specifically, \"Crushing Claw\" is translated as \"撕裂爪\".\n\nI'll go with the most standard translation in this context.\n</think>\n\n撕裂爪",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "近战武器攻击：+7命中，范围5英尺，目标一个。命中：13（2d8 + 4）钝击伤害。目标必须成功进行DC 14的体质豁免，否则在其下一个回合结束之前，所有基于力量的攻击掷骰将处于劣势。",
+          "value": "<p><think>\nThe user wants me to translate a D&D-style melee weapon attack description from English to Simplified Chinese (zh-CN). Let me translate this accurately:\n\n- Melee Weapon Attack: 远程武器攻击 or 近战武器攻击 - actually \"Melee\" is 近战\n- reach 5 ft.: 触及范围5英尺 (or 1.5米/5尺)\n- one target: 一个目标\n- Hit: 命中\n- bludgeoning damage: 钝击伤害\n- Constitution saving throw: 体质豁免\n- disadvantage: 劣势\n- Strength-based attack rolls: 基于力量的攻击掷骰\n\nLet me put it together naturally in Chinese:\n</think>\n\n近战武器攻击：+7命中，触及5英尺，一个目标。命中：13（2d8+4）点钝击伤害。目标必须成功通过DC 14的体质豁免，否则在下一个回合结束前，基于力量的攻击掷骰处于劣势。</p>",
           "chat": ""
         },
         "source": {
@@ -1165,8 +1165,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity18b": {
-            "_id": "dnd5eactivity18b",
+          "dnd5eactivity888": {
+            "_id": "dnd5eactivity888",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1258,12 +1258,12 @@
       }
     },
     {
-      "name": "触手Tentacles",
+      "name": "<think>\nThe user wants me to translate \"Tentacles\" from English to Chinese (zh-CN).\n\n\"Tentacles\" in Chinese can be translated as:\n- 触手 (chùshǒu) - tentacles (of an animal)\n- 触须 (chùxū) - tentacles, feelers\n- 触角 (chùjiǎo) - antennae, tentacles\n\nFor a general term \"tentacles\" (like those of an octopus, jellyfish, etc.), the most common translation is:\n触手 (chùshǒu)\n\nLet me return only the translated text.\n</think>\n\n触手",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "被孵化器抓住的生物必须成功通过DC 14的体质豁免，否则将中毒，直到下一个回合结束。如果目标已经受到鲁伊迪姆腐化的影响，则会变得瘫痪，直到下一个回合结束。",
+          "value": "<p><think>\nThe user wants me to translate the given English text about a game mechanic (D&D style) from English to zh-CN (Simplified Chinese). The text describes an effect from a creature called \"incubator\" that deals with a grapple condition, saving throws, poison, and Ruidium Corruption.\n\nLet me break down the key terms:\n- \"creature grappled by the incubator\" - 被孵化体抓住的生物\n- \"must succeed on a DC 14 Constitution saving throw\" - 必须成功通过DC 14的体质豁免\n- \"or be poisoned\" - 否则陷入中毒状态\n- \"until the end of its next turn\" - 持续到其下个回合结束\n- \"If the target is already affected by Ruidium Corruption\" - 如果目标已受红晶腐化影响\n- \"it instead becomes paralyzed\" - 改为陷入麻痹状态\n- \"until the end of its next turn\" - 持续到其下个回合结束\n\nI need to find appropriate Chinese translations for these gaming terms. In D&D Chinese translations:\n- \"grappled\" is usually 擒抱 or 被擒抱\n- \"saving throw\" is 豁免\n- \"poisoned\" is 中毒\n- \"paralyzed\" is 麻痹\n- \"incubator\" could be 孵化体 or 孵化物\n- \"Ruidium Corruption\" seems to be a specific term - it could be translated as 红晶腐化 or 鲁迪姆腐化\n\nLet me construct the translation:\n\n被孵化体擒抱的生物必须成功通过DC 14的体质豁免，否则陷入中毒状态，持续到其下回合结束。如果目标已受红晶腐化影响，则改为陷入麻痹状态，持续到其下回合结束。\n \nI'll fine-tune the terminology to ensure precise game mechanics translation. The key is maintaining accuracy while making the text sound natural in Chinese gaming context. I want to capture the specific conditions and their duration precisely.\n\nThe translation needs to reflect the exact mechanical effects: a Constitution saving throw, poison condition, and potential paralysis for creatures already affected by Ruidium Corruption.\n</think>\n\n被孵化体擒抱的生物必须成功通过DC 14的体质豁免，否则陷入中毒状态，持续到其下个回合结束。如果目标已受红晶腐化影响，则改为陷入麻痹状态，持续到其下个回合结束。</p>",
           "chat": ""
         },
         "source": {
@@ -1275,8 +1275,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2d9": {
-            "_id": "dnd5eactivity2d9",
+          "dnd5eactivity838": {
+            "_id": "dnd5eactivity838",
             "type": "save",
             "save": {
               "ability": [
@@ -1293,13 +1293,13 @@
             },
             "effects": [
               {
-                "_id": "c0730c3aeef34952"
+                "_id": "d738ea36613849f4"
               },
               {
-                "_id": "06880107e56cdd9e"
+                "_id": "e53e58d5878a078b"
               },
               {
-                "_id": "21e14b4568112886"
+                "_id": "644275879a7f6485"
               }
             ],
             "activation": {
@@ -1317,7 +1317,7 @@
       },
       "effects": [
         {
-          "_id": "c0730c3aeef34952",
+          "_id": "d738ea36613849f4",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1342,7 +1342,7 @@
           ]
         },
         {
-          "_id": "06880107e56cdd9e",
+          "_id": "e53e58d5878a078b",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1367,7 +1367,7 @@
           ]
         },
         {
-          "_id": "21e14b4568112886",
+          "_id": "644275879a7f6485",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1403,12 +1403,12 @@
       }
     },
     {
-      "name": "鲁迪姆幼虫巢穴 孵化器在30英尺内的某一点创建一个半径为5英尺的幼虫巢穴，持续一分钟。 (Ruidium Brood Patch : The incubator creates a 5-foot-radius brood patch at a point within 30 feet, lasting for one minute)",
+      "name": "Ruidium Brood Patch : The incubator creates a 5-foot-radius brood patch at a point within 30 feet, lasting for one minute",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "该区域变为困难地形。首次进入该区域的生物，或在该区域开始其回合，必须成功进行DC 14的体质豁免，否则将受到6（1d12）点毒素伤害和6（1d12）点精神伤害，并且其速度在本回合结束前降为0。如果成功豁免，则只受到一半伤害且没有其他效果。",
+          "value": "<p>The area becomes difficult terrain. A creature that enters the area for the first time on a turn, or starts its turn there, must succeed on a DC 14 Constitution saving throw or take 6 (1d12) poison damage plus 6 (1d12) psychic damage and have its speed reduced to 0 until the end of the turn. On a successful save, it takes half damage with no other effects.</p>",
           "chat": ""
         },
         "source": {
@@ -1420,8 +1420,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityac8": {
-            "_id": "dnd5eactivityac8",
+          "dnd5eactivity4da": {
+            "_id": "dnd5eactivity4da",
             "type": "save",
             "save": {
               "ability": [
@@ -1521,7 +1521,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274370011,
-    "modifiedTime": 1774274370011
+    "createdTime": 1775752086248,
+    "modifiedTime": 1775752086248
   }
 }

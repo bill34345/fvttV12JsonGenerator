@@ -1,74 +1,263 @@
 {
   "bonebreaker-dorokor.md": {
-    "hash": "678fa8a5d2ed2660d63054d564d9f76d19e9a7ea53895520d9c2a45423f7ea33",
+    "hash": "028b1b08fd68fedd592364c94f18e78c993d86b8b3b84069b74ae535c3b88426",
     "output": "output/bonebreaker-dorokor.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.946Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.946Z"
+    "lastSuccessAt": "2026-04-09T16:28:05.995Z",
+    "lastAttemptAt": "2026-04-09T16:28:05.995Z"
   },
   "faldric-the-archer.md": {
-    "hash": "e66f4987909100f255c8759373b6e6c55b9ac18b3e0721be555ea16fc6750d0b",
+    "hash": "39b6ed197e16deba20c11a2654ac9263439e7188c8fa26442ff9c26d4348f9df",
     "output": "output/faldric-the-archer.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.953Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.953Z"
+    "lastSuccessAt": "2026-04-09T16:28:06.018Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.018Z"
   },
   "oregg-steeltwister.md": {
-    "hash": "3199405dadc7e8f54b7c6aed92975d3aa79340458b92344d3af6e565a302e12d",
+    "hash": "777760b97f6f06a231ee882a18e4ddba2879fdb24cd891a5f261347496210ca2",
     "output": "output/oregg-steeltwister.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.962Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.962Z"
+    "lastSuccessAt": "2026-04-09T16:28:06.239Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.239Z"
   },
   "pinna.md": {
-    "hash": "a5ddd926967c450d6fb4c42ef39a2a366bc2a672b4c3ae947a022d031e104224",
+    "hash": "ecae2d3db21feb0efb2a75092a349b5bab0279e461ec3f95000e96ce15b246a5",
     "output": "output/pinna.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.968Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.968Z"
+    "lastSuccessAt": "2026-04-09T16:28:06.246Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.246Z"
   },
   "white-tusk-bloodrager.md": {
-    "hash": "0a499004bbeacfd199b21802c5884ce6e057e84d528d53f4294f1e70b5d91d72",
+    "hash": "7a72761a5cb78669c2c45b7efe8ba499211990f5e84fc832636fcb497f92192c",
     "output": "output/white-tusk-bloodrager.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.975Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.975Z"
+    "lastSuccessAt": "2026-04-09T16:28:08.674Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.674Z"
   },
   "white-tusk-juggernaut.md": {
-    "hash": "8cd8b70230a9facd6127ea9a1fc754439a7e3a9c3f3a4c52fa40cd6ee7fe2e06",
+    "hash": "ece9002078b4154147731c8e5c749278955132284790ff4d13d64189313e19b1",
     "output": "output/white-tusk-juggernaut.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.981Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.981Z"
+    "lastSuccessAt": "2026-04-09T16:28:09.110Z",
+    "lastAttemptAt": "2026-04-09T16:28:09.110Z"
   },
   "white-tusk-orc.md": {
-    "hash": "33be0555b9f904da85fe7e1a79bd8e35e79097c052055b3f476a1048b7a21551",
+    "hash": "8c1c03676240f509af5296dc24f0bb2f02479e962d41057f4b1101809e7cd529",
     "output": "output/white-tusk-orc.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.988Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.988Z"
+    "lastSuccessAt": "2026-04-09T16:28:09.445Z",
+    "lastAttemptAt": "2026-04-09T16:28:09.445Z"
   },
   "white-tusk-shaman.md": {
-    "hash": "aa8f0ea8fb1e505b0b0869abf06fb986d05ce079b20cd085da13e881fd3eb24f",
+    "hash": "ad04525e2a16b4e198792e2fcc5bf8702717305b689f8687a6ec2037d9fe302e",
     "output": "output/white-tusk-shaman.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:47.995Z",
-    "lastAttemptAt": "2026-02-17T11:07:47.995Z"
+    "lastSuccessAt": "2026-04-09T16:28:09.855Z",
+    "lastAttemptAt": "2026-04-09T16:28:09.855Z"
   },
   "white-tusk-warspeaker.md": {
-    "hash": "12af58f30aa069bbdf6bed72c4c5a5d3d9afb8156d9b34d74b76452a853c7fb6",
+    "hash": "a5372266fe2ad33a2c8ac414560bb25c8bf141cf7749491d8826a07e384fb6d9",
     "output": "output/white-tusk-warspeaker.json",
-    "fvttVersion": "13",
+    "fvttVersion": "12",
+    "effectProfile": "core",
     "status": "success",
-    "lastSuccessAt": "2026-02-17T11:07:48.002Z",
-    "lastAttemptAt": "2026-02-17T11:07:48.002Z"
+    "lastSuccessAt": "2026-04-09T16:28:10.523Z",
+    "lastAttemptAt": "2026-04-09T16:28:10.523Z"
+  },
+  "aboleth-spawn__底栖魔鱼衍体.md": {
+    "hash": "6a520731479a0372204c702483a65fd526f2b78158cc65e5e505c9033a5c54c8",
+    "output": "output/aboleth-spawn__底栖魔鱼衍体.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:05.979Z",
+    "lastAttemptAt": "2026-04-09T16:28:05.979Z"
+  },
+  "alyxian-aboleth__底栖魔鱼“阿利克辛”.md": {
+    "hash": "240e9f8d65f9fcdff6f4d9aba47067a9bb72c6c92dd89af7188e577e729331d7",
+    "output": "output/alyxian-aboleth__底栖魔鱼“阿利克辛”.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:05.986Z",
+    "lastAttemptAt": "2026-04-09T16:28:05.986Z"
+  },
+  "chuul-incubator.md": {
+    "hash": "60220592827679b0d3ecf34526a885145885b3387343c2b13ab03070f0f559ba",
+    "output": "output/chuul-incubator.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:05.999Z",
+    "lastAttemptAt": "2026-04-09T16:28:05.999Z"
+  },
+  "chuul-nullifier.md": {
+    "hash": "957dfe3899ebc46d92d8c5a46b9c2d7502b7e308e5fbec11828d4a5a87607518",
+    "output": "output/chuul-nullifier.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.002Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.002Z"
+  },
+  "chuul-screecher.md": {
+    "hash": "fd5e64cce2e930f6e54f7956c79de7b48e5f2cd4eb6466ac033f2d0b4ef70d29",
+    "output": "output/chuul-screecher.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.004Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.004Z"
+  },
+  "chuul_r/bettermonster.md": {
+    "hash": "b836fc94afd4e6b98f012dde89b28670c3944c9dd7f8ed0a119f3c83d1199583",
+    "output": "output/chuul_r/bettermonster.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.007Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.007Z"
+  },
+  "corrupted-giant-shark__腐化巨鲨.md": {
+    "hash": "f6212263ad49e1d31dc02a0f7542a8d4800cf9be9107d46a329764e4ac97604f",
+    "output": "output/corrupted-giant-shark__腐化巨鲨.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.012Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.012Z"
+  },
+  "deaths-embrace__死亡之拥.md": {
+    "hash": "3bed77c0d49fa70752174103d438d2842462507d03a6234f0d1e6c0c52cfda29",
+    "output": "output/deaths-embrace__死亡之拥.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.015Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.015Z"
+  },
+  "items/三祷之坠.md": {
+    "hash": "d289b86ae5eeadab9b535057da3cc9ab443b292ab0b4e8579814fa56cfcf3cc5",
+    "output": "output/items/三祷之坠.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.156Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.156Z"
+  },
+  "items/骑士之盾.md": {
+    "hash": "202e7a9459620229183b7ee052fcfd4e3a19c26f463021dd9965c05bb84fc5fd",
+    "output": "output/items/骑士之盾.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.217Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.217Z"
+  },
+  "light-devourer__噬光鮟鱇.md": {
+    "hash": "ae286d6047eadb971cb0b715d74047390327e30194245a44130ea9869571e84d",
+    "output": "output/light-devourer__噬光鮟鱇.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.224Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.224Z"
+  },
+  "mock-dragon.md": {
+    "hash": "31253d5a7277799ef3163afef267fa54c4d03837497482356ce0df0d4aeccb60",
+    "output": "output/mock-dragon.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.228Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.228Z"
+  },
+  "ruidium-corrupted-chuul-incubator.md": {
+    "hash": "7aedadf0dd2eb74b26eb8c1eaae3f77918323f6f6aca6a0fa30e736165d5347e",
+    "output": "output/ruidium-corrupted-chuul-incubator.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:06.387Z",
+    "lastAttemptAt": "2026-04-09T16:28:06.387Z"
+  },
+  "ruidium-corrupted-chuul-nullifier.md": {
+    "hash": "2136298f4fc07b91d8369abb4edb56052aae97d52aa6646c8938ce6c74da39ae",
+    "output": "output/ruidium-corrupted-chuul-nullifier.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:07.513Z",
+    "lastAttemptAt": "2026-04-09T16:28:07.513Z"
+  },
+  "ruidium-corrupted-chuul-screecher.md": {
+    "hash": "a3b8469da1888375b913f257c04ceb0ef2088d29a185c9798dddfde31b97145a",
+    "output": "output/ruidium-corrupted-chuul-screecher.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.303Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.303Z"
+  },
+  "ruined-chuul-nullifier.md": {
+    "hash": "e4f6fb7fb600a202f61aa5e45b6a62d4c2f4250c27655bff05e59f2446886046",
+    "output": "output/ruined-chuul-nullifier.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.308Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.308Z"
+  },
+  "ruined-chuul-screecher.md": {
+    "hash": "253f64226612e83453b848e7b3e480a13338b0272e259de6f8f310e646213f68",
+    "output": "output/ruined-chuul-screecher.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.312Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.312Z"
+  },
+  "scuttling-serpentmaw__蛇口蛮蟹.md": {
+    "hash": "411853223b1342c384947c7f967df703758f9407d7b1600baf75c2db3f2e89f6",
+    "output": "output/scuttling-serpentmaw__蛇口蛮蟹.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.317Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.317Z"
+  },
+  "slithering-bloodfin.md": {
+    "hash": "a3ef5b3823c6eb510fed0ca53a87d9ea7de21833d3154539f88e11d6c38c2161",
+    "output": "output/slithering-bloodfin.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.322Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.322Z"
+  },
+  "slithering-bloodfin__滑行血鳍.md": {
+    "hash": "3ed975f6b5864af9c1a9fda158313e614b053e6bdba5661b9d3d229819e6df7c",
+    "output": "output/slithering-bloodfin__滑行血鳍.json",
+    "fvttVersion": "12",
+    "effectProfile": "core",
+    "status": "success",
+    "lastSuccessAt": "2026-04-09T16:28:08.328Z",
+    "lastAttemptAt": "2026-04-09T16:28:08.328Z"
   }
 }

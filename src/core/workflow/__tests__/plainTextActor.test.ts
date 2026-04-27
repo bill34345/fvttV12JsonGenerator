@@ -19,7 +19,7 @@ describe('PlainTextActorWorkflow', () => {
     }
   });
 
-  it('writes markdown into vault/input and actor json into vault/output', async () => {
+  it('writes middle markdown, promotes it to vault/input, and writes actor json into vault/output', async () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-plaintext-actors-'));
     roots.push(vaultPath);
 
@@ -35,7 +35,9 @@ describe('PlainTextActorWorkflow', () => {
     });
 
     expect(result.markdown.files).toHaveLength(7);
+    expect(result.markdown.emitDir).toBe(join(vaultPath, 'middle'));
     expect(result.sync.processed).toBe(7);
+    expect(existsSync(join(vaultPath, 'middle', 'slithering-bloodfin__滑行血鳍.md'))).toBe(true);
     expect(existsSync(join(vaultPath, 'input', 'slithering-bloodfin__滑行血鳍.md'))).toBe(true);
     expect(existsSync(join(vaultPath, 'output', 'slithering-bloodfin__滑行血鳍.json'))).toBe(true);
   });

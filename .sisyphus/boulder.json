@@ -1,31 +1,13 @@
 {
-  "active_plan": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\.sisyphus\\plans\\fvtt-npc-importer-optimization-v2.md",
-  "started_at": "2026-03-20T08:40:54.918Z",
+  "active_plan": "I:\\OpenCode\\fvttV12JsonGenerator\\.sisyphus\\plans\\item-ai-normalization.md",
+  "started_at": "2026-04-09T16:08:07.012Z",
   "session_ids": [
-    "ses_2f5b6121bffeEeT7Ybqo5W4PWt",
-    "ses_2f5966ba3ffeDe9jvoAgCqya34",
-    "ses_2f5968085ffeMql5WZJF7ZcDQO",
-    "ses_2f5968b56ffeFnv7hB0lZxyxsi",
-    "ses_2f5967536ffec5328QXQLVVYbN",
-    "ses_2f57cd02bffeemVzm6Rk50fxd1",
-    "ses_2f57e0076ffeOEM6wqhM4QnuBc",
-    "ses_2f57e295dffepn44reMZ6ED388",
-    "ses_2f57e1544ffe8FXwMfXL57ipKm",
-    "ses_2f57e3d45ffegPh0iRdtuS8le2",
-    "ses_2f56ca9cbffeCCys370oD9NGjv",
-    "ses_2c7298116ffeQ05M8S0JF0tFM1"
+    "ses_28e134827ffe0V6CayqMnMVjSO",
+    "ses_28cfec8b0ffe3T0MlqD1dHCfZ7",
+    "ses_28cfbcab5ffezv76hnX967vGbL",
+    "ses_28cf8e0b5ffecylQl8jtktb7kz"
   ],
-  "plan_name": "fvtt-npc-importer-optimization-v2",
+  "plan_name": "item-ai-normalization",
   "agent": "atlas",
-  "task_sessions": {
-    "todo:2": {
-      "task_key": "todo:2",
-      "task_label": "2",
-      "task_title": "Update parseSkillsLine to use inferSkillProficiency and compute skillBonuses",
-      "session_id": "ses_2c54bcadbffeoZG3Rp869JinqM",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-03-29T18:01:01.955Z"
-    }
-  }
+  "task_sessions": {}
 }

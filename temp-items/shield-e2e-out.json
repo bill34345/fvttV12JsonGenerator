@@ -1,0 +1,156 @@
+{
+  "_id": "d0856e79cf2df062",
+  "name": "骑士之盾 (Shield of the Cavalier)",
+  "type": "equipment",
+  "img": "icons/equipment/chest/breastplate-collared-steel-grey.webp",
+  "system": {
+    "description": {
+      "value": "持握这面盾牌期间，你的护甲等级获得 +2 加值。\n**强力猛击（Forceful Bash）.** 当你执行攻击动作时，你可以使用这面盾牌进行其中一次攻击，这次攻击的目标必须在你 5 尺之内。将你的熟练加值和力量调整值加入攻击检定。若命中，盾牌会对目标造成 2d6 + 2 + 你力量调整值的力场伤害。\n**庇护领域（Protective Field）.** 当你或 5 尺内一位你可见的盟友成为一次攻击的目标，你可以用反应使这面盾牌制造一个源自你的、无法移动的 5 尺光环。",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "book": "SRD 5.1",
+      "page": "",
+      "license": "CC-BY-4.0",
+      "rules": "2014"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 20,
+      "units": "lb"
+    },
+    "price": {
+      "value": 900,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "equipped": false,
+    "rarity": "uncommon",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": 14,
+      "dex": 2,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": null,
+    "proficient": null,
+    "type": {
+      "value": "medium",
+      "baseItem": "breastplate"
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "properties": [
+      "ada",
+      "mgc"
+    ],
+    "activities": {
+      "dnd5eactivity4f5": {
+        "_id": "dnd5eactivity4f5",
+        "type": "attack",
+        "attack": {
+          "ability": "",
+          "bonus": "0",
+          "flat": true,
+          "type": {
+            "value": "mwak",
+            "classification": "weapon"
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "number": null,
+              "denomination": null,
+              "bonus": "",
+              "types": [
+                "force"
+              ],
+              "custom": {
+                "enabled": true,
+                "formula": "2d6 + 2 + 你力量调整值的"
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 1
+              }
+            }
+          ],
+          "includeBase": true
+        },
+        "range": {
+          "override": false,
+          "value": null,
+          "long": null,
+          "reach": 5,
+          "units": "ft",
+          "special": ""
+        },
+        "target": {
+          "override": false,
+          "prompt": true,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          }
+        },
+        "sort": 100000
+      },
+      "dnd5eactivity112": {
+        "_id": "dnd5eactivity112",
+        "type": "utility",
+        "sort": 200000
+      }
+    },
+    "attuned": true,
+    "identifier": ""
+  },
+  "effects": [],
+  "folder": "JqTP017wj3uxDJ8g",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.1.0",
+    "createdTime": 1725037133689,
+    "modifiedTime": 1728002238909,
+    "lastModifiedBy": "dnd5ebuilder0000"
+  },
+  "_key": "!items!DevmObXWP9MfwE2c"
+}

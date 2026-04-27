@@ -1,5 +1,5 @@
 {
-  "name": "碎骨者多罗科尔Bonebreaker Dorokor",
+  "name": "<think>\nThe user wants me to translate \"Bonebreaker Dorokor\" from English to Chinese (zh-CN).\n\nThis appears to be a name of an actor or character. For names, there are a few approaches:\n1. Transliteration - phonetic translation\n2. Literal translation - translating the meaning of the words\n3. Standard established translation if it exists\n\nLooking at the name:\n- \"Bonebreaker\" - 碎骨者, 断骨者, 破骨者\n- \"Dorokor\" - 这看起来像一个虚构的名字\n\nSince this appears to be a fictional character name (possibly from a game or media), and there's no established standard translation I can reference, I should provide a reasonable transliteration/translation.\n\nThe most likely intended translation would be:\n- 碎骨者·多罗科尔 or 碎骨者·多洛科尔\n\nActually, looking more carefully, this might be from a game or specific media. Without an established translation, I would go with transliteration:\n- Dorokor could be 多罗科尔, 多洛科尔, or similar\n\nLet me go with a common approach:\n骨碎者·多罗科尔 or 碎骨者·多罗科尔\n\nActually, \"Bonebreaker\" as a nickname/title is commonly translated as 碎骨者.\n\nSo: 碎骨者·多罗科尔\n</think>\n\n碎骨者·多罗科尔",
   "type": "npc",
   "img": "",
   "system": {
@@ -616,7 +616,7 @@
     }
   },
   "prototypeToken": {
-    "name": "碎骨者多罗科尔Bonebreaker Dorokor",
+    "name": "<think>\nThe user wants me to translate \"Bonebreaker Dorokor\" from English to Chinese (zh-CN).\n\nThis appears to be a name of an actor or character. For names, there are a few approaches:\n1. Transliteration - phonetic translation\n2. Literal translation - translating the meaning of the words\n3. Standard established translation if it exists\n\nLooking at the name:\n- \"Bonebreaker\" - 碎骨者, 断骨者, 破骨者\n- \"Dorokor\" - 这看起来像一个虚构的名字\n\nSince this appears to be a fictional character name (possibly from a game or media), and there's no established standard translation I can reference, I should provide a reasonable transliteration/translation.\n\nThe most likely intended translation would be:\n- 碎骨者·多罗科尔 or 碎骨者·多洛科尔\n\nActually, looking more carefully, this might be from a game or specific media. Without an established translation, I would go with transliteration:\n- Dorokor could be 多罗科尔, 多洛科尔, or similar\n\nLet me go with a common approach:\n骨碎者·多罗科尔 or 碎骨者·多罗科尔\n\nActually, \"Bonebreaker\" as a nickname/title is commonly translated as 碎骨者.\n\nSo: 碎骨者·多罗科尔\n</think>\n\n碎骨者·多罗科尔",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -705,12 +705,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -722,8 +722,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye82": {
-            "_id": "dnd5eactivitye82",
+          "dnd5eactivity9cd": {
+            "_id": "dnd5eactivity9cd",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -750,12 +750,12 @@
       }
     },
     {
-      "name": "创伤操控者Wielder of Wound",
+      "name": "<think>\nThe user wants me to translate \"Wielder of Wound\" from English to Simplified Chinese.\n\n\"Wielder\" means someone who wields or uses something - in this context, it could be translated as \"使用者\" or \"掌控者\" or \"持有者\"\n\"Wound\" could mean:\n1. An injury (伤口)\n2. To wound someone (伤害)\n3. In fantasy/gaming context, it could refer to a weapon or power that causes wounds\n\nGiven this appears to be a name/title (likely from a game or fantasy setting), I'll translate it as:\n- 伤口的掌控者\n- 伤害的掌控者\n- 伤口的持有者\n\nI think \"伤害的掌控者\" or \"伤口的掌控者\" would be most appropriate for a fantasy/role-playing context title.\n</think>\n\n伤口的掌控者",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>碎骨者多罗科尔挥舞着名为“伤口”的魔法巨斧。</p>",
+          "value": "<p><think>\nThe user wants me to translate the text \"Bonebreaker Dorokor wields the magical greataxe Wound.\" from English to Simplified Chinese (zh-CN).\n\nThis appears to be a fantasy/RPG style description, likely for a game item or character description.\n\nLet me translate:\n- \"Bonebreaker Dorokor\" - This is a proper name (a creature/character name). In translation, proper names are typically kept as-is or transliterated. Since this appears to be a fantasy name, I could transliterate it or keep it as is. In most fantasy game translations, names like \"Bonebreaker Dorokor\" might be transliterated. The name \"Bonebreaker\" means \"碎骨者\" or similar, and \"Dorokor\" could be transliterated as \"多罗科尔\" or similar.\n- \"wields\" - 挥舞/手持\n- \"the magical greataxe\" - 魔法巨斧/魔法大斧\n- \"Wound\" - 这是一个武器名称，可以翻译为\"创伤\"或者保留为\"Wound\"\n\nGiven the context is item.description domain, this is likely from a game item database or similar source.\n\nLet me provide a natural Chinese translation:\n\n\"碎骨者·多罗科尔手持魔法巨斧「创伤」。\"\n\nOr:\n\"碎骨者多罗科尔挥舞着魔法巨斧创伤。\"\n\nI think the first version with the dot is more common in Chinese fantasy/RPG contexts for proper names.\n</think>\n\n碎骨者多罗科尔手持魔法巨斧「创伤」。</p>",
           "chat": ""
         },
         "source": {
@@ -767,8 +767,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8cd": {
-            "_id": "dnd5eactivity8cd",
+          "dnd5eactivity3d4": {
+            "_id": "dnd5eactivity3d4",
             "type": "utility",
             "activation": {
               "type": "",
@@ -795,12 +795,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Bonebreaker Dorokor 会进行三次武器攻击，或者在战吼可用时进行两次攻击并发出一次战吼。</p>",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). This is a game-related text about a character named Bonebreaker Dorokor and her combat actions.\n\nLet me translate this:\n\n\"Bonebreaker Dorokhe makes three weapon attacks, or she makes two attacks and issues a War Cry if it is available.\"\n\nIn Chinese gaming context:\n- \"weapon attacks\" = 武器攻击\n- \"War Cry\" = 战吼 (this is a common gaming term)\n- \"if it is available\" = 如果可用/如果可用的话\n\nLet me compose the translation:\n\n\"Bonebreaker Dorokor发动三次武器攻击，或者如果可用的话，她进行两次攻击并发出战吼。\"\n\nOr more naturally:\n\n\"Bonebreaker Dorokor进行三次武器攻击，或者她可以进行两次攻击并发出战吼（如果可用）。\"\n\nI think the second version is more natural and clear.\n</think>\n\nBonebreaker Dorokor发动三次武器攻击，或者她可以进行两次攻击并发出战吼（如果可用）。</p>",
           "chat": ""
         },
         "source": {
@@ -812,8 +812,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity264": {
-            "_id": "dnd5eactivity264",
+          "dnd5eactivitya06": {
+            "_id": "dnd5eactivitya06",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -840,12 +840,12 @@
       }
     },
     {
-      "name": "伤口Wound",
+      "name": "<think>\nThe user wants me to translate \"Wound\" from English to Chinese (zh-CN).\n\n\"Wound\" in English can have multiple meanings:\n1. A physical injury (伤口/创伤)\n2. As a verb, to injure (伤害)\n\nFor the domain \"item.name\", this likely refers to the physical injury/medical term context, so the translation would be \"伤口\" or \"创伤\".\n\n\"伤口\" is the more common, everyday term for a wound/injury.\n\"创伤\" can also mean wound/trauma and is slightly more formal/medical.\n\nGiven this is for an \"item.name\" domain, I'll go with \"伤口\" as it's the most common translation for a wound in the context of items.\n</think>\n\n伤口",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +8，射程 5 英尺，单一目标。命中：造成 11（1d12 + 5）点挥砍伤害，外加 7（2d6）点死灵伤害。目标的最大生命值会减少，减少的数值等同于所造成的死灵伤害。目标的最大生命值在完成一次长休之前，或直到其严重创伤被一次强效复原术抚平之前，均不会恢复正常。</p>",
+          "value": "<p><think>\nThe user wants me to translate a text about a melee weapon attack from English to Simplified Chinese (zh-CN). This is a game-related description, likely from Dungeons & Dragons or similar RPG.\n\nLet me translate this carefully:\n\n\"Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 11(1d12 + 5) slashing damage plus 7 (2d6) necrotic damage. The target's maximum hit points are decreased in equal amount to the necrotic damage dealt. The target's hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell.\"\n\nLet me translate piece by piece:\n\n- Melee Weapon Attack = 近战武器攻击\n- +8 to hit = +8 命中\n- reach 5 ft. = 触及 5 尺\n- one target = 一个目标\n- Hit = 命中\n- 11(1d12 + 5) slashing damage = 11(1d12 + 5) 挥砍伤害\n- plus 7 (2d6) necrotic damage = 加上 7(2d6) 黯蚀伤害\n- The target's maximum hit points are decreased in equal amount to the necrotic damage dealt = 目标的最大生命值降低的数值等同于所受到的黯蚀伤害\n- The target's hit point maximum does not return to normal until it finishes a long rest or its grievous wounds are soothed by a greater restoration spell = 在目标完成一次长休或受到高等复原术治愈其严重创伤之前，其生命值上限不会恢复正常\n \nI'll use precise gaming terminology to ensure accuracy. I'll focus on maintaining the exact mechanical details while translating the game's mechanics into Chinese.\n</think>\n\n近战武器攻击：+8 命中，触及 5 尺，一个目标。命中：11（1d12 + 5）点挥砍伤害，外加 7（2d6）点黯蚀伤害。目标的最大生命值降低的数值等同于其所受到的黯蚀伤害。在目标完成一次长休或受到高等复原术治愈其严重创伤之前，其生命值上限不会恢复正常。</p>",
           "chat": ""
         },
         "source": {
@@ -857,8 +857,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6a9": {
-            "_id": "dnd5eactivity6a9",
+          "dnd5eactivitye09": {
+            "_id": "dnd5eactivitye09",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -967,12 +967,12 @@
       }
     },
     {
-      "name": "长弓Longbow",
+      "name": "<think>\nThe user wants me to translate \"Longbow\" from English to zh-CN (Simplified Chinese).\n\n\"Longbow\" is an English word that refers to a type of bow. In Chinese, this can be translated as:\n\n- 长弓 (cháng gōng) - which literally means \"long bow\"\n- 或者 can also be referred to as 长弓\n\nSince this is a domain of \"item.name\", it likely refers to a game item or similar, so a direct translation would be most appropriate.\n\n\"Longbow\" = 长弓\n</think>\n\n长弓",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程武器攻击：+5 命中，射程 150/600 英尺，对一个目标。命中：6（1d8 + 2）穿刺伤害。</p>",
+          "value": "<p><think>\nThe user wants me to translate the given text from English to Simplified Chinese (zh-CN).\n\nThe text is:\n\"Ranged Weapon Attack: +5 to hit, range 150/600 ft., one target. Hit: 6 (1d8 + 2) piercing damage.\"\n\nThis appears to be from a tabletop RPG like D&D 5e, describing an attack.\n\nKey terms to translate:\n- Ranged Weapon Attack = 远程武器攻击\n- to hit = 命中\n- range = 射程\n- one target = 一个目标\n- Hit = 命中\n- piercing damage = 穿刺伤害\n- ft. (feet) = 英尺\n\nLet me translate:\n\"远程武器攻击：+5 命中，射程 150/600 英尺，指定一个目标。命中：6（1d8 + 2）点穿刺伤害。\"\n\nWait, in Chinese RPG translations, \"to hit\" is often translated as \"攻击加值\" or just \"命中\". Let me think about the standard conventions.\n\nCommon translations:\n- Ranged Weapon Attack = 远程武器攻击\n- +5 to hit = +5 命中\n- range = 射程\n- Hit = 命中\n- piercing damage = 穿刺伤害\n\nActually, looking at common Chinese translations of D&D:\n- \"to hit\" is often translated as \"攻击加值\" or \"命中\"\n- \"Hit\" as the result is \"命中\" or \"造成\"\n\nStandard translation:\n\"远程武器攻击：+5 命中，射程 150/600 英尺，指定一个目标。命中：造成 6（1d8 + 2）点穿刺伤害。\"\n\nOr more commonly:\n\"远程武器攻击：+5 命中，射程 150/600 英尺，锁定一个目标。命中：6（1d8 + 2）点穿刺伤害。\"\n\nI think the most natural translation would be:\n\"远程武器攻击：+5 命中，射程 150/600 英尺，指定一个目标。命中：6（1d8 + 2）穿刺伤害。\"\n\n\nI'll adjust the damage translation to be more precise, removing \"点\" for a more natural-sounding Chinese RPG description. The final version captures the technical RPG terminology while maintaining clarity and conciseness in Chinese.\n</think>\n\n远程武器攻击：+5 命中，射程 150/600 英尺，指定一个目标。命中：6（1d8 + 2）穿刺伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -984,8 +984,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye96": {
-            "_id": "dnd5eactivitye96",
+          "dnd5eactivityad7": {
+            "_id": "dnd5eactivityad7",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1077,12 +1077,12 @@
       }
     },
     {
-      "name": "战吼 Dorokor 吼出兽人的战语，鼓舞她的战士走向胜利。 (War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory)",
+      "name": "<think>\nThe user wants me to translate \"War Cry : Dorokor screams an orcish war phrase, spurring her warriors on toward victory\" from English to Simplified Chinese.\n\nThis is for the domain \"item.name\" which suggests it's likely for a game item name or similar.\n\nLet me translate this:\n- War Cry = 战吼\n- Dorokor = 多罗科尔 (a name, I'll transliterate it)\n- screams = 呐喊\n- an orcish war phrase = 一句兽人战吼语\n- spurring her warriors on toward victory = 激励她的战士们迈向胜利\n\nSo the translation would be: 战吼：多罗科尔发出一句兽人战吼语，激励她的战士们迈向胜利\n\nOr more naturally: 战吼：多罗科尔高喊兽人战语，激励战士们迈向胜利\n</think>\n\n战吼：多罗科尔高喊兽人战语，激励战士们迈向胜利",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>选择以下效果之一：振奋：在30英尺内能听到Dorokor的声音的所有随从获得22（4d10）点临时生命值。</p>",
+          "value": "<p><think>\nThe user asks: \"Translate text from en to zh-CN. Return only translated text. Domain: item.description\"\n\nThe text: \"Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.\"\n\nWe must translate to Chinese (Simplified) with only the translation, no extra text.\n\nNeed to decide if \"Choose one of the following effects:\" is part of the text or just the instruction. The user said: \"Translate text from en to zh-CN. Return only translated text. Domain: item.description\". So they gave some text: \"Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.\" They likely want to translate that entire text. Possibly they might want just the Rally description, but likely they want the whole. I think translate the whole.\n\nLet's translate:\n\n\"Choose one of the following effects:\" => \"请选择以下效果之一：\"\n\n\"Rally:\" => \"激励：\"\n\n\"All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.\" => \"所有在30英尺范围内能听到她说话的Dorokor的随从获得22（4d10）临时生命值。\"\n\nNow check if the translation is accurate. Use Chinese: \"临时生命值\" is typical for temporary hit points. Could also be \"临时生命点数\". But \"临时生命值\" is fine.\n\nThus the translation:\n\n\"请选择以下效果之一：激励：所有在30英尺范围内能听到她说话的Dorokor的随从获得22（4d10）临时生命值。\"\n\nCheck punctuation: Usually Chinese uses fullwidth colon? \"激励：\" okay. Ensure consistent style: use Chinese full-width punctuation? It's okay.\n\nThus final answer.\n</think>\n\n请选择以下效果之一：激励：所有在30英尺范围内能听到她说话的Dorokor的随从获得22（4d10）临时生命值。</p>",
           "chat": ""
         },
         "source": {
@@ -1094,8 +1094,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity881": {
-            "_id": "dnd5eactivity881",
+          "dnd5eactivity874": {
+            "_id": "dnd5eactivity874",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1122,12 +1122,12 @@
       }
     },
     {
-      "name": "专注Focus",
+      "name": "<think>\nThe user wants me to translate \"Focus\" from English to Chinese (zh-CN).\n\n\"Focus\" in English can mean:\n1. A center of interest or activity (焦点)\n2. The state of paying close attention (专注)\n3. To concentrate attention (聚焦/集中)\n\nThe most common translation would be:\n- 焦点 (as a noun, meaning point of concentration/interest)\n- 专注 (as a noun, meaning concentration)\n- 聚焦/集中 (as a verb)\n\nGiven this is under the domain \"item.name\", it's likely referring to a product name or feature name. The most common and simple translation would be:\n\n**聚焦** or **焦点**\n\nI'll go with the most common one which is **聚焦**.\n</think>\n\n聚焦",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>多洛科尔30英尺范围内所有能听到她的爪牙，在它们下一个回合结束前进行的下一次攻击掷骰将获得优势。</p>",
+          "value": "<p><think>\nThe user wants me to translate text from English to zh-CN (Simplified Chinese). The text is:\n\"All of Dorokor’s minions within 30 feet that can hear her will have advantage on the next attack roll they make before the end of their next turn.\"\n\nLet me translate this carefully:\n\n- \"All of Dorokor's minions\" = \"多罗科尔的所有仆从\"\n- \"within 30 feet\" = \"在30英尺范围内\"\n- \"that can hear her\" = \"能听到她说话的\"\n- \"will have advantage on\" = \"在...方面获得优势\"\n- \"the next attack roll\" = \"下一次攻击掷骰\"\n- \"they make\" = \"他们进行的\"\n- \"before the end of their next turn\" = \"在他们下一回合结束之前\"\n\nFull translation: \"多罗科尔30英尺范围内所有能听到她说话的仆从，在其下一回合结束前进行的下一次攻击掷骰将获得优势。\"\n\nLet me refine this to make it more natural in Chinese:\n\"多罗科尔周围30英尺内所有能听到她说话的仆从，在其下一回合结束前进行的下一次攻击检定将获得优势。\"\n</think>\n\n多罗科尔周围30英尺内所有能听到她说话的仆从，在其下一回合结束前进行的下一次攻击检定将获得优势。</p>",
           "chat": ""
         },
         "source": {
@@ -1139,8 +1139,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb1e": {
-            "_id": "dnd5eactivityb1e",
+          "dnd5eactivity189": {
+            "_id": "dnd5eactivity189",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1167,12 +1167,12 @@
       }
     },
     {
-      "name": "冲锋Charge",
+      "name": "<think>\nThe user wants me to translate \"Charge\" from English to Chinese (Simplified, zh-CN). This is a domain-specific translation for \"item.name\" which typically refers to item names in games or similar contexts.\n\n\"Charge\" in the context of item names could mean:\n1. A charge/attack (进攻)\n2. To charge (like charging a battery or weapon)\n3. A military charge (冲锋)\n4. In gaming contexts, it might refer to a skill or ability\n\nGiven this is for \"item.name\" domain, I should provide a common translation that would be used for item names in games. Common translations for \"Charge\" as an item name or skill name would be:\n- 冲锋 (charge attack)\n- 充能 (energy charge)\n- 进攻 (attack)\n- 充能 (to charge up)\n\nThe most common translation for \"Charge\" as a noun or skill name in gaming contexts is typically 冲锋 (charge/attack) or 充能 (charge/energy).\n\nI'll go with 冲锋 as it's a common item/skill name in many games.\n</think>\n\n冲锋",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>所有在30英尺范围内能听到多罗科尔的爪牙可以作为一次反应移动至多相当于其速度的距离。</p>",
+          "value": "<p><think>\nThe user wants me to translate a text from English to Simplified Chinese (zh-CN). The text is:\n\n\"All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.\"\n\nThis appears to be a game-related description, likely from D&D or similar tabletop RPG. Let me translate this:\n\n\"All of Dorokor’s minions within 30 feet that can hear her can move up to their speed as a reaction.\"\n\nTranslation:\n\"所有在30英尺范围内能听到她说话的 Dorokor 的随从都可以以反应动作移动相当于其速度的距离。\"\n\nLet me refine this:\n- \"minions\" = 随从/部下\n- \"within 30 feet\" = 在30英尺内\n- \"that can hear her\" = 能听到她说话的\n- \"can move up to their speed\" = 可以移动最多相当于其速度的距离\n- \"as a reaction\" = 作为一种反应\n\nBetter translation:\n\"所有在30英尺范围内能听到她说话的 Dorokor 随从都可以用反应移动最多相当于其速度的距离。\"\n</think>\n\n所有在30英尺范围内能听到她说话的 Dorokor 的随从都可以以反应动作移动最多相当于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -1184,8 +1184,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity630": {
-            "_id": "dnd5eactivity630",
+          "dnd5eactivity7e0": {
+            "_id": "dnd5eactivity7e0",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1212,12 +1212,12 @@
       }
     },
     {
-      "name": "反派能力：军阀Villain Ability: Warlord",
+      "name": "<think>\nThe user wants me to translate \"Villain Ability: Warlord\" from English to Simplified Chinese (zh-CN).\n\nThis appears to be a game-related term, likely from a tabletop RPG, card game, or video game. Let me translate this:\n\n- \"Villain\" = 反派 / 恶棍 / 坏人\n- \"Ability\" = 能力\n- \"Warlord\" = 军阀\n\nIn gaming context, especially when referring to villain abilities, I should keep it consistent with gaming terminology. \"Villain\" in gaming contexts is often translated as \"反派\" or \"恶人\", and \"Ability\" is \"能力\" or \"技能\". \"Warlord\" as a warlord/commander type is \"军阀\".\n\nThe most natural translation for this gaming context would be:\n反派能力：军阀\n\nOr it could be:\n恶棍能力：军阀\n\nI'll go with \"反派能力：军阀\" as it's the most common gaming terminology.\n</think>\n\n反派能力：军阀",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次反应，当一个随从死亡时，Dorokor 可以向她其他的随从发出命令。能听到她的随从获得一个反应，可用以立即进行一次额外移动。</p>",
+          "value": "<p><think>\nThis is a translation task from English to Simplified Chinese (zh-CN). The text is about a game mechanic involving a character named \"Dorokor\" and her minions.\n\nLet me translate this:\n- \"As a reaction\" = 作为反应\n- \"when a minion dies\" = 当一个随从死亡时\n- \"Dorokor\" = Dorokor（保持原名）\n- \"can issue a command to her other minions\" = 可以向她的其他随从下达命令\n- \"Those who can hear her\" = 那些能听到她命令的随从\n- \"gain a reaction they can use to immediately take another movement\" = 获得一个反应，可以立即进行另一次移动\n\nSo the full translation:\n\"作为反应，当一个随从死亡时，Dorokor可以向她的其他随从下达命令。那些能听到她命令的随从获得一个反应，可以立即进行另一次移动。\"\n</think>\n\n作为反应，当一个随从死亡时，Dorokor可以向她的其他随从下达命令。那些能听到她命令的随从获得一个反应，可以立即进行另一次移动。</p>",
           "chat": ""
         },
         "source": {
@@ -1229,8 +1229,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybfc": {
-            "_id": "dnd5eactivitybfc",
+          "dnd5eactivityc22": {
+            "_id": "dnd5eactivityc22",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1264,7 +1264,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273704427,
-    "modifiedTime": 1774273704427
+    "createdTime": 1775752085992,
+    "modifiedTime": 1775752085992
   }
 }

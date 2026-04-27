@@ -330,7 +330,7 @@
         "value": 1,
         "bonuses": {
           "check": "",
-          "passive": "+4"
+          "passive": ""
         }
       },
       "prf": {
@@ -525,11 +525,12 @@
       },
       "loyalty": {
         "value": null
-      }
+      },
+      "prof": 4
     },
     "details": {
       "biography": {
-        "value": "<ul><li>血狂 (Blood Frenzy)。滑行血鳍对生命值未满的生物进行近战攻击时具有优势。</li><li>扭滑 (Wriggly)。滑行血鳍可以消耗 5 尺移动距离，以摆脱自身的束缚效果；若你需要直接落地执行，可以将其视为结束自身的被擒抱 (Grappled) 或受限 (Restrained) 状态。</li><li>死亡爆裂 (Death Burst)。当滑行血鳍死亡时，它会在自身周围 10 尺半径内爆出一团有毒血雾。区域内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定。 豁免失败：受到 10（`3d6`）点毒素伤害，并陷入中毒 (Poisoned) 状态，且需进行一次 魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
+        "value": "<ul><li>血狂 (Blood Frenzy)。滑行血鳍对生命值未满的生物进行近战攻击时具有优势。</li><li>扭滑 (Wriggly)。滑行血鳍可以消耗 5 尺移动距离，以摆脱自身的束缚效果；若你需要直接落地执行，可以将其视为结束自身的被擒抱 (Grappled) 或受限 (Restrained) 状态。</li><li>死亡爆裂 (Death Burst)。当滑行血鳍死亡时，它会在自身周围 10 尺半径内爆出一团有毒血雾。区域内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定。</li><li>豁免失败：受到 10（`3d6`）点毒素伤害，并陷入中毒 (Poisoned) 状态，且需进行一次 魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
         "public": ""
       },
       "alignment": "无阵营",
@@ -707,7 +708,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>滑行血鳍对生命值未满的生物进行近战攻击时具有优势.</li></ul>",
+          "value": "<ul><li>滑行血鳍对生命值未满的生物进行近战攻击时具有优势。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -719,8 +720,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity585": {
-            "_id": "dnd5eactivity585",
+          "dnd5eactivity9fb": {
+            "_id": "dnd5eactivity9fb",
             "type": "utility",
             "activation": {
               "type": "",
@@ -752,7 +753,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>滑行血鳍可以消耗 5 尺移动距离,以摆脱自身的束缚效果;若你需要直接落地执行,可以将其视为结束自身的被擒抱 (Grappled) 或受限 (Restrained) 状态.</li></ul>",
+          "value": "<ul><li>滑行血鳍可以消耗 5 尺移动距离，以摆脱自身的束缚效果；若你需要直接落地执行，可以将其视为结束自身的被擒抱 (Grappled) 或受限 (Restrained) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -764,8 +765,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity43c": {
-            "_id": "dnd5eactivity43c",
+          "dnd5eactivityee7": {
+            "_id": "dnd5eactivityee7",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -798,7 +799,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>当滑行血鳍死亡时,它会在自身周围 10 尺半径内爆出一团有毒血雾.区域内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:受到 10(`3d6`)点毒素伤害,并陷入中毒 (Poisoned) 状态,且需进行一次 魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption).</li></ul>",
+          "value": "<p>当滑行血鳍死亡时，它会在自身周围 10 尺半径内爆出一团有毒血雾。区域内每个生物必须进行一次 DC 16 的体质 (Constitution) 豁免检定。</p><ul><li>豁免失败：受到 10（`3d6`）点毒素伤害，并陷入中毒 (Poisoned) 状态，且需进行一次 魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -810,8 +811,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity435": {
-            "_id": "dnd5eactivity435",
+          "dnd5eactivityb5f": {
+            "_id": "dnd5eactivityb5f",
             "type": "save",
             "save": {
               "ability": [
@@ -846,7 +847,7 @@
             },
             "effects": [
               {
-                "_id": "3df7ad6bff441d5e"
+                "_id": "4bbb92daa50c10ea"
               }
             ],
             "activation": {
@@ -875,8 +876,8 @@
               }
             }
           },
-          "dnd5eactivity040": {
-            "_id": "dnd5eactivity040",
+          "dnd5eactivity3aa": {
+            "_id": "dnd5eactivity3aa",
             "type": "save",
             "save": {
               "ability": [
@@ -926,7 +927,7 @@
       },
       "effects": [
         {
-          "_id": "3df7ad6bff441d5e",
+          "_id": "4bbb92daa50c10ea",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -967,7 +968,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>发动一次啃咬 (Bite) 攻击和一次尾击 (Tail Crash) 攻击.</li></ul>",
+          "value": "<ul><li>发动一次啃咬 (Bite) 攻击和一次尾击 (Tail Crash) 攻击。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -979,8 +980,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc19": {
-            "_id": "dnd5eactivityc19",
+          "dnd5eactivity586": {
+            "_id": "dnd5eactivity586",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1012,7 +1013,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +9，触及 5 尺，单一目标。</p><ul><li>命中：14（`2d8+5`）点穿刺伤害，且目标被擒抱 (Grappled)（逃脱 DC 15），并同时陷入受限 (Restrained) 状态。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +9，触及 5 尺，单一目标。</li><li>命中：14（`2d8+5`）点穿刺伤害，且目标被擒抱 (Grappled)（逃脱 DC 15），并同时陷入受限 (Restrained) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1024,8 +1025,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity4bd": {
-            "_id": "dnd5eactivity4bd",
+          "dnd5eactivity2a5": {
+            "_id": "dnd5eactivity2a5",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1087,10 +1088,10 @@
             },
             "effects": [
               {
-                "_id": "e2799de9af492c0c"
+                "_id": "5e334a435fb3396f"
               },
               {
-                "_id": "cb6381ca1b644aed"
+                "_id": "52c1b5df857bb491"
               }
             ],
             "activation": {
@@ -1115,7 +1116,7 @@
       },
       "effects": [
         {
-          "_id": "e2799de9af492c0c",
+          "_id": "5e334a435fb3396f",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1140,7 +1141,7 @@
           ]
         },
         {
-          "_id": "cb6381ca1b644aed",
+          "_id": "52c1b5df857bb491",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1181,7 +1182,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +9，触及 10 尺，单一目标；该目标不能是与啃咬 (Bite) 相同的目标。</p><ul><li>命中：19（`4d6+5`）点钝击伤害。</li><li>强击 (Heavy Hit)：若此次攻击构成强击（“命中结果高出目标 AC 5 或更多”），则额外造成以下一种效果：</li><li>流血创口 (Bleeding Wound)：目标流血 `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>震荡冲击 (Reeling Impact)：目标必须进行一次 DC 15 的体质 (Constitution) 豁免检定，豁免失败则陷入</li><li>Dazed（恍惚）。</li><li>Dazed（恍惚）：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。</li><li>击退 (Push)：目标被推出 10 尺。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +9，触及 10 尺，单一目标；该目标不能是与啃咬 (Bite) 相同的目标。</li><li>命中：19（`4d6+5`）点钝击伤害。</li><li>强击 (Heavy Hit)：若此次攻击构成强击（“命中结果高出目标 AC 5 或更多”），则额外造成以下一种效果：</li><li>流血创口 (Bleeding Wound)：目标流血 `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>震荡冲击 (Reeling Impact)：目标必须进行一次 DC 15 的体质 (Constitution) 豁免检定，豁免失败则陷入 Dazed（恍惚）。</li><li>Dazed（恍惚）：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。</li><li>击退 (Push)：目标被推出 10 尺。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1193,8 +1194,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd6c": {
-            "_id": "dnd5eactivityd6c",
+          "dnd5eactivity0cb": {
+            "_id": "dnd5eactivity0cb",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1267,11 +1268,11 @@
             },
             "macroData": {
               "name": "Heavy Hit",
-              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivityd4d\",\"dnd5eactivity910\",\"dnd5eactivity709\"],\"branches\":[{\"activityId\":\"dnd5eactivityd4d\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivity910\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivity709\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
+              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivity0d3\",\"dnd5eactivitye72\",\"dnd5eactivity5c1\"],\"branches\":[{\"activityId\":\"dnd5eactivity0d3\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivitye72\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivity5c1\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
             }
           },
-          "dnd5eactivityd4d": {
-            "_id": "dnd5eactivityd4d",
+          "dnd5eactivity0d3": {
+            "_id": "dnd5eactivity0d3",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1301,7 +1302,7 @@
                   "label": "Bleeding Wound",
                   "kind": "damage"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivityd4d"
+                "heavyHitBranchActivityId": "dnd5eactivity0d3"
               }
             },
             "effects": [],
@@ -1325,8 +1326,8 @@
               "targets": []
             }
           },
-          "dnd5eactivity910": {
-            "_id": "dnd5eactivity910",
+          "dnd5eactivitye72": {
+            "_id": "dnd5eactivitye72",
             "type": "save",
             "save": {
               "ability": [
@@ -1348,7 +1349,7 @@
                   "label": "Reeling Impact",
                   "kind": "save"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivity910"
+                "heavyHitBranchActivityId": "dnd5eactivitye72"
               }
             },
             "effects": [],
@@ -1372,8 +1373,8 @@
               "targets": []
             }
           },
-          "dnd5eactivity709": {
-            "_id": "dnd5eactivity709",
+          "dnd5eactivity5c1": {
+            "_id": "dnd5eactivity5c1",
             "type": "utility",
             "flags": {
               "fvttJsonGenerator": {
@@ -1382,7 +1383,7 @@
                   "label": "Push",
                   "kind": "utility"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivity709"
+                "heavyHitBranchActivityId": "dnd5eactivity5c1"
               }
             },
             "effects": [],
@@ -1437,25 +1438,25 @@
             "acMargin": 5,
             "dieFormula": "1d3",
             "branchActivityIds": [
-              "dnd5eactivityd4d",
-              "dnd5eactivity910",
-              "dnd5eactivity709"
+              "dnd5eactivity0d3",
+              "dnd5eactivitye72",
+              "dnd5eactivity5c1"
             ],
             "branches": [
               {
-                "activityId": "dnd5eactivityd4d",
+                "activityId": "dnd5eactivity0d3",
                 "label": "Bleeding Wound",
                 "kind": "damage",
                 "index": 1
               },
               {
-                "activityId": "dnd5eactivity910",
+                "activityId": "dnd5eactivitye72",
                 "label": "Reeling Impact",
                 "kind": "save",
                 "index": 2
               },
               {
-                "activityId": "dnd5eactivity709",
+                "activityId": "dnd5eactivity5c1",
                 "label": "Push",
                 "kind": "utility",
                 "index": 3
@@ -1471,7 +1472,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +9，触及 5 尺，单一被滑行血鳍擒抱的生物。滑行血鳍一次只能吞下一名目标。</p><ul><li>命中：目标被吞下。被吞下的目标不再处于被擒抱 (Grappled) 状态，但陷入目盲 (Blinded) 和受限 (Restrained) 状态，并且对来自滑行血鳍体外的攻击和其他效应视为处于完全掩护 (Total Cover)。目标立刻受到 14（`4d6`）点死灵伤害，之后还会再次受到同样伤害；滑行血鳍恢复等同于造成伤害的生命值。 若滑行血鳍在单一回合内累计受到 30 点来自其体内的伤害，或累计受到 20 点钝击伤害，则它必须在该回合结束时进行一次 DC 15 的体质 (Constitution) 豁免检定。豁免失败时，它会吐出被吞下的生物；该生物出现在滑行血鳍周围 5 尺内，并陷入倒地 (Prone) 状态。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +9，触及 5 尺，单一被滑行血鳍擒抱的生物。滑行血鳍一次只能吞下一名目标。</li><li>命中：目标被吞下。被吞下的目标不再处于被擒抱 (Grappled) 状态，但陷入目盲 (Blinded) 和受限 (Restrained) 状态，并且对来自滑行血鳍体外的攻击和其他效应视为处于完全掩护 (Total Cover)。目标立刻受到 14（`4d6`）点死灵伤害，之后还会再次受到同样伤害；滑行血鳍恢复等同于造成伤害的生命值。</li><li>若滑行血鳍在单一回合内累计受到 30 点来自其体内的伤害，或累计受到 20 点钝击伤害，则它必须在该回合结束时进行一次 DC 15 的体质 (Constitution) 豁免检定。豁免失败时，它会吐出被吞下的生物；该生物出现在滑行血鳍周围 5 尺内，并陷入倒地 (Prone) 状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1483,8 +1484,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc8f": {
-            "_id": "dnd5eactivityc8f",
+          "dnd5eactivity19f": {
+            "_id": "dnd5eactivity19f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1528,10 +1529,10 @@
             },
             "effects": [
               {
-                "_id": "fd72d2b3cba20f67"
+                "_id": "2ceb090f9fa5aedb"
               },
               {
-                "_id": "5c576b59a20ef1c4"
+                "_id": "1b92190d4d1eb9c7"
               }
             ],
             "activation": {
@@ -1541,8 +1542,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity957": {
-            "_id": "dnd5eactivity957",
+          "dnd5eactivity0c7": {
+            "_id": "dnd5eactivity0c7",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1573,8 +1574,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity724": {
-            "_id": "dnd5eactivity724",
+          "dnd5eactivitye9a": {
+            "_id": "dnd5eactivitye9a",
             "type": "save",
             "save": {
               "ability": [
@@ -1605,7 +1606,7 @@
       },
       "effects": [
         {
-          "_id": "fd72d2b3cba20f67",
+          "_id": "2ceb090f9fa5aedb",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1630,7 +1631,7 @@
           ]
         },
         {
-          "_id": "5c576b59a20ef1c4",
+          "_id": "1b92190d4d1eb9c7",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1673,7 +1674,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当一次近战攻击未命中滑行血鳍时,它可以移动至多 10 尺,且该移动不会引发借机攻击 (Opportunity Attacks).</li></ul>",
+          "value": "<ul><li>当一次近战攻击未命中滑行血鳍时，它可以移动至多 10 尺，且该移动不会引发借机攻击 (Opportunity Attacks)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1685,8 +1686,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity1dd": {
-            "_id": "dnd5eactivity1dd",
+          "dnd5eactivitybd5": {
+            "_id": "dnd5eactivitybd5",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1718,7 +1719,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>每日 1 次,仅限濒血时.滑行血鳍发出一道穿透海水的灵能尖啸.与它处于同一片水体、且位于其 300 尺内的每个其他生物都必须进行一次 DC 15 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:目标陷入</li><li>Dazed(恍惚).</li><li>Dazed(恍惚):直到其下一回合结束前,目标不能进行反应,且在其回合中只能执行以下三者之一:移动、执行一个动作、或执行一个附赠动作.</li></ul>",
+          "value": "<ul><li>每日 1 次，仅限濒血时。滑行血鳍发出一道穿透海水的灵能尖啸。与它处于同一片水体、且位于其 300 尺内的每个其他生物都必须进行一次 DC 15 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：目标陷入 Dazed（恍惚）。</li><li>Dazed（恍惚）：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1730,8 +1731,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivityd4e": {
-            "_id": "dnd5eactivityd4e",
+          "dnd5eactivity760": {
+            "_id": "dnd5eactivity760",
             "type": "save",
             "save": {
               "ability": [
@@ -1748,7 +1749,7 @@
             },
             "effects": [
               {
-                "_id": "40aed67e02061979"
+                "_id": "38c9d0cdba968605"
               }
             ],
             "activation": {
@@ -1800,7 +1801,7 @@
       },
       "effects": [
         {
-          "_id": "40aed67e02061979",
+          "_id": "38c9d0cdba968605",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1845,7 +1846,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722592,
-    "modifiedTime": 1774273722592
+    "createdTime": 1777294609421,
+    "modifiedTime": 1777294609421
   }
 }

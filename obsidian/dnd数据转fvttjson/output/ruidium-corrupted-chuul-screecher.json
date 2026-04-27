@@ -1,5 +1,5 @@
 {
-  "name": "鲁迪姆腐化的楚尔尖叫者 (Ruidium Corrupted Chuul Screecher)",
+  "name": "Ruidium Corrupted Chuul Screecher",
   "type": "npc",
   "img": "",
   "system": {
@@ -708,12 +708,12 @@
   },
   "items": [
     {
-      "name": "两栖Amphibious",
+      "name": "<think>\nThe user wants me to translate \"Amphibious\" from English to Simplified Chinese (zh-CN).\n\n\"Amphibious\" in English means:\n1. Relating to or affecting both land and water\n2. (of a vehicle or person) able to operate on both land and water\n\nIn Chinese, this translates to:\n\"两栖的\" (liǎng qī de)\n\nFor example:\n- Amphibious vehicle = 两栖车辆\n- Amphibious operation = 两栖作战\n\nSince the domain is \"item.name\" (物品名称), the translation should be the standard term for this type of item/category.\n</think>\n\n两栖的",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "尖叫者可以在空气和水中呼吸。",
+          "value": "<p>The screecher can breathe air and water.</p>",
           "chat": ""
         },
         "source": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd01": {
-            "_id": "dnd5eactivityd01",
+          "dnd5eactivity11e": {
+            "_id": "dnd5eactivity11e",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,12 +753,12 @@
       }
     },
     {
-      "name": "感知魔法 (Sense Magic)",
+      "name": "<think>\nThe user wants me to translate \"Sense Magic\" from English to zh-CN (Simplified Chinese).\n\n\"Sense Magic\" - this appears to be a game term, likely from a video game or RPG context. It could refer to:\n1. A spell/ability name - \"感知魔法\" or \"魔法感知\"\n2. A general concept - \"感知魔法\" (to sense magic)\n\nIn gaming contexts, this is typically translated as:\n- \"感知魔法\" (gǎnzhī mófǎ) - to sense/perceive magic\n- \"魔法感知\" (mófǎ gǎnzhī) - magic sensing/awareness\n\nGiven this is likely from a game item or ability name context (Domain: item.name), the most common translation would be \"感知魔法\" or \"魔法感知\".\n\nI'll go with \"感知魔法\" as it's the more natural reading when used as an item name.\n</think>\n\n感知魔法",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "尖叫者可以在120英尺内感知魔法，就像施展了*侦测魔法*法术一样，但这个特性并不是魔法。",
+          "value": "<p>The screecher can sense magic within 120 feet as if it had the *detect magic* spell cast on it, except this trait isn't magical.</p>",
           "chat": ""
         },
         "source": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya8f": {
-            "_id": "dnd5eactivitya8f",
+          "dnd5eactivitybb7": {
+            "_id": "dnd5eactivitybb7",
             "type": "utility",
             "activation": {
               "type": "",
@@ -798,12 +798,12 @@
       }
     },
     {
-      "name": "脆弱的鲁伊迪姆外壳 如果尖叫者从单一来源受到15点或更多的钝击伤害，它的护甲等级将变为14，直到它完成一次短休或长休。 (Brittle Ruidium Shell: If the screecher takes 15 or more bludgeoning damage from a single source, its AC becomes 14 until it finishes a short or long rest)",
+      "name": "Brittle Ruidium Shell: If the screecher takes 15 or more bludgeoning damage from a single source, its AC becomes 14 until it finishes a short or long rest",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "虽然以这种方式降低了其交流电压，但它失去了对雷电的抵抗力。",
+          "value": "<p>While its AC is reduced this way, it loses thunder resistance.</p>",
           "chat": ""
         },
         "source": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity458": {
-            "_id": "dnd5eactivity458",
+          "dnd5eactivityfd3": {
+            "_id": "dnd5eactivityfd3",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -843,12 +843,12 @@
       }
     },
     {
-      "name": "血腥的高潮 当尖叫者的生命值首次降至57点或更少时，它立即充能鲁伊迪姆尖叫。 (Bloodied Crescendo: The first time the screecher is reduced to 57 HP or fewer, it immediately recharges Ruidium Screech)",
+      "name": "Bloodied Crescendo: The first time the screecher is reduced to 57 HP or fewer, it immediately recharges Ruidium Screech",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "下次使用鲁迪姆尖啸时，范围将增加到60英尺的锥形，而不是30英尺的锥形。",
+          "value": "<p>The next time it uses Ruidium Screech, the area increases to a 60-foot cone instead of a 30-foot cone.</p>",
           "chat": ""
         },
         "source": {
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf46": {
-            "_id": "dnd5eactivityf46",
+          "dnd5eactivity939": {
+            "_id": "dnd5eactivity939",
             "type": "utility",
             "activation": {
               "type": "",
@@ -888,12 +888,12 @@
       }
     },
     {
-      "name": "鲁迪姆腐化 当生物因此尖叫者的特性或行为需要进行鲁迪姆腐化豁免时，该生物必须成功通过DC 15的魅力豁免，否则将遭受鲁迪姆腐化。 (Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this screecher, the creature must succeed on a DC 15 Charisma saving throw or suffer Ruidium Corruption)",
+      "name": "Ruidium Corruption: When a creature is required to make a Ruidium Corruption save due to a trait or action of this screecher, the creature must succeed on a DC 15 Charisma saving throw or suffer Ruidium Corruption",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "如果生物已经受到鲁伊迪姆腐化的影响，则它将获得1级疲惫。",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). The text is:\n\n\"If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.\"\n\nThis appears to be game-related text, possibly from Dungeons & Dragons or a similar RPG system, referring to a status effect called \"Ruidium Corruption\" and \"exhaustion\" levels.\n\nLet me translate this:\n\n- \"If the creature\" = 如果该生物\n- \"is already affected by\" = 已经受到...影响\n- \"Ruidium Corruption\" = 锐毒侵蚀（或保持Ruidium Corruption不变，因为是专有名词）\n- \"it\" = 它\n- \"instead gains\" = 则改为获得\n- \"1 level of exhaustion\" = 1级力竭\n\nLet me put it together:\n如果该生物已经受到锐毒侵蚀的影响，则改为获得1级力竭。\n\nOr more naturally:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n\nActually, looking at game terminology more carefully:\n- \"Ruidium Corruption\" is likely a specific game term that might be kept as \"Ruidium Corruption\" or translated as \"锐毒侵蚀\"\n- \"exhaustion\" in D&D context is \"力竭\"\n\nI'll go with:\n如果该生物已受Ruidium Corruption影响，则改为获得1级力竭。\n\nOr fully translated:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n</think>\n\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。</p>",
           "chat": ""
         },
         "source": {
@@ -905,12 +905,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityff6": {
-            "_id": "dnd5eactivityff6",
+          "dnd5eactivity8cd": {
+            "_id": "dnd5eactivity8cd",
             "type": "utility",
             "effects": [
               {
-                "_id": "4441ec6234535851"
+                "_id": "e8e2fc6f51b87c97"
               }
             ],
             "activation": {
@@ -928,7 +928,7 @@
       },
       "effects": [
         {
-          "_id": "4441ec6234535851",
+          "_id": "e8e2fc6f51b87c97",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -964,12 +964,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "尖叫者进行两次撕裂爪攻击。如果它正在抓住一个生物，它可以用触手攻击替代其中一次攻击。",
+          "value": "<p>The screecher makes two Rending Claw attacks. If it's grappling a creature, it can replace one of these attacks with a Tentacles attack.</p>",
           "chat": ""
         },
         "source": {
@@ -981,8 +981,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity207": {
-            "_id": "dnd5eactivity207",
+          "dnd5eactivity474": {
+            "_id": "dnd5eactivity474",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1009,12 +1009,12 @@
       }
     },
     {
-      "name": "撕裂爪 (Rending Claw)",
+      "name": "Rending Claw",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "近战武器攻击：+7命中，范围10英尺，目标一个。命中：造成13（2d8 + 4）斩击伤害加3（1d6）雷鸣伤害。如果目标是大型或更小，则被抓住（逃脱DC 14）：尖叫者一次只能抓住一个生物。",
+          "value": "<p>Melee Weapon Attack: +7 to hit, reach 10 ft., one target. Hit: 13 (2d8 + 4) slashing damage plus 3 (1d6) thunder damage. If the target is Large or smaller, it's grappled (escape DC 14): The screecher can have only one creature grappled this way at a time.</p>",
           "chat": ""
         },
         "source": {
@@ -1026,8 +1026,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity27d": {
-            "_id": "dnd5eactivity27d",
+          "dnd5eactivity352": {
+            "_id": "dnd5eactivity352",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1106,7 +1106,7 @@
             },
             "effects": [
               {
-                "_id": "6c0b18cb3a4bf1c6"
+                "_id": "71f697f3a4984387"
               }
             ],
             "activation": {
@@ -1131,7 +1131,7 @@
       },
       "effects": [
         {
-          "_id": "6c0b18cb3a4bf1c6",
+          "_id": "71f697f3a4984387",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1167,12 +1167,12 @@
       }
     },
     {
-      "name": "触手Tentacles",
+      "name": "<think>\nThe user wants me to translate \"Tentacles\" from English to Chinese (zh-CN).\n\n\"Tentacles\" in Chinese can be translated as:\n- 触手 (chùshǒu) - tentacles (of an animal)\n- 触须 (chùxū) - tentacles, feelers\n- 触角 (chùjiǎo) - antennae, tentacles\n\nFor a general term \"tentacles\" (like those of an octopus, jellyfish, etc.), the most common translation is:\n触手 (chùshǒu)\n\nLet me return only the translated text.\n</think>\n\n触手",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "被尖叫者抓住的生物必须成功进行一次DC 15的体质豁免检定，否则将中毒，直到其下一个回合结束。在这种中毒状态下，对它的攻击在掷骰结果为17-20时会造成致命一击。如果目标已经受到鲁伊迪姆腐化的影响，则它将变得瘫痪，直到其下一个回合结束。",
+          "value": "<p>A creature grappled by the screecher must succeed on a DC 15 Constitution saving throw or be poisoned until the end of its next turn. While poisoned this way, attacks against it score a critical hit on a roll of 17–20. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
           "chat": ""
         },
         "source": {
@@ -1184,8 +1184,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3f5": {
-            "_id": "dnd5eactivity3f5",
+          "dnd5eactivityda4": {
+            "_id": "dnd5eactivityda4",
             "type": "save",
             "save": {
               "ability": [
@@ -1202,13 +1202,13 @@
             },
             "effects": [
               {
-                "_id": "f9e261338dcee33f"
+                "_id": "4ea8a85a004ecf13"
               },
               {
-                "_id": "b9ceca5d6ef26883"
+                "_id": "26697e20518c2cb0"
               },
               {
-                "_id": "72887d16b61f1cba"
+                "_id": "d71fff4c81bcb0e6"
               }
             ],
             "activation": {
@@ -1226,7 +1226,7 @@
       },
       "effects": [
         {
-          "_id": "f9e261338dcee33f",
+          "_id": "4ea8a85a004ecf13",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1251,7 +1251,7 @@
           ]
         },
         {
-          "_id": "b9ceca5d6ef26883",
+          "_id": "26697e20518c2cb0",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1276,7 +1276,7 @@
           ]
         },
         {
-          "_id": "72887d16b61f1cba",
+          "_id": "d71fff4c81bcb0e6",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1312,12 +1312,12 @@
       }
     },
     {
-      "name": "鲁迪姆尖叫 尖叫者释放出一种充满鲁迪姆共鸣的震耳欲聋的尖叫。 (Ruidium Screech : The screecher releases a deafening screech infused with ruidium resonance)",
+      "name": "Ruidium Screech : The screecher releases a deafening screech infused with ruidium resonance",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "在30英尺的锥形区域内，每个生物必须成功进行DC 15的体质豁免，否则将受到18（4d8）点雷鸣伤害和7（2d6）点精神伤害，并且在尖叫者的下一个回合结束之前将失聪且无法进行反应。如果它正在集中注意力，则必须立即进行一次体质豁免以维持集中，且处于劣势状态。如果尖叫者受伤且目标未能成功豁免，目标还必须进行一次鲁伊迪姆腐化豁免。成功豁免时，目标将受到一半伤害且没有其他效果。",
+          "value": "<p>Each creature in a 30-foot cone must succeed on a DC 15 Constitution saving throw or take 18 (4d8) thunder damage plus 7 (2d6) psychic damage and be deafened and unable to take reactions until the end of the screecher's next turn. If it's concentrating, it must immediately make a Constitution saving throw to maintain concentration with disadvantage. If the screecher is bloodied and the target fails its save, the target must also make a Ruidium Corruption save. On a successful save, it takes half damage with no other effects.</p>",
           "chat": ""
         },
         "source": {
@@ -1329,8 +1329,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivitye9e": {
-            "_id": "dnd5eactivitye9e",
+          "dnd5eactivity70d": {
+            "_id": "dnd5eactivity70d",
             "type": "save",
             "save": {
               "ability": [
@@ -1393,7 +1393,7 @@
             },
             "effects": [
               {
-                "_id": "0d85940b420636de"
+                "_id": "2267072d58a8b24b"
               }
             ],
             "activation": {
@@ -1411,7 +1411,7 @@
       },
       "effects": [
         {
-          "_id": "0d85940b420636de",
+          "_id": "2267072d58a8b24b",
           "name": "耳聋 (Deafened)",
           "type": "base",
           "system": {},
@@ -1458,7 +1458,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274369970,
-    "modifiedTime": 1774274369970
+    "createdTime": 1775752087516,
+    "modifiedTime": 1775752087516
   }
 }

@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity336": {
-            "_id": "dnd5eactivity336",
+          "dnd5eactivity0ad": {
+            "_id": "dnd5eactivity0ad",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,12 +762,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity050": {
-            "_id": "dnd5eactivity050",
+          "dnd5eactivitycd5": {
+            "_id": "dnd5eactivitycd5",
             "type": "utility",
             "effects": [
               {
-                "_id": "b446a5ed8c9b8b00"
+                "_id": "2121352dca5a9869"
               }
             ],
             "activation": {
@@ -785,7 +785,7 @@
       },
       "effects": [
         {
-          "_id": "b446a5ed8c9b8b00",
+          "_id": "2121352dca5a9869",
           "name": "脆壳反震 (Brittle Shell)",
           "type": "base",
           "system": {},
@@ -843,8 +843,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity90b": {
-            "_id": "dnd5eactivity90b",
+          "dnd5eactivity007": {
+            "_id": "dnd5eactivity007",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -888,8 +888,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity76b": {
-            "_id": "dnd5eactivity76b",
+          "dnd5eactivitye04": {
+            "_id": "dnd5eactivitye04",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -998,8 +998,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf84": {
-            "_id": "dnd5eactivityf84",
+          "dnd5eactivity1c4": {
+            "_id": "dnd5eactivity1c4",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1066,8 +1066,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity55e": {
-            "_id": "dnd5eactivity55e",
+          "dnd5eactivityb86": {
+            "_id": "dnd5eactivityb86",
             "type": "save",
             "save": {
               "ability": [
@@ -1120,7 +1120,7 @@
             },
             "effects": [
               {
-                "_id": "15d391a7d95c48b3"
+                "_id": "2150ba948ee97132"
               }
             ],
             "activation": {
@@ -1130,8 +1130,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity110": {
-            "_id": "dnd5eactivity110",
+          "dnd5eactivityca1": {
+            "_id": "dnd5eactivityca1",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1174,7 +1174,7 @@
             },
             "effects": [
               {
-                "_id": "c96fb1f6512e817d"
+                "_id": "2bda2162f41de771"
               }
             ],
             "activation": {
@@ -1184,8 +1184,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity486": {
-            "_id": "dnd5eactivity486",
+          "dnd5eactivity2e7": {
+            "_id": "dnd5eactivity2e7",
             "type": "utility",
             "uses": {
               "spent": 0,
@@ -1230,7 +1230,7 @@
       },
       "effects": [
         {
-          "_id": "15d391a7d95c48b3",
+          "_id": "2150ba948ee97132",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1255,7 +1255,7 @@
           ]
         },
         {
-          "_id": "c96fb1f6512e817d",
+          "_id": "2bda2162f41de771",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1310,12 +1310,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity95f": {
-            "_id": "dnd5eactivity95f",
+          "dnd5eactivity21d": {
+            "_id": "dnd5eactivity21d",
             "type": "utility",
             "effects": [
               {
-                "_id": "3682020f028a50bf"
+                "_id": "27faae195b57e9a9"
               }
             ],
             "activation": {
@@ -1333,7 +1333,7 @@
       },
       "effects": [
         {
-          "_id": "3682020f028a50bf",
+          "_id": "27faae195b57e9a9",
           "name": "缩壳防御 (Retract)",
           "type": "base",
           "system": {},
@@ -1391,8 +1391,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybe7": {
-            "_id": "dnd5eactivitybe7",
+          "dnd5eactivity27f": {
+            "_id": "dnd5eactivity27f",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1426,7 +1426,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774274948701,
-    "modifiedTime": 1774274948701
+    "createdTime": 1775752088314,
+    "modifiedTime": 1775752088314
   }
 }

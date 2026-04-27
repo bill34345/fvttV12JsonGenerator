@@ -1,5 +1,5 @@
 {
-  "name": "白牙萨满White Tusk Shaman",
+  "name": "White Tusk Shaman",
   "type": "npc",
   "img": "",
   "system": {
@@ -614,7 +614,7 @@
     }
   },
   "prototypeToken": {
-    "name": "白牙萨满White Tusk Shaman",
+    "name": "White Tusk Shaman",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -703,12 +703,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -720,8 +720,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye75": {
-            "_id": "dnd5eactivitye75",
+          "dnd5eactivity2aa": {
+            "_id": "dnd5eactivity2aa",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -748,12 +748,12 @@
       }
     },
     {
-      "name": "小黄人 野蛮军团 在朝着一个生物直线移动至少20英尺后，兽人对该生物的下一次攻击在掷骰结果为18 20时会造成暴击。 (Minion: Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20)",
+      "name": "Minion: Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>灵魂绑定身体（短暂或长时间休息后充能）：***作为一个额外动作，兽人可以变身为一只巨狼，持续时间最长为4小时。兽人可以选择其装备是掉落在地、与新形态融合，还是由新形态佩戴。当其巨狼形态的生命值降至0时，兽人会恢复为其真实形态。如果这次伤害会导致其巨狼形态的生命值降至0以下，多余的伤害将转移到其真实形态上。如果兽人死亡或失去知觉，也会恢复为其真实形态。兽人可以在其回合作为一个额外动作恢复为真实形态。当以这种方式恢复时，它的生命值将回到变身前的数值。</p>",
+          "value": "<p>Spirit-Bonded Body (Recharges after a Short or Long Rest): *** As a bonus action, the orc can transform into a dire wolf for up to 4 hours. The orc can choose whether its equipment falls to the ground, melds with its new form, or is worn by the new form. The orc reverts to its true form when its dire wolf form is reduced to 0 hit points. If this damage would cause its dire wolf form to drop below 0 hit points, the excess damage is done to its true form. The orc also reverts to its true form if it dies or falls unconscious. The orc can revert to its true form as a bonus action on its turn. When it reverts in this way, it returns to the number of hit points it had before it transformed.</p>",
           "chat": ""
         },
         "source": {
@@ -765,12 +765,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity042": {
-            "_id": "dnd5eactivity042",
+          "dnd5eactivitye2a": {
+            "_id": "dnd5eactivitye2a",
             "type": "utility",
             "effects": [
               {
-                "_id": "0da060b9cac6353a"
+                "_id": "0bd1a8bce97a731b"
               }
             ],
             "activation": {
@@ -788,7 +788,7 @@
       },
       "effects": [
         {
-          "_id": "0da060b9cac6353a",
+          "_id": "0bd1a8bce97a731b",
           "name": "昏迷 (Unconscious)",
           "type": "base",
           "system": {},
@@ -824,12 +824,12 @@
       }
     },
     {
-      "name": "灵契心智Spirit-Bonded Mind",
+      "name": "Spirit-Bonded Mind",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>该兽人可以随意施放“与动物交谈”，但只能与狼交流。</p>",
+          "value": "<p>The orc can cast speak with animals at will, but can only communicate with wolves.</p>",
           "chat": ""
         },
         "source": {
@@ -841,8 +841,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd7a": {
-            "_id": "dnd5eactivityd7a",
+          "dnd5eactivityb8a": {
+            "_id": "dnd5eactivityb8a",
             "type": "utility",
             "activation": {
               "type": "",
@@ -869,12 +869,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>白牙萨满发动两次灼血长矛攻击。</p>",
+          "value": "<p>The White Tusk Shaman makes two blood-searing spear attacks.</p>",
           "chat": ""
         },
         "source": {
@@ -886,8 +886,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb8c": {
-            "_id": "dnd5eactivityb8c",
+          "dnd5eactivity170": {
+            "_id": "dnd5eactivity170",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -914,12 +914,12 @@
       }
     },
     {
-      "name": "血灼之矛Blood-Searing Spear",
+      "name": "Blood-Searing Spear",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战或远程武器攻击：+5 命中，触及 5 英尺或射程 30/60 英尺，单个目标。命中：6（1d6 + 3）点穿刺伤害，外加 7（2d6）点毒素伤害。只有当这柄矛由兽人萨满挥舞时，这种魔法毒素才会生效。</p>",
+          "value": "<p>Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 30/60 ft., one target. Hit: 6 (1d6 + 3) piercing damage plus 7 (2d6) poison damage. This magical poison only functions when the spear is wielded by an orc shaman.</p>",
           "chat": ""
         },
         "source": {
@@ -931,8 +931,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity10f": {
-            "_id": "dnd5eactivity10f",
+          "dnd5eactivity35f": {
+            "_id": "dnd5eactivity35f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1048,7 +1048,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722626,
-    "modifiedTime": 1774273722626
+    "createdTime": 1775752089447,
+    "modifiedTime": 1775752089447
   }
 }

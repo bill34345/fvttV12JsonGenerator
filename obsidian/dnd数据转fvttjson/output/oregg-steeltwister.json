@@ -1,5 +1,5 @@
 {
-  "name": "奥雷格·斯蒂尔特威斯特Oregg Steeltwister",
+  "name": "<think>\nThe user wants me to translate \"Oregg Steeltwister\" from English to Chinese (zh-CN).\n\nThis appears to be a name, likely a character name or username. For names, we typically either:\n1. Transliterate them (create a phonetic equivalent in Chinese characters)\n2. Keep them as-is in pinyin with English letters\n\n\"Oregg Steeltwister\" appears to be a fictional/composite name:\n- \"Oregg\" - could be transliterated as something like 奥雷格 (Ào léi gé)\n- \"Steeltwister\" - could be transliterated as 斯蒂尔特威斯特 (Sī dài ěr tè wēi sī tè) or translated as 钢扭曲者 (gāng niǔ qū zhě)\n\nFor character names, the common practice in Chinese is to transliterate them using characters that approximate the sound. Let me create appropriate translations:\n\nOregg → 奥雷格 (Ào léi gé)\nSteeltwister → 斯蒂尔特威斯特 (Sī dài ěr tè wēi sī tè)\n\nOr I could interpret \"Steeltwister\" more creatively as it seems like a compound word. But for names, transliteration is generally preferred.\n\nLet me go with transliteration:\nOregg Steeltwister → 奥雷格·斯蒂尔特威斯特\n</think>\n\n奥雷格·斯蒂尔特威斯特",
   "type": "npc",
   "img": "",
   "system": {
@@ -614,7 +614,7 @@
     }
   },
   "prototypeToken": {
-    "name": "奥雷格·斯蒂尔特威斯特Oregg Steeltwister",
+    "name": "<think>\nThe user wants me to translate \"Oregg Steeltwister\" from English to Chinese (zh-CN).\n\nThis appears to be a name, likely a character name or username. For names, we typically either:\n1. Transliterate them (create a phonetic equivalent in Chinese characters)\n2. Keep them as-is in pinyin with English letters\n\n\"Oregg Steeltwister\" appears to be a fictional/composite name:\n- \"Oregg\" - could be transliterated as something like 奥雷格 (Ào léi gé)\n- \"Steeltwister\" - could be transliterated as 斯蒂尔特威斯特 (Sī dài ěr tè wēi sī tè) or translated as 钢扭曲者 (gāng niǔ qū zhě)\n\nFor character names, the common practice in Chinese is to transliterate them using characters that approximate the sound. Let me create appropriate translations:\n\nOregg → 奥雷格 (Ào léi gé)\nSteeltwister → 斯蒂尔特威斯特 (Sī dài ěr tè wēi sī tè)\n\nOr I could interpret \"Steeltwister\" more creatively as it seems like a compound word. But for names, transliteration is generally preferred.\n\nLet me go with transliteration:\nOregg Steeltwister → 奥雷格·斯蒂尔特威斯特\n</think>\n\n奥雷格·斯蒂尔特威斯特",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -703,12 +703,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -720,8 +720,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydff": {
-            "_id": "dnd5eactivitydff",
+          "dnd5eactivitye8c": {
+            "_id": "dnd5eactivitye8c",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -748,12 +748,12 @@
       }
     },
     {
-      "name": "符文纹身Rune-Tattooed",
+      "name": "<think>\nThe user wants me to translate \"Rune-Tattooed\" from English to Chinese (zh-CN).\n\nThis appears to be a gaming or fantasy-related term, likely referring to a character or item name that has runic tattoos or magical tattoos.\n\nBreaking it down:\n- \"Rune\" = 符文 (fúwén) - magical symbols/runes\n- \"Tattooed\" = 有纹身的 (yǒu wénshēn de) or 刺青的 (cìqīng de)\n\nA common translation for this type of fantasy term would be:\n- 符文纹身 (fúwén wénshēn)\n- 符文刺青 (fúwén cìqīng)\n\nHowever, in many fantasy game contexts, this might be kept as a compound or translated differently. Let me think about common translations:\n\nIn Chinese fantasy/gaming contexts:\n- \"Rune-Tattooed\" could be translated as:\n  - 符文纹身\n  - 符文刺青\n  - 刻符纹身\n\nFor a game item or character name, a common translation pattern would be:\n- 符文纹身 (literal but clear)\n- 有符文纹身的 (descriptive form)\n\nGiven this is likely a game item name or title, I'll go with a natural Chinese translation:\n\n符文纹身\n\nThis keeps the fantasy/magical feel while being clear in Chinese.\n</think>\n\n符文纹身",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>每当 Oregg 施放 1 级或更高等级的法术时，他会获得等同于 Xd10 点的临时生命值，其中 X 为该法术的等级。</p>",
+          "value": "<p><think>\nThe user wants translation from English to Chinese (zh-CN) of a piece of text: \"Whenever Oregg casts a spell of 1st level or higher, he gains a number of temporary hit points equal to Xd10, where X is the level of the spell.\"\n\nGoal: Return only translated text. Domain: item.description. So the translation must be appropriate for an item description context.\n\nThus produce Chinese translation.\n\nLet's parse the English phrase:\n\n\"Whenever Oregg casts a spell of 1st level or higher, he gains a number of temporary hit points equal to Xd10, where X is the level of the spell.\"\n\nPotential translation:\n\n\"每当 Oregg 施放 1 环或更高级的法术时，他会获得等同于 Xd10 的临时生命点，其中 X 为法术的环位。\"\n\nBut \"1st level\" maybe \"1级\". Usually Chinese translation of D&D uses \"1环\" for spells. But for \"1st level or higher\", typical Chinese is \"1环或更高\". Also \"temporary hit points\" -> \"临时生命值\" (or \"临时生命点数\").\n\nThus:\n\n\"每当 Oregg 施放 1 环或更高级的法术时，他获得相当于 Xd10 的临时生命值，其中 X 为法术的环位。\"\n\nAlternatively:\n\n\"每当 Oregg 施放 1 环或更高等级的法术时，他会获得 Xd10 的临时生命点，其中 X 为法术的等级。\"\n\nBut item description likely use \"等级\" to refer to spell level.\n\nThus \"每当 Oregg 施放 1 环或更高等级的法术时，他获得 Xd10 的临时生命点，其中 X 为法术的等级。\"\n\nBetter phrasing: \"每当 Oregg 施放 1 环或更高等级的法术时，他获得等同于 Xd10 的临时生命点，其中 X 为法术的等级。\"\n\nThus final answer: only the translation.\n\nWill output exactly that.\n\nBut need to ensure the translation is accurate and natural Chinese. Also \"temporary hit points\" may be \"临时生命点\" or \"临时生命值\". In Chinese D&D translation, \"临时生命点\" is used sometimes. The user says \"Return only translated text\". So just output Chinese.\n\nThus answer: \"每当 Oregg 施放 1 环或更高等级的法术时，他获得 Xd10 的临时生命点，其中 X 为法术的等级。\"\n\nOk. Ensure no extra punctuation beyond typical Chinese.\n\nWill output final.\n</think>\n\n每当 Oregg 施放 1 环或更高等级的法术时，他获得 Xd10 的临时生命点，其中 X 为法术的等级。</p>",
           "chat": ""
         },
         "source": {
@@ -765,8 +765,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd6f": {
-            "_id": "dnd5eactivityd6f",
+          "dnd5eactivityae4": {
+            "_id": "dnd5eactivityae4",
             "type": "utility",
             "activation": {
               "type": "",
@@ -793,12 +793,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Oregg 会进行两次长剑攻击，并可作为附赠动作施放一项戏法。</p>",
+          "value": "<p><think>\nThis is a simple translation request from English to Simplified Chinese. The text is:\n\n\"Oregg makes two longsword attacks and can cast a cantrip as a bonus action.\"\n\nLet me translate this:\n\n- \"Oregg\" - This is a proper noun (a character name), so I'll keep it as \"奥雷格\" (Oregg is likely a fantasy name)\n- \"makes two longsword attacks\" - \"进行两次长剑攻击\" or \"发动两次长剑攻击\"\n- \"and can cast a cantrip as a bonus action\" - \"并能以附赠动作施放一个法术\" or \"并可以以附赠动作施放一个戏法\"\n\nIn D&D terminology:\n- \"longsword\" is \"长剑\"\n- \"cantrip\" is commonly translated as \"戏法\" in Chinese D&D context\n- \"bonus action\" is \"附赠动作\" (this is the official Chinese translation used in official D&D materials)\n\nSo the translation would be:\n\n\"奥雷格进行两次长剑攻击，并可以以附赠动作施放一个戏法。\"\n\nOr alternatively:\n\"奥雷格发动两次长剑攻击，并能以附赠动作施放一个戏法。\"\n\nI'll go with the first option as it's more commonly used.\n</think>\n\n奥雷格进行两次长剑攻击，并可以以附赠动作施放一个戏法。</p>",
           "chat": ""
         },
         "source": {
@@ -810,8 +810,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6f2": {
-            "_id": "dnd5eactivity6f2",
+          "dnd5eactivity20b": {
+            "_id": "dnd5eactivity20b",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -838,12 +838,12 @@
       }
     },
     {
-      "name": "长剑Longsword",
+      "name": "<think>\nThe user wants me to translate \"Longsword\" from English to Chinese (zh-CN). This is a simple item name translation.\n\n\"Longsword\" in Chinese can be translated as:\n- 长剑 (cháng jiàn) - literally \"long sword\"\n\nThis is the most common and appropriate translation for a longsword (the weapon type, not the specific item from a particular game).\n\nI should return only the translated text.\n</think>\n\n长剑",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：+5 命中，触及 5 英尺，一个目标。命中：7（1d10 + 2）挥砍伤害。</p>",
+          "value": "<p><think>\nThis is a D&D-style melee weapon attack description that needs to be translated from English to Chinese (Simplified). Let me translate this accurately:\n\n- \"Melee Weapon Attack\" = \"近战武器攻击\"\n- \"+5 to hit\" = \"+5 命中\"\n- \"reach 5 ft.\" = \"触及 5 尺\"\n- \"one target\" = \"一个目标\"\n- \"Hit:\" = \"命中：\"\n- \"7 (1d10 + 2)\" = \"7（1d10 + 2）\"\n- \"slashing damage\" = \"挥砍伤害\"\n\nLet me put it together:\n</think>\n\n近战武器攻击：+5 命中，触及 5 尺，一个目标。命中：7（1d10 + 2）点挥砍伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -855,8 +855,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityebd": {
-            "_id": "dnd5eactivityebd",
+          "dnd5eactivity3c4": {
+            "_id": "dnd5eactivity3c4",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -948,12 +948,12 @@
       }
     },
     {
-      "name": "火焰箭Firebolt",
+      "name": "<think>\nThe user wants me to translate \"Firebolt\" from English to Chinese (Simplified Chinese - zh-CN).\n\n\"Firebolt\" is a common English word that can mean:\n1. A bolt of fire (fire + bolt/arrow)\n2. In fantasy/gaming contexts, it's often used as a proper noun for spells, weapons, or character names\n\nIn Chinese translation:\n- \"Firebolt\" as a noun/word would typically be \"火焰箭\" or \"火矢\"\n- In fantasy/gaming contexts like Harry Potter's spell, it's often translated as \"火焰咒\" or \"烈焰箭\"\n- As a proper noun or brand name, it might be kept as \"Firebolt\" or translated as \"火球\" (fireball) or \"火焰闪电\"\n\nThe most common translations are:\n- 火焰箭 (huǒ yàn jiàn) - literally \"flame arrow\"\n- 火矢 (huǒ shǐ) - \"fire arrow\"\n- 烈焰闪电 (liè yàn shǎn diàn) - \"blazing lightning\"\n\nGiven the context \"item.name\" (which suggests this is likely a game item name or similar), the most appropriate translation would be:\n\n火焰箭\n\nThis is a common translation for fire-based arrow/projectile items in games.\n</think>\n\n火焰箭",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>远程法术攻击：+7 命中，射程 120 英尺，单一目标。命中：11（2d10）点火焰伤害。</p>",
+          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). This is a description of a ranged spell attack from what appears to be a Dungeons & Dragons or similar tabletop RPG context.\n\nLet me translate this:\n\n\"Ranged Spell Attack: +7 to hit, range 120 ft., one target. Hit: 11 (2d10) fire damage.\"\n\n- Ranged Spell Attack = 远程法术攻击\n- +7 to hit = +7 命中\n- range 120 ft. = 射程 120 尺\n- one target = 一个目标\n- Hit = 命中\n- 11 (2d10) = 11（2d10）\n- fire damage = 火焰伤害\n\nPutting it together:\n</think>\n\n远程法术攻击：+7 命中，射程 120 尺，一个目标。命中：11（2d10）点火焰伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -965,8 +965,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3ec": {
-            "_id": "dnd5eactivity3ec",
+          "dnd5eactivity4d5": {
+            "_id": "dnd5eactivity4d5",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -993,12 +993,12 @@
       }
     },
     {
-      "name": "毒液喷射Poison Spray",
+      "name": "<think>\nThe user wants me to translate \"Poison Spray\" from English to Chinese (zh-CN).\n\n\"Poison Spray\" is a common term used in various contexts:\n1. As a spell in video games (like D&D, Pokémon, etc.)\n2. As a product name (like a pepper spray or bug spray)\n3. As a general term\n\nCommon translations for \"Poison Spray\":\n- 毒液喷射\n- 毒雾喷剂\n- 毒虫喷雾 (if it's for insects)\n- 毒喷雾\n\nGiven the context of \"item.name\" (likely a game item), I should provide a straightforward translation. The most common gaming translation would be:\n\n**毒液喷射** or **毒雾喷射**\n\nI'll go with **毒液喷射** as it's commonly used in gaming contexts.\n\nWait, let me reconsider. \"Poison Spray\" could also be:\n- 毒喷雾 (simpler form)\n- 毒液喷雾\n\nIn many RPG games, \"Poison Spray\" is translated as 毒液喷射 or 毒雾喷射. I'll use **毒液喷射** as the primary translation.\n</think>\n\n毒液喷射",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>距离 Oregg 10 英尺内的一个生物必须进行一次 DC 15 的体质豁免检定，失败则受到 13（2d12）点毒素伤害。</p>",
+          "value": "<p><think>\nThis is a translation task from English to Simplified Chinese (zh-CN). The text is a game rule description about a creature ability.\n\nLet me translate this:\n\n\"One creature within 10 feet of Oregg must make a successful DC 15 Constitution saving throw or take 13 (2d12) poison damage.\"\n\nKey terms to translate:\n- creature = 生物\n- within 10 feet = 在10英尺内\n- must make a successful = 必须成功进行\n- DC 15 Constitution saving throw =  DC 15 体质豁免\n- or = 否则\n- take = 承受\n- 13 (2d12) poison damage = 13（2d12）点毒素伤害\n\nTranslation:\n在奥雷格10英尺范围内的一个生物必须成功进行DC 15体质豁免，否则承受13（2d12）点毒素伤害。\n</think>\n\n在奥雷格10英尺范围内的一个生物必须成功进行DC 15体质豁免，否则承受13（2d12）点毒素伤害。</p>",
           "chat": ""
         },
         "source": {
@@ -1010,8 +1010,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb01": {
-            "_id": "dnd5eactivityb01",
+          "dnd5eactivity803": {
+            "_id": "dnd5eactivity803",
             "type": "save",
             "save": {
               "ability": [
@@ -1077,12 +1077,12 @@
       }
     },
     {
-      "name": "施法Spellcasting",
+      "name": "<think>\nThe user wants me to translate \"Spellcasting\" from English to zh-CN (Simplified Chinese).\n\n\"Spellcasting\" in the context of games (like D&D, video games, etc.) refers to the act of casting spells.\n\nThe translation would be:\n- 施法 (shī fǎ) - literally \"casting spells\" or \"spell casting\"\n\nThis is the standard term used in Chinese for spellcasting in gaming contexts.\n</think>\n\n施法",
       "type": "feat",
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>Oregg Steeltwister is a 5th-level<br>施法者spellcaster. His 施法属性spellcasting ability is Charisma<br>(法术豁免DCspell save DC 15, +7 to hit with 法术攻击spell attack). He<br>has the following sorcerer spells prepared:<br>戏法Cantrips (随意at will): 火焰箭firebolt, 密语message, 毒液喷射poison spray, 真实打击true strike<br>1st level (4 法术位slots): 魔法飞弹magic missile, 护盾shield<br>2nd level (3 法术位slots): 热金属heat metal<br>3rd level (2 法术位slots): 飞行术fly, 火球术fireball</p>",
+          "value": "<p>Oregg Steeltwister is a 5th-level<br>施法者spellcaster. His 施法属性spellcasting ability is Charisma<br>(法术豁免DCspell save DC 15, +7 to hit with 法术攻击spell attack). He<br>has the following sorcerer spells prepared:<br>戏法Cantrips (随意at will): <think>\nThe user wants me to translate \"firebolt\" from English to Chinese (zh-CN). This appears to be a spell name from a game (likely D&D or similar RPG).\n\n\"firebolt\" translates to \"火球术\" or \"火焰箭\" in Chinese.\n\nFor spell names in games like D&D:\n- firebolt is commonly translated as \"火球术\" or \"火焰矢\"\n\nThe most common translation for firebolt in Chinese gaming context is \"火球术\".\n\nLet me provide the translation.\n</think>\n\n火球术, <think>\nThe user wants me to translate text from English to Chinese (zh-CN). The domain is \"item.spellName\" which suggests this is about game item spell names.\n\nThe user just said \"message\" - this appears to be the text they want translated.\n\n\"message\" in Chinese (simplified) is \"消息\" or \"信息\".\n\nGiven the domain is \"item.spellName\", this seems to be a game-related context, so \"消息\" (message) would be the appropriate translation.\n</think>\n\n消息, <think>\nThe user wants me to translate \"poison spray\" from English to Chinese (Simplified).\n\n\"poison spray\" is a game term, commonly used in games like Dungeons & Dragons or other RPGs. It translates to:\n\npoison = 毒\nspray = 喷射/喷雾\n\nSo \"poison spray\" = 毒液喷射 or 毒雾喷射\n\nIn the context of D&D and similar RPGs, \"Poison Spray\" is typically translated as \"毒液喷射\" or \"毒气喷射\".\n\nThe most common translation in Chinese gaming context is: 毒液喷射\n\nLet me provide the translation.\n</think>\n\n毒液喷射, <think>\nThe user wants me to translate \"true strike\" from English to Chinese (zh-CN).\n\n\"true strike\" in the context of gaming/items typically refers to a skill or ability name. In Chinese, common translations for \"true strike\" could be:\n\n- 真实打击\n- 精准打击\n- 真击\n- 真实命中\n\nIn the context of game item.spellName, I believe \"真实打击\" or \"精准打击\" would be the most appropriate translations. \n\nLooking at common gaming terminology, \"true\" in gaming contexts often translates to \"真实\" (true/real) or \"精准\" (precise), and \"strike\" translates to \"打击\" (strike/hit) or \"攻击\" (attack).\n\nI think \"真实打击\" would be the most literal and common translation for a spell name like this.\n</think>\n\n真实打击<br>1st level (4 法术位slots): <think>\nThe user wants me to translate \"magic missile\" from English to Simplified Chinese (zh-CN). This is a gaming/fantasy term, commonly known in Chinese gaming communities.\n\n\"Magic missile\" is typically translated as \"魔法飞弹\" or \"魔导弹\" in Chinese gaming context.\n\nLet me think about the most common translations:\n1. 魔法飞弹 (most common in RPGs)\n2. 魔导弹\n3. 魔法导弹\n\nThe most standard and widely accepted translation would be \"魔法飞弹\".\n</think>\n\n魔法飞弹, <think>\nThe user wants me to translate \"shield\" from English to Chinese (zh-CN). This is a domain-specific translation for item spell names.\n\n\"shield\" in this context is likely referring to a game item or spell name. Common translations include:\n- 护盾 (hù dùn) - shield, protection\n- 盾牌 (pái dùn) - shield (as a physical object)\n- 护盾 (more common for magical/game shields)\n\nGiven this is for a spell/item name, \"护盾\" would be the most appropriate translation.\n</think>\n\n护盾<br>2nd level (3 法术位slots): <think>\nThe user wants me to translate \"heat metal\" from English to Simplified Chinese (zh-CN). This appears to be related to the domain \"item.spellName\" which suggests this is likely a game term, possibly from a video game like D&D or a similar RPG.\n\n\"heat metal\" in the context of a spell name would be translated as \"灼热金属\" or \"金属加热\" or \"热量金属\" in Chinese.\n\nLooking at typical translations for D&D or similar RPG games:\n- \"Heat Metal\" is commonly translated as \"灼热金属\" (zhú rè jīn shǔ) in Chinese versions of D&D\n- Another common translation could be \"金属发热\" but this is less likely as a spell name\n\nI should provide just the translated text as instructed.\n</think>\n\n灼热金属<br>3rd level (2 法术位slots): <think>\nThe user wants me to translate \"fly\" from English to Chinese (zh-CN).\n\n\"fly\" as a word can have multiple meanings:\n1. As a verb: to fly (飞行)\n2. As a noun: a fly (苍蝇/fly的复数形式)\n\nFor a spell name context (item.spellName domain), I should provide the most common translation.\n\n\"fly\" as a verb: 飞行\n\"fly\" as a noun: 飞行/苍蝇\n\nGiven this is a spell name, it's most likely \"飞行\" (to fly) or could be translated as \"飞\" (fly).\n\nI'll provide: 飞行\n</think>\n\n飞行, <think>\nThe user wants me to translate \"fireball\" from English to Chinese (zh-CN). This is a term from a domain called \"item.spellName\", which suggests it's likely a game term, possibly from World of Warcraft or a similar game.\n\nIn gaming context, \"fireball\" is typically translated as \"火球\" in Chinese.\n\nI should return only the translated text.\n</think>\n\n火球</p>",
           "chat": ""
         },
         "source": {
@@ -1113,7 +1113,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722553,
-    "modifiedTime": 1774273722553
+    "createdTime": 1775752086233,
+    "modifiedTime": 1775752086233
   }
 }

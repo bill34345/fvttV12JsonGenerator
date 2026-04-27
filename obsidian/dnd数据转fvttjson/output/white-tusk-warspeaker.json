@@ -1,5 +1,5 @@
 {
-  "name": "白牙战语者White Tusk Warspeaker",
+  "name": "White Tusk Warspeaker",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "白牙战语者White Tusk Warspeaker",
+    "name": "White Tusk Warspeaker",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity43c": {
-            "_id": "dnd5eactivity43c",
+          "dnd5eactivity215": {
+            "_id": "dnd5eactivity215",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -747,12 +747,12 @@
       }
     },
     {
-      "name": "随从Minion",
+      "name": "Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
+          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity67f": {
-            "_id": "dnd5eactivity67f",
+          "dnd5eactivity12e": {
+            "_id": "dnd5eactivity12e",
             "type": "utility",
             "activation": {
               "type": "",
@@ -792,12 +792,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>白獠牙战语者进行一次挑衅鞭击攻击和两次带刺狼牙棒攻击。</p>",
+          "value": "<p>The White Tusk warspeaker makes a goading lash attack and two spiked club attacks.</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity163": {
-            "_id": "dnd5eactivity163",
+          "dnd5eactivityeb6": {
+            "_id": "dnd5eactivityeb6",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -837,12 +837,12 @@
       }
     },
     {
-      "name": "挑衅之鞭Goading Lash",
+      "name": "Goading Lash",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +5，射程 5 英尺，目标为一名友方。命中：5（1d4 + 3）挥砍伤害。该目标在其下一回合结束前所做的下一次近战武器攻击具有优势，并额外造成 10（3d6）点伤害。</p>",
+          "value": "<p>Melee Weapon Attack: +5 to hit, reach 5 ft., one allied target. Hit: 5 (1d4 + 3) slashing damage. The next melee weapon attack the target makes before the end of its next turn has advantage and deals an extra 10 (3d6) damage.</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9f3": {
-            "_id": "dnd5eactivity9f3",
+          "dnd5eactivityf23": {
+            "_id": "dnd5eactivityf23",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -947,12 +947,12 @@
       }
     },
     {
-      "name": "尖刺狼牙棒Spiked Club",
+      "name": "Spiked Club",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：+5 命中，攻击距离 5 英尺，单一目标。命中：10（2d6 + 3）点穿刺伤害。</p>",
+          "value": "<p>Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) piercing damage.</p>",
           "chat": ""
         },
         "source": {
@@ -964,8 +964,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd06": {
-            "_id": "dnd5eactivityd06",
+          "dnd5eactivity9cc": {
+            "_id": "dnd5eactivity9cc",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1057,12 +1057,12 @@
       }
     },
     {
-      "name": "施法Spellcasting",
+      "name": "<think>\nThe user wants me to translate \"Spellcasting\" from English to zh-CN (Simplified Chinese).\n\n\"Spellcasting\" in the context of games (like D&D, video games, etc.) refers to the act of casting spells.\n\nThe translation would be:\n- 施法 (shī fǎ) - literally \"casting spells\" or \"spell casting\"\n\nThis is the standard term used in Chinese for spellcasting in gaming contexts.\n</think>\n\n施法",
       "type": "feat",
       "img": "icons/svg/d20-highlight.svg",
       "system": {
         "description": {
-          "value": "<p>The orc is a 5th-level 施法者spellcaster.<br>Its 施法属性spellcasting ability is Wisdom (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). The orc has the<br>following cleric spells prepared:<br>戏法Cantrips (随意at will): 抵抗resistance, 神圣烈焰sacred flame, 神奇术thaumaturgy<br>1st level (4 法术位slots): 治愈伤口cure wounds, 引导之矢guiding bolt, 施加创伤inflict wounds<br>2nd level (3 法术位slots): 致盲/致聋blindness/deafness, 灵能武器（大斧）spiritual weapon (greataxe)<br>3rd level (2 法术位slots): 赋予诅咒bestow curse, 守护灵spirit guardians</p>",
+          "value": "<p>The orc is a 5th-level 施法者spellcaster.<br>Its 施法属性spellcasting ability is Wisdom (法术豁免DCspell save DC<br>13, +5 to hit with 法术攻击spell attack). The orc has the<br>following cleric spells prepared:<br>戏法Cantrips (随意at will): resistance, sacred flame, thaumaturgy<br>1st level (4 法术位slots): cure wounds, guiding bolt, inflict wounds<br>2nd level (3 法术位slots): blindness/deafness, spiritual weapon (greataxe)<br>3rd level (2 法术位slots): bestow curse, spirit guardians</p>",
           "chat": ""
         },
         "source": {
@@ -1093,7 +1093,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273752664,
-    "modifiedTime": 1774273752664
+    "createdTime": 1775752089857,
+    "modifiedTime": 1775752089857
   }
 }

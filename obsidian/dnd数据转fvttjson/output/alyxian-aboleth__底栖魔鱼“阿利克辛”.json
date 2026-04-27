@@ -705,7 +705,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若一个生物通过心灵感应与底栖魔鱼交流,且底栖魔鱼能看见该生物,底栖魔鱼即可获知该生物最深层的渴望 (Greatest Desires).</li></ul>",
+          "value": "<ul><li>若一个生物通过心灵感应与底栖魔鱼交流，且底栖魔鱼能看见该生物，底栖魔鱼即可获知该生物最深层的渴望 (Greatest Desires)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydef": {
-            "_id": "dnd5eactivitydef",
+          "dnd5eactivity10f": {
+            "_id": "dnd5eactivity10f",
             "type": "utility",
             "activation": {
               "type": "",
@@ -750,7 +750,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>在水下时,底栖魔鱼周围半径 10 尺的区域对非异怪生物视为困难地形 (Difficult Terrain).受此黏液影响的生物若尝试在回合内进行除第一次以外的攻击,需进行一次 DC 14 的力量 (Strength) 豁免检定,豁免失败则该次攻击失效.</li></ul>",
+          "value": "<ul><li>在水下时，底栖魔鱼周围半径 10 尺的区域对非异怪生物视为困难地形 (Difficult Terrain)。受此黏液影响的生物若尝试在回合内进行除第一次以外的攻击，需进行一次 DC 14 的力量 (Strength) 豁免检定，豁免失败则该次攻击失效。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity099": {
-            "_id": "dnd5eactivity099",
+          "dnd5eactivitye91": {
+            "_id": "dnd5eactivitye91",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -807,7 +807,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若底栖魔鱼豁免失败,它可以选择直接豁免成功.当它使用此特性时,每个被底栖魔鱼支配 (Dominated) 的生物都可以进行一次具有优势 (Advantage) 的 DC 19 感知 (Wisdom) 豁免检定,成功则摆脱控制.</li></ul>",
+          "value": "<ul><li>若底栖魔鱼豁免失败，它可以选择直接豁免成功。当它使用此特性时，每个被底栖魔鱼支配 (Dominated) 的生物都可以进行一次具有优势 (Advantage) 的 DC 19 感知 (Wisdom) 豁免检定，成功则摆脱控制。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -819,8 +819,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybdf": {
-            "_id": "dnd5eactivitybdf",
+          "dnd5eactivity6dd": {
+            "_id": "dnd5eactivity6dd",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -886,7 +886,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>底栖魔鱼进行三次触手 (Tentacle) 攻击;它可以将其中一次替换为使用支配 (Dominate) 或迫使 (Compel).</li></ul>",
+          "value": "<ul><li>底栖魔鱼进行三次触手 (Tentacle) 攻击；它可以将其中一次替换为使用支配 (Dominate) 或迫使 (Compel)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -898,8 +898,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye98": {
-            "_id": "dnd5eactivitye98",
+          "dnd5eactivity491": {
+            "_id": "dnd5eactivity491",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -931,7 +931,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>一个被底栖魔鱼魅惑 (Charmed) 的生物对底栖魔鱼指定的一个生物进行一次武器攻击或施放一个戏法 (Cantrip).</li></ul>",
+          "value": "<ul><li>一个被底栖魔鱼魅惑 (Charmed) 的生物对底栖魔鱼指定的一个生物进行一次武器攻击或施放一个戏法 (Cantrip)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -943,8 +943,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfbd": {
-            "_id": "dnd5eactivityfbd",
+          "dnd5eactivity054": {
+            "_id": "dnd5eactivity054",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -980,7 +980,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +10，触及 10 尺，单一目标。</p><ul><li>命中：16（`3d6 + 5`）点钝击伤害 (Bludgeoning Damage)。</li><li>命中后，目标必须进行一次 DC 16 的体质 (Constitution) 豁免检定以对抗疾病 (Disease)。染病生物只能在水中呼吸，且在水外无法恢复生命值。1 分钟后，染病生物的皮肤开始变得黏滑半透明。 若该豁免结果为 11 或更低：在接下来的 1 分钟内，目标对下一次受到的钝击伤害 (Bludgeoning Damage) 具有易伤 (Vulnerability)。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +10，触及 10 尺，单一目标。</li><li>命中：16（`3d6 + 5`）点钝击伤害 (Bludgeoning Damage)。</li><li>命中后，目标必须进行一次 DC 16 的体质 (Constitution) 豁免检定以对抗疾病 (Disease)。染病生物只能在水中呼吸，且在水外无法恢复生命值。1 分钟后，染病生物的皮肤开始变得黏滑半透明。</li><li>若该豁免结果为 11 或更低：在接下来的 1 分钟内，目标对下一次受到的钝击伤害 (Bludgeoning Damage) 具有易伤 (Vulnerability)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -992,8 +992,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityafc": {
-            "_id": "dnd5eactivityafc",
+          "dnd5eactivity554": {
+            "_id": "dnd5eactivity554",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1111,7 +1111,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>射程 60 尺,视线内一个目标.目标必须进行一次 DC 18 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:目标被魔法魅惑 (Charmed) 并受底栖魔鱼控制.每当被魅惑的目标受到伤害时,可重复该豁免. 若该豁免结果为 13 或更低:目标陷入恍惚 (Dazed),直到其下回合结束.</li></ul>",
+          "value": "<ul><li>射程 60 尺，视线内一个目标。目标必须进行一次 DC 18 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：目标被魔法魅惑 (Charmed) 并受底栖魔鱼控制。每当被魅惑的目标受到伤害时，可重复该豁免。</li><li>若该豁免结果为 13 或更低：目标陷入恍惚 (Dazed)，直到其下回合结束。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1123,8 +1123,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity67c": {
-            "_id": "dnd5eactivity67c",
+          "dnd5eactivity266": {
+            "_id": "dnd5eactivity266",
             "type": "save",
             "save": {
               "ability": [
@@ -1141,7 +1141,7 @@
             },
             "effects": [
               {
-                "_id": "b2e1eaec2aec0bcb"
+                "_id": "0ab27d27d7d93b91"
               }
             ],
             "activation": {
@@ -1167,7 +1167,7 @@
       },
       "effects": [
         {
-          "_id": "b2e1eaec2aec0bcb",
+          "_id": "0ab27d27d7d93b91",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1223,7 +1223,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>仅限被魅惑的目标 (Charmed Target Only).目标必须进行一次 DC 17 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:受到 98(`15d10`)点心灵伤害 (Psychic Damage).</li><li>豁免成功:伤害减半. 若此伤害使被魅惑生物的生命值降至 0,则其恢复 98(`15d10`)点生命值,并且底栖魔鱼不再需要专注即可维持对其的支配.</li></ul>",
+          "value": "<ul><li>仅限被魅惑的目标 (Charmed Target Only)。目标必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：受到 98（`15d10`）点心灵伤害 (Psychic Damage)。</li><li>豁免成功：伤害减半。</li><li>若此伤害使被魅惑生物的生命值降至 0，则其恢复 98（`15d10`）点生命值，并且底栖魔鱼不再需要专注即可维持对其的支配。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1235,8 +1235,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity63c": {
-            "_id": "dnd5eactivity63c",
+          "dnd5eactivityed8": {
+            "_id": "dnd5eactivityed8",
             "type": "save",
             "save": {
               "ability": [
@@ -1319,7 +1319,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>半径 15 尺范围内的每个生物必须进行一次 DC 17 的敏捷 (Dexterity) 豁免检定.</p><ul><li>豁免失败:受到 35(`10d6`)点钝击伤害,并被推开 20 尺.</li><li>豁免成功:伤害减半,且不会被推开.</li></ul>",
+          "value": "<ul><li>半径 15 尺范围内的每个生物必须进行一次 DC 17 的敏捷 (Dexterity) 豁免检定。</li><li>豁免失败：受到 35（`10d6`）点钝击伤害，并被推开 20 尺。</li><li>豁免成功：伤害减半，且不会被推开。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1331,8 +1331,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc50": {
-            "_id": "dnd5eactivityc50",
+          "dnd5eactivityc36": {
+            "_id": "dnd5eactivityc36",
             "type": "save",
             "save": {
               "ability": [
@@ -1443,7 +1443,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>底栖魔鱼 120 尺内的一个生物必须进行一次 DC 17 的智力 (Intelligence) 豁免检定.</p><ul><li>豁免失败:目标受到 14(`4d6`)点心灵伤害,并且在其于底栖魔鱼下个回合结束前进行的下一次豁免检定中减去 `1d6`.</li></ul>",
+          "value": "<ul><li>底栖魔鱼 120 尺内的一个生物必须进行一次 DC 17 的智力 (Intelligence) 豁免检定。</li><li>豁免失败：目标受到 14（`4d6`）点心灵伤害，并且在其于底栖魔鱼下个回合结束前进行的下一次豁免检定中减去 `1d6`。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1455,8 +1455,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7a7": {
-            "_id": "dnd5eactivity7a7",
+          "dnd5eactivity4d3": {
+            "_id": "dnd5eactivity4d3",
             "type": "save",
             "save": {
               "ability": [
@@ -1535,7 +1535,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>底栖魔鱼和至多一个被其魅惑的生物进行传送,互换位置.</li></ul>",
+          "value": "<ul><li>底栖魔鱼和至多一个被其魅惑的生物进行传送，互换位置。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1547,8 +1547,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5c7": {
-            "_id": "dnd5eactivity5c7",
+          "dnd5eactivity51e": {
+            "_id": "dnd5eactivity51e",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -1588,7 +1588,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>底栖魔鱼使用其迫使 (Compel) 能力.</li></ul>",
+          "value": "<ul><li>底栖魔鱼使用其迫使 (Compel) 能力。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1600,8 +1600,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya3d": {
-            "_id": "dnd5eactivitya3d",
+          "dnd5eactivity17c": {
+            "_id": "dnd5eactivity17c",
             "type": "utility",
             "activation": {
               "type": "legendary",
@@ -1635,7 +1635,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273704408,
-    "modifiedTime": 1774273704408
+    "createdTime": 1775752085981,
+    "modifiedTime": 1775752085981
   }
 }

@@ -529,7 +529,7 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>再生 (Regeneration)：若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit)，则它在其回合开始时恢复 10 点生命值。</li><li>血之狂暴 (Blood Frenzy)：腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage)。</li><li>心灵漩涡 (Psychic Maelstrom)：任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。 豁免失败：受到 11（`2d10`）点心灵伤害 (Psychic Damage)。</li><li>电击敏感 (Electrosensitive)：若腐化巨鲨受到闪电伤害 (Lightning Damage)，则它在下个回合的攻击检定具有劣势 (Disadvantage)。</li><li>嗅觉过敏 (Hyperosmia)：腐化巨鲨对基于气味的效果具有劣势。 攻击者可以承受劣势，并额外承受 -5 命中罚值 来瞄准其吻部 (Snout)。若命中，则不造成伤害，但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物，且直到其下回合结束前，它接下来的 3 次 d20 掷骰（属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack）皆具有劣势。</li></ul>",
+        "value": "<ul><li>再生 (Regeneration)：若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit)，则它在其回合开始时恢复 10 点生命值。</li><li>血之狂暴 (Blood Frenzy)：腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage)。</li><li>心灵漩涡 (Psychic Maelstrom)：任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：受到 11（`2d10`）点心灵伤害 (Psychic Damage)。</li><li>电击敏感 (Electrosensitive)：若腐化巨鲨受到闪电伤害 (Lightning Damage)，则它在下个回合的攻击检定具有劣势 (Disadvantage)。</li><li>嗅觉过敏 (Hyperosmia)：腐化巨鲨对基于气味的效果具有劣势。</li><li>攻击者可以承受劣势，并额外承受 -5 命中罚值 来瞄准其吻部 (Snout)。若命中，则不造成伤害，但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物，且直到其下回合结束前，它接下来的 3 次 d20 掷骰（属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack）皆具有劣势。</li></ul>",
         "public": ""
       },
       "alignment": "无阵营",
@@ -705,7 +705,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit),则它在其回合开始时恢复 10 点生命值.</li></ul>",
+          "value": "<ul><li>若腐化巨鲨未受到光耀伤害 (Radiant Damage) 且未被重击 (Critical Hit)，则它在其回合开始时恢复 10 点生命值。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc23": {
-            "_id": "dnd5eactivityc23",
+          "dnd5eactivity806": {
+            "_id": "dnd5eactivity806",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -750,7 +750,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage).</li></ul>",
+          "value": "<ul><li>腐化巨鲨对任何未满生命值的生物进行近战攻击检定 (Melee Attack Rolls) 时具有优势 (Advantage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2ef": {
-            "_id": "dnd5eactivity2ef",
+          "dnd5eactivitye05": {
+            "_id": "dnd5eactivitye05",
             "type": "utility",
             "activation": {
               "type": "",
@@ -795,7 +795,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:受到 11(`2d10`)点心灵伤害 (Psychic Damage).</li></ul>",
+          "value": "<p>任何在腐化巨鲨 15 尺范围内开始其回合的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。</p><ul><li>豁免失败：受到 11（`2d10`）点心灵伤害 (Psychic Damage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -807,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3be": {
-            "_id": "dnd5eactivity3be",
+          "dnd5eactivitye17": {
+            "_id": "dnd5eactivitye17",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -840,7 +840,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若腐化巨鲨受到闪电伤害 (Lightning Damage),则它在下个回合的攻击检定具有劣势 (Disadvantage).</li></ul>",
+          "value": "<ul><li>若腐化巨鲨受到闪电伤害 (Lightning Damage)，则它在下个回合的攻击检定具有劣势 (Disadvantage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -852,8 +852,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity45e": {
-            "_id": "dnd5eactivity45e",
+          "dnd5eactivity924": {
+            "_id": "dnd5eactivity924",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -885,7 +885,52 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>腐化巨鲨对基于气味的效果具有劣势. 攻击者可以承受劣势,并额外承受 -5</p><ul><li>命中罚值 来瞄准其吻部 (Snout).若命中,则不造成伤害,但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物,且直到其下回合结束前,它接下来的 3 次 d20 掷骰(属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack)皆具有劣势.</li></ul>",
+          "value": "<ul><li>腐化巨鲨对基于气味的效果具有劣势。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivitybda": {
+            "_id": "dnd5eactivitybda",
+            "type": "utility",
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "攻击者可以承受劣势,并额外承受 -5 命中罚值 来瞄准其吻部 (Snout)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>若命中，则不造成伤害，但腐化巨鲨必须释放任何它所擒抱 (Grappled) 的生物，且直到其下回合结束前，它接下来的 3 次 d20 掷骰（属性检定 / Check、豁免检定 / Save 或攻击检定 / Attack）皆具有劣势。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -897,8 +942,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityed2": {
-            "_id": "dnd5eactivityed2",
+          "dnd5eactivitybf2": {
+            "_id": "dnd5eactivitybf2",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -931,7 +976,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +9，触及 5 尺，单一目标。</p><ul><li>命中：22（`3d10 + 6`）点穿刺伤害 (Piercing Damage)，且目标被擒抱 (Grappled)（逃脱 DC 17）。 若此攻击使目标陷入重伤 / 濒血 (Bloodied)，则目标必须进行一次 DC 17 的魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +9，触及 5 尺，单一目标。</li><li>命中：22（`3d10 + 6`）点穿刺伤害 (Piercing Damage)，且目标被擒抱 (Grappled)（逃脱 DC 17）。</li><li>若此攻击使目标陷入重伤 / 濒血 (Bloodied)，则目标必须进行一次 DC 17 的魅力 (Charisma) 豁免检定以抵抗绯晶腐化 (Ruidium Corruption)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -943,8 +988,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivityf94": {
-            "_id": "dnd5eactivityf94",
+          "dnd5eactivityea7": {
+            "_id": "dnd5eactivityea7",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1006,7 +1051,7 @@
             },
             "effects": [
               {
-                "_id": "d88d01d9878a536b"
+                "_id": "a9ed6379610a240b"
               }
             ],
             "activation": {
@@ -1031,7 +1076,7 @@
       },
       "effects": [
         {
-          "_id": "d88d01d9878a536b",
+          "_id": "a9ed6379610a240b",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1072,7 +1117,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>腐化巨鲨朝一个生物直线移动至少 20 尺并进行一次咬击 (Bite);若命中,则目标必须进行一次 DC 17 的体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:目标陷入恍惚 (Dazed). 恍惚 (Dazed):直到其下一回合结束前,目标不能进行反应,且在其回合中只能执行以下三者之一:移动、执行一个动作、或执行一个附赠动作.</li></ul>",
+          "value": "<ul><li>腐化巨鲨朝一个生物直线移动至少 20 尺并进行一次咬击 (Bite)；若命中，则目标必须进行一次 DC 17 的体质 (Constitution) 豁免检定。</li><li>豁免失败：目标陷入恍惚 (Dazed)。</li><li>恍惚 (Dazed)：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1084,8 +1129,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity762": {
-            "_id": "dnd5eactivity762",
+          "dnd5eactivity999": {
+            "_id": "dnd5eactivity999",
             "type": "save",
             "save": {
               "ability": [
@@ -1113,7 +1158,7 @@
             },
             "effects": [
               {
-                "_id": "2ad5587f95889f0c"
+                "_id": "1708cb83704b969b"
               }
             ],
             "activation": {
@@ -1131,7 +1176,7 @@
       },
       "effects": [
         {
-          "_id": "2ad5587f95889f0c",
+          "_id": "1708cb83704b969b",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1174,7 +1219,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若腐化巨鲨的咬击 (Bite) 未命中,它可以立即游动最多 25 尺,且该移动不会引发借机攻击 (Opportunity Attacks).</li></ul>",
+          "value": "<ul><li>若腐化巨鲨的咬击 (Bite) 未命中，它可以立即游动最多 25 尺，且该移动不会引发借机攻击 (Opportunity Attacks)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1186,8 +1231,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye83": {
-            "_id": "dnd5eactivitye83",
+          "dnd5eactivity8c7": {
+            "_id": "dnd5eactivity8c7",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1219,7 +1264,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +10，触及 10 尺，单一目标。</p><ul><li>命中：12（`1d10 + 6`）点钝击伤害 (Bludgeoning Damage)，且目标必须进行一次 DC 17 的力量 (Strength) 豁免检定。</li><li>豁免失败：目标被推开 10 尺。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +10，触及 10 尺，单一目标。</li><li>命中：12（`1d10 + 6`）点钝击伤害 (Bludgeoning Damage)，且目标必须进行一次 DC 17 的力量 (Strength) 豁免检定。</li><li>豁免失败：目标被推开 10 尺。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1231,8 +1276,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity017": {
-            "_id": "dnd5eactivity017",
+          "dnd5eactivity635": {
+            "_id": "dnd5eactivity635",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1331,7 +1376,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当腐化巨鲨正擒抱一个目标,且被它能看见的生物攻击时,它可以将该被擒抱目标拉到攻击轨迹前;被擒抱目标承受该次本应由腐化巨鲨承受伤害的一半.</li></ul>",
+          "value": "<ul><li>当腐化巨鲨正擒抱一个目标，且被它能看见的生物攻击时，它可以将该被擒抱目标拉到攻击轨迹前；被擒抱目标承受该次本应由腐化巨鲨承受伤害的一半。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1343,12 +1388,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity376": {
-            "_id": "dnd5eactivity376",
+          "dnd5eactivityaae": {
+            "_id": "dnd5eactivityaae",
             "type": "utility",
             "effects": [
               {
-                "_id": "0a89fa5bb004718c"
+                "_id": "978eca73ab3ef4b6"
               }
             ],
             "activation": {
@@ -1366,7 +1411,7 @@
       },
       "effects": [
         {
-          "_id": "0a89fa5bb004718c",
+          "_id": "978eca73ab3ef4b6",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1407,7 +1452,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>当腐化巨鲨的生命值降至重伤 / 濒血 (Bloodied) 时,它立即为撞击 (Ram) 充能,并可立即移动最多其一半速度的距离,且该移动不会引发借机攻击.随后,以它自身为中心 50 尺范围内的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定.</p><ul><li>豁免失败:陷入恐惧 (Fear),直到其下一回合结束.</li></ul>",
+          "value": "<ul><li>当腐化巨鲨的生命值降至重伤 / 濒血 (Bloodied) 时，它立即为撞击 (Ram) 充能，并可立即移动最多其一半速度的距离，且该移动不会引发借机攻击。随后，以它自身为中心 50 尺范围内的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。</li><li>豁免失败：陷入恐惧 (Fear)，直到其下一回合结束。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1419,8 +1464,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity2a6": {
-            "_id": "dnd5eactivity2a6",
+          "dnd5eactivitye1a": {
+            "_id": "dnd5eactivitye1a",
             "type": "save",
             "save": {
               "ability": [
@@ -1475,7 +1520,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722515,
-    "modifiedTime": 1774273722515
+    "createdTime": 1775752086009,
+    "modifiedTime": 1775752086009
   }
 }

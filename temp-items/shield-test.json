@@ -1,0 +1,52 @@
+{
+  "_id": "80b39d94e6190860",
+  "name": "骑士之盾 (Shield of the Cavalier)",
+  "type": "equipment",
+  "img": "icons/svg/item-bag.svg",
+  "system": {
+    "description": {
+      "value": "持握这面盾牌期间，你的护甲等级获得 +2 加值。\n**强力猛击（Forceful Bash）.** 当你执行攻击动作时...",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "book": "SRD 5.1",
+      "page": "",
+      "license": "CC-BY-4.0",
+      "rules": "2014"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "equipped": false,
+    "rarity": "common",
+    "identified": true,
+    "cover": null,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "activities": {},
+    "attuned": true,
+    "identifier": ""
+  },
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.0.0",
+    "createdTime": 1775410962162,
+    "modifiedTime": 1775410962162,
+    "lastModifiedBy": "fvttJsonGenerator"
+  }
+}

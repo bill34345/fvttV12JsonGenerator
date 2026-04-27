@@ -706,7 +706,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>底栖魔鱼衍体可以随意感知其 120 尺范围内的魔法.除此以外,该特性运作方式如同 侦测魔法 (Detect Magic) 法术,但其本身不属于魔法.</li></ul>",
+          "value": "<ul><li>底栖魔鱼衍体可以随意感知其 120 尺范围内的魔法。除此以外，该特性运作方式如同 侦测魔法 (Detect Magic) 法术，但其本身不属于魔法。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -718,8 +718,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye4f": {
-            "_id": "dnd5eactivitye4f",
+          "dnd5eactivityc06": {
+            "_id": "dnd5eactivityc06",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -751,7 +751,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>若该底栖魔鱼衍体从单一来源受到 15 点或以上的心灵伤害 (Psychic Damage),其 AC 降至 13,直到其完成一次短休 (Short Rest) 或长休 (Long Rest),并且失去 狂乱冲动 (Frenzied Impulse).</li></ul>",
+          "value": "<ul><li>若该底栖魔鱼衍体从单一来源受到 15 点或以上的心灵伤害 (Psychic Damage)，其 AC 降至 13，直到其完成一次短休 (Short Rest) 或长休 (Long Rest)，并且失去 狂乱冲动 (Frenzied Impulse)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -763,8 +763,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3d9": {
-            "_id": "dnd5eactivity3d9",
+          "dnd5eactivity223": {
+            "_id": "dnd5eactivity223",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -796,7 +796,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>由该衍体发动的攻击,以及对该衍体发动的攻击,皆具有优势 (Advantage).</li></ul>",
+          "value": "<ul><li>由该衍体发动的攻击，以及对该衍体发动的攻击，皆具有优势 (Advantage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -808,8 +808,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9c2": {
-            "_id": "dnd5eactivity9c2",
+          "dnd5eactivity104": {
+            "_id": "dnd5eactivity104",
             "type": "utility",
             "activation": {
               "type": "",
@@ -841,7 +841,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>衍体进行一次 绯晶长矛 (Ruidium Spear) 攻击、一次 心灵鞭笞 (Psychic Lash),以及两次 触手 (Tentacle) 攻击.它可以将一次 心灵鞭笞 (Psychic Lash) 替换为一次 心灵探究 (Mind Delve).</li></ul>",
+          "value": "<ul><li>衍体进行一次 绯晶长矛 (Ruidium Spear) 攻击、一次 心灵鞭笞 (Psychic Lash)，以及两次 触手 (Tentacle) 攻击。它可以将一次 心灵鞭笞 (Psychic Lash) 替换为一次 心灵探究 (Mind Delve)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -853,8 +853,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity063": {
-            "_id": "dnd5eactivity063",
+          "dnd5eactivityd9e": {
+            "_id": "dnd5eactivityd9e",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -886,7 +886,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战或远程武器攻击：命中 +7，触及 5 尺或射程 20/60 尺，单一目标。</p><ul><li>命中：8（`1d8 + 4`）点穿刺伤害 (Piercing Damage)。 重击 (Critical Hit)：目标必须进行一次对抗 绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
+          "value": "<ul><li>近战或远程武器攻击：命中 +7，触及 5 尺或射程 20/60 尺，单一目标。</li><li>命中：8（`1d8 + 4`）点穿刺伤害 (Piercing Damage)。</li><li>重击 (Critical Hit)：目标必须进行一次对抗 绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -898,8 +898,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3f2": {
-            "_id": "dnd5eactivity3f2",
+          "dnd5eactivity373": {
+            "_id": "dnd5eactivity373",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -996,7 +996,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>远程法术攻击：命中 +7，射程 120 尺，单一目标。</p><ul><li>命中：18（`4d8`）点心灵伤害 (Psychic Damage)。</li></ul>",
+          "value": "<ul><li>远程法术攻击：命中 +7，射程 120 尺，单一目标。</li><li>命中：18（`4d8`）点心灵伤害 (Psychic Damage)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1008,8 +1008,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya7b": {
-            "_id": "dnd5eactivitya7b",
+          "dnd5eactivity600": {
+            "_id": "dnd5eactivity600",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1106,7 +1106,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +7，触及 10 尺，单一目标。</p><ul><li>命中：目标被 擒抱 (Grappled)（逃脱 DC 14），并在其每个回合开始时受到 9（`2d8`）点心灵伤害。 该衍体共有 4 条触手，每条触手都可以维持一次擒抱。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +7，触及 10 尺，单一目标。</li><li>命中：目标被 擒抱 (Grappled)（逃脱 DC 14），并在其每个回合开始时受到 9（`2d8`）点心灵伤害。</li><li>该衍体共有 4 条触手，每条触手都可以维持一次擒抱。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1118,8 +1118,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc1f": {
-            "_id": "dnd5eactivityc1f",
+          "dnd5eactivity49b": {
+            "_id": "dnd5eactivity49b",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1181,7 +1181,7 @@
             },
             "effects": [
               {
-                "_id": "bb6e0fcec89b9ce6"
+                "_id": "a4324f6d659b3412"
               }
             ],
             "activation": {
@@ -1206,7 +1206,7 @@
       },
       "effects": [
         {
-          "_id": "bb6e0fcec89b9ce6",
+          "_id": "a4324f6d659b3412",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1247,7 +1247,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>一个被该衍体擒抱的目标必须进行一次 DC 14 的智力 (Intelligence) 豁免检定.</p><ul><li>豁免失败:直到该底栖魔鱼衍体的下一回合结束前,对该目标的攻击在掷出 15–20 时即造成 重击 (Critical Hit).</li></ul>",
+          "value": "<ul><li>一个被该衍体擒抱的目标必须进行一次 DC 14 的智力 (Intelligence) 豁免检定。</li><li>豁免失败：直到该底栖魔鱼衍体的下一回合结束前，对该目标的攻击在掷出 15–20 时即造成 重击 (Critical Hit)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1259,8 +1259,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye1e": {
-            "_id": "dnd5eactivitye1e",
+          "dnd5eactivity72f": {
+            "_id": "dnd5eactivity72f",
             "type": "save",
             "save": {
               "ability": [
@@ -1307,7 +1307,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273704389,
-    "modifiedTime": 1774273704389
+    "createdTime": 1775752085972,
+    "modifiedTime": 1775752085972
   }
 }

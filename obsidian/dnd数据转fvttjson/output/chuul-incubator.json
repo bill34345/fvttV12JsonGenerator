@@ -708,12 +708,12 @@
   },
   "items": [
     {
-      "name": "两栖 (Amphibious)",
+      "name": "两栖",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸.</li></ul>",
+          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity754": {
-            "_id": "dnd5eactivity754",
+          "dnd5eactivitycb3": {
+            "_id": "dnd5eactivitycb3",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -753,12 +753,12 @@
       }
     },
     {
-      "name": "感知魔法 (Sense Magic)",
+      "name": "感知魔法",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪可以随意感应到120尺范围内的魔法.该特性除了不具有魔法性外,其效果等同于检测魔法法术.</li></ul>",
+          "value": "<ul><li>该甲伏怪可以随意感应到120尺范围内的魔法。该特性除了不具有魔法性外，其效果等同于检测魔法法术。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydea": {
-            "_id": "dnd5eactivitydea",
+          "dnd5eactivity388": {
+            "_id": "dnd5eactivity388",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,12 +798,12 @@
       }
     },
     {
-      "name": "多重攻击 (Multiattack)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪进行一次钳击攻击.如果该甲伏怪正在抓取一个生物,它可以再使用一次触须.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity263": {
-            "_id": "dnd5eactivity263",
+          "dnd5eactivityfe7": {
+            "_id": "dnd5eactivityfe7",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -843,12 +843,12 @@
       }
     },
     {
-      "name": "钳击 (Pincer Strike)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>11 (2d6+4) 点钝击伤害.</p><ul><li>命中:如果目标是大型或更小的生物,则其被抓取(逃脱DC 14),且甲伏怪此时抓取的生物不能超过两个.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -860,67 +860,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybec": {
-            "_id": "dnd5eactivitybec",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "4",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 10,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
+          "dnd5eactivity494": {
+            "_id": "dnd5eactivity494",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -930,15 +872,8 @@
           }
         },
         "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 10,
-          "units": "ft"
+          "value": "monster",
+          "subtype": ""
         }
       },
       "effects": [],
@@ -953,12 +888,12 @@
       }
     },
     {
-      "name": "触须 (Tentacle)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>一个被该甲伏怪抓取的生物必须成功通过一次 DC 13 的体质豁免,否则将中毒1分钟.在该中毒效果结束前,目标处于麻痹状态.目标可以在其每个回合结束时重复该豁免,成功则结束该效果.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -970,30 +905,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5cd": {
-            "_id": "dnd5eactivity5cd",
-            "type": "save",
-            "save": {
-              "ability": [
-                "con"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "13",
-                "value": 13
-              }
-            },
-            "damage": {
-              "parts": []
-            },
-            "effects": [
-              {
-                "_id": "cf8cd11e4996cd6c"
-              },
-              {
-                "_id": "d4a7997021f90701"
-              }
-            ],
+          "dnd5eactivityc31": {
+            "_id": "dnd5eactivityc31",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -1007,58 +921,7 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "cf8cd11e4996cd6c",
-          "name": "中毒 (Poisoned)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
-          "statuses": [
-            "poisoned"
-          ]
-        },
-        {
-          "_id": "d4a7997021f90701",
-          "name": "麻痹 (Paralyzed)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
-          "statuses": [
-            "paralyzed"
-          ]
-        }
-      ],
+      "effects": [],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1070,12 +933,12 @@
       }
     },
     {
-      "name": "排出子嗣 (Disown Offspring)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪在其5尺内一个未占据的空间排泄出黏糊糊的两栖子嗣.该子嗣使用毒蛇群的数据面板,但它拥有与该甲伏怪相同的\"两栖\"和\"感知魔法\"特质.子嗣持续1分钟,随后溶解成一滩黑色粘液.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1087,42 +950,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb72": {
-            "_id": "dnd5eactivityb72",
+          "dnd5eactivityeaf": {
+            "_id": "dnd5eactivityeaf",
             "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
               "override": false,
               "condition": ""
-            },
-            "consumption": {
-              "scaling": {
-                "allowed": false
-              },
-              "spellSlot": true,
-              "targets": [
-                {
-                  "type": "itemUses",
-                  "value": "1",
-                  "target": "",
-                  "scaling": {}
-                }
-              ]
             }
           }
-        },
-        "uses": {
-          "spent": 0,
-          "value": 1,
-          "max": 1,
-          "per": "day",
-          "recovery": [
-            {
-              "period": "day",
-              "type": "recoverAll"
-            }
-          ]
         },
         "type": {
           "value": "monster",
@@ -1148,7 +985,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722489,
-    "modifiedTime": 1774273722489
+    "createdTime": 1775752085997,
+    "modifiedTime": 1775752085997
   }
 }

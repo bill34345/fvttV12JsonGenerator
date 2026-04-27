@@ -708,12 +708,12 @@
   },
   "items": [
     {
-      "name": "两栖 (Amphibious)",
+      "name": "两栖",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸.</li></ul>",
+          "value": "<ul><li>该甲伏怪可以在空气和水中呼吸。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity39d": {
-            "_id": "dnd5eactivity39d",
+          "dnd5eactivity3f5": {
+            "_id": "dnd5eactivity3f5",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -753,12 +753,12 @@
       }
     },
     {
-      "name": "感知魔法 (Sense Magic)",
+      "name": "感知魔法",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪可以随意感应到120尺范围内的魔法.该特性除了不具有魔法性外,其效果等同于检测魔法法术.</li></ul>",
+          "value": "<ul><li>该甲伏怪可以随意感应到120尺范围内的魔法。该特性除了不具有魔法性外，其效果等同于检测魔法法术。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity888": {
-            "_id": "dnd5eactivity888",
+          "dnd5eactivitybf2": {
+            "_id": "dnd5eactivitybf2",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,12 +798,12 @@
       }
     },
     {
-      "name": "多重攻击 (Multiattack)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪进行两次钳击攻击.如果该甲伏怪正在抓取一个生物,它可以再使用一次触须.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3b4": {
-            "_id": "dnd5eactivity3b4",
+          "dnd5eactivity202": {
+            "_id": "dnd5eactivity202",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -843,12 +843,12 @@
       }
     },
     {
-      "name": "钳击 (Pincer Strike)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>11 (2d6+4) 点钝击伤害.</p><ul><li>命中:如果目标是大型或更小的生物,则其被抓取(逃脱DC 14),且甲伏怪此时抓取的生物不能超过两个.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -860,67 +860,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity498": {
-            "_id": "dnd5eactivity498",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "4",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 10,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
+          "dnd5eactivityf46": {
+            "_id": "dnd5eactivityf46",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -930,15 +872,8 @@
           }
         },
         "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 10,
-          "units": "ft"
+          "value": "monster",
+          "subtype": ""
         }
       },
       "effects": [],
@@ -953,12 +888,12 @@
       }
     },
     {
-      "name": "尖啸 (Piercing Shriek)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该甲伏怪发出高频尖叫,覆盖90尺锥形区域.区域内的每个生物必须进行一次 DC 13 的体质豁免.豁免失败者受到 9 (2d8) 点雷鸣伤害并陷入眩晕直到其回合结束.豁免成功则伤害减半且不被眩晕.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -970,52 +905,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity622": {
-            "_id": "dnd5eactivity622",
-            "type": "save",
-            "save": {
-              "ability": [
-                "con"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "13",
-                "value": 13
-              }
-            },
-            "damage": {
-              "parts": []
-            },
-            "uses": {
-              "spent": 0,
-              "max": "1",
-              "recovery": [
-                {
-                  "period": "recharge",
-                  "type": "recoverAll",
-                  "formula": "5"
-                }
-              ]
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": 1,
-                "contiguous": false,
-                "type": "cone",
-                "size": "90",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
+          "dnd5eactivity1e9": {
+            "_id": "dnd5eactivity1e9",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -1036,20 +928,17 @@
           "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {},
-          "rules": {
-            "halfDamageOnSave": true
-          }
+          "effectHints": {}
         }
       }
     },
     {
-      "name": "触须 (Tentacle)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>一个被该甲伏怪抓取的生物必须成功通过一次 DC 13 的体质豁免,否则将中毒1分钟.在该中毒效果结束前,目标处于麻痹状态.目标可以在其每个回合结束时重复该豁免,成功则结束该效果.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1061,30 +950,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb93": {
-            "_id": "dnd5eactivityb93",
-            "type": "save",
-            "save": {
-              "ability": [
-                "con"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "13",
-                "value": 13
-              }
-            },
-            "damage": {
-              "parts": []
-            },
-            "effects": [
-              {
-                "_id": "0eebf0452d85d0f4"
-              },
-              {
-                "_id": "74db83c569dbc84d"
-              }
-            ],
+          "dnd5eactivity713": {
+            "_id": "dnd5eactivity713",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -1098,58 +966,7 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "0eebf0452d85d0f4",
-          "name": "中毒 (Poisoned)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
-          "statuses": [
-            "poisoned"
-          ]
-        },
-        {
-          "_id": "74db83c569dbc84d",
-          "name": "麻痹 (Paralyzed)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
-          "statuses": [
-            "paralyzed"
-          ]
-        }
-      ],
+      "effects": [],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1168,7 +985,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722507,
-    "modifiedTime": 1774273722507
+    "createdTime": 1775752086003,
+    "modifiedTime": 1775752086003
   }
 }

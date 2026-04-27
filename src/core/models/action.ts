@@ -6,7 +6,7 @@ export interface Damage {
 export interface ActionData {
   name: string;
   englishName?: string;
-  type: "attack" | "save" | "utility";
+  type: "attack" | "save" | "utility" | "effect" | "use" | "spell";
   desc?: string; 
   
   attack?: {
@@ -39,6 +39,24 @@ export interface ActionData {
   };
 
   damage?: Damage[];
+
+  // Cast activity fields (for spellcasting items like wands, staffs, rods)
+  spellName?: string;
+  usesPerDay?: number;
+
+  // Effect activity fields (for passive abilities like AC bonus, water breathing)
+  passiveEffect?: {
+    type: 'acBonus' | 'speed' | 'senses' | 'ability' | 'other';
+    value?: string | number;
+    description?: string;
+  };
+
+  // Use activity fields (for charge-consuming abilities without DC)
+  useAction?: {
+    consumption: number;
+    activation: 'action' | 'bonus' | 'reaction' | 'free';
+    description?: string;
+  };
 }
 
 export type ActivityActivationType = 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
@@ -126,4 +144,16 @@ export interface StructuredActionData {
   specialEffects?: SpecialEffect[];
   subActions?: SubAction[];
   embeddedEffects?: EmbeddedEffect[];
+
+  // Nested attack structure compatible with ActivityGenerator
+  attack?: {
+    type: "mwak" | "rwak";
+    toHit: number;
+    range: string;
+    reach?: string;
+    damage: Damage[];
+    versatile?: {
+      formula: string;
+    };
+  };
 }

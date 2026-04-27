@@ -1,4 +1,5 @@
-import { isAbsolute, join, resolve } from 'node:path';
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { PlainTextIngestionWorkflow, type PlainTextIngestionResult } from '../ingest/plaintext';
 import { type EffectProfile } from '../generator/effectProfileApplier';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
@@ -34,6 +35,10 @@ export class PlainTextActorWorkflow {
       enableAiNormalize: Boolean(options.enableAiNormalize),
     });
 
+    const promotedInputPaths = Boolean(options.dryRun)
+      ? []
+      : this.promoteMiddleFilesToInput(markdown, emitDir);
+
     const sync = Boolean(options.dryRun)
       ? this.createDryRunSyncResult(vaultPath)
       : await new ObsidianSyncWorkflow({ translationService: null }).sync({
@@ -41,7 +46,7 @@ export class PlainTextActorWorkflow {
           fvttVersion: options.fvttVersion ?? '12',
           effectProfile,
           excludeInputPaths: this.isSourceInsideEmitDir(sourcePath, emitDir) ? [sourcePath] : [],
-          forceInputPaths: markdown.files.map((file) => join(emitDir, file.fileName)),
+          forceInputPaths: promotedInputPaths,
         });
 
     return {
@@ -72,6 +77,18 @@ export class PlainTextActorWorkflow {
 
   private resolvePath(path: string): string {
     return isAbsolute(path) ? path : resolve(process.cwd(), path);
+  }
+
+  private promoteMiddleFilesToInput(markdown: PlainTextIngestionResult, inputDir: string): string[] {
+    const promotedPaths: string[] = [];
+    for (const file of markdown.files) {
+      const source = join(markdown.emitDir, file.fileName);
+      const target = join(inputDir, file.fileName);
+      mkdirSync(dirname(target), { recursive: true });
+      copyFileSync(source, target);
+      promotedPaths.push(target);
+    }
+    return promotedPaths;
   }
 
   private isSourceInsideEmitDir(sourcePath: string, emitDir: string): boolean {

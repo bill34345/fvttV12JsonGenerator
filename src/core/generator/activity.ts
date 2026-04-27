@@ -1,4 +1,5 @@
 import type { ActionData, Damage } from '../parser/action';
+import { spellsMapper } from '../mapper/spells';
 
 export class ActivityGenerator {
   public generate(action: ActionData): Record<string, any> {
@@ -24,6 +25,8 @@ export class ActivityGenerator {
           ...(action.attack.versatile ? { versatile: this.formatDamage({ formula: action.attack.versatile.formula, type: action.attack.damage[0]?.type || '' }) } : {})
         }
       };
+      activities[id].range = this.buildAttackRange(action.attack);
+      activities[id].target = this.buildTargetSchema();
     } else if (action.save) {
       activities[id] = {
         _id: id,
@@ -41,23 +44,174 @@ export class ActivityGenerator {
         }
       };
     } else if (action.damage && action.damage.length > 0) {
-       activities[id] = {
-         _id: id,
-         type: 'damage',
-         damage: {
-           parts: action.damage.map(d => this.formatDamage(d))
-         }
-       };
+      activities[id] = {
+        _id: id,
+        type: 'damage',
+        damage: {
+          parts: action.damage.map(d => this.formatDamage(d))
+        }
+      };
+    } else if (action.type === 'spell' && action.spellName) {
+      let spellInfo = spellsMapper.get(action.spellName);
+      if (!spellInfo && action.englishName) {
+        spellInfo = spellsMapper.get(action.englishName);
+      }
+      
+      const FOUNDRY_SPELL_UUIDS: Record<string, string> = {
+        'Invisibility': 'Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B',
+      };
+      
+      if (!spellInfo) {
+        const englishName = action.englishName || action.spellName;
+        const foundaryUuid = FOUNDRY_SPELL_UUIDS[englishName];
+        
+        if (foundaryUuid) {
+          activities[id] = {
+            _id: id,
+            type: 'cast',
+            spell: {
+              uuid: foundaryUuid,
+            },
+            activation: {
+              type: action.useAction?.activation || 'action',
+              value: 1,
+              override: false,
+            },
+            consumption: {
+              targets: [{
+                type: 'itemUses',
+                target: '',
+                value: (action.useAction?.consumption || 1).toString(),
+                scaling: { mode: '', formula: '' }
+              }],
+              scaling: { allowed: false, max: '' },
+              spellSlot: true
+            },
+            duration: {
+              units: 'inst',
+              concentration: false,
+              override: false
+            },
+            range: { override: false },
+            target: { template: { contiguous: false, units: 'ft' }, affects: { choice: false }, override: false, prompt: true },
+            uses: { spent: 0, recovery: [], max: '' },
+          };
+        } else {
+          activities[id] = {
+            _id: id,
+            type: 'utility',
+            activation: {
+              type: action.useAction?.activation || 'action',
+              value: 1,
+              override: false,
+            },
+            consumption: {
+              targets: [{
+                type: 'itemUses',
+                target: '',
+                value: (action.useAction?.consumption || 1).toString(),
+                scaling: { mode: '', formula: '' }
+              }],
+              scaling: { allowed: false, max: '' },
+              spellSlot: false
+            },
+            duration: {
+              units: 'inst',
+              concentration: false,
+              override: false
+            },
+            range: { override: false },
+            target: { template: { contiguous: false, units: 'ft' }, affects: { choice: false }, override: false, prompt: true },
+            uses: { spent: 0, recovery: [], max: '' },
+          };
+        }
+      } else {
+        activities[id] = {
+          _id: id,
+          type: 'cast',
+          spell: {
+            uuid: spellInfo.sourceId,
+          },
+          activation: {
+            type: action.useAction?.activation || 'action',
+            value: 1,
+            override: false,
+          },
+          consumption: {
+            targets: [{
+              type: 'itemUses',
+              target: '',
+              value: (action.useAction?.consumption || 1).toString(),
+              scaling: { mode: '', formula: '' }
+            }],
+            scaling: { allowed: false, max: '' },
+            spellSlot: true
+          },
+          duration: {
+            units: 'inst',
+            concentration: false,
+            override: false
+          },
+          range: { override: false },
+          target: { template: { contiguous: false, units: 'ft' }, affects: { choice: false }, override: false, prompt: true },
+          uses: { spent: 0, recovery: [], max: '' },
+        };
+      }
+    } else if (action.type === 'use' && action.useAction) {
+      activities[id] = {
+        _id: id,
+        type: 'utility',
+        activation: {
+          type: action.useAction.activation,
+          value: action.useAction.activation === 'free' ? 0 : 1,
+          override: false,
+        },
+        consumption: {
+          targets: [{
+            type: 'itemUses',
+            target: '',
+            value: action.useAction.consumption.toString(),
+            scaling: { mode: '', formula: '' }
+          }],
+          scaling: { allowed: false, max: '' },
+          spellSlot: false
+        },
+        duration: {
+          units: 'inst',
+          concentration: false,
+          override: false
+        },
+        range: { units: 'self', special: '', override: false },
+        target: { template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' }, affects: { count: '', type: '', choice: false, special: '' }, prompt: true, override: false },
+        uses: { spent: 0, recovery: [], max: '' },
+      };
+    } else if (action.type === 'effect' && action.passiveEffect) {
+      if (action.passiveEffect.type === 'acBonus') {
+        // Skip - handled by generatePassiveEffect() as Active Effect
+      } else {
+        activities[id] = {
+          _id: id,
+          type: 'utility',
+          activation: {
+            type: 'passive',
+            value: null,
+            override: false,
+          },
+          duration: {
+            units: 'perm',
+            concentration: false,
+            override: false
+          },
+          range: { units: 'self', special: '', override: false },
+          target: { template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' }, affects: { count: '', type: 'self', choice: false, special: '' }, prompt: true, override: false },
+          uses: { spent: 0, recovery: [], max: '' },
+        };
+      }
     } else {
       activities[id] = {
         _id: id,
         type: 'utility'
       };
-    }
-
-    if (action.attack) {
-      activities[id].range = this.buildAttackRange(action.attack);
-      activities[id].target = this.buildTargetSchema();
     }
 
     if (action.recharge) {
@@ -207,5 +361,57 @@ export class ActivityGenerator {
   private parseNumericDistance(value: string | undefined): number | null {
     const match = value?.match(/(\d+)/);
     return match?.[1] ? Number.parseInt(match[1], 10) : null;
+  }
+
+  /**
+   * Generate Passive Effect (Active Effect) for AC bonus, etc.
+   */
+  public generatePassiveEffect(action: ActionData): Record<string, any> | undefined {
+    if (action.type !== 'effect' || !action.passiveEffect) {
+      return undefined;
+    }
+
+    if (action.passiveEffect.type === 'acBonus') {
+      const id = this.generateId();
+      return {
+        _id: id,
+        name: action.name || `AC +${action.passiveEffect.value} 加值`,
+        type: 'passive',
+        origin: '',
+        changes: [{
+          key: 'system.attributes.ac.bonus',
+          mode: 2,
+          value: `+${action.passiveEffect.value}`,
+          priority: null
+        }],
+        disabled: false,
+        duration: {
+          startTime: null,
+          seconds: null,
+          combat: null,
+          rounds: null,
+          turns: null,
+          startRound: null,
+          startTurn: null
+        },
+        transfer: true,
+        flags: {},
+        tint: '#ffffff',
+        description: action.passiveEffect.description || '',
+        statuses: [],
+        _stats: {
+          compendiumSource: null,
+          duplicateSource: null,
+          coreVersion: '12.331',
+          systemId: 'dnd5e',
+          systemVersion: '4.0.0',
+          createdTime: null,
+          modifiedTime: null,
+          lastModifiedBy: 'dnd5ebuilder0000'
+        }
+      };
+    }
+
+    return undefined;
   }
 }

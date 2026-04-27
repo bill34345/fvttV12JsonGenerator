@@ -1,5 +1,5 @@
 {
-  "name": "白獠牙血怒者White Tusk Bloodrager",
+  "name": "White Tusk Bloodrager",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "白獠牙血怒者White Tusk Bloodrager",
+    "name": "White Tusk Bloodrager",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye45": {
-            "_id": "dnd5eactivitye45",
+          "dnd5eactivity7e0": {
+            "_id": "dnd5eactivity7e0",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -747,12 +747,12 @@
       }
     },
     {
-      "name": "随从Minion",
+      "name": "Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
+          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2de": {
-            "_id": "dnd5eactivity2de",
+          "dnd5eactivity346": {
+            "_id": "dnd5eactivity346",
             "type": "utility",
             "activation": {
               "type": "",
@@ -792,12 +792,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>白牙血怒者发动三次弯刀攻击。</p>",
+          "value": "<p>The White Tusk Bloodrager makes three falchion attacks.</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb0c": {
-            "_id": "dnd5eactivityb0c",
+          "dnd5eactivityf26": {
+            "_id": "dnd5eactivityf26",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -837,12 +837,12 @@
       }
     },
     {
-      "name": "阔刃剑Falchion",
+      "name": "Falchion",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：+6 命中，5 英尺射程，单个目标。命中：8（2d4 + 3）点挥砍伤害。</p>",
+          "value": "<p>Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 8 (2d4 + 3) slashing damage.</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3f4": {
-            "_id": "dnd5eactivity3f4",
+          "dnd5eactivity432": {
+            "_id": "dnd5eactivity432",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -954,7 +954,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722600,
-    "modifiedTime": 1774273722600
+    "createdTime": 1775752088330,
+    "modifiedTime": 1775752088330
   }
 }

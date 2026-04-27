@@ -1,5 +1,5 @@
 {
-  "name": "白牙巨像White Tusk Juggernaut",
+  "name": "White Tusk Juggernaut",
   "type": "npc",
   "img": "",
   "system": {
@@ -613,7 +613,7 @@
     }
   },
   "prototypeToken": {
-    "name": "白牙巨像White Tusk Juggernaut",
+    "name": "White Tusk Juggernaut",
     "displayName": 0,
     "actorLink": false,
     "appendNumber": false,
@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "攻击性Aggressive",
+      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>作为一次额外动作，兽人可以朝向它能看到的一个敌对生物移动最多等于其速度的距离。</p>",
+          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity1c9": {
-            "_id": "dnd5eactivity1c9",
+          "dnd5eactivity0db": {
+            "_id": "dnd5eactivity0db",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -747,12 +747,12 @@
       }
     },
     {
-      "name": "随从Minion",
+      "name": "Minion",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>野蛮部落：在以直线朝某个生物移动至少20英尺后，兽人对该生物的下一次攻击在掷骰为18–20时判定为暴击。</p>",
+          "value": "<p>Savage Horde: After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18–20.</p>",
           "chat": ""
         },
         "source": {
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycc4": {
-            "_id": "dnd5eactivitycc4",
+          "dnd5eactivity122": {
+            "_id": "dnd5eactivity122",
             "type": "utility",
             "activation": {
               "type": "",
@@ -792,12 +792,12 @@
       }
     },
     {
-      "name": "多重攻击Multiattack",
+      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>白牙巨兽进行一次獠牙攻击和一次长剑攻击。</p>",
+          "value": "<p>The White Tusk juggernaut makes one tusk attack and one longsword attack.</p>",
           "chat": ""
         },
         "source": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6f2": {
-            "_id": "dnd5eactivity6f2",
+          "dnd5eactivity474": {
+            "_id": "dnd5eactivity474",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -837,12 +837,12 @@
       }
     },
     {
-      "name": "獠牙Tusk",
+      "name": "Tusk",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +6，攻击距离 10 英尺，一个目标。命中：造成 11（2d6 + 4）点穿刺伤害。如果目标是生物，必须通过 DC 14 的力量豁免检定，否则被击倒。</p>",
+          "value": "<p>Melee Weapon Attack: +6 to hit, reach 10 ft., one target. Hit: 11 (2d6 + 4) piercing damage. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be knocked prone.</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc3b": {
-            "_id": "dnd5eactivityc3b",
+          "dnd5eactivity269": {
+            "_id": "dnd5eactivity269",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -917,7 +917,7 @@
             },
             "effects": [
               {
-                "_id": "66ea3f4ae84629e0"
+                "_id": "effa0e7f13b511d6"
               }
             ],
             "activation": {
@@ -942,7 +942,7 @@
       },
       "effects": [
         {
-          "_id": "66ea3f4ae84629e0",
+          "_id": "effa0e7f13b511d6",
           "name": "倒地 (Prone)",
           "type": "base",
           "system": {},
@@ -978,12 +978,12 @@
       }
     },
     {
-      "name": "长剑Longsword",
+      "name": "<think>\nThe user wants me to translate \"Longsword\" from English to Chinese (zh-CN). This is a simple item name translation.\n\n\"Longsword\" in Chinese can be translated as:\n- 长剑 (cháng jiàn) - literally \"long sword\"\n\nThis is the most common and appropriate translation for a longsword (the weapon type, not the specific item from a particular game).\n\nI should return only the translated text.\n</think>\n\n长剑",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：+6 命中，触及 10 英尺，一个目标。命中：13（2d8 + 4）点挥砍伤害。</p>",
+          "value": "<p>Melee Weapon Attack: +6 to hit, reach 10 ft., one target. Hit: 13 (2d8 + 4) slashing damage.</p>",
           "chat": ""
         },
         "source": {
@@ -995,8 +995,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf34": {
-            "_id": "dnd5eactivityf34",
+          "dnd5eactivitye40": {
+            "_id": "dnd5eactivitye40",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1088,12 +1088,12 @@
       }
     },
     {
-      "name": "部落守护者Horde Protector",
+      "name": "Horde Protector",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>当靠近兽人5英尺内的生物被一个兽人能看到的生物攻击，且兽人持有盾牌时，兽人可以使该次攻击检定处于劣势。</p>",
+          "value": "<p>When a creature within 5 feet of the orc is attacked by a creature the orc can see and the orc is wielding a shield, the orc can impose disadvantage on that attack roll.</p>",
           "chat": ""
         },
         "source": {
@@ -1105,8 +1105,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityea7": {
-            "_id": "dnd5eactivityea7",
+          "dnd5eactivity027": {
+            "_id": "dnd5eactivity027",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1140,7 +1140,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722610,
-    "modifiedTime": 1774273722610
+    "createdTime": 1775752088677,
+    "modifiedTime": 1775752088677
   }
 }

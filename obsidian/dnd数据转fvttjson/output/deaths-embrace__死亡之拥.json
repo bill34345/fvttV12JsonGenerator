@@ -529,7 +529,7 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>无骨 (Boneless)：死亡之拥可以穿过窄至 10 尺宽的空间，而无需挤行 (Squeezing)。</li><li>剧毒钟罩 (Toxifying Bell)：生物可以存在于死亡之拥占据的空间内；若它们处于其下方，则受到以下效果影响： 该区域视为困难地形 (Difficult Terrain)。 所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage)。 从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD，例如 石化触须 (Petrifying Tendrils)。 此外，若死亡之拥受到毒素伤害 (Poison Damage)，它自身不承受该伤害，而是将其任意分配给占据其空间的生物。</li><li>石化触须 (Petrifying Tendrils)：在被擒抱 (Grappled) 生物的回合开始时，该生物失去 2 个已消耗的生命骰 (Hit Dice, HD)；若该生物位于死亡之拥占据的空间内，则改为失去 3 个。 若该生物无法再失去更多 HD，则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定；豁免失败则陷入瘫痪 (Paralyzed) 状态，直到该目标的下回合开始。 若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态，则其必须重复进行相同豁免以对抗石化 (Petrified)。 攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值，尝试切断一条触手。若命中，则该次攻击只造成一半伤害并切断该触手；任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放。 只有当死亡之拥的触手数量降至 2 条或更少 时，它的攻击次数才会因此受到影响。</li></ul>",
+        "value": "<ul><li>无骨 (Boneless)：死亡之拥可以穿过窄至 10 尺宽的空间，而无需挤行 (Squeezing)。</li><li>剧毒钟罩 (Toxifying Bell)：生物可以存在于死亡之拥占据的空间内；若它们处于其下方，则受到以下效果影响：</li><li>该区域视为困难地形 (Difficult Terrain)。</li><li>所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage)。</li><li>从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD，例如 石化触须 (Petrifying Tendrils)。</li><li>此外，若死亡之拥受到毒素伤害 (Poison Damage)，它自身不承受该伤害，而是将其任意分配给占据其空间的生物。</li><li>石化触须 (Petrifying Tendrils)：在被擒抱 (Grappled) 生物的回合开始时，该生物失去 2 个已消耗的生命骰 (Hit Dice, HD)；若该生物位于死亡之拥占据的空间内，则改为失去 3 个。</li><li>若该生物无法再失去更多 HD，则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定；豁免失败则陷入瘫痪 (Paralyzed) 状态，直到该目标的下回合开始。</li><li>若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态，则其必须重复进行相同豁免以对抗石化 (Petrified)。</li><li>攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值，尝试切断一条触手。若命中，则该次攻击只造成一半伤害并切断该触手；任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放。</li><li>只有当死亡之拥的触手数量降至 2 条或更少 时，它的攻击次数才会因此受到影响。</li></ul>",
         "public": ""
       },
       "alignment": "混乱邪恶",
@@ -712,7 +712,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>死亡之拥可以穿过窄至 10 尺宽的空间,而无需挤行 (Squeezing).</li></ul>",
+          "value": "<ul><li>死亡之拥可以穿过窄至 10 尺宽的空间，而无需挤行 (Squeezing)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -724,8 +724,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity545": {
-            "_id": "dnd5eactivity545",
+          "dnd5eactivityb21": {
+            "_id": "dnd5eactivityb21",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -757,7 +757,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>生物可以存在于死亡之拥占据的空间内;若它们处于其下方,则受到以下效果影响: 该区域视为困难地形 (Difficult Terrain). 所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage). 从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD,例如 石化触须 (Petrifying Tendrils). 此外,若死亡之拥受到毒素伤害 (Poison Damage),它自身不承受该伤害,而是将其任意分配给占据其空间的生物.</li></ul>",
+          "value": "<ul><li>生物可以存在于死亡之拥占据的空间内；若它们处于其下方，则受到以下效果影响： 该区域视为困难地形 (Difficult Terrain)。 所有体质 (Constitution) 豁免检定具有劣势 (Disadvantage)。 从任何会移除生命骰 (Hit Dice, HD) 的效果中额外失去 1 个 HD，例如 石化触须 (Petrifying Tendrils)。 此外，若死亡之拥受到毒素伤害 (Poison Damage)，它自身不承受该伤害，而是将其任意分配给占据其空间的生物。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -769,12 +769,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycfb": {
-            "_id": "dnd5eactivitycfb",
+          "dnd5eactivitye5e": {
+            "_id": "dnd5eactivitye5e",
             "type": "utility",
             "effects": [
               {
-                "_id": "438c0cd18b7ec055"
+                "_id": "843fec5b95785a2d"
               }
             ],
             "activation": {
@@ -792,7 +792,7 @@
       },
       "effects": [
         {
-          "_id": "438c0cd18b7ec055",
+          "_id": "843fec5b95785a2d",
           "name": "石化 (Petrified)",
           "type": "base",
           "system": {},
@@ -833,7 +833,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>在被擒抱 (Grappled) 生物的回合开始时,该生物失去 2 个已消耗的生命骰 (Hit Dice, HD);若该生物位于死亡之拥占据的空间内,则改为失去 3 个. 若该生物无法再失去更多 HD,则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定;豁免失败则陷入瘫痪 (Paralyzed) 状态,直到该目标的下回合开始. 若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态,则其必须重复进行相同豁免以对抗石化 (Petrified). 攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值,尝试切断一条触手.若命中,则该次攻击只造成一半伤害并切断该触手;任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放. 只有当死亡之拥的触手数量降至 2 条或更少 时,它的攻击次数才会因此受到影响.</li></ul>",
+          "value": "<ul><li>在被擒抱 (Grappled) 生物的回合开始时，该生物失去 2 个已消耗的生命骰 (Hit Dice, HD)；若该生物位于死亡之拥占据的空间内，则改为失去 3 个。 若该生物无法再失去更多 HD，则其必须进行一次 DC 18 的体质 (Constitution) 豁免检定；豁免失败则陷入瘫痪 (Paralyzed) 状态，直到该目标的下回合开始。 若一个目标在其回合开始时已因死亡之拥的效果而处于瘫痪 (Paralyzed) 状态，则其必须重复进行相同豁免以对抗石化 (Petrified)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -845,21 +845,18 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityae9": {
-            "_id": "dnd5eactivityae9",
+          "dnd5eactivity9e8": {
+            "_id": "dnd5eactivity9e8",
             "type": "utility",
             "effects": [
               {
-                "_id": "087e3029b8da042b"
+                "_id": "5f8415c5a199ab17"
               },
               {
-                "_id": "e78dc2d08b55adcc"
+                "_id": "2c747769032f36b2"
               },
               {
-                "_id": "161f2c79225c0f0b"
-              },
-              {
-                "_id": "cca27685fee88373"
+                "_id": "db75aa1f8062fdc1"
               }
             ],
             "activation": {
@@ -877,7 +874,7 @@
       },
       "effects": [
         {
-          "_id": "087e3029b8da042b",
+          "_id": "5f8415c5a199ab17",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -902,32 +899,7 @@
           ]
         },
         {
-          "_id": "e78dc2d08b55adcc",
-          "name": "受限 (Restrained)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
-          "statuses": [
-            "restrained"
-          ]
-        },
-        {
-          "_id": "161f2c79225c0f0b",
+          "_id": "2c747769032f36b2",
           "name": "石化 (Petrified)",
           "type": "base",
           "system": {},
@@ -952,7 +924,111 @@
           ]
         },
         {
-          "_id": "cca27685fee88373",
+          "_id": "db75aa1f8062fdc1",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ]
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "攻击者可以承受劣势 (Disadvantage) 并在命中检定上承受 -5 罚值,尝试切断一条触手",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>若命中，则该次攻击只造成一半伤害并切断该触手；任何被该触手擒抱 (Grappled) 或束缚 (Restrained) 的生物都会被释放。 只有当死亡之拥的触手数量降至 2 条或更少 时，它的攻击次数才会因此受到影响。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "special",
+          "cost": null,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity28a": {
+            "_id": "dnd5eactivity28a",
+            "type": "utility",
+            "effects": [
+              {
+                "_id": "38cee3f3c603c503"
+              },
+              {
+                "_id": "43ab1a3531d63990"
+              }
+            ],
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [
+        {
+          "_id": "38cee3f3c603c503",
+          "name": "受限 (Restrained)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
+          "statuses": [
+            "restrained"
+          ]
+        },
+        {
+          "_id": "43ab1a3531d63990",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -993,7 +1069,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>死亡之拥使用一次 拖拽 (Reel),然后进行三次 触须鞭笞 (Tentacle Lash) 攻击;它可以将其中任意一次攻击替换为一次 投掷 (Fling),并将其中一次攻击替换为第二次 拖拽 (Reel).</li></ul>",
+          "value": "<ul><li>死亡之拥使用一次 拖拽 (Reel)，然后进行三次 触须鞭笞 (Tentacle Lash) 攻击；它可以将其中任意一次攻击替换为一次 投掷 (Fling)，并将其中一次攻击替换为第二次 拖拽 (Reel)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1005,8 +1081,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity19a": {
-            "_id": "dnd5eactivity19a",
+          "dnd5eactivitye07": {
+            "_id": "dnd5eactivitye07",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1038,7 +1114,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>死亡之拥将每个被其擒抱 (Grappled) 的生物向自己拉近最多 20 尺.</li></ul>",
+          "value": "<ul><li>死亡之拥将每个被其擒抱 (Grappled) 的生物向自己拉近最多 20 尺。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1050,12 +1126,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityde9": {
-            "_id": "dnd5eactivityde9",
+          "dnd5eactivity854": {
+            "_id": "dnd5eactivity854",
             "type": "utility",
             "effects": [
               {
-                "_id": "fb500e96f4442bb2"
+                "_id": "bc6a83dde5a9ff7a"
               }
             ],
             "activation": {
@@ -1073,7 +1149,7 @@
       },
       "effects": [
         {
-          "_id": "fb500e96f4442bb2",
+          "_id": "bc6a83dde5a9ff7a",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1114,7 +1190,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>近战武器攻击：命中 +11，触及 60 尺，单一目标。</p><ul><li>命中：13（`2d6 + 6`）点穿刺伤害 (Piercing Damage) 外加 11（`2d10`）点心灵伤害 (Psychic Damage)。若目标体型为大型或更小，则其被擒抱 (Grappled)（逃脱 DC 17）。 被擒抱的目标可以在其回合中花费 15 尺移动力并承受 11（`2d10`）点毒素伤害 (Poison Damage)，来尝试挣脱该擒抱，作为其该回合的自由动作 (Free Action)，而非消耗常规动作。每次失败的尝试会使其承受的该毒素伤害增加 `1d10`。 死亡之拥共有 6 条触手，每条可各自擒抱 1 个目标。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +11，触及 60 尺，单一目标。</li><li>命中：13（`2d6 + 6`）点穿刺伤害 (Piercing Damage) 外加 11（`2d10`）点心灵伤害 (Psychic Damage)。若目标体型为大型或更小，则其被擒抱 (Grappled)（逃脱 DC 17）。</li><li>被擒抱的目标可以在其回合中花费 15 尺移动力并承受 11（`2d10`）点毒素伤害 (Poison Damage)，来尝试挣脱该擒抱，作为其该回合的自由动作 (Free Action)，而非消耗常规动作。每次失败的尝试会使其承受的该毒素伤害增加 `1d10`。</li><li>死亡之拥共有 6 条触手，每条可各自擒抱 1 个目标。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1126,8 +1202,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity51e": {
-            "_id": "dnd5eactivity51e",
+          "dnd5eactivityce5": {
+            "_id": "dnd5eactivityce5",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1206,7 +1282,7 @@
             },
             "effects": [
               {
-                "_id": "8f59e427c5c3349a"
+                "_id": "a1a2e66eaab9ddbc"
               }
             ],
             "activation": {
@@ -1231,7 +1307,7 @@
       },
       "effects": [
         {
-          "_id": "8f59e427c5c3349a",
+          "_id": "a1a2e66eaab9ddbc",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1272,7 +1348,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>死亡之拥将一个被其擒抱 (Grappled) 的物体或生物投掷最多 60 尺.若该生物与另一个生物或表面碰撞,则其因未飞满 60 尺的部分,每差 10 尺便受到 3(`1d6`)点钝击伤害 (Bludgeoning Damage). 被作为抛射物击中的生物必须进行一次 DC 17 的力量 (Strength) 豁免检定.</p><ul><li>豁免失败:被推开 10 尺,并受到等量伤害.</li></ul>",
+          "value": "<ul><li>死亡之拥将一个被其擒抱 (Grappled) 的物体或生物投掷最多 60 尺。若该生物与另一个生物或表面碰撞，则其因未飞满 60 尺的部分，每差 10 尺便受到 3（`1d6`）点钝击伤害 (Bludgeoning Damage)。</li><li>被作为抛射物击中的生物必须进行一次 DC 17 的力量 (Strength) 豁免检定。</li><li>豁免失败：被推开 10 尺，并受到等量伤害。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1284,8 +1360,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityded": {
-            "_id": "dnd5eactivityded",
+          "dnd5eactivity2a7": {
+            "_id": "dnd5eactivity2a7",
             "type": "save",
             "save": {
               "ability": [
@@ -1320,7 +1396,7 @@
             },
             "effects": [
               {
-                "_id": "a3254373d13ed292"
+                "_id": "9cff702a8c354119"
               }
             ],
             "activation": {
@@ -1338,7 +1414,7 @@
       },
       "effects": [
         {
-          "_id": "a3254373d13ed292",
+          "_id": "9cff702a8c354119",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1388,7 +1464,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>死亡之拥最多可以采取 6 次反应,每条触手各 1 次.除借机攻击外,所有反应的名称中都标有额外的反应消耗 (Reaction Cost).</li></ul>",
+          "value": "<ul><li>死亡之拥最多可以采取 6 次反应，每条触手各 1 次。除借机攻击外，所有反应的名称中都标有额外的反应消耗 (Reaction Cost)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1400,8 +1476,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity479": {
-            "_id": "dnd5eactivity479",
+          "dnd5eactivity3f1": {
+            "_id": "dnd5eactivity3f1",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1433,7 +1509,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当死亡之拥即将被一次攻击命中时,它可以令一个正被其擒抱 (Grappled) 的生物代替自己承受该伤害.</li></ul>",
+          "value": "<ul><li>当死亡之拥即将被一次攻击命中时，它可以令一个正被其擒抱 (Grappled) 的生物代替自己承受该伤害。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1445,12 +1521,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity803": {
-            "_id": "dnd5eactivity803",
+          "dnd5eactivitya13": {
+            "_id": "dnd5eactivitya13",
             "type": "utility",
             "effects": [
               {
-                "_id": "6f7855b273f99b9a"
+                "_id": "a85a54e1db319ca6"
               }
             ],
             "activation": {
@@ -1468,7 +1544,7 @@
       },
       "effects": [
         {
-          "_id": "6f7855b273f99b9a",
+          "_id": "a85a54e1db319ca6",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1509,7 +1585,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>作为反应,当死亡之拥需要进行一次豁免以对抗一个仅以它为目标的法术时,它可以使该法术额外将其 10 尺内的每个生物都作为目标. 该法术每以此方式增加一个目标,其豁免 DC 就降低 1.</li></ul>",
+          "value": "<ul><li>作为反应，当死亡之拥需要进行一次豁免以对抗一个仅以它为目标的法术时，它可以使该法术额外将其 10 尺内的每个生物都作为目标。</li><li>该法术每以此方式增加一个目标，其豁免 DC 就降低 1。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1521,8 +1597,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8b7": {
-            "_id": "dnd5eactivity8b7",
+          "dnd5eactivity942": {
+            "_id": "dnd5eactivity942",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1554,7 +1630,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>死亡之拥立即使用一次 拖拽 (Reel).任何位于其占据空间内的目标都必须进行一次 具有劣势的 DC 17 体质 (Constitution) 豁免检定.</p><ul><li>豁免失败:陷入中毒 (Poisoned) 状态,直到其下回合结束. 此外,死亡之拥可以对任意数量被其擒抱 (Grappled) 的目标使用 投掷 (Fling).</li></ul>",
+          "value": "<ul><li>死亡之拥立即使用一次 拖拽 (Reel)。任何位于其占据空间内的目标都必须进行一次 具有劣势的 DC 17 体质 (Constitution) 豁免检定。</li><li>豁免失败：陷入中毒 (Poisoned) 状态，直到其下回合结束。</li><li>此外，死亡之拥可以对任意数量被其擒抱 (Grappled) 的目标使用 投掷 (Fling)。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1566,8 +1642,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6e6": {
-            "_id": "dnd5eactivity6e6",
+          "dnd5eactivity6c4": {
+            "_id": "dnd5eactivity6c4",
             "type": "save",
             "save": {
               "ability": [
@@ -1584,10 +1660,10 @@
             },
             "effects": [
               {
-                "_id": "115eab12573beb70"
+                "_id": "7d40c6fa4f73da29"
               },
               {
-                "_id": "a726abe054b31178"
+                "_id": "30f7b0bfc423e03c"
               }
             ],
             "activation": {
@@ -1605,7 +1681,7 @@
       },
       "effects": [
         {
-          "_id": "115eab12573beb70",
+          "_id": "7d40c6fa4f73da29",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1630,7 +1706,7 @@
           ]
         },
         {
-          "_id": "a726abe054b31178",
+          "_id": "30f7b0bfc423e03c",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1673,7 +1749,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722526,
-    "modifiedTime": 1774273722526
+    "createdTime": 1775752086013,
+    "modifiedTime": 1775752086013
   }
 }

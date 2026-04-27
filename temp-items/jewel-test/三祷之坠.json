@@ -1,0 +1,52 @@
+{
+  "_id": "76a6e9bba909b4cc",
+  "name": "三祷之坠 (Jewel of Three Prayers)",
+  "type": "equipment",
+  "img": "icons/svg/item-bag.svg",
+  "system": {
+    "description": {
+      "value": "三祷之坠是一件诀别遗物...\n**休眠态（Dormant State）.** 在这个状态下，三祷之坠是一面闪闪发光的黄金圆盘。\n在休眠状态下，这件坠饰有着以下属性：\n- 当佩戴这件饰物时，你的 AC 获得 +1 加值。\n- 当佩戴或手握这件坠饰时，你可以用一个动作令它发出 15 尺半径的明亮光照。\n**觉醒态（Awakened State）.** 在这个状态下，坠饰已经重获了祝福。\n坠饰的以下增益得到了提升：\n- 饰物提供的额外 AC 加值增加到 +2。\n- 它的充能数增加到 5。\n坠饰额外获得以下属性：\n- 你可以消耗 1 点饰物的充能，结束你自己身上的以下一项状态。\n- 当另一个生物豁免检定失败时，你可以消耗 1 点饰物的充能，令该生物重新进行豁免。\n**升华态（Exalted State）.** 在这个状态下，坠饰已经重获了至高之心的祝福。\n坠饰的以下增益得到了提升：\n- 饰物提供的额外 AC 加值增加到 +3。\n- 它的充能数增加到 7。\n坠饰额外获得以下属性：\n- 你获得在水中呼吸的能力，以及等同于你行走速度的游泳速度。\n- 你 30 尺内的每一位盟友都获得在水中呼吸的能力。\n- 以一个附赠动作，你可以消耗 1 发充能，以你自己或 15 尺内你能看见的一个自愿生物为目标。\n<p>当佩戴这件饰物时，你的 AC 获得 +1 加值。</p><p>当佩戴或手握这件坠饰时，你可以用一个动作令它发出 15 尺半径的明亮光照。</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "book": "SRD 5.1",
+      "page": "",
+      "license": "CC-BY-4.0",
+      "rules": "2014"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "equipped": false,
+    "rarity": "legendary",
+    "identified": true,
+    "cover": null,
+    "uses": {
+      "max": "1",
+      "spent": 0,
+      "recovery": []
+    },
+    "activities": {},
+    "attuned": true,
+    "identifier": ""
+  },
+  "effects": [],
+  "flags": {},
+  "_stats": {
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.0.0",
+    "createdTime": 1775443451531,
+    "modifiedTime": 1775443451531,
+    "lastModifiedBy": "fvttJsonGenerator"
+  }
+}

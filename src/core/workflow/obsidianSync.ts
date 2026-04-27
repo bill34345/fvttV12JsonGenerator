@@ -12,8 +12,12 @@ import {
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ActorGenerator } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
+import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
+import { ItemParser } from '../parser/item-parser';
+import { detectItemRoute } from '../parser/item-router';
 import { ParserFactory } from '../parser/router';
 import type { TranslationContext } from '../translation';
+import { createTranslationConfigFromEnv } from '../translation/config';
 
 export interface ObsidianSyncOptions {
   vaultPath: string;
@@ -58,10 +62,24 @@ export interface ObsidianSyncResult {
 
 export class ObsidianSyncWorkflow {
   private parserFactory = new ParserFactory();
+  private itemParser = new ItemParser();
+  private itemAiNormalizer: ItemAiNormalizer | null = null;
 
   constructor(
-    private readonly options: { translationService?: TranslationServiceLike | null } = {},
-  ) {}
+    private readonly options: { translationService?: TranslationServiceLike | null; enableAiNormalize?: boolean } = {},
+  ) {
+    if (options.enableAiNormalize) {
+      const config = createTranslationConfigFromEnv();
+      if (config.apiKey) {
+        this.itemAiNormalizer = new ItemAiNormalizer({
+          apiKey: config.apiKey,
+          baseUrl: config.baseUrl,
+          model: config.model,
+          timeoutMs: config.timeoutMs,
+        });
+      }
+    }
+  }
 
   public async sync(options: ObsidianSyncOptions): Promise<ObsidianSyncResult> {
     const fvttVersion = options.fvttVersion ?? '12';
@@ -138,9 +156,25 @@ export class ObsidianSyncWorkflow {
           continue;
         }
 
-        const route = this.parserFactory.detectRoute(content);
-        const parsed = this.parserFactory.parse(content);
-        const actor = await generator.generateForRoute(parsed, route);
+        const isItem = detectItemRoute(content);
+        let outputData: unknown;
+
+        if (isItem) {
+          let normalizedBody: string | undefined;
+          if (this.itemAiNormalizer) {
+            const bodyMatch = content.match(/^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
+            const bodyText = bodyMatch?.[1] ?? '';
+            normalizedBody = await this.itemAiNormalizer.normalizeItem(bodyText);
+          }
+          const parsedItem = this.itemParser.parse(content, normalizedBody);
+          const { ItemGenerator } = await import('../generator/item-generator');
+          const itemGenerator = new ItemGenerator({ fvttVersion });
+          outputData = await itemGenerator.generate(parsedItem);
+        } else {
+          const route = this.parserFactory.detectRoute(content);
+          const parsed = this.parserFactory.parse(content);
+          outputData = await generator.generateForRoute(parsed, route);
+        }
 
         if (existsSync(outputPath)) {
           const ts = new Date().toISOString().replace(/[:.]/g, '-');
@@ -152,7 +186,7 @@ export class ObsidianSyncWorkflow {
         }
 
         this.ensureDir(dirname(outputPath));
-        writeFileSync(outputPath, JSON.stringify(actor, null, 2));
+        writeFileSync(outputPath, JSON.stringify(outputData, null, 2));
 
         manifest[relInput] = {
           hash,

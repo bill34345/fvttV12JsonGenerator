@@ -708,12 +708,12 @@
   },
   "items": [
     {
-      "name": "血狂 (Blood Frenzy)",
+      "name": "血狂",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该异怪对生命值未满的生物进行近战攻击时具有优势.</li></ul>",
+          "value": "<ul><li>该异怪对生命值未满的生物进行近战攻击时具有优势。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity95d": {
-            "_id": "dnd5eactivity95d",
+          "dnd5eactivity739": {
+            "_id": "dnd5eactivity739",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,12 +753,12 @@
       }
     },
     {
-      "name": "扭滑 (Twist and slide)",
+      "name": "扭滑",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该异怪可以消耗 5 尺移动距离,以摆脱自身的束缚效果,或结束自身的擒抱状态.</li></ul>",
+          "value": "<ul><li>该异怪可以消耗 5 尺移动距离，以摆脱自身的束缚效果，或结束自身的擒抱状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfdc": {
-            "_id": "dnd5eactivityfdc",
+          "dnd5eactivity8db": {
+            "_id": "dnd5eactivity8db",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -798,12 +798,12 @@
       }
     },
     {
-      "name": "死亡爆裂 (Death Explosion)",
+      "name": "死亡爆裂",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当该异怪死亡时,它会在自身周围 10 尺半径内爆出一团有毒血雾.区域内每个生物必须成功通过一次 DC 16 的体质豁免,否则受到 10 (3d6) 点毒素伤害,并陷入中毒状态.</li></ul>",
+          "value": "<ul><li>当该异怪死亡时，它会在自身周围 10 尺半径内爆出一团有毒血雾。区域内每个生物必须成功通过一次 DC 16 的体质豁免，否则受到 10 (3d6) 点毒素伤害，并陷入中毒状态。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -815,12 +815,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd42": {
-            "_id": "dnd5eactivityd42",
+          "dnd5eactivity8d6": {
+            "_id": "dnd5eactivity8d6",
             "type": "utility",
             "effects": [
               {
-                "_id": "8dfcdabeb143ac45"
+                "_id": "1858e87ddbe83ed5"
               }
             ],
             "activation": {
@@ -838,7 +838,7 @@
       },
       "effects": [
         {
-          "_id": "8dfcdabeb143ac45",
+          "_id": "1858e87ddbe83ed5",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -874,12 +874,12 @@
       }
     },
     {
-      "name": "多重攻击 (Multiple Attacks)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该异怪发动一次啃咬和一次尾击.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -891,8 +891,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfa9": {
-            "_id": "dnd5eactivityfa9",
+          "dnd5eactivitydbd": {
+            "_id": "dnd5eactivitydbd",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -919,12 +919,12 @@
       }
     },
     {
-      "name": "啃咬 (Bite)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>14 (2d8+5) 点穿刺伤害.</p><ul><li>命中:目标被擒抱(逃脱DC 15),并同时陷入束缚状态.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -936,72 +936,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityce1": {
-            "_id": "dnd5eactivityce1",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "9",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "5",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 5,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
-            "effects": [
-              {
-                "_id": "8f865dfd63c812ce"
-              }
-            ],
+          "dnd5eactivity34f": {
+            "_id": "dnd5eactivity34f",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -1011,44 +948,11 @@
           }
         },
         "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 5,
-          "units": "ft"
+          "value": "monster",
+          "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "8f865dfd63c812ce",
-          "name": "被擒抱 (Grappled)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
-          "statuses": [
-            "grappled"
-          ]
-        }
-      ],
+      "effects": [],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1060,12 +964,12 @@
       }
     },
     {
-      "name": "尾击 (Backstab)",
-      "type": "weapon",
-      "img": "icons/svg/sword.svg",
+      "name": "",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>19 (4d6+5) 点钝击伤害.</p><ul><li>命中:若此次攻击命中结果高出目标AC 5或更多,则触发强击,目标额外受到流血、恍惚(DC 15 体质豁免)或被推开10尺的效果.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1077,92 +981,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity39e": {
-            "_id": "dnd5eactivity39e",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "9",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 4,
-                  "denomination": 6,
-                  "bonus": "5",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 10,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
-            "effects": [],
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivity1cc": {
-            "_id": "dnd5eactivity1cc",
-            "type": "save",
-            "save": {
-              "ability": [
-                "con"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "15",
-                "value": 15
-              }
-            },
-            "damage": {
-              "parts": []
-            },
-            "effects": [],
+          "dnd5eactivity149": {
+            "_id": "dnd5eactivity149",
+            "type": "utility",
             "activation": {
               "type": "action",
               "value": null,
@@ -1172,15 +993,8 @@
           }
         },
         "type": {
-          "value": "natural",
-          "classification": "weapon"
-        },
-        "equipped": true,
-        "range": {
-          "value": null,
-          "long": null,
-          "reach": 10,
-          "units": "ft"
+          "value": "monster",
+          "subtype": ""
         }
       },
       "effects": [],
@@ -1190,30 +1004,17 @@
           "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {
-            "heavyHit": true,
-            "dazed": true,
-            "bleed": true
-          },
-          "rules": {
-            "onFailedSave": [
-              {
-                "kind": "push",
-                "distance": 10,
-                "units": "ft"
-              }
-            ]
-          }
+          "effectHints": {}
         }
       }
     },
     {
-      "name": "吞咽 (Swallowing)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>14 (4d6) 点死灵伤害.</p><ul><li>命中:单一被该异怪擒抱的生物被吞下.被吞下的目标不再处于擒抱状态,但陷入目盲和束缚状态,并且对来自该异怪体外的攻击和其他效应视为处于完全掩护.目标立刻受到死灵伤害,之后在每次该异怪回合开始时还会再次受到同样伤害.该异怪恢复等同于造成伤害的生命值.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1225,104 +1026,9 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity39b": {
-            "_id": "dnd5eactivity39b",
-            "type": "attack",
-            "attack": {
-              "ability": "",
-              "bonus": "9",
-              "flat": true,
-              "type": {
-                "value": "mwak",
-                "classification": "weapon"
-              }
-            },
-            "damage": {
-              "parts": [
-                {
-                  "number": 4,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "necrotic"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
-              "includeBase": true
-            },
-            "range": {
-              "override": false,
-              "value": null,
-              "long": null,
-              "reach": 5,
-              "units": "ft",
-              "special": ""
-            },
-            "target": {
-              "override": false,
-              "prompt": true,
-              "template": {
-                "count": "",
-                "contiguous": false,
-                "type": "",
-                "size": "",
-                "width": "",
-                "height": "",
-                "units": "ft"
-              },
-              "affects": {
-                "count": "",
-                "type": "",
-                "choice": false,
-                "special": ""
-              }
-            },
-            "effects": [
-              {
-                "_id": "92c0a517e32523ee"
-              }
-            ],
-            "activation": {
-              "type": "bonus",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          },
-          "dnd5eactivityc90": {
-            "_id": "dnd5eactivityc90",
-            "type": "damage",
-            "damage": {
-              "parts": [
-                {
-                  "number": 4,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "necrotic"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ]
-            },
-            "effects": [],
+          "dnd5eactivity53b": {
+            "_id": "dnd5eactivity53b",
+            "type": "utility",
             "activation": {
               "type": "bonus",
               "value": null,
@@ -1336,52 +1042,24 @@
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "92c0a517e32523ee",
-          "name": "目盲 (Blinded)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
-          "statuses": [
-            "blinded"
-          ]
-        }
-      ],
+      "effects": [],
       "flags": {
         "tidy5e-sheet": {
           "section": "附赠动作",
           "actionSection": "附赠动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {
-            "swallow": true
-          }
+          "effectHints": {}
         }
       }
     },
     {
-      "name": "滑溜 (slippery)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>当一次近战攻击未命中该异怪时,它可以移动至多10尺,且该移动不会引发借机攻击.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1393,8 +1071,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity4bf": {
-            "_id": "dnd5eactivity4bf",
+          "dnd5eactivityaf2": {
+            "_id": "dnd5eactivityaf2",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1421,12 +1099,12 @@
       }
     },
     {
-      "name": "远洋尖啸 (Oceanic Howl)",
+      "name": "",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<ul><li>该异怪发出一道穿透海水的灵能尖啸.与它处于同一片水体、且位于其300尺内的每个其他生物都必须成功通过一次 DC 15 的感知豁免,否则陷入恍惚状态直到其下一回合结束前.</li></ul>",
+          "value": "",
           "chat": ""
         },
         "source": {
@@ -1438,110 +1116,30 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9a0": {
-            "_id": "dnd5eactivity9a0",
-            "type": "save",
-            "save": {
-              "ability": [
-                "wis"
-              ],
-              "dc": {
-                "calculation": "",
-                "formula": "15",
-                "value": 15
-              }
-            },
-            "damage": {
-              "parts": []
-            },
-            "effects": [
-              {
-                "_id": "6c06bfa3cb0b85a8"
-              }
-            ],
+          "dnd5eactivitycca": {
+            "_id": "dnd5eactivitycca",
+            "type": "utility",
             "activation": {
               "type": "reaction",
               "value": null,
               "override": false,
               "condition": ""
-            },
-            "consumption": {
-              "scaling": {
-                "allowed": false
-              },
-              "spellSlot": true,
-              "targets": [
-                {
-                  "type": "itemUses",
-                  "value": "1",
-                  "target": "",
-                  "scaling": {}
-                }
-              ]
-            },
-            "range": {
-              "override": false,
-              "value": 300,
-              "long": null,
-              "reach": null,
-              "units": "ft",
-              "special": ""
             }
           }
-        },
-        "uses": {
-          "spent": 0,
-          "value": 1,
-          "max": 1,
-          "per": "day",
-          "recovery": [
-            {
-              "period": "day",
-              "type": "recoverAll"
-            }
-          ]
         },
         "type": {
           "value": "monster",
           "subtype": ""
         }
       },
-      "effects": [
-        {
-          "_id": "6c06bfa3cb0b85a8",
-          "name": "恍惚 (Dazed)",
-          "type": "base",
-          "system": {},
-          "changes": [],
-          "disabled": false,
-          "duration": {
-            "startTime": null,
-            "seconds": null,
-            "combat": null,
-            "rounds": null,
-            "turns": null,
-            "startRound": null,
-            "startTurn": null
-          },
-          "description": "",
-          "origin": null,
-          "tint": "#ffffff",
-          "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
-          "statuses": [
-            "dazed"
-          ]
-        }
-      ],
+      "effects": [],
       "flags": {
         "tidy5e-sheet": {
           "section": "反应",
           "actionSection": "反应"
         },
         "fvttJsonGenerator": {
-          "effectHints": {
-            "dazed": true
-          }
+          "effectHints": {}
         }
       }
     }
@@ -1553,7 +1151,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1774273722583,
-    "modifiedTime": 1774273722583
+    "createdTime": 1775752088320,
+    "modifiedTime": 1775752088320
   }
 }

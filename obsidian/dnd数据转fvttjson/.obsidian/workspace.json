@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "input/开发用数据.md",
+                "file": "input/items/物品模版以及两个示例物品.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "开发用数据"
+              "title": "物品模版以及两个示例物品"
             }
           }
         ]
@@ -170,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "input/开发用数据.md",
+                "file": "input/items/物品模版以及两个示例物品.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "开发用数据 的大纲"
+              "title": "物品模版以及两个示例物品 的大纲"
             }
           }
         ],
@@ -197,10 +197,15 @@
       "bases:新建数据库": false
     }
   },
-  "active": "385bfda392e8bc9b",
+  "active": "e7067afaf8d07a8f",
   "lastOpenFiles": [
-    "input/开发用数据2.md",
+    "input/items/骑士之盾.md",
+    "input/items/三祷之坠.md",
+    "output/items",
     "input/开发用数据.md",
+    "input/items/物品模版以及两个示例物品.md",
+    "input/items",
+    "input/开发用数据2.md",
     "output/white-tusk-warspeaker.json",
     "output/white-tusk-shaman.json",
     "output/white-tusk-orc.json",
@@ -209,8 +214,6 @@
     "output/slithering-bloodfin.json",
     "output/ruined-chuul-screecher.json",
     "output/ruined-chuul-nullifier.json",
-    "output/ruidium-corrupted-chuul-screecher.json",
-    "output/ruidium-corrupted-chuul-nullifier.json",
     "middle/ruidium-corrupted-primeval-owlbear__月蚀矿原初枭雄.md",
     "middle/ruidium-vampire-squid__月蚀吸血乌贼.md",
     "input/slithering-bloodfin__滑行血鳍.md",
@@ -231,8 +234,6 @@
     "middle-test/ruidium-corrupted-chuul-nullifier__月蚀腐化虚寂者.md",
     "middle-test/ruidium-corrupted-chuul-incubator__月蚀矿腐化孵育者.md",
     "input/aboleth-spawn__底栖魔鱼衍体.md",
-    "input/chuul_r/bettermonster.md",
-    "input/ruidium-corrupted-chuul-incubator.md",
-    "input/ruidium-corrupted-chuul-screecher.md"
+    "input/chuul_r/bettermonster.md"
   ]
 }
