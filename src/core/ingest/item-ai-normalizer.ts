@@ -1,10 +1,11 @@
-import { OpenAICompatibleTranslator } from '../translation/openaiCompatible';
+export type ItemAiNormalizerHttpClient = (url: string, init: RequestInit) => Promise<Response>;
 
 export interface ItemAiNormalizerOptions {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
+  httpClient?: ItemAiNormalizerHttpClient;
 }
 
 interface ItemAiNormalizerInternalOptions {
@@ -65,7 +66,7 @@ export class ItemAiNormalizer {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly timeoutMs: number;
-  private readonly httpClient: (url: string, init: RequestInit) => Promise<Response>;
+  private readonly httpClient: ItemAiNormalizerHttpClient;
 
   constructor(options: ItemAiNormalizerOptions = {}) {
     const resolvedOptions: ItemAiNormalizerInternalOptions = {
@@ -80,7 +81,7 @@ export class ItemAiNormalizer {
     this.baseUrl = resolvedOptions.baseUrl;
     this.model = resolvedOptions.model;
     this.timeoutMs = resolvedOptions.timeoutMs;
-    this.httpClient = fetch.bind(globalThis);
+    this.httpClient = options.httpClient ?? fetch.bind(globalThis);
   }
 
   public async normalizeItem(bodyText: string): Promise<string> {
@@ -95,29 +96,33 @@ export class ItemAiNormalizer {
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
       const normalizedBaseUrl = this.baseUrl.replace(/\/+$/, '');
-      const response = await this.httpClient(
-        `${normalizedBaseUrl}/chat/completions`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: this.model,
-            temperature: 0,
-            messages: [
-              {
-                role: 'user',
-                content: prompt,
+      const response = await (async () => {
+        try {
+          return await this.httpClient(
+            `${normalizedBaseUrl}/chat/completions`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${this.apiKey}`,
               },
-            ],
-          }),
-          signal: controller.signal,
-        } as RequestInit,
-      );
-
-      clearTimeout(timeout);
+              body: JSON.stringify({
+                model: this.model,
+                temperature: 0,
+                messages: [
+                  {
+                    role: 'user',
+                    content: prompt,
+                  },
+                ],
+              }),
+              signal: controller.signal,
+            } as RequestInit,
+          );
+        } finally {
+          clearTimeout(timeout);
+        }
+      })();
 
       if (!response.ok) {
         console.error(`AI normalization failed: HTTP ${response.status}`);
