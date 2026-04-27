@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import {
 	existsSync,
+	copyFileSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
@@ -332,6 +333,38 @@ describe("ObsidianSyncWorkflow", () => {
 		expect(result.failed).toBe(0);
 		expect(result.skipped).toBe(1);
 		expect(existsSync(join(vaultPath, "output", "raw-collection.json"))).toBe(false);
+	});
+
+	it("generates item json from layout item markdown under input/items", async () => {
+		rmSync(inputFile, { force: true });
+
+		const sourceRoot = resolve(process.cwd(), "obsidian/dnd数据转fvttjson/input/items");
+		const inputItemsDir = join(vaultPath, "input", "items");
+		mkdirSync(inputItemsDir, { recursive: true });
+
+		copyFileSync(
+			join(sourceRoot, "骑士之盾.md"),
+			join(inputItemsDir, "骑士之盾.md"),
+		);
+		copyFileSync(
+			join(sourceRoot, "三祷之坠.md"),
+			join(inputItemsDir, "三祷之坠.md"),
+		);
+
+		const result = await workflow.sync({ vaultPath });
+
+		expect(result.failed).toBe(0);
+		expect(result.processed).toBe(2);
+		expect(existsSync(join(vaultPath, "output", "items", "骑士之盾.json"))).toBe(true);
+		expect(existsSync(join(vaultPath, "output", "items", "三祷之坠.json"))).toBe(true);
+
+		const shield = JSON.parse(
+			readFileSync(join(vaultPath, "output", "items", "骑士之盾.json"), "utf-8"),
+		) as { name?: string; type?: string; system?: any };
+
+		expect(shield.name).toContain("骑士之盾");
+		expect(shield.type).toBe("equipment");
+		expect(JSON.stringify(shield.system?.activities ?? {})).not.toContain("你力量调整值");
 	});
 
 	it("defaults sync to core effect profile without midi-qol automation", async () => {
