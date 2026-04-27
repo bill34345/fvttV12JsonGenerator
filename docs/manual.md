@@ -213,9 +213,12 @@ bun run src/index.ts --sync --vault "你的Obsidian仓库路径"
 | 文件夹 | 放什么 |
 |--------|--------|
 | `input/` | 你的 NPC `.md` 笔记 |
+| `middle/` | plaintext collection 规范化后的中间 Markdown |
 | `output/` | 生成的 FVTT JSON 文件 |
 | `output_backup/` | JSON 被覆盖前的备份 |
 | `examples/` | 示例模板 |
+
+对于 raw plaintext collections，工具会先把规范化后的中间 Markdown 写入 `middle/`。Dual-artifact 命令会再把这些中间文件复制到 `input/`，并通过正常同步流程在 `output/` 生成最终 JSON。这样保留了可审计的中间阶段，同时维持 Obsidian `input/`/`output/` 合约。
 
 ### 增量同步原理
 

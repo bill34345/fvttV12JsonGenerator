@@ -255,13 +255,20 @@ A: 请检查动作描述中的伤害公式是否符合 `2d6+5类型` 的格式�
 
 ## Plain Text Dual Artifact
 
-Markdown only（仅拆分并写入 vault/input）：
+Plain text ingestion uses a two-stage workflow:
+
+1. `--ingest-plaintext` normalizes the source collection into `vault/middle` and writes audit output under `vault/audits`.
+2. `--ingest-plaintext-actors` promotes the normalized middle markdown into `vault/input`, then runs the normal sync workflow to generate final actor JSON under `vault/output`.
+
+Final actor JSON must always come from the CLI/workflow; do not manually construct final actor JSON.
+
+Markdown only（仅拆分并写入 vault/middle）：
 
 ```bash
 bun run src/index.ts --ingest-plaintext "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --emit-dir "obsidian/dnd数据转fvttjson/input"
 ```
 
-Dual artifact（vault/input + vault/output）：
+Dual artifact（vault/middle + vault/input + vault/output）：
 
 ```bash
 bun run src/index.ts --ingest-plaintext-actors "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --vault "obsidian/dnd数据转fvttjson"

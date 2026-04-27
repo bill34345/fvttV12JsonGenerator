@@ -198,7 +198,10 @@ export class YamlParser {
       }
       if (internalKey === 'regional_effects' || internalKey === '巢穴效应') result.regional_effects = processedValue;
       if (internalKey === 'spellcasting' || internalKey === '施法') result.spellcasting = processedValue;
-      if (['特性', '动作', '附赠动作', '反应', '传奇动作'].includes(internalKey)) {
+      if (
+        ['特性', '动作', '附赠动作', '反应', '传奇动作'].includes(internalKey) &&
+        this.isStructuredActionSection(processedValue)
+      ) {
         const structuredParser = new StructuredActionParser();
         const sectionMap: Record<string, string> = {
           '特性': '特性',
@@ -265,6 +268,53 @@ export class YamlParser {
       // Values: "专精" -> 2
       this.parseSkills(processedValue, result);
     }
+  }
+
+  private isStructuredActionSection(value: unknown): boolean {
+    if (!Array.isArray(value)) {
+      return false;
+    }
+
+    const structuredKeys = new Set([
+      '名称',
+      'name',
+      '类型',
+      'type',
+      '描述',
+      'describe',
+      '子活动',
+      '内嵌效果',
+      '攻击类型',
+      'attackType',
+      '命中',
+      'toHit',
+      '范围',
+      'range',
+      '伤害',
+      'DC',
+      'AoE',
+      'aoe',
+      '目标',
+      'target',
+      '充能',
+      'recharge',
+      '每日',
+      'perLongRest',
+      '专注',
+      'concentration',
+      '失败效果',
+      '成功效果',
+      '特殊效果',
+      'specialEffects',
+    ]);
+
+    return value.some((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return false;
+      }
+
+      return Object.keys(entry as Record<string, unknown>).some((key) => structuredKeys.has(key));
+    });
   }
 
   private extractBodySections(body: string): YamlBodyExtractionResult {

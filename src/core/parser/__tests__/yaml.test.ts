@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { FIELD_MAPPING } from '../../../config/mapping';
 import { YamlParser } from '../yaml';
 
@@ -117,5 +118,19 @@ ${keyFor('hp')}: 255 (30d10 + 90)
 
     const result = parser.parse(yaml);
     expect(result.attributes.hp).toEqual({ value: 255, max: 255, formula: '30d10 + 90' });
+  });
+
+  it('keeps legacy object-style actions on the legacy action path instead of creating blank structured actions', () => {
+    const yaml = readFileSync('src/core/parser/__tests__/fixtures/yaml-legacy-actions.md', 'utf-8');
+
+    const result = parser.parse(yaml);
+
+    expect(result.actions).toEqual([
+      {
+        'Bite [Melee Weapon Attack]':
+          '+5 to hit, reach 5 ft., one target. Hit: 1d8+3 piercing damage.',
+      },
+    ]);
+    expect(result.structuredActions).toBeUndefined();
   });
 });

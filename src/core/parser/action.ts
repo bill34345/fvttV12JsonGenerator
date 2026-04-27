@@ -53,15 +53,17 @@ export class ActionParser {
       const rangeStr = attackMatch[4];
       const dmgPart = attackMatch[5];
       
-      const damages: Damage[] = [];
-      const formulaRegex = /(\d+d\d+(?:\s*[+\-]\s*\d+)?)/g;
-      const typeRaw = this.extractDamageType(dmgPart);
-      const typeKey = typeRaw ? i18n.getKey(typeRaw) : null;
-      const type = typeKey ? typeKey.replace('DND5E.Damage', '').toLowerCase() : 'bludgeoning';
-      const formulaMatch = dmgPart.match(formulaRegex);
-      if (formulaMatch) {
-        for (const formula of formulaMatch) {
-          damages.push({ formula: formula.trim(), type });
+      const damages = this.parseDamage(dmgPart);
+      if (damages.length === 0) {
+        const formulaRegex = /(\d+d\d+(?:\s*[+\-]\s*\d+)?)/g;
+        const typeRaw = this.extractDamageType(dmgPart);
+        const typeKey = typeRaw ? i18n.getKey(typeRaw) : null;
+        const type = typeKey ? typeKey.replace('DND5E.Damage', '').toLowerCase() : 'bludgeoning';
+        const formulaMatch = dmgPart.match(formulaRegex);
+        if (formulaMatch) {
+          for (const formula of formulaMatch) {
+            damages.push({ formula: formula.trim(), type });
+          }
         }
       }
       

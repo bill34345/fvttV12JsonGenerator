@@ -16,6 +16,7 @@
 - Do not switch from “fix the project flow” to “produce something usable however possible”.
 - Do not claim completion or correctness until the target JSON has been regenerated through the project flow and manually checked against the source markdown.
 - If you drift from the required workflow, stop immediately, say so plainly, and return to the project-path solution.
+- If the working tree has uncommitted changes, treat the current workspace as the source of truth. Do not create a worktree from `HEAD` for plan execution unless the user confirms or the relevant dirty changes are migrated into the worktree first.
 - If two attempts in a row fail, stop and report:
   - current root cause,
   - evidence gathered,

@@ -19,6 +19,27 @@ describe('ActionParser', () => {
     }
   });
 
+  it('parses compact Chinese melee weapon attacks from template object actions', () => {
+    const input = '啮咬 [近战武器攻击]: +14命中, 触及10尺, 2d10+8穿刺 + 2d6火焰';
+    const result = parser.parse(input);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        name: '啮咬',
+        type: 'attack',
+        attack: expect.objectContaining({
+          type: 'mwak',
+          toHit: 14,
+          reach: '10',
+        }),
+      }),
+    );
+    expect(result?.attack?.damage).toEqual([
+      { formula: '2d10+8', type: 'piercing' },
+      { formula: '2d6', type: 'fire' },
+    ]);
+  });
+
   it('should parse recharge save', () => {
     const input = '火焰吐息 [充能5-6]: { 豁免: DC21敏捷, 失败: 18d6火焰, 成功: 减半 }';
     const result = parser.parse(input);
@@ -35,5 +56,23 @@ describe('ActionParser', () => {
       expect(dmg[0].formula).toBe('18d6');
       expect(dmg[0].type).toBe('fire'); // "火焰" -> "fire"
     }
+  });
+
+  it('parses compact Chinese save object actions with recharge headers', () => {
+    const input = '火焰吐息 [充能5-6]: { 豁免: DC21敏捷, 失败: 18d6火焰, 成功: 减半 }';
+    const result = parser.parse(input);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        name: '火焰吐息',
+        type: 'save',
+        recharge: { value: 5, charged: true },
+        save: expect.objectContaining({
+          dc: 21,
+          ability: 'dex',
+        }),
+        damage: [{ formula: '18d6', type: 'fire' }],
+      }),
+    );
   });
 });
