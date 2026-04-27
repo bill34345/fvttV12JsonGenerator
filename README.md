@@ -286,3 +286,17 @@ Effect profile 说明：
 ```bash
 bun run src/index.ts --ingest-plaintext-actors "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --vault "obsidian/dnd数据转fvttjson" --effect-profile core
 ```
+
+## Item Text Workflows
+
+Item split only writes normalized item Markdown to `vault/middle/items`:
+
+```bash
+bun run src/index.ts --ingest-items "obsidian/dnd数据转fvttjson/input/items/物品模版以及两个示例物品.md" --vault "obsidian/dnd数据转fvttjson"
+```
+
+Item dual artifact writes `middle/items`, promotes Markdown to `input/items`, and generates final Item JSON under `output/items`:
+
+```bash
+bun run src/index.ts --ingest-items-json "obsidian/dnd数据转fvttjson/input/items/物品模版以及两个示例物品.md" --vault "obsidian/dnd数据转fvttjson"
+```

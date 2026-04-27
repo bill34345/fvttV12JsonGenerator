@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { splitItemCollection } from '../items';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { ItemsIngestionWorkflow, splitItemCollection } from '../items';
 
 const ITEM_FIXTURE = `# 下面是两个示例物品
 
@@ -62,5 +63,33 @@ describe('splitItemCollection', () => {
     const blocks = splitItemCollection(ITEM_FIXTURE);
     const awakenedBlock = blocks.find((b) => b.stageName === 'Awakened State');
     expect(awakenedBlock?.rawBlock).toContain('**觉醒态（Awakened State）.**');
+  });
+  it('writes split item markdown into the requested middle items directory', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-items-ingest-'));
+    const sourcePath = join(root, 'items.md');
+    const emitDir = join(root, 'vault', 'middle', 'items');
+
+    writeFileSync(
+      sourcePath,
+      [
+        '# 下面是一个示例物品',
+        '## 骑士之盾（Shield of the Cavalier）',
+        '*护甲（盾牌），极珍稀（需同调）*',
+        '',
+        '持握这面盾牌期间，你的护甲等级获得 +2 加值。',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      const workflow = new ItemsIngestionWorkflow();
+      const result = await workflow.ingest({ sourcePath, emitDir });
+
+      expect(result.emitDir).toBe(emitDir);
+      expect(result.files).toHaveLength(1);
+      expect(existsSync(join(emitDir, 'shield-of-the-cavalier__骑士之盾.md'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

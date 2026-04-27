@@ -80,6 +80,9 @@ function filterStructuredActionsByStage(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+const DEFAULT_VAULT = 'obsidian/dnd数据转fvttjson';
+const DEFAULT_EMIT_DIR = join(DEFAULT_VAULT, 'input');
+
 const program = new Command();
 
 program
@@ -89,7 +92,7 @@ program
   .argument('[input]', 'Input markdown file')
   .option('-o, --output <output>', 'Output JSON file')
   .option('--sync', 'Sync Obsidian vault input folder to output JSON')
-  .option('--vault <path>', 'Obsidian vault path', 'obsidian/dnd数据转fvttjson')
+  .option('--vault <path>', 'Obsidian vault path', DEFAULT_VAULT)
   .option('--clear-backup', 'Clear output_backup folder before sync')
   .option('--translate-json', 'Translate pending JSON files in place')
   .option('--translate-dir <path>', 'Directory for --translate-json', 'data/need_tran')
@@ -97,7 +100,7 @@ program
   .option('--ingest-plaintext-actors <source>', 'Generate project markdown and actor JSON from a plain-text creature collection')
   .option('--ingest-items <source>', 'Split a plain-text item collection into project markdown files')
   .option('--ingest-items-json <source>', 'Generate project item markdown and Item JSON from a plain-text item collection')
-  .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', 'obsidian/dnd数据转fvttjson/input')
+  .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', DEFAULT_EMIT_DIR)
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12')
@@ -267,9 +270,12 @@ program
 
       if (options.ingestItems) {
         const workflow = new ItemsIngestionWorkflow();
+        const itemEmitDir = options.emitDir === DEFAULT_EMIT_DIR
+          ? join(options.vault, "middle", "items")
+          : options.emitDir;
         const result = await workflow.ingest({
           sourcePath: options.ingestItems,
-          emitDir: options.emitDir,
+          emitDir: itemEmitDir,
           dryRun: Boolean(options.dryRun),
         });
 

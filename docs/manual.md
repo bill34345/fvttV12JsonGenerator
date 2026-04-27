@@ -385,3 +385,17 @@ bun run src/index.ts "path/to/bestiary.md" -o "output/dragon.json"
 | 挑战等级 | CR / challenge |
 | 近战武器攻击 | Melee Weapon Attack |
 | 远程武器攻击 | Ranged Weapon Attack |
+
+## Item Text Workflows
+
+Item split only writes normalized item Markdown to `vault/middle/items`:
+
+```bash
+bun run src/index.ts --ingest-items "obsidian/dnd数据转fvttjson/input/items/物品模版以及两个示例物品.md" --vault "obsidian/dnd数据转fvttjson"
+```
+
+Item dual artifact writes `middle/items`, promotes Markdown to `input/items`, and generates final Item JSON under `output/items`:
+
+```bash
+bun run src/index.ts --ingest-items-json "obsidian/dnd数据转fvttjson/input/items/物品模版以及两个示例物品.md" --vault "obsidian/dnd数据转fvttjson"
+```
