@@ -5,11 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 describe("CLI item import", () => {
-  it("supports --ingest-items-json with final output under vault/output/items", () => {
-    const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
-    const sourcePath = join(root, "items.md");
-    const vaultPath = join(root, "vault");
-
+  const writeItemCollection = (sourcePath: string) => {
     writeFileSync(
       sourcePath,
       [
@@ -21,6 +17,14 @@ describe("CLI item import", () => {
       ].join("\n"),
       "utf-8",
     );
+  };
+
+  it("supports --ingest-items-json with final output under vault/output/items", () => {
+    const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
+    const sourcePath = join(root, "items.md");
+    const vaultPath = join(root, "vault");
+
+    writeItemCollection(sourcePath);
 
     try {
       const result = spawnSync(
@@ -49,6 +53,74 @@ describe("CLI item import", () => {
       const item = JSON.parse(readFileSync(outputPath, "utf-8")) as { name?: string; type?: string };
       expect(item.name).toContain("骑士之盾");
       expect(item.type).toBe("equipment");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("defaults split-only --ingest-items output to vault/middle/items", () => {
+    const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
+    const sourcePath = join(root, "items.md");
+    const vaultPath = join(root, "vault");
+
+    writeItemCollection(sourcePath);
+
+    try {
+      const result = spawnSync(
+        "bun",
+        [
+          "run",
+          resolve(process.cwd(), "src/index.ts"),
+          "--ingest-items",
+          sourcePath,
+          "--vault",
+          vaultPath,
+          "--dry-run",
+        ],
+        {
+          cwd: process.cwd(),
+          encoding: "utf-8",
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.replace(/\\/g, "/")).toContain(`Output dir: ${vaultPath.replace(/\\/g, "/")}/middle/items`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("respects an explicit --emit-dir even when it matches the global default", () => {
+    const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
+    const sourcePath = join(root, "items.md");
+    const vaultPath = join(root, "vault");
+    const explicitEmitDir = "obsidian/dnd数据转fvttjson/input";
+
+    writeItemCollection(sourcePath);
+
+    try {
+      const result = spawnSync(
+        "bun",
+        [
+          "run",
+          resolve(process.cwd(), "src/index.ts"),
+          "--ingest-items",
+          sourcePath,
+          "--vault",
+          vaultPath,
+          "--emit-dir",
+          explicitEmitDir,
+          "--dry-run",
+        ],
+        {
+          cwd: process.cwd(),
+          encoding: "utf-8",
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(`Output dir: ${explicitEmitDir}`);
+      expect(result.stdout.replace(/\\/g, "/")).not.toContain(`${vaultPath.replace(/\\/g, "/")}/middle/items`);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

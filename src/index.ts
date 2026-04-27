@@ -270,7 +270,8 @@ program
 
       if (options.ingestItems) {
         const workflow = new ItemsIngestionWorkflow();
-        const itemEmitDir = options.emitDir === DEFAULT_EMIT_DIR
+        const emitDirSource = program.getOptionValueSource('emitDir');
+        const itemEmitDir = emitDirSource === 'default'
           ? join(options.vault, "middle", "items")
           : options.emitDir;
         const result = await workflow.ingest({
