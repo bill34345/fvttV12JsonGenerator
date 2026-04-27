@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ItemTextWorkflow } from "../itemTextWorkflow";
@@ -38,6 +38,7 @@ describe("ItemTextWorkflow", () => {
       expect(existsSync(middlePath)).toBe(true);
       expect(existsSync(inputPath)).toBe(true);
       expect(existsSync(outputPath)).toBe(true);
+      expect(readdirSync(join(vaultPath, "output", "items")).filter((name) => name.endsWith(".md"))).toEqual([]);
 
       const item = JSON.parse(readFileSync(outputPath, "utf-8")) as {
         name?: string;
