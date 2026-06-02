@@ -26,7 +26,7 @@ export class ItemParser implements ItemParserStrategy {
     const rarity = this.parseRarity(rawData);
     const attunement = this.parseAttunement(rawData);
 
-    const headerInfo = this.parseHeaderLine(body);
+    const headerInfo = this.parseLegacyMojibakeBodyInfo(body) ?? this.parseHeaderLine(body);
 
     const finalName = (name && name !== 'Unknown Item') ? name : (headerInfo.name ?? 'Unknown Item');
     const finalEnglishName = englishName ?? headerInfo.englishName;
@@ -370,26 +370,41 @@ export class ItemParser implements ItemParserStrategy {
     // Chinese type mappings
     const chineseMap: Record<string, ItemType> = {
       '武器': 'weapon',
+      '姝﹀櫒': 'weapon',
       '武器攻击': 'weapon',
+      '姝﹀櫒鏀诲嚮': 'weapon',
       '护甲': 'armor',
+      '鎶ょ敳': 'armor',
       '盾牌': 'armor',
+      '鐩剧墝': 'armor',
       '甲': 'armor',
       '装备': 'equipment',
+      '瑁呭': 'equipment',
       '奇物': 'equipment',
+      '饰品': 'equipment',
+      '饰物': 'equipment',
+      '濂囩墿': 'equipment',
       '药水': 'consumable',
+      '鑽按': 'consumable',
       '卷轴': 'consumable',
       '消耗品': 'consumable',
+      '娑堣€楀搧': 'consumable',
       '魔杖': 'wand',
+      '榄旀潠': 'wand',
       '法杖': 'staff',
+      '娉曟潠': 'staff',
       '杖': 'staff',
       '魔棒': 'rod',
       '弹药': 'ammunition',
+      '寮硅嵂': 'ammunition',
       '箭': 'ammunition',
       '弩箭': 'ammunition',
       '工具': 'tool',
+      '宸ュ叿': 'tool',
       '战利品': 'loot',
       '宝物': 'loot',
       '容器': 'container',
+      '瀹瑰櫒': 'container',
     };
 
     // English type mappings
@@ -399,6 +414,7 @@ export class ItemParser implements ItemParserStrategy {
       'shield': 'armor',
       'equipment': 'equipment',
       'wondrous': 'equipment',
+      'accessory': 'equipment',
       'potion': 'consumable',
       'scroll': 'consumable',
       'consumable': 'consumable',
@@ -446,6 +462,7 @@ export class ItemParser implements ItemParserStrategy {
       '稀有': 'uncommon',
       'rare': 'rare',
       '非常稀有': 'veryrare',
+      '极珍稀': 'veryrare',
       'very rare': 'veryrare',
       'veryrare': 'veryrare',
       '传说': 'legendary',
@@ -472,6 +489,52 @@ export class ItemParser implements ItemParserStrategy {
     }
 
     return undefined;
+  }
+
+  private parseLegacyMojibakeBodyInfo(body: string): {
+    name?: string;
+    englishName?: string;
+    type?: string;
+    rarity?: ItemRarity;
+    attunement?: AttunementType;
+  } | undefined {
+    if (!body.includes('锛')) {
+      return undefined;
+    }
+
+    const result: ReturnType<typeof this.parseLegacyMojibakeBodyInfo> = {};
+    const lines = body.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
+    const firstLetterMap: Record<string, string> = {
+      圔: 'B',
+      圓: 'A',
+      圫: 'S',
+    };
+
+    for (const line of lines) {
+      const match = line.match(/^##\s*(.+?)锛([圔圓圫])([^锛]+)锛\?\s*$/);
+      if (!match) continue;
+
+      result.name = match[1]?.trim();
+      const firstLetter = firstLetterMap[match[2] ?? ''] ?? '';
+      result.englishName = `${firstLetter}${match[3] ?? ''}`.trim();
+      break;
+    }
+
+    for (const line of lines) {
+      if (!line.startsWith('*')) continue;
+      const content = line.replace(/^\*/, '').replace(/\*$/, '').trim();
+      this.parseItalicContent(content, result);
+      if (!result.type && this.classifyItemType(content) !== 'loot') {
+        result.type = content;
+      }
+      if (!result.rarity) {
+        result.rarity = this.normalizeRarity(content);
+      }
+      break;
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   private parseHeaderLine(body: string): {
@@ -522,10 +585,10 @@ export class ItemParser implements ItemParserStrategy {
     const parts = content.split(/[,，]/).map(p => p.trim());
 
     // Chinese item type keywords
-    const typeKeywords = ['武器', '装备', '护甲', '奇物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container'];
+    const typeKeywords = ['武器', '装备', '护甲', '奇物', '饰品', '饰物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container', 'accessory'];
 
     // Rarity keywords
-    const rarityKeywords = ['普通', 'common', '稀有', 'uncommon', 'rare', '非常稀有', 'very rare', 'veryrare', '传说', 'legendary', '神器', 'artifact'];
+    const rarityKeywords = ['普通', 'common', '稀有', 'uncommon', 'rare', '非常稀有', '极珍稀', 'very rare', 'veryrare', '传说', 'legendary', '神器', 'artifact'];
 
     // Attunement keywords
     const attunementKeywords = ['需同调', 'require-attunement', 'requires attunement', 'attunement required'];
@@ -554,10 +617,10 @@ export class ItemParser implements ItemParserStrategy {
   private normalizeRarity(text: string): ItemRarity | undefined {
     const lower = text.toLowerCase();
 
-    if (lower.includes('普通') || lower === 'common') return 'common';
-    if (lower.includes('稀有') || lower === 'uncommon') return 'uncommon';
+    if (lower.includes('普通') || lower.includes('鏅€?') || lower.includes('櫘閫') || lower === 'common') return 'common';
+    if (lower.includes('稀有') || lower.includes('绋€鏈?') || lower === 'uncommon') return 'uncommon';
     if (lower.includes('rare') || lower === 'rare') return 'rare';
-    if (lower.includes('非常稀有') || lower.includes('very rare') || lower === 'veryrare') return 'veryrare';
+    if (lower.includes('非常稀有') || lower.includes('极珍稀') || lower.includes('very rare') || lower === 'veryrare') return 'veryrare';
     if (lower.includes('传说') || lower === 'legendary') return 'legendary';
     if (lower.includes('artifact') || lower.includes('神器')) return 'artifact';
 

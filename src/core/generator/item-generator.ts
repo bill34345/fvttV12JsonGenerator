@@ -52,6 +52,20 @@ const ITEM_TYPE_TO_DIR: Record<ItemType, string> = {
   container: 'container',
 };
 
+const ITEM_TYPE_TO_DOCUMENT_TYPE: Record<ItemType, string> = {
+  weapon: 'weapon',
+  equipment: 'equipment',
+  consumable: 'consumable',
+  loot: 'loot',
+  tool: 'tool',
+  ammunition: 'consumable',
+  armor: 'equipment',
+  rod: 'equipment',
+  wand: 'equipment',
+  staff: 'weapon',
+  container: 'container',
+};
+
 /**
  * Generate a random 16-character hex ID for items
  */
@@ -89,9 +103,11 @@ export class ItemGenerator {
 
     // 3. Generate new IDs for the cloned item
     item._id = generateItemId();
+    item.type = ITEM_TYPE_TO_DOCUMENT_TYPE[parsed.type] ?? item.type;
 
     // 4. Patch basic fields (name, description, rarity, attunement, price, weight)
     this.patchBasicFields(item, parsed);
+    this.ensureDocumentTypeFields(item, parsed.type);
 
     // 5. Generate activities from parsed.activities or parsed.structuredActions
     if (parsed.activities) {
@@ -315,6 +331,43 @@ export class ItemGenerator {
         max: parsed.uses.max,
         spent: parsed.uses.spent || 0,
         recovery: parsed.uses.recovery || [],
+      };
+    }
+  }
+
+  private ensureDocumentTypeFields(item: ItemDocument, type: ItemType): void {
+    if (type === 'weapon' || type === 'staff') {
+      item.system.damage = item.system.damage ?? {
+        base: {
+          number: null,
+          denomination: null,
+          bonus: '',
+          types: [],
+          custom: {
+            enabled: false,
+            formula: '',
+          },
+          scaling: {
+            mode: '',
+            number: null,
+            formula: '',
+          },
+        },
+      };
+      item.system.range = item.system.range ?? {
+        value: null,
+        long: null,
+        units: 'ft',
+        reach: null,
+      };
+      item.system.properties = item.system.properties ?? [];
+    }
+
+    if (type === 'consumable') {
+      item.system.uses = item.system.uses ?? {
+        max: '',
+        spent: 0,
+        recovery: [],
       };
     }
   }

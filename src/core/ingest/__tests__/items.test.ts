@@ -8,7 +8,7 @@ const ITEM_FIXTURE = `# 下面是两个示例物品
 
 ## 三祷之坠（Jewel of Three Prayers）
 
-*奇物，传说（需同调）*
+*饰品，传说（需同调）*
 
 三祷之坠是一件诀别遗物...
 
@@ -38,6 +38,9 @@ describe('splitItemCollection', () => {
     expect(jewelBlocks[0]?.stageName).toBe('Dormant State');
     expect(jewelBlocks[1]?.stageName).toBe('Awakened State');
     expect(jewelBlocks[2]?.stageName).toBe('Exalted State');
+    expect(jewelBlocks.every((block) => block.itemType === '饰品')).toBe(true);
+    expect(jewelBlocks.every((block) => block.rarity === '传说（需同调）')).toBe(true);
+    expect(jewelBlocks.every((block) => block.requireAttunement === true)).toBe(true);
   });
 
   it('骑士之盾 has no stage name', () => {

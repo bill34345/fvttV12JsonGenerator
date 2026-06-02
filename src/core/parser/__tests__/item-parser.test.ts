@@ -45,6 +45,28 @@ describe('ItemParser', () => {
       expect(result.description).toBe('三祷之坠是一件诀别遗物...');
     });
 
+    it('classifies accessory-style Chinese item metadata as equipment', () => {
+      const content = [
+        '---',
+        'layout: item',
+        '名称: 三祷之坠',
+        '英文名: Jewel of Three Prayers',
+        '类型: 饰品',
+        '稀有度: 传说（需同调）',
+        'require-attunement: true',
+        '---',
+        '## 三祷之坠（Jewel of Three Prayers）',
+        '*饰品，传说（需同调）*',
+        '三祷之坠是一件诀别遗物...',
+      ].join('\n');
+
+      const result = parser.parse(content);
+
+      expect(result.type).toBe('equipment');
+      expect(result.rarity).toBe('legendary');
+      expect(result.attunement).toBe('required');
+    });
+
     it('parses header line format with Chinese and English names', () => {
       const content = [
         '---',
@@ -153,6 +175,48 @@ describe('ItemParser', () => {
       expect(result.englishName).toBe('Dwarven Plate');
       expect(result.rarity).toBe('uncommon');
       expect(result.attunement).toBe('required');
+    });
+
+    it('classifies historical mojibake weapon fixtures from frontmatter and italic text', () => {
+      const content = `
+---
+layout: item
+鍚嶇О: 鎴樻枾
+绫诲瀷: 姝﹀櫒
+绋€鏈夊害: 鏅€?
+---
+## 鎴樻枾锛圔attleaxe锛?
+*姝﹀櫒锛屾櫘閫?
+涓€鎶婂潥鍥虹殑鎴樻枾銆?
+      `.trim();
+
+      const result = parser.parse(content);
+
+      expect(result.name).toBe('鎴樻枾');
+      expect(result.englishName).toBe('Battleaxe');
+      expect(result.type).toBe('weapon');
+      expect(result.rarity).toBe('common');
+    });
+
+    it('classifies historical mojibake consumable fixtures from frontmatter and italic text', () => {
+      const content = `
+---
+layout: item
+鍚嶇О: 鐐奸噾鐏劙
+绫诲瀷: 娑堣€楀搧
+绋€鏈夊害: 鏅€?
+---
+## 鐐奸噾鐏劙锛圓lchemist's Fire锛?
+*娑堣€楀搧锛屾櫘閫?
+杩欐槸涓€绉嶇矘鎬ф祦浣擄紝鏆撮湶鍦ㄧ┖姘斾腑浼氱偣鐕冦€?
+      `.trim();
+
+      const result = parser.parse(content);
+
+      expect(result.name).toBe('鐐奸噾鐏劙');
+      expect(result.englishName).toBe("Alchemist's Fire");
+      expect(result.type).toBe('consumable');
+      expect(result.rarity).toBe('common');
     });
   });
 

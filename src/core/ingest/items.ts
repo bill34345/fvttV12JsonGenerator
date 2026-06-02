@@ -136,7 +136,7 @@ function parseItalicLine(rawBlock: string): { itemType?: string; rarity?: string
   const content = italicMatch[1];
   const parts = content.split(/[,，]/).map(p => p.trim());
 
-  const typeKeywords = ['武器', '装备', '护甲', '奇物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container'];
+  const typeKeywords = ['武器', '装备', '护甲', '奇物', '饰品', '饰物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container', 'accessory'];
   const rarityKeywords = ['普通', 'common', '稀有', 'uncommon', 'rare', '非常稀有', 'very rare', 'veryrare', '传说', 'legendary', '神器', 'artifact', '极珍稀'];
   const attunementKeywords = ['需同调', 'require-attunement', 'requires attunement', 'attunement required'];
 

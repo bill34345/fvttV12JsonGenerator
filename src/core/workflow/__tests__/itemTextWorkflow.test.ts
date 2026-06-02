@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { ItemTextWorkflow } from "../itemTextWorkflow";
 
 describe("ItemTextWorkflow", () => {
@@ -49,6 +49,41 @@ describe("ItemTextWorkflow", () => {
       expect(item.name).toContain("骑士之盾");
       expect(item.type).toBe("equipment");
       expect(JSON.stringify(item.system?.activities ?? {})).not.toContain("你力量调整值");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("generates semantically typed item json from the sample multi-item collection", async () => {
+    const root = mkdtempSync(join(tmpdir(), "fvtt-item-workflow-"));
+    const sourcePath = resolve(process.cwd(), "obsidian/dnd数据转fvttjson/input/items/物品模版以及两个示例物品.md");
+    const vaultPath = join(root, "vault");
+
+    try {
+      const workflow = new ItemTextWorkflow();
+      const result = await workflow.run({ sourcePath, vaultPath });
+
+      expect(result.ingestion.files).toHaveLength(4);
+      expect(result.sync.failed).toBe(0);
+      expect(readdirSync(join(vaultPath, "output", "items")).filter((name) => name.endsWith(".md"))).toEqual([]);
+
+      const dormant = JSON.parse(
+        readFileSync(join(vaultPath, "output", "items", "jewel-of-three-prayers__三祷之坠 (Dormant State).json"), "utf-8"),
+      ) as { name?: string; type?: string; system?: { rarity?: string; activities?: Record<string, any> } };
+      const shield = JSON.parse(
+        readFileSync(join(vaultPath, "output", "items", "shield-of-the-cavalier__骑士之盾.json"), "utf-8"),
+      ) as { name?: string; type?: string; system?: { rarity?: string; activities?: Record<string, any> } };
+
+      expect(dormant.name).toContain("三祷之坠");
+      expect(dormant.type).toBe("equipment");
+      expect(dormant.system?.rarity).toBe("legendary");
+      expect(Object.values(dormant.system?.activities ?? {}).map((activity) => activity.type)).toContain("cast");
+
+      expect(shield.name).toContain("骑士之盾");
+      expect(shield.type).toBe("equipment");
+      expect(shield.system?.rarity).toBe("veryrare");
+      expect(JSON.stringify(shield.system?.activities ?? {})).toContain("2d6+2+@str");
+      expect(JSON.stringify(shield.system?.activities ?? {})).not.toContain("你力量调整值");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
