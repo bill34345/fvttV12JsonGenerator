@@ -12,6 +12,24 @@ type GeneratedActionData = ActionData & {
   targetCondition?: string;
 };
 
+const STATUS_ICON_OVERRIDES: Record<string, string> = {
+  bleed: 'blood',
+  bleeding: 'blood',
+  blood: 'blood',
+  dazed: 'daze',
+};
+
+const CUSTOM_STATUS_ICON_NAMES = new Set(['blood', 'daze']);
+
+export function statusIconPath(status: string): string {
+  const normalized = status.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const iconName = STATUS_ICON_OVERRIDES[normalized] ?? (normalized || 'unknown');
+  const basePath = CUSTOM_STATUS_ICON_NAMES.has(iconName)
+    ? 'icons/svg'
+    : 'systems/dnd5e/icons/svg/statuses';
+  return `${basePath}/${iconName}.svg`;
+}
+
 export function extractSwallowDamage(action: GeneratedActionData): Damage | undefined {
   const attackDamages = action.attack?.damage ?? [];
   const explicitNecrotic = attackDamages.find((damage: Damage) => damage.type === 'necrotic');
@@ -109,6 +127,7 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
         origin: null,
         tint: '#ffffff',
         transfer: false,
+        img: statusIconPath(info.en),
         statuses: [info.en],
         flags
       });
@@ -139,6 +158,7 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
       origin: null,
       tint: '#8800ff',
       transfer: false,
+      img: statusIconPath('restrained'),
       statuses: [],
       flags: { 'midi-qol.OverTime': 'turn=start,damageRoll=4d6,damageType=necrotic,label=吞咽中 (Swallowed),saveDC=15,saveAbility=con,saveRemove=True' }
     });
@@ -168,6 +188,24 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     { cn: '魅惑', en: 'charmed', label: 'Charmed' },
     { cn: '恐慌', en: 'frightened', label: 'Frightened' },
     { cn: '倒地', en: 'prone', label: 'Prone' },
+    { cn: '束缚', en: 'restrained', label: 'Restrained' },
+    { cn: '受限', en: 'restrained', label: 'Restrained' },
+    { cn: '目盲', en: 'blinded', label: 'Blinded' },
+    { cn: '耳聋', en: 'deafened', label: 'Deafened' },
+    { cn: '隐形', en: 'invisible', label: 'Invisible' },
+    { cn: '石化', en: 'petrified', label: 'Petrified' },
+    { cn: '被擒抱', en: 'grappled', label: 'Grappled' },
+    { cn: '擒抱', en: 'grappled', label: 'Grappled' },
+    { cn: '眩晕', en: 'dazed', label: 'Dazed' },
+    { cn: '恍惚', en: 'dazed', label: 'Dazed' },
+    { cn: 'Dazed', en: 'dazed', label: 'Dazed' },
+    { cn: '流血', en: 'bleeding', label: 'Bleeding' },
+    { cn: '中毒', en: 'poisoned', label: 'Poisoned' },
+    { cn: '麻痹', en: 'paralyzed', label: 'Paralyzed' },
+    { cn: '震慑', en: 'stunned', label: 'Stunned' },
+    { cn: '魅惑', en: 'charmed', label: 'Charmed' },
+    { cn: '恐慌', en: 'frightened', label: 'Frightened' },
+    { cn: '倒地', en: 'prone', label: 'Prone' },
     { cn: '受限', en: 'restrained', label: 'Restrained' },
     { cn: '目盲', en: 'blinded', label: 'Blinded' },
     { cn: '耳聋', en: 'deafened', label: 'Deafened' },
@@ -180,7 +218,24 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     { cn: '流血', en: 'bleeding', label: 'Bleeding' },
   ] as const;
 
-  const iconForStatus = (status: string) => `systems/dnd5e/icons/svg/statuses/${status}.svg`;
+  const englishOnlyStatusLabels: Record<string, string> = {
+    poisoned: '中毒',
+    paralyzed: '麻痹',
+    stunned: '震慑',
+    charmed: '魅惑',
+    frightened: '恐慌',
+    prone: '倒地',
+    restrained: '受限',
+    blinded: '目盲',
+    deafened: '耳聋',
+    invisible: '隐形',
+    petrified: '石化',
+    exhaustion: '力竭',
+    unconscious: '昏迷',
+    grappled: '被擒抱',
+    dazed: '恍惚',
+    bleeding: '流血',
+  };
   const buildOverTime = (status: string) => {
     if (status !== 'bleeding') {
       return {};
@@ -194,17 +249,24 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     return { 'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)' };
   };
 
+  const generatedStatuses = new Set<string>();
   for (const entry of conditionEntries) {
-    if (!(desc.includes(entry.cn) || desc.toLowerCase().includes(entry.en))) {
+    const hasLocalizedLabel = desc.includes(entry.cn);
+    const hasEnglishStatus = desc.toLowerCase().includes(entry.en);
+    if (!(hasLocalizedLabel || hasEnglishStatus)) {
       continue;
     }
     if (isSwallow && (entry.en === 'grappled' || entry.en === 'prone')) {
       continue;
     }
+    if (generatedStatuses.has(entry.en)) {
+      continue;
+    }
+    generatedStatuses.add(entry.en);
 
     effects.push({
       _id: generateId(),
-      name: `${entry.cn} (${entry.label})`,
+      name: `${hasEnglishStatus && !hasLocalizedLabel ? (englishOnlyStatusLabels[entry.en] ?? entry.cn) : entry.cn} (${entry.label})`,
       type: 'base',
       system: {},
       changes: [],
@@ -222,7 +284,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
       origin: null,
       tint: '#ffffff',
       transfer: false,
-      img: iconForStatus(entry.en),
+      img: statusIconPath(entry.en),
       statuses: [entry.en],
       flags: buildOverTime(entry.en),
     });
@@ -260,7 +322,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
       origin: null,
       tint: '#8800ff',
       transfer: false,
-      img: iconForStatus('restrained'),
+      img: statusIconPath('restrained'),
       statuses: [],
       flags: {
         'midi-qol.OverTime':

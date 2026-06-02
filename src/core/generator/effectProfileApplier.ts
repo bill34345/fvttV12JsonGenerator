@@ -1,3 +1,5 @@
+import { statusIconPath } from './actor-effects';
+
 export type EffectProfile = 'core' | 'modded-v12';
 
 export class EffectProfileApplier {
@@ -52,7 +54,7 @@ export class EffectProfileApplier {
       origin: null,
       tint,
       transfer: false,
-      img: `systems/dnd5e/icons/svg/statuses/${primaryStatus}.svg`,
+      img: statusIconPath(primaryStatus),
       statuses,
       ...(flags ? { flags } : {}),
     };

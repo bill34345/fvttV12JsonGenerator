@@ -34,6 +34,7 @@ import {
   extractThresholdEffects,
   extractOnHitRiders,
   extractOnFailedSaveRiders,
+  extractGenericRiderRules,
   normalizeAbility,
   extractLegendaryCostFixed,
   extractUsesPerLongRestFixed,
@@ -57,6 +58,7 @@ import {
   createCustomEffect as createCustomEffectExt,
   createRandomId as createRandomIdExt,
   extractSwallowDamage as extractSwallowDamageExt,
+  statusIconPath,
 } from './actor-effects';
 import {
   createDailyUses as createDailyUsesExt,
@@ -543,6 +545,7 @@ export class ActorGenerator {
     }
 
     actor.items = newItems;
+    this.applyTemporaryOverrideTargetEffects(actor);
     this.effectProfileApplier.apply(actor, this.effectProfile);
 
     this.applyTokenSize(actor);
@@ -599,6 +602,76 @@ export class ActorGenerator {
     if (token.sight && typeof token.sight === 'object') {
       token.sight.enabled = sightRange > 0;
       token.sight.range = sightRange;
+    }
+  }
+
+  private applyTemporaryOverrideTargetEffects(actor: any): void {
+    const items = Array.isArray(actor?.items) ? actor.items : [];
+    for (const item of items) {
+      const overrides = this.asRiderArray(item?.flags?.fvttJsonGenerator?.rules?.temporaryOverrides);
+      if (overrides.length === 0) {
+        continue;
+      }
+
+      for (const override of overrides) {
+        const targetAbility = typeof override.targetAbility === 'string' ? override.targetAbility : '';
+        if (!targetAbility) {
+          continue;
+        }
+
+        const targetItem = this.findItemByAbilityLabel(items, targetAbility);
+        if (!targetItem || !Array.isArray(targetItem.effects) || targetItem.effects.length === 0) {
+          continue;
+        }
+
+        const clonedEffects = targetItem.effects.map((effect: any) => this.cloneTemporaryOverrideEffect(effect, targetAbility));
+        item.effects = [...(item.effects ?? []), ...clonedEffects];
+        this.attachTemporaryOverrideEffectsToSaveActivities(item, clonedEffects);
+      }
+    }
+  }
+
+  private findItemByAbilityLabel(items: any[], label: string): any | undefined {
+    const normalizedLabel = this.normalizeRuleLookupText(label);
+    if (!normalizedLabel) {
+      return undefined;
+    }
+
+    return items.find((item) => this.normalizeRuleLookupText(String(item?.name ?? '')).includes(normalizedLabel));
+  }
+
+  private normalizeRuleLookupText(value: string): string {
+    return value
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, '')
+      .replace(/[\s·:：,，。._-]+/g, '');
+  }
+
+  private cloneTemporaryOverrideEffect(effect: any, targetAbility: string): any {
+    const clone = JSON.parse(JSON.stringify(effect));
+    clone._id = this.createRandomId();
+    clone.flags = {
+      ...(clone.flags ?? {}),
+      fvttJsonGenerator: {
+        ...(clone.flags?.fvttJsonGenerator ?? {}),
+        temporaryOverrideSource: {
+          targetAbility,
+        },
+      },
+    };
+    return clone;
+  }
+
+  private attachTemporaryOverrideEffectsToSaveActivities(item: any, effects: any[]): void {
+    const refs = effects.map((effect) => ({ _id: effect._id }));
+    for (const activity of Object.values(item?.system?.activities ?? {}) as any[]) {
+      if (activity?.type !== 'save') {
+        continue;
+      }
+      if (!activity.flags?.fvttJsonGenerator?.temporaryOverride) {
+        continue;
+      }
+      activity.effects = [...(activity.effects ?? []), ...refs];
     }
   }
 
@@ -746,14 +819,7 @@ export class ActorGenerator {
       }
 
       const isPassive = activationType === 'passive';
-      const activities = isPassive
-        ? this.activityGenerator.generate({
-            name: actionData.name,
-            englishName: actionData.englishName,
-            type: 'utility',
-            desc: actionData.desc,
-          })
-        : this.activityGenerator.generate(actionData);
+      const activities = this.activityGenerator.generate(actionData);
       
       const item = this.createItemFromAction(actionData, activities, isPassive ? '' : activationType);
       items.push(item);
@@ -1110,6 +1176,8 @@ export class ActorGenerator {
       return;
     }
 
+    this.appendGenericRiderActivities(activities, action);
+
     if (!action.attack || !action.desc || !/(?:强击|Heavy Hit)/i.test(action.desc)) {
       return;
     }
@@ -1150,6 +1218,200 @@ export class ActorGenerator {
         }),
       );
     }
+  }
+
+  private appendGenericRiderActivities(activities: Record<string, any>, action: GeneratedActionData): void {
+    const text = [action.name, action.englishName, action.desc].filter(Boolean).join('\n');
+    const rules = this.extractGenericRiderRules(text);
+    if (!rules) {
+      return;
+    }
+
+    this.appendConditionalDamageAttackActivities(activities, action, this.asRiderArray(rules.conditionalDamage));
+    const temporaryOverrides = this.asRiderArray(rules.temporaryOverrides);
+    this.removeTemporaryOverrideDamageActivities(activities, temporaryOverrides);
+    this.appendTemporaryOverrideSaveActivities(activities, action, temporaryOverrides);
+  }
+
+  private removeTemporaryOverrideDamageActivities(
+    activities: Record<string, any>,
+    riders: Array<Record<string, unknown>>,
+  ): void {
+    if (riders.length === 0) {
+      return;
+    }
+
+    const formulas = new Set(
+      riders
+        .map((rider) => this.normalizeNestedRiderDamage(rider.damage)?.formula)
+        .filter((formula): formula is string => Boolean(formula)),
+    );
+    if (formulas.size === 0) {
+      return;
+    }
+
+    for (const [id, activity] of Object.entries(activities) as Array<[string, any]>) {
+      if (activity?.type !== 'damage') {
+        continue;
+      }
+      const activityFormula = this.formatActivityDamagePartFormula(activity.damage?.parts?.[0]);
+      if (activityFormula && formulas.has(activityFormula)) {
+        delete activities[id];
+      }
+    }
+  }
+
+  private appendConditionalDamageAttackActivities(
+    activities: Record<string, any>,
+    action: GeneratedActionData,
+    riders: Array<Record<string, unknown>>,
+  ): void {
+    if (!action.attack || riders.length === 0) {
+      return;
+    }
+
+    for (const rider of riders) {
+      const damage = this.normalizeRiderDamage(rider, action.attack.damage[0]?.type ?? '');
+      if (!damage) {
+        continue;
+      }
+
+      const generated = this.activityGenerator.generate({
+        ...action,
+        name: `${action.name} Conditional Damage`,
+        englishName: action.englishName ? `${action.englishName} Conditional Damage` : undefined,
+        desc: String(rider.sourceText ?? action.desc ?? ''),
+        attack: {
+          ...action.attack,
+          damage: [damage],
+          versatile: undefined,
+        },
+      });
+      this.attachGeneratedActivityFlag(generated, 'conditionalDamage', {
+        ...rider,
+        baseAction: action.name,
+      });
+      Object.assign(activities, generated);
+    }
+  }
+
+  private appendTemporaryOverrideSaveActivities(
+    activities: Record<string, any>,
+    action: GeneratedActionData,
+    riders: Array<Record<string, unknown>>,
+  ): void {
+    if (riders.length === 0) {
+      return;
+    }
+
+    for (const rider of riders) {
+      const saveDc = typeof rider.saveDc === 'number' ? rider.saveDc : null;
+      const damage = this.normalizeNestedRiderDamage(rider.damage);
+      if (!saveDc && !damage) {
+        continue;
+      }
+
+      const generated = this.activityGenerator.generate({
+        name: `${action.name} Temporary Override`,
+        englishName: action.englishName ? `${action.englishName} Temporary Override` : undefined,
+        type: 'save',
+        desc: String(rider.sourceText ?? action.desc ?? ''),
+        save: {
+          dc: saveDc ?? 0,
+          ability: this.inferTemporaryOverrideSaveAbility(rider, action),
+        },
+        ...(damage ? { damage: [damage] } : {}),
+      });
+      this.attachGeneratedActivityFlag(generated, 'temporaryOverride', {
+        ...rider,
+        baseAction: action.name,
+      });
+      Object.assign(activities, generated);
+    }
+  }
+
+  private attachGeneratedActivityFlag(
+    generated: Record<string, any>,
+    key: string,
+    value: Record<string, unknown>,
+  ): void {
+    for (const activity of Object.values(generated) as any[]) {
+      const flags = (activity.flags ??= {});
+      flags.fvttJsonGenerator = {
+        ...(flags.fvttJsonGenerator ?? {}),
+        [key]: value,
+      };
+    }
+  }
+
+  private asRiderArray(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.filter((entry): entry is Record<string, unknown> => entry !== null && typeof entry === 'object');
+  }
+
+  private normalizeRiderDamage(rider: Record<string, unknown>, fallbackType: string): Damage | null {
+    const formula = typeof rider.formula === 'string' ? rider.formula.replace(/\s+/g, '') : '';
+    if (!formula) {
+      return null;
+    }
+
+    return {
+      formula,
+      type: typeof rider.damageType === 'string' && rider.damageType ? rider.damageType : fallbackType || 'bludgeoning',
+    };
+  }
+
+  private normalizeNestedRiderDamage(value: unknown): Damage | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+    const damage = value as Record<string, unknown>;
+    const formula = typeof damage.formula === 'string' ? damage.formula.replace(/\s+/g, '') : '';
+    if (!formula) {
+      return null;
+    }
+
+    return {
+      formula,
+      type: typeof damage.type === 'string' && damage.type ? damage.type : 'bludgeoning',
+    };
+  }
+
+  private formatActivityDamagePartFormula(part: any): string | null {
+    if (!part || typeof part !== 'object') {
+      return null;
+    }
+    const number = typeof part.number === 'number' ? part.number : null;
+    const denomination = typeof part.denomination === 'number' ? part.denomination : null;
+    if (!number || !denomination) {
+      return null;
+    }
+    const bonus = typeof part.bonus === 'string' && part.bonus.trim() ? part.bonus.trim().replace(/\s+/g, '') : '';
+    return `${number}d${denomination}${bonus ? (bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`) : ''}`;
+  }
+
+  private inferTemporaryOverrideSaveAbility(
+    rider: Record<string, unknown>,
+    action: GeneratedActionData,
+  ): NonNullable<ActionData['save']>['ability'] {
+    const explicitSave = this.extractSavingThrowFromText(action.desc ?? '');
+    if (explicitSave?.ability) {
+      return explicitSave.ability;
+    }
+
+    const label = [rider.targetAbility, rider.sourceText, action.desc].filter(Boolean).join(' ');
+    if (/(?:strength|\bstr\b|\u529b\u91cf)/i.test(label)) return 'str';
+    if (/(?:dexterity|\bdex\b|\u654f\u6377)/i.test(label)) return 'dex';
+    if (/(?:constitution|\bcon\b|\u4f53\u8d28|poison|disease|\u6bd2|\u75be\u75c5)/i.test(label)) return 'con';
+    if (/(?:intelligence|\bint\b|\u667a\u529b)/i.test(label)) return 'int';
+    if (/(?:charisma|\bcha\b|\u9b45\u529b)/i.test(label)) return 'cha';
+    if (/(?:wisdom|\bwis\b|fright|fear|laughter|\u611f\u77e5|\u6050\u60e7|\u6050\u614c|\u72c2\u7b11|\u7b11)/i.test(label)) {
+      return 'wis';
+    }
+
+    return 'wis';
   }
 
   private applyHeavyHitAutomation(item: any, action: GeneratedActionData): void {
@@ -1261,6 +1523,129 @@ export class ActorGenerator {
         ...rules,
       },
     };
+    this.applyCustomOnHitRiderEffects(item, rules);
+    this.removeConditionGatedEffects(item, rules);
+    this.applySummonActivityMetadata(item, rules);
+  }
+
+  private applySummonActivityMetadata(item: any, rules: Record<string, unknown>): void {
+    const summons = this.asRiderArray(rules.summons);
+    if (summons.length === 0) {
+      return;
+    }
+
+    const primarySummon = summons[0];
+    const countFormula = typeof primarySummon.countFormula === 'string'
+      ? primarySummon.countFormula.replace(/\s+/g, '')
+      : '';
+    if (!countFormula) {
+      return;
+    }
+
+    const activities = Object.values(item?.system?.activities ?? {}) as any[];
+    const utilityActivities = activities.filter((activity) => activity?.type === 'utility');
+    const targets = utilityActivities.length > 0 ? utilityActivities : activities;
+
+    for (const activity of targets) {
+      const flags = (activity.flags ??= {});
+      flags.fvttJsonGenerator = {
+        ...(flags.fvttJsonGenerator ?? {}),
+        summon: {
+          ...primarySummon,
+          countFormula,
+        },
+      };
+      activity.roll = {
+        ...(activity.roll ?? {}),
+        name: typeof activity.roll?.name === 'string' && activity.roll.name ? activity.roll.name : 'Summon Count',
+        formula: countFormula,
+        prompt: Boolean(activity.roll?.prompt ?? false),
+        visible: Boolean(activity.roll?.visible ?? false),
+      };
+      delete activity.rolls;
+    }
+  }
+
+  private applyCustomOnHitRiderEffects(item: any, rules: Record<string, unknown>): void {
+    const customRiders = this.asRiderArray(rules.onHitRiders).filter((rider) => rider.kind === 'customEffect');
+    if (customRiders.length === 0) {
+      return;
+    }
+
+    const savePenalties = this.asRiderArray(rules.savePenalties);
+    item.effects = item.effects ?? [];
+
+    for (const rider of customRiders) {
+      const label = typeof rider.label === 'string' && rider.label.trim() ? rider.label.trim() : 'Custom Effect';
+      const effect = this.createCustomEffect({
+        name: label,
+        img: this.iconForCustomEffectLabel(label),
+        statuses: [],
+        flags: {
+          fvttJsonGenerator: {
+            kind: 'onHitCustomEffect',
+            rider,
+            ...(savePenalties.length > 0 ? { savePenalties } : {}),
+          },
+        },
+      });
+      item.effects.push(effect);
+      this.attachEffectToAttackActivities(item, effect._id);
+    }
+  }
+
+  private iconForCustomEffectLabel(label: string): string {
+    if (/(?:bleed|bleeding|blood|wound|流血|血|伤口|傷口)/i.test(label)) {
+      return statusIconPath('bleeding');
+    }
+    if (/(?:dazed|恍惚|眩晕|眩暈)/i.test(label)) {
+      return statusIconPath('dazed');
+    }
+    return 'icons/svg/aura.svg';
+  }
+
+  private attachEffectToAttackActivities(item: any, effectId: string): void {
+    const activities = Object.values(item?.system?.activities ?? {}) as any[];
+    const attackActivities = activities.filter((activity) => activity?.type === 'attack');
+    const targets = attackActivities.length > 0 ? attackActivities : activities;
+    for (const activity of targets) {
+      activity.effects = [...(activity.effects ?? []), { _id: effectId }];
+    }
+  }
+
+  private removeConditionGatedEffects(item: any, rules: Record<string, unknown>): void {
+    const gated = Array.isArray(rules.conditionGatedStatuses) ? rules.conditionGatedStatuses : [];
+    if (gated.length === 0) {
+      return;
+    }
+
+    const gatedStatuses = new Set<string>();
+    for (const rider of gated as Array<Record<string, unknown>>) {
+      for (const status of Array.isArray(rider.statuses) ? rider.statuses : []) {
+        if (typeof status === 'string') {
+          gatedStatuses.add(status);
+        }
+      }
+      for (const condition of Array.isArray(rider.targetConditions) ? rider.targetConditions : []) {
+        if (condition === 'grappled' || condition === 'restrained' || condition === 'prone') {
+          gatedStatuses.add(condition);
+        }
+      }
+    }
+
+    if (gatedStatuses.size === 0) {
+      return;
+    }
+
+    item.effects = (item.effects ?? []).filter((effect: any) => {
+      const statuses = Array.isArray(effect?.statuses) ? effect.statuses : [];
+      return !statuses.some((status: string) => gatedStatuses.has(status));
+    });
+
+    const remainingIds = new Set((item.effects ?? []).map((effect: any) => effect?._id));
+    for (const activity of Object.values(item?.system?.activities ?? {}) as any[]) {
+      activity.effects = (activity.effects ?? []).filter((ref: any) => remainingIds.has(ref?._id));
+    }
   }
 
   private extractRuleMetadata(action: GeneratedActionData): Record<string, unknown> | null {
@@ -1292,6 +1677,17 @@ export class ActorGenerator {
     const onFailedSave = this.extractOnFailedSaveRiders(text);
     if (onFailedSave.length > 0) {
       rules.onFailedSave = onFailedSave;
+    }
+
+    const genericRiderRules = this.extractGenericRiderRules(text);
+    if (genericRiderRules) {
+      for (const [key, value] of Object.entries(genericRiderRules)) {
+        if (Array.isArray(value) && Array.isArray(rules[key])) {
+          rules[key] = [...(rules[key] as unknown[]), ...value];
+          continue;
+        }
+        rules[key] = value;
+      }
     }
 
     const allyEscapeSave = this.extractAllyEscapeSave(text);
@@ -1611,6 +2007,10 @@ export class ActorGenerator {
     return extractOnFailedSaveRiders(text);
   }
 
+  private extractGenericRiderRules(text: string): Record<string, unknown> | null {
+    return extractGenericRiderRules(text);
+  }
+
   private normalizeAbility(raw: string): string {
     return normalizeAbility(raw);
   }
@@ -1787,7 +2187,7 @@ export class ActorGenerator {
         effect: this.createCustomEffect({
           name: '中毒 (Poisoned)',
           statuses: ['poisoned'],
-          img: 'systems/dnd5e/icons/svg/statuses/poisoned.svg',
+          img: statusIconPath('poisoned'),
         }),
       },
       {
@@ -1802,7 +2202,7 @@ export class ActorGenerator {
         effect: this.createCustomEffect({
           name: '流血 (Bleeding)',
           statuses: ['bleeding'],
-          img: 'systems/dnd5e/icons/svg/statuses/bleeding.svg',
+          img: statusIconPath('bleeding'),
           flags: {
             'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
           },

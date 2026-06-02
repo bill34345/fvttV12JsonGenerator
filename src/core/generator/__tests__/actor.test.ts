@@ -242,6 +242,38 @@ describe('ActorGenerator', () => {
     ]);
   });
 
+  it('preserves parsed save activity for passive trait items', () => {
+    const input: ParsedNPC = {
+      name: 'Laughing Hand',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {
+        biography: [
+          '- **Horrifying Laughter**. Each hostile creature within 15 feet that can hear the laughing hand must make a DC 17 Wisdom saving throw, taking 10 (3d6) psychic damage on a failed save.',
+        ].join('\n'),
+      },
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+    };
+
+    const actor = generator.generate(input, { route: 'english' });
+    const laughter = actor.items.find((item: any) => item.name.startsWith('Horrifying Laughter'));
+    const activities = Object.values(laughter?.system.activities ?? {}) as any[];
+
+    expect(laughter).toBeDefined();
+    expect(['', 'special']).toContain(laughter.system.activation.type);
+    expect(activities.some((activity) => activity.type === 'save')).toBe(true);
+    const saveActivity = activities.find((activity) => activity.type === 'save');
+    expect(saveActivity?.save.ability).toContain('wis');
+    expect(saveActivity?.save.dc.value).toBe(17);
+    expect(saveActivity?.damage.parts[0]).toEqual(
+      expect.objectContaining({ number: 3, denomination: 6, types: ['psychic'] }),
+    );
+  });
+
   it('models Bloodfin Bite as an attack activity instead of a damage-only fallback', () => {
     const input: ParsedNPC = {
       name: 'Slithering Bloodfin',
@@ -432,10 +464,12 @@ describe('ActorGenerator', () => {
         ],
       }),
     );
+    const dazedEffect = (pelagicScreech.effects ?? []).find((effect: any) => effect.statuses?.includes('dazed'));
+    expect(dazedEffect?.img).toBe('icons/svg/daze.svg');
 
     for (const item of [swallow, pelagicScreech]) {
       for (const effect of item.effects ?? []) {
-        expect(effect.img).toMatch(/^systems\/dnd5e\/icons\/svg\/statuses\/.+\.svg$/);
+        expect(effect.img).toMatch(/^(?:systems\/dnd5e\/)?icons\/svg\/(?:statuses\/)?.+\.svg$/);
       }
     }
   });

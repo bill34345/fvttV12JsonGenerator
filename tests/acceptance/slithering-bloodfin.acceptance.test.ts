@@ -450,11 +450,11 @@ describe('Slithering Bloodfin acceptance gate', () => {
     expect(actorEffects.length + effectedItems.length).toBeGreaterThan(0);
 
     for (const effect of actorEffects) {
-      expect(effect.img).toMatch(/^systems\/dnd5e\/icons\/svg\/statuses\/.+\.svg$/);
+      expect(effect.img).toMatch(/^(?:systems\/dnd5e\/)?icons\/svg\/(?:statuses\/)?.+\.svg$/);
     }
     for (const item of effectedItems) {
       for (const effect of item.effects ?? []) {
-        expect(effect.img).toMatch(/^systems\/dnd5e\/icons\/svg\/statuses\/.+\.svg$/);
+        expect(effect.img).toMatch(/^(?:systems\/dnd5e\/)?icons\/svg\/(?:statuses\/)?.+\.svg$/);
       }
     }
   });

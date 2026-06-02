@@ -15,7 +15,7 @@ const SOURCE_PATH = join(
 type GeneratedActor = {
   items: Array<{
     name: string;
-    effects?: Array<{ statuses?: string[] }>;
+    effects?: Array<{ img?: string; statuses?: string[] }>;
     flags?: Record<string, any>;
     system: {
       activation?: { type?: string; cost?: number; condition?: string };
@@ -90,6 +90,10 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
       'bleeding',
       'poisoned',
     ]);
+    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('bleeding'));
+    const poisonedEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('poisoned'));
+    expect(bleedingEffect?.img).toBe('icons/svg/blood.svg');
+    expect(poisonedEffect?.img).toBe('systems/dnd5e/icons/svg/statuses/poisoned.svg');
   });
 
   it('does not infer a generic drop-to-zero heal rule from the Vampiric Bite rider text', () => {

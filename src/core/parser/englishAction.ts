@@ -120,7 +120,8 @@ export class EnglishActionParser {
   }
 
   private splitNameAndBody(line: string): { namePart: string; body: string } | null {
-    const match = line.match(/^(.+?)\.\s+(.+)$/) ?? line.match(/^(.+?):\s+(.+)$/);
+    const statblockColonMatch = line.match(/^(.+?):\s+((?:Melee|Ranged)(?:\s+or\s+Ranged)?\s+Weapon\s+Attack:.+)$/i);
+    const match = statblockColonMatch ?? line.match(/^(.+?)\.\s+(.+)$/) ?? line.match(/^(.+?):\s+(.+)$/);
     if (!match?.[1] || !match[2]) {
       return null;
     }

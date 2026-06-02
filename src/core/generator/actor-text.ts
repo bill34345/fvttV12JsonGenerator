@@ -37,6 +37,28 @@ export function mapDamageType(raw: string): string {
     return '';
   }
 
+  const fixedMap: Record<string, string> = {
+    钝击: 'bludgeoning',
+    穿刺: 'piercing',
+    挥砍: 'slashing',
+    冷冻: 'cold',
+    寒冷: 'cold',
+    火焰: 'fire',
+    闪电: 'lightning',
+    雷鸣: 'thunder',
+    毒素: 'poison',
+    毒性: 'poison',
+    心灵: 'psychic',
+    黯蚀: 'necrotic',
+    死灵: 'necrotic',
+    光耀: 'radiant',
+    力场: 'force',
+    强酸: 'acid',
+  };
+  if (fixedMap[cleaned]) {
+    return fixedMap[cleaned];
+  }
+
   const key = i18n.getKey(cleaned);
   if (!key) {
     return '';
@@ -279,6 +301,16 @@ export function extractOnHitRiders(text: string): Array<Record<string, unknown>>
     }
   }
 
+  const statusRider = extractOnHitStatusRider(text);
+  if (statusRider) {
+    results.push(statusRider);
+  }
+
+  const customRider = extractOnHitCustomEffectRider(text);
+  if (customRider) {
+    results.push(customRider);
+  }
+
   return results;
 }
 
@@ -305,7 +337,389 @@ export function extractOnFailedSaveRiders(text: string): Array<Record<string, un
       dice: dice.replace(/\s+/g, ''),
     });
   }
+
+  if (/失败[：:][^。.;]*(?:速度变为\s*0|speed\s+(?:becomes|is)\s*0)/i.test(text)) {
+    results.push({
+      kind: 'speedZero',
+    });
+  }
   return results;
+}
+
+export function extractGenericRiderRules(text: string): Record<string, unknown> | null {
+  const rules: Record<string, unknown> = {};
+
+  const conditionalDamage = extractConditionalDamageRiders(text);
+  if (conditionalDamage.length > 0) {
+    rules.conditionalDamage = conditionalDamage;
+  }
+
+  const savePenalties = extractSpecificSavePenalties(text);
+  if (savePenalties.length > 0) {
+    rules.savePenalties = savePenalties;
+  }
+
+  const temporaryOverrides = extractTemporaryOverrides(text);
+  if (temporaryOverrides.length > 0) {
+    rules.temporaryOverrides = temporaryOverrides;
+  }
+
+  const linkedAttacks = extractLinkedAttacks(text);
+  if (linkedAttacks.length > 0) {
+    rules.linkedAttacks = linkedAttacks;
+  }
+
+  const summons = extractSummons(text);
+  if (summons.length > 0) {
+    rules.summons = summons;
+  }
+
+  const conditionGatedStatuses = extractConditionGatedStatuses(text);
+  if (conditionGatedStatuses.length > 0) {
+    rules.conditionGatedStatuses = conditionGatedStatuses;
+  }
+
+  const immunityReplacements = extractImmunityReplacements(text);
+  if (immunityReplacements.length > 0) {
+    rules.immunityReplacements = immunityReplacements;
+  }
+
+  const movement = extractMovementRiders(text);
+  if (movement.length > 0) {
+    rules.movement = movement;
+  }
+
+  return Object.keys(rules).length > 0 ? rules : null;
+}
+
+function extractOnHitStatusRider(text: string): Record<string, unknown> | null {
+  if (extractConditionGatedStatuses(text).length > 0) {
+    return null;
+  }
+
+  const statuses = extractInflictedStatuses(text);
+  const relevant = statuses.filter((status) => ['grappled', 'restrained', 'prone', 'frightened', 'stunned', 'dazed'].includes(status));
+  if (relevant.length === 0) {
+    return null;
+  }
+
+  const hasHitContext = /Hit:|命中|命中后|on hit/i.test(text);
+  if (!hasHitContext) {
+    return null;
+  }
+
+  const escapeDcMatch = text.match(/(?:escape\s*DC|逃脱\s*DC)\s*(\d+)/i);
+  return {
+    kind: 'status',
+    statuses: unique(relevant),
+    ...(escapeDcMatch?.[1] ? { escapeDc: Number.parseInt(escapeDcMatch[1], 10) } : {}),
+    sourceText: text,
+  };
+}
+
+function extractOnHitCustomEffectRider(text: string): Record<string, unknown> | null {
+  const match =
+    text.match(/命中后，?目标获得一个([^，。]+?)(?:，|。)/) ??
+    text.match(/on hit,?\s+the target gains\s+([^,.]+?)(?:,|\.)/i);
+  const label = match?.[1]?.trim();
+  if (!label) {
+    return null;
+  }
+
+  const cannotReact = /不能采取反应|cannot take reactions|can't take reactions/i.test(text);
+  return {
+    kind: 'customEffect',
+    label,
+    ...(cannotReact ? { cannotReact: true } : {}),
+    duration: durationFromText(text),
+    sourceText: text,
+  };
+}
+
+function extractConditionalDamageRiders(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const patterns = [
+    /若[^。]*?(?:已|已经)[^。]*?(擒抱|grappled)[^。]*?则伤害变成\s*\d*\s*[（(]\s*`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?\s*[）)]\s*点?\s*([\u4e00-\u9fff]{2,4})?伤害/gi,
+    /if[^.]*?\b(grappled)\b[^.]*?(?:damage becomes|damage is)\s*\d*\s*\(`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?\)\s*([a-z]+)\s+damage/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const condition = normalizeCondition(match[1] ?? '');
+      const formula = match[2]?.replace(/\s+/g, '');
+      const damageType = normalizeDamageType(match[3] ?? '') || inferDamageTypeFromText(text);
+      if (!condition || !formula) {
+        continue;
+      }
+      results.push({
+        mode: 'replace',
+        formula,
+        damageType,
+        targetConditions: [condition],
+        sourceText: match[0],
+      });
+    }
+  }
+
+  return results;
+}
+
+function extractSpecificSavePenalties(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const patterns = [
+    /下一次对([^，。]+?)进行豁免时[^。]*?减去\s*`?(\d+d\d+)`?/gi,
+    /next\s+saving\s+throw\s+against\s+([^,.]+?)[^,.]*?subtract\s*`?(\d+d\d+)`?/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      if (!match[1] || !match[2]) {
+        continue;
+      }
+      results.push({
+        kind: 'savePenalty',
+        against: cleanRuleLabel(match[1]),
+        dice: match[2].replace(/\s+/g, ''),
+        duration: durationFromText(text),
+        sourceText: match[0],
+      });
+    }
+  }
+
+  for (const match of text.matchAll(/下一次对([^，。]+?)进行豁免时[^。]*?减去一颗四面骰/gi)) {
+    if (!match[1]) {
+      continue;
+    }
+    results.push({
+      kind: 'savePenalty',
+      against: cleanRuleLabel(match[1]),
+      dice: '1d4',
+      duration: durationFromText(text),
+      sourceText: match[0],
+    });
+  }
+
+  return results;
+}
+
+function extractTemporaryOverrides(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const match = text.match(
+    /受到([^。]*?伤害)[\s\S]*?它的([^。]*?)豁免\s*DC\s*提高至\s*(\d+)[\s\S]*?伤害提高至\s*\d*\s*[（(]\s*`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?\s*[）)]\s*点?\s*([\u4e00-\u9fff]{2,4})伤害/i,
+  );
+  if (!match?.[1] || !match[2] || !match[3] || !match[4]) {
+    return results;
+  }
+
+  results.push({
+    triggerDamageTypes: extractDamageTypesFromClause(match[1]),
+    targetAbility: cleanRuleLabel(match[2]),
+    saveDc: Number.parseInt(match[3], 10),
+    damage: {
+      formula: match[4].replace(/\s+/g, ''),
+      type: normalizeDamageType(match[5] ?? '') || 'bludgeoning',
+    },
+    duration: durationFromText(text),
+    sourceText: match[0],
+  });
+
+  return results;
+}
+
+function extractLinkedAttacks(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const match = text.match(/若[^。]*?移动到[^。]*?(\d+)\s*尺范围内[^。]*?可以对触发者进行一次([^。]+?)攻击/i);
+  if (match?.[1] && match[2]) {
+    results.push({
+      attackName: cleanRuleLabel(match[2]),
+      triggerRange: Number.parseInt(match[1], 10),
+      sourceText: match[0],
+    });
+  }
+  return results;
+}
+
+function extractSummons(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  if (!/召唤|summon/i.test(text)) {
+    return results;
+  }
+
+  const summonMatch =
+    text.match(/召唤\d*\s*[（(]\s*`?(\d+d\d+)`?\s*[）)]\s*只([^。；，]+?)(?:。|；|，)/i) ??
+    text.match(/summons?\s*(\d+d\d+|\d+)\s+([^,.]+?)(?:,|\.)/i);
+  if (!summonMatch?.[1] || !summonMatch[2]) {
+    return results;
+  }
+
+  const rangeMatch = text.match(/(?:出现在|within)[^。.\d]*(\d+)\s*(?:尺|feet|ft)/i);
+  const durationMatch = text.match(/持续\s*(\d+)\s*分钟|lasts?\s+(\d+)\s+minutes?/i);
+  results.push({
+    actorName: cleanRuleLabel(summonMatch[2]),
+    countFormula: summonMatch[1].replace(/\s+/g, ''),
+    ...(rangeMatch?.[1] ? { range: Number.parseInt(rangeMatch[1], 10) } : {}),
+    ...(durationMatch?.[1] || durationMatch?.[2]
+      ? { duration: { value: Number.parseInt((durationMatch[1] ?? durationMatch[2])!, 10), units: 'minute' } }
+      : {}),
+    sourceText: summonMatch[0],
+  });
+
+  return results;
+}
+
+function extractConditionGatedStatuses(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const match = text.match(/若目标(.+?)，目标则?额外陷入([^。；，]+?)状态/i);
+  if (!match?.[1] || !match[2]) {
+    return results;
+  }
+
+  const statuses = extractInflictedStatuses(match[2]);
+  const targetConditions = extractTargetConditions(match[1]);
+  if (statuses.length === 0 || targetConditions.length === 0) {
+    return results;
+  }
+
+  results.push({
+    statuses,
+    targetConditions,
+    sourceText: match[0],
+  });
+  return results;
+}
+
+function extractImmunityReplacements(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  const match = text.match(/若目标免疫([^，。]+?)状态[^。]*?改为[^。]*?陷入([^，。]+?)(?:Dazed)?[，。]/i);
+  if (!match?.[1] || !match[2]) {
+    return results;
+  }
+
+  results.push({
+    immuneTo: normalizeCondition(match[1]) || cleanRuleLabel(match[1]),
+    replacementStatuses: extractInflictedStatuses(`${match[2]} Dazed`),
+    sourceText: match[0],
+  });
+  return results;
+}
+
+function extractMovementRiders(text: string): Array<Record<string, unknown>> {
+  const results: Array<Record<string, unknown>> = [];
+  if (/不会引发借机攻击|does not provoke opportunity attacks?/i.test(text)) {
+    results.push({
+      kind: 'noOpportunityAttack',
+      sourceText: text,
+    });
+  }
+  const speedMatch = text.match(/移动最多一半速度|move(?:s)? up to half (?:its|their) speed/i);
+  if (speedMatch) {
+    results.push({
+      kind: 'move',
+      distance: 'halfSpeed',
+      sourceText: speedMatch[0],
+    });
+  }
+  return results;
+}
+
+function extractTargetConditions(clause: string): string[] {
+  const results: string[] = [];
+  for (const part of clause.split(/、|，或|或|，|,/).map((entry) => entry.trim()).filter(Boolean)) {
+    const hasMark = part.match(/拥有([^，。]+)$/);
+    if (hasMark?.[1]) {
+      results.push(cleanRuleLabel(hasMark[1]));
+      continue;
+    }
+    if (/擒抱|grappled/i.test(part)) {
+      results.push('grappled');
+      continue;
+    }
+    const affected = part.match(/受到([^，。]+?)影响/);
+    if (affected?.[1]) {
+      results.push(cleanRuleLabel(affected[1]));
+    }
+  }
+  return unique(results);
+}
+
+function extractInflictedStatuses(text: string): string[] {
+  const statuses: string[] = [];
+  const pairs: Array<[RegExp, string]> = [
+    [/擒抱|grappled/i, 'grappled'],
+    [/束缚|受限|restrained/i, 'restrained'],
+    [/倒地|prone/i, 'prone'],
+    [/恐慌|frightened/i, 'frightened'],
+    [/震慑|stunned/i, 'stunned'],
+    [/眩晕|恍惚|Dazed/i, 'dazed'],
+    [/中毒|poisoned/i, 'poisoned'],
+    [/目盲|blinded/i, 'blinded'],
+    [/耳聋|deafened/i, 'deafened'],
+  ];
+  for (const [pattern, status] of pairs) {
+    if (pattern.test(text)) {
+      statuses.push(status);
+    }
+  }
+  return unique(statuses);
+}
+
+function extractDamageTypesFromClause(clause: string): string[] {
+  const types: string[] = [];
+  const entries = [
+    ['穿刺', 'piercing'],
+    ['挥砍', 'slashing'],
+    ['钝击', 'bludgeoning'],
+    ['火焰', 'fire'],
+    ['冷冻', 'cold'],
+    ['寒冷', 'cold'],
+    ['闪电', 'lightning'],
+    ['毒素', 'poison'],
+    ['心灵', 'psychic'],
+    ['黯蚀', 'necrotic'],
+  ] as const;
+  for (const [label, type] of entries) {
+    if (clause.includes(label)) {
+      types.push(type);
+    }
+  }
+  return unique(types);
+}
+
+function normalizeCondition(raw: string): string {
+  return extractInflictedStatuses(raw)[0] ?? '';
+}
+
+function normalizeDamageType(raw: string): string {
+  return mapDamageType(raw) || raw.trim().toLowerCase();
+}
+
+function inferDamageTypeFromText(text: string): string {
+  const matches = [...text.matchAll(/([\u4e00-\u9fff]{2,4})伤害/g)];
+  const last = matches.at(-1)?.[1];
+  return normalizeDamageType(last ?? '') || 'bludgeoning';
+}
+
+function durationFromText(text: string): Record<string, unknown> {
+  if (/下一回合开始前|start of (?:its|their|the creature's) next turn/i.test(text)) {
+    return { until: 'selfNextTurnStart' };
+  }
+  if (/下一回合结束|end of (?:its|their|the target's) next turn/i.test(text)) {
+    return { until: 'targetNextTurnEnd' };
+  }
+  return { until: 'special' };
+}
+
+function cleanRuleLabel(raw: string): string {
+  return raw
+    .replace(/^的/, '')
+    .replace(/状态$/, '')
+    .replace(/攻击$/, '')
+    .replace(/[，。；,.]+$/g, '')
+    .trim();
+}
+
+function unique<T>(values: T[]): T[] {
+  return [...new Set(values)];
 }
 
 /**
