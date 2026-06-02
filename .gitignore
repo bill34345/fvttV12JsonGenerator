@@ -42,6 +42,7 @@ obsidian/dnd数据转fvttjson/middle-test/
 # Agent working files
 audits/
 middle/
+tmp-test-*/
 
 # Accidental files
 nul

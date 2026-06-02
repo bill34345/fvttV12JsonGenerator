@@ -3,6 +3,14 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "test": "bun test",
+    "test:npc": "bun test tests/acceptance/alyxian-aboleth.acceptance.test.ts tests/acceptance/scuttling-serpentmaw.acceptance.test.ts tests/acceptance/slithering-bloodfin.acceptance.test.ts tests/e2e.test.ts src/core/generator/__tests__/phase1-validation.test.ts",
+    "sync:vault": "bun run src/index.ts --sync --vault \"obsidian/dnd数据转fvttjson\"",
+    "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",
+    "cli:help": "bun run src/index.ts --help",
+    "verify:actor": "bun run src/tools/actorVerification.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
