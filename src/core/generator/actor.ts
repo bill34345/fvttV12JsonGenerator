@@ -1525,6 +1525,7 @@ export class ActorGenerator {
     };
     this.applyCustomOnHitRiderEffects(item, rules);
     this.removeConditionGatedEffects(item, rules);
+    this.removeConditionalDamagePrerequisiteEffects(item, rules);
     this.applySummonActivityMetadata(item, rules);
   }
 
@@ -1640,6 +1641,49 @@ export class ActorGenerator {
     item.effects = (item.effects ?? []).filter((effect: any) => {
       const statuses = Array.isArray(effect?.statuses) ? effect.statuses : [];
       return !statuses.some((status: string) => gatedStatuses.has(status));
+    });
+
+    const remainingIds = new Set((item.effects ?? []).map((effect: any) => effect?._id));
+    for (const activity of Object.values(item?.system?.activities ?? {}) as any[]) {
+      activity.effects = (activity.effects ?? []).filter((ref: any) => remainingIds.has(ref?._id));
+    }
+  }
+
+  private removeConditionalDamagePrerequisiteEffects(item: any, rules: Record<string, unknown>): void {
+    const conditionalDamage = this.asRiderArray(rules.conditionalDamage);
+    if (conditionalDamage.length === 0) {
+      return;
+    }
+
+    const inflictedStatuses = new Set<string>();
+    for (const rider of this.asRiderArray(rules.onHitRiders)) {
+      for (const status of Array.isArray(rider.statuses) ? rider.statuses : []) {
+        if (typeof status === 'string') {
+          inflictedStatuses.add(status);
+        }
+      }
+    }
+
+    const prerequisiteStatuses = new Set<string>();
+    for (const rider of conditionalDamage) {
+      for (const condition of Array.isArray(rider.targetConditions) ? rider.targetConditions : []) {
+        if (
+          typeof condition === 'string' &&
+          ['grappled', 'restrained', 'prone', 'frightened', 'stunned', 'dazed'].includes(condition) &&
+          !inflictedStatuses.has(condition)
+        ) {
+          prerequisiteStatuses.add(condition);
+        }
+      }
+    }
+
+    if (prerequisiteStatuses.size === 0) {
+      return;
+    }
+
+    item.effects = (item.effects ?? []).filter((effect: any) => {
+      const statuses = Array.isArray(effect?.statuses) ? effect.statuses : [];
+      return !statuses.some((status: string) => prerequisiteStatuses.has(status));
     });
 
     const remainingIds = new Set((item.effects ?? []).map((effect: any) => effect?._id));

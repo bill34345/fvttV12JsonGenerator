@@ -83,6 +83,16 @@ describe('generic rider extraction acceptance', () => {
         }),
       ]),
     );
+    expect(rules(item).onHitRiders ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          statuses: expect.arrayContaining(['grappled']),
+        }),
+      ]),
+    );
+    expect((item.effects ?? []).flatMap((effect: any) => effect.statuses ?? [])).not.toEqual(
+      expect.arrayContaining(['grappled']),
+    );
   });
 
   it('extracts custom on-hit marks, reaction denial, and specific save penalties', () => {

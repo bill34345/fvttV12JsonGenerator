@@ -397,7 +397,7 @@ function extractOnHitStatusRider(text: string): Record<string, unknown> | null {
     return null;
   }
 
-  const statuses = extractInflictedStatuses(text);
+  const statuses = extractExplicitOnHitStatuses(text);
   const relevant = statuses.filter((status) => ['grappled', 'restrained', 'prone', 'frightened', 'stunned', 'dazed'].includes(status));
   if (relevant.length === 0) {
     return null;
@@ -415,6 +415,24 @@ function extractOnHitStatusRider(text: string): Record<string, unknown> | null {
     ...(escapeDcMatch?.[1] ? { escapeDc: Number.parseInt(escapeDcMatch[1], 10) } : {}),
     sourceText: text,
   };
+}
+
+function extractExplicitOnHitStatuses(text: string): string[] {
+  const clauses: string[] = [];
+
+  for (const match of text.matchAll(/(?:目标|该生物)[^。；.]*?陷入[^。；.]*(?:状态)?/gi)) {
+    if (match[0] && !/(?:已|已经)[^。；.]*?陷入/.test(match[0])) {
+      clauses.push(match[0]);
+    }
+  }
+
+  for (const match of text.matchAll(/\b(?:target|creature)[^.]*?\b(?:is|becomes?)\s+(?:grappled|restrained|prone|frightened|stunned|dazed)\b[^.]*/gi)) {
+    if (match[0] && !/\balready\b/i.test(match[0])) {
+      clauses.push(match[0]);
+    }
+  }
+
+  return unique(clauses.flatMap((clause) => extractInflictedStatuses(clause)));
 }
 
 function extractOnHitCustomEffectRider(text: string): Record<string, unknown> | null {
