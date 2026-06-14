@@ -27,6 +27,30 @@
 - Convert Obsidian NPC/monster markdown into Foundry VTT dnd5e Actor JSON.
 - Supported sources currently include Chinese YAML/Markdown and English bestiary-style markdown.
 
+## Target Runtime Versions
+
+Unless the user explicitly changes the target, generated Foundry JSON must target:
+
+- Foundry VTT: v12
+- dnd5e system: 4.3.9
+- Default effect profile: core
+- Modded effect profile: modded-v12
+- MIDI-QOL: v12.4.27.1
+- DAE: v12.0.18
+- Times Up: v11.3.20
+- Item Macro: v2.2.0
+
+When implementing or reviewing behavior that depends on Foundry, dnd5e, MIDI-QOL, DAE, Times Up, Item Macro, or any other module API:
+
+- Do not use latest documentation by default.
+- Prefer locked local references under `references/` for the exact target version.
+- If local references are missing, use Context7 with a version-specific library ID when available.
+- If Context7 cannot confirm the exact version, consult the official package page or source repository for the target version before coding.
+- Do not infer module flags, hook names, macro pass names, Active Effect fields, or compatibility behavior from memory.
+- Final verification notes must state which versioned source was checked for module-dependent behavior.
+
+For module-integrated JSON, "tests pass", "JSON parses", and "generated successfully" are not enough. The generated JSON must be checked against the target module version's documented flags, effects, hooks, or workflow behavior.
+
 ## Core Rules
 
 - Preserve the current architecture unless the task explicitly calls for a redesign.
