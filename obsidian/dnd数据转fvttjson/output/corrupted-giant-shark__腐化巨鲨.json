@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity806": {
-            "_id": "dnd5eactivity806",
+          "dnd5eactivityb60": {
+            "_id": "dnd5eactivityb60",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye05": {
-            "_id": "dnd5eactivitye05",
+          "dnd5eactivity478": {
+            "_id": "dnd5eactivity478",
             "type": "utility",
             "activation": {
               "type": "",
@@ -807,14 +807,53 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye17": {
-            "_id": "dnd5eactivitye17",
-            "type": "utility",
+          "dnd5eactivity9f3": {
+            "_id": "dnd5eactivity9f3",
+            "type": "save",
+            "save": {
+              "ability": [
+                "wis"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "17",
+                "value": 17
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 10,
+                  "bonus": "",
+                  "types": [
+                    "psychic"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
             "activation": {
               "type": "special",
               "value": null,
               "override": false,
               "condition": ""
+            },
+            "range": {
+              "override": false,
+              "value": 15,
+              "long": null,
+              "reach": null,
+              "units": "ft",
+              "special": ""
             }
           }
         },
@@ -852,8 +891,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity924": {
-            "_id": "dnd5eactivity924",
+          "dnd5eactivity245": {
+            "_id": "dnd5eactivity245",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -897,8 +936,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybda": {
-            "_id": "dnd5eactivitybda",
+          "dnd5eactivityad7": {
+            "_id": "dnd5eactivityad7",
             "type": "utility",
             "activation": {
               "type": "",
@@ -942,8 +981,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybf2": {
-            "_id": "dnd5eactivitybf2",
+          "dnd5eactivity5c6": {
+            "_id": "dnd5eactivity5c6",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -988,8 +1027,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivityea7": {
-            "_id": "dnd5eactivityea7",
+          "dnd5eactivityc5f": {
+            "_id": "dnd5eactivityc5f",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1051,7 +1090,7 @@
             },
             "effects": [
               {
-                "_id": "a9ed6379610a240b"
+                "_id": "08be1d7a1a1378f4"
               }
             ],
             "activation": {
@@ -1076,7 +1115,7 @@
       },
       "effects": [
         {
-          "_id": "a9ed6379610a240b",
+          "_id": "08be1d7a1a1378f4",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1129,16 +1168,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity999": {
-            "_id": "dnd5eactivity999",
+          "dnd5eactivity37e": {
+            "_id": "dnd5eactivity37e",
             "type": "save",
             "save": {
               "ability": [
                 "con"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "17",
+                "calculation": "con",
+                "formula": "",
                 "value": 17
               }
             },
@@ -1158,7 +1197,7 @@
             },
             "effects": [
               {
-                "_id": "1708cb83704b969b"
+                "_id": "a62ba88448a62817"
               }
             ],
             "activation": {
@@ -1176,7 +1215,7 @@
       },
       "effects": [
         {
-          "_id": "1708cb83704b969b",
+          "_id": "a62ba88448a62817",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1195,7 +1234,7 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
+          "img": "icons/svg/daze.svg",
           "statuses": [
             "dazed"
           ]
@@ -1209,6 +1248,17 @@
         "fvttJsonGenerator": {
           "effectHints": {
             "dazed": true
+          },
+          "rules": {
+            "onHitRiders": [
+              {
+                "kind": "status",
+                "statuses": [
+                  "dazed"
+                ],
+                "sourceText": "撞击 Ram 腐化巨鲨朝一个生物直线移动至少 20 尺并进行一次咬击 (Bite)；若命中，则目标必须进行一次 DC 17 的体质 (Constitution) 豁免检定。\n豁免失败：目标陷入恍惚 (Dazed)。\n恍惚 (Dazed)：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。"
+              }
+            ]
           }
         }
       }
@@ -1231,8 +1281,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8c7": {
-            "_id": "dnd5eactivity8c7",
+          "dnd5eactivityb8b": {
+            "_id": "dnd5eactivityb8b",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1254,7 +1304,15 @@
           "actionSection": "附赠动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "movement": [
+              {
+                "kind": "noOpportunityAttack",
+                "sourceText": "快速撤退 Quick Retreat 若腐化巨鲨的咬击 (Bite) 未命中，它可以立即游动最多 25 尺，且该移动不会引发借机攻击 (Opportunity Attacks)。"
+              }
+            ]
+          }
         }
       }
     },
@@ -1276,38 +1334,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity635": {
-            "_id": "dnd5eactivity635",
+          "dnd5eactivity182": {
+            "_id": "dnd5eactivity182",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "10",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 1,
-                  "denomination": 10,
-                  "bonus": "6",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -1388,12 +1428,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityaae": {
-            "_id": "dnd5eactivityaae",
+          "dnd5eactivitya9a": {
+            "_id": "dnd5eactivitya9a",
             "type": "utility",
             "effects": [
               {
-                "_id": "978eca73ab3ef4b6"
+                "_id": "a223e4f220a50d14"
               }
             ],
             "activation": {
@@ -1411,7 +1451,7 @@
       },
       "effects": [
         {
-          "_id": "978eca73ab3ef4b6",
+          "_id": "a223e4f220a50d14",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1464,16 +1504,16 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivitye1a": {
-            "_id": "dnd5eactivitye1a",
+          "dnd5eactivity82e": {
+            "_id": "dnd5eactivity82e",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "17",
+                "calculation": "con",
+                "formula": "",
                 "value": 17
               }
             },
@@ -1508,7 +1548,15 @@
           "actionSection": "反应"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "movement": [
+              {
+                "kind": "noOpportunityAttack",
+                "sourceText": "盘旋威胁 Circling Threat 当腐化巨鲨的生命值降至重伤 / 濒血 (Bloodied) 时，它立即为撞击 (Ram) 充能，并可立即移动最多其一半速度的距离，且该移动不会引发借机攻击。随后，以它自身为中心 50 尺范围内的生物必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。\n豁免失败：陷入恐惧 (Fear)，直到其下一回合结束。"
+              }
+            ]
+          }
         }
       }
     }
@@ -1520,7 +1568,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752086009,
-    "modifiedTime": 1775752086009
+    "createdTime": 1781506144909,
+    "modifiedTime": 1781506144909
   }
 }

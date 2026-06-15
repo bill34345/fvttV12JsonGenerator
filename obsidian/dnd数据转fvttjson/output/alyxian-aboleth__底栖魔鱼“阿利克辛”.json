@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity10f": {
-            "_id": "dnd5eactivity10f",
+          "dnd5eactivityc13": {
+            "_id": "dnd5eactivityc13",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,14 +762,46 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye91": {
-            "_id": "dnd5eactivitye91",
-            "type": "utility",
+          "dnd5eactivity142": {
+            "_id": "dnd5eactivity142",
+            "type": "save",
+            "save": {
+              "ability": [
+                "str"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "14",
+                "value": 14
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "activation": {
               "type": "special",
               "value": null,
               "override": false,
               "condition": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "sphere",
+                "size": "10",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
             }
           }
         },
@@ -819,9 +851,22 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity6dd": {
-            "_id": "dnd5eactivity6dd",
-            "type": "utility",
+          "dnd5eactivity0e1": {
+            "_id": "dnd5eactivity0e1",
+            "type": "save",
+            "save": {
+              "ability": [
+                "wis"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "19",
+                "value": 19
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "activation": {
               "type": "special",
               "value": null,
@@ -898,8 +943,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity491": {
-            "_id": "dnd5eactivity491",
+          "dnd5eactivity009": {
+            "_id": "dnd5eactivity009",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -943,8 +988,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity054": {
-            "_id": "dnd5eactivity054",
+          "dnd5eactivity57d": {
+            "_id": "dnd5eactivity57d",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -992,38 +1037,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity554": {
-            "_id": "dnd5eactivity554",
+          "dnd5eactivity965": {
+            "_id": "dnd5eactivity965",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "10",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 3,
-                  "denomination": 6,
-                  "bonus": "5",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -1071,6 +1098,25 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 3,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [],
@@ -1123,16 +1169,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity266": {
-            "_id": "dnd5eactivity266",
+          "dnd5eactivity5ae": {
+            "_id": "dnd5eactivity5ae",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "18",
+                "calculation": "str",
+                "formula": "",
                 "value": 18
               }
             },
@@ -1141,7 +1187,7 @@
             },
             "effects": [
               {
-                "_id": "0ab27d27d7d93b91"
+                "_id": "c12565e3cdcd20ef"
               }
             ],
             "activation": {
@@ -1167,7 +1213,7 @@
       },
       "effects": [
         {
-          "_id": "0ab27d27d7d93b91",
+          "_id": "c12565e3cdcd20ef",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1235,16 +1281,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityed8": {
-            "_id": "dnd5eactivityed8",
+          "dnd5eactivityb41": {
+            "_id": "dnd5eactivityb41",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "17",
+                "calculation": "int",
+                "formula": "",
                 "value": 17
               }
             },
@@ -1331,16 +1377,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc36": {
-            "_id": "dnd5eactivityc36",
+          "dnd5eactivitybe3": {
+            "_id": "dnd5eactivitybe3",
             "type": "save",
             "save": {
               "ability": [
                 "dex"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "17",
+                "calculation": "int",
+                "formula": "",
                 "value": 17
               }
             },
@@ -1455,16 +1501,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity4d3": {
-            "_id": "dnd5eactivity4d3",
+          "dnd5eactivity284": {
+            "_id": "dnd5eactivity284",
             "type": "save",
             "save": {
               "ability": [
                 "int"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "17",
+                "calculation": "int",
+                "formula": "",
                 "value": 17
               }
             },
@@ -1547,8 +1593,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity51e": {
-            "_id": "dnd5eactivity51e",
+          "dnd5eactivity423": {
+            "_id": "dnd5eactivity423",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -1600,8 +1646,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity17c": {
-            "_id": "dnd5eactivity17c",
+          "dnd5eactivity0b6": {
+            "_id": "dnd5eactivity0b6",
             "type": "utility",
             "activation": {
               "type": "legendary",
@@ -1635,7 +1681,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752085981,
-    "modifiedTime": 1775752085981
+    "createdTime": 1781505947859,
+    "modifiedTime": 1781505947859
   }
 }

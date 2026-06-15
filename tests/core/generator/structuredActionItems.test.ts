@@ -92,6 +92,92 @@ describe('appendStructuredActionItems', () => {
   });
 
   describe('attack action generation', () => {
+    it('uses native ability-based weapon rolls for exact attack and damage modifier matches', () => {
+      const generator = new ActorGenerator();
+      const structuredActions: StructuredActionData[] = [
+        {
+          name: '爪击',
+          englishName: 'Claw',
+          type: 'attack',
+          attackType: 'mwak',
+          toHit: 6,
+          range: '触及5尺',
+          damage: [{ formula: '1d8+3', type: 'slashing', types: ['slashing', 'piercing'] }],
+        },
+      ];
+
+      const parsed = createMinimalParsedNPC({
+        动作: structuredActions,
+      });
+      parsed.abilities = { str: 16, dex: 14, con: 16, int: 3, wis: 11, cha: 3 };
+      parsed.attributes.prof = 3;
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((i: any) => i.name.includes('爪击'));
+      expect(item).toBeDefined();
+      expect(item.type).toBe('weapon');
+      expect(item.system.damage.base).toEqual(
+        expect.objectContaining({
+          number: 1,
+          denomination: 8,
+          bonus: '',
+          types: ['slashing', 'piercing'],
+        }),
+      );
+
+      const attackActivity = getActivities(item).find((a: any) => a.type === 'attack');
+      expect(attackActivity.attack).toEqual(
+        expect.objectContaining({
+          ability: 'str',
+          bonus: '',
+          flat: false,
+        }),
+      );
+      expect(attackActivity.damage.includeBase).toBe(true);
+      expect(attackActivity.damage.parts ?? []).toHaveLength(0);
+    });
+
+    it('keeps flat attack and literal damage when no exact ability match exists', () => {
+      const generator = new ActorGenerator();
+      const structuredActions: StructuredActionData[] = [
+        {
+          name: '强化爪击',
+          englishName: 'Empowered Claw',
+          type: 'attack',
+          attackType: 'mwak',
+          toHit: 8,
+          range: '触及5尺',
+          damage: [{ formula: '1d8+3', type: 'slashing' }],
+        },
+      ];
+
+      const parsed = createMinimalParsedNPC({
+        动作: structuredActions,
+      });
+      parsed.abilities = { str: 16, dex: 14, con: 16, int: 3, wis: 11, cha: 3 };
+      parsed.attributes.prof = 3;
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((i: any) => i.name.includes('强化爪击'));
+      expect(item).toBeDefined();
+      const attackActivity = getActivities(item).find((a: any) => a.type === 'attack');
+
+      expect(attackActivity.attack).toEqual(
+        expect.objectContaining({
+          bonus: '8',
+          flat: true,
+        }),
+      );
+      expect(attackActivity.damage.parts[0]).toEqual(
+        expect.objectContaining({
+          number: 1,
+          denomination: 8,
+          bonus: '3',
+          types: ['slashing'],
+        }),
+      );
+    });
+
     it('generates attack action item without target', () => {
       const generator = new ActorGenerator();
       const structuredActions: StructuredActionData[] = [
@@ -114,7 +200,7 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((i: any) => i.name.includes('啮咬'));
 
       expect(item).toBeDefined();
-      expect(item.type).toBe('feat');
+      expect(item.type).toBe('weapon');
       expect(item.system.activation?.type).toBe('action');
 
       const activities = getActivities(item);
@@ -202,6 +288,40 @@ describe('appendStructuredActionItems', () => {
 
       expect(item).toBeDefined();
       expect(item.system.uses?.per).toBe('recharge');
+    });
+
+    it('passes explicit DC source ability through to native save calculation', () => {
+      const generator = new ActorGenerator();
+      const structuredActions: StructuredActionData[] = [
+        {
+          name: 'Radiant Burst',
+          type: 'save',
+          DC: 15,
+          ability: 'dex',
+          dcSourceAbility: 'wis',
+          dcSourceKind: 'spellcasting',
+          describe: 'Spellcasting ability is Wisdom. Each target makes a DC 15 Dexterity saving throw.',
+        },
+      ];
+
+      const parsed = createMinimalParsedNPC({
+        动作: structuredActions,
+      });
+      parsed.abilities = { str: 18, dex: 14, con: 12, int: 12, wis: 18, cha: 10 };
+      parsed.attributes.prof = 3;
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((i: any) => i.name.includes('Radiant Burst'));
+      expect(item).toBeDefined();
+      const saveActivity = getActivities(item).find((a: any) => a.type === 'save');
+
+      expect(saveActivity.save.dc).toEqual(
+        expect.objectContaining({
+          calculation: 'wis',
+          formula: '',
+          value: 15,
+        }),
+      );
     });
   });
 

@@ -13,10 +13,30 @@ export function extractDamagePartsFromText(text: string): Damage[] {
   const typeMatches = [...text.matchAll(/点([一-龥]{2,4})伤害/g)];
   const fallbackType = mapDamageType(typeMatches[0]?.[1] ?? '');
 
-  return formulaMatches.map((match, index) => ({
-    formula: match[1]!.replace(/\s+/g, ''),
-    type: mapDamageType(typeMatches[index]?.[1] || '') || fallbackType || 'bludgeoning',
-  }));
+  return formulaMatches.map((match, index) => {
+    const nextMatch = formulaMatches[index + 1];
+    const start = match.index ?? 0;
+    const end = nextMatch?.index ?? text.length;
+    const segment = trimToCurrentSentence(text.slice(start, end));
+    const types = extractDamageTypesFromText(segment);
+    const primaryType = types[0] || mapDamageType(typeMatches[index]?.[1] || '') || fallbackType || 'bludgeoning';
+
+    return {
+      formula: match[1]!.replace(/\s+/g, ''),
+      type: primaryType,
+      ...(types.length > 1 ? { types } : {}),
+    };
+  });
+}
+
+function trimToCurrentSentence(text: string): string {
+  const boundaryIndexes = ['。', '.', '\n']
+    .map((boundary) => text.indexOf(boundary))
+    .filter((index) => index >= 0);
+  if (boundaryIndexes.length === 0) {
+    return text;
+  }
+  return text.slice(0, Math.min(...boundaryIndexes));
 }
 
 /**
@@ -35,6 +55,26 @@ export function mapDamageType(raw: string): string {
   const cleaned = raw.trim();
   if (!cleaned) {
     return '';
+  }
+
+  const englishMap: Record<string, string> = {
+    acid: 'acid',
+    bludgeoning: 'bludgeoning',
+    cold: 'cold',
+    fire: 'fire',
+    force: 'force',
+    lightning: 'lightning',
+    necrotic: 'necrotic',
+    piercing: 'piercing',
+    poison: 'poison',
+    psychic: 'psychic',
+    radiant: 'radiant',
+    slashing: 'slashing',
+    thunder: 'thunder',
+  };
+  const english = cleaned.replace(/\s+damage$/i, '').toLowerCase();
+  if (englishMap[english]) {
+    return englishMap[english];
   }
 
   const fixedMap: Record<string, string> = {
@@ -65,6 +105,28 @@ export function mapDamageType(raw: string): string {
   }
 
   return key.replace('DND5E.Damage', '').toLowerCase();
+}
+
+function extractDamageTypesFromText(text: string): string[] {
+  const types: string[] = [];
+  const add = (raw: string | undefined) => {
+    const mapped = raw ? mapDamageType(raw) : '';
+    if (mapped && !types.includes(mapped)) {
+      types.push(mapped);
+    }
+  };
+
+  for (const match of text.matchAll(/点([一-龥]{2,4})伤害/g)) {
+    add(match[1]);
+  }
+  for (const match of text.matchAll(/或([一-龥]{2,4})伤害/g)) {
+    add(match[1]);
+  }
+  for (const match of text.matchAll(/\b([A-Za-z]+)\s+Damage\b/gi)) {
+    add(match[1]);
+  }
+
+  return types;
 }
 
 /**

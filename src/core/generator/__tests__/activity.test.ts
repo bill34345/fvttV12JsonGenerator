@@ -51,6 +51,65 @@ describe('ActivityGenerator', () => {
     expect(activity.damage.parts[0].types).toContain('fire');
   });
 
+  it('generates native save DC calculation when the source ability is explicit and exact', () => {
+    const action: ActionData = {
+      name: 'Radiant Burst',
+      type: 'save',
+      save: {
+        dc: 15,
+        ability: 'dex',
+        dcSourceAbility: 'wis',
+        dcSourceKind: 'spellcasting',
+      },
+      damage: [{ formula: '4d6', type: 'radiant' }],
+    };
+
+    const activities = generator.generate(action, {
+      abilities: { str: 10, dex: 14, con: 12, int: 12, wis: 18, cha: 10 },
+      proficiencyBonus: 3,
+    });
+    const id = Object.keys(activities)[0]!;
+    const activity = activities[id];
+
+    expect(activity.type).toBe('save');
+    expect(activity.save.ability).toEqual(['dex']);
+    expect(activity.save.dc).toEqual(
+      expect.objectContaining({
+        calculation: 'wis',
+        formula: '',
+      }),
+    );
+    expect(activity.save.dc.value).toBe(15);
+  });
+
+  it('uses the first exact ability match for save DCs without an explicit source', () => {
+    const action: ActionData = {
+      name: '奴役',
+      englishName: 'Enslave',
+      type: 'save',
+      desc: '仅限被魅惑的目标。目标必须进行一次 DC 17 的感知 (Wisdom) 豁免检定。',
+      save: {
+        dc: 17,
+        ability: 'wis',
+      },
+    };
+
+    const activities = generator.generate(action, {
+      abilities: { str: 21, dex: 9, con: 20, int: 18, wis: 15, cha: 18 },
+      proficiencyBonus: 5,
+    });
+    const id = Object.keys(activities)[0]!;
+    const activity = activities[id];
+
+    expect(activity.save.dc).toEqual(
+      expect.objectContaining({
+        calculation: 'int',
+        formula: '',
+        value: 17,
+      }),
+    );
+  });
+
   it('should map new ActionData fields (reach, recharge, target, versatile)', () => {
     const action: ActionData = {
       name: 'Complex Attack',

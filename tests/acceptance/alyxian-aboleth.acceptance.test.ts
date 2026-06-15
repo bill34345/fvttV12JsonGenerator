@@ -196,6 +196,13 @@ describe('Alyxian Aboleth acceptance gate', () => {
     const saveActivity = getActivities(dominate).find((activity) => activity.type === 'save');
 
     expect(saveActivity).toBeDefined();
+    expect(saveActivity.save.dc).toEqual(
+      expect.objectContaining({
+        calculation: 'str',
+        formula: '',
+        value: 18,
+      }),
+    );
     expect(saveActivity.range).toEqual(
       expect.objectContaining({
         value: 60,
@@ -226,6 +233,13 @@ describe('Alyxian Aboleth acceptance gate', () => {
     const saveActivity = getActivities(enslave).find((activity) => activity.type === 'save');
 
     expect(saveActivity).toBeDefined();
+    expect(saveActivity.save.dc).toEqual(
+      expect.objectContaining({
+        calculation: 'int',
+        formula: '',
+        value: 17,
+      }),
+    );
     expect(saveActivity.damage.parts).toHaveLength(1);
     expect(saveActivity.damage.parts[0]).toEqual(
       expect.objectContaining({
@@ -262,15 +276,15 @@ describe('Alyxian Aboleth acceptance gate', () => {
     const attackActivity = activities.find((activity) => activity.type === 'attack');
 
     expect(attackActivity).toBeDefined();
-    expect(attackActivity.damage.parts).toHaveLength(1);
-    expect(attackActivity.damage.parts[0]).toEqual(
+    expect(tentacle.system.damage.base).toEqual(
       expect.objectContaining({
         number: 3,
         denomination: 6,
-        bonus: '5',
+        bonus: '',
         types: ['bludgeoning'],
       }),
     );
+    expect(attackActivity.damage.parts).toHaveLength(0);
     expect(tentacle.flags?.fvttJsonGenerator?.rules).toEqual(
       expect.objectContaining({
         onHitRiders: expect.arrayContaining([

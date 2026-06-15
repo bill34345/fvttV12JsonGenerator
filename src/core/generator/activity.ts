@@ -1,41 +1,65 @@
 import type { ActionData, Damage } from '../parser/action';
 import { spellsMapper } from '../mapper/spells';
+import { inferAttackAbility, type AttackAbility } from './attack-ability';
+import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
+import { mapDamageType } from './actor-text';
+
+export interface ActivityGenerationContext {
+  abilities?: Partial<Record<AttackAbility, number>>;
+  proficiencyBonus?: number;
+  spellcastingAbility?: AttackAbility;
+  dcSourceKind?: DcSourceKind;
+  preferNativeWeaponRolls?: boolean;
+}
 
 export class ActivityGenerator {
-  public generate(action: ActionData): Record<string, any> {
+  public generate(action: ActionData, context: ActivityGenerationContext = {}): Record<string, any> {
     const activities: Record<string, any> = {};
     const id = this.generateId();
 
     if (action.attack) {
+      const nativeRoll = this.inferNativeWeaponRoll(action, context);
+      const primaryDamage = nativeRoll ? action.attack.damage[0] : undefined;
       activities[id] = {
         _id: id,
         type: 'attack',
         attack: {
-          ability: '',
-          bonus: `${action.attack.toHit}`,
-          flat: true,
+          ability: nativeRoll?.ability ?? '',
+          bonus: nativeRoll ? '' : `${action.attack.toHit}`,
+          flat: nativeRoll ? false : true,
           type: {
             value: action.attack.type,
             classification: 'weapon'
           }
         },
         damage: {
-          parts: action.attack.damage.map(d => this.formatDamage(d)),
+          parts: (nativeRoll ? action.attack.damage.slice(1) : action.attack.damage).map(d => this.formatDamage(d)),
           includeBase: true,
           ...(action.attack.versatile ? { versatile: this.formatDamage({ formula: action.attack.versatile.formula, type: action.attack.damage[0]?.type || '' }) } : {})
-        }
+        },
+        ...(nativeRoll && primaryDamage ? {
+          flags: {
+            fvttJsonGenerator: {
+              nativeWeaponRoll: {
+                ability: nativeRoll.ability,
+                baseDamage: this.formatDamage(primaryDamage, { omitBonus: true })
+              }
+            }
+          }
+        } : {})
       };
       activities[id].range = this.buildAttackRange(action.attack);
       activities[id].target = this.buildTargetSchema();
     } else if (action.save) {
+      const nativeSaveDc = this.inferNativeSaveDc(action, context);
       activities[id] = {
         _id: id,
         type: 'save',
         save: {
           ability: [action.save.ability],
           dc: {
-            calculation: '',
-            formula: action.save.dc.toString(),
+            calculation: nativeSaveDc?.calculation ?? '',
+            formula: nativeSaveDc ? '' : action.save.dc.toString(),
             value: action.save.dc
           }
         },
@@ -263,7 +287,7 @@ export class ActivityGenerator {
     };
   }
 
-  private formatDamage(damage: Damage) {
+  public formatDamage(damage: Damage, options: { omitBonus?: boolean } = {}) {
     // dnd5e 4.0+ DamagePart: { number, denomination, bonus, types, custom }
     // OR Tuple: [formula, type] (Legacy but often supported)
     // Let's use Object format if we can parse the formula, or Tuple as fallback?
@@ -274,8 +298,8 @@ export class ActivityGenerator {
       return {
         number: parseInt(match[1]),
         denomination: parseInt(match[2]),
-        bonus: match[3] || '',
-        types: [damage.type],
+        bonus: options.omitBonus ? '' : match[3] || '',
+        types: this.normalizeDamageTypes(damage),
         custom: { enabled: false, formula: '' },
         scaling: { mode: 'whole', number: 1, formula: '' }
       };
@@ -286,10 +310,68 @@ export class ActivityGenerator {
         number: null,
         denomination: null,
         bonus: '',
-        types: [damage.type],
+        types: this.normalizeDamageTypes(damage),
         custom: { enabled: true, formula: damage.formula },
         scaling: { mode: 'whole', number: 1 }
     };
+  }
+
+  private normalizeDamageTypes(damage: Damage): string[] {
+    const rawTypes = damage.types && damage.types.length > 0 ? damage.types : [damage.type];
+    const types = rawTypes
+      .map((type) => mapDamageType(type) || type.trim().toLowerCase())
+      .filter((type): type is string => Boolean(type));
+    return [...new Set(types)];
+  }
+
+  private inferNativeWeaponRoll(
+    action: ActionData,
+    context: ActivityGenerationContext,
+  ): { ability: AttackAbility } | null {
+    if (!context.preferNativeWeaponRolls || !action.attack || action.attack.damage.length === 0) {
+      return null;
+    }
+    if (action.attack.type !== 'mwak' && action.attack.type !== 'rwak') {
+      return null;
+    }
+    if (!context.abilities || typeof context.proficiencyBonus !== 'number') {
+      return null;
+    }
+
+    return inferAttackAbility({
+      abilities: context.abilities,
+      proficiencyBonus: context.proficiencyBonus,
+      attackType: action.attack.type,
+      toHit: action.attack.toHit,
+      damageFormula: action.attack.damage[0]?.formula,
+    });
+  }
+
+  private inferNativeSaveDc(
+    action: ActionData,
+    context: ActivityGenerationContext,
+  ): { calculation: AttackAbility } | null {
+    if (!action.save || !context.abilities || typeof context.proficiencyBonus !== 'number') {
+      return null;
+    }
+
+    const contextualSourceAbility = action.save.dcSourceKind || context.dcSourceKind
+      ? context.spellcastingAbility
+      : undefined;
+
+    const result = deriveSaveDc({
+      abilities: context.abilities,
+      proficiencyBonus: context.proficiencyBonus,
+      dc: action.save.dc,
+      targetSaveAbility: action.save.ability,
+      actionName: action.name,
+      englishName: action.englishName,
+      description: action.desc,
+      dcSourceAbility: action.save.dcSourceAbility ?? contextualSourceAbility,
+      dcSourceKind: action.save.dcSourceKind ?? context.dcSourceKind,
+    });
+
+    return result.kind === 'native' ? { calculation: result.calculation } : null;
   }
 
   private generateId(): string {

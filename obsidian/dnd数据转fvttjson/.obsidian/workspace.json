@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "input/items/物品模版以及两个示例物品.md",
+                "file": "input/corrupted-giant-shark__腐化巨鲨.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "物品模版以及两个示例物品"
+              "title": "corrupted-giant-shark__腐化巨鲨"
             }
           }
         ]
@@ -170,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "input/items/物品模版以及两个示例物品.md",
+                "file": "input/corrupted-giant-shark__腐化巨鲨.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "物品模版以及两个示例物品 的大纲"
+              "title": "corrupted-giant-shark__腐化巨鲨 的大纲"
             }
           }
         ],
@@ -184,7 +184,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 512.5
+    "width": 200
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -194,26 +194,33 @@
       "daily-notes:打开/创建今天的日记": false,
       "templates:插入模板": false,
       "command-palette:打开命令面板": false,
-      "bases:新建数据库": false
+      "bases:新建数据库": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-excalidraw-plugin:新建绘图文件": false,
+      "templater-obsidian:Templater": false
     }
   },
-  "active": "e7067afaf8d07a8f",
+  "active": "8673d40fa499e62f",
   "lastOpenFiles": [
+    "output/items/三祷之坠 (Exalted).json",
+    "output/items/三祷之坠 (Awakened).json",
+    "output/items/三祷之坠.json",
+    "output/items/三祷之坠.json/三祷之坠.json",
+    "output/items/三祷之坠.json/三祷之坠 (Exalted).json",
+    "output/items/三祷之坠.json/三祷之坠 (Awakened).json",
+    "output/items",
+    "input/alyxian-aboleth__底栖魔鱼“阿利克辛”.md",
+    "input/aboleth-spawn__底栖魔鱼衍体.md",
+    "input/scuttling-serpentmaw__蛇口蛮蟹.md",
+    "input/items/物品模版以及两个示例物品.md",
     "input/items/骑士之盾.md",
     "input/items/三祷之坠.md",
-    "output/items",
     "input/开发用数据.md",
-    "input/items/物品模版以及两个示例物品.md",
     "input/items",
     "input/开发用数据2.md",
     "output/white-tusk-warspeaker.json",
     "output/white-tusk-shaman.json",
     "output/white-tusk-orc.json",
-    "output/white-tusk-juggernaut.json",
-    "output/white-tusk-bloodrager.json",
-    "output/slithering-bloodfin.json",
-    "output/ruined-chuul-screecher.json",
-    "output/ruined-chuul-nullifier.json",
     "middle/ruidium-corrupted-primeval-owlbear__月蚀矿原初枭雄.md",
     "middle/ruidium-vampire-squid__月蚀吸血乌贼.md",
     "input/slithering-bloodfin__滑行血鳍.md",
@@ -229,11 +236,7 @@
     "middle/corrupted-giant-shark__腐化巨鲨.md",
     "middle/alyxian-aboleth__底栖魔鱼“阿利克辛”.md",
     "middle/aboleth-spawn__底栖魔鱼衍体.md",
-    "input/scuttling-serpentmaw__蛇口蛮蟹.md",
     "middle-test/ruidium-corrupted-chuul-screecher__月蚀矿腐化尖啸者.md",
-    "middle-test/ruidium-corrupted-chuul-nullifier__月蚀腐化虚寂者.md",
-    "middle-test/ruidium-corrupted-chuul-incubator__月蚀矿腐化孵育者.md",
-    "input/aboleth-spawn__底栖魔鱼衍体.md",
-    "input/chuul_r/bettermonster.md"
+    "middle-test/ruidium-corrupted-chuul-nullifier__月蚀腐化虚寂者.md"
   ]
 }

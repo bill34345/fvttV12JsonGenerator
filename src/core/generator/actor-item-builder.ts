@@ -165,7 +165,7 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     base.attack = { type: action.attackType };
     if (action.toHit !== undefined) base.attack.damage = [];
     if (action.damage && action.damage.length > 0) {
-      base.attack.damage = action.damage.map(d => ({ formula: d.formula, type: d.type }));
+      base.attack.damage = action.damage.map(d => ({ formula: d.formula, type: d.type, types: d.types }));
     }
     if (action.toHit !== undefined) {
       base.attack.toHit = action.toHit;
@@ -175,6 +175,8 @@ export function structuredActionToActivityData(action: StructuredActionData): an
 
   if ((action.type === 'save' || action.DC) && action.DC) {
     base.save = { dc: action.DC, ability: action.ability || 'str' };
+    if (action.dcSourceAbility) base.save.dcSourceAbility = action.dcSourceAbility;
+    if (action.dcSourceKind) base.save.dcSourceKind = action.dcSourceKind;
     if (action.aoe) {
       base.save.dc = action.DC;
       base.aoe = { type: action.aoe.shape, template: { distance: action.aoe.range, type: action.aoe.shape } };

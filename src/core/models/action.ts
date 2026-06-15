@@ -1,6 +1,7 @@
 export interface Damage {
   formula: string;
   type: string;
+  types?: string[];
 }
 
 export interface ActionData {
@@ -23,6 +24,8 @@ export interface ActionData {
   save?: {
     dc: number;
     ability: string;
+    dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+    dcSourceKind?: 'ability' | 'spellcasting' | 'literal';
     onSave?: string;
     onFail?: string;
   };
@@ -68,6 +71,7 @@ export type SaveAbility = '力量' | '敏捷' | '体质' | '智力' | '感知' |
 export interface DamagePart {
   formula: string;
   type: string;
+  types?: string[];
 }
 
 export interface AoeTemplate {
@@ -97,6 +101,8 @@ export interface SubAction {
   threshold?: number;
   DC?: number;
   ability?: SaveAbility;
+  dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+  dcSourceKind?: 'ability' | 'spellcasting' | 'literal';
   aoe?: AoeTemplate;
   target?: ActionTarget;
   damage?: DamagePart[];

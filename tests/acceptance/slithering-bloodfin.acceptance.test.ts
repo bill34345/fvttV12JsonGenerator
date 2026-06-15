@@ -258,15 +258,15 @@ describe('Slithering Bloodfin acceptance gate', () => {
         }),
       }),
     );
-    expect(attackActivity.damage.parts).toHaveLength(1);
-    expect(attackActivity.damage.parts[0]).toEqual(
+    expect(tailCrash.system.damage.base).toEqual(
       expect.objectContaining({
         number: 4,
         denomination: 6,
-        bonus: '5',
+        bonus: '',
         types: ['bludgeoning'],
       }),
     );
+    expect(attackActivity.damage.parts).toHaveLength(0);
   });
 
   it('keeps Heavy Hit branch effects as hints instead of auto-applying them on Tail Crash activities', () => {

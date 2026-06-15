@@ -74,9 +74,8 @@ describe('Phase 1: Damage Type Mapping', () => {
   it('钳击 damage should be bludgeoning, not 钝击', () => {
     const pincer = actor.items.find((i: any) => i.name.includes('钳击'));
     expect(pincer).toBeDefined();
-    const activity = Object.values(pincer.system.activities)[0] as any;
-    expect(activity.damage.parts[0].types).toContain('bludgeoning');
-    expect(activity.damage.parts[0].types).not.toContain('钝击');
+    expect(pincer.system.damage.base.types).toContain('bludgeoning');
+    expect(pincer.system.damage.base.types).not.toContain('钝击');
   });
 });
 
