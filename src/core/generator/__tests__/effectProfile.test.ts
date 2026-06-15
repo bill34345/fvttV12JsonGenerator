@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ActorGenerator } from '../actor';
+import { generateEnhancedConditionEffects } from '../actor-effects';
 import { ParserFactory } from '../../parser/router';
 import { splitCollection, parseCreatureBlock } from '../../ingest/plaintext';
 
@@ -66,5 +67,19 @@ describe('ActorGenerator effect profiles', () => {
     for (const activity of Object.values(hintedItem.system.activities ?? {}) as any[]) {
       expect(activity.effects ?? []).toHaveLength(0);
     }
+  });
+
+  it('creates over-time automation only when bleeding damage formula and type are explicit', () => {
+    const implicit = generateEnhancedConditionEffects('目标开始流血 (Bleeding) `1d6`。', {}, 'Bleeding Bite');
+    const explicit = generateEnhancedConditionEffects(
+      '目标开始流血 (Bleeding) `1d6` piercing damage。',
+      {},
+      'Bleeding Bite',
+    );
+
+    expect(implicit[0]?.flags?.['midi-qol.OverTime']).toBeUndefined();
+    expect(explicit[0]?.flags?.['midi-qol.OverTime']).toBe(
+      'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+    );
   });
 });

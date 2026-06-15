@@ -529,6 +529,44 @@ describe('ItemParser', () => {
     });
   });
 
+  describe('bullet save parsing', () => {
+    it('uses explicit save abilities and failure statuses from bullet text', () => {
+      const content = [
+        '---',
+        'layout: item',
+        '---',
+        '## 豁免物品（Save Item）',
+        '*奇物，稀有*',
+        '- DC 15 敏捷豁免，失败受到 2d6 火焰伤害。',
+        '- DC 16 魅力豁免，失败受到 3d6 心灵伤害并陷入目盲状态。',
+      ].join('\n');
+
+      const result = parser.parse(content);
+      const saves = result.structuredActions?.saves;
+      expect(saves?.length).toBe(2);
+      expect(saves?.[0].save?.ability).toBe('dex');
+      expect(saves?.[0].save?.onFail).toBeUndefined();
+      expect(saves?.[1].save?.ability).toBe('cha');
+      expect(saves?.[1].save?.onFail).toBe('目盲');
+    });
+
+    it('does not invent constitution when bullet save omits ability', () => {
+      const content = [
+        '---',
+        'layout: item',
+        '---',
+        '## 无能力豁免物品（Abilityless Save Item）',
+        '*奇物，稀有*',
+        '- DC 14 豁免失败受到 2d6 火焰伤害。',
+        '- 你获得水中呼吸能力。',
+      ].join('\n');
+
+      const result = parser.parse(content);
+      expect(result.structuredActions?.saves?.[0].save?.ability).toBe('');
+      expect(result.structuredActions?.effects?.[0].passiveEffect?.type).toBe('senses');
+    });
+  });
+
   describe('multi-stage item parsing', () => {
     it('parses three-stage item with Dormant, Awakened, and Exalted states', () => {
       const content = [

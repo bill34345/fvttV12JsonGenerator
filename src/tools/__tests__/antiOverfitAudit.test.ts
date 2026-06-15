@@ -50,6 +50,44 @@ return {
     );
   });
 
+  it('flags fixed AC effects and failed-save outcomes', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/actor.ts',
+      `
+return createCustomEffect({
+  changes: [{
+    key: 'system.attributes.ac.flat',
+    value: '14',
+  }],
+  save: { onFail: '目盲' },
+});
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['fixed-ac-effect', 'fixed-on-fail']),
+    );
+  });
+
+  it('allows source-derived AC and failed-save values', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/actor.ts',
+      `
+return createCustomEffect({
+  changes: [{
+    key: 'system.attributes.ac.flat',
+    value: String(parsed.value),
+  }],
+  save: {
+    ...(failureStatus ? { onFail: failureStatus } : {}),
+  },
+});
+`,
+    );
+
+    expect(findings).toEqual([]);
+  });
+
   it('allows source-derived parsers, schema maps, and documented explicit exceptions', () => {
     const findings = auditAntiOverfitText(
       'src/core/parser/example.ts',

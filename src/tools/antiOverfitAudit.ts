@@ -7,7 +7,10 @@ export type AntiOverfitRule =
   | 'fixed-save-dc'
   | 'fixed-damage-roll'
   | 'fixed-save-ability'
-  | 'fixed-temp-hp';
+  | 'fixed-temp-hp'
+  | 'fixed-ac-effect'
+  | 'fixed-on-fail'
+  | 'fixed-overtime-flag';
 
 export interface AntiOverfitFinding {
   filePath: string;
@@ -54,11 +57,22 @@ const RULES: RuleCheck[] = [
     regex: /\bgrantsTempHp\s*:\s*\d+\b/i,
     message: 'Fixed temporary HP grants must be parsed from source text or explicitly documented.',
   },
+  {
+    rule: 'fixed-on-fail',
+    regex: /\bonFail\s*:\s*['"][^'"]+['"]/i,
+    message: 'Fixed failed-save outcomes must be parsed from source text or explicitly documented.',
+  },
+  {
+    rule: 'fixed-overtime-flag',
+    regex: /['"]midi-qol\.OverTime['"]\s*:\s*['"][^'"]*(?:damageRoll=\d+d\d+|saveDC=\d+|saveAbility=(?:str|dex|con|int|wis|cha))/i,
+    message: 'Fixed module over-time flags must be built from parsed source mechanics.',
+  },
 ];
 
 const NAMED_REGEX = /\/[^/\n]*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+|[\u4e00-\u9fff]{2,})[^/\n]*\/[a-z]*/;
 const MECHANICS_REGEX =
   /(?:\bsave\s*:\s*{[^}\n]*\bdc\s*:\s*\d+|\bsaveDC\s*=\s*\d+|\bdamageRoll\s*=\s*\d+d\d+|\bgrantsTempHp\s*:\s*\d+|\bsaveAbility\s*=\s*(?:str|dex|con|int|wis|cha)\b)/i;
+const FIXED_AC_EFFECT_REGEX = /key\s*:\s*['"]system\.attributes\.ac\.(?:flat|bonus)['"][\s\S]{0,180}value\s*:\s*['"]\d+['"]/i;
 
 export function auditAntiOverfitText(filePath: string, text: string): AntiOverfitFinding[] {
   const lines = text.split(/\r?\n/);
@@ -88,6 +102,18 @@ export function auditAntiOverfitText(filePath: string, text: string): AntiOverfi
           0,
         ));
       }
+    }
+
+    const acWindowText = lines.slice(index, index + 8).join('\n');
+    if (FIXED_AC_EFFECT_REGEX.test(acWindowText)) {
+      findings.push(createFinding(
+        filePath,
+        index,
+        line,
+        'fixed-ac-effect',
+        'Fixed AC effects must be parsed from source text or explicitly documented.',
+        0,
+      ));
     }
   }
 
@@ -153,6 +179,13 @@ function collectDefaultSources(): Array<{ filePath: string; text: string }> {
   return [...tracked, ...untracked];
 }
 
+function collectAllProductionSources(): Array<{ filePath: string; text: string }> {
+  return runGitLines(['ls-files', '--', 'src', 'scripts'])
+    .filter(isProductionAuditableFile)
+    .filter((filePath) => existsSync(filePath))
+    .map((filePath) => ({ filePath, text: readFileSync(filePath, 'utf-8') }));
+}
+
 function collectAddedLineSources(): Array<{ filePath: string; text: string }> {
   const diff = runGitText(['diff', '--unified=0', '--diff-filter=ACMRT', 'HEAD', '--', 'src', 'scripts']);
   const sources = new Map<string, string[]>();
@@ -202,8 +235,14 @@ function runGitText(args: string[]): string {
 }
 
 function runCli(): void {
-  const explicitFiles = process.argv.slice(2).filter((arg) => !arg.startsWith('-'));
-  const sources = explicitFiles.length > 0 ? [] : collectDefaultSources();
+  const args = process.argv.slice(2);
+  const checkAll = args.includes('--all');
+  const explicitFiles = args.filter((arg) => !arg.startsWith('-'));
+  const sources = explicitFiles.length > 0
+    ? []
+    : checkAll
+      ? collectAllProductionSources()
+      : collectDefaultSources();
   const findings = explicitFiles.length > 0
     ? auditAntiOverfitFiles(explicitFiles)
     : auditAntiOverfitSources(sources);

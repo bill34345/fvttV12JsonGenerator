@@ -10,7 +10,8 @@ import {
   createTranslationConfigFromEnv,
 } from '../translation';
 import type { TranslationContext } from '../translation';
-import { ActivityGenerator } from './activity';
+import { ActivityGenerator, type ActivityGenerationContext } from './activity';
+import type { AttackAbility } from './attack-ability';
 import type { ParsedNPC } from '../../config/mapping';
 import type { StructuredActionData } from '../models/action';
 import { spellsMapper } from '../mapper/spells';
@@ -58,6 +59,7 @@ import {
   createCustomEffect as createCustomEffectExt,
   createRandomId as createRandomIdExt,
   extractSwallowDamage as extractSwallowDamageExt,
+  buildOverTimeFlag,
   statusIconPath,
 } from './actor-effects';
 import {
@@ -74,9 +76,7 @@ import {
   resolveActivationType as resolveActivationTypeExt,
 } from './actor-item-builder';
 import {
-  isScuttlingSerpentmawVenomAction as isScuttlingSerpentmawVenomActionExt,
-  isTriggeredAcUtility as isTriggeredAcUtilityExt,
-  isSwallowLikeAction as isSwallowLikeActionExt,
+  hasSwallowLikeText as hasSwallowLikeTextExt,
   isDeathTriggeredSaveTrait as isDeathTriggeredSaveTraitExt,
   isStatusRemovalUtility as isStatusRemovalUtilityExt,
 } from './actor-special';
@@ -481,14 +481,16 @@ export class ActorGenerator {
     actor.system.details.biography.value = this.formatStructuredHtml(extracted.biography);
     this.appendActionItems(newItems, extracted.features, 'passive');
 
+    const activityContext = this.createActivityGenerationContext(parsed);
+
     if (parsed.structuredActions) {
-      this.appendStructuredActionItems(newItems, parsed.structuredActions);
+      this.appendStructuredActionItems(newItems, parsed.structuredActions, activityContext);
     } else {
-      this.appendActionItems(newItems, parsed.actions, 'action');
-      this.appendActionItems(newItems, parsed.bonus_actions, 'bonus');
-      this.appendActionItems(newItems, parsed.reactions, 'reaction');
-      this.appendActionItems(newItems, parsed.legendary_actions, 'legendary');
-      this.appendActionItems(newItems, parsed.lair_actions, 'lair');
+      this.appendActionItems(newItems, parsed.actions, 'action', activityContext);
+      this.appendActionItems(newItems, parsed.bonus_actions, 'bonus', activityContext);
+      this.appendActionItems(newItems, parsed.reactions, 'reaction', activityContext);
+      this.appendActionItems(newItems, parsed.legendary_actions, 'legendary', activityContext);
+      this.appendActionItems(newItems, parsed.lair_actions, 'lair', activityContext);
     }
 
     // Regional Effects
@@ -808,6 +810,7 @@ export class ActorGenerator {
     items: any[],
     source: unknown,
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' | 'passive',
+    activityContext: ActivityGenerationContext = {},
   ): void {
     for (const line of this.collectActionLines(source)) {
       if (activationType === 'legendary' && this.isLegendaryActionIntro(line)) {
@@ -819,14 +822,18 @@ export class ActorGenerator {
       }
 
       const isPassive = activationType === 'passive';
-      const activities = this.activityGenerator.generate(actionData);
+      const activities = this.activityGenerator.generate(actionData, activityContext);
       
       const item = this.createItemFromAction(actionData, activities, isPassive ? '' : activationType);
       items.push(item);
     }
   }
 
-  private appendStructuredActionItems(items: any[], structured: ParsedNPC['structuredActions']): void {
+  private appendStructuredActionItems(
+    items: any[],
+    structured: ParsedNPC['structuredActions'],
+    activityContext: ActivityGenerationContext,
+  ): void {
     if (!structured) return;
 
     const sectionMap: Array<{ key: keyof NonNullable<ParsedNPC['structuredActions']>; activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive' }> = [
@@ -842,16 +849,21 @@ export class ActorGenerator {
       if (!actions || !Array.isArray(actions)) continue;
 
       for (const action of actions) {
-        this.appendSingleStructuredAction(items, action, activationType);
+        this.appendSingleStructuredAction(items, action, activationType, activityContext);
       }
     }
   }
 
-  private appendSingleStructuredAction(items: any[], action: StructuredActionData, activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive'): void {
+  private appendSingleStructuredAction(
+    items: any[],
+    action: StructuredActionData,
+    activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive',
+    activityContext: ActivityGenerationContext,
+  ): void {
     const activityData = this.structuredActionToActivityData(action);
-    const activities = this.activityGenerator.generate(activityData);
+    const activities = this.activityGenerator.generate(activityData, activityContext);
     const item = this.createItemFromAction(
-      { name: action.name, type: action.type, desc: action.describe } as any,
+      { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe } as any,
       activities,
       activationType === 'passive' ? '' : activationType,
     );
@@ -982,6 +994,7 @@ export class ActorGenerator {
       itemName = itemName.replace(/\s*\[\d+\/(?:日|Day)\]/, '').trim();
     }
     const itemUses = !uses && action.usesPerLongRest !== undefined ? this.createDailyUses(action.usesPerLongRest) : uses;
+    const nativeBaseDamage = this.extractNativeBaseDamage(activities);
 
     const item = {
       name: itemName,
@@ -1001,6 +1014,7 @@ export class ActorGenerator {
           type: { value: 'natural', classification: 'weapon' },
           equipped: true,
           range: this.buildItemRange(action),
+          ...(nativeBaseDamage ? { damage: { base: nativeBaseDamage } } : {}),
         } : {
           type: { value: 'monster', subtype: activationType === 'lair' ? 'lair' : activationType === 'legendary' ? 'legendary' : '' }
         })
@@ -1009,6 +1023,7 @@ export class ActorGenerator {
       flags: this.buildItemSectionFlags(activationType === 'legendary' ? 'legendary' : resolvedActivationType, isPassive),
     };
 
+    this.removeNativeBaseDamageFlags(item.system.activities);
     this.appendSupplementalActivities(item.system.activities, action);
     item.effects = resolvedActivationType
       ? this.generateEnhancedConditionEffects(semanticDesc, item.system.activities, itemName)
@@ -1032,6 +1047,91 @@ export class ActorGenerator {
     legendaryCost?: number,
   ): number | null {
     return resolveItemActivationCostExt(activationType, legendaryCost);
+  }
+
+  private createActivityGenerationContext(parsed: ParsedNPC): ActivityGenerationContext {
+    const proficiencyBonus = this.getParsedProficiencyBonus(parsed);
+    const spellcastingAbility = this.extractSpellcastingAbility(parsed.spellcasting);
+    return {
+      abilities: parsed.abilities,
+      ...(proficiencyBonus !== undefined ? { proficiencyBonus } : {}),
+      ...(spellcastingAbility ? { spellcastingAbility } : {}),
+      preferNativeWeaponRolls: true,
+    };
+  }
+
+  private extractSpellcastingAbility(spellcasting: ParsedNPC['spellcasting']): AttackAbility | undefined {
+    const lines = this.extractSpellcastingLines(spellcasting);
+    const text = lines.join(' ');
+    const englishMatch = text.match(/spellcasting ability is\s+(strength|dexterity|constitution|intelligence|wisdom|charisma)\b/i);
+    if (englishMatch?.[1]) {
+      return this.mapAbilityWord(englishMatch[1]);
+    }
+    const chineseMatch = text.match(/施法属性(?:为|是|：|:)?\s*(力量|敏捷|体质|智力|感知|魅力)/);
+    if (chineseMatch?.[1]) {
+      return this.mapAbilityWord(chineseMatch[1]);
+    }
+    return undefined;
+  }
+
+  private mapAbilityWord(word: string): AttackAbility | undefined {
+    const normalized = word.trim().toLowerCase();
+    const map: Record<string, AttackAbility> = {
+      strength: 'str',
+      dexterity: 'dex',
+      constitution: 'con',
+      intelligence: 'int',
+      wisdom: 'wis',
+      charisma: 'cha',
+      力量: 'str',
+      敏捷: 'dex',
+      体质: 'con',
+      智力: 'int',
+      感知: 'wis',
+      魅力: 'cha',
+    };
+    return map[normalized] ?? map[word.trim()];
+  }
+
+  private getParsedProficiencyBonus(parsed: ParsedNPC): number | undefined {
+    if (typeof parsed.attributes?.prof === 'number' && Number.isFinite(parsed.attributes.prof)) {
+      return parsed.attributes.prof;
+    }
+    const cr = parsed.details?.cr;
+    if (typeof cr !== 'number' || !Number.isFinite(cr)) {
+      return undefined;
+    }
+    if (cr >= 17) return 6;
+    if (cr >= 13) return 5;
+    if (cr >= 9) return 4;
+    if (cr >= 5) return 3;
+    return 2;
+  }
+
+  private extractNativeBaseDamage(activities: Record<string, any>): any | null {
+    for (const activity of Object.values(activities ?? {}) as any[]) {
+      const baseDamage = activity?.flags?.fvttJsonGenerator?.nativeWeaponRoll?.baseDamage;
+      if (baseDamage) {
+        return baseDamage;
+      }
+    }
+    return null;
+  }
+
+  private removeNativeBaseDamageFlags(activities: Record<string, any>): void {
+    for (const activity of Object.values(activities ?? {}) as any[]) {
+      const generatorFlags = activity?.flags?.fvttJsonGenerator;
+      if (!generatorFlags?.nativeWeaponRoll) {
+        continue;
+      }
+      delete generatorFlags.nativeWeaponRoll;
+      if (Object.keys(generatorFlags).length === 0) {
+        delete activity.flags.fvttJsonGenerator;
+      }
+      if (activity.flags && Object.keys(activity.flags).length === 0) {
+        delete activity.flags;
+      }
+    }
   }
 
   private buildItemRange(action: GeneratedActionData): Record<string, number | string | null> {
@@ -1146,7 +1246,7 @@ export class ActorGenerator {
       return;
     }
 
-    if (this.isSwallowLikeAction(action)) {
+    if (this.hasSwallowLikeText(action)) {
       const damage = this.extractSwallowDamage(action);
       const save = this.extractSavingThrowFromText(action.desc ?? '');
 
@@ -1307,7 +1407,8 @@ export class ActorGenerator {
     for (const rider of riders) {
       const saveDc = typeof rider.saveDc === 'number' ? rider.saveDc : null;
       const damage = this.normalizeNestedRiderDamage(rider.damage);
-      if (!saveDc && !damage) {
+      const ability = this.inferTemporaryOverrideSaveAbility(rider, action);
+      if (!saveDc || !ability) {
         continue;
       }
 
@@ -1317,8 +1418,8 @@ export class ActorGenerator {
         type: 'save',
         desc: String(rider.sourceText ?? action.desc ?? ''),
         save: {
-          dc: saveDc ?? 0,
-          ability: this.inferTemporaryOverrideSaveAbility(rider, action),
+          dc: saveDc,
+          ability,
         },
         ...(damage ? { damage: [damage] } : {}),
       });
@@ -1395,7 +1496,7 @@ export class ActorGenerator {
   private inferTemporaryOverrideSaveAbility(
     rider: Record<string, unknown>,
     action: GeneratedActionData,
-  ): NonNullable<ActionData['save']>['ability'] {
+  ): NonNullable<ActionData['save']>['ability'] | null {
     const explicitSave = this.extractSavingThrowFromText(action.desc ?? '');
     if (explicitSave?.ability) {
       return explicitSave.ability;
@@ -1404,14 +1505,12 @@ export class ActorGenerator {
     const label = [rider.targetAbility, rider.sourceText, action.desc].filter(Boolean).join(' ');
     if (/(?:strength|\bstr\b|\u529b\u91cf)/i.test(label)) return 'str';
     if (/(?:dexterity|\bdex\b|\u654f\u6377)/i.test(label)) return 'dex';
-    if (/(?:constitution|\bcon\b|\u4f53\u8d28|poison|disease|\u6bd2|\u75be\u75c5)/i.test(label)) return 'con';
+    if (/(?:constitution|\bcon\b|\u4f53\u8d28)/i.test(label)) return 'con';
     if (/(?:intelligence|\bint\b|\u667a\u529b)/i.test(label)) return 'int';
     if (/(?:charisma|\bcha\b|\u9b45\u529b)/i.test(label)) return 'cha';
-    if (/(?:wisdom|\bwis\b|fright|fear|laughter|\u611f\u77e5|\u6050\u60e7|\u6050\u614c|\u72c2\u7b11|\u7b11)/i.test(label)) {
-      return 'wis';
-    }
+    if (/(?:wisdom|\bwis\b|\u611f\u77e5)/i.test(label)) return 'wis';
 
-    return 'wis';
+    return null;
   }
 
   private applyHeavyHitAutomation(item: any, action: GeneratedActionData): void {
@@ -2065,13 +2164,8 @@ export class ActorGenerator {
       return;
     }
 
-    if (this.isScuttlingSerpentmawVenomAction(action)) {
-      this.appendSerpentmawVenomActivities(item, action);
-    }
-
-    if (this.isTriggeredAcUtility(action)) {
-      this.applyTriggeredAcEffect(item, action);
-    }
+    this.appendCompoundRiderActivities(item, action);
+    this.applyParsedAcEffect(item, action);
 
     for (const [, activity] of activityEntries) {
       const parts = activity?.damage?.parts;
@@ -2114,7 +2208,7 @@ export class ActorGenerator {
       return;
     }
 
-    if (this.isSwallowLikeAction(action)) {
+    if (this.hasSwallowLikeText(action)) {
       item.effects = (item.effects ?? []).filter((effect: any) => {
         const statuses = effect?.statuses ?? [];
         return statuses.includes('blinded') || statuses.includes('restrained');
@@ -2182,182 +2276,290 @@ export class ActorGenerator {
     }
   }
 
-  private isScuttlingSerpentmawVenomAction(action: GeneratedActionData): boolean {
-    return isScuttlingSerpentmawVenomActionExt(action);
-  }
-
-  private isTriggeredAcUtility(action: GeneratedActionData): boolean {
-    return isTriggeredAcUtilityExt(action);
-  }
-
-  private appendSerpentmawVenomActivities(item: any, action: GeneratedActionData): void {
+  private appendCompoundRiderActivities(item: any, action: GeneratedActionData): void {
     const activities = item?.system?.activities;
     if (!activities || typeof activities !== 'object') {
       return;
     }
 
-    const existingVenom = Object.values(activities).filter((activity: any) =>
-      activity?.flags?.fvttJsonGenerator?.serpentmawVenom,
-    );
-    if (existingVenom.length > 0) {
+    const segments = this.extractCompoundRiderSegments(String(action.desc ?? ''));
+    if (segments.length === 0) {
       return;
     }
 
-    const desc = String(action.desc ?? '');
-    const brineText = this.extractDelimitedSegment(desc, /盐水电击 \(Brine-shock\)|Brine-shock/i, [
-      /针刺噬咬 \(Needling Bite\)|Needling Bite/i,
-    ]);
-    const needlingText = this.extractDelimitedSegment(desc, /针刺噬咬 \(Needling Bite\)|Needling Bite/i, [
-      /吸血噬咬 \(Vampiric Bite\)|Vampiric Bite/i,
-    ]);
-    const vampiricText = this.extractDelimitedSegment(desc, /吸血噬咬 \(Vampiric Bite\)|Vampiric Bite/i, []);
+    const existingRiders = Object.values(activities).filter((activity: any) =>
+      activity?.flags?.fvttJsonGenerator?.compoundRider,
+    );
+    if (existingRiders.length > 0) {
+      return;
+    }
 
     const baseDamage = action.attack?.damage?.[0];
-    const extraDie = baseDamage?.formula.match(/\d+d(\d+)/i)?.[1];
-    const extraNeedlingDamage = extraDie ? `1d${extraDie}` : '1d6';
-    const extraNeedlingType = baseDamage?.type || 'piercing';
+    for (const segment of segments) {
+      const damage = this.extractSegmentDamage(segment.text, baseDamage);
+      const save = this.extractSavingThrowFromText(segment.text);
+      const effect = this.createSegmentEffect(segment.text);
+      const metadata = this.extractSegmentMetadata(segment.text);
 
-    const venomRiders = [
-      {
-        key: 'brine-shock',
-        generated: this.activityGenerator.generate({
-          name: '盐水电击',
-          englishName: 'Brine-shock',
-          type: 'save',
-          desc: brineText,
-          save: { dc: 14, ability: 'con' },
-          damage: [{ formula: '2d6', type: 'poison' }],
-        }),
-        effect: this.createCustomEffect({
-          name: '中毒 (Poisoned)',
-          statuses: ['poisoned'],
-          img: statusIconPath('poisoned'),
-        }),
-      },
-      {
-        key: 'needling-bite',
-        generated: this.activityGenerator.generate({
-          name: '针刺噬咬',
-          englishName: 'Needling Bite',
-          type: 'utility',
-          desc: needlingText,
-          damage: [{ formula: extraNeedlingDamage, type: extraNeedlingType }],
-        }),
-        effect: this.createCustomEffect({
-          name: '流血 (Bleeding)',
-          statuses: ['bleeding'],
-          img: statusIconPath('bleeding'),
-          flags: {
-            'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
-          },
-        }),
-      },
-      {
-        key: 'vampiric-bite',
-        generated: this.activityGenerator.generate({
-          name: '吸血噬咬',
-          englishName: 'Vampiric Bite',
-          type: 'utility',
-          desc: vampiricText,
-        }),
-      },
-    ] as const;
+      if (!save && damage.length === 0 && !effect && Object.keys(metadata).length === 0) {
+        continue;
+      }
 
-    for (const rider of venomRiders) {
-      for (const activity of Object.values(rider.generated) as any[]) {
-        activity.uses = this.createDailyUses(1);
+      const generated = this.activityGenerator.generate({
+        name: segment.name,
+        englishName: segment.englishName,
+        type: save ? 'save' : 'utility',
+        desc: segment.text,
+        ...(save ? { save } : {}),
+        ...(damage.length > 0 ? { damage } : {}),
+      });
+
+      for (const activity of Object.values(generated) as any[]) {
+        if (this.segmentHasDailyUse(action.desc ?? '')) {
+          activity.uses = this.createDailyUses(1);
+        }
         activity.flags = {
           ...(activity.flags ?? {}),
           fvttJsonGenerator: {
             ...(activity.flags?.fvttJsonGenerator ?? {}),
-            serpentmawVenom: rider.key,
-            bloodiedTargetSaveDisadvantage: true,
+            compoundRider: segment.key,
+            ...(this.segmentHasBloodiedSaveDisadvantage(action.desc ?? '') ? { bloodiedTargetSaveDisadvantage: true } : {}),
+            ...metadata,
           },
         };
-
-        if (rider.key === 'needling-bite') {
-          activity.type = 'damage';
-        }
-
-        if (rider.key === 'vampiric-bite') {
-          activity.flags.fvttJsonGenerator = {
-            ...(activity.flags.fvttJsonGenerator ?? {}),
-            losesHitDie: 1,
-            grantsTempHp: 10,
-            corruptionSaveOnHitDieZero: true,
-          };
-        }
-
         Object.assign(activities, { [activity._id]: activity });
       }
 
-      if (rider.effect) {
+      if (effect) {
         item.effects = item.effects ?? [];
-        item.effects.push(rider.effect);
-        const targetActivity = Object.values(rider.generated)[0] as any;
-        targetActivity.effects = [{ _id: rider.effect._id }];
+        item.effects.push(effect);
+        const targetActivity = Object.values(generated)[0] as any;
+        targetActivity.effects = [{ _id: effect._id }];
       }
     }
   }
 
-  private applyTriggeredAcEffect(item: any, action: GeneratedActionData): void {
+  private extractCompoundRiderSegments(text: string): Array<{ key: string; name: string; englishName: string; text: string }> {
+    const markers = [
+      { key: 'brine-shock', name: '盐水电击', englishName: 'Brine-shock', pattern: /盐水电击\s*\(Brine-shock\)|Brine-shock/i },
+      { key: 'needling-bite', name: '针刺噬咬', englishName: 'Needling Bite', pattern: /针刺噬咬\s*\(Needling Bite\)|Needling Bite/i },
+      { key: 'vampiric-bite', name: '吸血噬咬', englishName: 'Vampiric Bite', pattern: /吸血噬咬\s*\(Vampiric Bite\)|Vampiric Bite/i },
+    ] as const;
+
+    const occurrences = markers
+      .map((marker) => {
+        const index = text.search(marker.pattern);
+        return index >= 0 ? { ...marker, index } : null;
+      })
+      .filter((entry): entry is typeof markers[number] & { index: number } => Boolean(entry))
+      .sort((left, right) => left.index - right.index);
+
+    return occurrences.map((entry, index) => {
+      const next = occurrences[index + 1];
+      return {
+        key: entry.key,
+        name: entry.name,
+        englishName: entry.englishName,
+        text: text.slice(entry.index, next?.index ?? undefined).trim(),
+      };
+    });
+  }
+
+  private extractSegmentDamage(text: string, baseDamage?: Damage): Damage[] {
+    const extracted = this.extractDamagePartsFromText(text);
+    if (extracted.length > 0) {
+      return extracted;
+    }
+
+    const extraDie = text.match(/(?:1\s*颗伤害骰|one\s+damage\s+die)/i);
+    const baseDie = baseDamage?.formula.match(/\d+d(\d+)/i)?.[1];
+    if (extraDie && baseDie && baseDamage?.type) {
+      return [{ formula: `1d${baseDie}`, type: baseDamage.type }];
+    }
+
+    return [];
+  }
+
+  private createSegmentEffect(text: string): any | null {
+    if (/(?:中毒|Poisoned)/i.test(text)) {
+      return this.createCustomEffect({
+        name: '中毒 (Poisoned)',
+        statuses: ['poisoned'],
+        img: statusIconPath('poisoned'),
+      });
+    }
+
+    if (/(?:流血|Bleeding|Bleed)/i.test(text)) {
+      const damage = this.extractBleedingDamageForOverTime(text);
+      return this.createCustomEffect({
+        name: '流血 (Bleeding)',
+        statuses: ['bleeding'],
+        img: statusIconPath('bleeding'),
+        flags: buildOverTimeFlag({
+          formula: damage?.formula,
+          damageType: damage?.type,
+          label: '流血 (Bleeding)',
+        }),
+      });
+    }
+
+    return null;
+  }
+
+  private extractBleedingDamageForOverTime(text: string): Damage | null {
+    const bleedingIndex = text.search(/流血|Bleeding|Bleed/i);
+    if (bleedingIndex === -1) {
+      return null;
+    }
+    const clause = text.slice(Math.max(0, bleedingIndex - 60), bleedingIndex + 180);
+    const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
+    const explicitType =
+      clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
+      ?? mapDamageType(clause.match(/([一-龥]{2,4})伤害/)?.[1] ?? '');
+    return formula && explicitType ? { formula, type: explicitType } : null;
+  }
+
+  private extractSegmentMetadata(text: string): Record<string, unknown> {
+    const metadata: Record<string, unknown> = {};
+    const hitDieLoss = text.match(/失去\s*\**(\d+)\s*颗[^。]*(?:生命骰|Hit Die)|loses?\s*(\d+)\s*(?:unspent\s*)?Hit Die/i);
+    const hitDice = hitDieLoss?.[1] ?? hitDieLoss?.[2];
+    if (hitDice) {
+      metadata.losesHitDie = Number.parseInt(hitDice, 10);
+    }
+
+    const tempHp = text.match(/获得\s*\**(\d+)\s*点临时生命值|gains?\s*(\d+)\s*temporary hit points?/i);
+    const tempHpValue = tempHp?.[1] ?? tempHp?.[2];
+    if (tempHpValue) {
+      metadata.grantsTempHp = Number.parseInt(tempHpValue, 10);
+    }
+
+    if (/生命骰降为\s*0|Hit Die[^。.]*(?:降为|to)\s*0|Hit Dice[^.]*to\s*0/i.test(text)) {
+      metadata.corruptionSaveOnHitDieZero = true;
+    }
+
+    return metadata;
+  }
+
+  private segmentHasDailyUse(text: string): boolean {
+    return /每次长休|long rest/i.test(text);
+  }
+
+  private segmentHasBloodiedSaveDisadvantage(text: string): boolean {
+    return /(?:濒血|重伤|Bloodied)[^。.]*(?:劣势|Disadvantage)/i.test(text);
+  }
+
+  private applyParsedAcEffect(item: any, action: GeneratedActionData): void {
     const activities = Object.values(item?.system?.activities ?? {}) as any[];
     if (activities.length === 0) {
       return;
     }
 
-    const itemName = `${action.name} ${action.englishName ?? ''}`;
-    const isBrittleShell = /Brittle Shell|脆壳反震/i.test(itemName);
-    const isRetract = /Retract|缩壳防御/i.test(itemName);
-    if (!isBrittleShell && !isRetract) {
+    const parsed = this.extractAcEffect(action.desc ?? '');
+    if (!parsed) {
       return;
     }
 
     const existing = (item.effects ?? []).find((effect: any) =>
-      /Brittle Shell|脆壳反震|Retract|缩壳防御/i.test(String(effect?.name ?? '')),
+      effect?.flags?.fvttJsonGenerator?.sourceDerivedAcEffect,
     );
     if (existing) {
       return;
     }
 
-    const effect = isBrittleShell
-      ? this.createCustomEffect({
-          name: '脆壳反震 (Brittle Shell)',
-          img: 'systems/dnd5e/icons/svg/statuses/downgrade.svg',
-          changes: [
-            {
-              key: 'system.attributes.ac.flat',
-              mode: 5,
-              value: '14',
-              priority: null,
-            },
-          ],
-        })
-      : this.createCustomEffect({
-          name: '缩壳防御 (Retract)',
-          img: 'systems/dnd5e/icons/svg/statuses/shield.svg',
-          changes: [
-            {
-              key: 'system.attributes.ac.bonus',
-              mode: 2,
-              value: '9',
-              priority: null,
-            },
-          ],
-          duration: {
-            startTime: null,
-            seconds: null,
-            combat: null,
-            rounds: 1,
-            turns: 0,
-            startRound: null,
-            startTurn: null,
-          },
-        });
+    const effect = this.createCustomEffect({
+      name: action.englishName ? `${action.name} (${action.englishName})` : action.name,
+      img: parsed.kind === 'flat'
+        ? 'systems/dnd5e/icons/svg/statuses/downgrade.svg'
+        : 'systems/dnd5e/icons/svg/statuses/shield.svg',
+      changes: [
+        {
+          key: parsed.kind === 'flat' ? 'system.attributes.ac.flat' : 'system.attributes.ac.bonus',
+          mode: parsed.kind === 'flat' ? 5 : 2,
+          value: String(parsed.value),
+          priority: null,
+        },
+      ],
+      ...(parsed.duration ? { duration: parsed.duration } : {}),
+      flags: {
+        fvttJsonGenerator: {
+          sourceDerivedAcEffect: true,
+          sourceText: parsed.sourceText,
+        },
+      },
+    });
 
     item.effects = [...(item.effects ?? []), effect];
     const firstActivity = activities[0];
     firstActivity.effects = [...(firstActivity.effects ?? []), { _id: effect._id }];
+  }
+
+  private extractAcEffect(text: string): { kind: 'flat' | 'bonus'; value: number; duration?: Record<string, unknown>; sourceText: string } | null {
+    const flatMatch =
+      text.match(/(?:AC|护甲等级)[^。.;]{0,20}(?:降至|变为|is|becomes)\s*(\d+)/i) ??
+      text.match(/(?:降至|变为|is|becomes)\s*(\d+)[^。.;]{0,20}(?:AC|护甲等级)/i);
+    if (flatMatch?.[1]) {
+      return {
+        kind: 'flat',
+        value: Number.parseInt(flatMatch[1], 10),
+        duration: this.extractEffectDuration(text),
+        sourceText: flatMatch[0],
+      };
+    }
+
+    const bonusMatches = [...text.matchAll(/(?:AC|护甲等级)[^。.;+]{0,30}\+(\d+)|\+(\d+)\s*(?:AC|护甲等级)/gi)];
+    const lastBonus = bonusMatches.at(-1);
+    const bonusValue = lastBonus?.[1] ?? lastBonus?.[2];
+    if (bonusValue) {
+      return {
+        kind: 'bonus',
+        value: Number.parseInt(bonusValue, 10),
+        duration: this.extractEffectDuration(text),
+        sourceText: lastBonus?.[0] ?? text,
+      };
+    }
+
+    return null;
+  }
+
+  private extractEffectDuration(text: string): Record<string, unknown> | undefined {
+    if (/直到其?下一回合开始|until (?:the )?(?:start of|beginning of) (?:its|their|your) next turn/i.test(text)) {
+      return {
+        startTime: null,
+        seconds: null,
+        combat: null,
+        rounds: 1,
+        turns: 0,
+        startRound: null,
+        startTurn: null,
+      };
+    }
+
+    if (/直到其?下一回合结束|until (?:the )?end of (?:its|their|your) next turn/i.test(text)) {
+      return {
+        startTime: null,
+        seconds: null,
+        combat: null,
+        rounds: 1,
+        turns: 1,
+        startRound: null,
+        startTurn: null,
+      };
+    }
+
+    const rounds = text.match(/(?:持续\s*)?(\d+)\s*(?:轮|rounds?)/i)?.[1];
+    if (rounds) {
+      return {
+        startTime: null,
+        seconds: null,
+        combat: null,
+        rounds: Number.parseInt(rounds, 10),
+        turns: 0,
+        startRound: null,
+        startTurn: null,
+      };
+    }
+
+    return undefined;
   }
 
   private extractDelimitedSegment(text: string, startPattern: RegExp, endPatterns: RegExp[]): string {
@@ -2379,8 +2581,8 @@ export class ActorGenerator {
     return createRandomIdExt();
   }
 
-  private isSwallowLikeAction(action: GeneratedActionData): boolean {
-    return isSwallowLikeActionExt(action);
+  private hasSwallowLikeText(action: GeneratedActionData): boolean {
+    return hasSwallowLikeTextExt(action);
   }
 
   private isDeathTriggeredSaveTrait(action: GeneratedActionData): boolean {
@@ -2524,7 +2726,7 @@ export class ActorGenerator {
       return this.enrichGeneratedAction(directAttack, trimmed);
     }
 
-    const englishFirst = this.isLikelyEnglishAction(parsingCandidate);
+    const englishFirst = this.prefersEnglishParser(parsingCandidate);
     const primary = englishFirst ? this.englishActionParser.parse(parsingCandidate) : this.actionParser.parse(parsingCandidate);
     if (primary) {
       if (headlineSplit?.body) {
@@ -2749,7 +2951,7 @@ export class ActorGenerator {
     return `${namePart.trim()}: ${bodyPart.trim()}`;
   }
 
-  private isLikelyEnglishAction(line: string): boolean {
+  private prefersEnglishParser(line: string): boolean {
     const hasLatin = /[A-Za-z]/.test(line);
     if (!hasLatin) {
       return false;

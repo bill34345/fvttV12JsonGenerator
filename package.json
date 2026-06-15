@@ -10,7 +10,8 @@
     "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",
     "cli:help": "bun run src/index.ts --help",
     "verify:actor": "bun run src/tools/actorVerification.ts",
-    "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts"
+    "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
+    "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all"
   },
   "devDependencies": {
     "@types/bun": "latest",

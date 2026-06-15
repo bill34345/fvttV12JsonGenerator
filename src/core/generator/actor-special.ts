@@ -9,25 +9,9 @@ type GeneratedActionData = ActionData & {
 };
 
 /**
- * Check if action is a scuttling serpentmaw venom action.
+ * Check if source text describes a swallow-like action.
  */
-export function isScuttlingSerpentmawVenomAction(action: GeneratedActionData): boolean {
-  const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-  return /Venomous Bite|毒液咬击/i.test(text) && /Brine-shock|盐水电击/i.test(text);
-}
-
-/**
- * Check if action is a triggered AC utility.
- */
-export function isTriggeredAcUtility(action: GeneratedActionData): boolean {
-  const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
-  return /Brittle Shell|脆壳反震|Retract|缩壳防御/i.test(text);
-}
-
-/**
- * Check if action is a swallow-like action.
- */
-export function isSwallowLikeAction(action: GeneratedActionData): boolean {
+export function hasSwallowLikeText(action: GeneratedActionData): boolean {
   const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
   return /(?:Swallow|吞咽|吞下|被吞下)/i.test(text);
 }

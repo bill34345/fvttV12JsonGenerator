@@ -720,8 +720,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9fb": {
-            "_id": "dnd5eactivity9fb",
+          "dnd5eactivity29c": {
+            "_id": "dnd5eactivity29c",
             "type": "utility",
             "activation": {
               "type": "",
@@ -765,8 +765,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityee7": {
-            "_id": "dnd5eactivityee7",
+          "dnd5eactivity478": {
+            "_id": "dnd5eactivity478",
             "type": "utility",
             "effects": [],
             "activation": {
@@ -811,8 +811,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb5f": {
-            "_id": "dnd5eactivityb5f",
+          "dnd5eactivitydc3": {
+            "_id": "dnd5eactivitydc3",
             "type": "save",
             "save": {
               "ability": [
@@ -847,7 +847,7 @@
             },
             "effects": [
               {
-                "_id": "4bbb92daa50c10ea"
+                "_id": "eb492549e0f47163"
               }
             ],
             "activation": {
@@ -876,8 +876,8 @@
               }
             }
           },
-          "dnd5eactivity3aa": {
-            "_id": "dnd5eactivity3aa",
+          "dnd5eactivitya87": {
+            "_id": "dnd5eactivitya87",
             "type": "save",
             "save": {
               "ability": [
@@ -927,7 +927,7 @@
       },
       "effects": [
         {
-          "_id": "4bbb92daa50c10ea",
+          "_id": "eb492549e0f47163",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -980,8 +980,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity586": {
-            "_id": "dnd5eactivity586",
+          "dnd5eactivity576": {
+            "_id": "dnd5eactivity576",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1025,38 +1025,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2a5": {
-            "_id": "dnd5eactivity2a5",
+          "dnd5eactivitya35": {
+            "_id": "dnd5eactivitya35",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "9",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "5",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -1088,10 +1070,10 @@
             },
             "effects": [
               {
-                "_id": "5e334a435fb3396f"
+                "_id": "5355e531f71170d4"
               },
               {
-                "_id": "52c1b5df857bb491"
+                "_id": "54362c82d9a741c3"
               }
             ],
             "activation": {
@@ -1112,11 +1094,30 @@
           "long": null,
           "reach": 5,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "piercing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [
         {
-          "_id": "5e334a435fb3396f",
+          "_id": "5355e531f71170d4",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1141,7 +1142,7 @@
           ]
         },
         {
-          "_id": "52c1b5df857bb491",
+          "_id": "54362c82d9a741c3",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1172,7 +1173,20 @@
           "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "onHitRiders": [
+              {
+                "kind": "status",
+                "statuses": [
+                  "grappled",
+                  "restrained"
+                ],
+                "escapeDc": 15,
+                "sourceText": "啃咬 Bite 近战武器攻击：命中 +9，触及 5 尺，单一目标。\n命中：14（`2d8+5`）点穿刺伤害，且目标被擒抱 (Grappled)（逃脱 DC 15），并同时陷入受限 (Restrained) 状态。"
+              }
+            ]
+          }
         }
       }
     },
@@ -1194,38 +1208,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity0cb": {
-            "_id": "dnd5eactivity0cb",
+          "dnd5eactivity4dc": {
+            "_id": "dnd5eactivity4dc",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "9",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 4,
-                  "denomination": 6,
-                  "bonus": "5",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -1268,11 +1264,11 @@
             },
             "macroData": {
               "name": "Heavy Hit",
-              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivity0d3\",\"dnd5eactivitye72\",\"dnd5eactivity5c1\"],\"branches\":[{\"activityId\":\"dnd5eactivity0d3\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivitye72\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivity5c1\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
+              "command": "const heavyHitSpec = {\"mode\":\"random\",\"trigger\":\"attack-margin\",\"acMargin\":5,\"dieFormula\":\"1d3\",\"branchActivityIds\":[\"dnd5eactivitycd9\",\"dnd5eactivityd1d\",\"dnd5eactivityb55\"],\"branches\":[{\"activityId\":\"dnd5eactivitycd9\",\"label\":\"Bleeding Wound\",\"kind\":\"damage\",\"index\":1},{\"activityId\":\"dnd5eactivityd1d\",\"label\":\"Reeling Impact\",\"kind\":\"save\",\"index\":2},{\"activityId\":\"dnd5eactivityb55\",\"label\":\"Push\",\"kind\":\"utility\",\"index\":3}]};\nconst midi = globalThis.MidiQOL ?? MidiQOL;\nif (!midi) return;\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst workflow = scopeData.workflow ?? args?.[0]?.workflow ?? midi.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\nconst firstTarget = workflow?.hitTargets?.first?.() ?? workflow?.targets?.first?.();\nconst targetAC = firstTarget?.actor?.system?.attributes?.ac?.value ?? firstTarget?.actor?.system?.attributes?.ac?.flat;\nif (typeof attackTotal !== \"number\" || typeof targetAC !== \"number\") return;\nif ((attackTotal - targetAC) < heavyHitSpec.acMargin) return;\nconst roll = await (new Roll(heavyHitSpec.dieFormula)).evaluate({ async: true });\nconst branch = heavyHitSpec.branches[Math.max(0, Math.min(heavyHitSpec.branches.length - 1, roll.total - 1))];\nif (!branch) return;\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst branchActivity =\n  activities?.get?.(branch.activityId) ??\n  activities?.[branch.activityId] ??\n  item?.activities?.get?.(branch.activityId);\nawait roll.toMessage({ flavor: \"Heavy Hit\" });\nif (branchActivity?.use) {\n  await branchActivity.use({}, {}, { configureDialog: false, workflow, trigger: \"heavy-hit\" });\n} else {\n  ui.notifications?.info?.(`Heavy Hit triggered: ${branch.label}`);\n}"
             }
           },
-          "dnd5eactivity0d3": {
-            "_id": "dnd5eactivity0d3",
+          "dnd5eactivitycd9": {
+            "_id": "dnd5eactivitycd9",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1302,7 +1298,7 @@
                   "label": "Bleeding Wound",
                   "kind": "damage"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivity0d3"
+                "heavyHitBranchActivityId": "dnd5eactivitycd9"
               }
             },
             "effects": [],
@@ -1326,8 +1322,8 @@
               "targets": []
             }
           },
-          "dnd5eactivitye72": {
-            "_id": "dnd5eactivitye72",
+          "dnd5eactivityd1d": {
+            "_id": "dnd5eactivityd1d",
             "type": "save",
             "save": {
               "ability": [
@@ -1349,7 +1345,7 @@
                   "label": "Reeling Impact",
                   "kind": "save"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivitye72"
+                "heavyHitBranchActivityId": "dnd5eactivityd1d"
               }
             },
             "effects": [],
@@ -1373,8 +1369,8 @@
               "targets": []
             }
           },
-          "dnd5eactivity5c1": {
-            "_id": "dnd5eactivity5c1",
+          "dnd5eactivityb55": {
+            "_id": "dnd5eactivityb55",
             "type": "utility",
             "flags": {
               "fvttJsonGenerator": {
@@ -1383,7 +1379,7 @@
                   "label": "Push",
                   "kind": "utility"
                 },
-                "heavyHitBranchActivityId": "dnd5eactivity5c1"
+                "heavyHitBranchActivityId": "dnd5eactivityb55"
               }
             },
             "effects": [],
@@ -1418,6 +1414,25 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 4,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [],
@@ -1438,28 +1453,39 @@
             "acMargin": 5,
             "dieFormula": "1d3",
             "branchActivityIds": [
-              "dnd5eactivity0d3",
-              "dnd5eactivitye72",
-              "dnd5eactivity5c1"
+              "dnd5eactivitycd9",
+              "dnd5eactivityd1d",
+              "dnd5eactivityb55"
             ],
             "branches": [
               {
-                "activityId": "dnd5eactivity0d3",
+                "activityId": "dnd5eactivitycd9",
                 "label": "Bleeding Wound",
                 "kind": "damage",
                 "index": 1
               },
               {
-                "activityId": "dnd5eactivitye72",
+                "activityId": "dnd5eactivityd1d",
                 "label": "Reeling Impact",
                 "kind": "save",
                 "index": 2
               },
               {
-                "activityId": "dnd5eactivity5c1",
+                "activityId": "dnd5eactivityb55",
                 "label": "Push",
                 "kind": "utility",
                 "index": 3
+              }
+            ]
+          },
+          "rules": {
+            "onHitRiders": [
+              {
+                "kind": "status",
+                "statuses": [
+                  "dazed"
+                ],
+                "sourceText": "尾击 Tail Crash 近战武器攻击：命中 +9，触及 10 尺，单一目标；该目标不能是与啃咬 (Bite) 相同的目标。\n命中：19（`4d6+5`）点钝击伤害。\n强击 (Heavy Hit)：若此次攻击构成强击（“命中结果高出目标 AC 5 或更多”），则额外造成以下一种效果：\n流血创口 (Bleeding Wound)：目标流血 `1d6`。\nBleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。\n震荡冲击 (Reeling Impact)：目标必须进行一次 DC 15 的体质 (Constitution) 豁免检定，豁免失败则陷入 Dazed（恍惚）。\nDazed（恍惚）：直到其下一回合结束前，目标不能进行反应，且在其回合中只能执行以下三者之一：移动、执行一个动作、或执行一个附赠动作。\n击退 (Push)：目标被推出 10 尺。"
               }
             ]
           }
@@ -1484,8 +1510,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity19f": {
-            "_id": "dnd5eactivity19f",
+          "dnd5eactivity185": {
+            "_id": "dnd5eactivity185",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -1529,10 +1555,10 @@
             },
             "effects": [
               {
-                "_id": "2ceb090f9fa5aedb"
+                "_id": "f0d7f615726a7aa7"
               },
               {
-                "_id": "1b92190d4d1eb9c7"
+                "_id": "853bc2de5762843f"
               }
             ],
             "activation": {
@@ -1542,8 +1568,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity0c7": {
-            "_id": "dnd5eactivity0c7",
+          "dnd5eactivity92d": {
+            "_id": "dnd5eactivity92d",
             "type": "damage",
             "damage": {
               "parts": [
@@ -1574,8 +1600,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivitye9a": {
-            "_id": "dnd5eactivitye9a",
+          "dnd5eactivityda0": {
+            "_id": "dnd5eactivityda0",
             "type": "save",
             "save": {
               "ability": [
@@ -1606,7 +1632,7 @@
       },
       "effects": [
         {
-          "_id": "2ceb090f9fa5aedb",
+          "_id": "f0d7f615726a7aa7",
           "name": "受限 (Restrained)",
           "type": "base",
           "system": {},
@@ -1631,7 +1657,7 @@
           ]
         },
         {
-          "_id": "1b92190d4d1eb9c7",
+          "_id": "853bc2de5762843f",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1664,6 +1690,19 @@
         "fvttJsonGenerator": {
           "effectHints": {
             "swallow": true
+          },
+          "rules": {
+            "onHitRiders": [
+              {
+                "kind": "status",
+                "statuses": [
+                  "grappled",
+                  "restrained",
+                  "prone"
+                ],
+                "sourceText": "吞咽 Swallow 近战武器攻击：命中 +9，触及 5 尺，单一被滑行血鳍擒抱的生物。滑行血鳍一次只能吞下一名目标。\n命中：目标被吞下。被吞下的目标不再处于被擒抱 (Grappled) 状态，但陷入目盲 (Blinded) 和受限 (Restrained) 状态，并且对来自滑行血鳍体外的攻击和其他效应视为处于完全掩护 (Total Cover)。目标立刻受到 14（`4d6`）点死灵伤害，之后还会再次受到同样伤害；滑行血鳍恢复等同于造成伤害的生命值。\n若滑行血鳍在单一回合内累计受到 30 点来自其体内的伤害，或累计受到 20 点钝击伤害，则它必须在该回合结束时进行一次 DC 15 的体质 (Constitution) 豁免检定。豁免失败时，它会吐出被吞下的生物；该生物出现在滑行血鳍周围 5 尺内，并陷入倒地 (Prone) 状态。"
+              }
+            ]
           }
         }
       }
@@ -1686,8 +1725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybd5": {
-            "_id": "dnd5eactivitybd5",
+          "dnd5eactivityb1a": {
+            "_id": "dnd5eactivityb1a",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1709,7 +1748,15 @@
           "actionSection": "反应"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "movement": [
+              {
+                "kind": "noOpportunityAttack",
+                "sourceText": "滑溜 Slippery 当一次近战攻击未命中滑行血鳍时，它可以移动至多 10 尺，且该移动不会引发借机攻击 (Opportunity Attacks)。"
+              }
+            ]
+          }
         }
       }
     },
@@ -1731,16 +1778,16 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity760": {
-            "_id": "dnd5eactivity760",
+          "dnd5eactivity5dc": {
+            "_id": "dnd5eactivity5dc",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "15",
+                "calculation": "con",
+                "formula": "",
                 "value": 15
               }
             },
@@ -1749,7 +1796,7 @@
             },
             "effects": [
               {
-                "_id": "38c9d0cdba968605"
+                "_id": "59971f2b38ef2b62"
               }
             ],
             "activation": {
@@ -1801,7 +1848,7 @@
       },
       "effects": [
         {
-          "_id": "38c9d0cdba968605",
+          "_id": "59971f2b38ef2b62",
           "name": "恍惚 (Dazed)",
           "type": "base",
           "system": {},
@@ -1820,7 +1867,7 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/dazed.svg",
+          "img": "icons/svg/daze.svg",
           "statuses": [
             "dazed"
           ]
@@ -1846,7 +1893,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1777294609421,
-    "modifiedTime": 1777294609421
+    "createdTime": 1781512875348,
+    "modifiedTime": 1781512875348
   }
 }

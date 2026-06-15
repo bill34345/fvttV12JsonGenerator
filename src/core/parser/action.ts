@@ -172,15 +172,17 @@ export class ActionParser {
         const abilityRaw = dcMatch[2].trim();
         const abilityKey = i18n.getKey(abilityRaw);
         if (abilityKey) {
-          let ability = 'str';
+          let ability: string | undefined;
           if (abilityKey.includes('Str')) ability = 'str';
           else if (abilityKey.includes('Dex')) ability = 'dex';
           else if (abilityKey.includes('Con')) ability = 'con';
           else if (abilityKey.includes('Int')) ability = 'int';
           else if (abilityKey.includes('Wis')) ability = 'wis';
           else if (abilityKey.includes('Cha')) ability = 'cha';
-          data.save = { dc, ability };
-          data.type = 'save';
+          if (ability) {
+            data.save = { dc, ability };
+            data.type = 'save';
+          }
         }
       }
 
@@ -225,7 +227,7 @@ export class ActionParser {
         const dcMatch = v.match(/DC\s*(\d+)\s*(.+)/i);
         if (dcMatch && dcMatch[1] && dcMatch[2]) {
           const abilityKey = i18n.getKey(dcMatch[2].trim());
-          let ability = 'str';
+          let ability: string | undefined;
           if (abilityKey) {
             if (abilityKey.includes('Str')) ability = 'str';
             else if (abilityKey.includes('Dex')) ability = 'dex';
@@ -234,7 +236,9 @@ export class ActionParser {
             else if (abilityKey.includes('Wis')) ability = 'wis';
             else if (abilityKey.includes('Cha')) ability = 'cha';
           }
-          saveInfo = { dc: parseInt(dcMatch[1]), ability };
+          if (ability) {
+            saveInfo = { dc: parseInt(dcMatch[1]), ability };
+          }
         }
       }
       

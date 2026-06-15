@@ -96,18 +96,43 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
     expect(poisonedEffect?.img).toBe('systems/dnd5e/icons/svg/statuses/poisoned.svg');
   });
 
+  it('models Claw with strength-based native weapon damage and both alternate damage types', () => {
+    const claw = findItem(actor, 'Claw');
+    const attackActivity = getActivities(claw).find((activity) => activity.type === 'attack');
+
+    expect(claw.type).toBe('weapon');
+    expect(claw.system.damage?.base).toEqual(
+      expect.objectContaining({
+        number: 1,
+        denomination: 8,
+        bonus: '',
+        types: ['slashing', 'piercing'],
+      }),
+    );
+    expect(attackActivity?.attack).toEqual(
+      expect.objectContaining({
+        ability: 'str',
+        bonus: '',
+        flat: false,
+      }),
+    );
+    expect(attackActivity?.damage?.parts ?? []).toHaveLength(0);
+  });
+
   it('does not infer a generic drop-to-zero heal rule from the Vampiric Bite rider text', () => {
     const venomousBite = findItem(actor, 'Venomous Bite');
     expect(venomousBite.flags?.fvttJsonGenerator?.rules?.onDropToZero).toBeUndefined();
   });
 
-  it('creates three venom rider activities under Venomous Bite with their own once-per-day usage', () => {
+  it('creates source-derived venom rider activities under Venomous Bite with their own once-per-day usage', () => {
     const venomousBite = findItem(actor, 'Venomous Bite');
     const activities = getActivities(venomousBite);
 
     expect(activities).toHaveLength(4);
     expect(activities[0]?.type).toBe('attack');
-    expect(activities.slice(1).map((activity) => activity.type)).toEqual(['save', 'damage', 'utility']);
+    expect(activities.slice(1).map((activity) => activity.type)).toEqual(['damage', 'damage', 'utility']);
+    expect(activities.slice(1).some((activity) => activity.save?.dc?.formula === '14')).toBe(false);
+    expect(activities.slice(1).some((activity) => (activity.save?.ability ?? []).includes('con'))).toBe(false);
     for (const activity of activities.slice(1)) {
       expect(activity.uses).toEqual(
         expect.objectContaining({
@@ -127,6 +152,8 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
     expect(activities[1]?.effects ?? []).toHaveLength(1);
     expect(activities[2]?.effects ?? []).toHaveLength(1);
     expect(activities[3]?.effects ?? []).toHaveLength(0);
+    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('bleeding'));
+    expect(bleedingEffect?.flags?.['midi-qol.OverTime']).toBeUndefined();
     expect((venomousBite.effects ?? []).flatMap((effect) => effect.statuses ?? []).sort()).toEqual([
       'bleeding',
       'poisoned',

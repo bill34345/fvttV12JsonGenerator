@@ -893,20 +893,7 @@ export class ItemParser implements ItemParserStrategy {
       });
     }
 
-    const ability = 'con';
-    if (/力量豁免/.test(text)) {
-      ability.match(/str/);
-    } else if (/敏捷豁免/.test(text)) {
-      ability.match(/dex/);
-    } else if (/体质豁免/.test(text)) {
-      ability.match(/con/);
-    } else if (/智力豁免/.test(text)) {
-      ability.match(/int/);
-    } else if (/感知豁免/.test(text)) {
-      ability.match(/wis/);
-    } else if (/魅力豁免/.test(text)) {
-      ability.match(/cha/);
-    }
+    const ability = this.extractSaveAbility(text) ?? '';
 
     let name = '保存效应';
     if (/传送/.test(text)) {
@@ -919,11 +906,39 @@ export class ItemParser implements ItemParserStrategy {
       save: {
         dc,
         ability,
-        onFail: '目盲',
+        ...this.extractBulletFailure(text),
       },
       damage: damages.length > 0 ? damages : undefined,
       desc: text,
     };
+  }
+
+  private extractSaveAbility(text: string): string | undefined {
+    const abilityEntries: Array<[RegExp, string]> = [
+      [/(?:力量|strength|\bstr\b)\s*(?:豁免|saving throw|save)/i, 'str'],
+      [/(?:敏捷|dexterity|\bdex\b)\s*(?:豁免|saving throw|save)/i, 'dex'],
+      [/(?:体质|constitution|\bcon\b)\s*(?:豁免|saving throw|save)/i, 'con'],
+      [/(?:智力|intelligence|\bint\b)\s*(?:豁免|saving throw|save)/i, 'int'],
+      [/(?:感知|wisdom|\bwis\b)\s*(?:豁免|saving throw|save)/i, 'wis'],
+      [/(?:魅力|charisma|\bcha\b)\s*(?:豁免|saving throw|save)/i, 'cha'],
+      [/(?:豁免|saving throw|save)\s*(?:力量|strength|\bstr\b)/i, 'str'],
+      [/(?:豁免|saving throw|save)\s*(?:敏捷|dexterity|\bdex\b)/i, 'dex'],
+      [/(?:豁免|saving throw|save)\s*(?:体质|constitution|\bcon\b)/i, 'con'],
+      [/(?:豁免|saving throw|save)\s*(?:智力|intelligence|\bint\b)/i, 'int'],
+      [/(?:豁免|saving throw|save)\s*(?:感知|wisdom|\bwis\b)/i, 'wis'],
+      [/(?:豁免|saving throw|save)\s*(?:魅力|charisma|\bcha\b)/i, 'cha'],
+    ];
+
+    return abilityEntries.find(([pattern]) => pattern.test(text))?.[1];
+  }
+
+  private extractBulletFailure(text: string): Pick<NonNullable<ActionData['save']>, 'onFail'> {
+    const failureText = text.match(/(?:失败|failure|failed save)[:：]?\s*([^。.;]+)/i)?.[1] ?? text;
+    if (/(?:目盲|blinded)/i.test(failureText)) {
+      const onFail = '目盲';
+      return { onFail };
+    }
+    return {};
   }
 
   /**
@@ -1253,9 +1268,10 @@ export class ItemParser implements ItemParserStrategy {
       '力量': 'str', '敏捷': 'dex', '体质': 'con',
       '智力': 'int', '感知': 'wis', '魅力': 'cha'
     };
-    let ability = 'str';
+    let ability = '';
+    const normalizedDescription = description.toLowerCase();
     for (const [cn, en] of Object.entries(abilityMap)) {
-      if (description.includes(cn) || description.toLowerCase().includes(en)) {
+      if (description.includes(cn) || normalizedDescription.includes(en)) {
         ability = en;
         break;
       }

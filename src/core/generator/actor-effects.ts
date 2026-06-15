@@ -3,6 +3,7 @@ import {
   createCustomEffect as createCustomEffectFromText,
   createRandomId as createRandomIdFromText,
   extractDamagePartsFromText,
+  mapDamageType,
 } from './actor-text';
 
 type GeneratedActionData = ActionData & {
@@ -11,6 +12,15 @@ type GeneratedActionData = ActionData & {
   requiresConcentration?: boolean;
   targetCondition?: string;
 };
+
+export interface OverTimeSpec {
+  formula?: string;
+  damageType?: string;
+  label: string;
+  saveDc?: number;
+  saveAbility?: string;
+  saveRemove?: boolean;
+}
 
 const STATUS_ICON_OVERRIDES: Record<string, string> = {
   bleed: 'blood',
@@ -65,6 +75,51 @@ export function createCustomEffect(options: {
   return createCustomEffectFromText(options);
 }
 
+export function buildOverTimeFlag(spec: OverTimeSpec): Record<string, string> {
+  const formula = spec.formula?.replace(/\s+/g, '');
+  const damageType = spec.damageType?.trim();
+  if (!formula || !damageType) {
+    return {};
+  }
+
+  const parts = [
+    'turn=start',
+    `damageRoll=${formula}`,
+    `damageType=${damageType}`,
+    `label=${spec.label}`,
+  ];
+  if (typeof spec.saveDc === 'number' && spec.saveAbility) {
+    parts.push(`saveDC=${spec.saveDc}`);
+    parts.push(`saveAbility=${spec.saveAbility}`);
+    if (spec.saveRemove) {
+      parts.push('saveRemove=True');
+    }
+  }
+  return { 'midi-qol.OverTime': parts.join(',') };
+}
+
+function extractBleedingOverTimeSpec(text: string): OverTimeSpec | null {
+  const bleedingIndex = text.search(/bleed|bleeding|流血/i);
+  if (bleedingIndex === -1) {
+    return null;
+  }
+
+  const clause = text.slice(Math.max(0, bleedingIndex - 80), bleedingIndex + 180);
+  const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
+  const damageType =
+    clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
+    ?? mapDamageType(clause.match(/([一-龥]{2,4})伤害/)?.[1] ?? '');
+  if (!formula || !damageType) {
+    return null;
+  }
+
+  return {
+    formula,
+    damageType,
+    label: /流血/.test(clause) ? '流血 (Bleeding)' : 'Bleeding',
+  };
+}
+
 export function generateConditionEffects(desc: string, activities: any, actionName?: string): any[] {
   const effects: any[] = [];
   if (!desc) return effects;
@@ -97,24 +152,15 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
     return res;
   };
 
-  const buildOverTime = (cn: string): Record<string, string> => {
-    if (cn === '流血') {
-      if (actionName && (actionName.includes('吞咽') || actionName.includes('Swallow'))) {
-        return { 'midi-qol.OverTime': 'turn=start,damageRoll=4d6,damageType=necrotic,label=吞咽死灵伤害 (Swallow Necrotic),saveDC=15,saveAbility=con,saveRemove=True' };
-      }
-      return { 'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)' };
-    }
-    return {};
-  };
-
   const isSwallow = actionName && (
     actionName.includes('吞咽') || actionName.includes('Swallow')
   );
+  const bleedingOverTime = extractBleedingOverTimeSpec(desc);
 
   for (const [cn, info] of Object.entries(conditionMap)) {
     if (desc.includes(cn) || desc.toLowerCase().includes(info.en)) {
       if (isSwallow && cn === '擒抱') continue;
-      const flags = buildOverTime(cn);
+      const flags = cn === '流血' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {};
       effects.push({
         _id: generateId(),
         name: `${cn} (${info.enLabel})`,
@@ -144,26 +190,6 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
       }
     }
   }
-
-  if (isSwallow) {
-    effects.push({
-      _id: generateId(),
-      name: '吞咽中 (Swallowed)',
-      type: 'base',
-      system: {},
-      changes: [],
-      disabled: false,
-      duration: { startTime: null, seconds: null, combat: null, rounds: null, turns: null, startRound: null, startTurn: null },
-      description: '',
-      origin: null,
-      tint: '#8800ff',
-      transfer: false,
-      img: statusIconPath('restrained'),
-      statuses: [],
-      flags: { 'midi-qol.OverTime': 'turn=start,damageRoll=4d6,damageType=necrotic,label=吞咽中 (Swallowed),saveDC=15,saveAbility=con,saveRemove=True' }
-    });
-  }
-
   return effects;
 }
 
@@ -236,18 +262,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     dazed: '恍惚',
     bleeding: '流血',
   };
-  const buildOverTime = (status: string) => {
-    if (status !== 'bleeding') {
-      return {};
-    }
-    if (isSwallow) {
-      return {
-        'midi-qol.OverTime':
-          'turn=start,damageRoll=4d6,damageType=necrotic,label=吞咽死灵伤害 (Swallow Necrotic),saveDC=15,saveAbility=con,saveRemove=True',
-      };
-    }
-    return { 'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)' };
-  };
+  const bleedingOverTime = extractBleedingOverTimeSpec(desc);
 
   const generatedStatuses = new Set<string>();
   for (const entry of conditionEntries) {
@@ -286,7 +301,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
       transfer: false,
       img: statusIconPath(entry.en),
       statuses: [entry.en],
-      flags: buildOverTime(entry.en),
+      flags: entry.en === 'bleeding' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {},
     });
   }
 
@@ -300,36 +315,5 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
       }
     }
   }
-
-  if (isSwallow) {
-    effects.push({
-      _id: generateId(),
-      name: '吞咽中 (Swallowed)',
-      type: 'base',
-      system: {},
-      changes: [],
-      disabled: false,
-      duration: {
-        startTime: null,
-        seconds: null,
-        combat: null,
-        rounds: null,
-        turns: null,
-        startRound: null,
-        startTurn: null,
-      },
-      description: '',
-      origin: null,
-      tint: '#8800ff',
-      transfer: false,
-      img: statusIconPath('restrained'),
-      statuses: [],
-      flags: {
-        'midi-qol.OverTime':
-          'turn=start,damageRoll=4d6,damageType=necrotic,label=吞咽中 (Swallowed),saveDC=15,saveAbility=con,saveRemove=True',
-      },
-    });
-  }
-
   return effects;
 }

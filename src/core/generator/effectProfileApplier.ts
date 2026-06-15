@@ -110,20 +110,7 @@ export class EffectProfileApplier {
     item.effects = (item.effects ?? []).filter((effect: any) => !/(?:Swallowed|吞咽中)/i.test(String(effect?.name ?? '')));
 
     if (/(?:Bleed|Bleeding|流血)/i.test(text)) {
-      for (const effect of item.effects) {
-        if (!effect || typeof effect !== 'object') {
-          continue;
-        }
-
-        if (!/(?:Bleed|Bleeding|流血)/i.test(String(effect.name ?? ''))) {
-          continue;
-        }
-
-        effect.flags = {
-          ...(effect.flags ?? {}),
-          'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
-        };
-      }
+      return;
     }
   }
 

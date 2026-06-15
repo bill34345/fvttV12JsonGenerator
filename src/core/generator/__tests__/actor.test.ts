@@ -473,4 +473,75 @@ describe('ActorGenerator', () => {
       }
     }
   });
+
+  it('creates AC effects from AC text instead of action names', () => {
+    const input: ParsedNPC = {
+      name: 'AC Parser',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      actions: [
+        'Brittle Shell. The creature withdraws without changing AC.',
+        'Shell Drop. The creature AC becomes 14 until it finishes a short or long rest.',
+        'Guarded Step. The creature gains +9 AC until the start of its next turn.',
+      ],
+    };
+
+    const actor = generator.generate(input, { route: 'english' });
+    const brittleShell = actor.items.find((item: any) => item.name === 'Brittle Shell');
+    const shellDrop = actor.items.find((item: any) => item.name === 'Shell Drop');
+    const guardedStep = actor.items.find((item: any) => item.name === 'Guarded Step');
+
+    expect(brittleShell?.effects ?? []).toHaveLength(0);
+    expect(shellDrop?.effects?.[0]?.changes).toEqual([
+      expect.objectContaining({
+        key: 'system.attributes.ac.flat',
+        value: '14',
+      }),
+    ]);
+    expect(guardedStep?.effects?.[0]?.changes).toEqual([
+      expect.objectContaining({
+        key: 'system.attributes.ac.bonus',
+        value: '9',
+      }),
+    ]);
+    expect(guardedStep?.effects?.[0]?.duration).toEqual(
+      expect.objectContaining({
+        rounds: 1,
+        turns: 0,
+      }),
+    );
+  });
+
+  it('does not create temporary override saves from semantic condition labels alone', () => {
+    const input: ParsedNPC = {
+      name: 'Override Parser',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      actions: [
+        'Poison Override. 目标受到强酸伤害后，它的毒素豁免 DC 提高至 15，伤害提高至（`2d6`）点毒素伤害。',
+        'Constitution Override. 目标受到强酸伤害后，它的体质豁免 DC 提高至 15，伤害提高至（`2d6`）点毒素伤害。',
+      ],
+    };
+
+    const actor = generator.generate(input, { route: 'english' });
+    const poisonOverride = actor.items.find((item: any) => item.name === 'Poison Override');
+    const constitutionOverride = actor.items.find((item: any) => item.name === 'Constitution Override');
+    const poisonActivities = Object.values(poisonOverride?.system.activities ?? {}) as any[];
+    const constitutionActivities = Object.values(constitutionOverride?.system.activities ?? {}) as any[];
+
+    expect(poisonActivities.some((activity) => activity.type === 'save')).toBe(false);
+    expect(constitutionActivities.some((activity) => activity.type === 'save' && activity.save?.ability?.includes('con'))).toBe(true);
+  });
 });
