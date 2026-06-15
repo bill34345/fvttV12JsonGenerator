@@ -9,7 +9,8 @@
     "sync:vault": "bun run src/index.ts --sync --vault \"obsidian/dnd数据转fvttjson\"",
     "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",
     "cli:help": "bun run src/index.ts --help",
-    "verify:actor": "bun run src/tools/actorVerification.ts"
+    "verify:actor": "bun run src/tools/actorVerification.ts",
+    "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

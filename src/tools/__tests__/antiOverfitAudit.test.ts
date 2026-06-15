@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'bun:test';
+import { auditAntiOverfitText } from '../antiOverfitAudit';
+
+describe('anti-overfit audit', () => {
+  it('flags action-name predicates that can hide sample-specific mechanics', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/activity-derivation.ts',
+      `
+function isMentalAction(actionName: string): boolean {
+  return /Dominate|Charm|Control/i.test(actionName);
+}
+`,
+    );
+
+    expect(findings).toEqual([
+      expect.objectContaining({
+        rule: 'action-name-predicate',
+        line: 2,
+      }),
+    ]);
+  });
+
+  it('flags action-name branches that assign fixed mechanics', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/actor-special.ts',
+      `
+if (/Venomous Bite|Brine-shock/i.test(text)) {
+  return { save: { dc: 14, ability: 'con' }, grantsTempHp: 10 };
+}
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['named-mechanics-branch', 'fixed-save-dc', 'fixed-temp-hp']),
+    );
+  });
+
+  it('flags fixed overtime mechanics embedded in module flag strings', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/actor-effects.ts',
+      `
+return {
+  'midi-qol.OverTime': 'turn=start,damageRoll=4d6,damageType=necrotic,saveDC=15,saveAbility=con'
+};
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['fixed-damage-roll', 'fixed-save-dc', 'fixed-save-ability']),
+    );
+  });
+
+  it('allows source-derived parsers, schema maps, and documented explicit exceptions', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/parser/example.ts',
+      `
+const dcMatch = text.match(/\\bDC\\s*(\\d+)\\b/i);
+const dc = dcMatch ? Number.parseInt(dcMatch[1], 10) : undefined;
+const dnd5eDamageTypes = { slashing: 'slashing', piercing: 'piercing' };
+
+// anti-overfit: allow explicit-exception - user approved compatibility shim for imported legacy files
+function isLegacyImportAction(actionName: string): boolean {
+  return /Legacy Import/i.test(actionName);
+}
+`,
+    );
+
+    expect(findings).toEqual([]);
+  });
+});
