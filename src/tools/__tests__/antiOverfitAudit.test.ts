@@ -105,4 +105,51 @@ function isLegacyImportAction(actionName: string): boolean {
 
     expect(findings).toEqual([]);
   });
+
+  it('flags named rider marker tables in production mechanics extraction', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/mechanics/mechanicsExtraction.ts',
+      `
+const RIDER_MARKERS = [
+  { key: 'vampiric-bite', englishName: 'Vampiric Bite', pattern: /Vampiric Bite/i },
+  { key: 'needling-bite', englishName: 'Needling Bite', pattern: /Needling Bite/i },
+];
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['named-rider-marker']),
+    );
+  });
+
+  it('flags named rider keys that branch mechanics behavior', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/mechanics/mechanicsExtraction.ts',
+      `
+if (riderKey === 'needling-bite') {
+  return [];
+}
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['named-mechanics-key-branch']),
+    );
+  });
+
+  it('flags named rider regex markers even when the table has a generic variable name', () => {
+    const findings = auditAntiOverfitText(
+      'src/core/generator/actor.ts',
+      `
+const markers = [
+  { key: 'vampiric-bite', pattern: /Vampiric Bite/i },
+];
+const compoundRiderSegments = markers.map((marker) => text.search(marker.pattern));
+`,
+    );
+
+    expect(findings.map((finding) => finding.rule)).toEqual(
+      expect.arrayContaining(['named-rider-marker']),
+    );
+  });
 });

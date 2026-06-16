@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity790": {
-            "_id": "dnd5eactivity790",
+          "dnd5eactivity722": {
+            "_id": "dnd5eactivity722",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,12 +762,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf07": {
-            "_id": "dnd5eactivityf07",
+          "dnd5eactivity95f": {
+            "_id": "dnd5eactivity95f",
             "type": "utility",
             "effects": [
               {
-                "_id": "2539f6858cd9553c"
+                "_id": "0c7f04c6ffa4b937"
               }
             ],
             "activation": {
@@ -785,7 +785,7 @@
       },
       "effects": [
         {
-          "_id": "2539f6858cd9553c",
+          "_id": "0c7f04c6ffa4b937",
           "name": "脆壳反震 (Brittle Shell)",
           "type": "base",
           "system": {},
@@ -849,8 +849,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye69": {
-            "_id": "dnd5eactivitye69",
+          "dnd5eactivity45a": {
+            "_id": "dnd5eactivity45a",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -894,8 +894,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityba9": {
-            "_id": "dnd5eactivityba9",
+          "dnd5eactivity0c7": {
+            "_id": "dnd5eactivity0c7",
             "type": "attack",
             "attack": {
               "ability": "str",
@@ -994,7 +994,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<ul><li>近战武器攻击：命中 +6，触及 15 尺，单一目标。</li><li>命中：10（`2d6 + 3`）点穿刺伤害 (Piercing Damage)。若此次攻击具有优势 (Advantage)，则改为造成 17 点穿刺伤害。</li><li>蛇吻每次长休可分别使用以下每种毒液各一次。以下毒液效果的豁免 DC 均为 14，且重伤 / 濒血 (Bloodied) 的目标在进行该豁免时具有劣势 (Disadvantage)。</li><li>盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。</li><li>针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw) 命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
+          "value": "<ul><li>近战武器攻击：命中 +6，触及 15 尺，单一目标。</li><li>命中：10（`2d6 + 3`）点穿刺伤害 (Piercing Damage)。若此次攻击具有优势 (Advantage)，则改为造成 17 点穿刺伤害。</li><li>蛇吻每次长休可分别使用以下每种毒液各一次。以下毒液效果的体质豁免 DC 均为 14，且重伤 / 濒血 (Bloodied) 的目标在进行该豁免时具有劣势 (Disadvantage)。</li><li>盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。</li><li>针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw) 命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。</li><li>Bleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。</li><li>吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1006,8 +1006,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5d4": {
-            "_id": "dnd5eactivity5d4",
+          "dnd5eactivity09f": {
+            "_id": "dnd5eactivity09f",
             "type": "attack",
             "attack": {
               "ability": "str",
@@ -1056,9 +1056,19 @@
               "condition": ""
             }
           },
-          "dnd5eactivity941": {
-            "_id": "dnd5eactivity941",
-            "type": "damage",
+          "dnd5eactivitye89": {
+            "_id": "dnd5eactivitye89",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "14",
+                "value": 14
+              }
+            },
             "damage": {
               "parts": [
                 {
@@ -1095,12 +1105,26 @@
             "flags": {
               "fvttJsonGenerator": {
                 "compoundRider": "brine-shock",
-                "bloodiedTargetSaveDisadvantage": true
+                "bloodiedTargetSaveDisadvantage": true,
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "盐水电击 (Brine-shock)：目标额外受到 `2d6` 点毒素伤害 (Poison Damage)，并陷入中毒 (Poisoned) 状态，直到其下一回合结束。",
+                    "startOffset": 198,
+                    "endOffset": 283,
+                    "kind": "direct"
+                  },
+                  "save": {
+                    "text": "以下毒液效果的体质豁免 DC 均为 14",
+                    "startOffset": 126,
+                    "endOffset": 146,
+                    "kind": "inherited"
+                  }
+                }
               }
             },
             "effects": [
               {
-                "_id": "282eafa59ccb835a"
+                "_id": "d720b2d05c6ad36c"
               }
             ],
             "activation": {
@@ -1110,9 +1134,19 @@
               "condition": ""
             }
           },
-          "dnd5eactivity6b4": {
-            "_id": "dnd5eactivity6b4",
-            "type": "damage",
+          "dnd5eactivitye66": {
+            "_id": "dnd5eactivitye66",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "14",
+                "value": 14
+              }
+            },
             "damage": {
               "parts": [
                 {
@@ -1120,24 +1154,7 @@
                   "denomination": 6,
                   "bonus": "",
                   "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
-                {
-                  "number": 1,
-                  "denomination": 6,
-                  "bonus": "",
-                  "types": [
-                    "bludgeoning"
+                    "piercing"
                   ],
                   "custom": {
                     "enabled": false,
@@ -1166,12 +1183,29 @@
             "flags": {
               "fvttJsonGenerator": {
                 "compoundRider": "needling-bite",
-                "bloodiedTargetSaveDisadvantage": true
+                "bloodiedTargetSaveDisadvantage": true,
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "针刺噬咬 (Needling Bite)：只能对本回合已被爪击 (Claw) 命中的目标使用。该次咬击额外造成 1 颗伤害骰 的伤害，且目标开始流血 (Bleeding) `1d6`。\nBleed（流血）：目标在其每个回合开始时受到 `1d6` 点（由创造流血的特性决定）伤害；流血层数可以叠加，叠加的层数会在回合开始时根据层数决定要受到几颗伤害骰；若目标恢复任意生命值，或 自身 / 5 尺内一名生物使用一个动作替其止血，则该效果结束（所有层数都结束）。",
+                    "startOffset": 283,
+                    "endOffset": 512,
+                    "kind": "direct"
+                  },
+                  "save": {
+                    "text": "以下毒液效果的体质豁免 DC 均为 14",
+                    "startOffset": 126,
+                    "endOffset": 146,
+                    "kind": "inherited"
+                  }
+                },
+                "bleeding": {
+                  "formula": "1d6"
+                }
               }
             },
             "effects": [
               {
-                "_id": "34b981c6ca699514"
+                "_id": "4d42a82a29a3cb9e"
               }
             ],
             "activation": {
@@ -1181,9 +1215,22 @@
               "condition": ""
             }
           },
-          "dnd5eactivityc05": {
-            "_id": "dnd5eactivityc05",
-            "type": "utility",
+          "dnd5eactivityd96": {
+            "_id": "dnd5eactivityd96",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "14",
+                "value": 14
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "uses": {
               "spent": 0,
               "value": 1,
@@ -1200,16 +1247,393 @@
               "fvttJsonGenerator": {
                 "compoundRider": "vampiric-bite",
                 "bloodiedTargetSaveDisadvantage": true,
-                "losesHitDie": 1,
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。",
+                    "startOffset": 512,
+                    "endOffset": 672,
+                    "kind": "direct"
+                  },
+                  "save": {
+                    "text": "以下毒液效果的体质豁免 DC 均为 14",
+                    "startOffset": 126,
+                    "endOffset": 146,
+                    "kind": "inherited"
+                  }
+                },
+                "hitDieLoss": 1,
+                "hitDiceOutcomeLegacy": {
+                  "sourceDerived": true
+                },
                 "grantsTempHp": 10,
-                "corruptionSaveOnHitDieZero": true
+                "followupSave": "Ruidium Corruption",
+                "followupSaveTrigger": "targetHitDiceReducedToZero",
+                "hitDiceOutcome": {
+                  "mode": "hit-dice-outcome",
+                  "primaryActivityId": "dnd5eactivityd96",
+                  "loseHitDieActivityId": "ecfbb831ddbc0a89",
+                  "tempHpActivityId": "032bcc1199ca4837",
+                  "followupSaveActivityId": "8f78e646fa480d05",
+                  "hitDiceChange": {
+                    "kind": "hitDiceChange",
+                    "direction": "lose",
+                    "count": 1,
+                    "pool": "unspent",
+                    "target": "failedSaveTarget",
+                    "evidence": {
+                      "text": "失去 1 颗未消耗的生命骰 (Hit Die",
+                      "startOffset": 23,
+                      "endOffset": 45,
+                      "kind": "direct"
+                    }
+                  },
+                  "tempHp": {
+                    "kind": "tempHp",
+                    "amount": 10,
+                    "target": "self",
+                    "evidence": {
+                      "text": "获得 10 点临时生命值",
+                      "startOffset": 63,
+                      "endOffset": 75,
+                      "kind": "direct"
+                    },
+                    "condition": "hitDiceChangeApplied"
+                  },
+                  "followupSave": {
+                    "kind": "followupSave",
+                    "label": "Ruidium Corruption",
+                    "trigger": "targetHitDiceReducedToZero",
+                    "target": "failedSaveTarget",
+                    "evidence": {
+                      "text": "生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定",
+                      "startOffset": 107,
+                      "endOffset": 159,
+                      "kind": "direct"
+                    }
+                  }
+                },
+                "outcomes": [
+                  {
+                    "kind": "hitDiceChange",
+                    "direction": "lose",
+                    "count": 1,
+                    "pool": "unspent",
+                    "target": "failedSaveTarget",
+                    "evidence": {
+                      "text": "失去 1 颗未消耗的生命骰 (Hit Die",
+                      "startOffset": 23,
+                      "endOffset": 45,
+                      "kind": "direct"
+                    }
+                  },
+                  {
+                    "kind": "tempHp",
+                    "amount": 10,
+                    "target": "self",
+                    "evidence": {
+                      "text": "获得 10 点临时生命值",
+                      "startOffset": 63,
+                      "endOffset": 75,
+                      "kind": "direct"
+                    },
+                    "condition": "hitDiceChangeApplied"
+                  },
+                  {
+                    "kind": "followupSave",
+                    "label": "Ruidium Corruption",
+                    "trigger": "targetHitDiceReducedToZero",
+                    "target": "failedSaveTarget",
+                    "evidence": {
+                      "text": "生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定",
+                      "startOffset": 107,
+                      "endOffset": 159,
+                      "kind": "direct"
+                    }
+                  }
+                ]
               }
+            },
+            "midiProperties": {
+              "identifier": "hit-dice-outcome-vampiric-bite-primary",
+              "otherActivityCompatible": true
+            },
+            "macroData": {
+              "name": "Hit Dice Outcome",
+              "command": "const hitDiceOutcomeSpec = {\"mode\":\"hit-dice-outcome\",\"primaryActivityId\":\"dnd5eactivityd96\",\"loseHitDieActivityId\":\"ecfbb831ddbc0a89\",\"tempHpActivityId\":\"032bcc1199ca4837\",\"followupSaveActivityId\":\"8f78e646fa480d05\",\"hitDiceChange\":{\"kind\":\"hitDiceChange\",\"direction\":\"lose\",\"count\":1,\"pool\":\"unspent\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"失去 1 颗未消耗的生命骰 (Hit Die\",\"startOffset\":23,\"endOffset\":45,\"kind\":\"direct\"}},\"tempHp\":{\"kind\":\"tempHp\",\"amount\":10,\"target\":\"self\",\"evidence\":{\"text\":\"获得 10 点临时生命值\",\"startOffset\":63,\"endOffset\":75,\"kind\":\"direct\"},\"condition\":\"hitDiceChangeApplied\"},\"followupSave\":{\"kind\":\"followupSave\",\"label\":\"Ruidium Corruption\",\"trigger\":\"targetHitDiceReducedToZero\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定\",\"startOffset\":107,\"endOffset\":159,\"kind\":\"direct\"}}};\nconst midi = globalThis.MidiQOL ?? (typeof MidiQOL !== \"undefined\" ? MidiQOL : undefined);\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst macroArgs = typeof args !== \"undefined\" ? args : [];\nconst workflow = scopeData.workflow ?? macroArgs?.[0]?.workflow ?? midi?.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst notifyManual = async (message) => {\n  ui.notifications?.info?.(message);\n  if (globalThis.ChatMessage?.create) {\n    await ChatMessage.create({ content: message, speaker: ChatMessage.getSpeaker?.({ actor: item?.actor }) });\n  }\n};\nif (!workflow) {\n  await notifyManual(\"GM must manually apply hit dice outcome; no midi-qol workflow was available.\");\n  return;\n}\nconst firstFrom = (collection) => collection?.first?.() ?? [...(collection ?? [])][0];\nconst targetToken =\n  firstFrom(workflow?.failedSaves) ??\n  firstFrom(workflow?.failedSaveTargets) ??\n  firstFrom(workflow?.hitTargets) ??\n  firstFrom(workflow?.targets);\nconst targetActor = targetToken?.actor ?? targetToken;\nconst safeHitDiceUpdate = async (actor, change) => {\n  if (!actor || !change?.count) return { ok: false, reason: \"No target actor.\" };\n  return {\n    ok: false,\n    reason: \"GM must manually apply hit dice change. No versioned safe hit dice update path is configured.\",\n  };\n};\nconst hitDieResult = await safeHitDiceUpdate(targetActor, hitDiceOutcomeSpec.hitDiceChange);\nif (!hitDieResult.ok) {\n  await notifyManual(hitDieResult.reason ?? \"GM must manually apply hit dice change.\");\n  return;\n}\nconst useActivity = async (activityId, trigger) => {\n  const activity = activities?.get?.(activityId) ?? activities?.[activityId] ?? item?.activities?.get?.(activityId);\n  if (activity?.use) await activity.use({}, {}, { configureDialog: false, workflow, trigger });\n};\nif (hitDiceOutcomeSpec.tempHpActivityId) {\n  await useActivity(hitDiceOutcomeSpec.tempHpActivityId, \"hit-dice-outcome-temp-hp\");\n}\nif (hitDiceOutcomeSpec.followupSaveActivityId && hitDieResult.remaining === 0) {\n  await useActivity(hitDiceOutcomeSpec.followupSaveActivityId, \"hit-dice-outcome-followup-save\");\n}"
             },
             "activation": {
               "type": "action",
               "value": null,
               "override": false,
               "condition": ""
+            }
+          },
+          "ecfbb831ddbc0a89": {
+            "_id": "ecfbb831ddbc0a89",
+            "name": "Lose Hit Die",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false,
+                "max": ""
+              },
+              "spellSlot": false,
+              "targets": []
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false
+            },
+            "range": {
+              "override": false
+            },
+            "target": {
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": ""
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              },
+              "prompt": true,
+              "override": false
+            },
+            "uses": {
+              "spent": 0,
+              "recovery": [],
+              "max": ""
+            },
+            "midiProperties": {
+              "identifier": "hit-dice-outcome-vampiric-bite-hitDiceChange",
+              "automationOnly": true,
+              "otherActivityCompatible": true
+            },
+            "flags": {
+              "fvttJsonGenerator": {
+                "compoundRider": "vampiric-bite",
+                "hitDiceOutcomeActivity": {
+                  "kind": "hitDiceChange",
+                  "evidence": {
+                    "text": "失去 1 颗未消耗的生命骰 (Hit Die",
+                    "startOffset": 23,
+                    "endOffset": 45,
+                    "kind": "direct"
+                  }
+                },
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。",
+                    "startOffset": 512,
+                    "endOffset": 672,
+                    "kind": "direct"
+                  },
+                  "outcome": {
+                    "text": "失去 1 颗未消耗的生命骰 (Hit Die",
+                    "startOffset": 23,
+                    "endOffset": 45,
+                    "kind": "direct"
+                  }
+                }
+              }
+            }
+          },
+          "032bcc1199ca4837": {
+            "_id": "032bcc1199ca4837",
+            "name": "Gain Temporary HP",
+            "type": "heal",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false,
+                "max": ""
+              },
+              "spellSlot": false,
+              "targets": []
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false
+            },
+            "range": {
+              "units": "self",
+              "special": "",
+              "override": false
+            },
+            "target": {
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": ""
+              },
+              "affects": {
+                "count": "",
+                "type": "self",
+                "choice": false,
+                "special": ""
+              },
+              "prompt": true,
+              "override": false
+            },
+            "healing": {
+              "number": null,
+              "denomination": null,
+              "bonus": "10",
+              "types": [
+                "temphp"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 1,
+                "formula": ""
+              }
+            },
+            "uses": {
+              "spent": 0,
+              "recovery": [],
+              "max": ""
+            },
+            "midiProperties": {
+              "identifier": "hit-dice-outcome-vampiric-bite-temp-hp",
+              "automationOnly": true,
+              "otherActivityCompatible": true
+            },
+            "flags": {
+              "fvttJsonGenerator": {
+                "compoundRider": "vampiric-bite",
+                "hitDiceOutcomeActivity": {
+                  "kind": "tempHp",
+                  "evidence": {
+                    "text": "获得 10 点临时生命值",
+                    "startOffset": 63,
+                    "endOffset": 75,
+                    "kind": "direct"
+                  }
+                },
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。",
+                    "startOffset": 512,
+                    "endOffset": 672,
+                    "kind": "direct"
+                  },
+                  "outcome": {
+                    "text": "获得 10 点临时生命值",
+                    "startOffset": 63,
+                    "endOffset": 75,
+                    "kind": "direct"
+                  }
+                }
+              }
+            }
+          },
+          "8f78e646fa480d05": {
+            "_id": "8f78e646fa480d05",
+            "name": "Ruidium Corruption Save",
+            "type": "utility",
+            "activation": {
+              "type": "special",
+              "value": null,
+              "override": false
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false,
+                "max": ""
+              },
+              "spellSlot": false,
+              "targets": []
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false
+            },
+            "range": {
+              "override": false
+            },
+            "target": {
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": ""
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              },
+              "prompt": true,
+              "override": false
+            },
+            "uses": {
+              "spent": 0,
+              "recovery": [],
+              "max": ""
+            },
+            "midiProperties": {
+              "identifier": "hit-dice-outcome-vampiric-bite-followupSave",
+              "automationOnly": true,
+              "otherActivityCompatible": true
+            },
+            "flags": {
+              "fvttJsonGenerator": {
+                "compoundRider": "vampiric-bite",
+                "hitDiceOutcomeActivity": {
+                  "kind": "followupSave",
+                  "evidence": {
+                    "text": "生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定",
+                    "startOffset": 107,
+                    "endOffset": 159,
+                    "kind": "direct"
+                  }
+                },
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "吸血噬咬 (Vampiric Bite)：目标失去 1 颗未消耗的生命骰 (Hit Die)。若目标以此方式失去生命骰，则蛇吻获得 10 点临时生命值 (Temporary Hit Points)。若此效果使目标的生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定。",
+                    "startOffset": 512,
+                    "endOffset": 672,
+                    "kind": "direct"
+                  },
+                  "outcome": {
+                    "text": "生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定",
+                    "startOffset": 107,
+                    "endOffset": 159,
+                    "kind": "direct"
+                  }
+                }
+              }
             }
           }
         },
@@ -1246,7 +1670,7 @@
       },
       "effects": [
         {
-          "_id": "282eafa59ccb835a",
+          "_id": "d720b2d05c6ad36c",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1271,7 +1695,7 @@
           ]
         },
         {
-          "_id": "34b981c6ca699514",
+          "_id": "4d42a82a29a3cb9e",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1304,6 +1728,54 @@
         "fvttJsonGenerator": {
           "effectHints": {
             "bleed": true
+          },
+          "hitDiceOutcome": {
+            "specs": [
+              {
+                "mode": "hit-dice-outcome",
+                "primaryActivityId": "dnd5eactivityd96",
+                "loseHitDieActivityId": "ecfbb831ddbc0a89",
+                "tempHpActivityId": "032bcc1199ca4837",
+                "followupSaveActivityId": "8f78e646fa480d05",
+                "hitDiceChange": {
+                  "kind": "hitDiceChange",
+                  "direction": "lose",
+                  "count": 1,
+                  "pool": "unspent",
+                  "target": "failedSaveTarget",
+                  "evidence": {
+                    "text": "失去 1 颗未消耗的生命骰 (Hit Die",
+                    "startOffset": 23,
+                    "endOffset": 45,
+                    "kind": "direct"
+                  }
+                },
+                "tempHp": {
+                  "kind": "tempHp",
+                  "amount": 10,
+                  "target": "self",
+                  "evidence": {
+                    "text": "获得 10 点临时生命值",
+                    "startOffset": 63,
+                    "endOffset": 75,
+                    "kind": "direct"
+                  },
+                  "condition": "hitDiceChangeApplied"
+                },
+                "followupSave": {
+                  "kind": "followupSave",
+                  "label": "Ruidium Corruption",
+                  "trigger": "targetHitDiceReducedToZero",
+                  "target": "failedSaveTarget",
+                  "evidence": {
+                    "text": "生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定",
+                    "startOffset": 107,
+                    "endOffset": 159,
+                    "kind": "direct"
+                  }
+                }
+              }
+            ]
           }
         }
       }
@@ -1326,12 +1798,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity532": {
-            "_id": "dnd5eactivity532",
+          "dnd5eactivity6fc": {
+            "_id": "dnd5eactivity6fc",
             "type": "utility",
             "effects": [
               {
-                "_id": "b7fd162d559a4faf"
+                "_id": "25cdc2d6042c57a4"
               }
             ],
             "activation": {
@@ -1349,7 +1821,7 @@
       },
       "effects": [
         {
-          "_id": "b7fd162d559a4faf",
+          "_id": "25cdc2d6042c57a4",
           "name": "缩壳防御 (Retract)",
           "type": "base",
           "system": {},
@@ -1413,8 +1885,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb5c": {
-            "_id": "dnd5eactivityb5c",
+          "dnd5eactivity744": {
+            "_id": "dnd5eactivity744",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1448,7 +1920,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1781512874395,
-    "modifiedTime": 1781512874395
+    "createdTime": 1781597270562,
+    "modifiedTime": 1781597270562
   }
 }
