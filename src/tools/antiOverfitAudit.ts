@@ -10,7 +10,9 @@ export type AntiOverfitRule =
   | 'fixed-temp-hp'
   | 'fixed-ac-effect'
   | 'fixed-on-fail'
-  | 'fixed-overtime-flag';
+  | 'fixed-overtime-flag'
+  | 'named-rider-marker'
+  | 'named-mechanics-key-branch';
 
 export interface AntiOverfitFinding {
   filePath: string;
@@ -73,6 +75,10 @@ const NAMED_REGEX = /\/[^/\n]*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+|[\u4e00-\u9fff]{
 const MECHANICS_REGEX =
   /(?:\bsave\s*:\s*{[^}\n]*\bdc\s*:\s*\d+|\bsaveDC\s*=\s*\d+|\bdamageRoll\s*=\s*\d+d\d+|\bgrantsTempHp\s*:\s*\d+|\bsaveAbility\s*=\s*(?:str|dex|con|int|wis|cha)\b)/i;
 const FIXED_AC_EFFECT_REGEX = /key\s*:\s*['"]system\.attributes\.ac\.(?:flat|bonus)['"][\s\S]{0,180}value\s*:\s*['"]\d+['"]/i;
+const RIDER_MARKER_CONTEXT_REGEX = /RIDER_MARKERS|rider/i;
+const NAMED_RIDER_MARKER_SHAPE_REGEX =
+  /key\s*:\s*['"][a-z0-9]+-[a-z0-9-]+['"][\s\S]{0,260}pattern\s*:\s*\/[^/\n]*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+|[\u4e00-\u9fff]{2,})[^/\n]*\//i;
+const NAMED_MECHANICS_KEY_BRANCH_REGEX = /\b[A-Za-z0-9_]*Key\s*={2,3}\s*['"][a-z0-9]+-[a-z0-9-]+['"]/;
 
 export function auditAntiOverfitText(filePath: string, text: string): AntiOverfitFinding[] {
   const lines = text.split(/\r?\n/);
@@ -102,6 +108,30 @@ export function auditAntiOverfitText(filePath: string, text: string): AntiOverfi
           0,
         ));
       }
+    }
+
+    const namedMarkerWindow = lines.slice(index, index + 8).join('\n');
+    if (RIDER_MARKER_CONTEXT_REGEX.test(namedMarkerWindow) && NAMED_RIDER_MARKER_SHAPE_REGEX.test(namedMarkerWindow)) {
+      findings.push(createFinding(
+        filePath,
+        index,
+        line,
+        'named-rider-marker',
+        'Named rider marker tables hard-code sample-specific action segments. Use source-structure parsing instead.',
+        0,
+      ));
+    }
+
+    const keyBranchMatch = line.match(NAMED_MECHANICS_KEY_BRANCH_REGEX);
+    if (keyBranchMatch) {
+      findings.push(createFinding(
+        filePath,
+        index,
+        line,
+        'named-mechanics-key-branch',
+        'Mechanics must not branch on generated rider/action keys. Parse the source text instead.',
+        keyBranchMatch.index ?? 0,
+      ));
     }
 
     const acWindowText = lines.slice(index, index + 8).join('\n');

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "input/corrupted-giant-shark__腐化巨鲨.md",
+                "file": "input/scuttling-serpentmaw__蛇口蛮蟹.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "corrupted-giant-shark__腐化巨鲨"
+              "title": "scuttling-serpentmaw__蛇口蛮蟹"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 392.5
   },
   "right": {
     "id": "f1a8e27e67a2b9c4",
@@ -170,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "input/corrupted-giant-shark__腐化巨鲨.md",
+                "file": "input/scuttling-serpentmaw__蛇口蛮蟹.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "corrupted-giant-shark__腐化巨鲨 的大纲"
+              "title": "scuttling-serpentmaw__蛇口蛮蟹 的大纲"
             }
           }
         ],
@@ -202,6 +202,7 @@
   },
   "active": "8673d40fa499e62f",
   "lastOpenFiles": [
+    "input/corrupted-giant-shark__腐化巨鲨.md",
     "output/items/三祷之坠 (Exalted).json",
     "output/items/三祷之坠 (Awakened).json",
     "output/items/三祷之坠.json",
@@ -220,7 +221,6 @@
     "input/开发用数据2.md",
     "output/white-tusk-warspeaker.json",
     "output/white-tusk-shaman.json",
-    "output/white-tusk-orc.json",
     "middle/ruidium-corrupted-primeval-owlbear__月蚀矿原初枭雄.md",
     "middle/ruidium-vampire-squid__月蚀吸血乌贼.md",
     "input/slithering-bloodfin__滑行血鳍.md",

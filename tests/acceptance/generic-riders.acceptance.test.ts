@@ -211,4 +211,43 @@ describe('generic rider extraction acceptance', () => {
       ]),
     );
   });
+
+  it('generates hit-dice outcome activities from source text without creature-name matching', () => {
+    const item = firstItem(
+      generateWith(
+        'Ashen Drain. The target loses 2 spent Hit Dice. If this reduces the target to 0 Hit Dice, it must make a Ruidium Corruption saving throw.',
+      ),
+    );
+    const generatedActivities = activities(item);
+
+    expect(item.flags?.fvttJsonGenerator?.hitDiceOutcome?.specs?.[0]).toEqual(
+      expect.objectContaining({
+        hitDiceChange: expect.objectContaining({ direction: 'lose', count: 2, pool: 'spent' }),
+        followupSave: expect.objectContaining({ label: 'Ruidium Corruption' }),
+      }),
+    );
+    expect(generatedActivities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Lose Hit Die',
+          type: 'utility',
+          flags: expect.objectContaining({
+            fvttJsonGenerator: expect.objectContaining({
+              hitDiceOutcomeActivity: expect.objectContaining({ kind: 'hitDiceChange' }),
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          name: 'Ruidium Corruption Save',
+          type: 'utility',
+          flags: expect.objectContaining({
+            fvttJsonGenerator: expect.objectContaining({
+              hitDiceOutcomeActivity: expect.objectContaining({ kind: 'followupSave' }),
+            }),
+          }),
+        }),
+      ]),
+    );
+    expect(JSON.stringify(item.flags?.fvttJsonGenerator?.hitDiceOutcome)).not.toContain('Vampiric Bite');
+  });
 });

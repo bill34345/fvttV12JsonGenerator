@@ -128,12 +128,61 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
     const venomousBite = findItem(actor, 'Venomous Bite');
     const activities = getActivities(venomousBite);
 
-    expect(activities).toHaveLength(4);
+    expect(activities).toHaveLength(7);
     expect(activities[0]?.type).toBe('attack');
-    expect(activities.slice(1).map((activity) => activity.type)).toEqual(['damage', 'damage', 'utility']);
-    expect(activities.slice(1).some((activity) => activity.save?.dc?.formula === '14')).toBe(false);
-    expect(activities.slice(1).some((activity) => (activity.save?.ability ?? []).includes('con'))).toBe(false);
-    for (const activity of activities.slice(1)) {
+    const riderSaves = activities.filter((activity) => activity.flags?.fvttJsonGenerator?.compoundRider && activity.type === 'save');
+    expect(riderSaves).toHaveLength(3);
+    for (const activity of riderSaves) {
+      expect(activity.save?.dc?.value).toBe(14);
+      expect(activity.save?.ability ?? []).toContain('con');
+    }
+    expect(riderSaves[0]?.damage?.parts?.[0]).toEqual(
+      expect.objectContaining({ number: 2, denomination: 6, types: ['poison'] }),
+    );
+    expect(riderSaves[1]?.damage?.parts?.[0]).toEqual(
+      expect.objectContaining({ number: 1, denomination: 6, types: ['piercing'] }),
+    );
+    expect(riderSaves[2]?.damage?.parts ?? []).toHaveLength(0);
+    expect(riderSaves[2]?.flags?.fvttJsonGenerator).toEqual(
+      expect.objectContaining({
+        hitDieLoss: 1,
+        grantsTempHp: 10,
+        followupSave: 'Ruidium Corruption',
+      }),
+    );
+    expect(riderSaves[2]?.macroData).toEqual(
+      expect.objectContaining({
+        name: 'Hit Dice Outcome',
+        command: expect.stringContaining('hitDiceOutcomeSpec'),
+      }),
+    );
+    expect(venomousBite.flags?.fvttJsonGenerator?.hitDiceOutcome?.specs?.[0]).toEqual(
+      expect.objectContaining({
+        hitDiceChange: expect.objectContaining({ direction: 'lose', count: 1, pool: 'unspent' }),
+        tempHp: expect.objectContaining({ amount: 10, target: 'self' }),
+        followupSave: expect.objectContaining({ label: 'Ruidium Corruption' }),
+      }),
+    );
+
+    const loseHitDie = activities.find(
+      (activity) => activity.flags?.fvttJsonGenerator?.hitDiceOutcomeActivity?.kind === 'hitDiceChange',
+    );
+    const gainTempHp = activities.find(
+      (activity) => activity.flags?.fvttJsonGenerator?.hitDiceOutcomeActivity?.kind === 'tempHp',
+    );
+    const followupSave = activities.find(
+      (activity) => activity.flags?.fvttJsonGenerator?.hitDiceOutcomeActivity?.kind === 'followupSave',
+    );
+    expect(loseHitDie).toEqual(expect.objectContaining({ name: 'Lose Hit Die', type: 'utility' }));
+    expect(loseHitDie?.activation?.type).toBe('special');
+    expect(gainTempHp).toEqual(expect.objectContaining({ name: 'Gain Temporary HP', type: 'heal' }));
+    expect(gainTempHp?.healing?.bonus).toBe('10');
+    expect(followupSave).toEqual(expect.objectContaining({ name: 'Ruidium Corruption Save', type: 'utility' }));
+    expect(followupSave?.midiProperties).toEqual(
+      expect.objectContaining({ automationOnly: true, otherActivityCompatible: true }),
+    );
+
+    for (const activity of riderSaves) {
       expect(activity.uses).toEqual(
         expect.objectContaining({
           value: 1,

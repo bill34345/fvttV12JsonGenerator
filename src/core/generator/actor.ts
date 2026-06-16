@@ -80,6 +80,12 @@ import {
   isDeathTriggeredSaveTrait as isDeathTriggeredSaveTraitExt,
   isStatusRemovalUtility as isStatusRemovalUtilityExt,
 } from './actor-special';
+import { extractCompoundRiderMechanics, type ExtractedRider, type HitDiceOutcome } from '../mechanics/mechanicsExtraction';
+import {
+  buildHitDiceOutcomeAutomationSpec,
+  buildHitDiceOutcomeMacroCommand,
+  type HitDiceOutcomeActivityIds,
+} from './hitDiceOutcomeAutomation';
 import {
   extractSpellNames as extractSpellNamesExt,
   extractSpellcastingLines as extractSpellcastingLinesExt,
@@ -2282,8 +2288,10 @@ export class ActorGenerator {
       return;
     }
 
-    const segments = this.extractCompoundRiderSegments(String(action.desc ?? ''));
-    if (segments.length === 0) {
+    const extraction = extractCompoundRiderMechanics(String(action.desc ?? ''), {
+      baseDamage: action.attack?.damage?.[0],
+    });
+    if (extraction.riders.length === 0) {
       return;
     }
 
@@ -2294,14 +2302,13 @@ export class ActorGenerator {
       return;
     }
 
-    const baseDamage = action.attack?.damage?.[0];
-    for (const segment of segments) {
-      const damage = this.extractSegmentDamage(segment.text, baseDamage);
-      const save = this.extractSavingThrowFromText(segment.text);
+    for (const segment of extraction.riders) {
+      const damage = segment.damage;
+      const save = segment.save ? { dc: segment.save.dc, ability: segment.save.ability } : undefined;
       const effect = this.createSegmentEffect(segment.text);
-      const metadata = this.extractSegmentMetadata(segment.text);
+      const metadata = segment.metadata;
 
-      if (!save && damage.length === 0 && !effect && Object.keys(metadata).length === 0) {
+      if (!save && damage.length === 0 && segment.outcomes.length === 0) {
         continue;
       }
 
@@ -2315,7 +2322,7 @@ export class ActorGenerator {
       });
 
       for (const activity of Object.values(generated) as any[]) {
-        if (this.segmentHasDailyUse(action.desc ?? '')) {
+        if (extraction.dailyUsePerRider) {
           activity.uses = this.createDailyUses(1);
         }
         activity.flags = {
@@ -2323,7 +2330,11 @@ export class ActorGenerator {
           fvttJsonGenerator: {
             ...(activity.flags?.fvttJsonGenerator ?? {}),
             compoundRider: segment.key,
-            ...(this.segmentHasBloodiedSaveDisadvantage(action.desc ?? '') ? { bloodiedTargetSaveDisadvantage: true } : {}),
+            ...(extraction.bloodiedTargetSaveDisadvantage ? { bloodiedTargetSaveDisadvantage: true } : {}),
+            fieldEvidence: {
+              segment: segment.evidence,
+              ...(segment.save ? { save: segment.save.evidence } : {}),
+            },
             ...metadata,
           },
         };
@@ -2336,48 +2347,190 @@ export class ActorGenerator {
         const targetActivity = Object.values(generated)[0] as any;
         targetActivity.effects = [{ _id: effect._id }];
       }
+
+      const primaryActivity = Object.values(generated)[0] as any;
+      if (primaryActivity && segment.outcomes.length > 0) {
+        const outcomeActivityIds = this.appendHitDiceOutcomeActivities(activities, segment);
+        const spec = buildHitDiceOutcomeAutomationSpec(segment, {
+          primaryActivityId: primaryActivity._id,
+          ...outcomeActivityIds,
+        });
+
+        primaryActivity.midiProperties = {
+          ...(primaryActivity.midiProperties ?? {}),
+          identifier: `hit-dice-outcome-${segment.key}-primary`,
+          otherActivityCompatible: true,
+        };
+        primaryActivity.macroData = {
+          ...(primaryActivity.macroData ?? {}),
+          name: 'Hit Dice Outcome',
+          command: buildHitDiceOutcomeMacroCommand(spec),
+        };
+        primaryActivity.flags = {
+          ...(primaryActivity.flags ?? {}),
+          fvttJsonGenerator: {
+            ...(primaryActivity.flags?.fvttJsonGenerator ?? {}),
+            hitDiceOutcome: spec,
+            outcomes: segment.outcomes,
+          },
+        };
+
+        item.flags = {
+          ...(item.flags ?? {}),
+          fvttJsonGenerator: {
+            ...(item.flags?.fvttJsonGenerator ?? {}),
+            hitDiceOutcome: {
+              specs: [...(item.flags?.fvttJsonGenerator?.hitDiceOutcome?.specs ?? []), spec],
+            },
+          },
+        };
+      }
     }
   }
 
-  private extractCompoundRiderSegments(text: string): Array<{ key: string; name: string; englishName: string; text: string }> {
-    const markers = [
-      { key: 'brine-shock', name: '盐水电击', englishName: 'Brine-shock', pattern: /盐水电击\s*\(Brine-shock\)|Brine-shock/i },
-      { key: 'needling-bite', name: '针刺噬咬', englishName: 'Needling Bite', pattern: /针刺噬咬\s*\(Needling Bite\)|Needling Bite/i },
-      { key: 'vampiric-bite', name: '吸血噬咬', englishName: 'Vampiric Bite', pattern: /吸血噬咬\s*\(Vampiric Bite\)|Vampiric Bite/i },
-    ] as const;
+  private appendHitDiceOutcomeActivities(
+    activities: Record<string, any>,
+    segment: ExtractedRider,
+  ): Omit<HitDiceOutcomeActivityIds, 'primaryActivityId'> {
+    const activityIds: Omit<HitDiceOutcomeActivityIds, 'primaryActivityId'> = {};
+    const hitDiceChange = segment.outcomes.find((outcome) => outcome.kind === 'hitDiceChange');
+    if (hitDiceChange) {
+      const activity = this.createHitDiceOutcomeUtilityActivity(
+        hitDiceChange.direction === 'gain' ? 'Gain Hit Die' : 'Lose Hit Die',
+        segment,
+        hitDiceChange,
+      );
+      activities[activity._id] = activity;
+      activityIds.loseHitDieActivityId = activity._id;
+    }
 
-    const occurrences = markers
-      .map((marker) => {
-        const index = text.search(marker.pattern);
-        return index >= 0 ? { ...marker, index } : null;
-      })
-      .filter((entry): entry is typeof markers[number] & { index: number } => Boolean(entry))
-      .sort((left, right) => left.index - right.index);
+    const tempHp = segment.outcomes.find((outcome) => outcome.kind === 'tempHp');
+    if (tempHp) {
+      const activity = this.createHitDiceOutcomeTempHpActivity(segment, tempHp);
+      activities[activity._id] = activity;
+      activityIds.tempHpActivityId = activity._id;
+    }
 
-    return occurrences.map((entry, index) => {
-      const next = occurrences[index + 1];
-      return {
-        key: entry.key,
-        name: entry.name,
-        englishName: entry.englishName,
-        text: text.slice(entry.index, next?.index ?? undefined).trim(),
-      };
-    });
+    const followupSave = segment.outcomes.find((outcome) => outcome.kind === 'followupSave');
+    if (followupSave) {
+      const activity = this.createHitDiceOutcomeUtilityActivity(`${followupSave.label} Save`, segment, followupSave);
+      activities[activity._id] = activity;
+      activityIds.followupSaveActivityId = activity._id;
+    }
+
+    return activityIds;
   }
 
-  private extractSegmentDamage(text: string, baseDamage?: Damage): Damage[] {
-    const extracted = this.extractDamagePartsFromText(text);
-    if (extracted.length > 0) {
-      return extracted;
-    }
+  private createHitDiceOutcomeUtilityActivity(
+    name: string,
+    segment: ExtractedRider,
+    outcome: HitDiceOutcome,
+  ): any {
+    const id = this.createRandomId();
+    return {
+      _id: id,
+      name,
+      type: 'utility',
+      activation: {
+        type: 'special',
+        value: null,
+        override: false,
+      },
+      consumption: {
+        scaling: { allowed: false, max: '' },
+        spellSlot: false,
+        targets: [],
+      },
+      duration: {
+        units: 'inst',
+        concentration: false,
+        override: false,
+      },
+      range: { override: false },
+      target: this.buildHitDiceOutcomeTarget(outcome),
+      uses: { spent: 0, recovery: [], max: '' },
+      midiProperties: {
+        identifier: `hit-dice-outcome-${segment.key}-${outcome.kind}`,
+        automationOnly: true,
+        otherActivityCompatible: true,
+      },
+      flags: this.buildHitDiceOutcomeActivityFlags(segment, outcome),
+    };
+  }
 
-    const extraDie = text.match(/(?:1\s*颗伤害骰|one\s+damage\s+die)/i);
-    const baseDie = baseDamage?.formula.match(/\d+d(\d+)/i)?.[1];
-    if (extraDie && baseDie && baseDamage?.type) {
-      return [{ formula: `1d${baseDie}`, type: baseDamage.type }];
-    }
+  private createHitDiceOutcomeTempHpActivity(
+    segment: ExtractedRider,
+    outcome: Extract<HitDiceOutcome, { kind: 'tempHp' }>,
+  ): any {
+    const id = this.createRandomId();
+    return {
+      _id: id,
+      name: 'Gain Temporary HP',
+      type: 'heal',
+      activation: {
+        type: 'special',
+        value: null,
+        override: false,
+      },
+      consumption: {
+        scaling: { allowed: false, max: '' },
+        spellSlot: false,
+        targets: [],
+      },
+      duration: {
+        units: 'inst',
+        concentration: false,
+        override: false,
+      },
+      range: { units: 'self', special: '', override: false },
+      target: {
+        template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' },
+        affects: { count: '', type: 'self', choice: false, special: '' },
+        prompt: true,
+        override: false,
+      },
+      healing: {
+        number: null,
+        denomination: null,
+        bonus: String(outcome.amount),
+        types: ['temphp'],
+        custom: { enabled: false, formula: '' },
+        scaling: { mode: 'whole', number: 1, formula: '' },
+      },
+      uses: { spent: 0, recovery: [], max: '' },
+      midiProperties: {
+        identifier: `hit-dice-outcome-${segment.key}-temp-hp`,
+        automationOnly: true,
+        otherActivityCompatible: true,
+      },
+      flags: this.buildHitDiceOutcomeActivityFlags(segment, outcome),
+    };
+  }
 
-    return [];
+  private buildHitDiceOutcomeTarget(outcome: HitDiceOutcome): Record<string, unknown> {
+    const targetType = outcome.target === 'self' ? 'self' : '';
+    return {
+      template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' },
+      affects: { count: '', type: targetType, choice: false, special: '' },
+      prompt: true,
+      override: false,
+    };
+  }
+
+  private buildHitDiceOutcomeActivityFlags(segment: ExtractedRider, outcome: HitDiceOutcome): Record<string, unknown> {
+    return {
+      fvttJsonGenerator: {
+        compoundRider: segment.key,
+        hitDiceOutcomeActivity: {
+          kind: outcome.kind,
+          evidence: outcome.evidence,
+        },
+        fieldEvidence: {
+          segment: segment.evidence,
+          outcome: outcome.evidence,
+        },
+      },
+    };
   }
 
   private createSegmentEffect(text: string): any | null {
@@ -2417,35 +2570,6 @@ export class ActorGenerator {
       clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
       ?? mapDamageType(clause.match(/([一-龥]{2,4})伤害/)?.[1] ?? '');
     return formula && explicitType ? { formula, type: explicitType } : null;
-  }
-
-  private extractSegmentMetadata(text: string): Record<string, unknown> {
-    const metadata: Record<string, unknown> = {};
-    const hitDieLoss = text.match(/失去\s*\**(\d+)\s*颗[^。]*(?:生命骰|Hit Die)|loses?\s*(\d+)\s*(?:unspent\s*)?Hit Die/i);
-    const hitDice = hitDieLoss?.[1] ?? hitDieLoss?.[2];
-    if (hitDice) {
-      metadata.losesHitDie = Number.parseInt(hitDice, 10);
-    }
-
-    const tempHp = text.match(/获得\s*\**(\d+)\s*点临时生命值|gains?\s*(\d+)\s*temporary hit points?/i);
-    const tempHpValue = tempHp?.[1] ?? tempHp?.[2];
-    if (tempHpValue) {
-      metadata.grantsTempHp = Number.parseInt(tempHpValue, 10);
-    }
-
-    if (/生命骰降为\s*0|Hit Die[^。.]*(?:降为|to)\s*0|Hit Dice[^.]*to\s*0/i.test(text)) {
-      metadata.corruptionSaveOnHitDieZero = true;
-    }
-
-    return metadata;
-  }
-
-  private segmentHasDailyUse(text: string): boolean {
-    return /每次长休|long rest/i.test(text);
-  }
-
-  private segmentHasBloodiedSaveDisadvantage(text: string): boolean {
-    return /(?:濒血|重伤|Bloodied)[^。.]*(?:劣势|Disadvantage)/i.test(text);
   }
 
   private applyParsedAcEffect(item: any, action: GeneratedActionData): void {
@@ -2619,6 +2743,9 @@ export class ActorGenerator {
     const orderedActivities = Object.values(activities);
     for (const [index, activity] of orderedActivities.entries()) {
       if (!activity || typeof activity !== 'object') {
+        continue;
+      }
+      if (activity.flags?.fvttJsonGenerator?.hitDiceOutcomeActivity) {
         continue;
       }
 
