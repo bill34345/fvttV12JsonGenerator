@@ -535,7 +535,7 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>### 特质</li><li>**两栖.*** 可以在空气和水中呼吸。</li><li>**感知魔法.*** 甲伏怪可以随意感知 120 尺范围内的魔法或瑞金矿石。该特性的运作方式类似于检测魔法 (Detect Magic)，但本身并非魔法。</li><li>**腐化反噬.*** 如果在任何攻击检定或豁免检定中掷出 1，它必须成功通过一次 DC 20 的魅力豁免，否则立即增加 1 级力竭。</li><li>**灵能干扰光环.*** 任何在甲伏怪 5 尺内开始其回合的生物，若不具备心灵伤害抗性，将受到 3 (1d6) 点心灵伤害。此外，该范围内的生物在维持法术专注 (Concentration) 的豁免中具有劣势 (Disadvantage)。</li></ul>",
+        "value": "<ul><li>### 特质</li></ul>",
         "public": ""
       },
       "alignment": "混乱邪恶",
@@ -727,8 +727,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity653": {
-            "_id": "dnd5eactivity653",
+          "dnd5eactivity8ed": {
+            "_id": "dnd5eactivity8ed",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -772,8 +772,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityaf3": {
-            "_id": "dnd5eactivityaf3",
+          "dnd5eactivityd04": {
+            "_id": "dnd5eactivityd04",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -817,12 +817,25 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity97e": {
-            "_id": "dnd5eactivity97e",
-            "type": "utility",
+          "dnd5eactivity497": {
+            "_id": "dnd5eactivity497",
+            "type": "save",
+            "save": {
+              "ability": [
+                "cha"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "20",
+                "value": 20
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "effects": [
               {
-                "_id": "86ccef8b0808bfad"
+                "_id": "10e9ca9ad6ae7c85"
               }
             ],
             "activation": {
@@ -840,7 +853,7 @@
       },
       "effects": [
         {
-          "_id": "86ccef8b0808bfad",
+          "_id": "10e9ca9ad6ae7c85",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -862,7 +875,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
             "exhaustion"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -893,9 +907,30 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity872": {
-            "_id": "dnd5eactivity872",
-            "type": "utility",
+          "dnd5eactivity591": {
+            "_id": "dnd5eactivity591",
+            "type": "damage",
+            "damage": {
+              "parts": [
+                {
+                  "number": 1,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "psychic"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
             "activation": {
               "type": "special",
               "value": null,
@@ -924,12 +959,12 @@
       }
     },
     {
-      "name": "",
+      "name": "多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<ul><li>甲伏怪发动两次钳击。如果甲伏怪正擒抱一个生物，它还可以额外使用一次触须。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -941,9 +976,14 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity9c1": {
-            "_id": "dnd5eactivity9c1",
+          "dnd5eactivity4d0": {
+            "_id": "dnd5eactivity4d0",
             "type": "utility",
+            "effects": [
+              {
+                "_id": "7ef82f3486353c1c"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -957,7 +997,34 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "7ef82f3486353c1c",
+          "name": "擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -969,12 +1036,12 @@
       }
     },
     {
-      "name": "",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
+      "name": "钳击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<p>7命中, 触及10尺, 11 (2d6+4) 点钝击伤害, 外加 3 (1d6) 点心灵伤害.</p><ul><li>命中：如果目标是体型为大型或更小的生物，则目标被擒抱（逃脱DC 15）。直到擒抱结束前，目标处于束缚状态。甲伏怪最多可同时擒抱两个生物。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -986,9 +1053,247 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity93a": {
-            "_id": "dnd5eactivity93a",
-            "type": "utility",
+          "dnd5eactivitydd3": {
+            "_id": "dnd5eactivitydd3",
+            "type": "attack",
+            "attack": {
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 1,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "bludgeoning"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "effects": [
+              {
+                "_id": "1b54dada8e8a47b2"
+              },
+              {
+                "_id": "4d8af6cb6e699e96"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
+        }
+      },
+      "effects": [
+        {
+          "_id": "1b54dada8e8a47b2",
+          "name": "束缚 (Restrained)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
+          "statuses": [
+            "restrained"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "4d8af6cb6e699e96",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      }
+    },
+    {
+      "name": "心灵尖啸",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>甲伏怪发出高频且带有灵能冲击的尖叫，覆盖90尺锥形区域。区域内的每个生物必须进行一次 DC 15 的体质豁免。豁免失败者受到 9 (2d8) 点雷鸣伤害和 7 (2d6) 点心灵伤害并陷入眩晕状态直到其下个回合结束。豁免成功则伤害减半且不会眩晕。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activation": {
+          "type": "action",
+          "cost": 1,
+          "condition": ""
+        },
+        "activities": {
+          "dnd5eactivity832": {
+            "_id": "dnd5eactivity832",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "str",
+                "formula": "",
+                "value": 15
+              }
+            },
+            "damage": {
+              "parts": []
+            },
+            "uses": {
+              "spent": 0,
+              "max": "1",
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "type": "recoverAll",
+                  "formula": "5"
+                }
+              ]
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": 1,
+                "contiguous": false,
+                "type": "cone",
+                "size": "90",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "effects": [
+              {
+                "_id": "eae6383b2d7b24fb"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1002,24 +1307,54 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "eae6383b2d7b24fb",
+          "name": "眩晕 (Dazed)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "icons/svg/daze.svg",
+          "statuses": [
+            "dazed"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
           "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "halfDamageOnSave": true
+          }
         }
       }
     },
     {
-      "name": "",
+      "name": "触须",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<ul><li>一个被甲伏怪擒抱的生物必须成功通过一次 DC 15 的体质豁免，否则将中毒1分钟。在中毒持续期间，目标处于麻痹状态。目标在其每回合结束时可以重复该豁免，成功则结束该效果。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1031,9 +1366,33 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2c6": {
-            "_id": "dnd5eactivity2c6",
-            "type": "utility",
+          "dnd5eactivity686": {
+            "_id": "dnd5eactivity686",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "str",
+                "formula": "",
+                "value": 15
+              }
+            },
+            "damage": {
+              "parts": []
+            },
+            "effects": [
+              {
+                "_id": "dca7b5153dd810ea"
+              },
+              {
+                "_id": "f3dd5ee8ddb1163e"
+              },
+              {
+                "_id": "85649bd8bfd33431"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1047,7 +1406,86 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "dca7b5153dd810ea",
+          "name": "中毒 (Poisoned)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
+          "statuses": [
+            "poisoned"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "f3dd5ee8ddb1163e",
+          "name": "麻痹 (Paralyzed)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
+          "statuses": [
+            "paralyzed"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "85649bd8bfd33431",
+          "name": "擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1059,57 +1497,12 @@
       }
     },
     {
-      "name": "",
+      "name": "红月厄运",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "",
-          "chat": ""
-        },
-        "source": {
-          "custom": "Imported"
-        },
-        "activation": {
-          "type": "action",
-          "cost": 1,
-          "condition": ""
-        },
-        "activities": {
-          "dnd5eactivityc93": {
-            "_id": "dnd5eactivityc93",
-            "type": "utility",
-            "activation": {
-              "type": "action",
-              "value": null,
-              "override": false,
-              "condition": ""
-            }
-          }
-        },
-        "type": {
-          "value": "monster",
-          "subtype": ""
-        }
-      },
-      "effects": [],
-      "flags": {
-        "tidy5e-sheet": {
-          "section": "动作",
-          "actionSection": "动作"
-        },
-        "fvttJsonGenerator": {
-          "effectHints": {}
-        }
-      }
-    },
-    {
-      "name": "",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
-      "system": {
-        "description": {
-          "value": "",
+          "value": "<ul><li>当10尺内的一个生物对其发动攻击检定并掷出自然20（暴击）时，甲伏怪强迫该生物重掷该骰。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1121,8 +1514,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2a7": {
-            "_id": "dnd5eactivity2a7",
+          "dnd5eactivitya96": {
+            "_id": "dnd5eactivitya96",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1156,7 +1549,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752088309,
-    "modifiedTime": 1775752088309
+    "createdTime": 1781713197075,
+    "modifiedTime": 1781713197075
   }
 }

@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
+      "name": "Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
+          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity266": {
-            "_id": "dnd5eactivity266",
+          "dnd5eactivity401": {
+            "_id": "dnd5eactivity401",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydab": {
-            "_id": "dnd5eactivitydab",
+          "dnd5eactivitydd7": {
+            "_id": "dnd5eactivitydd7",
             "type": "utility",
             "activation": {
               "type": "",
@@ -797,7 +797,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 12 (2d8 + 3) slashing damage, or 14 (2d10 + 3) slashing damage if used with two hands.</p>",
+          "value": "<p>近战武器攻击: +5 命中, 触及 5 ft., 一个目标. 命中： 12 (2d8 + 3) 挥砍伤害, or 14 (2d10 + 3) 挥砍伤害 if used with two hands.</p>",
           "chat": ""
         },
         "source": {
@@ -809,13 +809,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity311": {
-            "_id": "dnd5eactivity311",
+          "dnd5eactivity3a5": {
+            "_id": "dnd5eactivity3a5",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "5",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
@@ -823,23 +823,6 @@
             },
             "damage": {
               "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "3",
-                  "types": [
-                    "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
                 {
                   "number": 2,
                   "denomination": 10,
@@ -887,6 +870,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "4243c32b32e06ad2"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -905,9 +893,65 @@
           "long": null,
           "reach": 5,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "slashing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "4243c32b32e06ad2",
+          "name": "Battleaxe",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "5",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +5"
+            }
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "Actions",
@@ -924,7 +968,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 10 (2d6 + 3) piercing damage.</p>",
+          "value": "<p>近战或远程武器攻击: +5 命中, 触及 5 ft. or 射程 30/120 ft., 一个目标. 命中： 10 (2d6 + 3) 穿刺伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -936,38 +980,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb9a": {
-            "_id": "dnd5eactivityb9a",
+          "dnd5eactivity06a": {
+            "_id": "dnd5eactivity06a",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "5",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "3",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -997,6 +1023,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "f3893664ea3a3289"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1015,9 +1046,65 @@
           "long": null,
           "reach": 5,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "piercing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "f3893664ea3a3289",
+          "name": "Javelin",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "5",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +5"
+            }
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "Actions",
@@ -1036,7 +1123,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752089112,
-    "modifiedTime": 1775752089112
+    "createdTime": 1781713197140,
+    "modifiedTime": 1781713197140
   }
 }

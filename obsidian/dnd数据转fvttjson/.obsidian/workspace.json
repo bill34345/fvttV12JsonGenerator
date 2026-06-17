@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "input/scuttling-serpentmaw__蛇口蛮蟹.md",
+                "file": "crawls/goddessfantasy/board-2318/plaintext/monsters.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "scuttling-serpentmaw__蛇口蛮蟹"
+              "title": "monsters"
             }
           }
         ]
@@ -170,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "input/scuttling-serpentmaw__蛇口蛮蟹.md",
+                "file": "crawls/goddessfantasy/board-2318/plaintext/monsters.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "scuttling-serpentmaw__蛇口蛮蟹 的大纲"
+              "title": "monsters 的大纲"
             }
           }
         ],
@@ -202,41 +202,41 @@
   },
   "active": "8673d40fa499e62f",
   "lastOpenFiles": [
-    "input/corrupted-giant-shark__腐化巨鲨.md",
-    "output/items/三祷之坠 (Exalted).json",
-    "output/items/三祷之坠 (Awakened).json",
-    "output/items/三祷之坠.json",
-    "output/items/三祷之坠.json/三祷之坠.json",
-    "output/items/三祷之坠.json/三祷之坠 (Exalted).json",
-    "output/items/三祷之坠.json/三祷之坠 (Awakened).json",
-    "output/items",
-    "input/alyxian-aboleth__底栖魔鱼“阿利克辛”.md",
-    "input/aboleth-spawn__底栖魔鱼衍体.md",
-    "input/scuttling-serpentmaw__蛇口蛮蟹.md",
-    "input/items/物品模版以及两个示例物品.md",
-    "input/items/骑士之盾.md",
-    "input/items/三祷之坠.md",
-    "input/开发用数据.md",
-    "input/items",
-    "input/开发用数据2.md",
-    "output/white-tusk-warspeaker.json",
-    "output/white-tusk-shaman.json",
-    "middle/ruidium-corrupted-primeval-owlbear__月蚀矿原初枭雄.md",
-    "middle/ruidium-vampire-squid__月蚀吸血乌贼.md",
-    "input/slithering-bloodfin__滑行血鳍.md",
-    "audits/2026-03-28--2-audit.md",
-    "audits/2026-03-28---audit.md",
-    "middle/light-devourer__噬光鮟鱇.md",
-    "middle/slithering-bloodfin__滑行血鳍.md",
-    "middle/ruidium-corrupted-chuul-screecher__月蚀矿腐化尖啸者.md",
-    "middle/scuttling-serpentmaw__蛇口蛮蟹.md",
-    "middle/ruidium-corrupted-chuul-nullifier__月蚀腐化虚寂者.md",
-    "middle/deaths-embrace__死亡之拥.md",
-    "middle/ruidium-corrupted-chuul-incubator__月蚀矿腐化孵育者.md",
-    "middle/corrupted-giant-shark__腐化巨鲨.md",
-    "middle/alyxian-aboleth__底栖魔鱼“阿利克辛”.md",
-    "middle/aboleth-spawn__底栖魔鱼衍体.md",
-    "middle-test/ruidium-corrupted-chuul-screecher__月蚀矿腐化尖啸者.md",
-    "middle-test/ruidium-corrupted-chuul-nullifier__月蚀腐化虚寂者.md"
+    "output_backup/zombie-clot__丧尸肉团.2026-06-17T16-19-57-152Z.json",
+    "output_backup/yithian__伊斯人.2026-06-17T16-19-57-148Z.json",
+    "output_backup/white-tusk-warspeaker.2026-06-17T16-19-57-146Z.json",
+    "output_backup/white-tusk-shaman.2026-06-17T16-19-57-144Z.json",
+    "output_backup/white-tusk-orc.2026-06-17T16-19-57-141Z.json",
+    "output_backup/white-tusk-juggernaut.2026-06-17T16-19-57-138Z.json",
+    "output_backup/white-tusk-bloodrager.2026-06-17T16-19-57-110Z.json",
+    "output_backup/waxwork__活蜡像.2026-06-17T16-19-57-108Z.json",
+    "output_backup/the-laughing-hand__狂笑之手.2026-06-17T16-19-57-105Z.json",
+    "output_backup/swarm-of-zombie-limbs__丧尸断肢集群.2026-06-17T16-19-57-099Z.json",
+    "output_backup/slithering-bloodfin__滑行血鳍.2026-06-17T16-19-57-097Z.json",
+    "input/mordenheims-monster__莫登海姆的怪物.md",
+    "input/yithian__伊斯人.md",
+    "input/shoggoth__修格斯.md",
+    "input/nightgaunt__夜魇.md",
+    "input/mi-go__米·戈.md",
+    "input/elder-thing__古老者.md",
+    "input/gug__古革巨兽.md",
+    "input/dullahan__杜拉罕.md",
+    "input/waxwork__活蜡像.md",
+    "input/mist-horror__惊怖迷雾.md",
+    "input/zombie-clot__丧尸肉团.md",
+    "input/swarm-of-zombie-limbs__丧尸断肢集群.md",
+    "input/gremishka__小法妖.md",
+    "middle/mordenheims-monster__莫登海姆的怪物.md",
+    "middle/yithian__伊斯人.md",
+    "middle/shoggoth__修格斯.md",
+    "middle/nightgaunt__夜魇.md",
+    "middle/mi-go__米·戈.md",
+    "middle/elder-thing__古老者.md",
+    "middle/gug__古革巨兽.md",
+    "middle/dullahan__杜拉罕.md",
+    "middle/waxwork__活蜡像.md",
+    "middle/mist-horror__惊怖迷雾.md",
+    "middle/zombie-clot__丧尸肉团.md",
+    "middle/swarm-of-zombie-limbs__丧尸断肢集群.md"
   ]
 }

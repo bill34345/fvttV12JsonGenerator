@@ -76,7 +76,8 @@ program
   .command('records-to-plaintext')
   .description('Convert crawl records.json into a plaintext statblock collection')
   .requiredOption('--records <path>', 'Path to crawl records.json')
-  .option('--out-file <path>', 'Output plaintext collection file')
+  .option('--out-dir <path>', 'Output directory for per-monster plaintext files')
+  .option('--out-file <path>', 'Legacy output plaintext collection file')
   .option('--content-type <type>', 'Filter records by classified content type: all, monster, unknown', parseContentType, 'monster')
   .option('--site <site>', 'Site renderer to use; defaults to record.site')
   .option('--force', 'Overwrite the output file if it already exists')
@@ -86,6 +87,7 @@ program
     try {
       const result = runRecordsToPlaintext({
         recordsPath: options.records,
+        outDir: options.outDir,
         outFile: options.outFile,
         contentType: options.contentType,
         site: options.site,
@@ -97,10 +99,15 @@ program
       console.log(`Records read: ${result.recordsRead}`);
       console.log(`Records matched: ${result.recordsMatched}`);
       console.log(`Blocks emitted: ${result.blocksEmitted}`);
+      console.log(`Files written: ${result.filesWritten}`);
       console.log(`Skipped: ${result.skipped}`);
+      console.log(`OK: ${result.items.filter((item) => item.status === 'ok').length}`);
+      console.log(`Needs review: ${result.items.filter((item) => item.status === 'needs_review').length}`);
+      console.log(`Failed: ${result.items.filter((item) => item.status === 'failed').length}`);
       console.log(`Warnings: ${result.warnings.length}`);
       console.log(`Failures: ${result.failures.length}`);
-      console.log(`Output file: ${result.outFile}`);
+      console.log(`Output dir: ${result.outDir}`);
+      if (options.outFile) console.log(`Output file: ${result.outFile}`);
       console.log(`Dry run: ${result.dryRun ? 'yes' : 'no'}`);
 
       if (result.warnings.length > 0) {
@@ -113,6 +120,10 @@ program
         for (const failure of result.failures) {
           console.error(`Failed: topic ${failure.topicId ?? 'unknown'} ${failure.title ?? ''} -> ${failure.error}`);
         }
+        process.exit(1);
+      }
+
+      if (options.failOnWarning && result.warnings.length > 0) {
         process.exit(1);
       }
     } catch (error: unknown) {

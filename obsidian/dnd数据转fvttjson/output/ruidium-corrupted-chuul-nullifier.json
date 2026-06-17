@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "<think>\nThe user wants me to translate \"Amphibious\" from English to Simplified Chinese (zh-CN).\n\n\"Amphibious\" in English means:\n1. Relating to or affecting both land and water\n2. (of a vehicle or person) able to operate on both land and water\n\nIn Chinese, this translates to:\n\"两栖的\" (liǎng qī de)\n\nFor example:\n- Amphibious vehicle = 两栖车辆\n- Amphibious operation = 两栖作战\n\nSince the domain is \"item.name\" (物品名称), the translation should be the standard term for this type of item/category.\n</think>\n\n两栖的",
+      "name": "Amphibious",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity39a": {
-            "_id": "dnd5eactivity39a",
+          "dnd5eactivity52c": {
+            "_id": "dnd5eactivity52c",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Sense Magic\" from English to zh-CN (Simplified Chinese).\n\n\"Sense Magic\" - this appears to be a game term, likely from a video game or RPG context. It could refer to:\n1. A spell/ability name - \"感知魔法\" or \"魔法感知\"\n2. A general concept - \"感知魔法\" (to sense magic)\n\nIn gaming contexts, this is typically translated as:\n- \"感知魔法\" (gǎnzhī mófǎ) - to sense/perceive magic\n- \"魔法感知\" (mófǎ gǎnzhī) - magic sensing/awareness\n\nGiven this is likely from a game item or ability name context (Domain: item.name), the most common translation would be \"感知魔法\" or \"魔法感知\".\n\nI'll go with \"感知魔法\" as it's the more natural reading when used as an item name.\n</think>\n\n感知魔法",
+      "name": "Sense Magic",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity684": {
-            "_id": "dnd5eactivity684",
+          "dnd5eactivityce1": {
+            "_id": "dnd5eactivityce1",
             "type": "utility",
             "activation": {
               "type": "",
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye7e": {
-            "_id": "dnd5eactivitye7e",
+          "dnd5eactivity876": {
+            "_id": "dnd5eactivity876",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -848,7 +848,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>A creature in that area that is concentrating has disadvantage on Constitution saving throws to maintain concentration. In addition, when a creature in that area casts a spell of 1st level or higher, or activates a magic item effect that deals damage, restores HP, teleports, or imposes a condition, it must first succeed on a DC 15 Spellcasting ability check or the effect fails, but the spell slot, charge, or other resource is still expended.</p>",
+          "value": "<p>A creature in that area that is concentrating has disadvantage on 体质豁免检定s to maintain concentration. In addition, when a creature in that area casts a spell of 1st level or higher, or activates a magic item effect that deals damage, restores HP, teleports, or imposes a condition, it must first succeed on a DC 15 Spellcasting ability check or the effect fails, but the spell slot, charge, or other resource is still expended.</p>",
           "chat": ""
         },
         "source": {
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycdd": {
-            "_id": "dnd5eactivitycdd",
+          "dnd5eactivityadb": {
+            "_id": "dnd5eactivityadb",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -896,7 +896,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). The text is:\n\n\"If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.\"\n\nThis appears to be game-related text, possibly from Dungeons & Dragons or a similar RPG system, referring to a status effect called \"Ruidium Corruption\" and \"exhaustion\" levels.\n\nLet me translate this:\n\n- \"If the creature\" = 如果该生物\n- \"is already affected by\" = 已经受到...影响\n- \"Ruidium Corruption\" = 锐毒侵蚀（或保持Ruidium Corruption不变，因为是专有名词）\n- \"it\" = 它\n- \"instead gains\" = 则改为获得\n- \"1 level of exhaustion\" = 1级力竭\n\nLet me put it together:\n如果该生物已经受到锐毒侵蚀的影响，则改为获得1级力竭。\n\nOr more naturally:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n\nActually, looking at game terminology more carefully:\n- \"Ruidium Corruption\" is likely a specific game term that might be kept as \"Ruidium Corruption\" or translated as \"锐毒侵蚀\"\n- \"exhaustion\" in D&D context is \"力竭\"\n\nI'll go with:\n如果该生物已受Ruidium Corruption影响，则改为获得1级力竭。\n\nOr fully translated:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n</think>\n\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。</p>",
+          "value": "<p>If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.</p>",
           "chat": ""
         },
         "source": {
@@ -908,12 +908,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity235": {
-            "_id": "dnd5eactivity235",
+          "dnd5eactivity388": {
+            "_id": "dnd5eactivity388",
             "type": "utility",
             "effects": [
               {
-                "_id": "7fde7eb7a233b871"
+                "_id": "92232eff5360f97d"
               }
             ],
             "activation": {
@@ -931,7 +931,7 @@
       },
       "effects": [
         {
-          "_id": "7fde7eb7a233b871",
+          "_id": "92232eff5360f97d",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -953,7 +953,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
             "exhaustion"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -967,7 +968,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
+      "name": "多重攻击Multiattack",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -984,8 +985,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb1c": {
-            "_id": "dnd5eactivityb1c",
+          "dnd5eactivity209": {
+            "_id": "dnd5eactivity209",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1012,12 +1013,12 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Seizing Claw\" from English to Chinese (zh-CN).\n\n\"Seizing\" means to grab, take hold of, or grasp - in Chinese this can be translated as \"抓取\", \"攫取\", or \" seizing in the sense of taking control.\"\n\n\"Claw\" is a noun meaning a sharp, curved nail on an animal's foot, or something shaped like this - in Chinese this is \"爪\", \"爪子\", or \"利爪\".\n\nFor a game item name like \"Seizing Claw\", a common translation would be:\n- 抓取之爪\n- 攫取利爪\n- 夺爪\n- 掠爪\n\nI think \"攫取利爪\" or \"抓取利爪\" would be good translations as it maintains the powerful, aggressive tone of the original name.\n\nActually, looking at this as a game item name, a more concise translation might be:\n- 攫爪\n- 夺爪\n\nLet me go with \"攫取利爪\" as it more directly translates \"seizing\" (攫取) + \"claw\" (利爪).\n</think>\n\n攫取利爪",
+      "name": "Seizing Claw",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 14 (2d8 + 5) bludgeoning damage plus 4 (1d8) psychic damage. If the target is Large or smaller, it's grappled (escape DC 16) and pulled up to 10 feet toward the nullifier. The nullifier can have only one creature grappled this way at a time.</p>",
+          "value": "<p>近战武器攻击: +8 命中, 触及 10 ft., 一个目标. 命中： 14 (2d8 + 5) 钝击伤害 外加 4 (1d8) psychic damage. If the target is Large or smaller, it's grappled (escape DC 16) and pulled up to 10 feet toward the nullifier. The nullifier can have only one creature grappled this way at a time.</p>",
           "chat": ""
         },
         "source": {
@@ -1029,13 +1030,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityc00": {
-            "_id": "dnd5eactivityc00",
+          "dnd5eactivity99b": {
+            "_id": "dnd5eactivity99b",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "8",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
@@ -1043,23 +1044,6 @@
             },
             "damage": {
               "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "5",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
                 {
                   "number": 1,
                   "denomination": 8,
@@ -1109,7 +1093,10 @@
             },
             "effects": [
               {
-                "_id": "c195c98bfa5472f5"
+                "_id": "334ba05d1535a389"
+              },
+              {
+                "_id": "011ec520e75aef70"
               }
             ],
             "activation": {
@@ -1130,11 +1117,30 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [
         {
-          "_id": "c195c98bfa5472f5",
+          "_id": "334ba05d1535a389",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1156,7 +1162,44 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ]
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "011ec520e75aef70",
+          "name": "Seizing Claw",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "8",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +8"
+            }
+          }
         }
       ],
       "flags": {
@@ -1170,12 +1213,12 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Crushing Claw\" from English to Simplified Chinese (zh-CN). This appears to be a game term, likely from a game like Pokémon or similar.\n\nIn Pokémon, \"Crushing Claw\" (or the Japanese version \"哈欠\") - wait, let me think again. \"Crushing Claw\" could be from various games.\n\nActually, looking at this more carefully, this is likely \"Crushing Claw\" from the Pokémon series. In Pokémon games, \"Crushing Claw\" was a move that could be learned by certain Pokémon.\n\nIn Chinese (Simplified), \"Crushing Claw\" is typically translated as \"撕裂爪\" or \"碎裂爪\" or \"压碎爪\".\n\nLet me think about common translations:\n- \"Crushing Claw\" is often translated as \"撕裂爪\" (Sīliè zhuǎ) in Pokémon contexts\n\nActually, I believe the standard translation for \"Crushing Claw\" in Simplified Chinese (for Pokémon) is \"撕裂爪\".\n\nBut let me consider if this might be from another context. The instruction says \"item.name\" which suggests it could be a game item or move name.\n\nGiven the domain \"item.name\" and the game context likely being Pokémon, the most common translation would be:\n- 撕裂爪 (Sīliè zhuǎ) - literally \"Tearing Claw\" or \"Rending Claw\"\n\nOr it could be:\n- 碎裂爪 (Suìliè zhuǎ) - literally \"Shattering Claw\"\n- 压碎爪 (Yāsuì zhuǎ) - literally \"Crushing Claw\"\n\nFor Pokémon specifically, \"Crushing Claw\" is translated as \"撕裂爪\".\n\nI'll go with the most standard translation in this context.\n</think>\n\n撕裂爪",
+      "name": "Crushing Claw",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage plus 7 (2d6) psychic damage. The target must succeed on a DC 15 Constitution saving throw or can't take reactions until the start of the nullifier's next turn. If it's concentrating, it must immediately make a Constitution saving throw to maintain concentration with disadvantage.</p>",
+          "value": "<p>近战武器攻击: +8 命中, 触及 5 ft., 一个目标. 命中： 18 (3d8 + 5) 钝击伤害 外加 7 (2d6) psychic damage. The target must succeed on a DC 15 体质豁免检定 or can't take reactions until the start of the nullifier's next turn. If it's concentrating, it must immediately make a 体质豁免检定 to maintain concentration with disadvantage.</p>",
           "chat": ""
         },
         "source": {
@@ -1187,13 +1230,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd99": {
-            "_id": "dnd5eactivityd99",
+          "dnd5eactivityd57": {
+            "_id": "dnd5eactivityd57",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "8",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
@@ -1201,23 +1244,6 @@
             },
             "damage": {
               "parts": [
-                {
-                  "number": 3,
-                  "denomination": 8,
-                  "bonus": "5",
-                  "types": [
-                    "bludgeoning"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
                 {
                   "number": 2,
                   "denomination": 6,
@@ -1265,6 +1291,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "633dd790be872432"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1283,9 +1314,65 @@
           "long": null,
           "reach": 5,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 3,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "633dd790be872432",
+          "name": "Crushing Claw",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "8",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +8"
+            }
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "Actions",
@@ -1300,12 +1387,12 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Tentacles\" from English to Chinese (zh-CN).\n\n\"Tentacles\" in Chinese can be translated as:\n- 触手 (chùshǒu) - tentacles (of an animal)\n- 触须 (chùxū) - tentacles, feelers\n- 触角 (chùjiǎo) - antennae, tentacles\n\nFor a general term \"tentacles\" (like those of an octopus, jellyfish, etc.), the most common translation is:\n触手 (chùshǒu)\n\nLet me return only the translated text.\n</think>\n\n触手",
+      "name": "Tentacles",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>A creature grappled by the nullifier must succeed on a DC 15 Constitution saving throw or be poisoned and deafened until the end of its next turn. While poisoned this way, it has disadvantage on Constitution saving throws to maintain concentration. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
+          "value": "<p>A creature grappled by the nullifier must succeed on a DC 15 体质豁免检定 or be poisoned and deafened until the end of its next turn. While poisoned this way, it has disadvantage on 体质豁免检定s to maintain concentration. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
           "chat": ""
         },
         "source": {
@@ -1317,8 +1404,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity0ec": {
-            "_id": "dnd5eactivity0ec",
+          "dnd5eactivity368": {
+            "_id": "dnd5eactivity368",
             "type": "save",
             "save": {
               "ability": [
@@ -1335,16 +1422,16 @@
             },
             "effects": [
               {
-                "_id": "fa3a1ea78489105a"
+                "_id": "1380ae3445aa2ea2"
               },
               {
-                "_id": "21d3f059607f5386"
+                "_id": "b0957ab3a7522d8f"
               },
               {
-                "_id": "684690359f7e91d5"
+                "_id": "da324df1f9729a63"
               },
               {
-                "_id": "2d9c848d5202ee04"
+                "_id": "7b00b2e229fc39cd"
               }
             ],
             "activation": {
@@ -1362,7 +1449,7 @@
       },
       "effects": [
         {
-          "_id": "fa3a1ea78489105a",
+          "_id": "1380ae3445aa2ea2",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1384,10 +1471,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "21d3f059607f5386",
+          "_id": "b0957ab3a7522d8f",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1409,10 +1497,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "684690359f7e91d5",
+          "_id": "da324df1f9729a63",
           "name": "耳聋 (Deafened)",
           "type": "base",
           "system": {},
@@ -1434,10 +1523,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/deafened.svg",
           "statuses": [
             "deafened"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "2d9c848d5202ee04",
+          "_id": "7b00b2e229fc39cd",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1459,7 +1549,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1493,8 +1584,8 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity924": {
-            "_id": "dnd5eactivity924",
+          "dnd5eactivity275": {
+            "_id": "dnd5eactivity275",
             "type": "utility",
             "uses": {
               "spent": 0,
@@ -1549,8 +1640,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity4d8": {
-            "_id": "dnd5eactivity4d8",
+          "dnd5eactivity439": {
+            "_id": "dnd5eactivity439",
             "type": "save",
             "save": {
               "ability": [
@@ -1645,7 +1736,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752086390,
-    "modifiedTime": 1775752086390
+    "createdTime": 1781713197063,
+    "modifiedTime": 1781713197063
   }
 }

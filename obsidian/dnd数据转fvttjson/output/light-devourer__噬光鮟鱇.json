@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity618": {
-            "_id": "dnd5eactivity618",
+          "dnd5eactivity0ca": {
+            "_id": "dnd5eactivity0ca",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,8 +762,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity173": {
-            "_id": "dnd5eactivity173",
+          "dnd5eactivity63b": {
+            "_id": "dnd5eactivity63b",
             "type": "utility",
             "activation": {
               "type": "",
@@ -807,8 +807,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb1f": {
-            "_id": "dnd5eactivityb1f",
+          "dnd5eactivity6fb": {
+            "_id": "dnd5eactivity6fb",
             "type": "utility",
             "activation": {
               "type": "",
@@ -852,8 +852,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya15": {
-            "_id": "dnd5eactivitya15",
+          "dnd5eactivity81f": {
+            "_id": "dnd5eactivity81f",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -897,13 +897,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity3ac": {
-            "_id": "dnd5eactivity3ac",
+          "dnd5eactivitybbc": {
+            "_id": "dnd5eactivitybbc",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "8",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
@@ -911,23 +911,6 @@
             },
             "damage": {
               "parts": [
-                {
-                  "number": 5,
-                  "denomination": 6,
-                  "bonus": "4",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
                 {
                   "number": 2,
                   "denomination": 6,
@@ -977,13 +960,65 @@
             },
             "effects": [
               {
-                "_id": "fc0b01482131eafb"
+                "_id": "bf9edc6d441c0d12"
               },
               {
-                "_id": "bc17ecc68882894c"
+                "_id": "cab6cf4d1ae59f5b"
               },
               {
-                "_id": "47151f08da54f9dc"
+                "_id": "1ceb0ca3666cce15"
+              }
+            ],
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          },
+          "dnd5eactivity3a1": {
+            "_id": "dnd5eactivity3a1",
+            "type": "damage",
+            "damage": {
+              "parts": [
+                {
+                  "number": 2,
+                  "denomination": 6,
+                  "bonus": "",
+                  "types": [
+                    "点"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
+            "flags": {
+              "fvttJsonGenerator": {
+                "compoundRider": "bleeding",
+                "fieldEvidence": {
+                  "segment": {
+                    "text": "流血 (Bleeding)：目标在其每个回合开始时受到 `2d6` 点伤害；若其恢复任意生命值，或有生物在其 5 尺内使用一个动作替其止血，则该效果结束。",
+                    "startOffset": 259,
+                    "endOffset": 336,
+                    "kind": "direct"
+                  }
+                },
+                "bleeding": {
+                  "formula": "2d6"
+                }
+              }
+            },
+            "effects": [
+              {
+                "_id": "42a87abc82d1421a"
               }
             ],
             "activation": {
@@ -1004,11 +1039,30 @@
           "long": null,
           "reach": 5,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 5,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "piercing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [
         {
-          "_id": "fc0b01482131eafb",
+          "_id": "bf9edc6d441c0d12",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1030,10 +1084,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "bc17ecc68882894c",
+          "_id": "cab6cf4d1ae59f5b",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1055,10 +1110,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "47151f08da54f9dc",
+          "_id": "1ceb0ca3666cce15",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1077,10 +1133,39 @@
           "origin": null,
           "tint": "#ffffff",
           "transfer": false,
-          "img": "systems/dnd5e/icons/svg/statuses/bleeding.svg",
+          "img": "icons/svg/blood.svg",
           "statuses": [
             "bleeding"
-          ]
+          ],
+          "flags": {
+            "midi-qol.OverTime": "turn=start,damageRoll=5d6+4,damageType=piercing,label=流血 (Bleeding)"
+          }
+        },
+        {
+          "_id": "42a87abc82d1421a",
+          "name": "流血 (Bleeding)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "icons/svg/blood.svg",
+          "statuses": [
+            "bleeding"
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1113,16 +1198,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7c8": {
-            "_id": "dnd5eactivity7c8",
+          "dnd5eactivitybd1": {
+            "_id": "dnd5eactivitybd1",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "16",
+                "calculation": "str",
+                "formula": "",
                 "value": 16
               }
             },
@@ -1131,7 +1216,7 @@
             },
             "effects": [
               {
-                "_id": "637df334e6b41141"
+                "_id": "fd5c5825f715c62e"
               }
             ],
             "activation": {
@@ -1157,7 +1242,7 @@
       },
       "effects": [
         {
-          "_id": "637df334e6b41141",
+          "_id": "fd5c5825f715c62e",
           "name": "魅惑 (Charmed)",
           "type": "base",
           "system": {},
@@ -1179,7 +1264,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/charmed.svg",
           "statuses": [
             "charmed"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1210,8 +1296,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydf1": {
-            "_id": "dnd5eactivitydf1",
+          "dnd5eactivityc0b": {
+            "_id": "dnd5eactivityc0b",
             "type": "save",
             "save": {
               "ability": [
@@ -1246,7 +1332,7 @@
             },
             "effects": [
               {
-                "_id": "d011d5946af3cbe1"
+                "_id": "8a83006b3c806124"
               }
             ],
             "activation": {
@@ -1298,7 +1384,7 @@
       },
       "effects": [
         {
-          "_id": "d011d5946af3cbe1",
+          "_id": "8a83006b3c806124",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1320,7 +1406,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1351,8 +1438,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity297": {
-            "_id": "dnd5eactivity297",
+          "dnd5eactivityb94": {
+            "_id": "dnd5eactivityb94",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -1396,16 +1483,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitycaa": {
-            "_id": "dnd5eactivitycaa",
+          "dnd5eactivity29c": {
+            "_id": "dnd5eactivity29c",
             "type": "save",
             "save": {
               "ability": [
                 "con"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "16",
+                "calculation": "str",
+                "formula": "",
                 "value": 16
               }
             },
@@ -1432,7 +1519,7 @@
             },
             "effects": [
               {
-                "_id": "e1e6a883f5c09fae"
+                "_id": "a2be0dca934dc55b"
               }
             ],
             "activation": {
@@ -1469,7 +1556,7 @@
       },
       "effects": [
         {
-          "_id": "e1e6a883f5c09fae",
+          "_id": "a2be0dca934dc55b",
           "name": "目盲 (Blinded)",
           "type": "base",
           "system": {},
@@ -1491,7 +1578,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/blinded.svg",
           "statuses": [
             "blinded"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1522,16 +1610,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb18": {
-            "_id": "dnd5eactivityb18",
+          "dnd5eactivityb97": {
+            "_id": "dnd5eactivityb97",
             "type": "save",
             "save": {
               "ability": [
                 "wis"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "16",
+                "calculation": "str",
+                "formula": "",
                 "value": 16
               }
             },
@@ -1599,8 +1687,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity44b": {
-            "_id": "dnd5eactivity44b",
+          "dnd5eactivity946": {
+            "_id": "dnd5eactivity946",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1622,7 +1710,15 @@
           "actionSection": "反应"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "movement": [
+              {
+                "kind": "noOpportunityAttack",
+                "sourceText": "闪烁消失 Blink Out 当针对噬光者的近战攻击未命中时，它可以游动最多其一半速度的距离，且不会引发借机攻击 (Opportunity Attacks)，然后进行一次隐匿 (Stealth) 检定。\n使用后，噬光者进入潜伏 (Lurking) 状态。"
+              }
+            ]
+          }
         }
       }
     },
@@ -1644,8 +1740,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity703": {
-            "_id": "dnd5eactivity703",
+          "dnd5eactivityb33": {
+            "_id": "dnd5eactivityb33",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1682,7 +1778,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752086220,
-    "modifiedTime": 1775752086220
+    "createdTime": 1781713197025,
+    "modifiedTime": 1781713197025
   }
 }

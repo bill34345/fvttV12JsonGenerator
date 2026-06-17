@@ -12,13 +12,18 @@ export interface PlaintextRenderWarning {
 export interface PlaintextRenderResult {
   markdown: string;
   warnings: PlaintextRenderWarning[];
+  heading: string;
+  chineseName: string;
+  englishName: string;
 }
 
 interface RenderSource {
   statText: string;
   loreText?: string;
+  title?: string;
   imageUrls: string[];
   usedRawHtml: boolean;
+  statblockCandidateCount: number;
 }
 
 interface StatblockData {
@@ -177,15 +182,31 @@ export function renderGoddessFantasyMonsterToPlaintext(
   record: CrawledTopicRecord,
   options: { recordsDir: string },
 ): PlaintextRenderResult {
-  const warnings: PlaintextRenderWarning[] = [];
-  const source = loadRenderSource(record, options.recordsDir, warnings);
-  const data = parseStatblock(record, source.statText, source.imageUrls, source.loreText);
+  return renderGoddessFantasyMonsterToPlaintextItems(record, options)[0]!;
+}
+
+export function renderGoddessFantasyMonsterToPlaintextItems(
+  record: CrawledTopicRecord,
+  options: { recordsDir: string },
+): PlaintextRenderResult[] {
+  const loadWarnings: PlaintextRenderWarning[] = [];
+  const sources = loadRenderSources(record, options.recordsDir, loadWarnings);
+  return sources.map((source) => renderSource(record, source, loadWarnings));
+}
+
+function renderSource(
+  record: CrawledTopicRecord,
+  source: RenderSource,
+  loadWarnings: PlaintextRenderWarning[],
+): PlaintextRenderResult {
+  const warnings = [...loadWarnings];
+  const data = parseStatblock(record, source.statText, source.imageUrls, source.loreText, source.title);
 
   if (!source.usedRawHtml) {
     warnings.push(warning(record, 'used-text-fallback', 'rawHtmlPath was missing or unreadable; used posts[0].text'));
   }
 
-  if (countStatblockCandidates(source.statText) > 1) {
+  if (source.statblockCandidateCount > 1) {
     warnings.push(warning(record, 'possible-multiple-statblocks', 'first post appears to contain multiple statblocks'));
   }
 
@@ -198,14 +219,17 @@ export function renderGoddessFantasyMonsterToPlaintext(
   return {
     markdown: emitMarkdown(data),
     warnings,
+    heading: data.title,
+    chineseName: data.chineseName,
+    englishName: data.englishName,
   };
 }
 
-function loadRenderSource(
+function loadRenderSources(
   record: CrawledTopicRecord,
   recordsDir: string,
   warnings: PlaintextRenderWarning[],
-): RenderSource {
+): RenderSource[] {
   const htmlPath = record.rawHtmlPath
     ? isAbsolute(record.rawHtmlPath)
       ? record.rawHtmlPath
@@ -220,23 +244,26 @@ function loadRenderSource(
       if (firstBody.length > 0) {
         const bodyImages = extractImages(firstBody);
         const bodyText = htmlToText(firstBody.html() ?? '');
-        const tableSource = extractTableSource($, firstBody);
-        if (tableSource) {
-          return {
+        const tableSources = extractTableSources($, firstBody);
+        if (tableSources.length > 0) {
+          return tableSources.map((tableSource) => ({
             statText: tableSource.statText,
             loreText: tableSource.loreText,
+            title: tableSource.title,
             imageUrls: bodyImages.concat(record.imageUrls ?? []),
             usedRawHtml: true,
-          };
+            statblockCandidateCount: tableSource.statblockCandidateCount,
+          }));
         }
 
         const split = splitBodySource(bodyText, record);
-        return {
+        return [{
           statText: split.statText,
           loreText: split.loreText,
           imageUrls: bodyImages.concat(record.imageUrls ?? []),
           usedRawHtml: true,
-        };
+          statblockCandidateCount: countStatblockCandidates(split.statText),
+        }];
       }
       warnings.push(warning(record, 'missing-postbody', 'raw HTML did not contain #posts .postbody'));
     } catch (error) {
@@ -246,12 +273,13 @@ function loadRenderSource(
 
   const firstPost = record.posts.find((post) => post.index === 0) ?? record.posts[0];
   const split = splitBodySource(firstPost?.text ?? '', record);
-  return {
+  return [{
     statText: split.statText,
     loreText: split.loreText,
     imageUrls: (firstPost?.imageUrls ?? []).concat(record.imageUrls ?? []),
     usedRawHtml: false,
-  };
+    statblockCandidateCount: countStatblockCandidates(split.statText),
+  }];
 }
 
 function parseStatblock(
@@ -259,9 +287,12 @@ function parseStatblock(
   text: string,
   imageUrls: string[],
   loreText?: string,
+  titleOverride?: string,
 ): StatblockData {
   const normalized = normalizeText(text);
-  const names = parseNames(record.title, normalized);
+  const names = titleOverride
+    ? extractLeadingBilingualName(normalized) ?? parseNames(titleOverride, normalized)
+    : parseNames(record.title, normalized);
   const prelude = sliceBeforeFirstSection(normalized);
   const abilityRows = parseAbilityRows(prelude);
   const immunity = splitImmunities(extractField(prelude, '免疫', ['感官', '语言', 'CR', ...SECTION_END_LABELS]));
@@ -345,10 +376,10 @@ function emitMarkdown(data: StatblockData): string {
   return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
 }
 
-function extractTableSource(
+function extractTableSources(
   $: cheerio.CheerioAPI,
   body: cheerio.Cheerio<unknown>,
-): { statText: string; loreText?: string } | undefined {
+): Array<{ statText: string; loreText?: string; title?: string; statblockCandidateCount: number }> {
   const cells: Array<{ text: string; isStat: boolean }> = [];
   body.find('table.bbc_table td').each((_, element) => {
     const html = $.html(element);
@@ -357,16 +388,37 @@ function extractTableSource(
     cells.push({ text, isStat: isStatblockText(text) });
   });
 
-  const statIndex = cells.findIndex((cell) => cell.isStat);
-  if (statIndex === -1) return undefined;
+  const statIndexes = cells
+    .map((cell, index) => cell.isStat ? index : -1)
+    .filter((index) => index >= 0);
 
-  const statText = cells[statIndex]!.text;
-  const nextLore = cells.slice(statIndex + 1).find((cell) => !cell.isStat)?.text;
-  const previousLore = cells.slice(0, statIndex).reverse().find((cell) => !cell.isStat)?.text;
+  return statIndexes.map((statIndex) => {
+    const statText = cells[statIndex]!.text;
+    const nextLore = cells.slice(statIndex + 1).find((cell) => !cell.isStat)?.text;
+    const previousLore = cells.slice(0, statIndex).reverse().find((cell) => !cell.isStat)?.text;
+    const names = extractLeadingBilingualName(statText);
+    return {
+      statText,
+      loreText: cleanLoreText(nextLore ?? previousLore),
+      title: names ? `${names.chineseName}${names.englishName}` : undefined,
+      statblockCandidateCount: 1,
+    };
+  });
+}
 
+function extractLeadingBilingualName(text: string): { heading: string; chineseName: string; englishName: string } | undefined {
+  const normalized = normalizeText(text);
+  const acIndex = normalized.search(/\bAC\s*\d+/i);
+  const prefix = (acIndex > 0 ? normalized.slice(0, acIndex) : normalized).trim();
+  const match = prefix.match(/^([\u4e00-\u9fff][\u4e00-\u9fff·・、路\s-]{0,40}?)([A-Za-z][A-Za-z0-9'’?,\- ]{1,80})(?=\s*[\u4e00-\u9fff]|$)/);
+  if (!match?.[1] || !match[2]) return undefined;
+
+  const chineseName = match[1].trim();
+  const englishName = match[2].trim();
   return {
-    statText,
-    loreText: cleanLoreText(nextLore ?? previousLore),
+    heading: `${chineseName} (${englishName})`,
+    chineseName,
+    englishName,
   };
 }
 
@@ -379,8 +431,24 @@ function splitBodySource(text: string, record: CrawledTopicRecord): { statText: 
 
   return {
     statText: truncateTrailingSourceCopies(normalized.slice(statStart).trim()),
-    loreText: cleanLoreText(normalized.slice(0, statStart)),
+    loreText: cleanLeadingTranslatorCredit(normalized.slice(0, statStart), record),
   };
+}
+
+function cleanLeadingTranslatorCredit(loreText: string, record: CrawledTopicRecord): string {
+  const names = splitBilingualName(record.title) ?? parseNames(record.title, '');
+  const candidates = [names.chineseName, names.englishName].filter(Boolean);
+  const translatorMatch = loreText.match(/\u8bd1\u8005@/);
+  if (!translatorMatch?.index && translatorMatch?.index !== 0) return loreText;
+
+  for (const candidate of candidates) {
+    const index = loreText.indexOf(candidate);
+    if (index > translatorMatch.index) {
+      return loreText.slice(index);
+    }
+  }
+
+  return loreText.replace(/^\u8bd1\u8005@[^\s,.:;!?，。:：；！？]{1,8}/, '');
 }
 
 function findStatblockStart(text: string, record: CrawledTopicRecord): number {
@@ -660,9 +728,10 @@ function sliceBeforeFirstSection(text: string): string {
 }
 
 function countStatblockCandidates(text: string): number {
-  const crCount = text.match(/\bCR\s*[0-9/]+/gi)?.length ?? 0;
-  const acCount = text.match(/\bAC\s*\d+/gi)?.length ?? 0;
-  return Math.max(crCount, acCount);
+  const normalized = normalizeText(text);
+  const candidatePattern = /\bAC\s*\d+[\s\S]{0,500}?\bHP\s*\d+[\s\S]{0,900}?\bCR\s*[0-9/]+/gi;
+  const matches = normalized.match(candidatePattern)?.length ?? 0;
+  return matches > 0 ? matches : isStatblockText(normalized) ? 1 : 0;
 }
 
 function htmlToText(html: string): string {

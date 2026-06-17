@@ -543,6 +543,9 @@ export class EnglishBestiaryParser implements ParserStrategy {
     const name = this.readString(raw, ['name']);
     if (name) result.name = name;
 
+    const image = this.readString(raw, ['image', 'img']);
+    if (image) result.img = image;
+
     const size = this.normalizeSize(this.readString(raw, ['size']));
     if (size) result.traits.size = size;
 

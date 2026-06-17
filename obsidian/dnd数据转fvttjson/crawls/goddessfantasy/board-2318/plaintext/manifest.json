@@ -1,12 +1,161 @@
 {
-  "recordsPath": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\records.json",
-  "outFile": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters.md",
-  "generatedAt": "2026-06-17T09:09:25.586Z",
+  "schemaVersion": 1,
+  "recordsPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\records.json",
+  "outDir": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters",
+  "outFile": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters.md",
+  "legacyCollection": false,
+  "generatedAt": "2026-06-17T14:50:30.595Z",
   "recordsRead": 12,
   "recordsMatched": 12,
-  "blocksEmitted": 12,
+  "blocksEmitted": 13,
+  "filesWritten": 13,
   "skipped": 0,
-  "warnings": 1,
+  "warnings": 0,
   "failures": 0,
-  "dryRun": false
+  "dryRun": false,
+  "items": [
+    {
+      "topicId": "168299",
+      "title": "【怪物】小法妖Gremishka",
+      "status": "ok",
+      "fileName": "168299__gremishka.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168299__gremishka.md",
+      "heading": "小法妖 (Gremishka)",
+      "chineseName": "小法妖",
+      "englishName": "Gremishka",
+      "warnings": []
+    },
+    {
+      "topicId": "168320",
+      "title": "【怪物】丧尸Zombies",
+      "status": "ok",
+      "fileName": "168320__swarm-of-zombie-limbs.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168320__swarm-of-zombie-limbs.md",
+      "heading": "丧尸断肢集群 (Swarm of Zombie Limbs)",
+      "chineseName": "丧尸断肢集群",
+      "englishName": "Swarm of Zombie Limbs",
+      "warnings": []
+    },
+    {
+      "topicId": "168320",
+      "title": "【怪物】丧尸Zombies",
+      "status": "ok",
+      "fileName": "168320__zombie-clot.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168320__zombie-clot.md",
+      "heading": "丧尸肉团 (Zombie Clot)",
+      "chineseName": "丧尸肉团",
+      "englishName": "Zombie Clot",
+      "warnings": []
+    },
+    {
+      "topicId": "168685",
+      "title": "【怪物】惊怖迷雾 Mist Horror",
+      "status": "ok",
+      "fileName": "168685__mist-horror.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168685__mist-horror.md",
+      "heading": "惊怖迷雾 (Mist Horror)",
+      "chineseName": "惊怖迷雾",
+      "englishName": "Mist Horror",
+      "warnings": []
+    },
+    {
+      "topicId": "168686",
+      "title": "【怪物】活蜡像 Waxwork",
+      "status": "ok",
+      "fileName": "168686__waxwork.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168686__waxwork.md",
+      "heading": "活蜡像 (Waxwork)",
+      "chineseName": "活蜡像",
+      "englishName": "Waxwork",
+      "warnings": []
+    },
+    {
+      "topicId": "168906",
+      "title": "【怪物】杜拉罕 Dullahan",
+      "status": "ok",
+      "fileName": "168906__dullahan.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\168906__dullahan.md",
+      "heading": "杜拉罕 (Dullahan)",
+      "chineseName": "杜拉罕",
+      "englishName": "Dullahan",
+      "warnings": []
+    },
+    {
+      "topicId": "169738",
+      "title": "【怪物】古革巨兽Gug",
+      "status": "ok",
+      "fileName": "169738__gug.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169738__gug.md",
+      "heading": "古革巨兽 (Gug)",
+      "chineseName": "古革巨兽",
+      "englishName": "Gug",
+      "warnings": []
+    },
+    {
+      "topicId": "169739",
+      "title": "【怪物】古老者Elder Thing",
+      "status": "ok",
+      "fileName": "169739__elder-thing.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169739__elder-thing.md",
+      "heading": "古老者 (Elder Thing)",
+      "chineseName": "古老者",
+      "englishName": "Elder Thing",
+      "warnings": []
+    },
+    {
+      "topicId": "169741",
+      "title": "【怪物】米·戈Mi-Go",
+      "status": "ok",
+      "fileName": "169741__mi-go.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169741__mi-go.md",
+      "heading": "米·戈 (Mi-Go)",
+      "chineseName": "米·戈",
+      "englishName": "Mi-Go",
+      "warnings": []
+    },
+    {
+      "topicId": "169742",
+      "title": "【怪物】夜魇Nightgaunt",
+      "status": "ok",
+      "fileName": "169742__nightgaunt.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169742__nightgaunt.md",
+      "heading": "夜魇 (Nightgaunt)",
+      "chineseName": "夜魇",
+      "englishName": "Nightgaunt",
+      "warnings": []
+    },
+    {
+      "topicId": "169744",
+      "title": "【怪物】修格斯Shoggoth",
+      "status": "ok",
+      "fileName": "169744__shoggoth.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169744__shoggoth.md",
+      "heading": "修格斯 (Shoggoth)",
+      "chineseName": "修格斯",
+      "englishName": "Shoggoth",
+      "warnings": []
+    },
+    {
+      "topicId": "169745",
+      "title": "【怪物】伊斯人Yithian",
+      "status": "ok",
+      "fileName": "169745__yithian.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169745__yithian.md",
+      "heading": "伊斯人 (Yithian)",
+      "chineseName": "伊斯人",
+      "englishName": "Yithian",
+      "warnings": []
+    },
+    {
+      "topicId": "169768",
+      "title": "【怪物】莫登海姆的怪物Mordenheim’s Monster",
+      "status": "ok",
+      "fileName": "169768__mordenheims-monster.md",
+      "outputPath": "I:\\OpenCode\\fvttV12JsonGenerator\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters\\169768__mordenheims-monster.md",
+      "heading": "莫登海姆的怪物 (Mordenheim's Monster)",
+      "chineseName": "莫登海姆的怪物",
+      "englishName": "Mordenheim's Monster",
+      "warnings": []
+    }
+  ]
 }

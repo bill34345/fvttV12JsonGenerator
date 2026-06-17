@@ -708,7 +708,7 @@
   },
   "items": [
     {
-      "name": "<think>\nThe user wants me to translate \"Amphibious\" from English to Simplified Chinese (zh-CN).\n\n\"Amphibious\" in English means:\n1. Relating to or affecting both land and water\n2. (of a vehicle or person) able to operate on both land and water\n\nIn Chinese, this translates to:\n\"两栖的\" (liǎng qī de)\n\nFor example:\n- Amphibious vehicle = 两栖车辆\n- Amphibious operation = 两栖作战\n\nSince the domain is \"item.name\" (物品名称), the translation should be the standard term for this type of item/category.\n</think>\n\n两栖的",
+      "name": "Amphibious",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity11e": {
-            "_id": "dnd5eactivity11e",
+          "dnd5eactivity143": {
+            "_id": "dnd5eactivity143",
             "type": "utility",
             "activation": {
               "type": "",
@@ -753,7 +753,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Sense Magic\" from English to zh-CN (Simplified Chinese).\n\n\"Sense Magic\" - this appears to be a game term, likely from a video game or RPG context. It could refer to:\n1. A spell/ability name - \"感知魔法\" or \"魔法感知\"\n2. A general concept - \"感知魔法\" (to sense magic)\n\nIn gaming contexts, this is typically translated as:\n- \"感知魔法\" (gǎnzhī mófǎ) - to sense/perceive magic\n- \"魔法感知\" (mófǎ gǎnzhī) - magic sensing/awareness\n\nGiven this is likely from a game item or ability name context (Domain: item.name), the most common translation would be \"感知魔法\" or \"魔法感知\".\n\nI'll go with \"感知魔法\" as it's the more natural reading when used as an item name.\n</think>\n\n感知魔法",
+      "name": "Sense Magic",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybb7": {
-            "_id": "dnd5eactivitybb7",
+          "dnd5eactivity40b": {
+            "_id": "dnd5eactivity40b",
             "type": "utility",
             "activation": {
               "type": "",
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityfd3": {
-            "_id": "dnd5eactivityfd3",
+          "dnd5eactivity495": {
+            "_id": "dnd5eactivity495",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -860,8 +860,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity939": {
-            "_id": "dnd5eactivity939",
+          "dnd5eactivitye4a": {
+            "_id": "dnd5eactivitye4a",
             "type": "utility",
             "activation": {
               "type": "",
@@ -893,7 +893,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p><think>\nThe user wants me to translate the text from English to Simplified Chinese (zh-CN). The text is:\n\n\"If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.\"\n\nThis appears to be game-related text, possibly from Dungeons & Dragons or a similar RPG system, referring to a status effect called \"Ruidium Corruption\" and \"exhaustion\" levels.\n\nLet me translate this:\n\n- \"If the creature\" = 如果该生物\n- \"is already affected by\" = 已经受到...影响\n- \"Ruidium Corruption\" = 锐毒侵蚀（或保持Ruidium Corruption不变，因为是专有名词）\n- \"it\" = 它\n- \"instead gains\" = 则改为获得\n- \"1 level of exhaustion\" = 1级力竭\n\nLet me put it together:\n如果该生物已经受到锐毒侵蚀的影响，则改为获得1级力竭。\n\nOr more naturally:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n\nActually, looking at game terminology more carefully:\n- \"Ruidium Corruption\" is likely a specific game term that might be kept as \"Ruidium Corruption\" or translated as \"锐毒侵蚀\"\n- \"exhaustion\" in D&D context is \"力竭\"\n\nI'll go with:\n如果该生物已受Ruidium Corruption影响，则改为获得1级力竭。\n\nOr fully translated:\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。\n</think>\n\n如果该生物已受锐毒侵蚀影响，则改为获得1级力竭。</p>",
+          "value": "<p>If the creature is already affected by Ruidium Corruption, it instead gains 1 level of exhaustion.</p>",
           "chat": ""
         },
         "source": {
@@ -905,12 +905,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8cd": {
-            "_id": "dnd5eactivity8cd",
+          "dnd5eactivityf84": {
+            "_id": "dnd5eactivityf84",
             "type": "utility",
             "effects": [
               {
-                "_id": "e8e2fc6f51b87c97"
+                "_id": "2b0ffa0c551a8001"
               }
             ],
             "activation": {
@@ -928,7 +928,7 @@
       },
       "effects": [
         {
-          "_id": "e8e2fc6f51b87c97",
+          "_id": "2b0ffa0c551a8001",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -950,7 +950,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
             "exhaustion"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -964,7 +965,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
+      "name": "多重攻击Multiattack",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -981,8 +982,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity474": {
-            "_id": "dnd5eactivity474",
+          "dnd5eactivity6b6": {
+            "_id": "dnd5eactivity6b6",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -1014,7 +1015,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +7 to hit, reach 10 ft., one target. Hit: 13 (2d8 + 4) slashing damage plus 3 (1d6) thunder damage. If the target is Large or smaller, it's grappled (escape DC 14): The screecher can have only one creature grappled this way at a time.</p>",
+          "value": "<p>近战武器攻击: +7 命中, 触及 10 ft., 一个目标. 命中： 13 (2d8 + 4) 挥砍伤害 外加 3 (1d6) thunder damage. If the target is Large or smaller, it's grappled (escape DC 14): The screecher can have only one creature grappled this way at a time.</p>",
           "chat": ""
         },
         "source": {
@@ -1026,13 +1027,13 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity352": {
-            "_id": "dnd5eactivity352",
+          "dnd5eactivity2c1": {
+            "_id": "dnd5eactivity2c1",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "7",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
@@ -1040,23 +1041,6 @@
             },
             "damage": {
               "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "4",
-                  "types": [
-                    "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                },
                 {
                   "number": 1,
                   "denomination": 6,
@@ -1106,7 +1090,10 @@
             },
             "effects": [
               {
-                "_id": "71f697f3a4984387"
+                "_id": "483a9c77fac97105"
+              },
+              {
+                "_id": "e45157c2b12a660f"
               }
             ],
             "activation": {
@@ -1127,11 +1114,30 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "slashing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [
         {
-          "_id": "71f697f3a4984387",
+          "_id": "483a9c77fac97105",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1153,7 +1159,44 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ]
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "e45157c2b12a660f",
+          "name": "Rending Claw",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "7",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +7"
+            }
+          }
         }
       ],
       "flags": {
@@ -1167,12 +1210,12 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Tentacles\" from English to Chinese (zh-CN).\n\n\"Tentacles\" in Chinese can be translated as:\n- 触手 (chùshǒu) - tentacles (of an animal)\n- 触须 (chùxū) - tentacles, feelers\n- 触角 (chùjiǎo) - antennae, tentacles\n\nFor a general term \"tentacles\" (like those of an octopus, jellyfish, etc.), the most common translation is:\n触手 (chùshǒu)\n\nLet me return only the translated text.\n</think>\n\n触手",
+      "name": "Tentacles",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>A creature grappled by the screecher must succeed on a DC 15 Constitution saving throw or be poisoned until the end of its next turn. While poisoned this way, attacks against it score a critical hit on a roll of 17–20. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
+          "value": "<p>A creature grappled by the screecher must succeed on a DC 15 体质豁免检定 or be poisoned until the end of its next turn. While poisoned this way, attacks against it score a critical hit on a roll of 17–20. If the target is already affected by Ruidium Corruption, it instead becomes paralyzed until the end of its next turn.</p>",
           "chat": ""
         },
         "source": {
@@ -1184,16 +1227,16 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityda4": {
-            "_id": "dnd5eactivityda4",
+          "dnd5eactivity49e": {
+            "_id": "dnd5eactivity49e",
             "type": "save",
             "save": {
               "ability": [
                 "con"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "15",
+                "calculation": "str",
+                "formula": "",
                 "value": 15
               }
             },
@@ -1202,13 +1245,13 @@
             },
             "effects": [
               {
-                "_id": "4ea8a85a004ecf13"
+                "_id": "a7e73ca9f4ffd0d3"
               },
               {
-                "_id": "26697e20518c2cb0"
+                "_id": "7c3484ed4dc03d23"
               },
               {
-                "_id": "d71fff4c81bcb0e6"
+                "_id": "ba5297e9f4920e30"
               }
             ],
             "activation": {
@@ -1226,7 +1269,7 @@
       },
       "effects": [
         {
-          "_id": "4ea8a85a004ecf13",
+          "_id": "a7e73ca9f4ffd0d3",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1248,10 +1291,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
           "statuses": [
             "poisoned"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "26697e20518c2cb0",
+          "_id": "7c3484ed4dc03d23",
           "name": "麻痹 (Paralyzed)",
           "type": "base",
           "system": {},
@@ -1273,10 +1317,11 @@
           "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
           "statuses": [
             "paralyzed"
-          ]
+          ],
+          "flags": {}
         },
         {
-          "_id": "d71fff4c81bcb0e6",
+          "_id": "ba5297e9f4920e30",
           "name": "被擒抱 (Grappled)",
           "type": "base",
           "system": {},
@@ -1298,7 +1343,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
           "statuses": [
             "grappled"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1317,7 +1363,7 @@
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p>Each creature in a 30-foot cone must succeed on a DC 15 Constitution saving throw or take 18 (4d8) thunder damage plus 7 (2d6) psychic damage and be deafened and unable to take reactions until the end of the screecher's next turn. If it's concentrating, it must immediately make a Constitution saving throw to maintain concentration with disadvantage. If the screecher is bloodied and the target fails its save, the target must also make a Ruidium Corruption save. On a successful save, it takes half damage with no other effects.</p>",
+          "value": "<p>Each creature in a 30-foot cone must succeed on a DC 15 体质豁免检定 or take 18 (4d8) thunder damage 外加 7 (2d6) psychic damage and be deafened and unable to take reactions until the end of the screecher's next turn. If it's concentrating, it must immediately make a 体质豁免检定 to maintain concentration with disadvantage. If the screecher is bloodied and the target fails its save, the target must also make a Ruidium Corruption save. On a successful save, it takes half damage with no other effects.</p>",
           "chat": ""
         },
         "source": {
@@ -1329,16 +1375,16 @@
           "condition": "bloodied"
         },
         "activities": {
-          "dnd5eactivity70d": {
-            "_id": "dnd5eactivity70d",
+          "dnd5eactivityb85": {
+            "_id": "dnd5eactivityb85",
             "type": "save",
             "save": {
               "ability": [
                 "con"
               ],
               "dc": {
-                "calculation": "",
-                "formula": "15",
+                "calculation": "str",
+                "formula": "",
                 "value": 15
               }
             },
@@ -1393,7 +1439,7 @@
             },
             "effects": [
               {
-                "_id": "2267072d58a8b24b"
+                "_id": "0d60ba628acabfe2"
               }
             ],
             "activation": {
@@ -1411,7 +1457,7 @@
       },
       "effects": [
         {
-          "_id": "2267072d58a8b24b",
+          "_id": "0d60ba628acabfe2",
           "name": "耳聋 (Deafened)",
           "type": "base",
           "system": {},
@@ -1433,7 +1479,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/deafened.svg",
           "statuses": [
             "deafened"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1458,7 +1505,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752087516,
-    "modifiedTime": 1775752087516
+    "createdTime": 1781713197068,
+    "modifiedTime": 1781713197068
   }
 }

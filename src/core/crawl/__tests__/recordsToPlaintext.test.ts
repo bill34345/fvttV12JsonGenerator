@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { ParserFactory } from '../../parser/router';
@@ -118,7 +118,7 @@ describe('records-to-plaintext converter', () => {
     expect(result.markdown).toContain('# **小法妖 (Gremishka)**');
   });
 
-  test('uses only the first statblock cell for multi-statblock posts and does not leak raw stat text', () => {
+  test('uses each statblock cell for multi-statblock posts and does not leak raw stat text', () => {
     const records = readRecordsJson(recordsPath);
     const record: CrawledTopicRecord = {
       ...records[0]!,
@@ -130,7 +130,7 @@ describe('records-to-plaintext converter', () => {
         {
           ...records[0]!.posts[0]!,
           title: '【怪物】丧尸Zombies',
-          text: '',
+          text: 'raw HTML contains the statblock source',
           imageUrls: [],
         },
       ],
@@ -141,10 +141,15 @@ describe('records-to-plaintext converter', () => {
       contentType: 'monster',
     });
 
-    expect(result.blocksEmitted).toBe(1);
-    expect(result.markdown).toContain('# **丧尸 (Zombies)**');
+    expect(result.blocksEmitted).toBe(2);
+    expect(result.items.map((item) => item.status)).toEqual(['ok', 'ok']);
+    expect(result.warnings.some((warning) => warning.code === 'possible-multiple-statblocks')).toBe(false);
+    expect(result.items.map((item) => item.fileName)).toEqual([
+      '168320__swarm-of-zombie-limbs.md',
+      '168320__zombie-clot.md',
+    ]);
     expect(result.markdown).toContain('丧尸断肢集群 (Swarm of Zombie Limbs)');
-    expect(result.markdown).not.toContain('丧尸肉团Zombie Clot');
+    expect(result.markdown).toContain('丧尸肉团 (Zombie Clot)');
     expect(result.markdown).not.toContain('AC 12先攻');
     expect(result.markdown).not.toContain('特质Traits');
     expect(result.markdown).not.toContain('动作Actions');
@@ -217,6 +222,40 @@ describe('records-to-plaintext converter', () => {
     expect(result.markdown).toContain('银罐AC15，HP40，对所有伤害具有抗性。银罐在降至0生命值时破损。');
     expect(result.markdown).toContain('- **钳击 (Pincer)**：近战攻击检定：+9，触及 5 尺。');
     expect(result.markdown).not.toContain('[/size]');
+    expect(result.warnings.some((warning) => warning.code === 'possible-multiple-statblocks')).toBe(false);
+  });
+
+  test('removes translator credit from pre-statblock lore', () => {
+    const records = readRecordsJson(recordsPath);
+    const record: CrawledTopicRecord = {
+      ...records[0]!,
+      topicId: '168299',
+      title: '【怪物】小法妖Gremishka',
+      rawHtmlPath: 'missing.html',
+      imageUrls: [],
+      posts: [
+        {
+          ...records[0]!.posts[0]!,
+          title: '【怪物】小法妖Gremishka',
+          text:
+            '译者@铃谷小法妖 Gremishka魔法感应，法师杀手 栖息地：城市；宝藏：奥秘' +
+            '小法妖 Gremishka微型怪兽，混乱邪恶AC 14先攻 +2（12）HP 31（7d4+14）速度 30尺' +
+            '力量12+1+1敏捷14+2+2体质15+2+2智力11+0+0感知14+2+2魅力4-3-3' +
+            '感官 黑暗视觉30尺；被动察觉12语言 理解通用语但不会说CR 2（XP450；PB+2）' +
+            '特质Traits魔法抗性Magic Resistance。小法妖对抗法术和其他魔法效应时进行的豁免检定具有优势。' +
+            '动作Actions啮咬Bite。近战攻击检定：+4，触及5尺。命中：5（1d6+2）穿刺伤害。',
+          imageUrls: [],
+        },
+      ],
+    };
+
+    const result = convertRecordsToPlaintextCollection([record], {
+      recordsPath,
+      contentType: 'monster',
+    });
+
+    expect(result.markdown).toContain('# **小法妖 (Gremishka)**');
+    expect(result.markdown).not.toContain('译者@铃谷');
   });
 
   test('does not treat section words inside entry bodies as new section headings', () => {
@@ -267,6 +306,184 @@ describe('records-to-plaintext converter', () => {
     expect(existsSync(join(dirname(outFile), 'manifest.json'))).toBe(false);
   });
 
+  test('writes one markdown file per successful monster with index and manifests', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+    const records = readRecordsJson(recordsPath);
+
+    const result = runRecordsToPlaintext({
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+      force: true,
+    });
+
+    expect(result.recordsRead).toBe(records.length);
+    expect(result.filesWritten).toBe(1);
+    expect(result.items.find((item) => item.status === 'ok')?.fileName).toBe('169745__yithian.md');
+    expect(existsSync(join(outDir, '169745__yithian.md'))).toBe(true);
+    expect(existsSync(join(root, 'plaintext', 'index.md'))).toBe(true);
+    expect(existsSync(join(root, 'plaintext', 'manifest.json'))).toBe(true);
+    expect(existsSync(join(root, 'plaintext', 'warnings.jsonl'))).toBe(true);
+    expect(existsSync(join(root, 'plaintext', 'failures.jsonl'))).toBe(true);
+  });
+
+  test('writes aggregate monsters.md when every emitted item is clean', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+
+    const result = runRecordsToPlaintext({
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+      force: true,
+    });
+
+    const aggregateFile = join(root, 'plaintext', 'monsters.md');
+    expect(result.warnings).toHaveLength(0);
+    expect(result.failures).toHaveLength(0);
+    expect(existsSync(aggregateFile)).toBe(true);
+    expect(readFileSync(aggregateFile, 'utf-8')).toBe(result.markdown);
+  });
+
+  test('does not leave an aggregate monsters.md when conversion has warnings', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+    const aggregateFile = join(root, 'plaintext', 'monsters.md');
+    mkdirSync(join(root, 'plaintext'), { recursive: true });
+    writeFileSync(aggregateFile, 'stale aggregate', 'utf-8');
+    const records = readRecordsJson(recordsPath);
+    const fallbackRecord: CrawledTopicRecord = {
+      ...records[0]!,
+      rawHtmlPath: 'missing.html',
+    };
+
+    const converted = convertRecordsToPlaintextCollection([fallbackRecord], {
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+    });
+    const result = writePlaintextCollection(converted, { force: true });
+
+    expect(result.filesWritten).toBe(1);
+    expect(result.warnings.some((warning) => warning.code === 'used-text-fallback')).toBe(true);
+    expect(existsSync(join(outDir, '169745__yithian.md'))).toBe(true);
+    expect(existsSync(aggregateFile)).toBe(false);
+  });
+
+  test('one failed record does not prevent other monster files from being written', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+    const records = readRecordsJson(recordsPath);
+    const manyRecords = Array.from({ length: 20 }, (_, index) => ({
+      ...records[0]!,
+      topicId: String(20000 + index),
+      title: `【怪物】伊斯人${index} Yithian`,
+    }));
+    delete (manyRecords[7] as Partial<CrawledTopicRecord>).classification;
+
+    const converted = convertRecordsToPlaintextCollection(manyRecords, {
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+    });
+    const result = writePlaintextCollection(converted, {
+      force: true,
+    });
+
+    expect(result.recordsRead).toBe(20);
+    expect(result.filesWritten).toBe(19);
+    expect(result.failures).toHaveLength(1);
+    expect(result.items.filter((item) => item.status === 'failed')).toHaveLength(1);
+    expect(result.items.filter((item) => item.status === 'ok')).toHaveLength(19);
+  });
+
+  test('split multi-statblock items are written without needs_review warnings', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+    const records = readRecordsJson(recordsPath);
+    const record: CrawledTopicRecord = {
+      ...records[0]!,
+      topicId: '168320',
+      title: '【怪物】丧尸Zombies',
+      rawHtmlPath: 'goddessfantasy-topic-print-multi-statblock.html',
+      imageUrls: [],
+      posts: [
+        {
+          ...records[0]!.posts[0]!,
+          title: '【怪物】丧尸Zombies',
+          text: 'raw HTML contains the statblock source',
+          imageUrls: [],
+        },
+      ],
+    };
+
+    const converted = convertRecordsToPlaintextCollection([record], {
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+    });
+    const result = writePlaintextCollection(converted, {
+      force: true,
+    });
+
+    expect(result.filesWritten).toBe(2);
+    expect(result.items.map((item) => item.status)).toEqual(['ok', 'ok']);
+    expect(result.items.map((item) => item.fileName)).toEqual([
+      '168320__swarm-of-zombie-limbs.md',
+      '168320__zombie-clot.md',
+    ]);
+    expect(existsSync(join(root, 'plaintext', 'monsters', '168320__swarm-of-zombie-limbs.md'))).toBe(true);
+    expect(existsSync(join(root, 'plaintext', 'monsters', '168320__zombie-clot.md'))).toBe(true);
+    expect(readFileSync(join(root, 'plaintext', 'warnings.jsonl'), 'utf-8')).toBe('');
+  });
+
+  test('writes each statblock cell from a multi-statblock topic as its own monster file', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
+    roots.push(root);
+    const outDir = join(root, 'plaintext', 'monsters');
+    const records = readRecordsJson(recordsPath);
+    const record: CrawledTopicRecord = {
+      ...records[0]!,
+      topicId: '168320',
+      title: '【怪物】丧尸Zombies',
+      rawHtmlPath: 'goddessfantasy-topic-print-multi-statblock.html',
+      imageUrls: [],
+      posts: [
+        {
+          ...records[0]!.posts[0]!,
+          title: '【怪物】丧尸Zombies',
+          text: 'raw HTML contains the statblock source',
+          imageUrls: [],
+        },
+      ],
+    };
+
+    const converted = convertRecordsToPlaintextCollection([record], {
+      recordsPath,
+      outDir,
+      contentType: 'monster',
+    });
+    const result = writePlaintextCollection(converted, { force: true });
+
+    expect(result.recordsRead).toBe(1);
+    expect(result.recordsMatched).toBe(1);
+    expect(result.filesWritten).toBe(2);
+    expect(result.items.map((item) => item.fileName)).toEqual([
+      '168320__swarm-of-zombie-limbs.md',
+      '168320__zombie-clot.md',
+    ]);
+    expect(existsSync(join(outDir, '168320__swarm-of-zombie-limbs.md'))).toBe(true);
+    expect(existsSync(join(outDir, '168320__zombie-clot.md'))).toBe(true);
+    expect(readFileSync(join(outDir, '168320__swarm-of-zombie-limbs.md'), 'utf-8')).toContain('# **丧尸断肢集群 (Swarm of Zombie Limbs)**');
+    expect(readFileSync(join(outDir, '168320__zombie-clot.md'), 'utf-8')).toContain('# **丧尸肉团 (Zombie Clot)**');
+  });
+
   test('force=false rejects existing output and force=true overwrites it', () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-records-plaintext-'));
     roots.push(root);
@@ -281,11 +498,27 @@ describe('records-to-plaintext converter', () => {
     writePlaintextCollection(result, { force: true });
     writeFileSync(outFile, 'stale', 'utf-8');
 
-    expect(() => writePlaintextCollection(result, { force: false })).toThrow('Output file already exists');
+    const blocked = writePlaintextCollection(result, { force: false });
+    expect(blocked.failures[0]?.error).toContain('Output file already exists');
     writePlaintextCollection(result, { force: true });
 
     expect(readFileSync(outFile, 'utf-8')).toContain('# **伊斯人 (Yithian)**');
     expect(existsSync(join(dirname(outFile), 'manifest.json'))).toBe(true);
     expect(existsSync(join(dirname(outFile), 'failures.jsonl'))).toBe(true);
+  });
+
+  test('missing classification is recorded as a failed item instead of crashing conversion', () => {
+    const records = readRecordsJson(recordsPath);
+    const broken = { ...records[0]! } as Partial<CrawledTopicRecord>;
+    delete broken.classification;
+
+    const result = convertRecordsToPlaintextCollection([broken as CrawledTopicRecord], {
+      recordsPath,
+      contentType: 'monster',
+    });
+
+    expect(result.blocksEmitted).toBe(0);
+    expect(result.failures[0]?.error).toContain('classification.contentType');
+    expect(result.items[0]?.status).toBe('failed');
   });
 });

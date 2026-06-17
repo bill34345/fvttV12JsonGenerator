@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
+      "name": "Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
+          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity0db": {
-            "_id": "dnd5eactivity0db",
+          "dnd5eactivityaab": {
+            "_id": "dnd5eactivityaab",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity122": {
-            "_id": "dnd5eactivity122",
+          "dnd5eactivity61f": {
+            "_id": "dnd5eactivity61f",
             "type": "utility",
             "activation": {
               "type": "",
@@ -792,7 +792,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
+      "name": "多重攻击Multiattack",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity474": {
-            "_id": "dnd5eactivity474",
+          "dnd5eactivity55e": {
+            "_id": "dnd5eactivity55e",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -842,7 +842,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +6 to hit, reach 10 ft., one target. Hit: 11 (2d6 + 4) piercing damage. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be knocked prone.</p>",
+          "value": "<p>近战武器攻击: +6 命中, 触及 10 ft., 一个目标. 命中： 11 (2d6 + 4) 穿刺伤害. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be knocked prone.</p>",
           "chat": ""
         },
         "source": {
@@ -854,38 +854,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity269": {
-            "_id": "dnd5eactivity269",
+          "dnd5eactivityd32": {
+            "_id": "dnd5eactivityd32",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 6,
-                  "bonus": "4",
-                  "types": [
-                    "piercing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -917,7 +899,10 @@
             },
             "effects": [
               {
-                "_id": "effa0e7f13b511d6"
+                "_id": "2ff9d9b57fb210a0"
+              },
+              {
+                "_id": "78abf5067f6d13f4"
               }
             ],
             "activation": {
@@ -938,11 +923,30 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "piercing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
       "effects": [
         {
-          "_id": "effa0e7f13b511d6",
+          "_id": "2ff9d9b57fb210a0",
           "name": "倒地 (Prone)",
           "type": "base",
           "system": {},
@@ -964,7 +968,44 @@
           "img": "systems/dnd5e/icons/svg/statuses/prone.svg",
           "statuses": [
             "prone"
-          ]
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "78abf5067f6d13f4",
+          "name": "Tusk",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "6",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +6"
+            }
+          }
         }
       ],
       "flags": {
@@ -978,12 +1019,12 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Longsword\" from English to Chinese (zh-CN). This is a simple item name translation.\n\n\"Longsword\" in Chinese can be translated as:\n- 长剑 (cháng jiàn) - literally \"long sword\"\n\nThis is the most common and appropriate translation for a longsword (the weapon type, not the specific item from a particular game).\n\nI should return only the translated text.\n</think>\n\n长剑",
+      "name": "Longsword",
       "type": "weapon",
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +6 to hit, reach 10 ft., one target. Hit: 13 (2d8 + 4) slashing damage.</p>",
+          "value": "<p>近战武器攻击: +6 命中, 触及 10 ft., 一个目标. 命中： 13 (2d8 + 4) 挥砍伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -995,38 +1036,20 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitye40": {
-            "_id": "dnd5eactivitye40",
+          "dnd5eactivity9be": {
+            "_id": "dnd5eactivity9be",
             "type": "attack",
             "attack": {
-              "ability": "",
-              "bonus": "6",
-              "flat": true,
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
               "type": {
                 "value": "mwak",
                 "classification": "weapon"
               }
             },
             "damage": {
-              "parts": [
-                {
-                  "number": 2,
-                  "denomination": 8,
-                  "bonus": "4",
-                  "types": [
-                    "slashing"
-                  ],
-                  "custom": {
-                    "enabled": false,
-                    "formula": ""
-                  },
-                  "scaling": {
-                    "mode": "whole",
-                    "number": 1,
-                    "formula": ""
-                  }
-                }
-              ],
+              "parts": [],
               "includeBase": true
             },
             "range": {
@@ -1056,6 +1079,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "0291179c892752b1"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1074,9 +1102,65 @@
           "long": null,
           "reach": 10,
           "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 8,
+            "bonus": "",
+            "types": [
+              "slashing"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "0291179c892752b1",
+          "name": "Longsword",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "6",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +6"
+            }
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "Actions",
@@ -1105,8 +1189,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity027": {
-            "_id": "dnd5eactivity027",
+          "dnd5eactivity0d4": {
+            "_id": "dnd5eactivity0d4",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1140,7 +1224,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752088677,
-    "modifiedTime": 1775752088677
+    "createdTime": 1781713197137,
+    "modifiedTime": 1781713197137
   }
 }

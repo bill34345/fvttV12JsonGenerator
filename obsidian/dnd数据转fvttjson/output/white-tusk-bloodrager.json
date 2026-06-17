@@ -702,12 +702,12 @@
   },
   "items": [
     {
-      "name": "<think>\nThe user wants me to translate \"Aggressive\" from English to Chinese (zh-CN).\n\n\"Aggressive\" in English can be translated to Chinese as:\n- 侵略性的\n- 攻击性的\n- 积极的\n- 有进取心的\n\nFor the domain \"item.name\", this is likely referring to a game item or product attribute. In gaming context, \"Aggressive\" usually means \"攻击性的\" or \"侵略性的\".\n\nThe most common and appropriate translation for \"Aggressive\" in a general item name context would be:\n攻击性的\n\nOr more commonly shortened:\n攻击性\n\nI'll provide the most appropriate translation for this context.\n</think>\n\n攻击性",
+      "name": "Aggressive",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "<p><think>\nThis is a straightforward translation request. The user wants me to translate the following text from English to Simplified Chinese (zh-CN):\n\n\"As a bonus action, the orc can move up to its speed toward a hostile creature it can see.\"\n\nThis appears to be a game rule or ability description, likely from Dungeons & Dragons or similar RPG system.\n\nLet me translate this:\n\n- \"As a bonus action\" - 作为附赠动作\n- \"the orc\" - 兽人\n- \"can move\" - 可以移动\n- \"up to its speed\" - 最多其速度的距离\n- \"toward\" - 朝向\n- \"a hostile creature\" - 一个敌对生物\n- \"it can see\" - 它能看见的\n\nPutting it together:\n\"作为附赠动作，兽人最多可以向其能看见的一个敌对生物移动最多等于其速度的距离。\"\n\nActually, let me refine this for better readability in Chinese gaming context:\n\"作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。\"\n\nThis sounds more natural in Chinese for game rules.\n</think>\n\n作为附赠动作，兽人可向其能看见的一个敌对生物移动至多等于其速度的距离。</p>",
+          "value": "<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>",
           "chat": ""
         },
         "source": {
@@ -719,8 +719,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7e0": {
-            "_id": "dnd5eactivity7e0",
+          "dnd5eactivity946": {
+            "_id": "dnd5eactivity946",
             "type": "utility",
             "activation": {
               "type": "bonus",
@@ -764,8 +764,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity346": {
-            "_id": "dnd5eactivity346",
+          "dnd5eactivity732": {
+            "_id": "dnd5eactivity732",
             "type": "utility",
             "activation": {
               "type": "",
@@ -792,7 +792,7 @@
       }
     },
     {
-      "name": "<think>\nThe user wants me to translate \"Multiattack\" from English to Chinese (Simplified). This appears to be a term that could be from various contexts like gaming, combat systems, or fantasy settings.\n\nIn the context of games (especially tabletop RPGs like D&D), \"Multiattack\" refers to an ability that allows a creature to make multiple attacks in a single action.\n\nThe translation would be:\n- Multiattack = 多重攻击\n\nLet me return only the translated text.\n</think>\n\n多重攻击",
+      "name": "多重攻击Multiattack",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
@@ -809,8 +809,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityf26": {
-            "_id": "dnd5eactivityf26",
+          "dnd5eactivitya09": {
+            "_id": "dnd5eactivitya09",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -842,7 +842,7 @@
       "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "<p>Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 8 (2d4 + 3) slashing damage.</p>",
+          "value": "<p>近战武器攻击: +6 命中, 触及 5 ft., 一个目标. 命中： 8 (2d4 + 3) 挥砍伤害.</p>",
           "chat": ""
         },
         "source": {
@@ -854,8 +854,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity432": {
-            "_id": "dnd5eactivity432",
+          "dnd5eactivitybe7": {
+            "_id": "dnd5eactivitybe7",
             "type": "attack",
             "attack": {
               "ability": "",
@@ -915,6 +915,11 @@
                 "special": ""
               }
             },
+            "effects": [
+              {
+                "_id": "2f294f913930b369"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -935,7 +940,44 @@
           "units": "ft"
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "2f294f913930b369",
+          "name": "Falchion",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "6",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/shield.svg",
+          "statuses": [],
+          "flags": {
+            "fvttJsonGenerator": {
+              "sourceDerivedAcEffect": true,
+              "sourceText": "ack: +6"
+            }
+          }
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "Actions",
@@ -954,7 +996,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752088330,
-    "modifiedTime": 1775752088330
+    "createdTime": 1781713197110,
+    "modifiedTime": 1781713197110
   }
 }

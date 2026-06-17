@@ -717,8 +717,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityd75": {
-            "_id": "dnd5eactivityd75",
+          "dnd5eactivitye25": {
+            "_id": "dnd5eactivitye25",
             "type": "utility",
             "activation": {
               "type": "",
@@ -762,12 +762,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitydda": {
-            "_id": "dnd5eactivitydda",
+          "dnd5eactivity36b": {
+            "_id": "dnd5eactivity36b",
             "type": "utility",
             "effects": [
               {
-                "_id": "641dbe5757d48e74"
+                "_id": "7274763a0b0b355d"
               }
             ],
             "activation": {
@@ -785,7 +785,7 @@
       },
       "effects": [
         {
-          "_id": "641dbe5757d48e74",
+          "_id": "7274763a0b0b355d",
           "name": "脆壳反震 (Brittle Shell)",
           "type": "base",
           "system": {},
@@ -849,8 +849,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity2ee": {
-            "_id": "dnd5eactivity2ee",
+          "dnd5eactivityd4f": {
+            "_id": "dnd5eactivityd4f",
             "type": "utility",
             "activation": {
               "type": "action",
@@ -894,8 +894,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity8dc": {
-            "_id": "dnd5eactivity8dc",
+          "dnd5eactivity973": {
+            "_id": "dnd5eactivity973",
             "type": "attack",
             "attack": {
               "ability": "str",
@@ -1006,8 +1006,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity292": {
-            "_id": "dnd5eactivity292",
+          "dnd5eactivity090": {
+            "_id": "dnd5eactivity090",
             "type": "attack",
             "attack": {
               "ability": "str",
@@ -1056,8 +1056,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivityd04": {
-            "_id": "dnd5eactivityd04",
+          "dnd5eactivity473": {
+            "_id": "dnd5eactivity473",
             "type": "save",
             "save": {
               "ability": [
@@ -1124,7 +1124,7 @@
             },
             "effects": [
               {
-                "_id": "2a11cbfcc1788f4e"
+                "_id": "29699a3ce9125864"
               }
             ],
             "activation": {
@@ -1134,8 +1134,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity716": {
-            "_id": "dnd5eactivity716",
+          "dnd5eactivity1d8": {
+            "_id": "dnd5eactivity1d8",
             "type": "save",
             "save": {
               "ability": [
@@ -1205,7 +1205,7 @@
             },
             "effects": [
               {
-                "_id": "641ff23f3bef8d9d"
+                "_id": "91d3ae3f5fb90460"
               }
             ],
             "activation": {
@@ -1215,8 +1215,8 @@
               "condition": ""
             }
           },
-          "dnd5eactivity6fe": {
-            "_id": "dnd5eactivity6fe",
+          "dnd5eactivity0c1": {
+            "_id": "dnd5eactivity0c1",
             "type": "save",
             "save": {
               "ability": [
@@ -1270,10 +1270,10 @@
                 "followupSaveTrigger": "targetHitDiceReducedToZero",
                 "hitDiceOutcome": {
                   "mode": "hit-dice-outcome",
-                  "primaryActivityId": "dnd5eactivity6fe",
-                  "loseHitDieActivityId": "496a585c08ff90cb",
-                  "tempHpActivityId": "4d994461091976c4",
-                  "followupSaveActivityId": "73e656b9bd31569e",
+                  "primaryActivityId": "dnd5eactivity0c1",
+                  "loseHitDieActivityId": "b4d7592b23a3340b",
+                  "tempHpActivityId": "221da6b095b7b757",
+                  "followupSaveActivityId": "bf6ad9e8e0af3b96",
                   "hitDiceChange": {
                     "kind": "hitDiceChange",
                     "direction": "lose",
@@ -1359,7 +1359,7 @@
             },
             "macroData": {
               "name": "Hit Dice Outcome",
-              "command": "const hitDiceOutcomeSpec = {\"mode\":\"hit-dice-outcome\",\"primaryActivityId\":\"dnd5eactivity6fe\",\"loseHitDieActivityId\":\"496a585c08ff90cb\",\"tempHpActivityId\":\"4d994461091976c4\",\"followupSaveActivityId\":\"73e656b9bd31569e\",\"hitDiceChange\":{\"kind\":\"hitDiceChange\",\"direction\":\"lose\",\"count\":1,\"pool\":\"unspent\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"失去 1 颗未消耗的生命骰 (Hit Die\",\"startOffset\":23,\"endOffset\":45,\"kind\":\"direct\"}},\"tempHp\":{\"kind\":\"tempHp\",\"amount\":10,\"target\":\"self\",\"evidence\":{\"text\":\"获得 10 点临时生命值\",\"startOffset\":63,\"endOffset\":75,\"kind\":\"direct\"},\"condition\":\"hitDiceChangeApplied\"},\"followupSave\":{\"kind\":\"followupSave\",\"label\":\"Ruidium Corruption\",\"trigger\":\"targetHitDiceReducedToZero\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定\",\"startOffset\":107,\"endOffset\":159,\"kind\":\"direct\"}}};\nconst midi = globalThis.MidiQOL ?? (typeof MidiQOL !== \"undefined\" ? MidiQOL : undefined);\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst macroArgs = typeof args !== \"undefined\" ? args : [];\nconst workflow = scopeData.workflow ?? macroArgs?.[0]?.workflow ?? midi?.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst notifyManual = async (message) => {\n  ui.notifications?.info?.(message);\n  if (globalThis.ChatMessage?.create) {\n    await ChatMessage.create({ content: message, speaker: ChatMessage.getSpeaker?.({ actor: item?.actor }) });\n  }\n};\nif (!workflow) {\n  await notifyManual(\"GM must manually apply hit dice outcome; no midi-qol workflow was available.\");\n  return;\n}\nconst firstFrom = (collection) => collection?.first?.() ?? [...(collection ?? [])][0];\nconst targetToken =\n  firstFrom(workflow?.failedSaves) ??\n  firstFrom(workflow?.failedSaveTargets) ??\n  firstFrom(workflow?.hitTargets) ??\n  firstFrom(workflow?.targets);\nconst targetActor = targetToken?.actor ?? targetToken;\nconst safeHitDiceUpdate = async (actor, change) => {\n  if (!actor || !change?.count) return { ok: false, reason: \"No target actor.\" };\n  return {\n    ok: false,\n    reason: \"GM must manually apply hit dice change. No versioned safe hit dice update path is configured.\",\n  };\n};\nconst hitDieResult = await safeHitDiceUpdate(targetActor, hitDiceOutcomeSpec.hitDiceChange);\nif (!hitDieResult.ok) {\n  await notifyManual(hitDieResult.reason ?? \"GM must manually apply hit dice change.\");\n  return;\n}\nconst useActivity = async (activityId, trigger) => {\n  const activity = activities?.get?.(activityId) ?? activities?.[activityId] ?? item?.activities?.get?.(activityId);\n  if (activity?.use) await activity.use({}, {}, { configureDialog: false, workflow, trigger });\n};\nif (hitDiceOutcomeSpec.tempHpActivityId) {\n  await useActivity(hitDiceOutcomeSpec.tempHpActivityId, \"hit-dice-outcome-temp-hp\");\n}\nif (hitDiceOutcomeSpec.followupSaveActivityId && hitDieResult.remaining === 0) {\n  await useActivity(hitDiceOutcomeSpec.followupSaveActivityId, \"hit-dice-outcome-followup-save\");\n}"
+              "command": "const hitDiceOutcomeSpec = {\"mode\":\"hit-dice-outcome\",\"primaryActivityId\":\"dnd5eactivity0c1\",\"loseHitDieActivityId\":\"b4d7592b23a3340b\",\"tempHpActivityId\":\"221da6b095b7b757\",\"followupSaveActivityId\":\"bf6ad9e8e0af3b96\",\"hitDiceChange\":{\"kind\":\"hitDiceChange\",\"direction\":\"lose\",\"count\":1,\"pool\":\"unspent\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"失去 1 颗未消耗的生命骰 (Hit Die\",\"startOffset\":23,\"endOffset\":45,\"kind\":\"direct\"}},\"tempHp\":{\"kind\":\"tempHp\",\"amount\":10,\"target\":\"self\",\"evidence\":{\"text\":\"获得 10 点临时生命值\",\"startOffset\":63,\"endOffset\":75,\"kind\":\"direct\"},\"condition\":\"hitDiceChangeApplied\"},\"followupSave\":{\"kind\":\"followupSave\",\"label\":\"Ruidium Corruption\",\"trigger\":\"targetHitDiceReducedToZero\",\"target\":\"failedSaveTarget\",\"evidence\":{\"text\":\"生命骰降为 0，则目标必须立即进行一次对抗绯晶腐化 (Ruidium Corruption) 的豁免检定\",\"startOffset\":107,\"endOffset\":159,\"kind\":\"direct\"}}};\nconst midi = globalThis.MidiQOL ?? (typeof MidiQOL !== \"undefined\" ? MidiQOL : undefined);\nconst scopeData = typeof scope !== \"undefined\" ? scope : {};\nconst macroArgs = typeof args !== \"undefined\" ? args : [];\nconst workflow = scopeData.workflow ?? macroArgs?.[0]?.workflow ?? midi?.Workflow?.getWorkflow?.(scopeData.workflowId);\nconst item = scopeData.activity?.item ?? scopeData.item ?? workflow?.item;\nconst activities = item?.system?.activities;\nconst notifyManual = async (message) => {\n  ui.notifications?.info?.(message);\n  if (globalThis.ChatMessage?.create) {\n    await ChatMessage.create({ content: message, speaker: ChatMessage.getSpeaker?.({ actor: item?.actor }) });\n  }\n};\nif (!workflow) {\n  await notifyManual(\"GM must manually apply hit dice outcome; no midi-qol workflow was available.\");\n  return;\n}\nconst firstFrom = (collection) => collection?.first?.() ?? [...(collection ?? [])][0];\nconst targetToken =\n  firstFrom(workflow?.failedSaves) ??\n  firstFrom(workflow?.failedSaveTargets) ??\n  firstFrom(workflow?.hitTargets) ??\n  firstFrom(workflow?.targets);\nconst targetActor = targetToken?.actor ?? targetToken;\nconst safeHitDiceUpdate = async (actor, change) => {\n  if (!actor || !change?.count) return { ok: false, reason: \"No target actor.\" };\n  return {\n    ok: false,\n    reason: \"GM must manually apply hit dice change. No versioned safe hit dice update path is configured.\",\n  };\n};\nconst hitDieResult = await safeHitDiceUpdate(targetActor, hitDiceOutcomeSpec.hitDiceChange);\nif (!hitDieResult.ok) {\n  await notifyManual(hitDieResult.reason ?? \"GM must manually apply hit dice change.\");\n  return;\n}\nconst useActivity = async (activityId, trigger) => {\n  const activity = activities?.get?.(activityId) ?? activities?.[activityId] ?? item?.activities?.get?.(activityId);\n  if (activity?.use) await activity.use({}, {}, { configureDialog: false, workflow, trigger });\n};\nif (hitDiceOutcomeSpec.tempHpActivityId) {\n  await useActivity(hitDiceOutcomeSpec.tempHpActivityId, \"hit-dice-outcome-temp-hp\");\n}\nif (hitDiceOutcomeSpec.followupSaveActivityId && hitDieResult.remaining === 0) {\n  await useActivity(hitDiceOutcomeSpec.followupSaveActivityId, \"hit-dice-outcome-followup-save\");\n}"
             },
             "activation": {
               "type": "action",
@@ -1368,8 +1368,8 @@
               "condition": ""
             }
           },
-          "496a585c08ff90cb": {
-            "_id": "496a585c08ff90cb",
+          "b4d7592b23a3340b": {
+            "_id": "b4d7592b23a3340b",
             "name": "Lose Hit Die",
             "type": "utility",
             "activation": {
@@ -1451,8 +1451,8 @@
               }
             }
           },
-          "4d994461091976c4": {
-            "_id": "4d994461091976c4",
+          "221da6b095b7b757": {
+            "_id": "221da6b095b7b757",
             "name": "Gain Temporary HP",
             "type": "heal",
             "activation": {
@@ -1553,8 +1553,8 @@
               }
             }
           },
-          "73e656b9bd31569e": {
-            "_id": "73e656b9bd31569e",
+          "bf6ad9e8e0af3b96": {
+            "_id": "bf6ad9e8e0af3b96",
             "name": "Ruidium Corruption Save",
             "type": "utility",
             "activation": {
@@ -1670,7 +1670,7 @@
       },
       "effects": [
         {
-          "_id": "2a11cbfcc1788f4e",
+          "_id": "29699a3ce9125864",
           "name": "中毒 (Poisoned)",
           "type": "base",
           "system": {},
@@ -1695,7 +1695,7 @@
           ]
         },
         {
-          "_id": "641ff23f3bef8d9d",
+          "_id": "91d3ae3f5fb90460",
           "name": "流血 (Bleeding)",
           "type": "base",
           "system": {},
@@ -1717,7 +1717,8 @@
           "img": "icons/svg/blood.svg",
           "statuses": [
             "bleeding"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -1733,10 +1734,10 @@
             "specs": [
               {
                 "mode": "hit-dice-outcome",
-                "primaryActivityId": "dnd5eactivity6fe",
-                "loseHitDieActivityId": "496a585c08ff90cb",
-                "tempHpActivityId": "4d994461091976c4",
-                "followupSaveActivityId": "73e656b9bd31569e",
+                "primaryActivityId": "dnd5eactivity0c1",
+                "loseHitDieActivityId": "b4d7592b23a3340b",
+                "tempHpActivityId": "221da6b095b7b757",
+                "followupSaveActivityId": "bf6ad9e8e0af3b96",
                 "hitDiceChange": {
                   "kind": "hitDiceChange",
                   "direction": "lose",
@@ -1798,12 +1799,12 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity7f1": {
-            "_id": "dnd5eactivity7f1",
+          "dnd5eactivity477": {
+            "_id": "dnd5eactivity477",
             "type": "utility",
             "effects": [
               {
-                "_id": "c98b63f9e7001bcd"
+                "_id": "1a5a21bff7f697a3"
               }
             ],
             "activation": {
@@ -1821,7 +1822,7 @@
       },
       "effects": [
         {
-          "_id": "c98b63f9e7001bcd",
+          "_id": "1a5a21bff7f697a3",
           "name": "缩壳防御 (Retract)",
           "type": "base",
           "system": {},
@@ -1885,8 +1886,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity39c": {
-            "_id": "dnd5eactivity39c",
+          "dnd5eactivity356": {
+            "_id": "dnd5eactivity356",
             "type": "utility",
             "activation": {
               "type": "reaction",
@@ -1920,7 +1921,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1781598627791,
-    "modifiedTime": 1781598627791
+    "createdTime": 1781713197078,
+    "modifiedTime": 1781713197078
   }
 }

@@ -535,7 +535,7 @@
     },
     "details": {
       "biography": {
-        "value": "<ul><li>### 特质</li><li>**两栖.*** 该甲伏怪可以在空气和水中呼吸。</li><li>**反魔法光环.*** 甲伏怪随意在其周围 10 尺范围内创造一个反魔法区域。该特性的运作方式类似于反魔法场 (Antimagic Field) 术式，但其本身并非魔法。</li><li>**绝望共鸣.*** 瑞金的绝望情绪环绕着甲伏怪。任何在甲伏怪 10 尺范围内开始其回合的敌对生物，在进行任何攻击检定、属性检定或豁免检定时，无法获得优势 (Advantage)。</li><li>**腐化反噬.*** 如果在任何攻击检定或豁免检定中掷出 1，它必须进行一次 DC 20 的魅力 (Charisma) 豁免。失败则立即增加 1 级力竭。</li><li>**感知魔法.*** 甲伏怪可以随意感知 120 尺范围内的魔法或瑞金矿石。该特性的运作方式类似于检测魔法 (Detect Magic)，但本身并非魔法。</li></ul>",
+        "value": "<ul><li>### 特质</li></ul>",
         "public": ""
       },
       "alignment": "混乱邪恶",
@@ -725,8 +725,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityeec": {
-            "_id": "dnd5eactivityeec",
+          "dnd5eactivity3bb": {
+            "_id": "dnd5eactivity3bb",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -770,8 +770,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity448": {
-            "_id": "dnd5eactivity448",
+          "dnd5eactivity78e": {
+            "_id": "dnd5eactivity78e",
             "type": "utility",
             "activation": {
               "type": "",
@@ -815,8 +815,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity979": {
-            "_id": "dnd5eactivity979",
+          "dnd5eactivityb9a": {
+            "_id": "dnd5eactivityb9a",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -860,12 +860,25 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivity5a8": {
-            "_id": "dnd5eactivity5a8",
-            "type": "utility",
+          "dnd5eactivity841": {
+            "_id": "dnd5eactivity841",
+            "type": "save",
+            "save": {
+              "ability": [
+                "cha"
+              ],
+              "dc": {
+                "calculation": "",
+                "formula": "20",
+                "value": 20
+              }
+            },
+            "damage": {
+              "parts": []
+            },
             "effects": [
               {
-                "_id": "266fb8f1a1483d49"
+                "_id": "57f8ee41f9b23802"
               }
             ],
             "activation": {
@@ -883,7 +896,7 @@
       },
       "effects": [
         {
-          "_id": "266fb8f1a1483d49",
+          "_id": "57f8ee41f9b23802",
           "name": "力竭 (Exhaustion)",
           "type": "base",
           "system": {},
@@ -905,7 +918,8 @@
           "img": "systems/dnd5e/icons/svg/statuses/exhaustion.svg",
           "statuses": [
             "exhaustion"
-          ]
+          ],
+          "flags": {}
         }
       ],
       "flags": {
@@ -936,8 +950,8 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitya9a": {
-            "_id": "dnd5eactivitya9a",
+          "dnd5eactivityf3e": {
+            "_id": "dnd5eactivityf3e",
             "type": "utility",
             "activation": {
               "type": "special",
@@ -964,12 +978,12 @@
       }
     },
     {
-      "name": "",
+      "name": "多重攻击",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<ul><li>该甲伏怪发动一次钳击。如果甲伏怪正擒抱一个生物，它还可以额外使用一次触须。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -981,9 +995,14 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivitybd8": {
-            "_id": "dnd5eactivitybd8",
+          "dnd5eactivity3f7": {
+            "_id": "dnd5eactivity3f7",
             "type": "utility",
+            "effects": [
+              {
+                "_id": "7f572f762c6a8824"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -997,7 +1016,34 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "7f572f762c6a8824",
+          "name": "擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1009,12 +1055,12 @@
       }
     },
     {
-      "name": "",
-      "type": "feat",
-      "img": "icons/svg/mystery-man.svg",
+      "name": "钳击",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<p>8命中, 触及10尺, 12 (2d6+5) 点钝击伤害, 外加 5 (1d8) 点心灵伤害.</p><ul><li>命中：如果目标是体型为大型或更小的生物，则目标被擒抱（逃脱DC 16）。直到擒抱结束前，目标处于束缚状态。甲伏怪同一时间最多可擒抱两个生物。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1026,9 +1072,75 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityb64": {
-            "_id": "dnd5eactivityb64",
-            "type": "utility",
+          "dnd5eactivity865": {
+            "_id": "dnd5eactivity865",
+            "type": "attack",
+            "attack": {
+              "ability": "str",
+              "bonus": "",
+              "flat": false,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 1,
+                  "denomination": 8,
+                  "bonus": "",
+                  "types": [
+                    "bludgeoning"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 10,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "effects": [
+              {
+                "_id": "a41369f049b2470e"
+              },
+              {
+                "_id": "312d873e52faa674"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1038,11 +1150,90 @@
           }
         },
         "type": {
-          "value": "monster",
-          "subtype": ""
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 10,
+          "units": "ft"
+        },
+        "damage": {
+          "base": {
+            "number": 2,
+            "denomination": 6,
+            "bonus": "",
+            "types": [
+              "bludgeoning"
+            ],
+            "custom": {
+              "enabled": false,
+              "formula": ""
+            },
+            "scaling": {
+              "mode": "whole",
+              "number": 1,
+              "formula": ""
+            }
+          }
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "a41369f049b2470e",
+          "name": "束缚 (Restrained)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/restrained.svg",
+          "statuses": [
+            "restrained"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "312d873e52faa674",
+          "name": "被擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
@@ -1054,12 +1245,12 @@
       }
     },
     {
-      "name": "",
+      "name": "触须",
       "type": "feat",
       "img": "icons/svg/mystery-man.svg",
       "system": {
         "description": {
-          "value": "",
+          "value": "<ul><li>一个被甲伏怪擒抱的生物必须成功通过一次 DC 14 的体质豁免，否则将中毒1分钟。在中持续期间，目标处于麻痹状态。此外，目标在每次其回合开始时受到 5 (1d8) 点心灵伤害。目标在其每回合结束时可以重复该豁免，成功则结束该效果。</li></ul>",
           "chat": ""
         },
         "source": {
@@ -1071,9 +1262,51 @@
           "condition": ""
         },
         "activities": {
-          "dnd5eactivityab4": {
-            "_id": "dnd5eactivityab4",
-            "type": "utility",
+          "dnd5eactivitya64": {
+            "_id": "dnd5eactivitya64",
+            "type": "save",
+            "save": {
+              "ability": [
+                "con"
+              ],
+              "dc": {
+                "calculation": "con",
+                "formula": "",
+                "value": 14
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 1,
+                  "denomination": 8,
+                  "bonus": "",
+                  "types": [
+                    "psychic"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ]
+            },
+            "effects": [
+              {
+                "_id": "9afc308a538230df"
+              },
+              {
+                "_id": "8c3b9ab3b8c39c2f"
+              },
+              {
+                "_id": "12a83b2ae58a47fc"
+              }
+            ],
             "activation": {
               "type": "action",
               "value": null,
@@ -1087,14 +1320,96 @@
           "subtype": ""
         }
       },
-      "effects": [],
+      "effects": [
+        {
+          "_id": "9afc308a538230df",
+          "name": "中毒 (Poisoned)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/poisoned.svg",
+          "statuses": [
+            "poisoned"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "8c3b9ab3b8c39c2f",
+          "name": "麻痹 (Paralyzed)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/paralyzed.svg",
+          "statuses": [
+            "paralyzed"
+          ],
+          "flags": {}
+        },
+        {
+          "_id": "12a83b2ae58a47fc",
+          "name": "擒抱 (Grappled)",
+          "type": "base",
+          "system": {},
+          "changes": [],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": null,
+          "tint": "#ffffff",
+          "transfer": false,
+          "img": "systems/dnd5e/icons/svg/statuses/grappled.svg",
+          "statuses": [
+            "grappled"
+          ],
+          "flags": {}
+        }
+      ],
       "flags": {
         "tidy5e-sheet": {
           "section": "动作",
           "actionSection": "动作"
         },
         "fvttJsonGenerator": {
-          "effectHints": {}
+          "effectHints": {},
+          "rules": {
+            "repeatSaveOnDamage": true
+          }
         }
       }
     }
@@ -1106,7 +1421,7 @@
     "coreVersion": "12.331",
     "systemId": "dnd5e",
     "systemVersion": "4.3.9",
-    "createdTime": 1775752088306,
-    "modifiedTime": 1775752088306
+    "createdTime": 1781713197071,
+    "modifiedTime": 1781713197071
   }
 }

@@ -46,6 +46,19 @@ async function generateActorFromBlock(englishName: string) {
   return { generated, parsed, actor };
 }
 
+async function generateActorFromRawBlock(rawBlock: string) {
+  const generated = parseCreatureBlock(rawBlock);
+  const parserFactory = new ParserFactory();
+  const route = parserFactory.detectRoute(generated.markdown);
+  const parsed = parserFactory.parse(generated.markdown);
+  const actor = await new ActorGenerator({
+    fvttVersion: '12',
+    translationService: null,
+    effectProfile: 'core',
+  }).generateForRoute(parsed, route);
+  return { generated, parsed, actor };
+}
+
 describe('PlainTextIngestionWorkflow', () => {
   const roots: string[] = [];
 
@@ -235,5 +248,179 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(venomousBite).toContain('\n盐水电击 (Brine-shock)');
     expect(venomousBite).toContain('\n针刺噬咬 (Needling Bite)');
     expect(venomousBite).toContain('\n吸血噬咬 (Vampiric Bite)');
+  });
+
+  it('maps a source markdown image to actor.img only, not the prototype token texture', async () => {
+    const rawBlock = `# **Nightgaunt**
+
+_Large Aberration, Chaotic Evil_
+
+![Nightgaunt](https://media.example.test/nightgaunt.png)
+
+**Armor Class**: 16
+**Hit Points**: 136 (16d10+48)
+**Speed**: 30 ft., fly 40 ft.
+**Challenge**: 8 (3,900 XP) Proficiency Bonus +3
+
+Nightgaunts haunt alien skies.
+
+---
+
+### Actions
+
+- **Claw**: Melee Weapon Attack: +8 to hit, reach 5 ft. Hit: 14 (2d8+5) slashing damage.`;
+
+    const { generated, parsed, actor } = await generateActorFromRawBlock(rawBlock);
+
+    expect(generated.markdown).toContain('image: https://media.example.test/nightgaunt.png');
+    expect(parsed.img).toBe('https://media.example.test/nightgaunt.png');
+    expect(actor.img).toBe('https://media.example.test/nightgaunt.png');
+    expect(actor.prototypeToken.texture.src).toBe('');
+  });
+
+  it('preserves Nightgaunt biography and maps Chinese statblock traits into actor JSON', async () => {
+    const rawBlock = `# **夜魇 (Nightgaunt)**
+
+_大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_
+
+**护甲等级 (Armor Class)**：16
+**生命值 (Hit Points)**：136 (16d10+48)
+**速度 (Speed)**：30 尺，飞行 40 尺
+
+|**STR**|**DEX**|**CON**|**INT**|**WIS**|**CHA**|
+|---|---|---|---|---|---|
+|17 (+3)|20 (+5)|16 (+3)|13 (+1)|10 (+0)|10 (+0)|
+
+**豁免 (Saves)**：敏捷 +8
+**伤害抗性 (Damage Resistances)**：闪电，毒素，心灵
+**状态免疫 (Condition Immunities)**：目盲，耳聋，力竭
+**感官 (Senses)**：盲视 60 尺；被动察觉13
+**语言 (Languages)**：理解深潜语但不会说
+**挑战等级 (Challenge)**：8（3,900 XP）熟练加值 +3
+
+夜魇Nightgaunt
+自遥远国度而来的无面恐魔
+不可名状的夜魇形似石像鬼，翱翔于地底的连绵山脉之上。
+
+---
+
+### 特质 (Traits)
+
+- **飞掠 (Flyby)**：夜魇飞行离开敌人的触及范围时不会引发借机攻击。
+
+---
+
+### 动作 (Actions)
+
+- **爪击 (Claw)**：近战攻击检定：+8，触及 5 尺。命中：14（2d8+5）挥砍伤害外加10（3d6）毒素伤害。
+- **尾刺 (Barb)**：远程攻击检定：+8，射程 60 尺。命中：21（6d6）穿刺伤害，且目标陷入中毒状态直至其下一回合结束。
+
+---
+
+### 附赠动作 (Bonus Actions)
+
+- **瘙痒 (Tickle)**：感知豁免检定：DC16，单一正受擒于该夜魇的生物。失败：目标陷入失能状态，直至夜魇的下一回合开始。
+`;
+
+    const { generated, parsed, actor } = await generateActorFromRawBlock(rawBlock);
+
+    expect(generated.markdown).toContain('背景:');
+    expect(generated.rawNotes).not.toContain(
+      '伤害抗性 (Damage Resistances):闪电,毒素,心灵',
+    );
+    expect(parsed.details.biography).toContain('不可名状的夜魇形似石像鬼');
+    expect(actor.system.details.biography.value).toContain('不可名状的夜魇形似石像鬼');
+    expect(actor.system.details.biography.value).not.toContain('飞掠 (Flyby)');
+    expect(actor.system.traits.dr.value).toEqual(
+      expect.arrayContaining(['lightning', 'poison', 'psychic']),
+    );
+    expect(actor.system.traits.ci.value).toEqual(
+      expect.arrayContaining(['blinded', 'deafened', 'exhaustion']),
+    );
+    expect(actor.system.traits.languages.value).toContain('deep');
+
+    const claw = actor.items.find((item: any) => item.name === '爪击 (Claw)');
+    const clawActivities = Object.values(claw?.system?.activities ?? {}) as any[];
+    const clawAttack = clawActivities.find((activity) => activity.type === 'attack');
+    expect(clawAttack).toBeDefined();
+    expect(clawAttack?.attack?.type?.value).toBe('mwak');
+    expect(clawAttack?.attack).toEqual(
+      expect.objectContaining({
+        ability: 'dex',
+        bonus: '',
+        flat: false,
+      }),
+    );
+    expect(clawAttack?.range?.reach).toBe(5);
+    expect(claw?.system?.damage?.base).toEqual(
+      expect.objectContaining({ number: 2, denomination: 8, bonus: '', types: ['slashing'] }),
+    );
+    expect(clawAttack?.damage?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ number: 3, denomination: 6, bonus: '', types: ['poison'] }),
+      ]),
+    );
+
+    const barb = actor.items.find((item: any) => item.name === '尾刺 (Barb)');
+    const barbActivities = Object.values(barb?.system?.activities ?? {}) as any[];
+    const barbAttack = barbActivities.find((activity) => activity.type === 'attack');
+    expect(barbAttack).toBeDefined();
+    expect(barbAttack?.attack?.type?.value).toBe('rwak');
+    expect(barbAttack?.attack).toEqual(
+      expect.objectContaining({
+        bonus: '8',
+        flat: true,
+      }),
+    );
+    expect(barbAttack?.range?.value).toBe(60);
+    expect(barbAttack?.damage?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ number: 6, denomination: 6, bonus: '', types: ['piercing'] }),
+      ]),
+    );
+
+    const tickle = actor.items.find((item: any) => item.name === '瘙痒 (Tickle)');
+    const tickleActivities = Object.values(tickle?.system?.activities ?? {}) as any[];
+    const tickleSave = tickleActivities.find((activity) => activity.type === 'save');
+    expect(tickleSave).toBeDefined();
+    expect(tickleSave?.activation?.type).toBe('bonus');
+    expect(tickleSave?.save?.ability).toEqual(['wis']);
+    expect(tickleSave?.save?.dc?.value).toBe(16);
+  });
+
+  it('maps ability-before-DC damage save lines to save activities instead of damage-only stubs', async () => {
+    const rawBlock = `# **古老者 (Elder Thing)**
+
+_中型异怪 (Medium Aberration)，守序邪恶 (Lawful Evil)_
+
+**护甲等级 (Armor Class)**：15
+**生命值 (Hit Points)**：95 (10d8+50)
+**速度 (Speed)**：30 尺
+|**STR**|**DEX**|**CON**|**INT**|**WIS**|**CHA**|
+|---|---|---|---|---|---|
+|18 (+4)|12 (+1)|20 (+5)|20 (+5)|17 (+3)|15 (+2)|
+
+**挑战等级 (Challenge)**：10（5,900 XP）熟练加值 +4
+
+---
+
+### 动作 (Actions)
+
+- **心灵戳刺 (Psychic Skewer)**：感知豁免检定：DC18，单一 60 尺内的生物。失败：22（4d10）心灵伤害。`;
+
+    const { actor } = await generateActorFromRawBlock(rawBlock);
+    const skewer = actor.items.find((item: any) => item.name.includes('Psychic Skewer'));
+    const activities = Object.values(skewer?.system?.activities ?? {}) as any[];
+    const save = activities.find((activity) => activity.type === 'save');
+
+    expect(save).toBeDefined();
+    expect(activities.some((activity) => activity.type === 'damage')).toBe(false);
+    expect(save?.save?.ability).toEqual(['wis']);
+    expect(save?.save?.dc?.value).toBe(18);
+    expect(save?.damage?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ number: 4, denomination: 10, bonus: '', types: ['psychic'] }),
+      ]),
+    );
   });
 });
