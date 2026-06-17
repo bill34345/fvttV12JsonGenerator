@@ -1,0 +1,28 @@
+{
+  "site": "goddessfantasy",
+  "boardId": "2318",
+  "boardUrl": "https://www.goddessfantasy.net/bbs/index.php?board=2318.0",
+  "startedAt": "2026-06-17T07:26:27.129Z",
+  "finishedAt": "2026-06-17T07:26:47.158Z",
+  "options": {
+    "outDir": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318",
+    "maxBoardPages": 20,
+    "contentType": "monster",
+    "concurrency": 2,
+    "requestDelayMs": 800,
+    "force": true,
+    "dryRun": false,
+    "authProbe": "passed",
+    "cookieHeaderSource": "file"
+  },
+  "result": {
+    "boardId": "2318",
+    "outDir": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318",
+    "topicsDiscovered": 25,
+    "topicsMatched": 12,
+    "topicsCrawled": 12,
+    "topicsSkipped": 0,
+    "failures": 0,
+    "dryRun": false
+  }
+}

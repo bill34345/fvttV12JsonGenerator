@@ -574,7 +574,7 @@ function extractFrontmatter(
       if (hitPointRange) {
         frontmatter['生命值'] = String(hitPointRange.recommendedValue);
         rawNotes.push(`生命值原始范围: ${normalizedHitPoints}`);
-      } else if (isSafeHitPoints(value) && countNumericTokens(value) <= 2) {
+      } else if (isSafeHitPoints(value)) {
         frontmatter['生命值'] = normalizedHitPoints;
       } else {
         rawNotes.push(`生命值原始行: ${line}`);
@@ -991,10 +991,6 @@ function parseHitPointRange(value: string): { min: number; max: number; recommen
     max,
     recommendedValue: Math.round((min + max) / 2),
   };
-}
-
-function countNumericTokens(value: string): number {
-  return value.match(/\d+/g)?.length ?? 0;
 }
 
 function isSafeArmorClass(value: string): boolean {

@@ -1,0 +1,12 @@
+{
+  "recordsPath": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\records.json",
+  "outFile": "C:\\Users\\Zheng-Kaizhong\\Desktop\\unionnet\\fvttV12Json\\obsidian\\dnd数据转fvttjson\\crawls\\goddessfantasy\\board-2318\\plaintext\\monsters.md",
+  "generatedAt": "2026-06-17T09:09:25.586Z",
+  "recordsRead": 12,
+  "recordsMatched": 12,
+  "blocksEmitted": 12,
+  "skipped": 0,
+  "warnings": 1,
+  "failures": 0,
+  "dryRun": false
+}

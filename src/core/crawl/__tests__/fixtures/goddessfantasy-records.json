@@ -1,0 +1,63 @@
+[
+  {
+    "site": "goddessfantasy",
+    "boardId": "2318",
+    "topicId": "169745",
+    "title": "【怪物】伊斯人Yithian",
+    "url": "https://www.goddessfantasy.net/bbs/index.php?topic=169745.0",
+    "classification": {
+      "contentType": "monster",
+      "classificationSource": "title-prefix",
+      "matchedPrefix": "【怪物】"
+    },
+    "printUrl": "https://www.goddessfantasy.net/bbs/index.php?action=printpage;topic=169745.0",
+    "rawHtmlPath": "goddessfantasy-topic-print-statblock.html",
+    "crawledAt": "2026-06-17T00:00:00.000Z",
+    "imageUrls": [
+      "https://media.dndbeyond.com/compendium-images/rthw/ogMxaVTj4GqgnUqr/22-042.yithian.jpg"
+    ],
+    "posts": [
+      {
+        "index": 0,
+        "title": "【怪物】伊斯人Yithian",
+        "author": "Amethyst Dragonlord",
+        "postedAt": "2026-06-11, 周四 21:49:05",
+        "text": "伊斯人Yithian大型异怪，混乱中立AC 14先攻 +5（15）HP 180（19d10+76）速度 30尺力量18+4+4 敏捷10+0+0 体质18+4+9 智力21+5+10 感知18+4+4 魅力19+4+4免疫 心灵；魅惑，恐慌，中毒感官 真实视觉60尺；被动察觉14语言 深潜语；心灵感应120尺CR 15（XP13,000；PB+5）特质Traits魔法抗性Magic Resistance。伊斯人对抗法术和其他魔法效应时进行的豁免检定具有优势。动作Actions多重攻击Multiattack。伊斯人发动三次钳击攻击。",
+        "imageUrls": []
+      },
+      {
+        "index": 1,
+        "title": "回复：【怪物】伊斯人Yithian",
+        "author": "3034356449",
+        "postedAt": "2026-06-11, 周四 21:50:08",
+        "text": "论坛讨论回复不应进入 plaintext 输出。",
+        "imageUrls": []
+      }
+    ]
+  },
+  {
+    "site": "goddessfantasy",
+    "boardId": "2318",
+    "topicId": "169462",
+    "title": "《醉阎魔城：魔障深藏》目录贴",
+    "url": "https://www.goddessfantasy.net/bbs/index.php?topic=169462.0",
+    "classification": {
+      "contentType": "unknown",
+      "classificationSource": "none"
+    },
+    "printUrl": "https://www.goddessfantasy.net/bbs/index.php?action=printpage;topic=169462.0",
+    "rawHtmlPath": "missing.html",
+    "crawledAt": "2026-06-17T00:00:00.000Z",
+    "imageUrls": [],
+    "posts": [
+      {
+        "index": 0,
+        "title": "《醉阎魔城：魔障深藏》目录贴",
+        "author": "Amethyst Dragonlord",
+        "postedAt": "2026-06-11, 周四 21:49:05",
+        "text": "目录。",
+        "imageUrls": []
+      }
+    ]
+  }
+]

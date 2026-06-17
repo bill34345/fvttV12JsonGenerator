@@ -23,7 +23,9 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "commander": "^14.0.2",
+    "crawlee": "^3.17.0",
     "js-yaml": "^4.1.1",
     "marked": "^17.0.1",
     "opencc-js": "^1.0.5"
