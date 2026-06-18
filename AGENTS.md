@@ -32,6 +32,14 @@
 - Convert Obsidian NPC/monster markdown into Foundry VTT dnd5e Actor JSON.
 - Supported sources currently include Chinese YAML/Markdown and English bestiary-style markdown.
 
+## Workflow Layers
+
+- Root instructions cover project-wide gates and route work to the right workflow.
+- Actor JSON generation workflow: source markdown in `obsidian/dnd数据转fvttjson/input` -> project CLI -> generated JSON in `obsidian/dnd数据转fvttjson/output`; follow `docs/generated-actor-verification.md`.
+- Site crawl workflow: `src/tools/crawlSites.ts` and `src/core/crawl/*` collect source-site artifacts under `obsidian/dnd数据转fvttjson/crawls/...`, then convert `records.json` to plaintext before entering existing ingest/generator flows.
+- Keep site-crawl logic decoupled from `src/index.ts` unless the user explicitly asks to join the flows.
+- Use directory-specific AGENTS files for specialized rules: `src/core/generator/AGENTS.md` for generator anti-overfit, `src/core/crawl/AGENTS.md` for crawler and crawl-to-plaintext rules.
+
 ## Project Understanding Index
 
 - When the user asks for project understanding, architecture review, impact analysis, or codebase orientation, `project-understanding` may create or update `.pui/` under the workspace root without separate edit authorization.
@@ -94,6 +102,9 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
 - Convert one markdown file: `bun run src/index.ts "obsidian/dnd数据转fvttjson/input/example.md" -o "obsidian/dnd数据转fvttjson/output/example.json"`
 - Sync the Obsidian vault: `bun run src/index.ts --sync --vault "obsidian/dnd数据转fvttjson"`
 - Translate pending JSON in place: `bun run src/index.ts --translate-json --translate-dir "data/need_tran"`
+- Crawl Goddess Fantasy board: `bun run src/tools/crawlSites.ts goddessfantasy-board --board-url "<url>" --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>"`
+- Convert crawl records to plaintext: `bun run src/tools/crawlSites.ts records-to-plaintext --records "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>/records.json" --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>/plaintext/monsters"`
+- Run crawl tests: `bun test src/core/crawl/__tests__/goddessfantasy.test.ts src/core/crawl/__tests__/recordsToPlaintext.test.ts`
 
 ## Paths
 
@@ -102,7 +113,11 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
 - Obsidian vault: `obsidian/dnd数据转fvttjson`
 - Default input dir: `obsidian/dnd数据转fvttjson/input`
 - Default output dir: `obsidian/dnd数据转fvttjson/output`
+- Default crawl artifacts: `obsidian/dnd数据转fvttjson/crawls`
 - Main CLI entry: `src/index.ts`
+- Site crawl tool: `src/tools/crawlSites.ts`
+- Crawl core: `src/core/crawl`
+- Plaintext ingest: `src/core/ingest/plaintext.ts`
 - Actor generator: `src/core/generator/actor.ts`
 - Chinese action parser: `src/core/parser/action.ts`
 - English action parser: `src/core/parser/englishAction.ts`
