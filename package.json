@@ -9,6 +9,10 @@
     "sync:vault": "bun run src/index.ts --sync --vault \"obsidian/dnd数据转fvttjson\"",
     "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",
     "cli:help": "bun run src/index.ts --help",
+    "web:api": "bun run src/web/server/index.ts",
+    "web:dev": "bun run src/web/dev.ts",
+    "web:build": "vite build",
+    "web:start": "bun run src/web/server/index.ts",
     "verify:actor": "bun run src/tools/actorVerification.ts",
     "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all"
@@ -17,17 +21,24 @@
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.0.10",
-    "bun-types": "^1.3.6"
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "bun-types": "^1.3.6",
+    "vite": "^8.0.16"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@radix-ui/react-icons": "^1.3.2",
     "cheerio": "^1.2.0",
     "commander": "^14.0.2",
     "crawlee": "^3.17.0",
     "js-yaml": "^4.1.1",
     "marked": "^17.0.1",
-    "opencc-js": "^1.0.5"
+    "opencc-js": "^1.0.5",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }
