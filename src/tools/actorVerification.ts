@@ -5,6 +5,13 @@ interface BuildActorVerificationSummaryOptions {
   actorPath: string;
 }
 
+interface BuildActorVerificationSummaryFromValuesOptions {
+  source: string;
+  actor: unknown;
+  sourcePath?: string;
+  actorPath?: string;
+}
+
 interface ActivitySummary {
   type: string;
   range?: unknown;
@@ -42,6 +49,19 @@ export function buildActorVerificationSummary(
 ): ActorVerificationSummary {
   const source = readFileSync(options.sourcePath, 'utf-8');
   const actor = JSON.parse(readTextFile(options.actorPath)) as RecordLike;
+  return buildActorVerificationSummaryFromValues({
+    source,
+    actor,
+    sourcePath: options.sourcePath,
+    actorPath: options.actorPath,
+  });
+}
+
+export function buildActorVerificationSummaryFromValues(
+  options: BuildActorVerificationSummaryFromValuesOptions,
+): ActorVerificationSummary {
+  const source = options.source;
+  const actor = getRecord(options.actor);
   const system = getRecord(actor.system);
   const details = getRecord(system.details);
   const attributes = getRecord(system.attributes);
@@ -59,8 +79,8 @@ export function buildActorVerificationSummary(
   }
 
   return {
-    sourcePath: options.sourcePath,
-    actorPath: options.actorPath,
+    sourcePath: options.sourcePath ?? '<inline-source>',
+    actorPath: options.actorPath ?? '<inline-actor>',
     actor: {
       name: String(actor.name ?? ''),
       type: String(actor.type ?? ''),

@@ -1,0 +1,188 @@
+export type EffectProfile = 'core' | 'modded-v12';
+export type FvttVersion = '12' | '13';
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
+
+export type JobType =
+  | 'monster-collection'
+  | 'item-collection'
+  | 'vault-sync'
+  | 'translate-json'
+  | 'ingest-plaintext'
+  | 'ingest-plaintext-actors'
+  | 'ingest-items'
+  | 'goddessfantasy-board-crawl'
+  | 'records-to-plaintext';
+
+export interface CapabilitiesResponse {
+  pathModeEnabled: boolean;
+  translationConfigured: boolean;
+  goddessFantasyCookieConfigured: boolean;
+  goddessFantasyLoginConfigured: boolean;
+  imageAssetsConfigured: boolean;
+  imageMode: 'ssh';
+  imageSshTarget: string;
+  imageRemoteRoot: string;
+  imagePublicBaseUrl: string;
+  imageAllowHttp: boolean;
+  imageActorDir: string;
+  imageTokenDir: string;
+  imageTokenFrame: string;
+  imageTokenFrameConfigured: boolean;
+  imageTokenSize: number;
+  imageTokenFormat: 'webp';
+  publicAccess: boolean;
+  limits: {
+    singleUploadMb: number;
+    collectionUploadMb: number;
+    shortRequestsPerMinute: number;
+    longJobsPerIp: number;
+    tempRetentionHours: number;
+  };
+}
+
+export interface DefaultsResponse {
+  workspaceRoot: string;
+  vaultPath: string;
+  inputDir: string;
+  outputDir: string;
+  effectProfile: EffectProfile;
+  fvttVersion: FvttVersion;
+  sampleSourcePath: string;
+  pathModeEnabled: boolean;
+}
+
+export interface VerificationSummary {
+  sourcePath: string;
+  actorPath: string;
+  actor: {
+    name: string;
+    type: string;
+  };
+  items: Array<{
+    name: string;
+    type: string;
+    activation: string;
+    activityTypes: string[];
+  }>;
+  warnings: string[];
+}
+
+export interface ConversionResult {
+  kind: 'actor' | 'item';
+  sourcePath?: string;
+  outputPath?: string;
+  fvttVersion: FvttVersion;
+  effectProfile: EffectProfile;
+  name: string;
+  itemCount: number;
+  warnings: string[];
+  verification: VerificationSummary | null;
+  rawJson: unknown;
+  downloadUrl: string;
+  jobId: string;
+}
+
+export interface WebJobFile {
+  id: string;
+  fileName: string;
+  contentType: string;
+  label: string;
+  size: number;
+  downloadUrl: string;
+}
+
+export interface WebJob {
+  id: string;
+  type: JobType;
+  status: JobStatus;
+  createdAt: string;
+  updatedAt: string;
+  progress: {
+    current: number;
+    total: number;
+    label: string;
+  };
+  logs: Array<{
+    at: string;
+    level: 'info' | 'success' | 'error';
+    message: string;
+  }>;
+  files: WebJobFile[];
+  warnings: string[];
+  failures: Array<{
+    index?: number;
+    sourceName?: string;
+    file?: string;
+    error: string;
+  }>;
+  summary: Record<string, unknown> | null;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+interface ApiSuccess<T> {
+  ok: true;
+  data: T;
+}
+
+interface ApiFailure {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    detail?: string;
+  };
+}
+
+type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+
+export async function getCapabilities(): Promise<CapabilitiesResponse> {
+  return request<CapabilitiesResponse>('/api/capabilities');
+}
+
+export async function getDefaults(): Promise<DefaultsResponse> {
+  return request<DefaultsResponse>('/api/files/defaults');
+}
+
+export async function convertSingle(input: {
+  fileName: string;
+  content: string;
+  fvttVersion: FvttVersion;
+  effectProfile: EffectProfile;
+}): Promise<ConversionResult> {
+  return request<ConversionResult>('/api/convert/single', input);
+}
+
+export async function createJob(input: {
+  type: JobType;
+  fileName?: string;
+  content?: string;
+  options?: Record<string, unknown>;
+}): Promise<WebJob> {
+  return request<WebJob>('/api/jobs', input);
+}
+
+export async function getJob(id: string): Promise<WebJob> {
+  return request<WebJob>(`/api/jobs/${id}`);
+}
+
+export async function readSourceFile(path: string): Promise<{ path: string; content: string }> {
+  return request<{ path: string; content: string }>('/api/files/read', { path });
+}
+
+async function request<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = (await response.json()) as ApiResponse<T>;
+
+  if (!payload.ok) {
+    throw new Error(`${payload.error.code}: ${payload.error.message}`);
+  }
+
+  return payload.data;
+}
