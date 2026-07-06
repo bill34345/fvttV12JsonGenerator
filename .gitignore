@@ -21,6 +21,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.test.local
 .env.production.local
 .env.local
+.local/
 
 # caches
 .eslintcache
@@ -39,10 +40,32 @@ obsidian/dnd数据转fvttjson/output_backup/
 obsidian/dnd数据转fvttjson/middle/
 obsidian/dnd数据转fvttjson/middle-test/
 
+# Local Obsidian workspace state
+obsidian/dnd数据转fvttjson/.obsidian/workspace.json
+obsidian/dnd数据转fvttjson/.obsidian/workspace-mobile.json
+
+# Crawler runtime state and credentials
+**/.crawlee-storage/
+*.cookie
+*.cookies
+*cookie-header*
+*Cookie-header*
+
 # Agent working files
 audits/
 middle/
 tmp-test-*/
+
+# Temporary generated outputs
+output/
+output.json
+temp/
+temp-items/
+temp-*/
+temp-*
+debug-*.ts
+debug-*.js
+test_*.js
 
 # Accidental files
 nul
