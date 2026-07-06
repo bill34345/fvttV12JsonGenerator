@@ -119,6 +119,9 @@ function extractDamageTypesFromText(text: string): string[] {
   for (const match of text.matchAll(/点([一-龥]{2,4})伤害/g)) {
     add(match[1]);
   }
+  for (const match of text.matchAll(/[)）]\s*([一-龥]{2,4})伤害/g)) {
+    add(match[1]);
+  }
   for (const match of text.matchAll(/或([一-龥]{2,4})伤害/g)) {
     add(match[1]);
   }
@@ -192,6 +195,8 @@ export function extractSavingThrowsFromText(text: string): Array<NonNullable<Act
   let inheritedDc: number | undefined;
   const regex =
     /(?:(?:DC\s*(\d+)\s*(?:的)?\s*)?(力量|敏捷|体质|智力|感知|魅力|Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:\s*\([A-Za-z]+\))?\s*(?:豁免(?:检定)?|saving throw))/gi;
+  const abilityBeforeDcRegex =
+    /(力量|敏捷|体质|智力|感知|魅力|Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:\s*\([A-Za-z]+\))?\s*(?:豁免(?:检定)?|saving throw|save)\s*[:：,，]?\s*DC\s*(\d+)/gi;
 
   for (const match of text.matchAll(regex)) {
     const rawDc = match[1];
@@ -220,6 +225,30 @@ export function extractSavingThrowsFromText(text: string): Array<NonNullable<Act
 
     saves.push({
       dc: inheritedDc,
+      ability,
+    });
+  }
+
+  for (const match of text.matchAll(abilityBeforeDcRegex)) {
+    const rawAbility = match[1];
+    const rawDc = match[2];
+    if (!rawAbility || !rawDc) {
+      continue;
+    }
+
+    const ability = abilityMap[rawAbility];
+    if (!ability) {
+      continue;
+    }
+
+    const dc = Number.parseInt(rawDc, 10);
+    const previous = saves[saves.length - 1];
+    if (previous && previous.ability === ability && previous.dc === dc) {
+      continue;
+    }
+
+    saves.push({
+      dc,
       ability,
     });
   }
@@ -967,7 +996,10 @@ export function extractInlineFeatureLinesFromBiography(
   flushCurrentFeature();
 
   return {
-    biography: route === 'english' ? remaining.join('\n').trim() : biography.trim(),
+    biography:
+      route === 'english' || remaining.length > 0
+        ? remaining.join('\n').trim()
+        : biography.trim(),
     features,
   };
 }
@@ -1055,13 +1087,15 @@ export function parseLocalizedAttackLine(
 
   const header = split.header;
   const desc = split.body;
-  const attackPrefixMatch = desc.match(/^(近战或远程武器攻击|近战武器攻击|远程武器攻击|近战法术攻击|远程法术攻击)[:：]/);
+  const attackPrefixMatch = desc.match(
+    /^(近战或远程攻击检定|近战攻击检定|远程攻击检定|近战或远程武器攻击|近战武器攻击|远程武器攻击|近战法术攻击|远程法术攻击)[:：]\s*\+?\s*(\d+)?/,
+  );
   if (!attackPrefixMatch?.[1]) {
     return null;
   }
 
-  const toHitMatch = desc.match(/命中\s*\+?\s*(\d+)/);
-  if (!toHitMatch?.[1]) {
+  const toHit = attackPrefixMatch[2] ?? desc.match(/命中\s*\+?\s*(\d+)/)?.[1];
+  if (!toHit) {
     return null;
   }
 
@@ -1079,7 +1113,7 @@ export function parseLocalizedAttackLine(
     desc,
     attack: {
       type: isRanged ? 'rwak' : 'mwak',
-      toHit: Number.parseInt(toHitMatch[1], 10),
+      toHit: Number.parseInt(toHit, 10),
       range: rangeMatch?.[1] ? `${rangeMatch[1]}${rangeMatch[2] ? `/${rangeMatch[2]}` : ''}` : (reachMatch?.[1] ?? '5'),
       ...(reachMatch?.[1] ? { reach: reachMatch[1] } : {}),
       damage,

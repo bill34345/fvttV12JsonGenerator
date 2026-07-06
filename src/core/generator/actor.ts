@@ -319,8 +319,19 @@ export class ActorGenerator {
 
     // Patch Core Fields
     actor.name = parsed.name || actor.name;
+    if (typeof parsed.img === 'string' && parsed.img.trim()) {
+      actor.img = parsed.img.trim();
+    }
     if (actor.prototypeToken && typeof actor.prototypeToken === 'object') {
       actor.prototypeToken.name = actor.name;
+      if (
+        typeof parsed.tokenImg === 'string' &&
+        parsed.tokenImg.trim() &&
+        actor.prototypeToken.texture &&
+        typeof actor.prototypeToken.texture === 'object'
+      ) {
+        actor.prototypeToken.texture.src = parsed.tokenImg.trim();
+      }
     }
     // actor.type is fixed "npc"
 
@@ -2859,6 +2870,7 @@ export class ActorGenerator {
       if (headlineSplit?.body) {
         primary.desc = headlineSplit.body;
       }
+      this.upgradeExplicitSaveAction(primary);
       return this.enrichGeneratedAction(primary, trimmed);
     }
 
@@ -2867,6 +2879,7 @@ export class ActorGenerator {
       if (headlineSplit?.body) {
         secondary.desc = headlineSplit.body;
       }
+      this.upgradeExplicitSaveAction(secondary);
       return this.enrichGeneratedAction(secondary, trimmed);
     }
 
@@ -2876,10 +2889,21 @@ export class ActorGenerator {
       normalized.match(/^(.+?):\s+(.+)$/) ??
       normalized.match(/^(.+?)[。.:：]\s*(.+)$/);
     if (split?.[1] && split[2]) {
+      const desc = split[2].trim();
+      const save = this.extractSavingThrowFromText(desc);
+      if (save) {
+        return this.enrichGeneratedAction({
+          name: split[1].trim(),
+          type: 'save',
+          desc,
+          save,
+        }, trimmed);
+      }
+
       return this.enrichGeneratedAction({
         name: split[1].trim(),
         type: 'utility',
-        desc: split[2].trim(),
+        desc,
       }, trimmed);
     }
 
@@ -2888,6 +2912,20 @@ export class ActorGenerator {
       type: 'utility',
       desc: trimmed,
     }, trimmed);
+  }
+
+  private upgradeExplicitSaveAction(action: ActionData): void {
+    if ((action.type === 'attack' || action.save) || !action.desc) {
+      return;
+    }
+
+    const save = this.extractSavingThrowFromText(action.desc);
+    if (!save) {
+      return;
+    }
+
+    action.type = 'save';
+    action.save = save;
   }
 
   private splitHeadlineAndBody(text: string): { raw: string; header: string; body: string } | null {

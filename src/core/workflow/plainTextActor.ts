@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { PlainTextIngestionWorkflow, type PlainTextIngestionResult } from '../ingest/plaintext';
 import { type EffectProfile } from '../generator/effectProfileApplier';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
+import type { ImageAssetOptions } from '../assets/imageAssets';
 
 export interface PlainTextActorWorkflowOptions {
   sourcePath: string;
@@ -11,6 +12,7 @@ export interface PlainTextActorWorkflowOptions {
   enableAiNormalize?: boolean;
   effectProfile?: EffectProfile;
   fvttVersion?: '12' | '13';
+  imageAssets?: ImageAssetOptions;
 }
 
 export interface PlainTextActorWorkflowResult {
@@ -45,6 +47,7 @@ export class PlainTextActorWorkflow {
           vaultPath,
           fvttVersion: options.fvttVersion ?? '12',
           effectProfile,
+          imageAssets: options.imageAssets,
           excludeInputPaths: this.isSourceInsideEmitDir(sourcePath, emitDir) ? [sourcePath] : [],
           forceInputPaths: promotedInputPaths,
         });
@@ -72,6 +75,7 @@ export class PlainTextActorWorkflow {
       createdExample: false,
       clearedBackup: false,
       failures: [],
+      warnings: [],
     };
   }
 

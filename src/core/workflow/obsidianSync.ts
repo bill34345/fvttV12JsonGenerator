@@ -10,6 +10,11 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import {
+  processParsedNpcImage,
+  type ImageAssetOptions,
+  type ImageAssetWarning,
+} from '../assets/imageAssets';
 import { ActorGenerator } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
@@ -26,6 +31,7 @@ export interface ObsidianSyncOptions {
   effectProfile?: EffectProfile;
   excludeInputPaths?: string[];
   forceInputPaths?: string[];
+  imageAssets?: ImageAssetOptions;
 }
 
 interface TranslationServiceLike {
@@ -58,6 +64,7 @@ export interface ObsidianSyncResult {
   createdExample: boolean;
   clearedBackup: boolean;
   failures: Array<{ input: string; error: string }>;
+  warnings: ImageAssetWarning[];
 }
 
 export class ObsidianSyncWorkflow {
@@ -115,6 +122,7 @@ export class ObsidianSyncWorkflow {
       createdExample: false,
       clearedBackup: false,
       failures: [],
+      warnings: [],
     };
 
     if (options.clearBackup) {
@@ -173,6 +181,26 @@ export class ObsidianSyncWorkflow {
         } else {
           const route = this.parserFactory.detectRoute(content);
           const parsed = this.parserFactory.parse(content);
+          if (options.imageAssets?.mode === 'ssh') {
+            const imageResult = await processParsedNpcImage(parsed, options.imageAssets, {
+              slug: this.slugFromInput(relInput),
+              displayName: parsed.name || relInput,
+              localRoot: options.imageAssets.localRoot ?? join(outputDir, 'assets', 'goddessfantasy'),
+            });
+            result.warnings.push(...imageResult.warnings);
+            if (parsed.img) {
+              if (imageResult.actorUrl) {
+                parsed.img = imageResult.actorUrl;
+              } else {
+                delete parsed.img;
+              }
+              if (imageResult.tokenUrl) {
+                parsed.tokenImg = imageResult.tokenUrl;
+              } else {
+                delete parsed.tokenImg;
+              }
+            }
+          }
           outputData = await generator.generateForRoute(parsed, route);
         }
 
@@ -317,5 +345,10 @@ export class ObsidianSyncWorkflow {
 
   private normalizeForComparison(path: string): string {
     return resolve(path).replace(/\\/g, '/').toLowerCase();
+  }
+
+  private slugFromInput(relInput: string): string {
+    const stem = relInput.replace(/\.md$/i, '').split(/[\\/]/).pop() ?? 'actor';
+    return stem.split('__')[0] || stem;
   }
 }

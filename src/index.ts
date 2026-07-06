@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { Command } from 'commander';
 import { ActorGenerator } from './core/generator/actor';
 import type { EffectProfile } from './core/generator/effectProfileApplier';
@@ -11,6 +11,7 @@ import { JsonTranslationSyncWorkflow } from './core/workflow/jsonTranslationSync
 import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
 import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
+import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
 
 interface StructuredActions {
   attacks?: any[];
@@ -100,6 +101,17 @@ program
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12')
   .option('--fvtt-version <version>', 'Target Foundry major version (12 or 13)', '12')
+  .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
+  .option('--image-ssh-target <target>', 'SSH target for image uploads')
+  .option('--image-remote-root <path>', 'Remote image root directory for SSH uploads')
+  .option('--image-public-base-url <url>', 'Public base URL for uploaded images')
+  .option('--image-allow-http', 'Allow http:// image public URLs')
+  .option('--image-actor-dir <dir>', 'Actor image subdirectory', 'actors')
+  .option('--image-token-dir <dir>', 'Token image subdirectory', 'tokens')
+  .option('--image-token-frame <path>', 'Transparent PNG token frame path')
+  .option('--image-token-size <size>', 'Token output size in pixels', '1024')
+  .option('--image-token-format <format>', 'Token output format', 'webp')
+  .option('--image-token-crops <path>', 'JSON map of source-url hash to normalized token crop rectangles')
   .action(async (input, options) => {
     try {
       const requestedVersion = String(options.fvttVersion ?? '12');
@@ -112,6 +124,7 @@ program
       if (effectProfile !== 'core' && effectProfile !== 'modded-v12') {
         throw new Error(`Unsupported --effect-profile: ${effectProfile}. Use core or modded-v12.`);
       }
+      const imageAssets = buildImageAssetOptionsFromCli(options);
 
       if (options.translateJson) {
         const workflow = new JsonTranslationSyncWorkflow();
@@ -145,6 +158,7 @@ program
           clearBackup: Boolean(options.clearBackup),
           fvttVersion,
           effectProfile,
+          imageAssets,
         });
 
         console.log(`Synced vault: ${result.inputDir}`);
@@ -152,6 +166,7 @@ program
         console.log(`Skipped: ${result.skipped}`);
         console.log(`Failed: ${result.failed}`);
         console.log(`Backed up: ${result.backedUp}`);
+        console.log(`Warnings: ${result.warnings.length}`);
 
         if (result.createdExample) {
           console.log(`Created example: ${result.examplesDir}`);
@@ -166,6 +181,9 @@ program
             console.error(`Failed: ${failure.input} -> ${failure.error}`);
           }
           process.exit(1);
+        }
+        for (const warning of result.warnings) {
+          console.error(`Warning: ${warning.displayName ?? 'image'} [${warning.stage}] ${warning.message}`);
         }
 
         return;
@@ -202,6 +220,7 @@ program
           enableAiNormalize: Boolean(options.enableAiNormalize),
           effectProfile: effectProfileOption ? effectProfile : 'modded-v12',
           fvttVersion,
+          imageAssets,
         });
 
         console.log(`Ingested source: ${result.sourcePath}`);
@@ -210,6 +229,7 @@ program
         console.log(`Effect profile: ${result.effectProfile}`);
         console.log(`Dry run: ${result.markdown.dryRun ? 'yes' : 'no'}`);
         console.log(`AI normalize: ${result.markdown.usedAi ? 'enabled' : 'disabled'}`);
+        console.log(`Image mode: ${imageAssets?.mode ?? 'none'}`);
         console.log(`Markdown dir: ${result.markdown.emitDir}`);
         console.log(`JSON dir: ${result.sync.outputDir}`);
 
@@ -222,6 +242,7 @@ program
           console.log(`Skipped: ${result.sync.skipped}`);
           console.log(`Failed: ${result.sync.failed}`);
           console.log(`Backed up: ${result.sync.backedUp}`);
+          console.log(`Warnings: ${result.sync.warnings.length}`);
         }
 
         if (result.sync.failures.length > 0) {
@@ -229,6 +250,9 @@ program
             console.error(`Failed: ${failure.input} -> ${failure.error}`);
           }
           process.exit(1);
+        }
+        for (const warning of result.sync.warnings) {
+          console.error(`Warning: ${warning.displayName ?? 'image'} [${warning.stage}] ${warning.message}`);
         }
 
         return;

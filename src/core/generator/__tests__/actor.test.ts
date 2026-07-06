@@ -88,6 +88,27 @@ describe('ActorGenerator', () => {
     expect(actor.items[0].type).toBe('feat');
   });
 
+  it('writes token artwork only when parsed tokenImg is provided', () => {
+    const input: ParsedNPC = {
+      name: 'Nightgaunt',
+      type: 'npc',
+      img: 'http://assets.example.test/actors/nightgaunt.png',
+      tokenImg: 'http://assets.example.test/tokens/nightgaunt.webp',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+    };
+
+    const actor = generator.generate(input);
+
+    expect(actor.img).toBe('http://assets.example.test/actors/nightgaunt.png');
+    expect(actor.prototypeToken.texture.src).toBe('http://assets.example.test/tokens/nightgaunt.webp');
+  });
+
   it('extracts individual spell names from english spellcasting list lines', () => {
     const input: ParsedNPC = {
       name: 'Pinna',

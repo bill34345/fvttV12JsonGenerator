@@ -16,6 +16,7 @@ const SECTION_LABELS: Array<{ pattern: RegExp; name: SectionName }> = [
   { pattern: /^\s*(?:###\s*)?附赠动作(?:\s*\([^)]*\))?\s*$/i, name: '附赠动作' },
   { pattern: /^\s*(?:###\s*)?反应(?:\s*\([^)]*\))?\s*$/i, name: '反应' },
   { pattern: /^\s*(?:###\s*)?特性(?:\s*\([^)]*\))?\s*$/i, name: '特性' },
+  { pattern: /^\s*(?:###\s*)?特质(?:\s*\([^)]*\))?\s*$/i, name: '特性' },
   { pattern: /^\s*(?:###\s*)?动作(?:\s*\([^)]*\))?\s*$/i, name: '动作' },
   { pattern: /^\s*(?:###\s*)?legendary actions\s*$/i, name: '传奇动作' },
   { pattern: /^\s*(?:###\s*)?bonus actions\s*$/i, name: '附赠动作' },
@@ -65,52 +66,93 @@ const ALIGNMENT_MAP: Record<string, string> = {
 
 const DAMAGE_TYPE_MAP: Record<string, string> = {
   acid: 'acid',
+  强酸: 'acid',
   bludgeoning: 'bludgeoning',
+  钝击: 'bludgeoning',
   cold: 'cold',
+  冷冻: 'cold',
   fire: 'fire',
+  火焰: 'fire',
   force: 'force',
+  力场: 'force',
   lightning: 'lightning',
+  闪电: 'lightning',
   necrotic: 'necrotic',
+  黯蚀: 'necrotic',
   piercing: 'piercing',
+  穿刺: 'piercing',
   poison: 'poison',
+  毒素: 'poison',
   psychic: 'psychic',
+  心灵: 'psychic',
   radiant: 'radiant',
+  光耀: 'radiant',
   slashing: 'slashing',
+  挥砍: 'slashing',
   thunder: 'thunder',
+  雷鸣: 'thunder',
 };
 
 const CONDITION_MAP: Record<string, string> = {
   blinded: 'blinded',
+  目盲: 'blinded',
   charmed: 'charmed',
+  魅惑: 'charmed',
   deafened: 'deafened',
+  耳聋: 'deafened',
   exhaustion: 'exhaustion',
+  力竭: 'exhaustion',
   frightened: 'frightened',
+  恐慌: 'frightened',
   grappled: 'grappled',
+  受擒: 'grappled',
   incapacitated: 'incapacitated',
+  失能: 'incapacitated',
   invisible: 'invisible',
+  隐形: 'invisible',
   paralyzed: 'paralyzed',
+  麻痹: 'paralyzed',
   petrified: 'petrified',
+  石化: 'petrified',
   poisoned: 'poisoned',
+  中毒: 'poisoned',
   prone: 'prone',
+  倒地: 'prone',
   restrained: 'restrained',
+  束缚: 'restrained',
   stunned: 'stunned',
+  震慑: 'stunned',
   unconscious: 'unconscious',
+  昏迷: 'unconscious',
   dazed: 'dazed',
+  恍惚: 'dazed',
 };
 
 const LANGUAGE_MAP: Record<string, string> = {
   common: 'common',
+  通用语: 'common',
   'deep speech': 'deep',
+  深潜语: 'deep',
   draconic: 'draconic',
+  龙语: 'draconic',
   dwarvish: 'dwarvish',
+  矮人语: 'dwarvish',
   elvish: 'elvish',
+  精灵语: 'elvish',
   giant: 'giant',
+  巨人语: 'giant',
   goblin: 'goblin',
+  地精语: 'goblin',
   infernal: 'infernal',
+  炼狱语: 'infernal',
   orc: 'orc',
+  兽人语: 'orc',
   primordial: 'primordial',
+  原初语: 'primordial',
   telepathy: 'telepathy',
+  心灵感应: 'telepathy',
   undercommon: 'undercommon',
+  地底通用语: 'undercommon',
 };
 
 const ABILITY_LABEL_MAP: Record<string, string> = {
@@ -526,6 +568,13 @@ function extractFrontmatter(
     类型: 'npc',
   };
   const rawNotes: string[] = [];
+  const biographyLines: string[] = [];
+  let seenChallengeLine = false;
+
+  const imageUrl = extractFirstMarkdownImageUrl(preludeLines);
+  if (imageUrl) {
+    frontmatter.image = imageUrl;
+  }
 
   const taxonomyLine = preludeLines.find((line) => line.trim().startsWith('_'));
   if (taxonomyLine) {
@@ -574,7 +623,7 @@ function extractFrontmatter(
       if (hitPointRange) {
         frontmatter['生命值'] = String(hitPointRange.recommendedValue);
         rawNotes.push(`生命值原始范围: ${normalizedHitPoints}`);
-      } else if (isSafeHitPoints(value) && countNumericTokens(value) <= 2) {
+      } else if (isSafeHitPoints(value)) {
         frontmatter['生命值'] = normalizedHitPoints;
       } else {
         rawNotes.push(`生命值原始行: ${line}`);
@@ -600,6 +649,7 @@ function extractFrontmatter(
       if (parsed.cr === undefined && parsed.xp === undefined && parsed.prof === undefined) {
         rawNotes.push(line);
       }
+      seenChallengeLine = true;
       continue;
     }
 
@@ -680,11 +730,20 @@ function extractFrontmatter(
       } else {
         rawNotes.push(line);
       }
+      continue;
+    }
+
+    if (seenChallengeLine && isNarrativePreludeLine(line)) {
+      biographyLines.push(line);
     }
   }
 
   if (Object.keys(senses).length > 0) {
     frontmatter['感官'] = senses;
+  }
+
+  if (biographyLines.length > 0) {
+    frontmatter['背景'] = biographyLines.join('\n');
   }
 
   return { frontmatter, rawNotes: unique(rawNotes) };
@@ -913,13 +972,34 @@ function collectMappedTerms(line: string, map: Record<string, string>): string[]
   const matches: string[] = [];
 
   for (const [term, mapped] of Object.entries(map)) {
-    const pattern = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
-    if (pattern.test(value)) {
+    const normalizedTerm = term.toLowerCase();
+    const isAsciiTerm = /^[\x00-\x7F]+$/.test(normalizedTerm);
+    const matched = isAsciiTerm
+      ? new RegExp(`\\b${escapeRegExp(normalizedTerm)}\\b`, 'i').test(value)
+      : value.includes(normalizedTerm);
+    if (matched) {
       matches.push(mapped);
     }
   }
 
   return unique(matches);
+}
+
+function isNarrativePreludeLine(line: string): boolean {
+  const cleaned = normalizeInlineText(stripMarkdown(line));
+  if (!cleaned) return false;
+  if (/^!\[/.test(line.trim())) return false;
+  if (line.includes('|')) return false;
+  if (/^[-:]+$/.test(cleaned)) return false;
+  if (/^(STR|DEX|CON|INT|WIS|CHA)\b/i.test(cleaned)) return false;
+  if (
+    /(Armor Class|Initiative|Hit Points|Speed|Saves|Saving Throws|Skills|Damage Resistances|Damage Vulnerabilities|Damage Immunities|Condition Immunities|Senses|Languages|Challenge)/i.test(
+      cleaned,
+    )
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function detectSectionHeading(line: string): SectionName | null {
@@ -946,6 +1026,23 @@ function sanitizeFileName(value: string): string {
 
 function stripPublisherSuffix(value: string): string {
   return value.replace(/\bMCDM\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+function extractFirstMarkdownImageUrl(lines: string[]): string | undefined {
+  for (const line of lines) {
+    const match = line.match(/!\[[^\]]*]\(\s*(<[^>]+>|[^)\s]+)(?:\s+["'][^"']*["'])?\s*\)/);
+    const rawUrl = match?.[1]?.trim();
+    if (!rawUrl) continue;
+
+    const url = rawUrl.startsWith('<') && rawUrl.endsWith('>')
+      ? rawUrl.slice(1, -1).trim()
+      : rawUrl;
+    if (url && !url.startsWith('data:')) {
+      return url;
+    }
+  }
+
+  return undefined;
 }
 
 function stripMarkdown(value: string): string {
@@ -991,10 +1088,6 @@ function parseHitPointRange(value: string): { min: number; max: number; recommen
     max,
     recommendedValue: Math.round((min + max) / 2),
   };
-}
-
-function countNumericTokens(value: string): number {
-  return value.match(/\d+/g)?.length ?? 0;
 }
 
 function isSafeArmorClass(value: string): boolean {

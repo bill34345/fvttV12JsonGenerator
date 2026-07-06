@@ -185,4 +185,89 @@ describe('PlainTextActorWorkflow', () => {
     expect(second.sync.skipped).toBe(0);
     expect(second.sync.backedUp).toBe(7);
   });
+
+  it('mirrors source artwork into actor and token URLs during plaintext actor ingestion', async () => {
+    const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-plaintext-image-assets-'));
+    const localRoot = mkdtempSync(join(tmpdir(), 'fvtt-plaintext-image-cache-'));
+    roots.push(vaultPath, localRoot);
+
+    const sharp = (await import('sharp')).default;
+    const sourceImage = await sharp({
+      create: {
+        width: 64,
+        height: 48,
+        channels: 4,
+        background: { r: 40, g: 60, b: 120, alpha: 1 },
+      },
+    }).png().toBuffer();
+    const sourcePath = join(vaultPath, 'source.md');
+    writeFileSync(sourcePath, [
+      '# **Nightgaunt**',
+      '',
+      '_Large Aberration, Chaotic Evil_',
+      '',
+      '![Nightgaunt](https://media.example.test/nightgaunt.png)',
+      '',
+      '**Armor Class**: 16',
+      '**Hit Points**: 136 (16d10+48)',
+      '**Speed**: 30 ft., fly 40 ft.',
+      '**Challenge**: 8 (3,900 XP) Proficiency Bonus +3',
+      '',
+      'Nightgaunts haunt alien skies.',
+      '',
+      '---',
+      '',
+      '### Actions',
+      '',
+      '- **Claw**: Melee Weapon Attack: +8 to hit, reach 5 ft. Hit: 14 (2d8+5) slashing damage.',
+    ].join('\n'));
+
+    const uploaded: string[] = [];
+    const verifyCalls = new Map<string, number>();
+    const { PlainTextActorWorkflow } = await import('../plainTextActor');
+    const workflow = new PlainTextActorWorkflow();
+
+    const result = await workflow.ingestActors({
+      sourcePath,
+      vaultPath,
+      dryRun: false,
+      effectProfile: 'modded-v12',
+      fvttVersion: '12',
+      imageAssets: {
+        mode: 'ssh',
+        localRoot,
+        sshTarget: 'example-host',
+        remoteRoot: 'E:/Bill/imgSource',
+        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        allowHttp: true,
+        actorDir: 'actors',
+        tokenDir: 'tokens',
+        tokenFramePath: resolve(process.cwd(), 'references/fifthed_border_medium.png'),
+        tokenSize: 1024,
+        tokenFormat: 'webp',
+        fetchImage: async () => ({ buffer: sourceImage, contentType: 'image/png' }),
+        uploader: {
+          async ensureDir() {},
+          async uploadFile(_localPath: string, remotePath: string) {
+            uploaded.push(remotePath);
+          },
+        },
+        verifyPublicImage: async (url) => {
+          const calls = verifyCalls.get(url) ?? 0;
+          verifyCalls.set(url, calls + 1);
+          return calls > 0;
+        },
+      },
+    });
+
+    expect(result.sync.failed).toBe(0);
+    expect(result.sync.warnings).toEqual([]);
+    expect(uploaded).toHaveLength(2);
+
+    const actor = JSON.parse(readFileSync(join(vaultPath, 'output', 'nightgaunt.json'), 'utf-8'));
+    expect(actor.img).toMatch(/^http:\/\/49\.232\.12\.153\/imgSource\/actors\/nightgaunt__[a-f0-9]{8}\.png$/);
+    expect(actor.prototypeToken.texture.src).toMatch(
+      /^http:\/\/49\.232\.12\.153\/imgSource\/tokens\/nightgaunt__[a-f0-9]{8}\.webp$/,
+    );
+  });
 });

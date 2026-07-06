@@ -144,6 +144,11 @@ export class YamlParser {
       result.name = processedValue;
     } else if (path === 'type') {
       // ignore, fixed to npc
+    } else if (path === 'img') {
+      const image = String(processedValue ?? '').trim();
+      if (image) {
+        result.img = image;
+      }
     } else if (path.startsWith('system.abilities')) {
       if (internalKey === 'saves') {
         this.parseSavingThrows(processedValue, result);
@@ -171,7 +176,16 @@ export class YamlParser {
       if (internalKey === 'xp') result.details.xp = parseInt(processedValue);
       if (internalKey === 'alignment') result.details.alignment = processedValue;
       if (internalKey === 'creatureType') result.details.creatureType = processedValue;
-      // biography handled via body
+      if (internalKey === 'biography') {
+        const existingBiography = result.details.biography?.trim();
+        const frontmatterBiography = String(processedValue ?? '').trim();
+        if (frontmatterBiography) {
+          result.details.biography = [frontmatterBiography, existingBiography]
+            .filter((part): part is string => Boolean(part))
+            .join('\n')
+            .trim();
+        }
+      }
     } else if (path === 'items') {
       if (internalKey === 'actions' || internalKey === '动作') result.actions = processedValue;
       if (internalKey === 'reactions' || internalKey === '反应') result.reactions = processedValue;
