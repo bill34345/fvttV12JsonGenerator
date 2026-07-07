@@ -92,6 +92,7 @@ import {
   createSpellcastingDescriptionItem as createSpellcastingDescriptionItemExt,
   appendLegacySpellItems as appendLegacySpellItemsExt,
 } from './actor-legacy';
+import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
 
 interface TranslationServiceLike {
   translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
@@ -99,7 +100,7 @@ interface TranslationServiceLike {
 
 interface ActorGeneratorOptions {
   translationService?: TranslationServiceLike | null;
-  fvttVersion?: '12' | '13';
+  fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
 }
 
@@ -264,10 +265,10 @@ const SPELLCASTING_TERM_REPLACEMENTS: Array<[RegExp, string]> = [
 export class ActorGenerator {
   private actionParser = new ActionParser();
   private englishActionParser = new EnglishActionParser();
-  private activityGenerator = new ActivityGenerator();
+  private activityGenerator: ActivityGenerator;
   private goldenMaster: any;
   private translationService?: TranslationServiceLike;
-  private fvttVersion: '12' | '13';
+  private fvttVersion: FvttTargetVersion;
   private effectProfile: EffectProfile;
   private route: ParserRoute = 'chinese';
   private effectProfileApplier = new EffectProfileApplier();
@@ -278,6 +279,7 @@ export class ActorGenerator {
         ? this.createDefaultTranslationService()
         : options.translationService ?? undefined;
     this.fvttVersion = options.fvttVersion ?? '12';
+    this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
     this.loadGoldenMaster();
   }
@@ -372,19 +374,17 @@ export class ActorGenerator {
         };
       }
       if (parsed.attributes.legact) {
-        actor.system.resources.legact.value = parsed.attributes.legact.value;
-        actor.system.resources.legact.max = parsed.attributes.legact.max;
+        this.setResourceCounter(actor.system.resources.legact, parsed.attributes.legact.value, parsed.attributes.legact.max);
       }
       if (typeof parsed.attributes.prof === 'number' && Number.isFinite(parsed.attributes.prof)) {
         actor.system.attributes.prof = parsed.attributes.prof;
       }
     }
 
-    if ((!actor.system.resources.legact?.max || !actor.system.resources.legact?.value) && Array.isArray(parsed.legendary_actions)) {
+    if (this.shouldDeriveLegendaryActions(actor.system.resources.legact) && Array.isArray(parsed.legendary_actions)) {
       const legendaryCount = this.extractLegendaryActionCountFromLines(parsed.legendary_actions);
       if (legendaryCount) {
-        actor.system.resources.legact.value = legendaryCount;
-        actor.system.resources.legact.max = legendaryCount;
+        this.setResourceCounter(actor.system.resources.legact, legendaryCount, legendaryCount);
       }
     }
 
@@ -426,14 +426,7 @@ export class ActorGenerator {
       actor.system.traits.languages = { value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''), custom: '' };
       
       if (parsed.traits.senses) {
-        actor.system.attributes.senses = {
-          darkvision: parsed.traits.senses.darkvision ?? 0,
-          blindsight: parsed.traits.senses.blindsight ?? 0,
-          tremorsense: parsed.traits.senses.tremorsense ?? 0,
-          truesight: parsed.traits.senses.truesight ?? 0,
-          special: parsed.traits.senses.special || "",
-          units: "ft"
-        };
+        actor.system.attributes.senses = this.buildSenses(parsed.traits.senses);
       }
     }
 
@@ -568,6 +561,7 @@ export class ActorGenerator {
     this.effectProfileApplier.apply(actor, this.effectProfile);
 
     this.applyTokenSize(actor);
+    this.applyTargetDocumentMetadata(actor);
 
     return actor;
   }
@@ -706,9 +700,9 @@ export class ActorGenerator {
     actor.flags = {};
     // _stats: only keep core/system version info, remove user-specific fields
     actor._stats = {
-      coreVersion: actor._stats?.coreVersion || '12.331',
-      systemId: actor._stats?.systemId || 'dnd5e',
-      systemVersion: actor._stats?.systemVersion || '4.3.9',
+      coreVersion: this.targetStats().coreVersion,
+      systemId: this.targetStats().systemId,
+      systemVersion: this.targetStats().systemVersion,
       createdTime: Date.now(),
       modifiedTime: Date.now(),
     };
@@ -737,12 +731,10 @@ export class ActorGenerator {
     const resources = actor.system?.resources;
     if (resources) {
       if (resources.legact && typeof resources.legact === 'object') {
-        resources.legact.value = 0;
-        resources.legact.max = 0;
+        this.setResourceCounter(resources.legact, 0, 0);
       }
       if (resources.legres && typeof resources.legres === 'object') {
-        resources.legres.value = 0;
-        resources.legres.max = 0;
+        this.setResourceCounter(resources.legres, 0, 0);
       }
       if (resources.lair && typeof resources.lair === 'object') {
         resources.lair.value = false;
@@ -755,9 +747,7 @@ export class ActorGenerator {
       actor.system.attributes.movement = {
         walk: null, fly: null, swim: null, climb: null, burrow: null, hover: false
       };
-      actor.system.attributes.senses = {
-        darkvision: null, blindsight: null, tremorsense: null, truesight: null, special: ''
-      };
+      actor.system.attributes.senses = this.emptySenses();
     }
 
     const traits = actor.system?.traits;
@@ -969,7 +959,7 @@ export class ActorGenerator {
   }
 
   private appendLegacySpellItems(items: any[], spellcasting: ParsedNPC['spellcasting']): void {
-    appendLegacySpellItemsExt(items, spellcasting, this.activityGenerator);
+    appendLegacySpellItemsExt(items, spellcasting, this.activityGenerator, this.fvttVersion);
   }
 
   private createSpellcastingDescriptionItem(lines: string[]): any {
@@ -1223,7 +1213,8 @@ export class ActorGenerator {
   }
 
   private createDailyUses(value: number): Record<string, unknown> {
-    return createDailyUsesExt(value);
+    const uses = createDailyUsesExt(value);
+    return this.normalizeUses(uses);
   }
 
   private extractActivationCondition(desc: string): string {
@@ -2608,7 +2599,9 @@ export class ActorGenerator {
         : 'systems/dnd5e/icons/svg/statuses/shield.svg',
       changes: [
         {
-          key: parsed.kind === 'flat' ? 'system.attributes.ac.flat' : 'system.attributes.ac.bonus',
+          key: parsed.kind === 'flat'
+            ? 'system.attributes.ac.flat'
+            : this.isV14() ? 'system.attributes.ac.formula' : 'system.attributes.ac.bonus',
           mode: parsed.kind === 'flat' ? 5 : 2,
           value: String(parsed.value),
           priority: null,
@@ -2709,7 +2702,15 @@ export class ActorGenerator {
     duration?: Record<string, unknown>;
     flags?: Record<string, unknown>;
   }): any {
-    return createCustomEffectExt(options);
+    const effect = createCustomEffectExt(options);
+    effect._stats = {
+      coreVersion: this.targetStats().coreVersion,
+      systemId: this.targetStats().systemId,
+      systemVersion: this.targetStats().systemVersion,
+      createdTime: null,
+      modifiedTime: null,
+    };
+    return effect;
   }
 
   private createRandomId(): string {
@@ -3389,6 +3390,132 @@ export class ActorGenerator {
 
     const match = value.trim().match(/^([+-]?\d+)$/);
     return match?.[1] ? Number.parseInt(match[1], 10) : 0;
+  }
+
+  private setResourceCounter(resource: any, value: number, max: number): void {
+    if (!resource || typeof resource !== 'object') return;
+    if (this.isV14()) {
+      delete resource.value;
+      resource.max = max;
+      resource.spent = Math.max(0, max - value);
+      return;
+    }
+    resource.value = value;
+    resource.max = max;
+  }
+
+  private shouldDeriveLegendaryActions(resource: any): boolean {
+    if (!resource || typeof resource !== 'object') return true;
+    if (this.isV14()) {
+      return !resource.max || resource.spent === undefined;
+    }
+    return !resource.max || !resource.value;
+  }
+
+  private buildSenses(senses: NonNullable<ParsedNPC['traits']>['senses']): Record<string, unknown> {
+    if (this.isV14()) {
+      return {
+        ranges: {
+          darkvision: senses?.darkvision ?? 0,
+          blindsight: senses?.blindsight ?? 0,
+          tremorsense: senses?.tremorsense ?? 0,
+          truesight: senses?.truesight ?? 0,
+        },
+        special: senses?.special || '',
+        units: 'ft',
+      };
+    }
+
+    return {
+      darkvision: senses?.darkvision ?? 0,
+      blindsight: senses?.blindsight ?? 0,
+      tremorsense: senses?.tremorsense ?? 0,
+      truesight: senses?.truesight ?? 0,
+      special: senses?.special || '',
+      units: 'ft',
+    };
+  }
+
+  private emptySenses(): Record<string, unknown> {
+    if (this.isV14()) {
+      return {
+        ranges: {
+          darkvision: 0,
+          blindsight: 0,
+          tremorsense: 0,
+          truesight: 0,
+        },
+        special: '',
+      };
+    }
+
+    return {
+      darkvision: null,
+      blindsight: null,
+      tremorsense: null,
+      truesight: null,
+      special: '',
+    };
+  }
+
+  private targetStats(): ReturnType<typeof getFoundryTarget>['stats'] {
+    return getFoundryTarget(this.fvttVersion).stats;
+  }
+
+  private isV14(): boolean {
+    return this.fvttVersion === '14';
+  }
+
+  private applyTargetDocumentMetadata(actor: any): void {
+    this.applyDocumentStats(actor);
+    this.normalizeEffects(actor.effects);
+
+    for (const item of actor.items ?? []) {
+      this.applyDocumentStats(item);
+      this.normalizeEffects(item.effects);
+
+      if (this.isV14()) {
+        delete item.system?.activation;
+        if (item.system?.uses) {
+          item.system.uses = this.normalizeUses(item.system.uses);
+        }
+      }
+
+      for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
+        if (!activity || typeof activity !== 'object') continue;
+        if (activity.uses) {
+          activity.uses = this.normalizeUses(activity.uses);
+        }
+      }
+    }
+  }
+
+  private normalizeEffects(effects: unknown): void {
+    if (!Array.isArray(effects)) return;
+    for (const effect of effects) {
+      this.applyDocumentStats(effect);
+    }
+  }
+
+  private applyDocumentStats(document: any): void {
+    if (!document || typeof document !== 'object') return;
+    document._stats = {
+      ...(document._stats ?? {}),
+      coreVersion: this.targetStats().coreVersion,
+      systemId: this.targetStats().systemId,
+      systemVersion: this.targetStats().systemVersion,
+    };
+  }
+
+  private normalizeUses(uses: Record<string, unknown>): Record<string, unknown> {
+    if (!this.isV14()) return uses;
+    const normalized = { ...uses };
+    delete normalized.value;
+    delete normalized.per;
+    if (typeof normalized.max === 'number') {
+      normalized.max = String(normalized.max);
+    }
+    return normalized;
   }
 
   private createBaseActor() {

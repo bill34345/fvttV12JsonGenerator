@@ -33,6 +33,8 @@ export interface CollectionItemResult {
 export interface CollectionConversionResult {
   kind: CollectionKind;
   status: CollectionStatus;
+  fvttVersion: FvttTargetVersion;
+  effectProfile: EffectProfile;
   itemCount: number;
   succeeded: number;
   failed: number;
@@ -94,7 +96,7 @@ export async function convertMonsterCollectionToJson(
     }
   }
 
-  return summarizeCollection('monster-collection', items);
+  return summarizeCollection('monster-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core');
 }
 
 export async function convertItemCollectionToJson(
@@ -141,7 +143,7 @@ export async function convertItemCollectionToJson(
     }
   }
 
-  return summarizeCollection('item-collection', items);
+  return summarizeCollection('item-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core');
 }
 
 export function writeTextArtifact(
@@ -157,7 +159,12 @@ export function writeTextArtifact(
   return outputFile;
 }
 
-function summarizeCollection(kind: CollectionKind, items: CollectionItemResult[]): CollectionConversionResult {
+function summarizeCollection(
+  kind: CollectionKind,
+  items: CollectionItemResult[],
+  fvttVersion: FvttTargetVersion,
+  effectProfile: EffectProfile,
+): CollectionConversionResult {
   const succeededItems = items.filter((item) => item.status === 'succeeded');
   const failedItems = items.filter((item) => item.status === 'failed');
   const warnings = items.flatMap((item) => item.warnings);
@@ -165,6 +172,8 @@ function summarizeCollection(kind: CollectionKind, items: CollectionItemResult[]
   return {
     kind,
     status: failedItems.length === 0 ? 'succeeded' : succeededItems.length > 0 ? 'partial' : 'failed',
+    fvttVersion,
+    effectProfile,
     itemCount: items.length,
     succeeded: succeededItems.length,
     failed: failedItems.length,

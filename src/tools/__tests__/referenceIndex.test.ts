@@ -55,9 +55,13 @@ describe('referenceIndex', () => {
     roots.push(root);
 
     const foundryCore = join(root, 'references', 'foundry-v12-api-core', 'classes');
+    const foundryV14Core = join(root, 'references', 'foundry-v14-api-core', 'classes');
     const dndRepo = join(root, 'references', 'dnd5e-4.3.9', 'repo', 'module', 'documents');
+    const dndV14Repo = join(root, 'references', 'dnd5e-5.3.3', 'repo', 'module', 'data', 'activity');
     mkdirSync(foundryCore, { recursive: true });
+    mkdirSync(foundryV14Core, { recursive: true });
     mkdirSync(dndRepo, { recursive: true });
+    mkdirSync(dndV14Repo, { recursive: true });
 
     writeFileSync(
       join(root, 'references', 'foundry-v12-api-core', 'index.html'),
@@ -68,6 +72,14 @@ describe('referenceIndex', () => {
       '<html><head><title>Actor</title></head><body><h1>Actor</h1><p>Actor docs.</p></body></html>',
     );
     writeFileSync(
+      join(root, 'references', 'foundry-v14-api-core', 'index.html'),
+      '<html><head><title>Foundry V14</title></head><body><h1>Index</h1></body></html>',
+    );
+    writeFileSync(
+      join(foundryV14Core, 'foundry.documents.Actor.html'),
+      '<html><head><title>Actor v14</title></head><body><h1>Actor</h1><p>Actor docs.</p></body></html>',
+    );
+    writeFileSync(
       join(dndRepo, 'actor.mjs'),
       'export class Actor5e {}\nexport function buildActivity() {}\n',
     );
@@ -75,12 +87,21 @@ describe('referenceIndex', () => {
       join(root, 'references', 'dnd5e-4.3.9', 'repo', 'system.json'),
       '{"id":"dnd5e"}',
     );
+    writeFileSync(
+      join(dndV14Repo, 'save-data.mjs'),
+      'export default class BaseSaveActivityData {}\n',
+    );
+    writeFileSync(
+      join(root, 'references', 'dnd5e-5.3.3', 'repo', 'system.json'),
+      '{"id":"dnd5e","version":"5.3.3"}',
+    );
 
     const summary = buildReferenceIndexes(root);
 
-    expect(summary.foundryApiDocs).toBe(2);
-    expect(summary.dndRepoFiles).toBe(2);
+    expect(summary.foundryApiDocs).toBe(4);
+    expect(summary.dndRepoFiles).toBe(4);
     expect(existsSync(join(root, 'references', 'foundry-v12-api-core-text', 'classes', 'client.Actor.txt'))).toBe(true);
+    expect(existsSync(join(root, 'references', 'foundry-v14-api-core-text', 'classes', 'foundry.documents.Actor.txt'))).toBe(true);
 
     const foundryIndex = JSON.parse(
       readFileSync(join(root, 'references', 'indexes', 'foundry-v12-api-core-index.json'), 'utf8'),
@@ -91,5 +112,10 @@ describe('referenceIndex', () => {
       readFileSync(join(root, 'references', 'indexes', 'dnd5e-4.3.9-token-index.json'), 'utf8'),
     ) as Record<string, string[]>;
     expect(dndTokenIndex.actor).toContain('module/documents/actor.mjs');
+
+    const dndV14TokenIndex = JSON.parse(
+      readFileSync(join(root, 'references', 'indexes', 'dnd5e-5.3.3-token-index.json'), 'utf8'),
+    ) as Record<string, string[]>;
+    expect(dndV14TokenIndex.save).toContain('module/data/activity/save-data.mjs');
   });
 });

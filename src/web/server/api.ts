@@ -21,6 +21,7 @@ import { runJob, startJob, type WebJobRequest } from './jobs/jobRunner';
 import { getWebImageAssetPreset } from './imageAssetPreset';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../core/foundryTarget';
 
 export { TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 
@@ -141,12 +142,13 @@ export async function handleApiRequest(request: Request): Promise<Response> {
       assertApiWorkspacePath(body.sourcePath);
       if (body.outputPath) assertApiWorkspacePath(body.outputPath);
 
+      const fvttVersion = normalizeFvttVersion(body.fvttVersion);
       const result = await convertMarkdownPathToOutput({
         sourcePath: body.sourcePath,
         outputPath: body.outputPath,
         vaultPath: DEFAULT_VAULT_PATH,
-        fvttVersion: normalizeFvttVersion(body.fvttVersion),
-        effectProfile: normalizeEffectProfile(body.effectProfile),
+        fvttVersion,
+        effectProfile: normalizeEffectProfile(body.effectProfile, fvttVersion),
       });
       return jsonSuccess(result);
     }
@@ -154,14 +156,15 @@ export async function handleApiRequest(request: Request): Promise<Response> {
     if (request.method === 'POST' && (url.pathname === '/api/convert/single' || url.pathname === '/api/convert/upload')) {
       const body = await readJsonBody<ConvertBody>(request);
       validateUpload(body.fileName, body.content, singleUploadLimitBytes, ['.md', '.markdown', '.txt']);
+      const fvttVersion = normalizeFvttVersion(body.fvttVersion);
       const job = createJob('single-convert', clientIp);
       await runJob(job, {
         type: 'single-convert',
         fileName: body.fileName,
         content: body.content,
         options: {
-          fvttVersion: normalizeFvttVersion(body.fvttVersion),
-          effectProfile: normalizeEffectProfile(body.effectProfile),
+          fvttVersion,
+          effectProfile: normalizeEffectProfile(body.effectProfile, fvttVersion),
         },
       });
       const finished = getRequiredJob(job.id);
@@ -264,7 +267,7 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
     verification: (summary.verification ?? null) as ConversionResult['verification'],
     rawJson: summary.rawJson,
     outputPath: typeof summary.outputPath === 'string' ? summary.outputPath : undefined,
-    fvttVersion: summary.fvttVersion === '13' ? '13' : '12',
+    fvttVersion: normalizeFvttVersion(typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined),
     effectProfile: summary.effectProfile === 'modded-v12' ? 'modded-v12' : 'core',
     downloadUrl: job.files[0]?.downloadUrl ?? '',
     jobId: job.id,
@@ -329,17 +332,22 @@ function isAbsolutePath(path: string): boolean {
 }
 
 function normalizeFvttVersion(value: FvttTargetVersion | undefined): FvttTargetVersion {
-  if (value === undefined) return '12';
-  if (value !== '12' && value !== '13') {
+  try {
+    return parseFvttTargetVersion(value ?? '12');
+  } catch {
     throw userError('INVALID_FVTT_VERSION', `Unsupported fvttVersion: ${value}`);
   }
-  return value;
 }
 
-function normalizeEffectProfile(value: EffectProfile | undefined): EffectProfile {
+function normalizeEffectProfile(value: EffectProfile | undefined, fvttVersion: FvttTargetVersion = '12'): EffectProfile {
   if (value === undefined) return 'core';
   if (value !== 'core' && value !== 'modded-v12') {
     throw userError('INVALID_EFFECT_PROFILE', `Unsupported effectProfile: ${value}`);
+  }
+  try {
+    assertEffectProfileForTarget(fvttVersion, value);
+  } catch (error) {
+    throw userError('INVALID_EFFECT_PROFILE', error instanceof Error ? error.message : String(error));
   }
   return value;
 }

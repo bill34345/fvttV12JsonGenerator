@@ -11,8 +11,9 @@ import {
   buildActorVerificationSummaryFromValues,
   type ActorVerificationSummary,
 } from '../../tools/actorVerification';
+import type { FvttTargetVersion } from '../foundryTarget';
 
-export type FvttTargetVersion = '12' | '13';
+export type { FvttTargetVersion } from '../foundryTarget';
 export type GeneratedDocumentKind = 'actor' | 'item';
 
 export interface ConvertMarkdownContentOptions {
@@ -21,6 +22,7 @@ export interface ConvertMarkdownContentOptions {
   outputPath?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  translationService?: ConstructorParameters<typeof ActorGenerator>[0]['translationService'];
 }
 
 export interface ConvertMarkdownPathOptions {
@@ -29,6 +31,7 @@ export interface ConvertMarkdownPathOptions {
   vaultPath?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  translationService?: ConstructorParameters<typeof ActorGenerator>[0]['translationService'];
 }
 
 export interface ConversionResult {
@@ -61,6 +64,7 @@ export async function convertMarkdownPathToOutput(
     outputPath,
     fvttVersion: options.fvttVersion,
     effectProfile: options.effectProfile,
+    translationService: options.translationService,
   });
 }
 
@@ -95,7 +99,11 @@ export async function convertMarkdownContentToJson(
   const parserFactory = new ParserFactory();
   const route = parserFactory.detectRoute(options.content);
   const parsed = parserFactory.parse(options.content);
-  const actor = await new ActorGenerator({ fvttVersion, effectProfile }).generateForRoute(parsed, route);
+  const actor = await new ActorGenerator({
+    fvttVersion,
+    effectProfile,
+    translationService: options.translationService,
+  }).generateForRoute(parsed, route);
   const warnings = new ActorValidator().validate(parsed, actor);
   const outputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
   writeJsonIfRequested(outputPath, actor);

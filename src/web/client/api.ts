@@ -1,5 +1,5 @@
 export type EffectProfile = 'core' | 'modded-v12';
-export type FvttVersion = '12' | '13';
+export type FvttVersion = '12' | '13' | '14';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
 
 export type JobType =

@@ -907,6 +907,13 @@ export function extractRequiresConcentration(text: string): boolean {
  */
 export function extractTargetCondition(text: string): string | undefined {
   if (
+    /^(?:[^.。]*?)(?:被.*?(?:擒抱|grappled)|\bgrappled\b).*?(?:目标|生物|target|creature)/i.test(text) ||
+    /^(?:one|a|an)\s+grappled\s+(?:target|creature)\b/i.test(text)
+  ) {
+    return 'grappled';
+  }
+
+  if (
     /(?:\u4ec5\u9650\u88ab\u9b45\u60d1\u7684\u76ee\u6807|charmed target only)/i.test(text) ||
     /^(?:[^.。]*?)(?:\u88ab.*?\u9b45\u60d1|\u88ab\u9b45\u60d1).*?(?:\u76ee\u6807|\u751f\u7269)/i.test(text) ||
     /^(?:[^.。]*?)\bcharmed\b.*?(?:target|creature)/i.test(text)

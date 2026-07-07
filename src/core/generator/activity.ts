@@ -3,6 +3,7 @@ import { spellsMapper } from '../mapper/spells';
 import { inferAttackAbility, type AttackAbility } from './attack-ability';
 import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
 import { mapDamageType } from './actor-text';
+import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
 
 export interface ActivityGenerationContext {
   abilities?: Partial<Record<AttackAbility, number>>;
@@ -13,6 +14,12 @@ export interface ActivityGenerationContext {
 }
 
 export class ActivityGenerator {
+  private readonly fvttVersion: FvttTargetVersion;
+
+  public constructor(options: { fvttVersion?: FvttTargetVersion } = {}) {
+    this.fvttVersion = options.fvttVersion ?? '12';
+  }
+
   public generate(action: ActionData, context: ActivityGenerationContext = {}): Record<string, any> {
     const activities: Record<string, any> = {};
     const id = this.generateId();
@@ -57,13 +64,10 @@ export class ActivityGenerator {
         type: 'save',
         save: {
           ability: [action.save.ability],
-          dc: {
-            calculation: nativeSaveDc?.calculation ?? '',
-            formula: nativeSaveDc ? '' : action.save.dc.toString(),
-            value: action.save.dc
-          }
+          dc: this.buildSaveDc(action.save.dc, nativeSaveDc?.calculation)
         },
         damage: {
+          ...(this.isV14() ? { onSave: this.resolveSaveDamageResult(action.save.onSave ?? action.save.onFail) } : {}),
           parts: (action.damage || []).map(d => this.formatDamage(d))
         }
       };
@@ -307,12 +311,12 @@ export class ActivityGenerator {
     // Fallback: simple formula string?
     // If strict object required, we might put whole formula in 'custom'?
     return {
-        number: null,
-        denomination: null,
+        number: this.isV14() ? 0 : null,
+        denomination: this.isV14() ? 0 : null,
         bonus: '',
         types: this.normalizeDamageTypes(damage),
         custom: { enabled: true, formula: damage.formula },
-        scaling: { mode: 'whole', number: 1 }
+        scaling: { mode: 'whole', number: 1, ...(this.isV14() ? { formula: '' } : {}) }
     };
   }
 
@@ -461,7 +465,7 @@ export class ActivityGenerator {
         type: 'passive',
         origin: '',
         changes: [{
-          key: 'system.attributes.ac.bonus',
+          key: this.isV14() ? 'system.attributes.ac.formula' : 'system.attributes.ac.bonus',
           mode: 2,
           value: `+${action.passiveEffect.value}`,
           priority: null
@@ -484,9 +488,9 @@ export class ActivityGenerator {
         _stats: {
           compendiumSource: null,
           duplicateSource: null,
-          coreVersion: '12.331',
+          coreVersion: getFoundryTarget(this.fvttVersion).stats.coreVersion,
           systemId: 'dnd5e',
-          systemVersion: '4.0.0',
+          systemVersion: getFoundryTarget(this.fvttVersion).stats.systemVersion,
           createdTime: null,
           modifiedTime: null,
           lastModifiedBy: 'dnd5ebuilder0000'
@@ -495,5 +499,23 @@ export class ActivityGenerator {
     }
 
     return undefined;
+  }
+
+  private buildSaveDc(dc: number, calculation: AttackAbility | undefined): Record<string, unknown> {
+    const value = {
+      calculation: calculation ?? '',
+      formula: calculation ? '' : dc.toString(),
+    };
+    return this.isV14() ? value : { ...value, value: dc };
+  }
+
+  private resolveSaveDamageResult(text: string | undefined): string {
+    if (!text) return 'half';
+    if (/no damage|none|涓嶅彈|鏃犱激瀹?/i.test(text)) return 'none';
+    return 'half';
+  }
+
+  private isV14(): boolean {
+    return this.fvttVersion === '14';
   }
 }

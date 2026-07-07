@@ -4,6 +4,7 @@ import { PlainTextIngestionWorkflow, type PlainTextIngestionResult } from '../in
 import { type EffectProfile } from '../generator/effectProfileApplier';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
 import type { ImageAssetOptions } from '../assets/imageAssets';
+import type { FvttTargetVersion } from '../foundryTarget';
 
 export interface PlainTextActorWorkflowOptions {
   sourcePath: string;
@@ -11,7 +12,7 @@ export interface PlainTextActorWorkflowOptions {
   dryRun?: boolean;
   enableAiNormalize?: boolean;
   effectProfile?: EffectProfile;
-  fvttVersion?: '12' | '13';
+  fvttVersion?: FvttTargetVersion;
   imageAssets?: ImageAssetOptions;
 }
 

@@ -1,14 +1,16 @@
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { load as loadYaml } from 'js-yaml';
 import type { ParsedItem, ItemType, ActivityData } from '../models/item';
 import type { ItemParserStrategy } from '../parser/item-strategy';
 import { ActivityGenerator } from './activity';
+import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // From src/core/generator/, go up 3 levels to project root: src/core -> src -> project root
-const REFERENCES_PATH = join(__dirname, '../../..', 'references/dnd5e-4.3.9/repo/packs/_source/items');
+const PROJECT_ROOT = join(__dirname, '../../..');
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -32,7 +34,7 @@ export interface ItemDocument {
  * Options for ItemGenerator
  */
 export interface ItemGeneratorOptions {
-  fvttVersion?: string;
+  fvttVersion?: FvttTargetVersion;
 }
 
 /**
@@ -72,9 +74,11 @@ function generateItemId(): string {
  */
 export class ItemGenerator {
   private activityGenerator: ActivityGenerator;
+  private readonly fvttVersion: FvttTargetVersion;
 
   constructor(private options: ItemGeneratorOptions = {}) {
-    this.activityGenerator = new ActivityGenerator();
+    this.fvttVersion = options.fvttVersion ?? '12';
+    this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
   }
 
   /**
@@ -101,6 +105,7 @@ export class ItemGenerator {
     }
 
     // 6. Return the item document
+    this.finalizeTargetFields(item);
     return item;
   }
 
@@ -109,7 +114,7 @@ export class ItemGenerator {
    */
   private loadReferenceTemplate(type: ItemType): ItemDocument {
     const dir = ITEM_TYPE_TO_DIR[type] || 'equipment';
-    const dirPath = join(REFERENCES_PATH, dir);
+    const dirPath = join(this.referenceItemsPath(), dir);
 
     try {
       // Read directory contents to find a template file
@@ -126,27 +131,10 @@ export class ItemGenerator {
         return this.loadFallbackTemplate();
       }
       const templatePath = join(dirPath, firstFile);
-      const content = readFileSync(templatePath, 'utf-8');
-      return JSON.parse(content) as ItemDocument;
+      return this.loadTemplateFile(templatePath);
     } catch (error) {
       console.warn(`Warning: Failed to load reference template for type ${type}, using fallback: ${error}`);
       return this.loadFallbackTemplate();
-    }
-  }
-
-  /**
-   * Get all JSON files in a directory
-   */
-  private getJsonFiles(dirPath: string): string[] {
-    try {
-      if (!existsSync(dirPath)) {
-        return [];
-      }
-      return readdirSync(dirPath)
-        .filter((file: string) => file.endsWith('.json') && file !== '_folder.json')
-        .sort();
-    } catch {
-      return [];
     }
   }
 
@@ -199,9 +187,9 @@ export class ItemGenerator {
       flags: {},
       _stats: {
         duplicateSource: null,
-        coreVersion: '12.331',
-        systemId: 'dnd5e',
-        systemVersion: '4.0.0',
+          coreVersion: this.targetStats().coreVersion,
+          systemId: this.targetStats().systemId,
+          systemVersion: this.targetStats().systemVersion,
         createdTime: Date.now(),
         modifiedTime: Date.now(),
         lastModifiedBy: 'fvttJsonGenerator',
@@ -250,7 +238,9 @@ export class ItemGenerator {
     // Attunement
     if (parsed.attunement) {
       item.system.attunement = parsed.attunement;
-      item.system.attuned = parsed.attunement === 'required';
+      if (!this.isV14()) {
+        item.system.attuned = parsed.attunement === 'required';
+      }
     }
 
     // Price
@@ -373,7 +363,7 @@ export class ItemGenerator {
       if (!actions) return;
       if (!item.effects) item.effects = [];
       for (const action of actions) {
-        const passiveEffect = this.activityGenerator.generatePassiveEffect(action);
+      const passiveEffect = this.activityGenerator.generatePassiveEffect(action);
         if (passiveEffect) {
           passiveEffect.origin = `Item.${item._id}`;
           item.effects.push(passiveEffect);
@@ -409,5 +399,66 @@ export class ItemGenerator {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
+  }
+
+  private getJsonFiles(dirPath: string): string[] {
+    try {
+      if (!existsSync(dirPath)) {
+        return [];
+      }
+      return readdirSync(dirPath)
+        .filter((file: string) => /\.(json|ya?ml)$/i.test(file) && !file.startsWith('_folder.'))
+        .sort();
+    } catch {
+      return [];
+    }
+  }
+
+  private loadTemplateFile(path: string): ItemDocument {
+    const content = readFileSync(path, 'utf-8');
+    if (/\.ya?ml$/i.test(path)) {
+      return loadYaml(content) as ItemDocument;
+    }
+    return JSON.parse(content) as ItemDocument;
+  }
+
+  private referenceItemsPath(): string {
+    return join(PROJECT_ROOT, getFoundryTarget(this.fvttVersion).reference.dnd5eRepo, 'packs/_source/items');
+  }
+
+  private finalizeTargetFields(item: ItemDocument): void {
+    item._stats = {
+      ...(item._stats ?? {}),
+      coreVersion: this.targetStats().coreVersion,
+      systemId: this.targetStats().systemId,
+      systemVersion: this.targetStats().systemVersion,
+      createdTime: Date.now(),
+      modifiedTime: Date.now(),
+      lastModifiedBy: 'fvttJsonGenerator',
+    };
+
+    if (this.isV14()) {
+      delete item.system.attuned;
+    }
+
+    if (Array.isArray(item.effects)) {
+      for (const effect of item.effects) {
+        if (!effect || typeof effect !== 'object') continue;
+        effect._stats = {
+          ...(effect._stats ?? {}),
+          coreVersion: this.targetStats().coreVersion,
+          systemId: this.targetStats().systemId,
+          systemVersion: this.targetStats().systemVersion,
+        };
+      }
+    }
+  }
+
+  private targetStats(): ReturnType<typeof getFoundryTarget>['stats'] {
+    return getFoundryTarget(this.fvttVersion).stats;
+  }
+
+  private isV14(): boolean {
+    return this.fvttVersion === '14';
   }
 }

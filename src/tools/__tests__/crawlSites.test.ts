@@ -117,6 +117,43 @@ describe('crawl-sites CLI', () => {
       rmSync(outDir, { recursive: true, force: true });
     }
   }, 20_000);
+
+  test('goddessfantasy-pipeline --dry-run accepts Foundry v14 target', async () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'gf-cli-pipeline-v14-dry-run-'));
+    const requestedPrintTopics: string[] = [];
+    const server = createCliCrawlFixtureServer(['100'], requestedPrintTopics);
+
+    try {
+      const result = await runCli([
+        'goddessfantasy-pipeline',
+        '--board-url',
+        cliBoardUrl(server.port),
+        '--cookie-header',
+        'PHPSESSID=test',
+        '--skip-auth-probe',
+        '--out-dir',
+        outDir,
+        '--max-board-pages',
+        '1',
+        '--content-type',
+        'monster',
+        '--mode',
+        'incremental',
+        '--request-delay-ms',
+        '0',
+        '--fvtt-version',
+        '14',
+        '--dry-run',
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Stopped after: crawl-dry-run');
+      expect(result.stderr).not.toContain('Unsupported --fvtt-version');
+    } finally {
+      server.stop(true);
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
 
 async function runCli(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {

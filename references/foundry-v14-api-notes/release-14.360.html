@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+    
+    
+
+    
+    <meta charset="UTF-8">
+    <title>Release 14.360 | Foundry Virtual Tabletop</title>
+    <meta name="description" content="The official website and community for Foundry Virtual Tabletop.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+
+    
+    <link rel="icon" type="image/png" href="/static/assets/icons/fvtt.png" sizes="512x512">
+    <link rel="shortcut icon" type="image/png" href="/static/assets/icons/fvtt.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    
+    
+
+    
+    
+    <link rel="stylesheet" href="/static/fonts/fontawesome-6/css/all.min.css">
+    
+    <link rel="stylesheet" href="/static/css/darcula.css">
+    
+    <link rel="stylesheet" href="/static/css/foundry.css">
+    
+
+    
+    
+    <script src="/static/js/foundry.js"></script>
+    
+    <script src="/static/js/highlight.js"></script>
+    
+    
+    <script type="module" src="/static/js/foundry.mjs"></script>
+    
+    
+
+    
+    
+</head>
+
+<body  class="releases flexcol">
+    <header class="body-container" id="main-header">
+        
+<nav id="main-menu" class="flexrow">
+
+    
+    <label for="navigation-toggle" class="dropdown-toggle"><i class="fa-solid fa-bars"></i></label>
+
+
+
+    <input id="navigation-toggle" name="menu-toggle" class="dropdown-trigger" type="checkbox">
+
+    
+    <div id="navigation-links" class="dropdown">
+        <a href="/" title="Home"><i class="fas fa-home"></i>Home</a>
+        
+        <a href="/purchase/" title="Purchase Foundry Virtual Tabletop"><i class="fas fa-shopping-cart"></i>Purchase</a>
+        <a href="https://www.foundryvtt.store" title="Marketplace"><i class="fas fa-shopping-bag"></i> Official Marketplace</a>
+        <a href="https://demo.foundryvtt.com" title="Web Demo"><i class="fas fa-desktop"></i>Web Demo</a>
+        <a href="/search/" title="Search"><i class="fas fa-magnifying-glass"></i>Search</a>
+        <a href="/releases/" title="Releases"><i class="fas fa-feather-alt"></i>Release Notes</a>
+        <a href="/kb/" title="Knowledge Base"><i class="fas fa-book-open"></i>Knowledge Base</a>
+        <a href="/packages/" title="Systems and Modules"><i class="fas fa-cogs"></i>Systems and Modules</a>
+        <a href="/api" title="API Documentation"><i class="fas fa-laptop-code"></i>API Documentation</a>
+        <a href="/ember/" title="Ember"><i class="fa-solid fa-fire-flame"></i>Ember</a>
+        <a href="/merch/" title="Merch"><i class="fas fa-store"></i>Merch</a>
+    </div>
+</nav>
+
+
+
+
+<form id="login-form" class="login-login flexrow"
+      method="post" action="/auth/login/">
+    <input type="hidden" name="csrfmiddlewaretoken" value="BWZH84ZEzexpRVrLGWG4dQVz6jyfhbrJZ2adxL3qENqZXIZDb4T2l9xWF0UZqu91">
+    <input type="hidden" value="/releases/14.360" name="next">
+
+
+
+    <a id="login-download" title="Download Software - Login Required!" disabled><i class="fa-solid fa-download" inert></i></a>
+    <a class="button" id="register" href="/auth/register/" title="Register Account"><i class="fa-solid fa-user-plus"></i> Register</a>
+
+    <label for="login-toggle" class="dropdown-toggle"><i class="fa-solid fa-circle-user"></i></label>
+    <input type="checkbox" id="login-toggle" class="dropdown-trigger">
+
+    <div id="login" class="dropdown" role="dialog">
+        <p>Please enter your username and password.</p>
+        <label class="username" for="username">
+            <input id="username" type="text" class="dark" placeholder="Username" name="username" required>
+        </label>
+        <label class="password" for="login-password">
+            <input id="password" type="password" class="dark" placeholder="Password" name="password" required>
+        </label>
+        <p>Do you need to <a href="/auth/reset-password/" title="Reset Lost Password">reset your password</a>?</p>
+        <button type="submit" class="bright" name="login">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>Log In
+        </button>
+    </div>
+
+</form>
+
+
+        
+        
+    </header>
+    <!-- Background Image -->
+    <div id="background-top" class="background-image" ></div>
+
+    <!-- Begin Main Content Section -->
+    <main class="body-container flexcol" id="main-content">
+
+        <!-- Banner messages -->
+        <div id="banner-messages">
+
+            
+            <noscript>
+                <p class="notification warning permanent">Your web browser has JavaScript disabled which is required in order to properly use the foundryvtt.com website. Certain website features will be disabled or will not work as expected unless JavaScript is enabled.</p>
+            </noscript>
+
+            
+            
+            <form class="dialog-prompt" id="analytics-prompt" method="post" action="/auth/_analytics/">
+    <input type="hidden" name="csrfmiddlewaretoken" value="BWZH84ZEzexpRVrLGWG4dQVz6jyfhbrJZ2adxL3qENqZXIZDb4T2l9xWF0UZqu91">
+    <input type="hidden" name="redirect" value="/releases/14.360">
+    
+        <p>This website collects anonymous data about how users interact with our website. This data provides us with 
+        valuable insights that help us to improve our products. Some of these analytics features are non-essential 
+        and use browser cookies.</p>
+        <p>What data we collect and information on how it is used is described in our 
+        <a href="/article/privacy-policy/" title="Privacy Policy" target="_blank">Privacy Policy</a>.
+        </p>
+        
+    <footer class="buttons flexrow">
+        <button type="submit" class="bright" name="yes">
+            <i class="fas fa-check"></i> Accept All Cookies
+        </button>
+        <button type="submit" class="bright" name="no">
+            <i class="fas fa-times"></i> Required Only
+        </button>
+    </footer>
+</form>
+
+            
+
+            
+            
+        </div>
+
+        <!-- Primary Content -->
+        
+<h1 id="site-title">Release 14.360</h1>
+<h2 id="site-subtitle">Version 14 Stable</h2>
+
+<article id="release-180" class="primary-content">
+    <h5 class="release-date">April 09, 2026</h5>
+    <header id="update-header">
+    <h2 class="border" id="update-title">Foundry Virtual Tabletop - Version 14 - Stable 2 Release Notes</h2>
+    <figure id="update-banner">
+        <img alt="Release Notes for Foundry Virtual Tabletop Version 14" src="https://r2.foundryvtt.com/website-uploads-public/screen/user_681/v14-stable-2-release-banner-2026-04-09.webp" title="Foundry VTT - Version 14 - Stable 2 Release Notes"/>
+        <figcaption>Foundry VTT Version 14 Stable 2, shown with the Marlstone Manor map in our own groundbreaking <a href="https://foundryvtt.com/ember" rel="nofollow">Ember digital roleplaying game</a>, now available in Early Access!</figcaption>
+    </figure>
+</header>
+
+<section id="update-overview">
+    <p>We are happy to announce that <strong>Foundry Virtual Tabletop Version 14 Stable 2</strong> (14.360) is now available! This is just the first in an anticipated series of minor updates that addresses a few edge case bugs and polishes some rough spots in the user experience and API. There are no significant feature changes worth highlighting, although if you're interested in V14's experimental Particle Generator API there have been some nice non-breaking additions made there.</p>
+    <p>Because this is a minor patch update, if you already installed Version 14 Stable 1 (14.359) you will not need to do a complete reinstallation.</p>
+    <p class="note warning"><strong>WARNING:</strong> While this is categorized as a stable release there is always a possibility of unexpected bugs or compatibility issues. As with any time you update the core software, be sure to perform a complete backup of your user data to minimize any risk of data loss.</p>
+</section>
+
+<section id="features">
+<h2 class="section-header border">New Features</h2>
+    <h3 class="category-header" id="features-docs">Documents and Data</h3>
+    <ul>
+        <li>To improve the migration of legacy ActiveEffect, the <code>seconds</code> property is now preferred over other duration properties when migrating to the new schema. <a href="https://github.com/foundryvtt/foundryvtt/issues/14112" rel="nofollow" target="_blank">(14112)</a></li>
+        <li>Fixed a bug where creating an Active Effect with no Expiry Event value selected set it to Turn Start. <a href="https://github.com/foundryvtt/foundryvtt/issues/14117" rel="nofollow" target="_blank">(14117)</a></li>
+        <li>Restored <code>joint</code> and <code>fields</code> params for <code>DataModel#validate</code> to accommodate only performing field-level or joint-level validation. <a href="https://github.com/foundryvtt/foundryvtt/issues/14165" rel="nofollow" target="_blank">(14165)</a></li>
+    </ul>
+    <h3 class="category-header" id="features-apps">Applications and User Interface</h3>
+    <ul>
+        <li>The default Foundry VTT screen that is automatically created as part of the new user experience is now migrated to the latest schema. <a href="https://github.com/foundryvtt/foundryvtt/issues/14107" rel="nofollow" target="_blank">(14107)</a></li>
+        <li>Changed what occurs when you change the level of a token or when you control a token on a different level. The camera no longer automatically centers on the token in these cases. <a href="https://github.com/foundryvtt/foundryvtt/issues/14113" rel="nofollow" target="_blank">(14113)</a></li>
+        <li>In the Shape Configuration dialog, added some information to the hint text of the "Grid Based" option about the Grid Diagonals setting. <a href="https://github.com/foundryvtt/foundryvtt/issues/14120" rel="nofollow" target="_blank">(14120)</a></li>
+        <li>Changed the  default visibility of measured template regions from <code>OBSERVER</code> to <code>ALWAYS</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14166" rel="nofollow" target="_blank">(14166)</a></li>
+    </ul>
+</section>
+<section id="api">
+<h2 class="section-header border">API Improvements</h2>
+    <h3 class="category-header" id="api-canvas">The Game Canvas</h3>
+    <ul>
+        <li>Added a new octagon shape option for token drag ruler waypoints. <a href="https://github.com/foundryvtt/foundryvtt/issues/14104" rel="nofollow" target="_blank">(14104)</a></li>
+        <li>Added a new protected hook <code>Region#_onAnimationStateChange</code> which is called when <code>Region#animationState</code> has changed. <a href="https://github.com/foundryvtt/foundryvtt/issues/14141" rel="nofollow" target="_blank">(14141)</a></li>
+        <li>Made the private <code>Token##notInViewedLevelIndicator</code> publicly available as <code>Token#levelIndicator</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14143" rel="nofollow" target="_blank">(14143)</a></li>
+        <li>Added validation to <code>RegionLayer#placeRegion(s)</code> to catch cases when the user attempts to place a restricted region that is included in more than one level. <a href="https://github.com/foundryvtt/foundryvtt/issues/14069" rel="nofollow" target="_blank">(14069)</a></li>
+        <li>Enhanced the <code>ParticleGenerator</code> API so that you can now easily define a mask by passing it at configuration time or by modifying the <code>ParticleGenerator#mask</code> property during runtime. <a href="https://github.com/foundryvtt/foundryvtt/issues/14175" rel="nofollow" target="_blank">(14175)</a></li>
+        <li>Enhanced the <code>ParticleGenerator</code> API by separating out <code>VFXEffect#configureReferences</code> as a new public method that can be optionally called before <code>VFXEffect#play</code> to take manual control over reference field resolution. <a href="https://github.com/foundryvtt/foundryvtt/issues/14176" rel="nofollow" target="_blank">(14176)</a></li>
+        <li>Enhanced the <code>ParticleGenerator</code> API by introducing the new <code>VFXPointSourcePolygonField</code> which makes it easy to incorporate a point source polygon as part of a <code>VFXEffect</code> pipeline (for physical collision masking, for example). <a href="https://github.com/foundryvtt/foundryvtt/issues/14177" rel="nofollow" target="_blank">(14177)</a></li>
+        <li>Enhanced the <code>ParticleGenerator</code> API by adding the new <code>VFXParticleGeneratorComponent#pointSourceMask</code> field which makes it easy to mask the area of a particle generator in a <code>VFXEffect</code> pipeline using a point source polygon (for physical collision masking, for example). <a href="https://github.com/foundryvtt/foundryvtt/issues/14178" rel="nofollow" target="_blank">(14178)</a></li>
+    </ul>
+</section>
+<section id="bugs">
+<h2 class="section-header border">Bug Fixes</h2>
+    <h3 class="category-header" id="bugs-docs">Documents and Data</h3>
+    <ul>
+        <li>Fixed a bug where <code>ClientDocument.createDialog</code> did not pass a <code>renderContext</code> to render options. <a href="https://github.com/foundryvtt/foundryvtt/issues/13981" rel="nofollow" target="_blank">(13981)</a></li>
+        <li>Fixed a bug where the value of <code>phase</code> was reset for when making edits with the Active Effect Configuration dialog. <a href="https://github.com/foundryvtt/foundryvtt/issues/14147" rel="nofollow" target="_blank">(14147)</a></li>
+        <li>Fixed a bug where <code>_applyChangeUpgrade</code> was still using <code>CONST.ACTIVE_EFFECT_MODES</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14148" rel="nofollow" target="_blank">(14148)</a></li>
+        <li>Fixed a bug with Compendium sidebar tab filtering where documents with <code>img: null</code> were incorrectly populated with an object as their <code>img</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14151" rel="nofollow" target="_blank">(14151)</a></li>
+        <li>Fixed a bug that occurred during drag operations into a compendium. Closing the overwrite confirmation dialog replaced the entry instead of canceling it as expected. <a href="https://github.com/foundryvtt/foundryvtt/issues/14152" rel="nofollow" target="_blank">(14152)</a></li>
+        <li>Fixed a bug with <code>CompendiumCollection#importDocument</code> where it replaced an existing document without a confirmation dialog if the existing document was not loaded. <a href="https://github.com/foundryvtt/foundryvtt/issues/14156" rel="nofollow" target="_blank">(14156)</a></li>
+        <li>Improved validation to avoid passing invalid data to <code>super._cleanType</code> in cases where <code>ObjectField#_cleanType</code> is overridden. <a href="https://github.com/foundryvtt/foundryvtt/issues/14170" rel="nofollow" target="_blank">(14170)</a></li>
+        <li>To prevent undesirable side effects, dry runs on the server no longer call <code>_on*</code> handlers. <a href="https://github.com/foundryvtt/foundryvtt/issues/14171" rel="nofollow" target="_blank">(14171)</a></li>
+        <li>Resolved an issue where regions containing invalid behaviors could not be updated or deleted. <a href="https://github.com/foundryvtt/foundryvtt/issues/14139" rel="nofollow" target="_blank">(14139)</a></li>
+        <li>Fixed a bug where you could not replace a scene in a compendium with another scene that had the same ID. <a href="https://github.com/foundryvtt/foundryvtt/issues/14181" rel="nofollow" target="_blank">(14181)</a></li>    </ul>
+    <h3 class="category-header" id="bugs-apps">Applications and User Interface</h3>
+    <ul>
+        <li>Fixed a bug where saving or deleting a new keybinding automatically scrolled the window back to the top. <a href="https://github.com/foundryvtt/foundryvtt/issues/14014" rel="nofollow" target="_blank">(14014)</a></li>
+        <li>Fixed a bug where setting the default Folder sheet for specific specific types was ignored for the creation window. <a href="https://github.com/foundryvtt/foundryvtt/issues/14102" rel="nofollow" target="_blank">(14102)</a></li> 
+        <li>Fixed a bug where pending waypoints were not rendered by the ruler if the movement was paused. <a href="https://github.com/foundryvtt/foundryvtt/issues/14115" rel="nofollow" target="_blank">(14115)</a></li>
+        <li>Fixed a bug where players could see all of a scene's walls via the "Create Shapes from Controlled Walls" button. <a href="https://github.com/foundryvtt/foundryvtt/issues/14129" rel="nofollow" target="_blank">(14129)</a></li>
+        <li>When no scene is viewed, the tabs at the top of the Placeables sidebar are now disabled to prevent throwing errors. <a href="https://github.com/foundryvtt/foundryvtt/issues/14150" rel="nofollow" target="_blank">(14150)</a></li>
+        <li>Fixed a bug where resizing a detached window and then changing tabs could cause the window to resize to the minimum possible width and height. <a href="https://github.com/foundryvtt/foundryvtt/issues/14061" rel="nofollow" target="_blank">(14061)</a></li>
+        <li>Fixed a bug where detached windows were missing the usual smooth minimizing/maximizing transition. <a href="https://github.com/foundryvtt/foundryvtt/issues/14067" rel="nofollow" target="_blank">(14067)</a></li>
+        <li>Fixed a bug where <code>HTMLMultiSelectElement</code> was improperly displaying disabled <code>options</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/13612" rel="nofollow" target="_blank">(13612)</a></li>
+        <li>Fixed a bug where rebuilding adventures failed with an error. <a href="https://github.com/foundryvtt/foundryvtt/issues/14182" rel="nofollow" target="_blank">(14182)</a></li>
+    </ul>
+    <h3 class="category-header" id="bugs-canvas">The Game Canvas</h3>
+    <ul>
+        <li>Added <code>RegionDocument#hidden</code>. When a region is hidden, it is visible only to GMs and all of its behaviors are disabled. If the region is attached to a token, its hidden state automatically syncs with that token's hidden state. <a href="https://github.com/foundryvtt/foundryvtt/issues/14076" rel="nofollow" target="_blank">(14076)</a></li>
+        <li>Fixed a bug where a token's <code>level</code> was not animated by <code>Token##onUpdateAnimation</code>. Also fixed a bug where <code>TokenDocument#level</code> was incorrectly used instead of <code>TokenDocument#_source.level</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14111" rel="nofollow" target="_blank">(14111)</a></li>
+        <li>Prevented an error that was thrown when a player (non-GM) attempted to drag a token into unexplored fog, which caused the movement to fail. <a href="https://github.com/foundryvtt/foundryvtt/issues/14119" rel="nofollow" target="_blank">(14119)</a></li>
+        <li>Fixed a bug where <code>DetectionMode</code> incorrectly used <code>canvas.level</code> instead of <code>PointVisionSource#level</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14137" rel="nofollow" target="_blank">(14137)</a></li>
+        <li>Prevented an error thrown by <code>PrimarySpriteMesh#containsPoint</code> if the texture was invalid. This error was triggered by occlusion testing and crashed the canvas. <a href="https://github.com/foundryvtt/foundryvtt/issues/14138" rel="nofollow" target="_blank">(14138)</a></li>
+        <li>Resolved an issue where detaching an attached region mid-animation caused the animation state to become stuck. <a href="https://github.com/foundryvtt/foundryvtt/issues/14140" rel="nofollow" target="_blank">(14140)</a></li> 
+        <li>Fixed a bug where <code>DetectionMode#_testAngle</code> could incorrectly return <code>true</code> instead of <code>false</code> if the angle of the vision source was <code>0</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14144" rel="nofollow" target="_blank">(14144)</a></li>
+        <li>Fixed a bug with <code>DetectionMode._testCollision</code> where it could return incorrect results if the angle was less than 360 and origin and destination were in the same level. <a href="https://github.com/foundryvtt/foundryvtt/issues/14145" rel="nofollow" target="_blank">(14145)</a></li>
+        <li>Fixed a bug where the vision polygon incorrectly returned an empty polygon if the vision angle was <code>0</code>. The correct vision polygon in those conditions is a circle with radius equal to the external radius. <a href="https://github.com/foundryvtt/foundryvtt/issues/14146" rel="nofollow" target="_blank">(14146)</a></li>
+        <li>Fixed a bug where non-controlled visible tokens were always triggering occlusion, even if their disposition was Secret. <a href="https://github.com/foundryvtt/foundryvtt/issues/14161" rel="nofollow" target="_blank">(14161)</a></li>
+        <li>Fixed a bug where <code>ClockwiseSweepEdgeConfig</code> entries in <code>PointSourcePolygonConfig#edgeTypes</code> were non-functional. <a href="https://github.com/foundryvtt/foundryvtt/issues/14164" rel="nofollow" target="_blank">(14164)</a></li>
+        <li>Fixed a bug with <code>TokenDocument#includedInLevel</code> where it returned incorrect results when provided with a <code>Level</code> argument. <a href="https://github.com/foundryvtt/foundryvtt/issues/14168" rel="nofollow" target="_blank">(14168)</a></li>
+        
+    </ul>
+    <h3 class="category-header" id="bugs-packages">Package Development</h3>
+    <ul>
+        <li>Fixed a bug in the Setup screen where the "Requires/Incompatible Dependencies" badge tooltip of a world was not showing the missing or incompatible dependencies of the system. <a href="https://github.com/foundryvtt/foundryvtt/issues/14157" rel="nofollow" target="_blank">(14157)</a></li>
+    </ul>
+    <h3 class="category-header" id="bugs-i18n">Localization and Accessibility</h3>
+    <ul>
+        <li>Fixed a bug where Compendium titles were not localized in <code>CompendiumDirectory</code> document search results. <a href="https://github.com/foundryvtt/foundryvtt/issues/14048" rel="nofollow" target="_blank">(14048)</a></li>
+        <li>Fixed a bug where the Compendium sidebar was filtering based on the unlocalized version of the text. <a href="https://github.com/foundryvtt/foundryvtt/issues/13881" rel="nofollow" target="_blank">(13881)</a></li>
+    </ul>
+    <h3 class="category-header" id="bugs-other">Other Changes</h3>
+    <ul>
+        <li>Deleted <code>icons/sundries/sports/baseball-white.webp</code>, which was a duplicate of <code>icons/sundries/sports/baseball.webp</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14116" rel="nofollow" target="_blank">(14116)</a></li>
+        <li>Resolved an issue where non-GM users failed to undo (<kbd>CTRL+Z</kbd>) the deletion of regions they own if the regions had a behavior. The region can now be successfully restored, but without any behaviors. <a href="https://github.com/foundryvtt/foundryvtt/issues/14089" rel="nofollow" target="_blank">(14089)</a></li>
+        <li>Prevented an error with <code>CalendarData#format</code> which occurred if the first argument was not provided. <a href="https://github.com/foundryvtt/foundryvtt/issues/14160" rel="nofollow" target="_blank">(14160)</a></li>
+        <li>Fixed an off-by-1 error that occurred with <code>countLeapYears</code> at every leap year boundary. <a href="https://github.com/foundryvtt/foundryvtt/issues/14128" rel="nofollow" target="_blank">(14128)</a></li>
+        <li>Fixed a bug where dialogs spawned by detached ProseMirror editors were misaligned. <a href="https://github.com/foundryvtt/foundryvtt/issues/14125" rel="nofollow" target="_blank">(14125)</a></li>
+        <li>Fixed a bug where you could not view the source HTML inside a detached ProseMirror window. <a href="https://github.com/foundryvtt/foundryvtt/issues/14122" rel="nofollow" target="_blank">(14122)</a></li>
+        <li>Fixed a bug where you could not cancel source HTML editing inside a detached ProseMirror window. <a href="https://github.com/foundryvtt/foundryvtt/issues/14123" rel="nofollow" target="_blank">(14123)</a></li>
+        <li>Fixed a bug where re-attaching a detached ProseMirror editor rendered an additional menu. <a href="https://github.com/foundryvtt/foundryvtt/issues/14124" rel="nofollow" target="_blank">(14124)</a></li>
+    </ul>
+</section>
+<section id="documentation">
+<h2 class="section-header border">Documentation Improvements</h2>
+    <h3 class="category-header" id="documentation-docs">Documents and Data</h3>
+    <ul>
+        <li>Improved the API documentation for <code>ActorData</code> so that its <code>typedef</code> no longer incorrectly includes a reference to <code>tokenOverrides</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14135" rel="nofollow" target="_blank">(14135)</a></li>
+        <li>Improved the API documentation for <code>EffectChangeData</code> so that its <code>typedef</code> no longer refers to the numerical <code>mode</code> instead of the string <code>type</code>. <a href="https://github.com/foundryvtt/foundryvtt/issues/14136" rel="nofollow" target="_blank">(14136)</a></li>
+    </ul>
+</section>
+</article>
+
+
+        <!-- Secondary Content -->
+        
+        
+
+        <!-- Tertiary Content -->
+        
+        
+    </main>
+
+    <!-- Begin Main Footer Section -->
+    <footer class="body-container" id="main-footer">
+        <h4 id="footer-header">Foundry Virtual Tabletop</h4>
+<nav id="footer-links" class="flexrow">
+    <a href="/article/license" title="Software License">Software License</a>
+    <a href="/article/privacy-policy" title="Privacy Policy">Privacy Policy</a>
+    <a href="/article/terms-of-service" title="Privacy Policy">Terms of Service</a>
+    <a href="/article/ai-policy" title="AI Content Policy">AI Content Policy</a>
+    <a href="/article/partnerships" title="Partnerships">Partnerships</a>
+    <a href="/article/branding" title="Branding and Content Kit">Branding Guide</a>
+    <a href="/article/employment" title="Employment Opportunities">Employment Opportunities</a>
+    <a href="/contact-us/" title="Contact Us">Contact Us</a>
+</nav>
+<p id="copyright">Foundry Virtual Tabletop © Copyright 2026, Foundry Gaming, LLC. All rights reserved.</p>
+    </footer>
+
+    <!-- Background Bottom -->
+    <div id="background-bottom" class="background-image"></div>
+</body>
+</html>
+
+<!-- DEBUG INFO
+
+-->

@@ -17,6 +17,35 @@ For each generated Actor JSON, manually compare the generated output against the
 - No false effects: prerequisite-only text does not create on-hit effects unless the source explicitly applies that effect.
 - Output provenance: final JSON came from the project CLI or workflow, not manual construction or repair.
 
+## Version-Specific Checks
+
+When generating for `--fvtt-version 14`, also check:
+
+- Actor, embedded Item, and ActiveEffect `_stats` use Foundry `14.361` and dnd5e `5.3.3`.
+- NPC resources use v14/dnd5e 5.x source fields such as `max` and `spent`, not legacy `value`.
+- Senses use `system.attributes.senses.ranges.<sense>` plus `special`, not direct legacy sense fields.
+- Item activities carry activation data; item-level `system.activation` is not used as the v14 source of truth.
+- Save activities use `save.dc.calculation` and `save.dc.formula`; `save.dc.value` is prepared by dnd5e and should not be emitted as source data.
+- Uses data omits legacy `value` and `per`; generated source should use `spent`, `max`, and `recovery`.
+- Spell fallback items use `method` and `prepared`, not legacy `preparation.mode`.
+- Active Effect changes target schema-backed v14 fields, for example AC flat/formula fields rather than legacy AC bonus fields.
+
+## v14 Batch Acceptance
+
+For project-internal v14 core acceptance without a local Foundry runtime, run:
+
+```powershell
+bun run src/tools/v14AcceptanceSuite.ts --out-dir "obsidian/dnd数据转fvttjson/output/v14-acceptance" --report "docs/acceptance/v14-core-batch-verification.md"
+```
+
+The batch suite must:
+
+- Generate every JSON artifact through the project conversion workflow with `--fvtt-version 14` and `core` semantics.
+- Disable optional translation services so acceptance output is source-faithful and not affected by external model behavior.
+- Include a local GoddessFantasy fixture pipeline sample that covers crawl -> records -> plaintext -> actor JSON.
+- Record actorVerification warnings in the report instead of treating schema success as semantic success.
+- Keep live Foundry v14 import as an explicit unresolved runtime check when no local Foundry v14 runtime is available.
+
 ## Completion Standard
 
 A generated Actor JSON result is correct only when:

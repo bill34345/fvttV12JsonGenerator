@@ -21,6 +21,7 @@ import {
 } from '../../../core/workflow/collectionConversion';
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
 import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../../core/foundryTarget';
 import {
   addJobFile,
   appendJobLog,
@@ -106,12 +107,13 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
   mkdirSync(jobOutputDir(job.id), { recursive: true });
   setJobProgress(job.id, 1, 2, '生成 JSON');
 
+  const fvttVersion = optionFvttVersion(body.options);
   const result = await convertMarkdownContentToJson({
     content,
     sourcePath: inputPath,
     outputPath,
-    fvttVersion: optionFvttVersion(body.options),
-    effectProfile: optionEffectProfile(body.options),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
   });
 
   const file = addJobFile(job.id, {
@@ -131,12 +133,13 @@ async function runMonsterCollection(job: WebJob, body: WebJobRequest): Promise<v
   writeJobInput(job.id, markdownFileName(body.fileName ?? 'monsters.md'), content);
   setJobProgress(job.id, 1, 2, '拆分怪物合集并生成 JSON');
 
+  const fvttVersion = optionFvttVersion(body.options);
   const result = await convertMonsterCollectionToJson({
     content,
     fileName: body.fileName,
     outputDir: jobOutputDir(job.id),
-    fvttVersion: optionFvttVersion(body.options),
-    effectProfile: optionEffectProfile(body.options),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
   });
   for (const file of result.outputFiles) {
     addJobFile(job.id, file);
@@ -149,12 +152,13 @@ async function runItemCollection(job: WebJob, body: WebJobRequest): Promise<void
   writeJobInput(job.id, markdownFileName(body.fileName ?? 'items.md'), content);
   setJobProgress(job.id, 1, 2, '拆分物品合集并生成 JSON');
 
+  const fvttVersion = optionFvttVersion(body.options);
   const result = await convertItemCollectionToJson({
     content,
     fileName: body.fileName,
     outputDir: jobOutputDir(job.id),
-    fvttVersion: optionFvttVersion(body.options),
-    effectProfile: optionEffectProfile(body.options),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
   });
   for (const file of result.outputFiles) {
     addJobFile(job.id, file);
@@ -185,13 +189,14 @@ async function runPlaintextActorIngest(job: WebJob, body: WebJobRequest): Promis
   const vaultPath = join(jobDir(job.id), 'vault');
   const imageSetup = imageAssetsForJob(job.id, body.options);
   setJobProgress(job.id, 1, 2, '拆分 plaintext 并同步生成 Actor JSON');
+  const fvttVersion = optionFvttVersion(body.options);
   const result = await new PlainTextActorWorkflow().ingestActors({
     sourcePath,
     vaultPath,
     dryRun: false,
     enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
-    fvttVersion: optionFvttVersion(body.options),
-    effectProfile: optionEffectProfile(body.options),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
     imageAssets: imageSetup.imageAssets,
   });
   registerFilesUnder(job.id, vaultPath, ['.md', '.json', '.jsonl', '.webp', '.png', '.jpg', '.jpeg']);
@@ -248,14 +253,15 @@ async function runVaultSync(job: WebJob, body: WebJobRequest): Promise<void> {
   assertWorkspacePath(vaultPath);
   const imageSetup = imageAssetsForJob(job.id, body.options);
   setJobProgress(job.id, 1, 2, '同步 vault input 到 output');
+  const fvttVersion = optionFvttVersion(body.options);
   const result = await new ObsidianSyncWorkflow({
     translationService: null,
     enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
   }).sync({
     vaultPath: resolveWorkspacePath(vaultPath),
     clearBackup: optionBoolean(body.options, 'clearBackup'),
-    fvttVersion: optionFvttVersion(body.options),
-    effectProfile: optionEffectProfile(body.options),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
     imageAssets: imageSetup.imageAssets,
   });
   registerFilesUnder(job.id, result.outputDir, ['.json', '.webp', '.png', '.jpg', '.jpeg']);
@@ -408,12 +414,16 @@ function requireContent(body: WebJobRequest): string {
 }
 
 function optionFvttVersion(options: Record<string, unknown> | undefined): FvttTargetVersion {
-  const value = options?.fvttVersion;
-  return value === '13' ? '13' : '12';
+  return parseFvttTargetVersion(options?.fvttVersion ?? '12');
 }
 
-function optionEffectProfile(options: Record<string, unknown> | undefined): EffectProfile {
-  return options?.effectProfile === 'modded-v12' ? 'modded-v12' : 'core';
+function optionEffectProfile(
+  options: Record<string, unknown> | undefined,
+  fvttVersion: FvttTargetVersion = '12',
+): EffectProfile {
+  const profile = options?.effectProfile === 'modded-v12' ? 'modded-v12' : 'core';
+  assertEffectProfileForTarget(fvttVersion, profile);
+  return profile;
 }
 
 function optionBoolean(options: Record<string, unknown> | undefined, key: string): boolean {

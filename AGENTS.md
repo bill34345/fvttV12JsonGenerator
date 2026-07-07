@@ -59,6 +59,15 @@ Unless the user explicitly changes the target, generated Foundry JSON must targe
 - Times Up: v11.3.20
 - Item Macro: v2.2.0
 
+Foundry v14 is also a supported explicit target when `--fvtt-version 14` or the equivalent workflow/API option is used:
+
+- Foundry VTT: v14.361
+- dnd5e system: 5.3.3
+- Effect profile: core
+- Reference roots: `references/dnd5e-5.3.3/repo`, `references/foundry-v14-api-core`, and `references/foundry-v14-api-notes`
+
+Do not use `modded-v12` semantics as evidence for v14 correctness unless v14-compatible module versions have been separately verified.
+
 When implementing or reviewing behavior that depends on Foundry, dnd5e, MIDI-QOL, DAE, Times Up, Item Macro, or any other module API:
 
 - Do not use latest documentation by default.

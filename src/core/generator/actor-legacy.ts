@@ -1,6 +1,7 @@
 import type { ParsedNPC } from '../../config/mapping';
 import { spellsMapper } from '../mapper/spells';
 import type { ActivityGenerator } from './activity';
+import type { FvttTargetVersion } from '../foundryTarget';
 
 /**
  * Extract spell names from spellcasting data.
@@ -93,6 +94,7 @@ export function appendLegacySpellItems(
   items: any[],
   spellcasting: ParsedNPC['spellcasting'],
   activityGenerator: ActivityGenerator,
+  fvttVersion: FvttTargetVersion = '12',
 ): void {
   const spellcastingItem = {
     name: '施法',
@@ -119,10 +121,16 @@ export function appendLegacySpellItems(
         name: spellName,
         type: 'spell',
         img: 'icons/svg/mystery-man.svg',
-        system: {
-          preparation: { mode: 'innate' },
-          level: 0,
-        },
+        system: fvttVersion === '14'
+          ? {
+            method: 'innate',
+            prepared: 1,
+            level: 0,
+          }
+          : {
+            preparation: { mode: 'innate' },
+            level: 0,
+          },
       });
     }
   }

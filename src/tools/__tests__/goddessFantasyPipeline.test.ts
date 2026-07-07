@@ -1,56 +1,71 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  parsePipelineFvttVersion,
   pipelineExitCode,
   runGoddessFantasyPipeline,
   type GoddessFantasyPipelineDependencies,
 } from '../goddessFantasyPipeline';
 
+afterEach(() => {
+  rmSync('crawl-out', { recursive: true, force: true });
+});
+
 describe('GoddessFantasy pipeline', () => {
   test('runs crawl, plaintext conversion, and actor ingest in order', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'gf-pipeline-order-'));
+    const outDir = join(root, 'crawl');
+    const plaintextOutDir = join(outDir, 'plaintext', 'monsters');
+    const vaultPath = join(root, 'vault');
     const calls: string[] = [];
     const deps: GoddessFantasyPipelineDependencies = {
       crawl: async (options) => {
         calls.push(`crawl:${options.crawlMode}`);
         expect(options.force).toBe(false);
-        return crawlResult({ outDir: 'crawl-out', newTopicIds: ['170008'] });
+        return crawlResult({ outDir, newTopicIds: ['170008'] });
       },
       recordsToPlaintext: (options) => {
         calls.push(`plaintext:${options.recordsPath}`);
         expect(options.force).toBe(true);
-        expect(options.outDir).toBe('crawl-out/plaintext/monsters');
+        expect(options.outDir).toBe(plaintextOutDir);
         return plaintextResult({
           recordsPath: options.recordsPath,
           outDir: options.outDir!,
-          outFile: join('crawl-out', 'plaintext', 'monsters.md'),
+          outFile: join(outDir, 'plaintext', 'monsters.md'),
         });
       },
       ingestActors: async (options) => {
         calls.push(`actor:${options.sourcePath}`);
-        expect(options.vaultPath).toBe('vault');
+        expect(options.vaultPath).toBe(vaultPath);
         expect(options.effectProfile).toBe('modded-v12');
         expect(options.fvttVersion).toBe('12');
         return actorResult();
       },
     };
 
-    const result = await runGoddessFantasyPipeline({
-      boardUrl: 'https://example.test/board',
-      outDir: 'crawl-out',
-      plaintextOutDir: 'crawl-out/plaintext/monsters',
-      vaultPath: 'vault',
-      crawlMode: 'incremental',
-      force: false,
-      contentType: 'monster',
-    }, deps);
+    try {
+      const result = await runGoddessFantasyPipeline({
+        boardUrl: 'https://example.test/board',
+        outDir,
+        plaintextOutDir,
+        vaultPath,
+        crawlMode: 'incremental',
+        force: false,
+        contentType: 'monster',
+      }, deps);
 
-    expect(calls).toEqual([
-      'crawl:incremental',
-      `plaintext:${join('crawl-out', 'records.json')}`,
-      `actor:${join('crawl-out', 'plaintext', 'monsters.md')}`,
-    ]);
-    expect(result.stoppedAfter).toBe('complete');
-    expect(pipelineExitCode(result)).toBe(0);
+      expect(calls.slice(0, 2)).toEqual([
+        'crawl:incremental',
+        `plaintext:${join(outDir, 'records.json')}`,
+      ]);
+      expect(calls[2]?.startsWith('actor:')).toBe(true);
+      expect(result.stoppedAfter).toBe('complete');
+      expect(pipelineExitCode(result)).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test('dry-run stops after crawl and does not run downstream stages', async () => {
@@ -102,6 +117,51 @@ describe('GoddessFantasy pipeline', () => {
     expect(result.stoppedAfter).toBe('plaintext-warning');
     expect(result.warnings).toBe(1);
     expect(pipelineExitCode(result)).toBe(1);
+  });
+
+  test('uses a generated ingest collection when warning-tolerant plaintext export omits the aggregate file', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'gf-pipeline-warning-source-'));
+    const outDir = join(root, 'crawl');
+    const plaintextOutDir = join(outDir, 'plaintext', 'monsters');
+    const aggregatePath = join(outDir, 'plaintext', 'monsters.md');
+
+    try {
+      let actorSourcePath = '';
+      const result = await runGoddessFantasyPipeline({
+        boardUrl: 'https://example.test/board',
+        outDir,
+        plaintextOutDir,
+        failOnWarning: false,
+      }, {
+        crawl: async () => crawlResult({ outDir }),
+        recordsToPlaintext: () => plaintextResult({
+          outDir: plaintextOutDir,
+          outFile: aggregatePath,
+          warnings: [{ topicId: '1', code: 'needs-review', message: 'review' }],
+          items: [{
+            topicId: '1',
+            title: 'Needs Review',
+            status: 'needs_review',
+            fileName: '1__needs-review.md',
+            outputPath: join(plaintextOutDir, '1__needs-review.md'),
+            heading: 'Needs Review',
+            markdown: '# **Needs Review**\n\nplaceholder\n',
+            warnings: [{ topicId: '1', code: 'needs-review', message: 'review' }],
+          }],
+        }),
+        ingestActors: async (options) => {
+          actorSourcePath = options.sourcePath;
+          expect(existsSync(options.sourcePath)).toBe(true);
+          expect(readFileSync(options.sourcePath, 'utf-8')).toContain('# **Needs Review**');
+          return actorResult();
+        },
+      });
+
+      expect(result.stoppedAfter).toBe('complete');
+      expect(actorSourcePath.endsWith('monsters.pipeline-ingest.md')).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test('reports actor image warnings as a pipeline warning failure by default', async () => {
@@ -185,6 +245,28 @@ describe('GoddessFantasy pipeline', () => {
     expect(result.warnings).toBe(1);
     expect(result.failures).toBe(1);
     expect(pipelineExitCode(result)).toBe(1);
+  });
+
+  test('accepts Foundry v14 and passes it to actor ingest', async () => {
+    const deps: GoddessFantasyPipelineDependencies = {
+      crawl: async () => crawlResult({}),
+      recordsToPlaintext: () => plaintextResult({}),
+      ingestActors: async (options) => {
+        expect(options.fvttVersion).toBe('14');
+        return actorResult();
+      },
+    };
+
+    const result = await runGoddessFantasyPipeline({
+      boardUrl: 'https://example.test/board',
+      fvttVersion: '14',
+    }, deps);
+
+    expect(result.stoppedAfter).toBe('complete');
+  });
+
+  test('parses Foundry v14 as a supported pipeline target', () => {
+    expect(parsePipelineFvttVersion('14')).toBe('14');
   });
 });
 

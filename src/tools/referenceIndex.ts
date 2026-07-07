@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 
 export interface FoundryApiDocEntry {
@@ -124,11 +124,50 @@ export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceInd
   const root = resolve(projectRoot);
   const referencesDir = join(root, 'references');
   const indexesDir = join(referencesDir, 'indexes');
-  const foundryCoreDir = join(referencesDir, 'foundry-v12-api-core');
-  const foundryTextDir = join(referencesDir, 'foundry-v12-api-core-text');
-  const dndRepoDir = join(referencesDir, 'dnd5e-4.3.9', 'repo');
 
   mkdirSync(indexesDir, { recursive: true });
+
+  const foundryRoots = [
+    'foundry-v12-api-core',
+    'foundry-v14-api-core',
+  ].filter((name) => existsSync(join(referencesDir, name)));
+  const dndVersions = [
+    'dnd5e-4.3.9',
+    'dnd5e-5.3.3',
+  ].filter((name) => existsSync(join(referencesDir, name, 'repo')));
+
+  let foundryApiDocs = 0;
+  let foundryTextFiles = 0;
+  let dndRepoFiles = 0;
+  let dndTokenCount = 0;
+
+  for (const foundryRoot of foundryRoots) {
+    const result = buildFoundryIndex(referencesDir, indexesDir, foundryRoot);
+    foundryApiDocs += result.entries;
+    foundryTextFiles += result.textFiles;
+  }
+
+  for (const dndVersion of dndVersions) {
+    const result = buildDndIndex(referencesDir, indexesDir, dndVersion);
+    dndRepoFiles += result.entries;
+    dndTokenCount += result.tokens;
+  }
+
+  return {
+    foundryApiDocs,
+    foundryTextFiles,
+    dndRepoFiles,
+    dndTokenCount,
+  };
+}
+
+function buildFoundryIndex(
+  referencesDir: string,
+  indexesDir: string,
+  rootName: string,
+): { entries: number; textFiles: number } {
+  const foundryCoreDir = join(referencesDir, rootName);
+  const foundryTextDir = join(referencesDir, `${rootName}-text`);
   mkdirSync(foundryTextDir, { recursive: true });
 
   const foundryEntries: FoundryApiDocEntry[] = [];
@@ -172,6 +211,18 @@ export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceInd
     }
   }
 
+  writeFileSync(join(indexesDir, `${rootName}-index.json`), JSON.stringify(foundryEntries, null, 2));
+  writeFileSync(join(indexesDir, `${rootName}-token-index.json`), JSON.stringify(foundryTokenMap, null, 2));
+
+  return { entries: foundryEntries.length, textFiles: foundryEntries.length };
+}
+
+function buildDndIndex(
+  referencesDir: string,
+  indexesDir: string,
+  versionDir: string,
+): { entries: number; tokens: number } {
+  const dndRepoDir = join(referencesDir, versionDir, 'repo');
   const dndEntries: DndRepoFileEntry[] = [];
   const dndTokenMap: Record<string, string[]> = Object.create(null);
 
@@ -203,29 +254,10 @@ export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceInd
     }
   }
 
-  writeFileSync(
-    join(indexesDir, 'foundry-v12-api-core-index.json'),
-    JSON.stringify(foundryEntries, null, 2),
-  );
-  writeFileSync(
-    join(indexesDir, 'foundry-v12-api-core-token-index.json'),
-    JSON.stringify(foundryTokenMap, null, 2),
-  );
-  writeFileSync(
-    join(indexesDir, 'dnd5e-4.3.9-file-index.json'),
-    JSON.stringify(dndEntries, null, 2),
-  );
-  writeFileSync(
-    join(indexesDir, 'dnd5e-4.3.9-token-index.json'),
-    JSON.stringify(dndTokenMap, null, 2),
-  );
+  writeFileSync(join(indexesDir, `${versionDir}-file-index.json`), JSON.stringify(dndEntries, null, 2));
+  writeFileSync(join(indexesDir, `${versionDir}-token-index.json`), JSON.stringify(dndTokenMap, null, 2));
 
-  return {
-    foundryApiDocs: foundryEntries.length,
-    foundryTextFiles: foundryEntries.length,
-    dndRepoFiles: dndEntries.length,
-    dndTokenCount: Object.keys(dndTokenMap).length,
-  };
+  return { entries: dndEntries.length, tokens: Object.keys(dndTokenMap).length };
 }
 
 function walkFiles(root: string): string[] {

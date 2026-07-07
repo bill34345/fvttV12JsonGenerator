@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { runRecordsToPlaintext, type RecordsToPlaintextOptions, type RecordsToPlaintextResult } from '../core/crawl/convert/recordsToPlaintext';
 import { runGoddessFantasyBoardCrawl } from '../core/crawl/runGoddessFantasyBoardCrawl';
@@ -8,6 +8,7 @@ import type { ImageAssetOptions } from '../core/assets/imageAssets';
 import { runTokenReview, type TokenReviewOptions, type TokenReviewResult } from '../core/assets/tokenReview';
 import type { EffectProfile } from '../core/generator/effectProfileApplier';
 import { PlainTextActorWorkflow, type PlainTextActorWorkflowOptions, type PlainTextActorWorkflowResult } from '../core/workflow/plainTextActor';
+import { assertEffectProfileForTarget, parseFvttTargetVersion, type FvttTargetVersion } from '../core/foundryTarget';
 
 export interface GoddessFantasyPipelineOptions extends GoddessFantasyCrawlOptions {
   vaultPath?: string;
@@ -15,7 +16,7 @@ export interface GoddessFantasyPipelineOptions extends GoddessFantasyCrawlOption
   plaintextForce?: boolean;
   failOnWarning?: boolean;
   effectProfile?: EffectProfile;
-  fvttVersion?: '12' | '13';
+  fvttVersion?: FvttTargetVersion;
   imageAssets?: ImageAssetOptions;
   reviewTokens?: boolean;
   failOnTokenReview?: boolean;
@@ -102,10 +103,11 @@ export async function runGoddessFantasyPipeline(
     };
   }
 
+  const actorSourcePath = resolveActorIngestSourcePath(plaintext);
   const actor = await (dependencies.ingestActors ?? ((workflowOptions) => new PlainTextActorWorkflow().ingestActors(workflowOptions)))({
-    sourcePath: plaintext.outFile,
+    sourcePath: actorSourcePath,
     vaultPath: options.vaultPath ?? join('obsidian', 'dnd数据转fvttjson'),
-    effectProfile: options.effectProfile ?? 'modded-v12',
+    effectProfile: resolvePipelineEffectProfile(options.effectProfile, options.fvttVersion),
     fvttVersion: options.fvttVersion ?? '12',
     imageAssets: options.imageAssets,
   });
@@ -190,6 +192,28 @@ export function defaultPlaintextOutFileForOutDir(outDir: string): string {
   return join(dirname(resolve(outDir)), 'monsters.md');
 }
 
+export function resolveActorIngestSourcePath(plaintext: RecordsToPlaintextResult): string {
+  if (existsSync(plaintext.outFile)) {
+    return plaintext.outFile;
+  }
+
+  const emittedItemMarkdown = plaintext.items
+    .filter((item) => (item.status === 'ok' || item.status === 'needs_review') && item.markdown)
+    .map((item) => item.markdown!.trim())
+    .filter(Boolean)
+    .join('\n\n');
+  const emittedMarkdown = emittedItemMarkdown || (plaintext.blocksEmitted > 0 ? plaintext.markdown.trim() : '');
+
+  if (!emittedMarkdown) {
+    throw new Error(`No plaintext actor source was written for ingest: ${plaintext.outFile}`);
+  }
+
+  const sourcePath = join(dirname(resolve(plaintext.outFile)), 'monsters.pipeline-ingest.md');
+  mkdirSync(dirname(sourcePath), { recursive: true });
+  writeFileSync(sourcePath, `${emittedMarkdown}\n`, 'utf-8');
+  return sourcePath;
+}
+
 export function parsePipelineEffectProfile(value: unknown): EffectProfile {
   const profile = String(value ?? 'modded-v12');
   if (profile !== 'core' && profile !== 'modded-v12') {
@@ -198,12 +222,17 @@ export function parsePipelineEffectProfile(value: unknown): EffectProfile {
   return profile;
 }
 
-export function parsePipelineFvttVersion(value: unknown): '12' | '13' {
-  const version = String(value ?? '12');
-  if (version !== '12' && version !== '13') {
-    throw new Error(`Unsupported --fvtt-version: ${version}. Use 12 or 13.`);
-  }
-  return version;
+export function parsePipelineFvttVersion(value: unknown): FvttTargetVersion {
+  return parseFvttTargetVersion(value ?? '12');
+}
+
+export function resolvePipelineEffectProfile(
+  value: EffectProfile | undefined,
+  fvttVersion: FvttTargetVersion | undefined,
+): EffectProfile {
+  const profile = value ?? (fvttVersion === '14' ? 'core' : 'modded-v12');
+  assertEffectProfileForTarget(fvttVersion ?? '12', profile);
+  return profile;
 }
 
 export function pipelineExitCode(result: GoddessFantasyPipelineResult): number {

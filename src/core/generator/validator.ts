@@ -40,7 +40,10 @@ export class ActorValidator {
     }
 
     const expectedSenses = Object.keys(parsed.traits.senses || {});
-    const actualSenses = actor.system.attributes.senses || {};
+    const rawSenses = actor.system.attributes.senses || {};
+    const actualSenses = rawSenses.ranges && typeof rawSenses.ranges === 'object'
+      ? { ...rawSenses.ranges, special: rawSenses.special, units: rawSenses.units }
+      : rawSenses;
     for (const [k, v] of Object.entries(actualSenses)) {
       if (k !== 'units' && k !== 'special' && v !== 0 && v !== null) {
         if (!expectedSenses.includes(k)) {
@@ -52,4 +55,3 @@ export class ActorValidator {
     return warnings;
   }
 }
-

@@ -184,7 +184,7 @@ program
   .option('--no-plaintext-force', 'Do not overwrite plaintext outputs')
   .option('--allow-warnings', 'Continue/exit successfully even when plaintext or image warnings are emitted')
   .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12', 'modded-v12')
-  .option('--fvtt-version <version>', 'Target Foundry major version (12 or 13)', '12')
+  .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')
   .option('--image-remote-root <path>', 'Remote image root directory for SSH uploads')
@@ -204,6 +204,10 @@ program
       const crawlMode = pipelineMode(options.force, options.mode);
       const plaintextOutDir = options.plaintextOutDir ?? defaultPlaintextOutDir(options.outDir);
       const imageAssets = buildPipelineImageAssetOptions(options, options.outDir);
+      const fvttVersion = parsePipelineFvttVersion(options.fvttVersion);
+      const defaultedEffectProfile = !process.argv.includes('--effect-profile') && fvttVersion === '14'
+        ? 'core'
+        : options.effectProfile;
       const result = await runGoddessFantasyPipeline({
         boardUrl: options.boardUrl,
         cookieHeader: options.cookieHeader,
@@ -228,8 +232,8 @@ program
         plaintextOutDir,
         plaintextForce: options.plaintextForce,
         failOnWarning: !options.allowWarnings,
-        effectProfile: parsePipelineEffectProfile(options.effectProfile),
-        fvttVersion: parsePipelineFvttVersion(options.fvttVersion),
+        effectProfile: parsePipelineEffectProfile(defaultedEffectProfile),
+        fvttVersion,
         imageAssets,
         reviewTokens: Boolean(options.reviewTokens),
         failOnTokenReview: Boolean(options.failOnTokenReview),

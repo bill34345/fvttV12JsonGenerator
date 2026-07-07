@@ -12,6 +12,7 @@ import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
 import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from './core/foundryTarget';
 
 interface StructuredActions {
   attacks?: any[];
@@ -100,7 +101,7 @@ program
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12')
-  .option('--fvtt-version <version>', 'Target Foundry major version (12 or 13)', '12')
+  .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')
   .option('--image-remote-root <path>', 'Remote image root directory for SSH uploads')
@@ -114,16 +115,13 @@ program
   .option('--image-token-crops <path>', 'JSON map of source-url hash to normalized token crop rectangles')
   .action(async (input, options) => {
     try {
-      const requestedVersion = String(options.fvttVersion ?? '12');
-      if (requestedVersion !== '12' && requestedVersion !== '13') {
-        throw new Error(`Unsupported --fvtt-version: ${requestedVersion}. Use 12 or 13.`);
-      }
-      const fvttVersion = requestedVersion as '12' | '13';
+      const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
       const effectProfileOption = options.effectProfile as string | undefined;
       const effectProfile = (effectProfileOption ?? 'core') as EffectProfile;
       if (effectProfile !== 'core' && effectProfile !== 'modded-v12') {
         throw new Error(`Unsupported --effect-profile: ${effectProfile}. Use core or modded-v12.`);
       }
+      assertEffectProfileForTarget(fvttVersion, effectProfile);
       const imageAssets = buildImageAssetOptionsFromCli(options);
 
       if (options.translateJson) {
@@ -218,7 +216,7 @@ program
           vaultPath: options.vault,
           dryRun: Boolean(options.dryRun),
           enableAiNormalize: Boolean(options.enableAiNormalize),
-          effectProfile: effectProfileOption ? effectProfile : 'modded-v12',
+          effectProfile: effectProfileOption ? effectProfile : fvttVersion === '14' ? 'core' : 'modded-v12',
           fvttVersion,
           imageAssets,
         });

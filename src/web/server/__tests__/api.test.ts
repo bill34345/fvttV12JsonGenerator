@@ -112,6 +112,24 @@ describe('web API', () => {
     expect(after).toBe(before);
   });
 
+  it('accepts Foundry v14 for uploaded markdown conversion', async () => {
+    const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
+
+    const response = await post('/api/convert/upload', {
+      fileName: 'alyxian-v14.md',
+      content: source,
+      fvttVersion: '14',
+      effectProfile: 'core',
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.kind).toBe('actor');
+    expect(body.data.fvttVersion).toBe('14');
+  });
+
+
   it('verifies source and actor JSON supplied inline', async () => {
     const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
     const conversion = await (await post('/api/convert/upload', { fileName: 'inline.md', content: source })).json();
@@ -237,7 +255,7 @@ describe('web API', () => {
       fileName: 'monsters.md',
       content: firstTwoBlocks,
       options: {
-        fvttVersion: '12',
+        fvttVersion: '14',
         effectProfile: 'core',
       },
     });
@@ -248,6 +266,7 @@ describe('web API', () => {
 
     const job = await waitForJob(created.data.id);
     expect(['succeeded', 'partial']).toContain(job.status);
+    expect(job.summary.fvttVersion).toBe('14');
     expect(job.files.length).toBeGreaterThan(0);
 
     const zip = await handleApiRequest(new Request(`http://localhost/api/jobs/${job.id}/download.zip`));

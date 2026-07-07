@@ -417,6 +417,7 @@ export function App() {
               <select value={fvttVersion} onChange={(event) => setFvttVersion(event.target.value as FvttVersion)}>
                 <option value="12">v12</option>
                 <option value="13">v13</option>
+                <option value="14">v14</option>
               </select>
             </label>
             <label>

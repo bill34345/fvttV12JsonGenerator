@@ -23,11 +23,12 @@ import { detectItemRoute } from '../parser/item-router';
 import { ParserFactory } from '../parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';
+import type { FvttTargetVersion } from '../foundryTarget';
 
 export interface ObsidianSyncOptions {
   vaultPath: string;
   clearBackup?: boolean;
-  fvttVersion?: '12' | '13';
+  fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   excludeInputPaths?: string[];
   forceInputPaths?: string[];
@@ -41,7 +42,7 @@ interface TranslationServiceLike {
 interface ManifestEntry {
   hash: string;
   output: string;
-  fvttVersion?: '12' | '13';
+  fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   status: 'success' | 'failed' | 'stale';
   lastSuccessAt?: string;
