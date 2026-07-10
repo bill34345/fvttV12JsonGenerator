@@ -28,4 +28,29 @@ describe('Foundry lab process wrapper', () => {
     expect(result.commandLine).toContain('<redacted>');
     expect(JSON.stringify(result)).not.toContain(secret);
   });
+
+  it('redacts observable spawn error fields without swallowing ENOENT', async () => {
+    const secret = 'spawn-error-secret-value';
+    let captured: unknown;
+
+    try {
+      await runCommand(`definitely-missing-${secret}`, [`--token=${secret}`], {
+        cwd: process.cwd(),
+        redact: [secret],
+      });
+    } catch (error) {
+      captured = error;
+    }
+
+    expect(captured).toBeInstanceOf(Error);
+    const error = captured as Error & NodeJS.ErrnoException;
+    expect(error.code).toBe('ENOENT');
+    const observable = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      ...Object.fromEntries(Object.entries(error)),
+    };
+    expect(JSON.stringify(observable)).not.toContain(secret);
+  });
 });

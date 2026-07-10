@@ -18,6 +18,11 @@ export async function runCommand(
       (text, secret) => (secret ? text.replaceAll(secret, '<redacted>') : text),
       value,
     );
+  const redactErrorValue = (value: unknown): unknown => {
+    if (typeof value === 'string') return redacted(value);
+    if (Array.isArray(value)) return value.map(redactErrorValue);
+    return value;
+  };
   const commandLine = redacted([command, ...args].join(' '));
   if (options.dryRun) return { exitCode: 0, stdout: '', stderr: '', commandLine };
 
@@ -32,7 +37,14 @@ export async function runCommand(
       stderr += chunk;
     });
     const timer = setTimeout(() => child.kill(), options.timeoutMs ?? 30_000);
-    child.on('error', reject);
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      error.message = redacted(error.message);
+      if (error.stack) error.stack = redacted(error.stack);
+      const fields = error as unknown as Record<string, unknown>;
+      for (const [key, value] of Object.entries(fields)) fields[key] = redactErrorValue(value);
+      reject(error);
+    });
     child.on('close', (code) => {
       clearTimeout(timer);
       resolveResult({
