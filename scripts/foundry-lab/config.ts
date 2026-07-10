@@ -1,4 +1,5 @@
-import { isAbsolute, relative, resolve } from 'node:path';
+import { existsSync, realpathSync } from 'node:fs';
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 export interface FoundryLabConfig {
   repoRoot: string;
@@ -50,10 +51,34 @@ export function createLabConfig(repoRoot = process.cwd()): FoundryLabConfig {
   };
 }
 
+function resolvesOutside(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
+
+function resolveThroughExistingAncestor(target: string): string {
+  let existingAncestor = resolve(target);
+  const missingSegments: string[] = [];
+
+  while (!existsSync(existingAncestor)) {
+    const parent = dirname(existingAncestor);
+    if (parent === existingAncestor) return resolve(existingAncestor, ...missingSegments.reverse());
+    missingSegments.push(basename(existingAncestor));
+    existingAncestor = parent;
+  }
+
+  return resolve(realpathSync.native(existingAncestor), ...missingSegments.reverse());
+}
+
 export function assertInsideLabRoot(config: FoundryLabConfig, target: string): void {
   const candidate = resolve(target);
-  const rel = relative(config.labRoot, candidate);
-  if (!isAbsolute(candidate) || rel.startsWith('..') || isAbsolute(rel)) {
+  if (!isAbsolute(candidate) || resolvesOutside(config.labRoot, candidate)) {
+    throw new Error(`Target escapes Foundry lab root: ${candidate}`);
+  }
+
+  const realLabRoot = resolveThroughExistingAncestor(config.labRoot);
+  const realCandidate = resolveThroughExistingAncestor(candidate);
+  if (resolvesOutside(realLabRoot, realCandidate)) {
     throw new Error(`Target escapes Foundry lab root: ${candidate}`);
   }
 }

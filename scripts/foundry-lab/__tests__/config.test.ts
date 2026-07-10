@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { resolve } from 'node:path';
+import { mkdir, mkdtemp, rm, symlink, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { assertInsideLabRoot, createLabConfig } from '../config';
 
 describe('Foundry lab configuration', () => {
@@ -22,5 +24,44 @@ describe('Foundry lab configuration', () => {
       'Target escapes Foundry lab root',
     );
     expect(() => assertInsideLabRoot(config, 'I:/')).toThrow('Target escapes Foundry lab root');
+  });
+
+  it('accepts the configured lab root before it exists', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-missing-'));
+    try {
+      const config = createLabConfig(join(tempRoot, 'repo'));
+      expect(() => assertInsideLabRoot(config, config.labRoot)).not.toThrow();
+      expect(() => assertInsideLabRoot(config, join(config.labRoot, 'future', 'artifact'))).not.toThrow();
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects existing and missing targets routed outside through a junction', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-junction-'));
+    const repoRoot = join(tempRoot, 'repo');
+    const outsideRoot = join(tempRoot, 'outside');
+    const config = createLabConfig(repoRoot);
+    const junction = join(config.labRoot, 'escape');
+
+    try {
+      await mkdir(join(outsideRoot, 'existing'), { recursive: true });
+      await mkdir(config.labRoot, { recursive: true });
+      await symlink(outsideRoot, junction, 'junction');
+
+      expect(() => assertInsideLabRoot(config, join(junction, 'existing'))).toThrow(
+        'Target escapes Foundry lab root',
+      );
+      expect(() => assertInsideLabRoot(config, join(junction, 'missing', 'artifact'))).toThrow(
+        'Target escapes Foundry lab root',
+      );
+    } finally {
+      try {
+        await unlink(junction);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   });
 });

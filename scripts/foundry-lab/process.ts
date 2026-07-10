@@ -13,7 +13,12 @@ export async function runCommand(
   args: string[],
   options: RunCommandOptions,
 ): Promise<CommandResult> {
-  const commandLine = [command, ...args].join(' ');
+  const redacted = (value: string) =>
+    (options.redact ?? []).reduce(
+      (text, secret) => (secret ? text.replaceAll(secret, '<redacted>') : text),
+      value,
+    );
+  const commandLine = redacted([command, ...args].join(' '));
   if (options.dryRun) return { exitCode: 0, stdout: '', stderr: '', commandLine };
 
   return await new Promise((resolveResult, reject) => {
@@ -30,11 +35,6 @@ export async function runCommand(
     child.on('error', reject);
     child.on('close', (code) => {
       clearTimeout(timer);
-      const redacted = (value: string) =>
-        (options.redact ?? []).reduce(
-          (text, secret) => (secret ? text.replaceAll(secret, '<redacted>') : text),
-          value,
-        );
       resolveResult({
         exitCode: code ?? 1,
         stdout: redacted(stdout),
