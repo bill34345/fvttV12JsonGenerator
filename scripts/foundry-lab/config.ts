@@ -76,7 +76,12 @@ export function assertInsideLabRoot(config: FoundryLabConfig, target: string): v
     throw new Error(`Target escapes Foundry lab root: ${candidate}`);
   }
 
+  const realRepoRoot = resolveThroughExistingAncestor(config.repoRoot);
   const realLabRoot = resolveThroughExistingAncestor(config.labRoot);
+  if (resolvesOutside(realRepoRoot, realLabRoot)) {
+    throw new Error(`Target escapes Foundry lab root: ${candidate}`);
+  }
+
   const realCandidate = resolveThroughExistingAncestor(candidate);
   if (resolvesOutside(realLabRoot, realCandidate)) {
     throw new Error(`Target escapes Foundry lab root: ${candidate}`);

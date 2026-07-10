@@ -64,4 +64,31 @@ describe('Foundry lab configuration', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('rejects targets when the configured lab root is a junction outside the repo', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-root-junction-'));
+    const repoRoot = join(tempRoot, 'repo');
+    const outsideRoot = join(tempRoot, 'outside');
+    const config = createLabConfig(repoRoot);
+
+    try {
+      await mkdir(join(outsideRoot, 'existing'), { recursive: true });
+      await mkdir(join(repoRoot, '.local'), { recursive: true });
+      await symlink(outsideRoot, config.labRoot, 'junction');
+
+      expect(() => assertInsideLabRoot(config, join(config.labRoot, 'existing'))).toThrow(
+        'Target escapes Foundry lab root',
+      );
+      expect(() => assertInsideLabRoot(config, join(config.labRoot, 'missing', 'artifact'))).toThrow(
+        'Target escapes Foundry lab root',
+      );
+    } finally {
+      try {
+        await unlink(config.labRoot);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
