@@ -57,3 +57,5 @@ The current batch can be treated as source-faithful for project-internal v14 acc
 ## Remaining Risk
 
 Live Foundry v14.361 + dnd5e 5.3.3 import and sheet interaction smoke testing was not run because no local Foundry v14 runtime is available in this environment.
+
+The exact runtime environment, import matrix, Activity checks, failure evidence, and remaining non-runtime work are recorded in `docs/acceptance/v14-live-runtime-smoke-test.md`.
