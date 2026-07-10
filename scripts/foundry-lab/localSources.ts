@@ -52,9 +52,17 @@ export interface LocalSourceOptions {
   onProgress?: (message: string) => void;
 }
 
+type MakeDirectory = (path: string, options: { recursive: true }) => Promise<string | undefined>;
+type RemovePath = (
+  path: string,
+  options?: { recursive?: boolean; force?: boolean },
+) => Promise<void>;
+
 export interface LocalSourceDependencies {
   runCommand: typeof runCommand;
   copyFile: typeof copyFile;
+  mkdir: MakeDirectory;
+  rm: RemovePath;
 }
 
 interface ArchiveEntry {
@@ -346,6 +354,8 @@ async function createImmutableArchiveSnapshot(
   config: FoundryLabConfig,
   source: LocalPackageSource,
   copy: typeof copyFile,
+  makeDirectory: MakeDirectory,
+  remove: RemovePath,
 ): Promise<{
   root: string;
   path: string;
@@ -361,7 +371,7 @@ async function createImmutableArchiveSnapshot(
   const labParentExisted = existsSync(dirname(config.labRoot));
   for (const candidate of [snapshotsRoot, root, path]) assertInsideLabRoot(config, candidate);
   try {
-    await mkdir(root, { recursive: true });
+    await makeDirectory(root, { recursive: true });
     await copy(source.sourcePath, path, constants.COPYFILE_EXCL);
     const [postHash, snapshotHash] = await Promise.all([
       sha256File(source.sourcePath),
@@ -372,7 +382,7 @@ async function createImmutableArchiveSnapshot(
     }
     return { root, path, sha256: preHash, labRootExisted, labParentExisted };
   } catch (error) {
-    await cleanupArchiveSnapshot(config, { root, labRootExisted, labParentExisted });
+    await cleanupArchiveSnapshot(config, { root, labRootExisted, labParentExisted }, remove);
     throw error;
   }
 }
@@ -380,8 +390,9 @@ async function createImmutableArchiveSnapshot(
 async function cleanupArchiveSnapshot(
   config: FoundryLabConfig,
   snapshot: { root: string; labRootExisted: boolean; labParentExisted: boolean },
+  remove: RemovePath,
 ): Promise<void> {
-  await rm(snapshot.root, { recursive: true, force: true });
+  await remove(snapshot.root, { recursive: true, force: true });
   await removeEmptyDirectory(dirname(snapshot.root));
   if (!snapshot.labRootExisted) await removeEmptyDirectory(config.labRoot);
   if (!snapshot.labParentExisted) await removeEmptyDirectory(dirname(config.labRoot));
@@ -402,12 +413,35 @@ async function assertArchiveSourceHash(sourcePath: string, expected: string, pha
   }
 }
 
-async function replaceDirectory(config: FoundryLabConfig, staging: string, destination: string): Promise<void> {
+async function inspectArchiveDryRun(
+  source: LocalPackageSource,
+  execute: typeof runCommand,
+  cwd: string,
+  expectedSha256: string,
+): Promise<Awaited<ReturnType<typeof inspectArchive>>> {
+  try {
+    return await inspectArchive(source, source.sourcePath, execute, cwd);
+  } finally {
+    try {
+      await assertArchiveSourceHash(source.sourcePath, expectedSha256, 'during dry-run inspection');
+    } catch {
+      throw new Error(`Local source archive changed during dry-run inspection: ${basename(source.sourcePath)}`);
+    }
+  }
+}
+
+async function replaceDirectory(
+  config: FoundryLabConfig,
+  staging: string,
+  destination: string,
+  makeDirectory: MakeDirectory,
+  remove: RemovePath,
+): Promise<void> {
   const backup = `${destination}.previous`;
   for (const path of [staging, destination, backup]) assertInsideLabRoot(config, path);
-  await mkdir(dirname(destination), { recursive: true });
+  await makeDirectory(dirname(destination), { recursive: true });
   if (existsSync(backup) && !existsSync(destination)) await rename(backup, destination);
-  if (existsSync(backup)) await rm(backup, { recursive: true, force: true });
+  if (existsSync(backup)) await remove(backup, { recursive: true, force: true });
   let movedOld = false;
   if (existsSync(destination)) {
     await rename(destination, backup);
@@ -419,7 +453,7 @@ async function replaceDirectory(config: FoundryLabConfig, staging: string, desti
     if (movedOld && !existsSync(destination) && existsSync(backup)) await rename(backup, destination);
     throw error;
   }
-  if (existsSync(backup)) await rm(backup, { recursive: true, force: true });
+  if (existsSync(backup)) await remove(backup, { recursive: true, force: true });
 }
 
 function inventoriesEqual(left: LocalSourceFileEntry[], right: LocalSourceFileEntry[]): boolean {
@@ -470,6 +504,8 @@ export async function acquireLocalSources(
 ): Promise<LocalSourceReport> {
   const execute = dependencies.runCommand ?? runCommand;
   const copy = dependencies.copyFile ?? copyFile;
+  const makeDirectory = dependencies.mkdir ?? mkdir;
+  const remove = dependencies.rm ?? rm;
   const actions: LocalSourceAction[] = [];
   let installed = 0;
   let unresolved = 0;
@@ -515,22 +551,33 @@ export async function acquireLocalSources(
         action.sourceInventory = expectedInventory;
       } else if (info.isFile() && ['.zip', '.7z', '.rar'].includes(extname(source.sourcePath).toLowerCase())) {
         action.sourceKind = 'archive';
-        snapshot = await createImmutableArchiveSnapshot(config, source, copy);
-        action.sourceSha256 = snapshot.sha256;
-        archive = await inspectArchive(source, snapshot.path, execute, config.repoRoot);
-        await assertArchiveSourceHash(snapshot.path, snapshot.sha256, 'during immutable snapshot inspection');
-        await assertArchiveSourceHash(source.sourcePath, snapshot.sha256, 'after immutable snapshot inspection');
+        if (options.apply) {
+          snapshot = await createImmutableArchiveSnapshot(
+            config,
+            source,
+            copy,
+            makeDirectory,
+            remove,
+          );
+          action.sourceSha256 = snapshot.sha256;
+          archive = await inspectArchive(source, snapshot.path, execute, config.repoRoot);
+          await assertArchiveSourceHash(snapshot.path, snapshot.sha256, 'during immutable snapshot inspection');
+          await assertArchiveSourceHash(source.sourcePath, snapshot.sha256, 'after immutable snapshot inspection');
+        } else {
+          action.sourceSha256 = await sha256File(source.sourcePath);
+          archive = await inspectArchiveDryRun(source, execute, config.repoRoot, action.sourceSha256);
+        }
         packageRoot = '';
       } else {
         throw new Error(`Unsupported local source type: ${source.sourcePath}`);
       }
 
       if (!options.apply) continue;
-      await rm(staging, { recursive: true, force: true });
-      await rm(extractionRoot, { recursive: true, force: true });
+      await remove(staging, { recursive: true, force: true });
+      await remove(extractionRoot, { recursive: true, force: true });
       try {
         if (archive !== null) {
-          await mkdir(extractionRoot, { recursive: true });
+          await makeDirectory(extractionRoot, { recursive: true });
           const password = archive.password;
           const extraction = await execute(
             sevenZipExecutable(),
@@ -557,24 +604,24 @@ export async function acquireLocalSources(
         if (expectedInventory === null || !inventoriesEqual(expectedInventory, stagedInventory)) {
           throw new Error(`Staged local source inventory mismatch for ${source.id}`);
         }
-        await replaceDirectory(config, staging, destination);
+        await replaceDirectory(config, staging, destination, makeDirectory, remove);
         parseManifest(await readFile(join(destination, 'module.json'), 'utf8'), source.id, source.expectedVersion);
         action.status = 'installed';
         installed += 1;
         options.onProgress?.(`installed ${source.id}@${source.expectedVersion} from local ${action.sourceKind}`);
       } finally {
-        await rm(extractionRoot, { recursive: true, force: true });
+        await remove(extractionRoot, { recursive: true, force: true });
       }
     } catch (error) {
       action.status = error instanceof UnresolvedLocalSourceError ? 'unresolved' : 'failed';
       action.error = error instanceof Error ? error.message : String(error);
       if (action.status === 'unresolved') unresolved += 1;
       else failed += 1;
-      if (options.apply) await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+      if (options.apply) await remove(staging, { recursive: true, force: true }).catch(() => undefined);
       options.onProgress?.(`${action.status} ${source.id}@${source.expectedVersion}: ${action.error}`);
     } finally {
       if (snapshot !== null) {
-        await cleanupArchiveSnapshot(config, snapshot);
+        await cleanupArchiveSnapshot(config, snapshot, remove);
       }
     }
   }
@@ -592,8 +639,8 @@ export async function acquireLocalSources(
     const reportPath = join(config.inventoryRoot, 'local-source-report.json');
     const partPath = `${reportPath}.part`;
     for (const path of [config.inventoryRoot, reportPath, partPath]) assertInsideLabRoot(config, path);
-    await mkdir(config.inventoryRoot, { recursive: true });
-    await rm(partPath, { force: true });
+    await makeDirectory(config.inventoryRoot, { recursive: true });
+    await remove(partPath, { force: true });
     await writeFile(partPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
     await rename(partPath, reportPath);
   }

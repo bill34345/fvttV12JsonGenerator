@@ -245,25 +245,91 @@ describe('local source acquisition', () => {
     }
   });
 
-  it('dry-runs an archive through a disposable snapshot without leaving lab paths behind', async () => {
+  it('dry-runs an archive by direct read-only inspection without changing lab metadata', async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-local-archive-dry-'));
     const config = createLabConfig(join(tempRoot, 'repo'));
     const archive = join(tempRoot, 'source.zip');
+    const calls = { copyFile: 0, mkdir: 0, rm: 0 };
     try {
-      await mkdir(config.repoRoot, { recursive: true });
+      await mkdir(config.labRoot, { recursive: true });
+      await writeFile(join(config.labRoot, 'sentinel.txt'), 'untouched lab bytes');
       await writeFile(archive, 'fake archive bytes');
-      const before = await treeSnapshot(tempRoot);
+      const beforeLab = await treeSnapshot(config.labRoot);
+      const beforeLabMtime = (await stat(config.labRoot, { bigint: true })).mtimeNs;
+      const beforeSource = await readFile(archive);
+      const beforeSourceMtime = (await stat(archive, { bigint: true })).mtimeNs;
 
       const report = await acquireLocalSources(config, [mapping(resolve(archive))], { apply: false }, {
+        copyFile: async (...args: Parameters<typeof copyFile>) => {
+          calls.copyFile += 1;
+          return await copyFile(...args);
+        },
+        mkdir: async (path, options) => {
+          calls.mkdir += 1;
+          return await mkdir(path, options);
+        },
+        rm: async (path, options) => {
+          calls.rm += 1;
+          return await rm(path, options);
+        },
         runCommand: async (_command, args) => {
+          expect(args).toContain(resolve(archive));
+          expect(args.some((arg) => arg.endsWith('.snapshot.part'))).toBe(false);
           if (args.includes('l')) return commandResult({ stdout: archiveListing([{ path: 'module.json' }]) });
           return commandResult({ stdout: '{"id":"sample","version":"1.0.0"}' });
         },
       });
 
       expect(report.actions[0]?.status).toBe('planned');
-      expect(existsSync(config.labRoot)).toBe(false);
-      expect(await treeSnapshot(tempRoot)).toEqual(before);
+      expect(calls).toEqual({ copyFile: 0, mkdir: 0, rm: 0 });
+      expect(await treeSnapshot(config.labRoot)).toEqual(beforeLab);
+      expect((await stat(config.labRoot, { bigint: true })).mtimeNs).toBe(beforeLabMtime);
+      expect(await readFile(archive)).toEqual(beforeSource);
+      expect((await stat(archive, { bigint: true })).mtimeNs).toBe(beforeSourceMtime);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a dry-run archive changed during direct source inspection without touching the lab', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-local-archive-dry-race-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const archive = join(tempRoot, 'source.zip');
+    const calls = { copyFile: 0, mkdir: 0, rm: 0 };
+    try {
+      await mkdir(config.labRoot, { recursive: true });
+      await writeFile(join(config.labRoot, 'sentinel.txt'), 'untouched lab bytes');
+      await writeFile(archive, 'original archive bytes');
+      const beforeLab = await treeSnapshot(config.labRoot);
+      const beforeLabMtime = (await stat(config.labRoot, { bigint: true })).mtimeNs;
+
+      const report = await acquireLocalSources(config, [mapping(resolve(archive))], { apply: false }, {
+        copyFile: async (...args: Parameters<typeof copyFile>) => {
+          calls.copyFile += 1;
+          return await copyFile(...args);
+        },
+        mkdir: async (path, options) => {
+          calls.mkdir += 1;
+          return await mkdir(path, options);
+        },
+        rm: async (path, options) => {
+          calls.rm += 1;
+          return await rm(path, options);
+        },
+        runCommand: async (_command, args) => {
+          if (args.includes('l')) {
+            await writeFile(archive, 'changed during dry-run listing');
+            return commandResult({ stdout: archiveListing([{ path: 'module.json' }]) });
+          }
+          return commandResult({ stdout: '{"id":"sample","version":"1.0.0"}' });
+        },
+      });
+
+      expect(report.actions[0]?.status).toBe('failed');
+      expect(report.actions[0]?.error).toContain('changed during dry-run inspection');
+      expect(calls).toEqual({ copyFile: 0, mkdir: 0, rm: 0 });
+      expect(await treeSnapshot(config.labRoot)).toEqual(beforeLab);
+      expect((await stat(config.labRoot, { bigint: true })).mtimeNs).toBe(beforeLabMtime);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
