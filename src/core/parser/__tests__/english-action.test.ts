@@ -75,6 +75,30 @@ describe('EnglishActionParser', () => {
     expect((result as ExtendedActionResult | null)?.damage).toEqual([{ formula: '18d6', type: 'fire' }]);
   });
 
+  it('parses en dash recharge metadata from utility action headers', () => {
+    const input = 'War Cry (Recharge 4–6). Dorokor screams an orcish war phrase, spurring her warriors on toward victory.';
+
+    const result = parser.parse(input);
+
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('utility');
+    expect(result?.name).toBe('War Cry');
+    expect(result?.desc).toContain('Dorokor screams');
+    expect(result?.recharge).toEqual({ value: 4, charged: true });
+  });
+
+  it('keeps colon subtitle in trait name without swallowing sentence body', () => {
+    const input =
+      'Minion: Savage Horde. After moving at least 20 feet in a straight line toward a creature, the next attack scores a critical hit on 18-20.';
+
+    const result = parser.parse(input);
+
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('utility');
+    expect(result?.name).toBe('Minion: Savage Horde');
+    expect(result?.desc).toStartWith('After moving at least 20 feet');
+  });
+
   it('parses legendary action cost metadata from action names', () => {
     const input =
       'Wing Attack (Costs 2 Actions). The dragon beats its wings. Each creature within 10 feet must succeed on a DC 25 Dexterity saving throw or take 15 (2d6 + 8) bludgeoning damage and be knocked prone.';

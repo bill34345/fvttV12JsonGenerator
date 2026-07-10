@@ -125,6 +125,33 @@ describe('EnglishBestiaryParser frontmatter', () => {
     expect(result.reactions).toEqual(['Parry. The skirmisher adds 2 to its AC against one melee attack.']);
   });
 
+  it('normalizes bold english statblock headers without merging titles into body text', () => {
+    const content = [
+      '---',
+      'layout: creature',
+      'name: Header Fixture',
+      '---',
+      '### Traits',
+      '***Minion: Savage Horde.*** After moving at least 20',
+      'feet in a straight line toward a creature, the next attack scores a critical hit on 18-20.',
+      '',
+      '### Actions',
+      '***Multiattack.*** The shaman makes two spear attacks.',
+      '',
+      '***War Cry (Recharge 4-6).*** Dorokor screams an',
+      'orcish war phrase, spurring her warriors on toward victory.',
+    ].join('\n');
+
+    const result = parser.parse(content);
+
+    expect(result.details.biography).toContain('***Minion: Savage Horde.***');
+    expect(result.details.biography).toContain('After moving at least 20 feet in a straight line toward a creature');
+    expect(result.actions).toContain('Multiattack. The shaman makes two spear attacks.');
+    expect(result.actions).toContain(
+      'War Cry (Recharge 4-6). Dorokor screams an orcish war phrase, spurring her warriors on toward victory.',
+    );
+  });
+
   it('extracts spellcasting blocks and keeps non-section text in biography', () => {
     const content = [
       '---',

@@ -173,6 +173,7 @@ const SENSE_ALIASES: Record<string, string> = {
 };
 
 type BodySectionKey =
+  | 'traits'
   | 'actions'
   | 'bonus_actions'
   | 'reactions'
@@ -285,6 +286,7 @@ export class EnglishBestiaryParser implements ParserStrategy {
 
   private extractBodySections(body: string): BodyExtractionResult {
     const sectionLines: Record<BodySectionKey, string[]> = {
+      traits: [],
       actions: [],
       bonus_actions: [],
       reactions: [],
@@ -375,8 +377,12 @@ export class EnglishBestiaryParser implements ParserStrategy {
       }
     }
 
+    const normalizedTraits = this.normalizeBodySectionLines(sectionLines.traits, 'traits')
+      .map((line) => this.markEnglishTraitLine(line));
+    const biography = [...biographyLines, ...normalizedTraits].filter((line) => line.trim()).join('\n').trim();
+
     return {
-      biography: biographyLines.join('\n').trim(),
+      biography,
       actions: this.normalizeBodySectionLines(sectionLines.actions, 'actions'),
       bonus_actions: this.normalizeBodySectionLines(sectionLines.bonus_actions, 'bonus_actions'),
       reactions: this.normalizeBodySectionLines(sectionLines.reactions, 'reactions'),
@@ -422,6 +428,10 @@ export class EnglishBestiaryParser implements ParserStrategy {
 
     if (normalized.includes('spellcasting')) {
       return 'spellcasting';
+    }
+
+    if (/^traits?\b/.test(normalized)) {
+      return 'traits';
     }
 
     if (/^actions?\b/.test(normalized)) {
@@ -475,6 +485,16 @@ export class EnglishBestiaryParser implements ParserStrategy {
     }
 
     return merged;
+  }
+
+  private markEnglishTraitLine(line: string): string {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^(.+?\))\.\s+(.+)$/) ?? trimmed.match(/^([^.\n]{1,100})\.\s+(.+)$/);
+    if (!match?.[1] || !match[2]) {
+      return trimmed;
+    }
+
+    return `***${match[1].trim()}.*** ${match[2].trim()}`;
   }
 
   private cleanBodySectionLine(line: string): string {

@@ -3,15 +3,17 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ActorGenerator } from '../actor';
 import { generateEnhancedConditionEffects } from '../actor-effects';
+import { EffectProfileApplier } from '../effectProfileApplier';
 import { ParserFactory } from '../../parser/router';
 import { splitCollection, parseCreatureBlock } from '../../ingest/plaintext';
+import type { FvttTargetVersion } from '../../foundryTarget';
 
 const SOURCE_PATH = resolve(
   process.cwd(),
   'tests/fixtures/plaintext/月蚀矿腐化生物数据.md',
 );
 
-function loadActor(effectProfile: 'core' | 'modded-v12') {
+function loadActor(effectProfile: 'core' | 'modded-v12' | 'modded-v14', fvttVersion: FvttTargetVersion = '12') {
   const text = readFileSync(SOURCE_PATH, 'utf-8');
   const target = splitCollection(text).find((block) => block.englishName === 'Slithering Bloodfin');
   if (!target) {
@@ -24,7 +26,7 @@ function loadActor(effectProfile: 'core' | 'modded-v12') {
   const parsed = parserFactory.parse(generated.markdown);
 
   return new ActorGenerator({
-    fvttVersion: '12',
+    fvttVersion,
     translationService: null,
     effectProfile,
   } as any).generateForRoute(parsed, route);
@@ -79,6 +81,26 @@ describe('ActorGenerator effect profiles', () => {
 
     expect(implicit[0]?.flags?.['midi-qol.OverTime']).toBeUndefined();
     expect(explicit[0]?.flags?.['midi-qol.OverTime']).toBe(
+      'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+    );
+  });
+
+  it('modded-v14 preserves source-derived midi-qol OverTime while core strips it', () => {
+    const effect = {
+      name: '流血 (Bleeding)',
+      flags: {
+        'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+      },
+    };
+    const coreActor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
+    const moddedV14Actor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
+
+    const applier = new EffectProfileApplier();
+    applier.apply(coreActor, 'core');
+    applier.apply(moddedV14Actor, 'modded-v14');
+
+    expect(coreActor.items[0].effects[0].flags).toBeUndefined();
+    expect(moddedV14Actor.items[0].effects[0].flags?.['midi-qol.OverTime']).toBe(
       'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
     );
   });

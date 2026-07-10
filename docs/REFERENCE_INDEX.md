@@ -74,8 +74,6 @@ Provenance hashes:
   [`references/dnd5e-5.3.3/repo/`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/repo)
 - Published manifest:
   [`system.json`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/system.json)
-- Source archive:
-  [`release-5.3.3.zip`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/release-5.3.3.zip)
 - Release note snapshots:
   [`release-5.3.3.html`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/release-5.3.3.html)
   and
@@ -85,7 +83,6 @@ This is the first locked dnd5e source line for Foundry VTT v14 support. Its mani
 
 Provenance hashes:
 
-- `dnd5e-5.3.3/release-5.3.3.zip`: `F7B154D080CEBFBB35301A692C48CAE1FBF59706175D1B8A71AF461D70926932`
 - `dnd5e-5.3.3/system.json`: `B49E9CA38EFACFB1E98761FB59D47B6F4B8709D92653A31DD6434E16677C7E0E`
 
 Recommended search entry points inside the dnd5e source tree:
@@ -95,6 +92,15 @@ Recommended search entry points inside the dnd5e source tree:
 - `module/`
 - `data/`
 - `templates/`
+
+## v14 Module References
+
+The first `modded-v14` profile uses externally checked official package/source references instead of local module mirrors:
+
+- MIDI-QOL `14.0.9`: Foundry package page and `https://gitlab.com/tposney/midi-qol/-/raw/v14/package/module.json`
+- DAE `14.0.12`: Foundry package page and `https://gitlab.com/tposney/dae/-/raw/v14/package/module.json`
+- Times Up: Foundry package page states no v14 version; do not require it for v14 output.
+- Item Macro: Foundry package page currently verifies `3.0.1` against Foundry 13, so it is not a required v14 dependency.
 
 ## Usage Order
 

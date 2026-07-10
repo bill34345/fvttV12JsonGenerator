@@ -268,7 +268,9 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
     rawJson: summary.rawJson,
     outputPath: typeof summary.outputPath === 'string' ? summary.outputPath : undefined,
     fvttVersion: normalizeFvttVersion(typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined),
-    effectProfile: summary.effectProfile === 'modded-v12' ? 'modded-v12' : 'core',
+    effectProfile: summary.effectProfile === 'modded-v12' || summary.effectProfile === 'modded-v14'
+      ? summary.effectProfile
+      : 'core',
     downloadUrl: job.files[0]?.downloadUrl ?? '',
     jobId: job.id,
   };
@@ -341,7 +343,7 @@ function normalizeFvttVersion(value: FvttTargetVersion | undefined): FvttTargetV
 
 function normalizeEffectProfile(value: EffectProfile | undefined, fvttVersion: FvttTargetVersion = '12'): EffectProfile {
   if (value === undefined) return 'core';
-  if (value !== 'core' && value !== 'modded-v12') {
+  if (value !== 'core' && value !== 'modded-v12' && value !== 'modded-v14') {
     throw userError('INVALID_EFFECT_PROFILE', `Unsupported effectProfile: ${value}`);
   }
   try {

@@ -83,6 +83,58 @@ describe('v14AcceptanceSuite', () => {
     }
   });
 
+  test('generates a modded-v14 report and preserves explicit midi-qol OverTime', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'v14-modded-acceptance-suite-'));
+    try {
+      const sourcePath = join(root, 'bleeding-guardian.md');
+      const outDir = join(root, 'out');
+      const reportPath = join(root, 'report.md');
+      writeFileSync(sourcePath, [
+        '---',
+        'layout: creature',
+        'name: "Bleeding Guardian"',
+        'size: Medium humanoid',
+        'alignment: neutral',
+        'challenge: "1 (200 XP)"',
+        'speed: "30 ft."',
+        'hit_points: "22 (4d8 + 4)"',
+        'armor_class: "13"',
+        '---',
+        '',
+        '### Actions',
+        '',
+        '- **Bleeding Bite.** Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage, and the target starts bleeding, taking `1d6` piercing damage at the start of each turn.',
+        '',
+      ].join('\n'));
+
+      const result = await runV14AcceptanceSuite({
+        samples: [{
+          id: 'bleeding-guardian',
+          label: 'Bleeding Guardian',
+          category: 'modded-v14 overtime',
+          sourcePath,
+        }],
+        outDir,
+        reportPath,
+        includeCrawlFixture: false,
+        effectProfile: 'modded-v14',
+      } as any);
+
+      expect(result.summary.failed).toBe(0);
+      const actor = JSON.parse(readFileSync(join(outDir, 'bleeding-guardian.v14.json'), 'utf-8'));
+      const overtimeFlags = actor.items.flatMap((item: any) =>
+        (item.effects ?? []).map((effect: any) => effect.flags?.['midi-qol.OverTime']).filter(Boolean),
+      );
+      expect(overtimeFlags).toContain('turn=start,damageRoll=1d6,damageType=piercing,label=Bleeding');
+      const report = readFileSync(reportPath, 'utf-8');
+      expect(report).toContain('Effect profile: `modded-v14`');
+      expect(report).toContain('MIDI-QOL `14.0.9`');
+      expect(report).toContain('Times Up: not used for v14');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test('flags v12-only actor shape in v14 schema spot checks', () => {
     const checks = runV14SchemaChecks({
       _stats: { coreVersion: '12.331', systemId: 'dnd5e', systemVersion: '4.3.9' },

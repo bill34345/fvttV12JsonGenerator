@@ -425,6 +425,7 @@ export function App() {
               <select value={effectProfile} onChange={(event) => setEffectProfile(event.target.value as EffectProfile)}>
                 <option value="core">core</option>
                 <option value="modded-v12">modded-v12</option>
+                <option value="modded-v14">modded-v14</option>
               </select>
             </label>
           </div>

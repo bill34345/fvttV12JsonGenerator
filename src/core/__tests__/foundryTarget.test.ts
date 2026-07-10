@@ -15,6 +15,13 @@ describe('foundryTarget', () => {
     expect(target.dnd5eVersion).toBe('5.3.3');
     expect(target.stats.systemVersion).toBe('5.3.3');
     expect(target.reference.dnd5eRepo).toContain('references/dnd5e-5.3.3/repo');
+    expect(target.effectProfiles).toEqual(['core', 'modded-v14']);
+    expect(target.modules).toEqual({
+      midiQol: '14.0.9',
+      dae: '14.0.12',
+      timesUp: null,
+      itemMacro: null,
+    });
   });
 
   it('rejects unsupported target versions explicitly', () => {
@@ -24,5 +31,11 @@ describe('foundryTarget', () => {
   it('rejects v12 module effect profile for v14', () => {
     expect(() => assertEffectProfileForTarget('14', 'modded-v12')).toThrow('not supported');
     expect(() => assertEffectProfileForTarget('14', 'core')).not.toThrow();
+    expect(() => assertEffectProfileForTarget('14', 'modded-v14')).not.toThrow();
+  });
+
+  it('rejects v14 module effect profile for v12 and v13', () => {
+    expect(() => assertEffectProfileForTarget('12', 'modded-v14')).toThrow('not supported');
+    expect(() => assertEffectProfileForTarget('13', 'modded-v14')).toThrow('not supported');
   });
 });

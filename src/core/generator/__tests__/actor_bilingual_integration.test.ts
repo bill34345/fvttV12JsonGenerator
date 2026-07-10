@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ParsedNPC } from '../../../config/mapping';
+import { EnglishBestiaryParser } from '../../parser/english';
 import { ActorGenerator } from '../actor';
 
 type TranslationServiceLike = {
@@ -115,7 +116,7 @@ describe('ActorGenerator english bilingual integration', () => {
 
     expect(actor.name).toBe('成年红龙Adult Red Dragon');
     expect(actor.prototypeToken.name).toBe('成年红龙Adult Red Dragon');
-    expect(actor.items[0].name).toBe('啮咬Bite');
+    expect(actor.items[0].name).toBe('Bite');
     expect(actor.items[0].system.description.value).toContain('近战武器攻击');
     expect(actor.items[0].system.description.value).toContain('穿刺伤害');
   });
@@ -166,6 +167,121 @@ describe('ActorGenerator english bilingual integration', () => {
     expect(reactionItem.system.activation.type).toBe('reaction');
   });
 
+  it('keeps english action item names source-faithful when only local glossary fallback is available', async () => {
+    const input: ParsedNPC = {
+      name: 'White Tusk Shaman',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      actions: [
+        'Multiattack. The White Tusk Shaman makes two blood-searing spear attacks.',
+        'War Cry (Recharge 4–6). Dorokor screams an orcish war phrase.',
+      ],
+    };
+
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(input, 'english');
+
+    expect(actor.items.map((item) => item.name)).toEqual(['Multiattack', 'War Cry']);
+  });
+
+  it('keeps recharge action names source-faithful when description contains later colons', async () => {
+    const input: ParsedNPC = {
+      name: 'Bonebreaker Dorokor',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      actions: [
+        'War Cry (Recharge 4–6). Dorokor screams an orcish war phrase, spurring her warriors on toward victory. Choose one of the following effects: Rally: All of Dorokor’s minions within 30 feet that can hear her gain 22 (4d10) temporary hit points.',
+      ],
+    };
+
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(input, 'english');
+
+    expect(actor.items.map((item) => item.name)).toEqual(['War Cry']);
+    expect(actor.items[0].system.description.value).toContain('Choose one of the following effects');
+  });
+
+  it('keeps english passive feature names source-faithful when biography uses colon subtitles', async () => {
+    const input: ParsedNPC = {
+      name: 'White Tusk Shaman',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {
+        biography: [
+          'Minion: Savage Horde. After moving at least 20 feet in a straight line toward a creature, the next attack scores a critical hit on 18-20.',
+          'War Cry (Recharge 4-6). Dorokor screams an orcish war phrase.',
+        ].join('\n'),
+      },
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+    };
+
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(input, 'english');
+
+    expect(actor.items.map((item) => item.name)).toEqual(['Minion: Savage Horde', 'War Cry']);
+  });
+
+  it('does not turn unmarked title-case biography sentences into feature items', async () => {
+    const input: ParsedNPC = {
+      name: 'Ancient Flame Dragon',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {
+        biography: 'Ancient Flame Dragon. This sentence is narrative lore, not a trait entry.',
+      },
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+    };
+
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(input, 'english');
+
+    expect(actor.items.map((item) => item.name)).toEqual([]);
+    expect(actor.system.details.biography.value).toContain('Ancient Flame Dragon');
+  });
+
+  it('keeps plain english trait-section entries as feature items without extracting narrative lore', async () => {
+    const source = [
+      '---',
+      'layout: creature',
+      'name: Trait Fixture',
+      '---',
+      'Ancient Flame Dragon. This sentence is narrative lore, not a trait entry.',
+      '',
+      '### Traits',
+      '***Magic Resistance.*** The creature has advantage on saving throws against spells and other magical effects.',
+      '',
+      '### Actions',
+      'Multiattack. The creature makes two attacks.',
+    ].join('\n');
+
+    const parser = new EnglishBestiaryParser();
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(parser.parse(source), 'english');
+
+    expect(actor.items.map((item) => item.name)).toEqual(['Magic Resistance', 'Multiattack']);
+    expect(actor.system.details.biography.value).toContain('Ancient Flame Dragon');
+  });
+
   it('keeps english spellcasting as description feat instead of spell items', async () => {
     const generator = new ActorGenerator({ translationService: null });
     const input: ParsedNPC = {
@@ -190,7 +306,7 @@ describe('ActorGenerator english bilingual integration', () => {
 
     expect(spellItems).toHaveLength(0);
     expect(spellcastingFeat).toBeDefined();
-    expect(spellcastingFeat.name).toBe('施法Spellcasting');
+    expect(spellcastingFeat.name).toBe('Spellcasting');
     expect(spellcastingFeat.system.description.value).toContain('戏法Cantrips');
     expect(spellcastingFeat.system.description.value).toContain('minor illusion');
   });

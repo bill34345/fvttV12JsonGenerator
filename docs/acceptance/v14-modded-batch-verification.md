@@ -1,11 +1,11 @@
-# Foundry v14 Core Batch Verification
+# Foundry v14 Modded Profile Batch Verification
 
-Generated at: 2026-07-10T00:08:31.986Z
+Generated at: 2026-07-10T00:08:39.772Z
 
 ## Summary
 
-- Output dir: `I:/OpenCode/fvttV12JsonGenerator/obsidian/dnd数据转fvttjson/output/v14-acceptance`
-- Effect profile: `core`
+- Output dir: `I:/OpenCode/fvttV12JsonGenerator/obsidian/dnd数据转fvttjson/output/v14-modded-acceptance`
+- Effect profile: `modded-v14`
 - Samples: 6
 - Passed schema checks: 6
 - Failed samples: 0
@@ -14,7 +14,7 @@ Generated at: 2026-07-10T00:08:31.986Z
 
 ## Module Compatibility
 
-- Module automation is not emitted for the `core` profile.
+- MIDI-QOL `14.0.9` and DAE `14.0.12` are the locked v14 module references for generated automation.
 - Times Up: not used for v14; v14 duration handling is core/DAE-based.
 - Item Macro: not required for v14 acceptance; no v14-verified dependency is assumed.
 
@@ -22,19 +22,19 @@ Generated at: 2026-07-10T00:08:31.986Z
 
 | Sample | Category | Output | Schema | Verification warnings |
 | --- | --- | --- | --- | --- |
-| Slithering Bloodfin | complex actions and effects | `obsidian/dnd数据转fvttjson/output/v14-acceptance/slithering-bloodfin.v14.json` | 8/8 | 0 |
-| Chuul Nullifier | save activity and conditions | `obsidian/dnd数据转fvttjson/output/v14-acceptance/chuul-nullifier.v14.json` | 8/8 | 0 |
-| Bonebreaker Dorokor | multiattack, recharge, and reactions | `obsidian/dnd数据转fvttjson/output/v14-acceptance/bonebreaker-dorokor.v14.json` | 8/8 | 0 |
-| White Tusk Shaman | english route and innate utility text | `obsidian/dnd数据转fvttjson/output/v14-acceptance/white-tusk-shaman.v14.json` | 8/8 | 0 |
-| Bleeding Guardian | explicit bleeding overtime module fixture | `obsidian/dnd数据转fvttjson/output/v14-acceptance/v14-modded-bleeding-guardian.v14.json` | 8/8 | 0 |
-| GoddessFantasy Yithian Fixture | crawler fixture chain; print pages requested=1 | `obsidian/dnd数据转fvttjson/output/v14-acceptance/goddessfantasy-yithian.v14.json` | 8/8 | 0 |
+| Slithering Bloodfin | complex actions and effects | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/slithering-bloodfin.v14.json` | 8/8 | 0 |
+| Chuul Nullifier | save activity and conditions | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/chuul-nullifier.v14.json` | 8/8 | 0 |
+| Bonebreaker Dorokor | multiattack, recharge, and reactions | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/bonebreaker-dorokor.v14.json` | 8/8 | 0 |
+| White Tusk Shaman | english route and innate utility text | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/white-tusk-shaman.v14.json` | 8/8 | 0 |
+| Bleeding Guardian | explicit bleeding overtime module fixture | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/v14-modded-bleeding-guardian.v14.json` | 8/8 | 0 |
+| GoddessFantasy Yithian Fixture | crawler fixture chain; print pages requested=1 | `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/goddessfantasy-yithian.v14.json` | 8/8 | 0 |
 
 ## Sample Details
 
 ### Slithering Bloodfin
 
 - Source: `obsidian/dnd数据转fvttjson/input/slithering-bloodfin.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/slithering-bloodfin.v14.json`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/slithering-bloodfin.v14.json`
 - Actor/item name: 滑行血鳍 (Slithering Bloodfin)
 - Item count: 9
 - HP: `{"value":142,"max":142,"temp":null,"tempmax":null,"formula":"15d10 + 60"}`
@@ -57,7 +57,7 @@ Generated at: 2026-07-10T00:08:31.986Z
 ### Chuul Nullifier
 
 - Source: `obsidian/dnd数据转fvttjson/input/chuul-nullifier.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/chuul-nullifier.v14.json`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/chuul-nullifier.v14.json`
 - Actor/item name: 甲伏怪无效者 (Chuul Nullifier)
 - Item count: 6
 - HP: `{"value":127,"max":127,"temp":null,"tempmax":null,"formula":"15d10 + 45"}`
@@ -80,7 +80,7 @@ Generated at: 2026-07-10T00:08:31.986Z
 ### Bonebreaker Dorokor
 
 - Source: `obsidian/dnd数据转fvttjson/input/bonebreaker-dorokor.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/bonebreaker-dorokor.v14.json`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/bonebreaker-dorokor.v14.json`
 - Actor/item name: Bonebreaker Dorokor
 - Item count: 9
 - HP: `{"value":82,"max":82,"temp":null,"tempmax":null,"formula":"11d8 + 33"}`
@@ -103,7 +103,7 @@ Generated at: 2026-07-10T00:08:31.986Z
 ### White Tusk Shaman
 
 - Source: `obsidian/dnd数据转fvttjson/input/white-tusk-shaman.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/white-tusk-shaman.v14.json`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/white-tusk-shaman.v14.json`
 - Actor/item name: White Tusk Shaman
 - Item count: 5
 - HP: `{"value":52,"max":52,"temp":null,"tempmax":null,"formula":"8d8 + 16"}`
@@ -126,7 +126,7 @@ Generated at: 2026-07-10T00:08:31.986Z
 ### Bleeding Guardian
 
 - Source: `obsidian/dnd数据转fvttjson/input/v14-modded-bleeding-guardian.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/v14-modded-bleeding-guardian.v14.json`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/v14-modded-bleeding-guardian.v14.json`
 - Actor/item name: Bleeding Guardian
 - Item count: 1
 - HP: `{"value":22,"max":22,"temp":null,"tempmax":null,"formula":"4d8 + 4"}`
@@ -148,8 +148,8 @@ Generated at: 2026-07-10T00:08:31.986Z
 
 ### GoddessFantasy Yithian Fixture
 
-- Source: `obsidian/dnd数据转fvttjson/output/v14-acceptance/goddessfantasy-yithian.md`
-- Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/goddessfantasy-yithian.v14.json`
+- Source: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/goddessfantasy-yithian.md`
+- Output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance/goddessfantasy-yithian.v14.json`
 - Actor/item name: 伊斯人 (Yithian)
 - Item count: 5
 - HP: `{"value":180,"max":180,"temp":null,"tempmax":null,"formula":"19d10+76"}`

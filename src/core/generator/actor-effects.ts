@@ -104,7 +104,7 @@ function extractBleedingOverTimeSpec(text: string): OverTimeSpec | null {
     return null;
   }
 
-  const clause = text.slice(Math.max(0, bleedingIndex - 80), bleedingIndex + 180);
+  const clause = text.slice(bleedingIndex, bleedingIndex + 180);
   const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
   const damageType =
     clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()

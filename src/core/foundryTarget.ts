@@ -11,6 +11,12 @@ export interface FoundryTarget {
   reference: {
     dnd5eRepo: string;
   };
+  modules?: {
+    midiQol: string | null;
+    dae: string | null;
+    timesUp: string | null;
+    itemMacro: string | null;
+  };
   effectProfiles: readonly string[];
 }
 
@@ -52,7 +58,13 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
     reference: {
       dnd5eRepo: 'references/dnd5e-5.3.3/repo',
     },
-    effectProfiles: ['core'],
+    modules: {
+      midiQol: '14.0.9',
+      dae: '14.0.12',
+      timesUp: null,
+      itemMacro: null,
+    },
+    effectProfiles: ['core', 'modded-v14'],
   },
 };
 

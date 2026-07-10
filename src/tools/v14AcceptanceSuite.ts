@@ -10,6 +10,7 @@ import {
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import type { EffectProfile } from '../core/generator/effectProfileApplier';
 import { convertMarkdownPathToOutput } from '../core/workflow/singleFileConversion';
 import { buildActorVerificationSummary, type ActorVerificationSummary } from './actorVerification';
 import { runGoddessFantasyPipeline } from './goddessFantasyPipeline';
@@ -47,6 +48,7 @@ export interface V14AcceptanceSuiteResult {
   generatedAt: string;
   outDir: string;
   reportPath: string;
+  effectProfile: EffectProfile;
   samples: V14AcceptanceSampleResult[];
   summary: {
     total: number;
@@ -61,6 +63,7 @@ export interface V14AcceptanceSuiteOptions {
   outDir?: string;
   reportPath?: string;
   includeCrawlFixture?: boolean;
+  effectProfile?: EffectProfile;
 }
 
 const DEFAULT_OUT_DIR = join('obsidian', 'dnd数据转fvttjson', 'output', 'v14-acceptance');
@@ -91,6 +94,12 @@ export const DEFAULT_V14_ACCEPTANCE_SAMPLES: V14AcceptanceSample[] = [
     category: 'english route and innate utility text',
     sourcePath: join('obsidian', 'dnd数据转fvttjson', 'input', 'white-tusk-shaman.md'),
   },
+  {
+    id: 'v14-modded-bleeding-guardian',
+    label: 'Bleeding Guardian',
+    category: 'explicit bleeding overtime module fixture',
+    sourcePath: join('obsidian', 'dnd数据转fvttjson', 'input', 'v14-modded-bleeding-guardian.md'),
+  },
 ];
 
 export async function runV14AcceptanceSuite(
@@ -98,22 +107,24 @@ export async function runV14AcceptanceSuite(
 ): Promise<V14AcceptanceSuiteResult> {
   const outDir = resolvePath(options.outDir ?? DEFAULT_OUT_DIR);
   const reportPath = resolvePath(options.reportPath ?? DEFAULT_REPORT_PATH);
+  const effectProfile = options.effectProfile ?? 'core';
   mkdirSync(outDir, { recursive: true });
 
   const samples = options.samples ?? DEFAULT_V14_ACCEPTANCE_SAMPLES;
   const results: V14AcceptanceSampleResult[] = [];
   for (const sample of samples) {
-    results.push(await runMarkdownSample(sample, outDir));
+    results.push(await runMarkdownSample(sample, outDir, effectProfile));
   }
 
   if (options.includeCrawlFixture ?? true) {
-    results.push(await runGoddessFantasyFixtureSample(outDir));
+    results.push(await runGoddessFantasyFixtureSample(outDir, effectProfile));
   }
 
   const result = summarizeSuite({
     generatedAt: new Date().toISOString(),
     outDir,
     reportPath,
+    effectProfile,
     samples: results,
   });
 
@@ -123,19 +134,31 @@ export async function runV14AcceptanceSuite(
 }
 
 export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): string {
+  const title = result.effectProfile === 'core'
+    ? 'Foundry v14 Core Batch Verification'
+    : 'Foundry v14 Modded Profile Batch Verification';
   const lines: string[] = [
-    '# Foundry v14 Core Batch Verification',
+    `# ${title}`,
     '',
     `Generated at: ${result.generatedAt}`,
     '',
     '## Summary',
     '',
     `- Output dir: \`${normalizePathForMarkdown(result.outDir)}\``,
+    `- Effect profile: \`${result.effectProfile}\``,
     `- Samples: ${result.summary.total}`,
     `- Passed schema checks: ${result.summary.passed}`,
     `- Failed samples: ${result.summary.failed}`,
     `- Verification warnings: ${result.summary.warnings}`,
     `- Foundry runtime import: not run; no local Foundry v14 runtime is available.`,
+    '',
+    '## Module Compatibility',
+    '',
+    result.effectProfile === 'modded-v14'
+      ? '- MIDI-QOL `14.0.9` and DAE `14.0.12` are the locked v14 module references for generated automation.'
+      : '- Module automation is not emitted for the `core` profile.',
+    '- Times Up: not used for v14; v14 duration handling is core/DAE-based.',
+    '- Item Macro: not required for v14 acceptance; no v14-verified dependency is assumed.',
     '',
     '## Mechanical Checks',
     '',
@@ -203,6 +226,7 @@ export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): stri
 async function runMarkdownSample(
   sample: V14AcceptanceSample,
   outDir: string,
+  effectProfile: EffectProfile,
 ): Promise<V14AcceptanceSampleResult> {
   const sourcePath = resolvePath(sample.sourcePath);
   const outputPath = join(outDir, `${sample.id}.v14.json`);
@@ -211,7 +235,7 @@ async function runMarkdownSample(
       sourcePath,
       outputPath,
       fvttVersion: '14',
-      effectProfile: 'core',
+      effectProfile,
       translationService: null,
     });
     const actorSummary = conversion.kind === 'actor'
@@ -236,7 +260,7 @@ async function runMarkdownSample(
   }
 }
 
-async function runGoddessFantasyFixtureSample(outDir: string): Promise<V14AcceptanceSampleResult> {
+async function runGoddessFantasyFixtureSample(outDir: string, effectProfile: EffectProfile): Promise<V14AcceptanceSampleResult> {
   const root = mkdtempSync(join(tmpdir(), 'fvtt-v14-acceptance-gf-'));
   const crawlDir = join(root, 'crawl');
   const vaultPath = join(root, 'vault');
@@ -285,6 +309,7 @@ async function runGoddessFantasyFixtureSample(outDir: string): Promise<V14Accept
       plaintextForce: true,
       failOnWarning: false,
       fvttVersion: '14',
+      effectProfile,
     });
 
     const generatedJson = findSingleFile(result.actor?.sync.outputDir, '.json');
@@ -462,6 +487,8 @@ function parseCliArgs(argv: string[]): V14AcceptanceSuiteOptions {
       options.reportPath = requireValue(argv, ++index, arg);
     } else if (arg === '--no-crawl-fixture') {
       options.includeCrawlFixture = false;
+    } else if (arg === '--effect-profile') {
+      options.effectProfile = parseEffectProfileArg(requireValue(argv, ++index, arg));
     } else if (arg === '--sample') {
       const sourcePath = requireValue(argv, ++index, arg);
       const id = basename(sourcePath).replace(/\.md$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '');
@@ -485,6 +512,13 @@ function parseCliArgs(argv: string[]): V14AcceptanceSuiteOptions {
   return options;
 }
 
+function parseEffectProfileArg(value: string): EffectProfile {
+  if (value === 'core' || value === 'modded-v14') {
+    return value;
+  }
+  throw new Error(`Unsupported --effect-profile for v14 acceptance: ${value}. Use core or modded-v14.`);
+}
+
 function requireValue(argv: string[], index: number, name: string): string {
   const value = argv[index];
   if (!value) throw new Error(`Missing value for ${name}`);
@@ -498,6 +532,7 @@ function printHelp(): void {
     'Options:',
     '  --out-dir <path>       Directory for generated v14 JSON artifacts',
     '  --report <path>        Markdown report path',
+    '  --effect-profile <p>   v14 effect profile: core or modded-v14',
     '  --sample <path>        Custom markdown sample; repeatable',
     '  --no-crawl-fixture     Skip local GoddessFantasy fixture pipeline sample',
     '  -h, --help             Show help',

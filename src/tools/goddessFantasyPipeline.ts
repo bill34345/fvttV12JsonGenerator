@@ -216,8 +216,8 @@ export function resolveActorIngestSourcePath(plaintext: RecordsToPlaintextResult
 
 export function parsePipelineEffectProfile(value: unknown): EffectProfile {
   const profile = String(value ?? 'modded-v12');
-  if (profile !== 'core' && profile !== 'modded-v12') {
-    throw new Error(`Unsupported --effect-profile: ${profile}. Use core or modded-v12.`);
+  if (profile !== 'core' && profile !== 'modded-v12' && profile !== 'modded-v14') {
+    throw new Error(`Unsupported --effect-profile: ${profile}. Use core, modded-v12, or modded-v14.`);
   }
   return profile;
 }

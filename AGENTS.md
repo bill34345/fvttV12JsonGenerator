@@ -63,10 +63,15 @@ Foundry v14 is also a supported explicit target when `--fvtt-version 14` or the 
 
 - Foundry VTT: v14.361
 - dnd5e system: 5.3.3
-- Effect profile: core
+- Effect profiles: core, modded-v14
+- MIDI-QOL: v14.0.9 (modded-v14)
+- DAE: v14.0.12 (modded-v14)
+- Times Up: not used for v14; v14 duration handling is core/DAE-based
+- Item Macro: not a required v14 dependency unless separately verified
 - Reference roots: `references/dnd5e-5.3.3/repo`, `references/foundry-v14-api-core`, and `references/foundry-v14-api-notes`
 
 Do not use `modded-v12` semantics as evidence for v14 correctness unless v14-compatible module versions have been separately verified.
+Do not use Times Up or Item Macro behavior as evidence for `modded-v14` correctness unless a v14-compatible version has been separately verified.
 
 When implementing or reviewing behavior that depends on Foundry, dnd5e, MIDI-QOL, DAE, Times Up, Item Macro, or any other module API:
 

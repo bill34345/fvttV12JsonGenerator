@@ -974,6 +974,7 @@ export function extractInlineFeatureLinesFromBiography(
 
   const markdownFeaturePattern = /^\*{2,3}\s*([^*]+?)\s*\*{2,3}\s*[\u3002\uFF1A.:\s]+\s*(.+)$/;
   const plainFeaturePattern = /^([^\u3002\uFF1A:.]+(?:\s*\([^)]*\))?)\s*[\u3002\uFF1A:]\s*(.+)$/;
+  const englishFeaturePattern = /^([A-Z][A-Za-z0-9'’ -]*(?::\s*[A-Z][A-Za-z0-9'’ -]+)?(?:\s*\([^)]*\))?)\.\s+(.+)$/;
 
   for (const line of lines) {
     const normalized = line.replace(/^[-*+]\s*/, '').trim();
@@ -981,14 +982,27 @@ export function extractInlineFeatureLinesFromBiography(
     const markdownMatch = normalized.match(markdownFeaturePattern);
     if (markdownMatch?.[1] && markdownMatch[2]) {
       flushCurrentFeature();
-      currentFeature = `${markdownMatch[1].trim().replace(/[.\s]+$/g, '')}: ${markdownMatch[2].trim()}`;
+      const title = markdownMatch[1].trim().replace(/[.\s]+$/g, '');
+      currentFeature = route === 'english'
+        ? `${title}. ${markdownMatch[2].trim()}`
+        : `${title}: ${markdownMatch[2].trim()}`;
+      continue;
+    }
+
+    const englishMatch = route === 'english' ? normalized.match(englishFeaturePattern) : null;
+    if (englishMatch?.[1] && englishMatch[2] && isLikelyEnglishFeatureTitle(englishMatch[1]) && hasExplicitEnglishFeatureMarker(englishMatch[1])) {
+      flushCurrentFeature();
+      currentFeature = `${englishMatch[1].trim()}. ${englishMatch[2].trim()}`;
       continue;
     }
 
     const plainMatch = normalized.match(plainFeaturePattern);
     if (plainMatch?.[1] && plainMatch[2] && /\([A-Za-z][^)]*\)/.test(plainMatch[1])) {
       flushCurrentFeature();
-      currentFeature = `${plainMatch[1].trim().replace(/[.\s]+$/g, '')}: ${plainMatch[2].trim()}`;
+      const title = plainMatch[1].trim().replace(/[.\s]+$/g, '');
+      currentFeature = route === 'english'
+        ? `${title}. ${plainMatch[2].trim()}`
+        : `${title}: ${plainMatch[2].trim()}`;
       continue;
     }
 
@@ -1009,6 +1023,24 @@ export function extractInlineFeatureLinesFromBiography(
         : biography.trim(),
     features,
   };
+}
+
+function isLikelyEnglishFeatureTitle(title: string): boolean {
+  const normalized = title.replace(/\([^)]*\)/g, '').trim();
+  if (!normalized || normalized.length > 80) {
+    return false;
+  }
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 8) {
+    return false;
+  }
+
+  return words.every((word) => /^[A-Z0-9][A-Za-z0-9'’:-]*$/.test(word));
+}
+
+function hasExplicitEnglishFeatureMarker(title: string): boolean {
+  return title.includes(':') || /\([^)]*\)/.test(title);
 }
 
 /**

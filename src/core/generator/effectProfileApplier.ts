@@ -1,6 +1,6 @@
 import { statusIconPath } from './actor-effects';
 
-export type EffectProfile = 'core' | 'modded-v12';
+export type EffectProfile = 'core' | 'modded-v12' | 'modded-v14';
 
 export class EffectProfileApplier {
   public apply(actor: any, effectProfile: EffectProfile): void {
@@ -21,6 +21,8 @@ export class EffectProfileApplier {
 
       if (effectProfile === 'modded-v12') {
         this.applyModdedV12(item);
+      } else if (effectProfile === 'modded-v14') {
+        this.applyModdedV14(item);
       } else {
         this.stripModuleAutomation(item);
       }
@@ -112,6 +114,10 @@ export class EffectProfileApplier {
     if (/(?:Bleed|Bleeding|流血)/i.test(text)) {
       return;
     }
+  }
+
+  private applyModdedV14(item: any): void {
+    item.effects = (item.effects ?? []).filter((effect: any) => !/(?:Swallowed|吞咽中)/i.test(String(effect?.name ?? '')));
   }
 
   private stripModuleAutomation(item: any): void {

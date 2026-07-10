@@ -137,7 +137,7 @@ export class EnglishActionParser {
     let recharge: ActionData['recharge'] | undefined;
     let legendaryCost: number | undefined;
 
-    const rechargeMatch = name.match(/[\[(]\s*Recharge\s*(\d+)(?:\s*-\s*\d+)?\s*[\])]/i);
+    const rechargeMatch = name.match(/[\[(]\s*Recharge\s*(\d+)(?:\s*[-\u2010-\u2015]\s*\d+)?\s*[\])]/i);
     if (rechargeMatch?.[1]) {
       recharge = {
         value: Number.parseInt(rechargeMatch[1], 10),

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   parsePipelineFvttVersion,
+  parsePipelineEffectProfile,
   pipelineExitCode,
   runGoddessFantasyPipeline,
   type GoddessFantasyPipelineDependencies,
@@ -253,6 +254,7 @@ describe('GoddessFantasy pipeline', () => {
       recordsToPlaintext: () => plaintextResult({}),
       ingestActors: async (options) => {
         expect(options.fvttVersion).toBe('14');
+        expect(options.effectProfile).toBe('core');
         return actorResult();
       },
     };
@@ -265,8 +267,32 @@ describe('GoddessFantasy pipeline', () => {
     expect(result.stoppedAfter).toBe('complete');
   });
 
+  test('accepts explicit modded-v14 profile for Foundry v14 actor ingest', async () => {
+    const deps: GoddessFantasyPipelineDependencies = {
+      crawl: async () => crawlResult({}),
+      recordsToPlaintext: () => plaintextResult({}),
+      ingestActors: async (options) => {
+        expect(options.fvttVersion).toBe('14');
+        expect(options.effectProfile).toBe('modded-v14');
+        return actorResult({ effectProfile: 'modded-v14' });
+      },
+    };
+
+    const result = await runGoddessFantasyPipeline({
+      boardUrl: 'https://example.test/board',
+      fvttVersion: '14',
+      effectProfile: 'modded-v14' as any,
+    }, deps);
+
+    expect(result.stoppedAfter).toBe('complete');
+  });
+
   test('parses Foundry v14 as a supported pipeline target', () => {
     expect(parsePipelineFvttVersion('14')).toBe('14');
+  });
+
+  test('parses modded-v14 as a supported pipeline effect profile', () => {
+    expect(parsePipelineEffectProfile('modded-v14')).toBe('modded-v14');
   });
 });
 

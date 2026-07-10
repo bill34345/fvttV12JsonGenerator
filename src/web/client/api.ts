@@ -1,4 +1,4 @@
-export type EffectProfile = 'core' | 'modded-v12';
+export type EffectProfile = 'core' | 'modded-v12' | 'modded-v14';
 export type FvttVersion = '12' | '13' | '14';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
 

@@ -100,7 +100,7 @@ program
   .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', 'obsidian/dnd数据转fvttjson/input')
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
   .option('--dry-run', 'Preview outputs without writing files')
-  .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12')
+  .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
   .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')
@@ -118,8 +118,8 @@ program
       const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
       const effectProfileOption = options.effectProfile as string | undefined;
       const effectProfile = (effectProfileOption ?? 'core') as EffectProfile;
-      if (effectProfile !== 'core' && effectProfile !== 'modded-v12') {
-        throw new Error(`Unsupported --effect-profile: ${effectProfile}. Use core or modded-v12.`);
+      if (effectProfile !== 'core' && effectProfile !== 'modded-v12' && effectProfile !== 'modded-v14') {
+        throw new Error(`Unsupported --effect-profile: ${effectProfile}. Use core, modded-v12, or modded-v14.`);
       }
       assertEffectProfileForTarget(fvttVersion, effectProfile);
       const imageAssets = buildImageAssetOptionsFromCli(options);

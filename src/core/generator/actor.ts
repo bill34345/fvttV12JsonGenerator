@@ -2566,7 +2566,7 @@ export class ActorGenerator {
     if (bleedingIndex === -1) {
       return null;
     }
-    const clause = text.slice(Math.max(0, bleedingIndex - 60), bleedingIndex + 180);
+    const clause = text.slice(bleedingIndex, bleedingIndex + 180);
     const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
     const explicitType =
       clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
@@ -3108,6 +3108,10 @@ export class ActorGenerator {
   }
 
   private normalizeActionHeaderDelimiter(line: string): string {
+    if (!/[\u4e00-\u9fff]/.test(line)) {
+      return line;
+    }
+
     const match = line.match(/^(.+?[\)])\s*[。.:：]\s*(\S.*)$/);
     if (!match?.[1] || !match[2]) {
       return line;
@@ -3235,6 +3239,10 @@ export class ActorGenerator {
     }
 
     if (!this.translationService) {
+      if (namespace === 'item.name' && this.route === 'english') {
+        return source;
+      }
+
       const localTranslation = this.translateLocalName(source);
       if (!localTranslation) {
         return source;

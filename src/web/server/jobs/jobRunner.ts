@@ -421,7 +421,9 @@ function optionEffectProfile(
   options: Record<string, unknown> | undefined,
   fvttVersion: FvttTargetVersion = '12',
 ): EffectProfile {
-  const profile = options?.effectProfile === 'modded-v12' ? 'modded-v12' : 'core';
+  const profile = options?.effectProfile === 'modded-v12' || options?.effectProfile === 'modded-v14'
+    ? options.effectProfile
+    : 'core';
   assertEffectProfileForTarget(fvttVersion, profile);
   return profile;
 }

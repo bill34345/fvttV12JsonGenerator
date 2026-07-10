@@ -183,7 +183,7 @@ program
   .option('--skip-auth-probe', 'Skip the board auth probe before crawling')
   .option('--no-plaintext-force', 'Do not overwrite plaintext outputs')
   .option('--allow-warnings', 'Continue/exit successfully even when plaintext or image warnings are emitted')
-  .option('--effect-profile <profile>', 'Effect automation profile: core or modded-v12', 'modded-v12')
+  .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14', 'modded-v12')
   .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')

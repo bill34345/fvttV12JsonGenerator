@@ -30,6 +30,15 @@ When generating for `--fvtt-version 14`, also check:
 - Spell fallback items use `method` and `prepared`, not legacy `preparation.mode`.
 - Active Effect changes target schema-backed v14 fields, for example AC flat/formula fields rather than legacy AC bonus fields.
 
+When generating for `--fvtt-version 14 --effect-profile modded-v14`, also check:
+
+- The locked module evidence is MIDI-QOL `14.0.9` and DAE `14.0.12`.
+- Times Up fields or assumptions are not required for v14 output.
+- Item Macro is not treated as a required dependency unless a v14-verified version is separately documented.
+- `flags.midi-qol.OverTime` is emitted only when the source text explicitly provides a repeated-effect formula and damage type.
+- The OverTime formula comes from the repeated-effect clause, not from an earlier hit or attack damage clause.
+- Any macro-style automation remains guarded and falls back to GM manual handling when MIDI-QOL workflow context is missing.
+
 ## v14 Batch Acceptance
 
 For project-internal v14 core acceptance without a local Foundry runtime, run:
@@ -38,9 +47,16 @@ For project-internal v14 core acceptance without a local Foundry runtime, run:
 bun run src/tools/v14AcceptanceSuite.ts --out-dir "obsidian/dnd数据转fvttjson/output/v14-acceptance" --report "docs/acceptance/v14-core-batch-verification.md"
 ```
 
+For project-internal v14 module-profile acceptance, run:
+
+```powershell
+bun run src/tools/v14AcceptanceSuite.ts --effect-profile modded-v14 --out-dir "obsidian/dnd数据转fvttjson/output/v14-modded-acceptance" --report "docs/acceptance/v14-modded-batch-verification.md"
+```
+
 The batch suite must:
 
 - Generate every JSON artifact through the project conversion workflow with `--fvtt-version 14` and `core` semantics.
+- For the modded suite, generate every JSON artifact through the same workflow with `--fvtt-version 14 --effect-profile modded-v14`.
 - Disable optional translation services so acceptance output is source-faithful and not affected by external model behavior.
 - Include a local GoddessFantasy fixture pipeline sample that covers crawl -> records -> plaintext -> actor JSON.
 - Record actorVerification warnings in the report instead of treating schema success as semantic success.
