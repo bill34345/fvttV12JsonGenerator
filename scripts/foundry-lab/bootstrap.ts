@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { assertInsideLabRoot, type FoundryLabConfig } from './config';
 import { runCommand } from './process';
@@ -11,6 +11,8 @@ export interface BootstrapPlan {
   nodeChecksumUrl: string;
   nodeArchivePath: string;
   nodeChecksumPath: string;
+  nodeStagingRoot: string;
+  foundryStagingRoot: string;
   directories: string[];
 }
 
@@ -31,7 +33,15 @@ export interface BootstrapReport {
   errors: string[];
 }
 
+export interface BootstrapDependencies {
+  runCommand: typeof runCommand;
+  download: (url: string, destination: string) => Promise<void>;
+  extract: (source: string, destination: string) => Promise<void>;
+}
+
 export function buildBootstrapPlan(config: FoundryLabConfig): BootstrapPlan {
+  const nodeStagingRoot = resolve(dirname(config.nodeRoot), '.staging-node-v24.17.0-win-x64');
+  const foundryStagingRoot = resolve(dirname(config.appRoot), '.staging-foundry-14.364');
   const directories = [
     config.appRoot,
     dirname(config.nodeRoot),
@@ -40,6 +50,8 @@ export function buildBootstrapPlan(config: FoundryLabConfig): BootstrapPlan {
     config.evidenceRoot,
     config.profiles.coreTest.dataPath,
     config.profiles.serverMirror.dataPath,
+    nodeStagingRoot,
+    foundryStagingRoot,
   ];
   directories.forEach((path) => assertInsideLabRoot(config, path));
   const plan = {
@@ -48,6 +60,8 @@ export function buildBootstrapPlan(config: FoundryLabConfig): BootstrapPlan {
     nodeChecksumUrl: 'https://nodejs.org/dist/v24.17.0/SHASUMS256.txt',
     nodeArchivePath: resolve(config.cacheRoot, 'node-v24.17.0-win-x64.zip'),
     nodeChecksumPath: resolve(config.cacheRoot, 'node-v24.17.0-SHASUMS256.txt'),
+    nodeStagingRoot,
+    foundryStagingRoot,
     directories,
   };
   assertInsideLabRoot(config, plan.nodeArchivePath);
@@ -91,6 +105,7 @@ export async function verifyNodeArchiveChecksum(
 export async function bootstrapLab(
   config: FoundryLabConfig,
   options: BootstrapOptions = { apply: false },
+  dependencies: Partial<BootstrapDependencies> = {},
 ): Promise<BootstrapReport> {
   const plan = buildBootstrapPlan(config);
   const actions: BootstrapReport['actions'] = [
@@ -99,10 +114,14 @@ export async function bootstrapLab(
     { kind: 'download', target: plan.nodeArchivePath, status: 'planned' },
     { kind: 'download', target: plan.nodeChecksumPath, status: 'planned' },
     { kind: 'verify', target: plan.nodeArchivePath, status: 'planned' },
-    { kind: 'extract', target: dirname(config.nodeRoot), status: 'planned' },
-    { kind: 'extract', target: config.appRoot, status: 'planned' },
-    { kind: 'verify', target: resolve(config.nodeRoot, 'node.exe'), status: 'planned' },
-    { kind: 'verify', target: resolve(config.appRoot, 'package.json'), status: 'planned' },
+    { kind: 'extract', target: plan.nodeStagingRoot, status: 'planned' },
+    { kind: 'extract', target: plan.foundryStagingRoot, status: 'planned' },
+    {
+      kind: 'verify',
+      target: resolve(plan.nodeStagingRoot, basename(config.nodeRoot), 'node.exe'),
+      status: 'planned',
+    },
+    { kind: 'verify', target: resolve(plan.foundryStagingRoot, 'package.json'), status: 'planned' },
   ];
 
   if (!options.apply) {
@@ -126,6 +145,7 @@ export async function bootstrapLab(
   let nodeVersion: string | null = null;
   const reportPath = resolve(config.inventoryRoot, 'bootstrap-report.json');
   assertInsideLabRoot(config, reportPath);
+  const executeCommand = dependencies.runCommand ?? runCommand;
 
   const makeReport = (ok: boolean, errors: string[]): BootstrapReport => ({
     ok,
@@ -136,9 +156,15 @@ export async function bootstrapLab(
     errors,
   });
   const runPowerShell = async (script: string, cwd: string) => {
-    const result = await runCommand(
+    const result = await executeCommand(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script],
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `$ErrorActionPreference = 'Stop'; ${script}`,
+      ],
       { cwd, timeoutMs: 10 * 60_000 },
     );
     if (result.exitCode !== 0) throw new Error(result.stderr.trim() || `PowerShell failed: ${result.commandLine}`);
@@ -152,6 +178,51 @@ export async function bootstrapLab(
       `Expand-Archive -LiteralPath '${literalSource}' -DestinationPath '${literalDestination}' -Force`,
       config.repoRoot,
     );
+  };
+  const download = dependencies.download ?? (async (url: string, destination: string) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Download failed (${response.status}) for ${url}`);
+    await writeFile(destination, Buffer.from(await response.arrayBuffer()));
+  });
+  const extract = dependencies.extract ?? expandArchive;
+  const cleanDirectory = async (target: string) => {
+    assertInsideLabRoot(config, target);
+    await rm(target, { recursive: true, force: true });
+    await mkdir(target, { recursive: true });
+  };
+  const downloadAtomically = async (url: string, target: string) => {
+    assertInsideLabRoot(config, target);
+    const partPath = `${target}.part`;
+    assertInsideLabRoot(config, partPath);
+    await rm(partPath, { force: true });
+    if (existsSync(target)) return;
+    await download(url, partPath);
+    if (!existsSync(partPath)) throw new Error(`Download did not create expected part file: ${partPath}`);
+    await rename(partPath, target);
+  };
+  const replaceDirectory = async (stagedRoot: string, finalRoot: string) => {
+    const backupRoot = `${finalRoot}.previous`;
+    for (const target of [stagedRoot, finalRoot, backupRoot]) assertInsideLabRoot(config, target);
+
+    if (existsSync(backupRoot) && !existsSync(finalRoot)) await rename(backupRoot, finalRoot);
+    if (existsSync(backupRoot)) await rm(backupRoot, { recursive: true, force: true });
+
+    let movedOldTree = false;
+    if (existsSync(finalRoot)) {
+      await rename(finalRoot, backupRoot);
+      movedOldTree = true;
+    }
+    try {
+      await rename(stagedRoot, finalRoot);
+    } catch (error) {
+      if (movedOldTree && !existsSync(finalRoot) && existsSync(backupRoot)) {
+        await rename(backupRoot, finalRoot);
+      }
+      throw error;
+    }
+    if (movedOldTree && existsSync(backupRoot)) {
+      await rm(backupRoot, { recursive: true, force: true });
+    }
   };
 
   try {
@@ -199,11 +270,7 @@ export async function bootstrapLab(
     ] as const) {
       activeAction = requireAction(actionIndex);
       assertInsideLabRoot(config, activeAction.target);
-      if (!existsSync(activeAction.target)) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Download failed (${response.status}) for ${url}`);
-        await writeFile(activeAction.target, Buffer.from(await response.arrayBuffer()));
-      }
+      await downloadAtomically(url, activeAction.target);
       activeAction.status = 'done';
     }
 
@@ -212,18 +279,21 @@ export async function bootstrapLab(
     activeAction.status = 'done';
 
     activeAction = requireAction(plan.directories.length + 4);
-    await expandArchive(plan.nodeArchivePath, dirname(config.nodeRoot));
+    await cleanDirectory(plan.nodeStagingRoot);
+    await extract(plan.nodeArchivePath, plan.nodeStagingRoot);
     activeAction.status = 'done';
 
     activeAction = requireAction(plan.directories.length + 5);
-    await expandArchive(plan.foundryZip, config.appRoot);
+    await cleanDirectory(plan.foundryStagingRoot);
+    await extract(plan.foundryZip, plan.foundryStagingRoot);
     activeAction.status = 'done';
 
     activeAction = requireAction(plan.directories.length + 6);
-    const nodeExe = resolve(config.nodeRoot, 'node.exe');
+    const stagedNodeRoot = resolve(plan.nodeStagingRoot, basename(config.nodeRoot));
+    const nodeExe = resolve(stagedNodeRoot, 'node.exe');
     assertInsideLabRoot(config, nodeExe);
-    const nodeResult = await runCommand(nodeExe, ['--version'], {
-      cwd: config.nodeRoot,
+    const nodeResult = await executeCommand(nodeExe, ['--version'], {
+      cwd: stagedNodeRoot,
       timeoutMs: 30_000,
     });
     if (nodeResult.exitCode !== 0) {
@@ -236,7 +306,7 @@ export async function bootstrapLab(
     activeAction.status = 'done';
 
     activeAction = requireAction(plan.directories.length + 7);
-    const extractedPackagePath = resolve(config.appRoot, 'package.json');
+    const extractedPackagePath = resolve(plan.foundryStagingRoot, 'package.json');
     assertInsideLabRoot(config, extractedPackagePath);
     const extractedManifest = JSON.parse(await readFile(extractedPackagePath, 'utf8')) as { version?: string };
     if (extractedManifest.version !== '14.364.0') {
@@ -247,11 +317,24 @@ export async function bootstrapLab(
     foundryVersion = extractedManifest.version;
     activeAction.status = 'done';
 
+    await replaceDirectory(stagedNodeRoot, config.nodeRoot);
+    assertInsideLabRoot(config, plan.nodeStagingRoot);
+    await rm(plan.nodeStagingRoot, { recursive: true, force: true });
+    await replaceDirectory(plan.foundryStagingRoot, config.appRoot);
+
     const report = makeReport(true, []);
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
     return report;
   } catch (error) {
     if (activeAction.status === 'planned') activeAction.status = 'failed';
+    for (const stagingRoot of [plan.nodeStagingRoot, plan.foundryStagingRoot]) {
+      assertInsideLabRoot(config, stagingRoot);
+      try {
+        await rm(stagingRoot, { recursive: true, force: true });
+      } catch {
+        // Preserve the original bootstrap error in the report.
+      }
+    }
     const report = makeReport(false, [error instanceof Error ? error.message : String(error)]);
     if (existsSync(config.inventoryRoot)) {
       try {
