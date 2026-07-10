@@ -700,13 +700,15 @@ export async function acquirePackages(
   const serverTotal = moduleActions.filter((action) => action.kind === 'scp-directory').length;
 
   for (const action of actions) {
-    if (action.kind === 'authorized-manual-install' || action.kind === 'manual-review') {
+    if (action.kind === 'manual-review') {
       action.status = 'unresolved';
       unresolved += 1;
       await persistReport();
       continue;
     }
-    const destination = resolve(config.repoRoot, action.destination);
+    const destination = action.kind === 'authorized-manual-install'
+      ? resolve(config.profiles.serverMirror.dataPath, 'Data/modules', safeSegment(action.id, 'Package id'))
+      : resolve(config.repoRoot, action.destination);
     const stagingRoot = `${destination}.staging`;
     for (const path of [destination, stagingRoot]) assertInsideLabRoot(config, path);
     try {
@@ -718,6 +720,15 @@ export async function acquirePackages(
       } catch {
         // A missing or mismatched destination is replaced only after staging verifies.
       }
+      if (action.kind === 'authorized-manual-install' && !alreadyInstalled) {
+        action.status = 'unresolved';
+        unresolved += 1;
+        await persistReport();
+        continue;
+      }
+
+      const classifiedEntry = byId.get(action.id);
+      const needsPersistentStorage = classifiedEntry?.disk?.persistentStorage === true;
       if (!alreadyInstalled) {
         if (action.kind === 'download') {
           const archivePath = resolve(config.cacheRoot, safeSegment(action.id, 'Package id'), safeSegment(action.expectedVersion, 'Package version'), 'package.zip');
@@ -730,7 +741,7 @@ export async function acquirePackages(
             expectedVersion: action.expectedVersion,
             config,
           });
-        } else {
+        } else if (action.kind === 'scp-directory') {
           serverIndex += 1;
           options.onProgress?.(`[${serverIndex}/${serverTotal}] copying server-only package ${action.id}`);
           const transfer = await copyRemoteDirectory(config, action.remoteFolder, stagingRoot);
@@ -739,15 +750,21 @@ export async function acquirePackages(
             `[${serverIndex}/${serverTotal}] copied ${action.id}: ${transfer.bytes} bytes; `
             + `${transfer.excludedRuntimeLocks.length} runtime LOCK files excluded`,
           );
+        } else {
+          throw new Error(`Authorized package ${action.id} is not installed at the exact expected version`);
         }
         await readAndValidateInstalledManifest(config, stagingRoot, action.id, action.expectedVersion);
-        await replaceDirectory(stagingRoot, destination, config);
+      } else if (needsPersistentStorage) {
+        await rm(stagingRoot, { recursive: true, force: true });
+        await cp(destination, stagingRoot, {
+          recursive: true,
+          force: true,
+          preserveTimestamps: true,
+        });
       }
-      await readAndValidateInstalledManifest(config, destination, action.id, action.expectedVersion);
 
-      const classifiedEntry = byId.get(action.id);
-      if (classifiedEntry?.disk?.persistentStorage) {
-        const storageDestination = join(destination, 'storage');
+      if (needsPersistentStorage) {
+        const storageDestination = join(stagingRoot, 'storage');
         assertInsideLabRoot(config, storageDestination);
         const storage = await copyPersistentStorage(
           config,
@@ -756,6 +773,12 @@ export async function acquirePackages(
         );
         options.onProgress?.(`verified persistent storage for ${action.id}: ${storage.files} files, ${storage.bytes} bytes`);
       }
+
+      if (!alreadyInstalled || needsPersistentStorage) {
+        await readAndValidateInstalledManifest(config, stagingRoot, action.id, action.expectedVersion);
+        await replaceDirectory(stagingRoot, destination, config);
+      }
+      await readAndValidateInstalledManifest(config, destination, action.id, action.expectedVersion);
       action.status = 'installed';
       installed += 1;
       await persistReport();

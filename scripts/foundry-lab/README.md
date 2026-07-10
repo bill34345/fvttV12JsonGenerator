@@ -39,7 +39,9 @@ the existing SSH identity. Progress is reported per package, including copied
 bytes. No transfers run in parallel. Packages classified `account-protected`
 remain unresolved until installed through the user's authenticated Foundry
 package interface; the script never looks for public substitutes or stores
-credentials. `manual-review` packages are also held out of installation.
+credentials. On a later run, an account-protected package already present with
+the exact expected ID and version is accepted as installed. `manual-review`
+packages are always held out of installation.
 
 Server-only trees are inventoried read-only on production and verified locally
 by relative path, byte size, and SHA-256. Packages without active database lock
@@ -54,8 +56,12 @@ must be reacquired during an approved maintenance window or through its
 authorized package source.
 
 For active manifests declaring `persistentStorage: true`, the base package is
-installed first. Its production `storage` directory is then copied separately
-and checked by relative path, byte size, and SHA-256 before replacement.
+verified in package staging first. Its production `storage` directory is then
+copied into that same staged package and checked by relative path, byte size,
+and SHA-256. The complete package replaces the prior tree in one atomic step.
+When an exact package already exists (including an authorized protected
+package), it is cloned to staging before storage refresh, so a storage failure
+leaves the authorized base and its previous storage byte-for-byte untouched.
 
 The ignored report is written to:
 

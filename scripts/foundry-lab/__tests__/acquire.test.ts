@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   acquirePackages,
   buildArchiveExtractionCommand,
@@ -213,6 +213,155 @@ describe('archive and install safety', () => {
 
       expect(report.actions.find((action) => action.id === 'sample')?.status).toBe('failed');
       expect(JSON.parse(await readFile(join(destination, 'module.json'), 'utf8')).version).toBe('0.9.0');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the complete old package tree when persistent storage injection fails', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-acquire-storage-transaction-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample');
+    const oldManifest = join(destination, 'module.json');
+    const oldMarker = join(destination, 'marker.txt');
+    const oldStorage = join(destination, 'storage/data.bin');
+    const entry = classified('upstream-exact', { persistentStorage: true });
+    try {
+      await mkdir(dirname(oldStorage), { recursive: true });
+      await writeFile(oldManifest, '{"id":"sample","version":"0.9.0"}\n');
+      await writeFile(oldMarker, 'old marker bytes');
+      await writeFile(oldStorage, 'old storage bytes');
+      const before = await Promise.all([oldManifest, oldMarker, oldStorage].map(async (path) => ({
+        path, bytes: await readFile(path), mtimeNs: (await stat(path, { bigint: true })).mtimeNs,
+      })));
+
+      const report = await acquirePackages(config, [entry], { apply: true }, {
+        readDnd5eManifest: async () => ({
+          id: 'dnd5e', version: '5.3.3', download: 'https://example.test/dnd5e.zip',
+        }),
+        installArchive: async ({ stagingRoot, expectedId, expectedVersion }) => {
+          await mkdir(stagingRoot, { recursive: true });
+          const name = expectedId === 'dnd5e' ? 'system.json' : 'module.json';
+          await writeFile(join(stagingRoot, name), JSON.stringify({ id: expectedId, version: expectedVersion }));
+          if (expectedId === 'sample') await writeFile(join(stagingRoot, 'marker.txt'), 'new marker bytes');
+        },
+        copyPersistentStorage: async (_config, _folder, storageDestination) => {
+          await mkdir(storageDestination, { recursive: true });
+          await writeFile(join(storageDestination, 'data.bin'), 'partial new storage');
+          throw new Error('injected storage failure');
+        },
+      });
+
+      expect(report.actions.find((action) => action.id === 'sample')?.status).toBe('failed');
+      for (const snapshot of before) {
+        expect(await readFile(snapshot.path)).toEqual(snapshot.bytes);
+        expect((await stat(snapshot.path, { bigint: true })).mtimeNs).toBe(snapshot.mtimeNs);
+      }
+      expect(await readFile(oldMarker, 'utf8')).toBe('old marker bytes');
+      expect(existsSync(`${destination}.staging`)).toBe(false);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps absent protected packages unresolved but accepts an exact authorized install transactionally', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-acquire-protected-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const protectedEntry = classified('account-protected', { persistentStorage: true });
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample');
+    let storageCalls = 0;
+    const dependencies = {
+      readDnd5eManifest: async () => ({
+        id: 'dnd5e', version: '5.3.3', download: 'https://example.test/dnd5e.zip',
+      }),
+      installArchive: async ({ stagingRoot, expectedId, expectedVersion }: {
+        stagingRoot: string; expectedId: string; expectedVersion: string;
+      }) => {
+        await mkdir(stagingRoot, { recursive: true });
+        await writeFile(
+          join(stagingRoot, expectedId === 'dnd5e' ? 'system.json' : 'module.json'),
+          JSON.stringify({ id: expectedId, version: expectedVersion }),
+        );
+      },
+      copyPersistentStorage: async (_config: unknown, _folder: string, storageDestination: string) => {
+        storageCalls += 1;
+        expect(storageDestination).toContain('sample.staging');
+        await mkdir(storageDestination, { recursive: true });
+        await writeFile(join(storageDestination, 'authorized.bin'), 'authorized storage');
+        return { files: 1, bytes: 18 };
+      },
+    };
+    try {
+      const absent = await acquirePackages(config, [protectedEntry], { apply: true }, dependencies);
+      expect(absent.actions.find((action) => action.id === 'sample')?.status).toBe('unresolved');
+      expect(storageCalls).toBe(0);
+
+      await mkdir(destination, { recursive: true });
+      await writeFile(join(destination, 'module.json'), '{"id":"sample","version":"0.9.0"}\n');
+      const mismatched = await acquirePackages(config, [protectedEntry], { apply: true }, dependencies);
+      expect(mismatched.actions.find((action) => action.id === 'sample')?.status).toBe('unresolved');
+      expect(storageCalls).toBe(0);
+
+      await writeFile(join(destination, 'module.json'), '{"id":"sample","version":"1.0.0"}\n');
+      await writeFile(join(destination, 'authorized-marker.txt'), 'keep authorized base');
+      const installed = await acquirePackages(config, [protectedEntry], { apply: true }, dependencies);
+
+      expect(installed.actions.find((action) => action.id === 'sample')?.status).toBe('installed');
+      expect(storageCalls).toBe(1);
+      expect(await readFile(join(destination, 'authorized-marker.txt'), 'utf8')).toBe('keep authorized base');
+      expect(await readFile(join(destination, 'storage/authorized.bin'), 'utf8')).toBe('authorized storage');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back protected storage failure and never auto-accepts manual-review', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-protected-storage-rollback-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample');
+    const manifest = join(destination, 'module.json');
+    const marker = join(destination, 'authorized-marker.txt');
+    const storage = join(destination, 'storage/original.bin');
+    const protectedEntry = classified('account-protected', { persistentStorage: true });
+    try {
+      await mkdir(dirname(storage), { recursive: true });
+      await writeFile(manifest, '{"id":"sample","version":"1.0.0"}\n');
+      await writeFile(marker, 'authorized base bytes');
+      await writeFile(storage, 'authorized storage bytes');
+      const before = await Promise.all([manifest, marker, storage].map(async (path) => ({
+        path, bytes: await readFile(path), mtimeNs: (await stat(path, { bigint: true })).mtimeNs,
+      })));
+      const dependencies = {
+        readDnd5eManifest: async () => ({
+          id: 'dnd5e', version: '5.3.3', download: 'https://example.test/dnd5e.zip',
+        }),
+        installArchive: async ({ stagingRoot, expectedId, expectedVersion }: {
+          stagingRoot: string; expectedId: string; expectedVersion: string;
+        }) => {
+          await mkdir(stagingRoot, { recursive: true });
+          await writeFile(
+            join(stagingRoot, expectedId === 'dnd5e' ? 'system.json' : 'module.json'),
+            JSON.stringify({ id: expectedId, version: expectedVersion }),
+          );
+        },
+        copyPersistentStorage: async (_config: unknown, _folder: string, storageDestination: string) => {
+          await mkdir(storageDestination, { recursive: true });
+          await writeFile(join(storageDestination, 'partial.bin'), 'partial bytes');
+          throw new Error('protected storage failure');
+        },
+      };
+
+      const failed = await acquirePackages(config, [protectedEntry], { apply: true }, dependencies);
+      expect(failed.actions.find((action) => action.id === 'sample')?.status).toBe('failed');
+      for (const snapshot of before) {
+        expect(await readFile(snapshot.path)).toEqual(snapshot.bytes);
+        expect((await stat(snapshot.path, { bigint: true })).mtimeNs).toBe(snapshot.mtimeNs);
+      }
+      expect(existsSync(join(destination, 'storage/partial.bin'))).toBe(false);
+
+      const manual = classified('manual-review', { persistentStorage: false });
+      const held = await acquirePackages(config, [manual], { apply: true }, dependencies);
+      expect(held.actions.find((action) => action.id === 'sample')?.status).toBe('unresolved');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
