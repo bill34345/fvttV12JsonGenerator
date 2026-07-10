@@ -71,7 +71,7 @@ function normalizeInventoryEntry(value: unknown, index: number): ModuleInventory
     throw new Error(`Inventory entry ${index} is not an object`);
   }
   const entry = value as Record<string, unknown>;
-  if (typeof entry.folder !== 'string' || entry.folder.length === 0) {
+  if (typeof entry.folder !== 'string' || entry.folder.trim().length === 0) {
     throw new Error(`Inventory entry ${index} has invalid folder`);
   }
   if (typeof entry.protected !== 'boolean' || typeof entry.persistentStorage !== 'boolean') {
@@ -83,9 +83,18 @@ function normalizeInventoryEntry(value: unknown, index: number): ModuleInventory
     throw new Error(`Inventory entry ${index} has invalid compatibility`);
   }
 
+  const id = optionalString(entry.id, 'id', index);
+  if (id !== null && id.trim().length === 0) {
+    throw new Error(`Inventory entry ${index} has invalid id`);
+  }
+  const parseError = optionalString(entry.parseError, 'parseError', index);
+  if (parseError !== null && parseError.trim().length === 0) {
+    throw new Error(`Inventory entry ${index} has invalid parseError`);
+  }
+
   return {
     folder: entry.folder,
-    id: optionalString(entry.id, 'id', index),
+    id,
     title: optionalString(entry.title, 'title', index),
     version: optionalString(entry.version, 'version', index),
     compatibility: (compatibility ?? {}) as ModuleInventoryEntry['compatibility'],
@@ -96,8 +105,37 @@ function normalizeInventoryEntry(value: unknown, index: number): ModuleInventory
     protected: entry.protected,
     persistentStorage: entry.persistentStorage,
     manifestSha256: optionalString(entry.manifestSha256, 'manifestSha256', index),
-    parseError: optionalString(entry.parseError, 'parseError', index),
+    parseError,
   };
+}
+
+export function validateRemoteInventory(parsed: unknown): ModuleInventoryEntry[] {
+  if (!Array.isArray(parsed)) throw new Error('Remote inventory stdout must be a JSON array');
+  if (parsed.length !== EXPECTED_MODULE_COUNT) {
+    throw new Error(`Remote inventory must contain exactly ${EXPECTED_MODULE_COUNT} entries, received ${parsed.length}`);
+  }
+  const inventory = parsed.map(normalizeInventoryEntry);
+  const folders = new Set<string>();
+  const ids = new Set<string>();
+  for (const [index, entry] of inventory.entries()) {
+    if (folders.has(entry.folder)) {
+      throw new Error(`Inventory entry ${index} has duplicate folder: ${entry.folder}`);
+    }
+    folders.add(entry.folder);
+
+    if (entry.id !== null) {
+      if (ids.has(entry.id)) throw new Error(`Inventory entry ${index} has duplicate id: ${entry.id}`);
+      ids.add(entry.id);
+    }
+
+    if (entry.manifestSha256 !== null && !/^[0-9a-f]{64}$/.test(entry.manifestSha256)) {
+      throw new Error(`Inventory entry ${index} has invalid manifestSha256`);
+    }
+    if (entry.parseError === null && entry.manifestSha256 === null) {
+      throw new Error(`Inventory entry ${index} has invalid manifestSha256`);
+    }
+  }
+  return inventory;
 }
 
 function parseRemoteInventory(stdout: string): ModuleInventoryEntry[] {
@@ -107,11 +145,7 @@ function parseRemoteInventory(stdout: string): ModuleInventoryEntry[] {
   } catch (error) {
     throw new Error(`Remote inventory stdout is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
-  if (!Array.isArray(parsed)) throw new Error('Remote inventory stdout must be a JSON array');
-  if (parsed.length !== EXPECTED_MODULE_COUNT) {
-    throw new Error(`Remote inventory must contain exactly ${EXPECTED_MODULE_COUNT} entries, received ${parsed.length}`);
-  }
-  return parsed.map(normalizeInventoryEntry);
+  return validateRemoteInventory(parsed);
 }
 
 export async function captureRemoteInventory(

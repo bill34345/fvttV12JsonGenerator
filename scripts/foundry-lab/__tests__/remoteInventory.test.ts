@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createLabConfig } from '../config';
@@ -28,6 +29,41 @@ function inventoryEntry(index: number): ModuleInventoryEntry {
     manifestSha256: 'a'.repeat(64),
     parseError: null,
   };
+}
+
+async function expectInvalidInventoryPreservesSnapshot(
+  entries: ModuleInventoryEntry[],
+  expectedMessage: string,
+): Promise<void> {
+  const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-inventory-preserve-'));
+  const config = createLabConfig(join(tempRoot, 'repo'));
+  const outputPath = join(config.inventoryRoot, 'production-disk.json');
+  const originalBytes = Buffer.from('{"sentinel":"existing-snapshot"}\n', 'utf8');
+  try {
+    await mkdir(config.inventoryRoot, { recursive: true });
+    await writeFile(outputPath, originalBytes);
+    const beforeStat = await stat(outputPath, { bigint: true });
+    const beforeHash = createHash('sha256').update(originalBytes).digest('hex');
+
+    await expect(
+      captureRemoteInventory(config, {
+        runCommand: async () => ({
+          exitCode: 0,
+          stdout: JSON.stringify(entries),
+          stderr: '',
+          commandLine: 'ssh <fixture>',
+        }),
+      }),
+    ).rejects.toThrow(expectedMessage);
+
+    const afterBytes = await readFile(outputPath);
+    const afterStat = await stat(outputPath, { bigint: true });
+    expect(afterBytes).toEqual(originalBytes);
+    expect(createHash('sha256').update(afterBytes).digest('hex')).toBe(beforeHash);
+    expect(afterStat.mtimeNs).toBe(beforeStat.mtimeNs);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
 }
 
 describe('remote Foundry inventory', () => {
@@ -110,6 +146,34 @@ describe('remote Foundry inventory', () => {
         await rm(tempRoot, { recursive: true, force: true });
       }
     }
+  });
+
+  it('rejects duplicate folders without replacing an existing snapshot', async () => {
+    const entries = Array.from({ length: 249 }, (_, index) => inventoryEntry(index));
+    entries[1] = { ...entries[1]!, folder: entries[0]!.folder };
+
+    await expectInvalidInventoryPreservesSnapshot(entries, 'duplicate folder');
+  });
+
+  it('rejects duplicate non-null module ids without replacing an existing snapshot', async () => {
+    const entries = Array.from({ length: 249 }, (_, index) => inventoryEntry(index));
+    entries[1] = { ...entries[1]!, id: entries[0]!.id };
+
+    await expectInvalidInventoryPreservesSnapshot(entries, 'duplicate id');
+  });
+
+  it('rejects an empty non-null module id without replacing an existing snapshot', async () => {
+    const entries = Array.from({ length: 249 }, (_, index) => inventoryEntry(index));
+    entries[1] = { ...entries[1]!, id: '' };
+
+    await expectInvalidInventoryPreservesSnapshot(entries, 'invalid id');
+  });
+
+  it('rejects an invalid manifest hash without replacing an existing snapshot', async () => {
+    const entries = Array.from({ length: 249 }, (_, index) => inventoryEntry(index));
+    entries[1] = { ...entries[1]!, manifestSha256: 'not-a-sha256' };
+
+    await expectInvalidInventoryPreservesSnapshot(entries, 'invalid manifestSha256');
   });
 
   it('preserves per-entry parse errors rather than rejecting the snapshot', async () => {
