@@ -71,3 +71,55 @@ The ignored report is written to:
 
 It lists every installed, unresolved, and failed package. An apply run is only
 complete when both unresolved and failed counts are zero.
+
+## User-owned local package sources
+
+Exact packages already owned on the workstation can be imported without using
+production bandwidth. Put the mapping only in the ignored runtime file:
+
+```text
+.local/foundry-v14/inventory/local-package-sources.json
+```
+
+Each entry contains only an ID, exact expected version, and absolute source
+path. Do not add passwords, tokens, or account data:
+
+```json
+[
+  {
+    "id": "example-module",
+    "expectedVersion": "1.2.3",
+    "sourcePath": "D:\\user-owned-packages\\example-module.zip"
+  }
+]
+```
+
+Review sources without changing the lab or source files:
+
+```powershell
+bun run foundry:lab acquire-local
+```
+
+Then apply the validated plan:
+
+```powershell
+bun run foundry:lab acquire-local --apply
+```
+
+Directories and `.zip`, `.7z`, and `.rar` archives are supported. Archives use
+7-Zip and are listed before extraction. Absolute, UNC, drive-relative,
+traversal, and NTFS alternate-data-stream paths are rejected. A package may
+have `module.json` at archive root or inside exactly one wrapper directory.
+The exact manifest ID/version and the staged file inventory must verify before
+one atomic replacement of the server-mirror package directory.
+
+Encrypted archives use a runtime-only environment variable derived from the
+package ID, for example:
+
+```text
+FOUNDRY_LAB_ARCHIVE_PASSWORD_EXAMPLE_MODULE
+```
+
+The password is passed only to 7-Zip, redacted from command output, and never
+stored in mappings or reports. The ignored result is written to
+`.local/foundry-v14/inventory/local-source-report.json` only under `--apply`.

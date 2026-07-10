@@ -1,5 +1,6 @@
 import { bootstrapLab } from './bootstrap';
 import { acquirePackages, readClassifiedPlan } from './acquire';
+import { acquireLocalSources, readLocalSourceMappings } from './localSources';
 import { writePackagePlan } from './classify';
 import { createLabConfig } from './config';
 import { captureRemoteInventory, REMOTE_INVENTORY_EXPECTED_COUNT } from './remoteInventory';
@@ -53,6 +54,16 @@ if (command === 'acquire') {
   const config = createLabConfig();
   const plan = await readClassifiedPlan(config);
   const report = await acquirePackages(config, plan, {
+    apply,
+    onProgress: (message) => console.error(`[foundry-lab] ${message}`),
+  });
+  console.log(JSON.stringify(report, null, 2));
+  process.exit(!apply || report.complete ? 0 : 1);
+}
+if (command === 'acquire-local') {
+  const config = createLabConfig();
+  const sources = await readLocalSourceMappings(config);
+  const report = await acquireLocalSources(config, sources, {
     apply,
     onProgress: (message) => console.error(`[foundry-lab] ${message}`),
   });
