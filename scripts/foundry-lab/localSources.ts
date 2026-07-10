@@ -1,12 +1,15 @@
-import { createHash } from 'node:crypto';
-import { createReadStream, existsSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { constants, createReadStream, existsSync } from 'node:fs';
 import {
   cp,
+  copyFile,
   mkdir,
   readdir,
   readFile,
+  realpath,
   rename,
   rm,
+  rmdir,
   stat,
   writeFile,
 } from 'node:fs/promises';
@@ -51,6 +54,7 @@ export interface LocalSourceOptions {
 
 export interface LocalSourceDependencies {
   runCommand: typeof runCommand;
+  copyFile: typeof copyFile;
 }
 
 interface ArchiveEntry {
@@ -60,6 +64,14 @@ interface ArchiveEntry {
 }
 
 class UnresolvedLocalSourceError extends Error {}
+
+interface PreparedLocalSource {
+  source: LocalPackageSource;
+  destination: string;
+  staging: string;
+  extractionRoot: string;
+  backup: string;
+}
 
 function safePackageId(value: string): string {
   const windowsBasename = value.split('.', 1)[0]?.toUpperCase();
@@ -74,6 +86,74 @@ function safePackageId(value: string): string {
     throw new Error(`Package id is not a safe path segment: ${value}`);
   }
   return value;
+}
+
+function windowsCollisionKey(value: string): string {
+  return resolve(value).replaceAll('/', '\\').replace(/\\+$/, '').toLowerCase();
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  const leftKey = windowsCollisionKey(left);
+  const rightKey = windowsCollisionKey(right);
+  return leftKey === rightKey
+    || leftKey.startsWith(`${rightKey}\\`)
+    || rightKey.startsWith(`${leftKey}\\`);
+}
+
+async function resolveThroughExistingAncestor(target: string): Promise<string> {
+  let existingAncestor = resolve(target);
+  const missingSegments: string[] = [];
+  while (!existsSync(existingAncestor)) {
+    const parent = dirname(existingAncestor);
+    if (parent === existingAncestor) return resolve(existingAncestor, ...missingSegments.reverse());
+    missingSegments.push(basename(existingAncestor));
+    existingAncestor = parent;
+  }
+  return resolve(await realpath(existingAncestor), ...missingSegments.reverse());
+}
+
+async function assertSourceOutsideTransactionPaths(
+  config: FoundryLabConfig,
+  prepared: PreparedLocalSource,
+): Promise<void> {
+  const source = await resolveThroughExistingAncestor(prepared.source.sourcePath);
+  const protectedPaths = [
+    config.labRoot,
+    prepared.destination,
+    prepared.staging,
+    prepared.extractionRoot,
+    prepared.backup,
+  ];
+  for (const protectedPath of protectedPaths) {
+    const canonicalProtected = await resolveThroughExistingAncestor(protectedPath);
+    if (pathsOverlap(source, canonicalProtected)) {
+      throw new Error(
+        `Local source overlaps Foundry lab transaction path: ${prepared.source.sourcePath}`,
+      );
+    }
+  }
+}
+
+function assertNoCaseInsensitiveCollisions(prepared: PreparedLocalSource[]): void {
+  const ids = new Map<string, string>();
+  const destinations = new Map<string, string>();
+  for (const entry of prepared) {
+    const idKey = entry.source.id.toLowerCase();
+    const priorId = ids.get(idKey);
+    if (priorId !== undefined) {
+      throw new Error(`Local source ID case-insensitive collision: ${priorId} / ${entry.source.id}`);
+    }
+    ids.set(idKey, entry.source.id);
+
+    const destinationKey = windowsCollisionKey(entry.destination);
+    const priorDestination = destinations.get(destinationKey);
+    if (priorDestination !== undefined) {
+      throw new Error(
+        `Local source destination collision: ${priorDestination} / ${entry.destination}`,
+      );
+    }
+    destinations.set(destinationKey, entry.destination);
+  }
 }
 
 export function archivePasswordEnvName(id: string): string {
@@ -219,16 +299,17 @@ function safeCommandError(result: { stderr: string; stdout: string }, fallback: 
 
 async function inspectArchive(
   source: LocalPackageSource,
+  archivePath: string,
   execute: typeof runCommand,
   cwd: string,
-): Promise<{ entries: ArchiveEntry[]; root: string; manifestText: string; sha256: string; password?: string }> {
+): Promise<{ entries: ArchiveEntry[]; root: string; manifestText: string; password?: string }> {
   const passwordName = archivePasswordEnvName(source.id);
   const password = process.env[passwordName];
   const redact = password === undefined ? [] : [password];
   const executable = sevenZipExecutable();
   const list = await execute(
     executable,
-    ['l', '-slt', '-scsUTF-8', ...passwordArguments(password), source.sourcePath],
+    ['l', '-slt', '-scsUTF-8', ...passwordArguments(password), archivePath],
     { cwd, timeoutMs: 30 * 60_000, redact },
   );
   if (list.exitCode !== 0) {
@@ -247,7 +328,7 @@ async function inspectArchive(
   const manifestPath = root ? `${root}/module.json` : 'module.json';
   const manifest = await execute(
     executable,
-    ['e', '-so', '-y', ...passwordArguments(password), source.sourcePath, manifestPath],
+    ['e', '-so', '-y', ...passwordArguments(password), archivePath, manifestPath],
     { cwd, timeoutMs: 30 * 60_000, redact },
   );
   if (manifest.exitCode !== 0) {
@@ -258,7 +339,67 @@ async function inspectArchive(
     throw new Error(message);
   }
   parseManifest(manifest.stdout, source.id, source.expectedVersion);
-  return { entries, root, manifestText: manifest.stdout, sha256: await sha256File(source.sourcePath), password };
+  return { entries, root, manifestText: manifest.stdout, password };
+}
+
+async function createImmutableArchiveSnapshot(
+  config: FoundryLabConfig,
+  source: LocalPackageSource,
+  copy: typeof copyFile,
+): Promise<{
+  root: string;
+  path: string;
+  sha256: string;
+  labRootExisted: boolean;
+  labParentExisted: boolean;
+}> {
+  const preHash = await sha256File(source.sourcePath);
+  const snapshotsRoot = join(config.labRoot, '.local-source-snapshots');
+  const root = join(snapshotsRoot, `${source.id}-${randomUUID()}`);
+  const path = join(root, 'archive.snapshot.part');
+  const labRootExisted = existsSync(config.labRoot);
+  const labParentExisted = existsSync(dirname(config.labRoot));
+  for (const candidate of [snapshotsRoot, root, path]) assertInsideLabRoot(config, candidate);
+  try {
+    await mkdir(root, { recursive: true });
+    await copy(source.sourcePath, path, constants.COPYFILE_EXCL);
+    const [postHash, snapshotHash] = await Promise.all([
+      sha256File(source.sourcePath),
+      sha256File(path),
+    ]);
+    if (postHash !== preHash || snapshotHash !== preHash) {
+      throw new Error(`Local source archive changed while creating immutable snapshot: ${basename(source.sourcePath)}`);
+    }
+    return { root, path, sha256: preHash, labRootExisted, labParentExisted };
+  } catch (error) {
+    await cleanupArchiveSnapshot(config, { root, labRootExisted, labParentExisted });
+    throw error;
+  }
+}
+
+async function cleanupArchiveSnapshot(
+  config: FoundryLabConfig,
+  snapshot: { root: string; labRootExisted: boolean; labParentExisted: boolean },
+): Promise<void> {
+  await rm(snapshot.root, { recursive: true, force: true });
+  await removeEmptyDirectory(dirname(snapshot.root));
+  if (!snapshot.labRootExisted) await removeEmptyDirectory(config.labRoot);
+  if (!snapshot.labParentExisted) await removeEmptyDirectory(dirname(config.labRoot));
+}
+
+async function removeEmptyDirectory(path: string): Promise<void> {
+  try {
+    await rmdir(path);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'EEXIST') throw error;
+  }
+}
+
+async function assertArchiveSourceHash(sourcePath: string, expected: string, phase: string): Promise<void> {
+  if (await sha256File(sourcePath) !== expected) {
+    throw new Error(`Local source archive changed ${phase}: ${basename(sourcePath)}`);
+  }
 }
 
 async function replaceDirectory(config: FoundryLabConfig, staging: string, destination: string): Promise<void> {
@@ -291,7 +432,7 @@ export async function readLocalSourceMappings(config: FoundryLabConfig): Promise
   const text = await readFile(path, 'utf8');
   const parsed = JSON.parse(text.replace(/^\uFEFF/, '')) as unknown;
   if (!Array.isArray(parsed)) throw new Error('local-package-sources.json must be an array');
-  const ids = new Set<string>();
+  const ids = new Map<string, string>();
   return parsed.map((value, index) => {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error(`Local source mapping ${index} is not an object`);
@@ -305,8 +446,12 @@ export async function readLocalSourceMappings(config: FoundryLabConfig): Promise
     if (unknown.length > 0) throw new Error(`Local source mapping ${index} has unknown fields: ${unknown.join(', ')}`);
     if (typeof entry.id !== 'string') throw new Error(`Local source mapping ${index} has invalid id`);
     const id = safePackageId(entry.id);
-    if (ids.has(id)) throw new Error(`Local source mapping has duplicate id: ${id}`);
-    ids.add(id);
+    const idKey = id.toLowerCase();
+    const priorId = ids.get(idKey);
+    if (priorId !== undefined) {
+      throw new Error(`Local source mapping has case-insensitive ID collision: ${priorId} / ${id}`);
+    }
+    ids.set(idKey, id);
     if (typeof entry.expectedVersion !== 'string' || !entry.expectedVersion) {
       throw new Error(`Local source mapping ${index} has invalid expectedVersion`);
     }
@@ -324,12 +469,13 @@ export async function acquireLocalSources(
   dependencies: Partial<LocalSourceDependencies> = {},
 ): Promise<LocalSourceReport> {
   const execute = dependencies.runCommand ?? runCommand;
+  const copy = dependencies.copyFile ?? copyFile;
   const actions: LocalSourceAction[] = [];
   let installed = 0;
   let unresolved = 0;
   let failed = 0;
 
-  for (const rawSource of sources) {
+  const preparedSources: PreparedLocalSource[] = sources.map((rawSource) => {
     const source: LocalPackageSource = {
       id: safePackageId(rawSource.id),
       expectedVersion: rawSource.expectedVersion,
@@ -338,7 +484,15 @@ export async function acquireLocalSources(
     const destination = resolve(config.profiles.serverMirror.dataPath, 'Data/modules', source.id);
     const staging = `${destination}.local-source-staging`;
     const extractionRoot = `${staging}.extract`;
-    for (const path of [destination, staging, extractionRoot]) assertInsideLabRoot(config, path);
+    const backup = `${destination}.previous`;
+    for (const path of [destination, staging, extractionRoot, backup]) assertInsideLabRoot(config, path);
+    return { source, destination, staging, extractionRoot, backup };
+  });
+  assertNoCaseInsensitiveCollisions(preparedSources);
+  for (const prepared of preparedSources) await assertSourceOutsideTransactionPaths(config, prepared);
+
+  for (const prepared of preparedSources) {
+    const { source, destination, staging, extractionRoot } = prepared;
     const action: LocalSourceAction = {
       ...source,
       destination,
@@ -346,6 +500,7 @@ export async function acquireLocalSources(
       status: 'planned',
     };
     actions.push(action);
+    let snapshot: Awaited<ReturnType<typeof createImmutableArchiveSnapshot>> | null = null;
     try {
       if (!isAbsolute(source.sourcePath)) throw new Error(`Local source path must be absolute: ${source.sourcePath}`);
       const info = await stat(source.sourcePath);
@@ -360,8 +515,11 @@ export async function acquireLocalSources(
         action.sourceInventory = expectedInventory;
       } else if (info.isFile() && ['.zip', '.7z', '.rar'].includes(extname(source.sourcePath).toLowerCase())) {
         action.sourceKind = 'archive';
-        archive = await inspectArchive(source, execute, config.repoRoot);
-        action.sourceSha256 = archive.sha256;
+        snapshot = await createImmutableArchiveSnapshot(config, source, copy);
+        action.sourceSha256 = snapshot.sha256;
+        archive = await inspectArchive(source, snapshot.path, execute, config.repoRoot);
+        await assertArchiveSourceHash(snapshot.path, snapshot.sha256, 'during immutable snapshot inspection');
+        await assertArchiveSourceHash(source.sourcePath, snapshot.sha256, 'after immutable snapshot inspection');
         packageRoot = '';
       } else {
         throw new Error(`Unsupported local source type: ${source.sourcePath}`);
@@ -376,7 +534,7 @@ export async function acquireLocalSources(
           const password = archive.password;
           const extraction = await execute(
             sevenZipExecutable(),
-            ['x', '-y', `-o${extractionRoot}`, ...passwordArguments(password), source.sourcePath],
+            ['x', '-y', `-o${extractionRoot}`, ...passwordArguments(password), snapshot!.path],
             {
               cwd: config.repoRoot,
               timeoutMs: 4 * 60 * 60_000,
@@ -386,10 +544,8 @@ export async function acquireLocalSources(
           if (extraction.exitCode !== 0) {
             throw new Error(safeCommandError(extraction, `7z could not extract ${basename(source.sourcePath)}`));
           }
-          const postExtractionSha256 = await sha256File(source.sourcePath);
-          if (postExtractionSha256 !== archive.sha256) {
-            throw new Error(`Local source archive changed during extraction: ${basename(source.sourcePath)}`);
-          }
+          await assertArchiveSourceHash(snapshot!.path, snapshot!.sha256, 'inside immutable snapshot');
+          await assertArchiveSourceHash(source.sourcePath, snapshot!.sha256, 'after immutable snapshot extraction');
           packageRoot = archive.root ? join(extractionRoot, archive.root) : extractionRoot;
           parseManifest(await readFile(join(packageRoot, 'module.json'), 'utf8'), source.id, source.expectedVersion);
           expectedInventory = await directoryInventory(packageRoot);
@@ -416,6 +572,10 @@ export async function acquireLocalSources(
       else failed += 1;
       if (options.apply) await rm(staging, { recursive: true, force: true }).catch(() => undefined);
       options.onProgress?.(`${action.status} ${source.id}@${source.expectedVersion}: ${action.error}`);
+    } finally {
+      if (snapshot !== null) {
+        await cleanupArchiveSnapshot(config, snapshot);
+      }
     }
   }
 
