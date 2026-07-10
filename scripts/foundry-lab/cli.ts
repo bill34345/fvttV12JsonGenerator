@@ -1,4 +1,5 @@
 import { bootstrapLab } from './bootstrap';
+import { acquirePackages, readClassifiedPlan } from './acquire';
 import { writePackagePlan } from './classify';
 import { createLabConfig } from './config';
 import { captureRemoteInventory, REMOTE_INVENTORY_EXPECTED_COUNT } from './remoteInventory';
@@ -47,5 +48,15 @@ if (command === 'classify') {
     output: `${config.inventoryRoot}/package-plan.json`,
   }, null, 2));
   process.exit(0);
+}
+if (command === 'acquire') {
+  const config = createLabConfig();
+  const plan = await readClassifiedPlan(config);
+  const report = await acquirePackages(config, plan, {
+    apply,
+    onProgress: (message) => console.error(`[foundry-lab] ${message}`),
+  });
+  console.log(JSON.stringify(report, null, 2));
+  process.exit(!apply || report.complete ? 0 : 1);
 }
 throw new Error(`Unsupported foundry:lab command: ${command ?? '<missing>'}`);

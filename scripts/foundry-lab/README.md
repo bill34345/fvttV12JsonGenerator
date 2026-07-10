@@ -1,0 +1,67 @@
+# Foundry v14 local mirror tooling
+
+This tooling builds a loopback-only Foundry v14.364 laboratory under
+`.local/foundry-v14`. The directory is ignored by Git. Production access is
+read-only: inventory uses SSH and server-only package acquisition uses SCP.
+The workflow never creates production archives or removes or changes production
+files. SSH transport compression may be enabled in memory with `scp -C`.
+
+## Package acquisition
+
+First capture and classify the live inventory, then review the dry-run:
+
+```powershell
+bun run foundry:lab inventory --apply
+bun run foundry:lab classify
+bun run foundry:lab acquire
+```
+
+The dry-run reads the locked local inventory and dnd5e reference only. It does
+not create directories, download files, or connect over SSH. A production
+snapshot with 88 active modules produces 90 planned actions: one per module and
+one dnd5e 5.3.3 installation for each local profile.
+
+Apply the reviewed plan with:
+
+```powershell
+bun run foundry:lab acquire --apply
+```
+
+Public archives must remain HTTPS through every redirect. Downloads use a
+`.part` file, extraction uses an isolated staging directory, and the archive's
+UTF-8 `module.json` or `system.json` must contain the exact expected ID and
+version before the existing installation is atomically replaced. An invalid
+package fails independently and leaves an existing verified directory intact.
+
+Packages classified `server-only` are copied serially from
+`Administrator@49.232.12.153:E:/Bill/fvtt_v13/data/Data/modules/<folder>` using
+the existing SSH identity. Progress is reported per package, including copied
+bytes. No transfers run in parallel. Packages classified `account-protected`
+remain unresolved until installed through the user's authenticated Foundry
+package interface; the script never looks for public substitutes or stores
+credentials. `manual-review` packages are also held out of installation.
+
+Server-only trees are inventoried read-only on production and verified locally
+by relative path, byte size, and SHA-256. Packages without active database lock
+files use `scp -O -C -r` to avoid SFTP round trips for many small files. If a
+tree contains LevelDB files whose exact basename is `LOCK` (case-insensitive on
+Windows), acquisition uses modern `scp -C -r`, records those runtime-only lock
+paths as exclusions, and verifies every other file. No other filename is
+excluded. Missing files after a recursive copy are fetched one at a time and
+the complete tree is verified again. A live LevelDB `.log` file that Foundry
+holds exclusively is not treated as disposable: the package fails closed and
+must be reacquired during an approved maintenance window or through its
+authorized package source.
+
+For active manifests declaring `persistentStorage: true`, the base package is
+installed first. Its production `storage` directory is then copied separately
+and checked by relative path, byte size, and SHA-256 before replacement.
+
+The ignored report is written to:
+
+```text
+.local/foundry-v14/inventory/acquisition-report.json
+```
+
+It lists every installed, unresolved, and failed package. An apply run is only
+complete when both unresolved and failed counts are zero.
