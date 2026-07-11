@@ -37,6 +37,56 @@ describe('ActorGenerator', () => {
     expect(activities[id].attack.bonus).toBe('10');
   });
 
+  it('preserves compact YAML object saves when generating actor activities', () => {
+    const input: ParsedNPC = {
+      name: '成年红龙',
+      type: 'npc',
+      abilities: {},
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      actions: [{
+        '火焰吐息 [充能5-6]': {
+          豁免: 'DC21敏捷',
+          失败: '18d6火焰',
+          成功: '减半',
+        },
+      }, {
+        '寒霜喷射 [充能6]': {
+          豁免: 'DC15体质',
+          失败: '4d8寒冷',
+          成功: '减半',
+        },
+      }, {
+        威吓展示: {
+          描述: '目标能看见该生物时才有效',
+        },
+      }],
+    };
+
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(input, { route: 'chinese' });
+    const breath = actor.items.find((item: any) => item.name === '火焰吐息');
+    const activity = Object.values(breath?.system.activities ?? {})[0] as any;
+
+    expect(activity?.type).toBe('save');
+    expect(activity?.save).toEqual(expect.objectContaining({ ability: ['dex'], dc: { calculation: '', formula: '21' } }));
+    expect(activity?.damage.parts[0]).toEqual(expect.objectContaining({ number: 18, denomination: 6, types: ['fire'] }));
+    expect(activity?.damage.onSave).toBe('half');
+    expect(activity?.uses?.recovery?.[0]).toEqual(expect.objectContaining({ period: 'recharge', formula: '5' }));
+
+    const frost = actor.items.find((item: any) => item.name === '寒霜喷射');
+    const frostActivity = Object.values(frost?.system.activities ?? {})[0] as any;
+    expect(frostActivity?.type).toBe('save');
+    expect(frostActivity?.save.ability).toEqual(['con']);
+    expect(frostActivity?.damage.parts[0]).toEqual(expect.objectContaining({ number: 4, denomination: 8, types: ['cold'] }));
+
+    const display = actor.items.find((item: any) => item.name === '威吓展示');
+    expect(Object.values(display?.system.activities ?? {})[0]).toEqual(expect.objectContaining({ type: 'utility' }));
+  });
+
   it('uses english action parsing for bestiary attack lines', () => {
     const input: ParsedNPC = {
       name: 'Adult Red Dragon',

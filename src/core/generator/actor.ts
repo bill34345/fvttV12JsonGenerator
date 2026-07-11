@@ -950,12 +950,24 @@ export class ActorGenerator {
         const key = Object.keys(entry)[0];
         const value = Object.values(entry)[0];
         if (typeof key === 'string' && value !== undefined) {
-          lines.push(`${key}: ${String(value)}`);
+          lines.push(`${key}: ${this.serializeActionValue(value)}`);
         }
       }
     }
 
     return lines;
+  }
+
+  private serializeActionValue(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((entry) => this.serializeActionValue(entry)).join(', ')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{ ${Object.entries(value as Record<string, unknown>)
+        .map(([key, entry]) => `${key}: ${this.serializeActionValue(entry)}`)
+        .join(', ')} }`;
+    }
+    return String(value);
   }
 
   private appendLegacySpellItems(items: any[], spellcasting: ParsedNPC['spellcasting']): void {
