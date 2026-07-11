@@ -110,7 +110,7 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
 
 ## Baseline Commands
 
-- Run all tests: `bun test`
+- Run all tests with bounded concurrency: `bun test --max-concurrency 4`
 - Run coverage: `bun test --coverage`
 - Run one file: `bun test src/core/generator/__tests__/phase1-validation.test.ts`
 - Convert one markdown file: `bun run src/index.ts "obsidian/dnd数据转fvttjson/input/example.md" -o "obsidian/dnd数据转fvttjson/output/example.json"`

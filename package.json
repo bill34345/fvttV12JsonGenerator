@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --max-concurrency 4",
     "test:npc": "bun test tests/acceptance/alyxian-aboleth.acceptance.test.ts tests/acceptance/scuttling-serpentmaw.acceptance.test.ts tests/acceptance/slithering-bloodfin.acceptance.test.ts tests/e2e.test.ts src/core/generator/__tests__/phase1-validation.test.ts",
     "sync:vault": "bun run src/index.ts --sync --vault \"obsidian/dnd数据转fvttjson\"",
     "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",

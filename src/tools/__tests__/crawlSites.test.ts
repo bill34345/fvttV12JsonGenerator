@@ -201,12 +201,21 @@ async function runCli(args: string[]): Promise<{ exitCode: number; stdout: strin
     stdout: 'pipe',
     stderr: 'pipe',
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  return { exitCode, stdout, stderr };
+  const timeout = setTimeout(() => proc.kill(), 15_000);
+  try {
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    return { exitCode, stdout, stderr };
+  } finally {
+    clearTimeout(timeout);
+    if (proc.exitCode === null) {
+      proc.kill();
+      await proc.exited;
+    }
+  }
 }
 
 function createCliCrawlFixtureServer(
