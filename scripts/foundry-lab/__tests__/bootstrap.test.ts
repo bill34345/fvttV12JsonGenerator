@@ -166,8 +166,10 @@ describe('Foundry lab bootstrap', () => {
         await writeFile(join(destination, 'node-v24.17.0-win-x64', 'node.exe'), 'fixture');
       } else {
         await mkdir(destination, { recursive: true });
+        await mkdir(join(destination, 'public'), { recursive: true });
         await writeFile(join(destination, 'package.json'), JSON.stringify({ version: '14.364.0' }));
         await writeFile(join(destination, 'main.js'), 'fixture');
+        await writeFile(join(destination, 'license.html'), '<h1>Official Foundry License</h1>');
       }
     };
 
@@ -200,6 +202,9 @@ describe('Foundry lab bootstrap', () => {
       expect(downloadCalls).toBe(2);
       expect(existsSync(archivePart)).toBe(false);
       expect(await readFile(plan.nodeArchivePath)).toEqual(archiveBytes);
+      expect(await readFile(join(config.appRoot, 'public', 'license.html'), 'utf8')).toBe(
+        '<h1>Official Foundry License</h1>',
+      );
 
       await writeFile(archivePart, 'stale-part-next-to-complete-final');
       const reused = await bootstrapLab(config, { apply: true }, {

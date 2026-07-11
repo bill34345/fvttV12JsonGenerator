@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { assertInsideLabRoot, type FoundryLabConfig } from './config';
 import { runCommand } from './process';
@@ -316,6 +316,12 @@ export async function bootstrapLab(
     }
     foundryVersion = extractedManifest.version;
     activeAction.status = 'done';
+
+    const stagedLicenseSource = resolve(plan.foundryStagingRoot, 'license.html');
+    const stagedLicenseTarget = resolve(plan.foundryStagingRoot, 'public', 'license.html');
+    assertInsideLabRoot(config, stagedLicenseSource);
+    assertInsideLabRoot(config, stagedLicenseTarget);
+    await copyFile(stagedLicenseSource, stagedLicenseTarget);
 
     await replaceDirectory(stagedNodeRoot, config.nodeRoot);
     assertInsideLabRoot(config, plan.nodeStagingRoot);
