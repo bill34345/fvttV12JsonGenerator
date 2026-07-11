@@ -118,6 +118,34 @@ export class EffectProfileApplier {
 
   private applyModdedV14(item: any): void {
     item.effects = (item.effects ?? []).filter((effect: any) => !/(?:Swallowed|吞咽中)/i.test(String(effect?.name ?? '')));
+
+    for (const effect of item.effects) {
+      if (!effect || typeof effect !== 'object') {
+        continue;
+      }
+
+      const overTime = effect.flags?.['midi-qol.OverTime'];
+      if (typeof overTime !== 'string' || !overTime.trim()) {
+        continue;
+      }
+
+      // schema-derived: MIDI-QOL 14.0.9 scans v14 ActiveEffect system.changes
+      // for flags.midi-qol.OverTime; a document flag is not consumed there.
+      const system = (effect.system ??= {});
+      const changes = Array.isArray(system.changes) ? system.changes : [];
+      system.changes = changes.filter((change: any) => change?.key !== 'flags.midi-qol.OverTime');
+      system.changes.push({
+        key: 'flags.midi-qol.OverTime',
+        mode: 5,
+        value: overTime,
+        priority: 20,
+      });
+
+      delete effect.flags['midi-qol.OverTime'];
+      if (Object.keys(effect.flags).length === 0) {
+        delete effect.flags;
+      }
+    }
   }
 
   private stripModuleAutomation(item: any): void {
@@ -135,6 +163,17 @@ export class EffectProfileApplier {
         if (Object.keys(effect.flags).length === 0) {
           delete effect.flags;
         }
+      }
+
+      if (Array.isArray(effect.system?.changes)) {
+        effect.system.changes = effect.system.changes.filter(
+          (change: any) => change?.key !== 'flags.midi-qol.OverTime',
+        );
+      }
+      if (Array.isArray(effect.changes)) {
+        effect.changes = effect.changes.filter(
+          (change: any) => change?.key !== 'flags.midi-qol.OverTime',
+        );
       }
 
       return true;

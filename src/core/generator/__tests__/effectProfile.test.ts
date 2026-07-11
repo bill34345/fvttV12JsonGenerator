@@ -85,7 +85,7 @@ describe('ActorGenerator effect profiles', () => {
     );
   });
 
-  it('modded-v14 preserves source-derived midi-qol OverTime while core strips it', () => {
+  it('modded-v14 converts source-derived midi-qol OverTime to the ActiveEffect change read by MIDI 14.0.9 while core strips it', () => {
     const effect = {
       name: '流血 (Bleeding)',
       flags: {
@@ -100,8 +100,53 @@ describe('ActorGenerator effect profiles', () => {
     applier.apply(moddedV14Actor, 'modded-v14');
 
     expect(coreActor.items[0].effects[0].flags).toBeUndefined();
-    expect(moddedV14Actor.items[0].effects[0].flags?.['midi-qol.OverTime']).toBe(
-      'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
-    );
+    expect(coreActor.items[0].effects[0].system?.changes ?? []).toEqual([]);
+    expect(moddedV14Actor.items[0].effects[0].flags).toBeUndefined();
+    expect(moddedV14Actor.items[0].effects[0].system.changes).toEqual([{
+      key: 'flags.midi-qol.OverTime',
+      mode: 5,
+      value: 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+      priority: 20,
+    }]);
+  });
+
+  it('modded-v14 preserves complete source-derived OverTime values without converting neighboring flags', () => {
+    const actor = { items: [{
+      name: 'Generic repeated damage',
+      system: { description: { value: 'explicit repeated damage' } },
+      effects: [{
+        name: 'Repeated damage',
+        system: { changes: [] },
+        flags: {
+          'midi-qol.OverTime': 'turn=start,damageRoll=2d4,damageType=acid,label=Acid Burn,saveDC=15,saveAbility=dex,saveRemove=True',
+          'midi-qol': { unrelated: true },
+        },
+      }, {
+        name: 'Fire repeat',
+        system: { changes: [{ key: 'system.attributes.ac.flat', mode: 2, value: '1', priority: 20 }] },
+        flags: {
+          'midi-qol.OverTime': 'turn=end,damageRoll=1d10,damageType=fire,label=Burning',
+        },
+      }],
+    }] };
+
+    new EffectProfileApplier().apply(actor, 'modded-v14');
+
+    expect(actor.items[0].effects[0].system.changes).toEqual([{
+      key: 'flags.midi-qol.OverTime',
+      mode: 5,
+      value: 'turn=start,damageRoll=2d4,damageType=acid,label=Acid Burn,saveDC=15,saveAbility=dex,saveRemove=True',
+      priority: 20,
+    }]);
+    expect(actor.items[0].effects[0].flags).toEqual({ 'midi-qol': { unrelated: true } });
+    expect(actor.items[0].effects[1].system.changes).toEqual([
+      { key: 'system.attributes.ac.flat', mode: 2, value: '1', priority: 20 },
+      {
+        key: 'flags.midi-qol.OverTime',
+        mode: 5,
+        value: 'turn=end,damageRoll=1d10,damageType=fire,label=Burning',
+        priority: 20,
+      },
+    ]);
   });
 });

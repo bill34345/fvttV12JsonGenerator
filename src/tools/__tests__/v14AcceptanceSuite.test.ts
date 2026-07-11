@@ -122,10 +122,18 @@ describe('v14AcceptanceSuite', () => {
 
       expect(result.summary.failed).toBe(0);
       const actor = JSON.parse(readFileSync(join(outDir, 'bleeding-guardian.v14.json'), 'utf-8'));
-      const overtimeFlags = actor.items.flatMap((item: any) =>
-        (item.effects ?? []).map((effect: any) => effect.flags?.['midi-qol.OverTime']).filter(Boolean),
+      const overtimeChanges = actor.items.flatMap((item: any) =>
+        (item.effects ?? []).flatMap((effect: any) => effect.system?.changes ?? []),
       );
-      expect(overtimeFlags).toContain('turn=start,damageRoll=1d6,damageType=piercing,label=Bleeding');
+      expect(overtimeChanges).toContainEqual({
+        key: 'flags.midi-qol.OverTime',
+        mode: 5,
+        value: 'turn=start,damageRoll=1d6,damageType=piercing,label=Bleeding',
+        priority: 20,
+      });
+      expect(actor.items.flatMap((item: any) => item.effects ?? []).some(
+        (effect: any) => effect.flags?.['midi-qol.OverTime'],
+      )).toBe(false);
       const report = readFileSync(reportPath, 'utf-8');
       expect(report).toContain('Effect profile: `modded-v14`');
       expect(report).toContain('MIDI-QOL `14.0.9`');
