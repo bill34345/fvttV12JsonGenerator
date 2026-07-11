@@ -68,7 +68,7 @@ Foundry v14 is also a supported explicit target when `--fvtt-version 14` or the 
 - DAE: v14.0.12 (modded-v14)
 - Times Up: not used for v14; v14 duration handling is core/DAE-based
 - Item Macro: not a required v14 dependency unless separately verified
-- Reference roots: `references/dnd5e-5.3.3/repo`, `references/foundry-v14-api-core`, and `references/foundry-v14-api-notes`
+- Reference roots: tracked provenance under `references/`, optional full sources under `.local/references/`, and Foundry v14 release notes under `references/foundry-v14-api-notes`
 
 Do not use `modded-v12` semantics as evidence for v14 correctness unless v14-compatible module versions have been separately verified.
 Do not use Times Up or Item Macro behavior as evidence for `modded-v14` correctness unless a v14-compatible version has been separately verified.
@@ -76,7 +76,7 @@ Do not use Times Up or Item Macro behavior as evidence for `modded-v14` correctn
 When implementing or reviewing behavior that depends on Foundry, dnd5e, MIDI-QOL, DAE, Times Up, Item Macro, or any other module API:
 
 - Do not use latest documentation by default.
-- Prefer locked local references under `references/` for the exact target version.
+- Prefer tracked provenance plus verified locked caches under `.local/references/` for the exact target version.
 - If local references are missing, use Context7 with a version-specific library ID when available.
 - If Context7 cannot confirm the exact version, consult the official package page or source repository for the target version before coding.
 - Do not infer module flags, hook names, macro pass names, Active Effect fields, or compatibility behavior from memory.

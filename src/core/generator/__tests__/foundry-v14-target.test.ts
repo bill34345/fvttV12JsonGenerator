@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { load as loadYaml } from 'js-yaml';
 import { ActorGenerator } from '../actor';
 import { ActivityGenerator } from '../activity';
 import { ItemGenerator } from '../item-generator';
+import { assertEqualStructure } from '../../utils/assertEqualStructure';
 import { ActorValidator } from '../validator';
 import type { ParsedNPC } from '../../../config/mapping';
 
@@ -100,6 +104,49 @@ describe('Foundry v14 generator target', () => {
     expect(item._stats?.systemVersion).toBe('5.3.3');
     expect(item.system.attunement).toBe('required');
     expect(item.system.attuned).toBeUndefined();
+  });
+
+  it('uses bundled minimal templates for every supported v14 item route', async () => {
+    const cases = [
+      ['weapon', 'weapon'],
+      ['equipment', 'equipment'],
+      ['consumable', 'consumable'],
+      ['loot', 'loot'],
+      ['tool', 'tool'],
+      ['ammunition', 'consumable'],
+      ['armor', 'equipment'],
+      ['rod', 'equipment'],
+      ['wand', 'equipment'],
+      ['staff', 'weapon'],
+      ['container', 'container'],
+    ] as const;
+
+    for (const [sourceType, foundryType] of cases) {
+      const item = await new ItemGenerator({ fvttVersion: '14' }).generate({
+        name: `Test ${sourceType}`,
+        type: sourceType,
+        description: `Source-derived ${sourceType} fixture.`,
+      });
+
+      expect(item.type).toBe(foundryType);
+      expect(item.system.description.value).toContain(sourceType);
+      expect(item._stats?.systemVersion).toBe('5.3.3');
+    }
+  });
+
+  it('keeps the representative v14 equipment template structure', async () => {
+    const template = loadYaml(readFileSync(join(
+      process.cwd(),
+      'references/item-templates/dnd5e-5.3.3/items/equipment/amulet-of-health.yml',
+    ), 'utf8')) as Record<string, any>;
+    delete template.system.attuned;
+    const generated = await new ItemGenerator({ fvttVersion: '14' }).generate({
+      name: 'Amulet of Health',
+      type: 'equipment',
+      description: 'Representative structure check.',
+    });
+
+    assertEqualStructure(generated, template, { mode: 'shape' });
   });
 
   it('targets v14 AC formula instead of legacy AC bonus path', () => {

@@ -10,6 +10,8 @@ export interface FoundryTarget {
   };
   reference: {
     dnd5eRepo: string;
+    localCache?: string;
+    requiredForGeneration?: boolean;
   };
   modules?: {
     midiQol: string | null;
@@ -56,7 +58,9 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
       systemVersion: '5.3.3',
     },
     reference: {
-      dnd5eRepo: 'references/dnd5e-5.3.3/repo',
+      dnd5eRepo: '.local/references/dnd5e/5.3.3/repo',
+      localCache: '.local/references/dnd5e/5.3.3/repo',
+      requiredForGeneration: false,
     },
     modules: {
       midiQol: '14.0.9',

@@ -123,18 +123,19 @@ export function tokenizePath(relativePath: string): string[] {
 export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceIndexSummary {
   const root = resolve(projectRoot);
   const referencesDir = join(root, 'references');
-  const indexesDir = join(referencesDir, 'indexes');
+  const localReferencesDir = join(root, '.local', 'references');
+  const indexesDir = join(localReferencesDir, 'indexes');
 
   mkdirSync(indexesDir, { recursive: true });
 
   const foundryRoots = [
-    'foundry-v12-api-core',
-    'foundry-v14-api-core',
-  ].filter((name) => existsSync(join(referencesDir, name)));
+    { name: 'foundry-v12-api-core', path: join(referencesDir, 'foundry-v12-api-core') },
+    { name: 'foundry-v14-api-core', path: join(localReferencesDir, 'foundry', '14.361', 'api-core') },
+  ].filter((entry) => existsSync(entry.path));
   const dndVersions = [
-    'dnd5e-4.3.9',
-    'dnd5e-5.3.3',
-  ].filter((name) => existsSync(join(referencesDir, name, 'repo')));
+    { name: 'dnd5e-4.3.9', path: join(referencesDir, 'dnd5e-4.3.9', 'repo') },
+    { name: 'dnd5e-5.3.3', path: join(localReferencesDir, 'dnd5e', '5.3.3', 'repo') },
+  ].filter((entry) => existsSync(entry.path));
 
   let foundryApiDocs = 0;
   let foundryTextFiles = 0;
@@ -142,13 +143,13 @@ export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceInd
   let dndTokenCount = 0;
 
   for (const foundryRoot of foundryRoots) {
-    const result = buildFoundryIndex(referencesDir, indexesDir, foundryRoot);
+    const result = buildFoundryIndex(foundryRoot.path, join(localReferencesDir, 'generated-text', foundryRoot.name), indexesDir, foundryRoot.name);
     foundryApiDocs += result.entries;
     foundryTextFiles += result.textFiles;
   }
 
   for (const dndVersion of dndVersions) {
-    const result = buildDndIndex(referencesDir, indexesDir, dndVersion);
+    const result = buildDndIndex(dndVersion.path, indexesDir, dndVersion.name);
     dndRepoFiles += result.entries;
     dndTokenCount += result.tokens;
   }
@@ -162,12 +163,11 @@ export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceInd
 }
 
 function buildFoundryIndex(
-  referencesDir: string,
+  foundryCoreDir: string,
+  foundryTextDir: string,
   indexesDir: string,
   rootName: string,
 ): { entries: number; textFiles: number } {
-  const foundryCoreDir = join(referencesDir, rootName);
-  const foundryTextDir = join(referencesDir, `${rootName}-text`);
   mkdirSync(foundryTextDir, { recursive: true });
 
   const foundryEntries: FoundryApiDocEntry[] = [];
@@ -218,11 +218,10 @@ function buildFoundryIndex(
 }
 
 function buildDndIndex(
-  referencesDir: string,
+  dndRepoDir: string,
   indexesDir: string,
   versionDir: string,
 ): { entries: number; tokens: number } {
-  const dndRepoDir = join(referencesDir, versionDir, 'repo');
   const dndEntries: DndRepoFileEntry[] = [];
   const dndTokenMap: Record<string, string[]> = Object.create(null);
 

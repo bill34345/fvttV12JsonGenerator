@@ -122,31 +122,75 @@ export class ItemGenerator {
 
       if (files.length === 0) {
         // Fallback to equipment template
-        return this.loadFallbackTemplate();
+        return this.loadFallbackTemplate(type);
       }
 
       // Use the first item in the directory as template
       const firstFile = files[0];
       if (!firstFile) {
-        return this.loadFallbackTemplate();
+        return this.loadFallbackTemplate(type);
       }
       const templatePath = join(dirPath, firstFile);
       return this.loadTemplateFile(templatePath);
     } catch (error) {
       console.warn(`Warning: Failed to load reference template for type ${type}, using fallback: ${error}`);
-      return this.loadFallbackTemplate();
+      return this.loadFallbackTemplate(type);
     }
   }
 
   /**
    * Load fallback template when no reference is available
    */
-  private loadFallbackTemplate(): ItemDocument {
+  private loadBundledMinimalTemplate(type: ItemType): ItemDocument {
+    const item = this.loadFallbackTemplate(type);
+    const foundryType = this.foundryItemType(type);
+    item.type = foundryType;
+
+    item.system.properties ??= [];
+    item.system.container ??= null;
+    item.system.unidentified ??= { description: '' };
+
+    if (foundryType === 'weapon') {
+      item.system.damage ??= {
+        base: { number: 1, denomination: 4, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } },
+        versatile: { number: null, denomination: 0, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } },
+      };
+      item.system.range ??= { value: null, long: null, reach: null, units: 'ft' };
+      item.system.type ??= { value: 'simpleM', baseItem: '' };
+      item.system.proficient ??= null;
+    } else if (foundryType === 'equipment') {
+      item.system.armor ??= { value: null, dex: null };
+      item.system.type ??= { value: 'trinket', baseItem: '' };
+    } else if (foundryType === 'consumable') {
+      item.system.type ??= { value: type === 'ammunition' ? 'ammo' : 'potion', subtype: '' };
+      item.system.damage ??= { base: { number: null, denomination: 0, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } } };
+    } else if (foundryType === 'loot') {
+      item.system.type ??= { value: 'gear' };
+    } else if (foundryType === 'tool') {
+      item.system.type ??= { value: 'art', baseItem: '' };
+      item.system.ability ??= '';
+      item.system.bonus ??= '';
+    } else if (foundryType === 'container') {
+      item.system.capacity ??= { type: 'weight', value: null };
+      item.system.currency ??= { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+    }
+
+    return item;
+  }
+
+  private foundryItemType(type: ItemType): string {
+    if (type === 'ammunition' || type === 'consumable') return 'consumable';
+    if (type === 'armor' || type === 'rod' || type === 'wand') return 'equipment';
+    if (type === 'staff') return 'weapon';
+    return type;
+  }
+
+  private loadFallbackTemplate(type: ItemType = 'equipment'): ItemDocument {
     // Return a minimal valid item structure
     return {
       _id: 'fallback',
       name: 'Unknown Item',
-      type: 'equipment',
+      type: this.foundryItemType(type),
       img: 'icons/svg/item-bag.svg',
       system: {
         description: {
@@ -423,6 +467,9 @@ export class ItemGenerator {
   }
 
   private referenceItemsPath(): string {
+    if (this.isV14()) {
+      return join(PROJECT_ROOT, 'references/item-templates/dnd5e-5.3.3/items');
+    }
     return join(PROJECT_ROOT, getFoundryTarget(this.fvttVersion).reference.dnd5eRepo, 'packs/_source/items');
   }
 

@@ -1,120 +1,54 @@
-# Local Reference Index
+# Versioned Reference Cache
 
-This project keeps high-value Foundry and dnd5e references under [`references/`](I:/OpenCode/fvttV12JsonGenerator/references).
+Large upstream source trees, generated indexes, API mirrors, fonts, icons, and tokens are local verification inputs. They are not runtime dependencies and are not stored in Git.
 
-## Foundry V12
+## Tracked evidence
 
-- Core API curated snapshot:
-  [`references/foundry-v12-api-core/`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core)
-- Plain-text extracts for the curated snapshot:
-  [`references/foundry-v12-api-core-text/`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core-text)
-- Resumable wider mirror:
-  [`references/foundry-v12-api/`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api)
-- Machine-readable file index:
-  [`references/indexes/foundry-v12-api-core-index.json`](I:/OpenCode/fvttV12JsonGenerator/references/indexes/foundry-v12-api-core-index.json)
-- Machine-readable token index:
-  [`references/indexes/foundry-v12-api-core-token-index.json`](I:/OpenCode/fvttV12JsonGenerator/references/indexes/foundry-v12-api-core-token-index.json)
+- `references/reference-cache-manifest.json` pins each automatically acquired component to an immutable revision and records its license.
+- `references/dnd5e-5.3.3/system.json` records the published dnd5e package metadata.
+- `references/dnd5e-5.3.3/release-5.3.3.html` and `release-5.3.0.html` preserve the small release-note evidence used by the v14 work.
+- `references/foundry-v14-api-notes/` preserves the small official Foundry release-note snapshots and their acceptance hashes.
+- Generated v14 Item JSON uses the small locked templates under `references/item-templates/dnd5e-5.3.3`; it does not read the full upstream source tree.
 
-Recommended first pages:
+## Local layout
 
-- [`index.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/index.html)
-- [`client.Actor.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/classes/client.Actor.html)
-- [`client.Item.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/classes/client.Item.html)
-- [`foundry.abstract.Document.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/classes/foundry.abstract.Document.html)
-- [`foundry.abstract.DataModel.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/classes/foundry.abstract.DataModel.html)
-- [`client.TokenDocument.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v12-api-core/classes/client.TokenDocument.html)
+The ignored cache root is `.local/references/`:
 
-## Foundry V14
+| Path | Purpose |
+| --- | --- |
+| `.local/references/dnd5e/5.3.3/repo` | Immutable dnd5e source checkout pinned by the manifest |
+| `.local/references/foundry/14.361/api-core` | Curated Foundry v14 API pages retained for local review |
+| `.local/references/foundry/14.361/api-core-text` | Text extracts retained from the previous local snapshot |
+| `.local/references/indexes` | Rebuildable file and token indexes |
+| `.local/references/generated-text` | Rebuildable API text extracts |
 
-- Official API core extract:
-  [`references/foundry-v14-api-core/`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core)
-- Official stable release notes:
-  [`references/foundry-v14-api-notes/`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-notes)
+The older v12/dnd5e 4.3.9 tracked references remain available until they receive a separate migration. Removing the v14 inputs must not change v12 or v13 output.
 
-Recommended first pages:
+## Commands
 
-- [`index.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/index.html)
-- [`foundry.documents.Actor.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.Actor.html)
-- [`foundry.documents.Item.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.Item.html)
-- [`foundry.documents.ActiveEffect.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.ActiveEffect.html)
-- [`foundry.documents.BaseActor.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.BaseActor.html)
-- [`foundry.documents.BaseItem.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.BaseItem.html)
-- [`foundry.documents.BaseActiveEffect.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.documents.BaseActiveEffect.html)
-- [`foundry.abstract.Document.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.abstract.Document.html)
-- [`foundry.abstract.DataModel.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-core/classes/foundry.abstract.DataModel.html)
-- [`release-14.360.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-notes/release-14.360.html)
-- [`release-14.361.html`](I:/OpenCode/fvttV12JsonGenerator/references/foundry-v14-api-notes/release-14.361.html)
+```powershell
+# Show the immutable acquisition plan without writing files
+bun run references bootstrap --dry-run
 
-Provenance hashes:
+# Acquire into a staging directory, verify the exact revision, then atomically install
+bun run references bootstrap
 
-- `foundry-v14-api-core/index.html`: `33FEE4908148FD94B08DF94136B93790549E737D23C09D24F750B89385AECC44`
-- `foundry-v14-api-notes/release-14.360.html`: `4BA4B5F6DA5C2CF95A346B5B3AB398FFBFABBCE54F8579C79DFF88BE8108A639`
-- `foundry-v14-api-notes/release-14.361.html`: `580F327078CAFBD6A767405ABD8AA6E9057F2E431BAD50219F60B93A6B5114CC`
+# Offline validation; never modifies the cache
+bun run references verify
 
-## dnd5e 4.3.9
+# Rebuild generated indexes under .local/references
+bun run src/tools/referenceIndex.ts
+```
 
-- Locked source tree:
-  [`references/dnd5e-4.3.9/repo/`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-4.3.9/repo)
-- Machine-readable file index:
-  [`references/indexes/dnd5e-4.3.9-file-index.json`](I:/OpenCode/fvttV12JsonGenerator/references/indexes/dnd5e-4.3.9-file-index.json)
-- Machine-readable token index:
-  [`references/indexes/dnd5e-4.3.9-token-index.json`](I:/OpenCode/fvttV12JsonGenerator/references/indexes/dnd5e-4.3.9-token-index.json)
-- Release JSON:
-  [`release-4.3.9.json`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-4.3.9/release-4.3.9.json)
-- Release HTML snapshot:
-  [`release-4.3.9.html`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-4.3.9/release-4.3.9.html)
-- Release notes markdown:
-  [`RELEASE_NOTES.md`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-4.3.9/RELEASE_NOTES.md)
-- Published manifest:
-  [`system.json`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-4.3.9/system.json)
+The bootstrap command never replaces a valid existing cache until the staged clone has checked out the exact revision. A failed clone, checkout, or revision check leaves the existing target untouched.
 
-## dnd5e 5.3.3
+## Locked v14 evidence
 
-- Locked source tree:
-  [`references/dnd5e-5.3.3/repo/`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/repo)
-- Published manifest:
-  [`system.json`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/system.json)
-- Release note snapshots:
-  [`release-5.3.3.html`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/release-5.3.3.html)
-  and
-  [`release-5.3.0.html`](I:/OpenCode/fvttV12JsonGenerator/references/dnd5e-5.3.3/release-5.3.0.html)
+- Foundry generated metadata: `14.361`
+- Foundry runtime acceptance: `14.364`
+- dnd5e: `5.3.3`, revision `965ad2d0cf5d063dac675ba078b5bd3c3c0dd449`
+- MIDI-QOL: `14.0.9`
+- DAE: `14.0.12`
+- Foundry release `14.361` snapshot SHA-256: `580F327078CAFBD6A767405ABD8AA6E9057F2E431BAD50219F60B93A6B5114CC`
 
-This is the first locked dnd5e source line for Foundry VTT v14 support. Its manifest reports `version: 5.3.3` and `compatibility.verified: 14`.
-
-Provenance hashes:
-
-- `dnd5e-5.3.3/system.json`: `B49E9CA38EFACFB1E98761FB59D47B6F4B8709D92653A31DD6434E16677C7E0E`
-
-Recommended search entry points inside the dnd5e source tree:
-
-- `system.json`
-- `template.json`
-- `module/`
-- `data/`
-- `templates/`
-
-## v14 Module References
-
-The first `modded-v14` profile uses externally checked official package/source references instead of local module mirrors:
-
-- MIDI-QOL `14.0.9`: Foundry package page and `https://gitlab.com/tposney/midi-qol/-/raw/v14/package/module.json`
-- DAE `14.0.12`: Foundry package page and `https://gitlab.com/tposney/dae/-/raw/v14/package/module.json`
-- Times Up: Foundry package page states no v14 version; do not require it for v14 output.
-- Item Macro: Foundry package page currently verifies `3.0.1` against Foundry 13, so it is not a required v14 dependency.
-
-## Usage Order
-
-When implementing or reviewing Foundry output:
-
-1. Choose the target first: v12/v13 compatibility work uses dnd5e 4.3.9; v14 work uses dnd5e 5.3.3.
-2. Check the target `system.json`.
-3. Check the target dnd5e source tree or token index to narrow candidate files before opening source files.
-4. Check the matching Foundry API snapshot or notes for core document behavior.
-5. Read plain-text extracts before opening raw HTML when they exist.
-6. Only if local references are insufficient, browse the web.
-
-## Refresh Command
-
-Regenerate local indexes and text extracts:
-
-- `bun run src/tools/referenceIndex.ts`
+Full production-module coexistence is not accepted. These references support schema and narrow runtime verification only.

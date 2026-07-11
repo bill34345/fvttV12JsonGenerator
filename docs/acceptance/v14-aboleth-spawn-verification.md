@@ -42,8 +42,8 @@ Output: `obsidian/dnd数据转fvttjson/output/aboleth-spawn.v14.json`
 
 ## Reference Evidence
 
-- dnd5e target source: `references/dnd5e-5.3.3/repo`, with `system.json` version `5.3.3` and verified compatibility `14`.
-- Foundry target source: `references/foundry-v14-api-core` and `references/foundry-v14-api-notes`.
+- dnd5e target source: manifest-pinned `.local/references/dnd5e/5.3.3/repo`, with tracked `references/dnd5e-5.3.3/system.json` version `5.3.3` and verified compatibility `14`.
+- Foundry target source: cached `.local/references/foundry/14.361/api-core` plus tracked `references/foundry-v14-api-notes`.
 - Schema-derived v14 changes checked against local dnd5e 5.3.3 source:
   - NPC resources use `max`/`spent`;
   - senses use `senses.ranges`;

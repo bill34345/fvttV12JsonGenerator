@@ -14,7 +14,7 @@ describe('foundryTarget', () => {
     expect(target.fvttVersion).toBe('14');
     expect(target.dnd5eVersion).toBe('5.3.3');
     expect(target.stats.systemVersion).toBe('5.3.3');
-    expect(target.reference.dnd5eRepo).toContain('references/dnd5e-5.3.3/repo');
+    expect(target.reference.dnd5eRepo).toBe('.local/references/dnd5e/5.3.3/repo');
     expect(target.effectProfiles).toEqual(['core', 'modded-v14']);
     expect(target.modules).toEqual({
       midiQol: '14.0.9',
@@ -22,6 +22,13 @@ describe('foundryTarget', () => {
       timesUp: null,
       itemMacro: null,
     });
+  });
+
+  it('treats the v14 full reference as an optional local verification cache', () => {
+    const target = getFoundryTarget('14');
+
+    expect(target.reference.localCache).toBe('.local/references/dnd5e/5.3.3/repo');
+    expect(target.reference.requiredForGeneration).toBe(false);
   });
 
   it('rejects unsupported target versions explicitly', () => {
