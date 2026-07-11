@@ -2,6 +2,8 @@
 
 Generated from sanitized package IDs and manifest versions.
 
+> **Runtime authorization concern:** Foundry reported `Invalid signature file for protected module "mcdm-flee-mortals-where-evil-lives"`. Inventory `effectivePass` is not runtime compatibility or authorization acceptance.
+
 - Production active modules: 88
 - Raw production-exact pass: **false**
 - Effective pass after explicit user decisions: **true**
@@ -11,6 +13,7 @@ Generated from sanitized package IDs and manifest versions.
 - Unapproved version mismatches: none
 - Missing: none
 - Missing dependencies: none
+- Dependency declaration mismatches: none
 - Unresolved: none
 - Extra installed packages (non-blocking): none
 - Installed but intentionally disabled in activation policy: `dungeon-strugglers-collection`

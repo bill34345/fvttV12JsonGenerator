@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { resolve } from 'node:path';
 import { createLabConfig } from '../config';
-import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, validateListenerAddresses } from '../launch';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, validateListenerAddresses, validateListenerOwnership } from '../launch';
 
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
@@ -24,6 +24,10 @@ describe('Foundry profile launcher', () => {
     expect(() => validateListenerAddresses(['0.0.0.0'])).toThrow('loopback');
     expect(() => validateListenerAddresses(['192.168.1.2'])).toThrow('loopback');
   });
+  it('rejects a loopback listener owned by a different process', () => {
+    expect(() => validateListenerOwnership([{ address: '127.0.0.1', pid: 44 }], 55)).toThrow('owned');
+    expect(() => validateListenerOwnership([{ address: '127.0.0.1', pid: 55 }], 55)).not.toThrow();
+  });
   it('pins persisted Foundry options to loopback and disables UPnP', () => {
     expect(buildSafeOptions({ hostname: null, upnp: true, adminPassword: 'must-not-copy' }, config.profiles.coreTest)).toMatchObject({
       dataPath: config.profiles.coreTest.dataPath, hostname: '127.0.0.1', port: 30000, upnp: false,
@@ -40,5 +44,9 @@ describe('Foundry profile launcher', () => {
     expect(isExpectedFoundryProcess(config, node, `"${node}" --require hook "${main}"`)).toBe(true);
     expect(isExpectedFoundryProcess(config, node, `"${node}" other.js`)).toBe(false);
     expect(isExpectedFoundryProcess(config, 'C:/other/node.exe', `"${main}"`)).toBe(false);
+  });
+  it('maps each profile to the mutually exclusive peer', () => {
+    expect(otherProfileId('core-test')).toBe('server-mirror');
+    expect(otherProfileId('server-mirror')).toBe('core-test');
   });
 });
