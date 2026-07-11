@@ -87,6 +87,7 @@ describe('v14AcceptanceSuite', () => {
     const root = mkdtempSync(join(tmpdir(), 'v14-modded-acceptance-suite-'));
     try {
       const sourcePath = join(root, 'bleeding-guardian.md');
+      const unrelatedSourcePath = join(root, 'watchful-guardian.md');
       const outDir = join(root, 'out');
       const reportPath = join(root, 'report.md');
       writeFileSync(sourcePath, [
@@ -106,14 +107,39 @@ describe('v14AcceptanceSuite', () => {
         '- **Bleeding Bite.** Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage, and the target starts bleeding, taking `1d6` piercing damage at the start of each turn.',
         '',
       ].join('\n'));
+      writeFileSync(unrelatedSourcePath, [
+        '---',
+        'layout: creature',
+        'name: "Watchful Guardian"',
+        'size: Medium humanoid',
+        'alignment: neutral',
+        'challenge: "1 (200 XP)"',
+        'speed: "30 ft."',
+        'hit_points: "22 (4d8 + 4)"',
+        'armor_class: "13"',
+        '---',
+        '',
+        '### Actions',
+        '',
+        '- **Bite.** Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage.',
+        '',
+      ].join('\n'));
 
       const result = await runV14AcceptanceSuite({
-        samples: [{
-          id: 'bleeding-guardian',
-          label: 'Bleeding Guardian',
-          category: 'modded-v14 overtime',
-          sourcePath,
-        }],
+        samples: [
+          {
+            id: 'bleeding-guardian',
+            label: 'Bleeding Guardian',
+            category: 'modded-v14 overtime',
+            sourcePath,
+          },
+          {
+            id: 'watchful-guardian',
+            label: 'Watchful Guardian',
+            category: 'unrelated control',
+            sourcePath: unrelatedSourcePath,
+          },
+        ],
         outDir,
         reportPath,
         includeCrawlFixture: false,
@@ -133,6 +159,47 @@ describe('v14AcceptanceSuite', () => {
       });
       expect(actor.items.flatMap((item: any) => item.effects ?? []).some(
         (effect: any) => effect.flags?.['midi-qol.OverTime'],
+      )).toBe(false);
+
+      const bleedingBite = actor.items.find((item: any) => item.name === 'Bleeding Bite');
+      const activityDamageParts = Object.values(bleedingBite.system.activities).flatMap(
+        (activity: any) => activity.damage?.parts ?? [],
+      );
+      expect(activityDamageParts).toEqual([{
+        number: 1,
+        denomination: 8,
+        bonus: '3',
+        types: ['piercing'],
+        custom: { enabled: false, formula: '' },
+        scaling: { mode: 'whole', number: 1, formula: '' },
+      }]);
+
+      const unrelatedActor = JSON.parse(readFileSync(join(outDir, 'watchful-guardian.v14.json'), 'utf-8'));
+      const unrelatedEffects = unrelatedActor.items.flatMap((item: any) => item.effects ?? []);
+      expect(unrelatedEffects.some((effect: any) =>
+        effect.flags?.['midi-qol.OverTime']
+        || effect.system?.changes?.some((change: any) => change.key === 'flags.midi-qol.OverTime'),
+      )).toBe(false);
+
+      const coreOutDir = join(root, 'core-out');
+      await runV14AcceptanceSuite({
+        samples: [{
+          id: 'bleeding-guardian-core',
+          label: 'Bleeding Guardian Core',
+          category: 'core stripping control',
+          sourcePath,
+        }],
+        outDir: coreOutDir,
+        reportPath: join(root, 'core-report.md'),
+        includeCrawlFixture: false,
+        effectProfile: 'core',
+      });
+      const coreActor = JSON.parse(readFileSync(join(coreOutDir, 'bleeding-guardian-core.v14.json'), 'utf-8'));
+      const coreEffects = coreActor.items.flatMap((item: any) => item.effects ?? []);
+      expect(coreEffects.some((effect: any) =>
+        effect.flags?.['midi-qol.OverTime']
+        || effect.system?.changes?.some((change: any) => change.key === 'flags.midi-qol.OverTime')
+        || effect.changes?.some((change: any) => change.key === 'flags.midi-qol.OverTime'),
       )).toBe(false);
       const report = readFileSync(reportPath, 'utf-8');
       expect(report).toContain('Effect profile: `modded-v14`');
