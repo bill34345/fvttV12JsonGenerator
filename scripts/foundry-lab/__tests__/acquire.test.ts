@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -16,6 +17,7 @@ import {
   isRuntimeLockPath,
   hasOnlyRuntimeLockErrors,
   verifyStorageTrees,
+  copyPersistentStorageFromRemote,
 } from '../acquire';
 import { createLabConfig } from '../config';
 import type { ClassifiedPackage, PackageClass } from '../types';
@@ -101,6 +103,108 @@ describe('acquisition planning', () => {
 });
 
 describe('archive and install safety', () => {
+  it('treats a verified absent remote persistent-storage directory as empty', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-storage-absent-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample/storage');
+    const commands: string[] = [];
+    try {
+      await mkdir(destination, { recursive: true });
+      await writeFile(join(destination, 'stale.bin'), 'stale');
+      const result = await copyPersistentStorageFromRemote(config, 'sample', destination, async (command) => {
+        commands.push(command);
+        return { exitCode: 0, stdout: '{"exists":false,"files":[]}', stderr: '', commandLine: command };
+      });
+      expect(result).toEqual({ files: 0, bytes: 0, missingAsEmpty: true });
+      expect(commands).toEqual(['ssh']);
+      expect(existsSync(destination)).toBe(false);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('verifies an existing but empty remote persistent-storage directory as empty', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-storage-empty-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample/storage');
+    const commands: string[] = [];
+    try {
+      const result = await copyPersistentStorageFromRemote(config, 'sample', destination, async (command, _args) => {
+        commands.push(command);
+        if (command === 'ssh') {
+          return { exitCode: 0, stdout: '{"exists":true,"files":[]}', stderr: '', commandLine: command };
+        }
+        await mkdir(`${destination}.staging`, { recursive: true });
+        return { exitCode: 0, stdout: '', stderr: '', commandLine: command };
+      });
+      expect(result).toEqual({ files: 0, bytes: 0 });
+      expect(commands).toEqual(['ssh', 'scp']);
+      expect(existsSync(destination)).toBe(true);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves relative paths and verifies hashes for existing remote storage files', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-storage-files-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample/storage');
+    const bytes = 'persistent bytes';
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    try {
+      const result = await copyPersistentStorageFromRemote(config, 'sample', destination, async (command) => {
+        if (command === 'ssh') {
+          return { exitCode: 0, stdout: JSON.stringify({ exists: true, files: [{ relativePath: 'nested/data.bin', size: bytes.length, sha256 }] }), stderr: '', commandLine: command };
+        }
+        await mkdir(join(`${destination}.staging`, 'nested'), { recursive: true });
+        await writeFile(join(`${destination}.staging`, 'nested/data.bin'), bytes);
+        return { exitCode: 0, stdout: '', stderr: '', commandLine: command };
+      });
+      expect(result).toEqual({ files: 1, bytes: bytes.length });
+      expect(await readFile(join(destination, 'nested/data.bin'), 'utf8')).toBe(bytes);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed and preserves old storage when the remote probe errors', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-storage-probe-error-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const destination = join(config.profiles.serverMirror.dataPath, 'Data/modules/sample/storage');
+    try {
+      await mkdir(destination, { recursive: true });
+      await writeFile(join(destination, 'old.bin'), 'old bytes');
+      await expect(copyPersistentStorageFromRemote(config, 'sample', destination, async (command) => ({
+        exitCode: 1, stdout: '', stderr: 'Access denied', commandLine: command,
+      }))).rejects.toThrow('Access denied');
+      expect(await readFile(join(destination, 'old.bin'), 'utf8')).toBe('old bytes');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('records verified missing persistent storage as empty in the acquisition report', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-storage-report-'));
+    const config = createLabConfig(join(tempRoot, 'repo'));
+    const entry = classified('upstream-exact', { persistentStorage: true });
+    try {
+      const report = await acquirePackages(config, [entry], { apply: true }, {
+        readDnd5eManifest: async () => ({ id: 'dnd5e', version: '5.3.3', download: 'https://example.test/dnd5e.zip' }),
+        installArchive: async ({ stagingRoot, expectedId, expectedVersion }) => {
+          await mkdir(stagingRoot, { recursive: true });
+          await writeFile(join(stagingRoot, expectedId === 'dnd5e' ? 'system.json' : 'module.json'), JSON.stringify({ id: expectedId, version: expectedVersion }));
+        },
+        copyPersistentStorage: async () => ({ files: 0, bytes: 0, missingAsEmpty: true }),
+      });
+      expect(report.actions.find((action) => action.id === 'sample')).toEqual(expect.objectContaining({
+        status: 'installed',
+        persistentStorage: { files: 0, bytes: 0, remoteExists: false, disposition: 'verified-missing-as-empty' },
+      }));
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('uses a quote-free Windows OpenSSH source and tar.exe ZIP extraction', () => {
     expect(buildScpRemoteSpec(
       'Administrator@49.232.12.153',

@@ -17,7 +17,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { assertInsideLabRoot, type FoundryLabConfig } from './config';
 import { runCommand } from './process';
-import type { ClassifiedPackage } from './types';
+import type { ClassifiedPackage, CommandResult } from './types';
 
 export type AcquisitionAction =
   | { kind: 'download'; id: string; expectedVersion: string; url: string; destination: string }
@@ -31,6 +31,12 @@ export interface AcquisitionReport {
     status: 'planned' | 'installed' | 'unresolved' | 'failed';
     error?: string;
     excludedRuntimeLocks?: string[];
+    persistentStorage?: {
+      files: number;
+      bytes: number;
+      remoteExists: boolean;
+      disposition: 'verified' | 'verified-missing-as-empty';
+    };
   }>;
   installed: number;
   unresolved: number;
@@ -70,7 +76,7 @@ export interface AcquisitionDependencies {
     config: FoundryLabConfig,
     remoteFolder: string,
     destination: string,
-  ) => Promise<{ files: number; bytes: number }>;
+  ) => Promise<{ files: number; bytes: number; missingAsEmpty?: true }>;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -564,11 +570,41 @@ function quotePowerShellLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-async function defaultCopyPersistentStorage(
+type CommandRunner = (
+  command: string,
+  args: string[],
+  options: { cwd: string; timeoutMs?: number },
+) => Promise<CommandResult>;
+
+interface RemoteStorageInventory {
+  exists: boolean;
+  files: StorageEntry[];
+}
+
+function parseRemoteStorageInventory(stdout: string): RemoteStorageInventory {
+  const parsed = JSON.parse(stdout.trim()) as Partial<RemoteStorageInventory>;
+  if (typeof parsed !== 'object' || parsed === null || typeof parsed.exists !== 'boolean' || !Array.isArray(parsed.files)) {
+    throw new Error('Remote storage inventory has an invalid response');
+  }
+  const files = parsed.files.map((entry, index) => {
+    if (typeof entry !== 'object' || entry === null) throw new Error(`Remote storage entry ${index} is invalid`);
+    const value = entry as Partial<StorageEntry>;
+    if (typeof value.relativePath !== 'string' || typeof value.size !== 'number'
+      || typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.sha256)) {
+      throw new Error(`Remote storage entry ${index} is invalid`);
+    }
+    return { relativePath: value.relativePath, size: value.size, sha256: value.sha256 };
+  }).sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  if (!parsed.exists && files.length > 0) throw new Error('Absent remote storage cannot contain files');
+  return { exists: parsed.exists, files };
+}
+
+export async function copyPersistentStorageFromRemote(
   config: FoundryLabConfig,
   remoteFolder: string,
   destination: string,
-): Promise<{ files: number; bytes: number }> {
+  commandRunner: CommandRunner = runCommand,
+): Promise<{ files: number; bytes: number; missingAsEmpty?: true }> {
   safeSegment(remoteFolder, 'Remote module folder');
   assertInsideLabRoot(config, destination);
   const staging = `${destination}.staging`;
@@ -580,14 +616,15 @@ async function defaultCopyPersistentStorage(
     "$ErrorActionPreference='Stop'",
     '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)',
     `$root=${quotePowerShellLiteral(remoteStorage)}`,
-    "if (-not (Test-Path -LiteralPath $root)) { '[]'; exit 0 }",
+    "if (-not (Test-Path -LiteralPath $root)) { [pscustomobject]@{exists=$false;files=@()} | ConvertTo-Json -Compress; exit 0 }",
+    "if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw 'Persistent storage path is not a directory' }",
     '$files=@(Get-ChildItem -LiteralPath $root -File -Recurse | ForEach-Object {',
     "[pscustomobject]@{relativePath=$_.FullName.Substring($root.Length).TrimStart('\\').Replace('\\','/');size=$_.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()}",
     '})',
-    '$files | ConvertTo-Json -Compress',
+    '[pscustomobject]@{exists=$true;files=@($files)} | ConvertTo-Json -Depth 4 -Compress',
   ].join('; ');
   const encoded = Buffer.from(inventoryScript, 'utf16le').toString('base64');
-  const inventoryResult = await runCommand('ssh', [
+  const inventoryResult = await commandRunner('ssh', [
     '-i', identity, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
     '-o', 'StrictHostKeyChecking=yes', config.sshTarget,
     'powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded,
@@ -595,14 +632,16 @@ async function defaultCopyPersistentStorage(
   if (inventoryResult.exitCode !== 0) {
     throw new Error(inventoryResult.stderr.trim() || `Storage inventory failed for ${remoteFolder}`);
   }
-  const parsed = JSON.parse(inventoryResult.stdout.trim() || '[]') as StorageEntry | StorageEntry[];
-  const expected = (Array.isArray(parsed) ? parsed : [parsed]).sort(
-    (left, right) => left.relativePath.localeCompare(right.relativePath),
-  );
+  const inventory = parseRemoteStorageInventory(inventoryResult.stdout);
+  const expected = inventory.files;
+  if (!inventory.exists) {
+    await rm(destination, { recursive: true, force: true });
+    return { files: 0, bytes: 0, missingAsEmpty: true };
+  }
 
   await mkdir(dirname(staging), { recursive: true });
   const remotePath = buildScpRemoteSpec(config.sshTarget, remoteStorage);
-  const copyResult = await runCommand(
+  const copyResult = await commandRunner(
     'scp',
     buildScpCommandArgs(identity, remotePath, staging),
     { cwd: config.repoRoot, timeoutMs: 4 * 60 * 60_000 },
@@ -616,6 +655,8 @@ async function defaultCopyPersistentStorage(
   await replaceDirectory(staging, destination, config);
   return { files: actual.length, bytes: actual.reduce((sum, entry) => sum + entry.size, 0) };
 }
+
+const defaultCopyPersistentStorage = copyPersistentStorageFromRemote;
 
 function requireManifestIdentity(manifest: PackageManifest, expectedId: string, expectedVersion: string): void {
   validateArchiveIdentity({ expectedId, expectedVersion }, manifest);
@@ -728,7 +769,10 @@ export async function acquirePackages(
       }
 
       const classifiedEntry = byId.get(action.id);
-      const needsPersistentStorage = classifiedEntry?.disk?.persistentStorage === true;
+      const persistentStorageFolder = classifiedEntry?.disk?.persistentStorage === true
+        ? classifiedEntry.disk.folder
+        : null;
+      const needsPersistentStorage = persistentStorageFolder !== null;
       if (!alreadyInstalled) {
         if (action.kind === 'download') {
           const archivePath = resolve(config.cacheRoot, safeSegment(action.id, 'Package id'), safeSegment(action.expectedVersion, 'Package version'), 'package.zip');
@@ -768,9 +812,15 @@ export async function acquirePackages(
         assertInsideLabRoot(config, storageDestination);
         const storage = await copyPersistentStorage(
           config,
-          classifiedEntry.disk.folder,
+          persistentStorageFolder!,
           storageDestination,
         );
+        action.persistentStorage = {
+          files: storage.files,
+          bytes: storage.bytes,
+          remoteExists: storage.missingAsEmpty !== true,
+          disposition: storage.missingAsEmpty === true ? 'verified-missing-as-empty' : 'verified',
+        };
         options.onProgress?.(`verified persistent storage for ${action.id}: ${storage.files} files, ${storage.bytes} bytes`);
       }
 

@@ -62,6 +62,11 @@ and SHA-256. The complete package replaces the prior tree in one atomic step.
 When an exact package already exists (including an authorized protected
 package), it is cloned to staging before storage refresh, so a storage failure
 leaves the authorized base and its previous storage byte-for-byte untouched.
+The remote inventory probe reports whether the declared `storage` directory
+actually exists. A verified missing directory is recorded as
+`verified-missing-as-empty` with zero files and zero bytes and does not invoke
+SCP; probe errors still fail closed. Existing directories, including empty
+ones, continue through the full copy and relative-path/size/SHA-256 check.
 
 The ignored report is written to:
 
