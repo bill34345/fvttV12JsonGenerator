@@ -150,7 +150,7 @@ export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): stri
     `- Passed schema checks: ${result.summary.passed}`,
     `- Failed samples: ${result.summary.failed}`,
     `- Verification warnings: ${result.summary.warnings}`,
-    `- Foundry runtime import: not run; no local Foundry v14 runtime is available.`,
+    '- Foundry runtime import: outside this offline batch report; see `docs/acceptance/v14-live-runtime-smoke-test.md` for current live-runtime evidence.',
     '',
     '## Module Compatibility',
     '',
@@ -214,9 +214,9 @@ export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): stri
   lines.push(
     '## Semantic Acceptance Notes',
     '',
-    '- This report is project-internal acceptance, not a live Foundry runtime import result.',
+    '- This is an offline generation report; it does not embed or supersede live Foundry runtime evidence.',
     '- Source-to-output semantic review uses generated JSON summaries and `actorVerification`; any warning is documented above instead of hidden.',
-    '- Final runtime acceptance still requires importing representative JSON into a throwaway Foundry v14.361 + dnd5e 5.3.3 world.',
+    '- Current import, interaction, re-export, and compatibility results are maintained in `docs/acceptance/v14-live-runtime-smoke-test.md`.',
     '',
   );
 

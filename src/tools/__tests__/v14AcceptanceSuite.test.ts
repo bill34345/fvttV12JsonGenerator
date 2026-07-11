@@ -56,7 +56,9 @@ describe('v14AcceptanceSuite', () => {
       expect(report).toContain('# Foundry v14 Core Batch Verification');
       expect(report).toContain('Test Guardian');
       expect(report).toContain('actor core version');
-      expect(report).toContain('Foundry runtime import: not run');
+      expect(report).toContain('Foundry runtime import: outside this offline batch report');
+      expect(report).toContain('v14-live-runtime-smoke-test.md');
+      expect(report).not.toContain('no local Foundry v14 runtime is available');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -52,7 +52,7 @@ The previous English markdown item-name fidelity defects are resolved:
 - `Bonebreaker Dorokor`: `Multiattack` and `War Cry` are source-faithful item names.
 - `White Tusk Shaman`: `Minion: Savage Horde` and `Multiattack` are source-faithful item names.
 
-The current batch can be treated as source-faithful for project-internal v14 acceptance. Live testing has now removed the former narrow import risk: all six core and all six modded Actors imported and operated in their respective disposable worlds, and re-export preserved the reviewed HP, AC, CR, senses, movement, and Activity semantics.
+The current batch can be treated as source-faithful for project-internal v14 acceptance. Live testing has now removed the former narrow import risk: all six core and all six modded Actors imported, their sheets opened, and representative Activities operated in their respective disposable worlds. Re-export preservation of the reviewed HP, AC, CR, senses, movement, and Activity semantics was verified for all six core Actors; the modded runtime evidence is import/sheet/representative-Activity coverage plus the focused Bleeding Guardian automation proof, not a six-Actor modded re-export review.
 
 ## Live Runtime Corroboration
 
