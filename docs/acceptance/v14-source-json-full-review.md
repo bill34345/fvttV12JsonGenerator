@@ -1,6 +1,6 @@
 # Foundry v14 Source-to-JSON Full Review
 
-Reviewed on: 2026-07-09
+Reviewed on: 2026-07-11
 
 ## Scope
 
@@ -11,7 +11,7 @@ This review covers the current Foundry v14 acceptance artifacts generated throug
 - Core JSON output: `obsidian/dnd数据转fvttjson/output/v14-acceptance`
 - Modded v14 JSON output: `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance`
 
-The review compares generated Actor JSON back to the source markdown, following `docs/generated-actor-verification.md`. It is not a live Foundry runtime import smoke test.
+The review compares generated Actor JSON back to the source markdown, following `docs/generated-actor-verification.md`. Live import evidence is recorded separately in `docs/acceptance/v14-live-runtime-smoke-test.md` and is summarized here only to connect offline fidelity with actual runtime behavior.
 
 ## Mechanical Results
 
@@ -52,10 +52,16 @@ The previous English markdown item-name fidelity defects are resolved:
 - `Bonebreaker Dorokor`: `Multiattack` and `War Cry` are source-faithful item names.
 - `White Tusk Shaman`: `Minion: Savage Horde` and `Multiattack` are source-faithful item names.
 
-The current batch can be treated as source-faithful for project-internal v14 acceptance, subject to the runtime-import risk below.
+The current batch can be treated as source-faithful for project-internal v14 acceptance. Live testing has now removed the former narrow import risk: all six core and all six modded Actors imported and operated in their respective disposable worlds, and re-export preserved the reviewed HP, AC, CR, senses, movement, and Activity semantics.
 
-## Remaining Risk
+## Live Runtime Corroboration
 
-Live Foundry v14.361 + dnd5e 5.3.3 import and sheet interaction smoke testing was not run because no local Foundry v14 runtime is available in this environment.
+- Core: Foundry `14.364`, dnd5e `5.3.3`, zero third-party modules; six imports, six sheets opened, specified Activities exercised, 21 chat messages, no browser/server errors in the segment, and no OverTime automation.
+- Minimal modded: MIDI-QOL `14.0.9`, DAE `14.0.12`, libWrapper `1.13.5.1`, and socketlib `v1.1.4`; six imports and representative Activities passed.
+- Bleeding Guardian: the corrected runtime proof produced exactly one bleeding OverTime effect and one turn-start `1d6` piercing roll (`5`, HP `40 -> 35`), without reusing initial-hit damage or leaking automation to unrelated Actors. MIDI-QOL-disabled manual use also remained available.
 
-The exact runtime environment, import matrix, Activity checks, failure evidence, and remaining non-runtime work are recorded in `docs/acceptance/v14-live-runtime-smoke-test.md`.
+## Overall Limitation
+
+This source-to-JSON review remains `Pass`, and the narrow core/minimal-modded Actor runtime gates pass. Overall local-mirror acceptance is nevertheless `Partial`: a production-equivalent module candidate still has reproducible scene-control errors, and the copied `cor-cotn` world is blocked at Gamemaster authentication. Those coexistence/world gaps do not invalidate source fidelity, but they prevent a claim of complete production-environment support.
+
+The exact runtime environment, import matrix, failure evidence, and remaining work are recorded in `docs/acceptance/v14-live-runtime-smoke-test.md`.

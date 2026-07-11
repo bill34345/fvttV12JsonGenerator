@@ -1,116 +1,92 @@
 # Foundry v14 Live Runtime Smoke Test
 
-Status: pending
+Status: **Partial**
 
-This is the remaining live-runtime acceptance gate for Foundry v14 support. Offline schema checks, workflow generation, and source-to-JSON review are recorded separately in `docs/acceptance/v14-source-json-full-review.md`.
+Tested on: 2026-07-11
 
-## Locked Environment
+The narrow Actor runtime gates pass in both a zero-module core world and a locked minimal modded world. The overall Task 8 decision remains `Partial` because the production-equivalent module/world gate does not pass: the full module candidate has reproducible startup/runtime errors, and the copied production world cannot yet be entered without the Gamemaster password.
 
-Record the installed versions before importing any generated JSON:
+## Locked Environments
 
-| Component | Required version | Actual version | Result |
-| --- | --- | --- | --- |
-| Foundry VTT | `14.361` | Not recorded | Pending |
-| dnd5e | `5.3.3` | Not recorded | Pending |
-| MIDI-QOL, modded world only | `14.0.9` | Not recorded | Pending |
-| DAE, modded world only | `14.0.12` | Not recorded | Pending |
-| Times Up | Not installed or not required | Not recorded | Pending |
-| Item Macro | Not required | Not recorded | Pending |
+| Environment | Components actually used | Result |
+| --- | --- | --- |
+| Core disposable world | Foundry `14.364`, dnd5e `5.3.3`, zero third-party modules | Pass |
+| Minimal modded disposable world | Foundry `14.364`, dnd5e `5.3.3`, MIDI-QOL `14.0.9`, DAE `14.0.12`, libWrapper `1.13.5.1`, socketlib `v1.1.4` | Pass |
+| Production-equivalent candidate | 84-module reduced candidate after isolating known errors | Fail |
+| Copied production world `cor-cotn` | Local server-mirror profile | Blocked at Gamemaster authentication |
 
-Use a disposable world. Run the `core` checks with MIDI-QOL and DAE disabled. Run the `modded-v14` checks in a separate world with only the locked module versions enabled. Do not use a migrated v12 world as acceptance evidence.
+Times Up and Item Macro were not enabled or required for the accepted minimal modded behavior. The generated `_stats.coreVersion` remains `14.361`, while the importing runtime was Foundry `14.364`; dnd5e remained exactly `5.3.3`.
 
-## Inputs
+## Mechanical Verification
 
-Regenerate the artifacts through the project workflows before importing them:
+- The project CLI regenerated both six-Actor batches on 2026-07-11.
+- Each profile reported 6 samples, 6 passing schema checks, 0 failures, and 0 actor-verification warnings.
+- Core runtime import produced six Actors; all six sheets opened, the specified Activities executed, and 21 chat messages were created during the test segment.
+- The core segment recorded no browser-console or Foundry-server errors and no `midi-qol.OverTime` data.
+- The minimal modded runtime imported all six Actors and opened all six sheets.
+- Fixes used by the final Bleeding Guardian proof are recorded in commits `47f5477` and `2f1a52e`.
 
-```powershell
-bun run src/tools/v14AcceptanceSuite.ts --effect-profile core --out-dir "obsidian/dnd数据转fvttjson/output/v14-acceptance" --report "docs/acceptance/v14-core-batch-verification.md"
-bun run src/tools/v14AcceptanceSuite.ts --effect-profile modded-v14 --out-dir "obsidian/dnd数据转fvttjson/output/v14-modded-acceptance" --report "docs/acceptance/v14-modded-batch-verification.md"
-```
+These checks establish that the files parse, import, migrate, and execute. They do not by themselves establish source fidelity or compatibility with the complete production module set.
 
-Required pre-import results for each profile:
+## Core Runtime Semantic Acceptance
 
-- 6 samples generated.
-- 6 schema checks passed.
-- 0 failed samples.
-- 0 actor verification warnings.
-- The source-to-JSON review remains passing.
+All six core-profile Actors imported into the zero-module disposable world. Their sheets rendered HP, AC, CR, senses, movement, and Activities. Representative interactions included attacks, saves, utilities, reactions, and bonus actions; Death Burst and Pelagic Screech opened their expected dialogs/templates rather than failing silently.
 
-## Core Runtime Checks
+| Sample | Runtime evidence | Result |
+| --- | --- | --- |
+| Slithering Bloodfin | Sheet opened; Tail Crash, Death Burst, Swallow, and Pelagic Screech interaction paths exercised, including dialogs/templates | Pass |
+| Chuul Nullifier | Sheet opened; Pincer and Tentacles interaction paths exercised | Pass |
+| Bonebreaker Dorokor | Sheet opened; Multiattack, Longbow, and War Cry exercised | Pass |
+| White Tusk Shaman | Sheet opened; Minion: Savage Horde, Multiattack, and Blood-Searing Spear exercised | Pass |
+| Bleeding Guardian | Sheet opened; Bleeding Bite remained a normal core Activity with no module overtime behavior | Pass |
+| GoddessFantasy Yithian | Sheet opened; Pincer and Mind Swap interaction paths exercised | Pass |
 
-For every JSON under `obsidian/dnd数据转fvttjson/output/v14-acceptance`:
+Re-export review preserved the source-relevant HP, AC, CR, senses, movement, and Activity semantics. The exported documents recorded Foundry core version `14.364` and dnd5e system version `5.3.3`, showing that the actual runtime migration occurred without erasing those semantics.
 
-- [ ] Import the Actor into the disposable core world without a schema or document error.
-- [ ] Open the Actor sheet and confirm name, HP, AC, CR, senses, movement, and resources render.
-- [ ] Open every embedded Item used by the sample checks below.
-- [ ] Execute at least one attack, save, utility, reaction, or bonus-action Activity where the source provides one.
-- [ ] Confirm rolls and chat cards complete without console errors.
-- [ ] Confirm no `midi-qol.OverTime` automation is active in the core profile.
-- [ ] Export the imported Actor and confirm the key semantic fields remain present after Foundry/dnd5e preparation or migration.
+## Minimal Modded Runtime Semantic Acceptance
 
-| Sample | Required interaction focus | Import | Sheet | Activities | Console | Re-export |
-| --- | --- | --- | --- | --- | --- | --- |
-| Slithering Bloodfin | Tail Crash attack, Death Burst save, Swallow bonus action, Pelagic Screech reaction | Pending | Pending | Pending | Pending | Pending |
-| Chuul Nullifier | Pincer attack, Tentacles attack and attached conditions | Pending | Pending | Pending | Pending | Pending |
-| Bonebreaker Dorokor | Multiattack, Longbow, War Cry recharge utility | Pending | Pending | Pending | Pending | Pending |
-| White Tusk Shaman | Minion: Savage Horde, Multiattack, Blood-Searing Spear | Pending | Pending | Pending | Pending | Pending |
-| Bleeding Guardian | Bleeding Bite attack with no module overtime behavior | Pending | Pending | Pending | Pending | Pending |
-| GoddessFantasy Yithian | Pincer attack, Mind Swap recharge/save behavior | Pending | Pending | Pending | Pending | Pending |
+All six modded-profile Actors imported into the locked minimal runtime. All six sheets opened and representative Activities ran. The decisive source-derived automation check used Bleeding Guardian rather than treating module activation alone as proof.
 
-## Modded v14 Runtime Checks
+### Bleeding Guardian proof
 
-Repeat the import, sheet, Activity, console, and re-export checks using JSON under `obsidian/dnd数据转fvttjson/output/v14-modded-acceptance` with MIDI-QOL `14.0.9` and DAE `14.0.12` enabled.
+- An initial proof produced attack total `21` and initial damage `9`.
+- After fixes `47f5477` and `2f1a52e`, the repeated proof produced initial damage `10` and exactly one `midi-qol.OverTime` change/effect.
+- At the target's turn start, exactly one `1d6` piercing roll occurred; the roll was `5`, and target HP changed from `40` to `35`.
+- The overtime damage therefore came from the source-defined repeated `1d6` clause, not from the initial `1d8 + 3` hit.
+- Unrelated imported Actors had zero OverTime changes.
+- Times Up and Item Macro were not required.
+- With MIDI-QOL disabled, the Actor sheet and Bleeding Bite Attack Activity still opened and produced a chat message, preserving manual usability.
 
-The required module-specific acceptance is deliberately narrow:
+This passes the narrow MIDI-QOL `14.0.9` contract. DAE `14.0.12` coexistence passed, but no DAE-specific behavior is claimed because this corpus does not contain a source-derived DAE-only fixture.
 
-- [ ] All six Actors still import and operate without module hook, effect, or console errors.
-- [ ] Bleeding Bite applies exactly one bleeding effect when the source-defined workflow succeeds.
-- [ ] At the start of the affected target's turn, MIDI-QOL rolls exactly `1d6` piercing damage once.
-- [ ] The initial `1d8 + 3` hit damage is not reused as overtime damage.
-- [ ] Unrelated Actors and Items do not receive `midi-qol.OverTime` flags or bleeding automation.
-- [ ] The behavior does not require Times Up or Item Macro.
-- [ ] Disabling MIDI-QOL does not make the Actor or Item document impossible to open; manual handling remains possible.
+## Production-Equivalent Compatibility Gate
 
-DAE `14.0.12` coexistence without errors can pass here, but this checklist does not prove a DAE-specific automation contract. That remains separate work until a source-derived DAE behavior fixture exists.
+This gate does **not** pass.
 
-## Failure Evidence
-
-For every failed row, record all available evidence:
-
-- Exact Foundry, dnd5e, MIDI-QOL, and DAE versions.
-- Actor and Item names.
-- Import dialog error or notification text.
-- Browser console stack trace.
-- Relevant Foundry server log excerpt.
-- Screenshot of the incorrect sheet, Activity, effect, roll, or chat card.
-- Re-exported Actor JSON when import succeeds but migration or runtime behavior is wrong.
-- Whether the same artifact passes in `core` and fails only in `modded-v14`.
-
-Do not repair an exported Actor manually and use it as acceptance evidence. Fix the project workflow, regenerate the JSON, and rerun the failed row.
+- The full 86-module candidate previously exposed errors from `monks-combat-marker` `12.01` and `translate-all` `2.1.0`; disabling those yielded an 84-module reduced candidate with a clean initial load.
+- Activating and exercising a scene in that reduced candidate exposed a further `getSceneControlButtons` error involving `simple-quest` `2.3.10` and `monks-common-display` `14.01`.
+- Therefore “84-module startup without initial errors” is only a mechanical observation, not semantic acceptance of the complete module set.
+- The copied production world `cor-cotn` reached its Join page, but the blank Gamemaster password was rejected. No password was guessed, extracted, or bypassed, so production-world Actor behavior remains untested.
 
 ## Acceptance Decision
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Core profile imports all six Actors | Pending | Not recorded |
-| Core profile sheet and Activity interactions | Pending | Not recorded |
-| Modded profile imports all six Actors | Pending | Not recorded |
-| MIDI-QOL bleeding behavior | Pending | Not recorded |
-| No unrelated module automation leakage | Pending | Not recorded |
-| Re-export preserves source semantics | Pending | Not recorded |
-| No blocking console or server errors | Pending | Not recorded |
+| Core profile imports all six Actors | Pass | Six imports in Foundry `14.364` / dnd5e `5.3.3`, zero modules |
+| Core profile sheet and Activity interactions | Pass | All sheets opened; specified Activity paths executed; 21 chat messages; Death Burst/Pelagic Screech dialogs/templates observed |
+| Modded profile imports all six Actors | Pass | Six imports in locked minimal MIDI-QOL/DAE runtime |
+| MIDI-QOL bleeding behavior | Pass | One effect, one `1d6` piercing turn-start roll, HP `40 -> 35`; initial hit remained separate |
+| No unrelated module automation leakage | Pass | Unrelated Actors had zero OverTime changes |
+| Re-export preserves source semantics | Pass | HP, AC, CR, senses, movement, and Activity semantics preserved after runtime migration |
+| No blocking errors in accepted narrow segments | Pass | No browser/server errors in the core segment; minimal modded proof completed |
+| Full production-equivalent module set | Fail | Additional scene-control error after earlier module isolations |
+| Copied production-world workflow | Blocked | Gamemaster password required at Join page |
 
-Foundry v14 runtime support passes only when every gate above is `Pass`. A partial result must remain `Partial` and list the failed rows. DAE-specific automation support must not be claimed from coexistence testing alone.
+Overall status: **Partial**. Core Actor runtime support and the locked minimal modded Actor contract pass. Full production-equivalent coexistence and real-world acceptance remain unresolved and must not be described as passing.
 
 ## Remaining Work Outside This Gate
 
-These are separate from the live Actor import smoke test:
-
-1. **Standalone Item v14 acceptance:** generate a real Item Markdown source through the CLI, compare the v14 Item JSON back to the source, import it, open it, and execute its Activities. Current v14 Item coverage is unit-level rather than end-to-end semantic acceptance.
-2. **DAE-specific behavior fixture:** add a source-derived case that requires a documented DAE `14.0.12` contract. The current modded fixture proves MIDI-QOL bleeding overtime only.
-3. **Versioned local module references:** preserve exact MIDI-QOL `14.0.9` and DAE `14.0.12` manifests or source snapshots locally and document every generated module field against them.
-4. **Real GoddessFantasy v14 crawl:** run the authenticated live-site crawl through plaintext and Actor generation. Current v14 acceptance uses a local HTML fixture.
-5. **Broader real-input corpus:** expand beyond the current six-sample v14 batch. The vault currently contains more inputs than the acceptance suite reviews semantically.
-6. **User documentation:** add v14 CLI, Web, crawler, `core`, and `modded-v14` examples to the main manual or README after runtime behavior is accepted.
-
-These items do not invalidate the completed offline Actor source-to-JSON review. They limit which parts of the overall v14 workflow can be called fully accepted.
+1. Minimize and resolve the `simple-quest` / `monks-common-display` scene-control failure, then repeat complete-set scene and Actor workflows.
+2. Enter the copied world's Gamemaster password through the browser and repeat the Actor checks in `cor-cotn` without changing production.
+3. Add a source-derived DAE-specific behavior fixture before claiming DAE automation support beyond coexistence.
+4. Complete standalone Item v14 end-to-end acceptance, a live authenticated GoddessFantasy crawl, and broader real-input corpus coverage as separate gates.
