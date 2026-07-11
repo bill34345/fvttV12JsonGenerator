@@ -167,3 +167,16 @@ configuration reproduced errors from `monks-combat-marker` and `translate-all`.
 Disabling those two produced an 84-module reload with no captured browser
 errors. This 84-module result is a reduced stable candidate, not proof that all
 88 production IDs coexist or that every enabled feature is correct.
+
+The later authenticated `cor-cotn` smoke test used only the local copied world.
+The user explicitly authorized a local-only Gamemaster password reset, and the
+users database was backed up under the ignored world runtime directory before
+the change. Do not record the replacement password or commit that backup.
+
+That copied world opened with Foundry 14.364, dnd5e 5.3.3, and 87 registered
+active modules. Representative Actor sheet, save/chat, journal, scene, and token
+workflows succeeded. This proves sampled world usability, not complete module
+compatibility: `simple-quest` 2.3.10 threw from
+`JournalEntryPage.buildTOC`, and resource-path and deprecation warnings remained.
+Record the core workflow as `Pass`, the complete-module error-free gate as
+`Fail`, and the overall compatibility run as `Partial/Fail`.

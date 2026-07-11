@@ -20,7 +20,8 @@ This report distinguishes installation and declared compatibility from behavior 
 | Animation and media | Partial | Nine-module group loaded; a JB2A WebM played through Sequencer and was fetched; a Token Magic filter completed an add/remove cycle; relevant packs opened. Share Media displayed the selected video, but player receipt could not be tested in the GM-only disposable world. The planned melee/ranged/save coverage is incomplete. |
 | Scene, token, world utilities, localization, and content | Partial | In the cumulative utility/full-set runtime, a token moved and a wall, tile, and journal were created; utility controls and 90 packs were present. Calendar behavior, localization behavior, and representative feature correctness across the whole family remain incomplete. |
 | Complete production-snapshot module set | Fail | Of 88 production-active IDs, 87 registered in this runtime; the protected MCDM package was rejected for an invalid signature. Excluding the user-disabled Dungeon Strugglers left 86 configurable modules. That set reproducibly emitted two browser errors. Disabling `monks-combat-marker` and `translate-all` produced an 84-module reload with 0 captured browser errors, but this is a reduced set, not acceptance of all 88. |
-| Production-equivalent `cor-cotn` workflow | Not Tested | World recognized and reached its local Join page; behavioral acceptance requires local Gamemaster authentication and remains pending. |
+| Production-equivalent `cor-cotn` core workflow | Pass | After an explicitly authorized local-only Gamemaster password reset, the copied world opened. A real character sheet, saving throw/chat card, journal page, scene documents, and token restoration were exercised successfully. |
+| Production-equivalent `cor-cotn` complete-module error-free gate | Fail | The world is usable for the sampled core workflows, but `simple-quest` 2.3.10 threw a `JournalEntryPage.buildTOC` exception; repeated missing `@resources.legres.value` and deprecation warnings were also present. |
 
 ## No-Module Baseline Evidence
 
@@ -66,6 +67,7 @@ Add rows only for failures reproduced during the current run.
 | --- | --- | --- | --- | --- |
 | Monk's Combat Marker throws while transferring settings | Not minimized below the 86-module broad set; `monks-combat-marker` 12.01 was the isolated responsible module in that set | Reload the 86-module configuration; then disable only `monks-combat-marker` and reload | Browser exception: `"monks-little-details.token-highlight-remove" is not a registered game setting`, from `monks-combat-marker.js` `transferSettings`; absent after disabling the module | Reproduced and isolated for this configuration; leave `monks-combat-marker` disabled pending a compatible fix |
 | Translate All makes an unauthorized OpenAI models request with no configured key | Not minimized below the 86-module broad set; `translate-all` 2.1.0 was the isolated responsible module in that set | Reload with `translate-all` enabled and no API key; then disable only it and reload | Request to `https://api.openai.com/v1/models` returned HTTP 401; local module source calls model discovery during initialization; absent after disabling the module | Reproduced and isolated for empty-key configuration; leave `translate-all` disabled unless initialization/key handling is corrected |
+| Simple Quest fails while building a journal page table of contents | Production-equivalent `cor-cotn` with 87 registered active modules; interaction set not minimized | Open the copied world and render journal content during the authenticated production-world smoke test | Browser exception from `simple-quest` 2.3.10: `JournalEntryPage.buildTOC`, `t.forEach is not a function` | Reproduced in the real copied world; full-set error-free gate fails pending minimization/fix |
 
 ## Automation and Effects
 
@@ -139,6 +141,25 @@ The production inventory contained 88 active module IDs. The local runtime could
 - Disabling only `monks-combat-marker` and `translate-all` reduced the active set to 84. The subsequent reload recorded 0 captured browser errors.
 
 The 84-module reload is mechanical evidence for a cleaner reduced configuration. It is not an exact-parity result, does not prove every enabled feature is correct, and does not turn the 86-module or production 88-ID set into a `Pass`. Initial FPS near `0.5` was observed during startup only and is retained as informational evidence; no steady-state performance conclusion was drawn from it.
+
+## Production-Equivalent World Evidence
+
+The copied `cor-cotn` world was exercised locally on Foundry `14.364` with dnd5e `5.3.3`. The user explicitly authorized resetting only the local copy's Gamemaster password. Before that reset, the local users database was backed up to `.local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn/data/users.backup-before-local-gm-reset-20260711-135117`. This ignored runtime backup contains user data and is not a tracked deliverable; no credential is recorded in this report.
+
+Mechanical inventory after authenticated entry:
+
+- 87 registered active modules; the protected MCDM package remained unavailable because of its invalid signature.
+- 729 Actors, 281 Scenes, 415 Journals, 1,427 Items, and 41 messages at initial inspection.
+- The landing-page Scene contained five Tokens and four Walls.
+
+Behavior exercised:
+
+- Opened the real character sheet `卡勒姆·维雷`.
+- Rolled its Strength saving throw. A public chat card was created with formula `1d20 - 1` and total `6` in this run.
+- Opened the `St. Patrick's Day` Journal and rendered its one page.
+- Verified that the inspected token was restored to its original coordinates, `x=2054`, `y=1833`, after the movement check.
+
+This is semantic evidence that the copied world can load and that representative Actor, roll/chat, journal, scene, and token workflows are usable. It does **not** establish complete module compatibility. The browser recorded a `simple-quest` 2.3.10 exception in `JournalEntryPage.buildTOC` (`t.forEach is not a function`), repeated missing `@resources.legres.value` warnings, and deprecation warnings. Consequently, production-world core usability passes for the sampled workflows, while the complete-module error-free gate fails and overall Task 7 remains `Partial/Fail`, not `Pass`.
 
 ## Known Concerns Not Yet Accepted
 
