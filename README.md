@@ -1,288 +1,181 @@
-# Foundry VTT NPC Importer (Obsidian → dnd5e)
+# fvttV12JsonGenerator
 
-一个强大的命令行工具，用于将 Obsidian 中的 NPC 笔记（YAML Frontmatter + Markdown）转换为 Foundry VTT (v12 + dnd5e 4.3.x) 可导入的 JSON 格式。
+把 Obsidian 中的中文 YAML/Markdown、英文 bestiary 文本和批量怪物资料转换成 Foundry VTT dnd5e Actor/Item JSON。项目默认兼容 Foundry v12，同时支持显式生成 Foundry v14 JSON，并提供来源核对、GoddessFantasy 采集流水线、图片处理、Web 工作台和隔离的 Foundry v14 验收环境。
 
-## ✨ 特性
+## 支持范围
 
-- **中文友好**：直接使用中文属性名（如 `力量`、`敏捷`、`动作`）。
-- **智能解析**：
-  - 自动识别自然语言动作（如 `啮咬 [近战武器攻击]: +14命中, 触及10尺, 2d10+8穿刺`）。
-  - 支持 `spells.ldb` 二进制提取，自动链接法术 UUID。
-  - 支持繁简自动转换（输入繁体自动转为简体匹配）。
-- **高精度**：基于 "Golden Master" 模板生成，确保系统数据结构完美兼容 dnd5e 4.3.x。
-- **完整覆盖**：支持属性、技能、豁免、抗性/免疫、感官、语言、动作、传奇动作、施法等。
+| 目标 | 系统版本 | Effect profile | 当前状态 |
+| --- | --- | --- | --- |
+| Foundry v12 | dnd5e 4.3.9 | `core`、`modded-v12` | 默认目标 |
+| Foundry v13 | dnd5e 4.3.9 | `core`、`modded-v12` | 保留兼容路径 |
+| Foundry v14 | dnd5e 5.3.3 | `core`、`modded-v14` | Actor 核心与最小模组运行验收通过 |
 
-## 📦 安装与配置
+`modded-v14` 锁定 MIDI-QOL 14.0.9 和 DAE 14.0.12。完整生产模组集合仍存在已复现错误，整体兼容性状态是 **Partial**，不能表述为全部通过。详见 [`docs/acceptance/v14-live-runtime-smoke-test.md`](docs/acceptance/v14-live-runtime-smoke-test.md)。
 
-### 1. 环境准备
-本项目基于 [Bun](https://bun.sh/) 运行时开发。请先安装 Bun：
-```bash
-# Windows (PowerShell)
-powershell -c "irm bun.sh/install.ps1 | iex"
+## 安装
 
-# macOS / Linux
-curl -fsSL https://bun.sh/install | bash
-```
+需要 [Bun](https://bun.sh/) 1.3 或兼容版本：
 
-### 2. 获取代码并安装依赖
-```bash
-# 进入项目目录
+```powershell
 cd I:\OpenCode\fvttV12JsonGenerator
-
-# 安装依赖
-bun install
+bun install --frozen-lockfile
+bun run cli:help
 ```
 
-### 3. 数据准备 (关键!)
-工具需要依赖 Foundry VTT 的原始数据来保证转换准确性。请确保 `data/` 目录下有以下文件：
+仓库中的 `data/cn.json`、`data/spells.ldb` 和 v12 golden master 为现有 v12 工作流提供映射与模板。v14 正常生成不需要完整的 dnd5e/Foundry 上游仓库。
 
-| 文件名 | 来源 | 用途 |
-|--------|------|------|
-| `cn.json` | dnd5e 中文汉化包 | 用于中英字段映射 (如 `力量` -> `str`) |
-| `spells.ldb` | Foundry `packs/spells` | 用于提取法术 UUID (支持二进制片段) |
-| `golden-master.json` | **必须**从 Foundry 导出 | 用于作为生成的基准模板 |
+## 单文件转换
 
-**如何获取 `golden-master.json` (必须):**
-1. 打开 Foundry VTT (dnd5e 4.3.x)。
-2. 创建一个新的 NPC Actor，命名为 `Adult Red Dragon` (成年红龙)。
-3. (可选) 手动填入一些标准数值，确保数据结构完整。
-4. 右键点击该 Actor -> **Export Data** -> **Export to JSON**。
-5. 将下载的文件重命名为 `golden-master.json` 并放入 `data/` 目录。
+默认生成 Foundry v12 core JSON：
 
-## 🚀 使用方法
-
-### 基本命令
-```bash
-bun run src/index.ts <输入文件> [-o 输出文件]
+```powershell
+bun run src/index.ts "templates/npc-example.md" `
+  -o "obsidian/dnd数据转fvttjson/output/example.json"
 ```
 
-### 英文 Bestiary 输入（自动识别）
+显式生成 Foundry v14：
 
-当输入文件 frontmatter 包含 `layout: creature` 时，会自动走英文 bestiary 解析分支；未命中该标记时，仍走现有中文模板分支。
-
-```yaml
----
-layout: creature
-name: Adult Red Dragon
----
+```powershell
+bun run src/index.ts "templates/npc-example.md" `
+  -o "obsidian/dnd数据转fvttjson/output/example-v14.json" `
+  --fvtt-version 14 `
+  --effect-profile core
 ```
 
-```bash
-# 英文 bestiary 示例（仓库内样本）
-bun run src/index.ts src/core/parser/__tests__/fixtures/english-bestiary-adult-red-dragon.md -o output/english-dragon.json
+需要锁定的 MIDI-QOL/DAE 自动化时使用：
+
+```powershell
+bun run src/index.ts "templates/npc-example.md" `
+  -o "obsidian/dnd数据转fvttjson/output/example-v14-modded.json" `
+  --fvtt-version 14 `
+  --effect-profile modded-v14
 ```
 
-英文路线会在可用时输出双语名称与中文动作描述，同时保持现有中文工作流不变。
+最终 Actor/Item JSON 必须由 CLI 或项目 workflow 生成；不要手工拼装或修补最终 JSON。
 
-### 英文翻译配置（OpenAI-compatible）
+## Obsidian 工作流
 
-英文路线的翻译配置支持 `TRANSLATION_*` 优先，`OPENAI_*` 作为回退：
+默认数据路径：
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `TRANSLATION_API_KEY` / `OPENAI_API_KEY` | API Key（至少提供其一） | 空（未配置则不发起翻译请求） |
-| `TRANSLATION_BASE_URL` / `OPENAI_BASE_URL` | OpenAI 兼容接口地址 | `https://api.openai.com/v1` |
-| `TRANSLATION_MODEL` / `OPENAI_MODEL` | 模型名 | `gpt-4o-mini` |
-| `TRANSLATION_CACHE_FILE` | 翻译缓存文件路径 | `.cache/translation-cache.json` |
-| `TRANSLATION_TIMEOUT_MS` | 单次翻译超时（毫秒） | `15000` |
-
-`.env` 示例：
-
-```bash
-TRANSLATION_API_KEY=sk-xxxx
-TRANSLATION_BASE_URL=https://your-openai-compatible-endpoint/v1
-TRANSLATION_MODEL=gpt-4o-mini
-TRANSLATION_CACHE_FILE=.cache/translation-cache.json
-TRANSLATION_TIMEOUT_MS=15000
+```text
+obsidian/dnd数据转fvttjson/input
+  → parser / generator / workflow
+  → obsidian/dnd数据转fvttjson/output
 ```
 
-### 英文输出规则、缓存与 fail-soft
+批量增量同步：
 
-- 名称双语规则：`中文English`（无空格）。
-- 若未获得中文翻译（或翻译结果不含中文），名称回退为原英文名称。
-- 动作描述翻译写入 `item.system.description.value`；失败时保留英文原文。
-- 翻译失败（如超时/限流/上游错误）仅记录 warning，不阻塞整次转换。
-- 未配置 API Key 时不会调用翻译服务，流程仍正常生成 JSON。
-- 翻译缓存按文本 + 上下文 + provider/model/baseURL 生成 key，命中后直接复用结果。
-
-### JSON 原地翻译（`data/need_tran` 增量）
-
-当你已经有一批 Foundry JSON（例如 `data/need_tran`）并希望把未翻译字段补齐为中文时，可使用原地翻译模式：
-
-```bash
-bun run src/index.ts --translate-json
+```powershell
+bun run sync:vault
 ```
 
-自定义目录：
+同步会：
 
-```bash
-bun run src/index.ts --translate-json --translate-dir "data/need_tran"
+- 处理 `input/` 中新增或变化的 Markdown；
+- 把生成 JSON 写入 `output/`；
+- 覆盖前把旧 JSON 放入 `output_backup/`；
+- 通过 `.fvtt-sync-manifest.json` 跳过未变化输入；
+- 在源文件删除后移除过期输出。
+
+## 纯文本与批量怪物
+
+仅拆分纯文本资料为项目 Markdown：
+
+```powershell
+bun run src/index.ts `
+  --ingest-plaintext "path/to/collection.txt" `
+  --emit-dir "obsidian/dnd数据转fvttjson/input"
 ```
 
-行为说明：
-- 直接修改原 `.json` 文件（in-place）。
-- 每次运行都会先扫描字段：已包含中文的字段会自动跳过。
-- 仅翻译常见可读文本字段（如 `name`、`description.value`、`chatFlavor`、部分 `effects.description`）。
-- `角色名称`、`动作/特性名称`、`法术名称` 会输出为双语格式：`中文 (English)`（中文在前）。
-- 若名称原本只有中文，会自动反向补英文并转成同样的双语格式。
-- 自动复用翻译缓存（`TRANSLATION_CACHE_FILE`），避免重复请求。
-- 若出现单条翻译失败，会保留原文并继续处理其他字段。
+从纯文本直接生成中间 Markdown 和 Actor JSON：
 
-### Obsidian 批量同步（增量）
-
-当你在 Obsidian 库内维护大量 NPC 笔记时，推荐使用同步模式：
-
-```bash
-bun run src/index.ts --sync --vault "obsidian/dnd数据转fvttjson"
+```powershell
+bun run src/index.ts `
+  --ingest-plaintext-actors "path/to/collection.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
 ```
 
-同步模式会自动在 vault 下维护以下目录/文件：
+先用 `--dry-run` 检查识别数量和警告。AI normalization 是可选路径；未配置服务时使用规则化处理，测试不依赖外部翻译服务。
 
-| 路径 | 用途 |
-|------|------|
-| `input/` | 放待转换的 `.md` 笔记（支持子目录） |
-| `examples/` | 示例模板（首次会自动放入 `npc-example.md`） |
-| `output/` | 生成的 `.json` 输出 |
-| `output_backup/` | 同名输出被覆盖前的备份 |
-| `.fvtt-sync-manifest.json` | 增量状态文件（记录 hash、状态、输出路径） |
+## GoddessFantasy 流水线
 
-增量规则：
-- 新增 `.md`：会生成对应 `.json`
-- 修改过的 `.md`：会重新生成，并把旧 `.json` 先移到 `output_backup/`
-- 未变化的 `.md`：跳过处理
+采集结果默认写入 `obsidian/dnd数据转fvttjson/crawls`。cookie、账号和密码只能通过忽略文件或环境变量提供，不得提交到 Git。
 
-清理备份目录：
+```powershell
+# 板块增量采集
+bun run src/tools/crawlSites.ts goddessfantasy-board `
+  --board-url "<board-url>" `
+  --cookie-header-file ".local/goddessfantasy.cookie" `
+  --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318" `
+  --mode incremental
 
-```bash
-bun run src/index.ts --sync --vault "obsidian/dnd数据转fvttjson" --clear-backup
+# records.json 转换为纯文本怪物
+bun run src/tools/crawlSites.ts records-to-plaintext `
+  --records "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318/records.json" `
+  --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318/plaintext/monsters"
 ```
 
-### 示例
-```bash
-# 将模板转换为 JSON
-bun run src/index.ts templates/npc-example.md -o output/dragon.json
+`--force` 是 `--mode full` 的兼容别名。真实登录采集不属于离线验收，运行前应先 dry-run 并保护本地凭据。
+
+## Web 工作台
+
+```powershell
+# 本地开发
+bun run web:dev
+
+# API 服务
+bun run web:api
+
+# 生产构建
+bun run web:build
 ```
 
-成功后，你会看到：
-```
-Successfully generated output/dragon.json
-Name: 成年红龙
-Items: 5
-```
+Web/API 支持上传 Markdown、单文件转换、批量怪物 job、下载 ZIP、来源核对及受限的 workspace path 模式。部署注意事项见 [`docs/web-deployment.md`](docs/web-deployment.md)。
 
-### 导入到 Foundry VTT
-1. 打开 Foundry VTT。
-2. 创建一个新的 NPC Actor（或者选择一个现有的）。
-3. 右键点击该 Actor -> **Import Data**。
-4. 选择生成的 `output/dragon.json` 文件。
-5. 导入完成！所有属性、动作、法术应该都已正确填充。
+## 参考缓存
 
-## 📝 笔记格式规范 (Obsidian)
+完整 dnd5e 5.3.3 源码、Foundry API 页面和生成索引存放在忽略的 `.local/references`，不是生成器运行依赖：
 
-请参考 `templates/npc-example.md`。文件必须包含 **YAML Frontmatter** 和 **Markdown 正文**。
-
-### 基础结构
-```yaml
----
-名称: 成年红龙
-类型: npc
-挑战等级: 17
-...
----
-# 背景故事
-这里是 Markdown 格式的传记内容...
+```powershell
+bun run references bootstrap --dry-run
+bun run references bootstrap
+bun run references verify
+bun run src/tools/referenceIndex.ts
 ```
 
-### 支持的字段 (YAML)
+获取器先在 staging 中检出 manifest 固定的 revision，通过验证后才原子替换本地缓存。详情见 [`docs/REFERENCE_INDEX.md`](docs/REFERENCE_INDEX.md)。
 
-| 分类 | 字段名示例 | 格式说明 |
-|------|------------|----------|
-| **基础** | 名称, 类型, 阵营, 生物类型, 体型 | 文本 |
-| **属性** | 力量, 敏捷, 体质... | 数字 (如 `27`) |
-| **核心** | 生命值 | `256 (19d12+133)` (自动解析公式) |
-| **核心** | 护甲等级 | `19 (天生护甲)` (自动识别类型) |
-| **核心** | 速度 | `40尺, 飞行80尺` (自动解析) |
-| **技能** | 技能 | `{ 察觉: 专精, 隐匿: 熟练 }` |
-| **豁免** | 豁免熟练 | `[敏捷, 体质, 感知, 魅力]` |
-| **抗性** | 伤害免疫, 状态免疫 | `[火焰]`, `[恐慌]` |
-| **感知** | 感官 | `{ 盲视: 60尺, 被动察觉: 23 }` |
-| **动作** | 动作 | 列表 (见下文) |
+## 验证与验收
 
-### 动作格式 (自然语言)
+```powershell
+# 全量测试；限制并发以避免 CLI/Crawlee 子进程在 Windows 上资源饥饿
+bun run test
 
-**1. 近战/远程攻击**
-```yaml
-- 啮咬 [近战武器攻击]: +14命中, 触及10尺, 2d10+8穿刺 + 2d6火焰
-```
-*   格式：`名称 [类型]: +N命中, 范围, 伤害公式+类型`
+# parser/generator 反过拟合审计
+bun run audit:anti-overfit
 
-**2. 豁免/特质**
-```yaml
-- 骇人威仪: { 豁免: DC19感知, 失败: 恐慌, 成功: 免疫 }
+# Actor 来源对照
+bun run verify:actor -- "path/to/source.md" "path/to/actor.json"
+
+# Foundry Lab 单元测试
+bun run test:foundry-lab
 ```
 
-**3. 充能能力**
-```yaml
-- 火焰吐息 [充能5-6]: { 豁免: DC21敏捷, 失败: 18d6火焰, 成功: 减半 }
-```
+测试、JSON 可解析、文件存在和命令退出 0 都只是机械验证。生成结果只有在按照 [`docs/generated-actor-verification.md`](docs/generated-actor-verification.md) 核对身份、数值、动作、豁免、效果、施法、自动化和来源覆盖后，才可以声明正确。
 
-**4. 传奇动作**
-```yaml
-传奇动作:
-  - 侦测 (消耗1): 龙进行一次感知（察觉）检定
-```
+当前 v14 真实验收边界：
 
-## 🛠️ 开发与测试
+- 六个 core Actor 在 Foundry 14.364 / dnd5e 5.3.3 中导入并执行代表性 Activity：通过；
+- 六个 minimal modded Actor 与来源驱动的 MIDI-QOL OverTime：通过；
+- `cor-cotn` 本地副本的角色卡、豁免聊天卡、Journal、Scene 和 Token 抽样流程：通过；
+- 完整生产模组集合无错误共存：失败，仍为 Partial；
+- DAE 专属自动化、真实账号 GoddessFantasy 采集和独立 Item v14 实机验收：尚未完成。
 
-```bash
-# 运行单元测试
-bun test
+## 更多资料
 
-# 运行覆盖率检查
-bun test --coverage
-```
-
-## ⚠️ 常见问题
-
-**Q: 导入后没有图片？**
-A: 目前版本不处理图片路径。请在 Foundry 中手动设置 Token 和 头像，或者确保源数据中包含 `img` 字段（虽然目前主要通过默认图标处理）。
-
-**Q: 法术没有链接？**
-A: 请检查 `data/spells.ldb` 是否包含该法术。如果法术名无法在数据库中找到，工具会生成一个未链接 of Item。
-
-**Q: 报错 "Invalid damage format"？**
-A: 请检查动作描述中的伤害公式是否符合 `2d6+5类型` 的格式。
-
-## Plain Text Dual Artifact
-
-Plain text ingestion uses a two-stage workflow:
-
-1. `--ingest-plaintext` normalizes the source collection into `vault/middle` and writes audit output under `vault/audits`.
-2. `--ingest-plaintext-actors` promotes the normalized middle markdown into `vault/input`, then runs the normal sync workflow to generate final actor JSON under `vault/output`.
-
-Final actor JSON must always come from the CLI/workflow; do not manually construct final actor JSON.
-
-Markdown only（仅拆分并写入 vault/middle）：
-
-```bash
-bun run src/index.ts --ingest-plaintext "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --emit-dir "obsidian/dnd数据转fvttjson/input"
-```
-
-Dual artifact（vault/middle + vault/input + vault/output）：
-
-```bash
-bun run src/index.ts --ingest-plaintext-actors "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --vault "obsidian/dnd数据转fvttjson"
-```
-
-Effect profile 说明：
-
-| Profile | 默认用于 | 行为 |
-|------|----------|------|
-| `core` | 单文件转换、`--sync` | 只保留原生 dnd5e 可表达的结构，不写入 `midi-qol` automation |
-| `modded-v12` | `--ingest-plaintext-actors` | v1 以 `midi-qol` 为主，给 `Bleed` / `Swallow` 生成 over-time automation，其它 `Heavy Hit` / `Dazed` 保留为结构化 hints |
-
-显示指定 profile：
-
-```bash
-bun run src/index.ts --ingest-plaintext-actors "tests/fixtures/plaintext/月蚀矿腐化生物数据.md" --vault "obsidian/dnd数据转fvttjson" --effect-profile core
-```
+- [`docs/manual.md`](docs/manual.md)：以 v12 为主的旧版详细使用手册；涉及版本时以本 README 和 `AGENTS.md` 为准。
+- [`docs/generated-actor-verification.md`](docs/generated-actor-verification.md)：生成 Actor 的强制语义验收清单。
+- [`scripts/foundry-lab/README.md`](scripts/foundry-lab/README.md)：隔离 Foundry v14 实验环境的安全边界与操作手册。
+- [`docs/acceptance/foundry-v14-module-compatibility.md`](docs/acceptance/foundry-v14-module-compatibility.md)：模组矩阵、已知冲突和生产世界抽样证据。
