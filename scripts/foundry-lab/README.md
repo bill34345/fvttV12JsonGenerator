@@ -128,3 +128,42 @@ FOUNDRY_LAB_ARCHIVE_PASSWORD_EXAMPLE_MODULE
 The password is passed only to 7-Zip, redacted from command output, and never
 stored in mappings or reports. The ignored result is written to
 `.local/foundry-v14/inventory/local-source-report.json` only under `--apply`.
+
+## Module compatibility acceptance workflow
+
+Package parity is a prerequisite, not the compatibility result. Run behavior
+acceptance in disposable worlds and record it in
+`docs/acceptance/foundry-v14-module-compatibility.md` before using a copied
+production world:
+
+1. Start `core-test` with no third-party modules and exercise Actor create,
+   edit, roll, and export behavior.
+2. Start `server-mirror` with a disposable matrix world. Enable libraries and
+   sheets first, then automation/effects, animation/media, and scene/world
+   utilities in dependency-safe groups.
+3. After each group, reload and collect the active module IDs, browser errors,
+   server errors, and an actual feature workflow. A visible control or a clean
+   initialization log is only mechanical evidence.
+4. Enable the broad production-snapshot set. For each blocking error, disable
+   suspected modules and reproduce until the responsible module is isolated.
+   Record both the failing set and the reduced set; never relabel a reduced set
+   as exact parity.
+5. Exercise a production-equivalent copied world only after the clean disposable
+   baseline. Do not bypass its user authentication or copy live LevelDB files.
+
+Acceptance statuses mean:
+
+- `Pass`: the required representative behavior was exercised successfully.
+- `Partial`: some real behavior worked, but required coverage remains missing.
+- `Fail`: a required workflow or the intended complete configuration reproduced
+  a blocking error.
+- `Not Tested`: no behavioral evidence was collected.
+
+For the 2026-07-11 run, the production snapshot contained 88 active IDs, but
+only 87 registered locally because the protected MCDM package had an invalid
+signature. `dungeon-strugglers-collection` was intentionally disabled by user
+decision, so the broad configurable test contained 86 active modules. That
+configuration reproduced errors from `monks-combat-marker` and `translate-all`.
+Disabling those two produced an 84-module reload with no captured browser
+errors. This 84-module result is a reduced stable candidate, not proof that all
+88 production IDs coexist or that every enabled feature is correct.
