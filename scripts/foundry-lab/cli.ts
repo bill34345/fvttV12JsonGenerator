@@ -5,6 +5,8 @@ import { writePackagePlan } from './classify';
 import { createLabConfig } from './config';
 import { captureRemoteInventory, REMOTE_INVENTORY_EXPECTED_COUNT } from './remoteInventory';
 import type { PackageClass } from './types';
+import { generateRealParity, writeParityAcceptance } from './parity';
+import { launchProfile, stopProfile, type ProfileId } from './launch';
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
@@ -69,5 +71,16 @@ if (command === 'acquire-local') {
   });
   console.log(JSON.stringify(report, null, 2));
   process.exit(!apply || report.complete ? 0 : 1);
+}
+if (command === 'parity') {
+  const config = createLabConfig(); const report = await generateRealParity(config); await writeParityAcceptance(config, report);
+  console.log(JSON.stringify(report, null, 2)); process.exit(report.effectivePass ? 0 : 1);
+}
+if (command === 'launch' || command === 'stop') {
+  const profile = args.find((arg) => !arg.startsWith('--')) as ProfileId | undefined;
+  if (profile !== 'core-test' && profile !== 'server-mirror') throw new Error('Profile must be core-test or server-mirror');
+  if (command === 'stop') { await stopProfile(createLabConfig(), profile); console.log(JSON.stringify({ ok: true, profile, stopped: true })); }
+  else console.log(JSON.stringify({ ok: true, profile, ...(await launchProfile(createLabConfig(), profile)) }, null, 2));
+  process.exit(0);
 }
 throw new Error(`Unsupported foundry:lab command: ${command ?? '<missing>'}`);

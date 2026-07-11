@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'bun:test';
+import { resolve } from 'node:path';
+import { createLabConfig } from '../config';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, validateListenerAddresses } from '../launch';
+
+describe('Foundry profile launcher', () => {
+  const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
+  it('builds a loopback-only core command', () => {
+    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--noupnp'] });
+  });
+  it('uses an independent server mirror port and path', () => {
+    const command = buildLaunchCommand(config, 'server-mirror');
+    expect(command.args).toContain('30001');
+    expect(command.args).toContain(config.profiles.serverMirror.dataPath);
+  });
+  it('adapts the public command shape to Foundry 14.364 equals-style parsing', () => {
+    expect(buildRuntimeArgs(buildLaunchCommand(config, 'core-test').args)).toEqual([
+      resolve(config.appRoot, 'main.js'), `--dataPath=${config.profiles.coreTest.dataPath}`,
+      '--hostname=127.0.0.1', '--port=30000', '--noupnp',
+    ]);
+  });
+  it('rejects wildcard or non-loopback listeners', () => {
+    expect(() => validateListenerAddresses(['127.0.0.1', '::1'])).not.toThrow();
+    expect(() => validateListenerAddresses(['0.0.0.0'])).toThrow('loopback');
+    expect(() => validateListenerAddresses(['192.168.1.2'])).toThrow('loopback');
+  });
+  it('pins persisted Foundry options to loopback and disables UPnP', () => {
+    expect(buildSafeOptions({ hostname: null, upnp: true, adminPassword: 'must-not-copy' }, config.profiles.coreTest)).toMatchObject({
+      dataPath: config.profiles.coreTest.dataPath, hostname: '127.0.0.1', port: 30000, upnp: false,
+      unixSocket: null,
+    });
+    expect(buildSafeOptions({ adminPassword: 'must-not-copy' }, config.profiles.coreTest)).not.toHaveProperty('adminPassword');
+  });
+  it('preloads a narrow TCP listen guard that injects loopback for numeric ports', () => {
+    expect(loopbackPreloadSource()).toContain("args.splice(1,0,'127.0.0.1')");
+    expect(loopbackPreloadSource()).toContain('typeof args[0]');
+  });
+  it('will only stop the pinned lab Node process running the pinned Foundry app', () => {
+    const node = resolve(config.nodeRoot, 'node.exe'), main = resolve(config.appRoot, 'main.js');
+    expect(isExpectedFoundryProcess(config, node, `"${node}" --require hook "${main}"`)).toBe(true);
+    expect(isExpectedFoundryProcess(config, node, `"${node}" other.js`)).toBe(false);
+    expect(isExpectedFoundryProcess(config, 'C:/other/node.exe', `"${main}"`)).toBe(false);
+  });
+});
