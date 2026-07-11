@@ -131,6 +131,27 @@ stored in mappings or reports. The ignored result is written to
 
 ## Module compatibility acceptance workflow
 
+### Default world for future end-to-end testing
+
+Use the local copied world `cor-cotn` (`溟渊的呼唤`) in the `server-mirror`
+profile as the default environment for future real end-to-end Foundry tests.
+It is the durable production-shaped baseline for scene, Actor, sheet, chat,
+journal, token, and enabled-module behavior. Missing image assets are
+non-blocking unless they prevent the workflow under test.
+
+Do not replace that end-to-end baseline with a disposable world merely because
+the disposable world is cleaner. Use the disposable worlds only to isolate a
+failure:
+
+- `fvtt-v14-core-baseline` in `core-test`: Foundry/dnd5e behavior with no
+  third-party modules.
+- `fvtt-v14-module-matrix` in `server-mirror`: controlled module-group and
+  minimal locked-module tests.
+
+The copied world's authentication credential is intentionally not documented
+or committed. A successful local login is a runtime prerequisite, not a reason
+to store the password in this repository.
+
 Package parity is a prerequisite, not the compatibility result. Run behavior
 acceptance in disposable worlds and record it in
 `docs/acceptance/foundry-v14-module-compatibility.md` before using a copied
