@@ -27,6 +27,14 @@ export function validateListenerAddresses(addresses: string[]): void {
   if (!addresses.length || addresses.some((address) => address !== '127.0.0.1' && address !== '::1')) throw new Error(`Foundry listener is not loopback-only: ${addresses.join(', ') || '<none>'}`);
 }
 export interface ListenerRecord { address: string; pid: number }
+interface LaunchEvidence {
+  profile: ProfileId;
+  spawnedPid?: number;
+  listener?: { address: string; port: number; owningPid: number }[];
+  httpLicenseBoundary?: { status: number; location: string | null };
+  mutualExclusion?: { rejected: boolean; runningProfile: ProfileId; runningPid: number; firstProcessRemainedAlive: boolean };
+  stop?: { portReleased: boolean; pidGone: boolean; pidFileRemoved: boolean };
+}
 export function validateListenerOwnership(records: ListenerRecord[], expectedPid: number): void {
   validateListenerAddresses(records.map((record) => record.address));
   if (records.some((record) => record.pid !== expectedPid)) throw new Error(`Foundry listener is not owned by spawned PID ${expectedPid}`);
@@ -50,9 +58,17 @@ export function buildSafeOptions(existing: Record<string, unknown>, profile: { d
 export function loopbackPreloadSource(): string {
   return "const net=require('node:net');const original=net.Server.prototype.listen;net.Server.prototype.listen=function(...args){if(typeof args[0]==='number'&&(args.length===1||typeof args[1]==='function'))args.splice(1,0,'127.0.0.1');return original.apply(this,args)};";
 }
-export function isExpectedFoundryProcess(config: FoundryLabConfig, executable: string, commandLine: string): boolean {
-  return resolve(executable).toLowerCase() === resolve(config.nodeRoot, 'node.exe').toLowerCase()
-    && commandLine.toLowerCase().includes(resolve(config.appRoot, 'main.js').toLowerCase());
+export function isExpectedFoundryProcess(config: FoundryLabConfig, id: ProfileId, executable: string, commandLine: string): boolean {
+  const profile = profileFor(config, id);
+  const tokens = [...commandLine.matchAll(/"([^"]*)"|(\S+)/g)].map((match) => match[1] ?? match[2] ?? '');
+  const normalizedPath = (value: string) => resolve(value).replaceAll('\\', '/').toLowerCase();
+  const expectedMain = normalizedPath(resolve(config.appRoot, 'main.js'));
+  const dataToken = tokens.find((token) => token.toLowerCase().startsWith('--datapath='));
+  const portToken = tokens.find((token) => token.toLowerCase().startsWith('--port='));
+  return normalizedPath(executable) === normalizedPath(resolve(config.nodeRoot, 'node.exe'))
+    && tokens.some((token) => normalizedPath(token) === expectedMain)
+    && !!dataToken && normalizedPath(dataToken.slice(dataToken.indexOf('=') + 1)) === normalizedPath(profile.dataPath)
+    && portToken === `--port=${profile.port}`;
 }
 function queryProcess(pid: number): { executable: string; commandLine: string } | null {
   const query = Bun.spawnSync(['powershell', '-NoProfile', '-NonInteractive', '-Command', `$p=Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}' -ErrorAction SilentlyContinue;if($p){$p|Select-Object ExecutablePath,CommandLine|ConvertTo-Json -Compress}`], { stdout: 'pipe', stderr: 'pipe' });
@@ -61,12 +77,20 @@ function queryProcess(pid: number): { executable: string; commandLine: string } 
   const info = JSON.parse(output) as { ExecutablePath?: unknown; CommandLine?: unknown };
   return typeof info.ExecutablePath === 'string' && typeof info.CommandLine === 'string' ? { executable: info.ExecutablePath, commandLine: info.CommandLine } : null;
 }
+async function writeLaunchEvidence(config: FoundryLabConfig, id: ProfileId, patch: Partial<LaunchEvidence>): Promise<void> {
+  const directory = join(config.evidenceRoot, id), path = join(directory, 'launch-evidence.json'); await mkdir(directory, { recursive: true });
+  let existing: LaunchEvidence = { profile: id }; try { existing = JSON.parse(await readFile(path, 'utf8')) as LaunchEvidence; } catch {}
+  const temporary = `${path}.tmp`; await writeFile(temporary, `${JSON.stringify({ ...existing, ...patch, profile: id }, null, 2)}\n`, 'utf8'); await rename(temporary, path);
+}
 async function rejectRunningPeer(config: FoundryLabConfig, id: ProfileId): Promise<void> {
   const peer = otherProfileId(id), pidFile = join(config.evidenceRoot, peer, 'server.pid');
   if (!existsSync(pidFile)) return;
   let pid = 0; try { pid = Number((JSON.parse(await readFile(pidFile, 'utf8')) as { foundry?: unknown }).foundry); } catch {}
   const info = Number.isInteger(pid) && pid > 0 ? queryProcess(pid) : null;
-  if (info && isExpectedFoundryProcess(config, info.executable, info.commandLine)) throw new Error(`Cannot launch ${id} while ${peer} is running as PID ${pid}`);
+  if (info && isExpectedFoundryProcess(config, peer, info.executable, info.commandLine)) {
+    await writeLaunchEvidence(config, id, { mutualExclusion: { rejected: true, runningProfile: peer, runningPid: pid, firstProcessRemainedAlive: queryProcess(pid) !== null } });
+    throw new Error(`Cannot launch ${id} while ${peer} is running as PID ${pid}`);
+  }
   await rm(pidFile, { force: true });
 }
 
@@ -104,23 +128,42 @@ export async function launchProfile(config: FoundryLabConfig, id: ProfileId): Pr
     if (records.length) {
       try { validateListenerOwnership(records, pid); }
       catch (error) { await cleanup(); throw error; }
-      const temporary = `${pidFile}.tmp`; await writeFile(temporary, JSON.stringify({ foundry: pid }), 'utf8'); await rename(temporary, pidFile); child.unref();
+      let response: Response;
+      try { response = await fetch(`http://127.0.0.1:${profile.port}/license`, { redirect: 'manual' }); }
+      catch (error) { await cleanup(); throw new Error(`Foundry license boundary was not reachable: ${error instanceof Error ? error.message : String(error)}`); }
+      try {
+        await writeLaunchEvidence(config, id, {
+          spawnedPid: pid,
+          listener: records.map((record) => ({ address: record.address, port: profile.port, owningPid: record.pid })),
+          httpLicenseBoundary: { status: response.status, location: response.headers.get('location') },
+        });
+        const temporary = `${pidFile}.tmp`; await writeFile(temporary, JSON.stringify({ foundry: pid }), 'utf8'); await rename(temporary, pidFile); child.unref();
+      } catch (error) { await cleanup(); throw error; }
       return { pid, url: `http://127.0.0.1:${profile.port}/`, log };
     }
   }
   await cleanup(); throw new Error(`Foundry did not listen on port ${profile.port}`);
 }
-export async function stopProfile(config: FoundryLabConfig, id: ProfileId): Promise<void> {
+export interface StopDependencies {
+  queryProcess?: (pid: number) => { executable: string; commandLine: string } | null;
+  kill?: (pid: number) => void;
+}
+export async function stopProfile(config: FoundryLabConfig, id: ProfileId, dependencies: StopDependencies = {}): Promise<void> {
   const profile = profileFor(config, id), pidFile = join(config.evidenceRoot, id, 'server.pid');
   const stored = JSON.parse(await readFile(pidFile, 'utf8')) as { foundry?: unknown; proxy?: unknown };
   const pids = [stored.foundry].map(Number); if (pids.some((pid) => !Number.isInteger(pid) || pid <= 0)) throw new Error('Invalid Foundry pid file');
   for (const pid of pids) {
-    const processInfo = queryProcess(pid);
+    const processInfo = (dependencies.queryProcess ?? queryProcess)(pid);
     if (processInfo) {
-      if (!isExpectedFoundryProcess(config, processInfo.executable, processInfo.commandLine)) throw new Error(`Refusing to stop PID ${pid}: it is not the pinned Foundry lab process`);
-      Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'pipe', stderr: 'pipe' });
+      if (!isExpectedFoundryProcess(config, id, processInfo.executable, processInfo.commandLine)) throw new Error(`Refusing to stop PID ${pid}: it is not the pinned Foundry lab process`);
+      if (dependencies.kill) dependencies.kill(pid);
+      else Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'pipe', stderr: 'pipe' });
     }
   }
-  for (let i = 0; i < 20; i++) { if (!(await listenerRecords(profile.port)).length) { await rm(pidFile, { force: true }); return; } await Bun.sleep(100); }
+  for (let i = 0; i < 20; i++) { if (!(await listenerRecords(profile.port)).length) {
+    await rm(pidFile, { force: true });
+    await writeLaunchEvidence(config, id, { stop: { portReleased: true, pidGone: queryProcess(pids[0]!) === null, pidFileRemoved: !existsSync(pidFile) } });
+    return;
+  } await Bun.sleep(100); }
   throw new Error(`Port ${profile.port} did not release`);
 }

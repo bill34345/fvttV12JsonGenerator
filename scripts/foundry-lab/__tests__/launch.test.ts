@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { createLabConfig } from '../config';
-import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, validateListenerAddresses, validateListenerOwnership } from '../launch';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership } from '../launch';
 
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
@@ -41,12 +43,27 @@ describe('Foundry profile launcher', () => {
   });
   it('will only stop the pinned lab Node process running the pinned Foundry app', () => {
     const node = resolve(config.nodeRoot, 'node.exe'), main = resolve(config.appRoot, 'main.js');
-    expect(isExpectedFoundryProcess(config, node, `"${node}" --require hook "${main}"`)).toBe(true);
-    expect(isExpectedFoundryProcess(config, node, `"${node}" other.js`)).toBe(false);
-    expect(isExpectedFoundryProcess(config, 'C:/other/node.exe', `"${main}"`)).toBe(false);
+    const core = `"${node}" --require hook "${main}" --dataPath=${config.profiles.coreTest.dataPath} --port=30000`;
+    const mirror = `"${node}" --require hook "${main}" --dataPath=${config.profiles.serverMirror.dataPath} --port=30001`;
+    expect(isExpectedFoundryProcess(config, 'core-test', node, core)).toBe(true);
+    expect(isExpectedFoundryProcess(config, 'core-test', node, mirror)).toBe(false);
+    expect(isExpectedFoundryProcess(config, 'server-mirror', node, core)).toBe(false);
+    expect(isExpectedFoundryProcess(config, 'core-test', node, core.replace('--port=30000', '--port=300000'))).toBe(false);
+    expect(isExpectedFoundryProcess(config, 'core-test', 'C:/other/node.exe', core)).toBe(false);
   });
   it('maps each profile to the mutually exclusive peer', () => {
     expect(otherProfileId('core-test')).toBe('server-mirror');
     expect(otherProfileId('server-mirror')).toBe('core-test');
+  });
+  it('refuses a cross-profile PID file without killing the mirror process', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-stop-profile-'));
+    const isolated = createLabConfig(root); await mkdir(join(isolated.evidenceRoot, 'core-test'), { recursive: true });
+    await writeFile(join(isolated.evidenceRoot, 'core-test/server.pid'), '{"foundry":42}');
+    const node = resolve(isolated.nodeRoot, 'node.exe'), main = resolve(isolated.appRoot, 'main.js'); let kills = 0;
+    const mirror = `"${node}" "${main}" --dataPath=${isolated.profiles.serverMirror.dataPath} --port=30001`;
+    try {
+      await expect(stopProfile(isolated, 'core-test', { queryProcess: () => ({ executable: node, commandLine: mirror }), kill: () => { kills += 1; } })).rejects.toThrow('not the pinned');
+      expect(kills).toBe(0);
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
 });

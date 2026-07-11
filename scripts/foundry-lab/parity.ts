@@ -22,6 +22,10 @@ export interface ParityReport {
 const emptyDecisions = (): UserDecisions => ({ acceptedVersionOverrides: [], optionalDisabledModules: [] });
 
 export function compareModuleParity(active: ActiveModuleEntry[], local: LocalModule[], decisions = emptyDecisions()): ParityReport {
+  let validatedDecisions: UserDecisions;
+  try { validatedDecisions = validateDecisions(decisions); }
+  catch { throw new Error('Invalid user decisions'); }
+  decisions = validatedDecisions;
   const duplicate = <T>(entries: T[], id: (entry: T) => string) => entries.map(id).find((value, index, all) => all.indexOf(value) !== index);
   const duplicateActive = duplicate(active, (entry) => entry.id); if (duplicateActive) throw new Error(`Duplicate active module id: ${duplicateActive}`);
   const duplicateLocal = duplicate(local, (entry) => entry.id); if (duplicateLocal) throw new Error(`Duplicate local module id: ${duplicateLocal}`);
@@ -71,7 +75,7 @@ function validateDecisions(value: unknown): UserDecisions {
   const stringFields = (entry: unknown, fields: string[]) => {
     if (!entry || typeof entry !== 'object') return false;
     const record = entry as Record<string, unknown>;
-    return fields.every((field) => typeof record[field] === 'string' && (record[field] as string).length > 0);
+    return fields.every((field) => typeof record[field] === 'string' && (record[field] as string).trim().length > 0);
   };
   if (!data.acceptedVersionOverrides.every((entry) => stringFields(entry, ['id', 'productionVersion', 'localVersion', 'reason']))) throw new Error('Invalid acceptedVersionOverrides entry');
   if (!data.optionalDisabledModules.every((entry) => stringFields(entry, ['id', 'reason']))) throw new Error('Invalid optionalDisabledModules entry');

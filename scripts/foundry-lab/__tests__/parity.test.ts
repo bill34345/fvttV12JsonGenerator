@@ -61,4 +61,10 @@ describe('module parity', () => {
     const decisions = { acceptedVersionOverrides: [{ id: 'a', productionVersion: '1.0.0', localVersion: '1.0.0', reason: 'x' }], optionalDisabledModules: [] };
     expect(() => compareModuleParity(active, [{ id: 'a', version: '1.0.0', requires: [] }], decisions)).toThrow('Invalid user decisions');
   });
+  it('validates decision shape and non-empty reasons at the exported boundary', () => {
+    expect(() => compareModuleParity(active, [{ id: 'a', version: '2.0.0', requires: [] }], {
+      acceptedVersionOverrides: [{ id: 'a', productionVersion: '1.0.0', localVersion: '2.0.0', reason: '' }], optionalDisabledModules: [],
+    })).toThrow('Invalid user decisions');
+    expect(() => compareModuleParity(active, [{ id: 'a', version: '1.0.0', requires: [] }], { acceptedVersionOverrides: null, optionalDisabledModules: [] } as never)).toThrow('Invalid user decisions');
+  });
 });
