@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
 import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import type { FoundryLabConfig } from './config';
+import { assertInsideLabRoot } from './config';
 
 export type ProfileId = 'core-test' | 'server-mirror';
 export function buildLaunchCommand(config: FoundryLabConfig, profileId: ProfileId) {
@@ -94,7 +96,53 @@ async function rejectRunningPeer(config: FoundryLabConfig, id: ProfileId): Promi
   await rm(pidFile, { force: true });
 }
 
-export async function launchProfile(config: FoundryLabConfig, id: ProfileId): Promise<{ pid: number; url: string; log: string }> {
+interface LaunchReservationOwner { pid: number; profile: ProfileId; token: string }
+function isProcessAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+export async function withLaunchReservation<T>(config: FoundryLabConfig, id: ProfileId, work: () => Promise<T>): Promise<T> {
+  const lockDirectory = join(config.evidenceRoot, '.launch-reservation');
+  const ownerPath = join(lockDirectory, 'owner.json');
+  assertInsideLabRoot(config, lockDirectory);
+  await mkdir(config.evidenceRoot, { recursive: true });
+  const owner: LaunchReservationOwner = { pid: process.pid, profile: id, token: randomUUID() };
+  let acquired = false;
+  for (let attempt = 0; attempt < 3 && !acquired; attempt++) {
+    try {
+      await mkdir(lockDirectory);
+      acquired = true;
+      await writeFile(ownerPath, JSON.stringify(owner), { encoding: 'utf8', flag: 'wx' });
+    } catch (error) {
+      if (acquired) { await rm(lockDirectory, { recursive: true, force: true }); acquired = false; throw error; }
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      let existing: LaunchReservationOwner | null = null;
+      try { existing = JSON.parse(await readFile(ownerPath, 'utf8')) as LaunchReservationOwner; } catch {}
+      if (!existing || isProcessAlive(existing.pid)) {
+        const heldBy = existing ? `${existing.profile} (PID ${existing.pid})` : 'an initializing launcher';
+        throw new Error(`Foundry lab launch reservation is held by ${heldBy}`);
+      }
+      // Claim the stale directory by atomic rename before deleting it. This
+      // prevents two recoverers from deleting a new live owner's reservation.
+      const staleDirectory = `${lockDirectory}.stale-${owner.token}`;
+      try { await rename(lockDirectory, staleDirectory); }
+      catch (renameError) {
+        if ((renameError as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        throw renameError;
+      }
+      await rm(staleDirectory, { recursive: true, force: true });
+    }
+  }
+  if (!acquired) throw new Error('Unable to acquire Foundry lab launch reservation');
+  try { return await work(); }
+  finally {
+    let current: LaunchReservationOwner | null = null;
+    try { current = JSON.parse(await readFile(ownerPath, 'utf8')) as LaunchReservationOwner; } catch {}
+    if (current?.token === owner.token) await rm(lockDirectory, { recursive: true, force: true });
+  }
+}
+
+async function launchProfileReserved(config: FoundryLabConfig, id: ProfileId): Promise<{ pid: number; url: string; log: string }> {
   const profile = profileFor(config, id), built = buildLaunchCommand(config, id);
   await rejectRunningPeer(config, id);
   const mainScript = built.args[0]; if (!mainScript) throw new Error('Foundry main script argument is required');
@@ -143,6 +191,9 @@ export async function launchProfile(config: FoundryLabConfig, id: ProfileId): Pr
     }
   }
   await cleanup(); throw new Error(`Foundry did not listen on port ${profile.port}`);
+}
+export async function launchProfile(config: FoundryLabConfig, id: ProfileId): Promise<{ pid: number; url: string; log: string }> {
+  return withLaunchReservation(config, id, () => launchProfileReserved(config, id));
 }
 export interface StopDependencies {
   queryProcess?: (pid: number) => { executable: string; commandLine: string } | null;

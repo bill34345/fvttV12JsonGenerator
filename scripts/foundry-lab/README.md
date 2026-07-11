@@ -180,3 +180,11 @@ compatibility: `simple-quest` 2.3.10 threw from
 `JournalEntryPage.buildTOC`, and resource-path and deprecation warnings remained.
 Record the core workflow as `Pass`, the complete-module error-free gate as
 `Fail`, and the overall compatibility run as `Partial/Fail`.
+
+Profile launches are serialized by an atomic lab-wide reservation at
+`.local/foundry-v14/evidence/.launch-reservation`. The reservation spans peer
+PID inspection, process spawn, listener verification, and PID-file publication,
+so concurrent `core-test` and `server-mirror` launch commands cannot both pass
+the mutual-exclusion boundary. A failed launch releases its reservation. After
+an interrupted launcher, stale recovery removes the reservation only when its
+recorded owner PID is no longer alive; it never removes a live owner's lock.

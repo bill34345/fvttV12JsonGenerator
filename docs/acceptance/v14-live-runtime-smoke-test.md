@@ -4,7 +4,7 @@ Status: **Partial**
 
 Tested on: 2026-07-11
 
-The narrow Actor runtime gates pass in both a zero-module core world and a locked minimal modded world. The overall Task 8 decision remains `Partial` because the production-equivalent module/world gate does not pass: the full module candidate has reproducible startup/runtime errors, and the copied production world cannot yet be entered without the Gamemaster password.
+The narrow Actor runtime gates pass in both a zero-module core world and a locked minimal modded world. The authenticated copied-world smoke workflow also passes after an explicitly authorized local-only Gamemaster password reset. The overall Task 8 decision remains `Partial` because the production-equivalent complete-module gate still has reproducible runtime errors.
 
 ## Locked Environments
 
@@ -13,7 +13,7 @@ The narrow Actor runtime gates pass in both a zero-module core world and a locke
 | Core disposable world | Foundry `14.364`, dnd5e `5.3.3`, zero third-party modules | Pass |
 | Minimal modded disposable world | Foundry `14.364`, dnd5e `5.3.3`, MIDI-QOL `14.0.9`, DAE `14.0.12`, libWrapper `1.13.5.1`, socketlib `v1.1.4` | Pass |
 | Production-equivalent candidate | 84-module reduced candidate after isolating known errors | Fail |
-| Copied production world `cor-cotn` | Local server-mirror profile | Blocked at Gamemaster authentication |
+| Copied production world `cor-cotn` | Local server-mirror profile after authorized local-only Gamemaster password reset | Pass for sampled Actor/save-chat/journal/scene/token workflows |
 
 Times Up and Item Macro were not enabled or required for the accepted minimal modded behavior. The generated `_stats.coreVersion` remains `14.361`, while the importing runtime was Foundry `14.364`; dnd5e remained exactly `5.3.3`.
 
@@ -66,7 +66,10 @@ This gate does **not** pass.
 - The full 86-module candidate previously exposed errors from `monks-combat-marker` `12.01` and `translate-all` `2.1.0`; disabling those yielded an 84-module reduced candidate with a clean initial load.
 - Activating and exercising a scene in that reduced candidate exposed a further `getSceneControlButtons` error involving `simple-quest` `2.3.10` and `monks-common-display` `14.01`.
 - Therefore “84-module startup without initial errors” is only a mechanical observation, not semantic acceptance of the complete module set.
-- The copied production world `cor-cotn` reached its Join page, but the blank Gamemaster password was rejected. No password was guessed, extracted, or bypassed, so production-world Actor behavior remains untested.
+- The copied production world `cor-cotn` was authenticated after the user explicitly authorized resetting only the local copy's Gamemaster password. The users database was backed up in the ignored local runtime before the reset; no credential is recorded here.
+- The real character sheet `卡勒姆·维雷` opened. Its Strength save produced a public chat card with formula `1d20 - 1` and total `6`.
+- The `St. Patrick's Day` Journal rendered its page. The landing Scene loaded with five Tokens and four Walls, and a moved Token was restored to its original coordinates after the check.
+- These sampled world workflows pass, but the same run reproduced the complete-module errors described below.
 
 ## Acceptance Decision
 
@@ -80,13 +83,12 @@ This gate does **not** pass.
 | Re-export preserves source semantics | Pass | HP, AC, CR, senses, movement, and Activity semantics preserved after runtime migration |
 | No blocking errors in accepted narrow segments | Pass | No browser/server errors in the core segment; minimal modded proof completed |
 | Full production-equivalent module set | Fail | Additional scene-control error after earlier module isolations |
-| Copied production-world workflow | Blocked | Gamemaster password required at Join page |
+| Copied production-world workflow | Pass | Authenticated local copy; real character sheet, `1d20 - 1 = 6` save/chat, journal, landing Scene, and Token restoration exercised |
 
-Overall status: **Partial**. Core Actor runtime support and the locked minimal modded Actor contract pass. Full production-equivalent coexistence and real-world acceptance remain unresolved and must not be described as passing.
+Overall status: **Partial**. Core Actor runtime support, the locked minimal modded Actor contract, and sampled authenticated copied-world workflows pass. Full production-equivalent error-free module coexistence fails and must not be described as passing.
 
 ## Remaining Work Outside This Gate
 
 1. Minimize and resolve the `simple-quest` / `monks-common-display` scene-control failure, then repeat complete-set scene and Actor workflows.
-2. Enter the copied world's Gamemaster password through the browser and repeat the Actor checks in `cor-cotn` without changing production.
-3. Add a source-derived DAE-specific behavior fixture before claiming DAE automation support beyond coexistence.
-4. Complete standalone Item v14 end-to-end acceptance, a live authenticated GoddessFantasy crawl, and broader real-input corpus coverage as separate gates.
+2. Add a source-derived DAE-specific behavior fixture before claiming DAE automation support beyond coexistence.
+3. Complete standalone Item v14 end-to-end acceptance, a live authenticated GoddessFantasy crawl, and broader real-input corpus coverage as separate gates.

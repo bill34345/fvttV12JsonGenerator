@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { createLabConfig } from '../config';
-import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership } from '../launch';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
 
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
@@ -64,6 +64,57 @@ describe('Foundry profile launcher', () => {
     try {
       await expect(stopProfile(isolated, 'core-test', { queryProcess: () => ({ executable: node, commandLine: mirror }), kill: () => { kills += 1; } })).rejects.toThrow('not the pinned');
       expect(kills).toBe(0);
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it('atomically prevents concurrent cross-profile launch work from both proceeding', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-launch-reservation-'));
+    const isolated = createLabConfig(root);
+    let entered = 0;
+    let releaseFirst!: () => void;
+    const firstCanFinish = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    try {
+      const first = withLaunchReservation(isolated, 'core-test', async () => {
+        entered += 1;
+        await firstCanFinish;
+        return 'core';
+      });
+      while (entered === 0) await Bun.sleep(1);
+      await expect(withLaunchReservation(isolated, 'server-mirror', async () => {
+        entered += 1;
+        return 'mirror';
+      })).rejects.toThrow('launch reservation');
+      expect(entered).toBe(1);
+      releaseFirst();
+      expect(await first).toBe('core');
+    } finally { releaseFirst?.(); await rm(root, { recursive: true, force: true }); }
+  });
+  it('releases the launch reservation after failure so a retry can proceed', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-launch-reservation-retry-'));
+    const isolated = createLabConfig(root);
+    try {
+      await expect(withLaunchReservation(isolated, 'core-test', async () => { throw new Error('spawn failed'); })).rejects.toThrow('spawn failed');
+      expect(await withLaunchReservation(isolated, 'server-mirror', async () => 'retry proceeded')).toBe('retry proceeded');
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it('recovers a stale reservation only when its recorded owner is dead', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-launch-reservation-stale-'));
+    const isolated = createLabConfig(root);
+    const lock = join(isolated.evidenceRoot, '.launch-reservation');
+    try {
+      await mkdir(lock, { recursive: true });
+      await writeFile(join(lock, 'owner.json'), JSON.stringify({ pid: 2147483647, profile: 'core-test', token: 'stale' }));
+      expect(await withLaunchReservation(isolated, 'server-mirror', async () => 'recovered')).toBe('recovered');
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it('does not delete a reservation whose recorded owner is still alive', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-launch-reservation-live-'));
+    const isolated = createLabConfig(root);
+    const lock = join(isolated.evidenceRoot, '.launch-reservation');
+    try {
+      await mkdir(lock, { recursive: true });
+      await writeFile(join(lock, 'owner.json'), JSON.stringify({ pid: process.pid, profile: 'core-test', token: 'live' }));
+      await expect(withLaunchReservation(isolated, 'server-mirror', async () => 'unsafe')).rejects.toThrow('launch reservation');
+      expect(await Bun.file(join(lock, 'owner.json')).exists()).toBe(true);
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 });
