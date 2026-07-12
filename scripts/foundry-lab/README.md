@@ -209,3 +209,51 @@ so concurrent `core-test` and `server-mirror` launch commands cannot both pass
 the mutual-exclusion boundary. A failed launch releases its reservation. After
 an interrupted launcher, stale recovery removes the reservation only when its
 recorded owner PID is no longer alive; it never removes a live owner's lock.
+
+## Module health diagnostics
+
+Refresh the production disk inventory with the existing read-only SSH command,
+then create an ignored static diagnosis:
+
+```powershell
+bun run foundry:lab inventory --apply
+bun run foundry:lab diagnose inventory
+```
+
+Performance samples belong under
+`.local/foundry-v14/evidence/diagnostics`. A baseline JSON must contain the
+0, 15, 30, 60, 90, and 120 minute checkpoints; shorter data is rejected rather
+than reported as a soak result:
+
+```powershell
+bun run foundry:lab diagnose baseline full --input=.local/foundry-v14/evidence/diagnostics/full-samples.json
+```
+
+Runtime and semantic findings are supplied as a sanitized ignored JSON file.
+Only explicit findings can promote a module from `Untested`; manifest metadata
+alone never produces `OK`:
+
+```powershell
+bun run foundry:lab diagnose report --evidence=.local/foundry-v14/evidence/diagnostics/runtime-evidence.json
+```
+
+Operation-accumulation samples are appended one JSON object per line so an
+interrupted soak preserves every completed sample. After the 15-minute warm-up
+and five fixed 10-minute operation cycles, validate the 0, 15, 30, and 50
+minute checkpoints and render
+the sanitized report plus the ignored SVG curve with:
+
+```powershell
+bun run foundry:lab diagnose cumulative-report --input=.local/foundry-v14/evidence/diagnostics/operation-cumulative.jsonl
+```
+
+The cumulative report fails closed when any metric gap is recorded, the module
+configuration hash changes, a required checkpoint is absent, or fewer than 5
+post-GC cycle floors were collected. A performance-suspect result never claims
+that an individual module is the root cause.
+
+The report is written to
+`docs/acceptance/foundry-v14-module-health.md`. Find the Culprit is installed
+only in the local server mirror and is an isolation aid, not a corruption or
+performance scanner. Always restore the module activation snapshot and local
+user/config backups after a diagnostic run.

@@ -7,9 +7,41 @@ import { captureRemoteInventory, REMOTE_INVENTORY_EXPECTED_COUNT } from './remot
 import type { PackageClass } from './types';
 import { generateRealParity, writeParityAcceptance } from './parity';
 import { launchProfile, stopProfile, type ProfileId } from './launch';
+import { runCumulativeReport, runDiagnosticReport, runInventoryDiagnosis, runPerformanceBaseline } from './diagnose';
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
+if (command === 'diagnose') {
+  const [action, ...diagnoseArgs] = args;
+  const config = createLabConfig();
+  if (action === 'inventory') {
+    const result = await runInventoryDiagnosis(config);
+    console.log(JSON.stringify({ ok: result.ok, count: result.count, output: result.output }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'baseline') {
+    const profile = diagnoseArgs.find((arg) => !arg.startsWith('--'));
+    const input = diagnoseArgs.find((arg) => arg.startsWith('--input='))?.slice('--input='.length);
+    if (!profile || !input) throw new Error('diagnose baseline requires <profile> and --input=<ignored evidence JSON>');
+    console.log(JSON.stringify(await runPerformanceBaseline(config, profile, input), null, 2));
+    process.exit(0);
+  }
+  if (action === 'report') {
+    const evidence = diagnoseArgs.find((arg) => arg.startsWith('--evidence='))?.slice('--evidence='.length);
+    if (!evidence) throw new Error('diagnose report requires --evidence=<ignored runtime evidence JSON>');
+    const result = await runDiagnosticReport(config, evidence);
+    console.log(JSON.stringify({ ok: result.ok, output: result.output, count: result.report.modules.length }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'cumulative-report') {
+    const input = diagnoseArgs.find((arg) => arg.startsWith('--input='))?.slice('--input='.length);
+    if (!input) throw new Error('diagnose cumulative-report requires --input=<ignored JSONL evidence>');
+    const result = await runCumulativeReport(config, input);
+    console.log(JSON.stringify({ ok: result.ok, report: result.reportPath, chart: result.chartPath, verdict: result.analysis.verdict }, null, 2));
+    process.exit(result.ok ? 0 : 2);
+  }
+  throw new Error(`Unsupported diagnose action: ${action ?? '<missing>'}`);
+}
 if (command === 'bootstrap') {
   const report = await bootstrapLab(createLabConfig(), { apply });
   console.log(JSON.stringify(report, null, 2));

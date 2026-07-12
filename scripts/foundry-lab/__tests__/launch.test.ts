@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { createLabConfig } from '../config';
-import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOptionsLock, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
 
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
@@ -115,6 +115,19 @@ describe('Foundry profile launcher', () => {
       await writeFile(join(lock, 'owner.json'), JSON.stringify({ pid: process.pid, profile: 'core-test', token: 'live' }));
       await expect(withLaunchReservation(isolated, 'server-mirror', async () => 'unsafe')).rejects.toThrow('launch reservation');
       expect(await Bun.file(join(lock, 'owner.json')).exists()).toBe(true);
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it('removes only an empty stale Foundry options lock inside the selected profile', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-options-lock-'));
+    const isolated = createLabConfig(root);
+    const lock = join(isolated.profiles.serverMirror.dataPath, 'Config/options.json.lock');
+    try {
+      await mkdir(lock, { recursive: true });
+      expect(await cleanupStaleOptionsLock(isolated, 'server-mirror')).toBe(true);
+      expect(await Bun.file(lock).exists()).toBe(false);
+      await mkdir(lock, { recursive: true });
+      await writeFile(join(lock, 'owner'), 'live');
+      await expect(cleanupStaleOptionsLock(isolated, 'server-mirror')).rejects.toThrow('not empty');
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 });

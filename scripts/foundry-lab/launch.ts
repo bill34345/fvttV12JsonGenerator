@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, readdir, rename, rm, rmdir, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -199,6 +199,16 @@ export interface StopDependencies {
   queryProcess?: (pid: number) => { executable: string; commandLine: string } | null;
   kill?: (pid: number) => void;
 }
+export async function cleanupStaleOptionsLock(config: FoundryLabConfig, id: ProfileId): Promise<boolean> {
+  const profile = profileFor(config, id);
+  const lock = join(profile.dataPath, 'Config/options.json.lock');
+  assertInsideLabRoot(config, lock);
+  if (!existsSync(lock)) return false;
+  const children = await readdir(lock);
+  if (children.length) throw new Error(`Refusing to remove Foundry options lock because it is not empty: ${lock}`);
+  await rmdir(lock);
+  return true;
+}
 export async function stopProfile(config: FoundryLabConfig, id: ProfileId, dependencies: StopDependencies = {}): Promise<void> {
   const profile = profileFor(config, id), pidFile = join(config.evidenceRoot, id, 'server.pid');
   const stored = JSON.parse(await readFile(pidFile, 'utf8')) as { foundry?: unknown; proxy?: unknown };
@@ -213,7 +223,9 @@ export async function stopProfile(config: FoundryLabConfig, id: ProfileId, depen
   }
   for (let i = 0; i < 20; i++) { if (!(await listenerRecords(profile.port)).length) {
     await rm(pidFile, { force: true });
-    await writeLaunchEvidence(config, id, { stop: { portReleased: true, pidGone: queryProcess(pids[0]!) === null, pidFileRemoved: !existsSync(pidFile) } });
+    const pidGone = queryProcess(pids[0]!) === null;
+    const staleOptionsLockRemoved = pidGone ? await cleanupStaleOptionsLock(config, id) : false;
+    await writeLaunchEvidence(config, id, { stop: { portReleased: true, pidGone, pidFileRemoved: !existsSync(pidFile), staleOptionsLockRemoved } });
     return;
   } await Bun.sleep(100); }
   throw new Error(`Port ${profile.port} did not release`);
