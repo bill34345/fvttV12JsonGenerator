@@ -22,11 +22,6 @@
 - Do not claim completion or correctness until the target JSON has been regenerated through the project flow and checked against the source markdown using `docs/generated-actor-verification.md`.
 - If you drift from the required workflow, stop immediately, say so plainly, and return to the project-path solution.
 - If the working tree has uncommitted changes, treat the current workspace as the source of truth. Do not create a worktree from `HEAD` for plan execution unless the user confirms or the relevant dirty changes are migrated into the worktree first.
-- If two attempts in a row fail, stop and report:
-  - current root cause,
-  - evidence gathered,
-  - the single narrow next fix to try.
-
 ## Project Goal
 
 - Convert Obsidian NPC/monster markdown into Foundry VTT dnd5e Actor JSON.
