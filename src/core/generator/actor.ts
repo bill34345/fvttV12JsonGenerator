@@ -875,6 +875,18 @@ export class ActorGenerator {
       activationType === 'passive' ? '' : activationType,
     );
 
+    const legendaryCost = activationType === 'legendary'
+      ? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' ')) ?? 1
+      : null;
+    for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
+      activity.activation = {
+        type: activationType === 'passive' ? '' : activationType,
+        value: legendaryCost,
+        override: false,
+        condition: action.activation?.condition ?? '',
+      };
+    }
+
     if (action.subActions && action.subActions.length > 0) {
       this.attachSubActivities(item, action.subActions);
     }

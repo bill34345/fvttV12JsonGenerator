@@ -67,9 +67,29 @@ export class ActivityGenerator {
           dc: this.buildSaveDc(action.save.dc, nativeSaveDc?.calculation)
         },
         damage: {
-          ...(this.isV14() ? { onSave: this.resolveSaveDamageResult(action.save.onSave ?? action.save.onFail) } : {}),
+          ...(this.isV14() ? {
+            onSave: (action.damage?.length ?? 0) > 0
+              ? this.resolveSaveDamageResult(action.save.onSave ?? action.save.onFail)
+              : 'none',
+          } : {}),
           parts: (action.damage || []).map(d => this.formatDamage(d))
-        }
+        },
+        ...(action.aoe?.template ? {
+          target: {
+            prompt: true,
+            override: false,
+            template: {
+              count: '',
+              contiguous: false,
+              type: action.aoe.template.type,
+              size: action.aoe.template.distance,
+              width: '',
+              height: '',
+              units: 'ft',
+            },
+            affects: { count: '', type: '', choice: false, special: '' },
+          },
+        } : {}),
       };
     } else if (action.damage && action.damage.length > 0) {
       activities[id] = {
@@ -389,10 +409,13 @@ export class ActivityGenerator {
 
   private buildAttackRange(attack: NonNullable<ActionData['attack']>): Record<string, unknown> {
     if (attack.type === 'mwak') {
+      const thrownMatch = attack.range.match(/(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
+      const value = thrownMatch?.[1] ? Number.parseInt(thrownMatch[1], 10) : null;
+      const long = thrownMatch?.[2] ? Number.parseInt(thrownMatch[2], 10) : null;
       return {
         override: false,
-        value: null,
-        long: null,
+        value,
+        long,
         reach: this.parseNumericDistance(attack.reach ?? attack.range) ?? 5,
         units: 'ft',
         special: '',

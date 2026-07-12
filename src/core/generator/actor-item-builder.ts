@@ -170,7 +170,7 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     if (action.toHit !== undefined) {
       base.attack.toHit = action.toHit;
     }
-    if (action.range) base.range = action.range;
+    if (action.range) base.attack.range = action.range;
   }
 
   if ((action.type === 'save' || action.DC) && action.DC) {

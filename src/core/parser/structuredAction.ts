@@ -76,6 +76,10 @@ export class StructuredActionParser {
     if (action.type === 'save' || (entry as Record<string, unknown>)['DC']) {
       action.DC = this.parseNumber((entry as Record<string, unknown>)['DC']);
       action.ability = this.normalizeAbility(String((entry as Record<string, unknown>)['属性'] ?? (entry as Record<string, unknown>)['ability']));
+      const dcSourceKind = (entry as Record<string, unknown>)['DC来源'] ?? (entry as Record<string, unknown>)['dcSourceKind'];
+      if (dcSourceKind === 'ability' || dcSourceKind === 'spellcasting' || dcSourceKind === 'literal') {
+        action.dcSourceKind = dcSourceKind;
+      }
       action.aoe = this.parseAoe((entry as Record<string, unknown>)['AoE'] ?? (entry as Record<string, unknown>)['aoe']);
     }
 

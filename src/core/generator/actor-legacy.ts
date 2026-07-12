@@ -108,6 +108,7 @@ export function appendLegacySpellItems(
   };
 
   const spells = extractSpellNames(spellcasting);
+  const dailyUses = extractDailySpellUses(spellcasting);
 
   let hasLinkedSpells = false;
   for (const spellName of spells) {
@@ -126,6 +127,13 @@ export function appendLegacySpellItems(
             method: 'innate',
             prepared: 1,
             level: 0,
+            ...(dailyUses.has(spellName.toLowerCase()) ? {
+              uses: {
+                spent: 0,
+                max: dailyUses.get(spellName.toLowerCase()),
+                recovery: [{ period: 'day', type: 'recoverAll' }],
+              },
+            } : {}),
           }
           : {
             preparation: { mode: 'innate' },
@@ -138,4 +146,22 @@ export function appendLegacySpellItems(
   if (hasLinkedSpells) {
     items.push(spellcastingItem);
   }
+}
+
+function extractDailySpellUses(spellcasting: ParsedNPC['spellcasting']): Map<string, number> {
+  const result = new Map<string, number>();
+  if (!Array.isArray(spellcasting)) return result;
+
+  for (const entry of spellcasting) {
+    if (typeof entry !== 'string') continue;
+    const match = entry.match(/^\s*(\d+)\s*(?:次)?\s*\/\s*(?:每日|日|day)(?:\s*each)?\s*[:：]\s*(.+)$/i);
+    if (!match?.[1] || !match[2]) continue;
+    const uses = Number.parseInt(match[1], 10);
+    for (const rawName of match[2].split(/[,，]/)) {
+      const name = rawName.trim().replace(/[.;。；]$/g, '').toLowerCase();
+      if (name) result.set(name, uses);
+    }
+  }
+
+  return result;
 }
