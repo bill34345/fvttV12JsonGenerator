@@ -21,6 +21,7 @@ This report distinguishes installation and declared compatibility from behavior 
 | Scene, token, world utilities, localization, and content | Partial | In the cumulative utility/full-set runtime, a token moved and a wall, tile, and journal were created; utility controls and 90 packs were present. Calendar behavior, localization behavior, and representative feature correctness across the whole family remain incomplete. |
 | Complete production-snapshot module set | Fail | Of 88 production-active IDs, 87 registered in this runtime; the protected MCDM package was rejected for an invalid signature. Excluding the user-disabled Dungeon Strugglers left 86 configurable modules. That set reproducibly emitted two browser errors. Disabling `monks-combat-marker` and `translate-all` produced an 84-module reload with 0 captured browser errors, but this is a reduced set, not acceptance of all 88. |
 | Production-equivalent `cor-cotn` core workflow | Pass | After an explicitly authorized local-only Gamemaster password reset, the copied world opened. A real character sheet, saving throw/chat card, journal page, scene documents, and token restoration were exercised successfully. |
+| Swipe VTT tablet workflow in `cor-cotn` | Partial | Swipe 2.3.0 and socketlib 1.1.4 loaded in an iPad/touch-emulated client. Patreon authorization unlocked the mobile Combat section. Touch drag moved a real Token, and touch actions opened Combat, expanded a Rapier, and created a targeted MIDI attack chat card. The final chat-card attack roll was not accepted because the Chrome control transport stretched touch-down/up to about two seconds and suppressed the compatibility click; no d20 result was produced. |
 | Production-equivalent `cor-cotn` complete-module error-free gate | Fail | The world is usable for the sampled core workflows, but `simple-quest` 2.3.10 threw a `JournalEntryPage.buildTOC` exception; repeated missing `@resources.legres.value` and deprecation warnings were also present. |
 
 ## No-Module Baseline Evidence
@@ -161,7 +162,58 @@ Behavior exercised:
 
 This is semantic evidence that the copied world can load and that representative Actor, roll/chat, journal, scene, and token workflows are usable. It does **not** establish complete module compatibility. The browser recorded a `simple-quest` 2.3.10 exception in `JournalEntryPage.buildTOC` (`t.forEach is not a function`), repeated missing `@resources.legres.value` warnings, and deprecation warnings. Consequently, production-world core usability passes for the sampled workflows, while the complete-module error-free gate fails and overall Task 7 remains `Partial/Fail`, not `Pass`.
 
+## Swipe VTT 2.3.0 Tablet Acceptance
+
+The local-only `cor-cotn` copy was used for a dedicated Swipe VTT run. Swipe and Item Piles remain enabled by user decision; this run did not change either module's activation state.
+
+Runtime and package evidence:
+
+- Foundry VTT 14.364 and dnd5e 5.3.3.
+- Swipe VTT 2.3.0 installed from the official v2.3.0 release package.
+- Swipe declared Foundry minimum 14 and verified 14.363; this run supplies local behavior evidence on 14.364 rather than treating the manifest declaration as sufficient.
+- Required dependency socketlib 1.1.4 was installed and active.
+- Swipe was active in the copied production-shaped world alongside 79 other enabled modules.
+- The Chrome client was initialized with an iPad user agent, `navigator.maxTouchPoints = 5`, and `(pointer: coarse) = true` before Swipe startup.
+
+Mechanical UI evidence:
+
+- Swipe rendered the mobile quick controls, avatar carousel, mobile character-sheet drawer, Combat section, and mobile chat drawer.
+- Before Patreon authorization, Combat rendered as `Combat (Premium)` with class `locked`.
+- After the GM linked Patreon and Swipe reloaded, Combat rendered as `Combat`, without `locked`, and was not disabled.
+- The current browser viewport was effectively 819 by 614 CSS pixels because of the control/browser scale factor. Foundry therefore retained its minimum 1024 by 768 warning; the Swipe UI remained usable for the sampled operations.
+
+Behavior accepted with touch input:
+
+- A real Token for `卡勒姆·维雷` was dragged with `touchStart`/`touchMove`/`touchEnd` from scene coordinates `(2054, 1833)` to `(2054, 1633)`. The document coordinates and rendered screen center both changed, so this is semantic movement evidence rather than a gesture-dispatch success claim.
+- The mobile drawer received a real touch sequence ending in a compatibility click with `pointerType = touch`; its internal `isOpen` state became true.
+- Touch input selected the Combat tab, expanded `刺剑 Rapier`, and activated `Midi攻击 +6`.
+- The resulting chat message `b6ugL4YtBPm4ND6v` named `卡勒姆·维雷` as speaker, recorded its placed Token UUID as the attacking Token, and recorded `奥黛塔.米兰德拉` as the target with AC 17.
+- The server created the corresponding ChatMessage without a new Swipe server error.
+
+Test-fixture and automation boundaries:
+
+- The Chrome control transport sometimes stretched separate touch-down/up commands to roughly two seconds. On avatar controls this entered Swipe's documented long-press path; on the chat-card Attack button it produced `pointerdown(touch)`, `touchstart`, `pointerup(touch)`, and `touchend`, but no browser compatibility `click`.
+- Chrome's atomic `Input.synthesizeTapGesture` produced no page event in the same control surface. The MIDI workflow therefore remained suspended at `WorkflowState_WaitForAttackRoll`, with no d20 or damage roll. The attack-roll and damage-roll steps are not accepted.
+- DOM click was used only to clear setup obstructions and switch the drawer to the scene-backed test Actor after the control-layer timing limitation was isolated. Foundry's local canvas API was used to control the source Token and set the target Token. Those fixture actions are not counted as Swipe touch acceptance.
+- Temporary page event listeners recorded touch event order for diagnosis. They are runtime-only and disappear on reload; no module source was patched.
+
+Coexistence evidence and decision:
+
+- libWrapper warned that Swipe and Item Piles both modify `CONFIG.Token.objectClass.prototype._onClickLeft2`. Swipe uses the path to open its mobile sheet from a Token; Item Piles uses Token interaction for piles, containers, merchants, and related interfaces.
+- No Item Piles behavior failure was reproduced in this run, so the warning is a conflict risk, not an accepted incompatibility.
+- By user decision, keep both Swipe and Item Piles enabled. A future focused A/B should double-tap a normal Actor Token, an Item Pile, and a merchant Token on a real touch device before changing that decision.
+
+Acceptance decision: `Partial`. Installation, mobile initialization, Patreon unlock, Token touch movement, mobile drawer behavior, Combat navigation, and targeted attack-card creation pass. Real-device Token selection/targeting, final chat-card attack roll, damage roll, long-press HUD, two-finger pan, and pinch zoom remain unaccepted.
+
 ## Known Concerns Not Yet Accepted
+
+### Production deployment update (2026-07-12)
+
+The production `cor-cotn` world now runs with Swipe VTT 2.3.0 enabled, Automated Animations 7.0.15 retained, MIDI-QOL debug disabled, chat-card persistence and weak workflow references enabled, and the locally validated Monk's Bloodsplats 14.01 lifecycle patch deployed. Representative light and heavy scenes loaded without reproducing the patched Bloodsplats `position` failure.
+
+Production Swipe acceptance remains `Partial`. A real touch sequence opened Swipe quick controls, but the sampled production Token drag did not change Token coordinates and no complete attack/damage chat workflow was produced. Swipe also logged `Session validation error: TypeError: Failed to fetch`, so production Premium Combat unlock was not accepted. The Swipe/Item Piles libWrapper overlap remains a risk without a pile/merchant touch A/B.
+
+The 15-minute production sample and rollback identifiers are recorded in `foundry-v14-local-optimization-log.zh-CN.md`. The server remained listening on port 8080 after the changes.
 
 - `mcdm-flee-mortals-where-evil-lives` currently reports an invalid protected-module signature at server startup. This is not a proven coexistence conflict, but the module cannot receive `Pass` until an authorized valid package loads.
 - `dungeon-strugglers-collection` is installed but intentionally excluded from the active test set by user decision.
