@@ -207,7 +207,14 @@ export class ActivityGenerator {
         };
       }
     } else if (action.type === 'use' && action.useAction) {
-      const consumptionTargets = action.useAction.consumption > 0
+      const consumptionTargets = action.useAction.limitedUses?.max
+        ? [{
+            type: 'activityUses',
+            target: '',
+            value: '1',
+            scaling: { mode: '', formula: '' }
+          }]
+        : action.useAction.consumption > 0
         ? [{
             type: 'itemUses',
             target: '',

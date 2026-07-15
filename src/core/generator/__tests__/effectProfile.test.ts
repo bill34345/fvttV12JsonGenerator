@@ -193,6 +193,44 @@ describe('ActorGenerator effect profiles', () => {
     expect(effect?.flags?.fvttJsonGenerator?.sourceDuration).toBe('untilDamaged');
   });
 
+  it('marks the linked activity duration as special so dnd5e does not immediately suppress an until-damaged effect', () => {
+    const activities = {
+      dreadBrand: {
+        duration: { units: 'inst', concentration: false, override: false },
+        effects: [],
+      },
+    };
+
+    generateEnhancedConditionEffects(
+      'Hit: the target becomes frightened until it takes damage.',
+      activities,
+      'Dread Brand',
+    );
+
+    expect(activities.dreadBrand.duration).toEqual({
+      units: 'spec',
+      concentration: false,
+      override: false,
+    });
+  });
+
+  it('keeps an instantaneous activity unchanged when damage prose is not an effect duration', () => {
+    const activities = {
+      venomStrike: {
+        duration: { units: 'inst', concentration: false, override: false },
+        effects: [],
+      },
+    };
+
+    generateEnhancedConditionEffects(
+      'Hit: the target becomes poisoned. If the target takes damage from this attack, it also loses its reaction.',
+      activities,
+      'Venom Strike',
+    );
+
+    expect(activities.venomStrike.duration.units).toBe('inst');
+  });
+
   it('does not infer an until-damaged duration from neighboring damage prose', () => {
     const effects = generateEnhancedConditionEffects(
       'Hit: the target becomes poisoned. If the target takes damage from this attack, it also loses its reaction.',
@@ -280,6 +318,10 @@ describe('ActorGenerator effect profiles', () => {
     const moddedFist = moddedActor.items.find((item: any) => item.name === 'Stone Fist');
     const coreEffect = coreBrand?.effects?.find((effect: any) => effect.statuses?.includes('frightened'));
     const moddedEffect = moddedBrand?.effects?.find((effect: any) => effect.statuses?.includes('frightened'));
+    const coreBrandActivity = Object.values(coreBrand?.system.activities ?? {})[0] as any;
+    const moddedBrandActivity = Object.values(moddedBrand?.system.activities ?? {})[0] as any;
+    const coreFistActivity = Object.values(coreFist?.system.activities ?? {})[0] as any;
+    const moddedFistActivity = Object.values(moddedFist?.system.activities ?? {})[0] as any;
 
     expect(coreActor.name).toBe('Damage-Bound Warden');
     expect(moddedActor.name).toBe(coreActor.name);
@@ -291,6 +333,10 @@ describe('ActorGenerator effect profiles', () => {
       fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
       dae: { specialDuration: ['isDamaged'] },
     });
+    expect(coreBrandActivity?.duration?.units).toBe('spec');
+    expect(moddedBrandActivity?.duration?.units).toBe('spec');
+    expect(coreFistActivity?.duration).toBeUndefined();
+    expect(moddedFistActivity?.duration).toBeUndefined();
     expect(coreFist?.effects ?? []).toEqual([]);
     expect(moddedFist?.effects ?? []).toEqual([]);
     expect(moddedActor.items.flatMap((item: any) => item.effects ?? [])

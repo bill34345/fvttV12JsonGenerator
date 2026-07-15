@@ -262,7 +262,7 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
       });
     }
   }
-  
+
   if (effects.length > 0 && activities && typeof activities === 'object') {
     for (const activity of Object.values(activities) as any[]) {
       if (activity && typeof activity === 'object') {
@@ -396,11 +396,22 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
   }
 
   if (effects.length > 0 && activities && typeof activities === 'object') {
+    const hasUntilDamagedEffect = effects.some(
+      (effect) => effect.flags?.fvttJsonGenerator?.sourceDuration === 'untilDamaged',
+    );
     for (const activity of Object.values(activities) as any[]) {
       if (activity && typeof activity === 'object') {
         if (!activity.effects) activity.effects = [];
         for (const effect of effects) {
           activity.effects.push({ _id: effect._id });
+        }
+        if (hasUntilDamagedEffect) {
+          activity.duration = {
+            ...(activity.duration ?? {}),
+            units: 'spec',
+            concentration: activity.duration?.concentration ?? false,
+            override: activity.duration?.override ?? false,
+          };
         }
       }
     }

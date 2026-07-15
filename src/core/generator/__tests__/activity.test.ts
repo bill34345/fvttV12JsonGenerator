@@ -239,6 +239,50 @@ describe('ActivityGenerator', () => {
     }
   });
 
+  it('consumes one activity use when a utility activity has its own limited uses', () => {
+    const action: ActionData = {
+      name: 'Protective Ward',
+      type: 'use',
+      useAction: {
+        activation: 'reaction',
+        consumption: 0,
+        limitedUses: {
+          spent: 0,
+          max: '1',
+          recovery: [{ period: 'dawn', type: 'recoverAll' }],
+        },
+      },
+    };
+
+    const activities = generator.generate(action);
+    const activity = activities[Object.keys(activities)[0]!];
+
+    expect(activity.consumption.targets).toEqual([{
+      type: 'activityUses',
+      target: '',
+      value: '1',
+      scaling: { mode: '', formula: '' },
+    }]);
+    expect(activity.uses).toEqual(action.useAction?.limitedUses);
+  });
+
+  it('does not invent a consumption target for an unlimited utility activity', () => {
+    const action: ActionData = {
+      name: 'Open the Gate',
+      type: 'use',
+      useAction: {
+        activation: 'action',
+        consumption: 0,
+      },
+    };
+
+    const activities = generator.generate(action);
+    const activity = activities[Object.keys(activities)[0]!];
+
+    expect(activity.consumption.targets).toEqual([]);
+    expect(activity.uses).toEqual({ spent: 0, recovery: [], max: '' });
+  });
+
   it('should generate cast activity with correct structure', () => {
     const spellUuid = 'Compendium.dnd5e.spells.Item.59v9K9K9K9K9K9K9';
     const activities = generator.generateCast(spellUuid);

@@ -182,7 +182,6 @@ export class ItemGenerator {
           systemVersion: this.targetStats().systemVersion,
         createdTime: Date.now(),
         modifiedTime: Date.now(),
-        lastModifiedBy: 'fvttJsonGenerator',
       },
     };
   }
@@ -416,8 +415,8 @@ export class ItemGenerator {
       systemVersion: this.targetStats().systemVersion,
       createdTime: Date.now(),
       modifiedTime: Date.now(),
-      lastModifiedBy: 'fvttJsonGenerator',
     };
+    delete item._stats.lastModifiedBy;
 
     if (this.isV14()) {
       delete item.system.attuned;

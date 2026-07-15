@@ -123,3 +123,12 @@ This amendment updates the current interpretation without rewriting the earlier 
 - Authenticated GoddessFantasy remains blocked because credential/session use was not authorized. Exact production-equivalent coexistence remains **Fail / Partial**.
 
 For the canonical current layer-by-layer conclusion, see [`current-support-matrix.md`](current-support-matrix.md).
+
+## 2026-07-15 Runtime Resume Amendment
+
+This later amendment supersedes only the Milestone 9 browser-blocked interpretation above; the original evidence and chronology remain intact.
+
+- Chrome file access was enabled, and both CLI-generated artifacts imported through Foundry's supported UI in the disposable `fvtt-v14-module-matrix` world.
+- The Shield passed live AC `10 -> 12 -> 14`, Forceful Bash attack/damage/prone handling, Protective Field one-per-dawn depletion to `0/1`, 60-second concentration, second-use rejection, and runtime source readback. A UI Export Data event timed out and produced no downloaded file, so standalone Item acceptance remains **Partial** at the re-export comparison boundary.
+- Initial Dread Brand execution revealed that an instantaneous linked Activity made dnd5e mark the effect expired before DAE/MIDI could use `isDamaged`. After generalized `duration.units: "spec"` repair and CLI regeneration, the modded Activity applied Frightened, subsequent MIDI damage expired/removed it, and the core artifact retained the same effect after control damage. The locked DAE 14.0.12 + MIDI-QOL 14.0.9 `isDamaged` contract is now **Pass**.
+- Temporary Actors, Item, effects, and 30 test messages were removed. Guardian/target HP and pre-existing effects were restored; MIDI-QOL was returned to inactive while DAE/libWrapper/socketlib remained active. The local server and world option were restored after the run; production was untouched.

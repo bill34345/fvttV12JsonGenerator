@@ -19,7 +19,7 @@ Aggregate command:
 bun run ci:verify
 ```
 
-2026-07-15 result: **738 pass, 0 fail, 2,921 expectations**; production coverage, 109-source anti-overfit, 1,602-path repository hygiene, locked dnd5e 5.3.3 references, Web build, and zero-network Actor smoke all passed.
+2026-07-15 latest result: **743 pass, 0 fail, 2,932 expectations**; 87.55% line / 88.41% function production coverage, 109-source anti-overfit, 1,605-path repository hygiene, locked dnd5e 5.3.3 references, Web build, and zero-network Actor smoke all passed. The earlier 738-test result remains in dated milestone evidence.
 
 ## Executable matrix
 
@@ -51,14 +51,14 @@ These are generated through `src/index.ts`, not hand-authored JSON:
 
 | Sample | Commands / artifacts | Semantic inspection | Outcome |
 |---|---|---|---|
-| Shield v12 + v14 | Source-identical Shield input through `src/index.ts --fvtt-version 12/14 --effect-profile core` | Both outputs match source identity, rarity, attunement, armor base/magical bonus, weight, descriptions, two Activities, Forceful Bash damage/prone linkage, and Protective Field reaction, duration, concentration, radius, and dawn use. | Pass at CLI/source/schema layer; local runtime remains open. |
-| Damage-Bound Warden core + modded-v14 | `dae-until-damaged-warden.md` through `src/index.ts --fvtt-version 14 --effect-profile core/modded-v14`; then `bun run verify:actor` for each output | Actor identity/stats/type and both attacks match source; normalized Actors differ only by the one source-matched DAE flag and volatile nested IDs; both verifier reports have zero warnings. | Pass at CLI/source/schema layer; damage-triggered runtime removal remains open. |
+| Shield v12 + v14 | Source-identical Shield input through `src/index.ts --fvtt-version 12/14 --effect-profile core` | Both outputs match source identity, rarity, attunement, armor base/magical bonus, weight, descriptions, two Activities, Forceful Bash damage/prone linkage, and Protective Field reaction, duration, concentration, radius, dawn use, and self-Activity consumption. | Pass at CLI/source/schema and live import/behavior/readback layers; downloaded UI re-export comparison remains open. |
+| Damage-Bound Warden core + modded-v14 | `dae-until-damaged-warden.md` through `src/index.ts --fvtt-version 14 --effect-profile core/modded-v14`; then `bun run verify:actor` for each output | Actor identity/stats/type and both attacks match source; normalized Actors differ only by the one source-matched DAE flag and volatile nested IDs; both verifier reports have zero warnings. | Pass at CLI/source/schema and locked runtime layers: modded removes after later damage, core retains. |
 
 ## What this matrix does not prove
 
 - It does not prove arbitrary Markdown outside the represented syntax corpus is parsed correctly.
-- It does not prove the standalone Shield imports, equips, executes, and re-exports correctly in local Foundry; Chrome file upload is blocked until the user enables the extension's file-URL permission.
-- It does not prove the generated `isDamaged` flag actually expires an effect in Foundry. Locked source shows DAE 14.0.12 registers the key and MIDI-QOL 14.0.9 consumes damage and removes the effect, but the real runtime exercise is still blocked by the same upload permission.
+- It does not by itself prove the live Shield or `isDamaged` results; those are separately accepted and linked from `current-support-matrix.md` and the M9 runtime evidence.
+- The Shield's supported UI re-export/download comparison remains open even though import, equip, execution, use depletion, concentration, prone, and runtime readback passed.
 - It does not cover an authenticated live GoddessFantasy crawl, because credentials/session use was not authorized.
 - It does not establish exact production-equivalent coexistence for the full valid module package set or authorize production deployment changes.
 

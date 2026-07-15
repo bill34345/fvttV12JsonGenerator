@@ -172,7 +172,6 @@ describe('Foundry v14 generator target', () => {
         systemVersion: '5.3.3',
         createdTime: 0,
         modifiedTime: 0,
-        lastModifiedBy: 'fvttJsonGenerator',
       },
     };
 
@@ -182,6 +181,16 @@ describe('Foundry v14 generator target', () => {
     expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
     expect(generated.system.properties).toEqual([]);
     expect(generated.effects).toEqual([]);
+  });
+
+  it('omits user-specific lastModifiedBy metadata from portable v14 Item JSON', async () => {
+    const generated = await new ItemGenerator({ fvttVersion: '14' }).generate({
+      name: 'Portable Shield',
+      type: 'equipment',
+      description: 'Portable import metadata regression.',
+    });
+
+    expect(generated._stats).not.toHaveProperty('lastModifiedBy');
   });
 
   it('targets v14 AC formula instead of legacy AC bonus path', () => {

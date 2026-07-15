@@ -321,7 +321,14 @@ describe('source-derived standalone Item semantics', () => {
       expect(reaction).toEqual(expect.objectContaining({
         type: 'utility',
         activation: expect.objectContaining({ type: 'reaction', value: 1, override: false }),
-        consumption: expect.objectContaining({ targets: [] }),
+        consumption: expect.objectContaining({
+          targets: [{
+            type: 'activityUses',
+            target: '',
+            value: '1',
+            scaling: { mode: '', formula: '' },
+          }],
+        }),
         description: { chatFlavor: expect.stringContaining('持续最多 1 分钟') },
         duration: {
           value: '1',
@@ -347,7 +354,12 @@ describe('source-derived standalone Item semantics', () => {
           activation: { type: '', value: 0, override: false },
           description: { chatFlavor: '' },
           consumption: {
-            targets: [],
+            targets: [{
+              type: '',
+              target: '',
+              value: '',
+              scaling: { mode: '', formula: '' },
+            }],
             scaling: { allowed: false, max: '' },
             spellSlot: false,
           },

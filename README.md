@@ -171,7 +171,7 @@ bun run test:foundry-lab
 - 六个 minimal modded Actor 与来源驱动的 MIDI-QOL OverTime：通过；
 - `cor-cotn` 本地副本的角色卡、豁免聊天卡、Journal、Scene 和 Token 抽样流程：通过；
 - 完整生产模组集合无错误共存：失败，仍为 Partial；
-- 来源驱动的 DAE `isDamaged` 标记与独立 Item v14 已通过源码、CLI 和结构验收，但两者的 Foundry 实机导入/行为仍未完成；真实账号 GoddessFantasy 采集也尚未授权验收。当前分层结论见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
+- 来源驱动的 DAE `isDamaged` 已通过锁定 DAE 14.0.12 + MIDI-QOL 14.0.9 的实机移除与 core 保留对照；独立 Item v14 已通过导入、AC、两项 Activity、倒地、次数与专注语义，但仍缺一次受支持的 UI 导出文件对照。真实账号 GoddessFantasy 采集仍未授权，完整生产模组共存仍为 Partial。当前分层结论见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
 
 ## 更多资料
 

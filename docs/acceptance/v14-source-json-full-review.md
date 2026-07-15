@@ -84,3 +84,7 @@ The original six-Actor review above remains valid for those samples. It is not t
 - The `isDamaged` support boundary is the locked DAE 14.0.12 + MIDI-QOL 14.0.9 `modded-v14` stack, not DAE alone. Static flag generation passes; executed runtime removal does not yet.
 
 The canonical current conclusion is [`current-support-matrix.md`](current-support-matrix.md); the original dated evidence and false/partial chronology remain preserved here and in the runtime report.
+
+## 2026-07-15 Runtime Follow-Up Amendment
+
+The browser permission boundary described above is no longer current. CLI-generated Shield and Damage-Bound Warden artifacts imported through the supported local Foundry UI. Shield live AC, Activity, prone, limited-use, concentration, and runtime readback semantics pass, but a downloaded UI re-export artifact was not captured. Damage-Bound Warden now passes the locked DAE 14.0.12 + MIDI-QOL 14.0.9 removal versus core-retention control after a generalized `untilDamaged` Activity duration fix. Exact production-equivalent coexistence and authenticated crawling remain outside these bounded results.
