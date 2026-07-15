@@ -25,12 +25,12 @@
 - Modify: `src/core/generator/item-generator.ts`, `src/core/generator/activity.ts`
 - Modify: `src/core/generator/__tests__/item-source-semantics.test.ts` and focused parser/generator tests as needed
 
-- [ ] Write RED tests proving generated Items do not inherit name-independent breastplate armor/type/properties/weight/price/effects; an explicit shield gets base shield armor without a magical bonus; an explicit extra AC bonus becomes `armor.magicalBonus` plus `mgc`; unrelated equipment remains mechanically neutral.
-- [ ] Add at least three bilingual/corpus positives plus a close negative for explicit extra-AC parsing; patch shield subtype/base fields from text and locked schema, never from an item name.
-- [ ] Add at least three duration/concentration/aura positives plus a close negative; project exact duration, range, and target template fields into generated Activities.
-- [ ] Preserve each trait description on its Activity and reuse explicit target-condition extraction so Forceful Bash's conditional prone rider becomes an attached non-transfer Active Effect while prerequisite/termination/bare-condition prose stays negative.
-- [ ] Prove the real Shield produces base shield `armor.value: 2`, `magicalBonus: 2`, `type.value/baseItem: shield`, `mgc`, correct Forceful Bash damage/range/prone linkage, and Protective Field reaction/dawn use/duration/concentration/range for v12 and v14.
-- [ ] Keep the unrelated Jewel and at least one weapon/loot output free of new mechanics; run focused tests, both typechecks, `bun run audit:anti-overfit`, and `git diff --check`; commit the generalized repair separately.
+- [x] Write RED tests proving generated Items do not inherit name-independent breastplate armor/type/properties/weight/price/effects; an explicit shield gets base shield armor without a magical bonus; an explicit extra AC bonus becomes `armor.magicalBonus` plus `mgc`; unrelated equipment remains mechanically neutral.
+- [x] Add at least three bilingual/corpus positives plus a close negative for explicit extra-AC parsing; patch shield subtype/base fields from text and locked schema, never from an item name.
+- [x] Add at least three duration/concentration/aura positives plus a close negative; project exact duration, range, and target template fields into generated Activities.
+- [x] Preserve each trait description on its Activity and reuse explicit target-condition extraction so Forceful Bash's conditional prone rider becomes an attached non-transfer Active Effect while prerequisite/termination/bare-condition prose stays negative.
+- [x] Prove the real Shield produces base shield `armor.value: 2`, `magicalBonus: 2`, `type.value/baseItem: shield`, `mgc`, correct Forceful Bash damage/range/prone linkage, and Protective Field reaction/dawn use/duration/concentration/range for v12 and v14.
+- [x] Keep the unrelated Jewel and at least one weapon/loot output free of new mechanics; run focused tests, both typechecks, `bun run audit:anti-overfit`, and `git diff --check`; commit the generalized repair separately.
 
 ## Task 2: Standalone Item CLI and local Foundry acceptance (PROD-002)
 
@@ -89,3 +89,11 @@
 Mechanical acceptance: focused RED/GREEN tests, typechecks, anti-overfit, aggregate CI/coverage/hygiene/reference/build gates, CLI generation, imports, Activity executions, effect state transitions, and export/readback operations succeed.
 
 Semantic acceptance: no arbitrary template mechanic survives; the Shield's source and locked schema agree with both generated and runtime Item behavior; the DAE fixture proves one exact source-derived DAE-only expiry behavior rather than module activation; the corpus supports the generalized rules; every current support claim names its actual evidence layer; unauthorized external gaps remain explicit.
+
+## Progress and evidence
+
+- 2026-07-15 Task 1 GREEN: neutral bundled Item schemas replaced first-reference cloning. Explicit shield subtype, schema-derived base AC/weight, source-derived extra AC, attack ability, damage modifier, duration, concentration, aura, recovery, descriptions, and conditional prone linkage now project without item/action-name branches.
+- Focused evidence: `item-source-semantics.test.ts` passed 35/35 with three-positive/close-negative corpora for extra AC, duration/aura, and explicit attack abilities; the broader Item/Web slice passed 122/122; both production/all typechecks passed.
+- CLI semantic evidence: the real `骑士之盾.md` regenerated through `src/index.ts` for v12/core and v14/core. Both artifacts contain shield AC 2 plus magical bonus 2, `shield`/`shield`, `mgc`, 6 lb, STR Forceful Bash `2d6+2+@mod` with a linked non-transfer prone effect, and Protective Field as a reaction with 1-minute concentration, 5-foot radius, and one dawn-recovering use. The unrelated Jewel regression remained unchanged.
+- Aggregate evidence: the first CI run correctly rejected a stale v14 test that still required Amulet-of-Health reference mechanics. Replacing it with an `assertEqualStructure()` neutral equipment contract made the gate meaningful; the rerun passed 731 tests / 2,896 expectations, both typechecks, coverage, 109-source anti-overfit, 1,602-path hygiene, locked dnd5e 5.3.3 reference verification, Web build, and offline Actor smoke.
+- Exact next action: Task 2 imports the freshly generated v14/core Shield into the disposable project-local Foundry world, exercises/equips/exports it, and compares runtime and re-export semantics to the CLI artifact.
