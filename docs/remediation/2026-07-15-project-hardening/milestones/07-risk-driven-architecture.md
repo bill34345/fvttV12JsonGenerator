@@ -62,11 +62,11 @@ export class ActorLocalizer {
 - `ActorGeneratorOptions.translationService` continues using the exported `TranslationServiceLike` type.
 - `ActorGenerator.generateForRoute()` calls `new ActorLocalizer({ translationService, route }).localize(actor)` only for the English route, preserving the current call boundary.
 
-- [ ] **Step 1: Write characterization tests before moving implementation**
+- [x] **Step 1: Write characterization tests before moving implementation**
 
 Create three tests: local fallback makes the Actor name bilingual while keeping imported English item names source-faithful; an injected service localizes Actor/item names and descriptions with the same namespaces; a thrown provider call preserves source text. Use a minimal imported item with `system.source.custom = 'Imported'` and assert the exact Actor projection with `assertEqualStructure()`.
 
-- [ ] **Step 2: Run the focused tests and confirm the new module is missing**
+- [x] **Step 2: Run the focused tests and confirm the new module is missing**
 
 Run:
 
@@ -76,15 +76,15 @@ bun test src/core/generator/__tests__/actor-localizer.test.ts --max-concurrency 
 
 Expected: fail because `../actor-localizer` does not exist.
 
-- [ ] **Step 3: Move localization behavior without changing it**
+- [x] **Step 3: Move localization behavior without changing it**
 
 Move `LOCAL_NAME_TRANSLATIONS`, `LOCAL_DESCRIPTION_REPLACEMENTS`, `SPELLCASTING_TERM_REPLACEMENTS`, and the methods from `localizeEnglishActor()` through `extractDescriptionLines()` into `ActorLocalizer`. Keep the exact provider failure fallback, bilingual formatting, `Imported` item boundary, spellcasting list handling, and route-specific English item-name behavior.
 
-- [ ] **Step 4: Replace ActorGenerator's local methods with the narrow collaborator**
+- [x] **Step 4: Replace ActorGenerator's local methods with the narrow collaborator**
 
 Import `ActorLocalizer` and `TranslationServiceLike`; remove the moved constants/methods and the now-unused `TranslationContext` import. Do not move skill/passive calculation or any generation mechanics.
 
-- [ ] **Step 5: Verify focused and existing behavioral suites**
+- [x] **Step 5: Verify focused and existing behavioral suites**
 
 Run:
 
@@ -96,7 +96,7 @@ bun run typecheck:all
 
 Expected: all tests pass and both typechecks report zero diagnostics.
 
-- [ ] **Step 6: Review the extraction diff**
+- [x] **Step 6: Review the extraction diff**
 
 Confirm `actor.ts` contains orchestration only for localization, the new module has no Foundry mechanics inference, and no Item/parser files changed in this task.
 
