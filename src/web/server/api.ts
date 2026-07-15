@@ -92,9 +92,15 @@ export async function handleApiRequest(
     if (!isAuthorizedApiRequest(request, securityConfig)) {
       return jsonFailure(401, 'AUTH_REQUIRED', 'Authentication is required.');
     }
-    const clientIp = getClientIp(request);
+    const clientIp = getClientIp(request, {
+      remoteAddress: context.remoteAddress,
+      trustedProxies: securityConfig.trustedProxies,
+    });
 
-    if (request.method !== 'GET' && !checkShortRateLimit(clientIp)) {
+    if (request.method !== 'GET' && !checkShortRateLimit(clientIp, {
+      clientLimit: securityConfig.shortRequestsPerMinute,
+      globalLimit: securityConfig.globalShortRequestsPerMinute,
+    })) {
       throw userError('RATE_LIMITED', '请求过于频繁，请稍后再试。', 429);
     }
 

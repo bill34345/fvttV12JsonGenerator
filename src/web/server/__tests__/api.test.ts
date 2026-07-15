@@ -16,6 +16,8 @@ beforeEach(() => {
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
+  delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
+  delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
   delete Bun.env.GODDESSFANTASY_COOKIE;
@@ -28,6 +30,8 @@ afterEach(() => {
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
+  delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
+  delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.TRANSLATION_API_KEY;
   delete Bun.env.OPENAI_API_KEY;
@@ -253,6 +257,25 @@ describe('web API', () => {
     expect(acceptedBody.data.publicAccess).toBe(true);
     expect(acceptedBody.data.authenticationRequired).toBe(true);
     expect(acceptedBody.data.deploymentMode).toBe('public');
+  });
+
+  it('does not let forged forwarded headers split a direct client rate bucket', async () => {
+    Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT = '1';
+    Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT = '10';
+
+    const first = await handleApiRequest(new Request('http://localhost/api/not-a-route', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '198.51.100.10' },
+    }), { remoteAddress: '203.0.113.8' });
+    const second = await handleApiRequest(new Request('http://localhost/api/not-a-route', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '198.51.100.11' },
+    }), { remoteAddress: '203.0.113.8' });
+    const secondBody = await second.json();
+
+    expect(first.status).toBe(404);
+    expect(second.status).toBe(429);
+    expect(secondBody.error.code).toBe('RATE_LIMITED');
   });
 
   it('converts a single upload with a server download URL', async () => {

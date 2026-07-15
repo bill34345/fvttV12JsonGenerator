@@ -49,11 +49,13 @@ Verification record (2026-07-15): RED reproduced the missing config module, hard
 - Modify: `src/web/server/api.ts`
 - Modify: `src/web/server/__tests__/api.test.ts`
 
-- [ ] Write RED tests for direct clients, forged forwarded headers, one/multiple trusted proxy hops, malformed chains, and missing socket identity falling into one conservative shared bucket.
-- [ ] Derive identity from the real socket peer. Walk `x-forwarded-for` right-to-left only while the current hop is explicitly trusted; use `x-real-ip` only as a trusted-proxy fallback.
-- [ ] Add a global short-request window alongside the per-client window; prune empty/expired buckets and expose deterministic test reset/configuration.
-- [ ] Prove forged headers cannot split rate buckets and a global cap rejects distributed abuse.
-- [ ] Run focused/API tests, both typechecks, and Web build; commit separately.
+- [x] Write RED tests for direct clients, forged forwarded headers, one/multiple trusted proxy hops, malformed chains, and missing socket identity falling into one conservative shared bucket.
+- [x] Derive identity from the real socket peer. Walk `x-forwarded-for` right-to-left only while the current hop is explicitly trusted; use `x-real-ip` only as a trusted-proxy fallback.
+- [x] Add a global short-request window alongside the per-client window; prune empty/expired buckets and expose deterministic test reset/configuration.
+- [x] Prove forged headers cannot split rate buckets and a global cap rejects distributed abuse.
+- [x] Run focused/API tests, both typechecks, and Web build; commit separately.
+
+Verification record (2026-07-15): RED showed that forged/malformed forwarding values became identities and distributed identities had no global cap. GREEN passed 34 tests / 147 expectations, both typechecks, and Web build. Direct sockets now ignore forwarding, trusted chains are walked from the real peer right-to-left, malformed/no-socket input collapses conservatively, per-client and global windows are checked atomically, and all expired identity buckets are pruned during rate checks.
 
 ## Task 3: Pre-materialization body limits and bounded global jobs
 
