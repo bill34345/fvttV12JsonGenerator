@@ -84,11 +84,13 @@ Verification record (2026-07-15): RED reproduced post-materialization body check
 - Modify: `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - Modify: this plan
 
-- [ ] Document local default, explicit public/proxied variables, the external-auth-plus-injected-token model, trusted proxy literal IPs, matching 25 MiB proxy limit, global/per-client caps, and bounded cleanup.
-- [ ] Run focused Web/API/job tests, `bun run ci:verify`, and `git diff --check`.
-- [ ] Build and start the real server on loopback; use a browser to upload a real Markdown source, inspect job progress/result, download JSON and a ZIP, and verify downloaded identity/item counts rather than only HTTP status.
-- [ ] Run a process-level negative smoke proving non-loopback/no-public-mode and public-mode/no-token startup fail closed; run an authenticated public-mode API smoke without exposing the service externally.
-- [ ] Close WEB-001/WEB-002/WEB-003 only when docs, mechanical gates, browser behavior, and abuse/security semantics agree.
+- [x] Document local default, explicit public/proxied variables, the external-auth-plus-injected-token model, trusted proxy literal IPs, matching 25 MiB proxy limit, global/per-client caps, and bounded cleanup.
+- [x] Run focused Web/API/job tests, `bun run ci:verify`, and `git diff --check`.
+- [x] Build and start the real server on loopback; use a browser to upload a real Markdown source, inspect job progress/result, download JSON and a ZIP, and verify downloaded identity/item counts rather than only HTTP status.
+- [x] Run a process-level negative smoke proving non-loopback/no-public-mode and public-mode/no-token startup fail closed; run an authenticated public-mode API smoke without exposing the service externally.
+- [x] Close WEB-001/WEB-002/WEB-003 only when docs, mechanical gates, browser behavior, and abuse/security semantics agree.
+
+Verification record (2026-07-15): deployment documentation and Web operating rules now match the implemented loopback/public boundary, proxy trust model, 25 MiB server/proxy ceiling, per-client/global caps, and bounded terminal-job cleanup. Focused security/API tests pass 39 tests / 167 expectations; the aggregate gate passes 717 tests / 2,844 expectations, 87.29% production line coverage, 88.34% function coverage, 109-source anti-overfit audit, 1,601-path hygiene, locked dnd5e 5.3.3 verification, Web build, and zero-network Actor smoke. The real loopback workbench generated White Tusk Shaman v14/core with the exact six source items and no invented Unconscious mechanic, then generated a two-entry ZIP from `开发用数据2.md`; parsed archive entries match both source identities, dnd5e 5.3.3/Foundry 14.361 metadata, and 8/6 item counts. Process probes rejected non-loopback binding without public mode and public mode without a token; a separate loopback-only public-mode process returned 401 without bearer and 200 with the configured bearer, reported authenticated public mode and the actual limits, and both temporary ports were released afterward. The first collection attempt used a single-Actor source and correctly failed the collection heading contract; it was not counted as acceptance.
 
 ## Acceptance boundary
 

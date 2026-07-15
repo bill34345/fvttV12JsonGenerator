@@ -16,7 +16,8 @@
 
 ## Security And Public Deployment
 
-- Assume the first VPS deployment may be publicly reachable and has no application login.
+- Default Web/API binding must remain loopback-only. Public or reverse-proxied mode must be explicit and must retain the implemented authenticated API boundary.
+- Browser users authenticate at the external access layer; the proxy may inject the server-side bearer token. Do not expose or ask the browser to submit that token.
 - Do not let the browser submit server credentials, API keys, cookies, passwords, or crawl login secrets.
 - Translation, AI normalize, and crawl credentials must come from VPS environment variables only.
 - Preserve rate limits, upload size limits, per-IP long-job concurrency limits, temp cleanup, and hidden stack traces for public routes.
@@ -33,7 +34,7 @@
 
 ## Deployment Docs
 
-- Deployment docs must state when the app is publicly reachable and unauthenticated.
+- Deployment docs must state the exact binding, public-mode, authentication, and trusted-proxy boundary. Do not describe the current API as publicly unauthenticated.
 - Docs must list relevant environment variables and explicitly say that translation/crawl credentials are server-side env vars.
 - Reverse proxy examples should set a request body limit compatible with the Web upload limits.
 
