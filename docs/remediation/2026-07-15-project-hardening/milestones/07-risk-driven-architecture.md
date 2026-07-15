@@ -128,11 +128,11 @@ export function applyActorTargetMetadata(
 - `normalizeTargetUses()` returns the same object for v12/v13; for v14 it clones, removes legacy `value`/`per`, and converts numeric `max` to a string.
 - `applyActorTargetMetadata()` stamps Actor, Item, and Active Effect `_stats`; removes legacy Item activation only for v14; and normalizes Item/Activity uses.
 
-- [ ] **Step 1: Write v12/v14 structural characterization tests**
+- [x] **Step 1: Write v12/v14 structural characterization tests**
 
 Use one minimal Actor containing Actor effects, one Item effect, legacy Item activation/uses, and Activity uses. Assert v12 retains legacy fields while both targets receive exact locked target stats; assert v14 removes only the known legacy fields, stringifies numeric max, and leaves unrelated fields unchanged. Use `assertEqualStructure()` for the unrelated projection.
 
-- [ ] **Step 2: Run the focused test and confirm RED**
+- [x] **Step 2: Run the focused test and confirm RED**
 
 Run:
 
@@ -142,15 +142,15 @@ bun test src/core/generator/__tests__/actor-target-metadata.test.ts --max-concur
 
 Expected: fail because the target metadata module does not exist.
 
-- [ ] **Step 3: Implement the pure target helpers**
+- [x] **Step 3: Implement the pure target helpers**
 
 Move the current recursive logic exactly, obtain stats through `getFoundryTarget(fvttVersion).stats`, and keep null/non-object guards. Do not add schema repair beyond the existing normalization contract.
 
-- [ ] **Step 4: Rewire ActorGenerator**
+- [x] **Step 4: Rewire ActorGenerator**
 
 Replace `applyTargetDocumentMetadata(actor)` with `applyActorTargetMetadata(actor, this.fvttVersion)` and replace `this.normalizeUses(uses)` in `createDailyUses()` with `normalizeTargetUses(uses, this.fvttVersion)`. Remove only the private methods made unused; retain `targetStats()` because reset/default/effect construction still consumes it.
 
-- [ ] **Step 5: Verify target and semantic regressions**
+- [x] **Step 5: Verify target and semantic regressions**
 
 Run:
 
@@ -163,9 +163,11 @@ bun run audit:anti-overfit
 
 Expected: all tests and typechecks pass; the audit reports a nonzero changed-source count and no findings.
 
-- [ ] **Step 6: Regenerate structural controls through the CLI**
+- [x] **Step 6: Regenerate structural controls through the CLI**
 
 Generate one unchanged real Actor for v12 and v14 core under `obsidian/dnd数据转fvttjson/output/remediation-m7/`, then compare normalized outputs against pre-extraction controls using `assertEqualStructure()` with only volatile IDs/timestamps ignored. Inspect names, activities, effects, target metadata, and uses rather than relying on JSON parse success.
+
+Verification record (2026-07-15): the focused target-metadata, v14-target, and Actor suites passed 32 tests / 190 expectations; production and broad typechecks reported zero diagnostics; the anti-overfit audit reported two changed production sources and no findings. The project CLI regenerated White Tusk Shaman with six items for v12/core and v14/core. Both outputs were full normalized value-structure matches against controls regenerated from pre-extraction commit `86d0c56`; semantic projections also confirmed identity, Activities, Effects, locked target `_stats`, v12 legacy activation retention, and v14 legacy Item-field removal.
 
 ### Task 3: Close architecture acceptance
 

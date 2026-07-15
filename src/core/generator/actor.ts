@@ -88,6 +88,7 @@ import {
 } from './actor-legacy';
 import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
 import { ActorLocalizer, type TranslationServiceLike } from './actor-localizer';
+import { applyActorTargetMetadata, normalizeTargetUses } from './actor-target-metadata';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -505,7 +506,7 @@ export class ActorGenerator {
     this.effectProfileApplier.apply(actor, this.effectProfile);
 
     this.applyTokenSize(actor);
-    this.applyTargetDocumentMetadata(actor);
+    applyActorTargetMetadata(actor, this.fvttVersion);
 
     return actor;
   }
@@ -1182,7 +1183,7 @@ export class ActorGenerator {
 
   private createDailyUses(value: number): Record<string, unknown> {
     const uses = createDailyUsesExt(value);
-    return this.normalizeUses(uses);
+    return normalizeTargetUses(uses, this.fvttVersion);
   }
 
   private extractActivationCondition(desc: string): string {
@@ -3187,58 +3188,6 @@ export class ActorGenerator {
 
   private isV14(): boolean {
     return this.fvttVersion === '14';
-  }
-
-  private applyTargetDocumentMetadata(actor: any): void {
-    this.applyDocumentStats(actor);
-    this.normalizeEffects(actor.effects);
-
-    for (const item of actor.items ?? []) {
-      this.applyDocumentStats(item);
-      this.normalizeEffects(item.effects);
-
-      if (this.isV14()) {
-        delete item.system?.activation;
-        if (item.system?.uses) {
-          item.system.uses = this.normalizeUses(item.system.uses);
-        }
-      }
-
-      for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
-        if (!activity || typeof activity !== 'object') continue;
-        if (activity.uses) {
-          activity.uses = this.normalizeUses(activity.uses);
-        }
-      }
-    }
-  }
-
-  private normalizeEffects(effects: unknown): void {
-    if (!Array.isArray(effects)) return;
-    for (const effect of effects) {
-      this.applyDocumentStats(effect);
-    }
-  }
-
-  private applyDocumentStats(document: any): void {
-    if (!document || typeof document !== 'object') return;
-    document._stats = {
-      ...(document._stats ?? {}),
-      coreVersion: this.targetStats().coreVersion,
-      systemId: this.targetStats().systemId,
-      systemVersion: this.targetStats().systemVersion,
-    };
-  }
-
-  private normalizeUses(uses: Record<string, unknown>): Record<string, unknown> {
-    if (!this.isV14()) return uses;
-    const normalized = { ...uses };
-    delete normalized.value;
-    delete normalized.per;
-    if (typeof normalized.max === 'number') {
-      normalized.max = String(normalized.max);
-    }
-    return normalized;
   }
 
   private createBaseActor() {
