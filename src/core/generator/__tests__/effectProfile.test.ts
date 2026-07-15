@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { ActorGenerator } from '../actor';
 import { generateEnhancedConditionEffects } from '../actor-effects';
 import { EffectProfileApplier } from '../effectProfileApplier';
+import { prepareStructureForComparison } from '../../utils/assertEqualStructure';
 
 interface MutableTestEffect {
   name: string;
@@ -26,6 +27,10 @@ const SOURCE_PATH = resolve(
   process.cwd(),
   'tests/fixtures/plaintext/月蚀矿腐化生物数据.md',
 );
+const DAE_FIXTURE_PATH = resolve(
+  process.cwd(),
+  'obsidian/dnd数据转fvttjson/input/dae-until-damaged-warden.md',
+);
 
 function loadActor(effectProfile: 'core' | 'modded-v12' | 'modded-v14', fvttVersion: FvttTargetVersion = '12') {
   const text = readFileSync(SOURCE_PATH, 'utf-8');
@@ -41,6 +46,18 @@ function loadActor(effectProfile: 'core' | 'modded-v12' | 'modded-v14', fvttVers
 
   return new ActorGenerator({
     fvttVersion,
+    translationService: null,
+    effectProfile,
+  } as any).generateForRoute(parsed, route);
+}
+
+function loadDaeFixture(effectProfile: 'core' | 'modded-v14') {
+  const markdown = readFileSync(DAE_FIXTURE_PATH, 'utf-8');
+  const parserFactory = new ParserFactory();
+  const route = parserFactory.detectRoute(markdown);
+  const parsed = parserFactory.parse(markdown);
+  return new ActorGenerator({
+    fvttVersion: '14',
     translationService: null,
     effectProfile,
   } as any).generateForRoute(parsed, route);
@@ -146,6 +163,148 @@ describe('ActorGenerator effect profiles', () => {
     for (const text of negatives) {
       expect(generateEnhancedConditionEffects(text, {}, 'Condition Fixture')).toEqual([]);
     }
+  });
+
+  it.each([
+    [
+      'English same clause',
+      'On a failed save, the target becomes frightened until it takes damage.',
+      'frightened',
+    ],
+    [
+      '中文同句',
+      '豁免失败：目标陷入中毒状态，直到它受到伤害为止。',
+      'poisoned',
+    ],
+    [
+      'English following sentence',
+      'Hit: the target is stunned. This condition lasts until the target takes damage.',
+      'stunned',
+    ],
+  ] as const)('preserves the source duration hint when an inflicted condition lasts until damage: %s', (
+    _label,
+    text,
+    expectedStatus,
+  ) => {
+    const effects = generateEnhancedConditionEffects(text, {}, 'Until Damaged Fixture');
+    const effect = effects.find((candidate: any) => candidate.statuses?.includes(expectedStatus));
+
+    expect(effect).toBeDefined();
+    expect(effect?.flags?.fvttJsonGenerator?.sourceDuration).toBe('untilDamaged');
+  });
+
+  it('does not infer an until-damaged duration from neighboring damage prose', () => {
+    const effects = generateEnhancedConditionEffects(
+      'Hit: the target becomes poisoned. If the target takes damage from this attack, it also loses its reaction.',
+      {},
+      'Until Damaged Negative',
+    );
+
+    expect(effects[0]?.statuses).toContain('poisoned');
+    expect(effects[0]?.flags?.fvttJsonGenerator?.sourceDuration).toBeUndefined();
+  });
+
+  it('binds an until-damaged clause only to the status it actually modifies', () => {
+    const effects = generateEnhancedConditionEffects(
+      'Hit: the target becomes frightened until it takes damage and is poisoned for 1 minute.',
+      {},
+      'Until Damaged Mixed Durations',
+    );
+    const frightened = effects.find((effect: any) => effect.statuses?.includes('frightened'));
+    const poisoned = effects.find((effect: any) => effect.statuses?.includes('poisoned'));
+
+    expect(frightened?.flags?.fvttJsonGenerator?.sourceDuration).toBe('untilDamaged');
+    expect(poisoned).toBeDefined();
+    expect(poisoned?.flags?.fvttJsonGenerator?.sourceDuration).toBeUndefined();
+  });
+
+  it('maps only the neutral until-damaged hint to DAE 14.0.12 and strips DAE flags from core', () => {
+    const hintedEffect: MutableTestEffect = {
+      name: 'Frightened',
+      flags: {
+        fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+      },
+    };
+    const unrelatedEffect: MutableTestEffect = {
+      name: 'Unrelated prone',
+      flags: {
+        fvttJsonGenerator: { sourceClause: 'explicit-target-condition' },
+      },
+    };
+    const staleCoreDaeEffect: MutableTestEffect = {
+      name: 'Stale DAE flag',
+      flags: {
+        fvttJsonGenerator: { sourceClause: 'explicit-target-condition' },
+        dae: { specialDuration: ['isDamaged'] },
+      },
+    };
+    const coreActor: MutableTestActor = { items: [{
+      name: 'Core source duration',
+      system: { description: { value: 'explicit source duration' } },
+      effects: [structuredClone(hintedEffect), structuredClone(unrelatedEffect), structuredClone(staleCoreDaeEffect)],
+    }] };
+    const moddedV14Actor: MutableTestActor = { items: [{
+      name: 'Modded source duration',
+      system: { description: { value: 'explicit source duration' } },
+      effects: [structuredClone(hintedEffect), structuredClone(unrelatedEffect)],
+    }] };
+
+    const applier = new EffectProfileApplier();
+    applier.apply(coreActor, 'core');
+    applier.apply(moddedV14Actor, 'modded-v14');
+
+    expect(coreActor.items[0]?.effects[0]?.flags).toEqual({
+      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+    });
+    expect(coreActor.items[0]?.effects[1]?.flags).toEqual({
+      fvttJsonGenerator: { sourceClause: 'explicit-target-condition' },
+    });
+    expect(coreActor.items[0]?.effects[2]?.flags).toEqual({
+      fvttJsonGenerator: { sourceClause: 'explicit-target-condition' },
+    });
+    expect(moddedV14Actor.items[0]?.effects[0]?.flags).toEqual({
+      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+      dae: { specialDuration: ['isDamaged'] },
+    });
+    expect(moddedV14Actor.items[0]?.effects[1]?.flags).toEqual({
+      fvttJsonGenerator: { sourceClause: 'explicit-target-condition' },
+    });
+  });
+
+  it('keeps the real DAE fixture source-equivalent while adding exactly one modded-v14 duration', async () => {
+    const coreActor = await loadDaeFixture('core');
+    const moddedActor = await loadDaeFixture('modded-v14');
+    const coreBrand = coreActor.items.find((item: any) => item.name === 'Dread Brand');
+    const moddedBrand = moddedActor.items.find((item: any) => item.name === 'Dread Brand');
+    const coreFist = coreActor.items.find((item: any) => item.name === 'Stone Fist');
+    const moddedFist = moddedActor.items.find((item: any) => item.name === 'Stone Fist');
+    const coreEffect = coreBrand?.effects?.find((effect: any) => effect.statuses?.includes('frightened'));
+    const moddedEffect = moddedBrand?.effects?.find((effect: any) => effect.statuses?.includes('frightened'));
+
+    expect(coreActor.name).toBe('Damage-Bound Warden');
+    expect(moddedActor.name).toBe(coreActor.name);
+    expect(moddedActor.items.map((item: any) => item.name)).toEqual(coreActor.items.map((item: any) => item.name));
+    expect(coreEffect?.flags).toEqual({
+      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+    });
+    expect(moddedEffect?.flags).toEqual({
+      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+      dae: { specialDuration: ['isDamaged'] },
+    });
+    expect(coreFist?.effects ?? []).toEqual([]);
+    expect(moddedFist?.effects ?? []).toEqual([]);
+    expect(moddedActor.items.flatMap((item: any) => item.effects ?? [])
+      .filter((effect: any) => effect.flags?.dae?.specialDuration)).toHaveLength(1);
+    const comparisonOptions = {
+      ignorePaths: [
+        'items.*.effects.*._id',
+        'items.*.effects.*.flags.dae',
+        'items.*.system.activities.*.effects.*._id',
+      ],
+    };
+    expect(prepareStructureForComparison(moddedActor, comparisonOptions)).toEqual(
+      prepareStructureForComparison(coreActor, comparisonOptions),
+    );
   });
 
   it('modded-v14 converts source-derived midi-qol OverTime to the ActiveEffect change read by MIDI 14.0.9 while core strips it', () => {

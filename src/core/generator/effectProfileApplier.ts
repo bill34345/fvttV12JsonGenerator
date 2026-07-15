@@ -124,6 +124,17 @@ export class EffectProfileApplier {
         continue;
       }
 
+      if (effect.flags?.fvttJsonGenerator?.sourceDuration === 'untilDamaged') {
+        const flags = (effect.flags ??= {});
+        flags.dae = {
+          ...(flags.dae && typeof flags.dae === 'object' ? flags.dae : {}),
+          // source-derived mapping checked against DAE 14.0.12's registered
+          // `isDamaged` duration key; MIDI-QOL 14.0.9 consumes the key when
+          // its damage workflow removes the effect.
+          specialDuration: ['isDamaged'],
+        };
+      }
+
       const overTime = effect.flags?.['midi-qol.OverTime'];
       if (typeof overTime !== 'string' || !overTime.trim()) {
         continue;
@@ -160,6 +171,7 @@ export class EffectProfileApplier {
 
       if (effect.flags && typeof effect.flags === 'object') {
         delete effect.flags['midi-qol.OverTime'];
+        delete effect.flags.dae;
         if (Object.keys(effect.flags).length === 0) {
           delete effect.flags;
         }

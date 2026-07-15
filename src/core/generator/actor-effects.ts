@@ -347,6 +347,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
   };
   const bleedingOverTime = extractBleedingOverTimeSpec(desc);
   const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
+  const untilDamagedStatuses = extractUntilDamagedStatuses(desc, explicitlyInflicted);
 
   const generatedStatuses = new Set<string>();
   for (const entry of conditionEntries) {
@@ -385,7 +386,12 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
       transfer: false,
       img: statusIconPath(entry.en),
       statuses: [entry.en],
-      flags: entry.en === 'bleeding' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {},
+      flags: {
+        ...(entry.en === 'bleeding' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {}),
+        ...(untilDamagedStatuses.has(entry.en) ? {
+          fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+        } : {}),
+      },
     });
   }
 
@@ -400,4 +406,52 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     }
   }
   return effects;
+}
+
+function extractUntilDamagedStatuses(
+  desc: string,
+  explicitlyInflicted: ReadonlySet<string>,
+): Set<string> {
+  const statuses = new Set<string>();
+  const durationPatterns = [
+    /(?:until|lasts?\s+until)[^.!?;]{0,80}(?:(?:the\s+)?target|it|that\s+creature|the\s+creature)\s+(?:takes?|suffers?|receives?)\s+(?:any\s+)?damage/i,
+    /(?:直到|直至)[^。！？；.!?;]{0,48}(?:(?:目标|它|该生物|此生物)\s*)?(?:受到|承受)(?:任意|任何)?\s*伤害(?:为止)?/,
+  ];
+  const sentences = desc
+    .split(/[.!?;。！？；]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (let index = 0; index < sentences.length; index += 1) {
+    const sentence = sentences[index] ?? '';
+    const durationMatch = durationPatterns
+      .map((pattern) => pattern.exec(sentence))
+      .find((match): match is RegExpExecArray => Boolean(match));
+    if (!durationMatch) {
+      continue;
+    }
+
+    const prefix = sentence.slice(0, durationMatch.index);
+    const sameSentenceStatuses = EXPLICIT_STATUS_PATTERNS
+      .filter((entry) => explicitlyInflicted.has(entry.status) && entry.pattern.test(prefix))
+      .map((entry) => entry.status);
+    if (sameSentenceStatuses.length > 0) {
+      sameSentenceStatuses.forEach((status) => statuses.add(status));
+      continue;
+    }
+
+    const refersToPreviousCondition = /\bthis\s+condition\s+lasts?\s+until\b/i.test(sentence)
+      || /(?:该|此|这个?)?\s*(?:状态|效果)[^。！？]{0,16}(?:直到|直至)/.test(sentence);
+    if (!refersToPreviousCondition || index === 0) {
+      continue;
+    }
+
+    const previousStatuses = extractExplicitlyInflictedStatuses(sentences[index - 1] ?? '')
+      .filter((status) => explicitlyInflicted.has(status));
+    if (new Set(previousStatuses).size === 1) {
+      statuses.add(previousStatuses[0]!);
+    }
+  }
+
+  return statuses;
 }
