@@ -72,6 +72,7 @@ export interface WebJob {
 }
 
 const jobs = new Map<string, WebJob>();
+const activeJobIds = new Set<string>();
 const jobRoot = resolve(TEMP_WEB_DIR, 'jobs');
 
 export function createJob(type: WebJobType, clientIp: string): WebJob {
@@ -97,6 +98,7 @@ export function createJob(type: WebJobType, clientIp: string): WebJob {
 
   mkdirSync(jobDir(job.id), { recursive: true });
   jobs.set(job.id, job);
+  activeJobIds.add(job.id);
   persistJob(job);
   return job;
 }
@@ -113,6 +115,8 @@ export function updateJob(id: string, update: Partial<WebJob>): WebJob {
     updatedAt: new Date().toISOString(),
   };
   jobs.set(id, next);
+  if (next.status === 'queued' || next.status === 'running') activeJobIds.add(id);
+  else activeJobIds.delete(id);
   persistJob(next);
   return next;
 }
@@ -162,7 +166,11 @@ export function addJobFile(
 }
 
 export function runningJobsForIp(ip: string): number {
-  return [...jobs.values()].filter((job) => job.clientIp === ip && (job.status === 'queued' || job.status === 'running')).length;
+  return [...activeJobIds].filter((id) => jobs.get(id)?.clientIp === ip).length;
+}
+
+export function runningJobsTotal(): number {
+  return activeJobIds.size;
 }
 
 export function jobDir(id: string): string {
@@ -177,28 +185,46 @@ export function jobOutputDir(id: string): string {
   return join(jobDir(id), 'output');
 }
 
-export function cleanupExpiredJobs(retentionMs = 24 * 60 * 60 * 1000): number {
+export function cleanupExpiredJobs(
+  retentionMs = 24 * 60 * 60 * 1000,
+  maxRetainedJobs = 100,
+): number {
   if (!existsSync(jobRoot)) return 0;
 
   const now = Date.now();
   let removed = 0;
+  const retainedTerminal: Array<{ id: string; dir: string; mtimeMs: number }> = [];
   for (const entry of readdirSync(jobRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const dir = join(jobRoot, entry.name);
     const marker = join(dir, 'result.json');
     const statPath = existsSync(marker) ? marker : dir;
-    const ageMs = now - statSync(statPath).mtimeMs;
-    if (ageMs < retentionMs) continue;
-    rmSync(dir, { recursive: true, force: true });
-    jobs.delete(entry.name);
+    const mtimeMs = statSync(statPath).mtimeMs;
+    if (activeJobIds.has(entry.name)) continue;
+
+    if (now - mtimeMs >= retentionMs) {
+      removeJobDirectory(entry.name, dir);
+      removed++;
+      continue;
+    }
+    retainedTerminal.push({ id: entry.name, dir, mtimeMs });
+  }
+
+  retainedTerminal.sort((left, right) => left.mtimeMs - right.mtimeMs || left.id.localeCompare(right.id));
+  const excess = Math.max(0, retainedTerminal.length - Math.max(0, maxRetainedJobs));
+  for (const record of retainedTerminal.slice(0, excess)) {
+    removeJobDirectory(record.id, record.dir);
     removed++;
   }
   return removed;
 }
 
-export function resetJobsForTests(): void {
+export function resetJobsForTests(options: { preserveFiles?: boolean } = {}): void {
   jobs.clear();
-  rmSync(jobRoot, { recursive: true, force: true });
+  activeJobIds.clear();
+  if (!options.preserveFiles) {
+    rmSync(jobRoot, { recursive: true, force: true });
+  }
 }
 
 function getExistingJob(id: string): WebJob {
@@ -233,4 +259,10 @@ function sanitizeFileId(value: string): string {
 
 function sanitizeFileName(value: string): string {
   return basename(value).replace(/[<>:"/\\|?*\x00-\x1F]/g, '_') || 'output';
+}
+
+function removeJobDirectory(id: string, dir: string): void {
+  rmSync(dir, { recursive: true, force: true });
+  jobs.delete(id);
+  activeJobIds.delete(id);
 }

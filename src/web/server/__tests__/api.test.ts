@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { handleApiRequest, TEMP_WEB_DIR } from '../api';
-import { resetJobsForTests } from '../jobs/jobStore';
+import {
+  cleanupExpiredJobs,
+  createJob,
+  getJob,
+  jobDir,
+  resetJobsForTests,
+  runningJobsTotal,
+  updateJob,
+} from '../jobs/jobStore';
 import { resetRateLimitForTests } from '../security/rateLimit';
 
 const SAMPLE_SOURCE = resolve(
@@ -18,6 +26,10 @@ beforeEach(() => {
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
+  delete Bun.env.FVTT_WEB_LONG_JOBS_PER_CLIENT;
+  delete Bun.env.FVTT_WEB_GLOBAL_LONG_JOBS;
+  delete Bun.env.FVTT_WEB_JOB_RETENTION_HOURS;
+  delete Bun.env.FVTT_WEB_MAX_RETAINED_JOBS;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
   delete Bun.env.GODDESSFANTASY_COOKIE;
@@ -32,6 +44,10 @@ afterEach(() => {
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
+  delete Bun.env.FVTT_WEB_LONG_JOBS_PER_CLIENT;
+  delete Bun.env.FVTT_WEB_GLOBAL_LONG_JOBS;
+  delete Bun.env.FVTT_WEB_JOB_RETENTION_HOURS;
+  delete Bun.env.FVTT_WEB_MAX_RETAINED_JOBS;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.TRANSLATION_API_KEY;
   delete Bun.env.OPENAI_API_KEY;
@@ -227,6 +243,10 @@ describe('web API', () => {
     expect(body.data.authenticationRequired).toBe(false);
     expect(body.data.deploymentMode).toBe('local');
     expect(body.data.limits.collectionUploadMb).toBe(20);
+    expect(body.data.limits.requestBodyMb).toBe(25);
+    expect(body.data.limits.globalShortRequestsPerMinute).toBe(100);
+    expect(body.data.limits.globalLongJobs).toBe(4);
+    expect(body.data.limits.maxRetainedJobs).toBe(100);
     expect(body.data.imageMode).toBe('ssh');
     expect(body.data.imagePublicBaseUrl).toBe('http://49.232.12.153/imgSource');
     expect(body.data.imageAllowHttp).toBe(true);
@@ -276,6 +296,106 @@ describe('web API', () => {
     expect(first.status).toBe(404);
     expect(second.status).toBe(429);
     expect(secondBody.error.code).toBe('RATE_LIMITED');
+  });
+
+  it('rejects an oversized declared body before materializing request text', async () => {
+    let textCalled = false;
+    const request = {
+      method: 'POST',
+      url: 'http://localhost/api/convert/upload',
+      headers: new Headers({
+        'content-type': 'application/json',
+        'content-length': String(25 * 1024 * 1024 + 1),
+      }),
+      async text() {
+        textCalled = true;
+        return '{}';
+      },
+    } as Request;
+
+    const response = await handleApiRequest(request, { remoteAddress: '127.0.0.1' });
+    const body = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(body.error.code).toBe('REQUEST_BODY_TOO_LARGE');
+    expect(textCalled).toBe(false);
+  });
+
+  it('rejects malformed content-length before reading the body', async () => {
+    let textCalled = false;
+    const request = {
+      method: 'POST',
+      url: 'http://localhost/api/convert/upload',
+      headers: new Headers({
+        'content-type': 'application/json',
+        'content-length': 'not-a-number',
+      }),
+      async text() {
+        textCalled = true;
+        return '{}';
+      },
+    } as Request;
+
+    const response = await handleApiRequest(request, { remoteAddress: '127.0.0.1' });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('INVALID_CONTENT_LENGTH');
+    expect(textCalled).toBe(false);
+  });
+
+  it('enforces a global long-job cap across client identities', async () => {
+    Bun.env.FVTT_WEB_GLOBAL_LONG_JOBS = '1';
+    const blocker = createJob('monster-collection', '198.51.100.1');
+    updateJob(blocker.id, { status: 'running' });
+
+    const response = await handleApiRequest(new Request('http://localhost/api/jobs', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type: 'monster-collection',
+        fileName: 'second.md',
+        content: '# **Second Creature**',
+      }),
+    }), { remoteAddress: '198.51.100.2' });
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.error.code).toBe('GLOBAL_JOB_CONCURRENCY_LIMIT');
+  });
+
+  it('keeps active jobs while removing expired and excess terminal jobs', () => {
+    const active = createJob('monster-collection', 'active-client');
+    updateJob(active.id, { status: 'running' });
+    const expired = createJob('monster-collection', 'expired-client');
+    updateJob(expired.id, { status: 'succeeded' });
+    const older = createJob('monster-collection', 'older-client');
+    updateJob(older.id, { status: 'succeeded' });
+    const newest = createJob('monster-collection', 'newest-client');
+    updateJob(newest.id, { status: 'succeeded' });
+
+    const nowSeconds = Date.now() / 1000;
+    utimesSync(join(jobDir(expired.id), 'result.json'), nowSeconds - 10_000, nowSeconds - 10_000);
+    utimesSync(join(jobDir(older.id), 'result.json'), nowSeconds - 100, nowSeconds - 100);
+    utimesSync(join(jobDir(newest.id), 'result.json'), nowSeconds - 10, nowSeconds - 10);
+
+    const removed = cleanupExpiredJobs(1_000_000, 1);
+
+    expect(removed).toBe(2);
+    expect(getJob(active.id)?.status).toBe('running');
+    expect(getJob(expired.id)).toBeUndefined();
+    expect(getJob(older.id)).toBeUndefined();
+    expect(getJob(newest.id)?.status).toBe('succeeded');
+  });
+
+  it('does not treat a persisted pre-restart running status as a live process job', () => {
+    const stale = createJob('monster-collection', 'stale-client');
+    updateJob(stale.id, { status: 'running' });
+    expect(runningJobsTotal()).toBe(1);
+
+    resetJobsForTests({ preserveFiles: true });
+    expect(getJob(stale.id)?.status).toBe('running');
+    expect(runningJobsTotal()).toBe(0);
   });
 
   it('converts a single upload with a server download URL', async () => {

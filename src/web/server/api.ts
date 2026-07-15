@@ -14,6 +14,7 @@ import {
   createJob,
   getJob,
   runningJobsForIp,
+  runningJobsTotal,
   type WebJob,
   type WebJobType,
 } from './jobs/jobStore';
@@ -126,9 +127,13 @@ export async function handleApiRequest(
         limits: {
           singleUploadMb: 5,
           collectionUploadMb: 20,
-          shortRequestsPerMinute: 10,
-          longJobsPerIp: 1,
-          tempRetentionHours: 24,
+          requestBodyMb: securityConfig.maxRequestBodyBytes / 1024 / 1024,
+          shortRequestsPerMinute: securityConfig.shortRequestsPerMinute,
+          globalShortRequestsPerMinute: securityConfig.globalShortRequestsPerMinute,
+          longJobsPerIp: securityConfig.longJobsPerClient,
+          globalLongJobs: securityConfig.globalLongJobs,
+          tempRetentionHours: securityConfig.retentionMs / 60 / 60 / 1000,
+          maxRetainedJobs: securityConfig.maxRetainedJobs,
         },
         publicAccess: securityConfig.publicMode,
         authenticationRequired: securityConfig.publicMode,
@@ -153,7 +158,7 @@ export async function handleApiRequest(
 
     if (request.method === 'POST' && url.pathname === '/api/files/read') {
       if (!pathModeEnabled) throw userError('PATH_MODE_DISABLED', '服务器路径模式未启用。');
-      const body = await readJsonBody<ReadFileBody>(request);
+      const body = await readJsonBody<ReadFileBody>(request, securityConfig.maxRequestBodyBytes);
       if (!body.path) throw userError('MISSING_PATH', 'path is required.');
       return jsonSuccess({
         path: resolveWorkspacePath(body.path),
@@ -163,7 +168,7 @@ export async function handleApiRequest(
 
     if (request.method === 'POST' && url.pathname === '/api/convert/path') {
       if (!pathModeEnabled) throw userError('PATH_MODE_DISABLED', '服务器路径模式未启用。');
-      const body = await readJsonBody<ConvertPathBody>(request);
+      const body = await readJsonBody<ConvertPathBody>(request, securityConfig.maxRequestBodyBytes);
       if (!body.sourcePath) throw userError('MISSING_SOURCE_PATH', 'sourcePath is required.');
       assertApiWorkspacePath(body.sourcePath);
       if (body.outputPath) assertApiWorkspacePath(body.outputPath);
@@ -180,7 +185,7 @@ export async function handleApiRequest(
     }
 
     if (request.method === 'POST' && (url.pathname === '/api/convert/single' || url.pathname === '/api/convert/upload')) {
-      const body = await readJsonBody<ConvertBody>(request);
+      const body = await readJsonBody<ConvertBody>(request, securityConfig.maxRequestBodyBytes);
       validateUpload(body.fileName, body.content, singleUploadLimitBytes, ['.md', '.markdown', '.txt']);
       const fvttVersion = normalizeFvttVersion(body.fvttVersion);
       const job = createJob('single-convert', clientIp);
@@ -201,12 +206,20 @@ export async function handleApiRequest(
     }
 
     if (request.method === 'POST' && url.pathname === '/api/jobs') {
-      const body = await readJsonBody<WebJobRequest>(request);
+      const body = await readJsonBody<WebJobRequest>(request, securityConfig.maxRequestBodyBytes);
       if (!publicJobTypes.has(body.type)) {
         throw userError('INVALID_JOB_TYPE', `Unsupported job type: ${String(body.type)}`);
       }
-      if (runningJobsForIp(clientIp) >= 1) {
-        throw userError('JOB_CONCURRENCY_LIMIT', '同一 IP 只能同时运行 1 个长任务。', 429);
+      cleanupExpiredJobs(securityConfig.retentionMs, securityConfig.maxRetainedJobs);
+      if (runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient) {
+        throw userError(
+          'JOB_CONCURRENCY_LIMIT',
+          `同一客户端只能同时运行 ${securityConfig.longJobsPerClient} 个长任务。`,
+          429,
+        );
+      }
+      if (runningJobsTotal() >= securityConfig.globalLongJobs) {
+        throw userError('GLOBAL_JOB_CONCURRENCY_LIMIT', 'Server long-job capacity is currently full.', 429);
       }
       validateJobInput(body);
       const job = createJob(body.type, clientIp);
@@ -252,7 +265,7 @@ export async function handleApiRequest(
     }
 
     if (request.method === 'POST' && url.pathname === '/api/verify') {
-      const body = await readJsonBody<VerifyBody>(request);
+      const body = await readJsonBody<VerifyBody>(request, securityConfig.maxRequestBodyBytes);
       const source = body.sourceContent ?? (body.sourcePath ? readWorkspaceText(body.sourcePath) : undefined);
       const actor = body.actorJson ?? (body.actorPath ? JSON.parse(readWorkspaceText(body.actorPath)) : undefined);
       if (!source) throw userError('MISSING_SOURCE', 'sourcePath or sourceContent is required.');
@@ -421,7 +434,20 @@ function json(value: ApiResponse<unknown>, init?: ResponseInit): Response {
   });
 }
 
-async function readJsonBody<T>(request: Request): Promise<T> {
+async function readJsonBody<T>(request: Request, maxBytes: number): Promise<T> {
+  const declaredLength = request.headers.get('content-length');
+  if (declaredLength !== null) {
+    if (!/^\d+$/.test(declaredLength.trim())) {
+      throw userError('INVALID_CONTENT_LENGTH', 'Content-Length must be a non-negative integer.');
+    }
+    const parsedLength = Number(declaredLength);
+    if (!Number.isSafeInteger(parsedLength)) {
+      throw userError('INVALID_CONTENT_LENGTH', 'Content-Length is outside the supported range.');
+    }
+    if (parsedLength > maxBytes) {
+      throw userError('REQUEST_BODY_TOO_LARGE', 'Request body exceeds the 25 MiB server limit.', 413);
+    }
+  }
   const text = await request.text();
   if (!text.trim()) return {} as T;
   return JSON.parse(text) as T;

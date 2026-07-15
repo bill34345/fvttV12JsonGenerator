@@ -66,11 +66,13 @@ Verification record (2026-07-15): RED showed that forged/malformed forwarding va
 - Modify: `src/web/server/__tests__/api.test.ts`
 - Create or modify: focused job-store tests under `src/web/server/jobs/__tests__/`
 
-- [ ] Write RED tests proving an oversized declared body is rejected before `request.text()`, chunked/unknown bodies remain bounded by Bun's server ceiling, per-client and global long-job caps both apply, active jobs are never retention-evicted, expired jobs are removed, and terminal-job count stays bounded.
-- [ ] Enforce content-length before JSON materialization and return stable `REQUEST_BODY_TOO_LARGE` / invalid-length errors.
-- [ ] Add global running-job count and check it before job creation.
-- [ ] Run age/count cleanup before job creation; evict only terminal persisted jobs, oldest first, while preserving queued/running jobs.
-- [ ] Run focused/API tests, typechecks, Web build, and a modest concurrent abuse probe; commit separately.
+- [x] Write RED tests proving an oversized declared body is rejected before `request.text()`, chunked/unknown bodies remain bounded by Bun's server ceiling, per-client and global long-job caps both apply, active jobs are never retention-evicted, expired jobs are removed, and terminal-job count stays bounded.
+- [x] Enforce content-length before JSON materialization and return stable `REQUEST_BODY_TOO_LARGE` / invalid-length errors.
+- [x] Add global running-job count and check it before job creation.
+- [x] Run age/count cleanup before job creation; evict only terminal persisted jobs, oldest first, while preserving queued/running jobs.
+- [x] Run focused/API tests, typechecks, Web build, and a modest concurrent abuse probe; commit separately.
+
+Verification record (2026-07-15): RED reproduced post-materialization body checks, no global long-job cap, and age-only cleanup that could remove active jobs and did not enforce count. GREEN passed 39 tests / 167 expectations, both typechecks, Web build, and a 200-identity probe with exactly 100 global accepts / 100 rejects. Declared oversize and malformed lengths return stable errors before `.text()`; unknown/chunked bodies remain bounded at the Bun server; current-process active IDs survive cleanup; pre-restart `running` records do not consume live capacity; expired and oldest excess terminal jobs are removed before new job creation.
 
 ## Task 4: Deployment truth, browser acceptance, and finding closure
 
