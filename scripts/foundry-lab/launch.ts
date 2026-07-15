@@ -35,7 +35,7 @@ interface LaunchEvidence {
   listener?: { address: string; port: number; owningPid: number }[];
   httpLicenseBoundary?: { status: number; location: string | null };
   mutualExclusion?: { rejected: boolean; runningProfile: ProfileId; runningPid: number; firstProcessRemainedAlive: boolean };
-  stop?: { portReleased: boolean; pidGone: boolean; pidFileRemoved: boolean };
+  stop?: { portReleased: boolean; pidGone: boolean; pidFileRemoved: boolean; staleOptionsLockRemoved?: boolean };
 }
 export function validateListenerOwnership(records: ListenerRecord[], expectedPid: number): void {
   validateListenerAddresses(records.map((record) => record.address));

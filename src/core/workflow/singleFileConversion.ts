@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { ActorGenerator } from '../generator/actor';
+import { ActorGenerator, type ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ActorValidator } from '../generator/validator';
 import { ItemGenerator } from '../generator/item-generator';
@@ -22,7 +22,7 @@ export interface ConvertMarkdownContentOptions {
   outputPath?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
-  translationService?: ConstructorParameters<typeof ActorGenerator>[0]['translationService'];
+  translationService?: ActorGeneratorOptions['translationService'];
 }
 
 export interface ConvertMarkdownPathOptions {
@@ -31,7 +31,7 @@ export interface ConvertMarkdownPathOptions {
   vaultPath?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
-  translationService?: ConstructorParameters<typeof ActorGenerator>[0]['translationService'];
+  translationService?: ActorGeneratorOptions['translationService'];
 }
 
 export interface ConversionResult {

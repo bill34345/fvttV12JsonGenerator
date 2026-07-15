@@ -217,7 +217,7 @@ export async function handleApiRequest(request: Request): Promise<Response> {
         throw userError('NO_DOWNLOADABLE_FILES', '这个任务没有可下载产物。', 404);
       }
       const zip = createZipBuffer(files.map((file) => ({ path: file.path, fileName: file.fileName })));
-      return new Response(zip, {
+      return new Response(new Uint8Array(zip), {
         headers: {
           'content-type': 'application/zip',
           'content-disposition': contentDisposition(`${job.type}-${job.id}.zip`),
@@ -333,11 +333,11 @@ function isAbsolutePath(path: string): boolean {
   return /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('/') || path.startsWith('\\');
 }
 
-function normalizeFvttVersion(value: FvttTargetVersion | undefined): FvttTargetVersion {
+function normalizeFvttVersion(value: unknown): FvttTargetVersion {
   try {
     return parseFvttTargetVersion(value ?? '12');
   } catch {
-    throw userError('INVALID_FVTT_VERSION', `Unsupported fvttVersion: ${value}`);
+    throw userError('INVALID_FVTT_VERSION', `Unsupported fvttVersion: ${String(value)}`);
   }
 }
 

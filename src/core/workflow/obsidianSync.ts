@@ -66,6 +66,9 @@ export interface ObsidianSyncResult {
   clearedBackup: boolean;
   failures: Array<{ input: string; error: string }>;
   warnings: ImageAssetWarning[];
+  aiNormalizeRequested: boolean;
+  aiNormalizeEnabled: boolean;
+  actorTranslationEnabled: boolean;
 }
 
 export class ObsidianSyncWorkflow {
@@ -124,6 +127,9 @@ export class ObsidianSyncWorkflow {
       clearedBackup: false,
       failures: [],
       warnings: [],
+      aiNormalizeRequested: Boolean(this.options.enableAiNormalize),
+      aiNormalizeEnabled: Boolean(this.itemAiNormalizer),
+      actorTranslationEnabled: Boolean(this.options.translationService),
     };
 
     if (options.clearBackup) {

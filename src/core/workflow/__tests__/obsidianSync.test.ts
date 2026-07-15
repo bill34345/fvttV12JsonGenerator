@@ -81,6 +81,9 @@ describe("ObsidianSyncWorkflow", () => {
 		expect(result.processed).toBe(1);
 		expect(result.failed).toBe(0);
 		expect(result.skipped).toBe(0);
+		expect(result.aiNormalizeRequested).toBe(false);
+		expect(result.aiNormalizeEnabled).toBe(false);
+		expect(result.actorTranslationEnabled).toBe(false);
 
 		expect(existsSync(join(vaultPath, "input"))).toBe(true);
 		expect(existsSync(join(vaultPath, "examples"))).toBe(true);

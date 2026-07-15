@@ -92,7 +92,7 @@ describe('ItemParser', () => {
       const result = parser.parse(content);
       expect(result.name).toBe('矮人护甲');
       expect(result.englishName).toBe('Dwarven Plate');
-      expect(result.rarity).toBe('uncommon');
+      expect(result.rarity).toBe('rare');
       expect(result.attunement).toBe('required');
     });
 
@@ -151,7 +151,7 @@ describe('ItemParser', () => {
       const result = parser.parse(content);
       expect(result.name).toBe('矮人护甲');
       expect(result.englishName).toBe('Dwarven Plate');
-      expect(result.rarity).toBe('uncommon');
+      expect(result.rarity).toBe('rare');
       expect(result.attunement).toBe('required');
     });
   });
@@ -544,10 +544,10 @@ describe('ItemParser', () => {
       const result = parser.parse(content);
       const saves = result.structuredActions?.saves;
       expect(saves?.length).toBe(2);
-      expect(saves?.[0].save?.ability).toBe('dex');
-      expect(saves?.[0].save?.onFail).toBeUndefined();
-      expect(saves?.[1].save?.ability).toBe('cha');
-      expect(saves?.[1].save?.onFail).toBe('目盲');
+      expect(saves?.[0]?.save?.ability).toBe('dex');
+      expect(saves?.[0]?.save?.onFail).toBeUndefined();
+      expect(saves?.[1]?.save?.ability).toBe('cha');
+      expect(saves?.[1]?.save?.onFail).toBe('目盲');
     });
 
     it('does not invent constitution when bullet save omits ability', () => {
@@ -562,8 +562,8 @@ describe('ItemParser', () => {
       ].join('\n');
 
       const result = parser.parse(content);
-      expect(result.structuredActions?.saves?.[0].save?.ability).toBe('');
-      expect(result.structuredActions?.effects?.[0].passiveEffect?.type).toBe('senses');
+      expect(result.structuredActions?.saves?.[0]?.save?.ability).toBe('');
+      expect(result.structuredActions?.effects?.[0]?.passiveEffect?.type).toBe('senses');
     });
   });
 
@@ -603,21 +603,21 @@ describe('ItemParser', () => {
       expect(result.stages).toBeDefined();
       expect(result.stages!.length).toBe(3);
 
-      expect(result.stages![0].name).toBe('休眠态');
-      expect(result.stages![0].requirements).toEqual([
+      expect(result.stages?.[0]?.name).toBe('休眠态');
+      expect(result.stages?.[0]?.requirements).toEqual([
         '当佩戴这件坠饰时，你的护甲等级获得 +1 加值。',
         '你可以感知距离你30尺内的所有生物位置。',
       ]);
 
-      expect(result.stages![1].name).toBe('觉醒态');
-      expect(result.stages![1].requirements).toEqual([
+      expect(result.stages?.[1]?.name).toBe('觉醒态');
+      expect(result.stages?.[1]?.requirements).toEqual([
         '你的护甲等级获得 +2 加值（取代 +1）。',
         '你可以施展*侦测魔法*，每长休一次。',
         '你获得+5的生命值加成。',
       ]);
 
-      expect(result.stages![2].name).toBe('升华态');
-      expect(result.stages![2].requirements).toEqual([
+      expect(result.stages?.[2]?.name).toBe('升华态');
+      expect(result.stages?.[2]?.requirements).toEqual([
         '你的护甲等级获得 +3 加值（取代 +2）。',
         '你可以每天一次施展*反魔法场*。',
         '你对心灵伤害免疫。',
@@ -655,8 +655,8 @@ describe('ItemParser', () => {
 
       expect(result.stages).toBeDefined();
       expect(result.stages!.length).toBe(1);
-      expect(result.stages![0].name).toBe('休眠态');
-      expect(result.stages![0].requirements).toEqual(['能力1。']);
+      expect(result.stages?.[0]?.name).toBe('休眠态');
+      expect(result.stages?.[0]?.requirements).toEqual(['能力1。']);
     });
   });
 });

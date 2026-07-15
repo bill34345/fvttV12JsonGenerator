@@ -75,7 +75,7 @@ export function extractHtmlDocData(html: string): { title: string; headings: str
   const headings = Array.from(
     withoutScripts.matchAll(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi),
     (match) =>
-      decodeHtmlEntities(match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()),
+      decodeHtmlEntities((match[1] ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()),
   ).filter(Boolean);
 
   const text = decodeHtmlEntities(

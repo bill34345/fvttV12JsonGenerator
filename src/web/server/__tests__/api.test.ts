@@ -240,6 +240,51 @@ describe('web API', () => {
     expect(download.headers.get('content-type')).toContain('application/json');
   });
 
+  it('keeps ordinary Web conversion offline when ambient translation credentials exist', async () => {
+    const previousFetch = globalThis.fetch;
+    Bun.env.TRANSLATION_API_KEY = 'ambient-key-must-not-opt-in';
+    Bun.env.TRANSLATION_BASE_URL = 'https://translation.invalid/v1';
+    Bun.env.TRANSLATION_CACHE_FILE = join(TEMP_TEST_DIR, 'translation-cache.json');
+    let networkCalls = 0;
+
+    try {
+      globalThis.fetch = (async () => {
+        networkCalls += 1;
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: '<think>provider reasoning</think>网络翻译' } }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }) as unknown as typeof fetch;
+
+      const response = await post('/api/convert/single', {
+        fileName: 'deterministic.md',
+        content: [
+          '---',
+          'layout: creature',
+          'name: Deterministic Web Fixture',
+          'armor_class: 12',
+          'hit_points: 10 (3d6)',
+          '---',
+          '### Actions',
+          '**Deterministic Strike.** Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.',
+        ].join('\n'),
+        fvttVersion: '14',
+        effectProfile: 'core',
+      });
+      const body = await response.json();
+      const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+      const actor = await download.json();
+
+      expect(response.status).toBe(200);
+      expect(networkCalls).toBe(0);
+      expect(actor.name).toBe('Deterministic Web Fixture');
+      expect(actor.items.map((item: { name: string }) => item.name)).toContain('Deterministic Strike');
+    } finally {
+      globalThis.fetch = previousFetch;
+      delete Bun.env.TRANSLATION_BASE_URL;
+      delete Bun.env.TRANSLATION_CACHE_FILE;
+    }
+  });
+
   it('runs a monster collection job and downloads a zip', async () => {
     const firstTwoBlocks = [
       '# **Archive Test Wight**',
@@ -399,7 +444,7 @@ describe('web API', () => {
       const create = await post('/api/jobs', {
         type: 'goddessfantasy-board-crawl',
         options: {
-          boardUrl: crawlBoardUrl(server.port),
+          boardUrl: crawlBoardUrl(server.port!),
           crawlMode: 'incremental',
           contentType: 'monster',
           maxBoardPages: 1,
@@ -440,7 +485,7 @@ describe('web API', () => {
       const create = await post('/api/jobs', {
         type: 'goddessfantasy-board-crawl',
         options: {
-          boardUrl: crawlBoardUrl(server.port),
+          boardUrl: crawlBoardUrl(server.port!),
           crawlMode: 'full',
           contentType: 'monster',
           maxBoardPages: 1,

@@ -77,6 +77,9 @@ export class PlainTextActorWorkflow {
       clearedBackup: false,
       failures: [],
       warnings: [],
+      aiNormalizeRequested: false,
+      aiNormalizeEnabled: false,
+      actorTranslationEnabled: false,
     };
   }
 

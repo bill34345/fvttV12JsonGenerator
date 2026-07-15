@@ -81,7 +81,10 @@ export class YamlParser {
         this.parseSavingThrows((rawData as Record<string, unknown>)['豁免熟练'], result);
       }
       if ('技能' in rawData) {
-        this.parseSkills((rawData as Record<string, Record<string, string | number>>)['技能'], result);
+        const skills = (rawData as Record<string, unknown>)['技能'];
+        if (skills && typeof skills === 'object' && !Array.isArray(skills)) {
+          this.parseSkills(skills as Record<string, string | number>, result);
+        }
       }
       if ('感官' in rawData) {
         const parsedSenses = this.parseSenses((rawData as Record<string, unknown>)['感官']);

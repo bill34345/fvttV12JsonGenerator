@@ -116,7 +116,7 @@ export class ItemParser implements ItemParserStrategy {
   /**
    * Parse abilities array into structured action data
    */
-  private parseYamlAbilities(abilities: unknown[]): ItemStage['actions'] {
+  private parseYamlAbilities(abilities: unknown[]): NonNullable<ItemStage['actions']> {
     const effects: ActionData[] = [];
     const uses: ActionData[] = [];
     const spells: ActionData[] = [];
@@ -438,24 +438,7 @@ export class ItemParser implements ItemParserStrategy {
     if (typeof rarity !== 'string') {
       return undefined;
     }
-
-    const rarityMap: Record<string, ItemRarity> = {
-      '普通': 'common',
-      'common': 'common',
-      'uncommon': 'uncommon',
-      '稀有': 'uncommon',
-      'rare': 'rare',
-      '非常稀有': 'veryrare',
-      'very rare': 'veryrare',
-      'veryrare': 'veryrare',
-      '传说': 'legendary',
-      'legendary': 'legendary',
-      'artifact': 'artifact',
-      '神器': 'artifact',
-    };
-
-    const normalized = rarity.replace(/（[^）]+）/g, '').trim();
-    return rarityMap[normalized];
+    return this.normalizeRarity(rarity);
   }
 
   private parseAttunement(rawData: Record<string, unknown>): AttunementType | undefined {
@@ -524,9 +507,6 @@ export class ItemParser implements ItemParserStrategy {
     // Chinese item type keywords
     const typeKeywords = ['武器', '装备', '护甲', '奇物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container'];
 
-    // Rarity keywords
-    const rarityKeywords = ['普通', 'common', '稀有', 'uncommon', 'rare', '非常稀有', 'very rare', 'veryrare', '传说', 'legendary', '神器', 'artifact'];
-
     // Attunement keywords
     const attunementKeywords = ['需同调', 'require-attunement', 'requires attunement', 'attunement required'];
 
@@ -540,28 +520,40 @@ export class ItemParser implements ItemParserStrategy {
       if (typeKeywords.some(kw => lowerPart.includes(kw.toLowerCase())) && !result.type) {
         result.type = part;
       } else {
-        const isRarity = rarityKeywords.some(kw => lowerPart.includes(kw.toLowerCase()));
-        if (isRarity) {
-          const rarity = this.normalizeRarity(part);
-          if (rarity) {
-            result.rarity = rarity;
-          }
+        const rarity = this.normalizeRarity(part);
+        if (rarity) {
+          result.rarity = rarity;
         }
       }
     }
   }
 
   private normalizeRarity(text: string): ItemRarity | undefined {
-    const lower = text.toLowerCase();
-
-    if (lower.includes('普通') || lower === 'common') return 'common';
-    if (lower.includes('稀有') || lower === 'uncommon') return 'uncommon';
-    if (lower.includes('rare') || lower === 'rare') return 'rare';
-    if (lower.includes('非常稀有') || lower.includes('very rare') || lower === 'veryrare') return 'veryrare';
-    if (lower.includes('传说') || lower === 'legendary') return 'legendary';
-    if (lower.includes('artifact') || lower.includes('神器')) return 'artifact';
-
-    return undefined;
+    // source-derived: rarity must be an exact source label after removing an
+    // attunement qualifier. Substring matching turns prose into mechanics and
+    // makes longer labels such as 非常稀有 collide with 稀有.
+    const normalized = text
+      .replace(/[（(][^）)]*[）)]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    const rarityMap: Record<string, ItemRarity> = {
+      '普通': 'common',
+      common: 'common',
+      '非普通': 'uncommon',
+      uncommon: 'uncommon',
+      '稀有': 'rare',
+      rare: 'rare',
+      '极珍稀': 'veryRare',
+      '非常稀有': 'veryRare',
+      'very rare': 'veryRare',
+      veryrare: 'veryRare',
+      '传说': 'legendary',
+      legendary: 'legendary',
+      '神器': 'artifact',
+      artifact: 'artifact',
+    };
+    return rarityMap[normalized];
   }
 
   private extractDescription(body: string): string | undefined {
@@ -1252,7 +1244,10 @@ export class ItemParser implements ItemParserStrategy {
   }
 
   private isSaveTrait(description: string): boolean {
-    return /(?:DC|豁免)\s*\d+|豁免检定/.test(description);
+    // source-derived: a saving throw mentioned only as a trigger is not a save
+    // rolled by this trait. The trait needs an explicit numeric DC to become a
+    // save activity; parseSaveFromTrait enforces the same boundary.
+    return /(?:\bDC\s*\d+|豁免(?:检定)?\s*(?:DC\s*)?\d+)/i.test(description);
   }
 
   private parseSaveFromTrait(name: string, description: string): ActionData | null {
@@ -1317,17 +1312,63 @@ export class ItemParser implements ItemParserStrategy {
   /**
    * Parse utility action from a trait
    */
-  private parseUtilityFromTrait(name: string, _description: string): ActionData | null {
+  private parseUtilityFromTrait(name: string, description: string): ActionData | null {
     const englishNameMatch = name.match(/（([^）]+)）[。.]?$/);
     const englishName = englishNameMatch ? englishNameMatch[1] : undefined;
     const cleanName = name.replace(/（([^）]+)）[。.]?$/, '').trim();
 
-    // Utility traits have no attack or save mechanics
-    // They just describe passive effects
+    const activation = this.parseExplicitTraitActivation(description);
+    if (activation) {
+      return {
+        name: cleanName,
+        englishName,
+        type: 'use',
+        desc: description,
+        useAction: {
+          consumption: 0,
+          activation,
+          description,
+          limitedUses: this.parseTraitLimitedUses(description),
+        },
+      };
+    }
+
+    // Utility traits with no explicit action syntax remain descriptive. A bare
+    // word such as 反应 in “反应速度” cannot create action economy mechanics.
     return {
       name: cleanName,
       englishName,
       type: 'utility',
+      desc: description,
+    };
+  }
+
+  private parseExplicitTraitActivation(description: string): 'action' | 'bonus' | 'reaction' | 'free' | undefined {
+    if (/(?:作为(?:一个)?反应|(?:可以|可)用(?:你的|其)?反应|(?:可以|可)使用(?:你的|其)?反应|as (?:a|your) reaction|use your reaction)/i.test(description)) {
+      return 'reaction';
+    }
+    if (/(?:作为(?:一个)?附赠动作|as a bonus action)/i.test(description)) {
+      return 'bonus';
+    }
+    if (/(?:无需动作|不需要动作|without (?:using|requiring) an action)/i.test(description)) {
+      return 'free';
+    }
+    if (/(?:作为(?:一个)?动作|as an action)/i.test(description)) {
+      return 'action';
+    }
+    return undefined;
+  }
+
+  private parseTraitLimitedUses(
+    description: string,
+  ): NonNullable<ActionData['useAction']>['limitedUses'] {
+    const onceUntilDawn = /(?:直到|直至)(?:下一个|次日)?黎明前.*(?:无法|不能).*再次使用/i.test(description)
+      || /(?:cannot|can't)\s+(?:use\s+)?(?:it|this (?:reaction|ability|feature))?\s*(?:again\s+)?until (?:the )?next dawn/i.test(description);
+    if (!onceUntilDawn) return undefined;
+    return {
+      spent: 0,
+      max: '1',
+      recovery: [{ period: 'dawn', type: 'recoverAll' }],
     };
   }
 

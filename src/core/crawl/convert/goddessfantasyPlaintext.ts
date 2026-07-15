@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import * as cheerio from 'cheerio';
+import type { AnyNode } from 'domhandler';
 import type { CrawledTopicRecord } from '../types';
 
 export interface PlaintextRenderWarning {
@@ -378,7 +379,7 @@ function emitMarkdown(data: StatblockData): string {
 
 function extractTableSources(
   $: cheerio.CheerioAPI,
-  body: cheerio.Cheerio<unknown>,
+  body: cheerio.Cheerio<AnyNode>,
 ): Array<{ statText: string; loreText?: string; title?: string; statblockCandidateCount: number }> {
   const cells: Array<{ text: string; isStat: boolean }> = [];
   body.find('table.bbc_table td').each((_, element) => {
@@ -755,7 +756,7 @@ function htmlToText(html: string): string {
   return normalizeText(cheerio.load(`<div>${withBreaks}</div>`)('div').text());
 }
 
-function extractImages(body: cheerio.Cheerio<unknown>): string[] {
+function extractImages(body: cheerio.Cheerio<AnyNode>): string[] {
   const images: string[] = [];
   body.find('img[src]').each((_, element) => {
     const src = (element as { attribs?: Record<string, string> }).attribs?.src;
@@ -773,7 +774,7 @@ function firstHttpImage(values: string[]): string | undefined {
 }
 
 function cleanValue(value: string | undefined): string | undefined {
-  const cleaned = normalizeReadableText(value ?? '').replace(/^[：:\s]+/, '').replace(/\s+/g, ' ').trim();
+  const cleaned = (normalizeReadableText(value ?? '') ?? '').replace(/^[：:\s]+/, '').replace(/\s+/g, ' ').trim();
   return cleaned || undefined;
 }
 

@@ -809,7 +809,7 @@ function parseAbilityScores(lines: string[]): Record<string, number> {
     .slice(0, 6)
     .map((part) => {
       const match = part.match(/(-?\d+)/);
-      return match ? Number.parseInt(match[1], 10) : undefined;
+      return match?.[1] ? Number.parseInt(match[1], 10) : undefined;
     });
 
   if (values.some((value) => value === undefined)) {
@@ -850,8 +850,8 @@ function parseSimpleValueFromLabels(line: string, labels: string[]): string {
   return '';
 }
 
-function parseChallengeLine(line: string): { cr?: number; xp?: number; prof?: number } {
-  const out: { cr?: number; xp?: number; prof?: number } = {};
+function parseChallengeLine(line: string): { cr?: number | string; xp?: number; prof?: number } {
+  const out: { cr?: number | string; xp?: number; prof?: number } = {};
   const value = parseSimpleValue(line, 'Challenge');
 
   const xpMatch = value.match(/([0-9][0-9,]*)\s*XP/i);

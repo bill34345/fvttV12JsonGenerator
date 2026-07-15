@@ -20,7 +20,7 @@ export async function writeTokenReviewContactSheet(options: TokenReviewContactSh
   const titleHeight = options.title ? 52 : 0;
   const width = columns * tileSize + (columns + 1) * gap;
   const height = titleHeight + rows * (tileSize + labelHeight) + (rows + 1) * gap;
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: Parameters<ReturnType<typeof sharp>['composite']>[0] = [];
 
   if (options.title) {
     composites.push({
@@ -32,6 +32,7 @@ export async function writeTokenReviewContactSheet(options: TokenReviewContactSh
 
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
+    if (!item) continue;
     const left = gap + (index % columns) * (tileSize + gap);
     const top = titleHeight + gap + Math.floor(index / columns) * (tileSize + labelHeight + gap);
     const token = item.localTokenPath

@@ -5,6 +5,9 @@ import { dirname, extname, join } from 'node:path';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import type { ParsedNPC } from '../../config/mapping';
+import type { ImageTokenCrop } from './tokenCrop';
+
+export type { ImageTokenCrop } from './tokenCrop';
 
 const execFileAsync = promisify(execFile);
 
@@ -27,14 +30,6 @@ export interface PublicImageExpectation {
   width?: number;
   height?: number;
   format?: string;
-}
-
-export interface ImageTokenCrop {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  fit?: 'cover' | 'contain';
 }
 
 export interface ImageAssetUploader {

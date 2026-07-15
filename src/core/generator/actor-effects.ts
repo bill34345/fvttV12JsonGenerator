@@ -31,6 +31,25 @@ const STATUS_ICON_OVERRIDES: Record<string, string> = {
 
 const CUSTOM_STATUS_ICON_NAMES = new Set(['blood', 'daze']);
 
+const EXPLICIT_STATUS_PATTERNS: Array<{ status: string; pattern: RegExp }> = [
+  { status: 'poisoned', pattern: /\bpoisoned\b|\u4e2d\u6bd2/i },
+  { status: 'paralyzed', pattern: /\bparaly[sz]ed\b|\u9ebb\u75f9/i },
+  { status: 'stunned', pattern: /\bstunned\b|\u9707\u6151/i },
+  { status: 'charmed', pattern: /\bcharmed\b|\u9b45\u60d1/i },
+  { status: 'frightened', pattern: /\bfrightened\b|\u6050\u614c/i },
+  { status: 'prone', pattern: /\bprone\b|\u5012\u5730/i },
+  { status: 'restrained', pattern: /\brestrained\b|\u675f\u7f1a|\u53d7\u9650/i },
+  { status: 'blinded', pattern: /\bblinded\b|\u76ee\u76f2/i },
+  { status: 'deafened', pattern: /\bdeafened\b|\u8033\u804b/i },
+  { status: 'invisible', pattern: /\binvisible\b|\u9690\u5f62/i },
+  { status: 'petrified', pattern: /\bpetrified\b|\u77f3\u5316/i },
+  { status: 'exhaustion', pattern: /\bexhaust(?:ed|ion)\b|\u529b\u7aed/i },
+  { status: 'unconscious', pattern: /\bunconscious\b|\u660f\u8ff7/i },
+  { status: 'grappled', pattern: /\bgrappled\b|\u64d2\u62b1|\u88ab\u64d2\u62b1/i },
+  { status: 'dazed', pattern: /\bdazed\b|\u604d\u60da|\u7729\u6655/i },
+  { status: 'bleeding', pattern: /\bbleed(?:ing)?\b|\u6d41\u8840/i },
+];
+
 export function statusIconPath(status: string): string {
   const normalized = status.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
   const iconName = STATUS_ICON_OVERRIDES[normalized] ?? (normalized || 'unknown');
@@ -38,6 +57,69 @@ export function statusIconPath(status: string): string {
     ? 'icons/svg'
     : 'systems/dnd5e/icons/svg/statuses';
   return `${basePath}/${iconName}.svg`;
+}
+
+/**
+ * source-derived: return statuses only from clauses that explicitly apply a
+ * condition to a target/creature. Bare mentions, prerequisites, immunity text,
+ * and actor-state termination clauses are not target effects.
+ */
+export function extractExplicitlyInflictedStatuses(text: string): string[] {
+  const statuses = new Set<string>();
+  const sentences = text.split(/[.!?;\u3002\uFF1B]+/).map((part) => part.trim()).filter(Boolean);
+
+  for (const sentence of sentences) {
+    const hasTargetContext = /\b(?:target|creature|enemy|foe)\b|\u76ee\u6807|\u751f\u7269/i.test(sentence);
+    const hasOutcomeContext = /\b(?:hit|on\s+a\s+fail(?:ure|ed\s+save)|failed\s+save|instead)\s*[:：]?|(?:\u547d\u4e2d|\u8c41\u514d\u5931\u8d25|\u5931\u8d25|\u6539\u4e3a|\u5426\u5219)\s*[:：]?/i.test(sentence);
+    if (!(hasTargetContext || hasOutcomeContext)) {
+      continue;
+    }
+
+    const clauses = sentence.split(/,|\uFF0C|\bbut\b/i).map((part) => part.trim()).filter(Boolean);
+    for (const clause of clauses) {
+      const predicates: string[] = [];
+      const englishApplication = clause.match(
+        /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i,
+      );
+      if (englishApplication?.[1]) {
+        predicates.push(englishApplication[1]);
+      }
+
+      const saveFailureApplication = clause.match(
+        /\bor\s+(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i,
+      );
+      if (saveFailureApplication?.[1]) {
+        predicates.push(saveFailureApplication[1]);
+      }
+
+      const chineseApplication = clause.match(
+        /(?:\u9677\u5165|\u53d8\u4e3a|\u6210\u4e3a|\u53d7\u5230|\u5f00\u59cb)([\s\S]+)/,
+      );
+      if (chineseApplication?.[1]) {
+        predicates.push(chineseApplication[1]);
+      }
+
+      const chinesePassiveApplication = clause.match(
+        /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)\s*\u88ab(?:\u9b54\u6cd5)?([\s\S]+)/,
+      );
+      if (chinesePassiveApplication?.[1]) {
+        predicates.push(chinesePassiveApplication[1]);
+      }
+
+      for (const predicate of predicates) {
+        if (/^\s*(?:already|not|no\s+longer|immune\s+to|unaffected\s+by)\b/i.test(predicate)) {
+          continue;
+        }
+        for (const entry of EXPLICIT_STATUS_PATTERNS) {
+          if (entry.pattern.test(predicate)) {
+            statuses.add(entry.status);
+          }
+        }
+      }
+    }
+  }
+
+  return [...statuses];
 }
 
 export function extractSwallowDamage(action: GeneratedActionData): Damage | undefined {
@@ -156,9 +238,10 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
     actionName.includes('吞咽') || actionName.includes('Swallow')
   );
   const bleedingOverTime = extractBleedingOverTimeSpec(desc);
+  const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
 
   for (const [cn, info] of Object.entries(conditionMap)) {
-    if (desc.includes(cn) || desc.toLowerCase().includes(info.en)) {
+    if (explicitlyInflicted.has(info.en)) {
       if (isSwallow && cn === '擒抱') continue;
       const flags = cn === '流血' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {};
       effects.push({
@@ -263,12 +346,13 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     bleeding: '流血',
   };
   const bleedingOverTime = extractBleedingOverTimeSpec(desc);
+  const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
 
   const generatedStatuses = new Set<string>();
   for (const entry of conditionEntries) {
     const hasLocalizedLabel = desc.includes(entry.cn);
     const hasEnglishStatus = desc.toLowerCase().includes(entry.en);
-    if (!(hasLocalizedLabel || hasEnglishStatus)) {
+    if (!explicitlyInflicted.has(entry.en)) {
       continue;
     }
     if (isSwallow && (entry.en === 'grappled' || entry.en === 'prone')) {

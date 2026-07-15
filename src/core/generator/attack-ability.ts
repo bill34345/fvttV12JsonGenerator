@@ -5,7 +5,7 @@ export type AttackAbility = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export interface AttackAbilityInferenceInput {
   abilities: Partial<Record<AttackAbility, number>>;
   proficiencyBonus: number;
-  attackType: ActionData['attack']['type'] | 'msak' | 'rsak';
+  attackType: NonNullable<ActionData['attack']>['type'] | 'msak' | 'rsak';
   toHit: number;
   damageFormula?: string;
 }

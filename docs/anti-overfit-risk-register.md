@@ -24,3 +24,5 @@ Allowed source kinds are `schema-derived`, `source-derived`, `corpus-derived`, a
 - The implementation has at least three positives, one close negative, and one unrelated actor/item check.
 - Generated actor changes are verified through the CLI and checked against source markdown.
 - `bun run audit:anti-overfit` passes or every finding has a documented source kind and reason.
+- `bun run audit:anti-overfit:all` must report a nonzero production-source count. Git discovery failures and a zero-source `--all` result are hard failures; an empty corpus is never a passing audit.
+- Explicit-file audits remain available without Git discovery when a caller supplies concrete source paths.

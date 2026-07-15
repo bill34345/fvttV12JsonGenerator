@@ -1,6 +1,6 @@
 # Foundry v14 Core Batch Verification
 
-Generated at: 2026-07-11T06:37:46.759Z
+Generated at: 2026-07-15T10:54:04.788Z
 
 ## Summary
 
@@ -52,7 +52,7 @@ Generated at: 2026-07-11T06:37:46.759Z
 | no item-level legacy activation | pass | 9 embedded items checked |
 | embedded item target stats | pass | 9 embedded items checked |
 | save activities omit legacy dc.value | pass | 3 save activities checked |
-| effects target stats | pass | 8 effects checked |
+| effects target stats | pass | 6 effects checked |
 
 ### Chuul Nullifier
 
@@ -75,7 +75,7 @@ Generated at: 2026-07-11T06:37:46.759Z
 | no item-level legacy activation | pass | 6 embedded items checked |
 | embedded item target stats | pass | 6 embedded items checked |
 | save activities omit legacy dc.value | pass | 1 save activities checked |
-| effects target stats | pass | 2 effects checked |
+| effects target stats | pass | 0 effects checked |
 
 ### Bonebreaker Dorokor
 
@@ -98,19 +98,19 @@ Generated at: 2026-07-11T06:37:46.759Z
 | no item-level legacy activation | pass | 9 embedded items checked |
 | embedded item target stats | pass | 9 embedded items checked |
 | save activities omit legacy dc.value | pass | 0 save activities checked |
-| effects target stats | pass | 2 effects checked |
+| effects target stats | pass | 0 effects checked |
 
 ### White Tusk Shaman
 
 - Source: `obsidian/dnd数据转fvttjson/input/white-tusk-shaman.md`
 - Output: `obsidian/dnd数据转fvttjson/output/v14-acceptance/white-tusk-shaman.v14.json`
 - Actor/item name: White Tusk Shaman
-- Item count: 5
+- Item count: 6
 - HP: `{"value":52,"max":52,"temp":null,"tempmax":null,"formula":"8d8 + 16"}`
 - AC: `{"flat":14,"calc":"flat"}`
 - CR: `3`
 - Senses: `{"ranges":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0},"special":"","units":"ft"}`
-- Items reviewed: Aggressive, Minion: Savage Horde, Spirit-Bonded Mind, Multiattack, Blood-Searing Spear
+- Items reviewed: Aggressive, Minion: Savage Horde, Spirit-Bonded Body, Spirit-Bonded Mind, Multiattack, Blood-Searing Spear
 
 | v14 schema spot check | Result | Detail |
 | --- | --- | --- |
@@ -118,10 +118,10 @@ Generated at: 2026-07-11T06:37:46.759Z
 | actor system version | pass | 5.3.3 |
 | actor system id | pass | dnd5e |
 | v14 senses ranges | pass | {"ranges":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0},"special":"","units":"ft"} |
-| no item-level legacy activation | pass | 5 embedded items checked |
-| embedded item target stats | pass | 5 embedded items checked |
+| no item-level legacy activation | pass | 6 embedded items checked |
+| embedded item target stats | pass | 6 embedded items checked |
 | save activities omit legacy dc.value | pass | 0 save activities checked |
-| effects target stats | pass | 2 effects checked |
+| effects target stats | pass | 0 effects checked |
 
 ### Bleeding Guardian
 
@@ -144,7 +144,7 @@ Generated at: 2026-07-11T06:37:46.759Z
 | no item-level legacy activation | pass | 1 embedded items checked |
 | embedded item target stats | pass | 1 embedded items checked |
 | save activities omit legacy dc.value | pass | 0 save activities checked |
-| effects target stats | pass | 2 effects checked |
+| effects target stats | pass | 1 effects checked |
 
 ### GoddessFantasy Yithian Fixture
 

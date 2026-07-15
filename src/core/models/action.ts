@@ -43,6 +43,14 @@ export interface ActionData {
 
   damage?: Damage[];
 
+  aoe?: {
+    type?: string;
+    template?: {
+      type: string;
+      distance: number;
+    };
+  };
+
   // Cast activity fields (for spellcasting items like wands, staffs, rods)
   spellName?: string;
   usesPerDay?: number;
@@ -59,6 +67,15 @@ export interface ActionData {
     consumption: number;
     activation: 'action' | 'bonus' | 'reaction' | 'free';
     description?: string;
+    limitedUses?: {
+      spent: number;
+      max: string;
+      recovery: Array<{
+        period: string;
+        type: string;
+        formula?: string;
+      }>;
+    };
   };
 }
 
@@ -137,6 +154,8 @@ export interface StructuredActionData {
   damage?: DamagePart[];
   DC?: number;
   ability?: SaveAbility;
+  dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+  dcSourceKind?: 'ability' | 'spellcasting' | 'literal';
   aoe?: AoeTemplate;
   target?: ActionTarget;
   recharge?: [number, number];

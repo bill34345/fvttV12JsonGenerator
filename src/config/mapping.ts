@@ -61,6 +61,8 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
 };
 
 // Intermediate Parsed Structure
+export type LegacyActionEntry = string | Record<string, unknown>;
+
 export interface ParsedNPC {
   name: string;
   type: "npc";
@@ -112,7 +114,7 @@ export interface ParsedNPC {
   saveBonuses?: Record<string, number>; // key (e.g. 'con') -> extra save bonus beyond base + proficiency
   lairInitiative?: number;
 
-  actions?: string[];
+  actions?: LegacyActionEntry[];
   bonus_actions?: any;
   reactions?: any;
   legendary_actions?: any; // complex

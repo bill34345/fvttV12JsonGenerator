@@ -80,6 +80,28 @@ describe('TranslationService', () => {
     expect(readFileSync(cachePath, 'utf-8')).toContain('成年红龙');
   });
 
+  it('removes provider reasoning wrappers before translated text reaches the cache', async () => {
+    const translator = new OpenAICompatibleTranslator({
+      apiKey: 'sk-test',
+      baseUrl: 'https://middleman.example.com/v1',
+      model: 'reasoning-model',
+      httpClient: async () => createResponse(200, {
+        choices: [{ message: { content: '<think>private reasoning that is not output</think>\n\n攻击性' } }],
+      }),
+    });
+    const service = new TranslationService({
+      translator,
+      cache: new FileTranslationCache(cachePath),
+      providerName: 'middleman',
+      model: 'reasoning-model',
+    });
+
+    const result = await service.translate('Aggressive', { namespace: 'item.name' });
+
+    expect(result.text).toBe('攻击性');
+    expect(readFileSync(cachePath, 'utf-8')).not.toContain('<think>');
+  });
+
   it('returns cache hit for identical request without extra network call', async () => {
     let callCount = 0;
     const httpClient: HttpClient = async () => {

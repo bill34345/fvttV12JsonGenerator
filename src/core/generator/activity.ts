@@ -206,6 +206,14 @@ export class ActivityGenerator {
         };
       }
     } else if (action.type === 'use' && action.useAction) {
+      const consumptionTargets = action.useAction.consumption > 0
+        ? [{
+            type: 'itemUses',
+            target: '',
+            value: action.useAction.consumption.toString(),
+            scaling: { mode: '', formula: '' }
+          }]
+        : [];
       activities[id] = {
         _id: id,
         type: 'utility',
@@ -215,12 +223,7 @@ export class ActivityGenerator {
           override: false,
         },
         consumption: {
-          targets: [{
-            type: 'itemUses',
-            target: '',
-            value: action.useAction.consumption.toString(),
-            scaling: { mode: '', formula: '' }
-          }],
+          targets: consumptionTargets,
           scaling: { allowed: false, max: '' },
           spellSlot: false
         },
@@ -231,7 +234,7 @@ export class ActivityGenerator {
         },
         range: { units: 'self', special: '', override: false },
         target: { template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' }, affects: { count: '', type: '', choice: false, special: '' }, prompt: true, override: false },
-        uses: { spent: 0, recovery: [], max: '' },
+        uses: action.useAction.limitedUses ?? { spent: 0, recovery: [], max: '' },
       };
     } else if (action.type === 'effect' && action.passiveEffect) {
       if (action.passiveEffect.type === 'acBonus') {

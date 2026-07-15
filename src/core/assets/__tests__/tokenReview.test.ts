@@ -18,8 +18,8 @@ describe('token review risk classification', () => {
       ],
     });
 
-    expect(result.items[0].reasons).toContain('shared-source-without-slug-crop');
-    expect(result.items[1].reasons).toContain('shared-source-without-slug-crop');
+    expect(result.items[0]?.reasons).toContain('shared-source-without-slug-crop');
+    expect(result.items[1]?.reasons).toContain('shared-source-without-slug-crop');
   });
 
   it('marks duplicate tokens, extreme aspect ratios, and unconfirmed tokens', () => {
@@ -32,10 +32,10 @@ describe('token review risk classification', () => {
       ],
     });
 
-    expect(result.items[0].reasons).toContain('duplicate-token-image');
-    expect(result.items[1].reasons).toContain('duplicate-token-image');
-    expect(result.items[2].reasons).toContain('extreme-source-aspect-ratio');
-    expect(result.items[3].reasons).toContain('unconfirmed-token');
+    expect(result.items[0]?.reasons).toContain('duplicate-token-image');
+    expect(result.items[1]?.reasons).toContain('duplicate-token-image');
+    expect(result.items[2]?.reasons).toContain('extreme-source-aspect-ratio');
+    expect(result.items[3]?.reasons).toContain('unconfirmed-token');
   });
 
   it('does not mark confirmed exact slug crops as unconfirmed', () => {
@@ -52,8 +52,8 @@ describe('token review risk classification', () => {
       ],
     });
 
-    expect(result.items[0].reasons).not.toContain('unconfirmed-token');
-    expect(result.items[0].status).toBe('ok');
+    expect(result.items[0]?.reasons).not.toContain('unconfirmed-token');
+    expect(result.items[0]?.status).toBe('ok');
   });
 
   it('marks missing or unreadable token images as failed', () => {
@@ -64,10 +64,10 @@ describe('token review risk classification', () => {
       ],
     });
 
-    expect(result.items[0].reasons).toContain('missing-token');
-    expect(result.items[0].status).toBe('failed');
-    expect(result.items[1].reasons).toContain('token-unreadable');
-    expect(result.items[1].status).toBe('failed');
+    expect(result.items[0]?.reasons).toContain('missing-token');
+    expect(result.items[0]?.status).toBe('failed');
+    expect(result.items[1]?.reasons).toContain('token-unreadable');
+    expect(result.items[1]?.status).toBe('failed');
   });
 
   it('marks type-only captions as weak visual hints', () => {
@@ -86,8 +86,8 @@ describe('token review risk classification', () => {
       ],
     });
 
-    expect(result.items[0].reasons).toContain('weak-visual-hints');
-    expect(result.items[0].status).toBe('needs_review');
+    expect(result.items[0]?.reasons).toContain('weak-visual-hints');
+    expect(result.items[0]?.status).toBe('needs_review');
   });
 });
 

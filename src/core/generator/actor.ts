@@ -3,12 +3,6 @@ import { ActionParser } from '../parser/action';
 import type { ActionData, Damage } from '../parser/action';
 import { EnglishActionParser } from '../parser/englishAction';
 import type { ParserRoute } from '../parser/types';
-import {
-  FileTranslationCache,
-  OpenAICompatibleTranslator,
-  TranslationService,
-  createTranslationConfigFromEnv,
-} from '../translation';
 import type { TranslationContext } from '../translation';
 import { ActivityGenerator, type ActivityGenerationContext } from './activity';
 import type { AttackAbility } from './attack-ability';
@@ -81,6 +75,7 @@ import {
   isStatusRemovalUtility as isStatusRemovalUtilityExt,
 } from './actor-special';
 import { extractCompoundRiderMechanics, type ExtractedRider, type HitDiceOutcome } from '../mechanics/mechanicsExtraction';
+import { extractSourceDerivedAcEffect } from '../mechanics/acEffectExtraction';
 import {
   buildHitDiceOutcomeAutomationSpec,
   buildHitDiceOutcomeMacroCommand,
@@ -94,11 +89,11 @@ import {
 } from './actor-legacy';
 import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
 
-interface TranslationServiceLike {
+export interface TranslationServiceLike {
   translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
 }
 
-interface ActorGeneratorOptions {
+export interface ActorGeneratorOptions {
   translationService?: TranslationServiceLike | null;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
@@ -274,10 +269,7 @@ export class ActorGenerator {
   private effectProfileApplier = new EffectProfileApplier();
 
   constructor(options: ActorGeneratorOptions = {}) {
-    this.translationService =
-      options.translationService === undefined
-        ? this.createDefaultTranslationService()
-        : options.translationService ?? undefined;
+    this.translationService = options.translationService ?? undefined;
     this.fvttVersion = options.fvttVersion ?? '12';
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
@@ -1666,7 +1658,10 @@ export class ActorGenerator {
       return;
     }
 
-    const primarySummon = summons[0];
+    const [primarySummon] = summons;
+    if (!primarySummon) {
+      return;
+    }
     const countFormula = typeof primarySummon.countFormula === 'string'
       ? primarySummon.countFormula.replace(/\s+/g, '')
       : '';
@@ -1984,8 +1979,7 @@ export class ActorGenerator {
     }
 
     const formulas = [...text.matchAll(/(\d+d\d+)/gi)].map((match) => match[1]);
-    const healFormula = formulas[0]
-      ?? (action.damage?.[0]?.dice && action.damage?.[0]?.die ? `${action.damage[0].dice}d${action.damage[0].die}` : undefined);
+    const healFormula = formulas[0];
     if (!healFormula) {
       return null;
     }
@@ -2107,7 +2101,7 @@ export class ActorGenerator {
         const index = heavyHitText.search(marker.pattern);
         return index >= 0 ? { ...marker, index } : null;
       })
-      .filter((entry): entry is { key: string; label: string; pattern: RegExp; index: number } => Boolean(entry))
+      .filter((entry) => entry !== null)
       .sort((left, right) => left.index - right.index);
 
     return occurrences.map((entry, index) => {
@@ -2604,10 +2598,12 @@ export class ActorGenerator {
       return;
     }
 
-    const parsed = this.extractAcEffect(action.desc ?? '');
+    const sourceText = action.desc ?? '';
+    const parsed = extractSourceDerivedAcEffect(sourceText);
     if (!parsed) {
       return;
     }
+    const duration = this.extractEffectDuration(sourceText);
 
     const existing = (item.effects ?? []).find((effect: any) =>
       effect?.flags?.fvttJsonGenerator?.sourceDerivedAcEffect,
@@ -2631,7 +2627,7 @@ export class ActorGenerator {
           priority: null,
         },
       ],
-      ...(parsed.duration ? { duration: parsed.duration } : {}),
+      ...(duration ? { duration } : {}),
       flags: {
         fvttJsonGenerator: {
           sourceDerivedAcEffect: true,
@@ -2643,34 +2639,6 @@ export class ActorGenerator {
     item.effects = [...(item.effects ?? []), effect];
     const firstActivity = activities[0];
     firstActivity.effects = [...(firstActivity.effects ?? []), { _id: effect._id }];
-  }
-
-  private extractAcEffect(text: string): { kind: 'flat' | 'bonus'; value: number; duration?: Record<string, unknown>; sourceText: string } | null {
-    const flatMatch =
-      text.match(/(?:AC|护甲等级)[^。.;]{0,20}(?:降至|变为|is|becomes)\s*(\d+)/i) ??
-      text.match(/(?:降至|变为|is|becomes)\s*(\d+)[^。.;]{0,20}(?:AC|护甲等级)/i);
-    if (flatMatch?.[1]) {
-      return {
-        kind: 'flat',
-        value: Number.parseInt(flatMatch[1], 10),
-        duration: this.extractEffectDuration(text),
-        sourceText: flatMatch[0],
-      };
-    }
-
-    const bonusMatches = [...text.matchAll(/(?:AC|护甲等级)[^。.;+]{0,30}\+(\d+)|\+(\d+)\s*(?:AC|护甲等级)/gi)];
-    const lastBonus = bonusMatches.at(-1);
-    const bonusValue = lastBonus?.[1] ?? lastBonus?.[2];
-    if (bonusValue) {
-      return {
-        kind: 'bonus',
-        value: Number.parseInt(bonusValue, 10),
-        duration: this.extractEffectDuration(text),
-        sourceText: lastBonus?.[0] ?? text,
-      };
-    }
-
-    return null;
   }
 
   private extractEffectDuration(text: string): Record<string, unknown> | undefined {
@@ -3157,28 +3125,6 @@ export class ActorGenerator {
     }
 
     return /(weapon attack|saving throw|recharge|costs?\s+\d+\s+actions?|\+\d+\s+to\s+hit)/i.test(line);
-  }
-
-  private createDefaultTranslationService(): TranslationService | undefined {
-    const config = createTranslationConfigFromEnv();
-    if (!config.apiKey) {
-      return undefined;
-    }
-
-    const translator = new OpenAICompatibleTranslator({
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-      model: config.model,
-      timeoutMs: config.timeoutMs,
-    });
-
-    return new TranslationService({
-      translator,
-      cache: new FileTranslationCache(config.cacheFilePath),
-      providerName: 'openai-compatible',
-      model: config.model,
-      baseUrl: config.baseUrl,
-    });
   }
 
   private async localizeEnglishActor(actor: any): Promise<any> {

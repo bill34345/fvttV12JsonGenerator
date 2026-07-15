@@ -956,10 +956,11 @@ export function extractInlineFeatureLinesFromBiography(
     return { biography: '', features: [] };
   }
 
-  const lines = biography
+  const sourceLines = biography
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+  const lines = coalesceWrappedMarkdownFeatureLines(sourceLines);
   const features: string[] = [];
   const remaining: string[] = [];
   let currentFeature: string | null = null;
@@ -1023,6 +1024,53 @@ export function extractInlineFeatureLinesFromBiography(
         : biography.trim(),
     features,
   };
+}
+
+/**
+ * corpus-derived: Markdown statblocks sometimes wrap an explicitly emphasized
+ * feature title before its closing marker. Only join lines when the same
+ * opening marker is present later; unmatched emphasis remains untouched.
+ */
+function coalesceWrappedMarkdownFeatureLines(lines: string[]): string[] {
+  const coalesced: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) {
+      continue;
+    }
+
+    const opening = line.match(/^(\*{3}|\*{2})\s*\S/);
+    const marker = opening?.[1];
+    if (!marker || line.slice(marker.length).includes(marker)) {
+      coalesced.push(line);
+      continue;
+    }
+
+    let closingIndex = -1;
+    for (let candidateIndex = index + 1; candidateIndex < lines.length; candidateIndex += 1) {
+      if (lines[candidateIndex]?.includes(marker)) {
+        closingIndex = candidateIndex;
+        break;
+      }
+    }
+
+    if (closingIndex === -1) {
+      coalesced.push(line);
+      continue;
+    }
+
+    coalesced.push(
+      lines
+        .slice(index, closingIndex + 1)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    );
+    index = closingIndex;
+  }
+
+  return coalesced;
 }
 
 function isLikelyEnglishFeatureTitle(title: string): boolean {

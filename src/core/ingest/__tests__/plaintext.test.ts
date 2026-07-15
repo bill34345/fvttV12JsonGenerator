@@ -146,8 +146,8 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(parsed.actions?.length).toBeGreaterThan(0);
     expect(parsed.bonus_actions?.length).toBeGreaterThan(0);
     expect(parsed.reactions?.length).toBeGreaterThan(0);
-    expect(actor.items.some((item) => item.name.includes('(Swallow)'))).toBe(true);
-    expect(actor.items.some((item) => item.system?.activation?.type === 'reaction')).toBe(true);
+    expect(actor.items.some((item: { name: string }) => item.name.includes('(Swallow)'))).toBe(true);
+    expect(actor.items.some((item: { system?: { activation?: { type?: string } } }) => item.system?.activation?.type === 'reaction')).toBe(true);
   });
 
   it('maps structured sense notes into actor senses.special for Scuttling Serpentmaw', async () => {
@@ -202,9 +202,9 @@ describe('PlainTextIngestionWorkflow', () => {
     const { actor: sharkActor } = await generateActorFromBlock('Corrupted Giant Shark');
     const { actor: embraceActor } = await generateActorFromBlock("Death's Embrace");
 
-    const screech = bloodfinActor.items.find((item) => item.name.includes('(Pelagic Screech)'));
-    const ram = sharkActor.items.find((item) => item.name.includes('(Ram)'));
-    const bodyShield = embraceActor.items.find((item) => item.name.includes('(Body Shield)'));
+    const screech = bloodfinActor.items.find((item: { name: string }) => item.name.includes('(Pelagic Screech)'));
+    const ram = sharkActor.items.find((item: { name: string }) => item.name.includes('(Ram)'));
+    const bodyShield = embraceActor.items.find((item: { name: string }) => item.name.includes('(Body Shield)'));
 
     expect(screech?.system?.uses).toEqual(
       expect.objectContaining({
@@ -221,7 +221,7 @@ describe('PlainTextIngestionWorkflow', () => {
       }),
     );
     expect(
-      Object.values(ram?.system?.activities ?? {})[0]?.uses?.recovery?.[0],
+      (Object.values(ram?.system?.activities ?? {})[0] as { uses?: { recovery?: unknown[] } } | undefined)?.uses?.recovery?.[0],
     ).toEqual(expect.objectContaining({ period: 'recharge', formula: '5' }));
     expect(bodyShield?.system?.activation?.cost).toBe(2);
   });

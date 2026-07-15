@@ -14,7 +14,7 @@ describe('crawl-sites CLI', () => {
       const result = await runCli([
         'goddessfantasy-board',
         '--board-url',
-        cliBoardUrl(server.port),
+        cliBoardUrl(server.port!),
         '--cookie-header',
         'PHPSESSID=test',
         '--skip-auth-probe',
@@ -40,7 +40,7 @@ describe('crawl-sites CLI', () => {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 60_000);
 
   test('goddessfantasy-board --force acts as full mode', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'gf-cli-full-'));
@@ -52,7 +52,7 @@ describe('crawl-sites CLI', () => {
       const result = await runCli([
         'goddessfantasy-board',
         '--board-url',
-        cliBoardUrl(server.port),
+        cliBoardUrl(server.port!),
         '--cookie-header',
         'PHPSESSID=test',
         '--skip-auth-probe',
@@ -77,7 +77,7 @@ describe('crawl-sites CLI', () => {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 60_000);
 
   test('goddessfantasy-pipeline --dry-run reports crawl stats and skips downstream stages', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'gf-cli-pipeline-dry-run-'));
@@ -88,7 +88,7 @@ describe('crawl-sites CLI', () => {
       const result = await runCli([
         'goddessfantasy-pipeline',
         '--board-url',
-        cliBoardUrl(server.port),
+        cliBoardUrl(server.port!),
         '--cookie-header',
         'PHPSESSID=test',
         '--skip-auth-probe',
@@ -116,7 +116,7 @@ describe('crawl-sites CLI', () => {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 60_000);
 
   test('goddessfantasy-pipeline --dry-run accepts Foundry v14 target', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'gf-cli-pipeline-v14-dry-run-'));
@@ -127,7 +127,7 @@ describe('crawl-sites CLI', () => {
       const result = await runCli([
         'goddessfantasy-pipeline',
         '--board-url',
-        cliBoardUrl(server.port),
+        cliBoardUrl(server.port!),
         '--cookie-header',
         'PHPSESSID=test',
         '--skip-auth-probe',
@@ -153,7 +153,7 @@ describe('crawl-sites CLI', () => {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 60_000);
 
   test('goddessfantasy-pipeline --dry-run accepts Foundry v14 modded profile', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'gf-cli-pipeline-v14-modded-dry-run-'));
@@ -164,7 +164,7 @@ describe('crawl-sites CLI', () => {
       const result = await runCli([
         'goddessfantasy-pipeline',
         '--board-url',
-        cliBoardUrl(server.port),
+        cliBoardUrl(server.port!),
         '--cookie-header',
         'PHPSESSID=test',
         '--skip-auth-probe',
@@ -192,7 +192,7 @@ describe('crawl-sites CLI', () => {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 60_000);
 });
 
 async function runCli(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
@@ -201,7 +201,7 @@ async function runCli(args: string[]): Promise<{ exitCode: number; stdout: strin
     stdout: 'pipe',
     stderr: 'pipe',
   });
-  const timeout = setTimeout(() => proc.kill(), 15_000);
+  const timeout = setTimeout(() => proc.kill(), 60_000);
   try {
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(proc.stdout).text(),

@@ -414,8 +414,12 @@ export class ItemGenerator {
         } else {
           const activities = this.activityGenerator.generate(action);
           for (const [id, activity] of Object.entries(activities)) {
+            const actionName = action.englishName
+              ? `${action.name} (${action.englishName})`
+              : action.name;
             item.system.activities[id] = {
               ...activity,
+              name: (activity as ActivityData).name || actionName,
               sort: sortOrder,
             };
             sortOrder += 100000;

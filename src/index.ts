@@ -60,7 +60,7 @@ function filterStructuredActionsByStage(
       // For AC bonus effects, only include if desc matches CURRENT stage requirements
       // (AC bonus is stage-specific, not cumulative)
       if (item.passiveEffect?.type === 'acBonus') {
-        return currentStageRequirements.has(text);
+        return typeof text === 'string' && currentStageRequirements.has(text);
       }
       // For other effects, include if desc matches cumulative requirements
       if (!text) return true;
@@ -165,6 +165,9 @@ program
         console.log(`Failed: ${result.failed}`);
         console.log(`Backed up: ${result.backedUp}`);
         console.log(`Warnings: ${result.warnings.length}`);
+        console.log(`AI normalize requested: ${result.aiNormalizeRequested ? 'yes' : 'no'}`);
+        console.log(`AI normalize enabled: ${result.aiNormalizeEnabled ? 'yes' : 'no'}`);
+        console.log(`Actor translation enabled: ${result.actorTranslationEnabled ? 'yes' : 'no'}`);
 
         if (result.createdExample) {
           console.log(`Created example: ${result.examplesDir}`);

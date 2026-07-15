@@ -29,6 +29,24 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
+function cleanTranslatedContent(value: string): string {
+  let cleaned = value.trim();
+  const leadingReasoningBlock = /^<(?:think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/(?:think|analysis|reasoning)>\s*/i;
+
+  while (leadingReasoningBlock.test(cleaned)) {
+    cleaned = cleaned.replace(leadingReasoningBlock, '').trim();
+  }
+
+  if (!cleaned || /<\/?(?:think|analysis|reasoning)\b/i.test(cleaned)) {
+    throw new TranslationProviderError(
+      'invalid_response',
+      'Translation provider returned reasoning markup without a clean translated value',
+    );
+  }
+
+  return cleaned;
+}
+
 export class OpenAICompatibleTranslator implements Translator {
   private readonly httpClient: HttpClient;
   private readonly timeoutMs: number;
@@ -100,7 +118,7 @@ export class OpenAICompatibleTranslator implements Translator {
         throw new TranslationProviderError('invalid_response', 'Translation provider returned empty content');
       }
 
-      return translated.trim();
+      return cleanTranslatedContent(translated);
     } catch (error: unknown) {
       if (error instanceof TranslationProviderError) {
         throw error;

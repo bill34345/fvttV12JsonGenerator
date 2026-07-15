@@ -16,9 +16,9 @@ describe('heavyHitAutomation', () => {
 
   it('maps deterministic random rolls onto the configured branch list', () => {
     const branches = [
-      { key: 'bleeding-wound', activityId: 'act-bleed' },
-      { key: 'reeling-impact', activityId: 'act-daze' },
-      { key: 'push', activityId: 'act-push' },
+      { label: 'Bleeding Wound', activityId: 'act-bleed' },
+      { label: 'Reeling Impact', activityId: 'act-daze' },
+      { label: 'Push', activityId: 'act-push' },
     ];
 
     expect(selectHeavyHitBranch(branches, 1)).toEqual(branches[0]);
@@ -28,9 +28,9 @@ describe('heavyHitAutomation', () => {
 
   it('builds a random midi-qol automation spec and macro command from generic branch metadata', () => {
     const spec = buildHeavyHitAutomationSpec([
-      { key: 'bleeding-wound', activityId: 'act-bleed' },
-      { key: 'reeling-impact', activityId: 'act-daze' },
-      { key: 'push', activityId: 'act-push' },
+      { label: 'Bleeding Wound', activityId: 'act-bleed' },
+      { label: 'Reeling Impact', activityId: 'act-daze' },
+      { label: 'Push', activityId: 'act-push' },
     ]);
 
     expect(spec).toEqual(

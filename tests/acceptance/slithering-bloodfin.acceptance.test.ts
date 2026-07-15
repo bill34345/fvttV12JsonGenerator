@@ -13,17 +13,20 @@ type GeneratedActor = {
   type: string;
   system: any;
   prototypeToken: any;
+  effects?: Array<{ img?: string; statuses?: string[] }>;
   items: Array<{
     name: string;
     type: string;
     img?: string;
-    effects?: Array<{ img?: string; statuses?: string[] }>;
+    flags?: Record<string, any>;
+    effects?: Array<{ name?: string; img?: string; statuses?: string[] }>;
     system: {
-      activation?: { type?: string; cost?: number };
+      activation?: { type?: string; cost?: number; condition?: string };
       uses?: any;
       activities?: Record<string, any>;
       description?: { value?: string };
       type?: { value?: string; subtype?: string };
+      damage?: any;
     };
   }>;
 };

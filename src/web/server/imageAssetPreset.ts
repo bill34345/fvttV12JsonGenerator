@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ImageAssetOptions, ImageTokenCrop } from '../../core/assets/imageAssets';
+import { hasCompleteNormalizedCropRect } from '../../core/assets/tokenCrop';
 
 export interface WebImageAssetPreset {
   imageAssetsConfigured: boolean;
@@ -101,6 +102,9 @@ function parseTokenCropOverrides(value: unknown): Record<string, ImageTokenCrop>
       if (typeof numberValue !== 'number' || !Number.isFinite(numberValue) || numberValue < 0 || numberValue > 1) {
         throw new Error(`Invalid imageTokenCrops.${hash}.${field}: expected a number from 0 to 1.`);
       }
+    }
+    if (!hasCompleteNormalizedCropRect(crop)) {
+      throw new Error(`Invalid imageTokenCrops entry for ${hash}.`);
     }
     if (crop.width <= 0 || crop.height <= 0) {
       throw new Error(`Invalid imageTokenCrops.${hash}: width and height must be greater than 0.`);

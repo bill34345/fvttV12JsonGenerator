@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ParsedNPC } from '../../../config/mapping';
 import { EnglishBestiaryParser } from '../../parser/english';
 import { ActorGenerator } from '../actor';
@@ -25,6 +28,47 @@ function createEnglishParsed(): ParsedNPC {
 }
 
 describe('ActorGenerator english bilingual integration', () => {
+  it('does not infer permission to translate from ambient credentials', async () => {
+    const cacheDir = mkdtempSync(join(tmpdir(), 'fvtt-deterministic-translation-'));
+    const previous = {
+      key: Bun.env.TRANSLATION_API_KEY,
+      baseUrl: Bun.env.TRANSLATION_BASE_URL,
+      cacheFile: Bun.env.TRANSLATION_CACHE_FILE,
+      fetch: globalThis.fetch,
+    };
+    let networkCalls = 0;
+
+    try {
+      Bun.env.TRANSLATION_API_KEY = 'ambient-key-must-not-opt-in';
+      Bun.env.TRANSLATION_BASE_URL = 'https://translation.invalid/v1';
+      Bun.env.TRANSLATION_CACHE_FILE = join(cacheDir, 'cache.json');
+      globalThis.fetch = (async () => {
+        networkCalls += 1;
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: '<think>provider reasoning</think>网络翻译' } }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }) as unknown as typeof fetch;
+
+      const actor = await new ActorGenerator().generateForRoute({
+        ...createEnglishParsed(),
+        name: 'Deterministic Fixture',
+        actions: [
+          'Deterministic Strike. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) slashing damage.',
+        ],
+      }, 'english');
+
+      expect(networkCalls).toBe(0);
+      expect(actor.name).toBe('Deterministic Fixture');
+      expect(actor.items[0]?.name).toBe('Deterministic Strike');
+    } finally {
+      restoreEnv('TRANSLATION_API_KEY', previous.key);
+      restoreEnv('TRANSLATION_BASE_URL', previous.baseUrl);
+      restoreEnv('TRANSLATION_CACHE_FILE', previous.cacheFile);
+      globalThis.fetch = previous.fetch;
+      rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
+
   it('formats actor and action names as bilingual when translation exists', async () => {
     const translationService: TranslationServiceLike = {
       async translate(text, context) {
@@ -187,7 +231,7 @@ describe('ActorGenerator english bilingual integration', () => {
     const generator = new ActorGenerator({ translationService: null });
     const actor = await generator.generateForRoute(input, 'english');
 
-    expect(actor.items.map((item) => item.name)).toEqual(['Multiattack', 'War Cry']);
+    expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Multiattack', 'War Cry']);
   });
 
   it('keeps recharge action names source-faithful when description contains later colons', async () => {
@@ -209,7 +253,7 @@ describe('ActorGenerator english bilingual integration', () => {
     const generator = new ActorGenerator({ translationService: null });
     const actor = await generator.generateForRoute(input, 'english');
 
-    expect(actor.items.map((item) => item.name)).toEqual(['War Cry']);
+    expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['War Cry']);
     expect(actor.items[0].system.description.value).toContain('Choose one of the following effects');
   });
 
@@ -234,7 +278,7 @@ describe('ActorGenerator english bilingual integration', () => {
     const generator = new ActorGenerator({ translationService: null });
     const actor = await generator.generateForRoute(input, 'english');
 
-    expect(actor.items.map((item) => item.name)).toEqual(['Minion: Savage Horde', 'War Cry']);
+    expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Minion: Savage Horde', 'War Cry']);
   });
 
   it('does not turn unmarked title-case biography sentences into feature items', async () => {
@@ -255,7 +299,7 @@ describe('ActorGenerator english bilingual integration', () => {
     const generator = new ActorGenerator({ translationService: null });
     const actor = await generator.generateForRoute(input, 'english');
 
-    expect(actor.items.map((item) => item.name)).toEqual([]);
+    expect(actor.items.map((item: { name: string }) => item.name)).toEqual([]);
     expect(actor.system.details.biography.value).toContain('Ancient Flame Dragon');
   });
 
@@ -278,8 +322,49 @@ describe('ActorGenerator english bilingual integration', () => {
     const generator = new ActorGenerator({ translationService: null });
     const actor = await generator.generateForRoute(parser.parse(source), 'english');
 
-    expect(actor.items.map((item) => item.name)).toEqual(['Magic Resistance', 'Multiattack']);
+    expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Magic Resistance', 'Multiattack']);
     expect(actor.system.details.biography.value).toContain('Ancient Flame Dragon');
+  });
+
+  it('keeps wrapped emphasized trait titles as separate source-faithful feature items', async () => {
+    const source = readFileSync(
+      new URL('./fixtures/white-tusk-wrapped-traits.md', import.meta.url),
+      'utf-8',
+    );
+    const parser = new EnglishBestiaryParser();
+    const generator = new ActorGenerator({ translationService: null });
+    const actor = await generator.generateForRoute(parser.parse(source), 'english');
+
+    expect(actor.items.map((item: any) => ({
+      name: item.name,
+      description: item.system.description.value,
+    }))).toEqual([
+      {
+        name: 'Aggressive',
+        description: '<p>As a bonus action, the orc can move up to its speed toward a hostile creature it can see.</p>',
+      },
+      {
+        name: 'Minion: Savage Horde',
+        description: '<p>After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18-20.</p>',
+      },
+      {
+        name: 'Spirit-Bonded Body',
+        description: '<p>As a bonus action, the orc can transform into a dire wolf for up to 4 hours. The orc reverts to its true form if it falls unconscious.</p>',
+      },
+      {
+        name: 'Spirit-Bonded Mind',
+        description: '<p>The orc can cast speak with animals at will, but can only communicate with wolves.</p>',
+      },
+      {
+        name: 'Multiattack',
+        description: '<p>The White Tusk Shaman makes two blood-searing spear attacks.</p>',
+      },
+    ]);
+
+    const minion = actor.items.find((item: any) => item.name === 'Minion: Savage Horde');
+    expect(minion.effects).toEqual([]);
+    const spiritBody = actor.items.find((item: any) => item.name === 'Spirit-Bonded Body');
+    expect(spiritBody.effects).toEqual([]);
   });
 
   it('keeps english spellcasting as description feat instead of spell items', async () => {
@@ -387,3 +472,11 @@ describe('ActorGenerator english bilingual integration', () => {
     expect(actor.system.details.biography.value).toBe('');
   });
 });
+
+function restoreEnv(key: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete Bun.env[key];
+    return;
+  }
+  Bun.env[key] = value;
+}

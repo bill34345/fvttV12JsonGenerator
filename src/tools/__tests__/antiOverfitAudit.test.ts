@@ -1,7 +1,32 @@
 import { describe, expect, it } from 'bun:test';
-import { auditAntiOverfitText } from '../antiOverfitAudit';
+import { auditAntiOverfitText, executeAntiOverfitAudit } from '../antiOverfitAudit';
 
 describe('anti-overfit audit', () => {
+  it('fails an all-source audit when Git yields zero production sources', () => {
+    const result = executeAntiOverfitAudit(['--all'], {
+      collectAllProductionSources: () => [],
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.join('\n')).toContain('zero auditable production sources');
+    expect(result.stdout).toEqual([]);
+  });
+
+  it('keeps explicit-file auditing independent from Git source discovery', () => {
+    const result = executeAntiOverfitAudit(['fixture.ts'], {
+      collectAllProductionSources: () => {
+        throw new Error('Git discovery must not run');
+      },
+      auditFiles: () => [],
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      stdout: ['anti-overfit audit passed (1 source checked)'],
+      stderr: [],
+    });
+  });
+
   it('flags action-name predicates that can hide sample-specific mechanics', () => {
     const findings = auditAntiOverfitText(
       'src/core/generator/activity-derivation.ts',

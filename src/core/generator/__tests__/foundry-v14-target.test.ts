@@ -204,7 +204,8 @@ describe('Foundry v14 generator target', () => {
     });
 
     const item = actor.items.find((candidate: any) => candidate.type === 'weapon');
-    const activity = item?.system.activities[Object.keys(item.system.activities)[0]];
+    const activityId = item ? Object.keys(item.system.activities)[0] : undefined;
+    const activity = activityId ? item?.system.activities[activityId] : undefined;
 
     expect(item?._stats.coreVersion).toBe('14.361');
     expect(item?._stats.systemVersion).toBe('5.3.3');

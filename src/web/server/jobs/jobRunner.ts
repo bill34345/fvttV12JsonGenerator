@@ -333,7 +333,7 @@ async function runRecordsToPlaintextJob(job: WebJob, body: WebJobRequest): Promi
 function finishJob(
   id: string,
   status: WebJobStatus,
-  summary: Record<string, unknown>,
+  summary: object,
   warnings: string[],
   failures: Array<{ index?: number; sourceName?: string; file?: string; error: string }>,
 ): void {
@@ -343,7 +343,7 @@ function finishJob(
     status,
     warnings,
     failures,
-    summary,
+    summary: Object.fromEntries(Object.entries(summary)),
   });
 }
 

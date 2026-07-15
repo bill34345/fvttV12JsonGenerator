@@ -27,7 +27,7 @@ describe('buildWindowsPowerShellEncodedArgs', () => {
     expect(args.slice(0, 4)).toEqual(['powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand']);
     expect(args.join(' ')).not.toContain('|');
     expect(args.join(' ')).not.toContain('E:/Bill/imgSource/actors');
-    expect(Buffer.from(args[4], 'base64').toString('utf16le')).toBe(command);
+    expect(Buffer.from(args[4]!, 'base64').toString('utf16le')).toBe(command);
   });
 });
 

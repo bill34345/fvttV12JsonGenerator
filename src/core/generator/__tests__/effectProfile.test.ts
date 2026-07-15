@@ -4,6 +4,20 @@ import { resolve } from 'node:path';
 import { ActorGenerator } from '../actor';
 import { generateEnhancedConditionEffects } from '../actor-effects';
 import { EffectProfileApplier } from '../effectProfileApplier';
+
+interface MutableTestEffect {
+  name: string;
+  system?: { changes: Array<Record<string, unknown>> };
+  flags?: Record<string, unknown>;
+}
+
+interface MutableTestActor {
+  items: Array<{
+    name: string;
+    system: { description: { value: string } };
+    effects: MutableTestEffect[];
+  }>;
+}
 import { ParserFactory } from '../../parser/router';
 import { splitCollection, parseCreatureBlock } from '../../ingest/plaintext';
 import type { FvttTargetVersion } from '../../foundryTarget';
@@ -85,24 +99,73 @@ describe('ActorGenerator effect profiles', () => {
     );
   });
 
+  it('creates condition effects only from explicit target-application clauses', () => {
+    const positives = [
+      {
+        text: 'Hit: the target is grappled and restrained until it escapes.',
+        statuses: ['grappled', 'restrained'],
+      },
+      {
+        text: 'Each creature must succeed on a DC 15 Wisdom saving throw or become frightened.',
+        statuses: ['frightened'],
+      },
+      {
+        text: '目标必须成功通过豁免，否则陷入中毒状态。',
+        statuses: ['poisoned'],
+      },
+      {
+        text: '豁免失败：受到 10（3d6）点毒素伤害，并陷入中毒 (Poisoned) 状态。',
+        statuses: ['poisoned'],
+      },
+      {
+        text: '豁免失败：目标被魔法魅惑 (Charmed) 并受施法者控制。',
+        statuses: ['charmed'],
+      },
+      {
+        text: '命中：目标被擒抱 (Grappled)，并同时陷入受限 (Restrained) 状态。',
+        statuses: ['grappled', 'restrained'],
+      },
+      {
+        text: '若目标免疫恐慌状态，改为受到伤害，且陷入眩晕 (Dazed)。',
+        statuses: ['dazed'],
+      },
+    ];
+
+    for (const testCase of positives) {
+      const effects = generateEnhancedConditionEffects(testCase.text, {}, 'Condition Fixture');
+      expect(effects.flatMap((effect: any) => effect.statuses ?? []).sort()).toEqual(testCase.statuses.sort());
+    }
+
+    const negatives = [
+      'The orc reverts to its true form if it falls unconscious.',
+      'The creature has advantage on saving throws against being frightened.',
+      'Melee Weapon Attack: +5 to hit, one grappled creature.',
+      'If the target is already poisoned, it takes extra damage.',
+    ];
+
+    for (const text of negatives) {
+      expect(generateEnhancedConditionEffects(text, {}, 'Condition Fixture')).toEqual([]);
+    }
+  });
+
   it('modded-v14 converts source-derived midi-qol OverTime to the ActiveEffect change read by MIDI 14.0.9 while core strips it', () => {
-    const effect = {
+    const effect: MutableTestEffect = {
       name: '流血 (Bleeding)',
       flags: {
         'midi-qol.OverTime': 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
       },
     };
-    const coreActor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
-    const moddedV14Actor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
+    const coreActor: MutableTestActor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
+    const moddedV14Actor: MutableTestActor = { items: [{ name: 'Bleeding Bite', system: { description: { value: 'explicit bleeding' } }, effects: [structuredClone(effect)] }] };
 
     const applier = new EffectProfileApplier();
     applier.apply(coreActor, 'core');
     applier.apply(moddedV14Actor, 'modded-v14');
 
-    expect(coreActor.items[0].effects[0].flags).toBeUndefined();
-    expect(coreActor.items[0].effects[0].system?.changes ?? []).toEqual([]);
-    expect(moddedV14Actor.items[0].effects[0].flags).toBeUndefined();
-    expect(moddedV14Actor.items[0].effects[0].system.changes).toEqual([{
+    expect(coreActor.items[0]?.effects[0]?.flags).toBeUndefined();
+    expect(coreActor.items[0]?.effects[0]?.system?.changes ?? []).toEqual([]);
+    expect(moddedV14Actor.items[0]?.effects[0]?.flags).toBeUndefined();
+    expect(moddedV14Actor.items[0]?.effects[0]?.system?.changes).toEqual([{
       key: 'flags.midi-qol.OverTime',
       mode: 5,
       value: 'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
@@ -111,7 +174,7 @@ describe('ActorGenerator effect profiles', () => {
   });
 
   it('modded-v14 preserves complete source-derived OverTime values without converting neighboring flags', () => {
-    const actor = { items: [{
+    const actor: MutableTestActor = { items: [{
       name: 'Generic repeated damage',
       system: { description: { value: 'explicit repeated damage' } },
       effects: [{
@@ -132,14 +195,14 @@ describe('ActorGenerator effect profiles', () => {
 
     new EffectProfileApplier().apply(actor, 'modded-v14');
 
-    expect(actor.items[0].effects[0].system.changes).toEqual([{
+    expect(actor.items[0]?.effects[0]?.system?.changes).toEqual([{
       key: 'flags.midi-qol.OverTime',
       mode: 5,
       value: 'turn=start,damageRoll=2d4,damageType=acid,label=Acid Burn,saveDC=15,saveAbility=dex,saveRemove=True',
       priority: 20,
     }]);
-    expect(actor.items[0].effects[0].flags).toEqual({ 'midi-qol': { unrelated: true } });
-    expect(actor.items[0].effects[1].system.changes).toEqual([
+    expect(actor.items[0]?.effects[0]?.flags).toEqual({ 'midi-qol': { unrelated: true } });
+    expect(actor.items[0]?.effects[1]?.system?.changes).toEqual([
       { key: 'system.attributes.ac.flat', mode: 2, value: '1', priority: 20 },
       {
         key: 'flags.midi-qol.OverTime',

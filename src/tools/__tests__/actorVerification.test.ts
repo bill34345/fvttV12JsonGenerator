@@ -2,7 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildActorVerificationSummary } from '../actorVerification';
+import {
+  buildActorVerificationSummary,
+  buildActorVerificationSummaryFromValues,
+} from '../actorVerification';
 
 describe('actorVerification', () => {
   it('summarizes actor facts and flags items not found in the source markdown', () => {
@@ -127,4 +130,141 @@ describe('actorVerification', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('warns when a source-derived AC effect came from Attack text instead of an explicit AC clause', () => {
+    const summary = buildActorVerificationSummaryFromValues({
+      source: [
+        '# Bleeding Guardian',
+        'Bleeding Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target.',
+      ].join('\n'),
+      actor: {
+        name: 'Bleeding Guardian',
+        type: 'npc',
+        system: {
+          attributes: { senses: {} },
+          details: {},
+        },
+        items: [
+          {
+            name: 'Bleeding Bite',
+            type: 'weapon',
+            system: { activities: {} },
+            effects: [
+              {
+                name: 'Bleeding Bite',
+                changes: [
+                  {
+                    key: 'system.attributes.ac.formula',
+                    mode: 2,
+                    value: '4',
+                    priority: null,
+                  },
+                ],
+                flags: {
+                  fvttJsonGenerator: {
+                    sourceDerivedAcEffect: true,
+                    sourceText: 'ack: +4',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(summary.warnings).toContain(
+      'Invalid source-derived AC effect on Bleeding Bite: sourceText is not an explicit AC clause: ack: +4',
+    );
+  });
+
+  it('warns when a source-derived AC effect value disagrees with the explicit source clause', () => {
+    const summary = buildActorVerificationSummaryFromValues({
+      source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
+      actor: buildActorWithAcEffect({
+        coreVersion: '14.361',
+        key: 'system.attributes.ac.formula',
+        value: '4',
+      }),
+    });
+
+    expect(summary.warnings).toContain(
+      'Source-derived AC effect on Guarded Step has value 4, expected 2 from sourceText: +2 AC',
+    );
+  });
+
+  it('warns when a source-derived AC effect uses a target-incompatible change key', () => {
+    const summary = buildActorVerificationSummaryFromValues({
+      source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
+      actor: buildActorWithAcEffect({
+        coreVersion: '14.361',
+        key: 'system.attributes.ac.bonus',
+        value: '2',
+      }),
+    });
+
+    expect(summary.items[0]?.effects[0]).toEqual(
+      expect.objectContaining({
+        sourceDerivedAcEffect: true,
+        sourceText: '+2 AC',
+      }),
+    );
+    expect(summary.warnings).toContain(
+      'Source-derived AC effect on Guarded Step has key system.attributes.ac.bonus, expected system.attributes.ac.formula for Foundry v14',
+    );
+  });
+
+  it.each([
+    ['12.331', 'system.attributes.ac.bonus'],
+    ['14.361', 'system.attributes.ac.formula'],
+  ])('accepts a matching source-derived bonus AC effect for Foundry %s', (coreVersion, key) => {
+    const summary = buildActorVerificationSummaryFromValues({
+      source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
+      actor: buildActorWithAcEffect({ coreVersion, key, value: '2' }),
+    });
+
+    expect(summary.warnings).toEqual([]);
+  });
 });
+
+function buildActorWithAcEffect(options: {
+  coreVersion: string;
+  key: string;
+  value: string;
+}): Record<string, unknown> {
+  return {
+    name: 'AC Guardian',
+    type: 'npc',
+    _stats: { coreVersion: options.coreVersion },
+    system: {
+      attributes: { senses: {} },
+      details: {},
+    },
+    items: [
+      {
+        name: 'Guarded Step',
+        type: 'feat',
+        system: { activities: {} },
+        effects: [
+          {
+            name: 'Guarded Step',
+            changes: [
+              {
+                key: options.key,
+                mode: 2,
+                value: options.value,
+                priority: null,
+              },
+            ],
+            flags: {
+              fvttJsonGenerator: {
+                sourceDerivedAcEffect: true,
+                sourceText: '+2 AC',
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}

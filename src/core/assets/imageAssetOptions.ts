@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ImageAssetOptions, ImageTokenCrop } from './imageAssets';
+import { hasCompleteNormalizedCropRect } from './tokenCrop';
 
 export function buildImageAssetOptionsFromCli(options: {
   imageMode?: unknown;
@@ -71,6 +72,9 @@ export function loadTokenCropOverrides(path: string): Record<string, ImageTokenC
       if (typeof numberValue !== 'number' || !Number.isFinite(numberValue) || numberValue < 0 || numberValue > 1) {
         throw new Error(`Invalid token crop ${key}.${field} in ${path}: expected a number from 0 to 1`);
       }
+    }
+    if (!hasCompleteNormalizedCropRect(crop)) {
+      throw new Error(`Invalid token crop entry for ${key} in ${path}`);
     }
     if (crop.width <= 0 || crop.height <= 0) {
       throw new Error(`Invalid token crop ${key} in ${path}: width and height must be greater than 0`);

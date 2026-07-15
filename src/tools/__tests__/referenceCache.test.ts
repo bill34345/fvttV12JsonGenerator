@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { bootstrapReferenceCache, verifyReferenceCache, type ReferenceManifest } from '../referenceCache';
+import {
+  bootstrapReferenceCache,
+  formatReferenceCacheStatus,
+  verifyReferenceCache,
+  type ReferenceManifest,
+} from '../referenceCache';
 
 const roots: string[] = [];
 
@@ -27,6 +32,65 @@ describe('reference cache', () => {
 
     expect(verifyReferenceCache(manifest, root).components).toEqual([
       expect.objectContaining({ id: 'dnd5e-5.3.3', status: 'missing' }),
+    ]);
+  });
+
+  it('distinguishes an unreadable Git checkout from a revision mismatch', async () => {
+    const root = tempRoot();
+    const target = join(root, '.local', 'references', 'dnd5e', '5.3.3', 'repo');
+    await Bun.write(join(target, 'sentinel.txt'), 'keep');
+    const manifest = fixtureManifest('deadbeef');
+
+    const result = verifyReferenceCache(manifest, root, {
+      runGit: () => ({
+        ok: false,
+        command: `git -C ${target} rev-parse HEAD`,
+        args: ['-C', target, 'rev-parse', 'HEAD'],
+        status: 128,
+        stdout: '',
+        stderr: `fatal: detected dubious ownership in repository at '${target}'`,
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.components).toEqual([
+      expect.objectContaining({
+        id: 'dnd5e-5.3.3',
+        status: 'git-error',
+        expectedRevision: 'deadbeef',
+        gitError: expect.objectContaining({
+          status: 128,
+          stderr: expect.stringContaining('dubious ownership'),
+        }),
+      }),
+    ]);
+    expect(result.components[0]?.actualRevision).toBeUndefined();
+    expect(formatReferenceCacheStatus(result.components[0]!)).toContain('dubious ownership');
+  });
+
+  it('reports a readable checkout with the wrong revision as mismatch', async () => {
+    const root = tempRoot();
+    const target = join(root, '.local', 'references', 'dnd5e', '5.3.3', 'repo');
+    await Bun.write(join(target, 'sentinel.txt'), 'keep');
+    const manifest = fixtureManifest('deadbeef');
+
+    const result = verifyReferenceCache(manifest, root, {
+      runGit: () => ({
+        ok: true,
+        command: `git -C ${target} rev-parse HEAD`,
+        args: ['-C', target, 'rev-parse', 'HEAD'],
+        status: 0,
+        stdout: 'cafebabe\n',
+        stderr: '',
+      }),
+    });
+
+    expect(result.components).toEqual([
+      expect.objectContaining({
+        status: 'mismatch',
+        expectedRevision: 'deadbeef',
+        actualRevision: 'cafebabe',
+      }),
     ]);
   });
 

@@ -560,6 +560,7 @@ describe('ActorGenerator', () => {
         'Brittle Shell. The creature withdraws without changing AC.',
         'Shell Drop. The creature AC becomes 14 until it finishes a short or long rest.',
         'Guarded Step. The creature gains +9 AC until the start of its next turn.',
+        'Bleeding Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage.',
       ],
     };
 
@@ -567,8 +568,10 @@ describe('ActorGenerator', () => {
     const brittleShell = actor.items.find((item: any) => item.name === 'Brittle Shell');
     const shellDrop = actor.items.find((item: any) => item.name === 'Shell Drop');
     const guardedStep = actor.items.find((item: any) => item.name === 'Guarded Step');
+    const bleedingBite = actor.items.find((item: any) => item.name === 'Bleeding Bite');
 
     expect(brittleShell?.effects ?? []).toHaveLength(0);
+    expect(bleedingBite?.effects ?? []).toHaveLength(0);
     expect(shellDrop?.effects?.[0]?.changes).toEqual([
       expect.objectContaining({
         key: 'system.attributes.ac.flat',

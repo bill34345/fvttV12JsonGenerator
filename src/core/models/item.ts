@@ -19,7 +19,7 @@ export type ItemType =
 /**
  * Rarity values for items
  */
-export type ItemRarity = "common" | "uncommon" | "rare" | "veryrare" | "legendary" | "artifact";
+export type ItemRarity = "common" | "uncommon" | "rare" | "veryRare" | "legendary" | "artifact";
 
 /**
  * Attunement requirement types

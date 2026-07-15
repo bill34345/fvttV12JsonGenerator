@@ -28,6 +28,7 @@ type GeneratedActor = {
       description?: { value?: string };
       type?: { value?: string; subtype?: string };
       range?: any;
+      damage?: any;
     };
   }>;
 };

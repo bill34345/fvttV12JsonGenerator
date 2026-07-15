@@ -2,7 +2,7 @@
 
 Status: **Partial**
 
-Tested on: 2026-07-11
+Tested on: 2026-07-11; remediation regression retest: 2026-07-15
 
 The narrow Actor runtime gates pass in both a zero-module core world and a locked minimal modded world. The authenticated copied-world smoke workflow also passes after an explicitly authorized local-only Gamemaster password reset. The overall Task 8 decision remains `Partial` because the production-equivalent complete-module gate still has reproducible runtime errors.
 
@@ -59,6 +59,24 @@ All six modded-profile Actors imported into the locked minimal runtime. All six 
 
 This passes the narrow MIDI-QOL `14.0.9` contract. DAE `14.0.12` coexistence passed, but no DAE-specific behavior is claimed because this corpus does not contain a source-derived DAE-only fixture.
 
+## 2026-07-15 Semantic Remediation Regression Retest
+
+The three Actors whose earlier acceptance artifacts were invalidated by the false AC parser and wrapped-title/condition findings were regenerated through `v14AcceptanceSuite` and re-imported. This section amends the earlier pass evidence; it does not erase the chronology of the defects discovered afterward.
+
+| Profile | Runtime and exercised paths | Result |
+| --- | --- | --- |
+| Core | Foundry `14.364`, dnd5e `5.3.3`, zero modules; Bonebreaker `Multiattack`/`Longbow`/`War Cry`, Bleeding Guardian `Bleeding Bite`, and White Tusk `Minion: Savage Horde`/`Multiattack`/`Blood-Searing Spear` | Pass |
+| Minimal modded | Foundry `14.364`, dnd5e `5.3.3`, MIDI-QOL `14.0.9`, DAE `14.0.12`, libWrapper `1.13.5.1`, socketlib `v1.1.4`; the same seven Activities | Pass |
+
+Semantic observations:
+
+- The three sheets opened in both profiles. Every listed Activity created a chat message.
+- Bonebreaker, Bleeding Guardian, and White Tusk AC remained `16`, `13`, and `14` before and after every exercised Activity; no imported Actor-level or item-level effect contained the former false `ack:` AC change.
+- White Tusk rendered six separate items. `Spirit-Bonded Body` appeared as its own Bonus Action, while `Minion: Savage Horde` stayed a separate feature; neither carried an invented `Unconscious` effect.
+- The modded Bleeding Bite Activity referenced the single `Bleeding` effect, and the imported runtime value remained `flags.midi-qol.OverTime = turn=start,damageRoll=1d6,damageType=piercing,label=Bleeding`.
+- No exercised Activity failed. The modded console emitted module/runtime deprecation warnings (`ChatMessage#applyRollMode` and dnd5e senses aliases); the generated files themselves use `system.attributes.senses.ranges`. The copied matrix world also reports pre-existing invalid Calendaria journal-page data while Calendaria is inactive. These observations are recorded as non-blocking compatibility debt, not hidden as a clean-console claim.
+- Temporary Actors/folders were deleted, MIDI-QOL was returned to its prior disabled state in the matrix world, both local servers were stopped, and `server-mirror/Config/options.json` was restored to `cor-cotn`. Production was not inspected or modified.
+
 ## Production-Equivalent Compatibility Gate
 
 This gate does **not** pass.
@@ -84,6 +102,7 @@ This gate does **not** pass.
 | No blocking errors in accepted narrow segments | Pass | No browser/server errors in the core segment; minimal modded proof completed |
 | Full production-equivalent module set | Fail | Additional scene-control error after earlier module isolations |
 | Copied production-world workflow | Pass | Authenticated local copy; real character sheet, `1d20 - 1 = 6` save/chat, journal, landing Scene, and Token restoration exercised |
+| 2026-07-15 contaminated-Actor regression retest | Pass | Three affected Actors, two profiles, six sheets, fourteen Activity executions total, unchanged AC, restored White Tusk item boundary, and preserved Bleeding OverTime binding |
 
 Overall status: **Partial**. Core Actor runtime support, the locked minimal modded Actor contract, and sampled authenticated copied-world workflows pass. Full production-equivalent error-free module coexistence fails and must not be described as passing.
 

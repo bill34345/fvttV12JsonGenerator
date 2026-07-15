@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import {
+  formatGitCommandFailure,
+  runGitCommand,
+  type GitCommandFailure,
+  type GitCommandResult,
+} from './gitCommand';
 
 export interface ReferenceComponent {
   id: string;
@@ -20,29 +25,59 @@ export interface ReferenceManifest {
 export interface ReferenceCacheStatus {
   id: string;
   target: string;
-  status: 'ok' | 'missing' | 'mismatch';
+  status: 'ok' | 'missing' | 'git-error' | 'mismatch';
   expectedRevision: string;
   actualRevision?: string;
+  gitError?: GitCommandFailure;
+}
+
+export interface VerifyReferenceCacheOptions {
+  runGit?: (args: readonly string[]) => GitCommandResult;
 }
 
 export function loadReferenceManifest(path = resolve('references/reference-cache-manifest.json')): ReferenceManifest {
   return JSON.parse(readFileSync(path, 'utf8')) as ReferenceManifest;
 }
 
-export function verifyReferenceCache(manifest: ReferenceManifest, repoRoot = process.cwd()): { ok: boolean; components: ReferenceCacheStatus[] } {
+export function verifyReferenceCache(
+  manifest: ReferenceManifest,
+  repoRoot = process.cwd(),
+  options: VerifyReferenceCacheOptions = {},
+): { ok: boolean; components: ReferenceCacheStatus[] } {
+  const executeGit = options.runGit ?? ((args: readonly string[]) => runGitCommand(args));
   const components = manifest.components.map((component): ReferenceCacheStatus => {
     const target = resolve(repoRoot, component.target);
     if (!existsSync(target)) {
       return { id: component.id, target, status: 'missing', expectedRevision: component.revision };
     }
 
-    const actualRevision = git(['-C', target, 'rev-parse', 'HEAD'], false);
-    if (!actualRevision || actualRevision.toLowerCase() !== component.revision.toLowerCase()) {
-      return { id: component.id, target, status: 'mismatch', expectedRevision: component.revision, actualRevision: actualRevision || undefined };
+    const revisionResult = executeGit(['-C', target, 'rev-parse', 'HEAD']);
+    if (!revisionResult.ok) {
+      return {
+        id: component.id,
+        target,
+        status: 'git-error',
+        expectedRevision: component.revision,
+        gitError: revisionResult,
+      };
+    }
+    const actualRevision = revisionResult.stdout.trim();
+    if (actualRevision.toLowerCase() !== component.revision.toLowerCase()) {
+      return { id: component.id, target, status: 'mismatch', expectedRevision: component.revision, actualRevision };
     }
     return { id: component.id, target, status: 'ok', expectedRevision: component.revision, actualRevision };
   });
   return { ok: components.every((component) => component.status === 'ok'), components };
+}
+
+export function formatReferenceCacheStatus(component: ReferenceCacheStatus): string {
+  if (component.status === 'git-error' && component.gitError) {
+    return `${component.id}: git-error - ${formatGitCommandFailure(component.gitError)}`;
+  }
+  if (component.status === 'mismatch') {
+    return `${component.id}: mismatch - expected ${component.expectedRevision}, received ${component.actualRevision ?? 'unknown'}`;
+  }
+  return `${component.id}: ${component.status}`;
 }
 
 export async function bootstrapReferenceCache(
@@ -93,9 +128,9 @@ export async function bootstrapReferenceCache(
 }
 
 function git(args: string[], throwOnError: boolean): string | null {
-  const result = spawnSync('git', args, { encoding: 'utf8', windowsHide: true });
-  if (result.status !== 0) {
-    if (throwOnError) throw new Error(result.stderr.trim() || `git ${args.join(' ')} failed`);
+  const result = runGitCommand(args);
+  if (!result.ok) {
+    if (throwOnError) throw new Error(formatGitCommandFailure(result));
     return null;
   }
   return result.stdout.trim();
@@ -107,7 +142,7 @@ async function main(): Promise<void> {
   const manifest = loadReferenceManifest();
   if (command === 'verify') {
     const result = verifyReferenceCache(manifest);
-    for (const component of result.components) console.log(`${component.id}: ${component.status}`);
+    for (const component of result.components) console.log(formatReferenceCacheStatus(component));
     process.exitCode = result.ok ? 0 : 1;
     return;
   }

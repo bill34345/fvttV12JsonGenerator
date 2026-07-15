@@ -13,6 +13,7 @@ import {
 } from '@radix-ui/react-icons';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { hasCompleteNormalizedCropRect, type ImageTokenCrop as TokenCrop } from '../../core/assets/tokenCrop';
 import {
   convertSingle,
   createJob,
@@ -42,14 +43,6 @@ interface ToolConfig {
   accepts: string;
   needsFile: boolean;
   supportsImageAssets?: boolean;
-}
-
-interface TokenCrop {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  fit?: 'cover' | 'contain';
 }
 
 const tools: ToolConfig[] = [
@@ -815,6 +808,9 @@ function parseImageTokenCrops(text: string): Record<string, TokenCrop> | undefin
       if (typeof numberValue !== 'number' || !Number.isFinite(numberValue) || numberValue < 0 || numberValue > 1) {
         throw new Error(`token-crops.json 的 ${hash}.${field} 必须是 0 到 1 的数字。`);
       }
+    }
+    if (!hasCompleteNormalizedCropRect(crop)) {
+      throw new Error(`token-crops.json 的 ${hash} 必须是完整 crop 对象。`);
     }
     if (crop.width <= 0 || crop.height <= 0 || crop.left + crop.width > 1 || crop.top + crop.height > 1) {
       throw new Error(`token-crops.json 的 ${hash} 裁剪范围必须在图片内部。`);

@@ -107,7 +107,7 @@ export async function runTokenReview(options: TokenReviewOptions): Promise<Token
   const records = loadRecords(crawlDir);
   const tokenCropKeys = new Set(Object.keys(loadOptionalTokenCrops(options.tokenCropsPath ?? join(crawlDir, 'plaintext', 'token-crops.json'))));
   const confirmations = loadConfirmations(options.confirmationPath ?? join(crawlDir, 'plaintext', 'token-review-confirmed.json'));
-  const reviewItems = [];
+  const reviewItems: TokenReviewInput['items'] = [];
 
   for (const actor of actors) {
     const tokenUrl = stringOrUndefined(actor.data.prototypeToken?.texture?.src);
@@ -135,7 +135,7 @@ export async function runTokenReview(options: TokenReviewOptions): Promise<Token
 
     reviewItems.push({
       slug,
-      displayName: actor.data.name ?? manifest?.heading ?? slug,
+      displayName: stringOrUndefined(actor.data.name) ?? manifest?.heading ?? slug,
       actorJsonPath: actor.path,
       sourceImageUrl: actorImg,
       sourceHash,
@@ -331,10 +331,13 @@ function parseTokenAssetKey(urlOrPath: string): { slug: string; hash: string } |
     const fileName = basename(new URL(urlOrPath).pathname);
     const match = /^(.+)__([a-f0-9]{8})\.[^.]+$/i.exec(fileName);
     if (!match) return undefined;
-    return { slug: match[1].toLowerCase(), hash: match[2].toLowerCase() };
+    const [, slug, hash] = match;
+    return slug && hash ? { slug: slug.toLowerCase(), hash: hash.toLowerCase() } : undefined;
   } catch {
     const match = /^(.+)__([a-f0-9]{8})\.[^.]+$/i.exec(basename(urlOrPath));
-    return match ? { slug: match[1].toLowerCase(), hash: match[2].toLowerCase() } : undefined;
+    if (!match) return undefined;
+    const [, slug, hash] = match;
+    return slug && hash ? { slug: slug.toLowerCase(), hash: hash.toLowerCase() } : undefined;
   }
 }
 
@@ -371,7 +374,8 @@ function countBy(values: string[]): Map<string, number> {
 }
 
 function slugFromFileName(path: string): string {
-  return basename(path, '.json').split('__')[0].toLowerCase();
+  const fileName = basename(path, '.json');
+  return (fileName.split('__')[0] ?? fileName).toLowerCase();
 }
 
 function slugFromManifestFile(fileName: string | undefined): string | undefined {

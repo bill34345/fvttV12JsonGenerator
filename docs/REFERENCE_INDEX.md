@@ -42,6 +42,8 @@ bun run src/tools/referenceIndex.ts
 
 The bootstrap command never replaces a valid existing cache until the staged clone has checked out the exact revision. A failed clone, checkout, or revision check leaves the existing target untouched.
 
+`references verify` reports four distinct states: `ok`, `missing`, `mismatch`, and `git-error`. `mismatch` is used only when Git successfully reads `HEAD` and the revision differs. Missing Git, unsafe-directory/ownership failures, access errors, and other unreadable-checkout failures are reported as `git-error` with the Git command, exit status, and diagnostic text; they never masquerade as a revision mismatch.
+
 ## Locked v14 evidence
 
 - Foundry generated metadata: `14.361`

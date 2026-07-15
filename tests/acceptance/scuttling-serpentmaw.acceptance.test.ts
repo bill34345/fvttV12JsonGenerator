@@ -15,12 +15,19 @@ const SOURCE_PATH = join(
 type GeneratedActor = {
   items: Array<{
     name: string;
-    effects?: Array<{ img?: string; statuses?: string[] }>;
+    type?: string;
+    effects?: Array<{
+      img?: string;
+      statuses?: string[];
+      flags?: Record<string, any>;
+      changes?: Array<Record<string, any>>;
+    }>;
     flags?: Record<string, any>;
     system: {
       activation?: { type?: string; cost?: number; condition?: string };
       activities?: Record<string, any>;
       description?: { value?: string };
+      damage?: any;
     };
   }>;
 };

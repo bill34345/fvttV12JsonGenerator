@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { requireGitText } from './gitCommand';
 
 export type AntiOverfitRule =
   | 'action-name-predicate'
@@ -28,6 +28,24 @@ interface RuleCheck {
   rule: AntiOverfitRule;
   regex: RegExp;
   message: string;
+}
+
+interface AntiOverfitSource {
+  filePath: string;
+  text: string;
+}
+
+export interface AntiOverfitAuditExecutionResult {
+  exitCode: 0 | 1;
+  stdout: string[];
+  stderr: string[];
+}
+
+export interface AntiOverfitAuditDependencies {
+  collectDefaultSources?: () => AntiOverfitSource[];
+  collectAllProductionSources?: () => AntiOverfitSource[];
+  auditFiles?: (filePaths: string[]) => AntiOverfitFinding[];
+  auditSources?: (sources: AntiOverfitSource[]) => AntiOverfitFinding[];
 }
 
 const ALLOW_COMMENT =
@@ -157,7 +175,7 @@ export function auditAntiOverfitFiles(filePaths: string[]): AntiOverfitFinding[]
   });
 }
 
-function auditAntiOverfitSources(sources: Array<{ filePath: string; text: string }>): AntiOverfitFinding[] {
+function auditAntiOverfitSources(sources: AntiOverfitSource[]): AntiOverfitFinding[] {
   return sources.flatMap((source) => auditAntiOverfitText(source.filePath, source.text));
 }
 
@@ -198,7 +216,7 @@ function isProductionAuditableFile(filePath: string): boolean {
     && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(normalized);
 }
 
-function collectDefaultSources(): Array<{ filePath: string; text: string }> {
+function collectDefaultSources(): AntiOverfitSource[] {
   const tracked = collectAddedLineSources();
   const trackedPaths = new Set(tracked.map((source) => source.filePath));
   const untracked = runGitLines(['ls-files', '--others', '--exclude-standard', '--', 'src', 'scripts'])
@@ -209,14 +227,14 @@ function collectDefaultSources(): Array<{ filePath: string; text: string }> {
   return [...tracked, ...untracked];
 }
 
-function collectAllProductionSources(): Array<{ filePath: string; text: string }> {
+function collectAllProductionSources(): AntiOverfitSource[] {
   return runGitLines(['ls-files', '--', 'src', 'scripts'])
     .filter(isProductionAuditableFile)
     .filter((filePath) => existsSync(filePath))
     .map((filePath) => ({ filePath, text: readFileSync(filePath, 'utf-8') }));
 }
 
-function collectAddedLineSources(): Array<{ filePath: string; text: string }> {
+function collectAddedLineSources(): AntiOverfitSource[] {
   const diff = runGitText(['diff', '--unified=0', '--diff-filter=ACMRT', 'HEAD', '--', 'src', 'scripts']);
   const sources = new Map<string, string[]>();
   let currentPath = '';
@@ -259,38 +277,73 @@ function runGitLines(args: string[]): string[] {
 }
 
 function runGitText(args: string[]): string {
-  const result = spawnSync('git', args, { encoding: 'utf-8' });
-  if (result.status !== 0) return '';
-  return result.stdout;
+  return requireGitText(args);
+}
+
+export function executeAntiOverfitAudit(
+  args: string[],
+  dependencies: AntiOverfitAuditDependencies = {},
+): AntiOverfitAuditExecutionResult {
+  const collectDefault = dependencies.collectDefaultSources ?? collectDefaultSources;
+  const collectAll = dependencies.collectAllProductionSources ?? collectAllProductionSources;
+  const auditFiles = dependencies.auditFiles ?? auditAntiOverfitFiles;
+  const auditSources = dependencies.auditSources ?? auditAntiOverfitSources;
+
+  try {
+    const checkAll = args.includes('--all');
+    const explicitFiles = args.filter((arg) => !arg.startsWith('-'));
+    const sources = explicitFiles.length > 0
+      ? []
+      : checkAll
+        ? collectAll()
+        : collectDefault();
+
+    if (checkAll && explicitFiles.length === 0 && sources.length === 0) {
+      return {
+        exitCode: 1,
+        stdout: [],
+        stderr: ['anti-overfit audit failed: zero auditable production sources were discovered for --all'],
+      };
+    }
+
+    const findings = explicitFiles.length > 0
+      ? auditFiles(explicitFiles)
+      : auditSources(sources);
+
+    if (findings.length === 0) {
+      const checkedCount = explicitFiles.length > 0 ? explicitFiles.length : sources.length;
+      return {
+        exitCode: 0,
+        stdout: [`anti-overfit audit passed (${checkedCount} source${checkedCount === 1 ? '' : 's'} checked)`],
+        stderr: [],
+      };
+    }
+
+    const stderr = [
+      `anti-overfit audit failed (${findings.length} finding${findings.length === 1 ? '' : 's'})`,
+    ];
+    for (const finding of findings) {
+      stderr.push(`${finding.filePath}:${finding.line}:${finding.column} ${finding.rule}`);
+      stderr.push(`  ${finding.message}`);
+      stderr.push(`  evidence: ${finding.evidence}`);
+      stderr.push(`  required: ${finding.requiredAction}`);
+    }
+    return { exitCode: 1, stdout: [], stderr };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      exitCode: 1,
+      stdout: [],
+      stderr: [`anti-overfit audit failed: ${message}`],
+    };
+  }
 }
 
 function runCli(): void {
-  const args = process.argv.slice(2);
-  const checkAll = args.includes('--all');
-  const explicitFiles = args.filter((arg) => !arg.startsWith('-'));
-  const sources = explicitFiles.length > 0
-    ? []
-    : checkAll
-      ? collectAllProductionSources()
-      : collectDefaultSources();
-  const findings = explicitFiles.length > 0
-    ? auditAntiOverfitFiles(explicitFiles)
-    : auditAntiOverfitSources(sources);
-
-  if (findings.length === 0) {
-    const checkedCount = explicitFiles.length > 0 ? explicitFiles.length : sources.length;
-    console.log(`anti-overfit audit passed (${checkedCount} source${checkedCount === 1 ? '' : 's'} checked)`);
-    return;
-  }
-
-  console.error(`anti-overfit audit failed (${findings.length} finding${findings.length === 1 ? '' : 's'})`);
-  for (const finding of findings) {
-    console.error(`${finding.filePath}:${finding.line}:${finding.column} ${finding.rule}`);
-    console.error(`  ${finding.message}`);
-    console.error(`  evidence: ${finding.evidence}`);
-    console.error(`  required: ${finding.requiredAction}`);
-  }
-  process.exitCode = 1;
+  const result = executeAntiOverfitAudit(process.argv.slice(2));
+  for (const line of result.stdout) console.log(line);
+  for (const line of result.stderr) console.error(line);
+  process.exitCode = result.exitCode;
 }
 
 if (import.meta.main) {

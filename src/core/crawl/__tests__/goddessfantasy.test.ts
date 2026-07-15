@@ -134,7 +134,7 @@ describe('goddessfantasy board crawl modes', () => {
     try {
       writeRecords(outDir, [recordFixture('100', 'Old One'), recordFixture('101', 'Old Two')]);
       const result = await runGoddessFantasyBoardCrawl({
-        boardUrl: boardUrlFor(server.port),
+        boardUrl: boardUrlFor(server.port!),
         cookieHeader: 'PHPSESSID=test',
         skipAuthProbe: true,
         outDir,
@@ -167,7 +167,7 @@ describe('goddessfantasy board crawl modes', () => {
     try {
       writeRecords(outDir, [recordFixture('100', 'Old One')]);
       const result = await runGoddessFantasyBoardCrawl({
-        boardUrl: boardUrlFor(server.port),
+        boardUrl: boardUrlFor(server.port!),
         cookieHeader: 'PHPSESSID=test',
         skipAuthProbe: true,
         outDir,
@@ -200,7 +200,7 @@ describe('goddessfantasy board crawl modes', () => {
       writeRecords(outDir, [recordFixture('100', 'Old One'), recordFixture('101', 'Old Two')]);
       const before = readFileSync(join(outDir, 'records.json'), 'utf-8');
       const result = await runGoddessFantasyBoardCrawl({
-        boardUrl: boardUrlFor(server.port),
+        boardUrl: boardUrlFor(server.port!),
         cookieHeader: 'PHPSESSID=test',
         skipAuthProbe: true,
         outDir,
@@ -233,7 +233,7 @@ describe('goddessfantasy board crawl modes', () => {
     try {
       writeRecords(outDir, [recordFixture('100', 'Old One')]);
       const result = await runGoddessFantasyBoardCrawl({
-        boardUrl: boardUrlFor(server.port),
+        boardUrl: boardUrlFor(server.port!),
         cookieHeader: 'PHPSESSID=test',
         skipAuthProbe: true,
         outDir,
