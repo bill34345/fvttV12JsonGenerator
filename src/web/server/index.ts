@@ -1,19 +1,29 @@
 import { handleApiRequest } from './api';
 import { extname, join, relative, resolve } from 'node:path';
+import { getWebSecurityConfig } from './security/config';
 
-const port = Number(Bun.env.FVTT_WEB_API_PORT ?? 5174);
+const securityConfig = getWebSecurityConfig();
 const webRoot = resolve(process.cwd(), 'dist/web');
 
 Bun.serve({
-  port,
-  fetch(request) {
+  hostname: securityConfig.hostname,
+  port: securityConfig.port,
+  maxRequestBodySize: securityConfig.maxRequestBodyBytes,
+  fetch(request, server) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) return handleApiRequest(request);
+    if (url.pathname.startsWith('/api/')) {
+      return handleApiRequest(request, {
+        remoteAddress: server.requestIP(request)?.address ?? null,
+        securityConfig,
+      });
+    }
     return serveStatic(url.pathname);
   },
 });
 
-console.log(`fvttV12Json web listening on http://localhost:${port}`);
+console.log(
+  `fvttV12Json web listening on http://${securityConfig.hostname}:${securityConfig.port} (${securityConfig.publicMode ? 'authenticated public/proxied' : 'local'})`,
+);
 
 async function serveStatic(pathname: string): Promise<Response> {
   const filePath = resolveStaticPath(pathname);

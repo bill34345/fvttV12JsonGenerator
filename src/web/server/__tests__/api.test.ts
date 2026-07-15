@@ -12,6 +12,10 @@ const SAMPLE_SOURCE = resolve(
 const TEMP_TEST_DIR = resolve(process.cwd(), 'temp/web-tests');
 
 beforeEach(() => {
+  delete Bun.env.FVTT_WEB_PUBLIC_MODE;
+  delete Bun.env.FVTT_WEB_HOST;
+  delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
   delete Bun.env.GODDESSFANTASY_COOKIE;
@@ -20,6 +24,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete Bun.env.FVTT_WEB_PUBLIC_MODE;
+  delete Bun.env.FVTT_WEB_HOST;
+  delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.TRANSLATION_API_KEY;
   delete Bun.env.OPENAI_API_KEY;
@@ -211,7 +219,9 @@ describe('web API', () => {
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.data.publicAccess).toBe(true);
+    expect(body.data.publicAccess).toBe(false);
+    expect(body.data.authenticationRequired).toBe(false);
+    expect(body.data.deploymentMode).toBe('local');
     expect(body.data.limits.collectionUploadMb).toBe(20);
     expect(body.data.imageMode).toBe('ssh');
     expect(body.data.imagePublicBaseUrl).toBe('http://49.232.12.153/imgSource');
@@ -219,6 +229,30 @@ describe('web API', () => {
     expect(body.data.imageTokenSize).toBe(1024);
     expect(body.data.imageTokenFormat).toBe('webp');
     expect(body.data.imageTokenFrameConfigured).toBe(true);
+  });
+
+  it('requires the configured bearer token before public-mode API work', async () => {
+    Bun.env.FVTT_WEB_PUBLIC_MODE = '1';
+    Bun.env.FVTT_WEB_AUTH_TOKEN = '0123456789abcdef0123456789abcdef';
+
+    const missing = await handleApiRequest(new Request('http://localhost/api/capabilities'));
+    const missingBody = await missing.json();
+    expect(missing.status).toBe(401);
+    expect(missingBody.error.code).toBe('AUTH_REQUIRED');
+
+    const wrong = await handleApiRequest(new Request('http://localhost/api/capabilities', {
+      headers: { authorization: 'Bearer wrong-token' },
+    }));
+    expect(wrong.status).toBe(401);
+
+    const accepted = await handleApiRequest(new Request('http://localhost/api/capabilities', {
+      headers: { authorization: 'Bearer 0123456789abcdef0123456789abcdef' },
+    }));
+    const acceptedBody = await accepted.json();
+    expect(accepted.status).toBe(200);
+    expect(acceptedBody.data.publicAccess).toBe(true);
+    expect(acceptedBody.data.authenticationRequired).toBe(true);
+    expect(acceptedBody.data.deploymentMode).toBe('public');
   });
 
   it('converts a single upload with a server download URL', async () => {

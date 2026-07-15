@@ -22,6 +22,11 @@ import { getWebImageAssetPreset } from './imageAssetPreset';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../core/foundryTarget';
+import {
+  getWebSecurityConfig,
+  isAuthorizedApiRequest,
+  type WebSecurityConfig,
+} from './security/config';
 
 export { TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 
@@ -70,12 +75,25 @@ const publicJobTypes = new Set<WebJobType>([
 
 cleanupExpiredJobs();
 
-export async function handleApiRequest(request: Request): Promise<Response> {
+export interface ApiRequestContext {
+  remoteAddress?: string | null;
+  securityConfig?: WebSecurityConfig;
+}
+
+export async function handleApiRequest(
+  request: Request,
+  context: ApiRequestContext = {},
+): Promise<Response> {
   const url = new URL(request.url);
   const pathModeEnabled = isPathModeEnabled();
-  const clientIp = getClientIp(request);
 
   try {
+    const securityConfig = context.securityConfig ?? getWebSecurityConfig();
+    if (!isAuthorizedApiRequest(request, securityConfig)) {
+      return jsonFailure(401, 'AUTH_REQUIRED', 'Authentication is required.');
+    }
+    const clientIp = getClientIp(request);
+
     if (request.method !== 'GET' && !checkShortRateLimit(clientIp)) {
       throw userError('RATE_LIMITED', '请求过于频繁，请稍后再试。', 429);
     }
@@ -106,7 +124,9 @@ export async function handleApiRequest(request: Request): Promise<Response> {
           longJobsPerIp: 1,
           tempRetentionHours: 24,
         },
-        publicAccess: true,
+        publicAccess: securityConfig.publicMode,
+        authenticationRequired: securityConfig.publicMode,
+        deploymentMode: securityConfig.publicMode ? 'public' : 'local',
       });
     }
 
