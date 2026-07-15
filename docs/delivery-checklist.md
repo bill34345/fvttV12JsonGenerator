@@ -17,7 +17,7 @@ This checklist separates repository delivery gates from deeper product-support c
 - [x] v14 core and modded acceptance batches retain six schema-valid samples each with zero actor-verification warnings.
 - [x] Representative v12/v14 Shield and v14 core/modded Damage-Bound Warden CLI outputs were read against their source Markdown.
 - [x] Acceptance documents retain **Fail / Partial** for exact production-equivalent module coexistence and distinguish the reduced 84-module startup from parity.
-- [x] Repository hygiene confirms no tracked `.local` runtime data, user database, password, cookie, private key, raw server log, or production inventory snapshot.
+- [x] Repository hygiene confirms no tracked `.local` runtime data, user database, password, cookie, private key, raw server log, or production inventory snapshot; the latest M10 run checked 1,605 tracked paths.
 - [ ] Immediately before a real push, confirm `git status --short` contains only the intended staged delivery. Existing user-owned edits are not part of this remediation and must not be staged or overwritten.
 
 ## Product gates still open

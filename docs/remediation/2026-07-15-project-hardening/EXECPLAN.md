@@ -176,6 +176,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [ ] (2026-07-15) M9 Task 3 code/CLI half completed: per-status source-duration binding, core stripping, exact modded-v14 DAE mapping, a real bilingual/generalization fixture, two CLI/verifier passes, and the 738-test aggregate gate pass. Locked source inspection showed DAE registers the key while MIDI-QOL consumes real damage and removes the effect; PROD-001 stays open until that runtime behavior is exercised.
 - [x] (2026-07-15) M9 Task 4 closed PROD-004: the 19-category executable corpus matrix covers the required language/document/version/profile/positive/negative/regression dimensions; the focused matrix passed 148 tests / 656 expectations and aggregate CI passed 738 / 2,921 without upgrading blocked runtime or external claims.
 - [x] (2026-07-15) M9 Task 5 closed DOC-002: thirteen-layer current support matrix, README/checklist reconciliation, three append-only dated amendments, safe external resume commands, evidence-path validation, and a clean current-claim contradiction scan now agree. PROD-003 and PROD-005 remain explicit external boundaries.
+- [ ] (2026-07-15) M10 pre-final audit completed every unblocked repository/CLI/source gate and updated the current support evidence. Browser and local Foundry runtime rows remain open; this is recorded as pre-final evidence, not milestone or Goal completion.
 - [ ] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
 - [ ] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
@@ -401,14 +402,14 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 
 ## Milestone 10: Final Acceptance and Goal Closure
 
-- [ ] Run `git status --short` and classify every remaining change by owner and milestone.
-- [ ] Run production and broad type checks with zero supported-scope errors.
-- [ ] Run `bun test --max-concurrency 4` and the production-only coverage gate.
-- [ ] Run `bun run audit:anti-overfit` and `bun run audit:anti-overfit:all`; require a nonzero source count.
-- [ ] Run `bun run references -- verify` and require exact-version success or an explicit external blocker.
-- [ ] Run `bun run web:build` and the browser upload/download smoke workflow.
-- [ ] Regenerate representative v12, v14 core, and v14 modded Actors plus a v14 Item through the project flow.
-- [ ] Perform source-to-output semantic review for every changed parser/generator behavior and sample unchanged unrelated outputs.
+- [x] Run `git status --short` and classify every remaining change by owner and milestone. Only the three pre-existing user-owned files remain outside committed remediation work.
+- [x] Run production and broad type checks with zero supported-scope errors.
+- [x] Run `bun test --max-concurrency 4` and the production-only coverage gate: 738/0 and 87.54% production lines / 88.40% production functions.
+- [x] Run `bun run audit:anti-overfit` and `bun run audit:anti-overfit:all`; the docs-only changed-source run checks 0 sources, while the required all-source run checks a nonzero 109 and passes.
+- [x] Run `bun run references -- verify` and require exact-version success or an explicit external blocker: `dnd5e-5.3.3: ok`.
+- [ ] Run `bun run web:build` and the browser upload/download smoke workflow. The build passes; current browser smoke remains unaccepted because gstack proactive use is disabled and the installed `browse.exe` cannot resolve its packaged `server.ts`; Chrome file upload is separately blocked by its file-URL permission.
+- [x] Regenerate representative v12, v14 core, and v14 modded Actors plus a v14 Item through the project flow; also regenerate the unrelated Jewel control.
+- [x] Perform source-to-output semantic review for every changed parser/generator behavior and sample unchanged unrelated outputs. Three `verify:actor` runs return zero warnings and the explicit M10 projection script passes.
 - [ ] Run the authorized local Foundry runtime matrix and preserve the boundary between minimal runtime, copied-world, and production claims.
 - [ ] Update every finding state, Outcomes & Retrospective, and the support matrix.
 - [ ] Close the Goal only when all authorized findings are `closed` and external blockers are either resolved or explicitly accepted by the user as remaining scope.
@@ -495,6 +496,10 @@ Semantic acceptance proves the user's actual goal:
   Evidence: the UI reached `导入数据: M9 Temporary Shield Import`; `waitForEvent("filechooser")` succeeded, then `fileChooser.setFiles` returned `Not allowed`. The plugin's packaged `chrome-file-upload-troubleshooting.md` identifies the required Chrome extension permission. No import/runtime claim was accepted; the server and options were cleanly restored.
 - Observation: DAE 14.0.12 registers the `isDamaged` special-duration key, but MIDI-QOL 14.0.9 is the installed component that observes actual damage and removes matching effects.
   Evidence: DAE `module/Systems/DAEdnd5e.js` registers `isDamaged`; MIDI's manifest requires DAE >=14.0.0, and `midi-qol.js` reads `flags.dae.specialDuration` in its damage workflow before invoking `removeEffectUuids`. Static generation can accept the flag mapping, but runtime expiry cannot honestly be described as DAE-alone behavior.
+- Observation: M10's headless browser fallback is not currently usable even though its executable exists, and project policy prevents auto-invoking it while gstack proactive behavior is disabled.
+  Evidence: `browse.exe status` fails with `Cannot find server.ts. Set BROWSE_SERVER_SCRIPT env or run from the browse source tree`; the installed `gstack/browse` tree contains `bin/` and `dist/` but no `src/server.ts`, and `gstack-config get proactive` reports `false`. No browser result was accepted from this path.
+- Observation: The final CLI/source projection remains stable after all M9 documentation work.
+  Evidence: v12/core, v14/core, and v14/modded Damage-Bound Warden Actors plus v14/core Shield and the unrelated Jewel regenerated through `src/index.ts`; all Actor verifiers returned zero warnings, and explicit source assertions passed for metadata, stats, attacks, effect scoping, Shield armor/Activities/recovery, and Jewel non-leakage.
 - Observation: The former deployment guide materially contradicted the implemented secure boundary until Milestone 8 documentation was rewritten.
   Evidence: the old guide described the first version as publicly open without application authentication. Current code, process probes, capabilities output, README, Web AGENTS rules, and deployment examples now agree on loopback default plus explicit authenticated public/proxied mode.
 
@@ -572,6 +577,9 @@ Semantic acceptance proves the user's actual goal:
 - Decision: Make `current-support-matrix.md` the canonical present-tense claim layer and amend dated reports append-only.
   Rationale: Historical reports must retain what was known and what failed at their timestamps. A separate current matrix can reconcile later evidence without erasing chronology, while explicit links and status vocabulary prevent narrow Pass rows from becoming blanket support claims.
   Date/Author: 2026-07-15, Codex.
+- Decision: Treat M10 as pre-final evidence while M9 runtime and external findings remain open, rather than using a clean repository gate to close the Goal early.
+  Rationale: Type, test, coverage, reference, build, CLI, and source checks prove repository and generation health, but they cannot prove Shield equip/Activity behavior, DAE+MIDI effect removal, authenticated crawling, or exact production-equivalent coexistence.
+  Date/Author: 2026-07-15, Codex.
 
 ## Outcomes & Retrospective
 
@@ -621,5 +629,7 @@ Program initialization outcome on 2026-07-15:
 2026-07-15: Closed PROD-004 with `docs/acceptance/current-corpus-matrix.md`. The matrix records 19 executable and bounded categories across the requested language, Actor/Item, version, profile, effect, parser, close-negative, and unrelated-regression dimensions. The focused command passes 148 tests / 656 expectations and aggregate CI passes 738 / 2,921; explicit exclusions prevent those results from upgrading the still-blocked Foundry runtime, authenticated crawl, or production-equivalent module claims.
 
 2026-07-15: Closed DOC-002 after publishing the thirteen-layer current support matrix, reconciling README and the safe delivery checklist, appending dated amendments to the runtime/source/modded reports, preserving copied-world authentication chronology, recording safe external resume boundaries, validating every named evidence path, and running a clean current-claim contradiction scan. Historical statements remain visible before their amendments. PROD-003 remains blocked on explicit authenticated-session authorization and PROD-005 remains Fail/Partial on the exact production-equivalent gate.
+
+2026-07-15: Completed M10's unblocked pre-final audit without closing the milestone or Goal. Both typechecks, 738 tests, production coverage (87.54% lines / 88.40% functions), 109-source anti-overfit, dnd5e 5.3.3 reference verification, Web build, 116 Foundry Lab tests, and 1,605-path hygiene pass. Five representative outputs were regenerated only through the CLI; three Actor verifiers and the explicit source projection pass. The browser workflow and new local Foundry runtime behaviors remain unaccepted, so M9/M10 stay open.
 
 2026-07-15: Started Milestone 9 with focused plan `milestones/09-product-acceptance-and-support.md`. Inventory confirmed the Shield defect still originates in first-template inheritance, while locked dnd5e sources model a shield as base armor 2 plus a separate magical bonus 2. Installed DAE 14.0.12 exposes source-appropriate `isDamaged` special-duration behavior for the later DAE-only fixture. No authenticated crawl or production mutation was performed.

@@ -53,3 +53,10 @@ Required external state and authority: a valid authorized protected MCDM package
 ## Claim rule
 
 The project currently supports source-faithful generation for the bounded corpus, v12 by default, explicit v14 generation, core Actor runtime samples, and a narrow locked MIDI bleeding workflow. It does **not** currently support a blanket claim of full Foundry v14 production compatibility, complete module coexistence, live authenticated GoddessFantasy ingestion, standalone Item v14 runtime acceptance, or executed DAE/MIDI `isDamaged` behavior.
+
+## 2026-07-15 M10 Pre-Final Audit
+
+- Mechanical repository gates: production and broad typechecks pass; 738 tests / 2,921 expectations pass; production coverage is 87.54% lines and 88.40% functions; all-source anti-overfit passes with 109 sources; dnd5e 5.3.3 reference verification and Web build pass; Foundry Lab passes 116 tests / 417 expectations; repository hygiene passes across 1,605 tracked paths.
+- Regeneration: v12/core, v14/core, and v14/modded-v14 Damage-Bound Warden Actors, the v14/core Shield, and the unrelated v12 Jewel were regenerated only through `src/index.ts` into ignored output paths.
+- Semantic review: all three Actor verifier runs have zero warnings. Explicit assertions pass for source identity/stats/type/version metadata, native attack damage and reach, exactly scoped frightened/DAE behavior, the complete Shield armor/Activity/prone/reaction/duration/range/recovery projection, and absence of Shield mechanics on the Jewel.
+- Unaccepted: the current browser upload/download smoke, Shield live Foundry behavior, DAE+MIDI damage-triggered removal, authenticated live crawl, and exact production-equivalent coexistence. These prevent final milestone and Goal closure.
