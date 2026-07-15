@@ -1,16 +1,7 @@
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { load as loadYaml } from 'js-yaml';
 import type { ParsedItem, ItemType, ActivityData } from '../models/item';
-import type { ItemParserStrategy } from '../parser/item-strategy';
 import { ActivityGenerator } from './activity';
+import { generateEnhancedConditionEffects } from './actor-effects';
 import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// From src/core/generator/, go up 3 levels to project root: src/core -> src -> project root
-const PROJECT_ROOT = join(__dirname, '../../..');
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -36,23 +27,6 @@ export interface ItemDocument {
 export interface ItemGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
 }
-
-/**
- * Mapping from ItemType to reference directory name
- */
-const ITEM_TYPE_TO_DIR: Record<ItemType, string> = {
-  weapon: 'weapon',
-  equipment: 'equipment',
-  consumable: 'potion',
-  loot: 'loot',
-  tool: 'tool',
-  ammunition: 'ammunition',
-  armor: 'armor',
-  rod: 'rod',
-  wand: 'wand',
-  staff: 'weapon',
-  container: 'container',
-};
 
 /**
  * Generate a random 16-character hex ID for items
@@ -85,8 +59,9 @@ export class ItemGenerator {
    * Generate an ItemDocument from a ParsedItem
    */
   async generate(parsed: ParsedItem): Promise<ItemDocument> {
-    // 1. Load reference template based on item type
-    const template = this.loadReferenceTemplate(parsed.type);
+    // 1. Start from a neutral versioned schema. Reference items are evidence
+    // for field shape, never a source of mechanics for an unrelated item.
+    const template = this.loadBundledMinimalTemplate(parsed.type);
 
     // 2. Clone the template using golden master pattern
     const item = JSON.parse(JSON.stringify(template)) as ItemDocument;
@@ -110,35 +85,6 @@ export class ItemGenerator {
   }
 
   /**
-   * Load a reference template item from the dnd5e pack source
-   */
-  private loadReferenceTemplate(type: ItemType): ItemDocument {
-    const dir = ITEM_TYPE_TO_DIR[type] || 'equipment';
-    const dirPath = join(this.referenceItemsPath(), dir);
-
-    try {
-      // Read directory contents to find a template file
-      const files = this.getJsonFiles(dirPath);
-
-      if (files.length === 0) {
-        // Fallback to equipment template
-        return this.loadFallbackTemplate(type);
-      }
-
-      // Use the first item in the directory as template
-      const firstFile = files[0];
-      if (!firstFile) {
-        return this.loadFallbackTemplate(type);
-      }
-      const templatePath = join(dirPath, firstFile);
-      return this.loadTemplateFile(templatePath);
-    } catch (error) {
-      console.warn(`Warning: Failed to load reference template for type ${type}, using fallback: ${error}`);
-      return this.loadFallbackTemplate(type);
-    }
-  }
-
-  /**
    * Load fallback template when no reference is available
    */
   private loadBundledMinimalTemplate(type: ItemType): ItemDocument {
@@ -152,14 +98,14 @@ export class ItemGenerator {
 
     if (foundryType === 'weapon') {
       item.system.damage ??= {
-        base: { number: 1, denomination: 4, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } },
+        base: { number: null, denomination: 0, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } },
         versatile: { number: null, denomination: 0, bonus: '', types: [], custom: { enabled: false, formula: '' }, scaling: { mode: '', number: null, formula: '' } },
       };
       item.system.range ??= { value: null, long: null, reach: null, units: 'ft' };
       item.system.type ??= { value: 'simpleM', baseItem: '' };
       item.system.proficient ??= null;
     } else if (foundryType === 'equipment') {
-      item.system.armor ??= { value: null, dex: null };
+      item.system.armor ??= { value: null, dex: null, magicalBonus: null };
       item.system.type ??= { value: 'trinket', baseItem: '' };
     } else if (foundryType === 'consumable') {
       item.system.type ??= { value: type === 'ammunition' ? 'ammo' : 'potion', subtype: '' };
@@ -206,7 +152,7 @@ export class ItemGenerator {
         },
         quantity: 1,
         weight: {
-          value: 1,
+          value: 0,
           units: 'lb',
         },
         price: {
@@ -338,8 +284,12 @@ export class ItemGenerator {
     if (parsed.armor) {
       item.system.armor = {
         value: parsed.armor.value,
-        dex: 0,
-        magicalBonus: null,
+        dex: parsed.armor.dex ?? null,
+        magicalBonus: parsed.armor.magicalBonus ?? null,
+      };
+      item.system.type = {
+        value: parsed.armor.type ?? 'trinket',
+        baseItem: parsed.armor.baseItem ?? '',
       };
     }
 
@@ -413,6 +363,15 @@ export class ItemGenerator {
           item.effects.push(passiveEffect);
         } else {
           const activities = this.activityGenerator.generate(action);
+          const conditionEffects = generateEnhancedConditionEffects(
+            action.desc ?? '',
+            activities,
+            action.name,
+          );
+          for (const conditionEffect of conditionEffects) {
+            conditionEffect.origin = `Item.${item._id}`;
+            item.effects.push(conditionEffect);
+          }
           for (const [id, activity] of Object.entries(activities)) {
             const actionName = action.englishName
               ? `${action.name} (${action.englishName})`
@@ -447,34 +406,6 @@ export class ItemGenerator {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
-  }
-
-  private getJsonFiles(dirPath: string): string[] {
-    try {
-      if (!existsSync(dirPath)) {
-        return [];
-      }
-      return readdirSync(dirPath)
-        .filter((file: string) => /\.(json|ya?ml)$/i.test(file) && !file.startsWith('_folder.'))
-        .sort();
-    } catch {
-      return [];
-    }
-  }
-
-  private loadTemplateFile(path: string): ItemDocument {
-    const content = readFileSync(path, 'utf-8');
-    if (/\.ya?ml$/i.test(path)) {
-      return loadYaml(content) as ItemDocument;
-    }
-    return JSON.parse(content) as ItemDocument;
-  }
-
-  private referenceItemsPath(): string {
-    if (this.isV14()) {
-      return join(PROJECT_ROOT, 'references/item-templates/dnd5e-5.3.3/items');
-    }
-    return join(PROJECT_ROOT, getFoundryTarget(this.fvttVersion).reference.dnd5eRepo, 'packs/_source/items');
   }
 
   private finalizeTargetFields(item: ItemDocument): void {

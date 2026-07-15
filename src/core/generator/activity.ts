@@ -26,14 +26,15 @@ export class ActivityGenerator {
 
     if (action.attack) {
       const nativeRoll = this.inferNativeWeaponRoll(action, context);
+      const explicitAbility = action.attack.ability;
       const primaryDamage = nativeRoll ? action.attack.damage[0] : undefined;
       activities[id] = {
         _id: id,
         type: 'attack',
         attack: {
-          ability: nativeRoll?.ability ?? '',
-          bonus: nativeRoll ? '' : `${action.attack.toHit}`,
-          flat: nativeRoll ? false : true,
+          ability: nativeRoll?.ability ?? explicitAbility ?? '',
+          bonus: nativeRoll || explicitAbility ? '' : `${action.attack.toHit}`,
+          flat: !(nativeRoll || explicitAbility),
           type: {
             value: action.attack.type,
             classification: 'weapon'
@@ -294,6 +295,38 @@ export class ActivityGenerator {
           choice: false,
           special: ""
         }
+      };
+    }
+
+    const generatedActivity = activities[id];
+    if (generatedActivity && action.desc) {
+      generatedActivity.description = { chatFlavor: action.desc };
+    }
+    if (generatedActivity && action.activity?.duration) {
+      generatedActivity.duration = {
+        value: action.activity.duration.value,
+        units: action.activity.duration.units,
+        concentration: action.activity.duration.concentration,
+        override: false,
+      };
+    }
+    if (generatedActivity && action.activity?.range) {
+      generatedActivity.range = {
+        value: action.activity.range.value,
+        units: action.activity.range.units,
+        special: '',
+        override: false,
+      };
+    }
+    if (generatedActivity && action.activity?.target) {
+      generatedActivity.target = {
+        ...(generatedActivity.target ?? {}),
+        template: {
+          ...(generatedActivity.target?.template ?? {}),
+          type: action.activity.target.template.type,
+          size: action.activity.target.template.size,
+          units: action.activity.target.template.units,
+        },
       };
     }
 

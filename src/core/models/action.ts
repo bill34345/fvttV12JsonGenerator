@@ -12,6 +12,7 @@ export interface ActionData {
   
   attack?: {
     type: "mwak" | "rwak";
+    ability?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
     toHit: number;
     range: string;
     reach?: string;
@@ -42,6 +43,25 @@ export interface ActionData {
   };
 
   damage?: Damage[];
+
+  activity?: {
+    duration?: {
+      value: string;
+      units: 'round' | 'minute' | 'hour' | 'day' | string;
+      concentration: boolean;
+    };
+    range?: {
+      value: string;
+      units: 'ft' | string;
+    };
+    target?: {
+      template: {
+        type: 'radius' | string;
+        size: string;
+        units: 'ft' | string;
+      };
+    };
+  };
 
   aoe?: {
     type?: string;

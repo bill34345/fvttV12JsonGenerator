@@ -32,9 +32,17 @@ export class ItemParser implements ItemParserStrategy {
     const finalEnglishName = englishName ?? headerInfo.englishName;
     const finalRarity = rarity ?? headerInfo.rarity;
     const finalAttunement = attunement ?? headerInfo.attunement;
+    const finalType = this.classifyItemType(type || headerInfo.type || 'loot');
 
     const description = this.extractDescription(body);
     const uses = this.parseUses(body);
+    const armor = this.parseArmor(body, type, headerInfo.type);
+    const properties = armor?.magicalBonus ? ['mgc'] : undefined;
+    const weight = armor?.baseItem === 'shield'
+      // schema-derived: the locked dnd5e 4.3.9 and 5.3.3 shield records
+      // both define the base shield as 6 lb.
+      ? { value: 6, units: 'lb' as const }
+      : undefined;
 
     let stages: ItemStage[];
     let structuredActions: ParsedItem['structuredActions'];
@@ -66,10 +74,13 @@ export class ItemParser implements ItemParserStrategy {
     return {
       name: finalName,
       englishName: finalEnglishName,
-      type: this.classifyItemType(type || headerInfo.type || 'loot'),
+      type: finalType,
       rarity: finalRarity,
       attunement: finalAttunement,
       description,
+      armor,
+      properties,
+      weight,
       uses,
       stages,
       structuredActions,
@@ -1062,7 +1073,10 @@ export class ItemParser implements ItemParserStrategy {
     const cleanName = name.replace(/（([^）]+)）[。.]?$/, '').trim();
 
     // Parse damage
-    const damage = this.parseAttackDamage(description);
+    const ability = this.parseExplicitAttackAbility(description);
+    const damage = this.parseAttackDamage(description).map((entry) => ability
+      ? { ...entry, formula: entry.formula.replace(`@${ability}`, '@mod') }
+      : entry);
     if (!damage.length) {
       return null;
     }
@@ -1080,8 +1094,10 @@ export class ItemParser implements ItemParserStrategy {
       name: cleanName,
       englishName,
       type: 'attack',
+      desc: description,
       attack: {
         type: isRanged ? 'rwak' : 'mwak',
+        ...(ability ? { ability } : {}),
         toHit,
         range,
         reach,
@@ -1319,11 +1335,13 @@ export class ItemParser implements ItemParserStrategy {
 
     const activation = this.parseExplicitTraitActivation(description);
     if (activation) {
+      const activity = this.parseTraitActivityDetails(description);
       return {
         name: cleanName,
         englishName,
         type: 'use',
         desc: description,
+        ...(activity ? { activity } : {}),
         useAction: {
           consumption: 0,
           activation,
@@ -1341,6 +1359,107 @@ export class ItemParser implements ItemParserStrategy {
       type: 'utility',
       desc: description,
     };
+  }
+
+  private parseExplicitAttackAbility(description: string): NonNullable<ActionData['attack']>['ability'] | undefined {
+    const abilities = [
+      { key: 'str' as const, cn: '力量', en: 'strength' },
+      { key: 'dex' as const, cn: '敏捷', en: 'dexterity' },
+      { key: 'con' as const, cn: '体质', en: 'constitution' },
+      { key: 'int' as const, cn: '智力', en: 'intelligence' },
+      { key: 'wis' as const, cn: '感知', en: 'wisdom' },
+      { key: 'cha' as const, cn: '魅力', en: 'charisma' },
+    ];
+
+    for (const ability of abilities) {
+      const chineseForward = new RegExp(`熟练加值[\\s\\S]{0,16}${ability.cn}调整值`);
+      const chineseReverse = new RegExp(`${ability.cn}调整值[\\s\\S]{0,16}熟练加值`);
+      const englishForward = new RegExp(`proficiency bonus[\\s\\S]{0,24}${ability.en} modifier`, 'i');
+      const englishReverse = new RegExp(`${ability.en} modifier[\\s\\S]{0,24}proficiency bonus`, 'i');
+      if (
+        chineseForward.test(description)
+        || chineseReverse.test(description)
+        || englishForward.test(description)
+        || englishReverse.test(description)
+      ) {
+        return ability.key;
+      }
+    }
+    return undefined;
+  }
+
+  private parseArmor(
+    body: string,
+    frontmatterType: string | undefined,
+    headerType: string | undefined,
+  ): ParsedItem['armor'] {
+    const typeText = `${frontmatterType ?? ''} ${headerType ?? ''}`;
+    if (!/(?:盾牌|\bshield\b)/i.test(typeText)) {
+      return undefined;
+    }
+
+    const magicalBonus = this.parseAdditionalShieldAcBonus(body);
+    return {
+      // schema-derived: locked dnd5e 4.3.9 and 5.3.3 both model a normal
+      // shield as base armor 2; any explicit extra source bonus is separate.
+      value: 2,
+      dex: null,
+      magicalBonus,
+      type: 'shield',
+      baseItem: 'shield',
+    };
+  }
+
+  private parseAdditionalShieldAcBonus(body: string): number | null {
+    const clauses = body.split(/[。.!?；;]+/).map((part) => part.trim()).filter(Boolean);
+    for (let index = 0; index < clauses.length; index++) {
+      const clause = `${clauses[index] ?? ''} ${clauses[index + 1] ?? ''}`;
+      const explicitlyAdditional = /(?:额外|之外|原本.*(?:外|之外)|in addition to|additional)/i.test(clause);
+      const mentionsArmorClass = /(?:护甲等级|\bAC\b|armor class)/i.test(clause);
+      if (!explicitlyAdditional || !mentionsArmorClass) continue;
+
+      const bonusMatch = clause.match(/(?:额外(?:获得)?\s*|获得\s*|have\s+(?:an?\s*)?)(?:a\s*)?\+\s*(\d+)\s*(?:AC|护甲等级|加值|bonus)?/i)
+        ?? clause.match(/\+\s*(\d+)\s*(?:AC|护甲等级|加值|bonus)/i);
+      if (bonusMatch?.[1]) {
+        return Number.parseInt(bonusMatch[1], 10);
+      }
+    }
+    return null;
+  }
+
+  private parseTraitActivityDetails(description: string): ActionData['activity'] | undefined {
+    const duration = this.parseExplicitActivityDuration(description);
+    const aura = description.match(/(?:创造|制造|create(?:s)?|emanation|aura)[\s\S]{0,40}?(\d+)\s*-?\s*(?:尺|feet?|foot)[\s\S]{0,12}?(?:光环|灵光|emanation|aura)/i)
+      ?? description.match(/(\d+)\s*-?\s*(?:尺|feet?|foot)[\s\S]{0,12}?(?:光环|灵光|emanation|aura)/i);
+    const auraSize = aura?.[1];
+
+    if (!duration && !auraSize) return undefined;
+    return {
+      ...(duration ? { duration } : {}),
+      ...(auraSize ? {
+        range: { value: auraSize, units: 'ft' as const },
+        target: {
+          template: { type: 'radius' as const, size: auraSize, units: 'ft' as const },
+        },
+      } : {}),
+    };
+  }
+
+  private parseExplicitActivityDuration(description: string): NonNullable<ActionData['activity']>['duration'] | undefined {
+    const durationMatch = description.match(/(?:持续(?:最多)?|维持(?:最多)?|lasts?(?:\s+for|\s+up\s+to)?|up\s+to)\s*(\d+)\s*(轮|分钟|小时|天|rounds?|minutes?|hours?|days?)/i);
+    if (!durationMatch?.[1] || !durationMatch[2]) return undefined;
+
+    const unitText = durationMatch[2].toLowerCase();
+    const units = /轮|round/.test(unitText)
+      ? 'round'
+      : /分钟|minute/.test(unitText)
+        ? 'minute'
+        : /小时|hour/.test(unitText)
+          ? 'hour'
+          : 'day';
+    const concentration = /(?:维持专注|保持专注|maintain(?:s|ing)? concentration|concentration\s*,?\s*(?:for|up to))/i.test(description);
+
+    return { value: durationMatch[1], units, concentration };
   }
 
   private parseExplicitTraitActivation(description: string): 'action' | 'bonus' | 'reaction' | 'free' | undefined {

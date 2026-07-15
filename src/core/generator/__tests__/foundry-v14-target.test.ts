@@ -1,7 +1,4 @@
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { load as loadYaml } from 'js-yaml';
 import { ActorGenerator } from '../actor';
 import { ActivityGenerator } from '../activity';
 import { ItemGenerator } from '../item-generator';
@@ -134,19 +131,57 @@ describe('Foundry v14 generator target', () => {
     }
   });
 
-  it('keeps the representative v14 equipment template structure', async () => {
-    const template = loadYaml(readFileSync(join(
-      process.cwd(),
-      'references/item-templates/dnd5e-5.3.3/items/equipment/amulet-of-health.yml',
-    ), 'utf8')) as Record<string, any>;
-    delete template.system.attuned;
+  it('keeps a schema-complete neutral v14 equipment structure without reference-item mechanics', async () => {
     const generated = await new ItemGenerator({ fvttVersion: '14' }).generate({
       name: 'Amulet of Health',
       type: 'equipment',
       description: 'Representative structure check.',
     });
 
-    assertEqualStructure(generated, template, { mode: 'shape' });
+    const neutralEquipmentContract = {
+      _id: 'contract-id',
+      name: 'Contract Item',
+      type: 'equipment',
+      img: 'icons/svg/item-bag.svg',
+      system: {
+        description: { value: '', chat: '' },
+        source: { custom: '', book: '', page: '', license: '', rules: '' },
+        quantity: 1,
+        weight: { value: 0, units: 'lb' },
+        price: { value: 0, denomination: 'gp' },
+        attunement: 'none',
+        equipped: false,
+        rarity: 'common',
+        identified: true,
+        cover: null,
+        uses: { max: '', spent: 0, recovery: [] },
+        activities: {},
+        identifier: 'contract-item',
+        properties: [],
+        container: null,
+        unidentified: { description: '' },
+        armor: { value: null, dex: null, magicalBonus: null },
+        type: { value: 'trinket', baseItem: '' },
+      },
+      effects: [],
+      flags: {},
+      _stats: {
+        duplicateSource: null,
+        coreVersion: '14.361',
+        systemId: 'dnd5e',
+        systemVersion: '5.3.3',
+        createdTime: 0,
+        modifiedTime: 0,
+        lastModifiedBy: 'fvttJsonGenerator',
+      },
+    };
+
+    assertEqualStructure(generated, neutralEquipmentContract, { mode: 'shape' });
+    expect(generated.img).toBe('icons/svg/item-bag.svg');
+    expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: null });
+    expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
+    expect(generated.system.properties).toEqual([]);
+    expect(generated.effects).toEqual([]);
   });
 
   it('targets v14 AC formula instead of legacy AC bonus path', () => {

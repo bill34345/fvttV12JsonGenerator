@@ -76,7 +76,11 @@ export interface RangeData {
  * Armor data structure for equipment/armor items
  */
 export interface ArmorData {
-  value: number;
+  value: number | null;
+  dex?: number | null;
+  magicalBonus?: number | null;
+  type?: "light" | "medium" | "heavy" | "shield" | "trinket";
+  baseItem?: string;
 }
 
 /**
