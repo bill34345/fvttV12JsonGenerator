@@ -111,3 +111,15 @@ Overall status: **Partial**. Core Actor runtime support, the locked minimal modd
 1. Minimize and resolve the `simple-quest` / `monks-common-display` scene-control failure, then repeat complete-set scene and Actor workflows.
 2. Add a source-derived DAE-specific behavior fixture before claiming DAE automation support beyond coexistence.
 3. Complete standalone Item v14 end-to-end acceptance, a live authenticated GoddessFantasy crawl, and broader real-input corpus coverage as separate gates.
+
+## 2026-07-15 Milestone 9 Status Amendment
+
+This amendment updates the current interpretation without rewriting the earlier runtime evidence or its then-valid remaining-work list.
+
+- A generalized source-derived `isDamaged` Actor fixture now exists and passes code, CLI, source, profile-isolation, and schema acceptance. DAE 14.0.12 registers the duration key, while MIDI-QOL 14.0.9 is the locked damage-workflow consumer that removes matching effects. The real Foundry damage/removal exercise has **not** run, so DAE/MIDI runtime support beyond the earlier bleeding contract remains unaccepted.
+- The real standalone Shield now passes v12/v14 source, CLI, and schema acceptance with corrected armor, Activity, duration, range, concentration, recovery, damage, and conditional prone semantics. Its live import/equip/exercise/re-export comparison remains unaccepted.
+- The broader corpus gate is now represented by the dated 19-category current corpus matrix and passed its 148-test focused run plus the 738-test aggregate gate. This closes the former corpus-documentation gap only; it does not upgrade runtime claims.
+- Both new runtime exercises reached Foundry's supported Import Data workflow but are blocked by the user-controlled Chrome extension **Allow access to file URLs** permission. No direct database bypass was used.
+- Authenticated GoddessFantasy remains blocked because credential/session use was not authorized. Exact production-equivalent coexistence remains **Fail / Partial**.
+
+For the canonical current layer-by-layer conclusion, see [`current-support-matrix.md`](current-support-matrix.md).

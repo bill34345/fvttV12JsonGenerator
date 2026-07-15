@@ -74,3 +74,13 @@ The current batch can be treated as source-faithful for project-internal v14 acc
 This source-to-JSON review remains `Pass`, and the narrow core/minimal-modded Actor runtime gates pass. Overall local-mirror acceptance is nevertheless `Partial`: a production-equivalent module candidate still has reproducible scene-control errors. The older statement that copied `cor-cotn` was blocked at Gamemaster authentication is superseded by the later, explicitly authorized local-only password-reset evidence in the runtime report; sampled copied-world workflows pass, but complete module coexistence does not. These boundaries do not invalidate source fidelity, but they prevent a claim of complete production-environment support.
 
 The exact runtime environment, import matrix, failure evidence, and remaining work are recorded in `docs/acceptance/v14-live-runtime-smoke-test.md`.
+
+## 2026-07-15 Milestone 9 Scope Amendment
+
+The original six-Actor review above remains valid for those samples. It is not the complete current corpus and must not be used as a standalone claim for Item or DAE/MIDI runtime support.
+
+- The current executable corpus now has 19 bounded categories with Chinese/English, Actor/Item, v12/v14, core/modded, positive/close-negative, parser/effect, and unrelated-regression coverage. Its focused command passed 148 tests / 656 expectations; aggregate CI passed 738 / 2,921.
+- The standalone Shield and Damage-Bound Warden add source/CLI/schema evidence outside the original six-sample batch. Shield live equip/Activity/export behavior and Damage-Bound Warden damage-triggered effect removal are still unaccepted because local file selection is blocked by the user-controlled Chrome extension permission.
+- The `isDamaged` support boundary is the locked DAE 14.0.12 + MIDI-QOL 14.0.9 `modded-v14` stack, not DAE alone. Static flag generation passes; executed runtime removal does not yet.
+
+The canonical current conclusion is [`current-support-matrix.md`](current-support-matrix.md); the original dated evidence and false/partial chronology remain preserved here and in the runtime report.

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILLS: use `superpowers:executing-plans`, `superpowers:test-driven-development`, and `superpowers:verification-before-completion`. Do not dispatch subagents because the active project instructions do not authorize delegation.
 
-**Goal:** Close the authorized standalone Item, DAE-specific, corpus, and documentation gaps with source-derived behavior and locked local-runtime evidence while keeping authenticated crawling and exact production-module coexistence visible as external blockers.
+**Goal:** Close the authorized standalone Item, modded-v14 DAE/MIDI-specific, corpus, and documentation gaps with source-derived behavior and locked local-runtime evidence while keeping authenticated crawling and exact production-module coexistence visible as external blockers.
 
-**Architecture:** Standalone Item documents will be generated from a neutral target-version schema skeleton instead of inheriting mechanics from the first reference file. The Item parser will expose only source- or schema-derived armor and Activity details, and the shared Activity generator will project those details into v12/v14 schemas. Existing explicit-condition extraction will attach source-derived riders without item-name branches. DAE-only behavior will be represented as a source-duration hint and converted to exact DAE 14.0.12 flags only by `modded-v14`; core output will remain module-free. A single current support matrix will then link each claim to dated CLI/runtime evidence.
+**Architecture:** Standalone Item documents will be generated from a neutral target-version schema skeleton instead of inheriting mechanics from the first reference file. The Item parser will expose only source- or schema-derived armor and Activity details, and the shared Activity generator will project those details into v12/v14 schemas. Existing explicit-condition extraction will attach source-derived riders without item-name branches. Module-specific behavior will be represented as a source-duration hint and converted to the DAE 14.0.12 `isDamaged` key only by `modded-v14`; MIDI-QOL 14.0.9 is the locked consumer that removes the effect after its damage workflow, while core output remains module-free. A single current support matrix will then link each claim to dated CLI/runtime evidence.
 
-**Locked evidence:** Foundry 14.364, dnd5e 5.3.3, MIDI-QOL 14.0.9, DAE 14.0.12, local `server-mirror` only. For Item armor fields, check tracked dnd5e 4.3.9 Shield/Shield +2 plus locked 5.3.3 Shield of the Cavalier. For DAE flags and expiry, check the installed 14.0.12 `module/Systems/DAEdnd5e.js` and `module/specialDurations.js` before coding.
+**Locked evidence:** Foundry 14.364, dnd5e 5.3.3, MIDI-QOL 14.0.9, DAE 14.0.12, local `server-mirror` only. For Item armor fields, check tracked dnd5e 4.3.9 Shield/Shield +2 plus locked 5.3.3 Shield of the Cavalier. For `isDamaged`, check DAE 14.0.12 registration plus MIDI-QOL 14.0.9 damage/removal consumption before coding or claiming runtime behavior.
 
 ## Constraints and classification
 
@@ -44,7 +44,7 @@
 - [ ] Apply/remove the conditional prone effect deliberately, confirm Protective Field renders the expected reaction, duration, concentration, range/template, and dawn use, then export/read back the runtime Item.
 - [ ] Compare re-exported source-relevant fields to the CLI artifact. Record migration-only volatility separately; do not accept an HTTP/import success or visible sheet alone.
 
-## Task 3: Source-derived DAE-only behavior (PROD-001)
+## Task 3: Source-derived DAE/MIDI behavior (PROD-001)
 
 **Files:**
 
@@ -52,11 +52,11 @@
 - Modify: `src/core/generator/actor-effects.ts`, `src/core/generator/effectProfileApplier.ts`
 - Modify/add: focused effect-profile and acceptance tests
 
-- [ ] Write RED tests for three source clauses meaning an inflicted condition lasts until the target takes damage, one close negative, and one unrelated Actor; no action/name branch is allowed.
-- [ ] Preserve a neutral source-duration hint on the generated condition effect. For `modded-v14`, map only that hint to DAE 14.0.12 `flags.dae.specialDuration: ["isDamaged"]`; strip DAE flags from `core`.
-- [ ] Generate the fixture through the CLI for v14 core and modded-v14. Verify identical base Actor mechanics, no DAE flags in core, exactly one source-matched DAE duration in modded, and unchanged unrelated outputs.
-- [ ] Import the modded Actor into the locked minimal local runtime, apply the condition to a target through its Activity, deal damage, and prove DAE expires/suppresses the effect. Repeat the pre-damage state with DAE inactive or the core artifact to demonstrate the behavior is specifically provided by DAE rather than mere coexistence.
-- [ ] Run focused tests, locked-version source review, anti-overfit audit, typechecks, and aggregate CI before closure.
+- [x] Write RED tests for three source clauses meaning an inflicted condition lasts until the target takes damage, one close negative, one mixed-duration scoping negative, and one unrelated Actor; no action/name branch is allowed.
+- [x] Preserve a neutral source-duration hint on the generated condition effect. For `modded-v14`, map only that hint to DAE 14.0.12 `flags.dae.specialDuration: ["isDamaged"]`; strip DAE flags from `core`.
+- [x] Generate the fixture through the CLI for v14 core and modded-v14. Verify identical base Actor mechanics, no DAE flags in core, exactly one source-matched DAE duration in modded, and unchanged unrelated outputs.
+- [ ] Import the modded Actor into the locked minimal local runtime, apply the condition to a target through its Activity, deal damage, and prove the locked DAE 14.0.12 + MIDI-QOL 14.0.9 stack removes the effect. Repeat the pre-damage state with the core artifact or module consumer inactive to demonstrate that the behavior is module-specific rather than mere coexistence.
+- [x] Run focused tests, locked-version source review, anti-overfit audit, typechecks, and aggregate CI; keep PROD-001 open until the runtime exercise passes.
 
 ## Task 4: Expand and publish the acceptance corpus (PROD-004)
 
@@ -65,9 +65,9 @@
 - Create: `docs/acceptance/current-corpus-matrix.md` or an executable matrix tool/test if that is the narrower durable artifact
 - Modify: relevant acceptance suite/tool inputs only when the new cases enter an existing supported flow
 
-- [ ] Record positive and close-negative controls across Chinese/English, Actor/Item, v12/v14, core/modded, condition/effect, parser, and unrelated regression categories.
-- [ ] Require every matrix row to name the real source/fixture, workflow command or test, target, semantic projection, and dated outcome.
-- [ ] Run the matrix and aggregate CI; do not infer broad parser confidence from a single Shield or DAE fixture.
+- [x] Record positive and close-negative controls across Chinese/English, Actor/Item, v12/v14, core/modded, condition/effect, parser, and unrelated regression categories.
+- [x] Require every matrix row to name the real source/fixture, workflow command or test, target, semantic projection, and dated outcome.
+- [x] Run the matrix and aggregate CI; do not infer broad parser confidence from a single Shield or DAE fixture.
 
 ## Task 5: Reconcile current support truth (DOC-002, PROD-003, PROD-005)
 
@@ -77,12 +77,12 @@
 - Modify: `docs/delivery-checklist.md` and dated reports under `docs/acceptance/` by dated amendment only
 - Modify: parent ExecPlan and this plan
 
-- [ ] Separate source fidelity, schema validity, CLI generation, minimal core runtime, module-specific runtime, copied-world sampled usability, exact production-equivalent coexistence, and production deployment.
-- [ ] Link each current support claim to dated evidence; preserve superseded failures and reconcile copied-world authentication chronology without rewriting history.
-- [ ] Run contradiction scans for stale blanket `Pass`, unauthenticated/copied-world, DAE-untested, standalone-Item-untested, crawler, and complete-module statements.
-- [ ] Keep PROD-003 `blocked_external` because authenticated crawl credentials/session were not authorized; state the exact safe resume command and secret boundary without running it.
-- [ ] Keep PROD-005 `blocked_external`/`Partial-Fail` unless the exact valid production package set and representative workflows pass. Do not use the reduced 84-module set or production deployment changes as exact coexistence proof.
-- [ ] Close DOC-002 only after the current matrix, dated amendments, delivery checklist, finding ledger, and contradiction scan agree.
+- [x] Separate source fidelity, schema validity, CLI generation, minimal core runtime, module-specific runtime, copied-world sampled usability, exact production-equivalent coexistence, and production deployment.
+- [x] Link each current support claim to dated evidence; preserve superseded failures and reconcile copied-world authentication chronology without rewriting history.
+- [x] Run contradiction scans for stale blanket `Pass`, unauthenticated/copied-world, DAE-untested, standalone-Item-untested, crawler, and complete-module statements.
+- [x] Keep PROD-003 `blocked_external` because authenticated crawl credentials/session were not authorized; state the exact safe resume command and secret boundary without running it.
+- [x] Keep PROD-005 `blocked_external`/`Partial-Fail` unless the exact valid production package set and representative workflows pass. Do not use the reduced 84-module set or production deployment changes as exact coexistence proof.
+- [x] Close DOC-002 only after the current matrix, dated amendments, delivery checklist, finding ledger, and contradiction scan agree.
 
 ## Acceptance boundary
 
@@ -99,4 +99,9 @@ Semantic acceptance: no arbitrary template mechanic survives; the Shield's sourc
 - Exact next action: Task 2 imports the freshly generated v14/core Shield into the disposable project-local Foundry world, exercises/equips/exports it, and compares runtime and re-export semantics to the CLI artifact.
 - 2026-07-15 Task 2 runtime preflight: project-local Foundry 14.364/dnd5e 5.3.3 started loopback-only in `fvtt-v14-module-matrix`; Gamemaster login, world/UI readiness, Item directory, disposable equipment creation, context menu, and Foundry's Import Data dialog all worked. The ChatGPT Chrome Extension then rejected `fileChooser.setFiles` because Chrome's "Allow access to file URLs" permission is disabled. No JSON was imported, no runtime behavior was accepted, the server was stopped, port 30001 released, and `options.json` restored to `cor-cotn`. Temporary world Item `M9 Temporary Shield Import` remains for UI cleanup/resume.
 - Runtime resume boundary: after the user enables the documented Chrome extension permission, restart the same matrix world, import `remediation-m9-shield.v14.json` through that existing Item's Import Data dialog, complete equip/exercise/export/readback, delete the disposable documents, stop the server, and restore the world option. Until then Task 2 and SEM-005 remain open.
-- Exact next action while upload permission is external: execute Task 3 RED and complete all DAE parser/generator/CLI work that does not require runtime file import; retain the same runtime blocker for the final DAE exercise.
+- 2026-07-15 Task 3 code/CLI acceptance: generalized source clauses now preserve a neutral `untilDamaged` hint per modified status, including three positive forms, a neighboring-damage negative, and a mixed-duration scoping negative. `core` strips DAE flags; `modded-v14` adds exactly one `flags.dae.specialDuration: ["isDamaged"]`. The real Damage-Bound Warden fixture regenerated through the CLI in both profiles, both `verify:actor` runs reported zero warnings, and normalized full-Actor comparison differs only in that DAE flag plus volatile effect/activity IDs.
+- Locked module evidence: DAE 14.0.12 registers `isDamaged` in `module/Systems/DAEdnd5e.js`; MIDI-QOL 14.0.9 declares DAE >=14.0.0 and its damage workflow reads `flags.dae.specialDuration`, then invokes `removeEffectUuids` for actual HP/temp damage. Runtime support must therefore be reported as locked DAE+MIDI `modded-v14` behavior, not DAE-alone behavior.
+- Mechanical evidence: 14 focused tests / 57 expectations, both typechecks, two CLI generations, two verifier runs, changed-source and 109-source anti-overfit audits, and aggregate `ci:verify` passed 738 tests / 2,921 expectations, production coverage, 1,602-path hygiene, locked-reference, build, and offline smoke gates.
+- 2026-07-15 Task 4 accepted: `docs/acceptance/current-corpus-matrix.md` records 19 bounded executable categories across Chinese/English, Actor/Item, v12/v14, core/modded, positive/close-negative, condition/effect, parser, and unrelated regressions. Its focused 11-file command passed 148 tests / 656 expectations; the aggregate gate passed 738 / 2,921. The matrix explicitly excludes the blocked Foundry imports, authenticated crawl, and production-equivalent module claim.
+- 2026-07-15 Task 5 accepted and DOC-002 closed: the current support matrix separates thirteen evidence layers, links dated sources, and provides safe resume boundaries. README and the delivery checklist now agree; three dated reports received append-only amendments. The current-claim scan found no prohibited Pass upgrades, evidence paths exist, historical stale wording remains only before explicit amendments, PROD-003 stays `blocked_external`, and PROD-005 stays `blocked_external` / `Fail-Partial`.
+- Exact next action: after the user enables Chrome extension file-URL access, resume Task 2 and Task 3 in the disposable matrix world. Separately request explicit authorization/session before running the authenticated GoddessFantasy pipeline; do not run it from the general external-research permission alone.

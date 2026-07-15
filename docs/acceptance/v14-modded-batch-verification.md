@@ -174,3 +174,7 @@ Generated at: 2026-07-15T10:54:07.281Z
 - This is an offline generation report; it does not embed or supersede live Foundry runtime evidence.
 - Source-to-output semantic review uses generated JSON summaries and `actorVerification`; any warning is documented above instead of hidden.
 - Current import, interaction, re-export, and compatibility results are maintained in `docs/acceptance/v14-live-runtime-smoke-test.md`.
+
+## 2026-07-15 Milestone 9 Amendment
+
+The six rows above remain the original offline batch. A separate generalized Damage-Bound Warden fixture now passes `modded-v14` CLI/source/schema review with exactly one source-matched DAE 14.0.12 `isDamaged` flag and an otherwise source-equivalent core Actor. This adds static generation evidence; it does not add a seventh runtime-accepted Actor. MIDI-QOL 14.0.9 is the locked component that consumes real damage and removes the flagged effect, and that runtime exercise remains blocked by Chrome's user-controlled file-URL permission. See [`current-support-matrix.md`](current-support-matrix.md).
