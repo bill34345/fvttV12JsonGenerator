@@ -177,6 +177,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] (2026-07-15) M9 Task 4 closed PROD-004: the 19-category executable corpus matrix covers the required language/document/version/profile/positive/negative/regression dimensions; the focused matrix passed 148 tests / 656 expectations and aggregate CI passed 738 / 2,921 without upgrading blocked runtime or external claims.
 - [x] (2026-07-15) M9 Task 5 closed DOC-002: thirteen-layer current support matrix, README/checklist reconciliation, three append-only dated amendments, safe external resume commands, evidence-path validation, and a clean current-claim contradiction scan now agree. PROD-003 and PROD-005 remain explicit external boundaries.
 - [ ] (2026-07-15) M10 pre-final audit completed every unblocked repository/CLI/source gate and updated the current support evidence. Browser and local Foundry runtime rows remain open; this is recorded as pre-final evidence, not milestone or Goal completion.
+- [ ] (2026-07-15) Persistent Goal blocked audit reached the required third consecutive continuation with the same external conditions and no remaining safe repository-only work. The Goal is marked `blocked`, not complete; its full objective and exact resume steps remain unchanged.
 - [ ] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
 - [ ] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
@@ -395,7 +396,7 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - [ ] Add a generalized source-derived DAE/MIDI fixture with positive, close-negative, and unrelated controls; code/CLI/source/schema layers pass, but exercise it through the locked DAE 14.0.12 + MIDI-QOL 14.0.9 local runtime after file upload is enabled.
 - [ ] Select a real standalone Item source, generate it for v14 through the CLI, import/open/exercise/re-export it, and compare source-relevant fields.
 - [x] Expand the corpus matrix across Chinese/English, actor/item, v12/v14, core/modded, positive/negative, and unrelated regression controls.
-- [ ] For authenticated GoddessFantasy crawling, request authorization only when all offline work is ready; do not store cookies/passwords in tracked files or chat artifacts.
+- [x] For authenticated GoddessFantasy crawling, request authorization only when all offline work is ready; authorization was requested after offline work completed but has not been granted. Do not store cookies/passwords in tracked files or chat artifacts.
 - [x] Keep full production coexistence `Partial/Fail` unless the exact acceptance gate passes. Do not bypass protected module signatures or change production without explicit authorization.
 
 **Semantic acceptance:** Every support claim names the layer it proves, dated evidence supports it, and unresolved external gaps remain visible rather than being converted into blanket success.
@@ -411,7 +412,7 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - [x] Regenerate representative v12, v14 core, and v14 modded Actors plus a v14 Item through the project flow; also regenerate the unrelated Jewel control.
 - [x] Perform source-to-output semantic review for every changed parser/generator behavior and sample unchanged unrelated outputs. Three `verify:actor` runs return zero warnings and the explicit M10 projection script passes.
 - [ ] Run the authorized local Foundry runtime matrix and preserve the boundary between minimal runtime, copied-world, and production claims.
-- [ ] Update every finding state, Outcomes & Retrospective, and the support matrix.
+- [x] Update every finding state, Outcomes & Retrospective, and the support matrix at the pre-final stopping point; open and external states remain explicit.
 - [ ] Close the Goal only when all authorized findings are `closed` and external blockers are either resolved or explicitly accepted by the user as remaining scope.
 
 ## Validation and Acceptance
@@ -580,6 +581,9 @@ Semantic acceptance proves the user's actual goal:
 - Decision: Treat M10 as pre-final evidence while M9 runtime and external findings remain open, rather than using a clean repository gate to close the Goal early.
   Rationale: Type, test, coverage, reference, build, CLI, and source checks prove repository and generation health, but they cannot prove Shield equip/Activity behavior, DAE+MIDI effect removal, authenticated crawling, or exact production-equivalent coexistence.
   Date/Author: 2026-07-15, Codex.
+- Decision: Mark the persistent Goal `blocked` after the same external conditions remained at the third consecutive goal continuation.
+  Rationale: All authorized repository-only work and the unblocked M10 audit are complete. Continuing automatically cannot enable the user's Chrome extension permission, authorize a login session, supply a valid protected package, authorize production changes, or accept those items as remaining scope. `blocked` preserves the full objective and avoids reporting an indefinitely active Goal with no legal next action.
+  Date/Author: 2026-07-15, Codex.
 
 ## Outcomes & Retrospective
 
@@ -631,5 +635,7 @@ Program initialization outcome on 2026-07-15:
 2026-07-15: Closed DOC-002 after publishing the thirteen-layer current support matrix, reconciling README and the safe delivery checklist, appending dated amendments to the runtime/source/modded reports, preserving copied-world authentication chronology, recording safe external resume boundaries, validating every named evidence path, and running a clean current-claim contradiction scan. Historical statements remain visible before their amendments. PROD-003 remains blocked on explicit authenticated-session authorization and PROD-005 remains Fail/Partial on the exact production-equivalent gate.
 
 2026-07-15: Completed M10's unblocked pre-final audit without closing the milestone or Goal. Both typechecks, 738 tests, production coverage (87.54% lines / 88.40% functions), 109-source anti-overfit, dnd5e 5.3.3 reference verification, Web build, 116 Foundry Lab tests, and 1,605-path hygiene pass. Five representative outputs were regenerated only through the CLI; three Actor verifiers and the explicit source projection pass. The browser workflow and new local Foundry runtime behaviors remain unaccepted, so M9/M10 stay open.
+
+2026-07-15: The strict blocked audit reached its third consecutive goal continuation. Live state still shows only the three user-owned dirty files, port 30001 stopped, and `options.json` restored to `cor-cotn`; no new authority or external state appeared. The persistent Goal is therefore `blocked`, not complete. Resume it without changing scope after Chrome file-URL access is enabled, authenticated crawl authorization/session is granted or explicitly accepted as remaining, and the valid exact module-set/production boundary is supplied or explicitly accepted as remaining.
 
 2026-07-15: Started Milestone 9 with focused plan `milestones/09-product-acceptance-and-support.md`. Inventory confirmed the Shield defect still originates in first-template inheritance, while locked dnd5e sources model a shield as base armor 2 plus a separate magical bonus 2. Installed DAE 14.0.12 exposes source-appropriate `isDamaged` special-duration behavior for the later DAE-only fixture. No authenticated crawl or production mutation was performed.
