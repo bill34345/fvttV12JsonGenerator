@@ -122,7 +122,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | ART-001 | P2 | closed | Input, generated output, acceptance fixture, historical artifact, and deliverable boundaries are not explicit. | Tracked artifact policy and inventory; every tracked output category has a reason; generated outputs are reproducible or intentionally retained fixtures. |
 | ART-002 | P2 | closed | Historical debug and temp files remain tracked despite current ignore intent. | Each file is promoted to a named fixture/tool or removed in a scoped index cleanup; no useful evidence is deleted without replacement. |
 | DET-001 | P2 | closed | Optional AI/network behavior is influenced by environment credentials, and deterministic/offline mode is not one uniform, enforced contract across workflows. | Ambient credentials cannot activate Actor/Web translation; explicit modes are observable; provider reasoning is sanitized; CLI/API/browser offline semantics pass. |
-| ARCH-001 | P2 | in_progress | Large multi-responsibility modules increase regression and review risk, especially `actor.ts`, parsers, plaintext ingest, and `App.tsx`. | Characterization tests plus responsibility-based extraction; no line-count-only refactor; structural and semantic output stays stable. |
+| ARCH-001 | P2 | closed | Large multi-responsibility modules increase regression and review risk, especially `actor.ts`, parsers, plaintext ingest, and `App.tsx`. | Measured selection plus two independently committed Actor extractions; six characterization tests; full v12/v14 pre/post CLI structure and semantic controls; 699-test aggregate gate. |
 | WEB-001 | P1 if public, P3 if loopback-only | planned | Web API advertises public unauthenticated access while exposing expensive jobs and server-side configured capabilities. | Deployment mode explicitly chosen; secure default binding/auth policy implemented and tested; docs match actual exposure. |
 | WEB-002 | P1 if proxied | validated | Client identity trusts forwarded headers without a trusted-proxy boundary; in-memory per-IP limiting can be spoofed or collapse clients. | Trusted proxy configuration, fallback identity behavior, global caps, and tests for forged headers and proxy chains. |
 | WEB-003 | P2 | validated | Upload limits are checked after `request.text()` and process-local job/rate state is not a complete public resource-control boundary. | Request-body/server limits, global job cap, cleanup bounds, and load/abuse tests are documented and enforced for public deployment. |
@@ -164,13 +164,14 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] (2026-07-15) Milestone 6 inventory and hygiene enforcement completed: 178 prohibited tracked artifacts were classified and untracked without deleting ignored local recovery copies; the real hygiene gate passes and rejects a planted regression.
 - [x] (2026-07-15) Closed SEM-004 after the source-identical Shield fixture, three-positive/close-negative parsing corpus, v12/v14 structural generation tests, real v12/v14 CLI regeneration, unrelated Jewel comparison, and the 693-test aggregate CI gate passed. Mandatory semantic review separately retained SEM-005 for the broader standalone Item mechanics still missing.
 - [x] Milestone 6: Define and clean artifact boundaries (ART-001, ART-002).
-- [ ] (2026-07-15) Milestone 7 started with measured candidate evidence and focused child plan `milestones/07-risk-driven-architecture.md`; ARCH-001 moved to `in_progress`. `actor.ts` was selected for two sequential characterized extractions, while Item/Web refactors were deferred to avoid mixing SEM-005 or deployment behavior changes.
-- [ ] Milestone 7: Perform risk-driven architecture extraction (ARCH-001).
+- [x] (2026-07-15) Milestone 7 started with measured candidate evidence and focused child plan `milestones/07-risk-driven-architecture.md`; ARCH-001 moved to `in_progress`. `actor.ts` was selected for two sequential characterized extractions, while Item/Web refactors were deferred to avoid mixing SEM-005 or deployment behavior changes.
+- [x] (2026-07-15) Milestone 7 closed: `ActorLocalizer` and pure target-metadata normalization were extracted in separate commits; six direct characterization tests, full v12/v14 pre/post CLI controls, semantic projections, and the 699-test aggregate gate passed with no behavior change.
+- [x] Milestone 7: Perform risk-driven architecture extraction (ARCH-001).
 - [ ] Milestone 8: Secure the chosen Web deployment model (WEB-001, WEB-002, WEB-003).
 - [ ] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
 - [ ] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
-**Exact next action:** Execute M7 Task 1 RED: add direct ActorLocalizer characterization tests for local fallback, injected translation, and provider failure before creating `actor-localizer.ts`.
+**Exact next action:** Start Milestone 8 by reading `src/web/AGENTS.md`, recording the decision-gate fallback of loopback binding by default with explicit public mode, creating a focused Web-security child plan, and moving WEB-001/WEB-002/WEB-003 to `in_progress` before the first TDD change.
 
 ## Milestone 1: Repair Semantic AC Extraction and Verification
 
@@ -338,12 +339,12 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 
 **Files:** Determined per focused child plan from change coupling and responsibility, with likely first candidates `src/core/generator/actor.ts`, `src/core/parser/item-parser.ts`, `src/core/ingest/plaintext.ts`, and `src/web/client/App.tsx`.
 
-- [ ] Measure change coupling, type-error concentration, test coverage, and responsibility boundaries; do not use line count alone as authorization.
-- [ ] Select one cohesive extraction at a time, beginning with logic already isolated by semantic fixes such as AC effect extraction.
-- [ ] Write characterization tests and `assertEqualStructure()` snapshots before moving logic.
-- [ ] Keep exported interfaces narrow and target-version behavior explicit.
-- [ ] Run v12 and v14 real-source conversions plus unrelated-actor structural comparisons after each extraction.
-- [ ] Commit each extraction separately from feature or bug changes.
+- [x] Measure change coupling, type-error concentration, test coverage, and responsibility boundaries; do not use line count alone as authorization.
+- [x] Select one cohesive extraction at a time, beginning with logic already isolated by semantic fixes such as AC effect extraction.
+- [x] Write characterization tests and `assertEqualStructure()` snapshots before moving logic.
+- [x] Keep exported interfaces narrow and target-version behavior explicit.
+- [x] Run v12 and v14 real-source conversions plus unrelated-actor structural comparisons after each extraction.
+- [x] Commit each extraction separately from feature or bug changes.
 
 **Semantic acceptance:** Modules have clearer responsibilities and lower change coupling while generated Actor/Item behavior, CLI output, and Web workflows remain semantically identical.
 
@@ -478,6 +479,8 @@ Semantic acceptance proves the user's actual goal:
   Evidence: `references/dnd5e-4.3.9/repo/module/config.mjs` and `.local/references/dnd5e/5.3.3/repo/module/config.mjs` both define `veryRare`; regenerated v12 and v14 Shield Items now emit that exact key.
 - Observation: Source review beyond SEM-004 found broader standalone Item template leakage and incomplete action mechanics that the removed scratch outputs also did not solve.
   Evidence: the generated Shield inherits breastplate `armor.value: 14`/`dex: 2` and omits its extra magical AC, Protective Field duration/concentration/range, and Forceful Bash prone rider. The locked 5.3.3 `equipment24/armor/magical/shield-of-the-cavalier.yml` and 4.3.9 Shield/Shield +2 sources show the correct schema; SEM-005 now owns this work with PROD-002 runtime acceptance.
+- Observation: The highest-coupling Actor module could be reduced without semantic drift by extracting two already-characterized responsibilities rather than performing a broad rewrite.
+  Evidence: `actor.ts` moved from 3,514 lines / 157 private methods to 3,208 / 140; the two new collaborators have six direct tests; v12 and v14 CLI outputs are full normalized value-structure matches to controls regenerated from pre-extraction commit `86d0c56`; the aggregate gate passes 699 tests.
 
 ## Decision Log
 
@@ -529,6 +532,9 @@ Semantic acceptance proves the user's actual goal:
 - Decision: Close Milestone 6 after SEM-004 restored and exceeded the useful behavior present in historical scratch output, while keeping the newly discovered broader Item defect visible as SEM-005 rather than expanding artifact cleanup indefinitely.
   Rationale: Artifact retention and Item feature completeness are separate concerns. The removed copies are reproducible, locally retained, and recoverable from Git; none contained the missing armor/duration/rider correctness. SEM-005 is tied to the planned standalone Item live acceptance so those defects cannot disappear from the program.
   Date/Author: 2026-07-15, Codex.
+- Decision: Close ARCH-001 after two narrow Actor responsibility extractions and defer Item-parser and Web-client refactors to their semantic/security milestones.
+  Rationale: Measured coupling selected `actor.ts`, but mixing SEM-005 feature work or M8 deployment behavior into a refactor would make output stability unprovable. Independent commits plus exact v12/v14 controls preserve reviewability.
+  Date/Author: 2026-07-15, Codex.
 
 ## Outcomes & Retrospective
 
@@ -540,6 +546,7 @@ Program initialization outcome on 2026-07-15:
 - The persistent Goal is active and points back to this file rather than attempting to carry the full program in Goal text.
 - No business code or generated Actor JSON was modified during initialization.
 - Implementation and closure outcomes will be appended here after each milestone; historical entries must not be rewritten to hide failed or superseded evidence.
+- Milestone 7 reduced ActorGenerator responsibility and change coupling without changing real v12/v14 output: localization and target metadata now have narrow collaborators, independent commits, direct characterization, and exact CLI controls.
 
 ## Change Note
 
@@ -562,3 +569,5 @@ Program initialization outcome on 2026-07-15:
 2026-07-15: Completed the 178-path artifact inventory, policy, fail-closed hygiene tool, planted regression, and path-scoped index cleanup while retaining ignored local recovery copies. Mandatory Item source review then rejected M6 closure: the current Shield workflow loses rarity and Protective Field semantics. Added SEM-004 and moved into a fixture-backed parser/generator repair before declaring the historical scratch outputs superseded.
 
 2026-07-15: Closed SEM-004, ART-001, ART-002, and Milestone 6. The exact Shield source now generates schema-valid `veryRare`, two named Activities, a reaction, and one dawn-recovering use for v12/v14; all 693 tests and aggregate gates pass. The same semantic review discovered broader standalone Item template/mechanics defects and recorded them as SEM-005 for generalized repair plus PROD-002 live-runtime acceptance rather than overstating M6 completion.
+
+2026-07-15: Closed ARCH-001 and Milestone 7. `ActorLocalizer` and target-version metadata normalization were extracted in separate commits with six direct characterization tests; pre/post CLI outputs for White Tusk Shaman were identical after normalization for both v12 and v14, semantic projections remained source-faithful, and the 699-test aggregate gate passed.

@@ -176,11 +176,11 @@ Verification record (2026-07-15): the focused target-metadata, v14-target, and A
 - Modify: `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - Modify: this plan
 
-- [ ] **Step 1: Record objective metrics**
+- [x] **Step 1: Record objective metrics**
 
 Record final `actor.ts` line/method counts, new module sizes, test counts, and diff scope. The acceptance claim is responsibility separation plus stable output, not a line-count target.
 
-- [ ] **Step 2: Run the aggregate gate**
+- [x] **Step 2: Run the aggregate gate**
 
 Run:
 
@@ -191,13 +191,15 @@ git diff --check
 
 Expected: production/broad typechecks zero; all tests/coverage pass; 99-source audit, hygiene, locked reference verification, Web build, and offline smoke pass; no whitespace errors.
 
-- [ ] **Step 3: Perform semantic acceptance**
+- [x] **Step 3: Perform semantic acceptance**
 
 Read the normalized v12/v14 Actor controls and confirm identity, stats, items, Activity fields, effects, flags, and uses are unchanged. Confirm ordinary generation remains zero-network and provider failure fallback remains source-faithful.
 
-- [ ] **Step 4: Update the authoritative ledger**
+- [x] **Step 4: Update the authoritative ledger**
 
 Close ARCH-001 only if both extractions and the semantic comparison pass. Record any newly discovered behavior as a separate finding rather than changing it inside this refactor.
+
+Closure record (2026-07-15): `actor.ts` moved from 3,514 lines / 157 private methods at selection to 3,208 lines / 140 private methods. The extracted collaborators are 276 lines (`ActorLocalizer`) and 59 lines (target metadata), with six direct characterization tests. The M7 diff is limited to those two collaborators, their tests, `actor.ts` orchestration, and this plan; the two extractions were committed independently as `86d0c56` and `2657b06`. `bun run ci:verify` passed 699 tests / 2,791 expectations / 87 files, zero production and broad type diagnostics, 87.07% production-line and 88.11% production-function coverage, 108-source anti-overfit, 1,597-path hygiene, locked dnd5e 5.3.3 reference verification, Web build, and the offline six-item White Tusk smoke. Real v12/v14 CLI outputs were full normalized value-structure matches to pre-extraction controls and passed manual semantic projection review; ambient-network and provider-failure behavior remained covered by the aggregate and focused suites.
 
 ## Self-review
 
