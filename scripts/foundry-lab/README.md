@@ -129,6 +129,20 @@ The password is passed only to 7-Zip, redacted from command output, and never
 stored in mappings or reports. The ignored result is written to
 `.local/foundry-v14/inventory/local-source-report.json` only under `--apply`.
 
+## Browser-controlled JSON import and export
+
+Do not rely on a Windows file picker when controlling Foundry through the
+ChatGPT/Codex Chrome extension. Extension-connected Playwright can reject
+`DOM.setFileInputFiles` even when Chrome's **Allow access to file URLs** setting
+is enabled, and download events may stall at the native Save As boundary.
+
+Use Foundry's public `importFromJSON()` and `exportToJSON()` client workflows
+through the browser's permitted developer protocol, transferring JSON text
+rather than a local path and capturing the exact export Blob before the native
+dialog. The complete procedure, security boundary, cleanup, and semantic
+acceptance rules are in
+[`docs/runbooks/foundry-json-transfer-without-file-dialog.md`](../../docs/runbooks/foundry-json-transfer-without-file-dialog.md).
+
 ## Module compatibility acceptance workflow
 
 ### Default world for future end-to-end testing
