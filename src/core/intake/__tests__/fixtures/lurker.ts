@@ -18,6 +18,21 @@ function evidence(quote: string, occurrence = 0) {
 
 export function buildValidLurkerIr(): MonsterIntakeIR {
   const claim = (path: string, quote: string) => ({ path, valueKind: 'explicit' as const, evidence: [evidence(quote)], confidence: 'high' as const });
+  const claims = [
+    claim('/creature/identity/name', '暗影潜妖'), claim('/creature/identity/size', '中型妖精'), claim('/creature/identity/creatureType', '中型妖精'), claim('/creature/identity/alignment', '中立邪恶'),
+    claim('/creature/attributes/ac', 'AC 14'), claim('/creature/attributes/initiative', '先攻 +4'), claim('/creature/attributes/hp', 'HP 65（10d8+20）'), claim('/creature/attributes/movement', '速度 30尺，攀爬30尺'),
+    claim('/creature/attributes/cr', 'CR 4'), claim('/creature/attributes/xp', 'XP 1100'), claim('/creature/attributes/proficiencyBonus', 'PB +2'),
+    claim('/creature/abilities', '力量 18 +4 +4  敏捷 14 +2 +4  体质 14 +2 +2'), claim('/creature/abilities', '智力 11 +0 +0  感知 13 +1 +3  魅力 16 +3 +3'),
+    claim('/creature/saves', '力量 18 +4 +4  敏捷 14 +2 +4  体质 14 +2 +2'), claim('/creature/saves', '智力 11 +0 +0  感知 13 +1 +3  魅力 16 +3 +3'),
+    claim('/creature/skills', '技能 欺瞒+5，威吓+5，察觉+3，隐匿+6'), claim('/creature/defenses', '抗性 钝击'), claim('/creature/defenses', '免疫 受擒，束缚'),
+    claim('/creature/senses', '感官 黑暗视觉60尺；被动察觉13'), claim('/creature/languages', '语言 通用语以及一门其他语言'),
+    claim('/creature/traits/0', '畸曲魇体Nightmarish Contortion。潜妖可以挤入1尺的立方空间，且可以移动穿过最窄1寸宽的空间而无需消耗额外的移动力。'),
+    claim('/creature/traits/1', '蛛行Spider Climb。潜妖可以在难以攀爬的表面上攀爬，包括沿着天花板移动，且无需为此进行属性检定。'),
+    claim('/creature/traits/2', '纯真结界Ward of Innocence。若生物正持握曾属于儿童的毛绒动物玩偶，潜妖无法攻击其，也无法主动进入其10尺内的空间。'),
+    claim('/creature/actions/0', '多重攻击Multiattack。潜妖发动两次爪击攻击。'),
+    claim('/creature/actions/1', '爪击Claw。近战攻击检定：+6，触及10尺。 命中：9（1d10+4）挥砍伤害，若目标生物体型不超过中型，则其被两只手臂之一擒抱，陷入受擒状态（逃脱DC 14），且目标陷入束缚状态直至擒抱结束。'),
+    claim('/creature/bonusActions/0', '黑暗传送Dark Teleport。若潜妖未身处明亮光照中，其传送至多120尺至一处其可见的未占据空间。若目标空间未处于明亮光照 中，则潜妖无需看见该空间。正被潜妖擒抱的生物必须成功通过一次DC13的魅力豁免，否则与潜妖一同传送至距潜妖目标空间最近的未占据空间。'),
+  ];
   return {
     schemaVersion: 1,
     source: { sha256: createHash('sha256').update(LURKER_SOURCE).digest('hex'), length: LURKER_SOURCE.length },
@@ -44,13 +59,8 @@ export function buildValidLurkerIr(): MonsterIntakeIR {
       ],
       reactions: [], legendaryActions: [],
     },
-    claims: [
-      claim('/creature/identity/name', '暗影潜妖'), claim('/creature/identity/size', '中型妖精'), claim('/creature/identity/creatureType', '中型妖精'),
-      claim('/creature/attributes/ac', 'AC 14'), claim('/creature/attributes/hp', 'HP 65（10d8+20）'), claim('/creature/attributes/movement', '速度 30尺，攀爬30尺'),
-      claim('/creature/attributes/cr', 'CR 4'), claim('/creature/abilities', '力量 18 +4 +4  敏捷 14 +2 +4  体质 14 +2 +2'),
-      claim('/creature/abilities', '智力 11 +0 +0  感知 13 +1 +3  魅力 16 +3 +3'), claim('/creature/traits', '特质Traits'), claim('/creature/actions', '动作Actions'), claim('/creature/bonusActions', '附赠动作Bonus Actions'),
-    ],
-    coverage: [{ start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE, classification: 'mechanical', claimPaths: ['/creature'] }],
+    claims,
+    coverage: [{ start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE, classification: 'mechanical', claimPaths: [...new Set(claims.map((value) => value.path))] }],
     uncertainties: [],
   };
 }

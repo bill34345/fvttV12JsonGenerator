@@ -121,3 +121,4 @@ nul
 /opencode.json.bak
 # END Ruler Generated Files
 .local/references/
+.gstack/

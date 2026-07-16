@@ -13,6 +13,9 @@ import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from './core/foundryTarget';
+import { loadMonsterIntakeConfig } from './core/intake/config';
+import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from './core/intake/provider';
+import { resumeMonsterIntake, runMonsterIntake } from './core/intake/orchestrator';
 
 interface StructuredActions {
   attacks?: any[];
@@ -94,8 +97,11 @@ program
   .option('--clear-backup', 'Clear output_backup folder before sync')
   .option('--translate-json', 'Translate pending JSON files in place')
   .option('--translate-dir <path>', 'Directory for --translate-json', 'data/need_tran')
-  .option('--ingest-plaintext <source>', 'Split a plain-text creature collection into project markdown files')
-  .option('--ingest-plaintext-actors <source>', 'Generate project markdown and actor JSON from a plain-text creature collection')
+  .option('--intake-monsters <source>', 'AI-first monster/NPC intake from TXT or irregular Markdown (recommended)')
+  .option('--resume-intake <run-dir>', 'Resume an AI monster intake review bundle')
+  .option('--decisions <path>', 'Decision JSON file for --resume-intake')
+  .option('--ingest-plaintext <source>', '[legacy rule-based] Split a plain-text creature collection into project markdown files')
+  .option('--ingest-plaintext-actors <source>', '[legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
   .option('--ingest-items <source>', 'Split a plain-text item collection into project markdown files')
   .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', 'obsidian/dnd数据转fvttjson/input')
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
@@ -123,6 +129,41 @@ program
       }
       assertEffectProfileForTarget(fvttVersion, effectProfile);
       const imageAssets = buildImageAssetOptionsFromCli(options);
+
+      if (options.intakeMonsters) {
+        const source = readFileSync(resolve(options.intakeMonsters), 'utf-8');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = options.dryRun ? undefined : new OpenAICompatibleMonsterIntakeProvider({
+          ...loadMonsterIntakeConfig(),
+          audit: (event) => audit.push(event),
+        });
+        const result = await runMonsterIntake({
+          source,
+          sourceName: options.intakeMonsters,
+          vaultPath: options.vault,
+          dryRun: Boolean(options.dryRun),
+          fvttVersion: fvttVersion as '12' | '14',
+          effectProfile,
+        }, provider);
+        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+        printIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
+
+      if (options.resumeIntake) {
+        if (!options.decisions) throw new Error('--resume-intake requires --decisions <path>.');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = new OpenAICompatibleMonsterIntakeProvider({
+          ...loadMonsterIntakeConfig(),
+          audit: (event) => audit.push(event),
+        });
+        const result = await resumeMonsterIntake(options.resumeIntake, options.decisions, provider, options.vault);
+        writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
+        printIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
 
       if (options.translateJson) {
         const workflow = new JsonTranslationSyncWorkflow();
@@ -191,6 +232,7 @@ program
       }
 
       if (options.ingestPlaintext) {
+        console.warn('[Legacy rule-based] This converter is retained for compatibility; use --intake-monsters for semantic intake.');
         const workflow = new PlainTextIngestionWorkflow();
         const result = await workflow.ingest({
           sourcePath: options.ingestPlaintext,
@@ -209,10 +251,13 @@ program
           console.log(`- ${file.fileName} | sections=${Object.keys(file.sections).length} | notes=${file.rawNotes.length}`);
         }
 
+        if (result.files.length === 0) throw new Error('Legacy plaintext ingestion detected 0 monsters.');
+
         return;
       }
 
       if (options.ingestPlaintextActors) {
+        console.warn('[Legacy rule-based] This converter is retained for compatibility; use --intake-monsters for semantic intake.');
         const workflow = new PlainTextActorWorkflow();
         const result = await workflow.ingestActors({
           sourcePath: options.ingestPlaintextActors,
@@ -255,6 +300,8 @@ program
         for (const warning of result.sync.warnings) {
           console.error(`Warning: ${warning.displayName ?? 'image'} [${warning.stage}] ${warning.message}`);
         }
+
+        if (result.markdown.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
 
         return;
       }
@@ -394,3 +441,23 @@ program
   });
 
 program.parse();
+
+function intakeExitCode(status: string): number {
+  if (status === 'succeeded' || status === 'dry_run') return 0;
+  if (status === 'needs_review') return 2;
+  return 1;
+}
+
+function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>): void {
+  console.log(`AI intake run: ${result.runId}`);
+  console.log(`Status: ${result.status}`);
+  console.log(`Discovered monsters: ${result.discoveryCount}`);
+  if (result.estimatedMaxCalls !== undefined) console.log(`Estimated worst-case provider calls: ${result.estimatedMaxCalls}`);
+  if (result.runPath) console.log(`Review bundle: ${result.runPath}`);
+  for (const creature of result.creatures) {
+    console.log(`- ${creature.label}: ${creature.status} | calls extract=${creature.calls.extraction} review=${creature.calls.review} repair=${creature.calls.repair}`);
+    for (const finding of creature.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
+    if (creature.markdownPath) console.log(`  Markdown: ${creature.markdownPath}`);
+    if (creature.actorPath) console.log(`  Actor JSON: ${creature.actorPath}`);
+  }
+}

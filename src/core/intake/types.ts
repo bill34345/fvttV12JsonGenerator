@@ -205,6 +205,28 @@ export interface MonsterIntakeOptions {
   dryRun?: boolean;
   fvttVersion?: Extract<FvttTargetVersion, '12' | '14'>;
   effectProfile?: EffectProfile;
+  replaceConflicts?: Set<string>;
+}
+
+export interface MonsterIntakeCreatureResult {
+  id: string;
+  label: string;
+  status: MonsterIntakeStatus;
+  bundlePath: string;
+  findings: IntakeFinding[];
+  calls: { extraction: number; review: number; repair: number };
+  markdownPath?: string;
+  actorPath?: string;
+}
+
+export interface MonsterIntakeRunResult {
+  runId: string;
+  sourceSha256: string;
+  runPath: string;
+  status: 'succeeded' | 'needs_review' | 'partial' | 'failed' | 'dry_run';
+  creatures: MonsterIntakeCreatureResult[];
+  discoveryCount: number;
+  estimatedMaxCalls?: number;
 }
 
 export type DecisionAction = 'select' | 'set' | 'preserve-literal' | 'exclude';

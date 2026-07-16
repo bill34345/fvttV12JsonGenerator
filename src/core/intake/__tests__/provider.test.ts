@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { loadMonsterIntakeConfig, MonsterIntakeConfigurationError } from '../config';
 import {
+  INTAKE_PROMPT_VERSIONS,
   MonsterIntakeProviderError,
   OpenAICompatibleMonsterIntakeProvider,
   parseStrictJson,
@@ -57,6 +58,27 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(JSON.stringify(body)).toContain('untrusted data');
     expect(requests[0]!.init.headers.Authorization).toBe('Bearer secret');
+  });
+
+  test('extraction prompt requires numeric CR, leaf claims, and exact full coverage', async () => {
+    const requests: Array<{ url: string; init: HttpRequest }> = [];
+    const provider = makeProvider(async (url, init) => {
+      requests.push({ url, init });
+      return response(200, '{"schemaVersion":1,"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
+    });
+
+    await provider.extract({
+      source: 'monster',
+      sourceSha256: 'hash',
+      candidate: { id: 'monster', label: 'Monster', start: 0, end: 7, quote: 'monster' },
+    });
+
+    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
+    const prompt = body.messages[0]!.content;
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v2');
+    expect(prompt).toContain('cr must be a JSON number');
+    expect(prompt).toContain('Parent object claims do not support child values');
+    expect(prompt).toContain('partition the full candidate range');
   });
 
   test('retries retryable 429 once and audits without secrets', async () => {

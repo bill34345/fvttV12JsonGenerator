@@ -21,6 +21,7 @@
     "web:build": "vite build",
     "web:start": "bun run src/web/server/index.ts",
     "verify:actor": "bun run src/tools/actorVerification.ts",
+    "verify:intake": "bun run src/tools/intakeVerification.ts",
     "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all",
     "foundry:lab": "bun run scripts/foundry-lab/cli.ts",

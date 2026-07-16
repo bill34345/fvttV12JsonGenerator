@@ -18,7 +18,9 @@ import {
   type WebJob,
   type WebJobType,
 } from './jobs/jobStore';
-import { runJob, startJob, type WebJobRequest } from './jobs/jobRunner';
+import { resumeAiMonsterIntakeJob, runJob, startJob, type WebJobRequest } from './jobs/jobRunner';
+import { monsterIntakeConfigured } from '../../core/intake/config';
+import type { IntakeDecision } from '../../core/intake/types';
 import { getWebImageAssetPreset } from './imageAssetPreset';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
@@ -72,6 +74,7 @@ const publicJobTypes = new Set<WebJobType>([
   'ingest-items',
   'goddessfantasy-board-crawl',
   'records-to-plaintext',
+  'ai-monster-intake',
 ]);
 
 cleanupExpiredJobs();
@@ -110,6 +113,7 @@ export async function handleApiRequest(
       return jsonSuccess({
         pathModeEnabled,
         translationConfigured: Boolean(Bun.env.TRANSLATION_API_KEY || Bun.env.OPENAI_API_KEY),
+        monsterIntakeConfigured: monsterIntakeConfigured(Bun.env),
         goddessFantasyCookieConfigured: Boolean(Bun.env.GODDESSFANTASY_COOKIE),
         goddessFantasyLoginConfigured: Boolean(Bun.env.GODDESSFANTASY_USERNAME && Bun.env.GODDESSFANTASY_PASSWORD),
         imageAssetsConfigured: imagePreset.imageAssetsConfigured,
@@ -232,6 +236,22 @@ export async function handleApiRequest(
       return jsonSuccess(publicJob(getRequiredJob(jobMatch[1])));
     }
 
+    const decisionsMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/decisions$/i);
+    if (request.method === 'POST' && decisionsMatch?.[1]) {
+      const job = getRequiredJob(decisionsMatch[1]);
+      if (job.type !== 'ai-monster-intake') throw userError('NOT_RESUMABLE', '只有 AI 怪物资料整理任务可以提交确认。');
+      if (job.status !== 'needs_review' && job.status !== 'failed' && job.status !== 'partial') {
+        throw userError('JOB_NOT_REVIEWABLE', `当前任务状态 ${job.status} 不可恢复。`);
+      }
+      if (runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient || runningJobsTotal() >= securityConfig.globalLongJobs) {
+        throw userError('JOB_CONCURRENCY_LIMIT', '当前长任务并发已满，请稍后重试。', 429);
+      }
+      const body = await readJsonBody<{ decisions?: IntakeDecision[] }>(request, securityConfig.maxRequestBodyBytes);
+      if (!Array.isArray(body.decisions)) throw userError('INVALID_DECISIONS', 'decisions 必须是数组。');
+      void resumeAiMonsterIntakeJob(job, body.decisions).catch(() => undefined);
+      return jsonSuccess(publicJob(getRequiredJob(job.id)));
+    }
+
     const downloadMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/download\/([^/]+)$/i);
     if (request.method === 'GET' && downloadMatch?.[1] && downloadMatch[2]) {
       const job = getRequiredJob(downloadMatch[1]);
@@ -334,7 +354,7 @@ function getRequiredJob(id: string): WebJob {
 
 function validateJobInput(body: WebJobRequest): void {
   const type = body.type;
-  const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type.startsWith('ingest-');
+  const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type === 'ai-monster-intake' || type.startsWith('ingest-');
   const needsJson = type === 'translate-json' || type === 'records-to-plaintext';
 
   if (needsMarkdown) {

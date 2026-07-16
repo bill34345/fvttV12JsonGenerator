@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { validateMonsterIntakeIR } from '../validator';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 
@@ -54,5 +55,30 @@ describe('MonsterIntakeIR validation', () => {
     });
     const result = validateMonsterIntakeIR(LURKER_SOURCE, ir);
     expect(result.blocking.some((finding) => finding.code === 'CONFLICTING_CLAIMS')).toBe(true);
+  });
+
+  it('rejects conflicting explicit AC values even when AI omits the second claim', () => {
+    const note = '\n旁注：该生物的护甲等级为16，以上AC 14为旧数据。';
+    const source = `${LURKER_SOURCE}${note}`;
+    const ir = buildValidLurkerIr();
+    ir.source = {
+      sha256: createHash('sha256').update(source).digest('hex'),
+      length: source.length,
+    };
+    ir.coverage.push({
+      start: LURKER_SOURCE.length,
+      end: source.length,
+      quote: note,
+      classification: 'narrative',
+      claimPaths: [],
+    });
+
+    const result = validateMonsterIntakeIR(source, ir);
+    const firstCandidateOnly = validateMonsterIntakeIR(source, ir, {
+      coverageRange: { start: 0, end: LURKER_SOURCE.length },
+    });
+
+    expect(result.blocking.some((finding) => finding.code === 'CONFLICTING_SOURCE_VALUES')).toBe(true);
+    expect(firstCandidateOnly.blocking.some((finding) => finding.code === 'CONFLICTING_SOURCE_VALUES')).toBe(false);
   });
 });

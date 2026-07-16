@@ -1,6 +1,6 @@
 export type EffectProfile = 'core' | 'modded-v12' | 'modded-v14';
 export type FvttVersion = '12' | '13' | '14';
-export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'needs_review' | 'partial' | 'failed';
 
 export type JobType =
   | 'monster-collection'
@@ -10,12 +10,14 @@ export type JobType =
   | 'ingest-plaintext'
   | 'ingest-plaintext-actors'
   | 'ingest-items'
+  | 'ai-monster-intake'
   | 'goddessfantasy-board-crawl'
   | 'records-to-plaintext';
 
 export interface CapabilitiesResponse {
   pathModeEnabled: boolean;
   translationConfigured: boolean;
+  monsterIntakeConfigured: boolean;
   goddessFantasyCookieConfigured: boolean;
   goddessFantasyLoginConfigured: boolean;
   imageAssetsConfigured: boolean;
@@ -166,6 +168,13 @@ export async function createJob(input: {
 
 export async function getJob(id: string): Promise<WebJob> {
   return request<WebJob>(`/api/jobs/${id}`);
+}
+
+export async function submitIntakeDecisions(
+  id: string,
+  decisions: Array<{ issueId: string; action: 'select' | 'set' | 'preserve-literal' | 'exclude'; value?: unknown; note?: string }>,
+): Promise<WebJob> {
+  return request<WebJob>(`/api/jobs/${id}/decisions`, { decisions });
 }
 
 export async function readSourceFile(path: string): Promise<{ path: string; content: string }> {

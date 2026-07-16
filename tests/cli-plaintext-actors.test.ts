@@ -45,8 +45,8 @@ describe('CLI plaintext actor import', () => {
     expect(stdout).toContain('Effect profile: modded-v12');
     expect(stdout).toContain('Detected creatures: 7');
     expect(existsSync(join(vaultPath, 'input'))).toBe(false);
-    expect(stderr).toBe('');
-  });
+    expect(stderr).toContain('[Legacy rule-based]');
+  }, 15_000);
 
   it('accepts image workflow options during dry-run without uploading assets', () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-cli-plaintext-actors-images-'));
@@ -94,7 +94,7 @@ describe('CLI plaintext actor import', () => {
     expect(stdout).toContain('Image mode: ssh');
     expect(stdout).toContain('Dry run: yes');
     expect(existsSync(join(vaultPath, 'input'))).toBe(false);
-    expect(stderr).toBe('');
+    expect(stderr).toContain('[Legacy rule-based]');
   });
 
   it('accepts image token crop override manifests during dry-run', () => {
@@ -139,6 +139,6 @@ describe('CLI plaintext actor import', () => {
 
     expect(proc.exitCode).toBe(0);
     expect(stdout).toContain('Image mode: ssh');
-    expect(stderr).toBe('');
+    expect(stderr).toContain('[Legacy rule-based]');
   });
 });

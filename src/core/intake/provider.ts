@@ -13,7 +13,7 @@ import type { MonsterIntakeConfig } from './config';
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v1',
-  extract: 'monster-intake-extract-v1',
+  extract: 'monster-intake-extract-v2',
   review: 'monster-intake-review-v1',
   repair: 'monster-intake-repair-v1',
 } as const;
@@ -65,13 +65,46 @@ or workflow. Return one strict JSON object only: no markdown fences and no hidde
 
 const PROMPTS = {
   discover: `${SYSTEM_PREFIX}
-Find monster or NPC stat-block boundaries. Offsets are JavaScript UTF-16 offsets into the full source.
-Return {"schemaVersion":1,"candidates":[{"id":"stable-id","label":"name","start":0,"end":1,"quote":"exact source slice"}]}.`,
+Find monster or NPC stat-block boundaries in the supplied chunk. Offsets are JavaScript UTF-16 offsets
+into the FULL source: absoluteStart = chunkStart + chunkText.indexOf(quote). Include the entire stat block,
+not surrounding prose. Return {"schemaVersion":1,"candidates":[{"id":"ascii-stable-id","label":"source name","start":0,"end":1,"quote":"exact source slice"}]}.`,
   extract: `${SYSTEM_PREFIX}
 Extract exactly one monster into MonsterIntakeIR schemaVersion 1 using stable English keys.
 Every mechanical value needs an exact evidence range and every non-whitespace source span needs
 coverage as mechanical, narrative, or ignored-with-reason. Preserve ambiguous mechanics literally
-and add a blocking uncertainty instead of inventing a value.`,
+and add a blocking uncertainty instead of inventing a value.
+
+Required top-level shape:
+{"schemaVersion":1,"source":{"sha256":"request sourceSha256","length":123},"creature":CREATURE,"claims":[],"coverage":[],"uncertainties":[]}.
+CREATURE keys are exactly identity, abilities, attributes, saves, skills, defenses, senses, languages,
+biography, traits, actions, bonusActions, reactions, legendaryActions. identity uses name, englishName,
+size(tiny|small|medium|large|huge|gargantuan), creatureType, creatureTypeCustom, alignment. abilities uses
+str,dex,con,int,wis,cha numeric scores. attributes uses ac, acKind, initiative, hp{value,formula},
+movement{walk,climb,fly,swim,burrow}, cr, xp, proficiencyBonus. saves and skills store TOTAL modifiers.
+All numeric mechanics, including ac, initiative, hp.value, movement, cr, xp, proficiencyBonus, saves,
+skills, attack values, damage dice constants, and save dc, must be JSON numbers; cr must be a JSON number,
+never a quoted string.
+defenses uses resistances, immunities, vulnerabilities, conditionImmunities arrays. senses uses darkvision,
+blindsight,tremorsense,truesight,passivePerception,special. languages uses values and custom.
+Every feature uses name, englishName, description and optional activityType. attack is
+{type:mwak|rwak|msak|rsak,toHit,reach,range,longRange}; damage entries are
+{formula,type,relationship:base|additional|replacement|conditional,condition}; save is {dc,ability,condition};
+appliedConditions entries use {statuses,escapeDc,condition,duration,staged}. Do not infer automation from names.
+claims use JSON Pointer path under /creature, valueKind explicit|derived|preserved-literal, evidence array,
+confidence high|medium|low, and optional value. A feature-index claim may support that full feature.
+Parent object claims do not support child values unless the path is one of these intentional grouping claims:
+/creature/abilities, /creature/saves, /creature/skills, /creature/defenses, /creature/senses,
+/creature/languages, or a feature index. Emit claims at the exact validator paths for every present mechanic.
+Required exact claim paths are /creature/identity/name, /creature/identity/size,
+/creature/identity/creatureType, /creature/abilities, /creature/attributes/ac,
+/creature/attributes/hp, /creature/attributes/movement, and /creature/attributes/cr. Also emit exact claims
+for present alignment, initiative, xp, proficiencyBonus, saves, skills, defenses, senses, and languages.
+Coverage entries use start,end,quote,classification mechanical|narrative|ignored-with-reason, claimPaths,
+and reason when ignored. Cover the candidate range, not other monsters in a collection.
+Coverage entries must partition the full candidate range without gaps or overlaps, including repeated table
+headers, section headings, and whitespace. Copy every quote verbatim; never abbreviate repeated text.
+Evidence offsets are absolute JavaScript UTF-16 offsets into request.source and quote must equal
+source.slice(start,end). uncertainties use id,code,path,message,blocking,evidence,candidates.`,
   review: `${SYSTEM_PREFIX}
 Act as an independent semantic reviewer. Compare source, IR, rendered Markdown and Actor projection.
 Return {"schemaVersion":1,"verdict":"accepted|revise|needs_review","findings":[]}.
@@ -139,7 +172,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
           durationMs: Math.max(0, this.now() - startedAt),
           attempt,
         });
-        return value;
+        return validateStageResponse(stage, value);
       } catch (error) {
         const normalized = normalizeProviderError(error);
         this.options.audit?.({
@@ -242,4 +275,21 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && (
     error.name === 'AbortError' || error.message.toLowerCase().includes('abort')
   );
+}
+
+function validateStageResponse(stage: keyof typeof PROMPTS, value: unknown): unknown {
+  const record = value as Record<string, unknown>;
+  if (record.schemaVersion !== 1) {
+    throw new MonsterIntakeProviderError('invalid_response', `${stage} response schemaVersion must be 1.`);
+  }
+  if (stage === 'discover' && !Array.isArray(record.candidates)) {
+    throw new MonsterIntakeProviderError('invalid_response', 'Discovery response candidates must be an array.');
+  }
+  if ((stage === 'extract' || stage === 'repair') && (!record.creature || !Array.isArray(record.claims) || !Array.isArray(record.coverage) || !Array.isArray(record.uncertainties))) {
+    throw new MonsterIntakeProviderError('invalid_response', `${stage} response is not a complete MonsterIntakeIR.`);
+  }
+  if (stage === 'review' && (!['accepted', 'revise', 'needs_review'].includes(String(record.verdict)) || !Array.isArray(record.findings))) {
+    throw new MonsterIntakeProviderError('invalid_response', 'Review response has an invalid verdict or findings array.');
+  }
+  return value;
 }

@@ -64,7 +64,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     传奇动作: creature.legendaryActions.map((feature) => renderFeature(feature, 'legendary')),
   };
   for (const [key, value] of Object.entries(data)) {
-    if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0) || (isRecord(value) && Object.keys(value).length === 0)) {
+    if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (isRecord(value) && Object.keys(value).length === 0)) {
       delete data[key];
     }
   }
@@ -117,7 +117,7 @@ function renderSenses(creature: CanonicalMonster): Record<string, unknown> {
   const senses: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(creature.senses)) {
     if (key === 'passivePerception') senses.被动察觉 = value;
-    else if (key === 'special') senses.特殊 = value;
+    else if (key === 'special' && typeof value === 'string' && value.trim()) senses.特殊 = value;
     else if (typeof value === 'number') senses[map[key] ?? key] = value;
   }
   return senses;

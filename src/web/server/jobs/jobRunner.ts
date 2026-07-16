@@ -22,6 +22,10 @@ import {
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
 import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../../core/foundryTarget';
+import { loadMonsterIntakeConfig } from '../../../core/intake/config';
+import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from '../../../core/intake/provider';
+import { resumeMonsterIntake, runMonsterIntake } from '../../../core/intake/orchestrator';
+import type { IntakeDecision, MonsterIntakeAiProvider } from '../../../core/intake/types';
 import {
   addJobFile,
   appendJobLog,
@@ -42,11 +46,15 @@ export interface WebJobRequest {
   options?: Record<string, unknown>;
 }
 
+export interface WebJobRunnerDependencies {
+  monsterIntakeProvider?: MonsterIntakeAiProvider;
+}
+
 export function startJob(job: WebJob, body: WebJobRequest): void {
   void runJob(job, body);
 }
 
-export async function runJob(job: WebJob, body: WebJobRequest): Promise<void> {
+export async function runJob(job: WebJob, body: WebJobRequest, dependencies: WebJobRunnerDependencies = {}): Promise<void> {
   try {
     updateJob(job.id, { status: 'running' });
     appendJobLog(job.id, 'info', `开始任务：${job.type}`);
@@ -82,6 +90,9 @@ export async function runJob(job: WebJob, body: WebJobRequest): Promise<void> {
         break;
       case 'records-to-plaintext':
         await runRecordsToPlaintextJob(job, body);
+        break;
+      case 'ai-monster-intake':
+        await runAiMonsterIntake(job, body, dependencies.monsterIntakeProvider);
         break;
       default:
         throw new Error(`Unsupported job type: ${job.type}`);
@@ -175,6 +186,7 @@ async function runPlaintextIngest(job: WebJob, body: WebJobRequest): Promise<voi
     dryRun: false,
     enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
   });
+  if (result.files.length === 0) throw new Error('Legacy plaintext ingestion detected 0 monsters.');
   registerFilesUnder(job.id, jobOutputDir(job.id), ['.md', '.json', '.jsonl']);
   finishJob(job.id, 'succeeded', {
     sourcePath: result.sourcePath,
@@ -199,6 +211,7 @@ async function runPlaintextActorIngest(job: WebJob, body: WebJobRequest): Promis
     effectProfile: optionEffectProfile(body.options, fvttVersion),
     imageAssets: imageSetup.imageAssets,
   });
+  if (result.markdown.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
   registerFilesUnder(job.id, vaultPath, ['.md', '.json', '.jsonl', '.webp', '.png', '.jpg', '.jpeg']);
   const imageWarnings = [
     ...imageSetup.warnings,
@@ -345,6 +358,108 @@ function finishJob(
     failures,
     summary: Object.fromEntries(Object.entries(summary)),
   });
+}
+
+async function runAiMonsterIntake(
+  job: WebJob,
+  body: WebJobRequest,
+  injectedProvider?: MonsterIntakeAiProvider,
+): Promise<void> {
+  const source = requireContent(body);
+  const inputPath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'monster-intake.txt'), source);
+  setJobProgress(job.id, 1, 4, 'AI 发现与结构化提取');
+  const audit: IntakeProviderAuditEvent[] = [];
+  const provider = injectedProvider ?? new OpenAICompatibleMonsterIntakeProvider({
+    ...loadMonsterIntakeConfig(),
+    audit: (event) => audit.push(event),
+  });
+  const fvttVersion = optionFvttVersion(body.options);
+  if (fvttVersion !== '12' && fvttVersion !== '14') {
+    throw new Error('AI monster intake only supports Foundry v12 or v14.');
+  }
+  const result = await runMonsterIntake({
+    source,
+    sourceName: basename(inputPath),
+    runRoot: join(jobDir(job.id), 'intake-runs'),
+    vaultPath: join(jobDir(job.id), 'vault'),
+    fvttVersion,
+    effectProfile: optionEffectProfile(body.options, fvttVersion),
+  }, provider);
+  writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+  registerIntakeFiles(job.id, result);
+  finishIntakeJob(job.id, result);
+}
+
+export async function resumeAiMonsterIntakeJob(
+  job: WebJob,
+  decisions: IntakeDecision[],
+  injectedProvider?: MonsterIntakeAiProvider,
+): Promise<void> {
+  if (job.type !== 'ai-monster-intake') throw new Error('Only ai-monster-intake jobs can be resumed.');
+  const runId = String(job.summary?.runId ?? '');
+  const sourceSha256 = String(job.summary?.sourceSha256 ?? '');
+  if (!runId || !sourceSha256) throw new Error('AI monster intake job has no resumable bundle.');
+  const runPath = join(jobDir(job.id), 'intake-runs', runId);
+  const decisionsPath = join(runPath, 'decisions.json');
+  writeFileSync(decisionsPath, JSON.stringify({ runId, sourceSha256, decisions }, null, 2));
+  updateJob(job.id, { status: 'running', files: [], error: undefined });
+  setJobProgress(job.id, 1, 4, '应用人工确认并重新完整验收');
+  const audit: IntakeProviderAuditEvent[] = [];
+  const provider = injectedProvider ?? new OpenAICompatibleMonsterIntakeProvider({
+    ...loadMonsterIntakeConfig(),
+    audit: (event) => audit.push(event),
+  });
+  const result = await resumeMonsterIntake(runPath, decisionsPath, provider, join(jobDir(job.id), 'vault'));
+  writeFileSync(join(runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
+  registerIntakeFiles(job.id, result);
+  finishIntakeJob(job.id, result);
+}
+
+function finishIntakeJob(id: string, result: Awaited<ReturnType<typeof runMonsterIntake>>): void {
+  const status: WebJobStatus = result.status === 'dry_run' ? 'failed' : result.status;
+  finishJob(id, status, {
+    runId: result.runId,
+    sourceSha256: result.sourceSha256,
+    discoveryCount: result.discoveryCount,
+    creatures: result.creatures.map((creature) => ({
+      id: creature.id,
+      label: creature.label,
+      status: creature.status,
+      calls: creature.calls,
+      findings: creature.findings,
+    })),
+  }, result.creatures.flatMap((creature) => creature.findings.filter((finding) => !finding.blocking).map((finding) => finding.message)),
+  result.creatures.filter((creature) => creature.status === 'failed').map((creature) => ({
+    sourceName: creature.label,
+    error: creature.findings.map((finding) => finding.message).join('; '),
+  })));
+}
+
+function registerIntakeFiles(id: string, result: Awaited<ReturnType<typeof runMonsterIntake>>): void {
+  const common = [
+    [join(result.runPath, 'source.txt'), 'source.txt', 'text/plain; charset=utf-8', '原始文本'],
+    [join(result.runPath, 'discovery.json'), 'discovery.json', 'application/json; charset=utf-8', '怪物边界'],
+    [join(result.runPath, 'decisions.template.json'), 'decisions.template.json', 'application/json; charset=utf-8', '确认模板'],
+  ] as const;
+  for (const [path, fileName, contentType, label] of common) {
+    if (existsSync(path)) addJobFile(id, { path, fileName, contentType, label });
+  }
+  for (const creature of result.creatures) {
+    for (const [name, label, contentType] of [
+      ['intake-ir.json', `${creature.label} · IR`, 'application/json; charset=utf-8'],
+      ['standard.md', `${creature.label} · 候选 Markdown`, 'text/markdown; charset=utf-8'],
+      ['deterministic-report.json', `${creature.label} · 确定性报告`, 'application/json; charset=utf-8'],
+      ['deterministic-report.md', `${creature.label} · 核对报告`, 'text/markdown; charset=utf-8'],
+      ['ai-review.json', `${creature.label} · AI 终审`, 'application/json; charset=utf-8'],
+    ] as const) {
+      const path = join(creature.bundlePath, name);
+      if (existsSync(path)) addJobFile(id, { path, fileName: `${creature.id}-${name}`, contentType, label });
+    }
+    if (creature.status === 'accepted' && creature.actorPath && creature.markdownPath) {
+      addJobFile(id, { path: creature.actorPath, fileName: `${creature.id}-actor.json`, contentType: 'application/json; charset=utf-8', label: `${creature.label} · Actor JSON` });
+      addJobFile(id, { path: creature.markdownPath, fileName: `${creature.id}.md`, contentType: 'text/markdown; charset=utf-8', label: `${creature.label} · 标准 Markdown` });
+    }
+  }
 }
 
 function registerFilesUnder(id: string, root: string, allowedExts: string[]): void {
@@ -517,6 +632,7 @@ function hasTranslationConfig(): boolean {
 function statusText(status: WebJobStatus): string {
   if (status === 'succeeded') return '任务完成。';
   if (status === 'partial') return '任务部分完成，请查看失败条目。';
+  if (status === 'needs_review') return '任务需要人工确认；Actor JSON 尚未注册为正式下载。';
   if (status === 'failed') return '任务失败。';
   return status;
 }

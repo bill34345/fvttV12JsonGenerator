@@ -20,6 +20,7 @@ import {
   getCapabilities,
   getDefaults,
   getJob,
+  submitIntakeDecisions,
   type CapabilitiesResponse,
   type ConversionResult,
   type DefaultsResponse,
@@ -31,7 +32,7 @@ import {
 } from './api';
 
 type ToolId = 'single' | JobType;
-type ToolGroupId = 'json' | 'crawler';
+type ToolGroupId = 'intake' | 'json' | 'legacy' | 'crawler';
 type CrawlMode = 'full' | 'incremental';
 
 interface ToolConfig {
@@ -46,6 +47,15 @@ interface ToolConfig {
 }
 
 const tools: ToolConfig[] = [
+  {
+    id: 'ai-monster-intake',
+    group: 'intake',
+    title: 'AI 怪物资料整理',
+    short: 'AI Intake',
+    description: '推荐入口：上传或粘贴 TXT / 乱 Markdown，经证据化提取、项目生成器与独立终审生成 Actor JSON。文本会发送到服务器配置的 AI provider。',
+    accepts: '.md,.markdown,.txt',
+    needsFile: true,
+  },
   {
     id: 'single',
     group: 'json',
@@ -75,8 +85,8 @@ const tools: ToolConfig[] = [
   },
   {
     id: 'ingest-plaintext-actors',
-    group: 'json',
-    title: 'Plaintext 生成 Actor',
+    group: 'legacy',
+    title: 'Legacy Plaintext 生成 Actor',
     short: 'Plaintext Actor',
     description: '上传站点整理文本，先拆成项目 Markdown，再同步生成 Actor JSON。',
     accepts: '.md,.markdown,.txt',
@@ -85,8 +95,8 @@ const tools: ToolConfig[] = [
   },
   {
     id: 'ingest-plaintext',
-    group: 'crawler',
-    title: 'Plaintext 拆分',
+    group: 'legacy',
+    title: 'Legacy Plaintext 拆分',
     short: 'Plaintext',
     description: '只拆分 plaintext 到项目 Markdown，不生成 Foundry JSON。',
     accepts: '.md,.markdown,.txt',
@@ -141,11 +151,13 @@ const tools: ToolConfig[] = [
 ];
 
 const toolGroups: Array<{ id: ToolGroupId; title: string; detail: string }> = [
+  { id: 'intake', title: '推荐', detail: 'AI 主导、证据化、可复核' },
   { id: 'json', title: '生成 JSON', detail: 'Actor / Item / Vault 输出' },
+  { id: 'legacy', title: 'Legacy', detail: '旧规则转换，仅兼容历史流程' },
   { id: 'crawler', title: '爬虫与整理', detail: '抓取、拆分、翻译' },
 ];
 
-const terminalStatuses: JobStatus[] = ['succeeded', 'partial', 'failed'];
+const terminalStatuses: JobStatus[] = ['succeeded', 'needs_review', 'partial', 'failed'];
 const goddessFantasyBoardUrl = 'https://www.goddessfantasy.net/bbs/index.php?board=2318.0';
 
 export function App() {
@@ -171,6 +183,8 @@ export function App() {
 
   const tool = tools.find((item) => item.id === activeTool) ?? tools[0]!;
   const supportsImageAssets = Boolean(tool.supportsImageAssets);
+  const supportsAiNormalize = ['ingest-plaintext', 'ingest-plaintext-actors', 'vault-sync'].includes(activeTool);
+  const supportsClearBackup = activeTool === 'vault-sync';
   const uploadLimitMb = activeTool === 'single'
     ? capabilities?.limits.singleUploadMb ?? 5
     : capabilities?.limits.collectionUploadMb ?? 20;
@@ -218,6 +232,10 @@ export function App() {
       setImageAssetsEnabled(false);
     }
   }, [imageAssetsEnabled, supportsImageAssets]);
+
+  useEffect(() => {
+    if (activeTool === 'ai-monster-intake' && fvttVersion === '13') setFvttVersion('12');
+  }, [activeTool, fvttVersion]);
 
   const jsonPreview = useMemo(() => {
     if (singleResult) return JSON.stringify(singleResult.rawJson, null, 2);
@@ -316,6 +334,7 @@ export function App() {
       <section className="capability-strip">
         <Capability label="访问" value={capabilities?.publicAccess ? '公网开放' : '本地'} tone="warning" />
         <Capability label="翻译" value={capabilities?.translationConfigured ? '已配置' : '未配置'} />
+        <Capability label="AI Intake" value={capabilities?.monsterIntakeConfigured ? '已配置' : '未配置'} tone={capabilities?.monsterIntakeConfigured ? undefined : 'warning'} />
         <Capability label="爬站凭据" value={capabilities?.goddessFantasyCookieConfigured || capabilities?.goddessFantasyLoginConfigured ? '已配置' : '未配置'} />
         <Capability label="图片资产" value={capabilities?.imageAssetsConfigured ? '已配置' : '未配置'} tone={capabilities?.imageAllowHttp ? 'warning' : undefined} />
         <Capability label="上传限制" value={`${uploadLimitMb} MB`} />
@@ -409,7 +428,7 @@ export function App() {
               <span>Foundry</span>
               <select value={fvttVersion} onChange={(event) => setFvttVersion(event.target.value as FvttVersion)}>
                 <option value="12">v12</option>
-                <option value="13">v13</option>
+                {activeTool !== 'ai-monster-intake' ? <option value="13">v13</option> : null}
                 <option value="14">v14</option>
               </select>
             </label>
@@ -423,16 +442,22 @@ export function App() {
             </label>
           </div>
 
-          <div className="checkbox-row">
-            <label>
-              <input type="checkbox" checked={enableAiNormalize} onChange={(event) => setEnableAiNormalize(event.target.checked)} />
-              AI normalize
-            </label>
-            <label>
-              <input type="checkbox" checked={clearBackup} onChange={(event) => setClearBackup(event.target.checked)} />
-              clear backup
-            </label>
-          </div>
+          {supportsAiNormalize || supportsClearBackup ? (
+            <div className="checkbox-row">
+              {supportsAiNormalize ? (
+                <label>
+                  <input type="checkbox" checked={enableAiNormalize} onChange={(event) => setEnableAiNormalize(event.target.checked)} />
+                  AI normalize
+                </label>
+              ) : null}
+              {supportsClearBackup ? (
+                <label>
+                  <input type="checkbox" checked={clearBackup} onChange={(event) => setClearBackup(event.target.checked)} />
+                  clear backup
+                </label>
+              ) : null}
+            </div>
+          ) : null}
 
           {supportsImageAssets ? (
             <ImageAssetsPanel
@@ -489,6 +514,19 @@ export function App() {
 
           <ImageAssetSummary capabilities={capabilities} job={job} />
 
+          <IntakeReviewPanel
+            job={job}
+            onResumed={(nextJob) => {
+              setJob(nextJob);
+              setStatus('loading');
+              setError('');
+            }}
+            onError={(message) => {
+              setStatus('error');
+              setError(message);
+            }}
+          />
+
           <DownloadPanel singleResult={singleResult} job={job} />
 
           <pre className="json-preview">{jsonPreview}</pre>
@@ -502,6 +540,121 @@ export function App() {
       </section>
     </main>
   );
+}
+
+interface IntakeReviewFinding {
+  id: string;
+  code: string;
+  path: string;
+  message: string;
+  blocking: boolean;
+  candidates?: unknown[];
+  evidence?: Array<{ start: number; end: number; quote: string }>;
+}
+
+interface IntakeReviewCreature {
+  id: string;
+  label: string;
+  status: string;
+  findings: IntakeReviewFinding[];
+}
+
+function IntakeReviewPanel(props: {
+  job: WebJob | null;
+  onResumed: (job: WebJob) => void;
+  onError: (message: string) => void;
+}) {
+  const [drafts, setDrafts] = useState<Record<string, { action: 'select' | 'set' | 'preserve-literal' | 'exclude'; value: string }>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const creatures = props.job?.type === 'ai-monster-intake' && Array.isArray(props.job.summary?.creatures)
+    ? props.job.summary.creatures as unknown as IntakeReviewCreature[]
+    : [];
+  const findings = creatures.flatMap((creature) => (creature.findings ?? []).filter((finding) => finding.blocking).map((finding) => ({ creature, finding })));
+
+  useEffect(() => {
+    if (!props.job || props.job.status !== 'needs_review') return;
+    setDrafts(Object.fromEntries(findings.map(({ finding }) => [finding.id, {
+      action: 'select' as const,
+      value: finding.candidates?.[0] === undefined ? '' : stringifyDecisionValue(finding.candidates[0]),
+    }])));
+  }, [props.job?.id, props.job?.status]);
+
+  if (!props.job || props.job.type !== 'ai-monster-intake') return null;
+  if (creatures.length === 0) return null;
+
+  async function submit() {
+    if (!props.job) return;
+    setSubmitting(true);
+    try {
+      const decisions = findings.map(({ finding }) => {
+        const draft = drafts[finding.id] ?? { action: 'select' as const, value: '' };
+        const requiresValue = draft.action === 'select' || draft.action === 'set';
+        return {
+          issueId: finding.id,
+          action: draft.action,
+          value: requiresValue ? parseDecisionValue(draft.value) : undefined,
+        };
+      });
+      props.onResumed(await submitIntakeDecisions(props.job.id, decisions));
+    } catch (error) {
+      props.onError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="intake-review">
+      <h3>AI Intake 逐怪物审查</h3>
+      {creatures.map((creature) => (
+        <article key={creature.id}>
+          <header><strong>{creature.label}</strong><span>{statusLabel(creature.status as JobStatus)}</span></header>
+          {(creature.findings ?? []).filter((finding) => finding.blocking).map((finding) => {
+            const draft = drafts[finding.id] ?? { action: 'select' as const, value: '' };
+            return (
+              <div className="intake-issue" key={finding.id}>
+                <div><code>{finding.code}</code><code>{finding.path}</code></div>
+                <p>{finding.message}</p>
+                {finding.evidence?.map((evidence) => <blockquote key={`${evidence.start}-${evidence.end}`}>{evidence.quote}</blockquote>)}
+                {props.job?.status === 'needs_review' ? (
+                  <div className="intake-decision">
+                    <select value={draft.action} onChange={(event) => setDrafts({ ...drafts, [finding.id]: { ...draft, action: event.target.value as typeof draft.action } })}>
+                      <option value="select">选择候选</option>
+                      <option value="set">手工设值</option>
+                      <option value="preserve-literal">保留原文</option>
+                      <option value="exclude">排除可选内容</option>
+                    </select>
+                    {draft.action === 'select' && finding.candidates?.length ? (
+                      <select value={draft.value} onChange={(event) => setDrafts({ ...drafts, [finding.id]: { ...draft, value: event.target.value } })}>
+                        {finding.candidates.map((candidate) => {
+                          const value = stringifyDecisionValue(candidate);
+                          return <option key={value} value={value}>{value}</option>;
+                        })}
+                      </select>
+                    ) : null}
+                    {draft.action === 'set' ? <input value={draft.value} onChange={(event) => setDrafts({ ...drafts, [finding.id]: { ...draft, value: event.target.value } })} placeholder="JSON 值或文本" /> : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </article>
+      ))}
+      {props.job.status === 'needs_review' && findings.length > 0 ? (
+        <button className="primary-button" disabled={submitting} onClick={submit}>{submitting ? '正在重新验收…' : '提交确认并恢复任务'}</button>
+      ) : null}
+    </section>
+  );
+}
+
+function stringifyDecisionValue(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+function parseDecisionValue(value: string): unknown {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try { return JSON.parse(trimmed); } catch { return trimmed; }
 }
 
 function ImageAssetsPanel(props: {

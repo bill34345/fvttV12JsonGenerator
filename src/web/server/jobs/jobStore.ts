@@ -11,7 +11,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 import { TEMP_WEB_DIR } from '../paths';
 
-export type WebJobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
+export type WebJobStatus = 'queued' | 'running' | 'succeeded' | 'needs_review' | 'partial' | 'failed';
 
 export type WebJobType =
   | 'single-convert'
@@ -22,6 +22,7 @@ export type WebJobType =
   | 'ingest-plaintext'
   | 'ingest-plaintext-actors'
   | 'ingest-items'
+  | 'ai-monster-intake'
   | 'goddessfantasy-board-crawl'
   | 'records-to-plaintext';
 

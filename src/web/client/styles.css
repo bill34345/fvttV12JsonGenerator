@@ -653,6 +653,52 @@ select:focus {
   white-space: pre;
 }
 
+.intake-review {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.intake-review article,
+.intake-issue {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.intake-review article header,
+.intake-issue > div,
+.intake-decision {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.intake-issue p,
+.intake-issue code,
+.intake-issue blockquote {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.intake-issue blockquote {
+  max-height: 180px;
+  overflow: auto;
+  margin: 8px 0;
+  padding: 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+}
+
+.intake-decision input,
+.intake-decision select {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .error-box,
 .success-box,
 .empty-state,

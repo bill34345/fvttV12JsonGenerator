@@ -22,7 +22,11 @@ const REQUIRED_CLAIM_PATHS = [
   '/creature/abilities',
 ] as const;
 
-export function validateMonsterIntakeIR(source: string, value: unknown): IntakeValidationResult {
+export function validateMonsterIntakeIR(
+  source: string,
+  value: unknown,
+  options: { coverageRange?: { start: number; end: number } } = {},
+): IntakeValidationResult {
   const findings: IntakeFinding[] = [];
   const finding = (
     code: string,
@@ -58,6 +62,7 @@ export function validateMonsterIntakeIR(source: string, value: unknown): IntakeV
   }
 
   validateCreature(ir, finding);
+  validateExplicitAcConflicts(source, options.coverageRange, finding);
 
   const claims = Array.isArray(ir.claims) ? ir.claims : [];
   if (!Array.isArray(ir.claims)) {
@@ -69,14 +74,19 @@ export function validateMonsterIntakeIR(source: string, value: unknown): IntakeV
       finding('MISSING_REQUIRED_CLAIM', path, `Required field has no source-backed claim: ${path}`, 'evidence');
     }
   }
+  for (const path of collectMechanicalClaimPaths(ir)) {
+    if (!claims.some((claim) => claimCovers(claim, path))) {
+      finding('UNSUPPORTED_MECHANICAL_VALUE', path, `Mechanical value has no evidence-backed claim: ${path}`, 'evidence');
+    }
+  }
   validateConflictingClaims(claims, finding);
 
   const coverage = Array.isArray(ir.coverage) ? ir.coverage : [];
   if (!Array.isArray(ir.coverage)) {
     finding('INVALID_COVERAGE', '/coverage', 'coverage must be an array.', 'schema');
   }
-  coverage.forEach((entry, index) => validateCoverage(source, entry, index, finding));
-  validateFullCoverage(source, coverage, finding);
+  coverage.forEach((entry, index) => validateCoverage(source, entry, index, claims, finding));
+  validateFullCoverage(source, coverage, finding, options.coverageRange);
 
   if (!Array.isArray(ir.uncertainties)) {
     finding('INVALID_UNCERTAINTIES', '/uncertainties', 'uncertainties must be an array.', 'schema');
@@ -178,6 +188,7 @@ function validateCoverage(
   source: string,
   entry: SourceCoverageEntry,
   index: number,
+  claims: IntakeClaim[],
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
 ): void {
   validateEvidence(source, entry, `/coverage/${index}`, finding);
@@ -189,6 +200,9 @@ function validateCoverage(
   }
   if (entry?.classification === 'mechanical' && (!Array.isArray(entry.claimPaths) || entry.claimPaths.length === 0)) {
     finding('UNCLAIMED_MECHANICAL_COVERAGE', `/coverage/${index}/claimPaths`, 'Mechanical coverage must point to at least one claim path.', 'coverage');
+  }
+  if (entry?.classification === 'mechanical' && entry.claimPaths?.some((path) => !claims.some((claim) => claim.path === path))) {
+    finding('UNKNOWN_COVERAGE_CLAIM', `/coverage/${index}/claimPaths`, 'Mechanical coverage references a claim path that is not present in claims.', 'coverage');
   }
 }
 
@@ -211,13 +225,16 @@ function validateFullCoverage(
   source: string,
   coverage: SourceCoverageEntry[],
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+  coverageRange?: { start: number; end: number },
 ): void {
   const covered = new Uint8Array(source.length);
   for (const entry of coverage) {
     if (!Number.isInteger(entry?.start) || !Number.isInteger(entry?.end)) continue;
     for (let index = Math.max(0, entry.start); index < Math.min(source.length, entry.end); index++) covered[index] = 1;
   }
-  for (let index = 0; index < source.length; index++) {
+  const start = coverageRange?.start ?? 0;
+  const limit = coverageRange?.end ?? source.length;
+  for (let index = start; index < limit; index++) {
     if (!covered[index] && !/\s/.test(source[index]!)) {
       const end = Math.min(source.length, index + 80);
       finding('UNCOVERED_SOURCE', '/coverage', 'Non-whitespace source text is not classified by the coverage ledger.', 'coverage', [{
@@ -247,8 +264,71 @@ function validateConflictingClaims(
   }
 }
 
+function validateExplicitAcConflicts(
+  source: string,
+  range: { start: number; end: number } | undefined,
+  finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+): void {
+  const start = range?.start ?? 0;
+  const end = range?.end ?? source.length;
+  const text = source.slice(start, end);
+  const evidence: Array<EvidenceRef & { value: number }> = [];
+  const pattern = /(?:\bAC\b|护甲等级|Armor\s+Class)\s*(?:为|是|[:：])?\s*(\d{1,2})/giu;
+  for (const match of text.matchAll(pattern)) {
+    if (match.index === undefined || !match[1]) continue;
+    const value = Number.parseInt(match[1], 10);
+    const refStart = start + match.index;
+    evidence.push({
+      start: refStart,
+      end: refStart + match[0].length,
+      quote: match[0],
+      value,
+    });
+  }
+  const values = [...new Set(evidence.map((ref) => ref.value))];
+  if (values.length > 1) {
+    finding(
+      'CONFLICTING_SOURCE_VALUES',
+      '/creature/attributes/ac',
+      `Source contains conflicting explicit AC values: ${values.join(', ')}.`,
+      'conflict',
+      evidence.map(({ value: _value, ...ref }) => ref),
+    );
+  }
+}
+
 function claimCovers(claim: IntakeClaim, requiredPath: string): boolean {
-  return claim?.path === requiredPath || requiredPath.startsWith(`${claim?.path}/`);
+  if (claim?.path === requiredPath) return true;
+  if (!requiredPath.startsWith(`${claim?.path}/`)) return false;
+  return claim.path === '/creature/abilities'
+    || claim.path === '/creature/saves'
+    || claim.path === '/creature/skills'
+    || claim.path === '/creature/defenses'
+    || claim.path === '/creature/senses'
+    || claim.path === '/creature/languages'
+    || /^\/creature\/(?:traits|actions|bonusActions|reactions|legendaryActions)\/\d+$/.test(claim.path);
+}
+
+function collectMechanicalClaimPaths(ir: MonsterIntakeIR): string[] {
+  const creature = ir.creature;
+  const paths = [
+    '/creature/identity/name', '/creature/identity/size', '/creature/identity/creatureType',
+    '/creature/abilities', '/creature/attributes/ac', '/creature/attributes/hp',
+    '/creature/attributes/movement', '/creature/attributes/cr',
+  ];
+  if (creature.identity?.alignment) paths.push('/creature/identity/alignment');
+  if (creature.attributes?.initiative !== undefined) paths.push('/creature/attributes/initiative');
+  if (creature.attributes?.xp !== undefined) paths.push('/creature/attributes/xp');
+  if (creature.attributes?.proficiencyBonus !== undefined) paths.push('/creature/attributes/proficiencyBonus');
+  if (Object.keys(creature.saves ?? {}).length > 0) paths.push('/creature/saves');
+  if (Object.keys(creature.skills ?? {}).length > 0) paths.push('/creature/skills');
+  if (Object.values(creature.defenses ?? {}).some((value) => Array.isArray(value) && value.length > 0)) paths.push('/creature/defenses');
+  if (Object.keys(creature.senses ?? {}).length > 0) paths.push('/creature/senses');
+  if ((creature.languages?.values?.length ?? 0) > 0 || creature.languages?.custom) paths.push('/creature/languages');
+  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
+    creature[section]?.forEach((_feature, index) => paths.push(`/creature/${section}/${index}`));
+  }
+  return paths;
 }
 
 function isDiceFormula(value: string): boolean {
