@@ -112,6 +112,8 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | SEM-003 | P0 | closed | Condition-effect generation treats any condition word as an inflicted status, so prerequisites, termination clauses, immunity prose, and actor-state descriptions can create invented target effects. | Source-derived application-clause parser with positive/close-negative bilingual tests; White Tusk has no invented `Unconscious`; explicit target conditions and Bleeding automation survive full regression and runtime import. |
 | SEM-004 | P1 | closed | Standalone Item parsing maps Chinese rarities incorrectly and drops an actionable trait when its trigger merely mentions a saving throw, so the real Shield of the Cavalier loses schema-valid `veryRare`, reaction activation, and dawn recovery semantics. | Source-derived rarity and actionable-trait parsing with generalized positive/close-negative fixtures; the real Shield source regenerates through the CLI as `veryRare` with Forceful Bash plus a Protective Field reaction limited to once per dawn; v12/v14 structural checks and an unrelated Jewel regression pass. |
 | SEM-005 | P1 | closed | The former standalone Item template leakage and omitted Shield mechanics are repaired; live import/equip/Activity/readback passed, and Foundry's public `exportToJSON()` output was captured without a native dialog and matched the CLI artifact on every source-relevant field. | Generalized armor/action schema parsing backed by locked dnd5e 4.3.9 and 5.3.3 references; positive/negative/unrelated fixtures; v12/v14 CLI regeneration; PROD-002 local Foundry import/open/exercise/re-export comparison passes without template leakage or omitted source mechanics. |
+| SEM-006 | P1 | closed | The authenticated live GoddessFantasy corpus exposed structured statline loss: fractional CR `1/2` became `1`, Chinese necrotic resistance `暗蚀` was omitted, qualified language phrases lost their qualifiers, and variable size/type/alignment taxonomy could disappear. | Fraction-aware YAML parsing, corpus-derived alias/qualifier preservation, and variable-taxonomy custom fields pass fixture tests; live projections pass for 1 fractional CR, 25 qualified-language records, and 10 variable-taxonomy records across the 47 regenerated Actors. |
+| SEM-007 | P1 | closed | The authenticated live GoddessFantasy corpus exposed conditional-mechanics invention: replacement damage was emitted as simultaneous damage and staged save outcomes were linked as simultaneous immediate statuses. | Source-derived clause scoping keeps base plus additive damage while preserving replacement prose; staged saves retain literal text without invented simultaneous effects; three positives, close negatives, immediate-status controls, Gremishka, and Petrifying Death's Head pass. |
 | VER-001 | P0 | closed | `actorVerification` does not validate embedded Active Effects or their source-derived claims. | Verifier summarizes effects and warns on invalid AC clauses/change mismatches; regression proves old Bleeding artifact is rejected and regenerated artifacts pass. |
 | DOC-001 | P0 | closed | v14 source-fidelity and runtime acceptance claims include artifacts contaminated by SEM-001. | Reports preserve the defect chronology, affected actors were regenerated, source-reviewed, runtime-retested, and the copied-world authentication contradiction was amended. |
 | GATE-001 | P1 | closed | `antiOverfitAudit.runGitText()` returns an empty string on Git failure, allowing `--all` to report success with zero checked sources. | Shared typed Git execution fails closed; actual non-repository and zero-source CLI probes exit 1; tests cover missing Git and explicit-file independence; real all-audit checks 99 sources. |
@@ -129,7 +131,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | DOC-002 | P2 | closed | Acceptance documents previously contained chronology and support-boundary drift across source review, runtime smoke, module compatibility, and delivery checklist. | The canonical current support matrix separates thirteen layers and links dated evidence; three reports carry append-only amendments; README/checklist/ledger agree; current-claim contradiction scan is clean while historical text remains explicitly superseded. |
 | PROD-001 | P2 | closed | The CLI-generated modded-v14 Dread Brand effect now survives initial application and is removed by subsequent real MIDI damage in the locked DAE 14.0.12 + MIDI-QOL 14.0.9 stack; the core artifact remains active after the same control damage. | Generalized fixture generated through CLI and exercised in the locked DAE 14.0.12 + MIDI-QOL 14.0.9 runtime with source-to-output review. |
 | PROD-002 | P2 | closed | The real Shield passes supported Foundry import, sheet/readback, equipped+attuned AC `10 -> 12 -> 14`, Forceful Bash attack/damage/prone semantics, one-per-dawn Protective Field depletion/concentration semantics, and public `exportToJSON()` round-trip comparison without an operating-system file dialog. | Real source item generated by CLI, imported, opened, exercised, re-exported, and semantically compared; ignored export evidence retained under `.local/foundry-v14/evidence/remediation-m9/`. |
-| PROD-003 | P2 | blocked_external | Authenticated live GoddessFantasy crawl has not been accepted. | User-authorized credentials/session used without tracking secrets; live crawl, records-to-plaintext, generation, provenance, and semantic sample pass. |
+| PROD-003 | P2 | closed | The user-authorized authenticated Chrome crawl completed without exporting credentials; its initially rejected semantic sample was repaired under SEM-006 and SEM-007 and rerun. | In-place Chrome session; no cookie/credential inspection or export; 54 discovered / 37 crawled topics / 47 statblocks / zero pipeline failures; 47 CLI regenerations and 47/47 verifiers; expanded live semantic projections and aggregate gate pass. |
 | PROD-004 | P2 | closed | The former acceptance corpus was too narrow to justify broad parser/generalization confidence. | The dated 19-category corpus matrix names real fixtures/tests, target/profile, semantic projection, close/unrelated controls, and outcomes; its focused 148-test run and 738-test aggregate gate pass while runtime/external gaps remain excluded. |
 | PROD-005 | P2 | closed | The 2026-07-11 88-ID production snapshot was mistakenly promoted into a current completion blocker after the 2026-07-12 user-directed module cleanup changed the intended state. | Chronology audit preserves the 88-ID reproduction failure as historical evidence, records 79 only as the last verified local baseline, makes no unverified current production-count claim, and requires a fresh inventory plus explicit scope before any future production coexistence audit. Closure is a scope/report correction, not a compatibility Pass. |
 
@@ -174,13 +176,14 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] (2026-07-15) M9 Task 1 completed: neutral Item schema generation and generalized source mechanics passed real v12/v14 CLI semantic review and the 731-test aggregate gate; SEM-005 remains `in_progress` until Task 2 proves the v14 runtime/import/exercise/export half.
 - [x] (2026-07-16) M9 Task 2 closed after replacing the Chrome extension file-dialog boundary with Foundry's public document methods. The CLI v14 Shield imported via `importFromJSON()`; `exportToJSON()` produced a 9,727-byte JSON Blob captured before native download; the source-relevant projection matched exactly after normalizing only schema-default expansion. The disposable Item was deleted, the prototype wrapper was restored, the server stopped, and the original world option restored.
 - [x] (2026-07-16) Closed PROD-005 as a scope/report correction. The ledger had mistaken the dated 2026-07-11 88-ID production snapshot for the current intended set despite the 2026-07-12 module-cleanup and production-change record. The last verified local baseline is 79; the current production count was not re-inventoried and is not claimed.
+- [x] (2026-07-16) Milestone 11 completed under `milestones/11-live-crawl-semantic-acceptance.md`. The authorized Chrome session yielded 54 board topics, 37 matched/crawled topics, 47 plaintext statblocks, zero crawl/plaintext failures, and no exported cookies or credentials. Mandatory source review first rejected the JSON, then generalized repairs passed 52 focused tests, 47 CLI regenerations/verifiers, expanded 1/25/10/staged/replacement live projections, and the 753-test aggregate gate.
 - [x] (2026-07-15) M9 Task 3 closed PROD-001: a dnd5e Activity duration bug discovered in real runtime was repaired with generalized `untilDamaged -> duration.units: spec` projection; the CLI modded artifact applied a live Frightened effect and subsequent MIDI damage removed it, while the CLI core control retained the effect after the same damage path.
 - [x] (2026-07-15) M9 Task 4 closed PROD-004: the 19-category executable corpus matrix covers the required language/document/version/profile/positive/negative/regression dimensions; the focused matrix passed 148 tests / 656 expectations and aggregate CI passed 738 / 2,921 without upgrading blocked runtime or external claims.
 - [x] (2026-07-15) M9 Task 5 initially closed DOC-002 with PROD-003 and PROD-005 recorded as external boundaries; the 2026-07-16 chronology correction supersedes only the PROD-005 interpretation and leaves PROD-003 as the sole external boundary.
-- [ ] (2026-07-15) M10 pre-final audit completed every then-unblocked repository/CLI/source gate and updated the current support evidence. The 2026-07-16 no-dialog round trip closed the local Item row, and the chronology audit removed stale PROD-005. External PROD-003 is now the only remaining Goal boundary.
-- [ ] (2026-07-15) Persistent Goal blocked audit reached the required third consecutive continuation. Subsequent work closed the Chrome/Item boundary and corrected stale PROD-005; the Goal remains blocked only by PROD-003's authenticated-session authorization/acceptance boundary.
-- [ ] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
-- [ ] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
+- [x] (2026-07-15) M10 pre-final audit completed every then-unblocked repository/CLI/source gate and updated the current support evidence. The 2026-07-16 no-dialog round trip, chronology correction, and accepted authenticated crawl subsequently closed every remaining Goal boundary.
+- [x] (2026-07-15) The historical blocked audit correctly recorded the then-current external boundaries. Later user authorization and accepted evidence resolved the final PROD-003 boundary; the Goal is ready for completion after scoped commit verification.
+- [x] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
+- [x] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
 **Exact next action:** Authenticated crawling is the only remaining external boundary and still requires separate explicit credential/session authorization or explicit acceptance as remaining scope. Do not treat the historical 88-module snapshot as current production state.
 
@@ -288,14 +291,14 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - Modify production files identified by the fresh type-error inventory; start with shared domain types before leaf assertions.
 - Move or delete tracked scratch files only under Milestone 6 ownership rules.
 
-- [ ] Capture machine-readable error inventories for production, tests, scripts, and historical debug files without committing raw noisy logs.
-- [ ] Define `tsconfig.production.json` to include supported production source and exclude tests, temp, generated output, and historical debug scripts.
-- [ ] Add `typecheck:production` and `typecheck:all` scripts that use the installed TypeScript version without network fetching.
-- [ ] Fix shared model drift first: Actor activities, image asset options/presets, token review types, job runner contracts, and Foundry target shapes.
-- [ ] Do not use blanket `any`, `@ts-ignore`, `skipLibCheck` expansion, or broad exclusion to manufacture a pass.
-- [ ] Add or update behavioral tests whenever a type repair reveals an ambiguous runtime contract.
-- [ ] Reduce production errors to zero, then repair tests/scripts or reclassify obsolete debug programs under the artifact milestone.
-- [ ] Run `bun run typecheck:production`, `bun run typecheck:all`, `bun test --max-concurrency 4`, `bun run web:build`, and targeted CLI conversions.
+- [x] Capture machine-readable error inventories for production, tests, scripts, and historical debug files without committing raw noisy logs.
+- [x] Define `tsconfig.production.json` to include supported production source and exclude tests, temp, generated output, and historical debug scripts.
+- [x] Add `typecheck:production` and `typecheck:all` scripts that use the installed TypeScript version without network fetching.
+- [x] Fix shared model drift first: Actor activities, image asset options/presets, token review types, job runner contracts, and Foundry target shapes.
+- [x] Do not use blanket `any`, `@ts-ignore`, `skipLibCheck` expansion, or broad exclusion to manufacture a pass.
+- [x] Add or update behavioral tests whenever a type repair reveals an ambiguous runtime contract.
+- [x] Reduce production errors to zero, then repair tests/scripts or reclassify obsolete debug programs under the artifact milestone.
+- [x] Run `bun run typecheck:production`, `bun run typecheck:all`, `bun test --max-concurrency 4`, `bun run web:build`, and targeted CLI conversions.
 
 **Semantic acceptance:** Runtime behavior is unchanged except where a type error exposed a real bug; both Actor generation and the Web workbench complete representative real workflows.
 
@@ -312,14 +315,14 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - Create or modify the supported Bun test configuration after verifying the exact installed Bun 1.3.8 coverage syntax.
 - Add network-isolation tests near plaintext ingest, sync, translation, crawler, and Web job workflows.
 
-- [ ] Add one deterministic aggregate command that runs production typecheck, bounded full tests, anti-overfit all-source audit, reference verification, Web build, and a generated-actor smoke conversion.
-- [ ] Configure CI concurrency and timeouts so a hung crawler or child process fails visibly.
-- [ ] Ensure CI does not require API keys, login cookies, SSH access, production Foundry, or network translation.
-- [ ] Exclude test implementation files from production coverage reporting using Bun's supported configuration, then record the new baseline by subsystem.
-- [ ] Set initial thresholds no higher than the freshly measured production baseline; require critical semantic/gate modules to have direct branch tests even if the global threshold passes.
-- [ ] Add tests proving credentials present in environment do not trigger AI/network use without the explicit option.
-- [ ] Ensure opt-in network usage is reflected in CLI output/result metadata and failures are not swallowed silently.
-- [ ] Validate the CI workflow locally as far as possible and verify that a temporary planted regression makes each relevant gate fail; revert the planted regression immediately.
+- [x] Add one deterministic aggregate command that runs production typecheck, bounded full tests, anti-overfit all-source audit, reference verification, Web build, and a generated-actor smoke conversion.
+- [x] Configure CI concurrency and timeouts so a hung crawler or child process fails visibly.
+- [x] Ensure CI does not require API keys, login cookies, SSH access, production Foundry, or network translation.
+- [x] Exclude test implementation files from production coverage reporting using Bun's supported configuration, then record the new baseline by subsystem.
+- [x] Set initial thresholds no higher than the freshly measured production baseline; require critical semantic/gate modules to have direct branch tests even if the global threshold passes.
+- [x] Add tests proving credentials present in environment do not trigger AI/network use without the explicit option.
+- [x] Ensure opt-in network usage is reflected in CLI output/result metadata and failures are not swallowed silently.
+- [x] Validate the CI workflow locally as far as possible and verify that a temporary planted regression makes each relevant gate fail; revert the planted regression immediately.
 
 **Semantic acceptance:** A clean checkout can prove the supported offline product path, and CI cannot turn missing tools, zero-source audits, hidden network behavior, or low semantic coverage into green status.
 
@@ -334,13 +337,13 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - Modify or relocate tracked output/debug/temp artifacts in path-scoped commits.
 - Add a repository hygiene check under `src/tools/` with tests if policy cannot be enforced by Git ignore alone.
 
-- [ ] Inventory every tracked file under vault output, root `debug-*`, root `temp-*`, and `temp-items/` with category, producer command, consumer, reproducibility, and retention reason.
-- [ ] Define five explicit categories: source input, generated disposable output, tracked golden fixture, tracked acceptance evidence, and local/sensitive runtime artifact.
-- [ ] For every tracked generated JSON, either document its stable fixture consumer or regenerate it into an ignored location and remove it from version control in a scoped commit.
-- [ ] Promote useful debug scripts to named tools/tests with documented entrypoints; remove only obsolete copies after preserving unique behavior as tests or documentation.
-- [ ] Preserve user data and unrelated files; do not bulk-delete based only on filename.
-- [ ] Add a hygiene gate that detects newly tracked disposable output, credentials, cookies, `.local` runtime state, and unclassified root scratch files.
-- [ ] Run all commands that consume retained fixtures and prove paths still resolve on Windows with Chinese filenames.
+- [x] Inventory every tracked file under vault output, root `debug-*`, root `temp-*`, and `temp-items/` with category, producer command, consumer, reproducibility, and retention reason.
+- [x] Define five explicit categories: source input, generated disposable output, tracked golden fixture, tracked acceptance evidence, and local/sensitive runtime artifact.
+- [x] For every tracked generated JSON, either document its stable fixture consumer or regenerate it into an ignored location and remove it from version control in a scoped commit.
+- [x] Promote useful debug scripts to named tools/tests with documented entrypoints; remove only obsolete copies after preserving unique behavior as tests or documentation.
+- [x] Preserve user data and unrelated files; do not bulk-delete based only on filename.
+- [x] Add a hygiene gate that detects newly tracked disposable output, credentials, cookies, `.local` runtime state, and unclassified root scratch files.
+- [x] Run all commands that consume retained fixtures and prove paths still resolve on Windows with Chinese filenames.
 
 **Semantic acceptance:** A new contributor can tell which files are sources, deliverables, fixtures, evidence, and disposable state; cleaning does not erase the only copy of useful behavior or proof.
 
@@ -394,10 +397,10 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 
 - [x] Build a current support matrix separating source fidelity, schema validity, minimal runtime behavior, module-specific behavior, production-equivalent coexistence, and production deployment.
 - [x] Reconcile copied-world authentication chronology and other stale cross-report statements with dated amendments.
-- [ ] Add a generalized source-derived DAE/MIDI fixture with positive, close-negative, and unrelated controls; code/CLI/source/schema layers pass, but exercise it through the locked DAE 14.0.12 + MIDI-QOL 14.0.9 local runtime after file upload is enabled.
-- [ ] Select a real standalone Item source, generate it for v14 through the CLI, import/open/exercise/re-export it, and compare source-relevant fields.
+- [x] Add a generalized source-derived DAE/MIDI fixture with positive, close-negative, and unrelated controls; exercise it through the locked DAE 14.0.12 + MIDI-QOL 14.0.9 local runtime.
+- [x] Select a real standalone Item source, generate it for v14 through the CLI, import/open/exercise/re-export it, and compare source-relevant fields.
 - [x] Expand the corpus matrix across Chinese/English, actor/item, v12/v14, core/modded, positive/negative, and unrelated regression controls.
-- [x] For authenticated GoddessFantasy crawling, request authorization only when all offline work is ready; authorization was requested after offline work completed but has not been granted. Do not store cookies/passwords in tracked files or chat artifacts.
+- [x] For authenticated GoddessFantasy crawling, request authorization only when all offline work is ready; later explicit authorization enabled the accepted 37-topic/47-Actor run without storing cookies/passwords in tracked files or chat artifacts.
 - [x] Keep full production coexistence `Partial/Fail` unless the exact acceptance gate passes. Do not bypass protected module signatures or change production without explicit authorization.
 
 **Semantic acceptance:** Every support claim names the layer it proves, dated evidence supports it, and unresolved external gaps remain visible rather than being converted into blanket success.
@@ -414,7 +417,15 @@ The parser must recognize `AC` only as a standalone abbreviation, for example `\
 - [x] Perform source-to-output semantic review for every changed parser/generator behavior and sample unchanged unrelated outputs. Three `verify:actor` runs return zero warnings and the explicit M10 projection script passes.
 - [x] Run the authorized local Foundry runtime matrix and preserve the boundary between minimal runtime, copied-world, and production claims. Shield behavior/readback/export and the locked modded/core `isDamaged` control pass. The historical 88-ID mirror failure remains evidence but is no longer a current completion gate; current production state is still not claimed.
 - [x] Update every finding state, Outcomes & Retrospective, and the support matrix at the pre-final stopping point; open and external states remain explicit.
-- [ ] Close the Goal only when all authorized findings are `closed` and external blockers are either resolved or explicitly accepted by the user as remaining scope.
+- [x] All authorized findings are `closed`; external blockers were either resolved by later authorization/evidence or removed as stale scope. Complete the persistent Goal after the scoped commit and fresh status check.
+
+## Milestone 11: Repair Live-Crawl Semantic Fidelity and Accept PROD-003
+
+**Finding IDs:** SEM-006, SEM-007, PROD-003.
+
+**Focused plan:** `milestones/11-live-crawl-semantic-acceptance.md`.
+
+This milestone converts the authenticated crawl from a mechanically successful but semantically rejected run into accepted evidence. It uses fixture-backed generalized rules, regenerates affected Actors only through the existing crawl/plaintext/CLI workflow, and closes PROD-003 only after source-to-output review of both repaired and unrelated controls.
 
 ## Validation and Acceptance
 
@@ -447,6 +458,13 @@ Semantic acceptance proves the user's actual goal:
 - Optional `/checkpoint` snapshots may supplement recovery, but this checked-in ExecPlan remains authoritative.
 
 ## Surprises & Discoveries
+
+- Observation: The authenticated crawl was mechanically perfect before it was semantically acceptable.
+  Evidence: 37/37 topics, 47 statblocks, zero pipeline failures, and parseable JSON still produced a truncated fractional CR, omitted `暗蚀`, lost language/taxonomy qualifiers, simultaneous replacement damage, and simultaneous staged statuses; source review rejected the run before repair.
+- Observation: Incremental source hashing can correctly skip unchanged Markdown while still leaving outputs stale after parser/generator code changes.
+  Evidence: the post-repair pipeline reported 37 Actor skips because source hashes were unchanged; all 47 Actors therefore received explicit project-CLI regeneration before acceptance.
+- Observation: Final semantic inspection found three incomplete variable-taxonomy outputs after the first green aggregate gate, and the next aggregate run hit one non-reproducible crawler scheduling failure.
+  Evidence: Loup Garou, Waxwork, and Wereraven preserved custom taxonomy but initially had empty standard type; adding corpus aliases and rerunning plaintext plus CLI produced 10/10 standard/custom matches. The unrelated crawler full-mode test then passed 10/10 isolated and the complete aggregate rerun passed 753/753, matching the existing documented concurrency-sensitive test debt.
 
 - Observation: The earlier report counted 82 production TypeScript errors; the fresh 2026-07-15 measurement found 81 across 20 production files while the total remained 1,007.
   Evidence: two fresh `bunx tsc --noEmit` inventories using the current working tree.
@@ -512,6 +530,13 @@ Semantic acceptance proves the user's actual goal:
   Evidence: runtime showed `_source.duration.expired = true` and DAE suppression for the generated `inst` Activity. Locked dnd5e/Foundry/DAE sources plus a live control isolated `duration.units: "spec"`; the regenerated modded Actor then retained Frightened before damage and expired it after MIDI damage, while core retained the effect.
 
 ## Decision Log
+
+- Decision: Bridge the authorized Chrome session in place without reading browser credential stores.
+  Rationale: Authenticated board and print-page HTML were available through the user-authorized session; saving page content for the project parser proved access while avoiding cookie, password, local-storage, or header export. Raw authenticated crawl/session artifacts remain local and untracked.
+  Date/Author: 2026-07-16, Codex with user authorization.
+- Decision: Preserve conditional mechanics literally when the target schema cannot represent their branching/staged behavior faithfully.
+  Rationale: A replacement damage formula is not simultaneous damage, and first/second failed-save outcomes are not simultaneous effects. Base/additive mechanics remain structured while conditional branches stay in the item description rather than being invented as unconditional automation.
+  Date/Author: 2026-07-16, Codex.
 
 - Decision: Use this repository file, not chat context, memory, Goal text, or checkpoint files, as the authoritative issue ledger.
   Rationale: Context compression and generated memories are helpful but lossy; a versioned living document is reviewable and recoverable.
@@ -613,10 +638,14 @@ Program initialization outcome on 2026-07-15:
 - Implementation and closure outcomes will be appended here after each milestone; historical entries must not be rewritten to hide failed or superseded evidence.
 - Milestone 7 reduced ActorGenerator responsibility and change coupling without changing real v12/v14 output: localization and target metadata now have narrow collaborators, independent commits, direct characterization, and exact CLI controls.
 - Milestone 8 changed the Web deployment contract from implicit public/unauthenticated assumptions to a loopback-safe default and explicit authenticated public/proxied mode. Real browser Actor/ZIP workflows remained semantically usable, while trusted proxy, body, rate, job, and retention boundaries now fail closed and are documented honestly.
+- Milestone 11 closed the last external Goal boundary through an explicitly authorized in-place Chrome session. The live run added 47 tracked project inputs and local ignored Actor outputs, exposed five semantic failure classes that mechanical success missed, repaired them with generalized tests, and accepted the corpus only after 47/47 verification plus expanded source projections.
+- Final aggregate evidence is 753 tests / 2,959 expectations, 87.61% production lines / 88.50% production functions, 109 audited sources, locked dnd5e reference success, Web build success, and offline Actor smoke success; post-stage hygiene separately passes across 1,655 tracked paths. Production remains untouched and exact production-module coexistence remains a separately bounded Partial claim, not an unfinished Goal requirement.
 
 ## Change Note
 
 2026-07-15: Created the initial self-contained remediation program after a repository review and fresh baseline verification. The plan records all confirmed findings, distinguishes in-repo work from external authorization boundaries, and defines mechanical plus semantic completion gates so context compression cannot silently drop work.
+
+2026-07-16: User authorization resolved the final authenticated-session boundary. The live GoddessFantasy pipeline was first rejected on semantic review, repaired through SEM-006/SEM-007, rerun through the project CLI, and accepted with 47/47 verifiers plus expanded live projections. PROD-003 is closed and the persistent Goal has no remaining authorized finding or external blocker.
 
 2026-07-15: Completed Milestone 1's implementation and mechanical verification. SEM-001 and VER-001 remain short of closure until the full affected v14 acceptance batches are regenerated and semantically reviewed in Milestone 2. Recorded the newly reproduced `.env`-driven network attempt under DET-001.
 

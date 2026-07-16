@@ -12,7 +12,7 @@ This checklist separates repository delivery gates from deeper product-support c
 
 ## Required repository gates before push
 
-- [x] `bun run ci:verify` passed on 2026-07-15: 743 tests / 2,932 expectations, both typechecks, 87.55% line / 88.41% function production coverage, 109-source anti-overfit, 1,605-path hygiene, locked dnd5e reference verification, Web build, and offline Actor smoke.
+- [x] `bun run ci:verify` passed on 2026-07-16: 753 tests / 2,959 expectations, both typechecks, 87.61% line / 88.50% function production coverage, 109-source anti-overfit, locked dnd5e reference verification, Web build, and offline Actor smoke; post-stage hygiene separately passed across 1,655 tracked paths.
 - [x] The focused current corpus command passed 148 tests / 656 expectations across 11 files.
 - [x] v14 core and modded acceptance batches retain six schema-valid samples each with zero actor-verification warnings.
 - [x] Representative v12/v14 Shield and v14 core/modded Damage-Bound Warden CLI outputs were read against their source Markdown.
@@ -24,10 +24,10 @@ This checklist separates repository delivery gates from deeper product-support c
 
 - [x] Standalone Item v14: import/equip/AC/both Activities/prone/limited-use/concentration/runtime-readback and the no-dialog `exportToJSON()` source-relevant comparison pass.
 - [x] DAE/MIDI `isDamaged`: the real CLI modded-v14 Actor retained the effect before damage and removed it after locked DAE 14.0.12 + MIDI-QOL 14.0.9 damage; the real CLI core control retained it after damage.
-- [ ] Authenticated GoddessFantasy: receive explicit session/credential authorization, run the authenticated incremental pipeline without exposing secrets, and review provenance plus generated semantics.
+- [x] Authenticated GoddessFantasy: the explicitly authorized Chrome session produced 37 topics / 47 statblocks without inspecting or exporting cookies; 47/47 regenerated v14 Actors passed verifier plus expanded source-semantic review.
 - [x] Historical 88-module snapshot: removed as a current product gate after reconciling the later 79-module local baseline and 2026-07-12 production changes. No current production count is claimed without a fresh inventory.
 
-Chrome file access and the bounded standalone Item gate are closed. The authenticated crawl still requires new authority or external state. Historical full-module evidence remains Partial, but the superseded 88-ID snapshot is not a current blocker and no present production count is inferred from it.
+Chrome file access, the bounded standalone Item gate, and the authorized authenticated crawl are closed. Historical full-module evidence remains Partial, but the superseded 88-ID snapshot is not a current blocker and no present production count is inferred from it.
 
 ## Outside the current remediation authorization
 
