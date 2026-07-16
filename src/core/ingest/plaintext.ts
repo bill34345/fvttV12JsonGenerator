@@ -79,6 +79,7 @@ const DAMAGE_TYPE_MAP: Record<string, string> = {
   闪电: 'lightning',
   necrotic: 'necrotic',
   黯蚀: 'necrotic',
+  暗蚀: 'necrotic',
   piercing: 'piercing',
   穿刺: 'piercing',
   poison: 'poison',
@@ -581,6 +582,7 @@ function extractFrontmatter(
     const taxonomy = parseTaxonomyLine(taxonomyLine);
     if (taxonomy.size) frontmatter.体型 = taxonomy.size;
     if (taxonomy.creatureType) frontmatter.生物类型 = taxonomy.creatureType;
+    if (taxonomy.custom) frontmatter.生物类型备注 = taxonomy.custom;
     if (taxonomy.alignment) frontmatter.阵营 = taxonomy.alignment;
   }
 
@@ -710,6 +712,10 @@ function extractFrontmatter(
       if (values.length > 0) {
         frontmatter['语言'] = values;
       }
+      const literal = parseSimpleValue(line, 'Languages');
+      if (hasLanguageQualifier(literal)) {
+        frontmatter['语言备注'] = literal;
+      }
       continue;
     }
 
@@ -765,30 +771,68 @@ function parseTaxonomyLine(line: string): {
   size?: string;
   creatureType?: string;
   alignment?: string;
+  custom?: string;
 } {
   const stripped = stripMarkdown(line);
   const groups = [...stripped.matchAll(/\(([^)]+)\)/g)].map((match) => match[1]?.trim()).filter(Boolean) as string[];
-  const first = groups[0] ?? '';
-  const second = groups[1] ?? '';
+  const visibleSegments = stripped
+    .replace(/\([^)]*\)/g, '')
+    .split(/[，,]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const taxonomy: { size?: string; creatureType?: string; alignment?: string; custom?: string } = {};
+  const candidates = [...groups, ...visibleSegments];
+  const chineseSizes: Record<string, string> = {
+    微型: '微型', 小型: '小型', 中型: '中型', 大型: '大型', 巨型: '巨型', 超巨型: '超巨型',
+  };
+  const chineseTypes: Record<string, string> = {
+    类人生物: '类人生物', 类人: '类人生物', 天界生物: '天界生物',
+    构装: '构装体', 怪兽: '怪物',
+    异怪: '异怪', 野兽: '野兽', 构装体: '构装体', 龙: '龙', 元素: '元素',
+    精类: '精类', 邪魔: '邪魔', 巨人: '巨人', 怪物: '怪物', 软泥怪: '软泥怪',
+    植物: '植物', 亡灵: '亡灵',
+  };
 
-  const taxonomy: { size?: string; creatureType?: string; alignment?: string } = {};
-  const firstWords = first.split(/\s+/).filter(Boolean);
-  const sizeKey = firstWords[0]?.toLowerCase();
-  if (sizeKey && SIZE_MAP[sizeKey]) {
-    taxonomy.size = SIZE_MAP[sizeKey];
+  for (const candidate of candidates) {
+    const normalized = candidate.toLowerCase();
+    const words = normalized.split(/\s+/).filter(Boolean);
+    const sizeKey = words[0];
+    if (!taxonomy.size && sizeKey && SIZE_MAP[sizeKey]) taxonomy.size = SIZE_MAP[sizeKey];
+    if (!taxonomy.creatureType) {
+      const typeKey = words.slice(1).join(' ');
+      if (typeKey && CREATURE_TYPE_MAP[typeKey]) taxonomy.creatureType = CREATURE_TYPE_MAP[typeKey];
+    }
+    if (!taxonomy.alignment && ALIGNMENT_MAP[normalized]) taxonomy.alignment = ALIGNMENT_MAP[normalized];
+
+    if (!taxonomy.size) {
+      const chineseSize = Object.keys(chineseSizes)
+        .filter((key) => candidate.includes(key))
+        .sort((a, b) => candidate.indexOf(a) - candidate.indexOf(b) || b.length - a.length)[0];
+      if (chineseSize) taxonomy.size = chineseSizes[chineseSize];
+    }
+    if (!taxonomy.creatureType) {
+      const chineseType = Object.keys(chineseTypes)
+        .sort((a, b) => b.length - a.length)
+        .find((key) => candidate.includes(key));
+      if (chineseType) taxonomy.creatureType = chineseTypes[chineseType];
+    }
+    if (!taxonomy.alignment) {
+      const chineseAlignment = Object.values(ALIGNMENT_MAP).find((value) => candidate.includes(value));
+      if (chineseAlignment) taxonomy.alignment = chineseAlignment;
+    }
   }
 
-  const typeKey = firstWords.slice(1).join(' ').toLowerCase();
-  if (typeKey && CREATURE_TYPE_MAP[typeKey]) {
-    taxonomy.creatureType = CREATURE_TYPE_MAP[typeKey];
-  }
-
-  const alignmentKey = second.toLowerCase();
-  if (alignmentKey && ALIGNMENT_MAP[alignmentKey]) {
-    taxonomy.alignment = ALIGNMENT_MAP[alignmentKey];
+  const visibleTaxonomy = visibleSegments[0] ?? '';
+  const sizeMentions = Object.keys(chineseSizes).filter((key) => visibleTaxonomy.includes(key));
+  if (sizeMentions.length > 1 && /或|\bor\b/i.test(visibleTaxonomy)) {
+    taxonomy.custom = visibleTaxonomy;
   }
 
   return taxonomy;
+}
+
+function hasLanguageQualifier(value: string): boolean {
+  return /不会说|不能说|无法说|外加|另加|其他|其它|任意|understands?[\s\S]*but\s+(?:can(?:not|'t)|does\s+not)\s+speak|\bplus\b|\bother\b/i.test(value);
 }
 
 function parseAbilityScores(lines: string[]): Record<string, number> {

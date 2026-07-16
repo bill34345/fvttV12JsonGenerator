@@ -15,6 +15,12 @@ const SOURCE_PATH = resolve(
   FIXTURE_DIR,
   readdirSync(FIXTURE_DIR).find((file) => file.toLowerCase().endsWith('.md')) ?? '',
 );
+const LIVE_SEMANTIC_FIXTURE_PATH = resolve(
+  process.cwd(),
+  'src/core/ingest/__tests__/fixtures/live-crawl-semantic-statlines.md',
+);
+// PlainTextIngestionWorkflow consumes this exact multi-Actor crawl-style source.
+// A file fixture is required because split boundaries and cross-layer Markdown -> YAML -> v14 JSON fidelity are part of the regression.
 
 class FailingAiNormalizer {
   public async normalizeBlock(): Promise<string> {
@@ -53,6 +59,24 @@ async function generateActorFromRawBlock(rawBlock: string) {
   const parsed = parserFactory.parse(generated.markdown);
   const actor = await new ActorGenerator({
     fvttVersion: '12',
+    translationService: null,
+    effectProfile: 'core',
+  }).generateForRoute(parsed, route);
+  return { generated, parsed, actor };
+}
+
+async function generateLiveSemanticActor(englishName: string) {
+  const source = readFileSync(LIVE_SEMANTIC_FIXTURE_PATH, 'utf-8');
+  const block = splitCollection(source).find((entry) => entry.englishName === englishName);
+  expect(block).toBeDefined();
+  if (!block) throw new Error(`Missing live semantic fixture: ${englishName}`);
+
+  const generated = parseCreatureBlock(block.rawBlock);
+  const parserFactory = new ParserFactory();
+  const route = parserFactory.detectRoute(generated.markdown);
+  const parsed = parserFactory.parse(generated.markdown);
+  const actor = await new ActorGenerator({
+    fvttVersion: '14',
     translationService: null,
     effectProfile: 'core',
   }).generateForRoute(parsed, route);
@@ -422,5 +446,50 @@ _中型异怪 (Medium Aberration)，守序邪恶 (Lawful Evil)_
         expect.objectContaining({ number: 4, denomination: 10, bonus: '', types: ['psychic'] }),
       ]),
     );
+  });
+
+  it('preserves live-crawl statlines and avoids inventing conditional mechanics', async () => {
+    const gremishka = await generateLiveSemanticActor('Gremishka');
+    expect(gremishka.actor.system.traits.languages).toEqual({
+      value: ['common'],
+      custom: '理解通用语但不会说',
+    });
+    const swarmingBites = gremishka.actor.items.find((item: any) => item.name.includes('Swarming Bites'));
+    const swarmAttack = Object.values(swarmingBites?.system?.activities ?? {})
+      .find((activity: any) => activity.type === 'attack') as any;
+    expect(swarmAttack?.damage?.parts).toEqual([
+      expect.objectContaining({ number: 3, denomination: 6, bonus: '2', types: ['piercing'] }),
+      expect.objectContaining({ number: 2, denomination: 6, bonus: '', types: ['force'] }),
+    ]);
+
+    const priest = await generateLiveSemanticActor('Priest of Osybus');
+    expect(priest.actor.system.traits.size).toBe('med');
+    expect(priest.actor.system.details.type).toEqual(
+      expect.objectContaining({ value: 'humanoid', custom: '中型或小型类人' }),
+    );
+    expect(priest.actor.system.details.alignment).toBe('中立邪恶');
+    expect(priest.actor.system.traits.languages).toEqual({
+      value: ['common'],
+      custom: '通用语外加两门其它语言',
+    });
+
+    const waxwork = await generateLiveSemanticActor('Waxwork');
+    expect(waxwork.actor.system.details.type).toEqual(
+      expect.objectContaining({ value: 'construct', custom: '中型或小型构装' }),
+    );
+    const wereraven = await generateLiveSemanticActor('Wereraven');
+    expect(wereraven.actor.system.details.type).toEqual(
+      expect.objectContaining({ value: 'monstrosity', custom: '中型或小型怪兽（兽化人）' }),
+    );
+
+    const petrifyingHead = await generateLiveSemanticActor("Petrifying Death's Head");
+    expect(petrifyingHead.actor.system.details.cr).toBe(0.5);
+    expect(petrifyingHead.actor.system.traits.dr.value).toEqual(['necrotic']);
+    const petrifyingBite = petrifyingHead.actor.items.find((item: any) => item.name.includes('Petrifying Bite'));
+    expect(petrifyingBite?.effects ?? []).toEqual([]);
+    const linkedEffects = Object.values(petrifyingBite?.system?.activities ?? {})
+      .flatMap((activity: any) => activity.effects ?? []);
+    expect(linkedEffects).toEqual([]);
+    expect(petrifyingBite?.system?.description?.value).toContain('再次失败');
   });
 });

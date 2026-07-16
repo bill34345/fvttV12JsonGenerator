@@ -56,4 +56,36 @@ describe('english biography feature extraction', () => {
       features: [],
     });
   });
+
+  it.each([
+    [
+      'Chinese bloodied replacement',
+      '命中：12（3d6+2）穿刺伤害——若该集群处于浴血则改为9（3d4+2）穿刺伤害——外加7（2d6）力场伤害。',
+      ['3d6+2', '2d6'],
+    ],
+    [
+      'English instead clause',
+      'Hit: 12 (3d6+2) piercing damage; if bloodied, it deals 9 (3d4+2) piercing damage instead, plus 7 (2d6) force damage.',
+      ['3d6+2', '2d6'],
+    ],
+    [
+      'English conditional or clause',
+      'Hit: 12 (3d6+2) piercing damage, or 9 (3d4+2) piercing damage if the swarm is bloodied, plus 7 (2d6) force damage.',
+      ['3d6+2', '2d6'],
+    ],
+  ] as const)('does not emit replacement damage as simultaneous damage: %s', (
+    _label,
+    text,
+    expected,
+  ) => {
+    expect(extractPrimaryDamagePartsFromText(text).map((part) => part.formula)).toEqual([...expected]);
+  });
+
+  it('keeps multiple unconditional additive damage parts', () => {
+    const parts = extractPrimaryDamagePartsFromText(
+      '命中：5（1d6+2）穿刺伤害，外加7（2d6）力场伤害与3（1d4+1）火焰伤害。',
+    );
+
+    expect(parts.map((part) => part.formula)).toEqual(['1d6+2', '2d6', '1d4+1']);
+  });
 });

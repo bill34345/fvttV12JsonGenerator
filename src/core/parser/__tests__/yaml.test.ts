@@ -120,6 +120,16 @@ ${keyFor('hp')}: 255 (30d10 + 90)
     expect(result.attributes.hp).toEqual({ value: 255, max: 255, formula: '30d10 + 90' });
   });
 
+  it('preserves fractional challenge ratings as their numeric value', () => {
+    const yaml = `
+${keyFor('name')}: Fractional CR Test
+${keyFor('type')}: npc
+${keyFor('cr')}: 1/2
+---`;
+
+    expect(parser.parse(yaml).details.cr).toBe(0.5);
+  });
+
   it('keeps legacy object-style actions on the legacy action path instead of creating blank structured actions', () => {
     const yaml = readFileSync('src/core/parser/__tests__/fixtures/yaml-legacy-actions.md', 'utf-8');
 

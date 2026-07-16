@@ -5,7 +5,10 @@ import type { ActionData, Damage } from '../parser/action';
  * Extract damage parts from text by parsing dice formulas and damage types.
  */
 export function extractDamagePartsFromText(text: string): Damage[] {
-  const formulaMatches = [...text.matchAll(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/gi)];
+  const allFormulaMatches = [...text.matchAll(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/gi)];
+  const formulaMatches = allFormulaMatches.filter((match, index) => (
+    index === 0 || !isConditionalReplacementFormula(text, allFormulaMatches, index)
+  ));
   if (formulaMatches.length === 0) {
     return [];
   }
@@ -78,6 +81,7 @@ export function mapDamageType(raw: string): string {
   }
 
   const fixedMap: Record<string, string> = {
+    ['\u6697\u8680']: 'necrotic',
     钝击: 'bludgeoning',
     穿刺: 'piercing',
     挥砍: 'slashing',
@@ -1024,6 +1028,32 @@ export function extractInlineFeatureLinesFromBiography(
         : biography.trim(),
     features,
   };
+}
+
+function isConditionalReplacementFormula(
+  text: string,
+  matches: RegExpMatchArray[],
+  index: number,
+): boolean {
+  const current = matches[index];
+  if (!current) return false;
+  const previous = matches[index - 1];
+  const next = matches[index + 1];
+  const start = current.index ?? 0;
+  const end = start + current[0].length;
+  const previousEnd = previous ? (previous.index ?? 0) + previous[0].length : 0;
+  const nextStart = next?.index ?? text.length;
+  const prefix = text.slice(previousEnd, start);
+  const suffix = text.slice(end, nextStart);
+  const prefixAfterAdditive = prefix.split(/\bplus\b|外加/i).at(-1) ?? prefix;
+  const suffixBeforeAdditive = suffix.split(/\bplus\b|外加/i)[0] ?? suffix;
+  const localClause = `${prefixAfterAdditive}${current[0]}${suffixBeforeAdditive}`;
+
+  if (/改为|替代(?:为)?|instead\b|rather\s+than/i.test(localClause)) return true;
+
+  const hasAlternativeMarker = /(?:^|[\s,，;；—-])(?:or|或|或者)(?:[\s,，;；—-]|$)/i.test(prefix);
+  const hasCondition = /\b(?:if|when)\b|若|如果|处于/i.test(`${prefix}${suffix}`);
+  return hasAlternativeMarker && hasCondition;
 }
 
 /**

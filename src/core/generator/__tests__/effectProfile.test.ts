@@ -167,6 +167,39 @@ describe('ActorGenerator effect profiles', () => {
 
   it.each([
     [
+      'Chinese repeated save',
+      '体质豁免：DC11。首次失败：目标陷入束缚状态。再次失败：目标陷入石化状态替代其束缚状态。',
+    ],
+    [
+      'English ordinal failures',
+      'On the first failed save, the target is restrained. On the second failed save, it becomes petrified instead of restrained.',
+    ],
+    [
+      'English fails again',
+      'On a failed save, the creature becomes restrained. If it fails this save again, it becomes petrified, replacing restrained.',
+    ],
+  ] as const)('does not link staged save outcomes as simultaneous immediate effects: %s', (
+    _label,
+    text,
+  ) => {
+    expect(generateEnhancedConditionEffects(text, {}, 'Staged Save Fixture')).toEqual([]);
+  });
+
+  it('continues to link unconditional immediate multiple statuses', () => {
+    const effects = generateEnhancedConditionEffects(
+      'Hit: the target is grappled and restrained until it escapes.',
+      {},
+      'Immediate Status Control',
+    );
+
+    expect(effects.flatMap((effect: any) => effect.statuses ?? []).sort()).toEqual([
+      'grappled',
+      'restrained',
+    ]);
+  });
+
+  it.each([
+    [
       'English same clause',
       'On a failed save, the target becomes frightened until it takes damage.',
       'frightened',

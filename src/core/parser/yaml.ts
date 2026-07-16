@@ -175,10 +175,11 @@ export class YamlParser {
         result.attributes.prof = parseInt(processedValue);
       }
     } else if (path.startsWith('system.details')) {
-      if (internalKey === 'cr') result.details.cr = parseInt(processedValue);
+      if (internalKey === 'cr') result.details.cr = this.parseChallengeRating(processedValue);
       if (internalKey === 'xp') result.details.xp = parseInt(processedValue);
       if (internalKey === 'alignment') result.details.alignment = processedValue;
       if (internalKey === 'creatureType') result.details.creatureType = processedValue;
+      if (internalKey === 'creatureTypeCustom') result.details.creatureTypeCustom = processedValue;
       if (internalKey === 'biography') {
         const existingBiography = result.details.biography?.trim();
         const frontmatterBiography = String(processedValue ?? '').trim();
@@ -256,6 +257,8 @@ export class YamlParser {
         result.traits.size = sizeMap[processedValue] || processedValue;
       } else if (internalKey === 'dm') {
         result.traits.dm = this.parseDamageMod(processedValue);
+      } else if (internalKey === 'languagesCustom') {
+        result.traits.languagesCustom = String(processedValue ?? '').trim();
       } else {
         // dr, di, ci, languages -> array
         if (['dr', 'di', 'dv'].includes(internalKey) && Array.isArray(processedValue)) {
@@ -285,6 +288,18 @@ export class YamlParser {
       // Values: "专精" -> 2
       this.parseSkills(processedValue, result);
     }
+  }
+
+  private parseChallengeRating(value: unknown): number {
+    const normalized = String(value ?? '').trim();
+    const fraction = normalized.match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (fraction?.[1] && fraction[2]) {
+      const numerator = Number.parseInt(fraction[1], 10);
+      const denominator = Number.parseInt(fraction[2], 10);
+      if (denominator > 0) return numerator / denominator;
+    }
+
+    return Number.parseFloat(normalized);
   }
 
   private isStructuredActionSection(value: unknown): boolean {

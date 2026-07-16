@@ -15,6 +15,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "类型": { key: "type", path: "type", type: "string", required: true },
   "体型": { key: "size", path: "system.traits.size", type: "string" },
   "生物类型": { key: "creatureType", path: "system.details.type.value", type: "string" },
+  "生物类型备注": { key: "creatureTypeCustom", path: "system.details.type.custom", type: "string" },
   "阵营": { key: "alignment", path: "system.details.alignment", type: "string" },
 
   // Abilities
@@ -58,6 +59,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "状态免疫": { key: "ci", path: "system.traits.ci", type: "array" },
   "感官": { key: "senses", path: "system.traits.senses", type: "object" },
   "语言": { key: "languages", path: "system.traits.languages", type: "array" },
+  "语言备注": { key: "languagesCustom", path: "system.traits.languages.custom", type: "string" },
 };
 
 // Intermediate Parsed Structure
@@ -93,6 +95,7 @@ export interface ParsedNPC {
     biography?: string;
     alignment?: string;
     creatureType?: string;
+    creatureTypeCustom?: string;
   };
 
   traits: {
@@ -103,6 +106,7 @@ export interface ParsedNPC {
     dm?: any;
     ci?: string[];
     languages?: string[];
+    languagesCustom?: string;
     senses?: Record<string, number | string>;
     bypasses?: string[];
   };

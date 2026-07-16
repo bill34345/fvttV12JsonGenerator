@@ -345,6 +345,10 @@ export class ActorGenerator {
         if (!actor.system.details.type) actor.system.details.type = {};
         actor.system.details.type.value = CREATURE_TYPE_VALUE_MAP[parsed.details.creatureType] || parsed.details.creatureType;
       }
+      if (parsed.details.creatureTypeCustom) {
+        if (!actor.system.details.type) actor.system.details.type = {};
+        actor.system.details.type.custom = parsed.details.creatureTypeCustom;
+      }
       if (parsed.details.biography) actor.system.details.biography.value = parsed.details.biography;
       
       actor.system.details.habitat = { value: [], custom: "" };
@@ -368,7 +372,10 @@ export class ActorGenerator {
       actor.system.traits.ci = { value: parsed.traits.ci || [], custom: '' };
       actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
-      actor.system.traits.languages = { value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''), custom: '' };
+      actor.system.traits.languages = {
+        value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''),
+        custom: parsed.traits.languagesCustom || '',
+      };
       
       if (parsed.traits.senses) {
         actor.system.attributes.senses = this.buildSenses(parsed.traits.senses);

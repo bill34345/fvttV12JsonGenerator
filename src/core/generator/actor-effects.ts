@@ -65,6 +65,9 @@ export function statusIconPath(status: string): string {
  * and actor-state termination clauses are not target effects.
  */
 export function extractExplicitlyInflictedStatuses(text: string): string[] {
+  if (hasStagedSaveOutcomes(text)) {
+    return [];
+  }
   const statuses = new Set<string>();
   const sentences = text.split(/[.!?;\u3002\uFF1B]+/).map((part) => part.trim()).filter(Boolean);
 
@@ -120,6 +123,19 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
   }
 
   return [...statuses];
+}
+
+function hasStagedSaveOutcomes(text: string): boolean {
+  const hasInitialStage = /首次失败|第一次失败|\bfirst\s+failed\s+save\b|\bon\s+a\s+failed\s+save\b/i.test(text);
+  const hasLaterStage = /再次失败|第二次失败|又一次失败|\bsecond\s+failed\s+save\b|\bfails?(?:\s+this|\s+the)?\s+save\s+again\b/i.test(text);
+  if (!(hasInitialStage && hasLaterStage)) return false;
+
+  const mentionedStatuses = new Set(
+    EXPLICIT_STATUS_PATTERNS
+      .filter((entry) => entry.pattern.test(text))
+      .map((entry) => entry.status),
+  );
+  return mentionedStatuses.size >= 2;
 }
 
 export function extractSwallowDamage(action: GeneratedActionData): Damage | undefined {
