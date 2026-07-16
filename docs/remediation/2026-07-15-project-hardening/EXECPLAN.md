@@ -115,6 +115,9 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | SEM-006 | P1 | closed | The authenticated live GoddessFantasy corpus exposed structured statline loss: fractional CR `1/2` became `1`, Chinese necrotic resistance `暗蚀` was omitted, qualified language phrases lost their qualifiers, and variable size/type/alignment taxonomy could disappear. | Fraction-aware YAML parsing, corpus-derived alias/qualifier preservation, and variable-taxonomy custom fields pass fixture tests; live projections pass for 1 fractional CR, 25 qualified-language records, and 10 variable-taxonomy records across the 47 regenerated Actors. |
 | SEM-007 | P1 | closed | The authenticated live GoddessFantasy corpus exposed conditional-mechanics invention: replacement damage was emitted as simultaneous damage and staged save outcomes were linked as simultaneous immediate statuses. | Source-derived clause scoping keeps base plus additive damage while preserving replacement prose; staged saves retain literal text without invented simultaneous effects; three positives, close negatives, immediate-status controls, Gremishka, and Petrifying Death's Head pass. |
 | VER-001 | P0 | closed | `actorVerification` does not validate embedded Active Effects or their source-derived claims. | Verifier summarizes effects and warns on invalid AC clauses/change mismatches; regression proves old Bleeding artifact is rejected and regenerated artifacts pass. |
+| INTAKE-001 | P1 | in_progress | The Legacy plaintext workflow detects zero creatures for ordinary compact Chinese statblocks yet exits successfully, and AI normalization runs only after the failed rule-based split. | New AI-first document discovery accepts raw text without Markdown markers; Legacy zero-result paths fail closed in CLI and Web. |
+| INTAKE-002 | P1 | in_progress | Adding minimal headings lets the Legacy workflow run but loses or replaces source semantics, including AC, HP, abilities, movement, defenses, senses, languages, traits, and action boundaries. | Evidence-backed IR, deterministic Markdown rendering, CLI generation, semantic comparison, independent AI review, and Lurker source acceptance all pass. |
+| VER-002 | P1 | in_progress | The existing plaintext audit and Actor verifier report no warning for gross source-to-output drift and default-template leakage. | Intake verifier rejects planted AC 20, HP 332, all-10 abilities, merged actions, and biography-only traits; unaccepted JSON is not deliverable. |
 | DOC-001 | P0 | closed | v14 source-fidelity and runtime acceptance claims include artifacts contaminated by SEM-001. | Reports preserve the defect chronology, affected actors were regenerated, source-reviewed, runtime-retested, and the copied-world authentication contradiction was amended. |
 | GATE-001 | P1 | closed | `antiOverfitAudit.runGitText()` returns an empty string on Git failure, allowing `--all` to report success with zero checked sources. | Shared typed Git execution fails closed; actual non-repository and zero-source CLI probes exit 1; tests cover missing Git and explicit-file independence; real all-audit checks 99 sources. |
 | GATE-002 | P1 | closed | Reference verification maps an unreadable Git checkout to generic `mismatch`, hiding safe-directory/access errors. | Status model distinguishes `missing`, `git-error`, `mismatch`, and `ok`; ownership/access diagnostics are actionable; real locked cache reports `ok`. |
@@ -137,6 +140,9 @@ This table is authoritative. A child plan may add detail but may not silently ch
 
 ## Progress
 
+- [x] (2026-07-16) Reproduced the real compact-Chinese plaintext failure: raw Lurker yields zero creatures with exit 0; minimally marked input mechanically generates but semantically becomes AC 20, HP 332, six abilities at 10, missing core fields, merged Multiattack/Claw, and biography-only traits while both audit layers remain green.
+- [x] (2026-07-16) User approved a parallel AI-first intake pipeline, strict failure policy, per-field evidence IR, independent review plus one repair, ambiguity-only human review, CLI+Web delivery, monster-only v1, TXT/MD paste/upload, single+collection input, and bounded real OpenAI plus local Foundry acceptance.
+- [ ] (2026-07-16) Implement and accept INTAKE-001, INTAKE-002, and VER-002 under `docs/superpowers/plans/2026-07-16-ai-monster-intake.md`.
 - [x] (2026-07-15) Completed repository-wide orientation and identified semantic, gate, type, CI, coverage, artifact, architecture, Web, and product-acceptance gaps.
 - [x] (2026-07-15) Reproduced SEM-001 against current generated artifacts and counted 12 flagged AC effects, including 8 false `ack: +N` effects.
 - [x] (2026-07-15) Reproduced VER-001: Bleeding Guardian verification returns no warnings despite the false AC effect.
@@ -185,7 +191,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
 - [x] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
-**Exact next action:** Authenticated crawling is the only remaining external boundary and still requires separate explicit credential/session authorization or explicit acceptance as remaining scope. Do not treat the historical 88-module snapshot as current production state.
+**Exact next action:** Execute `docs/superpowers/plans/2026-07-16-ai-monster-intake.md` from INTAKE-001/INTAKE-002/VER-002 without reopening the already closed hardening findings. Preserve the user-owned dirty files and keep production untouched.
 
 ## Milestone 1: Repair Semantic AC Extraction and Verification
 
@@ -642,6 +648,8 @@ Program initialization outcome on 2026-07-15:
 - Final aggregate evidence is 753 tests / 2,959 expectations, 87.61% production lines / 88.50% production functions, 109 audited sources, locked dnd5e reference success, Web build success, and offline Actor smoke success; post-stage hygiene separately passes across 1,655 tracked paths. Production remains untouched and exact production-module coexistence remains a separately bounded Partial claim, not an unfinished Goal requirement.
 
 ## Change Note
+
+2026-07-16: Started the separately authorized AI-first monster intake program after a real Lurker source disproved the Legacy plaintext support claim. Added INTAKE-001, INTAKE-002, and VER-002 as new in-progress findings without rewriting the earlier closed hardening chronology. The approved path is a parallel evidence-backed AI pipeline with deterministic Markdown/CLI generation, strict failure, independent AI review, bounded repair, and local-only runtime acceptance.
 
 2026-07-15: Created the initial self-contained remediation program after a repository review and fresh baseline verification. The plan records all confirmed findings, distinguishes in-repo work from external authorization boundaries, and defines mechanical plus semantic completion gates so context compression cannot silently drop work.
 
