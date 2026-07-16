@@ -218,3 +218,14 @@ The 15-minute production sample and rollback identifiers are recorded in `foundr
 - `mcdm-flee-mortals-where-evil-lives` currently reports an invalid protected-module signature at server startup. This is not a proven coexistence conflict, but the module cannot receive `Pass` until an authorized valid package loads.
 - `dungeon-strugglers-collection` is installed but intentionally excluded from the active test set by user decision.
 - `dnd-simplified-chinese-babele-patch` 1.0.76 and `dnd-heroes-faerun` 1.1.0 are user-approved local versions that differ from the production inventory snapshot.
+
+## 2026-07-16 Historical-Snapshot Correction
+
+The `88 active module IDs` statements above describe the read-only production inventory captured on 2026-07-11 and the attempt to reproduce that dated snapshot. They are not a claim that production currently has 88 enabled modules and are not a current project completion target.
+
+The later 2026-07-12 optimization record superseded that intended-set assumption: the final verified local `server-mirror` baseline had 79 enabled modules, while selected cleanup, settings, Swipe, and Bloodsplats changes were separately applied to production. That production record did not capture a post-change active-module total. Consequently:
+
+- `79` is evidence for the last accepted local baseline only;
+- this report makes no current production-count claim;
+- the protected MCDM package and exact 88-ID parity are historical gaps, not standing prerequisites for the project-hardening Goal;
+- any future production coexistence audit must start from a fresh read-only inventory and an explicitly agreed intended package set.

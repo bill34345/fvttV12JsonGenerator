@@ -16,18 +16,18 @@ This checklist separates repository delivery gates from deeper product-support c
 - [x] The focused current corpus command passed 148 tests / 656 expectations across 11 files.
 - [x] v14 core and modded acceptance batches retain six schema-valid samples each with zero actor-verification warnings.
 - [x] Representative v12/v14 Shield and v14 core/modded Damage-Bound Warden CLI outputs were read against their source Markdown.
-- [x] Acceptance documents retain **Fail / Partial** for exact production-equivalent module coexistence and distinguish the reduced 84-module startup from parity.
+- [x] Acceptance documents preserve the 2026-07-11 88-ID reproduction failure as historical evidence, while the current matrix no longer treats that superseded snapshot as a completion gate.
 - [x] Repository hygiene confirms no tracked `.local` runtime data, user database, password, cookie, private key, raw server log, or production inventory snapshot; the latest M10 run checked 1,605 tracked paths.
 - [ ] Immediately before a real push, confirm `git status --short` contains only the intended staged delivery. Existing user-owned edits are not part of this remediation and must not be staged or overwritten.
 
 ## Product gates still open
 
-- [ ] Standalone Item v14: import/equip/AC/both Activities/prone/limited-use/concentration/runtime-readback pass; capture the remaining supported UI Export Data download and compare source-relevant fields.
+- [x] Standalone Item v14: import/equip/AC/both Activities/prone/limited-use/concentration/runtime-readback and the no-dialog `exportToJSON()` source-relevant comparison pass.
 - [x] DAE/MIDI `isDamaged`: the real CLI modded-v14 Actor retained the effect before damage and removed it after locked DAE 14.0.12 + MIDI-QOL 14.0.9 damage; the real CLI core control retained it after damage.
 - [ ] Authenticated GoddessFantasy: receive explicit session/credential authorization, run the authenticated incremental pipeline without exposing secrets, and review provenance plus generated semantics.
-- [ ] Exact production-equivalent module coexistence: load the exact authorized valid package set and pass representative workflows without the known runtime errors.
+- [x] Historical 88-module snapshot: removed as a current product gate after reconciling the later 79-module local baseline and 2026-07-12 production changes. No current production count is claimed without a fresh inventory.
 
-Chrome file access is no longer a blocker. The standalone Item gate is now open only for a captured supported UI export/download comparison. The authenticated crawl and protected/full module set still require new authority or external state. Their open state does not invalidate the repository and bounded runtime/CLI gates above, but it prevents a blanket “complete v14 support” claim.
+Chrome file access and the bounded standalone Item gate are closed. The authenticated crawl still requires new authority or external state. Historical full-module evidence remains Partial, but the superseded 88-ID snapshot is not a current blocker and no present production count is inferred from it.
 
 ## Outside the current remediation authorization
 
