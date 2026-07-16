@@ -1,6 +1,6 @@
 # Current Support Matrix
 
-**Current as of:** 2026-07-16
+**Current as of:** 2026-07-17
 **Canonical role:** this file is the current support summary. Dated reports remain immutable evidence snapshots; later amendments clarify their present interpretation without erasing earlier failures or narrower passes.
 
 ## Status vocabulary
@@ -16,6 +16,7 @@
 | Layer | Current status | Accepted scope | Explicit boundary | Dated evidence |
 |---|---|---|---|---|
 | Source fidelity | **Pass, bounded corpus** | The 19-category corpus covers Chinese/English, Actor/Item, parser/generator, v12/v14, core/modded, positive/close-negative, effect/condition, and unrelated regressions. Real Shield and Damage-Bound Warden CLI outputs were also read against source. | This is not a claim for arbitrary Markdown or every D&D mechanic. | [Current corpus matrix](current-corpus-matrix.md); [source/JSON review](v14-source-json-full-review.md) |
+| AI monster intake | **Pass, bounded Lurker workflow; review-required failures verified** | Raw TXT/MD monster input can pass AI boundary discovery, evidence-backed IR, deterministic Markdown rendering, existing project generation, deterministic source/IR/Markdown/Actor comparison, independent review, and one bounded repair. A real Lurker IR reached accepted with zero deterministic/AI findings; the resulting v14/core Actor also passed Foundry 14.364 / dnd5e 5.3.3 import, open-sheet, and source-relevant readback. | Monster/NPC only, at most 50 creatures and 200,000 UTF-16 characters. No OCR, PDF/image, Item, arbitrary-text guarantee, or equal-quality guarantee across models. Fresh stochastic evidence/coverage failures correctly enter `needs_review` and are not promoted. Codex OAuth was exercised only through an unofficial temporary localhost bridge, not claimed as OpenAI Platform API support. | Parent remediation ledger; [AI Intake design](../superpowers/specs/2026-07-16-ai-monster-intake-design.md) |
 | Schema validity | **Pass, current targets** | Generated v12 and explicit v14 Actor/Item structures pass characterized tests; v14 targets Foundry 14.361 document metadata and dnd5e 5.3.3 schemas. | Schema checks do not prove import migration, sheet rendering, or Activity execution. | [Core batch](v14-core-batch-verification.md); [modded batch](v14-modded-batch-verification.md); [current corpus](current-corpus-matrix.md) |
 | CLI/workflow generation | **Pass, represented flows** | Actor and standalone Item generation, plaintext ingestion, vault sync, verification, offline smoke, and the authorized authenticated crawl pipeline are covered by the 753-test aggregate gate plus the live 47-Actor run. Shield v12/v14, Damage-Bound Warden core/modded-v14, and all 47 crawl Actors were regenerated through `src/index.ts` or the project pipeline. | Runtime import/export is a separate layer. Generated JSON was not hand-repaired. | [Current corpus](current-corpus-matrix.md); parent remediation ledger |
 | Core Actor runtime | **Pass, six-Actor local sample** | Six v14/core Actors imported into Foundry 14.364 / dnd5e 5.3.3, opened, executed representative Activities, and re-exported with reviewed semantics retained. | This does not cover standalone Item runtime or arbitrary Actors. | [Live runtime smoke](v14-live-runtime-smoke-test.md); [source/JSON review](v14-source-json-full-review.md) |
@@ -52,7 +53,7 @@ The 88-module figure belongs only to the 2026-07-11 production inventory snapsho
 
 ## Claim rule
 
-The project currently supports source-faithful generation for the bounded corpus, v12 by default, explicit v14 generation, core Actor runtime samples, the bounded standalone Shield v14 import/behavior/export workflow, the narrow locked MIDI bleeding workflow, the locked DAE+MIDI `isDamaged` contract, and the bounded 2026-07-16 authenticated GoddessFantasy board-2318 ingestion. It does **not** currently support a blanket claim of full Foundry v14 production compatibility, the current production module count, arbitrary authenticated boards/statblock syntax, or arbitrary standalone Item round trips.
+The project currently supports source-faithful generation for the bounded corpus, bounded TXT/MD monster AI Intake with strict `needs_review`, v12 by default, explicit v14 generation, core Actor runtime samples, the bounded standalone Shield v14 import/behavior/export workflow, the narrow locked MIDI bleeding workflow, the locked DAE+MIDI `isDamaged` contract, and the bounded 2026-07-16 authenticated GoddessFantasy board-2318 ingestion. It does **not** currently support a blanket claim of full Foundry v14 production compatibility, the current production module count, arbitrary AI model/text correctness, OCR/PDF/image Intake, Item Intake, arbitrary authenticated boards/statblock syntax, or arbitrary standalone Item round trips.
 
 ## 2026-07-15 M10 Pre-Final Audit
 

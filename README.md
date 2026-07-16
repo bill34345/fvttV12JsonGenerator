@@ -77,7 +77,44 @@ bun run sync:vault
 - 通过 `.fvtt-sync-manifest.json` 跳过未变化输入；
 - 在源文件删除后移除过期输出。
 
-## 纯文本与批量怪物
+## AI 怪物资料整理（推荐）
+
+第一次拿到 TXT 或格式混乱的 Markdown 时，推荐让 AI 负责发现怪物边界与提取来源证据，再由项目确定性生成标准 Markdown 和 Actor JSON。AI 不直接写最终 JSON，任一证据、覆盖、投影或独立 review 门失败都会进入 `needs_review` 或 `failed`，不会静默回退旧转换器。
+
+配置专用环境变量，不会读取 `TRANSLATION_*` 或通用 `OPENAI_*`：
+
+```text
+MONSTER_INTAKE_API_KEY=<provider key>
+MONSTER_INTAKE_BASE_URL=https://api.openai.com/v1
+MONSTER_INTAKE_MODEL=<extraction model>
+MONSTER_INTAKE_REVIEW_MODEL=<optional reviewer model; defaults to extraction model>
+MONSTER_INTAKE_TIMEOUT_MS=60000
+```
+
+运行单只或合集：
+
+```powershell
+bun run src/index.ts `
+  --intake-monsters "path/to/raw.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
+```
+
+`--dry-run` 只检查配置、输入限制并估算怪物数和最大调用数，不调用 AI、不推广文件。accepted Markdown 写入 vault `input/`，Actor JSON 由现有 workflow 写入 `output/`。若结果需要确认，审查包保存在 `.local/intake-runs/<run-id>/`，可提交 decisions 后完整重跑：
+
+```powershell
+bun run src/index.ts `
+  --resume-intake ".local/intake-runs/<run-id>" `
+  --decisions ".local/intake-runs/<run-id>/decisions.json" `
+  --vault "obsidian/dnd数据转fvttjson"
+```
+
+退出码：`0` 表示全部 accepted，`2` 表示至少一只 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。首版只支持怪物/NPC，单次最多 50 只、200,000 个 JavaScript UTF-16 字符，不支持图片/PDF OCR 或 Item，也不承诺任意模型、任意文本都能自动通过。
+
+## Legacy 纯文本转换器
+
+以下命令是保留给历史脚本的规则转换器。它们不再扩展任意乱文本识别能力，识别到 0 只怪物时会失败；其 audit 只是格式诊断，不是语义验收。
 
 仅拆分纯文本资料为项目 Markdown：
 
@@ -97,7 +134,7 @@ bun run src/index.ts `
   --effect-profile core
 ```
 
-先用 `--dry-run` 检查识别数量和警告。AI normalization 是可选路径；未配置服务时使用规则化处理，测试不依赖外部翻译服务。
+先用 `--dry-run` 检查识别数量和警告。Legacy 流程始终是规则化处理，不会在 AI Intake 缺少配置或失败时被自动调用。
 
 ## GoddessFantasy 流水线
 
@@ -176,6 +213,7 @@ bun run test:foundry-lab
 ## 更多资料
 
 - [`docs/manual.md`](docs/manual.md)：以 v12 为主的旧版详细使用手册；涉及版本时以本 README 和 `AGENTS.md` 为准。
+- [`docs/superpowers/specs/2026-07-16-ai-monster-intake-design.md`](docs/superpowers/specs/2026-07-16-ai-monster-intake-design.md)：AI Intake 的 IR、证据、审查和失败边界。
 - [`docs/generated-actor-verification.md`](docs/generated-actor-verification.md)：生成 Actor 的强制语义验收清单。
 - [`scripts/foundry-lab/README.md`](scripts/foundry-lab/README.md)：隔离 Foundry v14 实验环境的安全边界与操作手册。
 - [`docs/acceptance/foundry-v14-module-compatibility.md`](docs/acceptance/foundry-v14-module-compatibility.md)：模组矩阵、已知冲突和生产世界抽样证据。

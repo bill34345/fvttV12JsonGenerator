@@ -220,6 +220,8 @@ bun run src/index.ts --sync --vault "你的Obsidian仓库路径"
 
 对于 raw plaintext collections，工具会先把规范化后的中间 Markdown 写入 `middle/`。Dual-artifact 命令会再把这些中间文件复制到 `input/`，并通过正常同步流程在 `output/` 生成最终 JSON。这样保留了可审计的中间阶段，同时维持 Obsidian `input/`/`output/` 合约。
 
+> 上述 plaintext collection 是 Legacy 规则流程，只适合已有兼容格式。第一次收到 TXT 或乱 Markdown 时，推荐使用下面的 AI Intake；Legacy 识别 0 只怪物会失败，其格式 audit 不能当作来源语义验收。
+
 ### 增量同步原理
 
 工具会记住每个文件的状态（MD5 hash）：
@@ -242,6 +244,55 @@ bun run src/index.ts --sync --vault "obsidian/dnd数据转fvttjson" --clear-back
 # 单次转换（不需要 Obsidian）
 bun run src/index.ts "path/to/npc.md" -o "path/to/output.json"
 ```
+
+---
+
+## 场景 3A：把 TXT 或乱 Markdown 整理为项目格式
+
+**目标**：输入未经标记的怪物/NPC 文本，由 AI 提取带原文证据的结构，再让项目 workflow 生成标准 Markdown 和 Actor JSON。
+
+先配置独立的 Intake provider：
+
+```bash
+MONSTER_INTAKE_API_KEY=<provider key>
+MONSTER_INTAKE_BASE_URL=https://api.openai.com/v1
+MONSTER_INTAKE_MODEL=<extraction model>
+MONSTER_INTAKE_REVIEW_MODEL=<optional reviewer model>
+MONSTER_INTAKE_TIMEOUT_MS=60000
+```
+
+这些变量不会回退到翻译服务的 `TRANSLATION_*` 或通用 `OPENAI_*`。运行前可做零网络预检：
+
+```powershell
+bun run src/index.ts --intake-monsters "path/to/raw.txt" --vault "obsidian/dnd数据转fvttjson" --dry-run
+```
+
+正式运行：
+
+```powershell
+bun run src/index.ts `
+  --intake-monsters "path/to/raw.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
+```
+
+流水线会依次做怪物边界发现、evidence-backed IR、确定性校验、标准 Markdown 渲染、现有 parser/generator 生成、IR/Markdown/Actor 核对和独立 AI review。AI 不直接生成或修补最终 JSON。
+
+- `accepted`：标准 Markdown 进入 `input/`，正式 Actor JSON 进入 `output/`；CLI 退出 `0`。
+- `needs_review`：保留 source、IR、候选 Markdown/Actor 和报告，但不把候选 Actor 当正式 Web 下载；CLI 退出 `2`。
+- `failed`：存在 provider/执行失败；CLI 退出 `1`。
+
+需要人工确认时，复制 `decisions.template.json` 为 decisions 文件，按 issue 选择 `select`、`set`、`preserve-literal` 或允许的 `exclude`，然后恢复原 run：
+
+```powershell
+bun run src/index.ts `
+  --resume-intake ".local/intake-runs/<run-id>" `
+  --decisions ".local/intake-runs/<run-id>/decisions.json" `
+  --vault "obsidian/dnd数据转fvttjson"
+```
+
+恢复会重新执行确定性校验、Markdown 渲染、项目生成和独立 review，不会从旧候选 JSON 继续打补丁。提交的 TXT/MD 会发送给配置的 AI provider；首版只支持怪物/NPC，最多 50 只、200,000 个 UTF-16 字符，不支持图片/PDF OCR 或 Item。
 
 ---
 

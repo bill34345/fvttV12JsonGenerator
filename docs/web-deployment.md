@@ -61,12 +61,21 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 工作流能力：
 
 - `FVTT_WEB_ENABLE_PATH_MODE=1`：允许读取服务器 workspace 路径和运行 `vault-sync`。公开部署通常不要开启。
+- `MONSTER_INTAKE_API_KEY`：AI 怪物资料整理专用 provider key；只保留在服务端。
+- `MONSTER_INTAKE_BASE_URL`：OpenAI-compatible API 根地址，例如 `https://api.openai.com/v1`。
+- `MONSTER_INTAKE_MODEL`：discovery、extraction 和 repair 使用的模型。
+- `MONSTER_INTAKE_REVIEW_MODEL`：独立 review 模型；未设置时使用 `MONSTER_INTAKE_MODEL`。
+- `MONSTER_INTAKE_TIMEOUT_MS`：每阶段超时，默认 `60000` 毫秒。
 - `TRANSLATION_API_KEY` 或 `OPENAI_API_KEY`：服务器端翻译/AI normalize 凭据。
 - `GODDESSFANTASY_COOKIE`：服务器端 Goddess Fantasy crawl cookie。
 - `GODDESSFANTASY_USERNAME` / `GODDESSFANTASY_PASSWORD`：服务器端爬站登录凭据。
 - `FVTT_WEB_EXPOSE_ERRORS=1`：返回内部错误详情，仅限本机调试；公开部署不要开启。
 
 浏览器只能看到“某项能力是否已配置”，不能取得上述凭据值。
+
+AI 怪物资料整理只读取五个 `MONSTER_INTAKE_*` 变量，不会回退到翻译或通用 OpenAI 变量。粘贴或上传的 TXT/MD 原文会发送给该 provider，因此公开部署必须在用户提交前明确告知这一点，并按 provider 的数据政策处理。服务端审计只记录 provider、model、prompt version、耗时、调用计数和错误码，不记录 key、请求头或隐藏推理。
+
+单次 Intake 最多 200,000 个 JavaScript UTF-16 字符、50 只怪物；长文本按 24,000 字符分块并保留 1,000 字符重叠，逐怪物 extraction 并发为 2。每只怪物最多 1 次 extraction、1 次独立 review 和 1 次 semantic repair；各阶段可对 timeout、429 或网络错误重试一次。模型不能自行增加循环或调用工具。`needs_review` 任务可下载 source、IR、候选 Markdown 和报告，但 Web 不会把候选 Actor JSON 注册为正式下载；只有 accepted 才注册 Actor JSON/ZIP。
 
 ## 固定资源保护
 
