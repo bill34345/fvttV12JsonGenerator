@@ -105,6 +105,81 @@ describe('AI monster intake orchestrator', () => {
     expect(ambiguous.claims[0]!.evidence[0]!.start).toBe(999);
   });
 
+  test('anchors a repeated evidence quote to the nearest reported source position', () => {
+    const source = 'Repeated title\nintroductory narrative\nRepeated title\nstat block';
+    const secondStart = source.lastIndexOf('Repeated title');
+    const ir = buildValidLurkerIr();
+    ir.claims[0]!.evidence[0] = {
+      start: secondStart + 6,
+      end: secondStart + 8,
+      quote: 'Repeated title',
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'repeated',
+      label: 'Repeated',
+      start: 0,
+      end: source.length,
+      quote: source,
+    }, ir);
+
+    expect(anchored.claims[0]!.evidence[0]).toEqual({
+      start: secondStart,
+      end: secondStart + 'Repeated title'.length,
+      quote: 'Repeated title',
+    });
+  });
+
+  test('anchors a repeated exact quote when one occurrence is clearly nearer despite large model offset drift', () => {
+    const source = 'Repeated title\nintroductory narrative that is deliberately long\nRepeated title\nstat block';
+    const secondStart = source.lastIndexOf('Repeated title');
+    const reportedStart = secondStart + 'Repeated title'.length * 3;
+    const ir = buildValidLurkerIr();
+    ir.claims[0]!.evidence[0] = {
+      start: reportedStart,
+      end: reportedStart + 1,
+      quote: 'Repeated title',
+    };
+    ir.coverage[0] = {
+      ...ir.coverage[0]!,
+      start: reportedStart,
+      end: reportedStart + 1,
+      quote: 'Repeated title',
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'repeated', label: 'Repeated', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.claims[0]!.evidence[0]!.start).toBe(secondStart);
+    expect(anchored.coverage[0]!.start).toBe(secondStart);
+  });
+
+  test('normalizes model-overloaded AC notes and feature activity types into stable IR fields', () => {
+    const ir = buildValidLurkerIr();
+    (ir.creature.attributes as unknown as { acKind: string }).acKind = '（有法师护甲时15）';
+    (ir.creature.actions[1] as unknown as { activityType: string }).activityType = 'action';
+    (ir.creature.traits[2] as unknown as { activityType: string }).activityType = 'bonus';
+    ir.creature.languages.values = ['通用语'];
+    ir.creature.actions[1]!.damage![0]!.type = '穿刺';
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'lurker',
+      label: 'lurker',
+      start: 0,
+      end: LURKER_SOURCE.length,
+      quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.attributes.acKind).toBeUndefined();
+    expect(anchored.creature.attributes.acNote).toBe('（有法师护甲时15）');
+    expect(anchored.creature.actions[1]!.activityType).toBe('attack');
+    expect(anchored.creature.traits[2]!.activityType).toBe('utility');
+    expect(anchored.creature.traits[2]!.activationType).toBe('bonus');
+    expect(anchored.creature.languages.values).toEqual(['common']);
+    expect(anchored.creature.actions[1]!.damage![0]!.type).toBe('piercing');
+  });
+
   test('drops only unanchorable whitespace coverage while preserving invalid mechanical coverage', () => {
     const ir = buildValidLurkerIr();
     ir.coverage.push({
@@ -194,6 +269,10 @@ describe('AI monster intake orchestrator', () => {
     writeFileSync(first.creatures[0]!.markdownPath!, 'existing conflicting markdown');
     writeFileSync(first.creatures[0]!.actorPath!, '{"name":"existing actor"}');
     const blocked = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
+    const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
+    const storedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8'));
+    storedIr.creature.actions[1].activityType = 'action';
+    writeFileSync(storedIrPath, JSON.stringify(storedIr, null, 2));
     const decisionsPath = join(blocked.runPath, 'decisions.json');
     writeFileSync(decisionsPath, JSON.stringify({
       runId: blocked.runId,
@@ -202,6 +281,7 @@ describe('AI monster intake orchestrator', () => {
     }));
     const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, new FakeProvider(), paths.vaultPath);
     expect(resumed.status).toBe('succeeded');
+    expect(JSON.parse(readFileSync(storedIrPath, 'utf-8')).creature.actions[1].activityType).toBe('attack');
     expect(JSON.parse(readFileSync(resumed.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
     expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.md'), 'utf-8')).toBe('existing conflicting markdown');
     expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.json'), 'utf-8')).toContain('existing actor');

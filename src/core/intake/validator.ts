@@ -317,9 +317,9 @@ function collectMechanicalClaimPaths(ir: MonsterIntakeIR): string[] {
     '/creature/attributes/movement', '/creature/attributes/cr',
   ];
   if (creature.identity?.alignment) paths.push('/creature/identity/alignment');
-  if (creature.attributes?.initiative !== undefined) paths.push('/creature/attributes/initiative');
-  if (creature.attributes?.xp !== undefined) paths.push('/creature/attributes/xp');
-  if (creature.attributes?.proficiencyBonus !== undefined) paths.push('/creature/attributes/proficiencyBonus');
+  if (creature.attributes?.initiative != null) paths.push('/creature/attributes/initiative');
+  if (creature.attributes?.xp != null) paths.push('/creature/attributes/xp');
+  if (creature.attributes?.proficiencyBonus != null) paths.push('/creature/attributes/proficiencyBonus');
   if (Object.keys(creature.saves ?? {}).length > 0) paths.push('/creature/saves');
   if (Object.keys(creature.skills ?? {}).length > 0) paths.push('/creature/skills');
   if (Object.values(creature.defenses ?? {}).some((value) => Array.isArray(value) && value.length > 0)) paths.push('/creature/defenses');

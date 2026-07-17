@@ -134,7 +134,7 @@ export async function resumeMonsterIntake(
   for (const candidate of discovery.candidates) {
     const creaturePath = join(runPath, 'creatures', safeId(candidate.id));
     const oldIr = readJson<MonsterIntakeIR>(join(creaturePath, 'intake-ir.json'));
-    const decidedIr = applyDecisions(oldIr, byIssue);
+    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(oldIr, byIssue));
     results.push(await processExistingIr(options, provider, runPath, candidate, decidedIr));
   }
   const status = aggregateStatus(results);
@@ -414,6 +414,7 @@ function setJsonPointer(target: unknown, pointer: string, value: unknown): void 
 
 export function anchorIrEvidence(source: string, candidate: DiscoveryCandidate, ir: MonsterIntakeIR): MonsterIntakeIR {
   const next = structuredClone(ir);
+  normalizeModelIr(next);
   const refs = [
     ...next.claims.flatMap((claim) => claim.evidence),
     ...next.coverage,
@@ -423,15 +424,62 @@ export function anchorIrEvidence(source: string, candidate: DiscoveryCandidate, 
     if (Number.isInteger(ref.start) && Number.isInteger(ref.end) && source.slice(ref.start, ref.end) === ref.quote) continue;
     if (!ref.quote) continue;
     const local = source.slice(candidate.start, candidate.end);
-    const first = local.indexOf(ref.quote);
-    if (first < 0 || local.indexOf(ref.quote, first + 1) >= 0) continue;
-    ref.start = candidate.start + first;
+    const offsets: number[] = [];
+    for (let offset = local.indexOf(ref.quote); offset >= 0; offset = local.indexOf(ref.quote, offset + 1)) {
+      offsets.push(candidate.start + offset);
+    }
+    if (offsets.length === 0) continue;
+    const ranked = offsets
+      .map((offset) => ({ offset, distance: Math.abs(offset - ref.start) }))
+      .sort((left, right) => left.distance - right.distance || left.offset - right.offset);
+    const nearest = ranked[0]!;
+    const nextNearest = ranked[1];
+    const unambiguous = ranked.length === 1
+      || (ref.quote.length >= 8
+        && nextNearest !== undefined
+        && nearest.distance < nextNearest.distance
+        && nextNearest.distance - nearest.distance >= Math.max(4, Math.ceil(ref.quote.length / 2)));
+    if (!unambiguous) continue;
+    ref.start = nearest.offset;
     ref.end = ref.start + ref.quote.length;
   }
   next.coverage = next.coverage.filter((entry) => (
     source.slice(entry.start, entry.end) === entry.quote || /\S/u.test(entry.quote)
   ));
   return next;
+}
+
+function normalizeModelIr(ir: MonsterIntakeIR): void {
+  const attributes = ir.creature.attributes as MonsterIntakeIR['creature']['attributes'] & { acKind?: unknown; initiative?: number | null };
+  if (typeof attributes.acKind === 'string' && !['flat', 'natural', 'default'].includes(attributes.acKind)) {
+    attributes.acNote = attributes.acNote?.trim() || attributes.acKind;
+    delete attributes.acKind;
+  }
+  if (attributes.initiative === null) delete attributes.initiative;
+  ir.creature.languages.values = ir.creature.languages.values.map(normalizeLanguageValue);
+  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
+    for (const feature of ir.creature[section]) {
+      const overloadedActivityType = String(feature.activityType);
+      if (['action', 'bonus', 'reaction', 'legendary', 'special'].includes(overloadedActivityType)) {
+        feature.activationType = overloadedActivityType as NonNullable<typeof feature.activationType>;
+        feature.activityType = undefined;
+      }
+      if (!['attack', 'save', 'damage', 'utility'].includes(String(feature.activityType))) {
+        feature.activityType = feature.attack ? 'attack' : feature.save ? 'save' : feature.damage?.length ? 'damage' : 'utility';
+      }
+      for (const damage of feature.damage ?? []) damage.type = normalizeDamageValue(damage.type);
+    }
+  }
+}
+
+function normalizeLanguageValue(value: string): string {
+  return ({ 通用语: 'common', 矮人语: 'dwarvish', 精灵语: 'elvish', 巨人语: 'giant', 地精语: 'goblin' } as Record<string, string>)[value]
+    ?? value.toLowerCase();
+}
+
+function normalizeDamageValue(value: string): string {
+  return ({ 强酸: 'acid', 钝击: 'bludgeoning', 冷冻: 'cold', 火焰: 'fire', 力场: 'force', 闪电: 'lightning', 黯蚀: 'necrotic', 穿刺: 'piercing', 毒素: 'poison', 心灵: 'psychic', 光耀: 'radiant', 挥砍: 'slashing', 雷鸣: 'thunder' } as Record<string, string>)[value]
+    ?? value.toLowerCase();
 }
 
 async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper: (value: T) => Promise<R>): Promise<R[]> {

@@ -143,4 +143,19 @@ ${keyFor('cr')}: 1/2
     ]);
     expect(result.structuredActions).toBeUndefined();
   });
+
+  it('preserves an explicit activation type on a structured trait while retaining section inference elsewhere', () => {
+    const yaml = readFileSync('src/core/parser/__tests__/fixtures/yaml-structured-activation.md', 'utf-8');
+
+    const result = parser.parse(yaml);
+    const traits = result.structuredActions?.['特性'];
+    const actions = result.structuredActions?.['动作'];
+
+    expect(traits?.[0]?.activation?.type).toBe('bonus');
+    expect(traits?.[0]?.activation?.explicit).toBe(true);
+    expect(traits?.[1]?.activation?.type).toBe('special');
+    expect(traits?.[1]?.activation?.explicit).toBeUndefined();
+    expect(actions?.[0]?.activation?.type).toBe('action');
+    expect(actions?.[0]?.activation?.explicit).toBeUndefined();
+  });
 });

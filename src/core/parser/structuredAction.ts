@@ -53,7 +53,13 @@ export class StructuredActionParser {
     const type = (entry as Record<string, unknown>)['类型'] ?? 'utility';
     const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
-    const activationType = this.inferActivationType(sectionName);
+    const record = entry as Record<string, unknown>;
+    const activation = record['activation'];
+    const activationRecord = activation && typeof activation === 'object' && !Array.isArray(activation)
+      ? activation as Record<string, unknown>
+      : undefined;
+    const explicitActivationType = this.normalizeActivationType(record['激活'] ?? record['activationType'] ?? activationRecord?.['type']);
+    const activationType = explicitActivationType ?? this.inferActivationType(sectionName);
     const subActions = this.parseSubActions((entry as Record<string, unknown>)['子活动']);
     const embeddedEffects = this.parseEmbeddedEffects((entry as Record<string, unknown>)['内嵌效果']);
 
@@ -61,7 +67,11 @@ export class StructuredActionParser {
       name: this.extractName(String(name)),
       englishName: this.extractEnglishName(String(name)),
       type: this.normalizeType(String(type)),
-      activation: activationType ? { type: activationType, condition: ((entry as Record<string, unknown>)['activation'] as Record<string, unknown>)?.['condition'] as string | undefined } : undefined,
+      activation: activationType ? {
+        type: activationType,
+        condition: activationRecord?.['condition'] as string | undefined,
+        ...(explicitActivationType ? { explicit: true } : {}),
+      } : undefined,
       describe: String(describe),
     };
 
@@ -129,6 +139,15 @@ export class StructuredActionParser {
     if (sectionName === '附赠动作') return 'bonus';
     if (sectionName === '反应') return 'reaction';
     if (sectionName === '传奇动作') return 'legendary';
+    return null;
+  }
+
+  private normalizeActivationType(value: unknown): ActivityActivationType | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'action' || normalized === 'bonus' || normalized === 'reaction' || normalized === 'legendary' || normalized === 'special') {
+      return normalized;
+    }
     return null;
   }
 

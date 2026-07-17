@@ -13,8 +13,8 @@ import type { MonsterIntakeConfig } from './config';
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v1',
-  extract: 'monster-intake-extract-v2',
-  review: 'monster-intake-review-v1',
+  extract: 'monster-intake-extract-v3',
+  review: 'monster-intake-review-v4',
   repair: 'monster-intake-repair-v1',
 } as const;
 
@@ -79,14 +79,19 @@ Required top-level shape:
 CREATURE keys are exactly identity, abilities, attributes, saves, skills, defenses, senses, languages,
 biography, traits, actions, bonusActions, reactions, legendaryActions. identity uses name, englishName,
 size(tiny|small|medium|large|huge|gargantuan), creatureType, creatureTypeCustom, alignment. abilities uses
-str,dex,con,int,wis,cha numeric scores. attributes uses ac, acKind, initiative, hp{value,formula},
+str,dex,con,int,wis,cha numeric scores. attributes uses ac, acKind(flat|natural|default), acNote for literal
+conditional AC text, initiative, hp{value,formula},
 movement{walk,climb,fly,swim,burrow}, cr, xp, proficiencyBonus. saves and skills store TOTAL modifiers.
 All numeric mechanics, including ac, initiative, hp.value, movement, cr, xp, proficiencyBonus, saves,
 skills, attack values, damage dice constants, and save dc, must be JSON numbers; cr must be a JSON number,
 never a quoted string.
 defenses uses resistances, immunities, vulnerabilities, conditionImmunities arrays. senses uses darkvision,
 blindsight,tremorsense,truesight,passivePerception,special. languages uses values and custom.
-Every feature uses name, englishName, description and optional activityType. attack is
+Every feature uses name, englishName, description, optional activityType(attack|save|damage|utility), and optional
+activationType(action|bonus|reaction|legendary|special). Activity type describes the mechanic; activation type describes
+when it is used, regardless of which section contains the feature. If source text says the creature uses a bonus action,
+reaction, or action, encode that exact action economy. Never use special merely because a feature appears under traits;
+special is only for an explicitly special activation that is not action, bonus action, reaction, or legendary. attack is
 {type:mwak|rwak|msak|rsak,toHit,reach,range,longRange}; damage entries are
 {formula,type,relationship:base|additional|replacement|conditional,condition}; save is {dc,ability,condition};
 appliedConditions entries use {statuses,escapeDc,condition,duration,staged}. Do not infer automation from names.
@@ -108,7 +113,19 @@ source.slice(start,end). uncertainties use id,code,path,message,blocking,evidenc
   review: `${SYSTEM_PREFIX}
 Act as an independent semantic reviewer. Compare source, IR, rendered Markdown and Actor projection.
 Return {"schemaVersion":1,"verdict":"accepted|revise|needs_review","findings":[]}.
-Any lost explicit mechanic, default replacing a source value, merged entry, or invented automation is blocking.`,
+Any lost explicit mechanic, default replacing a source value, merged entry, or invented automation is blocking.
+Canonical IR normalizes language and damage enums to English Foundry identifiers, so common/通用语 and
+piercing/穿刺 are equivalent rather than replacement. Derived Foundry saves and initiative are intentionally
+omitted from actorProjection unless explicit in source. Literal conditional mechanics that cannot be automated,
+such as alternate AC under mage armor, may be preserved in Markdown and Actor biography; do not call that
+invented when the exact condition is supported by source evidence. Deterministic standard Markdown stores mechanics in
+YAML frontmatter and does not need to duplicate them in a Markdown body. Independently derive explicit action economy from
+the source: if source explicitly says bonus action, the matching IR feature and Actor activation must be bonus, never
+special, passive, or empty merely because it is listed under traits. Apply the same check to action, reaction, and legendary
+action wording. Canonical acNote has no native Actor field: the deterministic renderer intentionally preserves it as a
+biography line formatted exactly like 护甲等级：<base AC>（<literal condition>）. Treat that controlled literal-preservation
+line as the structured AC note carried into Actor biography, not as invented narrative or mechanic relocation. Empty
+optional values and null/undefined are equivalent.`,
   repair: `${SYSTEM_PREFIX}
 Repair the MonsterIntakeIR only. Use the original source evidence and supplied findings.
 Do not edit Markdown or Actor JSON. Return a complete MonsterIntakeIR schemaVersion 1.`,

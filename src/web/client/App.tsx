@@ -30,6 +30,11 @@ import {
   type JobType,
   type WebJob,
 } from './api';
+import {
+  createDecisionDraft,
+  isReviewFindingActionable,
+  type IntakeDecisionDraft,
+} from './intakeReview';
 
 type ToolId = 'single' | JobType;
 type ToolGroupId = 'intake' | 'json' | 'legacy' | 'crawler';
@@ -548,6 +553,7 @@ interface IntakeReviewFinding {
   path: string;
   message: string;
   blocking: boolean;
+  origin?: string;
   candidates?: unknown[];
   evidence?: Array<{ start: number; end: number; quote: string }>;
 }
@@ -564,19 +570,17 @@ function IntakeReviewPanel(props: {
   onResumed: (job: WebJob) => void;
   onError: (message: string) => void;
 }) {
-  const [drafts, setDrafts] = useState<Record<string, { action: 'select' | 'set' | 'preserve-literal' | 'exclude'; value: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, IntakeDecisionDraft>>({});
   const [submitting, setSubmitting] = useState(false);
   const creatures = props.job?.type === 'ai-monster-intake' && Array.isArray(props.job.summary?.creatures)
     ? props.job.summary.creatures as unknown as IntakeReviewCreature[]
     : [];
   const findings = creatures.flatMap((creature) => (creature.findings ?? []).filter((finding) => finding.blocking).map((finding) => ({ creature, finding })));
+  const allFindingsActionable = findings.every(({ finding }) => isReviewFindingActionable(finding));
 
   useEffect(() => {
     if (!props.job || props.job.status !== 'needs_review') return;
-    setDrafts(Object.fromEntries(findings.map(({ finding }) => [finding.id, {
-      action: 'select' as const,
-      value: finding.candidates?.[0] === undefined ? '' : stringifyDecisionValue(finding.candidates[0]),
-    }])));
+    setDrafts(Object.fromEntries(findings.map(({ finding }) => [finding.id, createDecisionDraft(finding)])));
   }, [props.job?.id, props.job?.status]);
 
   if (!props.job || props.job.type !== 'ai-monster-intake') return null;
@@ -584,10 +588,15 @@ function IntakeReviewPanel(props: {
 
   async function submit() {
     if (!props.job) return;
+    if (!allFindingsActionable) {
+      props.onError('当前问题不能通过人工设值安全修复，请修改原文或重新运行 AI 提取。');
+      return;
+    }
     setSubmitting(true);
     try {
       const decisions = findings.map(({ finding }) => {
-        const draft = drafts[finding.id] ?? { action: 'select' as const, value: '' };
+        const draft = drafts[finding.id] ?? createDecisionDraft(finding);
+        if (draft.action === 'unresolved') throw new Error(`问题 ${finding.id} 尚未选择可执行决定。`);
         const requiresValue = draft.action === 'select' || draft.action === 'set';
         return {
           issueId: finding.id,
@@ -608,15 +617,15 @@ function IntakeReviewPanel(props: {
       <h3>AI Intake 逐怪物审查</h3>
       {creatures.map((creature) => (
         <article key={creature.id}>
-          <header><strong>{creature.label}</strong><span>{statusLabel(creature.status as JobStatus)}</span></header>
+          <header><strong>{creature.label}</strong><span>{statusLabel(creature.status as JobStatus | 'accepted')}</span></header>
           {(creature.findings ?? []).filter((finding) => finding.blocking).map((finding) => {
-            const draft = drafts[finding.id] ?? { action: 'select' as const, value: '' };
+            const draft = drafts[finding.id] ?? createDecisionDraft(finding);
             return (
               <div className="intake-issue" key={finding.id}>
                 <div><code>{finding.code}</code><code>{finding.path}</code></div>
                 <p>{finding.message}</p>
                 {finding.evidence?.map((evidence) => <blockquote key={`${evidence.start}-${evidence.end}`}>{evidence.quote}</blockquote>)}
-                {props.job?.status === 'needs_review' ? (
+                {props.job?.status === 'needs_review' && isReviewFindingActionable(finding) ? (
                   <div className="intake-decision">
                     <select value={draft.action} onChange={(event) => setDrafts({ ...drafts, [finding.id]: { ...draft, action: event.target.value as typeof draft.action } })}>
                       <option value="select">选择候选</option>
@@ -634,13 +643,15 @@ function IntakeReviewPanel(props: {
                     ) : null}
                     {draft.action === 'set' ? <input value={draft.value} onChange={(event) => setDrafts({ ...drafts, [finding.id]: { ...draft, value: event.target.value } })} placeholder="JSON 值或文本" /> : null}
                   </div>
+                ) : props.job?.status === 'needs_review' ? (
+                  <p className="intake-decision-note">该问题不能通过当前确认表单安全覆盖，请修改原文或重新运行提取。</p>
                 ) : null}
               </div>
             );
           })}
         </article>
       ))}
-      {props.job.status === 'needs_review' && findings.length > 0 ? (
+      {props.job.status === 'needs_review' && findings.length > 0 && allFindingsActionable ? (
         <button className="primary-button" disabled={submitting} onClick={submit}>{submitting ? '正在重新验收…' : '提交确认并恢复任务'}</button>
       ) : null}
     </section>
@@ -902,7 +913,7 @@ function resultDetail(singleResult: ConversionResult | null, job: WebJob | null)
   return '等待运行';
 }
 
-function statusLabel(status: JobStatus | 'idle' | 'loading' | 'success' | 'error'): string {
+export function statusLabel(status: JobStatus | 'accepted' | 'idle' | 'loading' | 'success' | 'error'): string {
   switch (status) {
     case 'queued':
       return '排队中';
@@ -914,6 +925,10 @@ function statusLabel(status: JobStatus | 'idle' | 'loading' | 'success' | 'error
       return '已完成';
     case 'partial':
       return '部分完成';
+    case 'needs_review':
+      return '待人工确认';
+    case 'accepted':
+      return '已接受';
     case 'failed':
     case 'error':
       return '失败';

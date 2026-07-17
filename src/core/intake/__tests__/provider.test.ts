@@ -75,10 +75,30 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v2');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v3');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
     expect(prompt).toContain('partition the full candidate range');
+    expect(prompt).toContain('activationType(action|bonus|reaction|legendary|special)');
+    expect(prompt).toContain('regardless of which section contains the feature');
+    expect(prompt).toContain('Never use special merely because a feature appears under traits');
+  });
+
+  test('review prompt independently checks source action economy against IR and Actor activation', async () => {
+    const requests: Array<{ url: string; init: HttpRequest }> = [];
+    const provider = makeProvider(async (url, init) => {
+      requests.push({ url, init });
+      return response(200, '{"schemaVersion":1,"verdict":"accepted","findings":[]}');
+    });
+
+    await provider.review({} as never);
+
+    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
+    const prompt = body.messages[0]!.content;
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v4');
+    expect(prompt).toContain('source explicitly says bonus action');
+    expect(prompt).toContain('special, passive, or empty');
+    expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
   });
 
   test('retries retryable 429 once and audits without secrets', async () => {

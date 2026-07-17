@@ -819,20 +819,21 @@ export class ActorGenerator {
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive',
     activityContext: ActivityGenerationContext,
   ): void {
+    const effectiveActivationType = action.activation?.explicit ? action.activation.type : activationType;
     const activityData = this.structuredActionToActivityData(action);
     const activities = this.activityGenerator.generate(activityData, activityContext);
     const item = this.createItemFromAction(
       { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe } as any,
       activities,
-      activationType === 'passive' ? '' : activationType,
+      effectiveActivationType === 'passive' ? '' : effectiveActivationType,
     );
 
-    const legendaryCost = activationType === 'legendary'
+    const legendaryCost = effectiveActivationType === 'legendary'
       ? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' ')) ?? 1
       : null;
     for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
       activity.activation = {
-        type: activationType === 'passive' ? '' : activationType,
+        type: effectiveActivationType === 'passive' ? '' : effectiveActivationType,
         value: legendaryCost,
         override: false,
         condition: action.activation?.condition ?? '',
@@ -849,7 +850,7 @@ export class ActorGenerator {
 
     if (action.recharge) {
       item.system.uses = { value: 0, max: '', per: 'recharge' };
-      item.system.activation.type = activationType === 'legendary' ? 'legendary' : activationType;
+      item.system.activation.type = effectiveActivationType === 'legendary' ? 'legendary' : effectiveActivationType;
     }
 
     if (action.concentration) {
@@ -949,14 +950,16 @@ export class ActorGenerator {
   private createItemFromAction(
     action: GeneratedActionData,
     activities: any,
-    activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' = 'action',
+    activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | 'special' | '' = 'action',
   ): any {
     const resolvedActivationType =
       activationType === ''
         ? this.inferPassiveActivationType(action)
         : activationType === 'legendary'
           ? 'legendary'
-          : this.resolveActivationType(action, activationType);
+          : activationType === 'special'
+            ? 'special'
+            : this.resolveActivationType(action, activationType);
 
     const passiveTraits = ['两栖', '感知魔法', '反魔场光环', 'Amphibious', 'Sense Magic', 'Antimagic Aura'];
     const isPassive = activationType === '' || passiveTraits.some(t => action.name.includes(t));

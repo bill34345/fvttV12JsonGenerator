@@ -56,7 +56,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     感官: renderSenses(creature),
     语言: creature.languages.values.map((value) => languageZh(value)),
     语言备注: creature.languages.custom,
-    传记: creature.biography,
+    传记: renderBiography(creature),
     特性: creature.traits.map((feature) => renderFeature(feature, 'trait')),
     动作: creature.actions.map((feature) => renderFeature(feature, 'action')),
     附赠动作: creature.bonusActions.map((feature) => renderFeature(feature, 'bonus')),
@@ -69,15 +69,17 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     }
   }
   const frontmatter = yaml.dump(data, { noRefs: true, lineWidth: -1, sortKeys: false, quotingType: '"', forceQuotes: false });
-  return `---\n${frontmatter}---\n\n# ${displayName(creature.identity.name, creature.identity.englishName)}\n\n`;
+  return `---\n${frontmatter}---\n`;
 }
 
 function renderFeature(feature: CanonicalFeature, section: string): Record<string, unknown> {
   const result: Record<string, unknown> = {
     名称: displayName(feature.name, feature.englishName),
-    类型: feature.activityType ?? 'utility',
+    类型: feature.attack ? 'attack' : feature.save ? 'save' : feature.activityType ?? 'utility',
+    激活: feature.activationType,
     描述: feature.description,
   };
+  if (!result.激活) delete result.激活;
   if (feature.attack) {
     result.攻击类型 = feature.attack.type;
     result.命中 = feature.attack.toHit;
@@ -91,7 +93,7 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
   if (structuredDamage?.length) {
     result.伤害 = structuredDamage.map((damage) => ({
       公式: normalizeDice(damage.formula),
-      类型: damage.type,
+      类型: canonicalDamageType(damage.type),
     }));
   }
   if (feature.save) {
@@ -103,6 +105,23 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
   if (feature.uses) result.每日 = feature.uses.max;
   if (section === 'legendary' && feature.legendaryCost) result.传奇动作消耗 = feature.legendaryCost;
   return result;
+}
+
+function renderBiography(creature: CanonicalMonster): string | undefined {
+  const parts = creature.biography?.trim() ? [creature.biography.trim()] : [];
+  if (creature.attributes.acNote?.trim()) {
+    const note = creature.attributes.acNote.trim();
+    const literalNote = /^[（(]/u.test(note) ? note : `（${note}）`;
+    parts.push(`护甲等级：${creature.attributes.ac}${literalNote}`);
+  }
+  return parts.length > 0 ? parts.join('\n\n') : undefined;
+}
+
+function canonicalDamageType(value: string): string {
+  const normalized = value.toLowerCase();
+  const direct = Object.keys(DAMAGE_ZH).find((key) => key === normalized);
+  if (direct) return direct;
+  return Object.entries(DAMAGE_ZH).find(([, label]) => label === value)?.[0] ?? value;
 }
 
 function renderMovement(movement: CanonicalMonster['attributes']['movement']): string {

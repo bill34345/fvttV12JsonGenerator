@@ -17,7 +17,11 @@ export function verifyMonsterIntake(
 ): IntakeVerificationReport {
   const findings = [...validateMonsterIntakeIR(source, ir, { coverageRange }).findings];
   const expected = ir.creature;
-  const projection = projectActor(actor, { skillKeys: Object.keys(expected.skills) });
+  const projection = projectActor(actor, {
+    skillKeys: Object.keys(expected.skills),
+    saveKeys: Object.keys(expected.saves),
+    includeInitiative: expected.attributes.initiative != null,
+  });
   const add = (code: string, path: string, message: string) => findings.push({
     id: `${code.toLowerCase()}:${path}`.replace(/[^a-z0-9:/_-]+/g, '-'),
     code, path, message, blocking: true, origin: 'semantic',
@@ -51,7 +55,7 @@ export function verifyMonsterIntake(
   compareSet(add, 'ACTOR_VULNERABILITY_DRIFT', '/creature/defenses/vulnerabilities', expected.defenses.vulnerabilities, projection.vulnerabilities);
   compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities);
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
-  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages);
+  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguage);
   compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', expected.languages.custom, projection.languageCustom);
   compareFeatureSections(add, expected.traits, projection.items, 'traits');
   compareFeatureSections(add, expected.actions, projection.items, 'actions');
@@ -60,7 +64,10 @@ export function verifyMonsterIntake(
   compareFeatureSections(add, expected.legendaryActions, projection.items, 'legendaryActions');
 
   for (const requiredText of featureDescriptions(expected)) {
-    if (!markdown.includes(requiredText)) add('MARKDOWN_DESCRIPTION_LOSS', '/markdown', `Rendered Markdown lost feature text: ${requiredText.slice(0, 80)}`);
+    if (!compact(markdown)?.includes(compact(requiredText) ?? '')) add('MARKDOWN_DESCRIPTION_LOSS', '/markdown', `Rendered Markdown lost feature text: ${requiredText.slice(0, 80)}`);
+  }
+  if (expected.attributes.acNote?.trim() && !markdown.includes(expected.attributes.acNote.trim())) {
+    add('MARKDOWN_AC_NOTE_LOSS', '/markdown/护甲等级', `Rendered Markdown lost conditional AC text: ${expected.attributes.acNote}`);
   }
   if (markdown.includes('护甲等级: 20') && expected.attributes.ac !== 20) add('TEMPLATE_DEFAULT_LEAK', '/markdown/护甲等级', 'Rendered Markdown contains a conflicting template AC 20.');
   if (markdown.includes('生命值: 332') && expected.attributes.hp.value !== 332) add('TEMPLATE_DEFAULT_LEAK', '/markdown/生命值', 'Rendered Markdown contains a conflicting template HP 332.');
@@ -82,7 +89,7 @@ export function renderIntakeVerificationMarkdown(report: IntakeVerificationRepor
   return `${lines.join('\n')}\n`;
 }
 
-export function projectActor(actor: unknown, options: { skillKeys?: string[] } = {}): Record<string, unknown> {
+export function projectActor(actor: unknown, options: { skillKeys?: string[]; saveKeys?: string[]; includeInitiative?: boolean } = {}): Record<string, unknown> {
   const root = asRecord(actor);
   const system = asRecord(root.system);
   const attrs = asRecord(system.attributes);
@@ -96,10 +103,12 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[] } =
   const traits = asRecord(system.traits);
   const prof = numeric(attrs.prof);
   const abilityValues = Object.fromEntries(['str', 'dex', 'con', 'int', 'wis', 'cha'].map((key) => [key, numeric(asRecord(abilities[key]).value)]));
-  const saves = Object.fromEntries(Object.entries(abilityValues).map(([key, score]) => {
+  const allSaves = Object.fromEntries(Object.entries(abilityValues).map(([key, score]) => {
     const ability = asRecord(abilities[key]);
     return [key, abilityMod(score) + numeric(ability.proficient) * prof + numeric(asRecord(ability.bonuses).save)];
   }));
+  const requestedSaveKeys = options.saveKeys === undefined ? undefined : new Set(options.saveKeys);
+  const saves = Object.fromEntries(Object.entries(allSaves).filter(([key]) => requestedSaveKeys === undefined || requestedSaveKeys.has(key)));
   const skillSystem = asRecord(system.skills);
   const skills: Record<string, number> = {};
   const allSkillTotals: Record<string, number> = {};
@@ -125,7 +134,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[] } =
     cr: details.cr,
     xp: asRecord(details.xp).value,
     proficiencyBonus: prof,
-    initiative: abilityMod(abilityValues.dex) + numeric(asRecord(attrs.init).bonus),
+    initiative: options.includeInitiative === false ? undefined : abilityMod(abilityValues.dex) + numeric(asRecord(attrs.init).bonus),
     size: normalizeSize(traits.size),
     creatureType: asRecord(details.type).value,
     abilities: projectedAbilities,
@@ -142,10 +151,11 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[] } =
       tremorsense: numericSense(senseRanges.tremorsense),
       truesight: numericSense(senseRanges.truesight),
       passivePerception: 10 + (allSkillTotals.perception ?? 0),
-      special: sensesRoot.special || null,
+      ...(sensesRoot.special ? { special: sensesRoot.special } : {}),
     },
     languages: arrayValues(languages.value),
     languageCustom: languages.custom || undefined,
+    biography: stripHtml(String(asRecord(details.biography).value ?? '')),
     items,
   };
 }
@@ -164,10 +174,23 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
   const save = asRecord(firstActivity.save);
   const saveDc = asRecord(save.dc);
   const damageBase = asRecord(asRecord(system.damage).base);
+  const activityDamage = asRecord(firstActivity.damage);
+  const activityDamageParts = Array.isArray(activityDamage.parts) ? activityDamage.parts : [];
+  const activityDamageBase = asRecord(activityDamageParts[0]);
+  const projectedDamage = activityDamageBase.number && activityDamageBase.denomination ? activityDamageBase : damageBase;
   const attackAbility = Object.keys(attack).length > 0 ? String(attack.ability ?? '') : '';
-  const damageFormula = damageBase.number && damageBase.denomination
-    ? `${damageBase.number}d${damageBase.denomination}${abilityMod(abilities[attackAbility]) ? `+${abilityMod(abilities[attackAbility])}` : ''}`
+  const projectedDamageBonus = projectedDamage === activityDamageBase
+    ? String(projectedDamage.bonus ?? '').trim()
+    : String(abilityMod(abilities[attackAbility]) || '');
+  const damageFormula = projectedDamage.number && projectedDamage.denomination
+    ? `${projectedDamage.number}d${projectedDamage.denomination}${projectedDamageBonus ? /^[+-]/.test(projectedDamageBonus) ? projectedDamageBonus : `+${projectedDamageBonus}` : ''}`
     : undefined;
+  const hasAttack = Object.keys(attack).length > 0;
+  const toHit = !hasAttack ? undefined
+    : attack.flat === true ? numericOrUndefined(attack.bonus)
+      : attackAbility ? abilityMod(abilities[attackAbility]) + prof + numeric(attack.bonus)
+        : numericOrUndefined(attack.bonus);
+  const damageTypes = arrayValues(projectedDamage.types);
   const effects = Array.isArray(item.effects) ? item.effects.flatMap((effect) => arrayValues(asRecord(effect).statuses)) : [];
   return {
     name: item.name,
@@ -175,11 +198,11 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     activation: activation.type ?? activityActivation.type,
     description: stripHtml(String(description.value ?? activityDescription.chatFlavor ?? '')),
     attackType: asRecord(attack.type).value,
-    toHit: attackAbility ? abilityMod(abilities[attackAbility]) + prof + numeric(attack.bonus) : undefined,
+    toHit,
     reach: range.reach,
     range: range.value,
     damageFormula,
-    damageTypes: arrayValues(damageBase.types),
+    damageTypes,
     saveDc: numericOrUndefined(saveDc.value ?? saveDc.formula),
     saveAbilities: arrayValues(save.ability),
     statuses: effects,
@@ -193,7 +216,7 @@ function compareFeatureSections(
   section: string,
 ): void {
   const items = Array.isArray(actorItems) ? actorItems.map(asRecord) : [];
-  const expectedActivation = section === 'actions' ? 'action'
+  const sectionActivation = section === 'actions' ? 'action'
     : section === 'bonusActions' ? 'bonus'
       : section === 'reactions' ? 'reaction'
         : section === 'legendaryActions' ? 'legendary'
@@ -204,8 +227,12 @@ function compareFeatureSections(
       add('ACTOR_FEATURE_MISSING', `/creature/${section}/${index}`, `Actor is missing separate feature: ${feature.name}`);
       continue;
     }
+    const expectedActivation = feature.activationType ?? sectionActivation;
     if (expectedActivation && found.activation !== expectedActivation) {
-      add('ACTOR_ACTIVATION_DRIFT', `/creature/${section}/${index}`, `${feature.name} activation is ${String(found.activation)}, expected ${expectedActivation}.`);
+      const path = feature.activationType
+        ? `/creature/${section}/${index}/activationType`
+        : `/creature/${section}/${index}`;
+      add('ACTOR_ACTIVATION_DRIFT', path, `${feature.name} activation is ${String(found.activation)}, expected ${expectedActivation}.`);
     }
     const description = String(found.description ?? '');
     const significant = feature.description.replace(/\s+/g, '').slice(0, 24);
@@ -221,7 +248,7 @@ function compareFeatureSections(
     for (const [damageIndex, damage] of (feature.damage ?? []).entries()) {
       if (damage.relationship !== 'base') continue;
       compare(add, 'ACTOR_DAMAGE_FORMULA_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/formula`, compact(damage.formula), compact(found.damageFormula));
-      if (!arrayValues(found.damageTypes).includes(damage.type)) add('ACTOR_DAMAGE_TYPE_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/type`, `${feature.name} lost damage type ${damage.type}.`);
+      if (!arrayValues(found.damageTypes).map(normalizeDamageType).includes(normalizeDamageType(damage.type))) add('ACTOR_DAMAGE_TYPE_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/type`, `${feature.name} lost damage type ${damage.type}.`);
     }
     if (feature.save) {
       compare(add, 'ACTOR_SAVE_DC_DRIFT', `/creature/${section}/${index}/save/dc`, feature.save.dc, found.saveDc);
@@ -248,7 +275,7 @@ function compare(
   expected: unknown,
   actual: unknown,
 ): void {
-  if (expected === undefined) return;
+  if (expected === undefined || expected === null || expected === '') return;
   if (JSON.stringify(expected) !== JSON.stringify(actual)) add(code, path, `Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`);
 }
 
@@ -258,9 +285,10 @@ function compareSet(
   path: string,
   expected: string[],
   actual: unknown,
+  normalize: (value: string) => string = (value) => value.toLowerCase(),
 ): void {
-  const left = [...expected].map((value) => value.toLowerCase()).sort();
-  const right = arrayValues(actual).map((value) => value.toLowerCase()).sort();
+  const left = [...expected].map(normalize).sort();
+  const right = arrayValues(actual).map(normalize).sort();
   if (JSON.stringify(left) !== JSON.stringify(right)) add(code, path, `Expected ${JSON.stringify(left)}, got ${JSON.stringify(right)}.`);
 }
 
@@ -304,6 +332,16 @@ function normalizeSize(value: unknown): string {
 }
 function normalizeCreatureType(value: unknown): string {
   return ({ 妖精: 'fey', 异怪: 'aberration', 野兽: 'beast', 天界生物: 'celestial', 构装生物: 'construct', 龙: 'dragon', 元素生物: 'elemental', 邪魔: 'fiend', 巨人: 'giant', 类人生物: 'humanoid', 怪兽: 'monstrosity', 泥怪: 'ooze', 植物: 'plant', 亡灵: 'undead' } as Record<string, string>)[String(value)] ?? String(value).toLowerCase();
+}
+
+function normalizeLanguage(value: string): string {
+  return ({ 通用语: 'common', 矮人语: 'dwarvish', 精灵语: 'elvish', 巨人语: 'giant', 地精语: 'goblin' } as Record<string, string>)[value]
+    ?? value.toLowerCase();
+}
+
+function normalizeDamageType(value: string): string {
+  return ({ 强酸: 'acid', 钝击: 'bludgeoning', 冷冻: 'cold', 火焰: 'fire', 力场: 'force', 闪电: 'lightning', 黯蚀: 'necrotic', 穿刺: 'piercing', 毒素: 'poison', 心灵: 'psychic', 光耀: 'radiant', 挥砍: 'slashing', 雷鸣: 'thunder' } as Record<string, string>)[value]
+    ?? value.toLowerCase();
 }
 
 function stripHtml(value: string): string {

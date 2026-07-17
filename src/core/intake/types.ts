@@ -59,6 +59,7 @@ export interface CanonicalFeature {
   englishName?: string;
   description: string;
   activityType?: 'attack' | 'save' | 'damage' | 'utility';
+  activationType?: 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
   activationCondition?: string;
   attack?: {
     type: 'mwak' | 'rwak' | 'msak' | 'rsak';
@@ -92,6 +93,7 @@ export interface CanonicalMonster {
   attributes: {
     ac: number;
     acKind?: 'flat' | 'natural' | 'default';
+    acNote?: string;
     initiative?: number;
     hp: { value: number; formula?: string };
     movement: Partial<Record<'walk' | 'climb' | 'fly' | 'swim' | 'burrow', number>>;

@@ -16,6 +16,19 @@ describe('MonsterIntakeIR validation', () => {
     expect(result.blocking.some((finding) => finding.code === 'EVIDENCE_MISMATCH')).toBe(true);
   });
 
+  it('does not require evidence for absent nullable optional mechanics', () => {
+    const ir = buildValidLurkerIr();
+    (ir.creature.attributes as unknown as { initiative: null }).initiative = null;
+    ir.claims = ir.claims.filter((claim) => claim.path !== '/creature/attributes/initiative');
+
+    const result = validateMonsterIntakeIR(LURKER_SOURCE, ir);
+
+    expect(result.blocking.some((finding) => (
+      finding.code === 'UNSUPPORTED_MECHANICAL_VALUE'
+      && finding.path === '/creature/attributes/initiative'
+    ))).toBe(false);
+  });
+
   it('requires every core field and an evidence claim', () => {
     const ir = buildValidLurkerIr();
     delete (ir.creature.attributes as Partial<typeof ir.creature.attributes>).ac;

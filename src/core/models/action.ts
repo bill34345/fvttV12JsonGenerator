@@ -167,6 +167,7 @@ export interface StructuredActionData {
   activation?: {
     type: ActivityActivationType;
     condition?: string;
+    explicit?: boolean;
   };
   attackType?: 'mwak' | 'rwak' | 'msak' | 'rsak';
   toHit?: number;
