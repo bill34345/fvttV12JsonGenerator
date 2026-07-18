@@ -75,13 +75,24 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v3');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v4');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
     expect(prompt).toContain('partition the full candidate range');
     expect(prompt).toContain('activationType(action|bonus|reaction|legendary|special)');
     expect(prompt).toContain('regardless of which section contains the feature');
     expect(prompt).toContain('Never use special merely because a feature appears under traits');
+    expect(prompt).toContain('explicitly granted spells only');
+    expect(prompt).toContain('never invent expectedLevel, expectedSchool, sourceBookHint, UUID, rules text, damage, or effects');
+    expect(prompt).toContain('usageGroups');
+    expect(prompt).toContain('evidence to every spell, saveDc, attackBonus, component waiver, and restriction');
+    expect(prompt).toContain('Do not also emit structured spellcasting as an ordinary trait');
+    expect(prompt).toContain('complete literal grant line or span');
+    expect(prompt).toContain('each Spell ref and restriction evidence range must be contained');
+    expect(prompt).toContain('description must exactly equal one complete verified source slice');
+    expect(prompt).toContain('minimal, self-contained grant span');
+    expect(prompt).toContain('begin with the usage label after optional Markdown');
+    expect(prompt).toContain('standalone list conjunctions');
   });
 
   test('review prompt independently checks source action economy against IR and Actor activation', async () => {
@@ -95,10 +106,31 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v4');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v5');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
+    expect(prompt).toContain('same structured spellcasting contract');
+    expect(prompt).toContain('explicitly granted');
+    expect(prompt).toContain('usage evidence must cover the complete grant span');
+    expect(prompt).toContain('visible description must match verified group evidence');
+    expect(prompt).toContain('minimal and self-contained');
+  });
+
+  test('repair prompt preserves the same source-evidenced spellcasting boundary', async () => {
+    const requests: Array<{ url: string; init: HttpRequest }> = [];
+    const provider = makeProvider(async (url, init) => {
+      requests.push({ url, init });
+      return response(200, '{"schemaVersion":1,"source":{"sha256":"hash","length":0},"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
+    });
+
+    await provider.repair({} as never);
+
+    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
+    const prompt = body.messages[0]!.content;
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v2');
+    expect(prompt).toContain('same structured spellcasting contract');
+    expect(prompt).toContain('Do not invent');
   });
 
   test('retries retryable 429 once and audits without secrets', async () => {

@@ -1,5 +1,11 @@
 import yaml from 'js-yaml';
-import type { AbilityKey, CanonicalFeature, CanonicalMonster, MonsterIntakeIR } from './types';
+import type {
+  AbilityKey,
+  CanonicalFeature,
+  CanonicalMonster,
+  CanonicalSpellcastingGroup,
+  MonsterIntakeIR,
+} from './types';
 
 const SIZE_ZH: Record<CanonicalMonster['identity']['size'], string> = {
   tiny: '微型', small: '小型', medium: '中型', large: '大型', huge: '巨型', gargantuan: '超巨型',
@@ -57,7 +63,11 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     语言: creature.languages.values.map((value) => languageZh(value)),
     语言备注: creature.languages.custom,
     传记: renderBiography(creature),
-    特性: creature.traits.map((feature) => renderFeature(feature, 'trait')),
+    法术清单: renderSpellManifest(ir),
+    特性: [
+      ...(creature.spellcasting ?? []).map((group) => renderSpellcastingFeature(group)),
+      ...creature.traits.map((feature) => renderFeature(feature, 'trait')),
+    ],
     动作: creature.actions.map((feature) => renderFeature(feature, 'action')),
     附赠动作: creature.bonusActions.map((feature) => renderFeature(feature, 'bonus')),
     反应: creature.reactions.map((feature) => renderFeature(feature, 'reaction')),
@@ -70,6 +80,64 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
   }
   const frontmatter = yaml.dump(data, { noRefs: true, lineWidth: -1, sortKeys: false, quotingType: '"', forceQuotes: false });
   return `---\n${frontmatter}---\n`;
+}
+
+function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | undefined {
+  const groups = ir.creature.spellcasting;
+  if (!groups?.length) return undefined;
+  return {
+    schemaVersion: 1,
+    manifestId: renderSpellManifestId(ir),
+    sourceSha256: ir.source.sha256,
+    rulesPreference: '2024',
+    spellcastingGroups: groups.map((group) => ({
+      groupId: group.groupId,
+      featureItemKey: group.groupId,
+      ability: group.ability,
+      ...(group.saveDc === undefined ? {} : { saveDc: group.saveDc }),
+      ...(group.attackBonus === undefined ? {} : { attackBonus: group.attackBonus }),
+      spellRefs: group.usageGroups.flatMap((usageGroup) => usageGroup.spellRefs.map((ref) => ({
+        refId: ref.refId,
+        identifier: ref.identifier,
+        originalName: ref.originalName,
+        ...(ref.englishName === undefined ? {} : { englishName: ref.englishName }),
+        ...(ref.chineseName === undefined ? {} : { chineseName: ref.chineseName }),
+        aliases: ref.aliases,
+        method: usageGroup.usage === 'at-will' ? 'at-will' : 'innate',
+        ...(usageGroup.usage === '1/day-each'
+          ? { uses: { value: 1, recovery: 'day', shared: false } }
+          : {}),
+        ignoresMaterialComponents: group.componentWaivers.some((waiver) => waiver.component === 'material'),
+        restrictions: ref.restrictions,
+        evidence: ref.evidence,
+      }))),
+    })),
+  };
+}
+
+function renderSpellManifestId(ir: MonsterIntakeIR): string {
+  const groups = ir.creature.spellcasting ?? [];
+  const creatureKey = stableIdPart(ir.creature.identity.englishName ?? ir.creature.identity.name);
+  const groupKey = groups.map((group) => stableIdPart(group.groupId)).join('-');
+  const sourceOffset = groups.flatMap((group) => group.evidence)
+    .find((evidence) => Number.isInteger(evidence.start))?.start ?? 0;
+  return `intake-${ir.source.sha256.slice(0, 16)}-${creatureKey}-${groupKey}-${sourceOffset}`;
+}
+
+function stableIdPart(value: string): string {
+  const normalized = value.normalize('NFKC').toLocaleLowerCase('en-US')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/^-+|-+$/gu, '');
+  return normalized || 'unnamed';
+}
+
+function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<string, unknown> {
+  return renderFeature({
+    name: group.featureName,
+    englishName: group.featureEnglishName,
+    description: group.description,
+    activityType: 'utility',
+  }, 'trait');
 }
 
 function renderFeature(feature: CanonicalFeature, section: string): Record<string, unknown> {

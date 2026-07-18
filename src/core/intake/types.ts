@@ -1,5 +1,6 @@
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion } from '../foundryTarget';
+import type { PortableSpellRef } from '../spell-resolution/types';
 
 export type MonsterIntakeStatus = 'accepted' | 'needs_review' | 'failed';
 export type ClaimKind = 'explicit' | 'derived' | 'preserved-literal' | 'user-confirmed';
@@ -80,6 +81,38 @@ export interface CanonicalFeature {
   legendaryCost?: number;
 }
 
+export type CanonicalSpellRef = Pick<
+  PortableSpellRef,
+  'refId' | 'identifier' | 'originalName' | 'englishName' | 'chineseName' | 'aliases' | 'restrictions' | 'evidence'
+>;
+
+export interface CanonicalSpellComponentWaiver {
+  component: 'material';
+  evidence: EvidenceRef[];
+}
+
+export interface CanonicalSpellUsageGroup {
+  usage: 'at-will' | '1/day-each';
+  evidence: EvidenceRef[];
+  spellRefs: CanonicalSpellRef[];
+}
+
+export interface CanonicalSpellcastingGroup {
+  groupId: string;
+  featureName: string;
+  featureEnglishName?: string;
+  description: string;
+  evidence: EvidenceRef[];
+  ability: AbilityKey;
+  abilityEvidence: EvidenceRef[];
+  saveDc?: number;
+  saveDcEvidence?: EvidenceRef[];
+  attackBonus?: number;
+  attackBonusEvidence?: EvidenceRef[];
+  componentWaivers: CanonicalSpellComponentWaiver[];
+  usageGroups: CanonicalSpellUsageGroup[];
+}
+
 export interface CanonicalMonster {
   identity: {
     name: string;
@@ -115,6 +148,7 @@ export interface CanonicalMonster {
   };
   languages: { values: string[]; custom?: string };
   biography?: string;
+  spellcasting?: CanonicalSpellcastingGroup[];
   traits: CanonicalFeature[];
   actions: CanonicalFeature[];
   bonusActions: CanonicalFeature[];
