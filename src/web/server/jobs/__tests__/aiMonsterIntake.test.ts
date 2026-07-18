@@ -37,13 +37,14 @@ class WebRatWarlockProvider implements MonsterIntakeAiProvider {
   readonly providerName = 'fake';
   readonly extractionModel = 'fake';
   readonly reviewModel = 'fake-review';
+  ir: MonsterIntakeIR = buildRatWarlockIr();
   async discover(): Promise<DiscoveryResult> {
     return {
       schemaVersion: 1,
       candidates: [{ id: 'rat-warlock', label: '鼠神邪术师', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
     };
   }
-  async extract(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
+  async extract(): Promise<MonsterIntakeIR> { return structuredClone(this.ir); }
   async review(): Promise<AiReviewResult> { return { schemaVersion: 1, verdict: 'accepted', findings: [] }; }
   async repair(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
 }
@@ -82,10 +83,38 @@ describe('Web AI monster intake job', () => {
       manifestId: actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.manifestId,
     });
     expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+    expect(actor.items.some((item: any) => item.type === 'spell')).toBe(false);
+    expect(actor.items.some((item: any) => Object.values(item.system?.activities ?? {}).some((activity: any) => (
+      activity.type === 'cast'
+      || activity.flags?.['fvtt-json-generator-spell-resolver']?.managed === true
+    )))).toBe(false);
     expect(JSON.stringify(finished.summary)).not.toContain('"status":"hydrated"');
     expect(JSON.stringify(finished.summary)).not.toContain('reportPath');
     expect(JSON.stringify(finished.summary)).not.toContain('bundlePath');
     expect(JSON.stringify(finished.summary)).not.toContain(finished.files[0]!.path);
+  });
+
+  test('does not expose local report paths in registered downloadable deterministic reports', async () => {
+    const provider = new WebRatWarlockProvider();
+    (provider.ir.creature.spellcasting as any) = [null];
+    const job = createJob('ai-monster-intake', 'test');
+    await runJob(job, {
+      type: 'ai-monster-intake',
+      fileName: 'rat-warlock-invalid.txt',
+      content: RAT_WARLOCK_SOURCE,
+      options: { fvttVersion: '14', effectProfile: 'core' },
+    }, { monsterIntakeProvider: provider });
+    const finished = getJob(job.id)!;
+    const reportFiles = finished.files.filter((file) => /deterministic-report\.(?:json|md)$/u.test(file.fileName));
+
+    expect(finished.status).toBe('needs_review');
+    expect(reportFiles).toHaveLength(2);
+    for (const file of reportFiles) {
+      const content = await Bun.file(file.path).text();
+      expect(content).not.toContain('reportPath');
+      expect(content).not.toContain('bundlePath');
+      expect(content).not.toContain(file.path.replace(/deterministic-report\.(?:json|md)$/u, ''));
+    }
   });
 
   test('exposes the review bundle and evidence but gates candidate Actor JSON', async () => {

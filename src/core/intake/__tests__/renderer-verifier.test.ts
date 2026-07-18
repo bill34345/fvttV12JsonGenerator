@@ -96,6 +96,36 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_MISSING' }));
   });
 
+  test('blocks cloned source-identical spellcasting features even when resolver flags are moved to the clone', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    const linked = actor.items.find((item: any) => item.flags?.['fvtt-json-generator-spell-resolver']?.featureItemKey);
+    const clone = structuredClone(linked);
+    delete linked.flags['fvtt-json-generator-spell-resolver'];
+    actor.items.push(clone);
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.status).toBe('needs_review');
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_DUPLICATE' }));
+  });
+
+  test.each([
+    ['a pre-runtime Cast Activity', (activity: any) => { activity.type = 'cast'; }, 'PORTABLE_ACTOR_CAST_ACTIVITY'],
+    ['a resolver-managed Activity', (activity: any) => {
+      activity.flags = { 'fvtt-json-generator-spell-resolver': { managed: true, documentType: 'activity' } };
+    }, 'PORTABLE_ACTOR_MANAGED_ACTIVITY'],
+  ] as const)('blocks %s anywhere in a portable caster Actor', async (_label, mutate, expectedCode) => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    const item = actor.items.find((candidate: any) => Object.keys(candidate.system?.activities ?? {}).length > 0);
+    const activity = Object.values(item.system.activities)[0];
+    mutate(activity);
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.status).toBe('needs_review');
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: expectedCode }));
+  });
+
   test.each([
     ['a wrong-type dummy', { name: '天生施法 (Innate Spellcasting)', type: 'weapon', system: {} }, 'SPELL_FEATURE_LINK_WRONG_TYPE'],
     ['a fake feat with no generated feature identity', { name: 'Dummy', type: 'feat', system: {} }, 'SPELL_FEATURE_LINK_IDENTITY_MISMATCH'],

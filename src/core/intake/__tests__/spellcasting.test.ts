@@ -4,6 +4,7 @@ import yaml from 'js-yaml';
 import { renderMonsterIntakeMarkdown } from '../renderer';
 import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE, ratEvidence } from './fixtures/rat-warlock';
+import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 
 const EXPECTED_GROUPS = [
   { usage: 'at-will', spells: ['eldritch-blast', 'mage-armor', 'minor-illusion', 'thaumaturgy'] },
@@ -132,6 +133,49 @@ describe('source-evidenced spellcasting intake', () => {
     }));
   });
 
+  test.each([
+    {
+      label: 'spell identity',
+      mutate: (ir: any) => {
+        Object.assign(ir.creature.spellcasting[0].usageGroups[0].spellRefs[0], {
+          refId: 'fireball', identifier: 'fireball', originalName: 'Fireball', englishName: 'Fireball',
+          chineseName: '火球术', aliases: ['Fireball', '火球术'],
+        });
+      },
+      code: 'SPELL_REF_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
+    },
+    {
+      label: 'spellcasting ability',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].ability = 'wis'; },
+      code: 'SPELL_ABILITY_EVIDENCE_MISMATCH', path: '/creature/spellcasting/0/ability',
+    },
+    {
+      label: 'save DC',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].saveDc = 99; },
+      code: 'SPELL_SAVE_DC_EVIDENCE_MISMATCH', path: '/creature/spellcasting/0/saveDc',
+    },
+    {
+      label: 'spell attack bonus',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].attackBonus = 99; },
+      code: 'SPELL_ATTACK_BONUS_EVIDENCE_MISMATCH', path: '/creature/spellcasting/0/attackBonus',
+    },
+    {
+      label: 'material component waiver',
+      mutate: (ir: any) => {
+        const group = ir.creature.spellcasting[0];
+        group.description = group.description.replace(group.componentWaivers[0].evidence[0].quote, '');
+        group.componentWaivers = [];
+      },
+      code: 'SPELL_COMPONENT_WAIVER_MISSING', path: '/creature/spellcasting/0/componentWaivers',
+    },
+  ])('blocks a $label claim that is not entailed by its exact source evidence', ({ mutate, code, path }) => {
+    const ir = buildRatWarlockIr() as any;
+    mutate(ir);
+
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+  });
+
   test('blocks a whole-source grant span that swallows an earlier non-grant mention', () => {
     const ir = buildRatWarlockIr() as any;
     const usage = ir.creature.spellcasting[0].usageGroups[0];
@@ -215,6 +259,51 @@ describe('source-evidenced spellcasting intake', () => {
     mechanical.quote = source.slice(mechanical.start);
 
     expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+  });
+
+  test('accepts a non-Rat English caster with a distinct instance refId and an explicit evidenced alias', () => {
+    const { source, ir } = buildEnglishCasterCase();
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+  });
+
+  test.each([
+    {
+      label: 'claimed Fire from evidence for Faerie Fire',
+      build: () => buildEnglishCasterCase({ spellName: 'Faerie Fire', explicitAlias: 'Fey Flame' }),
+      mutate: (ir: any) => Object.assign(ir.creature.spellcasting[0].usageGroups[0].spellRefs[0], {
+        identifier: 'fire', originalName: 'Fire', englishName: 'Fire', aliases: [],
+      }),
+    },
+    {
+      label: 'short alias Fire from evidence for Sacred Fire',
+      build: () => buildEnglishCasterCase(),
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[0].spellRefs[0].aliases.push('Fire'); },
+    },
+    {
+      label: 'punctuation-only alias whose normalized form is empty',
+      build: () => buildEnglishCasterCase(),
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[0].spellRefs[0].aliases.push('---'); },
+    },
+  ])('rejects substring or empty-normalization spell evidence: $label', ({ build, mutate }) => {
+    const { source, ir } = build();
+    mutate(ir);
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'SPELL_REF_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
+    }));
+  });
+
+  test.each([
+    ['ability word elsewhere', (ir: any) => { ir.creature.spellcasting[0].ability = 'cha'; }, 'SPELL_ABILITY_EVIDENCE_MISMATCH'],
+    ['unrelated DC-sized number', (ir: any) => { ir.creature.spellcasting[0].saveDc = 99; }, 'SPELL_SAVE_DC_EVIDENCE_MISMATCH'],
+    ['unrelated signed number', (ir: any) => { ir.creature.spellcasting[0].attackBonus = 99; }, 'SPELL_ATTACK_BONUS_EVIDENCE_MISMATCH'],
+  ])('rejects a close English negative based on an $label', (_label, mutate, code) => {
+    const { source, ir } = buildEnglishCasterCase();
+    mutate(ir);
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code }));
   });
 
   test.each([
@@ -391,4 +480,47 @@ function containedBy(
   parent: { start: number; end: number },
 ): boolean {
   return child.start >= parent.start && child.end <= parent.end;
+}
+
+function buildEnglishCasterCase(
+  options: { spellName?: string; explicitAlias?: string } = {},
+): { source: string; ir: ReturnType<typeof buildValidLurkerIr> } {
+  const spellName = options.spellName ?? 'Sacred Flame';
+  const explicitAlias = options.explicitAlias ?? 'Sacred Fire';
+  const identifier = spellName.toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
+  const spellGrant = `${spellName} (alias: "${explicitAlias}")`;
+  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. Its spellcasting ability is Wisdom (spell save DC 13, +5 to hit with spell attacks). It requires no material components.\nAt Will: ${spellGrant}`;
+  const source = `${LURKER_SOURCE}\n${description}`;
+  const ir = buildValidLurkerIr() as any;
+  const start = source.length - description.length;
+  const evidence = (quote: string) => {
+    const quoteStart = source.indexOf(quote, start);
+    return { start: quoteStart, end: quoteStart + quote.length, quote };
+  };
+  ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
+  ir.creature.spellcasting = [{
+    groupId: 'innate-wisdom', featureName: 'Innate Spellcasting', description,
+    evidence: [{ start, end: source.length, quote: description }],
+    ability: 'wis', abilityEvidence: [evidence('spellcasting ability is Wisdom')],
+    saveDc: 13, saveDcEvidence: [evidence('spell save DC 13')],
+    attackBonus: 5, attackBonusEvidence: [evidence('+5 to hit with spell attacks')],
+    componentWaivers: [{ component: 'material', evidence: [evidence('requires no material components')] }],
+    usageGroups: [{
+      usage: 'at-will', evidence: [evidence(`At Will: ${spellGrant}`)],
+      spellRefs: [{
+        refId: `instance-${identifier}-1`, identifier, originalName: spellName,
+        englishName: spellName, aliases: [spellName, explicitAlias],
+        restrictions: [], evidence: [evidence(spellGrant)],
+      }],
+    }],
+  }];
+  ir.claims.push({
+    path: '/creature/spellcasting/0', valueKind: 'explicit', confidence: 'high',
+    evidence: [{ start, end: source.length, quote: description }],
+  });
+  const mechanical = ir.coverage.find((entry: any) => entry.classification === 'mechanical');
+  mechanical.end = source.length;
+  mechanical.quote = source.slice(mechanical.start);
+  mechanical.claimPaths.push('/creature/spellcasting/0');
+  return { source, ir };
 }

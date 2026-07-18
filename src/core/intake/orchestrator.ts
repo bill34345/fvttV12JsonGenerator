@@ -221,15 +221,15 @@ async function processIr(
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
-      return result(candidate, bundlePath, 'needs_review', combined, calls, withSpellStatus(report.spellResolution, 'needs_review', bundlePath));
+      return result(candidate, bundlePath, 'needs_review', combined, calls, withReportPath(report.spellResolution, bundlePath));
     }
     const promoted = await promoteAccepted(options, runPath, candidate, ir, markdown);
     if (promoted.findings.length > 0) {
-      return result(candidate, bundlePath, 'needs_review', promoted.findings, calls, withSpellStatus(report.spellResolution, 'needs_review', bundlePath));
+      return result(candidate, bundlePath, 'needs_review', promoted.findings, calls, withReportPath(report.spellResolution, bundlePath));
     }
     copyFileSync(promoted.actorPath, join(bundlePath, 'actor.json'));
     return {
-      ...result(candidate, bundlePath, 'accepted', [], calls, withSpellStatus(report.spellResolution, report.spellResolution.status, bundlePath)),
+      ...result(candidate, bundlePath, 'accepted', [], calls, withReportPath(report.spellResolution, bundlePath)),
       markdownPath: promoted.markdownPath,
       actorPath: promoted.actorPath,
     };
@@ -252,7 +252,38 @@ async function promoteAccepted(
   const actorPath = join(vault, 'output', `${slug}.json`);
   const sameMarkdown = existsSync(markdownPath) && readFileSync(markdownPath, 'utf-8') === markdown;
   if (sameMarkdown && existsSync(actorPath) && !options.replaceConflicts?.has(candidate.id)) {
-    return { markdownPath, actorPath, findings: [] };
+    try {
+      const existingActor = JSON.parse(readFileSync(actorPath, 'utf-8')) as unknown;
+      const existingReport = verifyMonsterIntake(options.source, ir, markdown, existingActor, candidate);
+      if (existingReport.status === 'accepted') return { markdownPath, actorPath, findings: [] };
+      return {
+        markdownPath,
+        actorPath,
+        findings: [{
+          id: `target-conflict:${candidate.id}`,
+          code: 'TARGET_CONFLICT',
+          path: '/promotion',
+          message: `Existing Actor is not the exact portable project output (${existingReport.findings.map((finding) => finding.code).join(', ')}): ${actorPath}`,
+          blocking: true,
+          origin: 'conflict',
+          candidates: ['replace', 'keep-existing'],
+        }],
+      };
+    } catch (error) {
+      return {
+        markdownPath,
+        actorPath,
+        findings: [{
+          id: `target-conflict:${candidate.id}`,
+          code: 'TARGET_CONFLICT',
+          path: '/promotion',
+          message: `Existing Actor cannot be verified as portable project output (${error instanceof Error ? error.message : String(error)}): ${actorPath}`,
+          blocking: true,
+          origin: 'conflict',
+          candidates: ['replace', 'keep-existing'],
+        }],
+      };
+    }
   }
   const conflict = [
     existingConflict(markdownPath, markdown),
@@ -419,18 +450,19 @@ function spellResolutionFromIr(
   return { required: true, status, spellCount, reportPath: join(bundlePath, 'deterministic-report.md') };
 }
 
-function withSpellStatus(
+function withReportPath(
   resolution: PortableSpellResolutionStatus,
-  status: PortableSpellResolutionStatus['status'],
   bundlePath: string,
 ): PortableSpellResolutionStatus {
   if (!resolution.required) return resolution;
-  return { ...resolution, status, reportPath: join(bundlePath, 'deterministic-report.md') };
+  return { ...resolution, reportPath: join(bundlePath, 'deterministic-report.md') };
 }
 
 function writeReports(bundlePath: string, report: Parameters<typeof renderIntakeVerificationMarkdown>[0]): void {
-  writeJson(join(bundlePath, 'deterministic-report.json'), report);
-  writeFileSync(join(bundlePath, 'deterministic-report.md'), renderIntakeVerificationMarkdown(report));
+  const { reportPath: _reportPath, ...spellResolution } = report.spellResolution;
+  const portableReport = { ...report, spellResolution };
+  writeJson(join(bundlePath, 'deterministic-report.json'), portableReport);
+  writeFileSync(join(bundlePath, 'deterministic-report.md'), renderIntakeVerificationMarkdown(portableReport));
 }
 
 function writeDecisionTemplate(runPath: string, manifest: Manifest): void {

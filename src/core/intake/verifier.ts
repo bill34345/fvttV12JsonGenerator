@@ -144,8 +144,27 @@ function verifyPortableSpellResolution(
 
   const items = Array.isArray(actorRoot.items) ? actorRoot.items : [];
   items.forEach((item, index) => {
-    if (asRecord(item).type === 'spell') {
+    const itemRecord = asRecord(item);
+    if (itemRecord.type === 'spell') {
       add('PORTABLE_ACTOR_EMBEDDED_SPELL', `/actor/items/${index}`, 'Portable caster Actors must not contain embedded placeholder or resolved Spells.');
+    }
+    for (const [activityKey, activity] of Object.entries(asRecord(asRecord(itemRecord.system).activities))) {
+      const activityRecord = asRecord(activity);
+      if (activityRecord.type === 'cast') {
+        add(
+          'PORTABLE_ACTOR_CAST_ACTIVITY',
+          `/actor/items/${index}/system/activities/${activityKey}`,
+          'Portable caster Actors must not contain pre-runtime Cast Activities.',
+        );
+      }
+      const activityFlags = asRecord(asRecord(activityRecord.flags)[RESOLVER_MODULE_ID]);
+      if (activityFlags.managed === true || activityFlags.documentType === 'activity') {
+        add(
+          'PORTABLE_ACTOR_MANAGED_ACTIVITY',
+          `/actor/items/${index}/system/activities/${activityKey}`,
+          'Portable caster Actors must not contain resolver-managed Activities before target-world hydration.',
+        );
+      }
     }
   });
 
@@ -158,6 +177,19 @@ function verifyPortableSpellResolution(
         : [];
     });
     const expectedGroup = ir.creature.spellcasting?.[groupIndex];
+    const sourceIdentical = expectedGroup ? items.flatMap((item, itemIndex) => {
+      const itemRecord = asRecord(item);
+      return itemRecord.type === 'feat' && matchesGeneratedSpellcastingFeature(itemRecord, expectedGroup)
+        ? [{ item, itemIndex }]
+        : [];
+    }) : [];
+    if (sourceIdentical.length > 1) {
+      add(
+        'SPELL_FEATURE_LINK_DUPLICATE',
+        `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest/spellcastingGroups/${groupIndex}/featureItemKey`,
+        `Spellcasting group ${group.groupId} has ${sourceIdentical.length} source-identical generated features.`,
+      );
+    }
     const linked = flagged.filter(({ item, itemIndex }) => {
       const itemRecord = asRecord(item);
       if (itemRecord.type !== 'feat') {

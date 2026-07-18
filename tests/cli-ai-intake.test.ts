@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { copyFileSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../src/core/intake/__tests__/fixtures/rat-warlock';
@@ -78,6 +78,15 @@ describe('AI monster intake CLI', () => {
       expect(stdout).toContain('鼠神邪术师: accepted');
       expect(stdout).toContain('法术：已整理 10 项；目标世界解析待完成（需 FVTT v14 解析模块）');
       expect(stdout).not.toContain('法术：hydrated');
+      const actorPath = stdout.match(/Actor JSON:\s*(.+\.json)\s*$/mu)?.[1]?.trim();
+      expect(actorPath).toBeDefined();
+      const actor = JSON.parse(readFileSync(actorPath!, 'utf-8'));
+      expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+      expect(actor.items.some((item: any) => item.type === 'spell')).toBe(false);
+      expect(actor.items.some((item: any) => Object.values(item.system?.activities ?? {}).some((activity: any) => (
+        activity.type === 'cast'
+        || activity.flags?.['fvtt-json-generator-spell-resolver']?.managed === true
+      )))).toBe(false);
     } finally {
       server.stop(true);
     }

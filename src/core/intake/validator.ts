@@ -472,13 +472,40 @@ function validateSpellcastingGroupFields(
   }
   validateSpellEvidenceArray(source, group.evidence, `${path}/evidence`, finding);
   validateSpellEvidenceArray(source, group.abilityEvidence, `${path}/abilityEvidence`, finding);
+  if (ABILITIES.includes(group.ability) && !evidenceEntailsAbility(source, group.abilityEvidence, group.ability)) {
+    finding(
+      'SPELL_ABILITY_EVIDENCE_MISMATCH',
+      `${path}/ability`,
+      `Exact spellcasting evidence does not entail ability ${group.ability}.`,
+      'evidence',
+      group.abilityEvidence,
+    );
+  }
   if (group.saveDc !== undefined) {
     if (!Number.isFinite(group.saveDc)) finding('INVALID_SAVE_DC', `${path}/saveDc`, 'Spell save DC must be finite.', 'schema');
     validateSpellEvidenceArray(source, group.saveDcEvidence, `${path}/saveDcEvidence`, finding);
+    if (Number.isFinite(group.saveDc) && !evidenceEntailsSaveDc(source, group.saveDcEvidence, group.saveDc)) {
+      finding(
+        'SPELL_SAVE_DC_EVIDENCE_MISMATCH',
+        `${path}/saveDc`,
+        `Exact spellcasting evidence does not entail save DC ${group.saveDc}.`,
+        'evidence',
+        group.saveDcEvidence,
+      );
+    }
   }
   if (group.attackBonus !== undefined) {
     if (!Number.isFinite(group.attackBonus)) finding('INVALID_ATTACK_BONUS', `${path}/attackBonus`, 'Spell attack bonus must be finite.', 'schema');
     validateSpellEvidenceArray(source, group.attackBonusEvidence, `${path}/attackBonusEvidence`, finding);
+    if (Number.isFinite(group.attackBonus) && !evidenceEntailsAttackBonus(source, group.attackBonusEvidence, group.attackBonus)) {
+      finding(
+        'SPELL_ATTACK_BONUS_EVIDENCE_MISMATCH',
+        `${path}/attackBonus`,
+        `Exact spellcasting evidence does not entail spell attack bonus ${group.attackBonus}.`,
+        'evidence',
+        group.attackBonusEvidence,
+      );
+    }
   }
   if (!Array.isArray(group.componentWaivers)) {
     finding('INVALID_COMPONENT_WAIVERS', `${path}/componentWaivers`, 'componentWaivers must be an array.', 'schema');
@@ -491,7 +518,26 @@ function validateSpellcastingGroupFields(
       }
       validateUnknownSpellcastingProperties(waiver, COMPONENT_WAIVER_KEYS, waiverPath, finding);
       validateSpellEvidenceArray(source, waiver.evidence as EvidenceRef[], `${waiverPath}/evidence`, finding);
+      if (!evidenceEntailsMaterialWaiver(source, waiver.evidence as EvidenceRef[])) {
+        finding(
+          'SPELL_COMPONENT_WAIVER_EVIDENCE_MISMATCH',
+          waiverPath,
+          'Exact component-waiver evidence does not entail ignoring material components.',
+          'evidence',
+          waiver.evidence as EvidenceRef[],
+        );
+      }
     });
+    if (textEntailsMaterialWaiver(exactEvidenceText(source, group.evidence))
+      && !group.componentWaivers.some((waiver) => isRecord(waiver) && waiver.component === 'material')) {
+      finding(
+        'SPELL_COMPONENT_WAIVER_MISSING',
+        `${path}/componentWaivers`,
+        'Source spellcasting text explicitly waives material components, but the structured waiver is missing.',
+        'evidence',
+        group.evidence,
+      );
+    }
   }
   if (!Array.isArray(group.usageGroups) || group.usageGroups.length === 0) {
     finding('INVALID_SPELL_USE_GROUP', `${path}/usageGroups`, 'At least one explicit spell use group is required.', 'schema');
@@ -547,6 +593,15 @@ function validateSpellUsageGroup(
           ref.evidence as EvidenceRef[],
         );
       }
+      if (!evidenceEntailsSpellRef(source, ref, ref.evidence as EvidenceRef[])) {
+        finding(
+          'SPELL_REF_EVIDENCE_MISMATCH',
+          refPath,
+          'Exact spell evidence does not entail a source-side spell name, or the structured identifier and aliases are internally inconsistent.',
+          'evidence',
+          Array.isArray(ref.evidence) ? ref.evidence as EvidenceRef[] : undefined,
+        );
+      }
       if (Array.isArray(ref.restrictions)) {
         ref.restrictions.forEach((restriction, restrictionIndex) => {
           if (!isRecord(restriction)) return;
@@ -573,6 +628,123 @@ function validateSpellUsageGroup(
     });
   }
   validateMinimalGrantSpans(usageGroup, path, finding);
+}
+
+// source-derived: these checks bind structured spell mechanics to exact source slices.
+// The vocabulary below is schema-derived (stable dnd5e ability keys and their English/Chinese labels).
+function exactEvidenceText(source: string, evidence: unknown): string {
+  if (!Array.isArray(evidence)) return '';
+  return evidence.flatMap((value) => {
+    if (!isRecord(value)
+      || !Number.isInteger(value.start)
+      || !Number.isInteger(value.end)
+      || typeof value.quote !== 'string'
+      || source.slice(value.start as number, value.end as number) !== value.quote) return [];
+    return [value.quote];
+  }).join('\n');
+}
+
+function normalizeEvidenceToken(value: unknown): string {
+  return String(value ?? '').normalize('NFKC').toLocaleLowerCase('en-US').replace(/[\p{P}\p{S}\s]+/gu, '');
+}
+
+function evidenceEntailsSpellRef(source: string, ref: Record<string, unknown>, evidence: EvidenceRef[]): boolean {
+  const evidenceText = exactEvidenceText(source, evidence);
+  if (!evidenceText) return false;
+  const names = [ref.originalName, ref.englishName, ref.chineseName]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const aliases = (Array.isArray(ref.aliases) ? ref.aliases : [])
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const identifier = normalizeEvidenceToken(ref.identifier);
+  const englishName = normalizeEvidenceToken(ref.englishName);
+  const provenNames = names.filter((name) => evidenceContainsPhrase(evidenceText, name));
+  const aliasesInternallyConsistent = aliases.every((alias) => {
+    const normalizedAlias = normalizeEvidenceToken(alias);
+    return Boolean(normalizedAlias) && (
+      provenNames.some((name) => normalizeEvidenceToken(name) === normalizedAlias)
+      || evidenceContainsPhrase(evidenceText, alias)
+    );
+  });
+  return provenNames.length > 0
+    && Boolean(identifier)
+    && (!englishName || identifier === englishName)
+    && aliasesInternallyConsistent;
+}
+
+function evidenceContainsPhrase(evidenceText: string, phrase: string): boolean {
+  const text = evidenceText.normalize('NFKC').toLocaleLowerCase('en-US');
+  const phraseCharacters = Array.from(phrase.normalize('NFKC').toLocaleLowerCase('en-US'))
+    .filter((character) => !/[\p{P}\p{S}\s]/u.test(character));
+  if (phraseCharacters.length === 0) return false;
+  const flexibleSeparator = '[\\p{P}\\p{S}\\s]*';
+  const matcher = new RegExp(phraseCharacters.map(escapeRegExp).join(flexibleSeparator), 'giu');
+  for (const match of text.matchAll(matcher)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    const before = adjacentPhraseCharacter(text, start, -1);
+    const after = adjacentPhraseCharacter(text, end, 1);
+    if (!sameTokenClass(before, phraseCharacters[0])
+      && !sameTokenClass(after, phraseCharacters.at(-1))) return true;
+  }
+  return false;
+}
+
+function adjacentPhraseCharacter(text: string, offset: number, direction: -1 | 1): string | undefined {
+  const characters = direction < 0
+    ? Array.from(text.slice(0, offset)).reverse()
+    : Array.from(text.slice(offset));
+  return characters.find((character) => !/[\s\p{Pd}\p{Pc}'’]/u.test(character));
+}
+
+function sameTokenClass(left: string | undefined, right: string | undefined): boolean {
+  if (!left || !right) return false;
+  return evidenceTokenClass(left) === evidenceTokenClass(right) && evidenceTokenClass(left) !== undefined;
+}
+
+function evidenceTokenClass(character: string): 'latin-number' | 'cjk' | 'unicode-letter' | undefined {
+  if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(character)) return 'cjk';
+  if (/[\p{Script=Latin}\p{N}]/u.test(character)) return 'latin-number';
+  if (/\p{L}/u.test(character)) return 'unicode-letter';
+  return undefined;
+}
+
+function evidenceEntailsAbility(source: string, evidence: EvidenceRef[] | undefined, ability: AbilityKey): boolean {
+  const labels: Record<AbilityKey, string[]> = {
+    str: ['strength', '\u529b\u91cf'], dex: ['dexterity', '\u654f\u6377'], con: ['constitution', '\u4f53\u8d28'],
+    int: ['intelligence', '\u667a\u529b'], wis: ['wisdom', '\u611f\u77e5'], cha: ['charisma', '\u9b45\u529b'],
+  };
+  const text = exactEvidenceText(source, evidence).normalize('NFKC').toLocaleLowerCase('en-US');
+  return labels[ability].some((label) => {
+    const escaped = escapeRegExp(label);
+    return new RegExp(`(?:spellcasting\\s+ability\\s+(?:is|uses?)|\\u65bd\\u6cd5\\u5c5e\\u6027\\u4e3a)\\s*${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+  });
+}
+
+function evidenceEntailsSaveDc(source: string, evidence: EvidenceRef[] | undefined, dc: number): boolean {
+  const text = exactEvidenceText(source, evidence).normalize('NFKC');
+  const value = escapeRegExp(String(dc));
+  return new RegExp(`(?:spell\\s*save|save|\\u8c41\\u514d)[^\\n\\d]{0,20}DC\\s*[:：]?\\s*${value}(?!\\d)`, 'iu').test(text);
+}
+
+function evidenceEntailsAttackBonus(source: string, evidence: EvidenceRef[] | undefined, bonus: number): boolean {
+  const text = exactEvidenceText(source, evidence).normalize('NFKC');
+  const signed = bonus >= 0 ? `\\+\\s*${escapeRegExp(String(bonus))}` : `-\\s*${escapeRegExp(String(Math.abs(bonus)))}`;
+  return new RegExp(`(?:spell\\s*attack(?:\\s+(?:roll|modifier|bonus))?\\s*(?:is|:)?|\\u6cd5\\u672f\\u653b\\u51fb)[^\\n]{0,20}${signed}(?!\\d)`, 'iu').test(text)
+    || new RegExp(`${signed}(?!\\d)[^\\n]{0,40}(?:to\\s+hit\\s+with\\s+)?spell\\s*attacks?`, 'iu').test(text);
+}
+
+function evidenceEntailsMaterialWaiver(source: string, evidence: EvidenceRef[]): boolean {
+  return textEntailsMaterialWaiver(exactEvidenceText(source, evidence));
+}
+
+function textEntailsMaterialWaiver(value: unknown): boolean {
+  const text = String(value ?? '').normalize('NFKC').toLocaleLowerCase('en-US');
+  return /(?:without|requires?\s+no|requiring\s+no)\s+material\s+components?/iu.test(text)
+    || /(?:\u65e0\u9700|\u4e0d\u9700|\u4e0d\u9700\u8981)\s*\u6750\u6599\u6210\u5206/u.test(text);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function validateSpellcastingNotDuplicated(

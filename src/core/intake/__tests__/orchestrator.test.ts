@@ -44,6 +44,7 @@ class RatWarlockProvider implements MonsterIntakeAiProvider {
   readonly providerName = 'fake';
   readonly extractionModel = 'fake-extract';
   readonly reviewModel = 'fake-review';
+  reviewVerdict: AiReviewResult['verdict'] = 'accepted';
   async discover(): Promise<DiscoveryResult> {
     return {
       schemaVersion: 1,
@@ -51,7 +52,16 @@ class RatWarlockProvider implements MonsterIntakeAiProvider {
     };
   }
   async extract(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
-  async review(): Promise<AiReviewResult> { return { schemaVersion: 1, verdict: 'accepted', findings: [] }; }
+  async review(): Promise<AiReviewResult> {
+    return {
+      schemaVersion: 1,
+      verdict: this.reviewVerdict,
+      findings: this.reviewVerdict === 'accepted' ? [] : [{
+        id: 'biography-review', code: 'BIOGRAPHY_REVIEW', path: '/creature/biography',
+        message: 'Biography wording needs review.', blocking: true, origin: 'ai-review',
+      }],
+    };
+  }
   async repair(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
 }
 
@@ -270,6 +280,100 @@ describe('AI monster intake orchestrator', () => {
     const actor = JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8'));
     expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
     expect(actor.items.filter((item: any) => item.type === 'spell')).toEqual([]);
+  });
+
+  test('keeps deterministic spell resolution pending when an unrelated AI biography finding needs review', async () => {
+    const provider = new RatWarlockProvider();
+    provider.reviewVerdict = 'needs_review';
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({ code: 'BIOGRAPHY_REVIEW' }));
+    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+  });
+
+  test('re-verifies an identical promoted caster Actor and requires explicit replace before regeneration', async () => {
+    const paths = roots();
+    const first = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+    const actorPath = first.creatures[0]!.actorPath!;
+    const mutatedActor = JSON.parse(readFileSync(actorPath, 'utf-8'));
+    mutatedActor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status = 'hydrated';
+    mutatedActor.items.push({ name: 'Placeholder: Fireball', type: 'spell', system: {} });
+    writeFileSync(actorPath, JSON.stringify(mutatedActor, null, 2));
+
+    const blocked = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+
+    expect(blocked.status).toBe('needs_review');
+    expect(blocked.creatures[0]!.findings).toContainEqual(expect.objectContaining({ code: 'TARGET_CONFLICT' }));
+    expect(blocked.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+    expect(JSON.parse(readFileSync(actorPath, 'utf-8')).items.some((item: any) => item.type === 'spell')).toBe(true);
+
+    const decisionsPath = join(blocked.runPath, 'decisions.json');
+    writeFileSync(decisionsPath, JSON.stringify({
+      runId: blocked.runId,
+      sourceSha256: blocked.sourceSha256,
+      decisions: [{ issueId: 'target-conflict:rat-warlock', action: 'select', value: 'replace' }],
+    }));
+    const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, new RatWarlockProvider(), paths.vaultPath);
+    const regenerated = JSON.parse(readFileSync(resumed.creatures[0]!.actorPath!, 'utf-8'));
+
+    expect(resumed.status).toBe('succeeded');
+    expect(regenerated.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+    expect(regenerated.items.some((item: any) => item.type === 'spell')).toBe(false);
+    expect(regenerated.items.some((item: any) => Object.values(item.system?.activities ?? {}).some((activity: any) => (
+      activity.type === 'cast'
+      || activity.flags?.['fvtt-json-generator-spell-resolver']?.managed === true
+    )))).toBe(false);
+  });
+
+  test('blocks reuse when the published caster JSON has only a premature Cast Activity', async () => {
+    const paths = roots();
+    const first = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+    const actorPath = first.creatures[0]!.actorPath!;
+    const actor = JSON.parse(readFileSync(actorPath, 'utf-8'));
+    const item = actor.items.find((candidate: any) => Object.keys(candidate.system?.activities ?? {}).length > 0);
+    (Object.values(item.system.activities)[0] as any).type = 'cast';
+    writeFileSync(actorPath, JSON.stringify(actor, null, 2));
+
+    const blocked = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+
+    expect(blocked.status).toBe('needs_review');
+    expect(blocked.creatures[0]!.findings).toContainEqual(expect.objectContaining({
+      code: 'TARGET_CONFLICT',
+      message: expect.stringContaining('PORTABLE_ACTOR_CAST_ACTIVITY'),
+    }));
+    expect(blocked.creatures[0]!.spellResolution.status).toBe('pending');
+    expect(JSON.parse(readFileSync(actorPath, 'utf-8')).items.some((candidate: any) => candidate.type === 'spell')).toBe(false);
   });
 
   test('leaves non-caster intake acceptance unchanged with spell resolution not required', async () => {
