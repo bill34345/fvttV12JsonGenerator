@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { resolve } from 'node:path';
+import { copyFileSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../src/core/intake/__tests__/fixtures/rat-warlock';
 
 const SOURCE = resolve('src/core/intake/__tests__/fixtures/lurker-in-the-dark.raw.txt');
 
@@ -26,6 +29,59 @@ describe('AI monster intake CLI', () => {
     expect(proc.stderr.toString()).toContain('MONSTER_INTAKE_API_KEY');
     expect(proc.stderr.toString()).not.toContain('OPENAI_API_KEY');
   });
+
+  test('reports accepted portable caster spells separately as pending target-world resolution', async () => {
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const body = await request.json() as any;
+        const system = String(body.messages?.[0]?.content ?? '');
+        const content = system.includes('Find monster or NPC stat-block boundaries')
+          ? { schemaVersion: 1, candidates: [{ id: 'rat-warlock', label: '鼠神邪术师', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }] }
+          : system.includes('Extract exactly one monster')
+            ? buildRatWarlockIr()
+            : { schemaVersion: 1, verdict: 'accepted', findings: [] };
+        return Response.json({ choices: [{ message: { content: JSON.stringify(content) } }] });
+      },
+    });
+    const root = mkdtempSync(join(tmpdir(), 'monster-intake-cli-'));
+    mkdirSync(join(root, 'data'), { recursive: true });
+    copyFileSync(resolve('data/cn.json'), join(root, 'data/cn.json'));
+    copyFileSync(resolve('data/spells.ldb'), join(root, 'data/spells.ldb'));
+    copyFileSync(resolve('data/golden-master.json'), join(root, 'data/golden-master.json'));
+    try {
+      const proc = Bun.spawn({
+        cmd: [
+          'bun', 'run', resolve('src/index.ts'),
+          '--intake-monsters', resolve('src/core/intake/__tests__/fixtures/rat-warlock.raw.txt'),
+          '--vault', join(root, 'vault'),
+          '--fvtt-version', '14',
+          '--effect-profile', 'core',
+        ],
+        cwd: root,
+        stdout: 'pipe',
+        stderr: 'pipe',
+        env: {
+          ...process.env,
+          MONSTER_INTAKE_API_KEY: 'test-key',
+          MONSTER_INTAKE_BASE_URL: server.url.toString(),
+          MONSTER_INTAKE_MODEL: 'test-model',
+        },
+      });
+      const [exitCode, stdout, stderr] = await Promise.all([
+        proc.exited,
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+      ]);
+
+      expect({ exitCode, stdout, stderr }).toEqual({ exitCode: 0, stdout: expect.any(String), stderr: '' });
+      expect(stdout).toContain('鼠神邪术师: accepted');
+      expect(stdout).toContain('法术：已整理 10 项；目标世界解析待完成（需 FVTT v14 解析模块）');
+      expect(stdout).not.toContain('法术：hydrated');
+    } finally {
+      server.stop(true);
+    }
+  }, 20_000);
 
   test('legacy raw ingestion fails when the rule-based splitter finds zero monsters', () => {
     const proc = Bun.spawnSync({

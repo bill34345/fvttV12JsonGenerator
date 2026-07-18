@@ -32,8 +32,11 @@ import {
 } from './api';
 import {
   createDecisionDraft,
+  describePortableSpellResolution,
+  intakeActorDownloadLabel,
   isReviewFindingActionable,
   type IntakeDecisionDraft,
+  type PortableSpellResolutionLike,
 } from './intakeReview';
 
 type ToolId = 'single' | JobType;
@@ -57,7 +60,7 @@ const tools: ToolConfig[] = [
     group: 'intake',
     title: 'AI 怪物资料整理',
     short: 'AI Intake',
-    description: '推荐入口：上传或粘贴 TXT / 乱 Markdown，经证据化提取、项目生成器与独立终审生成 Actor JSON。文本会发送到服务器配置的 AI provider。',
+    description: '推荐入口：上传或粘贴 TXT / 乱 Markdown，经证据化提取、项目生成器与独立终审生成便携 Actor JSON。施法者的法术会在导入目标世界后由 FVTT v14 解析模块完成解析。文本会发送到服务器配置的 AI provider。',
     accepts: '.md,.markdown,.txt',
     needsFile: true,
   },
@@ -563,6 +566,7 @@ interface IntakeReviewCreature {
   label: string;
   status: string;
   findings: IntakeReviewFinding[];
+  spellResolution?: PortableSpellResolutionLike;
 }
 
 function IntakeReviewPanel(props: {
@@ -618,6 +622,9 @@ function IntakeReviewPanel(props: {
       {creatures.map((creature) => (
         <article key={creature.id}>
           <header><strong>{creature.label}</strong><span>{statusLabel(creature.status as JobStatus | 'accepted')}</span></header>
+          {describePortableSpellResolution(creature.spellResolution) ? (
+            <p className="intake-spell-status">{describePortableSpellResolution(creature.spellResolution)}</p>
+          ) : null}
           {(creature.findings ?? []).filter((finding) => finding.blocking).map((finding) => {
             const draft = drafts[finding.id] ?? createDecisionDraft(finding);
             return (
@@ -803,25 +810,33 @@ function DownloadPanel(props: { singleResult: ConversionResult | null; job: WebJ
   if (!props.job) {
     return <div className="empty-state">运行后会在这里显示 JSON、Markdown、records 和 ZIP 下载。</div>;
   }
+  const job = props.job;
 
   return (
     <div className="download-list">
-      {props.job.files.length > 1 ? (
-        <a className="download-row is-zip" href={`/api/jobs/${props.job.id}/download.zip`}>
+      {job.files.length > 1 ? (
+        <a className="download-row is-zip" href={`/api/jobs/${job.id}/download.zip`}>
           <ArchiveIcon />
           <span>全部产物</span>
           <strong>下载 ZIP</strong>
         </a>
       ) : null}
-      {props.job.files.map((file) => (
+      {job.files.map((file) => (
         <a className="download-row" href={file.downloadUrl} key={file.id}>
           <DownloadIcon />
-          <span>{file.label || file.fileName}</span>
+          <span>{intakeDownloadLabel(job, file.fileName, file.label || file.fileName)}</span>
           <strong>{formatBytes(file.size)}</strong>
         </a>
       ))}
     </div>
   );
+}
+
+function intakeDownloadLabel(job: WebJob, fileName: string, label: string): string {
+  if (job.type !== 'ai-monster-intake' || !fileName.endsWith('-actor.json')) return label;
+  const creatures = Array.isArray(job.summary?.creatures) ? job.summary.creatures as unknown as IntakeReviewCreature[] : [];
+  const creature = creatures.find((entry) => fileName === `${entry.id}-actor.json`);
+  return intakeActorDownloadLabel(label, creature?.spellResolution);
 }
 
 function Warnings(props: { singleResult: ConversionResult | null; job: WebJob | null }) {

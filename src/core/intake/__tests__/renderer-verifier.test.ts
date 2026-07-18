@@ -2,10 +2,127 @@ import { describe, expect, test } from 'bun:test';
 import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
 import { anchorIrEvidence } from '../orchestrator';
 import { renderMonsterIntakeMarkdown } from '../renderer';
-import { projectActor, verifyMonsterIntake } from '../verifier';
+import { projectActor, renderIntakeVerificationMarkdown, verifyMonsterIntake } from '../verifier';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
+
+async function generatedRatWarlock() {
+  const ir = buildRatWarlockIr();
+  const markdown = renderMonsterIntakeMarkdown(ir);
+  const generated = await convertMarkdownContentToJson({
+    content: markdown,
+    fvttVersion: '14',
+    effectProfile: 'core',
+    translationService: null,
+  });
+  return { ir, markdown, actor: generated.rawJson as any };
+}
 
 describe('intake Markdown renderer and deterministic verifier', () => {
+  test('accepts an intact portable Rat Warlock actor while reporting target-world resolution pending', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.status).toBe('accepted');
+    expect(report.findings).toEqual([]);
+    expect(report.spellResolution).toEqual({
+      required: true,
+      status: 'pending',
+      manifestId: actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.manifestId,
+      spellCount: 10,
+    });
+    expect(renderIntakeVerificationMarkdown(report)).toContain('法术：已整理 10 项；目标世界解析待完成');
+  });
+
+  test('extracts the first closing frontmatter delimiter when later Markdown contains a horizontal rule', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    const markdownWithBodyRule = `${markdown}\nSource notes after frontmatter\n---\nThis is body text, not YAML.\n`;
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdownWithBodyRule, actor);
+
+    expect(report.status).toBe('accepted');
+    expect(report.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+  });
+
+  test.each([
+    ['drops a SpellRef', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs.pop(); }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+    ['duplicates a SpellRef', (actor: any) => { const refs = actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs; refs.push(structuredClone(refs[0])); }, 'DUPLICATE_ID'],
+    ['changes source-derived usage', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs[4].uses.value = 2; }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+    ['changes source-derived save DC', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].saveDc = 99; }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+    ['changes source-derived attack bonus', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].attackBonus = 99; }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+    ['changes the material component waiver', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs[0].ignoresMaterialComponents = false; }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+    ['changes a literal restriction', (actor: any) => { actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs[0].restrictions[0].text = 'any number of rays'; }, 'PORTABLE_SPELL_MANIFEST_DRIFT'],
+  ] as const)('blocks a portable actor that %s', async (_label, mutate, expectedCode) => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    mutate(actor);
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.status).toBe('needs_review');
+    expect(report.spellResolution.status).toBe('failed');
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: expectedCode, blocking: true }));
+  });
+
+  test('blocks destination UUIDs in a portable actor', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs[0].aliases.push(
+      'Compendium.dnd5e.spells.Item.ABCDEFGHIJKLMNOP',
+    );
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'FORBIDDEN_TARGET_WORLD_IDENTIFIER' }));
+  });
+
+  test('blocks a fabricated manifest hash in a portable actor', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.manifestHash = '0'.repeat(64);
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_MANIFEST_HASH_MISMATCH' }));
+  });
+
+  test('blocks placeholder embedded Spells and missing generated-feature linkage', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.items.push({ name: 'Placeholder: Eldritch Blast', type: 'spell', system: {} });
+    const linked = actor.items.find((item: any) => item.flags?.['fvtt-json-generator-spell-resolver']?.featureItemKey);
+    delete linked.flags['fvtt-json-generator-spell-resolver'];
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'PORTABLE_ACTOR_EMBEDDED_SPELL' }));
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_MISSING' }));
+  });
+
+  test.each([
+    ['a wrong-type dummy', { name: '天生施法 (Innate Spellcasting)', type: 'weapon', system: {} }, 'SPELL_FEATURE_LINK_WRONG_TYPE'],
+    ['a fake feat with no generated feature identity', { name: 'Dummy', type: 'feat', system: {} }, 'SPELL_FEATURE_LINK_IDENTITY_MISMATCH'],
+  ] as const)('does not accept %s as the linked spellcasting feature', async (_label, dummy, expectedCode) => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    const linked = actor.items.find((item: any) => item.flags?.['fvtt-json-generator-spell-resolver']?.featureItemKey);
+    const resolverFlags = structuredClone(linked.flags['fvtt-json-generator-spell-resolver']);
+    delete linked.flags['fvtt-json-generator-spell-resolver'];
+    actor.items.push({ ...dummy, flags: { 'fvtt-json-generator-spell-resolver': resolverFlags } });
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.status).toBe('needs_review');
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: expectedCode }));
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_MISSING' }));
+  });
+
+  test('blocks a premature hydrated claim before target-world runtime resolution', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status = 'hydrated';
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'PREMATURE_SPELL_HYDRATION' }));
+    expect(report.spellResolution.status).toBe('failed');
+  });
+
   test('projects v14 flat attack bonuses and activity damage parts', () => {
     const actor = {
       system: {

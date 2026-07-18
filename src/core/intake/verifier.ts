@@ -1,4 +1,18 @@
-import type { AbilityKey, CanonicalFeature, IntakeFinding, MonsterIntakeIR } from './types';
+import yaml from 'js-yaml';
+import {
+  findForbiddenTargetWorldIdentifiers,
+  hashManifest,
+  RESOLVER_MODULE_ID,
+  validatePortableSpellManifest,
+  type PortableSpellManifest,
+} from '../spell-resolution';
+import type {
+  AbilityKey,
+  CanonicalFeature,
+  IntakeFinding,
+  MonsterIntakeIR,
+  PortableSpellResolutionStatus,
+} from './types';
 import { validateMonsterIntakeIR } from './validator';
 
 export interface IntakeVerificationReport {
@@ -6,6 +20,7 @@ export interface IntakeVerificationReport {
   status: 'accepted' | 'needs_review';
   findings: IntakeFinding[];
   projection: Record<string, unknown>;
+  spellResolution: PortableSpellResolutionStatus;
 }
 
 export function verifyMonsterIntake(
@@ -63,6 +78,8 @@ export function verifyMonsterIntake(
   compareFeatureSections(add, expected.reactions, projection.items, 'reactions');
   compareFeatureSections(add, expected.legendaryActions, projection.items, 'legendaryActions');
 
+  const spellResolution = verifyPortableSpellResolution(source, ir, markdown, actor, add, () => findings.length);
+
   for (const requiredText of featureDescriptions(expected)) {
     if (!compact(markdown)?.includes(compact(requiredText) ?? '')) add('MARKDOWN_DESCRIPTION_LOSS', '/markdown', `Rendered Markdown lost feature text: ${requiredText.slice(0, 80)}`);
   }
@@ -73,7 +90,179 @@ export function verifyMonsterIntake(
   if (markdown.includes('生命值: 332') && expected.attributes.hp.value !== 332) add('TEMPLATE_DEFAULT_LEAK', '/markdown/生命值', 'Rendered Markdown contains a conflicting template HP 332.');
 
   const deduped = dedupe(findings);
-  return { schemaVersion: 1, status: deduped.some((finding) => finding.blocking) ? 'needs_review' : 'accepted', findings: deduped, projection };
+  return {
+    schemaVersion: 1,
+    status: deduped.some((finding) => finding.blocking) ? 'needs_review' : 'accepted',
+    findings: deduped,
+    projection,
+    spellResolution,
+  };
+}
+
+function verifyPortableSpellResolution(
+  source: string,
+  ir: MonsterIntakeIR,
+  markdown: string,
+  actor: unknown,
+  add: (code: string, path: string, message: string) => void,
+  findingCount: () => number,
+): PortableSpellResolutionStatus {
+  const expectedManifest = extractRenderedSpellManifest(markdown);
+  const required = Boolean(ir.creature.spellcasting?.length);
+  if (!required) return { required: false, status: 'not-required', spellCount: 0 };
+
+  const actorRoot = asRecord(actor);
+  const resolver = asRecord(asRecord(actorRoot.flags)[RESOLVER_MODULE_ID]);
+  const actualManifest = resolver.spellManifest;
+  const spellCount = ir.creature.spellcasting!
+    .flatMap((group) => group.usageGroups)
+    .reduce((count, group) => count + group.spellRefs.length, 0);
+  const findingStart = findingCount();
+
+  if (!expectedManifest) {
+    add('RENDERED_SPELL_MANIFEST_MISSING', '/markdown', 'Rendered caster Markdown is missing its portable spell manifest.');
+  }
+
+  const validated = validatePortableSpellManifest(actualManifest, source);
+  if (!validated.ok) {
+    for (const finding of validated.findings) {
+      add(finding.code, `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest${finding.path === '/' ? '' : finding.path}`, finding.message);
+    }
+  }
+
+  if (expectedManifest && !canonicalEqual(actualManifest, expectedManifest)) {
+    add(
+      'PORTABLE_SPELL_MANIFEST_DRIFT',
+      `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest`,
+      'Portable Actor spell manifest differs from the source-derived rendered manifest.',
+    );
+  }
+
+  for (const forbidden of findForbiddenTargetWorldIdentifiers(actor)) {
+    add(forbidden.code, forbidden.path, `Portable Actor contains a destination-world document identifier: ${forbidden.match}.`);
+  }
+
+  const items = Array.isArray(actorRoot.items) ? actorRoot.items : [];
+  items.forEach((item, index) => {
+    if (asRecord(item).type === 'spell') {
+      add('PORTABLE_ACTOR_EMBEDDED_SPELL', `/actor/items/${index}`, 'Portable caster Actors must not contain embedded placeholder or resolved Spells.');
+    }
+  });
+
+  const groups = expectedManifest?.spellcastingGroups ?? (validated.ok ? validated.value.spellcastingGroups : []);
+  for (const [groupIndex, group] of groups.entries()) {
+    const flagged = items.flatMap((item, itemIndex) => {
+      const flags = asRecord(asRecord(asRecord(item).flags)[RESOLVER_MODULE_ID]);
+      return flags.featureItemKey === group.featureItemKey && flags.groupId === group.groupId
+        ? [{ item, itemIndex }]
+        : [];
+    });
+    const expectedGroup = ir.creature.spellcasting?.[groupIndex];
+    const linked = flagged.filter(({ item, itemIndex }) => {
+      const itemRecord = asRecord(item);
+      if (itemRecord.type !== 'feat') {
+        add(
+          'SPELL_FEATURE_LINK_WRONG_TYPE',
+          `/actor/items/${itemIndex}/type`,
+          `Spellcasting group ${group.groupId} may only link to its generated feat Item.`,
+        );
+        return false;
+      }
+      if (!expectedGroup || !matchesGeneratedSpellcastingFeature(itemRecord, expectedGroup)) {
+        add(
+          'SPELL_FEATURE_LINK_IDENTITY_MISMATCH',
+          `/actor/items/${itemIndex}`,
+          `Linked feat does not preserve the generated spellcasting feature identity for group ${group.groupId}.`,
+        );
+        return false;
+      }
+      return true;
+    });
+    if (linked.length === 0) {
+      add(
+        'SPELL_FEATURE_LINK_MISSING',
+        `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest/spellcastingGroups/${groupIndex}/featureItemKey`,
+        `No generated feature is linked to spellcasting group ${group.groupId}.`,
+      );
+    } else if (linked.length !== 1) {
+      add(
+        'SPELL_FEATURE_LINK_DUPLICATE',
+        `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest/spellcastingGroups/${groupIndex}/featureItemKey`,
+        `Spellcasting group ${group.groupId} is linked to ${linked.length} generated features.`,
+      );
+    }
+  }
+
+  const resolution = asRecord(resolver.spellResolution);
+  if (resolution.status !== 'pending') {
+    add(
+      resolution.status === 'hydrated' ? 'PREMATURE_SPELL_HYDRATION' : 'INVALID_PORTABLE_SPELL_RESOLUTION_STATUS',
+      `/actor/flags/${RESOLVER_MODULE_ID}/spellResolution/status`,
+      'Project generation may only emit pending spell resolution; hydration belongs to the destination-world module.',
+    );
+  }
+  if (validated.ok) {
+    const expectedHash = hashManifest(validated.value);
+    if (resolution.manifestHash !== expectedHash) {
+      add(
+        'SPELL_MANIFEST_HASH_MISMATCH',
+        `/actor/flags/${RESOLVER_MODULE_ID}/spellResolution/manifestHash`,
+        'Portable Actor spellResolution.manifestHash does not match its exact manifest.',
+      );
+    }
+  }
+
+  const failed = findingCount() > findingStart;
+  return {
+    required: true,
+    status: failed ? 'failed' : 'pending',
+    ...(typeof asRecord(actualManifest).manifestId === 'string' ? { manifestId: String(asRecord(actualManifest).manifestId) } : {}),
+    spellCount,
+  };
+}
+
+function extractRenderedSpellManifest(markdown: string): PortableSpellManifest | undefined {
+  if (!markdown.startsWith('---\n')) return undefined;
+  const firstClosing = markdown.indexOf('\n---\n', 4);
+  const end = firstClosing >= 0
+    ? firstClosing
+    : markdown.endsWith('\n---') ? markdown.length - '\n---'.length : -1;
+  if (end <= 3) return undefined;
+  const root = asRecord(yaml.load(markdown.slice(4, end)));
+  const candidate = Object.values(root).find((value) => {
+    const record = asRecord(value);
+    return record.schemaVersion === 1 && record.rulesPreference === '2024' && Array.isArray(record.spellcastingGroups);
+  });
+  return candidate as PortableSpellManifest | undefined;
+}
+
+function matchesGeneratedSpellcastingFeature(
+  item: Record<string, unknown>,
+  group: NonNullable<MonsterIntakeIR['creature']['spellcasting']>[number],
+): boolean {
+  const name = String(item.name ?? '');
+  if (!name.includes(group.featureName)) return false;
+  if (group.featureEnglishName && !name.includes(group.featureEnglishName)) return false;
+
+  const system = asRecord(item.system);
+  const descriptions = [String(asRecord(system.description).value ?? '')];
+  for (const activity of Object.values(asRecord(system.activities))) {
+    const activityRecord = asRecord(activity);
+    const description = asRecord(activityRecord.description);
+    descriptions.push(String(description.chatFlavor ?? description.value ?? ''));
+  }
+  const expected = compact(group.description);
+  return Boolean(expected && descriptions.some((description) => compact(stripHtml(description)) === expected));
+}
+
+function canonicalEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map((key) => [key, canonicalize((value as Record<string, unknown>)[key])]));
 }
 
 export function renderIntakeVerificationMarkdown(report: IntakeVerificationReport): string {
@@ -84,6 +273,12 @@ export function renderIntakeVerificationMarkdown(report: IntakeVerificationRepor
     `阻断问题：${report.findings.filter((finding) => finding.blocking).length}`,
     '',
   ];
+  if (report.spellResolution.required) {
+    const spellText = report.spellResolution.status === 'pending'
+      ? `法术：已整理 ${report.spellResolution.spellCount} 项；目标世界解析待完成`
+      : `法术：${report.spellResolution.spellCount} 项；目标世界解析状态 ${report.spellResolution.status}`;
+    lines.splice(lines.length - 1, 0, spellText);
+  }
   if (report.findings.length === 0) lines.push('未发现确定性漂移。');
   else for (const finding of report.findings) lines.push(`- [${finding.code}] ${finding.path}：${finding.message}`);
   return `${lines.join('\n')}\n`;

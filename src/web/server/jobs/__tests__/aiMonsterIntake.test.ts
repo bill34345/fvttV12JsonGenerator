@@ -10,6 +10,7 @@ import type {
   ReviewRequest,
 } from '../../../../core/intake/types';
 import { buildValidLurkerIr, LURKER_SOURCE } from '../../../../core/intake/__tests__/fixtures/lurker';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../../../../core/intake/__tests__/fixtures/rat-warlock';
 import { createJob, getJob, resetJobsForTests } from '../jobStore';
 import { runJob } from '../jobRunner';
 
@@ -32,6 +33,21 @@ class WebFakeProvider implements MonsterIntakeAiProvider {
   async repair(_request: RepairRequest): Promise<MonsterIntakeIR> { return buildValidLurkerIr(); }
 }
 
+class WebRatWarlockProvider implements MonsterIntakeAiProvider {
+  readonly providerName = 'fake';
+  readonly extractionModel = 'fake';
+  readonly reviewModel = 'fake-review';
+  async discover(): Promise<DiscoveryResult> {
+    return {
+      schemaVersion: 1,
+      candidates: [{ id: 'rat-warlock', label: '鼠神邪术师', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
+    };
+  }
+  async extract(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
+  async review(): Promise<AiReviewResult> { return { schemaVersion: 1, verdict: 'accepted', findings: [] }; }
+  async repair(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
+}
+
 afterEach(() => resetJobsForTests());
 
 describe('Web AI monster intake job', () => {
@@ -42,6 +58,34 @@ describe('Web AI monster intake job', () => {
     expect(finished.status).toBe('succeeded');
     expect(finished.files.some((file) => file.fileName.endsWith('-actor.json'))).toBe(true);
     expect(finished.files.some((file) => file.fileName.includes('candidate-actor'))).toBe(false);
+  });
+
+  test('registers a portable caster Actor without claiming target-world hydration', async () => {
+    const job = createJob('ai-monster-intake', 'test');
+    await runJob(job, {
+      type: 'ai-monster-intake',
+      fileName: 'rat-warlock.txt',
+      content: RAT_WARLOCK_SOURCE,
+      options: { fvttVersion: '14', effectProfile: 'core' },
+    }, { monsterIntakeProvider: new WebRatWarlockProvider() });
+    const finished = getJob(job.id)!;
+    const creature = (finished.summary?.creatures as any[])[0];
+    const actorFile = finished.files.find((file) => file.fileName === 'rat-warlock-actor.json');
+    const actor = JSON.parse(await Bun.file(actorFile!.path).text());
+
+    expect(finished.status).toBe('succeeded');
+    expect(creature.status).toBe('accepted');
+    expect(creature.spellResolution).toEqual({
+      required: true,
+      status: 'pending',
+      spellCount: 10,
+      manifestId: actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.manifestId,
+    });
+    expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+    expect(JSON.stringify(finished.summary)).not.toContain('"status":"hydrated"');
+    expect(JSON.stringify(finished.summary)).not.toContain('reportPath');
+    expect(JSON.stringify(finished.summary)).not.toContain('bundlePath');
+    expect(JSON.stringify(finished.summary)).not.toContain(finished.files[0]!.path);
   });
 
   test('exposes the review bundle and evidence but gates candidate Actor JSON', async () => {

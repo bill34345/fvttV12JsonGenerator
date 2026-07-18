@@ -21,6 +21,7 @@ import type {
   MonsterIntakeIR,
   MonsterIntakeOptions,
   MonsterIntakeRunResult,
+  PortableSpellResolutionStatus,
 } from './types';
 import { renderIntakeVerificationMarkdown, verifyMonsterIntake } from './verifier';
 import { validateMonsterIntakeIR } from './validator';
@@ -160,7 +161,15 @@ async function processCandidate(
   } catch (error) {
     const finding = providerFinding(error);
     writeJson(join(bundlePath, 'deterministic-report.json'), { schemaVersion: 1, status: 'failed', findings: [finding] });
-    return { id: candidate.id, label: candidate.label, status: 'failed', bundlePath, findings: [finding], calls };
+    return {
+      id: candidate.id,
+      label: candidate.label,
+      status: 'failed',
+      bundlePath,
+      findings: [finding],
+      calls,
+      spellResolution: { required: false, status: 'failed', spellCount: 0 },
+    };
   }
 }
 
@@ -189,8 +198,9 @@ async function processIr(
     writeJson(join(bundlePath, 'intake-ir.json'), ir);
     const validation = validateMonsterIntakeIR(options.source, ir, { coverageRange: candidate });
     if (validation.blocking.length > 0) {
-      writeReports(bundlePath, { schemaVersion: 1, status: 'needs_review', findings: validation.findings, projection: {} });
-      return result(candidate, bundlePath, 'needs_review', validation.findings, calls);
+      const spellResolution = spellResolutionFromIr(ir, 'needs_review', bundlePath);
+      writeReports(bundlePath, { schemaVersion: 1, status: 'needs_review', findings: validation.findings, projection: {}, spellResolution });
+      return result(candidate, bundlePath, 'needs_review', validation.findings, calls, spellResolution);
     }
     const markdown = renderMonsterIntakeMarkdown(ir);
     writeFileSync(join(bundlePath, 'standard.md'), markdown);
@@ -211,16 +221,22 @@ async function processIr(
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
-      return result(candidate, bundlePath, 'needs_review', combined, calls);
+      return result(candidate, bundlePath, 'needs_review', combined, calls, withSpellStatus(report.spellResolution, 'needs_review', bundlePath));
     }
     const promoted = await promoteAccepted(options, runPath, candidate, ir, markdown);
-    if (promoted.findings.length > 0) return result(candidate, bundlePath, 'needs_review', promoted.findings, calls);
+    if (promoted.findings.length > 0) {
+      return result(candidate, bundlePath, 'needs_review', promoted.findings, calls, withSpellStatus(report.spellResolution, 'needs_review', bundlePath));
+    }
     copyFileSync(promoted.actorPath, join(bundlePath, 'actor.json'));
-    return { ...result(candidate, bundlePath, 'accepted', [], calls), markdownPath: promoted.markdownPath, actorPath: promoted.actorPath };
+    return {
+      ...result(candidate, bundlePath, 'accepted', [], calls, withSpellStatus(report.spellResolution, report.spellResolution.status, bundlePath)),
+      markdownPath: promoted.markdownPath,
+      actorPath: promoted.actorPath,
+    };
   }
   return result(candidate, bundlePath, 'needs_review', [{
     id: 'repair-limit', code: 'REPAIR_LIMIT', path: '/', message: 'One automatic semantic repair did not produce an accepted result.', blocking: true, origin: 'ai-review',
-  }], calls);
+  }], calls, spellResolutionFromIr(ir, 'needs_review', bundlePath));
 }
 
 async function promoteAccepted(
@@ -375,8 +391,41 @@ function combineFindings(deterministic: IntakeFinding[], review: AiReviewResult)
   return [...deterministic, ...(Array.isArray(review.findings) ? review.findings.map((finding) => ({ ...finding, origin: 'ai-review' as const })) : [])];
 }
 
-function result(candidate: DiscoveryCandidate, bundlePath: string, status: MonsterIntakeCreatureResult['status'], findings: IntakeFinding[], calls: MonsterIntakeCreatureResult['calls']): MonsterIntakeCreatureResult {
-  return { id: candidate.id, label: candidate.label, status, bundlePath, findings, calls };
+function result(
+  candidate: DiscoveryCandidate,
+  bundlePath: string,
+  status: MonsterIntakeCreatureResult['status'],
+  findings: IntakeFinding[],
+  calls: MonsterIntakeCreatureResult['calls'],
+  spellResolution: PortableSpellResolutionStatus,
+): MonsterIntakeCreatureResult {
+  return { id: candidate.id, label: candidate.label, status, bundlePath, findings, calls, spellResolution };
+}
+
+function spellResolutionFromIr(
+  ir: MonsterIntakeIR,
+  status: PortableSpellResolutionStatus['status'],
+  bundlePath: string,
+): PortableSpellResolutionStatus {
+  const groups: unknown[] = Array.isArray(ir.creature.spellcasting) ? ir.creature.spellcasting : [];
+  const spellCount = groups.reduce<number>((count, group) => {
+    if (!group || typeof group !== 'object' || !Array.isArray((group as { usageGroups?: unknown }).usageGroups)) return count;
+    return count + (group as { usageGroups: unknown[] }).usageGroups.reduce<number>((usageCount, usage) => {
+      if (!usage || typeof usage !== 'object' || !Array.isArray((usage as { spellRefs?: unknown }).spellRefs)) return usageCount;
+      return usageCount + (usage as { spellRefs: unknown[] }).spellRefs.length;
+    }, 0);
+  }, 0);
+  if (groups.length === 0) return { required: false, status: status === 'failed' ? 'failed' : 'not-required', spellCount: 0 };
+  return { required: true, status, spellCount, reportPath: join(bundlePath, 'deterministic-report.md') };
+}
+
+function withSpellStatus(
+  resolution: PortableSpellResolutionStatus,
+  status: PortableSpellResolutionStatus['status'],
+  bundlePath: string,
+): PortableSpellResolutionStatus {
+  if (!resolution.required) return resolution;
+  return { ...resolution, status, reportPath: join(bundlePath, 'deterministic-report.md') };
 }
 
 function writeReports(bundlePath: string, report: Parameters<typeof renderIntakeVerificationMarkdown>[0]): void {

@@ -3,6 +3,14 @@ import type { FvttTargetVersion } from '../foundryTarget';
 import type { PortableSpellRef } from '../spell-resolution/types';
 
 export type MonsterIntakeStatus = 'accepted' | 'needs_review' | 'failed';
+
+export interface PortableSpellResolutionStatus {
+  required: boolean;
+  status: 'not-required' | 'pending' | 'hydrated' | 'needs_review' | 'failed';
+  manifestId?: string;
+  spellCount: number;
+  reportPath?: string;
+}
 export type ClaimKind = 'explicit' | 'derived' | 'preserved-literal' | 'user-confirmed';
 export type IntakeConfidence = 'high' | 'medium' | 'low';
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -251,6 +259,7 @@ export interface MonsterIntakeCreatureResult {
   bundlePath: string;
   findings: IntakeFinding[];
   calls: { extraction: number; review: number; repair: number };
+  spellResolution: PortableSpellResolutionStatus;
   markdownPath?: string;
   actorPath?: string;
 }

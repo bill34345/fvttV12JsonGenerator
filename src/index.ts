@@ -456,6 +456,13 @@ function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>)
   if (result.runPath) console.log(`Review bundle: ${result.runPath}`);
   for (const creature of result.creatures) {
     console.log(`- ${creature.label}: ${creature.status} | calls extract=${creature.calls.extraction} review=${creature.calls.review} repair=${creature.calls.repair}`);
+    if (creature.spellResolution.required) {
+      if (creature.spellResolution.status === 'pending') {
+        console.log(`  法术：已整理 ${creature.spellResolution.spellCount} 项；目标世界解析待完成（需 FVTT v14 解析模块）`);
+      } else {
+        console.log(`  法术：${creature.spellResolution.spellCount} 项；目标世界解析状态 ${creature.spellResolution.status}`);
+      }
+    }
     for (const finding of creature.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
     if (creature.markdownPath) console.log(`  Markdown: ${creature.markdownPath}`);
     if (creature.actorPath) console.log(`  Actor JSON: ${creature.actorPath}`);

@@ -14,6 +14,7 @@ import type {
   ReviewRequest,
 } from '../types';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
 
 class FakeProvider implements MonsterIntakeAiProvider {
   readonly providerName = 'fake';
@@ -37,6 +38,21 @@ class FakeProvider implements MonsterIntakeAiProvider {
     return { schemaVersion: 1, verdict, findings: verdict === 'accepted' ? [] : [{ id: 'review-revise', code: 'REVIEW_REVISE', path: '/creature', message: 'revise', blocking: true, origin: 'ai-review' }] };
   }
   async repair(_request: RepairRequest): Promise<MonsterIntakeIR> { this.repairCalls += 1; return buildValidLurkerIr(); }
+}
+
+class RatWarlockProvider implements MonsterIntakeAiProvider {
+  readonly providerName = 'fake';
+  readonly extractionModel = 'fake-extract';
+  readonly reviewModel = 'fake-review';
+  async discover(): Promise<DiscoveryResult> {
+    return {
+      schemaVersion: 1,
+      candidates: [{ id: 'rat-warlock', label: 'Warlock of the Rat God', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
+    };
+  }
+  async extract(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
+  async review(): Promise<AiReviewResult> { return { schemaVersion: 1, verdict: 'accepted', findings: [] }; }
+  async repair(): Promise<MonsterIntakeIR> { return buildRatWarlockIr(); }
 }
 
 function roots() {
@@ -231,6 +247,64 @@ describe('AI monster intake orchestrator', () => {
     expect(result.creatures[0]!.markdownPath).toEndWith('lurker-in-the-dark.md');
     expect(result.creatures[0]!.actorPath).toEndWith('lurker-in-the-dark.json');
     expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
+  });
+
+  test('keeps an accepted Rat Warlock portable while exposing spell resolution as pending', async () => {
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, new RatWarlockProvider());
+
+    expect(result.status).toBe('succeeded');
+    expect(result.creatures[0]).toMatchObject({
+      status: 'accepted',
+      spellResolution: {
+        required: true,
+        status: 'pending',
+        spellCount: 10,
+      },
+    });
+    const actor = JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8'));
+    expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+    expect(actor.items.filter((item: any) => item.type === 'spell')).toEqual([]);
+  });
+
+  test('leaves non-caster intake acceptance unchanged with spell resolution not required', async () => {
+    const result = await runMonsterIntake({
+      source: LURKER_SOURCE,
+      sourceName: 'lurker.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, new FakeProvider());
+
+    expect(result.creatures[0]).toMatchObject({
+      status: 'accepted',
+      spellResolution: { required: false, status: 'not-required', spellCount: 0 },
+    });
+  });
+
+  test('reports malformed caster intake as spell resolution needing review without crashing', async () => {
+    const provider = new RatWarlockProvider();
+    provider.extract = async () => {
+      const ir = buildRatWarlockIr() as any;
+      ir.creature.spellcasting = [null];
+      return ir;
+    };
+
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'needs_review', spellCount: 0 });
   });
 
   test('performs at most one semantic repair and then requires review', async () => {

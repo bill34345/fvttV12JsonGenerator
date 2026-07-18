@@ -427,6 +427,12 @@ function finishIntakeJob(id: string, result: Awaited<ReturnType<typeof runMonste
       status: creature.status,
       calls: creature.calls,
       findings: creature.findings,
+      spellResolution: {
+        required: creature.spellResolution.required,
+        status: creature.spellResolution.status,
+        spellCount: creature.spellResolution.spellCount,
+        ...(creature.spellResolution.manifestId ? { manifestId: creature.spellResolution.manifestId } : {}),
+      },
     })),
   }, result.creatures.flatMap((creature) => creature.findings.filter((finding) => !finding.blocking).map((finding) => finding.message)),
   result.creatures.filter((creature) => creature.status === 'failed').map((creature) => ({
