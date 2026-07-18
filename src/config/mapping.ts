@@ -1,4 +1,5 @@
 import type { StructuredActionData } from "../core/models/action";
+import type { PortableSpellManifest } from "../core/spell-resolution";
 
 export interface FieldDefinition {
   key: string;       // Internal simplified key (e.g., "str", "hp")
@@ -48,6 +49,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "巢穴动作": { key: "lair_actions", path: "items", type: "array" },
   "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
   "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
+  "法术清单": { key: "spellManifest", path: "spellManifest", type: "object" },
 
   // Lists / Traits
   "豁免熟练": { key: "saves", path: "system.abilities", type: "array" }, // Special handling in parser
@@ -125,6 +127,7 @@ export interface ParsedNPC {
   lair_actions?: any;
   regional_effects?: any;
   spellcasting?: any;
+  spellManifest?: PortableSpellManifest;
 
   structuredActions?: {
     特性?: StructuredActionData[];

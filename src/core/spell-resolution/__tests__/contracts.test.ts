@@ -5,6 +5,7 @@ import {
   hashManagedProjection,
   hashManifest,
   validatePortableSpellManifest,
+  validatePortableSpellManifestStructure,
   type PortableSpellManifest,
 } from '..';
 
@@ -105,6 +106,62 @@ describe('portable spell manifest contract', () => {
 
     expect(RESOLVER_MODULE_ID).toBe('fvtt-json-generator-spell-resolver');
     expect(validatePortableSpellManifest(manifest, SOURCE)).toEqual({ ok: true, value: manifest });
+  });
+
+  test.each([
+    ['zero-length', 0, 0, ''],
+    ['unsafe-integer', Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER + 1, ''],
+  ])('rejects %s evidence at both structural and source-backed boundaries', (_label, start, end, quote) => {
+    const manifest = cloneAsUnknown(buildValidManifest());
+    manifest.spellcastingGroups[0].spellRefs[0].evidence = [{ start, end, quote }];
+
+    for (const result of [
+      validatePortableSpellManifestStructure(manifest),
+      validatePortableSpellManifest(manifest, SOURCE),
+    ]) {
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('Expected evidence validation to fail.');
+      expect(result.findings).toContainEqual(expect.objectContaining({
+        code: 'INVALID_EVIDENCE',
+        path: '/spellcastingGroups/0/spellRefs/0/evidence/0',
+        blocking: true,
+      }));
+    }
+  });
+
+  test.each([
+    'Compendium.dnd5e.spells.Item.abcdefghijklmnop',
+    'Actor.abcdefghijklmnop.Item.ponmlkjihgfedcba',
+    'Item.abcdefghijklmnop',
+  ])('rejects target-world identifier text at the exact manifest paths: %s', (targetIdentifier) => {
+    const manifest = cloneAsUnknown(buildValidManifest());
+    const ref = manifest.spellcastingGroups[0].spellRefs[0];
+    ref.originalName = targetIdentifier;
+    ref.evidence = [{ start: 0, end: targetIdentifier.length, quote: targetIdentifier }];
+
+    const result = validatePortableSpellManifestStructure(manifest);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('Expected target identifier validation to fail.');
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'FORBIDDEN_TARGET_WORLD_IDENTIFIER',
+      path: '/spellcastingGroups/0/spellRefs/0/originalName',
+      blocking: true,
+    }));
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'FORBIDDEN_TARGET_WORLD_IDENTIFIER',
+      path: '/spellcastingGroups/0/spellRefs/0/evidence/0/quote',
+      blocking: true,
+    }));
+  });
+
+  test('allows ordinary item and compendium prose without UUID syntax', () => {
+    const manifest = cloneAsUnknown(buildValidManifest());
+    const prose = 'An item may appear in a compendium without naming a destination document.';
+    const ref = manifest.spellcastingGroups[0].spellRefs[0];
+    ref.originalName = prose;
+    ref.evidence = [{ start: 0, end: prose.length, quote: prose }];
+
+    expect(validatePortableSpellManifestStructure(manifest).ok).toBe(true);
   });
 
   test('rejects an unknown schema version rather than coercing it', () => {

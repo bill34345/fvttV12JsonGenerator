@@ -4,6 +4,7 @@ import { i18n } from '../mapper/i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import { StructuredActionParser } from './structuredAction';
 import type { StructuredActionData } from '../models/action';
+import { validatePortableSpellManifestStructure } from '../spell-resolution';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -143,7 +144,14 @@ export class YamlParser {
     const processedValue = this.processValue(mapping, value);
 
     // Determine target location in ParsedNPC
-    if (path === 'name') {
+    if (path === 'spellManifest') {
+      const validation = validatePortableSpellManifestStructure(processedValue);
+      if (!validation.ok) {
+        const stableFindings = validation.findings.map((finding) => `${finding.code} ${finding.path}`).join('; ');
+        throw new Error(`InvalidSpellManifest: ${stableFindings}`);
+      }
+      result.spellManifest = validation.value;
+    } else if (path === 'name') {
       result.name = processedValue;
     } else if (path === 'type') {
       // ignore, fixed to npc
@@ -341,6 +349,7 @@ export class YamlParser {
       '成功效果',
       '特殊效果',
       'specialEffects',
+      'spellcastingFeatureKey',
     ]);
 
     return value.some((entry) => {

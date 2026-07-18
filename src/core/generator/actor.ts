@@ -11,6 +11,14 @@ import { spellsMapper } from '../mapper/spells';
 import { i18n } from '../mapper/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';
 import {
+  ActorSpellManifestError,
+  assertNoOrphanedSpellcastingFeatureLinks,
+  assertPortableActorHasNoTargetWorldIdentifiers,
+  assertSpellManifestTarget,
+  buildActorSpellManifest,
+  markSpellcastingFeatureItem,
+} from './actor-spell-manifest';
+import {
   buildHeavyHitAutomationSpec,
   buildHeavyHitMacroCommand,
 } from './heavyHitAutomation';
@@ -236,10 +244,12 @@ export class ActorGenerator {
       return actor;
     }
 
-    return new ActorLocalizer({
+    const localizedActor = await new ActorLocalizer({
       translationService: this.translationService,
       route,
     }).localize(actor);
+    assertPortableActorHasNoTargetWorldIdentifiers(localizedActor);
+    return localizedActor;
   }
 
   private loadGoldenMaster() {
@@ -254,6 +264,7 @@ export class ActorGenerator {
   }
 
   public generate(parsed: ParsedNPC, options: GenerateOptions = {}): any {
+    assertSpellManifestTarget(parsed.spellManifest, this.fvttVersion);
     this.route = options.route ?? 'chinese';
     // Clone Base
     const actor = this.goldenMaster 
@@ -497,7 +508,7 @@ export class ActorGenerator {
     }
 
     // Spellcasting
-    if (parsed.spellcasting) {
+    if (parsed.spellcasting && !parsed.spellManifest) {
       if (options.spellcastingMode === 'description') {
         const lines = this.extractSpellcastingLines(parsed.spellcasting);
         if (lines.length > 0) {
@@ -509,11 +520,17 @@ export class ActorGenerator {
     }
 
     actor.items = newItems;
+    if (parsed.spellManifest) {
+      buildActorSpellManifest(actor, parsed.spellManifest, this.fvttVersion);
+    } else {
+      assertNoOrphanedSpellcastingFeatureLinks(actor);
+    }
     this.applyTemporaryOverrideTargetEffects(actor);
     this.effectProfileApplier.apply(actor, this.effectProfile);
 
     this.applyTokenSize(actor);
     applyActorTargetMetadata(actor, this.fvttVersion);
+    assertPortableActorHasNoTargetWorldIdentifiers(actor);
 
     return actor;
   }
@@ -819,7 +836,19 @@ export class ActorGenerator {
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive',
     activityContext: ActivityGenerationContext,
   ): void {
+    if (action.spellcastingFeatureKey && activationType !== 'passive') {
+      throw new ActorSpellManifestError(
+        'SPELL_FEATURE_LINK_INVALID_SECTION',
+        'spellcastingFeatureKey is allowed only on a passive trait item.',
+      );
+    }
     const effectiveActivationType = action.activation?.explicit ? action.activation.type : activationType;
+    if (action.spellcastingFeatureKey && effectiveActivationType !== 'passive') {
+      throw new ActorSpellManifestError(
+        'SPELL_FEATURE_LINK_INVALID_ACTIVATION',
+        'Linked spellcasting features must remain passive.',
+      );
+    }
     const activityData = this.structuredActionToActivityData(action);
     const activities = this.activityGenerator.generate(activityData, activityContext);
     const item = this.createItemFromAction(
@@ -859,6 +888,10 @@ export class ActorGenerator {
 
     if (action.perLongRest) {
       item.system.uses = { value: action.perLongRest, max: action.perLongRest, per: 'lr' };
+    }
+
+    if (action.spellcastingFeatureKey) {
+      markSpellcastingFeatureItem(item, action.spellcastingFeatureKey);
     }
 
     items.push(item);

@@ -60,12 +60,20 @@ export class StructuredActionParser {
       : undefined;
     const explicitActivationType = this.normalizeActivationType(record['激活'] ?? record['activationType'] ?? activationRecord?.['type']);
     const activationType = explicitActivationType ?? this.inferActivationType(sectionName);
+    const spellcastingFeatureKey = this.parseSpellcastingFeatureKey(record['spellcastingFeatureKey']);
+    if (spellcastingFeatureKey && sectionName !== '特性') {
+      throw new Error('InvalidSpellcastingFeatureLinkSection: spellcastingFeatureKey is allowed only in the 特性 section.');
+    }
+    if (spellcastingFeatureKey && explicitActivationType) {
+      throw new Error('InvalidSpellcastingFeatureActivation: linked spellcasting features must remain passive.');
+    }
     const subActions = this.parseSubActions((entry as Record<string, unknown>)['子活动']);
     const embeddedEffects = this.parseEmbeddedEffects((entry as Record<string, unknown>)['内嵌效果']);
 
     const action: StructuredActionData = {
       name: this.extractName(String(name)),
       englishName: this.extractEnglishName(String(name)),
+      spellcastingFeatureKey,
       type: this.normalizeType(String(type)),
       activation: activationType ? {
         type: activationType,
@@ -131,6 +139,14 @@ export class StructuredActionParser {
     }
 
     return action;
+  }
+
+  private parseSpellcastingFeatureKey(value: unknown): string | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new Error('InvalidSpellcastingFeatureKey: spellcastingFeatureKey must be a non-empty string.');
+    }
+    return value.trim();
   }
 
   private inferActivationType(sectionName: string): ActivityActivationType | null {

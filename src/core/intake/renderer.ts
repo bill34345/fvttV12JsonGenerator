@@ -132,12 +132,16 @@ function stableIdPart(value: string): string {
 }
 
 function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<string, unknown> {
-  return renderFeature({
-    name: group.featureName,
-    englishName: group.featureEnglishName,
-    description: group.description,
-    activityType: 'utility',
-  }, 'trait');
+  return {
+    ...renderFeature({
+      name: group.featureName,
+      englishName: group.featureEnglishName,
+      description: group.description,
+      activityType: 'utility',
+    }, 'trait'),
+    // Source-derived machine linkage; it does not alter the visible description.
+    spellcastingFeatureKey: group.groupId,
+  };
 }
 
 function renderFeature(feature: CanonicalFeature, section: string): Record<string, unknown> {

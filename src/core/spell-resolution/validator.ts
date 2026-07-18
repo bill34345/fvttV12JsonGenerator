@@ -6,6 +6,7 @@ import type {
   SpellResolutionFinding,
 } from './types';
 import { listUnknownManifestProperties } from './schema';
+import { findForbiddenTargetWorldIdentifiers } from './forbidden-target-identifier';
 
 const ABILITIES = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
 const METHODS = new Set(['innate', 'prepared', 'pact', 'at-will']);
@@ -16,6 +17,22 @@ const RESTRICTION_KINDS = new Set(['target', 'summoning', 'casting', 'other']);
 type RecordValue = Record<string, unknown>;
 
 export function validatePortableSpellManifest(manifest: unknown, source: string): ManifestValidationResult {
+  return validateManifest(manifest, source);
+}
+
+/**
+ * Validates the portable schema without claiming access to the original source.
+ *
+ * Evidence offsets in a rendered Markdown file still refer to the pre-render Intake
+ * source. This boundary therefore validates exact keys, types, ranges, and the
+ * UTF-16 quote span length, while `validatePortableSpellManifest` remains the
+ * stronger source-backed check that verifies the source hash and quote contents.
+ */
+export function validatePortableSpellManifestStructure(manifest: unknown): ManifestValidationResult {
+  return validateManifest(manifest);
+}
+
+function validateManifest(manifest: unknown, source?: string): ManifestValidationResult {
   const findings: SpellResolutionFinding[] = [];
   const usedIds = new Map<string, string>();
   const logicalSpells = new Map<string, string>();
@@ -37,6 +54,13 @@ export function validatePortableSpellManifest(manifest: unknown, source: string)
   for (const unknown of listUnknownManifestProperties(manifest)) {
     addFinding('UNKNOWN_PROPERTY', unknown.path, `法术清单不允许未知字段 ${unknown.key}。`);
   }
+  for (const forbidden of findForbiddenTargetWorldIdentifiers(manifest)) {
+    addFinding(
+      forbidden.code,
+      forbidden.path,
+      `便携法术清单不得包含目标世界文档标识符 ${forbidden.match}。`,
+    );
+  }
 
   if (manifest.schemaVersion !== 1) {
     addFinding('UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion', '不支持的法术清单 schemaVersion；当前只接受数字 1。');
@@ -50,7 +74,7 @@ export function validatePortableSpellManifest(manifest: unknown, source: string)
 
   if (typeof manifest.sourceSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(manifest.sourceSha256)) {
     addFinding('INVALID_SOURCE_SHA256', '/sourceSha256', 'sourceSha256 必须是 64 位小写十六进制 SHA-256。');
-  } else {
+  } else if (source !== undefined) {
     const expected = createHash('sha256').update(source).digest('hex');
     if (manifest.sourceSha256 !== expected) {
       addFinding('SOURCE_HASH_MISMATCH', '/sourceSha256', 'sourceSha256 与提交的源文本不一致。');
@@ -76,7 +100,7 @@ export function validatePortableSpellManifest(manifest: unknown, source: string)
 function validateGroup(
   groupValue: unknown,
   groupIndex: number,
-  source: string,
+  source: string | undefined,
   usedIds: Map<string, string>,
   logicalSpells: Map<string, string>,
   addFinding: FindingWriter,
@@ -115,7 +139,7 @@ function validateGroup(
 function validateRef(
   refValue: unknown,
   path: string,
-  source: string,
+  source: string | undefined,
   usedIds: Map<string, string>,
   logicalSpells: Map<string, string>,
   addFinding: FindingWriter,
@@ -206,7 +230,7 @@ function validateSharedUses(refs: unknown[], groupPath: string, addFinding: Find
   }
 }
 
-function validateRestrictions(value: unknown, path: string, source: string, addFinding: FindingWriter): void {
+function validateRestrictions(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter): void {
   if (!Array.isArray(value)) {
     addFinding('INVALID_RESTRICTIONS', path, 'restrictions 必须是数组。');
     return;
@@ -232,7 +256,7 @@ function validateRestrictions(value: unknown, path: string, source: string, addF
   });
 }
 
-function validateEvidenceArray(value: unknown, path: string, source: string, addFinding: FindingWriter): void {
+function validateEvidenceArray(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter): void {
   if (!Array.isArray(value) || value.length === 0) {
     addFinding('MISSING_EVIDENCE', path, '每个法术或限制都必须至少有一条证据。');
     return;
@@ -240,18 +264,27 @@ function validateEvidenceArray(value: unknown, path: string, source: string, add
   value.forEach((entry, index) => validateEvidence(entry, `${path}/${index}`, source, addFinding));
 }
 
-function validateEvidence(value: unknown, path: string, source: string, addFinding: FindingWriter): void {
+function validateEvidence(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter): void {
   if (!isRecord(value)
-    || !Number.isInteger(value.start)
-    || !Number.isInteger(value.end)
+    || !Number.isSafeInteger(value.start)
+    || !Number.isSafeInteger(value.end)
     || (value.start as number) < 0
-    || (value.end as number) < (value.start as number)
-    || (value.end as number) > source.length
-    || typeof value.quote !== 'string') {
+    || (value.end as number) <= (value.start as number)
+    || typeof value.quote !== 'string'
+    || value.quote.length === 0) {
     addFinding('INVALID_EVIDENCE', path, '证据范围必须是源文本内有效的 UTF-16 整数区间。');
     return;
   }
   const evidence = value as unknown as EvidenceRef;
+  if (evidence.quote.length !== evidence.end - evidence.start) {
+    addFinding('INVALID_EVIDENCE_QUOTE_LENGTH', path, '证据 quote 的 UTF-16 长度必须与 end - start 一致。', [evidence]);
+    return;
+  }
+  if (source === undefined) return;
+  if (evidence.end > source.length) {
+    addFinding('INVALID_EVIDENCE', path, '证据范围必须位于原始源文本的 UTF-16 范围内。', [evidence]);
+    return;
+  }
   if (source.slice(evidence.start, evidence.end) !== evidence.quote) {
     addFinding('EVIDENCE_MISMATCH', path, '证据摘录与源文本 UTF-16 范围不完全一致。', [evidence]);
   }

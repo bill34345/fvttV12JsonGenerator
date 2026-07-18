@@ -163,6 +163,8 @@ export interface SpecialEffect {
 export interface StructuredActionData {
   name: string;
   englishName?: string;
+  /** Stable source-derived bridge to a portable spell manifest feature. */
+  spellcastingFeatureKey?: string;
   type: ActivityType;
   activation?: {
     type: ActivityActivationType;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { FIELD_MAPPING } from '../../../config/mapping';
+import { validatePortableSpellManifest, validatePortableSpellManifestStructure } from '../../spell-resolution';
 import { YamlParser } from '../yaml';
 
 function keyFor(internalKey: string): string {
@@ -157,5 +158,79 @@ ${keyFor('cr')}: 1/2
     expect(traits?.[1]?.activation?.explicit).toBeUndefined();
     expect(actions?.[0]?.activation?.type).toBe('action');
     expect(actions?.[0]?.activation?.explicit).toBeUndefined();
+  });
+
+  it('maps and preserves only a strictly validated portable spell manifest', () => {
+    const markdown = readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8');
+    const result = parser.parse(markdown);
+
+    expect(result.spellManifest).toEqual({
+      schemaVersion: 1,
+      manifestId: 'portable-caster-spells',
+      sourceSha256: '0'.repeat(64),
+      rulesPreference: '2024',
+      spellcastingGroups: [{
+        groupId: 'innate-wisdom',
+        featureItemKey: 'innate-wisdom-feature',
+        ability: 'wis',
+        saveDc: 13,
+        spellRefs: [{
+          refId: 'mage-armor',
+          identifier: 'mage-armor',
+          originalName: 'Mage Armor',
+          englishName: 'Mage Armor',
+          aliases: [],
+          method: 'innate',
+          restrictions: [],
+          evidence: [{ start: 0, end: 10, quote: 'Mage Armor' }],
+        }],
+      }],
+    });
+    expect(result.structuredActions?.['特性']?.[1]?.spellcastingFeatureKey).toBe('innate-wisdom-feature');
+  });
+
+  it('does not pretend rendered Markdown is the raw evidence source', () => {
+    const markdown = readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8');
+    const result = parser.parse(markdown);
+
+    expect(validatePortableSpellManifestStructure(result.spellManifest).ok).toBe(true);
+    const falselySourceBacked = validatePortableSpellManifest(result.spellManifest, markdown);
+    expect(falselySourceBacked.ok).toBe(false);
+    if (!falselySourceBacked.ok) {
+      expect(falselySourceBacked.findings).toContainEqual(expect.objectContaining({ code: 'SOURCE_HASH_MISMATCH' }));
+    }
+  });
+
+  it('fails closed when the portable manifest has structurally invalid evidence', () => {
+    const markdown = readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8')
+      .replace('end: 10', 'end: 11');
+
+    expect(() => parser.parse(markdown)).toThrow('INVALID_EVIDENCE_QUOTE_LENGTH');
+  });
+
+  it.each([
+    ['a zero-length evidence span', (markdown: string) => markdown
+      .replace('start: 0', 'start: 10')
+      .replace('quote: Mage Armor', "quote: ''")],
+    ['unsafe-integer evidence offsets', (markdown: string) => markdown
+      .replace('start: 0', 'start: 9007199254740992')
+      .replace('end: 10', 'end: 9007199254740992')
+      .replace('quote: Mage Armor', "quote: ''")],
+  ])('fails closed for %s at the structure-only boundary', (_label, mutate) => {
+    const markdown = mutate(readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8'));
+
+    expect(() => parser.parse(markdown)).toThrow('INVALID_EVIDENCE');
+  });
+
+  it.each([
+    ['a non-trait section', (markdown: string) => markdown.replace('特性:', '动作:'), 'InvalidSpellcastingFeatureLinkSection'],
+    ['an explicitly active trait', (markdown: string) => markdown.replace(
+      'spellcastingFeatureKey: innate-wisdom-feature',
+      'spellcastingFeatureKey: innate-wisdom-feature\n    activationType: action',
+    ), 'InvalidSpellcastingFeatureActivation'],
+  ])('rejects spellcasting linkage on %s', (_label, mutate, code) => {
+    const markdown = mutate(readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8'));
+
+    expect(() => parser.parse(markdown)).toThrow(code);
   });
 });
