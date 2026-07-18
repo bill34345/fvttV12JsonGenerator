@@ -232,7 +232,7 @@ Only a complete plan may apply. The hydrator then:
 
 - embeds real selected Spell documents using public Foundry document APIs;
 - preserves target-world compendium provenance;
-- creates native dnd5e 5.3.3 Cast Activities on the group-linked source spellcasting feature and links them to the newly embedded Actor Spell documents, not to a resolver runtime API;
+- creates native dnd5e 5.3.3 Cast Activities on the group-linked source spellcasting feature; each Activity retains the selected target-world Compendium UUID, while its eagerly embedded native cache carries `flags.dnd5e.cachedFor` and `_stats.compendiumSource` exactly as dnd5e expects;
 - applies source-derived uses, casting level, attack bonus, save DC, material handling, and literal restrictions without modifying the source compendium Spell;
 - tags every managed Spell and Activity with manifest ID, group ID, ref ID, transaction ID, source UUID, and generated-content hash;
 - writes the final status and resolution report only after all changes succeed.
@@ -376,7 +376,7 @@ Use only the project-local `server-mirror`, never production.
    - Faerie Fire;
    - Invisibility;
    - Misty Step.
-5. Verify at-will versus independent 1/day uses, DC 12, attack +4, ignored material components, Mage Armor self-only, Conjure Animals limited to Giant Rat, and Eldritch Blast's two rays are preserved without invented effects.
+5. Verify at-will versus independent 1/day uses, DC 12, attack +4, ignored material components, and Mage Armor self-only through native fields. Verify Conjure Animals' Giant Rat qualifier and Eldritch Blast's two-ray instruction remain visible literal restrictions when the selected 2024 Spell schema cannot enforce them; the resolver must not pretend those restrictions were automated.
 6. Open the embedded Spell sheets and inspect actual native Activities.
 7. Execute at least one attack spell, one save spell, and one utility spell; inspect chat cards, uses, target/range, and resulting Actor state.
 8. Verify PHB wins an otherwise equivalent PHB/`spells24` duplicate.
