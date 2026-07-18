@@ -1,7 +1,7 @@
 # FVTT Target-World Spell Resolver Design
 
 **Date:** 2026-07-18
-**Status:** Approved in conversation; awaiting written-spec review
+**Status:** Approved by the user; implementation plan written
 **Target:** Foundry VTT `14.364`, dnd5e `5.3.3`
 
 ## Goal
@@ -453,10 +453,10 @@ No finding closes until both the generated data projection and live spell-use be
 
 ## Written-Spec Review Gate
 
-After this document is committed, the user reviews it once. On approval, use `superpowers:writing-plans` to create:
+The user approved this design and requested the implementation plan. `superpowers:writing-plans` produced:
 
 ```text
 docs/superpowers/plans/2026-07-18-fvtt-target-world-spell-resolver.md
 ```
 
-The implementation plan must use TDD, exact file paths, focused commits, the project-local Foundry mirror, and explicit mechanical plus semantic acceptance gates.
+The implementation plan uses TDD, exact file paths, focused commits, the project-local Foundry mirror, and explicit mechanical plus semantic acceptance gates.
