@@ -137,8 +137,61 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | PROD-003 | P2 | closed | The user-authorized authenticated Chrome crawl completed without exporting credentials; its initially rejected semantic sample was repaired under SEM-006 and SEM-007 and rerun. | In-place Chrome session; no cookie/credential inspection or export; 54 discovered / 37 crawled topics / 47 statblocks / zero pipeline failures; 47 CLI regenerations and 47/47 verifiers; expanded live semantic projections and aggregate gate pass. |
 | PROD-004 | P2 | closed | The former acceptance corpus was too narrow to justify broad parser/generalization confidence. | The dated 19-category corpus matrix names real fixtures/tests, target/profile, semantic projection, close/unrelated controls, and outcomes; its focused 148-test run and 738-test aggregate gate pass while runtime/external gaps remain excluded. |
 | PROD-005 | P2 | closed | The 2026-07-11 88-ID production snapshot was mistakenly promoted into a current completion blocker after the 2026-07-12 user-directed module cleanup changed the intended state. | Chronology audit preserves the 88-ID reproduction failure as historical evidence, records 79 only as the last verified local baseline, makes no unverified current production-count claim, and requires a fresh inventory plus explicit scope before any future production coexistence audit. Closure is a scope/report correction, not a compatibility Pass. |
+| SPELL-001 | P1 | open | Rat Warlock's AI Intake acceptance is false-green for functional spellcasting: the current Actor retains prose but has no portable ten-spell resolver manifest, no embedded resolved Spell items, and no pending resolver state. | The Task 1 RED acceptance test records the exact absent-manifest failure. Closure requires a portable manifest, all-or-nothing Actor-level hydration with rollback, and project-local Foundry runtime acceptance under the exact target schema. |
 
 ## Progress
+
+### 2026-07-19 Spell Resolver Task 1 Execution Note
+
+The following pre-edit baseline was captured before Task 1 edited any project file. The `.ruler/AGENTS.md` and `AGENTS.md` diffs contain user-owned local Foundry/hardening routing hunks. They must remain byte-for-byte intact except for the later appended resolver hard gate; the BaileyWiki guide and crawl directory remain unrelated and untouched.
+
+```text
+git status --short
+ M .ruler/AGENTS.md
+ M AGENTS.md
+?? docs/baileywiki-mass-edit-guide.zh-CN.md
+?? "obsidian/dnd\346\225\260\346\215\256\350\275\254fvttjson/crawls/"
+```
+
+```diff
+git diff -- .ruler/AGENTS.md AGENTS.md
+@@ -27,6 +27,13 @@
+ +## Long-Running Project Hardening Program
+ +
+ +- For the remediation program started on 2026-07-15, read and maintain `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md` before changing code.
+ +- Treat that ExecPlan as the authoritative finding ledger, progress record, decision log, evidence index, and cross-session recovery document. Chat summaries, Goal text, memories, and checkpoints are supporting context only.
+ +- At every stopping point, update the ExecPlan's progress, discoveries, decisions, finding states, verification evidence, and exact remaining work.
+ +- Do not close a finding until both mechanical verification and semantic acceptance are recorded. Continue to the next authorized milestone without asking for a generic next step; pause only for a material product choice, new authority, irreversible action, credentials, or an external-state dependency.
+ +
+@@ -105,6 +112,15 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
+ +- Local Foundry v14 application root: `.local/foundry-v14/app/14.364`.
+ +- Local Foundry v14 server entry: `.local/foundry-v14/app/14.364/main.js`.
+ +- Local Foundry v14 test data path: `.local/foundry-v14/data/server-mirror`.
+ +- Local Foundry v14 test modules: `.local/foundry-v14/data/server-mirror/Data/modules`.
+ +- Local Foundry v14 test systems: `.local/foundry-v14/data/server-mirror/Data/systems`.
+ +- Local Foundry v14 test worlds: `.local/foundry-v14/data/server-mirror/Data/worlds`.
+ +- For local Foundry runtime or module work, use the project-local `server-mirror` paths above first; do not rediscover them by scanning the machine unless a listed path is missing or the user asks for a fresh inventory.
+ +- `C:\Users\Administrator\AppData\Local\FoundryVTT` is the desktop-default data shell on this machine, not the populated project test mirror; as last verified on 2026-07-14, its `Data/modules` contained no installed modules.
+ +- The project-local mirror is not the production server. Do not inspect or modify production merely because a task refers to "local Foundry", "FVTT", or "mods".
+
+The same two hunks, at `AGENTS.md` offsets `27` and `119`, had identical content.
+```
+
+**RED evidence — `SPELL-001` (2026-07-19):** `bun test src/core/intake/__tests__/rat-warlock-spell-baseline.test.ts` exited 1 after loading the current spell database. The intake flow produced one candidate Actor, then failed at the intended first functional assertion:
+
+```text
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+at src/core/intake/__tests__/rat-warlock-spell-baseline.test.ts:115:22
+```
+
+The absent value was `actor.flags?.["fvtt-json-generator-spell-resolver"]?.spellManifest`. This is the expected RED baseline: description-only spellcasting cannot satisfy functional spell resolution. No production resolver implementation was added, so no GREEN result is claimed for `SPELL-001`.
+
+**2026-07-19 review correction:** The Rat Warlock helper now returns `spellResolution` directly from the actual intake result through the narrow temporary bridge needed before Task 9 publishes that field, and the test asserts it directly without a masking result cast. The baseline uses the approved stable module ID `fvtt-json-generator-spell-resolver`. The focused rerun remains intentionally RED at the first manifest assertion (`Received: undefined`, line 116; `0 pass`, `1 fail`, exit 1), proving this correction did not weaken or move the functional acceptance boundary.
+
+**Exact next action:** Begin Spell Resolver Task 2 contract RED tests and manifest types; keep `SPELL-001` open.
 
 - [x] (2026-07-16) Reproduced the real compact-Chinese plaintext failure: raw Lurker yields zero creatures with exit 0; minimally marked input mechanically generates but semantically becomes AC 20, HP 332, six abilities at 10, missing core fields, merged Multiattack/Claw, and biography-only traits while both audit layers remain green.
 - [x] (2026-07-16) User approved a parallel AI-first intake pipeline, strict failure policy, per-field evidence IR, independent review plus one repair, ambiguity-only human review, CLI+Web delivery, monster-only v1, TXT/MD paste/upload, single+collection input, and bounded real OpenAI plus local Foundry acceptance.
@@ -198,7 +251,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] Milestone 9: Reconcile acceptance documentation and close authorized product gaps (DOC-002, PROD-001 through PROD-005).
 - [x] Milestone 10: Run final repository and semantic acceptance, write retrospective, and close the program Goal.
 
-**Exact next action:** Finish the feature branch with task-scoped staging/commit only. Preserve the user-owned `AGENTS.md`, `.ruler/AGENTS.md`, BaileyWiki guide, and crawl artifacts; keep ignored AI/OAuth/browser/runtime evidence local and production untouched.
+**Exact next action:** Begin Spell Resolver Task 2 contract RED tests and manifest types; keep `SPELL-001` open.
 
 ## Milestone 1: Repair Semantic AC Extraction and Verification
 
