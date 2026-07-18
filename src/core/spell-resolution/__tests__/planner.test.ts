@@ -6,10 +6,23 @@ import {
   DEFAULT_SPELL_RESOLUTION_CONFIGURATION,
   logicalSpellRefKey,
   planSpellHydration,
+  type HydrationPreflight,
   type PortableSpellManifest,
   type SavedSpellMapping,
   type SpellCandidateMetadata,
 } from '..';
+
+function requireReady(result: HydrationPreflight): Extract<HydrationPreflight, { status: 'ready' }> {
+  expect(result.status).toBe('ready');
+  if (result.status !== 'ready') throw new Error(`Expected ready preflight, received ${result.status}`);
+  return result;
+}
+
+function requireBlocked(result: HydrationPreflight): Exclude<HydrationPreflight, { status: 'ready' }> {
+  expect(result.status).not.toBe('ready');
+  if (result.status === 'ready') throw new Error('Expected blocked preflight, received ready');
+  return result;
+}
 
 const SOURCE = 'Fireball and Cure Wounds';
 
@@ -70,7 +83,7 @@ describe('all-or-nothing hydration preflight', () => {
     expect(first.status).toBe('ready');
     expect(second.status).toBe('ready');
     expect(first.status === 'ready' && first.plan.selections).toHaveLength(2);
-    expect(first.status === 'ready' && second.status === 'ready' && first.plan.planHash).toBe(second.plan.planHash);
+    expect(requireReady(first).plan.planHash).toBe(requireReady(second).plan.planHash);
     expect(first.report.sourceInventoryHash).toBe(hashSourceInventoryMetadata(input.candidates));
   });
 
@@ -91,7 +104,7 @@ describe('all-or-nothing hydration preflight', () => {
 
     expect(fresh.status).toBe('ready');
     expect(reused.status).toBe('ready');
-    expect(fresh.status === 'ready' && reused.status === 'ready' && fresh.plan.planHash).toBe(reused.plan.planHash);
+    expect(requireReady(fresh).plan.planHash).toBe(requireReady(reused).plan.planHash);
   });
 
   test('withholds the entire plan when one of two refs is missing', () => {
@@ -161,7 +174,7 @@ describe('all-or-nothing hydration preflight', () => {
 
     expect(result.status).toBe('needs_review');
     expect('plan' in result).toBe(false);
-    expect(result.findings.some((finding) => finding.code === 'STALE_SAVED_SELECTION')).toBe(true);
+    expect(requireBlocked(result).findings.some((finding) => finding.code === 'STALE_SAVED_SELECTION')).toBe(true);
     expect(result.report.results.find((entry) => entry.logicalRefKey === saved.logicalRefKey)?.status).toBe('needs_review');
   });
 
@@ -209,8 +222,8 @@ describe('all-or-nothing hydration preflight', () => {
     expect(first.status).toBe('ready');
     expect(reordered.status).toBe('ready');
     expect(edited.status).toBe('ready');
-    expect(first.status === 'ready' && reordered.status === 'ready' && first.plan.planHash).toBe(reordered.plan.planHash);
-    expect(first.status === 'ready' && edited.status === 'ready' && first.plan.planHash).not.toBe(edited.plan.planHash);
+    expect(requireReady(first).plan.planHash).toBe(requireReady(reordered).plan.planHash);
+    expect(requireReady(first).plan.planHash).not.toBe(requireReady(edited).plan.planHash);
   });
 
   test('includes configuration and manual decisions in the stable plan hash', () => {
@@ -221,7 +234,7 @@ describe('all-or-nothing hydration preflight', () => {
     const overwrite = plan({ manifest: manifest(), candidates, currentManagedProjection: projection, manualDecisions: [{ logicalRefKey: fireKey, decision: 'overwrite' }] });
     expect(keep.status).toBe('ready');
     expect(overwrite.status).toBe('ready');
-    expect(keep.status === 'ready' && overwrite.status === 'ready' && keep.plan.planHash).not.toBe(overwrite.plan.planHash);
+    expect(requireReady(keep).plan.planHash).not.toBe(requireReady(overwrite).plan.planHash);
     expect(keep.report.resolutionConfigHash).toBe(hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION));
   });
 
@@ -274,10 +287,10 @@ describe('all-or-nothing hydration preflight', () => {
 
     expect(oldPlan.status).toBe('ready');
     expect(newPlan.status).toBe('ready');
-    expect(oldPlan.status === 'ready' && newPlan.status === 'ready' && oldPlan.plan.planHash).not.toBe(newPlan.plan.planHash);
+    expect(requireReady(oldPlan).plan.planHash).not.toBe(requireReady(newPlan).plan.planHash);
     expect(stale.status).toBe('needs_review');
     expect('plan' in stale).toBe(false);
-    expect(stale.findings.some((finding) => finding.code === 'STALE_SOURCE_INVENTORY')).toBe(true);
+    expect(requireBlocked(stale).findings.some((finding) => finding.code === 'STALE_SOURCE_INVENTORY')).toBe(true);
   });
 
   test('fails closed on an invalid manifest without incidental TypeErrors', () => {
@@ -291,7 +304,7 @@ describe('all-or-nothing hydration preflight', () => {
     for (const sourceInventoryHash of [undefined, 'not-a-sha256', 'A'.repeat(64)]) {
       const result = planSpellHydration({ manifest: manifest(), candidates, sourceInventoryHash } as never);
       expect(result.status).toBe('incompatible');
-      expect(result.findings.some((finding) => finding.code === 'INVALID_SOURCE_INVENTORY_HASH')).toBe(true);
+      expect(requireBlocked(result).findings.some((finding) => finding.code === 'INVALID_SOURCE_INVENTORY_HASH')).toBe(true);
     }
   });
 
@@ -316,7 +329,7 @@ describe('all-or-nothing hydration preflight', () => {
       const result = plan(input as never);
       expect(result.status).toBe('needs_review');
       expect('plan' in result).toBe(false);
-      expect(result.findings.some((finding) => finding.code === 'MALFORMED_PREFLIGHT_INPUT' || finding.code === 'MALFORMED_CANDIDATE')).toBe(true);
+      expect(requireBlocked(result).findings.some((finding) => finding.code === 'MALFORMED_PREFLIGHT_INPUT' || finding.code === 'MALFORMED_CANDIDATE')).toBe(true);
     }
   });
 });

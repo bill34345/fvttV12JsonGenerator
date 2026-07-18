@@ -1,0 +1,10 @@
+{
+  "FVTTJSONSPELL.Settings.SourcePriority.Name": "Spell source priority",
+  "FVTTJSONSPELL.Settings.SourcePriority.Hint": "Ordered package and pack preferences used only after exact spell identity matching.",
+  "FVTTJSONSPELL.Settings.SavedMappings.Name": "Saved spell mappings",
+  "FVTTJSONSPELL.Settings.SavedMappings.Hint": "Internal concrete spell selections keyed by portable manifest references.",
+  "FVTTJSONSPELL.Settings.DebugLogging.Name": "Debug logging",
+  "FVTTJSONSPELL.Settings.DebugLogging.Hint": "Log source-index diagnostics in this client.",
+  "FVTTJSONSPELL.Settings.IndexMetadata.Name": "Spell source index metadata",
+  "FVTTJSONSPELL.Settings.IndexMetadata.Hint": "Internal hashes and package versions for the current destination spell inventory."
+}

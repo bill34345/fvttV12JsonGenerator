@@ -1,0 +1,31 @@
+{
+  "id": "fvtt-json-generator-spell-resolver",
+  "title": "FVTT JSON Generator Spell Resolver",
+  "description": "Resolves portable monster spell manifests against enabled destination-world Item compendia.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14.364",
+    "verified": "14.364",
+    "maximum": "14.364"
+  },
+  "esmodules": ["scripts/index.js"],
+  "styles": [{ "src": "styles/resolver.css" }],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.3.3",
+          "verified": "5.3.3",
+          "maximum": "5.3.3"
+        }
+      }
+    ]
+  },
+  "socket": false
+}

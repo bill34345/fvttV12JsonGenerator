@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import { hashManifest } from './hash';
+import { sha256 } from './sha256';
 import { DEFAULT_SPELL_RESOLUTION_CONFIGURATION, hashResolutionConfiguration, hashSourceInventoryMetadata, isSpellResolutionConfiguration, logicalSpellRefKey, resolveSpellRef } from './resolver';
 import type {
   HydrationPreflight,
@@ -238,10 +238,6 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (!isRecord(value)) return value;
   return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
-}
-
-function sha256(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
 }
 
 function hashCanonical(value: unknown): string {

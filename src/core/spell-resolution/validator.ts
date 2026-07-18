@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { EvidenceRef } from '../intake/types';
 import type {
   ManifestValidationResult,
@@ -6,6 +5,7 @@ import type {
   SpellResolutionFinding,
 } from './types';
 import { listUnknownManifestProperties } from './schema';
+import { sha256 } from './sha256';
 import { findForbiddenTargetWorldIdentifiers } from './forbidden-target-identifier';
 
 const ABILITIES = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
@@ -75,7 +75,7 @@ function validateManifest(manifest: unknown, source?: string): ManifestValidatio
   if (typeof manifest.sourceSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(manifest.sourceSha256)) {
     addFinding('INVALID_SOURCE_SHA256', '/sourceSha256', 'sourceSha256 必须是 64 位小写十六进制 SHA-256。');
   } else if (source !== undefined) {
-    const expected = createHash('sha256').update(source).digest('hex');
+    const expected = sha256(source);
     if (manifest.sourceSha256 !== expected) {
       addFinding('SOURCE_HASH_MISMATCH', '/sourceSha256', 'sourceSha256 与提交的源文本不一致。');
     }

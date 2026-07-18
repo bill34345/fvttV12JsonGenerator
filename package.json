@@ -26,6 +26,8 @@
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all",
     "foundry:lab": "bun run scripts/foundry-lab/cli.ts",
     "test:foundry-lab": "bun test scripts/foundry-lab/__tests__",
+    "build:spell-resolver": "bun run scripts/buildSpellResolver.ts",
+    "test:spell-resolver": "bun test src/core/spell-resolution src/foundry/monster-spell-resolver",
     "references": "bun run src/tools/referenceCache.ts"
   },
   "devDependencies": {

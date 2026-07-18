@@ -1,0 +1,10 @@
+{
+  "FVTTJSONSPELL.Settings.SourcePriority.Name": "法术来源优先级",
+  "FVTTJSONSPELL.Settings.SourcePriority.Hint": "仅在法术身份精确匹配后，按顺序应用包与合集来源偏好。",
+  "FVTTJSONSPELL.Settings.SavedMappings.Name": "已保存的法术映射",
+  "FVTTJSONSPELL.Settings.SavedMappings.Hint": "按便携清单引用保存的内部具体法术选择。",
+  "FVTTJSONSPELL.Settings.DebugLogging.Name": "调试日志",
+  "FVTTJSONSPELL.Settings.DebugLogging.Hint": "在当前客户端记录来源索引诊断。",
+  "FVTTJSONSPELL.Settings.IndexMetadata.Name": "法术来源索引元数据",
+  "FVTTJSONSPELL.Settings.IndexMetadata.Hint": "当前目标世界法术清单的内部哈希和包版本。"
+}

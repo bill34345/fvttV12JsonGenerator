@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import { listUnknownManifestProperties } from './schema';
+import { sha256 } from './sha256';
 import { RESOLVER_MODULE_ID, type PortableSpellManifest } from './types';
 
 const MANAGED_TOP_LEVEL_KEYS = [
@@ -159,10 +159,6 @@ function canonicalize(value: unknown, path: string[]): unknown {
 
 function compact(value: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
-}
-
-function sha256(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import { normalizeSpellIdentity } from './normalize';
+import { sha256 } from './sha256';
 import type {
   PortableSpellRef,
   SavedSpellMapping,
@@ -39,11 +39,11 @@ export function hashSourceInventoryMetadata(candidates: readonly SpellCandidateM
   const projected = [...candidates]
     .map(projectCandidateForHash)
     .sort((left, right) => canonicalStringify(left).localeCompare(canonicalStringify(right), 'en'));
-  return createHash('sha256').update(canonicalStringify(projected)).digest('hex');
+  return sha256(canonicalStringify(projected));
 }
 
 export function hashResolutionConfiguration(configuration: SpellResolutionConfiguration): string {
-  return createHash('sha256').update(canonicalStringify(projectConfiguration(configuration))).digest('hex');
+  return sha256(canonicalStringify(projectConfiguration(configuration)));
 }
 
 export function resolveSpellRef(input?: ResolveSpellRefInput): SpellResolutionResult {
