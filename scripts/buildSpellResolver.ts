@@ -12,6 +12,8 @@ const STATIC_FILES = [
   'lang/en.json',
   'lang/zh-CN.json',
   'styles/resolver.css',
+  'templates/report.hbs',
+  'templates/review.hbs',
 ] as const;
 const FORBIDDEN_TEXT = [
   /node:/i,

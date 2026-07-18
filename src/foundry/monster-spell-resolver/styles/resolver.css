@@ -2,3 +2,44 @@
   border-inline-start: 0.25rem solid var(--color-border-highlight-alt);
   padding-inline-start: 0.75rem;
 }
+
+.fvtt-json-generator-spell-resolver-review,
+.fvtt-json-generator-spell-resolver-report {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  max-block-size: min(75vh, 52rem);
+  gap: 0.75rem;
+}
+
+.fvtt-json-generator-spell-resolver-scroll {
+  min-block-size: 0;
+  max-block-size: min(65vh, 44rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.fvtt-json-generator-spell-resolver-break {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.fvtt-json-generator-spell-resolver-spell {
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 0.25rem;
+  margin-block: 0.75rem;
+  padding: 0.75rem;
+}
+
+.fvtt-json-generator-spell-resolver-spell fieldset,
+.fvtt-json-generator-spell-resolver-spell select {
+  max-inline-size: 100%;
+}
+
+.dialog:has(.fvtt-json-generator-spell-resolver-review) .form-footer {
+  flex: 0 0 auto;
+  position: sticky;
+  inset-block-end: 0;
+}

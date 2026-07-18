@@ -79,7 +79,13 @@ describe('Actor-local atomic hydration transaction', () => {
     expect(actor.managedActivities()).toHaveLength(2);
     expect(actor.foreignProjection()).toEqual(foreignBefore);
     const resolution = actor.flags[RESOLVER_MODULE_ID].spellResolution;
-    expect(resolution).toMatchObject({ status: 'hydrated', planHash: plan.planHash, manifestHash: plan.manifestHash });
+    expect(resolution).toMatchObject({
+      status: 'hydrated', planHash: plan.planHash, manifestHash: plan.manifestHash,
+      resolutionConfigHash: plan.resolutionConfigHash,
+      report: { selections: plan.selections.map((entry) => expect.objectContaining({
+        logicalRefKey: entry.logicalRefKey, selectedUuid: entry.uuid, rules: entry.rules, selectionOrigin: entry.selectionOrigin,
+      })) },
+    });
     expect(resolution.undoSnapshot).toBeDefined();
     expect(Array.isArray(resolution.report.literalRestrictions)).toBe(true);
 

@@ -144,7 +144,11 @@ describe('Foundry companion module contract', () => {
       'module.json',
       'scripts/index.js',
       'styles/resolver.css',
+      'templates/report.hbs',
+      'templates/review.hbs',
     ]);
+    expect(await readFile(resolve(second.outputDir, 'templates/review.hbs'), 'utf8')).toContain('{{{content}}}');
+    expect(await readFile(resolve(second.outputDir, 'templates/report.hbs'), 'utf8')).toContain('{{{content}}}');
     expect(second.archiveEntries[0]).not.toContain(RESOLVER_MODULE_ID);
     const bundle = await readFile(resolve(second.outputDir, 'scripts/index.js'), 'utf8');
     expect(bundle).not.toMatch(/node:crypto|sourceMappingURL|I:\\|\.local[\\/]|rat-warlock|OPENAI_API_KEY/i);

@@ -128,6 +128,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
       status: 'hydrated' as const,
       manifestHash: input.plan.manifestHash,
       planHash: input.plan.planHash,
+      resolutionConfigHash: input.plan.resolutionConfigHash,
       managedProjectionHash,
       transactionId,
       report: {
@@ -139,6 +140,8 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
           groupId: entry.groupId,
           refId: entry.refId,
           selectedUuid: entry.uuid,
+          rules: entry.rules,
+          selectionOrigin: entry.selectionOrigin,
           ...(entry.manualDecision === undefined ? {} : { manualDecision: entry.manualDecision }),
           ...(entry.manualDecision === 'keep' ? { protected: true } : {}),
         })),
