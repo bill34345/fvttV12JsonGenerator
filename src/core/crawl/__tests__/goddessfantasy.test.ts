@@ -162,7 +162,12 @@ describe('goddessfantasy board crawl modes', () => {
   test('full mode rebuilds records from the current scan range', async () => {
     const outDir = mkdtempSync(join(tmpdir(), 'gf-full-'));
     const requestedPrintTopics: string[] = [];
-    const server = createFixtureServer(['100', '101', '102'], requestedPrintTopics);
+    const server = createFixtureServer(
+      ['100', '101', '102'],
+      requestedPrintTopics,
+      new Set(),
+      new Map([['100', 40], ['101', 20]]),
+    );
 
     try {
       writeRecords(outDir, [recordFixture('100', 'Old One')]);
@@ -174,6 +179,7 @@ describe('goddessfantasy board crawl modes', () => {
         maxBoardPages: 1,
         contentType: 'monster',
         crawlMode: 'full',
+        concurrency: 3,
         requestDelayMs: 0,
       });
 
@@ -261,14 +267,17 @@ function createFixtureServer(
   topicIds: string[],
   requestedPrintTopics: string[],
   failingTopicIds = new Set<string>(),
+  responseDelaysMs = new Map<string, number>(),
 ): ReturnType<typeof Bun.serve> {
   return Bun.serve({
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       const url = new URL(request.url);
       if (url.search.includes('action=printpage')) {
         const topicId = url.search.match(/topic=(\d+)/)?.[1] ?? 'unknown';
         requestedPrintTopics.push(topicId);
+        const delayMs = responseDelaysMs.get(topicId) ?? 0;
+        if (delayMs > 0) await Bun.sleep(delayMs);
         if (failingTopicIds.has(topicId)) {
           return new Response('<html><body id="posts"></body></html>', {
             headers: { 'content-type': 'text/html; charset=utf-8' },

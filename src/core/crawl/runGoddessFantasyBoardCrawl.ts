@@ -230,7 +230,7 @@ export async function runGoddessFantasyBoardCrawl(
 
   const finalRecords = mode === 'incremental'
     ? mergeRecords(existingRecords, crawledRecords)
-    : crawledRecords;
+    : sortRecordsByTopicId(crawledRecords);
   const newTopicIds = dryRun
     ? [...dryRunNewTopicIds].sort()
     : crawledRecords.map((record) => record.topicId).sort();
@@ -380,8 +380,7 @@ function loadExistingRecords(path: string): CrawledTopicRecord[] {
 function mergeRecords(existingRecords: CrawledTopicRecord[], newRecords: CrawledTopicRecord[]): CrawledTopicRecord[] {
   const merged = [...existingRecords];
   const indexByTopic = new Map(merged.map((record, index) => [record.topicId, index]));
-  const orderedNewRecords = [...newRecords]
-    .sort((a, b) => Number.parseInt(a.topicId, 10) - Number.parseInt(b.topicId, 10));
+  const orderedNewRecords = sortRecordsByTopicId(newRecords);
 
   for (const record of orderedNewRecords) {
     const existingIndex = indexByTopic.get(record.topicId);
@@ -393,6 +392,17 @@ function mergeRecords(existingRecords: CrawledTopicRecord[], newRecords: Crawled
     merged.push(record);
   }
   return merged;
+}
+
+function sortRecordsByTopicId(records: CrawledTopicRecord[]): CrawledTopicRecord[] {
+  return [...records].sort((a, b) => {
+    const numericA = Number.parseInt(a.topicId, 10);
+    const numericB = Number.parseInt(b.topicId, 10);
+    if (Number.isFinite(numericA) && Number.isFinite(numericB) && numericA !== numericB) {
+      return numericA - numericB;
+    }
+    return a.topicId < b.topicId ? -1 : a.topicId > b.topicId ? 1 : 0;
+  });
 }
 
 function writeRecordsJsonl(path: string, records: CrawledTopicRecord[]): void {
