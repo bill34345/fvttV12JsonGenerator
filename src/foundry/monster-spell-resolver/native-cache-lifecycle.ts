@@ -75,7 +75,7 @@ export class NativeCacheLifecycleCapture {
         && documentId(effect?.parent) === itemId
         && (effect?.parent?.actor === actor || effect?.parent?.parent === actor)
         && (expectedUserId === undefined || userId === expectedUserId)
-        && effectChangesMatch(changed?.changes, expectedChanges))?.effect,
+        && nativeEffectChangesEqual(changed?.changes, expectedChanges))?.effect,
       `updateActiveEffect for ${itemId}/${effectId}`,
       timeoutMs,
     );
@@ -140,6 +140,11 @@ export function captureNativeCacheProjection(source: any): Record<string, any> {
   return projection;
 }
 
+export function nativeEffectChangesEqual(actual: unknown, expected: unknown): boolean {
+  return computeManagedSourceHash({ effects: [{ changes: actual }] })
+    === computeManagedSourceHash({ effects: [{ changes: expected }] });
+}
+
 export function assertNativeCacheProjectionMatches(expectedProjection: unknown, actualDocument: any): void {
   const expected = captureNativeCacheProjection(expectedProjection);
   const actual = captureNativeCacheProjection(actualDocument);
@@ -176,11 +181,6 @@ function readCompendiumSource(document: any): unknown {
 
 function documentId(document: any): string {
   return typeof document?.id === 'string' ? document.id : (typeof document?._id === 'string' ? document._id : '');
-}
-
-function effectChangesMatch(actual: unknown, expected: unknown): boolean {
-  return computeManagedSourceHash({ effects: [{ changes: actual }] })
-    === computeManagedSourceHash({ effects: [{ changes: expected }] });
 }
 
 function errorMessage(error: unknown): string {

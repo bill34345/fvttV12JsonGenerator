@@ -24,6 +24,7 @@ import {
   assertNativeCacheProjectionMatches,
   captureNativeCacheProjection,
   NativeCacheLifecycleCapture,
+  nativeEffectChangesEqual,
   resolverDocumentHooks,
   type ResolverDocumentHookBus,
 } from './native-cache-lifecycle';
@@ -619,6 +620,15 @@ async function waitForActivityCacheLifecycle(
     const enchantment = expectedEffects.find((effect: any) => effect?.type === 'enchantment'
       && beforeEffects.some((prior: any) => prior?._id === effect?._id));
     if (enchantment?._id) {
+      const currentCache = findItem(input.actor, documentId(beforeCache));
+      const currentEffects = Array.isArray(documentSource(currentCache).effects)
+        ? documentSource(currentCache).effects
+        : [];
+      const currentEnchantment = currentEffects.find((effect: any) => effect?._id === enchantment._id);
+      // Document.update() is a no-op when dnd5e's computed changes already
+      // equal the persisted enchantment. Foundry emits no updateActiveEffect
+      // hook in that case, and no delayed semantic mutation remains to await.
+      if (currentEnchantment && nativeEffectChangesEqual(currentEnchantment.changes, enchantment.changes)) return;
       const currentUserId = typeof (globalThis as any).game?.user?.id === 'string'
         ? (globalThis as any).game.user.id
         : undefined;

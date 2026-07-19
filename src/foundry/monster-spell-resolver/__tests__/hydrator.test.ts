@@ -224,6 +224,9 @@ describe('prepared Activity eager cache hydration', () => {
     actor.lifecycleHooks = hooks;
     actor.delayedEffectUpdateMs = 450;
     actor.emitConflictingEffectUpdateBeforeReal = true;
+    initial.cache.effects.find((effect: any) => effect.type === 'enchantment').changes = [
+      { key: 'system.description.value', mode: 5, value: 'manual prior projection' },
+    ];
     const journal = createHydrationJournal(actor);
     const startedAt = Date.now();
 
@@ -246,6 +249,10 @@ describe('prepared Activity eager cache hydration', () => {
     const hooks = new FakeHookBus();
     actor.lifecycleHooks = hooks;
     actor.delayedEffectUpdateMs = 450;
+    const existingCache = actor.items.find((item) => item.type === 'spell');
+    existingCache.effects.find((effect: any) => effect.type === 'enchantment').changes = [
+      { key: 'system.description.value', mode: 5, value: 'stale prior projection' },
+    ];
     const journal = createHydrationJournal(actor);
     const startedAt = Date.now();
 
@@ -257,6 +264,23 @@ describe('prepared Activity eager cache hydration', () => {
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
     expect(overwritten.cache.flags[RESOLVER_MODULE_ID].managed).toBe(true);
     expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+  });
+
+  test('accepts an exact existing enchantment when Foundry performs a no-op and emits no update hook', async () => {
+    const actor = new FakeActor(false);
+    await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    const hooks = new FakeHookBus();
+
+    const overwritten = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal: createHydrationJournal(actor), lifecycleHooks: hooks,
+    });
+
+    expect(overwritten.cache.effects.find((effect: any) => effect.type === 'enchantment').changes).toEqual([]);
+    expect(overwritten.cache.flags[RESOLVER_MODULE_ID].managed).toBe(true);
   });
 
   test('does not return before an exact createItem lifecycle event that arrives beyond the old stability window', async () => {
@@ -527,9 +551,12 @@ class FakeActor {
     const currentCache = this.findCache(activity.relativeUUID);
     const enchantment = currentCache?.effects?.find((effect: any) => effect.type === 'enchantment');
     if (!enchantment || !this.lifecycleHooks) return;
-    const emit = () => this.lifecycleHooks?.emit('updateActiveEffect', {
-      ...structuredClone(enchantment), id: enchantment._id, parent: currentCache,
-    }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
+    const emit = () => {
+      enchantment.changes = [];
+      this.lifecycleHooks?.emit('updateActiveEffect', {
+        ...structuredClone(enchantment), id: enchantment._id, parent: currentCache,
+      }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
+    };
     if (this.delayedEffectUpdateMs > 0) {
       const delay = this.delayedEffectUpdateMs;
       this.delayedEffectUpdateMs = 0;
