@@ -106,6 +106,20 @@ describe('prepared Activity eager cache hydration', () => {
     })).rejects.toThrow(/projection/i);
   });
 
+  test('removes only a transaction-created native duplicate after the second Activity lifecycle write', async () => {
+    const actor = new FakeActor(true);
+    actor.duplicateNativeCacheOnHashWrite = true;
+    const journal = createHydrationJournal(actor);
+
+    const result = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001', journal,
+    });
+
+    expect(actor.items.filter((item) => item.type === 'spell').map((item) => item.id)).toEqual([result.cache.id]);
+    expect(journal.nativeCaches.map((entry) => entry.id).sort()).toEqual(['DupNativeCache01', 'NativeHydrate001']);
+    expect(actor.calls).toContainEqual(['deleteEmbeddedDocuments', 'Item']);
+  });
+
   test.each(['missing', 'multiple'] as const)(
     'Keep rejects an invalid current manual structure with %s strictly owned cached Spells before writing',
     async (shape) => {
@@ -139,6 +153,56 @@ describe('prepared Activity eager cache hydration', () => {
       expect(actor.calls).toHaveLength(callCount);
     },
   );
+
+  test('Keep retries the exact dnd5e replacement cache when the old ID disappears during restore', async () => {
+    const actor = new FakeActor(false);
+    const initial = await hydrateManagedSelection({
+      actor,
+      manifest: oneSpellManifest(),
+      selection: selection(),
+      transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    initial.activity.name = 'Manual Light Name';
+    actor.replaceCacheBeforeFullUpdate = true;
+    const journal = createHydrationJournal(actor);
+
+    const kept = await hydrateManagedSelection({
+      actor,
+      manifest: oneSpellManifest(),
+      selection: selection(),
+      transactionId: 'Transaction00002',
+      journal,
+      preserveExisting: true,
+    });
+
+    expect(kept.activity.name).toBe('Manual Light Name');
+    expect(kept.cache.id).toBe('RegenKeepCache01');
+    expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    expect(journal.nativeCaches.map((entry) => entry.id)).toContain('RegenKeepCache01');
+    expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+  });
+
+  test('Keep waits for a delayed dnd5e replacement cache after the public getter resolves', async () => {
+    const actor = new FakeActor(false);
+    const initial = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    initial.activity.name = 'Delayed Manual Light';
+    actor.delayReplacementBeforeFullUpdate = true;
+    const journal = createHydrationJournal(actor);
+
+    const kept = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal, preserveExisting: true,
+    });
+
+    expect(kept.activity.name).toBe('Delayed Manual Light');
+    expect(kept.cache.id).toBe('DelayKeepCache01');
+    expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    expect(journal.nativeCaches.map((entry) => entry.id)).toContain('DelayKeepCache01');
+  });
 });
 
 class FakeActor {
@@ -146,6 +210,9 @@ class FakeActor {
   readonly type = 'npc';
   readonly calls: unknown[][] = [];
   getterCalls = 0;
+  replaceCacheBeforeFullUpdate = false;
+  delayReplacementBeforeFullUpdate = false;
+  duplicateNativeCacheOnHashWrite = false;
   flags: Record<string, any>;
   items: any[];
   sourcedItems = new Map<string, any[]>();
@@ -168,13 +235,54 @@ class FakeActor {
   async updateEmbeddedDocuments(name: string, updates: any[]) {
     this.calls.push(['updateEmbeddedDocuments', name]);
     for (const update of updates) {
-      const item = this.items.find((entry) => entry.id === update._id)!;
+      let item = this.items.find((entry) => entry.id === update._id)!;
       const activityEntry = Object.entries(update).find(([key]) => key.startsWith('system.activities.'));
       if (!activityEntry) {
+        if (this.delayReplacementBeforeFullUpdate && item?.type === 'spell' && update.type === 'spell') {
+          this.delayReplacementBeforeFullUpdate = false;
+          const relativeUUID = item.flags.dnd5e.cachedFor;
+          const feature = this.items[0]!;
+          const activity = [...feature.system.activities.values()].find((entry: any) => entry.relativeUUID === relativeUUID);
+          this.items = this.items.filter((entry) => entry !== item);
+          this.refreshSourcedItems();
+          setTimeout(() => {
+            const replacement = this.cacheSource(activity, 'DelayKeepCache01');
+            replacement.parent = this;
+            replacement.actor = this;
+            this.items.push(replacement);
+            this.refreshSourcedItems();
+          }, 50);
+          throw new Error(`undefined id [${update._id}] does not exist in the EmbeddedCollection collection.`);
+        }
+        if (this.replaceCacheBeforeFullUpdate && item?.type === 'spell' && update.type === 'spell') {
+          this.replaceCacheBeforeFullUpdate = false;
+          const relativeUUID = item.flags.dnd5e.cachedFor;
+          const feature = this.items[0]!;
+          const activity = [...feature.system.activities.values()].find((entry: any) => entry.relativeUUID === relativeUUID);
+          this.items = this.items.filter((entry) => entry !== item);
+          const replacement = this.cacheSource(activity, 'RegenKeepCache01');
+          replacement.parent = this;
+          replacement.actor = this;
+          this.items.push(replacement);
+          this.refreshSourcedItems();
+          throw new Error(`undefined id [${update._id}] does not exist in the EmbeddedCollection collection.`);
+        }
         const resolverFlags = update[`flags.${RESOLVER_MODULE_ID}`];
         if (resolverFlags) item.flags[RESOLVER_MODULE_ID] = structuredClone(resolverFlags);
         const preparedHash = update[`flags.${RESOLVER_MODULE_ID}.generatedContentHash`];
         if (preparedHash) item.flags[RESOLVER_MODULE_ID].generatedContentHash = preparedHash;
+        if (update.type === 'spell') {
+          const prepared = {
+            ...structuredClone(update),
+            id: update._id,
+            parent: this,
+            actor: this,
+            system: { ...structuredClone(update.system), preparedSpellDefault: 'dnd5e-normalized' },
+          };
+          this.items.splice(this.items.indexOf(item), 1, prepared);
+          item = prepared;
+          this.refreshSourcedItems();
+        }
         continue;
       }
       const [path, source] = activityEntry;
@@ -182,6 +290,15 @@ class FakeActor {
       const id = activityPath.shift()!;
       if (activityPath.join('.') === `flags.${RESOLVER_MODULE_ID}.generatedContentHash`) {
         item.system.activities.get(id).flags[RESOLVER_MODULE_ID].generatedContentHash = source;
+        if (this.duplicateNativeCacheOnHashWrite) {
+          this.duplicateNativeCacheOnHashWrite = false;
+          const activity = item.system.activities.get(id);
+          const duplicate = this.cacheSource(activity, 'DupNativeCache01');
+          duplicate.parent = this;
+          duplicate.actor = this;
+          this.items.push(duplicate);
+          this.refreshSourcedItems();
+        }
         continue;
       }
       if (activityPath.length) throw new Error(`Unsupported fake Activity update path: ${path}`);
@@ -212,6 +329,13 @@ class FakeActor {
     this.items.push(...created);
     this.refreshSourcedItems();
     return created;
+  }
+
+  async deleteEmbeddedDocuments(name: string, ids: string[]) {
+    this.calls.push(['deleteEmbeddedDocuments', name]);
+    this.items = this.items.filter((item) => !ids.includes(item.id));
+    this.refreshSourcedItems();
+    return ids;
   }
 
   installPreExistingUnownedCache() {

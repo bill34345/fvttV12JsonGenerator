@@ -159,8 +159,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   // dnd5e may have auto-created the cache synchronously as part of the public
   // feature update. Journal exact post-snapshot native provenance before the
   // failure injection point so rollback can never overlook an unowned Item.
-  let phaseCaches = cachesForActivity(input.actor, activity);
-  if (phaseCaches.length > 1) throw new Error('Multiple cached Spells claim the same prepared Activity.');
+  let phaseCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   let phaseCache = phaseCaches[0];
   if (phaseCache?.flags?.[RESOLVER_MODULE_ID] !== undefined
     && existingIdentity && existingIdentity.selectedUuid !== built.identity.selectedUuid) {
@@ -180,8 +179,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   ({ feature: preparedFeature, activity } = await refreshPreparedActivityHash(
     input.actor, preparedFeature, activity, built.identity,
   ));
-  phaseCaches = cachesForActivity(input.actor, activity);
-  if (phaseCaches.length > 1) throw new Error('Multiple cached Spells claim the same prepared Activity.');
+  phaseCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   phaseCache = phaseCaches[0];
   if (phaseCache && phaseCache.flags?.[RESOLVER_MODULE_ID] === undefined) {
     journalNativeCache(input, preparedFeature, activity, phaseCache, built.identity);
@@ -218,8 +216,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   if (nativeCacheSource === undefined) nativeCacheSource = await activity.getCachedSpellData();
   assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
 
-  const matchingCaches = cachesForActivity(input.actor, activity);
-  if (matchingCaches.length > 1) throw new Error('Multiple cached Spells claim the same prepared Activity.');
+  const matchingCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
 
   let cache = matchingCaches[0];
   if (cache) {
@@ -230,13 +227,9 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
         // dnd5e created this exact cache during the feature update; it was
         // shape-checked against the getter and only ownership was added.
       } else if (input.preserveExisting) {
-        const ownership = cacheOwnershipSource(cache, built.identity, input.transactionId, true);
-        await requireActorApi(input.actor, 'updateEmbeddedDocuments')('Item', [{
-          _id: documentId(cache),
-          [`flags.${RESOLVER_MODULE_ID}`]: ownership,
-        }]);
-        cache = findItem(input.actor, documentId(cache));
-        if (!cache) throw new Error('Kept cache disappeared while refreshing resolver metadata.');
+        // Defer the cache write until restoreKeptCache. dnd5e may replace the
+        // cached Spell while resolving its public getter, so an intermediate
+        // update by the old ID is not a stable operation.
       } else {
         const replacementId = documentId(cache);
         assertResolverDocumentOwnership(input.actor, preparedFeature, cache, built.identity, 'spell', activity.relativeUUID);
@@ -293,7 +286,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       throw new Error('Keep requires exactly one strictly owned cached Spell snapshot.');
     }
     cache = await restoreKeptCache(
-      input.actor,
+      input,
       preparedFeature,
       activity,
       cache,
@@ -303,6 +296,13 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     );
   }
 
+  // A dnd5e Activity lifecycle write can surface an additional native cache
+  // after the immediate public call. At this final boundary, retain the exact
+  // owned cache and remove only transaction-created, provenance-proven native
+  // duplicates before hashing and transaction validation.
+  const finalCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
+  const finalOwned = finalCaches.find((entry) => entry.flags?.[RESOLVER_MODULE_ID]?.managed === true);
+  if (finalOwned) cache = finalOwned;
   cache = await refreshPreparedSpellHash(input.actor, preparedFeature, activity, cache, built.identity);
 
   const result: HydratedSelection = {
@@ -355,6 +355,42 @@ function journalNativeCache(
   });
 }
 
+async function coalesceTransactionNativeCaches(
+  input: HydrateManagedSelectionInput,
+  feature: any,
+  activity: any,
+  identity: ResolverManagedIdentity,
+): Promise<any[]> {
+  // Yield once so public dnd5e lifecycle continuations triggered by the
+  // preceding embedded update become visible before the ownership decision.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const caches = cachesForActivity(input.actor, activity);
+  if (caches.length <= 1) return caches;
+  const owned: any[] = [];
+  const native: any[] = [];
+  for (const cache of caches) {
+    if (cache.flags?.[RESOLVER_MODULE_ID] !== undefined) {
+      assertResolverDocumentOwnership(input.actor, feature, cache, identity, 'spell', activity.relativeUUID);
+      owned.push(cache);
+      continue;
+    }
+    assertAdoptableNativeCache(
+      input.actor, feature, activity, cache, identity, input.journal.snapshotItemIds,
+    );
+    if (!input.journal.nativeCaches.some((entry) => entry.id === documentId(cache))) {
+      journalNativeCache(input, feature, activity, cache, identity);
+    }
+    native.push(cache);
+  }
+  if (owned.length > 1) throw new Error('Multiple resolver-owned cached Spells claim the same prepared Activity.');
+  const retained = owned[0] ?? [...native].sort((left, right) => documentId(left).localeCompare(documentId(right), 'en'))[0];
+  const deleteIds = caches.filter((cache) => cache !== retained).map(documentId);
+  if (deleteIds.length) await requireActorApi(input.actor, 'deleteEmbeddedDocuments')('Item', deleteIds);
+  const prepared = retained ? findItem(input.actor, documentId(retained)) : undefined;
+  if (!prepared) throw new Error('Retained native cache disappeared during exact duplicate cleanup.');
+  return [prepared];
+}
+
 async function refreshPreparedActivityHash(
   actor: any,
   feature: any,
@@ -395,7 +431,7 @@ async function refreshPreparedSpellHash(
 }
 
 async function restoreKeptCache(
-  actor: any,
+  input: HydrateManagedSelectionInput,
   feature: any,
   activity: any,
   cache: any,
@@ -403,27 +439,72 @@ async function restoreKeptCache(
   transactionId: string,
   snapshot: Record<string, any>,
 ): Promise<any> {
-  assertResolverDocumentOwnership(actor, feature, cache, identity, 'spell', activity.relativeUUID);
-  const cacheId = documentId(cache);
-  const source = structuredClone(snapshot);
-  source._id = cacheId;
-  delete source.id;
-  source.flags = isRecord(source.flags) ? source.flags : {};
-  source.flags.dnd5e = isRecord(source.flags.dnd5e) ? source.flags.dnd5e : {};
-  source.flags.dnd5e.cachedFor = activity.relativeUUID;
-  source.flags[RESOLVER_MODULE_ID] = resolverOwnershipFlags(identity, 'spell', transactionId);
-  source.flags[RESOLVER_MODULE_ID].protected = true;
-  source.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(source);
-
   // dnd5e 5.3.3 onUpdateActivities regenerates cached enchantment changes
   // for every Activity-id update. Keep therefore restores the strictly-owned
   // pre-write Spell source only after both the Activity body and prepared-hash
   // writes have completed, through the public Actor embedded-Item API.
-  await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [source]);
+  const actor = input.actor;
+  const current = await currentKeepCache(input, feature, activity, cache, identity);
+  const sourceFor = (cacheId: string) => {
+    const source = structuredClone(snapshot);
+    source._id = cacheId;
+    delete source.id;
+    source.flags = isRecord(source.flags) ? source.flags : {};
+    source.flags.dnd5e = isRecord(source.flags.dnd5e) ? source.flags.dnd5e : {};
+    source.flags.dnd5e.cachedFor = activity.relativeUUID;
+    source.flags[RESOLVER_MODULE_ID] = resolverOwnershipFlags(identity, 'spell', transactionId);
+    source.flags[RESOLVER_MODULE_ID].protected = true;
+    source.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(source);
+    return source;
+  };
+  let cacheId = documentId(current);
+  try {
+    await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [sourceFor(cacheId)]);
+  } catch (error) {
+    // A real dnd5e Cast getter can replace its cache after the getter Promise
+    // resolves. Retry exactly once against the freshly proven native/owned
+    // cache; never fall back to a name match or an arbitrary Spell.
+    const replacement = await currentKeepCache(input, feature, activity, current, identity);
+    const replacementId = documentId(replacement);
+    if (replacementId === cacheId) throw error;
+    cacheId = replacementId;
+    await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [sourceFor(cacheId)]);
+  }
   const restored = findItem(actor, cacheId);
   if (!restored) throw new Error('Kept cache disappeared while restoring its manual source.');
   assertResolverDocumentOwnership(actor, feature, restored, identity, 'spell', activity.relativeUUID);
   return restored;
+}
+
+async function currentKeepCache(
+  input: HydrateManagedSelectionInput,
+  feature: any,
+  activity: any,
+  prior: any,
+  identity: ResolverManagedIdentity,
+): Promise<any> {
+  let caches = cachesForActivity(input.actor, activity);
+  const deadline = Date.now() + 2000;
+  while (caches.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    caches = cachesForActivity(input.actor, activity);
+  }
+  if (caches.length !== 1) throw new Error('Keep requires exactly one current cached Spell while restoring manual content.');
+  const current = caches[0];
+  if (current.flags?.[RESOLVER_MODULE_ID] !== undefined) {
+    assertResolverDocumentOwnership(input.actor, feature, current, identity, 'spell', activity.relativeUUID);
+    return current;
+  }
+  assertAdoptableNativeCache(
+    input.actor, feature, activity, current, identity, input.journal.snapshotItemIds,
+  );
+  if (!input.journal.nativeCaches.some((entry: NativeCacheJournalEntry) => entry.id === documentId(current))) {
+    journalNativeCache(input, feature, activity, current, identity);
+  }
+  if (documentId(current) === documentId(prior)) {
+    throw new Error('Keep cache lost resolver ownership without a dnd5e replacement identity change.');
+  }
+  return current;
 }
 
 function assertPreparedHash(document: any, label: 'Activity' | 'Spell'): void {
