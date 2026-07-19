@@ -97,6 +97,7 @@ describe('Web AI monster intake job', () => {
   test('does not expose local report paths in registered downloadable deterministic reports', async () => {
     const provider = new WebRatWarlockProvider();
     (provider.ir.creature.spellcasting as any) = [null];
+    provider.repair = async () => structuredClone(provider.ir);
     const job = createJob('ai-monster-intake', 'test');
     await runJob(job, {
       type: 'ai-monster-intake',
@@ -108,6 +109,7 @@ describe('Web AI monster intake job', () => {
     const reportFiles = finished.files.filter((file) => /deterministic-report\.(?:json|md)$/u.test(file.fileName));
 
     expect(finished.status).toBe('needs_review');
+    expect((finished.summary?.creatures as any[])[0]?.calls.repair).toBe(1);
     expect(reportFiles).toHaveLength(2);
     for (const file of reportFiles) {
       const content = await Bun.file(file.path).text();
