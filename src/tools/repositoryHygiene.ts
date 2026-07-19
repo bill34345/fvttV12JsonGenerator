@@ -34,6 +34,11 @@ const RULE_MESSAGES: Record<RepositoryHygieneRule, string> = {
   'unclassified-root-scratch': 'Root scratch/output paths must be promoted to a named source, fixture, tool, or documentation path.',
 };
 
+// anti-overfit: allow explicit-exception - Task 11 requires this CLI-generated Actor to remain tracked as the audited acceptance artifact.
+const TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS = new Set([
+  'obsidian/dnd数据转fvttjson/output/warlock-of-the-rat-god.json',
+]);
+
 export function inspectTrackedArtifactPaths(paths: string[]): RepositoryHygieneFinding[] {
   const findings: RepositoryHygieneFinding[] = [];
   for (const rawPath of paths) {
@@ -94,6 +99,7 @@ export function executeRepositoryHygiene(
 
 function classifyProhibitedPath(path: string): RepositoryHygieneRule | null {
   if (/^obsidian\/[^/]+\/output_backup\//i.test(path)) return 'generated-backup';
+  if (TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS.has(path)) return null;
   if (/^obsidian\/[^/]+\/output\//i.test(path)) return 'disposable-generated-output';
   if (/(?:^|\/)\.fvtt-sync-manifest\.json$/i.test(path)) return 'runtime-manifest';
   if (/(?:^|\/)\.obsidian\/workspace(?:-mobile)?\.json$/i.test(path)) return 'local-workspace-state';

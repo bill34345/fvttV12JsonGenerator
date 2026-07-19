@@ -62,6 +62,17 @@ describe('repository hygiene gate', () => {
     });
   });
 
+  it('allows only the explicitly approved Rat Warlock generated acceptance artifact', () => {
+    const findings = inspectTrackedArtifactPaths([
+      'obsidian/dnd数据转fvttjson/output/warlock-of-the-rat-god.json',
+      'obsidian/dnd数据转fvttjson/output/another-rat-warlock.json',
+    ]);
+
+    expect(findings.map((finding) => [finding.path, finding.rule])).toEqual([
+      ['obsidian/dnd数据转fvttjson/output/another-rat-warlock.json', 'disposable-generated-output'],
+    ]);
+  });
+
   it('fails closed for prohibited paths, zero tracked paths, and Git collection errors', () => {
     const prohibited = executeRepositoryHygiene({
       collectTrackedPaths: () => ['src/index.ts', 'output/actor.json'],

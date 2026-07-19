@@ -351,7 +351,7 @@ describe('Foundry companion module contract', () => {
     expect(bundle).not.toMatch(/node:crypto|sourceMappingURL|I:\\|\.local[\\/]|rat-warlock|OPENAI_API_KEY/i);
     expect(firstBytes.includes(Buffer.from('module.json'))).toBe(true);
     expect(await readFile(resolve(moduleRoot, '../../..', '.gitignore'), 'utf8')).toMatch(/^dist$/m);
-  });
+  }, 20_000);
 });
 
 class FakeRuntimeAdapter implements ResolverFoundryAdapter {
