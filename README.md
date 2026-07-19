@@ -112,6 +112,21 @@ bun run src/index.ts `
 
 退出码：`0` 表示全部 accepted，`2` 表示至少一只 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。首版只支持怪物/NPC，单次最多 50 只、200,000 个 JavaScript UTF-16 字符，不支持图片/PDF OCR 或 Item，也不承诺任意模型、任意文本都能自动通过。
 
+## Foundry 目标世界法术解析（v14）
+
+带法术清单的 AI Intake Actor 会保持便携：项目生成阶段只写入带来源证据的法术清单，并将状态标为 `pending`；不会写占位 Spell、世界内 UUID 或本机 Compendium UUID。把 Actor JSON 正常导入 Foundry 后，由目标世界模块扫描所有已启用且当前 GM 可读取的 Item Compendium，完成实际法术选择和水合。
+
+当前解析器只支持 Foundry `14.364` / dnd5e `5.3.3`。匹配规则是精确身份优先：存在同名且事实一致的 2024 法术时只能选择 2024；只有不存在同键 2024 候选项时，才允许使用带明确报告的唯一 2014 回退。模糊、冲突、缺失或人工修改都会进入检查，不会部分写入。
+
+```powershell
+bun run foundry:lab spell-resolver build
+bun run foundry:lab spell-resolver install --apply
+bun run foundry:lab spell-resolver verify-install
+bun run foundry:lab spell-resolver prepare-world --world=fvtt-v14-module-matrix --apply
+```
+
+普通使用、升级、卸载、诊断和安全边界见 [`docs/foundry-spell-resolver-install.zh-CN.md`](docs/foundry-spell-resolver-install.zh-CN.md)。模块不支持 Foundry v12、生产世界自动安装或全世界批量迁移。
+
 ## Legacy 纯文本转换器
 
 以下命令是保留给历史脚本的规则转换器。它们不再扩展任意乱文本识别能力，识别到 0 只怪物时会失败；其 audit 只是格式诊断，不是语义验收。

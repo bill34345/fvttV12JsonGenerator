@@ -88,6 +88,19 @@ Uninstall revalidates the manifest ID and moves only the exact module directory
 to a recoverable ignored backup. Disabling the module in a world and proving
 that hydrated Spells still cast are separate runtime acceptance steps.
 
+After installation, import a portable Actor through Foundry's normal Actor JSON
+import flow. A valid portable spellcaster starts at `pending`; the resolver then
+indexes every enabled, readable Item compendium and exposes Actor-level GM
+controls for Resolve, Report, Sources, Undo, and diagnostic export. The settings
+submenu can rebuild the source index after package changes. `verify-install`
+proves installed bytes only—it does not replace report inspection or native
+attack/save/utility spell-use acceptance.
+
+The module is locked to Foundry 14.364 and dnd5e 5.3.3. Foundry v12 resolver
+support, automatic production installation, and world-wide Actor migration are
+not provided. Full operator instructions are in
+`docs/foundry-spell-resolver-install.zh-CN.md`.
+
 ## Package acquisition
 
 First capture and classify the live inventory, then review the dry-run:

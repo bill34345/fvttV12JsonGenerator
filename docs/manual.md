@@ -296,6 +296,25 @@ bun run src/index.ts `
 
 ---
 
+## 场景 3B：把便携施法者水合为目标世界原生法术
+
+AI Intake 生成的施法者 Actor 在项目输出阶段应保持 `pending`。这个状态不是失败：它表示来源法术清单已经通过项目核对，但真正的 Spell 文档必须等 Actor 进入目标 Foundry 世界后，依据该世界实际启用的法术来源解析。
+
+使用顺序：
+
+1. 用项目 CLI 或 AI Intake 生成 Foundry v14 Actor JSON；不要手工添加 Spell 或 Compendium UUID。
+2. 在 Foundry `14.364` / dnd5e `5.3.3` 世界中启用目标世界法术解析器。
+3. 通过 Foundry 的普通 Actor JSON 导入功能导入 Actor。
+4. 以 GM 身份检查 Actor 标题栏中的解析状态；必要时选择“解析或重新解析法术”。
+5. 如果出现歧义或人工修改，明确选择来源、保留人工修改、用生成内容覆盖，或取消。取消和关闭窗口都不得修改 Actor。
+6. 状态变为“已水合”后，打开缓存 Spell 和 Cast Activity，实际检查攻击、豁免、次数、目标和文字限制。
+
+模块会自动扫描全部已启用、可读的 Item Compendium，而不是维护固定包白名单。2024 精确候选优先；只有没有同键 2024 候选项时才允许唯一 2014 回退，并在 Actor 状态和报告中显式标记。水合以 Actor 为单位原子执行，任何缺失、歧义、冲突或写入失败都会阻止部分成功。
+
+完整安装和诊断步骤见 [`foundry-spell-resolver-install.zh-CN.md`](foundry-spell-resolver-install.zh-CN.md)。当前不支持 v12 解析器、OCR/PDF Intake、生产世界自动部署或全世界批量迁移。
+
+---
+
 ## 场景 4：把已有 JSON 补成中文
 
 **目标**：你有一批从其他地方来的 FVTT NPC JSON，想把字段补成中文。

@@ -37,7 +37,7 @@
 - Create: `src/core/intake/__tests__/fixtures/rat-warlock.raw.txt`
 - Create: `src/core/intake/__tests__/rat-warlock-spell-baseline.test.ts`
 
-- [ ] **Step 1: Preserve the current dirty-file baseline**
+- [x] **Step 1: Preserve the current dirty-file baseline**
 
 Run:
 
@@ -48,7 +48,7 @@ git diff -- .ruler/AGENTS.md AGENTS.md
 
 Save the output in the Task 1 execution note inside the ExecPlan before editing. The existing modifications remain user-owned; do not normalize or replace either file.
 
-- [ ] **Step 2: Add the Rat Warlock source verbatim and write the RED acceptance test**
+- [x] **Step 2: Add the Rat Warlock source verbatim and write the RED acceptance test**
 
 The fixture must contain the exact user-provided text, including the introductory quotation, lore paragraphs, duplicate title, all ten spells, DC 12, attack +4, material-component waiver, Mage Armor self-only restriction, Giant Rat restriction, and Eldritch Blast two-ray instruction.
 
@@ -70,7 +70,7 @@ test("Rat Warlock emits a portable ten-spell manifest without resolved items", a
 
 Do not weaken the test to accept description-only spellcasting.
 
-- [ ] **Step 3: Run the RED test and record the real failure**
+- [x] **Step 3: Run the RED test and record the real failure**
 
 Run:
 
@@ -80,7 +80,7 @@ bun test src/core/intake/__tests__/rat-warlock-spell-baseline.test.ts
 
 Expected: failure proving that the current pipeline has no portable manifest or functional resolved spells. Record the exact failure in `EXECPLAN.md` as `SPELL-001`; do not rewrite the earlier AI Intake success history.
 
-- [ ] **Step 4: Append the safety contract to project instructions**
+- [x] **Step 4: Append the safety contract to project instructions**
 
 Append the same focused hard gate to `.ruler/AGENTS.md` and root `AGENTS.md` while preserving surrounding dirty changes:
 
@@ -97,11 +97,11 @@ Append the same focused hard gate to `.ruler/AGENTS.md` and root `AGENTS.md` whi
 
 The directory-level `AGENTS.md` must additionally require exact Foundry/dnd5e reference inspection before runtime schema changes.
 
-- [ ] **Step 5: Correct the support claim append-only**
+- [x] **Step 5: Correct the support claim append-only**
 
 In the support matrix, preserve the prior Rat intake acceptance but add a dated qualification: non-spell statblock intake passed; functional spell resolution is open under `SPELL-001` until the local Foundry runtime gate passes.
 
-- [ ] **Step 6: Verify and commit only Task 1 paths**
+- [x] **Step 6: Verify and commit only Task 1 paths**
 
 Run:
 
@@ -131,7 +131,7 @@ git commit -m "test: record portable spell resolution gap"
 - Create: `src/core/spell-resolution/index.ts`
 - Create: `src/core/spell-resolution/__tests__/contracts.test.ts`
 
-- [ ] **Step 1: Write contract RED tests**
+- [x] **Step 1: Write contract RED tests**
 
 Cover a valid Rat manifest plus unknown schema, duplicate `manifestId`/`groupId`/`refId`, invalid ability, invalid recovery, non-positive uses, shared-use contradictions, missing identifier and names, evidence quote mismatch, invalid expected level/school, and duplicate logical spells.
 
@@ -182,7 +182,7 @@ export interface PortableSpellRef {
 
 Use the existing intake `EvidenceRef` type rather than defining a structurally divergent duplicate.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 Run:
 
@@ -192,7 +192,7 @@ bun test src/core/spell-resolution/__tests__/contracts.test.ts
 
 Expected: module-not-found/type failures.
 
-- [ ] **Step 3: Implement strict runtime validation and serialization**
+- [x] **Step 3: Implement strict runtime validation and serialization**
 
 `validatePortableSpellManifest(manifest, source)` returns a discriminated union:
 
@@ -204,7 +204,7 @@ type ManifestValidationResult =
 
 Every finding has stable `code`, `path`, Chinese `message`, `blocking`, evidence, and optional candidates. Validation must never silently coerce an unknown version or unsupported enum.
 
-- [ ] **Step 4: Implement two distinct hashes**
+- [x] **Step 4: Implement two distinct hashes**
 
 Implement canonical key ordering and explicit projections:
 
@@ -213,7 +213,7 @@ Implement canonical key ordering and explicit projections:
 
 Write a regression proving that casting a 1/day spell changes `spent` without being misclassified as a manual edit, while changing attack/save/target/description does change the managed projection hash.
 
-- [ ] **Step 5: Run tests and typecheck**
+- [x] **Step 5: Run tests and typecheck**
 
 Run:
 
@@ -224,7 +224,7 @@ bun run typecheck:production
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/core/spell-resolution
@@ -246,7 +246,7 @@ git commit -m "feat: define portable spell manifest contract"
 - Create: `src/core/intake/__tests__/fixtures/rat-warlock.ts`
 - Create: `src/core/intake/__tests__/spellcasting.test.ts`
 
-- [ ] **Step 1: Add RED tests for the Rat spellcasting IR**
+- [x] **Step 1: Add RED tests for the Rat spellcasting IR**
 
 The fake extraction fixture must represent exactly two source groups:
 
@@ -261,7 +261,7 @@ Assert DC 12, attack +4, Charisma, ignored material components, independent 1/da
 
 Add negatives for prose mentioning a spell without granting it, duplicated spellcasting in both `traits` and structured groups, and unsupported ambiguous shared uses.
 
-- [ ] **Step 2: Extend `CanonicalMonster` with structured spellcasting**
+- [x] **Step 2: Extend `CanonicalMonster` with structured spellcasting**
 
 Add an optional field using stable English keys:
 
@@ -271,7 +271,7 @@ spellcasting?: CanonicalSpellcastingGroup[];
 
 Each group carries `groupId`, `featureName`, `ability`, optional DC/attack bonus, component waivers, usage groups, restrictions, and evidence-backed spell references. Reuse the portable spell types where their semantics are identical; keep source IR fields separate from destination resolution findings.
 
-- [ ] **Step 3: Version the extraction prompt without adding model freedom**
+- [x] **Step 3: Version the extraction prompt without adding model freedom**
 
 Update the extraction schema/prompt so the model:
 
@@ -285,11 +285,11 @@ Update the extraction schema/prompt so the model:
 
 Reviewer and repair prompts must review the same structured contract.
 
-- [ ] **Step 4: Validate spell evidence and coverage**
+- [x] **Step 4: Validate spell evidence and coverage**
 
 Call `validatePortableSpellManifest` semantics from intake validation without constructing a destination manifest prematurely. A granted spell without evidence, duplicate logical spell, invalid use group, or uncovered mechanical spell line is blocking.
 
-- [ ] **Step 5: Deterministically render the Markdown contract**
+- [x] **Step 5: Deterministically render the Markdown contract**
 
 Add one top-level Chinese YAML key, mapped later by the parser:
 
@@ -308,7 +308,7 @@ Add one top-level Chinese YAML key, mapped later by the parser:
 
 The visible trait description remains source-faithful for humans. It must not contain a target UUID or fabricated spell mechanics. YAML ordering is deterministic.
 
-- [ ] **Step 6: Run focused tests**
+- [x] **Step 6: Run focused tests**
 
 ```powershell
 bun test src/core/intake/__tests__/spellcasting.test.ts src/core/intake/__tests__/rat-warlock-spell-baseline.test.ts src/core/intake/__tests__/renderer-verifier.test.ts src/core/intake/__tests__/provider.test.ts
@@ -317,7 +317,7 @@ bun run typecheck:production
 
 Expected: exact ten-spell fixture passes; negative prose and evidence cases block.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add src/core/intake
@@ -341,7 +341,7 @@ git commit -m "feat: extract evidenced monster spell manifests"
 - Create: `src/core/generator/__tests__/actor-spell-manifest.test.ts`
 - Modify: `src/core/utils/assertEqualStructure.ts` only if a stricter path-aware assertion is required
 
-- [ ] **Step 1: Write parser/generator RED tests**
+- [x] **Step 1: Write parser/generator RED tests**
 
 Required cases:
 
@@ -352,11 +352,11 @@ Required cases:
 5. A v12 request with a portable spell manifest fails with a precise unsupported-target finding; it must not silently invoke the legacy mapper.
 6. Existing legacy fixtures without `法术清单` retain their structure.
 
-- [ ] **Step 2: Add explicit parser mapping**
+- [x] **Step 2: Add explicit parser mapping**
 
 Add `法术清单 -> spellManifest` to the mapping and a typed `ParsedNPC.spellManifest?: PortableSpellManifest`. Do not rely on unknown-object recursion for the public contract. In `applyField`, validate the whole manifest and preserve the returned typed value.
 
-- [ ] **Step 3: Generate the portable v14 Actor boundary**
+- [x] **Step 3: Generate the portable v14 Actor boundary**
 
 `buildActorSpellManifest()` must:
 
@@ -369,7 +369,7 @@ Add `法术清单 -> spellManifest` to the mapping and a typed `ParsedNPC.spellM
 
 Use a source-derived stable feature key, not the translated feature display name.
 
-- [ ] **Step 4: Enforce structure and anti-overfit coverage**
+- [x] **Step 4: Enforce structure and anti-overfit coverage**
 
 Use `assertEqualStructure()` against a v14 manifest fixture. Document rule classification:
 
@@ -380,7 +380,7 @@ Use `assertEqualStructure()` against a v14 manifest fixture. Document rule class
 
 Generalization set: Rat Warlock, a second two-group caster, close negative lore-only spell mention, and unrelated Lurker.
 
-- [ ] **Step 5: Run focused gates**
+- [x] **Step 5: Run focused gates**
 
 ```powershell
 bun test src/core/parser/__tests__/yaml.test.ts src/core/generator/__tests__/actor-spell-manifest.test.ts src/core/generator/__tests__/actor.test.ts
@@ -390,7 +390,7 @@ bun run typecheck:production
 
 Expected: pass with no unexplained anti-overfit finding.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/config/mapping.ts src/core/parser src/core/generator src/core/utils/assertEqualStructure.ts
@@ -412,7 +412,7 @@ git commit -m "feat: generate portable spell resolver actors"
 - Create: `src/core/spell-resolution/__tests__/resolver.test.ts`
 - Create: `src/core/spell-resolution/__tests__/planner.test.ts`
 
-- [ ] **Step 1: Write the candidate-priority RED matrix**
+- [x] **Step 1: Write the candidate-priority RED matrix**
 
 Use metadata-only candidates. Cover:
 
@@ -432,7 +432,7 @@ Use metadata-only candidates. Cover:
 - near-name fuzzy result as suggestion only;
 - close negative names that must not auto-resolve.
 
-- [ ] **Step 2: Define the Foundry-independent source index contract**
+- [x] **Step 2: Define the Foundry-independent source index contract**
 
 ```ts
 export interface SpellCandidateMetadata {
@@ -451,7 +451,7 @@ export interface SpellCandidateMetadata {
 
 Normalization may fold Unicode width, whitespace, punctuation, and ASCII case. It may not translate, stem, or infer a spell from approximate semantic similarity.
 
-- [ ] **Step 3: Implement deterministic resolution**
+- [x] **Step 3: Implement deterministic resolution**
 
 Return one of `resolved`, `needs_review`, or `missing` per ref with an ordered trace explaining every filter and tie-break. Persisted mappings include logical ref key, selected UUID, rules, source inventory hash, and selection origin.
 
@@ -465,7 +465,7 @@ Use this exact order:
 6. only if no same-key 2024 candidate exists, repeat exact matching against 2014 candidates and mark a unique selection as fallback;
 7. return approximate matches as review suggestions only.
 
-- [ ] **Step 4: Implement full-Actor preflight planning**
+- [x] **Step 4: Implement full-Actor preflight planning**
 
 `planSpellHydration()` accepts a valid manifest, candidate index, saved mappings, current managed projection, and manual decisions. It returns:
 
@@ -478,11 +478,11 @@ type HydrationPreflight =
 
 If any spell is missing, ambiguous, contradictory, or has an undecided manual conflict, there is no writable plan.
 
-- [ ] **Step 5: Test idempotency inputs and source priority changes**
+- [x] **Step 5: Test idempotency inputs and source priority changes**
 
 The same manifest + source inventory + selected UUIDs + configuration + decisions must produce the same plan hash. A priority change marks only affected selections stale; it does not produce an automatic Actor write.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 ```powershell
 bun test src/core/spell-resolution/__tests__/resolver.test.ts src/core/spell-resolution/__tests__/planner.test.ts
@@ -512,7 +512,7 @@ git commit -m "feat: plan deterministic destination spell resolution"
 - Create: `scripts/buildSpellResolver.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Write RED package and discovery tests**
+- [x] **Step 1: Write RED package and discovery tests**
 
 Assert module ID, ES module entry, localization, exact minimum/maximum verified versions, no socket or macro dependency, and no broad system compatibility claim.
 
@@ -528,7 +528,7 @@ For discovery, fake the Foundry adapter and include:
 
 All enabled readable Item packs are indexed; only actual `type === "spell"` documents become candidates.
 
-- [ ] **Step 2: Add a narrow Foundry adapter**
+- [x] **Step 2: Add a narrow Foundry adapter**
 
 Keep runtime globals behind interfaces such as:
 
@@ -543,15 +543,15 @@ interface FoundrySpellSourceAdapter {
 
 The pure core never imports `game`, `Hooks`, `Actor`, `Item`, or `foundry` globals.
 
-- [ ] **Step 3: Build the source inventory from real index fields**
+- [x] **Step 3: Build the source inventory from real index fields**
 
 Request only `_id`, `name`, `type`, `system.identifier`, `system.source.rules`, `system.source.book`, `system.level`, and `system.school`. Fetch a full document only after selection. Compute an inventory hash from enabled package versions plus indexed candidate metadata.
 
-- [ ] **Step 4: Add exact version gating and settings**
+- [x] **Step 4: Add exact version gating and settings**
 
 At `init`, register settings for source priority, saved concrete mappings, debug logging, and index metadata. At `ready`, if versions differ from Foundry 14.364/dnd5e 5.3.3, register status/diagnostics only and prohibit mutation.
 
-- [ ] **Step 5: Add a deterministic build**
+- [x] **Step 5: Add a deterministic build**
 
 `scripts/buildSpellResolver.ts` uses `Bun.build` to bundle the module into ignored `dist/fvtt-json-generator-spell-resolver/`, copies module metadata/locales/styles/templates, validates that referenced files exist, and creates an installable ZIP without embedding source maps containing local absolute paths.
 
@@ -562,7 +562,7 @@ Add scripts:
 "test:spell-resolver": "bun test src/core/spell-resolution src/foundry/monster-spell-resolver"
 ```
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 ```powershell
 bun test src/foundry/monster-spell-resolver/__tests__/module-manifest.test.ts src/foundry/monster-spell-resolver/__tests__/source-index.test.ts
@@ -590,7 +590,7 @@ Expected: package validates and build artifacts remain ignored.
 - Create: `src/foundry/monster-spell-resolver/__tests__/hydrator.test.ts`
 - Create: `src/foundry/monster-spell-resolver/__tests__/transaction.test.ts`
 
-- [ ] **Step 1: Pin the runtime reference evidence in the tests**
+- [x] **Step 1: Pin the runtime reference evidence in the tests**
 
 Before implementation, cite the inspected local dnd5e 5.3.3 behavior in test comments and the ExecPlan:
 
@@ -602,7 +602,7 @@ Before implementation, cite the inspected local dnd5e 5.3.3 behavior in test com
 
 Do not transcribe private implementation wholesale; encode only the public data behavior required for compatibility.
 
-- [ ] **Step 2: Write native-shape RED tests**
+- [x] **Step 2: Write native-shape RED tests**
 
 For Rat Warlock assert:
 
@@ -617,15 +617,15 @@ For Rat Warlock assert:
 - Giant Rat and two-ray restrictions remain visible and reported as literal when unsupported, not encoded as invented effects;
 - no custom Activity type, Item Macro, or module runtime macro is present.
 
-- [ ] **Step 3: Build activity source data deterministically**
+- [x] **Step 3: Build activity source data deterministically**
 
 `buildCastActivitySource()` receives the source feature ID, selected UUID, manifest group/ref, and stable generated IDs. It returns native dnd5e 5.3.3 Activity source data plus resolver ownership flags and managed projection hash.
 
-- [ ] **Step 4: Create eager cache data through dnd5e's prepared Activity**
+- [x] **Step 4: Create eager cache data through dnd5e's prepared Activity**
 
 Apply feature Activity updates first through public embedded-document APIs. Then read the Actor's prepared Cast Activity and call its public `getCachedSpellData()` to obtain the correct native cache shape. Merge only resolver ownership metadata, then create the embedded Spell. Do not manually clone a premium Spell document or replace the Activity's Compendium UUID with the embedded UUID.
 
-- [ ] **Step 5: Enforce ownership before every update/delete**
+- [x] **Step 5: Enforce ownership before every update/delete**
 
 Mutation is allowed only when all of these match:
 
@@ -638,7 +638,7 @@ Mutation is allowed only when all of these match:
 
 A name match alone never grants ownership.
 
-- [ ] **Step 6: Implement compensating transaction and rollback**
+- [x] **Step 6: Implement compensating transaction and rollback**
 
 The transaction service:
 
@@ -652,11 +652,11 @@ The transaction service:
 
 Test failure injection after feature update, after partial cache creation, during cleanup, and during rollback. Unrelated items/activities/effects/flags must remain deep-equal in every case.
 
-- [ ] **Step 7: Test no-op reapplication and ordinary spell use**
+- [x] **Step 7: Test no-op reapplication and ordinary spell use**
 
 Reapplying the same plan creates no new documents. Spending a daily use does not trigger manual-edit conflict because volatile use state is outside the managed hash.
 
-- [ ] **Step 8: Run and commit**
+- [x] **Step 8: Run and commit**
 
 ```powershell
 bun test src/foundry/monster-spell-resolver/__tests__/cast-activity.test.ts src/foundry/monster-spell-resolver/__tests__/ownership.test.ts src/foundry/monster-spell-resolver/__tests__/hydrator.test.ts src/foundry/monster-spell-resolver/__tests__/transaction.test.ts
@@ -684,7 +684,7 @@ git commit -m "feat: hydrate native dnd5e monster spells atomically"
 - Create: `src/foundry/monster-spell-resolver/__tests__/hooks.test.ts`
 - Create: `src/foundry/monster-spell-resolver/__tests__/review-app.test.ts`
 
-- [ ] **Step 1: Write hook and review RED tests**
+- [x] **Step 1: Write hook and review RED tests**
 
 Assert immediate no-op for non-GM, unflagged Actor, unsupported versions, active resolver transaction, or already-applied plan hash. Assert create/update event bursts schedule one preflight only and never recurse from resolver-owned writes.
 
@@ -697,7 +697,7 @@ Manual edit review must expose exactly:
 
 An invalid current manual structure cannot be silently kept; it remains blocking with an explanation.
 
-- [ ] **Step 2: Register only versioned public hooks**
+- [x] **Step 2: Register only versioned public hooks**
 
 Use the local Foundry 14 hook reference in `.local/foundry-v14/app/14.364/client/hooks.mjs` to register:
 
@@ -707,11 +707,11 @@ Use the local Foundry 14 hook reference in `.local/foundry-v14/app/14.364/client
 
 Do not monkey-patch Actor sheets or dnd5e classes. Add a test that scans bundled source for forbidden prototype assignment/custom Activity registration patterns.
 
-- [ ] **Step 3: Implement once-per-finding review behavior**
+- [x] **Step 3: Implement once-per-finding review behavior**
 
 Open automatically once per manifest/finding hash. The review shows source evidence, candidate package/book/rules/level/UUID, current/proposed diffs, fallback warnings, and literal-only restrictions. Apply remains disabled until every blocking issue has a decision.
 
-- [ ] **Step 4: Add status and explicit GM actions**
+- [x] **Step 4: Add status and explicit GM actions**
 
 Status values are `pending`, `resolving`, `needs_review`, `hydrated`, `stale`, `incompatible`, `failed`, and `failed-recovery-required`.
 
@@ -725,11 +725,11 @@ Expose:
 
 Controls are GM-only. There is no world-wide resolve button.
 
-- [ ] **Step 5: Verify long-content UI and cancel semantics**
+- [x] **Step 5: Verify long-content UI and cancel semantics**
 
 Test long Chinese text, UUIDs, JSON paths, and errors for wrapping/scrolling without overlapping controls. Verify Esc, title-bar close, and Cancel all leave Actor state unchanged.
 
-- [ ] **Step 6: Run and commit**
+- [x] **Step 6: Run and commit**
 
 ```powershell
 bun test src/foundry/monster-spell-resolver/__tests__/hooks.test.ts src/foundry/monster-spell-resolver/__tests__/review-app.test.ts
@@ -758,7 +758,7 @@ git commit -m "feat: add spell resolver review and gm controls"
 - Modify: `src/web/client/__tests__/intakeReview.test.ts`
 - Modify: `src/web/server/jobs/__tests__/aiMonsterIntake.test.ts`
 
-- [ ] **Step 1: Write RED verifier and messaging tests**
+- [x] **Step 1: Write RED verifier and messaging tests**
 
 The deterministic verifier must block:
 
@@ -771,7 +771,7 @@ The deterministic verifier must block:
 
 It must pass an intact Rat manifest as source-accepted with `spellResolution.status === "pending"`.
 
-- [ ] **Step 2: Add a distinct spell-resolution result**
+- [x] **Step 2: Add a distinct spell-resolution result**
 
 Do not overload `MonsterIntakeStatus`. Add:
 
@@ -787,7 +787,7 @@ interface PortableSpellResolutionStatus {
 
 At project generation time, a valid caster is `pending`, never `hydrated`. The Foundry module owns the transition to hydrated.
 
-- [ ] **Step 3: Update CLI output without changing accepted Actor registration**
+- [x] **Step 3: Update CLI output without changing accepted Actor registration**
 
 For a caster, print a separate line:
 
@@ -797,11 +797,11 @@ For a caster, print a separate line:
 
 The intake can remain source-accepted because its portable output is valid, but CLI output and reports may not call spells functional before runtime hydration.
 
-- [ ] **Step 4: Update Web review/status copy**
+- [x] **Step 4: Update Web review/status copy**
 
 Show `资料已整理，法术将在目标世界解析` and spell count. Do not offer a hydrated Actor download or imply spell functionality from the Intake job. Existing non-caster status remains unchanged.
 
-- [ ] **Step 5: Run focused gates and commit**
+- [x] **Step 5: Run focused gates and commit**
 
 ```powershell
 bun test src/core/intake/__tests__/orchestrator.test.ts src/core/intake/__tests__/renderer-verifier.test.ts tests/cli-ai-intake.test.ts src/web/client/__tests__/intakeReview.test.ts src/web/server/jobs/__tests__/aiMonsterIntake.test.ts
@@ -825,7 +825,7 @@ git commit -m "feat: report pending target-world spell resolution"
 - Modify: `scripts/foundry-lab/README.md`
 - Modify: `package.json`
 
-- [ ] **Step 1: Write path-safety RED tests**
+- [x] **Step 1: Write path-safety RED tests**
 
 The installer accepts only the resolved project-local module destination:
 
@@ -835,7 +835,7 @@ The installer accepts only the resolved project-local module destination:
 
 Reject production paths, junction escapes, module-ID mismatches, missing build validation, and any target outside the configured mirror. Existing local module content is backed up before replacement. Uninstall removes only the exact module directory after revalidating its manifest ID.
 
-- [ ] **Step 2: Add Foundry Lab commands**
+- [x] **Step 2: Add Foundry Lab commands**
 
 Add:
 
@@ -849,11 +849,11 @@ foundry:lab spell-resolver uninstall --apply
 
 `verify-install` compares build/install hashes, validates module metadata, and confirms Foundry/dnd5e version paths. It does not claim the module has run successfully.
 
-- [ ] **Step 3: Add a disposable test-world preparation command**
+- [x] **Step 3: Add a disposable test-world preparation command**
 
 `spell-resolver prepare-world --world=fvtt-v14-module-matrix --apply` may enable the module only in that project-local disposable world after backing up its configuration. It must reject `cor-cotn`, production-like data roots, unknown worlds, and any request that would alter another world.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 ```powershell
 bun test scripts/foundry-lab/__tests__/spellResolver.test.ts
@@ -881,7 +881,7 @@ Expected: install is mechanically valid in the local mirror only.
 - Modify: `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - Create: `docs/acceptance/2026-07-18-rat-warlock-spell-resolver.md`
 
-- [ ] **Step 1: Run bounded AI Intake on the unmarked raw fixture**
+- [x] **Step 1: Run bounded AI Intake on the unmarked raw fixture**
 
 Use explicit existing OpenAI-compatible Intake configuration only. Do not use MiniMax, Legacy plaintext fallback, or hand-added Markdown markers.
 
@@ -900,7 +900,7 @@ $creature = Get-ChildItem "$run/creatures" -Directory
 if ($creature.Count -ne 1) { throw "Expected exactly one Rat Warlock creature bundle" }
 ```
 
-- [ ] **Step 2: Run source-to-portable verification**
+- [x] **Step 2: Run source-to-portable verification**
 
 ```powershell
 bun run verify:intake -- --source "src/core/intake/__tests__/fixtures/rat-warlock.raw.txt" --ir "$($creature.FullName)/intake-ir.json" --markdown "obsidian/dnd数据转fvttjson/input/鼠神邪术师.md" --actor "obsidian/dnd数据转fvttjson/output/鼠神邪术师.json"
@@ -908,7 +908,7 @@ bun run verify:intake -- --source "src/core/intake/__tests__/fixtures/rat-warloc
 
 Manually read the raw source, IR, Markdown, and Actor projection. Record that all ten names/usages, DC 12, attack +4, component waiver, self-only, Giant Rat, and two-ray facts remain present and no spell mechanics/UUID was invented.
 
-- [ ] **Step 3: Install and launch the module in the disposable local mirror**
+- [x] **Step 3: Install and launch the module in the disposable local mirror**
 
 ```powershell
 bun run foundry:lab spell-resolver build
@@ -920,7 +920,7 @@ bun run foundry:lab launch server-mirror
 
 Use the project-local Foundry 14.364 data mirror only.
 
-- [ ] **Step 4: Import through Foundry's public Actor import path**
+- [x] **Step 4: Import through Foundry's public Actor import path**
 
 Capture browser/runtime evidence showing:
 
@@ -930,11 +930,11 @@ Capture browser/runtime evidence showing:
 - hydration finishes as one transaction;
 - status becomes `hydrated` only after post-write validation.
 
-- [ ] **Step 5: Inspect the hydrated native document graph**
+- [x] **Step 5: Inspect the hydrated native document graph**
 
 Verify exactly ten real cached Spell items and ten matching native Cast Activities. For every pair check destination Compendium UUID, `flags.dnd5e.cachedFor`, `_stats.compendiumSource`, resolver ownership, and source feature group linkage. Confirm no placeholder or duplicate item exists.
 
-- [ ] **Step 6: Perform semantic spell-use acceptance**
+- [x] **Step 6: Perform semantic spell-use acceptance**
 
 Open Spell sheets and execute at least:
 
@@ -946,7 +946,7 @@ Open Spell sheets and execute at least:
 
 Confirm ignored material components are represented by native Cast data. Confirm Giant Rat remains visible literal restriction for 2024 Conjure Animals and no unsupported automation is claimed.
 
-- [ ] **Step 7: Exercise source priority and future-expansion discovery**
+- [x] **Step 7: Exercise source priority and future-expansion discovery**
 
 With local installed packs:
 
@@ -955,7 +955,7 @@ With local installed packs:
 - confirm an enabled mixed pack's 2014 spell does not beat a matching 2024 spell;
 - confirm a unique 2014-only name produces a visible fallback report.
 
-- [ ] **Step 8: Exercise non-interference and recovery**
+- [x] **Step 8: Exercise non-interference and recovery**
 
 Capture before/after projections for an unrelated Actor. Verify:
 
@@ -969,11 +969,11 @@ Capture before/after projections for an unrelated Actor. Verify:
 - disabling the resolver leaves hydrated cached Spells openable and castable;
 - the unrelated Actor remains unchanged.
 
-- [ ] **Step 9: Write semantic acceptance evidence**
+- [x] **Step 9: Write semantic acceptance evidence**
 
 The acceptance document records exact Foundry/dnd5e/package versions, commands, Actor/manifest IDs, counts, selected source UUIDs, screenshots/log references, mechanical results, human semantic observations, and remaining literal-only limitations. Do not copy full premium Spell descriptions.
 
-- [ ] **Step 10: Commit tracked acceptance artifacts only**
+- [x] **Step 10: Commit tracked acceptance artifacts only**
 
 ```powershell
 git add "obsidian/dnd数据转fvttjson/input/鼠神邪术师.md" "obsidian/dnd数据转fvttjson/output/鼠神邪术师.json" docs/acceptance/2026-07-18-rat-warlock-spell-resolver.md docs/remediation/2026-07-15-project-hardening/EXECPLAN.md
@@ -997,7 +997,7 @@ Do not commit `.local` runtime data, credentials, premium spell bodies, cookies,
 - Modify: `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - Modify: `scripts/foundry-lab/README.md`
 
-- [ ] **Step 1: Write the user-facing boundary accurately**
+- [x] **Step 1: Write the user-facing boundary accurately**
 
 Document:
 
@@ -1012,7 +1012,7 @@ Document:
 - privacy/licensing boundary: no official spell rules copied into project manifests;
 - OCR/PDF, v12 resolver, production installation, and world-wide migration remain unsupported/out of scope.
 
-- [ ] **Step 2: Update verification instructions**
+- [x] **Step 2: Update verification instructions**
 
 `docs/generated-actor-verification.md` must distinguish:
 
@@ -1022,7 +1022,7 @@ Document:
 
 No single layer substitutes for the others.
 
-- [ ] **Step 3: Run focused and aggregate mechanical gates**
+- [x] **Step 3: Run focused and aggregate mechanical gates**
 
 ```powershell
 bun run test:spell-resolver
@@ -1039,7 +1039,7 @@ bun run ci:verify
 
 Expected: every command exits 0. Record command, timestamp, duration, and result in the ExecPlan; do not replace semantic evidence with this list.
 
-- [ ] **Step 4: Run repository and package hygiene checks**
+- [x] **Step 4: Run repository and package hygiene checks**
 
 ```powershell
 git status --short
@@ -1050,7 +1050,7 @@ git grep -n -E "(MONSTER_INTAKE_API_KEY|Authorization: Bearer|premium spell desc
 
 Expected: no local runtime/build artifacts or secrets are tracked; only known documentation references are present.
 
-- [ ] **Step 5: Perform final semantic audit**
+- [x] **Step 5: Perform final semantic audit**
 
 Read the Rat raw source, accepted Markdown, pre-hydration Actor, resolver report, post-hydration Actor projection, and local runtime acceptance evidence together. Explicitly answer:
 
@@ -1064,7 +1064,7 @@ Read the Rat raw source, accepted Markdown, pre-hydration Actor, resolver report
 
 Any “no” keeps `SPELL-001` open and requires the smallest corrective task plus a repeated focused/runtime gate.
 
-- [ ] **Step 6: Close the ledger finding only after both evidence layers pass**
+- [x] **Step 6: Close the ledger finding only after both evidence layers pass**
 
 Append, without rewriting history:
 
@@ -1074,7 +1074,7 @@ Append, without rewriting history:
 - remaining limitations;
 - closure decision for `SPELL-001`.
 
-- [ ] **Step 7: Commit documentation and final ledger state**
+- [x] **Step 7: Commit documentation and final ledger state**
 
 ```powershell
 git add README.md docs scripts/foundry-lab/README.md
