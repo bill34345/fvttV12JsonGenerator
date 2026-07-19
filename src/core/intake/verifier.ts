@@ -177,17 +177,17 @@ function verifyPortableSpellResolution(
         : [];
     });
     const expectedGroup = ir.creature.spellcasting?.[groupIndex];
-    const sourceIdentical = expectedGroup ? items.flatMap((item, itemIndex) => {
+    const sourceAssociated = expectedGroup ? items.flatMap((item, itemIndex) => {
       const itemRecord = asRecord(item);
-      return itemRecord.type === 'feat' && matchesGeneratedSpellcastingFeature(itemRecord, expectedGroup)
+      return isGeneratedSpellcastingSourceFeature(itemRecord, group.featureItemKey, group.groupId)
         ? [{ item, itemIndex }]
         : [];
     }) : [];
-    if (sourceIdentical.length > 1) {
+    if (sourceAssociated.length > 1) {
       add(
         'SPELL_FEATURE_LINK_DUPLICATE',
         `/actor/flags/${RESOLVER_MODULE_ID}/spellManifest/spellcastingGroups/${groupIndex}/featureItemKey`,
-        `Spellcasting group ${group.groupId} has ${sourceIdentical.length} source-identical generated features.`,
+        `Spellcasting group ${group.groupId} has ${sourceAssociated.length} generated source features.`,
       );
     }
     const linked = flagged.filter(({ item, itemIndex }) => {
@@ -285,6 +285,19 @@ function matchesGeneratedSpellcastingFeature(
   }
   const expected = compact(group.description);
   return Boolean(expected && descriptions.some((description) => compact(stripHtml(description)) === expected));
+}
+
+function isGeneratedSpellcastingSourceFeature(
+  item: Record<string, unknown>,
+  featureItemKey: string,
+  groupId: string,
+): boolean {
+  if (item.type !== 'feat') return false;
+  const flags = asRecord(item.flags);
+  const generatorFlags = asRecord(flags.fvttJsonGenerator);
+  const resolverFlags = asRecord(flags[RESOLVER_MODULE_ID]);
+  return generatorFlags.spellcastingFeatureKey === featureItemKey
+    || (resolverFlags.featureItemKey === featureItemKey && resolverFlags.groupId === groupId);
 }
 
 function canonicalEqual(left: unknown, right: unknown): boolean {

@@ -114,6 +114,12 @@ export function buildActorSpellManifest(
     }
     const item = linked[0]!;
     item.flags = item.flags ?? {};
+    // source-derived: this stable project-owned marker preserves the exact
+    // structured feature key independently of display names and descriptions.
+    item.flags.fvttJsonGenerator = {
+      ...(item.flags.fvttJsonGenerator ?? {}),
+      spellcastingFeatureKey: group.featureItemKey,
+    };
     item.flags[RESOLVER_MODULE_ID] = {
       featureItemKey: group.featureItemKey,
       groupId: group.groupId,

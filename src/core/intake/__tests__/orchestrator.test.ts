@@ -298,6 +298,57 @@ describe('AI monster intake orchestrator', () => {
     expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
   });
 
+  test('keeps spell resolution pending when deterministic validation blocks only an unrelated actor field', async () => {
+    const provider = new RatWarlockProvider();
+    provider.extract = async () => {
+      const ir = buildRatWarlockIr() as any;
+      ir.creature.identity.name = '';
+      return ir;
+    };
+
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({
+      path: '/creature/identity/name',
+      blocking: true,
+    }));
+    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+  });
+
+  test('marks spell resolution needs_review when AI review blocks a spell-specific path', async () => {
+    const provider = new RatWarlockProvider();
+    provider.review = async () => ({
+      schemaVersion: 1,
+      verdict: 'needs_review',
+      findings: [{
+        id: 'spell-review',
+        code: 'SPELL_REVIEW',
+        path: '/creature/spellcasting/0/usageGroups/0',
+        message: 'The explicit spell grant needs human review.',
+        blocking: true,
+        origin: 'ai-review',
+      }],
+    });
+
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'needs_review', spellCount: 10 });
+  });
+
   test('re-verifies an identical promoted caster Actor and requires explicit replace before regeneration', async () => {
     const paths = roots();
     const first = await runMonsterIntake({
@@ -342,6 +393,53 @@ describe('AI monster intake orchestrator', () => {
       activity.type === 'cast'
       || activity.flags?.['fvtt-json-generator-spell-resolver']?.managed === true
     )))).toBe(false);
+  });
+
+  test('requires canonical generated-Actor equality before reusing a published target', async () => {
+    const paths = roots();
+    const first = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+    const actorPath = first.creatures[0]!.actorPath!;
+    const actor = JSON.parse(readFileSync(actorPath, 'utf-8'));
+    actor.items.push({
+      name: 'User-added harmless feature',
+      type: 'feat',
+      system: { description: { value: 'Not represented by this intake source.' }, activities: {} },
+      effects: [],
+      flags: {},
+    });
+    writeFileSync(actorPath, JSON.stringify(actor, null, 2));
+
+    const blocked = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE,
+      sourceName: 'rat-warlock.raw.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...paths,
+    }, new RatWarlockProvider());
+
+    expect(blocked.status).toBe('needs_review');
+    expect(blocked.creatures[0]!.findings).toContainEqual(expect.objectContaining({
+      code: 'TARGET_CONFLICT',
+      message: expect.stringContaining('/items'),
+    }));
+    expect(JSON.parse(readFileSync(actorPath, 'utf-8')).items.some((item: any) => item.name === 'User-added harmless feature')).toBe(true);
+
+    const decisionsPath = join(blocked.runPath, 'decisions.json');
+    writeFileSync(decisionsPath, JSON.stringify({
+      runId: blocked.runId,
+      sourceSha256: blocked.sourceSha256,
+      decisions: [{ issueId: 'target-conflict:rat-warlock', action: 'select', value: 'replace' }],
+    }));
+    const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, new RatWarlockProvider(), paths.vaultPath);
+
+    expect(resumed.status).toBe('succeeded');
+    expect(JSON.parse(readFileSync(actorPath, 'utf-8')).items.some((item: any) => item.name === 'User-added harmless feature')).toBe(false);
   });
 
   test('blocks reuse when the published caster JSON has only a premature Cast Activity', async () => {

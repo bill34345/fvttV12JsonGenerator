@@ -122,6 +122,7 @@ describe('portable Actor spell manifest boundary', () => {
       featureItemKey: 'innate-charisma',
       groupId: 'innate-charisma',
     });
+    expect(linked[0].flags.fvttJsonGenerator.spellcastingFeatureKey).toBe('innate-charisma');
     expect(linked[0].system.description.value).toContain('Innate Spellcasting');
     expect(actor.items.filter((item: any) => item.type === 'spell')).toHaveLength(0);
     expect(actor.items.flatMap((item: any) => Object.values(item.system?.activities ?? {}))
@@ -144,8 +145,10 @@ describe('portable Actor spell manifest boundary', () => {
 
     const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
     expect(actor.items[0].flags?.[RESOLVER_MODULE_ID]).toBeUndefined();
+    expect(actor.items[0].flags?.fvttJsonGenerator?.spellcastingFeatureKey).toBeUndefined();
     expect(actor.items[0].system.description.value).toContain('same-shaped non-spell trait');
     expect(actor.items[1].flags[RESOLVER_MODULE_ID]).toEqual({ featureItemKey: 'feature-a', groupId: 'group-a' });
+    expect(actor.items[1].flags.fvttJsonGenerator.spellcastingFeatureKey).toBe('feature-a');
   });
 
   it('supports a second two-group caster and links each source group independently', () => {
@@ -166,6 +169,10 @@ describe('portable Actor spell manifest boundary', () => {
       { featureItemKey: 'feature-b', groupId: 'group-b' },
       { featureItemKey: 'feature-a', groupId: 'group-a' },
     ]);
+    expect(actor.items.map((item: any) => item.flags.fvttJsonGenerator.spellcastingFeatureKey)).toEqual([
+      'feature-b',
+      'feature-a',
+    ]);
   });
 
   it('supports a third distinct one-group Wisdom caster without name inference', () => {
@@ -176,6 +183,7 @@ describe('portable Actor spell manifest boundary', () => {
     const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
     expect(actor.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups[0].ability).toBe('wis');
     expect(actor.items[0].flags[RESOLVER_MODULE_ID].groupId).toBe('wisdom-group');
+    expect(actor.items[0].flags.fvttJsonGenerator.spellcastingFeatureKey).toBe('wisdom-feature');
   });
 
   it.each([
@@ -293,15 +301,25 @@ describe('portable Actor spell manifest boundary', () => {
 
     assertEqualStructure({
       actorFlags: actor.flags[RESOLVER_MODULE_ID],
-      items: actor.items.map((item: any) => ({ name: item.name, type: item.type, resolver: item.flags?.[RESOLVER_MODULE_ID] })),
+      items: actor.items.map((item: any) => ({
+        name: item.name,
+        type: item.type,
+        resolver: item.flags?.[RESOLVER_MODULE_ID],
+        generatorKey: item.flags?.fvttJsonGenerator?.spellcastingFeatureKey,
+      })),
     }, {
       actorFlags: {
         spellManifest: parsed.spellManifest,
         spellResolution: { status: 'pending', manifestHash: hashManifest(parsed.spellManifest!) },
       },
       items: [
-        { name: 'Arcane Ward', type: 'feat', resolver: undefined },
-        { name: 'Innate Magic', type: 'feat', resolver: { featureItemKey: 'innate-wisdom-feature', groupId: 'innate-wisdom' } },
+        { name: 'Arcane Ward', type: 'feat', resolver: undefined, generatorKey: undefined },
+        {
+          name: 'Innate Magic',
+          type: 'feat',
+          resolver: { featureItemKey: 'innate-wisdom-feature', groupId: 'innate-wisdom' },
+          generatorKey: 'innate-wisdom-feature',
+        },
       ],
     });
   });

@@ -198,7 +198,11 @@ async function processIr(
     writeJson(join(bundlePath, 'intake-ir.json'), ir);
     const validation = validateMonsterIntakeIR(options.source, ir, { coverageRange: candidate });
     if (validation.blocking.length > 0) {
-      const spellResolution = spellResolutionFromIr(ir, 'needs_review', bundlePath);
+      const spellResolution = spellResolutionForFindings(
+        spellResolutionFromIr(ir, 'pending', bundlePath),
+        validation.findings,
+        bundlePath,
+      );
       writeReports(bundlePath, { schemaVersion: 1, status: 'needs_review', findings: validation.findings, projection: {}, spellResolution });
       return result(candidate, bundlePath, 'needs_review', validation.findings, calls, spellResolution);
     }
@@ -221,9 +225,16 @@ async function processIr(
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
-      return result(candidate, bundlePath, 'needs_review', combined, calls, withReportPath(report.spellResolution, bundlePath));
+      return result(
+        candidate,
+        bundlePath,
+        'needs_review',
+        combined,
+        calls,
+        spellResolutionForFindings(report.spellResolution, combined, bundlePath),
+      );
     }
-    const promoted = await promoteAccepted(options, runPath, candidate, ir, markdown);
+    const promoted = await promoteAccepted(options, runPath, candidate, ir, markdown, generated.rawJson);
     if (promoted.findings.length > 0) {
       return result(candidate, bundlePath, 'needs_review', promoted.findings, calls, withReportPath(report.spellResolution, bundlePath));
     }
@@ -236,7 +247,7 @@ async function processIr(
   }
   return result(candidate, bundlePath, 'needs_review', [{
     id: 'repair-limit', code: 'REPAIR_LIMIT', path: '/', message: 'One automatic semantic repair did not produce an accepted result.', blocking: true, origin: 'ai-review',
-  }], calls, spellResolutionFromIr(ir, 'needs_review', bundlePath));
+  }], calls, spellResolutionFromIr(ir, 'pending', bundlePath));
 }
 
 async function promoteAccepted(
@@ -245,6 +256,7 @@ async function promoteAccepted(
   candidate: DiscoveryCandidate,
   ir: MonsterIntakeIR,
   markdown: string,
+  generatedActor: unknown,
 ): Promise<{ markdownPath: string; actorPath: string; findings: IntakeFinding[] }> {
   const vault = resolve(options.vaultPath ?? 'obsidian/dnd数据转fvttjson');
   const slug = slugify(ir.creature.identity.englishName ?? ir.creature.identity.name, candidate.id);
@@ -255,7 +267,23 @@ async function promoteAccepted(
     try {
       const existingActor = JSON.parse(readFileSync(actorPath, 'utf-8')) as unknown;
       const existingReport = verifyMonsterIntake(options.source, ir, markdown, existingActor, candidate);
-      if (existingReport.status === 'accepted') return { markdownPath, actorPath, findings: [] };
+      if (existingReport.status === 'accepted') {
+        const difference = firstPromotionDifference(existingActor, generatedActor);
+        if (!difference) return { markdownPath, actorPath, findings: [] };
+        return {
+          markdownPath,
+          actorPath,
+          findings: [{
+            id: `target-conflict:${candidate.id}`,
+            code: 'TARGET_CONFLICT',
+            path: '/promotion',
+            message: `Existing Actor differs from this run's canonical generated Actor at ${difference}: ${actorPath}`,
+            blocking: true,
+            origin: 'conflict',
+            candidates: ['replace', 'keep-existing'],
+          }],
+        };
+      }
       return {
         markdownPath,
         actorPath,
@@ -450,6 +478,22 @@ function spellResolutionFromIr(
   return { required: true, status, spellCount, reportPath: join(bundlePath, 'deterministic-report.md') };
 }
 
+function spellResolutionForFindings(
+  base: PortableSpellResolutionStatus,
+  findings: IntakeFinding[],
+  bundlePath: string,
+): PortableSpellResolutionStatus {
+  if (!base.required || base.status === 'failed') return withReportPath(base, bundlePath);
+  const needsReview = findings.some((finding) => finding.blocking && isSpellSpecificFinding(finding));
+  return withReportPath({ ...base, status: needsReview ? 'needs_review' : 'pending' }, bundlePath);
+}
+
+function isSpellSpecificFinding(finding: IntakeFinding): boolean {
+  if (finding.path === '/creature/spellcasting' || finding.path.startsWith('/creature/spellcasting/')) return true;
+  if (finding.path.startsWith(`/actor/flags/fvtt-json-generator-spell-resolver/`)) return true;
+  return /^(?:SPELL_|PORTABLE_SPELL_|PORTABLE_ACTOR_(?:EMBEDDED_SPELL|CAST_ACTIVITY|MANAGED_ACTIVITY)|PREMATURE_SPELL_|RENDERED_SPELL_|FORBIDDEN_TARGET_WORLD_IDENTIFIER)/u.test(finding.code);
+}
+
 function withReportPath(
   resolution: PortableSpellResolutionStatus,
   bundlePath: string,
@@ -472,6 +516,60 @@ function writeDecisionTemplate(runPath: string, manifest: Manifest): void {
 
 function existingConflict(path: string, expected: string): string | undefined {
   return existsSync(path) && readFileSync(path, 'utf-8') !== expected ? path : undefined;
+}
+
+// Exhaustive published-output comparison. The only ignored data is generated afresh by
+// the project workflow: Actor timestamps, generated activity map IDs, and generated
+// Active Effect IDs. Item order and every semantic field remain part of the comparison.
+function promotionProjection(value: unknown, path = ''): unknown {
+  if (Array.isArray(value)) return value.map((entry, index) => promotionProjection(entry, `${path}/${index}`));
+  if (!value || typeof value !== 'object') return value;
+  const record = value as Record<string, unknown>;
+  if (path.endsWith('/system/activities')) {
+    return Object.values(record)
+      .map((activity, index) => promotionProjection(activity, `${path}/<activity-${index}>`))
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  }
+  return Object.fromEntries(Object.keys(record).sort().flatMap((key) => {
+    const childPath = `${path}/${key}`;
+    if (path.endsWith('/_stats') && (key === 'createdTime' || key === 'modifiedTime')) return [];
+    if (key === '_id' && (
+      /\/system\/activities\/<activity-\d+>$/u.test(path)
+      || /\/system\/activities\/<activity-\d+>\/effects\/\d+$/u.test(path)
+      || /\/items\/\d+\/effects\/\d+$/u.test(path)
+    )) return [];
+    return [[key, promotionProjection(record[key], childPath)]];
+  }));
+}
+
+function firstPromotionDifference(existing: unknown, generated: unknown): string | undefined {
+  const left = promotionProjection(existing);
+  const right = promotionProjection(generated);
+  return firstCanonicalDifference(left, right, '') ?? undefined;
+}
+
+function firstCanonicalDifference(left: unknown, right: unknown, path: string): string | null {
+  if (Object.is(left, right)) return null;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) return path || '/';
+    for (let index = 0; index < left.length; index += 1) {
+      const difference = firstCanonicalDifference(left[index], right[index], `${path}/${index}`);
+      if (difference) return difference;
+    }
+    return null;
+  }
+  if (left && right && typeof left === 'object' && typeof right === 'object' && !Array.isArray(left) && !Array.isArray(right)) {
+    const leftRecord = left as Record<string, unknown>;
+    const rightRecord = right as Record<string, unknown>;
+    const keys = [...new Set([...Object.keys(leftRecord), ...Object.keys(rightRecord)])].sort();
+    for (const key of keys) {
+      if (!(key in leftRecord) || !(key in rightRecord)) return `${path}/${key}` || '/';
+      const difference = firstCanonicalDifference(leftRecord[key], rightRecord[key], `${path}/${key}`);
+      if (difference) return difference;
+    }
+    return null;
+  }
+  return path || '/';
 }
 
 function providerFinding(error: unknown): IntakeFinding {

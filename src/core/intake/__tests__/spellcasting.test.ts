@@ -269,6 +269,94 @@ describe('source-evidenced spellcasting intake', () => {
 
   test.each([
     {
+      label: 'English ability-first syntax',
+      abilityClause: 'It uses Wisdom as spellcasting ability',
+      materialClause: 'It requires no material components',
+    },
+    {
+      label: 'Chinese ability-first and broad component-waiver syntax',
+      abilityClause: '它使用智力作为施法属性',
+      ability: 'int' as const,
+      materialClause: '它无需任何材料成分',
+    },
+    {
+      label: 'Chinese canonical ability and all-spell-component waiver syntax',
+      abilityClause: '它的施法属性为感知',
+      ability: 'wis' as const,
+      materialClause: '它无需法术成分',
+    },
+  ])('accepts generalized evidenced spellcasting syntax: $label', ({ abilityClause, materialClause, ability }) => {
+    const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause, ability });
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+  });
+
+  test('rejects a spoof identifier when englishName is omitted instead of treating refId as name evidence', () => {
+    const { source, ir } = buildEnglishCasterCase();
+    const ref = (ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];
+    delete ref.englishName;
+    ref.identifier = 'fireball';
+    ref.refId = 'instance-sacred-flame-1';
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'SPELL_REF_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
+    }));
+  });
+
+  test('accepts a missing englishName only when the stable identifier is bound to the evidenced English originalName', () => {
+    const { source, ir } = buildEnglishCasterCase();
+    const ref = (ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];
+    delete ref.englishName;
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+  });
+
+  test('rejects a mixed-script originalName and identifier as the fallback English identity', () => {
+    const { source, ir } = buildEnglishCasterCase({ spellName: '火球 Sacred Flame' });
+    const ref = (ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];
+    delete ref.englishName;
+    ref.identifier = '火球-sacred-flame';
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'SPELL_REF_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
+    }));
+  });
+
+  test('rejects a mixed-script explicit englishName and identifier even when exactly evidenced', () => {
+    const { source, ir } = buildEnglishCasterCase({ spellName: '火球 Sacred Flame' });
+    const ref = (ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];
+    ref.englishName = '火球 Sacred Flame';
+    ref.identifier = '火球-sacred-flame';
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'SPELL_REF_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
+    }));
+  });
+
+  test.each([
+    {
+      label: 'unrelated Chinese attribute use',
+      abilityClause: '它使用感知进行调查，魅力才是施法属性',
+      materialClause: '它无需任何材料成分',
+      expectedCode: 'SPELL_ABILITY_EVIDENCE_MISMATCH',
+    },
+    {
+      label: 'non-material component waiver',
+      abilityClause: '它使用感知作为施法属性',
+      materialClause: '它无需任何言语成分',
+      expectedCode: 'SPELL_COMPONENT_WAIVER_EVIDENCE_MISMATCH',
+    },
+  ])('rejects close generalized syntax negative: $label', ({ abilityClause, materialClause, expectedCode }) => {
+    const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause });
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code: expectedCode }));
+  });
+
+  test.each([
+    {
       label: 'claimed Fire from evidence for Faerie Fire',
       build: () => buildEnglishCasterCase({ spellName: 'Faerie Fire', explicitAlias: 'Fey Flame' }),
       mutate: (ir: any) => Object.assign(ir.creature.spellcasting[0].usageGroups[0].spellRefs[0], {
@@ -483,13 +571,21 @@ function containedBy(
 }
 
 function buildEnglishCasterCase(
-  options: { spellName?: string; explicitAlias?: string } = {},
+  options: {
+    spellName?: string;
+    explicitAlias?: string;
+    abilityClause?: string;
+    materialClause?: string;
+    ability?: 'wis' | 'int';
+  } = {},
 ): { source: string; ir: ReturnType<typeof buildValidLurkerIr> } {
   const spellName = options.spellName ?? 'Sacred Flame';
   const explicitAlias = options.explicitAlias ?? 'Sacred Fire';
   const identifier = spellName.toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
   const spellGrant = `${spellName} (alias: "${explicitAlias}")`;
-  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. Its spellcasting ability is Wisdom (spell save DC 13, +5 to hit with spell attacks). It requires no material components.\nAt Will: ${spellGrant}`;
+  const abilityClause = options.abilityClause ?? 'Its spellcasting ability is Wisdom';
+  const materialClause = options.materialClause ?? 'It requires no material components';
+  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. ${abilityClause} (spell save DC 13, +5 to hit with spell attacks). ${materialClause}.\nAt Will: ${spellGrant}`;
   const source = `${LURKER_SOURCE}\n${description}`;
   const ir = buildValidLurkerIr() as any;
   const start = source.length - description.length;
@@ -501,10 +597,10 @@ function buildEnglishCasterCase(
   ir.creature.spellcasting = [{
     groupId: 'innate-wisdom', featureName: 'Innate Spellcasting', description,
     evidence: [{ start, end: source.length, quote: description }],
-    ability: 'wis', abilityEvidence: [evidence('spellcasting ability is Wisdom')],
+    ability: options.ability ?? 'wis', abilityEvidence: [evidence(abilityClause)],
     saveDc: 13, saveDcEvidence: [evidence('spell save DC 13')],
     attackBonus: 5, attackBonusEvidence: [evidence('+5 to hit with spell attacks')],
-    componentWaivers: [{ component: 'material', evidence: [evidence('requires no material components')] }],
+    componentWaivers: [{ component: 'material', evidence: [evidence(materialClause)] }],
     usageGroups: [{
       usage: 'at-will', evidence: [evidence(`At Will: ${spellGrant}`)],
       spellRefs: [{

@@ -96,17 +96,36 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_MISSING' }));
   });
 
-  test('blocks cloned source-identical spellcasting features even when resolver flags are moved to the clone', async () => {
+  test('blocks a second generated spellcasting source feature even when descriptions drift and resolver flags move', async () => {
     const { ir, markdown, actor } = await generatedRatWarlock();
     const linked = actor.items.find((item: any) => item.flags?.['fvtt-json-generator-spell-resolver']?.featureItemKey);
     const clone = structuredClone(linked);
     delete linked.flags['fvtt-json-generator-spell-resolver'];
+    linked.name = 'Completely renamed by a user';
+    linked.system.description.value = '<p>User-edited prose that no longer matches the source description.</p>';
+    (Object.values(linked.system.activities)[0] as any).description.chatFlavor = 'Different activity prose.';
     actor.items.push(clone);
 
     const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
 
     expect(report.status).toBe('needs_review');
     expect(report.findings).toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_DUPLICATE' }));
+  });
+
+  test('does not classify a near-name unrelated generated feat as the spellcasting source feature', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.items.push({
+      name: 'Innate Spellcasting Notes',
+      type: 'feat',
+      system: { description: { value: '<p>Unrelated notes.</p>' }, activities: {} },
+      effects: [],
+      flags: { fvttJsonGenerator: { effectHints: {} } },
+    });
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor);
+
+    expect(report.findings).not.toContainEqual(expect.objectContaining({ code: 'SPELL_FEATURE_LINK_DUPLICATE' }));
+    expect(report.status).toBe('accepted');
   });
 
   test.each([

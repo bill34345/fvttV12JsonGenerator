@@ -656,7 +656,14 @@ function evidenceEntailsSpellRef(source: string, ref: Record<string, unknown>, e
   const aliases = (Array.isArray(ref.aliases) ? ref.aliases : [])
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
   const identifier = normalizeEvidenceToken(ref.identifier);
-  const englishName = normalizeEvidenceToken(ref.englishName);
+  const hasEnglishName = typeof ref.englishName === 'string' && ref.englishName.trim().length > 0;
+  const englishName = hasEnglishName && isLatinLetterOnlyName(ref.englishName as string)
+    ? normalizeEvidenceToken(ref.englishName)
+    : '';
+  const originalName = normalizeEvidenceToken(ref.originalName);
+  const stableEnglishName = hasEnglishName
+    ? englishName
+    : (typeof ref.originalName === 'string' && isLatinLetterOnlyName(ref.originalName) ? originalName : '');
   const provenNames = names.filter((name) => evidenceContainsPhrase(evidenceText, name));
   const aliasesInternallyConsistent = aliases.every((alias) => {
     const normalizedAlias = normalizeEvidenceToken(alias);
@@ -667,8 +674,15 @@ function evidenceEntailsSpellRef(source: string, ref: Record<string, unknown>, e
   });
   return provenNames.length > 0
     && Boolean(identifier)
-    && (!englishName || identifier === englishName)
+    && Boolean(stableEnglishName)
+    && identifier === stableEnglishName
+    && provenNames.some((name) => normalizeEvidenceToken(name) === stableEnglishName)
     && aliasesInternallyConsistent;
+}
+
+function isLatinLetterOnlyName(value: string): boolean {
+  const letters = Array.from(value.normalize('NFKC')).filter((character) => /\p{L}/u.test(character));
+  return letters.length > 0 && letters.every((character) => /\p{Script=Latin}/u.test(character));
 }
 
 function evidenceContainsPhrase(evidenceText: string, phrase: string): boolean {
@@ -716,7 +730,7 @@ function evidenceEntailsAbility(source: string, evidence: EvidenceRef[] | undefi
   const text = exactEvidenceText(source, evidence).normalize('NFKC').toLocaleLowerCase('en-US');
   return labels[ability].some((label) => {
     const escaped = escapeRegExp(label);
-    return new RegExp(`(?:spellcasting\\s+ability\\s+(?:is|uses?)|\\u65bd\\u6cd5\\u5c5e\\u6027\\u4e3a)\\s*${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+    return new RegExp(`(?:spellcasting\\s+ability\\s+(?:is|uses?)\\s*${escaped}|uses?\\s+${escaped}\\s+as\\s+(?:(?:its|the)\\s+)?spellcasting\\s+ability|\\u65bd\\u6cd5\\u5c5e\\u6027\\u4e3a\\s*${escaped}|\\u4f7f\\u7528\\s*${escaped}\\s*\\u4f5c\\u4e3a\\s*\\u65bd\\u6cd5\\u5c5e\\u6027)(?![\\p{L}\\p{N}])`, 'iu').test(text);
   });
 }
 
@@ -740,7 +754,7 @@ function evidenceEntailsMaterialWaiver(source: string, evidence: EvidenceRef[]):
 function textEntailsMaterialWaiver(value: unknown): boolean {
   const text = String(value ?? '').normalize('NFKC').toLocaleLowerCase('en-US');
   return /(?:without|requires?\s+no|requiring\s+no)\s+material\s+components?/iu.test(text)
-    || /(?:\u65e0\u9700|\u4e0d\u9700|\u4e0d\u9700\u8981)\s*\u6750\u6599\u6210\u5206/u.test(text);
+    || /(?:\u65e0\u9700|\u4e0d\u9700|\u4e0d\u9700\u8981)\s*(?:\u4efb\u4f55|\u4efb\u610f|\u5168\u90e8|\u6240\u6709)?\s*(?:\u6750\u6599|\u6cd5\u672f)\u6210\u5206/u.test(text);
 }
 
 function escapeRegExp(value: string): string {
