@@ -28,12 +28,21 @@ export interface NativeCacheJournalEntry {
   identity: ResolverManagedIdentity;
   cachedFor: string;
   selectedUuid: string;
+  sourceItem: string;
   ownershipApplied: boolean;
+}
+
+export interface NativeCacheBinding {
+  identity: ResolverManagedIdentity;
+  cachedFor: string;
+  selectedUuid: string;
+  sourceItem: string;
 }
 
 export interface HydrationJournal {
   actor: any;
   snapshotItemIds: Set<string>;
+  nativeBindings: NativeCacheBinding[];
   nativeCaches: NativeCacheJournalEntry[];
   createdSpellIds: string[];
   touchedActivityIds: string[];
@@ -68,6 +77,7 @@ export function createHydrationJournal(actor: any): HydrationJournal {
   return {
     actor,
     snapshotItemIds: new Set(iterate(actor?.items).map(documentId).filter(Boolean)),
+    nativeBindings: [],
     nativeCaches: [],
     createdSpellIds: [],
     touchedActivityIds: [],
@@ -173,6 +183,10 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     journalNativeCache(input, preparedFeature, activity, phaseCache, built.identity);
   }
 
+  let nativeCacheSource = await activity.getCachedSpellData();
+  assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
+  journalNativeBinding(input, activity, built.identity, nativeCacheSource);
+
   // dnd5e 5.3.3 prepares/defaults sparse Activity input. The ownership hash
   // must therefore be finalized from the public prepared document, not from
   // the pre-DataModel source that was sent to Item.update().
@@ -185,12 +199,9 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     journalNativeCache(input, preparedFeature, activity, phaseCache, built.identity);
   }
 
-  let nativeCacheSource: any;
   let adoptedNativeId: string | undefined;
   if (phaseCache && phaseCache.flags?.[RESOLVER_MODULE_ID] === undefined) {
     assertAdoptableNativeCache(input.actor, preparedFeature, activity, phaseCache, built.identity, input.journal.snapshotItemIds);
-    nativeCacheSource = await activity.getCachedSpellData();
-    assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
     assertNativeCacheProjectionMatches(nativeCacheSource, phaseCache);
     const journalEntry = input.journal.nativeCaches.find((entry) => entry.id === documentId(phaseCache))!;
     const ownership = cacheOwnershipSource(phaseCache, built.identity, input.transactionId);
@@ -212,9 +223,6 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       identity: built.identity,
     });
   }
-
-  if (nativeCacheSource === undefined) nativeCacheSource = await activity.getCachedSpellData();
-  assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
 
   const matchingCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
 
@@ -253,7 +261,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       assertNativeCacheProjectionMatches(nativeCacheSource, cache);
       const entry = input.journal.nativeCaches.find((candidate) => candidate.id === documentId(cache)) ?? {
         id: documentId(cache), identity: structuredClone(built.identity), cachedFor: activity.relativeUUID,
-        selectedUuid: built.identity.selectedUuid, ownershipApplied: false,
+        selectedUuid: built.identity.selectedUuid, sourceItem: cache.system.sourceItem, ownershipApplied: false,
       };
       if (!input.journal.nativeCaches.includes(entry)) input.journal.nativeCaches.push(entry);
       const ownership = cacheOwnershipSource(cache, built.identity, input.transactionId);
@@ -351,7 +359,24 @@ function journalNativeCache(
     identity: structuredClone(identity),
     cachedFor: activity.relativeUUID,
     selectedUuid: identity.selectedUuid,
+    sourceItem: cache.system.sourceItem,
     ownershipApplied: false,
+  });
+}
+
+function journalNativeBinding(
+  input: HydrateManagedSelectionInput,
+  activity: any,
+  identity: ResolverManagedIdentity,
+  nativeSource: any,
+): void {
+  if (input.journal.nativeBindings.some((entry) => entry.identity.logicalRefKey === identity.logicalRefKey
+    && entry.identity.activityId === identity.activityId)) return;
+  input.journal.nativeBindings.push({
+    identity: structuredClone(identity),
+    cachedFor: activity.relativeUUID,
+    selectedUuid: identity.selectedUuid,
+    sourceItem: nativeSource.system.sourceItem,
   });
 }
 
@@ -483,11 +508,24 @@ async function currentKeepCache(
   prior: any,
   identity: ResolverManagedIdentity,
 ): Promise<any> {
-  let caches = cachesForActivity(input.actor, activity);
-  const deadline = Date.now() + 2000;
-  while (caches.length === 0 && Date.now() < deadline) {
+  const stableWindowMs = 300;
+  const deadline = Date.now() + 2_000;
+  let caches: any[] = [];
+  let signature = '';
+  let stableSince = Date.now();
+  while (Date.now() < deadline) {
+    caches = await coalesceTransactionNativeCaches(input, feature, activity, identity);
+    const nextSignature = [
+      ...caches.map((entry) => `current:${documentId(entry)}`),
+      ...input.journal.nativeCaches.map((entry) => `journal:${entry.id}`),
+    ].sort().join('\n');
+    if (nextSignature !== signature) {
+      signature = nextSignature;
+      stableSince = Date.now();
+    } else if (caches.length === 1 && Date.now() - stableSince >= stableWindowMs) {
+      break;
+    }
     await new Promise((resolve) => setTimeout(resolve, 25));
-    caches = cachesForActivity(input.actor, activity);
   }
   if (caches.length !== 1) throw new Error('Keep requires exactly one current cached Spell while restoring manual content.');
   const current = caches[0];

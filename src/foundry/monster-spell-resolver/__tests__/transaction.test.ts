@@ -238,6 +238,29 @@ describe('Actor-local atomic hydration transaction', () => {
     expect(actor.foreignProjection()).toEqual(foreignBefore);
   });
 
+  test('waits for a delayed dnd5e native cache replacement before declaring rollback restored', async () => {
+    const actor = new TransactionActor(false, 1_500);
+    const before = actor.rawItemProjection();
+    const originalUpdate = actor.updateEmbeddedDocuments.bind(actor);
+    let activityWrites = 0;
+    actor.updateEmbeddedDocuments = async (name: string, updates: any[]) => {
+      const result = await originalUpdate(name, updates);
+      if (name === 'Item' && updates.some((entry) => Object.keys(entry ?? {})
+        .some((key) => key.startsWith('system.activities.')))) {
+        activityWrites += 1;
+        if (activityWrites === 2) throw new Error('failure after prepared Activity hash update');
+      }
+      return result;
+    };
+
+    await expect(executeHydrationTransaction({
+      actor, manifest: manifest(), plan: readyPlan(),
+    })).rejects.toBeInstanceOf(HydrationTransactionError);
+    await new Promise((resolve) => setTimeout(resolve, 1_800));
+
+    expect(actor.rawItemProjection()).toEqual(before);
+  }, 10_000);
+
   test('reports exact residual differences when rollback cannot fully restore', async () => {
     const actor = new TransactionActor(true);
     actor.installStaleManagedPair();
@@ -261,8 +284,30 @@ describe('Actor-local atomic hydration transaction', () => {
       expect(transactionError.rollbackSucceeded).toBe(false);
       expect(transactionError.residualDifferences.length).toBeGreaterThan(0);
       expect(transactionError.residualDifferences.every((entry) => entry.path.startsWith('/managed/')
-        || entry.path.startsWith('/flags/') || entry.path.startsWith('/items/'))).toBe(true);
+        || entry.path.startsWith('/flags/') || entry.path.startsWith('/items/')
+        || entry.path === '/rollback/errors')).toBe(true);
       expect(transactionError.message).toContain('cleanup failed');
+    }
+  });
+
+  test('does not declare rollback restored when a compensating operation itself reports an error', async () => {
+    const actor = new TransactionActor();
+    try {
+      await executeHydrationTransaction({
+        actor, manifest: manifest(), plan: readyPlan(),
+        failureInjector(stage) {
+          if (stage === 'after-feature-update') throw new Error('original failure');
+          if (stage === 'during-rollback') throw new Error('rollback operation failed');
+        },
+      });
+      throw new Error('Expected transaction failure.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HydrationTransactionError);
+      const transactionError = error as HydrationTransactionError;
+      expect(transactionError.rollbackSucceeded).toBe(false);
+      expect(transactionError.residualDifferences).toContainEqual({
+        path: '/rollback/errors', after: ['rollback operation failed'],
+      });
     }
   });
 
@@ -577,8 +622,10 @@ class TransactionActor {
   failSnapshotRecreate = false;
   private activeMutations = 0;
   private nativeCacheSequence = 0;
+  private activityHashWrites = 0;
+  private delayedReplacementScheduled = false;
 
-  constructor(private readonly autoCache = false) {
+  constructor(private readonly autoCache = false, private readonly delayedReplacementMs?: number) {
     const feature: any = {
       id: 'FeatureTransact1', _id: 'FeatureTransact1', type: 'feat', parent: this, actor: this, name: 'Same Display Name',
       flags: {
@@ -615,6 +662,13 @@ class TransactionActor {
           if (activityPath.join('.') === `flags.${RESOLVER_MODULE_ID}.generatedContentHash`) {
             item.system.activities.get(id).flags[RESOLVER_MODULE_ID].generatedContentHash = source;
             this.mutateCachedEnchantment(item.system.activities.get(id));
+            this.activityHashWrites += 1;
+            if (this.delayedReplacementMs !== undefined && this.activityHashWrites === 1
+              && !this.delayedReplacementScheduled) {
+              this.delayedReplacementScheduled = true;
+              const activity = item.system.activities.get(id);
+              setTimeout(() => { void this.replaceWithDelayedNativeCache(activity); }, this.delayedReplacementMs);
+            }
             continue;
           }
           if (activityPath.length) throw new Error(`Unsupported fake Activity update path: ${path}`);
@@ -789,6 +843,18 @@ class TransactionActor {
     if (!cache || !enchantment) return;
     enchantment.changes = [];
     this.calls.push(['nativeRefreshCachedEnchantment', cache.id]);
+  }
+
+  private async replaceWithDelayedNativeCache(activity: any) {
+    const source = await activity.getCachedSpellData();
+    this.items = this.items.filter((item) => item.flags?.dnd5e?.cachedFor !== activity.relativeUUID);
+    source._id = this.nextNativeCacheId();
+    const stats = structuredClone(source._stats);
+    delete source._stats;
+    const document = { ...source, id: source._id, parent: this, actor: this } as any;
+    document.toObject = () => ({ ...activitySource(document), _stats: structuredClone(stats) });
+    this.items.push(document);
+    this.refreshSourcedItems();
   }
 
   private nextNativeCacheId() {

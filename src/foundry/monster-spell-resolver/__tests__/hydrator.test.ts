@@ -203,6 +203,28 @@ describe('prepared Activity eager cache hydration', () => {
     expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
     expect(journal.nativeCaches.map((entry) => entry.id)).toContain('DelayKeepCache01');
   });
+
+  test('Keep coalesces a delayed native cache that overlaps the strictly owned cache after the getter', async () => {
+    const actor = new FakeActor(false);
+    const initial = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    initial.activity.name = 'Overlapping Manual Light';
+    actor.delayDuplicateNativeCacheAfterGetter = true;
+    const journal = createHydrationJournal(actor);
+
+    const kept = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal, preserveExisting: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(kept.activity.name).toBe('Overlapping Manual Light');
+    expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+    expect(journal.nativeCaches.map((entry) => entry.id)).toContain('DupNativeCache01');
+  });
 });
 
 class FakeActor {
@@ -213,6 +235,7 @@ class FakeActor {
   replaceCacheBeforeFullUpdate = false;
   delayReplacementBeforeFullUpdate = false;
   duplicateNativeCacheOnHashWrite = false;
+  delayDuplicateNativeCacheAfterGetter = false;
   flags: Record<string, any>;
   items: any[];
   sourcedItems = new Map<string, any[]>();
@@ -364,7 +387,20 @@ class FakeActor {
       description: source.description ?? { chatFlavor: '' },
       id: source._id, parent: feature.system,
       relativeUUID: `.Item.${feature.id}.Activity.${source._id}`,
-      async getCachedSpellData() { actor.getterCalls++; return actor.cacheSource(activity, source._id); },
+      async getCachedSpellData() {
+        actor.getterCalls++;
+        if (actor.delayDuplicateNativeCacheAfterGetter) {
+          actor.delayDuplicateNativeCacheAfterGetter = false;
+          setTimeout(() => {
+            const duplicate = actor.cacheSource(activity, 'DupNativeCache01');
+            duplicate.parent = actor;
+            duplicate.actor = actor;
+            actor.items.push(duplicate);
+            actor.refreshSourcedItems();
+          }, 200);
+        }
+        return actor.cacheSource(activity, source._id);
+      },
     };
     Object.defineProperties(activity, {
       item: { get: () => activity.parent?.parent },
