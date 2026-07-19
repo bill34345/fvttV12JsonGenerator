@@ -319,6 +319,8 @@ describe('stable hashes', () => {
     afterCast.folder = 'Folder.changed';
     afterCast.ownership.default = 3;
     afterCast._stats.modifiedTime = 999;
+    afterCast._stats.coreVersion = '14.364';
+    afterCast._stats.systemVersion = '5.3.3';
     afterCast.chat = { messageId: 'runtime-message' };
 
     expect(hashManagedProjection(afterCast)).toBe(hashManagedProjection(managed));

@@ -137,6 +137,7 @@ function normalizeManagedValue(value: unknown, path: string[]): unknown {
 
 function isVolatilePath(path: string[], key: string): boolean {
   if (VOLATILE_KEYS.has(key)) return true;
+  if (path.at(-1) === '_stats' && (key === 'coreVersion' || key === 'systemVersion')) return true;
   if (key === 'spent' && path.at(-1) === 'uses') return true;
   if (path.length >= 2 && path[0] === 'flags' && path[1] === RESOLVER_MODULE_ID) {
     return key === 'generatedContentHash' || key === 'transactionId';
