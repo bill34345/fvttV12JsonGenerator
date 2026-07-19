@@ -769,6 +769,24 @@ describe('Actor-level resolve pipeline', () => {
     expect(fixture.service.isAlreadyApplied(target)).toBe(false);
   });
 
+  test('explicit Resolve is an exact no-op when the hydrated Actor is already applied', async () => {
+    const fixture = serviceFixture();
+    await installHydratedPair(fixture);
+    expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(true);
+    fixture.calls.execute.length = 0;
+    fixture.calls.fetch.length = 0;
+    fixture.calls.review = 0;
+    fixture.target.updateCalls.length = 0;
+
+    await fixture.service.processActor(fixture.target, { explicit: true });
+
+    expect(fixture.calls.fetch).toEqual([]);
+    expect(fixture.calls.execute).toEqual([]);
+    expect(fixture.calls.review).toBe(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(true);
+  });
+
   test('persists a manual candidate mapping before hydration and makes zero Actor writes when persistence fails', async () => {
     const fixture = serviceFixture();
     const second = {

@@ -352,6 +352,14 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
         return;
       }
       const readyRuntime = runtime as ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> };
+      // Explicit Resolve must obey the same exact already-applied boundary as
+      // event-driven coordination, except that a previously protected Keep is
+      // intentionally surfaced again for an explicit human decision.
+      if (service.isAlreadyApplied(actor)) {
+        if (!options.explicit) return;
+        const explicitCheck = createPreflight(actor, validation.value, readyRuntime, dependencies, true);
+        if (explicitCheck.status === 'ready') return;
+      }
       active.add(actor);
       await withWorldMappingMutex(async () => {
         ephemeral.set(actor, 'resolving');
