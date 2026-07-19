@@ -25,8 +25,9 @@ export function isResolverStatus(value: unknown): value is ResolverStatus {
 /** Resolving is intentionally derived from memory so Task 7 snapshots the true pre-write status. */
 export function readResolverStatus(actor: any, context: ResolverStatusContext = {}): ResolverStatus {
   if (context.active) return 'resolving';
-  if (isResolverStatus(context.ephemeral)) return context.ephemeral;
   const stored = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.status;
+  if (stored === 'failed-recovery-required') return stored;
+  if (isResolverStatus(context.ephemeral)) return context.ephemeral;
   return isResolverStatus(stored) ? stored : 'pending';
 }
 

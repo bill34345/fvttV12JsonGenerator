@@ -137,6 +137,7 @@ export function captureNativeCacheProjection(source: any): Record<string, any> {
   delete projection._id;
   delete projection.id;
   if (isRecord(projection.flags)) delete projection.flags[RESOLVER_MODULE_ID];
+  normalizeNativeCacheRichText(projection);
   return projection;
 }
 
@@ -177,6 +178,25 @@ function documentSource(document: any): Record<string, any> {
 
 function readCompendiumSource(document: any): unknown {
   return documentSource(document)?._stats?.compendiumSource;
+}
+
+function normalizeNativeCacheRichText(projection: Record<string, any>): void {
+  const description = projection.system?.description;
+  if (isRecord(description)) {
+    for (const key of ['value', 'chat']) {
+      if (typeof description[key] === 'string') description[key] = normalizeHtmlAmpersands(description[key]);
+    }
+  }
+  if (!Array.isArray(projection.effects)) return;
+  for (const effect of projection.effects) {
+    if (isRecord(effect) && typeof effect.description === 'string') {
+      effect.description = normalizeHtmlAmpersands(effect.description);
+    }
+  }
+}
+
+function normalizeHtmlAmpersands(value: string): string {
+  return value.replaceAll('&amp;', '&');
 }
 
 function documentId(document: any): string {

@@ -50,6 +50,14 @@ describe('spell resolver status and safe event coordination', () => {
     expect(target.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('pending');
   });
 
+  test('persisted recovery-required outranks a later non-active ephemeral review status', () => {
+    const target = actor();
+    target.flags[RESOLVER_MODULE_ID].spellResolution.status = 'failed-recovery-required';
+    expect(readResolverStatus(target, { ephemeral: 'needs_review' })).toBe('failed-recovery-required');
+    expect(readResolverStatus(target, { ephemeral: 'stale' })).toBe('failed-recovery-required');
+    expect(readResolverStatus(target, { active: true, ephemeral: 'needs_review' })).toBe('resolving');
+  });
+
   test('immediately ignores non-GM, wrong initiating client, unflagged, unsupported, active, and applied Actors', () => {
     const scheduled: Array<() => void> = [];
     const processed: unknown[] = [];
