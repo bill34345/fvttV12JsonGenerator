@@ -20,6 +20,13 @@ import {
   readCompendiumSource,
   resolverOwnershipFlags,
 } from './ownership';
+import {
+  assertNativeCacheProjectionMatches,
+  captureNativeCacheProjection,
+  NativeCacheLifecycleCapture,
+  resolverDocumentHooks,
+  type ResolverDocumentHookBus,
+} from './native-cache-lifecycle';
 
 const FOUNDRY_ID = /^[A-Za-z0-9]{16}$/;
 
@@ -28,7 +35,7 @@ export interface NativeCacheJournalEntry {
   identity: ResolverManagedIdentity;
   cachedFor: string;
   selectedUuid: string;
-  sourceItem: string;
+  nativeProjection: Record<string, any>;
   ownershipApplied: boolean;
 }
 
@@ -36,7 +43,7 @@ export interface NativeCacheBinding {
   identity: ResolverManagedIdentity;
   cachedFor: string;
   selectedUuid: string;
-  sourceItem: string;
+  nativeProjection: Record<string, any>;
 }
 
 export interface HydrationJournal {
@@ -46,6 +53,7 @@ export interface HydrationJournal {
   nativeCaches: NativeCacheJournalEntry[];
   createdSpellIds: string[];
   touchedActivityIds: string[];
+  lifecycleFailures: string[];
 }
 
 export interface HydrateManagedSelectionInput {
@@ -56,6 +64,7 @@ export interface HydrateManagedSelectionInput {
   journal: HydrationJournal;
   preserveExisting?: boolean;
   afterFeatureUpdate?: (phase: HydrationFeatureUpdatePhase) => void | Promise<void>;
+  lifecycleHooks?: ResolverDocumentHookBus;
 }
 
 export interface HydrationFeatureUpdatePhase {
@@ -81,6 +90,7 @@ export function createHydrationJournal(actor: any): HydrationJournal {
     nativeCaches: [],
     createdSpellIds: [],
     touchedActivityIds: [],
+    lifecycleFailures: [],
   };
 }
 
@@ -116,12 +126,14 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   assertLinkedFeatureOwnership(input.actor, feature, built.identity);
   const existingActivity = getActivity(feature, built.activity._id);
   let existingIdentity: ResolverManagedIdentity | undefined;
+  let existingCache: any;
   let keptCacheSnapshot: Record<string, any> | undefined;
   if (existingActivity) {
     existingIdentity = resolverIdentityFromFlags(existingActivity);
     assertResolverDocumentOwnership(input.actor, feature, existingActivity, existingIdentity, 'activity');
     assertSameManagedRef(existingIdentity, built.identity);
     const existingCaches = cachesForActivity(input.actor, existingActivity);
+    existingCache = existingCaches[0];
     if (input.preserveExisting && existingCaches.length !== 1) {
       throw new Error('Keep requires exactly one strictly owned cached Spell for the existing Cast Activity.');
     }
@@ -152,23 +164,35 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   if (input.preserveExisting) activitySource.flags[RESOLVER_MODULE_ID].protected = true;
   activitySource.flags[RESOLVER_MODULE_ID].transactionId = input.transactionId;
   activitySource.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(activitySource);
-  await requireActorApi(input.actor, 'updateEmbeddedDocuments')('Item', [{
-    _id: documentId(feature),
-    [`system.activities.${activitySource._id}`]: activitySource,
-  }]);
-  input.journal.touchedActivityIds.push(activitySource._id);
-
-  let preparedFeature = findItem(input.actor, documentId(feature));
-  if (!preparedFeature) throw new Error('Linked feature disappeared after Activity update.');
-  let activity = getActivity(preparedFeature, activitySource._id);
-  if (!activity || typeof activity.getCachedSpellData !== 'function') {
-    throw new Error('Updated feature did not prepare a public dnd5e Cast Activity.');
+  const firstLifecycle = new NativeCacheLifecycleCapture(resolverDocumentHooks(input.lifecycleHooks));
+  let preparedFeature: any;
+  let activity: any;
+  let nativeCacheSource: any;
+  try {
+    await requireActorApi(input.actor, 'updateEmbeddedDocuments')('Item', [{
+      _id: documentId(feature),
+      [`system.activities.${activitySource._id}`]: activitySource,
+    }]);
+    input.journal.touchedActivityIds.push(activitySource._id);
+    preparedFeature = findItem(input.actor, documentId(feature));
+    if (!preparedFeature) throw new Error('Linked feature disappeared after Activity update.');
+    activity = getActivity(preparedFeature, activitySource._id);
+    if (!activity || typeof activity.getCachedSpellData !== 'function') {
+      throw new Error('Updated feature did not prepare a public dnd5e Cast Activity.');
+    }
+    assertResolverDocumentOwnership(input.actor, preparedFeature, activity, built.identity, 'activity');
+    nativeCacheSource = await activity.getCachedSpellData();
+    assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
+    journalNativeBinding(input, activity, built.identity, nativeCacheSource);
+    await waitForActivityCacheLifecycle(
+      input, firstLifecycle, existingActivity, existingCache, activity, nativeCacheSource, built.identity,
+    );
+  } finally {
+    firstLifecycle.dispose();
   }
-  assertResolverDocumentOwnership(input.actor, preparedFeature, activity, built.identity, 'activity');
 
-  // dnd5e may have auto-created the cache synchronously as part of the public
-  // feature update. Journal exact post-snapshot native provenance before the
-  // failure injection point so rollback can never overlook an unowned Item.
+  // The exact public lifecycle has completed before ownership/adoption begins.
+
   let phaseCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   let phaseCache = phaseCaches[0];
   if (phaseCache?.flags?.[RESOLVER_MODULE_ID] !== undefined
@@ -183,15 +207,11 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     journalNativeCache(input, preparedFeature, activity, phaseCache, built.identity);
   }
 
-  let nativeCacheSource = await activity.getCachedSpellData();
-  assertNativeCacheSource(nativeCacheSource, activity, built.identity.selectedUuid);
-  journalNativeBinding(input, activity, built.identity, nativeCacheSource);
-
   // dnd5e 5.3.3 prepares/defaults sparse Activity input. The ownership hash
   // must therefore be finalized from the public prepared document, not from
   // the pre-DataModel source that was sent to Item.update().
   ({ feature: preparedFeature, activity } = await refreshPreparedActivityHash(
-    input.actor, preparedFeature, activity, built.identity,
+    input, preparedFeature, activity, built.identity, nativeCacheSource,
   ));
   phaseCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   phaseCache = phaseCaches[0];
@@ -261,7 +281,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       assertNativeCacheProjectionMatches(nativeCacheSource, cache);
       const entry = input.journal.nativeCaches.find((candidate) => candidate.id === documentId(cache)) ?? {
         id: documentId(cache), identity: structuredClone(built.identity), cachedFor: activity.relativeUUID,
-        selectedUuid: built.identity.selectedUuid, sourceItem: cache.system.sourceItem, ownershipApplied: false,
+        selectedUuid: built.identity.selectedUuid, nativeProjection: captureNativeCacheProjection(nativeCacheSource), ownershipApplied: false,
       };
       if (!input.journal.nativeCaches.includes(entry)) input.journal.nativeCaches.push(entry);
       const ownership = cacheOwnershipSource(cache, built.identity, input.transactionId);
@@ -354,12 +374,16 @@ function journalNativeCache(
 ): void {
   assertAdoptableNativeCache(input.actor, feature, activity, cache, identity, input.journal.snapshotItemIds);
   if (input.journal.nativeCaches.some((entry) => entry.id === documentId(cache))) return;
+  const binding = input.journal.nativeBindings.find((entry) => entry.identity.logicalRefKey === identity.logicalRefKey
+    && entry.identity.activityId === identity.activityId);
+  if (!binding) throw new Error('Native cache cannot be journaled before its complete public getter projection is bound.');
+  assertNativeCacheProjectionMatches(binding.nativeProjection, cache);
   input.journal.nativeCaches.push({
     id: documentId(cache),
     identity: structuredClone(identity),
     cachedFor: activity.relativeUUID,
     selectedUuid: identity.selectedUuid,
-    sourceItem: cache.system.sourceItem,
+    nativeProjection: structuredClone(binding.nativeProjection),
     ownershipApplied: false,
   });
 }
@@ -376,7 +400,7 @@ function journalNativeBinding(
     identity: structuredClone(identity),
     cachedFor: activity.relativeUUID,
     selectedUuid: identity.selectedUuid,
-    sourceItem: nativeSource.system.sourceItem,
+    nativeProjection: captureNativeCacheProjection(nativeSource),
   });
 }
 
@@ -386,9 +410,6 @@ async function coalesceTransactionNativeCaches(
   activity: any,
   identity: ResolverManagedIdentity,
 ): Promise<any[]> {
-  // Yield once so public dnd5e lifecycle continuations triggered by the
-  // preceding embedded update become visible before the ownership decision.
-  await new Promise((resolve) => setTimeout(resolve, 0));
   const caches = cachesForActivity(input.actor, activity);
   if (caches.length <= 1) return caches;
   const owned: any[] = [];
@@ -417,19 +438,35 @@ async function coalesceTransactionNativeCaches(
 }
 
 async function refreshPreparedActivityHash(
-  actor: any,
+  input: HydrateManagedSelectionInput,
   feature: any,
   activity: any,
   identity: ResolverManagedIdentity,
+  nativeCacheSource: any,
 ): Promise<{ feature: any; activity: any }> {
+  const actor = input.actor;
   const hash = computeManagedSourceHash(documentSource(activity));
-  await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [{
-    _id: documentId(feature),
-    [`system.activities.${documentId(activity)}.flags.${RESOLVER_MODULE_ID}.generatedContentHash`]: hash,
-  }]);
+  const beforeCache = cachesForActivity(actor, activity)[0];
+  const lifecycle = new NativeCacheLifecycleCapture(resolverDocumentHooks(input.lifecycleHooks));
+  try {
+    await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [{
+      _id: documentId(feature),
+      [`system.activities.${documentId(activity)}.flags.${RESOLVER_MODULE_ID}.generatedContentHash`]: hash,
+    }]);
+  } catch (error) {
+    lifecycle.dispose();
+    throw error;
+  }
   const preparedFeature = findItem(actor, documentId(feature));
   const preparedActivity = getActivity(preparedFeature, documentId(activity));
   if (!preparedFeature || !preparedActivity) throw new Error('Prepared Activity disappeared while finalizing its content hash.');
+  try {
+    await waitForActivityCacheLifecycle(
+      input, lifecycle, activity, beforeCache, preparedActivity, nativeCacheSource, identity,
+    );
+  } finally {
+    lifecycle.dispose();
+  }
   assertResolverDocumentOwnership(actor, preparedFeature, preparedActivity, identity, 'activity');
   assertPreparedHash(preparedActivity, 'Activity');
   return { feature: preparedFeature, activity: preparedActivity };
@@ -508,25 +545,7 @@ async function currentKeepCache(
   prior: any,
   identity: ResolverManagedIdentity,
 ): Promise<any> {
-  const stableWindowMs = 300;
-  const deadline = Date.now() + 2_000;
-  let caches: any[] = [];
-  let signature = '';
-  let stableSince = Date.now();
-  while (Date.now() < deadline) {
-    caches = await coalesceTransactionNativeCaches(input, feature, activity, identity);
-    const nextSignature = [
-      ...caches.map((entry) => `current:${documentId(entry)}`),
-      ...input.journal.nativeCaches.map((entry) => `journal:${entry.id}`),
-    ].sort().join('\n');
-    if (nextSignature !== signature) {
-      signature = nextSignature;
-      stableSince = Date.now();
-    } else if (caches.length === 1 && Date.now() - stableSince >= stableWindowMs) {
-      break;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
+  const caches = await coalesceTransactionNativeCaches(input, feature, activity, identity);
   if (caches.length !== 1) throw new Error('Keep requires exactly one current cached Spell while restoring manual content.');
   const current = caches[0];
   if (current.flags?.[RESOLVER_MODULE_ID] !== undefined) {
@@ -575,29 +594,46 @@ function assertNativeCacheSource(source: any, activity: any, selectedUuid: strin
   if (!Array.isArray(source.effects)) throw new Error('Native cache source lacks source effects/enchantment data.');
 }
 
-function assertNativeCacheProjectionMatches(expected: any, actualDocument: any): void {
-  const expectedSource = documentSource(expected);
-  const actualSource = documentSource(actualDocument);
-  delete expectedSource._id;
-  delete actualSource._id;
-  delete expectedSource.id;
-  delete actualSource.id;
-  if (isRecord(expectedSource.flags)) delete expectedSource.flags[RESOLVER_MODULE_ID];
-  if (isRecord(actualSource.flags)) delete actualSource.flags[RESOLVER_MODULE_ID];
-  const actualExpectedShape = retainExpectedShape(expectedSource, actualSource);
-  if (computeManagedSourceHash(expectedSource) !== computeManagedSourceHash(actualExpectedShape)) {
-    throw new Error('New native cache does not match the prepared Activity public cache projection.');
+async function waitForActivityCacheLifecycle(
+  input: HydrateManagedSelectionInput,
+  lifecycle: NativeCacheLifecycleCapture,
+  beforeActivity: any,
+  beforeCache: any,
+  activity: any,
+  nativeCacheSource: any,
+  identity: ResolverManagedIdentity,
+): Promise<void> {
+  if (!lifecycle.active) return;
+  try {
+    if (!beforeCache || beforeActivity?.spell?.uuid !== identity.selectedUuid) {
+      await lifecycle.waitForCreatedCache({
+        actor: input.actor,
+        cachedFor: activity.relativeUUID,
+        selectedUuid: identity.selectedUuid,
+        projection: captureNativeCacheProjection(nativeCacheSource),
+      });
+      return;
+    }
+    const expectedEffects = Array.isArray(nativeCacheSource?.effects) ? nativeCacheSource.effects : [];
+    const beforeEffects = Array.isArray(documentSource(beforeCache).effects) ? documentSource(beforeCache).effects : [];
+    const enchantment = expectedEffects.find((effect: any) => effect?.type === 'enchantment'
+      && beforeEffects.some((prior: any) => prior?._id === effect?._id));
+    if (enchantment?._id) {
+      const currentUserId = typeof (globalThis as any).game?.user?.id === 'string'
+        ? (globalThis as any).game.user.id
+        : undefined;
+      await lifecycle.waitForUpdatedEffect(
+        input.actor,
+        documentId(beforeCache),
+        enchantment._id,
+        enchantment.changes,
+        currentUserId,
+      );
+    }
+  } catch (error) {
+    input.journal.lifecycleFailures.push(error instanceof Error ? error.message : String(error));
+    throw error;
   }
-}
-
-function retainExpectedShape(expected: unknown, actual: unknown): unknown {
-  if (Array.isArray(expected)) {
-    if (!Array.isArray(actual) || actual.length !== expected.length) return actual;
-    return expected.map((entry, index) => retainExpectedShape(entry, actual[index]));
-  }
-  if (!isRecord(expected)) return actual;
-  if (!isRecord(actual)) return actual;
-  return Object.fromEntries(Object.keys(expected).map((key) => [key, retainExpectedShape(expected[key], actual[key])]));
 }
 
 function documentSource(document: any): Record<string, any> {

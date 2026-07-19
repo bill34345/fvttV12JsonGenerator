@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { logicalSpellRefKey, RESOLVER_MODULE_ID, type PortableSpellManifest, type SpellHydrationSelection } from '../../../core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash, generatedResolverDocumentId } from '../cast-activity';
 import { createHydrationJournal, hydrateManagedSelection } from '../hydrator';
+import { resolverDocumentHooks } from '../native-cache-lifecycle';
 
 // dnd5e.mjs 17937-17940 resolves cachedSpell through actor.sourcedItems and
 // cachedFor===relativeUUID. Lines 18004-18026 define the public native cache
@@ -35,6 +36,21 @@ function selection(): SpellHydrationSelection {
 }
 
 describe('prepared Activity eager cache hydration', () => {
+  test('fails closed in a Foundry runtime when the public Hook bus is unavailable', () => {
+    const gameDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'game');
+    const hooksDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'Hooks');
+    try {
+      Object.defineProperty(globalThis, 'game', { configurable: true, value: {} });
+      Object.defineProperty(globalThis, 'Hooks', { configurable: true, value: undefined });
+      expect(() => resolverDocumentHooks()).toThrow(/public Foundry Hooks are unavailable/i);
+    } finally {
+      if (gameDescriptor) Object.defineProperty(globalThis, 'game', gameDescriptor);
+      else delete (globalThis as any).game;
+      if (hooksDescriptor) Object.defineProperty(globalThis, 'Hooks', hooksDescriptor);
+      else delete (globalThis as any).Hooks;
+    }
+  });
+
   test.each([false, true])('uses public prepared getter without duplicate caches when native auto-cache=%s', async (autoCache) => {
     const actor = new FakeActor(autoCache);
     const journal = createHydrationJournal(actor);
@@ -120,6 +136,20 @@ describe('prepared Activity eager cache hydration', () => {
     expect(actor.calls).toContainEqual(['deleteEmbeddedDocuments', 'Item']);
   });
 
+  test('never deletes a same-provenance duplicate whose complete native projection differs', async () => {
+    const actor = new FakeActor(true);
+    actor.duplicateNativeCacheOnHashWrite = true;
+    actor.corruptDuplicateNativeCacheOnHashWrite = true;
+
+    await expect(hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    })).rejects.toThrow(/public getter projection/i);
+
+    expect(actor.items.filter((item) => item.type === 'spell').map((item) => item.id).sort())
+      .toEqual(['DupNativeCache01', 'NativeHydrate001']);
+  });
+
   test.each(['missing', 'multiple'] as const)(
     'Keep rejects an invalid current manual structure with %s strictly owned cached Spells before writing',
     async (shape) => {
@@ -183,49 +213,91 @@ describe('prepared Activity eager cache hydration', () => {
     expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
   });
 
-  test('Keep waits for a delayed dnd5e replacement cache after the public getter resolves', async () => {
+  test('Keep waits for the exact delayed enchantment lifecycle signal before restoring manual content', async () => {
     const actor = new FakeActor(false);
     const initial = await hydrateManagedSelection({
       actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
       journal: createHydrationJournal(actor),
     });
     initial.activity.name = 'Delayed Manual Light';
-    actor.delayReplacementBeforeFullUpdate = true;
+    const hooks = new FakeHookBus();
+    actor.lifecycleHooks = hooks;
+    actor.delayedEffectUpdateMs = 450;
+    actor.emitConflictingEffectUpdateBeforeReal = true;
     const journal = createHydrationJournal(actor);
+    const startedAt = Date.now();
 
     const kept = await hydrateManagedSelection({
       actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
-      journal, preserveExisting: true,
+      journal, preserveExisting: true, lifecycleHooks: hooks,
     });
 
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
     expect(kept.activity.name).toBe('Delayed Manual Light');
-    expect(kept.cache.id).toBe('DelayKeepCache01');
     expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
-    expect(journal.nativeCaches.map((entry) => entry.id)).toContain('DelayKeepCache01');
   });
 
-  test('Keep coalesces a delayed native cache that overlaps the strictly owned cache after the getter', async () => {
+  test('Overwrite waits for the exact delayed enchantment lifecycle signal before returning', async () => {
     const actor = new FakeActor(false);
-    const initial = await hydrateManagedSelection({
+    await hydrateManagedSelection({
       actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
       journal: createHydrationJournal(actor),
     });
-    initial.activity.name = 'Overlapping Manual Light';
-    actor.delayDuplicateNativeCacheAfterGetter = true;
+    const hooks = new FakeHookBus();
+    actor.lifecycleHooks = hooks;
+    actor.delayedEffectUpdateMs = 450;
     const journal = createHydrationJournal(actor);
+    const startedAt = Date.now();
 
-    const kept = await hydrateManagedSelection({
+    const overwritten = await hydrateManagedSelection({
       actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
-      journal, preserveExisting: true,
+      journal, lifecycleHooks: hooks,
     });
-    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    expect(kept.activity.name).toBe('Overlapping Manual Light');
-    expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
+    expect(overwritten.cache.flags[RESOLVER_MODULE_ID].managed).toBe(true);
     expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
-    expect(journal.nativeCaches.map((entry) => entry.id)).toContain('DupNativeCache01');
+  });
+
+  test('does not return before an exact createItem lifecycle event that arrives beyond the old stability window', async () => {
+    const hooks = new FakeHookBus();
+    const actor = new FakeActor(false, false, hooks);
+    actor.delayedNativeCacheMs = 450;
+    const startedAt = Date.now();
+
+    const hydrated = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+      lifecycleHooks: hooks,
+    });
+
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+    expect(hydrated.cache.flags[RESOLVER_MODULE_ID].managed).toBe(true);
   });
 });
+
+class FakeHookBus {
+  private nextId = 1;
+  private readonly callbacks = new Map<string, Map<number, (...args: any[]) => void>>();
+
+  on(name: string, callback: (...args: any[]) => void): number {
+    const id = this.nextId++;
+    const entries = this.callbacks.get(name) ?? new Map();
+    entries.set(id, callback);
+    this.callbacks.set(name, entries);
+    return id;
+  }
+
+  off(name: string, id: number): void {
+    this.callbacks.get(name)?.delete(id);
+  }
+
+  emit(name: string, ...args: any[]): void {
+    for (const callback of this.callbacks.get(name)?.values() ?? []) callback(...args);
+  }
+}
 
 class FakeActor {
   readonly id = 'ActorHydrate0001';
@@ -235,12 +307,20 @@ class FakeActor {
   replaceCacheBeforeFullUpdate = false;
   delayReplacementBeforeFullUpdate = false;
   duplicateNativeCacheOnHashWrite = false;
+  corruptDuplicateNativeCacheOnHashWrite = false;
   delayDuplicateNativeCacheAfterGetter = false;
+  delayedNativeCacheMs = 0;
+  delayedEffectUpdateMs = 0;
+  emitConflictingEffectUpdateBeforeReal = false;
   flags: Record<string, any>;
   items: any[];
   sourcedItems = new Map<string, any[]>();
 
-  constructor(private readonly autoCache: boolean, private readonly corruptNativeCache = false) {
+  constructor(
+    private readonly autoCache: boolean,
+    private readonly corruptNativeCache = false,
+    public lifecycleHooks?: FakeHookBus,
+  ) {
     const manifest = oneSpellManifest();
     this.flags = { [RESOLVER_MODULE_ID]: { spellManifest: manifest } };
     const feature: any = {
@@ -312,11 +392,14 @@ class FakeActor {
       const activityPath = path.slice('system.activities.'.length).split('.');
       const id = activityPath.shift()!;
       if (activityPath.join('.') === `flags.${RESOLVER_MODULE_ID}.generatedContentHash`) {
-        item.system.activities.get(id).flags[RESOLVER_MODULE_ID].generatedContentHash = source;
+        const updatedActivity = item.system.activities.get(id);
+        updatedActivity.flags[RESOLVER_MODULE_ID].generatedContentHash = source;
+        this.emitEnchantmentUpdate(updatedActivity);
         if (this.duplicateNativeCacheOnHashWrite) {
           this.duplicateNativeCacheOnHashWrite = false;
           const activity = item.system.activities.get(id);
           const duplicate = this.cacheSource(activity, 'DupNativeCache01');
+          if (this.corruptDuplicateNativeCacheOnHashWrite) duplicate.name = 'Conflicting same-provenance cache';
           duplicate.parent = this;
           duplicate.actor = this;
           this.items.push(duplicate);
@@ -327,6 +410,19 @@ class FakeActor {
       if (activityPath.length) throw new Error(`Unsupported fake Activity update path: ${path}`);
       const activity = this.preparedActivity(item, source as any);
       item.system.activities.set(id, activity);
+      this.emitEnchantmentUpdate(activity);
+      if (this.delayedNativeCacheMs > 0 && !this.findCache(activity.relativeUUID)) {
+        const delay = this.delayedNativeCacheMs;
+        this.delayedNativeCacheMs = 0;
+        setTimeout(() => {
+          const cache = this.cacheSource(activity, 'DelayedNative001');
+          cache.parent = this;
+          cache.actor = this;
+          this.items.push(cache);
+          this.refreshSourcedItems();
+          this.lifecycleHooks?.emit('createItem', cache, {}, 'CurrentUser00001');
+        }, delay);
+      }
       if (this.autoCache && !this.findCache(activity.relativeUUID)) {
         const cache = this.cacheSource(activity, 'NativeHydrate001');
         cache.system.preparedSpellDefault = 'dnd5e-normalized';
@@ -425,6 +521,25 @@ class FakeActor {
 
   private findCache(relativeUUID: string) {
     return this.items.find((item) => item.type === 'spell' && item.flags?.dnd5e?.cachedFor === relativeUUID);
+  }
+
+  private emitEnchantmentUpdate(activity: any): void {
+    const currentCache = this.findCache(activity.relativeUUID);
+    const enchantment = currentCache?.effects?.find((effect: any) => effect.type === 'enchantment');
+    if (!enchantment || !this.lifecycleHooks) return;
+    const emit = () => this.lifecycleHooks?.emit('updateActiveEffect', {
+      ...structuredClone(enchantment), id: enchantment._id, parent: currentCache,
+    }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
+    if (this.delayedEffectUpdateMs > 0) {
+      const delay = this.delayedEffectUpdateMs;
+      this.delayedEffectUpdateMs = 0;
+      if (this.emitConflictingEffectUpdateBeforeReal) {
+        this.lifecycleHooks.emit('updateActiveEffect', {
+          ...structuredClone(enchantment), id: enchantment._id, parent: currentCache,
+        }, { changes: [{ key: 'system.description.value', mode: 5, value: 'foreign update' }] }, {}, 'CurrentUser00001');
+      }
+      setTimeout(emit, delay);
+    } else emit();
   }
 
   private refreshSourcedItems() {

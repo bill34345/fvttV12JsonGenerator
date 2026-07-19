@@ -238,26 +238,23 @@ describe('Actor-local atomic hydration transaction', () => {
     expect(actor.foreignProjection()).toEqual(foreignBefore);
   });
 
-  test('waits for a delayed dnd5e native cache replacement before declaring rollback restored', async () => {
-    const actor = new TransactionActor(false, 1_500);
+  test('waits for delayed public createItem completion while restoring snapshot Activities during rollback', async () => {
+    const actor = new TransactionActor(true);
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
     const before = actor.rawItemProjection();
-    const originalUpdate = actor.updateEmbeddedDocuments.bind(actor);
-    let activityWrites = 0;
-    actor.updateEmbeddedDocuments = async (name: string, updates: any[]) => {
-      const result = await originalUpdate(name, updates);
-      if (name === 'Item' && updates.some((entry) => Object.keys(entry ?? {})
-        .some((key) => key.startsWith('system.activities.')))) {
-        activityWrites += 1;
-        if (activityWrites === 2) throw new Error('failure after prepared Activity hash update');
-      }
-      return result;
-    };
+    const hooks = new TransactionHookBus();
+    actor.lifecycleHooks = hooks;
+    actor.nativeCreateDelayMs = 450;
+    const startedAt = Date.now();
 
     await expect(executeHydrationTransaction({
-      actor, manifest: manifest(), plan: readyPlan(),
-    })).rejects.toBeInstanceOf(HydrationTransactionError);
-    await new Promise((resolve) => setTimeout(resolve, 1_800));
+      actor, manifest: manifest(), plan: readyPlan(actor), lifecycleHooks: hooks,
+      failureInjector(stage) {
+        if (stage === 'after-partial-cache-creation') throw new Error('force snapshot restore');
+      },
+    })).rejects.toMatchObject({ rollbackSucceeded: true, residualDifferences: [] });
 
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(800);
     expect(actor.rawItemProjection()).toEqual(before);
   }, 10_000);
 
@@ -308,6 +305,49 @@ describe('Actor-local atomic hydration transaction', () => {
       expect(transactionError.residualDifferences).toContainEqual({
         path: '/rollback/errors', after: ['rollback operation failed'],
       });
+    }
+  });
+
+  test('a public lifecycle timeout is failed recovery with an exact rollback error, never a silent success', async () => {
+    const actor = new TransactionActor(false);
+    const hooks = new TransactionHookBus();
+    try {
+      await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan(), lifecycleHooks: hooks });
+      throw new Error('Expected lifecycle timeout.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HydrationTransactionError);
+      const transactionError = error as HydrationTransactionError;
+      expect(transactionError.rollbackSucceeded).toBe(false);
+      expect(transactionError.residualDifferences).toContainEqual(expect.objectContaining({
+        path: '/rollback/errors',
+      }));
+      expect(JSON.stringify(transactionError.residualDifferences)).toContain('Timed out waiting for public Foundry createItem');
+    }
+  }, 10_000);
+
+  test('rollback preserves and reports a same-provenance native cache whose getter projection changed', async () => {
+    const actor = new TransactionActor(true);
+    let changed = false;
+    try {
+      await executeHydrationTransaction({
+        actor, manifest: manifest(), plan: readyPlan(),
+        failureInjector(stage) {
+          if (stage !== 'after-feature-update') return;
+          const cache = actor.items.find((item) => item.type === 'spell' && item.flags?.[RESOLVER_MODULE_ID]?.managed);
+          if (!cache) throw new Error('expected adopted native cache');
+          cache.name = 'Projection changed after adoption';
+          changed = true;
+          throw new Error('projection changed after adoption');
+        },
+      });
+      throw new Error('Expected projection-safe rollback failure.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HydrationTransactionError);
+      expect(changed).toBe(true);
+      const transactionError = error as HydrationTransactionError;
+      expect(transactionError.rollbackSucceeded).toBe(false);
+      expect(transactionError.residualDifferences.some((entry) => entry.path === '/rollback/errors')).toBe(true);
+      expect(actor.items.some((item) => item.type === 'spell' && item.name === 'Projection changed after adoption')).toBe(true);
     }
   });
 
@@ -610,6 +650,22 @@ describe('Actor-local atomic hydration transaction', () => {
   });
 });
 
+class TransactionHookBus {
+  private nextId = 1;
+  private readonly callbacks = new Map<string, Map<number, (...args: any[]) => void>>();
+  on(name: string, callback: (...args: any[]) => void): number {
+    const id = this.nextId++;
+    const entries = this.callbacks.get(name) ?? new Map();
+    entries.set(id, callback);
+    this.callbacks.set(name, entries);
+    return id;
+  }
+  off(name: string, id: number): void { this.callbacks.get(name)?.delete(id); }
+  emit(name: string, ...args: any[]): void {
+    for (const callback of this.callbacks.get(name)?.values() ?? []) callback(...args);
+  }
+}
+
 class TransactionActor {
   readonly id = 'ActorTransact001';
   readonly documentName = 'Actor';
@@ -620,12 +676,11 @@ class TransactionActor {
   sourcedItems = new Map<string, any[]>();
   maxConcurrentMutations = 0;
   failSnapshotRecreate = false;
+  lifecycleHooks?: TransactionHookBus;
+  nativeCreateDelayMs = 0;
   private activeMutations = 0;
   private nativeCacheSequence = 0;
-  private activityHashWrites = 0;
-  private delayedReplacementScheduled = false;
-
-  constructor(private readonly autoCache = false, private readonly delayedReplacementMs?: number) {
+  constructor(private readonly autoCache = false) {
     const feature: any = {
       id: 'FeatureTransact1', _id: 'FeatureTransact1', type: 'feat', parent: this, actor: this, name: 'Same Display Name',
       flags: {
@@ -638,7 +693,14 @@ class TransactionActor {
     feature.system.parent = feature;
     feature.deleteActivity = async (id: string) => {
       this.calls.push(['deleteActivity', id]);
+      const activity = feature.system.activities.get(id);
+      const cache = activity && this.items.find((item) => item.flags?.dnd5e?.cachedFor === activity.relativeUUID);
       feature.system.activities.delete(id);
+      if (cache) {
+        this.items = this.items.filter((item) => item !== cache);
+        this.refreshSourcedItems();
+        this.lifecycleHooks?.emit('deleteItem', cache, {}, 'CurrentUser00001');
+      }
       return feature;
     };
     this.items = [feature, {
@@ -662,13 +724,6 @@ class TransactionActor {
           if (activityPath.join('.') === `flags.${RESOLVER_MODULE_ID}.generatedContentHash`) {
             item.system.activities.get(id).flags[RESOLVER_MODULE_ID].generatedContentHash = source;
             this.mutateCachedEnchantment(item.system.activities.get(id));
-            this.activityHashWrites += 1;
-            if (this.delayedReplacementMs !== undefined && this.activityHashWrites === 1
-              && !this.delayedReplacementScheduled) {
-              this.delayedReplacementScheduled = true;
-              const activity = item.system.activities.get(id);
-              setTimeout(() => { void this.replaceWithDelayedNativeCache(activity); }, this.delayedReplacementMs);
-            }
             continue;
           }
           if (activityPath.length) throw new Error(`Unsupported fake Activity update path: ${path}`);
@@ -680,6 +735,7 @@ class TransactionActor {
             this.items = this.items.filter((entry) => entry !== previousCache);
             this.calls.push(['nativeDeleteCachedSpell', previousCache.id]);
             this.refreshSourcedItems();
+            this.lifecycleHooks?.emit('deleteItem', previousCache, {}, 'CurrentUser00001');
           }
           const activity = this.preparedActivity(item, source as any);
           item.system.activities.set(id, activity);
@@ -687,8 +743,14 @@ class TransactionActor {
             const native = await activity.getCachedSpellData();
             native._id = this.nextNativeCacheId();
             native.system.preparedSpellDefault = 'dnd5e-normalized';
-            this.items.push({ ...native, id: native._id, parent: this, actor: this });
-            this.refreshSourcedItems();
+            const install = () => {
+              const document = { ...native, id: native._id, parent: this, actor: this };
+              this.items.push(document);
+              this.refreshSourcedItems();
+              this.lifecycleHooks?.emit('createItem', document, {}, 'CurrentUser00001');
+            };
+            if (this.nativeCreateDelayMs > 0) setTimeout(install, this.nativeCreateDelayMs);
+            else install();
           }
           this.mutateCachedEnchantment(activity);
         }
@@ -732,8 +794,10 @@ class TransactionActor {
   async deleteEmbeddedDocuments(name: string, ids: string[]) {
     await this.withMutation(async () => {
       this.calls.push(['deleteEmbeddedDocuments', name, [...ids]]);
+      const deleted = this.items.filter((item) => ids.includes(item.id));
       this.items = this.items.filter((item) => !ids.includes(item.id));
       this.refreshSourcedItems();
+      for (const item of deleted) this.lifecycleHooks?.emit('deleteItem', item, {}, 'CurrentUser00001');
     });
     return [];
   }
@@ -843,18 +907,9 @@ class TransactionActor {
     if (!cache || !enchantment) return;
     enchantment.changes = [];
     this.calls.push(['nativeRefreshCachedEnchantment', cache.id]);
-  }
-
-  private async replaceWithDelayedNativeCache(activity: any) {
-    const source = await activity.getCachedSpellData();
-    this.items = this.items.filter((item) => item.flags?.dnd5e?.cachedFor !== activity.relativeUUID);
-    source._id = this.nextNativeCacheId();
-    const stats = structuredClone(source._stats);
-    delete source._stats;
-    const document = { ...source, id: source._id, parent: this, actor: this } as any;
-    document.toObject = () => ({ ...activitySource(document), _stats: structuredClone(stats) });
-    this.items.push(document);
-    this.refreshSourcedItems();
+    this.lifecycleHooks?.emit('updateActiveEffect', {
+      ...structuredClone(enchantment), id: enchantment._id, parent: cache,
+    }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
   }
 
   private nextNativeCacheId() {

@@ -114,39 +114,6 @@ export function assertAdoptableNativeCache(
   if (readCompendiumSource(cache) !== identity.selectedUuid) fail('Native cache Compendium source does not match the selected UUID.');
 }
 
-/**
- * A dnd5e cache continuation can outlive its Activity during compensating
- * rollback. This permits cleanup only when the transaction already journaled
- * the exact Activity binding and native sourceItem value.
- */
-export function assertOrphanedTransactionNativeCache(
-  actor: any,
-  feature: any,
-  cache: any,
-  identity: ResolverDocumentIdentity,
-  cachedFor: string,
-  sourceItem: string,
-  snapshotItemIds: ReadonlySet<string>,
-): void {
-  assertLinkedFeatureOwnership(actor, feature, identity);
-  const id = documentId(cache);
-  if (!FOUNDRY_ID.test(id)) fail('Orphaned native cache has an invalid Foundry Document ID.');
-  if (snapshotItemIds.has(id)) fail('A pre-existing cache cannot be treated as a rollback orphan.');
-  if (cache.type !== 'spell' || cache.parent !== actor || cache.actor !== actor) {
-    fail('Orphaned native cache is not embedded in the expected Actor.');
-  }
-  if (cache.flags?.[RESOLVER_MODULE_ID] !== undefined) fail('Orphaned native cache unexpectedly has resolver ownership.');
-  if (typeof cachedFor !== 'string' || !cachedFor || cache.flags?.dnd5e?.cachedFor !== cachedFor) {
-    fail('Orphaned native cache cachedFor does not match the journaled Activity.');
-  }
-  if (readCompendiumSource(cache) !== identity.selectedUuid) {
-    fail('Orphaned native cache Compendium source does not match the journaled selection.');
-  }
-  if (typeof sourceItem !== 'string' || !sourceItem || cache.system?.sourceItem !== sourceItem) {
-    fail('Orphaned native cache sourceItem does not match the journaled native source.');
-  }
-}
-
 export function resolverOwnershipFlags(
   identity: ResolverDocumentIdentity,
   documentType: 'activity' | 'spell',

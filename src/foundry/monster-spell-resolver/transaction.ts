@@ -11,12 +11,17 @@ import {
 import { computeManagedSourceHash, generatedResolverDocumentId, type LiteralRestrictionReport } from './cast-activity';
 import { createHydrationJournal, hydrateManagedSelection, type HydrationJournal } from './hydrator';
 import {
+  assertNativeCacheProjectionMatches,
+  captureNativeCacheProjection,
+  NativeCacheLifecycleCapture,
+  resolverDocumentHooks,
+  type ResolverDocumentHookBus,
+} from './native-cache-lifecycle';
+import {
   assertAdoptableNativeCache,
   assertLinkedFeatureOwnership,
-  assertOrphanedTransactionNativeCache,
   assertResolverDocumentOwnership,
   documentId,
-  readCompendiumSource,
   resolverOwnershipFlags,
   type ResolverDocumentIdentity,
 } from './ownership';
@@ -46,6 +51,7 @@ export interface ExecuteHydrationTransactionInput {
   manifest: PortableSpellManifest;
   plan: SpellHydrationPlan;
   failureInjector?: (stage: HydrationFailureStage) => void | Promise<void>;
+  lifecycleHooks?: ResolverDocumentHookBus;
 }
 
 export interface HydrationTransactionResult {
@@ -123,6 +129,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
         journal,
         preserveExisting: selection.manualDecision === 'keep',
         afterFeatureUpdate: async () => input.failureInjector?.('after-feature-update'),
+        lifecycleHooks: input.lifecycleHooks,
       });
       literalRestrictions.push(...hydrated.literalRestrictions);
       if (index === 0 && input.plan.selections.length > 1) {
@@ -359,8 +366,8 @@ async function rollback(
   rollbackResolverFlags: unknown,
 ): Promise<ResidualDifference[]> {
   const rollbackErrors: string[] = [];
+  rollbackErrors.push(...journal.lifecycleFailures.map((entry) => `Unresolved native Activity lifecycle: ${entry}`));
   await safeRollback(async () => input.failureInjector?.('during-rollback'), rollbackErrors);
-  await settleRollbackNativeCaches(input, journal, rollbackErrors);
 
   let managed = collectManagedDocuments(input.actor, input.manifest.manifestId);
   for (const { spell, identity } of managed.spells) {
@@ -370,6 +377,8 @@ async function rollback(
       if (!activityEntry) throw new Error(`Cannot prove Activity ownership for rollback Spell ${documentId(spell)}.`);
       assertResolverDocumentOwnership(input.actor, activityEntry.feature, activityEntry.activity, identity, 'activity');
       assertResolverDocumentOwnership(input.actor, activityEntry.feature, spell, identity, 'spell', activityEntry.activity.relativeUUID);
+      const nativeEntry = journal.nativeCaches.find((entry) => entry.id === documentId(spell));
+      if (nativeEntry) assertNativeCacheProjectionMatches(nativeEntry.nativeProjection, spell);
       await requireApi(input.actor, 'deleteEmbeddedDocuments')('Item', [documentId(spell)]);
     }, rollbackErrors);
   }
@@ -385,6 +394,7 @@ async function rollback(
       if (!feature || !activity) throw new Error(`Journaled native cache ${entry.id} lost its owned Activity.`);
       if (cache.flags?.[RESOLVER_MODULE_ID] === undefined) {
         assertAdoptableNativeCache(input.actor, feature, activity, cache, entry.identity, journal.snapshotItemIds);
+        assertNativeCacheProjectionMatches(entry.nativeProjection, cache);
         const ownership = resolverOwnershipFlags(entry.identity, 'spell');
         const source = documentSource(cache);
         source.flags = isRecord(source.flags) ? source.flags : {};
@@ -397,6 +407,7 @@ async function rollback(
       }
       const owned = findItem(input.actor, entry.id);
       assertResolverDocumentOwnership(input.actor, feature, owned, entry.identity, 'spell', activity.relativeUUID);
+      assertNativeCacheProjectionMatches(entry.nativeProjection, owned);
       await requireApi(input.actor, 'deleteEmbeddedDocuments')('Item', [entry.id]);
     }, rollbackErrors);
   }
@@ -405,8 +416,7 @@ async function rollback(
   for (const { feature, activity, identity } of managed.activities) {
     await safeRollback(async () => {
       assertResolverDocumentOwnership(input.actor, feature, activity, identity, 'activity');
-      if (typeof feature.deleteActivity !== 'function') throw new Error('Rollback requires feature.deleteActivity(id).');
-      await feature.deleteActivity(documentId(activity));
+      await deleteOwnedActivitySafely(input, feature, activity);
     }, rollbackErrors);
   }
 
@@ -415,18 +425,36 @@ async function rollback(
       const feature = findItem(input.actor, saved.featureId);
       if (!feature) throw new Error(`Snapshot feature ${saved.featureId} is missing.`);
       const beforeIds = new Set(iterate(input.actor.items).map(documentId));
-      await requireApi(input.actor, 'updateEmbeddedDocuments')('Item', [{
-        _id: saved.featureId,
-        [`system.activities.${saved.source._id}`]: structuredClone(saved.source),
-      }]);
-      // dnd5e may auto-create a cache during rollback Activity restoration.
-      const activity = getActivity(findItem(input.actor, saved.featureId), saved.source._id);
-      const identity = readIdentity(saved.source.flags?.[RESOLVER_MODULE_ID]);
-      if (!activity || !identity) throw new Error('Restored snapshot Activity lacks resolver identity.');
+      const lifecycle = new NativeCacheLifecycleCapture(resolverDocumentHooks(input.lifecycleHooks));
+      let activity: any;
+      let identity: ResolverDocumentIdentity | undefined;
+      let nativeProjection: Record<string, any>;
+      try {
+        await requireApi(input.actor, 'updateEmbeddedDocuments')('Item', [{
+          _id: saved.featureId,
+          [`system.activities.${saved.source._id}`]: structuredClone(saved.source),
+        }]);
+        activity = getActivity(findItem(input.actor, saved.featureId), saved.source._id);
+        identity = readIdentity(saved.source.flags?.[RESOLVER_MODULE_ID]);
+        if (!activity || !identity) throw new Error('Restored snapshot Activity lacks resolver identity.');
+        const nativeSource = await activity.getCachedSpellData();
+        nativeProjection = captureNativeCacheProjection(nativeSource);
+        if (lifecycle.active) {
+          await lifecycle.waitForCreatedCache({
+            actor: input.actor,
+            cachedFor: activity.relativeUUID,
+            selectedUuid: identity.selectedUuid,
+            projection: nativeProjection,
+          });
+        }
+      } finally {
+        lifecycle.dispose();
+      }
       const newCaches = iterate(input.actor.items).filter((item) => !beforeIds.has(documentId(item))
         && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID);
       for (const cache of newCaches) {
         assertAdoptableNativeCache(input.actor, feature, activity, cache, identity, beforeIds);
+        assertNativeCacheProjectionMatches(nativeProjection, cache);
         const ownership = resolverOwnershipFlags(identity, 'spell');
         const source = documentSource(cache);
         source.flags = isRecord(source.flags) ? source.flags : {};
@@ -437,8 +465,6 @@ async function rollback(
       }
     }, rollbackErrors);
   }
-
-  await settleOrphanedRollbackNativeCaches(input, journal, rollbackErrors);
 
   if (snapshot.spells.length) {
     await safeRollback(async () => {
@@ -457,96 +483,15 @@ async function rollback(
   return differences;
 }
 
-async function settleRollbackNativeCaches(
+async function deleteOwnedActivitySafely(
   input: ExecuteHydrationTransactionInput,
-  journal: HydrationJournal,
-  rollbackErrors: string[],
+  feature: any,
+  activity: any,
 ): Promise<void> {
-  if (journal.nativeBindings.length === 0) return;
-  const stableWindowMs = 300;
-  const deadline = Date.now() + 2_000;
-  let signature = '';
-  let stableSince = Date.now();
-  while (Date.now() < deadline) {
-    const targets = [...journal.nativeBindings];
-    for (const entry of targets) {
-      const feature = findItem(input.actor, entry.identity.featureId);
-      const activity = getActivity(feature, entry.identity.activityId);
-      if (!feature || !activity) continue;
-      for (const cache of iterate(input.actor.items)) {
-        const id = documentId(cache);
-        if (!id || journal.snapshotItemIds.has(id) || cache?.flags?.dnd5e?.cachedFor !== entry.cachedFor
-          || readCompendiumSource(cache) !== entry.selectedUuid) continue;
-        try {
-          if (cache.flags?.[RESOLVER_MODULE_ID] === undefined) {
-            assertAdoptableNativeCache(input.actor, feature, activity, cache, entry.identity, journal.snapshotItemIds);
-            if (!journal.nativeCaches.some((candidate) => candidate.id === id)) {
-              journal.nativeCaches.push({ ...structuredClone(entry), id, ownershipApplied: false });
-            }
-          } else {
-            assertResolverDocumentOwnership(input.actor, feature, cache, entry.identity, 'spell', activity.relativeUUID);
-          }
-        } catch (error) {
-          rollbackErrors.push(errorMessage(error));
-        }
-      }
-    }
-    const nextSignature = journal.nativeCaches.map((entry) => entry.id).sort().join('\n');
-    if (nextSignature !== signature) {
-      signature = nextSignature;
-      stableSince = Date.now();
-    } else if (Date.now() - stableSince >= stableWindowMs) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-}
-
-async function settleOrphanedRollbackNativeCaches(
-  input: ExecuteHydrationTransactionInput,
-  journal: HydrationJournal,
-  rollbackErrors: string[],
-): Promise<void> {
-  if (journal.nativeBindings.length === 0) return;
-  const discovered = new Set<string>();
-  // dnd5e 5.3.3 does not await Item5e#onUpdateActivities (18532-18555)
-  // at the Actor embedded-update boundary. Its compendium-backed cache insert
-  // can therefore complete after the Activity has already been compensated.
-  const stableWindowMs = 2_000;
-  const deadline = Date.now() + 5_000;
-  let stableSince = Date.now();
-  while (Date.now() < deadline) {
-    for (const entry of [...journal.nativeBindings]) {
-      const feature = findItem(input.actor, entry.identity.featureId);
-      if (!feature) continue;
-      for (const cache of iterate(input.actor.items)) {
-        const id = documentId(cache);
-        if (!id || journal.snapshotItemIds.has(id) || cache?.type !== 'spell'
-          || cache?.flags?.dnd5e?.cachedFor !== entry.cachedFor
-          || readCompendiumSource(cache) !== entry.selectedUuid) continue;
-        try {
-          if (cache.flags?.[RESOLVER_MODULE_ID] === undefined) {
-            assertOrphanedTransactionNativeCache(
-              input.actor, feature, cache, entry.identity, entry.cachedFor, entry.sourceItem, journal.snapshotItemIds,
-            );
-          } else {
-            assertResolverDocumentOwnership(
-              input.actor, feature, cache, entry.identity, 'spell', entry.cachedFor,
-            );
-          }
-          await requireApi(input.actor, 'deleteEmbeddedDocuments')('Item', [id]);
-          if (!discovered.has(id)) {
-            discovered.add(id);
-            stableSince = Date.now();
-          }
-        } catch (error) {
-          rollbackErrors.push(errorMessage(error));
-        }
-      }
-    }
-    if (Date.now() - stableSince >= stableWindowMs) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
+  if (typeof feature.deleteActivity !== 'function') throw new Error('Rollback requires feature.deleteActivity(id).');
+  const cache = iterate(input.actor.items).find((item) => item?.flags?.dnd5e?.cachedFor === activity.relativeUUID);
+  if (cache) throw new Error(`Rollback refuses to delete Activity ${documentId(activity)} while cached Spell ${documentId(cache)} remains unverified.`);
+  await feature.deleteActivity(documentId(activity));
 }
 
 export function projectCurrentManagedContent(actor: any, manifestId: string): ManagedSpellProjection[] {
