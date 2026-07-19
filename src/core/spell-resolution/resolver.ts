@@ -218,10 +218,31 @@ function choose2024(base: ReturnType<typeof makeBase>, ref: PortableSpellRef, ca
 function candidateContradictions(candidate: SpellCandidateMetadata, ref: PortableSpellRef): string[] {
   const result: string[] = [];
   if (ref.expectedLevel !== undefined && candidate.level !== ref.expectedLevel) result.push('level');
-  if (ref.expectedSchool !== undefined && normalizeOptional(candidate.school) !== normalizeSpellIdentity(ref.expectedSchool)) result.push('school');
+  if (ref.expectedSchool !== undefined && normalizeDnd5eSchool(candidate.school) !== ref.expectedSchool) result.push('school');
   if (ref.sourceBookHint && candidate.sourceBook === undefined) result.push('sourceBook');
   return result;
 }
+
+/**
+ * dnd5e 5.3.3 stores Spell.system.school as the CONFIG.DND5E.spellSchools
+ * object key while the portable manifest deliberately uses its fullKey value.
+ */
+function normalizeDnd5eSchool(school: string | undefined): string | undefined {
+  const normalized = normalizeOptional(school);
+  if (normalized === undefined) return undefined;
+  return DND5E_SCHOOL_CODE_TO_FULL_NAME[normalized] ?? normalized;
+}
+
+const DND5E_SCHOOL_CODE_TO_FULL_NAME: Readonly<Record<string, string>> = Object.freeze({
+  abj: 'abjuration',
+  con: 'conjuration',
+  div: 'divination',
+  enc: 'enchantment',
+  evo: 'evocation',
+  ill: 'illusion',
+  nec: 'necromancy',
+  trs: 'transmutation',
+});
 
 function candidateMatchesRef(candidate: SpellCandidateMetadata, ref: PortableSpellRef): boolean {
   return intersects(spellRefKeys(ref), candidateKeys(candidate));

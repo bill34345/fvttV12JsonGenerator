@@ -7,6 +7,7 @@ import {
   validatePortableSpellManifest,
   validatePortableSpellManifestStructure,
   type PortableSpellManifest,
+  type PortableSpellRef,
 } from '..';
 
 const SOURCE = [
@@ -35,7 +36,7 @@ function evidence(quote: string) {
 }
 
 function buildValidManifest(): PortableSpellManifest {
-  const makeRef = (identifier: string, originalName: string, index: number) => ({
+  const makeRef = (identifier: string, originalName: string, index: number): PortableSpellRef => ({
     refId: `rat-spell-${index + 1}`,
     identifier,
     originalName,
@@ -264,7 +265,7 @@ describe('portable spell manifest contract', () => {
     expect(findings).toContainEqual(expect.objectContaining({
       code: 'INVALID_EXPECTED_SCHOOL',
       path: '/spellcastingGroups/0/spellRefs/0/expectedSchool',
-      message: '预期法术学派必须使用受支持的小写标识。',
+      message: '预期法术学派必须使用完整小写英文名：abjuration、conjuration、divination、enchantment、evocation、illusion、necromancy 或 transmutation。',
     }));
   });
 

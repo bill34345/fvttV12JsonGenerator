@@ -28,8 +28,8 @@ const SOURCE = 'Fireball and Cure Wounds';
 
 function manifest(): PortableSpellManifest {
   const refs = [
-    { refId: 'fireball', identifier: 'fireball', originalName: 'Fireball', englishName: 'Fireball', expectedLevel: 3, expectedSchool: 'evocation' },
-    { refId: 'cure-wounds', identifier: 'cure-wounds', originalName: 'Cure Wounds', englishName: 'Cure Wounds', expectedLevel: 1, expectedSchool: 'abjuration' },
+    { refId: 'fireball', identifier: 'fireball', originalName: 'Fireball', englishName: 'Fireball', expectedLevel: 3, expectedSchool: 'evocation' as const },
+    { refId: 'cure-wounds', identifier: 'cure-wounds', originalName: 'Cure Wounds', englishName: 'Cure Wounds', expectedLevel: 1, expectedSchool: 'abjuration' as const },
   ];
   return {
     schemaVersion: 1,
@@ -42,7 +42,7 @@ function manifest(): PortableSpellManifest {
       spellRefs: refs.map((entry) => ({
         ...entry,
         aliases: [],
-        method: 'prepared' as const,
+        method: 'at-will' as const,
         restrictions: [],
         evidence: [{ start: SOURCE.indexOf(entry.originalName), end: SOURCE.indexOf(entry.originalName) + entry.originalName.length, quote: entry.originalName }],
       })),
@@ -62,7 +62,7 @@ function spell(identifier: string, overrides: Partial<SpellCandidateMetadata> = 
     rules: '2024',
     sourceBook: 'PHB',
     level: isFireball ? 3 : 1,
-    school: isFireball ? 'evocation' : 'abjuration',
+    school: isFireball ? 'evo' : 'abj',
     ...overrides,
   };
 }
@@ -75,6 +75,64 @@ function plan(input: Omit<Parameters<typeof planSpellHydration>[0], 'sourceInven
 }
 
 describe('all-or-nothing hydration preflight', () => {
+  test.each(['prepared', 'pact'] as const)('fails incompatible before planning unsupported %s Cast Activities', (method) => {
+    const unsupported = manifest();
+    unsupported.spellcastingGroups[0]!.spellRefs[0]!.method = method;
+
+    const result = plan({ manifest: unsupported, candidates: [spell('fireball'), spell('cure-wounds')] });
+
+    expect(result.status).toBe('incompatible');
+    expect('plan' in result).toBe(false);
+    expect(requireBlocked(result).findings).toContainEqual(expect.objectContaining({
+      code: 'UNSUPPORTED_CAST_METHOD',
+      path: '/spellcastingGroups/0/spellRefs/0/method',
+      blocking: true,
+    }));
+  });
+
+  test.each([
+    ['at-will with uses', 'at-will', { value: 1, recovery: 'day', shared: false }],
+    ['innate without uses', 'innate', undefined],
+    ['two uses', 'innate', { value: 2, recovery: 'day', shared: false }],
+    ['short-rest recovery', 'innate', { value: 1, recovery: 'shortRest', shared: false }],
+    ['long-rest recovery', 'innate', { value: 1, recovery: 'longRest', shared: false }],
+    ['shared uses', 'innate', { value: 1, recovery: 'day', shared: true }],
+  ] as const)('fails incompatible before planning unsupported uses contract: %s', (_label, method, uses) => {
+    const unsupported = manifest();
+    const ref = unsupported.spellcastingGroups[0]!.spellRefs[0]!;
+    ref.method = method;
+    if (uses === undefined) delete ref.uses;
+    else ref.uses = { value: uses.value, recovery: uses.recovery, shared: uses.shared };
+    if (_label === 'shared uses') {
+      if (uses === undefined) throw new Error('Shared-uses fixture requires an explicit use contract.');
+      const poolMate = unsupported.spellcastingGroups[0]!.spellRefs[1]!;
+      poolMate.method = 'innate';
+      poolMate.uses = { value: uses.value, recovery: uses.recovery, shared: uses.shared };
+    }
+
+    const result = plan({ manifest: unsupported, candidates: [spell('fireball'), spell('cure-wounds')] });
+
+    expect(result.status).toBe('incompatible');
+    expect('plan' in result).toBe(false);
+    expect(requireBlocked(result).findings).toContainEqual(expect.objectContaining({
+      code: 'UNSUPPORTED_CAST_USES',
+      path: '/spellcastingGroups/0/spellRefs/0/uses',
+      blocking: true,
+    }));
+  });
+
+  test('accepts the complete supported Cast matrix without disturbing an unrelated ref', () => {
+    const supported = manifest();
+    supported.spellcastingGroups[0]!.spellRefs[1]!.method = 'innate';
+    supported.spellcastingGroups[0]!.spellRefs[1]!.uses = { value: 1, recovery: 'day', shared: false };
+
+    const result = plan({ manifest: supported, candidates: [spell('fireball'), spell('cure-wounds')] });
+
+    expect(result.status).toBe('ready');
+    expect(result.report.findings).toEqual([]);
+    expect(result.status === 'ready' && result.plan.selections).toHaveLength(2);
+  });
+
   test('returns a stable writable plan only when every ref is resolved', () => {
     const input = { manifest: manifest(), candidates: [spell('fireball'), spell('cure-wounds')] };
     const first = plan(input);
@@ -190,7 +248,7 @@ describe('all-or-nothing hydration preflight', () => {
       resolutionConfigHash: hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),
       selectionOrigin: 'automatic-2024',
     };
-    const result = plan({ manifest: manifest(), candidates: [...oldInventory, spell('ice-storm', { name: 'Ice Storm', level: 4, school: 'evocation' })], savedMappings: [saved] });
+    const result = plan({ manifest: manifest(), candidates: [...oldInventory, spell('ice-storm', { name: 'Ice Storm', level: 4, school: 'evo' })], savedMappings: [saved] });
 
     expect(result.status).toBe('ready');
     expect(result.status === 'ready' && result.plan.selections.find((entry) => entry.logicalRefKey === saved.logicalRefKey)?.uuid).toBe(fire.uuid);

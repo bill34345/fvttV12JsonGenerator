@@ -38,7 +38,7 @@ function candidate(overrides: Partial<SpellCandidateMetadata> = {}): SpellCandid
     rules: '2024',
     sourceBook: 'PHB',
     level: 3,
-    school: 'evocation',
+    school: 'evo',
     ...overrides,
   };
 }
@@ -315,7 +315,7 @@ describe('deterministic destination spell resolver', () => {
 
   test.each([
     ['level', { level: 4 }],
-    ['school', { school: 'abjuration' }],
+    ['school', { school: 'abj' }],
     ['source book', { sourceBook: 'XGE' }],
   ] as const)('rejects reviewed approximate selection with contradictory %s metadata', (_label, contradiction) => {
     const near = candidate({ identifier: 'fireballl', name: 'Fireballl', ...contradiction });
@@ -378,6 +378,33 @@ describe('deterministic destination spell resolver', () => {
     expect(result.findings.some((finding) => finding.code === 'INVALID_SAVED_MAPPING')).toBe(true);
   });
 
+  test.each([
+    ['abjuration', 'abj'],
+    ['conjuration', 'con'],
+    ['divination', 'div'],
+    ['enchantment', 'enc'],
+    ['evocation', 'evo'],
+    ['illusion', 'ill'],
+    ['necromancy', 'nec'],
+    ['transmutation', 'trs'],
+  ] as const)('matches manifest school full name %s to the dnd5e 5.3.3 document code %s', (expectedSchool, school) => {
+    // Locked reference: dnd5e 5.3.3 CONFIG.DND5E.spellSchools uses these
+    // three-letter object keys and exposes the manifest-facing name as fullKey.
+    const result = resolve([candidate({ school })], { ref: ref({ expectedSchool }) });
+    expect(result.status).toBe('resolved');
+  });
+
+  test('still rejects a different real dnd5e school code and ignores school when the manifest has no expectation', () => {
+    const contradictory = resolve([candidate({ school: 'abj' })]);
+    const unconstrained = resolve([candidate({ school: 'future-school-code' })], {
+      ref: ref({ expectedSchool: undefined }),
+    });
+
+    expect(contradictory.status).toBe('needs_review');
+    expect(contradictory.findings.some((finding) => finding.code === 'CONTRADICTORY_2024_CANDIDATE')).toBe(true);
+    expect(unconstrained.status).toBe('resolved');
+  });
+
   test('requires review when an explicit source hint cannot be checked due to missing book metadata', () => {
     const result = resolve([candidate({ sourceBook: undefined })], { ref: ref({ sourceBookHint: 'PHB' }) });
     expect(result.status).toBe('needs_review');
@@ -385,7 +412,7 @@ describe('deterministic destination spell resolver', () => {
   });
 
   test('supports a second unrelated caster family without creature-specific logic', () => {
-    const cure = candidate({ id: 'cure', uuid: 'Compendium.dnd-players-handbook.spells.Item.curewounds2024x', name: 'Cure Wounds', identifier: 'cure-wounds', level: 1, school: 'abjuration' });
+    const cure = candidate({ id: 'cure', uuid: 'Compendium.dnd-players-handbook.spells.Item.curewounds2024x', name: 'Cure Wounds', identifier: 'cure-wounds', level: 1, school: 'abj' });
     const result = resolve([cure], { manifestId: 'priest-v1', groupId: 'daily', ref: ref({ refId: 'cure', identifier: 'cure-wounds', originalName: 'Cure Wounds', englishName: 'Cure Wounds', chineseName: undefined, aliases: [], expectedLevel: 1, expectedSchool: 'abjuration' }) });
     expect(result.status).toBe('resolved');
   });

@@ -21,6 +21,17 @@ export interface PortableSpellcastingGroup {
   spellRefs: PortableSpellRef[];
 }
 
+/** Portable, system-independent school names used by the manifest contract. */
+export type PortableSpellSchool =
+  | 'abjuration'
+  | 'conjuration'
+  | 'divination'
+  | 'enchantment'
+  | 'evocation'
+  | 'illusion'
+  | 'necromancy'
+  | 'transmutation';
+
 export interface PortableSpellRef {
   refId: string;
   identifier: string;
@@ -29,7 +40,7 @@ export interface PortableSpellRef {
   chineseName?: string;
   aliases: string[];
   expectedLevel?: number;
-  expectedSchool?: string;
+  expectedSchool?: PortableSpellSchool;
   sourceBookHint?: string;
   method: 'innate' | 'prepared' | 'pact' | 'at-will';
   uses?: {

@@ -2,6 +2,7 @@ import type { EvidenceRef } from '../intake/types';
 import type {
   ManifestValidationResult,
   PortableSpellManifest,
+  PortableSpellSchool,
   SpellResolutionFinding,
 } from './types';
 import { listUnknownManifestProperties } from './schema';
@@ -11,7 +12,7 @@ import { findForbiddenTargetWorldIdentifiers } from './forbidden-target-identifi
 const ABILITIES = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
 const METHODS = new Set(['innate', 'prepared', 'pact', 'at-will']);
 const RECOVERIES = new Set(['day', 'shortRest', 'longRest']);
-const SCHOOLS = new Set(['abjuration', 'conjuration', 'divination', 'enchantment', 'evocation', 'illusion', 'necromancy', 'transmutation']);
+const SCHOOLS = new Set<PortableSpellSchool>(['abjuration', 'conjuration', 'divination', 'enchantment', 'evocation', 'illusion', 'necromancy', 'transmutation']);
 const RESTRICTION_KINDS = new Set(['target', 'summoning', 'casting', 'other']);
 
 type RecordValue = Record<string, unknown>;
@@ -172,8 +173,8 @@ function validateRef(
   if (ref.expectedLevel !== undefined && (!Number.isInteger(ref.expectedLevel) || (ref.expectedLevel as number) < 0 || (ref.expectedLevel as number) > 9)) {
     addFinding('INVALID_EXPECTED_LEVEL', `${path}/expectedLevel`, '预期法术环阶必须是 0 到 9 的整数。');
   }
-  if (ref.expectedSchool !== undefined && (typeof ref.expectedSchool !== 'string' || !SCHOOLS.has(ref.expectedSchool))) {
-    addFinding('INVALID_EXPECTED_SCHOOL', `${path}/expectedSchool`, '预期法术学派必须使用受支持的小写标识。');
+  if (ref.expectedSchool !== undefined && (typeof ref.expectedSchool !== 'string' || !SCHOOLS.has(ref.expectedSchool as PortableSpellSchool))) {
+    addFinding('INVALID_EXPECTED_SCHOOL', `${path}/expectedSchool`, '预期法术学派必须使用完整小写英文名：abjuration、conjuration、divination、enchantment、evocation、illusion、necromancy 或 transmutation。');
   }
   if (ref.sourceBookHint !== undefined && !isNonEmptyString(ref.sourceBookHint)) {
     addFinding('INVALID_SOURCE_BOOK_HINT', `${path}/sourceBookHint`, 'sourceBookHint 必须是非空字符串。');

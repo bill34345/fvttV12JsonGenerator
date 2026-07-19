@@ -58,6 +58,22 @@ export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPre
     return { status: 'incompatible', findings: invalid, report };
   }
 
+  const unsupportedCastFindings = validateHydratorCastSupport(manifestValidation.value);
+  if (unsupportedCastFindings.length > 0) {
+    const stableFindings = sortFindings(unsupportedCastFindings);
+    const report: SpellResolutionReport = {
+      manifestId,
+      sourceInventoryHash,
+      candidateMetadataHash,
+      resolutionConfigHash,
+      currentManagedProjectionHash: emptyInputHash,
+      manualDecisionsHash: emptyInputHash,
+      results: [],
+      findings: stableFindings,
+    };
+    return { status: 'incompatible', findings: stableFindings, report };
+  }
+
   const savedMappings = Array.isArray(safeInput.savedMappings) ? safeInput.savedMappings : [];
   const projections = Array.isArray(safeInput.currentManagedProjection) ? safeInput.currentManagedProjection : [];
   const decisions = Array.isArray(safeInput.manualDecisions) ? safeInput.manualDecisions : [];
@@ -129,6 +145,53 @@ export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPre
   };
   const plan: SpellHydrationPlan = { ...planWithoutHash, planHash: sha256(canonicalStringify(planWithoutHash)) };
   return { status: 'ready', plan, report };
+}
+
+/**
+ * Keep the Foundry-independent planner aligned with the deliberately narrow
+ * dnd5e 5.3.3 Cast builder so an unsupported manifest can never enter a write
+ * transaction. First release supports only unlimited at-will casts and
+ * independent innate 1/day casts.
+ */
+function validateHydratorCastSupport(manifest: PortableSpellManifest): SpellResolutionFinding[] {
+  const findings: SpellResolutionFinding[] = [];
+  manifest.spellcastingGroups.forEach((group, groupIndex) => {
+    group.spellRefs.forEach((ref, refIndex) => {
+      const refPath = `/spellcastingGroups/${groupIndex}/spellRefs/${refIndex}`;
+      if (ref.method === 'prepared' || ref.method === 'pact') {
+        findings.push(finding(
+          'UNSUPPORTED_CAST_METHOD',
+          `${refPath}/method`,
+          `首版 Cast Activity 不支持 ${ref.method} 施法方式；尚未创建任何写入计划。`,
+          ref.evidence,
+        ));
+        return;
+      }
+      if (ref.method === 'at-will') {
+        if (ref.uses !== undefined) {
+          findings.push(finding(
+            'UNSUPPORTED_CAST_USES',
+            `${refPath}/uses`,
+            'at-will 法术不得同时声明有限使用次数；尚未创建任何写入计划。',
+            ref.evidence,
+          ));
+        }
+        return;
+      }
+      if (ref.uses === undefined
+        || ref.uses.value !== 1
+        || ref.uses.recovery !== 'day'
+        || ref.uses.shared) {
+        findings.push(finding(
+          'UNSUPPORTED_CAST_USES',
+          `${refPath}/uses`,
+          '首版 innate Cast Activity 只支持独立 1/day 使用次数；尚未创建任何写入计划。',
+          ref.evidence,
+        ));
+      }
+    });
+  });
+  return findings;
 }
 
 function validateOptionalArrayShapes(input: Partial<PlanSpellHydrationInput>): SpellResolutionFinding[] {
@@ -222,8 +285,8 @@ function uniqueByKey<T extends { logicalRefKey: string }>(values: readonly T[]):
   return result;
 }
 
-function finding(code: string, path: string, message: string): SpellResolutionFinding {
-  return { code, path, message, blocking: true, evidence: [] };
+function finding(code: string, path: string, message: string, evidence: SpellResolutionFinding['evidence'] = []): SpellResolutionFinding {
+  return { code, path, message, blocking: true, evidence };
 }
 
 function sortFindings(findings: SpellResolutionFinding[]): SpellResolutionFinding[] {
