@@ -20,6 +20,16 @@ This checklist separates repository delivery gates from deeper product-support c
 - [x] Repository hygiene confirms no tracked `.local` runtime data, user database, password, cookie, private key, raw server log, or production inventory snapshot; the latest M10 run checked 1,605 tracked paths.
 - [ ] Immediately before a real push, confirm `git status --short` contains only the intended staged delivery. Existing user-owned edits are not part of this remediation and must not be staged or overwritten.
 
+## Foundry module localization gate
+
+All current and future Foundry modules must follow [`docs/foundry-module-localization-policy.md`](foundry-module-localization-policy.md).
+
+- [ ] Runtime settings, dialogs, reports, status text, notifications, errors, and help have complete English and Simplified Chinese localization.
+- [ ] A per-client module-local English / 简体中文 selector is preferred; if dynamic switching is impractical, a complete version-matched localized artifact or verified manual replacement path is supplied.
+- [ ] Module title, package-manager description, release description, and functional summary have documented English and Chinese delivery paths.
+- [ ] Both locales receive exact-runtime visual and behavior acceptance; language changes do not alter IDs, stored settings, Actor data, source selection, or mechanics.
+- [ ] `MOD-I18N-001` remains deferred for the current spell resolver; existing `en` / `zh-CN` runtime dictionaries are present, but the module-local selector and localized manifest-facing metadata are not yet implemented.
+
 ## Product gates still open
 
 - [x] Standalone Item v14: import/equip/AC/both Activities/prone/limited-use/concentration/runtime-readback and the no-dialog `exportToJSON()` source-relevant comparison pass.
