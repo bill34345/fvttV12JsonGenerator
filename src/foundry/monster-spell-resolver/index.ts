@@ -8,6 +8,7 @@ export * from './transaction';
 export * from './hooks';
 export * from './review-app';
 export * from './status';
+export * from './settings-app';
 
 const resolverAdapter = createFoundryAdapter();
 registerResolverLifecycle(resolverAdapter);

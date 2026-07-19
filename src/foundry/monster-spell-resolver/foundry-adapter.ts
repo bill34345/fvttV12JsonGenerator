@@ -1,5 +1,7 @@
 import { RESOLVER_MODULE_ID } from '../../core/spell-resolution/types';
-import { registerResolverSettings, type ResolverSettingDefinition } from './settings';
+import { sha256 } from '../../core/spell-resolution/sha256';
+import { registerResolverSettings, type ResolverSettingDefinition, type ResolverSettingsMenuDefinition } from './settings';
+import { createResolverSettingsApplicationClass } from './settings-app';
 import {
   buildSpellSourceIndex,
   type FoundryItemPackRef,
@@ -34,15 +36,39 @@ export interface ResolverRuntimeApi {
   canMutate: boolean;
   sourceIndex?: SpellSourceIndexResult;
   diagnostics: Array<ResolverCompatibilityDiagnostic | SpellSourceIndexDiagnostic>;
+  rebuildSourceIndex?: () => Promise<SpellSourceIndexResult>;
+}
+
+export interface ResolverRuntimeDiagnosticProjection {
+  code: string;
+  pack: string;
+  path: string;
+  message: string;
+  blocking: boolean;
+}
+
+export function projectResolverRuntimeDiagnostics(
+  runtime: ResolverRuntimeApi | undefined,
+): ResolverRuntimeDiagnosticProjection[] {
+  const diagnostics = runtime?.diagnostics ?? runtime?.sourceIndex?.diagnostics ?? [];
+  return diagnostics.map((entry) => ({
+    code: entry.code,
+    pack: 'pack' in entry ? entry.pack : '',
+    path: 'path' in entry ? entry.path : '',
+    message: entry.message,
+    blocking: 'blocking' in entry ? entry.blocking : entry.code === 'SOURCE_INDEX_FAILED',
+  }));
 }
 
 export interface ResolverFoundryAdapter extends FoundrySpellSourceAdapter {
   registerSetting(definition: ResolverSettingDefinition): void;
+  registerSettingsMenu(definition: ResolverSettingsMenuDefinition): void;
   getSetting(key: ResolverSettingDefinition['key']): unknown;
   setSetting(key: ResolverSettingDefinition['key'], value: unknown): Promise<void>;
   canPersistWorldSettings(): boolean;
   once(hook: 'init' | 'ready', callback: () => void | Promise<void>): void;
   exposeApi(api: ResolverRuntimeApi): void;
+  logDebug(event: string, details: unknown): void;
 }
 
 export function evaluateRuntimeCompatibility(versions: ResolverRuntimeVersions): ResolverCompatibility {
@@ -80,35 +106,50 @@ export function registerResolverLifecycle(adapter: ResolverFoundryAdapter): void
       return;
     }
 
-    try {
-      const sourceIndex = await buildSpellSourceIndex(adapter);
-      if (adapter.canPersistWorldSettings()) {
-        await adapter.setSetting('indexMetadata', {
-          sourceInventoryHash: sourceIndex.sourceInventoryHash,
-          candidateMetadataHash: sourceIndex.candidateMetadataHash,
-          sourcePackages: sourceIndex.sourcePackages,
-          candidateCount: sourceIndex.candidates.length,
+    let lastReadableIndex: SpellSourceIndexResult | undefined;
+    const rebuildSourceIndex = async (): Promise<SpellSourceIndexResult> => {
+      try {
+        const sourceIndex = await buildSpellSourceIndex(adapter);
+        if (adapter.canPersistWorldSettings()) {
+          await adapter.setSetting('indexMetadata', {
+            sourceInventoryHash: sourceIndex.sourceInventoryHash,
+            candidateMetadataHash: sourceIndex.candidateMetadataHash,
+            sourcePackages: sourceIndex.sourcePackages,
+            sourcePacks: sourceIndex.sourcePacks,
+            candidateCount: sourceIndex.candidates.length,
+          });
+        }
+        lastReadableIndex = sourceIndex;
+        adapter.exposeApi({
+          moduleId: RESOLVER_MODULE_ID,
+          compatibility,
+          canMutate: !sourceIndex.diagnostics.some((diagnostic) => diagnostic.blocking),
+          sourceIndex,
+          diagnostics: sourceIndex.diagnostics,
+          rebuildSourceIndex,
         });
+        logSourceIndexDebug(adapter, 'source-index-rebuilt', sourceIndex, sourceIndex.diagnostics);
+        return sourceIndex;
+      } catch (error) {
+        const diagnostic: ResolverCompatibilityDiagnostic = {
+          code: 'SOURCE_INDEX_FAILED',
+          message: `Source index rebuild failed: ${sanitizeError(error)}`,
+        };
+        adapter.exposeApi({
+          moduleId: RESOLVER_MODULE_ID,
+          compatibility,
+          canMutate: false,
+          ...(lastReadableIndex ? { sourceIndex: lastReadableIndex } : {}),
+          diagnostics: [diagnostic],
+          rebuildSourceIndex,
+        });
+        logSourceIndexDebug(adapter, 'source-index-rebuild-failed', lastReadableIndex, [diagnostic]);
+        throw error;
       }
-      adapter.exposeApi({
-        moduleId: RESOLVER_MODULE_ID,
-        compatibility,
-        canMutate: !sourceIndex.diagnostics.some((diagnostic) => diagnostic.blocking),
-        sourceIndex,
-        diagnostics: sourceIndex.diagnostics,
-      });
-    } catch (error) {
-      const diagnostic: ResolverCompatibilityDiagnostic = {
-        code: 'SOURCE_INDEX_FAILED',
-        message: `Source index initialization failed: ${sanitizeError(error)}`,
-      };
-      adapter.exposeApi({
-        moduleId: RESOLVER_MODULE_ID,
-        compatibility,
-        canMutate: false,
-        diagnostics: [diagnostic],
-      });
-    }
+    };
+    try {
+      await rebuildSourceIndex();
+    } catch { /* rebuildSourceIndex already exposed a retryable fail-closed API */ }
   });
 }
 
@@ -160,6 +201,14 @@ export function createFoundryAdapter(): ResolverFoundryAdapter {
       const { key, ...config } = definition;
       game.settings.register(RESOLVER_MODULE_ID, key, config);
     },
+    registerSettingsMenu(definition) {
+      if (!game?.settings) throw new Error('Foundry settings are unavailable during init.');
+      const { key, ...config } = definition;
+      game.settings.registerMenu(RESOLVER_MODULE_ID, key, {
+        ...config,
+        type: createResolverSettingsApplicationClass(),
+      });
+    },
     getSetting(key) {
       return game?.settings?.get(RESOLVER_MODULE_ID, key);
     },
@@ -177,7 +226,35 @@ export function createFoundryAdapter(): ResolverFoundryAdapter {
       const module = game?.modules?.get(RESOLVER_MODULE_ID);
       if (module) module.api = Object.freeze(api);
     },
+    logDebug(event, details) {
+      console.debug(`[${RESOLVER_MODULE_ID}] ${event}`, details);
+    },
   };
+}
+
+function logSourceIndexDebug(
+  adapter: ResolverFoundryAdapter,
+  event: 'source-index-rebuilt' | 'source-index-rebuild-failed',
+  sourceIndex: SpellSourceIndexResult | undefined,
+  diagnostics: Array<ResolverCompatibilityDiagnostic | SpellSourceIndexDiagnostic>,
+): void {
+  let enabled = false;
+  try { enabled = adapter.getSetting('debugLogging') === true; }
+  catch { return; }
+  if (!enabled) return;
+  adapter.logDebug(event, {
+    candidateCount: sourceIndex?.candidates.length ?? 0,
+    sourcePackageCount: sourceIndex?.sourcePackages.length ?? 0,
+    sourcePackCount: sourceIndex?.sourcePacks.length ?? 0,
+    retainedReadableIndex: event === 'source-index-rebuild-failed' && sourceIndex !== undefined,
+    diagnostics: diagnostics.map((entry) => ({
+      code: entry.code,
+      pack: 'pack' in entry ? entry.pack : '',
+      path: 'path' in entry ? entry.path : '',
+      blocking: 'blocking' in entry ? entry.blocking : entry.code === 'SOURCE_INDEX_FAILED',
+      errorHash: sha256(entry.message),
+    })),
+  });
 }
 
 function resolvePackageState(

@@ -292,6 +292,68 @@ describe('deterministic destination spell resolver', () => {
     expect(unrelated.suggestions).toEqual([]);
   });
 
+  test('reuses an explicitly reviewed approximate suggestion when inventory, constraints, and rules remain valid', () => {
+    const near = candidate({ identifier: 'fireballl', name: 'Fireballl' });
+    const candidates = [near];
+    const first = resolve(candidates);
+    expect(first.status).toBe('needs_review');
+    expect(first.suggestions?.map((entry) => entry.uuid)).toEqual([near.uuid]);
+
+    const reviewed = resolve(candidates, { savedMapping: {
+      logicalRefKey: logicalSpellRefKey('caster-v1', 'prepared-spells', 'ref-fireball'),
+      selectedUuid: near.uuid,
+      rules: '2024',
+      sourceInventoryHash: hashSourceInventoryMetadata(candidates),
+      candidateMetadataHash: hashSourceInventoryMetadata(candidates),
+      resolutionConfigHash: hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),
+      selectionOrigin: 'manual-review',
+    } });
+    expect(reviewed.status).toBe('resolved');
+    expect(reviewed.status === 'resolved' && reviewed.origin).toBe('manual-review');
+    expect(reviewed.status === 'resolved' && reviewed.selected.uuid).toBe(near.uuid);
+  });
+
+  test.each([
+    ['level', { level: 4 }],
+    ['school', { school: 'abjuration' }],
+    ['source book', { sourceBook: 'XGE' }],
+  ] as const)('rejects reviewed approximate selection with contradictory %s metadata', (_label, contradiction) => {
+    const near = candidate({ identifier: 'fireballl', name: 'Fireballl', ...contradiction });
+    const candidates = [near];
+    const result = resolve(candidates, {
+      ref: ref({ sourceBookHint: 'PHB' }),
+      savedMapping: {
+        logicalRefKey: logicalSpellRefKey('caster-v1', 'prepared-spells', 'ref-fireball'),
+        selectedUuid: near.uuid,
+        rules: '2024',
+        sourceInventoryHash: hashSourceInventoryMetadata(candidates),
+        candidateMetadataHash: hashSourceInventoryMetadata(candidates),
+        resolutionConfigHash: hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),
+        selectionOrigin: 'manual-review',
+      },
+    });
+    expect(result.status).toBe('needs_review');
+    expect(result.findings.some((finding) => finding.code === 'INVALID_SAVED_MAPPING')).toBe(true);
+  });
+
+  test.each([
+    ['exact same-key 2024', [candidate({ rules: '2014', identifier: 'fireballl', name: 'Fireballl', packageId: 'legacy', uuid: 'Compendium.legacy.spells.Item.fireballlegacy14x' }), candidate()]],
+    ['approximate 2024', [candidate({ rules: '2014', identifier: 'fireballl', name: 'Fireballl', packageId: 'legacy', uuid: 'Compendium.legacy.spells.Item.fireballlegacy14x' }), candidate({ identifier: 'firebal', name: 'Firebal' })]],
+  ] as const)('does not let a reviewed approximate 2014 choice bypass %s', (_label, candidates) => {
+    const legacy = candidates[0]!;
+    const result = resolve(candidates, { savedMapping: {
+      logicalRefKey: logicalSpellRefKey('caster-v1', 'prepared-spells', 'ref-fireball'),
+      selectedUuid: legacy.uuid,
+      rules: '2014',
+      sourceInventoryHash: hashSourceInventoryMetadata(candidates),
+      candidateMetadataHash: hashSourceInventoryMetadata(candidates),
+      resolutionConfigHash: hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),
+      selectionOrigin: 'manual-review',
+    } });
+    expect(result.status).toBe('needs_review');
+    expect(result.findings.some((finding) => finding.code === 'INVALID_SAVED_MAPPING')).toBe(true);
+  });
+
   test('requires review for multiple equivalent 2014 exact matches', () => {
     const a = candidate({ rules: '2014', packageId: 'legacy-a', uuid: 'Compendium.legacy-a.spells.Item.fireball2014aaa' });
     const b = candidate({ rules: '2014', packageId: 'legacy-b', uuid: 'Compendium.legacy-b.spells.Item.fireball2014bbb' });

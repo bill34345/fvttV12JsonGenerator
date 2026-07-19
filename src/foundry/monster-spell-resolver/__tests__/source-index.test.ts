@@ -142,6 +142,15 @@ describe('destination spell source index', () => {
       { packageId: 'misleading', version: '1.0.0' },
       { packageId: 'mixed', version: '3.0.0' },
     ]);
+    expect(result.sourcePacks).toEqual([
+      { collection: 'broken.items', packageId: 'broken', packageVersion: '1.0.0', packId: 'items' },
+      { collection: 'dnd5e.spells24', packageId: 'dnd5e', packageVersion: '5.3.3', packId: 'spells24' },
+      { collection: 'empty-hint.items', packageId: 'empty-hint', packageVersion: '2.0.0', packId: 'items' },
+      { collection: 'heroes-options.spells', packageId: 'heroes-options', packageVersion: '1.4.0', packId: 'spells' },
+      { collection: 'midi.items', packageId: 'midi', packageVersion: '14.0.9', packId: 'items' },
+      { collection: 'misleading.spells', packageId: 'misleading', packageVersion: '1.0.0', packId: 'spells' },
+      { collection: 'mixed.items', packageId: 'mixed', packageVersion: '3.0.0', packId: 'items' },
+    ]);
   });
 
   test('is invariant to pack, row, and object insertion order', async () => {
@@ -176,6 +185,20 @@ describe('destination spell source index', () => {
 
     expect(after.candidateMetadataHash).toBe(before.candidateMetadataHash);
     expect(after.sourceInventoryHash).not.toBe(before.sourceInventoryHash);
+  });
+
+  test('an enabled zero-Spell Item pack remains visible and affects only the authoritative inventory hash', async () => {
+    const spellPack = pack('alpha.spells', 'alpha', '1.0.0');
+    const emptyPack = pack('empty.items', 'empty', '2.0.0');
+    const rows = new Map<string, Row[] | Error>([[spellPack.collection, [spell('aaaaaaaaaaaaaaaa', 'Alpha', '2024')]], [emptyPack.collection, []]]);
+    const withEmpty = await buildSpellSourceIndex(new FakeAdapter([spellPack, emptyPack], rows));
+    const withoutEmpty = await buildSpellSourceIndex(new FakeAdapter([spellPack], rows));
+    expect(withEmpty.sourcePacks).toContainEqual({
+      collection: 'empty.items', packageId: 'empty', packageVersion: '2.0.0', packId: 'items',
+    });
+    expect(withEmpty.candidates).toEqual(withoutEmpty.candidates);
+    expect(withEmpty.candidateMetadataHash).toBe(withoutEmpty.candidateMetadataHash);
+    expect(withEmpty.sourceInventoryHash).not.toBe(withoutEmpty.sourceInventoryHash);
   });
 
   test('fetches a full document only after a concrete selected UUID exists', async () => {

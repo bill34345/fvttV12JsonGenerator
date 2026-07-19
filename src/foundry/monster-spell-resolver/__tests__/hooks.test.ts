@@ -5,14 +5,18 @@ import { hashManifest, logicalSpellRefKey, RESOLVER_MODULE_ID } from '../../../c
 import { buildSpellResolverPackage } from '../../../../scripts/buildSpellResolver';
 import {
   createResolverActorService,
+  buildResolverReviewModel,
+  createAuthorityGuardedActions,
   createResolverEventCoordinator,
   normalizeSavedMappings,
   registerResolverHooks,
   restoreLastHydration,
+  selectResolverAuthority,
   type ResolverActorActions,
 } from '../hooks';
 import { RESOLVER_STATUS_VALUES, readResolverStatus } from '../status';
 import { computeManagedSourceHash } from '../cast-activity';
+import { createResolverReviewSession } from '../review-app';
 
 const validManifest = {
   schemaVersion: 1 as const,
@@ -62,7 +66,7 @@ describe('spell resolver status and safe event coordination', () => {
     state.isGM = false;
     expect(coordinator.onActorEvent(actor(), { userId: 'gm-1' })).toBe('ignored');
     state.isGM = true;
-    expect(coordinator.onActorEvent(actor(), { userId: 'other-gm' })).toBe('ignored');
+    expect(coordinator.onActorEvent(actor(), { userId: 'other-gm', resolverOwned: true })).toBe('ignored');
     expect(coordinator.onActorEvent({ id: 'plain', documentName: 'Actor', flags: {} }, { userId: 'gm-1' })).toBe('ignored');
     state.supported = false;
     expect(coordinator.onActorEvent(actor(), { userId: 'gm-1' })).toBe('ignored');
@@ -122,7 +126,7 @@ describe('Actor-level resolve pipeline', () => {
     };
     const candidate = {
       id: 'abcdefghijklmnop', uuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop', packageId: 'dnd5e', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const calls = { execute: [] as any[], fetch: [] as string[], review: 0, saved: [] as any[], notifications: [] as any[], templates: [] as any[] };
     const settings: Record<string, any> = { sourcePriority: [{ packageId: 'dnd5e', packId: 'spells24' }], savedMappings: {} };
@@ -136,7 +140,13 @@ describe('Actor-level resolve pipeline', () => {
       }),
       getSetting: (key: string) => settings[key],
       setSetting: async (key: string, value: unknown) => { settings[key] = value; calls.saved.push(value); },
-      fetchSelectedDocument: async (uuid: string) => { calls.fetch.push(uuid); return { documentName: 'Item', type: 'spell', uuid }; },
+      fetchSelectedDocument: async (uuid: string) => {
+        calls.fetch.push(uuid);
+        return {
+          documentName: 'Item', type: 'spell', uuid, name: 'Mage Armor',
+          system: { identifier: 'mage-armor', source: { rules: '2024', book: 'PHB' }, level: 1, school: 'abj' },
+        };
+      },
       execute: async (...args: any[]) => { calls.execute.push(args); },
       openReview: async () => { calls.review++; return { action: 'cancel' }; },
       renderTemplate: async (templatePath: string, context: any) => {
@@ -150,13 +160,248 @@ describe('Actor-level resolve pipeline', () => {
     return { target, calls, settings, dependencies, service: createResolverActorService(dependencies) };
   }
 
+  async function installHydratedPair(fixture: ReturnType<typeof serviceFixture>, protect = false) {
+    await fixture.service.processActor(fixture.target, { explicit: true });
+    const plan = fixture.calls.execute[0]![2];
+    const selection = plan.selections[0];
+    const target = fixture.target;
+    target.id = 'ACTOR00000000001';
+    target.type = 'npc';
+    const feature: any = {
+      id: 'FEAT000000000001', _id: 'FEAT000000000001', type: 'feat', parent: target, actor: target,
+      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      system: { activities: new Map() },
+    };
+    const identity = {
+      manifestId: validManifest.manifestId, groupId: 'innate', refId: 'mage-armor', featureId: feature.id,
+      logicalRefKey: selection.logicalRefKey, selectedUuid: selection.uuid, activityId: 'ACTV000000000001',
+      ...(protect ? { protected: true } : {}),
+    };
+    const relativeUUID = `Actor.${target.id}.Item.${feature.id}.Activity.${identity.activityId}`;
+    const activity: any = {
+      id: identity.activityId, _id: identity.activityId, type: 'cast', actor: target, item: feature, relativeUUID,
+      spell: { uuid: selection.uuid }, flags: { [RESOLVER_MODULE_ID]: { managed: true, documentType: 'activity', ...identity } },
+      toObject() { return { _id: this.id, type: this.type, spell: structuredClone(this.spell), flags: structuredClone(this.flags) }; },
+    };
+    activity.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(activity.toObject());
+    const spell: any = {
+      id: 'SPEL000000000001', _id: 'SPEL000000000001', type: 'spell', parent: target, actor: target,
+      flags: { dnd5e: { cachedFor: relativeUUID }, [RESOLVER_MODULE_ID]: { managed: true, documentType: 'spell', ...identity } },
+      _stats: { compendiumSource: selection.uuid },
+      toObject() { return { _id: this.id, type: this.type, flags: structuredClone(this.flags), _stats: structuredClone(this._stats) }; },
+    };
+    spell.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(spell.toObject());
+    feature.system.activities.set(activity.id, activity);
+    target.items = [feature, spell];
+    target.flags[RESOLVER_MODULE_ID].spellResolution = {
+      status: 'hydrated', planHash: plan.planHash, manifestHash: hashManifest(validManifest),
+      resolutionConfigHash: plan.resolutionConfigHash,
+      report: {
+        sourceInventoryHash: plan.sourceInventoryHash, candidateMetadataHash: plan.candidateMetadataHash,
+        selections: [{
+          logicalRefKey: selection.logicalRefKey, selectedUuid: selection.uuid, rules: selection.rules,
+          selectionOrigin: selection.selectionOrigin,
+          ...(protect ? { manualDecision: 'keep', protected: true } : {}),
+        }],
+      },
+    };
+    const runtime = fixture.dependencies.getRuntime();
+    runtime.sourceIndex.sourceInventoryHash = plan.sourceInventoryHash;
+    runtime.sourceIndex.candidateMetadataHash = plan.candidateMetadataHash;
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.calls.execute.length = 0;
+    fixture.calls.review = 0;
+    target.updateCalls.length = 0;
+    return { target, feature, activity, spell, logicalRefKey: selection.logicalRefKey };
+  }
+
   test('pending Actor validates every selected full Spell before one transaction and never persists resolving', async () => {
     const { target, calls, service } = serviceFixture();
+    expect(service.status(target)).toBe('pending');
+    expect(service.isAlreadyApplied(target)).toBe(false);
     await service.processActor(target);
     expect(calls.fetch).toEqual(['Compendium.dnd5e.spells24.Item.abcdefghijklmnop']);
     expect(calls.execute).toHaveLength(1);
     expect(target.updateCalls).toEqual([]);
     expect(target.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('pending');
+    expect(calls.review).toBe(0);
+    expect(calls.notifications).toContainEqual(['info', 'FVTTJSONSPELL.Notification.HydrationComplete (1)']);
+  });
+
+  test.each([
+    ['deleted pair', ({ target, feature }: any) => { feature.system.activities.clear(); target.items = [feature]; }],
+    ['missing Activity half', ({ feature }: any) => { feature.system.activities.clear(); }],
+    ['missing cached Spell half', ({ target, spell }: any) => { target.items = target.items.filter((item: any) => item !== spell); }],
+    ['duplicate cached Spell', ({ target, spell }: any) => {
+      const duplicate = {
+        ...spell, id: 'SPEL000000000002', _id: 'SPEL000000000002',
+        flags: structuredClone(spell.flags), _stats: structuredClone(spell._stats),
+        toObject() { return { _id: this.id, type: this.type, flags: structuredClone(this.flags), _stats: structuredClone(this._stats) }; },
+      } as any;
+      duplicate.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(duplicate.toObject());
+      target.items.push(duplicate);
+    }],
+    ['duplicate Cast Activity', ({ feature, activity }: any) => {
+      const duplicate = {
+        ...activity, id: 'ACTV000000000002', _id: 'ACTV000000000002', flags: structuredClone(activity.flags),
+        toObject() { return { _id: this.id, type: this.type, spell: structuredClone(this.spell), flags: structuredClone(this.flags) }; },
+      } as any;
+      duplicate.flags[RESOLVER_MODULE_ID].activityId = duplicate.id;
+      duplicate.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(duplicate.toObject());
+      feature.system.activities.set(duplicate.id, duplicate);
+    }],
+    ['mis-parented Activity', ({ activity }: any) => { activity.item = { id: 'FOREIGNFEATURE001' }; }],
+    ['invalid ownership identity', ({ spell }: any) => {
+      spell.flags[RESOLVER_MODULE_ID].featureId = 'OTHERFEATURE0001';
+      spell.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(spell.toObject());
+    }],
+    ['stale resolution with deleted pair', ({ target, feature }: any) => {
+      target.flags[RESOLVER_MODULE_ID].spellResolution.status = 'stale';
+      feature.system.activities.clear();
+      target.items = [feature];
+    }],
+  ] as const)('persisted %s becomes one blocking manual review and is never silently rebuilt', async (_label, mutate) => {
+    let reviewModel: any;
+    const fixture = serviceFixture();
+    fixture.dependencies.openReview = async (model: any) => {
+      reviewModel = model;
+      fixture.calls.review++;
+      return { action: 'cancel' };
+    };
+    const state = await installHydratedPair(fixture);
+    expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(true);
+    mutate(state);
+
+    expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(false);
+    expect(fixture.service.status(fixture.target)).toBe('needs_review');
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.review).toBe(1);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.service.status(fixture.target)).toBe('needs_review');
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(reviewModel.spells[0]).toMatchObject({
+      logicalRefKey: state.logicalRefKey,
+      manualConflict: { keepable: false, explanation: expect.any(String) },
+      candidateDecisionRequired: false,
+      blocking: true,
+    });
+    const session = createResolverReviewSession(reviewModel);
+    expect(() => session.decideManual(state.logicalRefKey, 'keep')).toThrow(/cannot be kept/i);
+    session.decideManual(state.logicalRefKey, 'overwrite');
+    expect(session.canApply()).toBe(true);
+
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.review).toBe(1);
+    expect(fixture.calls.execute).toHaveLength(0);
+  });
+
+  test('eligible Actor reports incompatible on an unsupported runtime without writing', () => {
+    const fixture = serviceFixture({ getRuntime: () => ({ compatibility: { supported: false }, canMutate: false, diagnostics: [] }) });
+    expect(fixture.service.status(fixture.target)).toBe('incompatible');
+    expect(fixture.target.updateCalls).toEqual([]);
+  });
+
+  test.each(['sourceInventoryHash', 'candidateMetadataHash'] as const)(
+    'derives stale immediately when current %s changes without an Actor event',
+    async (changedHash) => {
+      const fixture = serviceFixture();
+      await installHydratedPair(fixture);
+      const runtime = fixture.dependencies.getRuntime();
+      expect(fixture.service.status(fixture.target)).toBe('hydrated');
+      runtime.sourceIndex[changedHash] = 'd'.repeat(64);
+      fixture.dependencies.getRuntime = () => runtime;
+      expect(fixture.service.status(fixture.target)).toBe('stale');
+      expect(fixture.target.updateCalls).toEqual([]);
+    },
+  );
+
+  test('source-index blockers derive actionable status and explicit resolve remains read-only', async () => {
+    const fixture = serviceFixture({
+      getRuntime: () => ({
+        compatibility: { supported: true }, canMutate: false,
+        diagnostics: [{ code: 'SOURCE_INDEX_FAILED', message: 'Index unavailable', blocking: true }],
+        sourceIndex: undefined,
+      }),
+    });
+    expect(fixture.service.status(fixture.target)).toBe('needs_review');
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.status = 'hydrated';
+    expect(fixture.service.status(fixture.target)).toBe('stale');
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.status = 'failed-recovery-required';
+    expect(fixture.service.status(fixture.target)).toBe('failed-recovery-required');
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.status = 'pending';
+
+    const before = structuredClone(fixture.target.flags);
+    await fixture.service.resolve(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.target.flags).toEqual(before);
+    expect(fixture.calls.notifications).toContainEqual([
+      'warn', 'FVTTJSONSPELL.Notification.SourceIndexBlocked',
+    ]);
+  });
+
+  test('flagged invalid manifest stays diagnosable but can never hydrate', async () => {
+    let reportHtml = '';
+    let exported: any;
+    const fixture = serviceFixture({
+      showDocument: async (_title: string, html: string) => { reportHtml = html; },
+      exportJson: (_filename: string, value: unknown) => { exported = value; },
+    });
+    fixture.target.flags[RESOLVER_MODULE_ID].spellManifest = {
+      ...structuredClone(validManifest), schemaVersion: 99,
+    };
+    expect(fixture.service.status(fixture.target)).toBe('incompatible');
+
+    const before = structuredClone(fixture.target.flags);
+    await fixture.service.resolve(fixture.target);
+    await fixture.service.viewReport(fixture.target);
+    await fixture.service.exportDiagnostics(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.target.flags).toEqual(before);
+    expect(fixture.calls.notifications).toContainEqual([
+      'warn', 'FVTTJSONSPELL.Notification.InvalidManifest',
+    ]);
+    expect(reportHtml).toContain('incompatible');
+    expect(reportHtml).toContain('UNSUPPORTED_SCHEMA_VERSION');
+    expect(exported).toMatchObject({
+      status: 'incompatible',
+      manifestValidation: { ok: false },
+    });
+    expect(exported.manifestValidation.findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'UNSUPPORTED_SCHEMA_VERSION' }),
+    ]));
+  });
+
+  test('diagnostic export redacts premium residual bodies while retaining recovery provenance', async () => {
+    let exported: any;
+    const fixture = serviceFixture({ exportJson: (_filename: string, value: unknown) => { exported = value; } });
+    const sentinel = 'PREMIUM-DESCRIPTION-MUST-NOT-LEAVE-THE-WORLD';
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution = {
+      status: 'failed-recovery-required',
+      undoSnapshot: { premium: sentinel },
+      residualDifferences: [{
+        path: '/managed/spells/SPEL000000000001/system/description/value',
+        before: {
+          _id: 'SPEL000000000001', type: 'spell', system: { description: { value: sentinel } },
+          _stats: { compendiumSource: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop' },
+          flags: { [RESOLVER_MODULE_ID]: { managed: true, documentType: 'spell', selectedUuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop' } },
+        },
+        after: sentinel,
+      }],
+    };
+    await fixture.service.exportDiagnostics(fixture.target);
+    const serialized = JSON.stringify(exported);
+    expect(serialized).not.toContain(sentinel);
+    expect(serialized).not.toContain('undoSnapshot');
+    expect(exported.spellResolution.residualDifferences[0]).toMatchObject({
+      path: '/managed/spells/SPEL000000000001/system/description/value',
+      before: { contentHash: expect.any(String), metadata: expect.objectContaining({
+        '/_id': 'SPEL000000000001',
+        '/_stats/compendiumSource': 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',
+      }) },
+      after: { contentHash: expect.any(String) },
+    });
   });
 
   test('a Task 7 commit is the only Actor write; Task 8 never patches resolution metadata afterward', async () => {
@@ -179,14 +424,100 @@ describe('Actor-level resolve pipeline', () => {
     expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.resolutionConfigHash).toBeUndefined();
   });
 
-  test('implicit source/config change marks hydrated Actor stale without rewriting; explicit Resolve may apply', async () => {
-    const { target, calls, service } = serviceFixture();
-    target.flags[RESOLVER_MODULE_ID].spellResolution = { status: 'hydrated', planHash: 'old', manifestHash: 'old', report: {} };
-    await service.processActor(target);
-    expect(calls.execute).toHaveLength(0);
-    expect(target.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('stale');
-    await service.processActor(target, { explicit: true });
-    expect(calls.execute).toHaveLength(1);
+  test('affected source-priority change stays read-only on an unrelated Actor event; explicit Resolve may apply', async () => {
+    const fixture = serviceFixture();
+    const runtime = fixture.dependencies.getRuntime();
+    const alternate = {
+      ...runtime.sourceIndex.candidates[0],
+      id: 'qrstuvwxyzabcdef', uuid: 'Compendium.other.spells24.Item.qrstuvwxyzabcdef', packageId: 'other',
+    };
+    runtime.sourceIndex.candidates.push(alternate);
+    fixture.dependencies.getRuntime = () => runtime;
+    const hydrated = await installHydratedPair(fixture);
+    const service = fixture.service;
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.report.selections[0].selectedUuid).toContain('dnd5e.spells24');
+    expect(service.isAlreadyApplied(hydrated.target)).toBe(true);
+
+    fixture.settings.sourcePriority = [{ packageId: 'unrelated' }, { packageId: 'dnd5e', packId: 'spells24' }, { packageId: 'other', packId: 'spells24' }];
+    await service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(service.status(fixture.target)).toBe('hydrated');
+
+    fixture.settings.sourcePriority = [{ packageId: 'other', packId: 'spells24' }, { packageId: 'dnd5e', packId: 'spells24' }];
+    await service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(service.status(fixture.target)).toBe('stale');
+    expect(fixture.target.updateCalls).toEqual([]);
+
+    await service.processActor(fixture.target, { explicit: true });
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.execute[0][2].selections[0].uuid).toBe(alternate.uuid);
+  });
+
+  test('protected Keep stays hydrated and quiet on ordinary events but explicit Resolve requires review again', async () => {
+    const fixture = serviceFixture();
+    await fixture.service.processActor(fixture.target, { explicit: true });
+    const plan = fixture.calls.execute[0]![2];
+    const runtime = fixture.dependencies.getRuntime();
+    runtime.sourceIndex.candidateMetadataHash = plan.candidateMetadataHash;
+    fixture.dependencies.getRuntime = () => runtime;
+    const logicalRefKey = logicalSpellRefKey(validManifest.manifestId, 'innate', 'mage-armor');
+    const selectedUuid = plan.selections[0].uuid;
+    fixture.target.id = 'ACTORPROTECTED01';
+    fixture.target.type = 'npc';
+    const feature: any = {
+      id: 'FEAT0PROTECTED01', type: 'feat', parent: fixture.target, actor: fixture.target,
+      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      system: { activities: new Map() },
+    };
+    const identity = {
+      manifestId: validManifest.manifestId, groupId: 'innate', refId: 'mage-armor', featureId: feature.id,
+      logicalRefKey, selectedUuid, activityId: 'ACTV0PROTECTED01', protected: true,
+    };
+    const relativeUUID = `Actor.${fixture.target.id}.Item.${feature.id}.Activity.${identity.activityId}`;
+    const activity: any = {
+      id: identity.activityId, _id: identity.activityId, type: 'cast', actor: fixture.target, item: feature, relativeUUID,
+      spell: { uuid: selectedUuid }, flags: { [RESOLVER_MODULE_ID]: { managed: true, documentType: 'activity', ...identity } },
+      toObject() { return { _id: this.id, type: this.type, spell: structuredClone(this.spell), flags: structuredClone(this.flags) }; },
+    };
+    activity.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(activity.toObject());
+    const spell: any = {
+      id: 'SPEL0PROTECTED01', _id: 'SPEL0PROTECTED01', type: 'spell', parent: fixture.target, actor: fixture.target,
+      flags: { dnd5e: { cachedFor: relativeUUID }, [RESOLVER_MODULE_ID]: { managed: true, documentType: 'spell', ...identity } },
+      _stats: { compendiumSource: selectedUuid },
+      toObject() { return { _id: this.id, type: this.type, flags: structuredClone(this.flags), _stats: structuredClone(this._stats) }; },
+    };
+    spell.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(spell.toObject());
+    feature.system.activities.set(activity.id, activity);
+    fixture.target.items = [feature, spell];
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution = {
+      status: 'hydrated', planHash: plan.planHash, manifestHash: hashManifest(validManifest),
+      resolutionConfigHash: plan.resolutionConfigHash,
+      report: {
+        sourceInventoryHash: plan.sourceInventoryHash, candidateMetadataHash: plan.candidateMetadataHash,
+        selections: plan.selections.map((entry: any) => ({
+          logicalRefKey: entry.logicalRefKey, selectedUuid: entry.uuid, rules: entry.rules,
+          selectionOrigin: entry.selectionOrigin, manualDecision: 'keep', protected: true,
+        })),
+      },
+    };
+    fixture.calls.execute.length = 0;
+    const before = structuredClone(fixture.target.flags);
+
+    expect(fixture.service.status(fixture.target)).toBe('hydrated');
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.review).toBe(0);
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+
+    let reviewModel: any;
+    fixture.dependencies.openReview = async (model: any) => { reviewModel = model; fixture.calls.review++; return { action: 'cancel' }; };
+    await fixture.service.resolve(fixture.target);
+    expect(fixture.calls.review).toBe(1);
+    expect(reviewModel.spells[0].manualConflict).toMatchObject({ keepable: true });
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.flags).toEqual(before);
+    expect(fixture.target.updateCalls).toEqual([]);
   });
 
   test('Cancel and repeated identical finding hash open once and mutate no Actor state', async () => {
@@ -204,7 +535,11 @@ describe('Actor-level resolve pipeline', () => {
   });
 
   test('invalid fetched selection becomes read-only needs_review and never starts or writes a transaction', async () => {
-    const { target, calls, dependencies } = serviceFixture({ fetchSelectedDocument: async () => ({ documentName: 'Item', type: 'feat' }) });
+    let reviewModel: any;
+    const { target, calls, dependencies } = serviceFixture({
+      fetchSelectedDocument: async () => ({ documentName: 'Item', type: 'feat' }),
+      openReview: async (model: any) => { reviewModel = model; calls.review++; return { action: 'cancel' }; },
+    });
     const service = createResolverActorService(dependencies);
     const before = structuredClone(target.flags);
     await service.processActor(target);
@@ -213,6 +548,107 @@ describe('Actor-level resolve pipeline', () => {
     expect(calls.review).toBe(1);
     expect(target.flags).toEqual(before);
     expect(target.updateCalls).toEqual([]);
+    expect(reviewModel.spells[0]).toMatchObject({
+      candidateDecisionRequired: false,
+      candidates: [],
+      warnings: ['FVTTJSONSPELL.Review.RebuildIndex'],
+      blocking: true,
+    });
+  });
+
+  test('GM can promote an indexed approximate suggestion through manual review to a ready transaction', async () => {
+    const fixture = serviceFixture();
+    const runtime = fixture.dependencies.getRuntime();
+    const near = {
+      ...runtime.sourceIndex.candidates[0], identifier: 'mage-armour', name: 'Mage Armour',
+    };
+    runtime.sourceIndex.candidates = [near];
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.dependencies.fetchSelectedDocument = async (uuid: string) => ({
+      documentName: 'Item', type: 'spell', uuid, name: near.name,
+      system: { identifier: near.identifier, source: { rules: near.rules, book: near.sourceBook }, level: near.level, school: near.school },
+    });
+    const logicalRefKey = logicalSpellRefKey(validManifest.manifestId, 'innate', 'mage-armor');
+    fixture.dependencies.openReview = async () => {
+      fixture.calls.review++;
+      return { action: 'apply', manualDecisions: [], candidateSelections: [{ logicalRefKey, selectedUuid: near.uuid }] };
+    };
+    const service = createResolverActorService(fixture.dependencies);
+
+    await service.processActor(fixture.target, { explicit: true });
+    expect(fixture.calls.review).toBe(1);
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.execute[0]![2].selections[0]).toMatchObject({
+      uuid: near.uuid, selectionOrigin: 'manual-review', rules: '2024',
+    });
+    expect(fixture.settings.savedMappings[logicalRefKey]).toMatchObject({
+      selectedUuid: near.uuid, selectionOrigin: 'manual-review',
+    });
+  });
+
+  test('reviewed approximate selection still fails closed when the fetched full Spell differs from indexed metadata', async () => {
+    const fixture = serviceFixture();
+    const runtime = fixture.dependencies.getRuntime();
+    const near = {
+      ...runtime.sourceIndex.candidates[0], identifier: 'mage-armour', name: 'Mage Armour',
+    };
+    runtime.sourceIndex.candidates = [near];
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.dependencies.fetchSelectedDocument = async (uuid: string) => ({
+      documentName: 'Item', type: 'spell', uuid, name: 'Tampered Premium Name',
+      system: { identifier: near.identifier, source: { rules: near.rules, book: near.sourceBook }, level: near.level, school: near.school },
+    });
+    const logicalRefKey = logicalSpellRefKey(validManifest.manifestId, 'innate', 'mage-armor');
+    fixture.dependencies.openReview = async () => {
+      fixture.calls.review++;
+      return { action: 'apply', manualDecisions: [], candidateSelections: [{ logicalRefKey, selectedUuid: near.uuid }] };
+    };
+
+    await createResolverActorService(fixture.dependencies).processActor(fixture.target, { explicit: true });
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.calls.notifications.flat().join(' ')).toContain('name changed after indexing');
+  });
+
+  test('same-UUID full Spell metadata drift is needs_review before any transaction', async () => {
+    const fixture = serviceFixture({
+      fetchSelectedDocument: async (uuid: string) => ({
+        documentName: 'Item', type: 'spell', uuid, name: 'Fireball',
+        system: { identifier: 'fireball', source: { rules: '2014', book: 'PHB 2014' }, level: 3, school: 'evo' },
+      }),
+    });
+    const before = structuredClone(fixture.target.flags);
+    const service = createResolverActorService(fixture.dependencies);
+    await service.processActor(fixture.target);
+    expect(service.status(fixture.target)).toBe('needs_review');
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.target.flags).toEqual(before);
+  });
+
+  test.each([
+    ['name', (document: any) => { document.name = 'Shield'; }],
+    ['identifier', (document: any) => { document.system.identifier = 'shield'; }],
+    ['rules', (document: any) => { document.system.source.rules = '2014'; }],
+    ['source book', (document: any) => { document.system.source.book = 'XGE'; }],
+    ['level', (document: any) => { document.system.level = 2; }],
+    ['school', (document: any) => { document.system.school = 'evo'; }],
+  ] as const)('rejects same-UUID full Spell %s drift against indexed facts', async (_label, mutate) => {
+    const fixture = serviceFixture({
+      fetchSelectedDocument: async (uuid: string) => {
+        const document = {
+          documentName: 'Item', type: 'spell', uuid, name: 'Mage Armor',
+          system: { identifier: 'mage-armor', source: { rules: '2024', book: 'PHB' }, level: 1, school: 'abj' },
+        };
+        mutate(document);
+        return document;
+      },
+    });
+    const service = createResolverActorService(fixture.dependencies);
+    await service.processActor(fixture.target);
+    expect(service.status(fixture.target)).toBe('needs_review');
+    expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]);
   });
 
   test('requires exact selected document UUID and fails closed on malformed sourcePriority', async () => {
@@ -264,7 +700,7 @@ describe('Actor-level resolve pipeline', () => {
     target.items = [feature];
     const alternate = {
       id: 'qrstuvwxyzabcdef', uuid: 'Compendium.other.spells24.Item.qrstuvwxyzabcdef', packageId: 'other', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const runtime = fixture.dependencies.getRuntime();
     runtime.sourceIndex.candidates.push(alternate);
@@ -283,6 +719,9 @@ describe('Actor-level resolve pipeline', () => {
       },
     };
     expect(fixture.service.isAlreadyApplied(target)).toBe(true);
+    fixture.settings.sourcePriority = [{ packageId: 'unrelated' }, { packageId: 'dnd5e', packId: 'spells24' }];
+    expect(fixture.service.isAlreadyApplied(target)).toBe(true);
+    fixture.settings.sourcePriority = [{ packageId: 'dnd5e', packId: 'spells24' }];
     fixture.settings.savedMappings = { [logicalRefKey]: {
       logicalRefKey, selectedUuid: alternate.uuid, rules: '2024', sourceInventoryHash: plan.sourceInventoryHash,
       candidateMetadataHash: plan.candidateMetadataHash, resolutionConfigHash: plan.resolutionConfigHash, selectionOrigin: 'manual-review',
@@ -300,7 +739,7 @@ describe('Actor-level resolve pipeline', () => {
     const fixture = serviceFixture();
     const second = {
       id: 'qrstuvwxyzabcdef', uuid: 'Compendium.dnd5e.spells24.Item.qrstuvwxyzabcdef', packageId: 'dnd5e', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const runtime = fixture.dependencies.getRuntime();
     runtime.sourceIndex.candidates.push(second);
@@ -330,7 +769,7 @@ describe('Actor-level resolve pipeline', () => {
     const fixture = serviceFixture();
     const second = {
       id: 'qrstuvwxyzabcdef', uuid: 'Compendium.dnd5e.spells24.Item.qrstuvwxyzabcdef', packageId: 'dnd5e', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const runtime = fixture.dependencies.getRuntime();
     runtime.sourceIndex.candidates.push(second);
@@ -359,7 +798,7 @@ describe('Actor-level resolve pipeline', () => {
     const fixture = serviceFixture();
     const second = {
       id: 'qrstuvwxyzabcdef', uuid: 'Compendium.dnd5e.spells24.Item.qrstuvwxyzabcdef', packageId: 'dnd5e', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const runtime = fixture.dependencies.getRuntime();
     runtime.sourceIndex.candidates.push(second);
@@ -383,7 +822,7 @@ describe('Actor-level resolve pipeline', () => {
     const fixture = serviceFixture();
     const second = {
       id: 'qrstuvwxyzabcdef', uuid: 'Compendium.dnd5e.spells24.Item.qrstuvwxyzabcdef', packageId: 'dnd5e', packId: 'spells24',
-      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1,
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
     };
     const runtime = fixture.dependencies.getRuntime();
     runtime.sourceIndex.candidates.push(second);
@@ -430,6 +869,42 @@ describe('Actor-level resolve pipeline', () => {
     expect(fixture.target.updateCalls).toEqual([]);
   });
 
+  test('serializes two-Actor mapping decisions so failed compensation cannot erase the later success', async () => {
+    const first = serviceFixture();
+    const second = serviceFixture();
+    const alternate = {
+      id: 'qrstuvwxyzabcdef', uuid: 'Compendium.dnd5e.spells24.Item.qrstuvwxyzabcdef', packageId: 'dnd5e', packId: 'spells24',
+      name: 'Mage Armor', identifier: 'mage-armor', rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
+    };
+    const runtime = first.dependencies.getRuntime();
+    runtime.sourceIndex.candidates.push(alternate);
+    const shared: Record<string, any> = { sourcePriority: first.settings.sourcePriority, savedMappings: {} };
+    let releaseFirst!: () => void;
+    let firstEntered!: () => void;
+    const entered = new Promise<void>((resolve) => { firstEntered = resolve; });
+    const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const key = logicalSpellRefKey(validManifest.manifestId, 'innate', 'mage-armor');
+    for (const [fixture, selectedUuid] of [[first, runtime.sourceIndex.candidates[0].uuid], [second, alternate.uuid]] as const) {
+      fixture.dependencies.getRuntime = () => runtime;
+      fixture.dependencies.getSetting = (setting: string) => shared[setting];
+      fixture.dependencies.setSetting = async (setting: string, value: unknown) => { shared[setting] = structuredClone(value); };
+      fixture.dependencies.openReview = async () => ({
+        action: 'apply', manualDecisions: [], candidateSelections: [{ logicalRefKey: key, selectedUuid }],
+      });
+    }
+    first.dependencies.execute = async (...args: any[]) => { first.calls.execute.push(args); firstEntered(); await gate; throw new Error('first failed'); };
+    second.dependencies.execute = async (...args: any[]) => { second.calls.execute.push(args); };
+    const firstRun = createResolverActorService(first.dependencies).processActor(first.target);
+    await entered;
+    const secondRun = createResolverActorService(second.dependencies).processActor(second.target);
+    await Promise.resolve();
+    expect(second.calls.execute).toHaveLength(0);
+    releaseFirst();
+    await Promise.all([firstRun, secondRun]);
+    expect(second.calls.execute).toHaveLength(1);
+    expect(shared.savedMappings[key].selectedUuid).toBe(alternate.uuid);
+  });
+
   test('review and View Sources expose manifest evidence plus actual current/proposed structure, not hashes alone', async () => {
     let reviewModel: any;
     let sourcesHtml = '';
@@ -461,25 +936,122 @@ describe('Actor-level resolve pipeline', () => {
     fixture.target.id = 'ACTOR00000000001';
     fixture.target.type = 'npc';
     fixture.target.items = [feature];
+    fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection = [{
+      logicalRefKey, activities: [{ id: 'ACTV000000000001', spell: { uuid: 'Compendium.old.spells.Item.aaaaaaaaaaaaaaaa' } }], cachedSpells: [],
+    }];
+    const runtime = fixture.dependencies.getRuntime();
+    runtime.sourceIndex.diagnostics = [{
+      code: 'PACK_INDEX_FAILED', pack: 'broken.spells', path: '/index', message: 'permission denied', blocking: true,
+    }];
+    runtime.diagnostics = runtime.sourceIndex.diagnostics;
+    fixture.dependencies.getRuntime = () => runtime;
     const service = createResolverActorService(fixture.dependencies);
     await service.processActor(fixture.target);
     expect(reviewModel.spells[0].sourceEvidence).toEqual([{ start: 0, end: 10, quote: 'Mage Armor' }]);
-    expect(reviewModel.spells[0].current.documents).toHaveLength(1);
-    expect(reviewModel.spells[0].current.documents[0].source.system.target.value).toBe(99);
-    expect(reviewModel.spells[0].proposed.activity).toMatchObject({ type: 'cast', spell: { uuid: selectedUuid } });
-    expect(reviewModel.spells[0].lastGeneratedProof).toMatchObject({ contentAvailable: false });
+    expect(reviewModel.spells[0].current.generatedProjection.activities[0]).toMatchObject({
+      id: 'ACTV000000000001', type: 'cast', spell: { uuid: selectedUuid },
+    });
+    expect(reviewModel.spells[0].proposed.activities[0]).toMatchObject({ type: 'cast', spell: { uuid: selectedUuid } });
+    expect(reviewModel.spells[0].proposed.cachedSpells[0]).toMatchObject({ compendiumSource: selectedUuid, type: 'spell' });
+    expect(reviewModel.spells[0].lastGeneratedProof.activities[0].spell.uuid).toContain('Compendium.old');
+    expect(JSON.stringify(reviewModel.spells[0])).not.toContain('hash only');
     await service.viewSources(fixture.target);
     expect(sourcesHtml).toContain('Mage Armor');
     expect(sourcesHtml).toContain('quote');
+    expect(sourcesHtml).toContain('PACK_INDEX_FAILED');
+    expect(sourcesHtml).toContain('broken.spells');
+    expect(sourcesHtml).toContain('/index');
+    expect(sourcesHtml).toContain('permission denied');
+  });
+
+  test('View Sources shows the current rebuild failure instead of stale retained-index diagnostics', async () => {
+    let sourcesHtml = '';
+    const fixture = serviceFixture({
+      showDocument: async (_title: string, html: string) => { sourcesHtml = html; },
+    });
+    const runtime = fixture.dependencies.getRuntime();
+    runtime.canMutate = false;
+    runtime.diagnostics = [{ code: 'SOURCE_INDEX_FAILED', message: 'current rebuild list failed' }];
+    runtime.sourceIndex.diagnostics = [{
+      code: 'PACK_INDEX_FAILED', pack: 'old.spells', path: '/old', message: 'stale old failure', blocking: true,
+    }];
+    fixture.dependencies.getRuntime = () => runtime;
+
+    await createResolverActorService(fixture.dependencies).viewSources(fixture.target);
+    expect(sourcesHtml).toContain('SOURCE_INDEX_FAILED');
+    expect(sourcesHtml).toContain('current rebuild list failed');
+    expect(sourcesHtml).not.toContain('stale old failure');
+  });
+
+  test('duplicate refId values in different groups bind each proposed Activity to its exact logical feature', async () => {
+    const fixture = serviceFixture();
+    const manifest = structuredClone(validManifest) as any;
+    manifest.spellcastingGroups = [
+      { ...structuredClone(validManifest.spellcastingGroups[0]), groupId: 'group-a', featureItemKey: 'feature-a' },
+      { ...structuredClone(validManifest.spellcastingGroups[0]), groupId: 'group-b', featureItemKey: 'feature-b' },
+    ];
+    fixture.target.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
+    fixture.target.items = [
+      { id: 'FEATUREGROUP0001', flags: { [RESOLVER_MODULE_ID]: { groupId: 'group-a', featureItemKey: 'feature-a' } }, system: { activities: new Map() } },
+      { id: 'FEATUREGROUP0002', flags: { [RESOLVER_MODULE_ID]: { groupId: 'group-b', featureItemKey: 'feature-b' } }, system: { activities: new Map() } },
+    ];
+    const selected = fixture.dependencies.getRuntime().sourceIndex.candidates[0];
+    const results = ['group-a', 'group-b'].map((groupId) => ({
+      status: 'resolved', refId: 'mage-armor', logicalRefKey: logicalSpellRefKey(manifest.manifestId, groupId, 'mage-armor'),
+      selected, candidates: [], origin: 'automatic-2024', trace: [],
+    }));
+    const reviewModel = buildResolverReviewModel(fixture.target, manifest, {
+      status: 'needs_review', findings: [], report: {
+        manifestId: manifest.manifestId, sourceInventoryHash: 'c'.repeat(64), candidateMetadataHash: 'b'.repeat(64),
+        resolutionConfigHash: 'd'.repeat(64), currentManagedProjectionHash: 'e'.repeat(64), manualDecisionsHash: 'f'.repeat(64),
+        results, findings: [],
+      },
+    } as any);
+
+    expect(reviewModel.spells.map((spell: any) => [spell.logicalRefKey, spell.proposed.activities[0].featureId])).toEqual([
+      [logicalSpellRefKey(manifest.manifestId, 'group-a', 'mage-armor'), 'FEATUREGROUP0001'],
+      [logicalSpellRefKey(manifest.manifestId, 'group-b', 'mage-armor'), 'FEATUREGROUP0002'],
+    ]);
   });
 });
 
 describe('public Foundry hook and GM control registration', () => {
+  test('selects one deterministic active GM authority on every client', () => {
+    const users = [
+      { id: 'gm-z', isGM: true, active: true },
+      { id: 'gm-a', isGM: true, active: true },
+      { id: 'gm-0', isGM: true, active: false },
+      { id: 'player', isGM: false, active: true },
+    ];
+    expect(selectResolverAuthority(users, users[1])).toEqual({ isGM: true, userId: 'gm-a' });
+    expect(selectResolverAuthority(users, users[0])).toEqual({ isGM: false, userId: 'gm-z' });
+    expect(selectResolverAuthority(users, users[2])).toEqual({ isGM: false, userId: 'gm-0' });
+  });
+
+  test('non-authoritative GM hooks, controls, and explicit actions are all read-only', async () => {
+    const calls: string[] = [];
+    const raw: ResolverActorActions = {
+      status: () => 'pending', resolve: async () => { calls.push('resolve'); }, viewReport: async () => { calls.push('report'); },
+      viewSources: async () => { calls.push('sources'); }, undo: async () => { calls.push('undo'); }, exportDiagnostics: async () => { calls.push('diagnostics'); },
+    };
+    const guarded = createAuthorityGuardedActions(raw, () => false);
+    const target = actor();
+    await guarded.resolve(target); await guarded.viewReport(target); await guarded.viewSources(target); await guarded.undo(target); await guarded.exportDiagnostics(target);
+    expect(calls).toEqual([]);
+
+    const scheduled: unknown[] = [];
+    const coordinator = createResolverEventCoordinator({
+      authority: () => ({ isGM: false, userId: 'gm-z' }), runtimeSupported: () => true, isActive: () => false,
+      isAlreadyApplied: () => false, schedule: (callback) => scheduled.push(callback), process: async () => {},
+    });
+    expect(coordinator.onActorEvent(target, { userId: 'gm-a' })).toBe('ignored');
+    expect(scheduled).toEqual([]);
+  });
   test('registers only the four approved public hooks and wires every Actor action', async () => {
     const callbacks = new Map<string, Function>();
     const calls: string[] = [];
     const actions: ResolverActorActions = {
-      status: () => 'pending',
+      status: (target: any) => target?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.status ?? 'pending',
       resolve: async () => { calls.push('resolve'); },
       viewReport: async () => { calls.push('report'); },
       viewSources: async () => { calls.push('sources'); },
@@ -497,6 +1069,7 @@ describe('public Foundry hook and GM control registration', () => {
     const controls: any[] = [];
     callbacks.get('getHeaderControlsApplicationV2')!({ document: target }, controls);
     expect(controls.map((entry) => entry.action)).toEqual([
+      'fvtt-json-generator-spell-resolver.status',
       'fvtt-json-generator-spell-resolver.resolve',
       'fvtt-json-generator-spell-resolver.report',
       'fvtt-json-generator-spell-resolver.sources',
@@ -511,7 +1084,33 @@ describe('public Foundry hook and GM control registration', () => {
     expect(menu).toHaveLength(5);
     const element = { closest: () => ({ dataset: { entryId: target.id } }) };
     for (const entry of menu) await entry.onClick({}, element);
-    expect(calls).toEqual(['resolve', 'report', 'sources', 'undo', 'diagnostics', 'resolve', 'report', 'sources', 'undo', 'diagnostics']);
+    expect(calls).toEqual(['report', 'resolve', 'report', 'sources', 'undo', 'diagnostics', 'resolve', 'report', 'sources', 'undo', 'diagnostics']);
+
+    const fallback = actor('actor-fallback') as any;
+    fallback.flags[RESOLVER_MODULE_ID].spellResolution.report = { selections: [{ selectionOrigin: 'fallback-2014' }] };
+    const fallbackControls: any[] = [];
+    callbacks.get('getHeaderControlsApplicationV2')!({ document: fallback }, fallbackControls);
+    expect(fallbackControls.slice(0, 2).map((entry) => [entry.action, entry.label])).toEqual([
+      ['fvtt-json-generator-spell-resolver.status', 'FVTTJSONSPELL.Status.pending'],
+      ['fvtt-json-generator-spell-resolver.fallback-2014', 'FVTTJSONSPELL.Status.Fallback2014'],
+    ]);
+    fallback.flags[RESOLVER_MODULE_ID].spellResolution.status = 'hydrated';
+    const hydratedControls: any[] = [];
+    callbacks.get('getHeaderControlsApplicationV2')!({ document: fallback }, hydratedControls);
+    expect(hydratedControls[0].icon).toContain('fvtt-json-generator-spell-resolver-status-icon--hydrated');
+
+    const invalid = actor('actor-invalid') as any;
+    invalid.flags[RESOLVER_MODULE_ID].spellManifest = { ...structuredClone(validManifest), schemaVersion: 99 };
+    const invalidControls: any[] = [];
+    callbacks.get('getHeaderControlsApplicationV2')!({ document: invalid }, invalidControls);
+    expect(invalidControls.map((entry) => [entry.action, entry.visible()])).toEqual([
+      ['fvtt-json-generator-spell-resolver.status', true],
+      ['fvtt-json-generator-spell-resolver.resolve', true],
+      ['fvtt-json-generator-spell-resolver.report', true],
+      ['fvtt-json-generator-spell-resolver.sources', true],
+      ['fvtt-json-generator-spell-resolver.undo', false],
+      ['fvtt-json-generator-spell-resolver.diagnostics', true],
+    ]);
 
     const nonActorControls: any[] = [];
     callbacks.get('getHeaderControlsApplicationV2')!({ document: { documentName: 'Item' } }, nonActorControls);
@@ -582,6 +1181,16 @@ describe('Undo Last Hydration transaction boundary', () => {
     expect(fixture.mutations.count).toBe(before);
   });
 
+  test('rejects an empty snapshot that falsely claims a previously hydrated selection', async () => {
+    const fixture = createUndoActor();
+    const snapshot = fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot;
+    snapshot.activities = [];
+    snapshot.spells = [];
+    const before = fixture.mutations.count;
+    await expect(restoreLastHydration(fixture.actor)).rejects.toThrow(/empty|selection|pending|snapshot/i);
+    expect(fixture.mutations.count).toBe(before);
+  });
+
   test('fails before writing when a foreign cache already claims the snapshot Activity', async () => {
     const fixture = createUndoActor();
     fixture.actor.items.push({
@@ -629,8 +1238,15 @@ describe('Undo Last Hydration transaction boundary', () => {
     fixture.actor.createEmbeddedDocuments = async () => { throw new Error('injected persistent Undo create failure'); };
     const notifications: any[] = [];
     const service = createResolverActorService(undoServiceDependencies(notifications));
-    await expect(service.undo(fixture.actor)).rejects.toThrow(/persistent Undo|compensation/i);
+    let undoError: any;
+    try { await service.undo(fixture.actor); } catch (error) { undoError = error; }
+    expect({ isArray: Array.isArray(undoError.residualDifferences), type: typeof undoError.residualDifferences })
+      .toEqual({ isArray: true, type: 'object' });
+    expect(undoError.residualDifferences.length).toBeGreaterThan(0);
+    expect(undoError.residualDifferences.some((entry: any) => /^\/managed\/(activities|spells)\/.+/.test(entry.path))).toBe(true);
+    expect(undoError).toMatchObject({ recoveryRequired: true });
     expect(fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('failed-recovery-required');
+    expect(fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.residualDifferences).toEqual(undoError.residualDifferences);
     expect(service.status(fixture.actor)).toBe('failed-recovery-required');
     expect(notifications.flat().join(' ')).toMatch(/persistent Undo|recovery|compensation/i);
     expect(service.isActive(fixture.actor)).toBe(false);
@@ -653,7 +1269,10 @@ describe('Undo Last Hydration transaction boundary', () => {
           candidates: [candidate], sourcePackages: [], diagnostics: [], candidateMetadataHash: 'b'.repeat(64), sourceInventoryHash: 'c'.repeat(64),
         } }),
         getSetting: (key: string) => key === 'sourcePriority' ? [{ packageId: 'dnd5e', packId: 'spells24' }] : {},
-        setSetting: async () => {}, fetchSelectedDocument: async (uuid: string) => ({ documentName: 'Item', type: 'spell', uuid }),
+        setSetting: async () => {}, fetchSelectedDocument: async (uuid: string) => ({
+          documentName: 'Item', type: 'spell', uuid, name: 'Mage Armor',
+          system: { identifier: 'mage-armor', source: { rules: '2024', book: undefined }, level: 1 },
+        }),
         execute: async () => { entered(); await gate; }, openReview: async () => ({ action: 'cancel' }),
         renderTemplate: async (_path: string, context: any) => context.content,
         showDocument: async () => {}, exportJson: () => {}, notify: () => {},

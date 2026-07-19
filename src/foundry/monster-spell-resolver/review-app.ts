@@ -24,6 +24,7 @@ export interface ResolverReviewSpell {
   lastGeneratedProof?: unknown;
   proposed?: unknown;
   manualConflict?: { keepable: boolean; explanation?: string };
+  candidateDecisionRequired?: boolean;
   warnings: string[];
   literalRestrictions: Array<{ kind: string; text: string }>;
   blocking: boolean;
@@ -79,6 +80,10 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
     },
     selectCandidate(logicalRefKey, selectedUuid) {
       const spell = byKey.get(logicalRefKey);
+      if (selectedUuid === '') {
+        candidateSelections.delete(logicalRefKey);
+        return;
+      }
       if (!spell?.candidates.some((candidate) => candidate.uuid === selectedUuid)) {
         throw new TypeError(`Candidate ${selectedUuid} is not offered for ${logicalRefKey}.`);
       }
@@ -108,54 +113,46 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
 }
 
 function requiresCandidateDecision(spell: ResolverReviewSpell): boolean {
-  return spell.blocking && !spell.manualConflict && spell.candidates.length > 0;
+  return spell.candidateDecisionRequired === true;
 }
 
-export function renderResolverReviewHtml(model: ResolverReviewModel): string {
+export type ResolverLocalizer = (key: string, data?: Record<string, unknown>) => string;
+
+export function renderResolverReviewHtml(model: ResolverReviewModel, localize: ResolverLocalizer = defaultLocalizer()): string {
+  const display = (entry: unknown) => entry === undefined || entry === '' ? localize('FVTTJSONSPELL.Review.Unknown') : String(entry);
   const spells = model.spells.map((spell) => {
-    const evidence = (spell.sourceEvidence ?? spell.evidence)
-      .map((entry) => `${entry.start}–${entry.end}: ${entry.quote}`)
-      .join('\n');
-    const candidates = spell.candidates.map((candidate) => `
-      <li class="fvtt-json-generator-spell-resolver-break">
-        ${escape(candidate.packageId)} / ${escape(candidate.packId)} · ${escape(candidate.sourceBook ?? '—')} ·
-        ${escape(candidate.rules ?? 'unknown')} · ${escape(String(candidate.level ?? '—'))} ·
-        <code>${escape(candidate.uuid)}</code>
-      </li>`).join('');
-    const candidateSelect = requiresCandidateDecision(spell) ? `<label>Source
-      <select data-logical-ref-key="${escapeAttribute(spell.logicalRefKey)}">
-        <option value="">Select a concrete source</option>
-        ${spell.candidates.map((candidate) => `<option value="${escapeAttribute(candidate.uuid)}">${escape(candidate.packageId)} / ${escape(candidate.packId)} / ${escape(candidate.rules ?? 'unknown')} / ${escape(candidate.uuid)}</option>`).join('')}
-      </select></label>` : '';
-    const keep = spell.manualConflict ? `
-      <fieldset data-review-key="${escapeAttribute(spell.logicalRefKey)}">
-        <legend>${escape(spell.manualConflict.explanation ?? 'Manual managed-content change')}</legend>
-        <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="keep"
-          ${spell.manualConflict.keepable ? '' : 'disabled'}> Keep manual</label>
-        <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="overwrite"> Overwrite</label>
-      </fieldset>` : '';
-    return `<article class="fvtt-json-generator-spell-resolver-spell">
-      <h3>${escape(spell.originalName)} <code>${escape(spell.refId)}</code></h3>
-      <p class="fvtt-json-generator-spell-resolver-break">${escape(evidence)}</p>
-      <ul>${candidates}</ul>
-      ${candidateSelect}
-      ${keep}
-      <details><summary>Current / proposed diff</summary>
-        <p>Last-generated proof (hash only; prior content unavailable)</p>
-        <pre class="fvtt-json-generator-spell-resolver-scroll fvtt-json-generator-spell-resolver-break">${escape(pretty(spell.lastGeneratedProof))}</pre>
-        <pre class="fvtt-json-generator-spell-resolver-scroll fvtt-json-generator-spell-resolver-break">${escape(pretty(spell.current))}</pre>
-        <pre class="fvtt-json-generator-spell-resolver-scroll fvtt-json-generator-spell-resolver-break">${escape(pretty(spell.proposed))}</pre>
-      </details>
-      <ul>${spell.warnings.map((warning) => `<li>${escape(warning)}</li>`).join('')}</ul>
-      <section><strong>literal-only</strong>${spell.literalRestrictions.map((restriction) =>
-        `<p class="fvtt-json-generator-spell-resolver-break">${escape(restriction.kind)}: ${escape(restriction.text)}</p>`).join('')}</section>
-    </article>`;
+    const evidence = (spell.sourceEvidence ?? spell.evidence).map((entry) => `${entry.start}-${entry.end}: ${entry.quote}`).join('\n');
+    const candidates = spell.candidates.map((candidate) => `<li class="fvtt-json-generator-spell-resolver-break">
+      ${escape(candidate.packageId)} / ${escape(candidate.packId)} · ${escape(display(candidate.sourceBook))} ·
+      ${escape(display(candidate.rules))} · ${escape(display(candidate.level))} · <code>${escape(candidate.uuid)}</code></li>`).join('');
+    const select = requiresCandidateDecision(spell) ? `<label>${escape(localize('FVTTJSONSPELL.Review.Source'))}
+      <select data-logical-ref-key="${escapeAttribute(spell.logicalRefKey)}"><option value="">${escape(localize('FVTTJSONSPELL.Review.SelectSource'))}</option>
+      ${spell.candidates.map((candidate) => `<option value="${escapeAttribute(candidate.uuid)}">${escape(candidate.packageId)} / ${escape(candidate.packId)} / ${escape(display(candidate.rules))} / ${escape(candidate.uuid)}</option>`).join('')}</select></label>` : '';
+    const manual = spell.manualConflict ? `<fieldset data-review-key="${escapeAttribute(spell.logicalRefKey)}">
+      <legend>${escape(localize(spell.manualConflict.keepable ? 'FVTTJSONSPELL.Review.ManualConflict' : 'FVTTJSONSPELL.Review.ManualConflictInvalid'))}</legend>
+      <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="keep" ${spell.manualConflict.keepable ? '' : 'disabled'}> ${escape(localize('FVTTJSONSPELL.Review.KeepManual'))}</label>
+      <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="overwrite"> ${escape(localize('FVTTJSONSPELL.Review.Overwrite'))}</label></fieldset>` : '';
+    return `<article class="fvtt-json-generator-spell-resolver-spell"><h3>${escape(spell.originalName)} <code>${escape(spell.refId)}</code></h3>
+      <h4>${escape(localize('FVTTJSONSPELL.Review.Evidence'))}</h4><p class="fvtt-json-generator-spell-resolver-break">${escape(evidence)}</p>
+      <h4>${escape(localize('FVTTJSONSPELL.Review.Candidates'))}</h4><ul>${candidates}</ul>${select}${manual}
+      <details><summary>${escape(localize('FVTTJSONSPELL.Review.ProjectionDiff'))}</summary>
+      ${projectionSection(localize('FVTTJSONSPELL.Review.LastGenerated'), spell.lastGeneratedProof, localize)}
+      ${projectionSection(localize('FVTTJSONSPELL.Review.Current'), spell.current, localize)}
+      ${projectionSection(localize('FVTTJSONSPELL.Review.Proposed'), spell.proposed, localize)}</details>
+      <ul>${spell.warnings.map((warning) => `<li>${escape(localize(warning))}</li>`).join('')}</ul>
+      <section><strong>${escape(localize('FVTTJSONSPELL.Review.LiteralRestrictions'))}</strong>${spell.literalRestrictions.map((restriction) =>
+        `<p class="fvtt-json-generator-spell-resolver-break">${escape(localize(`FVTTJSONSPELL.Review.Restriction.${restriction.kind}`))}: ${escape(restriction.text)}</p>`).join('')}</section></article>`;
   }).join('');
-  const findings = model.findings.map((entry) =>
-    `<li class="fvtt-json-generator-spell-resolver-break"><code>${escape(entry.path)}</code> ${escape(entry.code)}: ${escape(entry.message)}</li>`).join('');
-  return `<div class="fvtt-json-generator-spell-resolver-review">
-    <section class="fvtt-json-generator-spell-resolver-scroll"><ul>${findings}</ul>${spells}</section>
-  </div>`;
+  const findings = model.findings.map((entry) => {
+    const key = `FVTTJSONSPELL.Finding.${entry.code}`;
+    const translated = localize(key);
+    return `<li class="fvtt-json-generator-spell-resolver-break"><code>${escape(entry.path)}</code> ${escape(entry.code)}: ${escape(translated === key ? entry.message : translated)}</li>`;
+  }).join('');
+  return `<div class="fvtt-json-generator-spell-resolver-review"><section class="fvtt-json-generator-spell-resolver-scroll"><ul>${findings}</ul>${spells}</section></div>`;
+}
+
+function projectionSection(title: string, projection: unknown, localize: ResolverLocalizer): string {
+  return `<h4>${escape(title)}</h4><pre class="fvtt-json-generator-spell-resolver-scroll fvtt-json-generator-spell-resolver-break">${escape(pretty(projection, localize))}</pre>`;
 }
 
 export interface ResolverDialogAdapter {
@@ -211,7 +208,7 @@ function readReviewForm(form: any, session: ResolverReviewSession): void {
     if (name.startsWith('manual:')) session.decideManual(name.slice('manual:'.length), input.value);
   }
   for (const select of form.querySelectorAll('select[data-logical-ref-key]')) {
-    if (select.value) session.selectCandidate(select.dataset.logicalRefKey, select.value);
+    session.selectCandidate(select.dataset.logicalRefKey, select.value ?? '');
   }
 }
 
@@ -234,8 +231,17 @@ function compareLogicalKey(left: { logicalRefKey: string }, right: { logicalRefK
   return left.logicalRefKey.localeCompare(right.logicalRefKey, 'en');
 }
 
-function pretty(value: unknown): string {
+function pretty(value: unknown, localize: ResolverLocalizer = defaultLocalizer()): string {
+  if (value === undefined || value === null) return localize('FVTTJSONSPELL.Review.NoProjection');
   return value === undefined ? '—' : JSON.stringify(value, null, 2);
+}
+
+function defaultLocalizer(): ResolverLocalizer {
+  return (key, data) => {
+    const i18n = (globalThis as any).game?.i18n;
+    if (data && typeof i18n?.format === 'function') return i18n.format(key, data);
+    return typeof i18n?.localize === 'function' ? i18n.localize(key) : key;
+  };
 }
 
 function escape(value: string): string {

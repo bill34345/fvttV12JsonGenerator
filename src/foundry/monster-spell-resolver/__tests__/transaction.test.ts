@@ -10,6 +10,7 @@ import {
   type SpellHydrationPlan,
 } from '../../../core/spell-resolution';
 import { generatedResolverDocumentId } from '../cast-activity';
+import { createResolverActorService } from '../hooks';
 import {
   executeHydrationTransaction,
   projectCurrentManagedContent,
@@ -87,6 +88,16 @@ describe('Actor-local atomic hydration transaction', () => {
       })) },
     });
     expect(resolution.undoSnapshot).toBeDefined();
+    expect(resolution.generatedProjection).toHaveLength(2);
+    expect(resolution.generatedProjection.every((entry: any) => entry.activities.length === 1 && entry.cachedSpells.length === 1)).toBe(true);
+    expect(resolution.generatedProjection.map((entry: any) => entry.logicalRefKey)).toEqual(
+      [...plan.selections.map((entry) => entry.logicalRefKey)].sort(),
+    );
+    expect(JSON.stringify(resolution.generatedProjection)).not.toMatch(/description\.value|effects|preparedSpellDefault/);
+    expect(resolution.generatedProjection[0].cachedSpells[0]).toMatchObject({
+      type: 'spell', compendiumSource: expect.stringContaining('Compendium.dnd5e.spells24.Item.'),
+      resolver: { managed: true, documentType: 'spell' },
+    });
     expect(Array.isArray(resolution.report.literalRestrictions)).toBe(true);
 
     const daily = actor.managedActivities().find((activity) => activity.uses?.max === '1')!;
@@ -270,6 +281,8 @@ describe('Actor-local atomic hydration transaction', () => {
     const actor = new TransactionActor();
     await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
     const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+    const priorGenerated = structuredClone(actor.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection
+      .find((entry: any) => entry.logicalRefKey === lightKey));
     const activity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
     const cache = actor.items.find((item) => item.flags?.[RESOLVER_MODULE_ID]?.documentType === 'spell'
       && item.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
@@ -290,6 +303,8 @@ describe('Actor-local atomic hydration transaction', () => {
     const keptActivity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
     const keptCache = actor.items.find((item) => item.flags?.[RESOLVER_MODULE_ID]?.documentType === 'spell'
       && item.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    const committedGenerated = actor.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection
+      .find((entry: any) => entry.logicalRefKey === lightKey);
     expect({ foreign: keptActivity.flags.foreign, dnd5e: keptActivity.flags.dnd5e }).toEqual(foreignFlags.activity);
     expect({ foreign: keptCache.flags.foreign, runtimeOnly: keptCache.flags.dnd5e.runtimeOnly }).toEqual(foreignFlags.cache);
     if (decision === 'keep') {
@@ -298,13 +313,52 @@ describe('Actor-local atomic hydration transaction', () => {
       expect(keptCache.system.manualField).toEqual({ keep: true });
       expect(keptActivity.flags[RESOLVER_MODULE_ID].protected).toBe(true);
       expect(keptCache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+      expect(committedGenerated).toEqual(priorGenerated);
+      expect(committedGenerated.activities[0].spell.challenge.attack).toBe('4');
     } else {
       expect(keptActivity.spell.challenge.attack).toBe('4');
       expect(keptActivity.description).toBeUndefined();
       expect(keptCache.system.manualField).toBeUndefined();
       expect(keptActivity.flags[RESOLVER_MODULE_ID].protected).toBeUndefined();
       expect(keptCache.flags[RESOLVER_MODULE_ID].protected).toBeUndefined();
+      expect(committedGenerated.activities[0].spell.challenge.attack).toBe('4');
     }
+  });
+
+  test('Keep without a prior generated baseline leaves Last generated unavailable', async () => {
+    const actor = new TransactionActor();
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
+    const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+    delete actor.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection;
+    const activity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    activity.spell.challenge.attack = '9';
+
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan(actor, 'keep') });
+    const generated = actor.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection;
+    expect(generated.some((entry: any) => entry.logicalRefKey === lightKey)).toBe(false);
+    expect(activity.spell.challenge.attack).toBe('9');
+  });
+
+  test('Overwrite after Keep is the only transaction path that clears protection and restores deterministic content', async () => {
+    const actor = new TransactionActor();
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
+    const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+    const activity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    activity.spell.challenge.attack = '9';
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan(actor, 'keep') });
+    const keptActivity = actor.managedActivities()
+      .find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    expect(keptActivity.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    expect(keptActivity.spell.challenge.attack).toBe('9');
+
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan(actor, 'overwrite') });
+    const overwrittenActivity = actor.managedActivities()
+      .find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    const overwrittenCache = actor.items.find((item) => item.type === 'spell'
+      && item.flags?.[RESOLVER_MODULE_ID]?.logicalRefKey === lightKey)!;
+    expect(overwrittenActivity.spell.challenge.attack).toBe('4');
+    expect(overwrittenActivity.flags[RESOLVER_MODULE_ID].protected).toBeUndefined();
+    expect(overwrittenCache.flags[RESOLVER_MODULE_ID].protected).toBeUndefined();
   });
 
   test.each([[false], [true]] as const)(
@@ -420,10 +474,100 @@ describe('Actor-local atomic hydration transaction', () => {
       expect(actor.items.some((item) => item.id === 'UnownedCache0001')).toBe(true);
     }
   });
+
+  test('service Overwrite rebuilds a wholly deleted persisted pair through the real transaction', async () => {
+    const actor = new TransactionActor();
+    const candidates: SpellCandidateMetadata[] = [
+      {
+        id: 'aaaaaaaaaaaaaaaa', uuid: 'Compendium.dnd5e.spells24.Item.aaaaaaaaaaaaaaaa',
+        packageId: 'dnd5e', packId: 'spells24', name: 'Light', identifier: 'light', rules: '2024',
+      },
+      {
+        id: 'bbbbbbbbbbbbbbbb', uuid: 'Compendium.dnd5e.spells24.Item.bbbbbbbbbbbbbbbb',
+        packageId: 'dnd5e', packId: 'spells24', name: 'Darkness', identifier: 'darkness', rules: '2024',
+      },
+    ];
+    const runtime: any = {
+      moduleId: RESOLVER_MODULE_ID,
+      compatibility: { supported: true, foundry: '14.364', dnd5e: '5.3.3', diagnostics: [] },
+      canMutate: true,
+      diagnostics: [],
+      sourceIndex: {
+        candidates,
+        sourcePackages: [{ packageId: 'dnd5e', version: '5.3.3' }],
+        diagnostics: [],
+        candidateMetadataHash: 'b'.repeat(64),
+        sourceInventoryHash: 'd'.repeat(64),
+      },
+    };
+    const reviews: any[] = [];
+    const notifications: any[] = [];
+    const service = createResolverActorService({
+      getRuntime: () => runtime,
+      getSetting: (key) => key === 'sourcePriority' ? [{ packageId: 'dnd5e', packId: 'spells24' }] : {},
+      setSetting: async () => {},
+      fetchSelectedDocument: async (uuid) => {
+        const candidate = candidates.find((entry) => entry.uuid === uuid)!;
+        return {
+          documentName: 'Item', type: 'spell', uuid, name: candidate.name,
+          system: { identifier: candidate.identifier, source: { rules: candidate.rules } },
+        };
+      },
+      execute: (target, targetManifest, plan) => executeHydrationTransaction({ actor: target, manifest: targetManifest, plan }),
+      openReview: async (model) => {
+        reviews.push(model);
+        const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+        expect(model.spells.find((spell) => spell.logicalRefKey === lightKey)).toMatchObject({
+          manualConflict: { keepable: false, explanation: expect.any(String) },
+          candidateDecisionRequired: false,
+          blocking: true,
+        });
+        return reviews.length === 1
+          ? { action: 'cancel' }
+          : { action: 'apply', manualDecisions: [{ logicalRefKey: lightKey, decision: 'overwrite' }], candidateSelections: [] };
+      },
+      renderTemplate: async (_path, context) => String(context.content ?? ''),
+      showDocument: async () => {},
+      exportJson: () => {},
+      notify: (...args) => notifications.push(args),
+    });
+
+    // Pending with no managed documents must remain the ordinary automatic path.
+    await service.processActor(actor);
+    expect(reviews).toHaveLength(0);
+    expect(actor.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('hydrated');
+    runtime.sourceIndex.sourceInventoryHash = actor.flags[RESOLVER_MODULE_ID].spellResolution.report.sourceInventoryHash;
+    runtime.sourceIndex.candidateMetadataHash = actor.flags[RESOLVER_MODULE_ID].spellResolution.report.candidateMetadataHash;
+
+    const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+    const activity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    const cache = actor.items.find((item) => item.type === 'spell'
+      && item.flags?.[RESOLVER_MODULE_ID]?.logicalRefKey === lightKey)!;
+    const feature = actor.items[0]!;
+    await feature.deleteActivity(activity.id);
+    await actor.deleteEmbeddedDocuments('Item', [cache.id]);
+    const cancelCallCount = actor.calls.length;
+
+    expect(service.status(actor)).toBe('needs_review');
+    await service.resolve(actor);
+    expect(reviews).toHaveLength(1);
+    expect(actor.calls).toHaveLength(cancelCallCount);
+    expect(service.status(actor)).toBe('needs_review');
+
+    await service.resolve(actor);
+    expect(reviews).toHaveLength(2);
+    expect(actor.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('hydrated');
+    expect(service.isAlreadyApplied(actor)).toBe(true);
+    expect(actor.managedActivities().filter((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)).toHaveLength(1);
+    expect(actor.items.filter((item) => item.type === 'spell'
+      && item.flags?.[RESOLVER_MODULE_ID]?.logicalRefKey === lightKey)).toHaveLength(1);
+    expect(notifications.some(([level]) => level === 'error')).toBe(false);
+  });
 });
 
 class TransactionActor {
   readonly id = 'ActorTransact001';
+  readonly documentName = 'Actor';
   readonly type = 'npc';
   readonly calls: unknown[][] = [];
   flags: Record<string, any> = { [RESOLVER_MODULE_ID]: { spellManifest: manifest(), spellResolution: { status: 'pending', manifestHash: readyPlan().manifestHash } }, foreign: { keep: { nested: true } } };

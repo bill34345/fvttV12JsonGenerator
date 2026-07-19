@@ -12,6 +12,16 @@ export interface ResolverSettingDefinition {
 
 export interface ResolverSettingsAdapter {
   registerSetting(definition: ResolverSettingDefinition): void;
+  registerSettingsMenu(definition: ResolverSettingsMenuDefinition): void;
+}
+
+export interface ResolverSettingsMenuDefinition {
+  key: 'resolverSettings';
+  name: string;
+  label: string;
+  hint: string;
+  icon: string;
+  restricted: true;
 }
 
 export const RESOLVER_SETTING_DEFINITIONS: ResolverSettingDefinition[] = [
@@ -57,4 +67,12 @@ export const RESOLVER_SETTING_DEFINITIONS: ResolverSettingDefinition[] = [
 
 export function registerResolverSettings(adapter: ResolverSettingsAdapter): void {
   for (const definition of RESOLVER_SETTING_DEFINITIONS) adapter.registerSetting(definition);
+  adapter.registerSettingsMenu({
+    key: 'resolverSettings',
+    name: 'FVTTJSONSPELL.Settings.Menu.Name',
+    label: 'FVTTJSONSPELL.Settings.Menu.Label',
+    hint: 'FVTTJSONSPELL.Settings.Menu.Hint',
+    icon: 'fa-solid fa-wand-magic-sparkles',
+    restricted: true,
+  });
 }

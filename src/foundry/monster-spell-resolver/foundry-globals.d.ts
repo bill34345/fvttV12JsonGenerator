@@ -21,6 +21,7 @@ declare const game: {
   modules?: { get(id: string): ({ active?: boolean; version?: string; api?: unknown } & Record<string, unknown>) | undefined };
   settings?: {
     register(namespace: string, key: string, definition: Record<string, unknown>): void;
+    registerMenu(namespace: string, key: string, definition: Record<string, unknown>): void;
     get(namespace: string, key: string): unknown;
     set(namespace: string, key: string, value: unknown): Promise<unknown>;
   };

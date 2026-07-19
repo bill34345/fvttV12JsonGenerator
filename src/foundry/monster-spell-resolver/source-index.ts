@@ -40,6 +40,13 @@ export interface SpellSourcePackageVersion {
   version: string;
 }
 
+export interface SpellSourcePackInventory {
+  collection: string;
+  packageId: string;
+  packageVersion: string;
+  packId: string;
+}
+
 export interface SpellSourceIndexDiagnostic {
   code: 'PACK_DISABLED' | 'PACK_UNREADABLE' | 'PACK_NOT_ITEM' | 'PACK_INDEX_FAILED' | 'INVALID_SPELL_INDEX_ROW';
   pack: string;
@@ -51,6 +58,7 @@ export interface SpellSourceIndexDiagnostic {
 export interface SpellSourceIndexResult {
   candidates: SpellCandidateMetadata[];
   sourcePackages: SpellSourcePackageVersion[];
+  sourcePacks: SpellSourcePackInventory[];
   diagnostics: SpellSourceIndexDiagnostic[];
   candidateMetadataHash: string;
   sourceInventoryHash: string;
@@ -63,6 +71,7 @@ export interface SpellSourceIndexResult {
  */
 export async function buildSpellSourceIndex(adapter: FoundrySpellSourceAdapter): Promise<SpellSourceIndexResult> {
   const candidates: SpellCandidateMetadata[] = [];
+  const sourcePacks: SpellSourcePackInventory[] = [];
   const diagnostics: SpellSourceIndexDiagnostic[] = [];
   const packageVersions = new Map<string, Set<string>>();
   const packs = [...await adapter.listEnabledReadableItemPacks()].sort(comparePacks);
@@ -80,6 +89,13 @@ export async function buildSpellSourceIndex(adapter: FoundrySpellSourceAdapter):
       diagnostics.push(diagnostic('PACK_NOT_ITEM', pack, '/', 'Compendium is not an Item pack.'));
       continue;
     }
+
+    sourcePacks.push({
+      collection: pack.collection,
+      packageId: pack.packageId,
+      packageVersion: pack.packageVersion,
+      packId: pack.packId,
+    });
 
     const versions = packageVersions.get(pack.packageId) ?? new Set<string>();
     versions.add(pack.packageVersion);
@@ -122,8 +138,8 @@ export async function buildSpellSourceIndex(adapter: FoundrySpellSourceAdapter):
     .flatMap(([packageId, versions]) => [...versions].map((version) => ({ packageId, version })))
     .sort((left, right) => compareText(left.packageId, right.packageId) || compareText(left.version, right.version));
   const candidateMetadataHash = hashSourceInventoryMetadata(candidates);
-  const sourceInventoryHash = sha256(canonicalStringify({ sourcePackages, candidates }));
-  return { candidates, sourcePackages, diagnostics, candidateMetadataHash, sourceInventoryHash };
+  const sourceInventoryHash = sha256(canonicalStringify({ sourcePackages, sourcePacks, candidates }));
+  return { candidates, sourcePackages, sourcePacks, diagnostics, candidateMetadataHash, sourceInventoryHash };
 }
 
 export async function fetchSelectedSpellDocument(

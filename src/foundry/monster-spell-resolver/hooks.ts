@@ -1,7 +1,9 @@
 import {
   hashManifest,
   hashResolutionConfiguration,
+  isValidManualReviewCandidate,
   isSpellResolutionConfiguration,
+  normalizeSpellIdentity,
   planSpellHydration,
   RESOLVER_MODULE_ID,
   sha256,
@@ -10,15 +12,22 @@ import {
   type ManagedSpellProjection,
   type PortableSpellManifest,
   type SavedSpellMapping,
+  type SpellCandidateMetadata,
   type SpellHydrationPlan,
   type SpellManualDecision,
   type SpellResolutionConfiguration,
 } from '../../core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash } from './cast-activity';
 import type { ResolverRuntimeApi } from './foundry-adapter';
-import { HydrationTransactionError, executeHydrationTransaction, projectCurrentManagedContent } from './transaction';
+import {
+  HydrationTransactionError,
+  executeHydrationTransaction,
+  projectHydrationBindingProjection,
+  projectProposedResolverDocuments,
+  projectResolverManagedDocuments,
+} from './transaction';
 import { fetchSelectedSpellDocument } from './source-index';
-import { createFoundryAdapter } from './foundry-adapter';
+import { createFoundryAdapter, projectResolverRuntimeDiagnostics } from './foundry-adapter';
 import { assertAdoptableNativeCache, assertResolverDocumentOwnership, documentId } from './ownership';
 import {
   openResolverReviewDialog,
@@ -63,7 +72,7 @@ export function createResolverEventCoordinator(options: ResolverEventCoordinator
   return {
     onActorEvent(actor, event) {
       const authority = options.authority();
-      if (!authority.isGM || !authority.userId || event.userId !== authority.userId || event.resolverOwned) return 'ignored';
+      if (!authority.isGM || !authority.userId || event.resolverOwned) return 'ignored';
       if (!isEligibleActor(actor) || !options.runtimeSupported() || options.isActive(actor) || options.isAlreadyApplied(actor)) {
         return 'ignored';
       }
@@ -79,6 +88,18 @@ export function createResolverEventCoordinator(options: ResolverEventCoordinator
   };
 }
 
+export function selectResolverAuthority(
+  users: Iterable<{ id?: string; isGM?: boolean; active?: boolean }> | undefined,
+  currentUser: { id?: string; isGM?: boolean; active?: boolean } | undefined,
+): { isGM: boolean; userId?: string } {
+  const activeGms = [...(users ?? [])]
+    .filter((user) => user?.isGM === true && user.active === true && typeof user.id === 'string' && user.id.length > 0)
+    .sort((left, right) => left.id!.localeCompare(right.id!, 'en'));
+  const authorityId = activeGms[0]?.id;
+  const currentId = typeof currentUser?.id === 'string' ? currentUser.id : undefined;
+  return { isGM: currentUser?.isGM === true && currentUser.active === true && currentId === authorityId, ...(currentId ? { userId: currentId } : {}) };
+}
+
 export interface ResolverHookBus {
   on(name: 'createActor' | 'updateActor' | 'getHeaderControlsApplicationV2' | 'getActorContextOptions', callback: (...args: any[]) => unknown): unknown;
 }
@@ -89,6 +110,21 @@ export interface ResolverHookController {
   isCurrentUserGM(): boolean;
 }
 
+export function createAuthorityGuardedActions(actions: ResolverActorActions, isAuthority: () => boolean): ResolverActorActions {
+  const guard = (operation: (actor: any) => Promise<void>) => async (actor: any) => {
+    if (!isAuthority()) return;
+    await operation(actor);
+  };
+  return {
+    status: (actor) => actions.status(actor),
+    resolve: guard(actions.resolve),
+    viewReport: guard(actions.viewReport),
+    viewSources: guard(actions.viewSources),
+    undo: guard(actions.undo),
+    exportDiagnostics: guard(actions.exportDiagnostics),
+  };
+}
+
 export function registerResolverHooks(hooks: ResolverHookBus, controller: ResolverHookController): void {
   hooks.on('createActor', (actor: any, options: any, userId: string) =>
     controller.onActorEvent(actor, { userId, resolverOwned: isResolverOwnedOperation(options) }));
@@ -97,7 +133,7 @@ export function registerResolverHooks(hooks: ResolverHookBus, controller: Resolv
   hooks.on('getHeaderControlsApplicationV2', (application: any, controls: any[]) => {
     if (!controller.isCurrentUserGM()) return;
     const actor = application?.document;
-    if (!isEligibleActor(actor)) return;
+    if (!isResolverFlaggedActor(actor)) return;
     controls.push(...createActionEntries(controller.actions, () => actor, true));
   });
   hooks.on('getActorContextOptions', (application: any, menuItems: any[]) => {
@@ -114,26 +150,57 @@ function createActionEntries(
   resolveActor: (element?: any) => any,
   header: boolean,
 ): any[] {
+  const actor = header ? resolveActor() : undefined;
+  const markers = header && isResolverFlaggedActor(actor) ? [{
+    action: `${RESOLVER_MODULE_ID}.status`,
+    label: resolverStatusLabel(actions.status(actor)),
+    icon: statusIcon(actions.status(actor)),
+    tooltip: 'FVTTJSONSPELL.Status.MarkerHint',
+    visible: () => true,
+    onClick: async () => { await actions.viewReport(actor); },
+  }, ...(hasFallbackSelection(actor) ? [{
+    action: `${RESOLVER_MODULE_ID}.fallback-2014`,
+    label: 'FVTTJSONSPELL.Status.Fallback2014',
+    icon: 'fa-solid fa-triangle-exclamation',
+    tooltip: 'FVTTJSONSPELL.Status.Fallback2014Hint',
+    visible: () => true,
+    onClick: async () => { await actions.viewReport(actor); },
+  }] : [])] : [];
   const specs = [
-    ['resolve', 'FVTTJSONSPELL.Action.Resolve', 'fa-solid fa-wand-magic-sparkles', actions.resolve],
-    ['report', 'FVTTJSONSPELL.Action.ViewReport', 'fa-solid fa-clipboard-list', actions.viewReport],
-    ['sources', 'FVTTJSONSPELL.Action.ViewSources', 'fa-solid fa-book', actions.viewSources],
-    ['undo', 'FVTTJSONSPELL.Action.Undo', 'fa-solid fa-rotate-left', actions.undo],
-    ['diagnostics', 'FVTTJSONSPELL.Action.ExportDiagnostics', 'fa-solid fa-file-export', actions.exportDiagnostics],
+    ['resolve', 'FVTTJSONSPELL.Action.Resolve', 'fa-solid fa-wand-magic-sparkles', actions.resolve, false],
+    ['report', 'FVTTJSONSPELL.Action.ViewReport', 'fa-solid fa-clipboard-list', actions.viewReport, false],
+    ['sources', 'FVTTJSONSPELL.Action.ViewSources', 'fa-solid fa-book', actions.viewSources, false],
+    ['undo', 'FVTTJSONSPELL.Action.Undo', 'fa-solid fa-rotate-left', actions.undo, true],
+    ['diagnostics', 'FVTTJSONSPELL.Action.ExportDiagnostics', 'fa-solid fa-file-export', actions.exportDiagnostics, false],
   ] as const;
-  return specs.map(([action, label, icon, handler]) => ({
+  return [...markers, ...specs.map(([action, label, icon, handler, validOnly]) => ({
     ...(header ? { action: `${RESOLVER_MODULE_ID}.${action}` } : {}),
     label,
     icon,
     ...(header ? { tooltip: resolverStatusLabel(actions.status(resolveActor())) } : {}),
-    visible: (element?: any) => isEligibleActor(resolveActor(element)),
+    visible: (element?: any) => isResolverFlaggedActor(resolveActor(element)) && (!validOnly || isEligibleActor(resolveActor(element))),
     onClick: async (...args: any[]) => {
       const element = header ? undefined : args[1];
       const actor = resolveActor(element);
-      if (!isEligibleActor(actor)) return;
+      if (!isResolverFlaggedActor(actor) || (validOnly && !isEligibleActor(actor))) return;
       await handler(actor);
     },
-  }));
+  }))];
+}
+
+function hasFallbackSelection(actor: any): boolean {
+  const selections = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report?.selections;
+  return Array.isArray(selections) && selections.some((entry) => entry?.selectionOrigin === 'fallback-2014');
+}
+
+function statusIcon(status: ResolverStatus): string {
+  const base = 'fvtt-json-generator-spell-resolver-status-icon';
+  if (status === 'hydrated') return `fa-solid fa-circle-check ${base} ${base}--hydrated`;
+  if (status === 'failed' || status === 'failed-recovery-required' || status === 'incompatible') {
+    return `fa-solid fa-circle-xmark ${base} ${base}--error`;
+  }
+  if (status === 'needs_review' || status === 'stale') return `fa-solid fa-circle-exclamation ${base} ${base}--warning`;
+  return `fa-solid fa-circle-info ${base} ${base}--info`;
 }
 
 function isResolverOwnedOperation(options: unknown): boolean {
@@ -159,19 +226,30 @@ function isSavedMapping(value: unknown): value is SavedSpellMapping {
   const keys = ['logicalRefKey', 'selectedUuid', 'rules', 'sourceInventoryHash', 'candidateMetadataHash', 'resolutionConfigHash', 'selectionOrigin'];
   if (Object.keys(value).some((key) => !keys.includes(key))) return false;
   return typeof value.logicalRefKey === 'string'
-    && /^Compendium\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}$/.test(String(value.selectedUuid))
+    && isCompendiumItemUuid(value.selectedUuid)
     && (value.rules === '2024' || value.rules === '2014')
     && isHash(value.sourceInventoryHash) && isHash(value.candidateMetadataHash) && isHash(value.resolutionConfigHash)
     && (value.selectionOrigin === 'automatic-2024' || value.selectionOrigin === 'fallback-2014' || value.selectionOrigin === 'manual-review');
 }
 
 function isEligibleActor(actor: any): boolean {
-  if (actor?.documentName !== 'Actor') return false;
+  if (!isResolverFlaggedActor(actor)) return false;
   return validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest).ok;
+}
+
+function isResolverFlaggedActor(actor: any): boolean {
+  return actor?.documentName === 'Actor'
+    && isRecord(actor.flags?.[RESOLVER_MODULE_ID])
+    && Object.prototype.hasOwnProperty.call(actor.flags[RESOLVER_MODULE_ID], 'spellManifest');
 }
 
 function isHash(value: unknown): boolean {
   return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+}
+
+function isCompendiumItemUuid(value: unknown): value is string {
+  return typeof value === 'string'
+    && /^Compendium\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}$/.test(value);
 }
 
 function isRecord(value: unknown): value is Record<string, any> {
@@ -189,6 +267,7 @@ export interface ResolverActorServiceDependencies {
   showDocument(title: string, html: string): Promise<void>;
   exportJson(filename: string, value: unknown): void;
   notify(level: 'info' | 'warn' | 'error', message: string): void;
+  localize?(key: string, data?: Record<string, unknown>): string;
 }
 
 export interface ResolveActorOptions {
@@ -208,7 +287,32 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
   const reports = new WeakMap<object, HydrationPreflight['report']>();
 
   const service: ResolverActorService = {
-    status(actor) { return readResolverStatus(actor, { active: active.has(actor), ephemeral: ephemeral.get(actor) }); },
+    status(actor) {
+      const current = readResolverStatus(actor, { active: active.has(actor), ephemeral: ephemeral.get(actor) });
+      if (current === 'failed' || current === 'failed-recovery-required') return current;
+      if (isResolverFlaggedActor(actor) && !isEligibleActor(actor)) return 'incompatible';
+      const runtime = dependencies.getRuntime();
+      if (isEligibleActor(actor) && runtime && runtime.compatibility.supported !== true) return 'incompatible';
+      if (isEligibleActor(actor) && runtime?.compatibility.supported === true
+        && (!runtime.canMutate || !runtime.sourceIndex)) {
+        return current === 'hydrated' || current === 'stale' ? 'stale' : 'needs_review';
+      }
+      if ((current === 'hydrated' || current === 'stale') && isEligibleActor(actor)
+        && runtime?.compatibility.supported === true && runtime.canMutate && runtime.sourceIndex) {
+        const manifest = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+        if (manifest.ok && !hasStrictHydratedStructure(
+          actor,
+          manifest.value,
+          actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution,
+        )) return 'needs_review';
+      }
+      if (current === 'hydrated' && isEligibleActor(actor) && runtime?.compatibility.supported === true
+        && runtime.canMutate && runtime.sourceIndex
+        && hasStaleHydratedResolutionInputs(actor, runtime as ResolverRuntimeApi & {
+          sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']>;
+        }, dependencies)) return 'stale';
+      return current;
+    },
     isActive(actor) { return Boolean(actor && typeof actor === 'object' && active.has(actor)); },
     isAlreadyApplied(actor) {
       try {
@@ -222,8 +326,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']>;
         }, dependencies);
         if (resolution.report?.sourceInventoryHash !== current.report.sourceInventoryHash
-          || resolution.report?.candidateMetadataHash !== current.report.candidateMetadataHash
-          || resolution.resolutionConfigHash !== current.report.resolutionConfigHash) return false;
+          || resolution.report?.candidateMetadataHash !== current.report.candidateMetadataHash) return false;
         if (!sameResolvedSelections(current.report.results, resolution.report?.selections)) return false;
         if (!hasStrictHydratedStructure(actor, validated.value, resolution)) return false;
         return true;
@@ -232,15 +335,28 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     async resolve(actor) { await service.processActor(actor, { explicit: true }); },
     async processActor(actor, options = {}) {
       if (!actor || typeof actor !== 'object' || active.has(actor)) return;
-      const runtime = dependencies.getRuntime();
-      if (!runtime?.compatibility.supported || !runtime.canMutate || !runtime.sourceIndex) return;
-      const readyRuntime = runtime as ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> };
       const validation = validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
-      if (!validation.ok) return;
+      if (!validation.ok) {
+        if (options.explicit && isResolverFlaggedActor(actor)) {
+          dependencies.notify('warn', localizedNotice(dependencies, 'FVTTJSONSPELL.Notification.InvalidManifest'));
+        }
+        return;
+      }
+      const runtime = dependencies.getRuntime();
+      if (!runtime?.compatibility.supported) {
+        if (options.explicit) dependencies.notify('warn', localizedNotice(dependencies, 'FVTTJSONSPELL.Notification.IncompatibleRuntime'));
+        return;
+      }
+      if (!runtime.canMutate || !runtime.sourceIndex) {
+        if (options.explicit) dependencies.notify('warn', localizedNotice(dependencies, 'FVTTJSONSPELL.Notification.SourceIndexBlocked'));
+        return;
+      }
+      const readyRuntime = runtime as ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> };
       active.add(actor);
-      ephemeral.set(actor, 'resolving');
-      try {
-        const initial = createPreflight(actor, validation.value, readyRuntime, dependencies);
+      await withWorldMappingMutex(async () => {
+        ephemeral.set(actor, 'resolving');
+        try {
+        const initial = createPreflight(actor, validation.value, readyRuntime, dependencies, options.explicit === true);
         reports.set(actor, initial.report);
         if (initial.status === 'incompatible') {
           ephemeral.set(actor, 'incompatible');
@@ -256,19 +372,30 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           const outcome = await dependencies.openReview(model);
           if (outcome.action === 'cancel') return;
           const mappings = mappingsFromCandidateSelections(initial, outcome, readyRuntime, dependencies);
-          const replanned = createPreflight(actor, validation.value, readyRuntime, dependencies, outcome.manualDecisions, mappings);
+          const replanned = createPreflight(actor, validation.value, readyRuntime, dependencies, true, outcome.manualDecisions, mappings);
           reports.set(actor, replanned.report);
           if (replanned.status !== 'ready') {
             ephemeral.set(actor, replanned.status === 'incompatible' ? 'incompatible' : 'needs_review');
             return;
           }
-          await applyReadyPlan(actor, validation.value, replanned.plan, dependencies, options, mappings);
+          await applyReadyPlan(actor, validation.value, replanned.plan, dependencies, mappings);
           ephemeral.delete(actor);
           return;
         }
-        await applyReadyPlan(actor, validation.value, initial.plan, dependencies, options);
+        const persistedStatus = readResolverStatus(actor);
+        if (!options.explicit && persistedStatus === 'stale') {
+          ephemeral.set(actor, 'stale');
+          return;
+        }
+        if (!options.explicit && persistedStatus === 'hydrated'
+          && actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.planHash !== initial.plan.planHash) {
+          if (hasStaleHydratedResolutionInputs(actor, readyRuntime, dependencies)) ephemeral.set(actor, 'stale');
+          else ephemeral.delete(actor);
+          return;
+        }
+        await applyReadyPlan(actor, validation.value, initial.plan, dependencies);
         ephemeral.delete(actor);
-      } catch (error) {
+        } catch (error) {
         if (error instanceof MappingStateError && !error.actorMutationAllowed) {
           ephemeral.set(actor, error.recoveryRequired ? 'failed-recovery-required' : 'failed');
           dependencies.notify('error', error.message);
@@ -308,9 +435,10 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
         ephemeral.set(actor, status);
         await writeFailureStatus(actor, status, error);
         dependencies.notify('error', errorMessage(error));
-      } finally {
-        active.delete(actor);
-      }
+        } finally {
+          active.delete(actor);
+        }
+      });
     },
     async viewReport(actor) {
       let report: unknown;
@@ -319,7 +447,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       if (validation.ok && runtime?.compatibility.supported && runtime.sourceIndex) {
         const current = createPreflight(actor, validation.value, runtime as ResolverRuntimeApi & {
           sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']>;
-        }, dependencies);
+        }, dependencies, true);
         reports.set(actor, current.report);
         const committed = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report;
         report = {
@@ -328,6 +456,8 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           ...(Array.isArray(committed?.selections) ? { selections: committed.selections } : {}),
           ...(Array.isArray(committed?.literalRestrictions) ? { literalRestrictions: committed.literalRestrictions } : {}),
         };
+      } else if (!validation.ok && isResolverFlaggedActor(actor)) {
+        report = { status: 'incompatible', manifestFindings: validation.findings };
       } else {
         report = reports.get(actor) ?? actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report;
       }
@@ -338,6 +468,8 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       const manifest = actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest;
       const data = {
         sourcePackages: runtime?.sourceIndex?.sourcePackages ?? [],
+        sourcePacks: runtime?.sourceIndex?.sourcePacks ?? [],
+        sourceDiagnostics: projectResolverRuntimeDiagnostics(runtime),
         selections: actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report?.selections ?? [],
         manifestEvidence: isRecord(manifest) && Array.isArray(manifest.spellcastingGroups)
           ? manifest.spellcastingGroups.flatMap((group: any) => Array.isArray(group.spellRefs) ? group.spellRefs.map((ref: any) => ({
@@ -367,6 +499,9 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     },
     async exportDiagnostics(actor) {
       const runtime = dependencies.getRuntime();
+      const validation = validatePortableSpellManifestStructure(
+        actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest,
+      );
       const value = {
         moduleId: RESOLVER_MODULE_ID,
         actorId: documentId(actor),
@@ -376,6 +511,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
         sourceInventoryHash: runtime?.sourceIndex?.sourceInventoryHash,
         candidateMetadataHash: runtime?.sourceIndex?.candidateMetadataHash,
         spellResolution: redactReport(actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution),
+        manifestValidation: validation.ok ? { ok: true } : { ok: false, findings: validation.findings },
       };
       dependencies.exportJson(`spell-resolver-${safeFilename(documentId(actor) || 'actor')}.json`, value);
     },
@@ -383,11 +519,39 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
   return service;
 }
 
+function hasStaleHydratedResolutionInputs(
+  actor: any,
+  runtime: ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> },
+  dependencies: ResolverActorServiceDependencies,
+): boolean {
+  const resolution = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
+  const committed = resolution?.report;
+  if (committed?.sourceInventoryHash !== runtime.sourceIndex.sourceInventoryHash
+    || committed?.candidateMetadataHash !== runtime.sourceIndex.candidateMetadataHash) return true;
+  const manifest = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  if (!manifest.ok) return true;
+  try {
+    const current = createPreflight(actor, manifest.value, runtime, dependencies);
+    return !sameResolvedSelections(current.report.results, committed?.selections);
+  } catch {
+    return true;
+  }
+}
+
+function localizedNotice(
+  dependencies: ResolverActorServiceDependencies,
+  key: string,
+  data?: Record<string, unknown>,
+): string {
+  return dependencies.localize?.(key, data) ?? key;
+}
+
 function createPreflight(
   actor: any,
   manifest: PortableSpellManifest,
   runtime: ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> },
   dependencies: ResolverActorServiceDependencies,
+  includeProtectedConflicts = false,
   manualDecisions: SpellManualDecision[] = [],
   additionalMappings: SavedSpellMapping[] = [],
 ): HydrationPreflight {
@@ -423,7 +587,7 @@ function createPreflight(
     candidates: runtime.sourceIndex.candidates,
     sourceInventoryHash: runtime.sourceIndex.sourceInventoryHash,
     savedMappings: [...byKey.values()],
-    currentManagedProjection: projectManagedContentWithConflicts(actor, manifest.manifestId),
+    currentManagedProjection: projectManagedContentWithConflicts(actor, manifest, includeProtectedConflicts),
     manualDecisions,
     configuration,
   });
@@ -450,14 +614,8 @@ async function applyReadyPlan(
   manifest: PortableSpellManifest,
   plan: SpellHydrationPlan,
   dependencies: ResolverActorServiceDependencies,
-  options: ResolveActorOptions,
   mappings: SavedSpellMapping[] = [],
 ): Promise<boolean> {
-  const resolution = actor.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
-  if (resolution?.status === 'hydrated' && resolution.planHash !== plan.planHash && !options.explicit) {
-    await writeStatus(actor, 'stale', { stalePlanHash: plan.planHash });
-    return false;
-  }
   for (const selection of plan.selections) {
     const document = await dependencies.fetchSelectedDocument(selection.uuid);
     if (!document || document.documentName !== 'Item' || document.type !== 'spell' || document.uuid !== selection.uuid) {
@@ -466,45 +624,110 @@ async function applyReadyPlan(
         `Selected destination document is not the exact readable Spell: ${selection.uuid}`,
       );
     }
+    validateSelectedSpellFacts(document, selection, manifest, dependencies);
   }
   if (mappings.length === 0) {
     await dependencies.execute(actor, manifest, plan);
+    notifyHydrationComplete(dependencies, plan.selections.length);
     return true;
   }
+  {
+    const previousMappings = structuredClone(dependencies.getSetting('savedMappings'));
+    const nextMappings = mergeSavedMappings(previousMappings, mappings);
+    try {
+      await dependencies.setSetting('savedMappings', nextMappings);
+    } catch (cause) {
+      try {
+        await dependencies.setSetting('savedMappings', structuredClone(previousMappings));
+      } catch (restoreCause) {
+        throw new MappingStateError(
+          `Saved mapping persistence failed before hydration and exact restoration also failed: ${errorMessage(cause)}; mapping restore failure: ${errorMessage(restoreCause)}. Manual recovery is required.`,
+          true, false, { cause },
+        );
+      }
+      throw new MappingStateError(`Saved mapping persistence failed before hydration: ${errorMessage(cause)}. No Actor mutation was attempted.`, false, false, { cause });
+    }
+    try {
+      await dependencies.execute(actor, manifest, plan);
+      notifyHydrationComplete(dependencies, plan.selections.length);
+    } catch (cause) {
+      try {
+        await dependencies.setSetting('savedMappings', structuredClone(previousMappings));
+      } catch (restoreCause) {
+        throw new MappingStateError(
+          `Hydration failed and saved mapping restoration failed: ${errorMessage(cause)}; mapping restore failure: ${errorMessage(restoreCause)}. Manual recovery is required.`,
+          true, true, { cause },
+        );
+      }
+      throw cause;
+    }
+    return true;
+  }
+}
 
-  const previousMappings = structuredClone(dependencies.getSetting('savedMappings'));
-  const nextMappings = mergeSavedMappings(previousMappings, mappings);
-  try {
-    await dependencies.setSetting('savedMappings', nextMappings);
-  } catch (cause) {
-    try {
-      await dependencies.setSetting('savedMappings', structuredClone(previousMappings));
-    } catch (restoreCause) {
-      throw new MappingStateError(
-        `Saved mapping persistence failed before hydration and exact restoration also failed: ${errorMessage(cause)}; mapping restore failure: ${errorMessage(restoreCause)}. Manual recovery is required.`,
-        true,
-        false,
-        { cause },
-      );
-    }
-    throw new MappingStateError(`Saved mapping persistence failed before hydration: ${errorMessage(cause)}. No Actor mutation was attempted.`, false, false, { cause });
+function notifyHydrationComplete(dependencies: ResolverActorServiceDependencies, count: number): void {
+  const key = 'FVTTJSONSPELL.Notification.HydrationComplete';
+  dependencies.notify('info', dependencies.localize?.(key, { count }) ?? `${key} (${count})`);
+}
+
+function validateSelectedSpellFacts(
+  document: any,
+  selection: SpellHydrationPlan['selections'][number],
+  manifest: PortableSpellManifest,
+  dependencies: ResolverActorServiceDependencies,
+): void {
+  const candidate = dependencies.getRuntime()?.sourceIndex?.candidates.find((entry) => entry.uuid === selection.uuid);
+  const group = manifest.spellcastingGroups.find((entry) => entry.groupId === selection.groupId);
+  const ref = group?.spellRefs.find((entry) => entry.refId === selection.refId);
+  if (!candidate || !ref || candidate.rules !== selection.rules) {
+    throw new SelectedSpellValidationError(selection.logicalRefKey, `Selected Spell is no longer bound to its indexed candidate and manifest ref: ${selection.uuid}`);
   }
-  try {
-    await dependencies.execute(actor, manifest, plan);
-  } catch (cause) {
-    try {
-      await dependencies.setSetting('savedMappings', structuredClone(previousMappings));
-    } catch (restoreCause) {
-      throw new MappingStateError(
-        `Hydration failed and saved mapping restoration failed: ${errorMessage(cause)}; mapping restore failure: ${errorMessage(restoreCause)}. Manual recovery is required.`,
-        true,
-        true,
-        { cause },
-      );
+  const source = documentSource(document);
+  const system = isRecord(document?.system) ? document.system : (isRecord(source.system) ? source.system : {});
+  const sourceData = isRecord(system.source) ? system.source : {};
+  const full: Pick<SpellCandidateMetadata, 'name' | 'identifier' | 'rules' | 'sourceBook' | 'level' | 'school'> = {
+    name: typeof document.name === 'string' ? document.name : String(source.name ?? ''),
+    identifier: optionalText(system.identifier),
+    rules: optionalText(sourceData.rules),
+    sourceBook: optionalText(sourceData.book),
+    level: typeof system.level === 'number' && Number.isFinite(system.level) ? system.level : undefined,
+    school: optionalText(system.school),
+  };
+  for (const key of ['name', 'identifier', 'rules', 'sourceBook', 'level', 'school'] as const) {
+    if (full[key] !== candidate[key]) {
+      throw new SelectedSpellValidationError(selection.logicalRefKey, `Selected Spell ${key} changed after indexing: ${selection.uuid}`);
     }
-    throw cause;
   }
-  return true;
+  const refKeys = [ref.identifier, ref.originalName, ref.englishName, ref.chineseName, ...ref.aliases]
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map(normalizeSpellIdentity);
+  const fullKeys = [full.identifier, full.name].filter((entry): entry is string => typeof entry === 'string').map(normalizeSpellIdentity);
+  const indexedCandidates = dependencies.getRuntime()?.sourceIndex?.candidates ?? [];
+  const identityAndConstraintsValid = selection.selectionOrigin === 'manual-review'
+    ? isValidManualReviewCandidate(candidate, indexedCandidates, ref)
+    : fullKeys.some((entry) => refKeys.includes(entry))
+      && (ref.sourceBookHint === undefined || normalizeSpellIdentity(full.sourceBook ?? '') === normalizeSpellIdentity(ref.sourceBookHint))
+      && (ref.expectedLevel === undefined || full.level === ref.expectedLevel)
+      && (ref.expectedSchool === undefined || normalizeSpellIdentity(full.school ?? '') === normalizeSpellIdentity(ref.expectedSchool));
+  if (!identityAndConstraintsValid || full.rules !== selection.rules) {
+    throw new SelectedSpellValidationError(selection.logicalRefKey, `Selected Spell no longer satisfies the manifest identity or source constraints: ${selection.uuid}`);
+  }
+}
+
+function optionalText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+let worldMappingTail: Promise<void> = Promise.resolve();
+
+async function withWorldMappingMutex<T>(operation: () => Promise<T>): Promise<T> {
+  const prior = worldMappingTail;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  worldMappingTail = prior.catch(() => undefined).then(() => gate);
+  await prior.catch(() => undefined);
+  try { return await operation(); }
+  finally { release(); }
 }
 
 function mappingsFromCandidateSelections(
@@ -558,54 +781,58 @@ class MappingStateError extends Error {
   }
 }
 
-function buildResolverReviewModel(actor: any, manifest: PortableSpellManifest, preflight: HydrationPreflight): ResolverReviewModel {
-  const projection = new Map(projectManagedContentWithConflicts(actor, manifest.manifestId).map((entry) => [entry.logicalRefKey, entry]));
-  const refs = new Map(manifest.spellcastingGroups.flatMap((group) => group.spellRefs.map((ref) => [
-    JSON.stringify([manifest.manifestId, group.groupId, ref.refId]), ref,
+export function buildResolverReviewModel(actor: any, manifest: PortableSpellManifest, preflight: HydrationPreflight): ResolverReviewModel {
+  const projection = new Map(projectManagedContentWithConflicts(actor, manifest).map((entry) => [entry.logicalRefKey, entry]));
+  const currentGenerated = new Map(projectResolverManagedDocuments(actor, manifest.manifestId)
+    .map((entry) => [entry.logicalRefKey, entry]));
+  const lastGenerated = new Map((Array.isArray(actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.generatedProjection)
+    ? actor.flags[RESOLVER_MODULE_ID].spellResolution.generatedProjection : [])
+    .map((entry: any) => [entry?.logicalRefKey, entry]));
+  const targets = new Map(manifest.spellcastingGroups.flatMap((group) => group.spellRefs.map((ref) => [
+    JSON.stringify([manifest.manifestId, group.groupId, ref.refId]), { group, ref },
   ] as const)));
   const spells = preflight.report.results.map((result) => {
-    const ref = refs.get(result.logicalRefKey);
+    const target = targets.get(result.logicalRefKey);
+    const ref = target?.ref;
     const candidates = result.status === 'resolved' ? [result.selected, ...(result.candidates ?? [])] : (result.candidates ?? result.suggestions);
     const current = projection.get(result.logicalRefKey);
-    const keepability = current?.manualConflict ? inspectKeepability(actor, manifest.manifestId, result.logicalRefKey) : undefined;
-    const currentDocuments = managedDocuments(actor, manifest.manifestId, result.logicalRefKey).map((entry) => ({
-      kind: entry.kind,
-      id: documentId(entry.value),
-      source: documentSource(entry.value),
-    }));
-    const group = manifest.spellcastingGroups.find((entry) => entry.spellRefs.some((spellRef) => spellRef.refId === result.refId));
+    const keepability = current?.manualConflict ? inspectKeepability(actor, manifest, result.logicalRefKey) : undefined;
+    const group = target?.group;
     const feature = group ? iterate(actor.items).find((item) => item?.flags?.[RESOLVER_MODULE_ID]?.groupId === group.groupId
       && item?.flags?.[RESOLVER_MODULE_ID]?.featureItemKey === group.featureItemKey) : undefined;
     const proposed = result.status === 'resolved' && group && ref && feature
-      ? {
-          activity: buildCastActivitySource({ manifestId: manifest.manifestId, featureId: documentId(feature), group, ref, selectedUuid: result.selected.uuid }).activity,
-          cachedSpell: { operation: 'create-or-replace-native-cache', selectedUuid: result.selected.uuid },
-        }
+      ? projectProposedResolverDocuments(
+          result.logicalRefKey,
+          documentId(feature),
+          buildCastActivitySource({ manifestId: manifest.manifestId, featureId: documentId(feature), group, ref, selectedUuid: result.selected.uuid }).activity,
+          result.selected,
+        )
       : { activity: { status: 'blocked', reason: result.status }, cachedSpell: { status: 'blocked' } };
+    const invalidSelectedDocument = preflight.report.findings.some((finding) => finding.code === 'INVALID_SELECTED_SPELL_DOCUMENT'
+      && (finding.path === result.logicalRefKey || finding.path.includes(result.refId)));
+    const invalidUuid = invalidSelectedDocument && result.status === 'resolved' ? result.selected.uuid : undefined;
+    const offeredCandidates = dedupeCandidates(candidates).filter((candidate) => candidate.uuid !== invalidUuid);
     return {
       logicalRefKey: result.logicalRefKey,
       refId: result.refId,
       originalName: ref?.originalName ?? result.refId,
       evidence: ref?.evidence ?? [],
       sourceEvidence: ref?.evidence ?? [],
-      candidates: dedupeCandidates(candidates).map((candidate) => ({
+      candidates: offeredCandidates.map((candidate) => ({
         packageId: candidate.packageId, packId: candidate.packId, sourceBook: candidate.sourceBook,
         rules: candidate.rules, level: candidate.level, uuid: candidate.uuid,
       })),
-      current: { projection: current ?? null, documents: currentDocuments },
-      lastGeneratedProof: {
-        contentAvailable: false,
-        limitation: 'Task 7 stores a generated-content hash and ownership proof, not a duplicate prior content body.',
-        documents: currentDocuments.map((entry) => ({
-          kind: entry.kind, id: entry.id,
-          generatedContentHash: (entry.source as any)?.flags?.[RESOLVER_MODULE_ID]?.generatedContentHash,
-          resolverOwnership: (entry.source as any)?.flags?.[RESOLVER_MODULE_ID],
-        })),
-      },
+      current: { ownershipProjection: current ?? null, generatedProjection: currentGenerated.get(result.logicalRefKey) ?? null },
+      lastGeneratedProof: lastGenerated.get(result.logicalRefKey) ?? null,
       proposed,
       ...(current?.manualConflict ? { manualConflict: keepability } : {}),
-      warnings: result.status === 'resolved' && result.origin === 'fallback-2014' ? ['2014 fallback is visible'] : [],
+      warnings: [
+        ...(result.status === 'resolved' && result.origin === 'fallback-2014' ? ['FVTTJSONSPELL.Review.Fallback2014'] : []),
+        ...(invalidSelectedDocument && offeredCandidates.length === 0 ? ['FVTTJSONSPELL.Review.RebuildIndex'] : []),
+      ],
       literalRestrictions: (ref?.restrictions ?? []).map((restriction) => ({ kind: restriction.kind, text: restriction.text })),
+      candidateDecisionRequired: (invalidSelectedDocument && offeredCandidates.length > 0)
+        || (result.status !== 'resolved' && offeredCandidates.length > 0),
       blocking: result.status !== 'resolved' || current?.manualConflict === true
         || preflight.report.findings.some((finding) => finding.blocking && (finding.path === result.logicalRefKey || finding.path.includes(result.refId))),
     };
@@ -614,15 +841,31 @@ function buildResolverReviewModel(actor: any, manifest: PortableSpellManifest, p
   return { manifestId: manifest.manifestId, findingHash, title: 'FVTTJSONSPELL.Review.Title', findings: preflight.report.findings, spells };
 }
 
-function projectManagedContentWithConflicts(actor: any, manifestId: string): ManagedSpellProjection[] {
-  return projectCurrentManagedContent(actor, manifestId).map((entry) => ({
-    ...entry,
-    ...(hasManagedDrift(actor, manifestId, entry.logicalRefKey) ? { manualConflict: true } : {}),
-  }));
+function projectManagedContentWithConflicts(
+  actor: any,
+  manifest: PortableSpellManifest,
+  includeProtectedConflicts = true,
+): ManagedSpellProjection[] {
+  const projections = projectHydrationBindingProjection(actor, manifest);
+  const expected = expectedPersistedManagedRefs(actor, manifest);
+  const conflicts = projections.flatMap((entry) => {
+    const expectedRef = expected.get(entry.logicalRefKey);
+    const pair = expectedRef ? inspectPersistedManagedPair(actor, manifest, expectedRef) : undefined;
+    const conflict = hasManagedDrift(actor, manifest.manifestId, entry.logicalRefKey, includeProtectedConflicts)
+      || (pair !== undefined && (!pair.keepable || !pair.hashesMatch));
+    return conflict ? [entry.logicalRefKey] : [];
+  });
+  return projectHydrationBindingProjection(actor, manifest, conflicts);
 }
 
-function hasManagedDrift(actor: any, manifestId: string, logicalRefKey: string): boolean {
+function hasManagedDrift(
+  actor: any,
+  manifestId: string,
+  logicalRefKey: string,
+  includeProtectedConflicts = true,
+): boolean {
   for (const document of managedDocuments(actor, manifestId, logicalRefKey)) {
+    if (includeProtectedConflicts && document.value.flags?.[RESOLVER_MODULE_ID]?.protected === true) return true;
     const source = documentSource(document.value);
     const stored = document.value.flags?.[RESOLVER_MODULE_ID]?.generatedContentHash;
     if (typeof stored !== 'string' || stored !== computeManagedSourceHash(source)) return true;
@@ -630,9 +873,52 @@ function hasManagedDrift(actor: any, manifestId: string, logicalRefKey: string):
   return false;
 }
 
-function inspectKeepability(actor: any, manifestId: string, logicalRefKey: string): { keepable: boolean; explanation?: string } {
+interface ExpectedManagedRef {
+  logicalRefKey: string;
+  groupId: string;
+  refId: string;
+  featureItemKey: string;
+  selectedUuid?: string;
+}
+
+function expectedPersistedManagedRefs(actor: any, manifest: PortableSpellManifest): Map<string, ExpectedManagedRef> {
+  const resolution = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
+  if (resolution?.status !== 'hydrated' && resolution?.status !== 'stale') return new Map();
+  const expected = manifest.spellcastingGroups.flatMap((group) => group.spellRefs.map((ref) => ({
+    logicalRefKey: JSON.stringify([manifest.manifestId, group.groupId, ref.refId]),
+    groupId: group.groupId,
+    refId: ref.refId,
+    featureItemKey: group.featureItemKey,
+  })));
+  const selections = Array.isArray(resolution?.report?.selections) ? resolution.report.selections : [];
+  const byKey = new Map<string, any[]>();
+  for (const selection of selections) {
+    if (!isRecord(selection) || typeof selection.logicalRefKey !== 'string') continue;
+    const values = byKey.get(selection.logicalRefKey) ?? [];
+    values.push(selection);
+    byKey.set(selection.logicalRefKey, values);
+  }
+  const exactReportShape = selections.length === expected.length
+    && expected.every((entry) => byKey.get(entry.logicalRefKey)?.length === 1);
+  return new Map(expected.map((entry) => {
+    const selection = exactReportShape ? byKey.get(entry.logicalRefKey)?.[0] : undefined;
+    return [entry.logicalRefKey, {
+      ...entry,
+      ...(isCompendiumItemUuid(selection?.selectedUuid)
+        ? { selectedUuid: selection.selectedUuid }
+        : {}),
+    }];
+  }));
+}
+
+function inspectKeepability(actor: any, manifest: PortableSpellManifest, logicalRefKey: string): { keepable: boolean; explanation?: string } {
+  const expected = expectedPersistedManagedRefs(actor, manifest).get(logicalRefKey);
+  if (expected) {
+    const inspected = inspectPersistedManagedPair(actor, manifest, expected);
+    return inspected.keepable ? { keepable: true } : { keepable: false, explanation: inspected.explanation };
+  }
   try {
-    const docs = managedDocuments(actor, manifestId, logicalRefKey);
+    const docs = managedDocuments(actor, manifest.manifestId, logicalRefKey);
     const activity = docs.filter((entry) => entry.kind === 'activity');
     const spell = docs.filter((entry) => entry.kind === 'spell');
     if (activity.length !== 1 || spell.length !== 1) throw new Error('Keep requires exactly one owned Cast Activity and one owned cached Spell.');
@@ -645,26 +931,53 @@ function inspectKeepability(actor: any, manifestId: string, logicalRefKey: strin
   }
 }
 
+function inspectPersistedManagedPair(
+  actor: any,
+  manifest: PortableSpellManifest,
+  expected: ExpectedManagedRef,
+): { keepable: boolean; hashesMatch: boolean; explanation?: string } {
+  try {
+    if (!expected.selectedUuid) throw new Error('Persisted hydration report does not contain one exact selection for this manifest ref.');
+    const docs = managedDocuments(actor, manifest.manifestId, expected.logicalRefKey);
+    const activities = docs.filter((entry) => entry.kind === 'activity');
+    const spells = docs.filter((entry) => entry.kind === 'spell');
+    if (activities.length !== 1 || spells.length !== 1) {
+      throw new Error('Keep requires exactly one owned Cast Activity and one owned cached Spell.');
+    }
+    const activity = activities[0]!;
+    const spell = spells[0]!;
+    const linkedFeatures = iterate(actor?.items).filter((item) => item?.flags?.[RESOLVER_MODULE_ID]?.groupId === expected.groupId
+      && item?.flags?.[RESOLVER_MODULE_ID]?.featureItemKey === expected.featureItemKey);
+    if (linkedFeatures.length !== 1 || linkedFeatures[0] !== activity.feature) {
+      throw new Error('Managed pair is not linked to the one manifest-declared generated feature.');
+    }
+    const identity = readManagedIdentity(activity.value.flags?.[RESOLVER_MODULE_ID]);
+    if (!identity || identity.logicalRefKey !== expected.logicalRefKey
+      || identity.groupId !== expected.groupId || identity.refId !== expected.refId
+      || identity.selectedUuid !== expected.selectedUuid) {
+      throw new Error('Managed pair ownership identity does not match the persisted manifest/report selection.');
+    }
+    assertResolverDocumentOwnership(actor, activity.feature, activity.value, identity, 'activity');
+    assertResolverDocumentOwnership(actor, activity.feature, spell.value, identity, 'spell', activity.value.relativeUUID);
+    const hashesMatch = [activity.value, spell.value].every((document) => {
+      const stored = document.flags?.[RESOLVER_MODULE_ID]?.generatedContentHash;
+      return typeof stored === 'string' && stored === computeManagedSourceHash(documentSource(document));
+    });
+    return { keepable: true, hashesMatch };
+  } catch (error) {
+    return { keepable: false, hashesMatch: false, explanation: errorMessage(error) };
+  }
+}
+
 function hasStrictHydratedStructure(actor: any, manifest: PortableSpellManifest, resolution: any): boolean {
-  const expectedKeys = manifest.spellcastingGroups.flatMap((group) => group.spellRefs.map((ref) =>
-    JSON.stringify([manifest.manifestId, group.groupId, ref.refId]))).sort();
-  const selections = Array.isArray(resolution?.report?.selections) ? resolution.report.selections : [];
-  if (selections.length !== expectedKeys.length) return false;
-  const selectionByKey = new Map<string, any>();
-  for (const selection of selections) {
-    if (!isRecord(selection) || typeof selection.logicalRefKey !== 'string' || typeof selection.selectedUuid !== 'string'
-      || selectionByKey.has(selection.logicalRefKey)) return false;
-    selectionByKey.set(selection.logicalRefKey, selection);
-  }
-  for (const logicalRefKey of expectedKeys) {
-    const selection = selectionByKey.get(logicalRefKey);
-    if (!selection) return false;
-    const documents = managedDocuments(actor, manifest.manifestId, logicalRefKey);
-    if (documents.length !== 2 || documents.some((entry) => entry.value.flags?.[RESOLVER_MODULE_ID]?.selectedUuid !== selection.selectedUuid)) return false;
-    const keepability = inspectKeepability(actor, manifest.manifestId, logicalRefKey);
-    if (!keepability.keepable || hasManagedDrift(actor, manifest.manifestId, logicalRefKey)) return false;
-  }
-  return true;
+  if (resolution?.status !== 'hydrated' && resolution?.status !== 'stale') return false;
+  const expected = expectedPersistedManagedRefs(actor, manifest);
+  const expectedCount = manifest.spellcastingGroups.reduce((count, group) => count + group.spellRefs.length, 0);
+  if (expected.size !== expectedCount || managedDocuments(actor, manifest.manifestId).length !== expectedCount * 2) return false;
+  return [...expected.values()].every((entry) => {
+    const inspected = inspectPersistedManagedPair(actor, manifest, entry);
+    return inspected.keepable && inspected.hashesMatch;
+  });
 }
 
 function sameResolvedSelections(results: HydrationPreflight['report']['results'], selections: unknown): boolean {
@@ -711,7 +1024,9 @@ async function writeFailureStatus(actor: any, status: ResolverStatus, error: unk
   try {
     await writeStatus(actor, status, {
       error: errorMessage(error),
-      ...(error instanceof HydrationTransactionError ? { residualDifferences: error.residualDifferences } : {}),
+      ...(error instanceof HydrationTransactionError || error instanceof UndoTransactionError
+        ? { residualDifferences: error.residualDifferences }
+        : {}),
     });
   } catch { /* keep the in-memory failure state if Actor permissions are gone */ }
 }
@@ -741,6 +1056,7 @@ export async function restoreLastHydration(actor: any): Promise<void> {
         const error = new UndoTransactionError(
           `Undo failed and compensation failed: ${errorMessage(cause)}; ${errorMessage(rollbackCause)}.`,
           true,
+          diffUndoSnapshots(before, captureUndoSnapshot(actor, validation.value.manifestId, actor.flags?.[RESOLVER_MODULE_ID])),
           { cause },
         );
         await writeFailureStatus(actor, 'failed-recovery-required', error);
@@ -749,6 +1065,7 @@ export async function restoreLastHydration(actor: any): Promise<void> {
       const error = new UndoTransactionError(
         `Undo failed, but compensation restored the prior managed state: ${errorMessage(cause)}.`,
         false,
+        [],
         { cause },
       );
       await writeFailureStatus(actor, 'failed', error);
@@ -758,7 +1075,12 @@ export async function restoreLastHydration(actor: any): Promise<void> {
 }
 
 export class UndoTransactionError extends Error {
-  constructor(message: string, public readonly recoveryRequired: boolean, options?: ErrorOptions) {
+  constructor(
+    message: string,
+    public readonly recoveryRequired: boolean,
+    public readonly residualDifferences: Array<{ path: string; before?: unknown; after?: unknown }>,
+    options?: ErrorOptions,
+  ) {
     super(message, options);
     this.name = 'UndoTransactionError';
   }
@@ -872,6 +1194,24 @@ function validateUndoSnapshot(actor: any, manifest: PortableSpellManifest, snaps
     spells.add(identity.logicalRefKey);
   }
   if (activities.size !== spells.size) throw new Error('Undo snapshot managed Activity/cache counts differ.');
+  const resolution = flags.spellResolution;
+  const selections = Array.isArray(resolution?.report?.selections) ? resolution.report.selections : [];
+  if (activities.size === 0) {
+    if (resolution?.status !== 'pending' || selections.length !== 0) {
+      throw new Error('An empty Undo snapshot is valid only for a genuine pending pre-first-hydration state without selections.');
+    }
+  } else {
+    if (selections.length !== activities.size) throw new Error('Undo snapshot report selections do not match owned document pairs.');
+    for (const selection of selections) {
+      if (!isRecord(selection) || typeof selection.logicalRefKey !== 'string' || typeof selection.selectedUuid !== 'string') {
+        throw new Error('Undo snapshot report selection is malformed.');
+      }
+      const pair = activities.get(selection.logicalRefKey);
+      if (!pair || pair.identity.selectedUuid !== selection.selectedUuid || !spells.has(selection.logicalRefKey)) {
+        throw new Error('Undo snapshot report selection does not match its exact owned Activity/cache pair.');
+      }
+    }
+  }
   for (const { identity } of activities.values()) {
     const cachedFor = `.Item.${identity.featureId}.Activity.${identity.activityId}`;
     const foreign = iterate(actor.items).find((item) => item?.flags?.dnd5e?.cachedFor === cachedFor
@@ -915,6 +1255,34 @@ function sameManagedSnapshot(actual: UndoSnapshot, expected: UndoSnapshot): bool
   return canonicalStringify(project(actual)) === canonicalStringify(project(expected));
 }
 
+function diffUndoSnapshots(expected: UndoSnapshot, actual: UndoSnapshot): Array<{ path: string; before?: unknown; after?: unknown }> {
+  const differences: Array<{ path: string; before?: unknown; after?: unknown }> = [];
+  const compare = (path: string, before: unknown, after: unknown): void => {
+    if (canonicalStringify(before) === canonicalStringify(after)) return;
+    if (isRecord(before) && isRecord(after)) {
+      const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort((left, right) => left.localeCompare(right, 'en'));
+      for (const key of keys) compare(`${path}/${jsonPointerSegment(key)}`, before[key], after[key]);
+      return;
+    }
+    if (Array.isArray(before) && Array.isArray(after)) {
+      const length = Math.max(before.length, after.length);
+      for (let index = 0; index < length; index++) compare(`${path}/${index}`, before[index], after[index]);
+      return;
+    }
+    differences.push({ path, ...(before === undefined ? {} : { before }), ...(after === undefined ? {} : { after }) });
+  };
+  compare(`/flags/${RESOLVER_MODULE_ID}`, expected.resolverFlags, actual.resolverFlags);
+  compare('/managed/activities', Object.fromEntries(expected.activities.map((entry) => [`${entry.featureId}:${entry.source._id}`, entry.source])),
+    Object.fromEntries(actual.activities.map((entry) => [`${entry.featureId}:${entry.source._id}`, entry.source])));
+  compare('/managed/spells', Object.fromEntries(expected.spells.map((source) => [String(source._id), source])),
+    Object.fromEntries(actual.spells.map((source) => [String(source._id), source])));
+  return differences;
+}
+
+function jsonPointerSegment(value: string): string {
+  return value.replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
 function getActivity(feature: any, id: string): any {
   const activities = feature?.system?.activities;
   if (activities && typeof activities.get === 'function') return activities.get(id);
@@ -938,10 +1306,16 @@ export function createFoundryResolverHookController(): ResolverHookController {
     showDocument: async (title, html) => { await openReadOnlyDialog(title, html); },
     exportJson: (filename, value) => (globalThis as any).foundry?.utils?.saveDataToFile?.(JSON.stringify(value, null, 2), 'application/json', filename),
     notify: (level, message) => (globalThis as any).ui?.notifications?.[level]?.(message),
+    localize: (key, data) => {
+      const i18n = (globalThis as any).game?.i18n;
+      return data && typeof i18n?.format === 'function' ? i18n.format(key, data) : (i18n?.localize?.(key) ?? key);
+    },
   };
   const service = createResolverActorService(dependencies);
+  const authority = () => selectResolverAuthority((game as any)?.users, (game as any)?.user);
+  const actions = createAuthorityGuardedActions(service, () => authority().isGM);
   const coordinator = createResolverEventCoordinator({
-    authority: () => ({ isGM: game?.user?.isGM === true, userId: (game?.user as any)?.id }),
+    authority,
     runtimeSupported: () => {
       const runtime = dependencies.getRuntime();
       return runtime?.compatibility.supported === true && runtime.canMutate === true;
@@ -951,7 +1325,7 @@ export function createFoundryResolverHookController(): ResolverHookController {
     schedule: (callback) => queueMicrotask(() => { void callback(); }),
     process: (actor) => service.processActor(actor),
   });
-  return { onActorEvent: coordinator.onActorEvent, actions: service, isCurrentUserGM: () => game?.user?.isGM === true };
+  return { onActorEvent: coordinator.onActorEvent, actions, isCurrentUserGM: () => authority().isGM };
 }
 
 async function openReadOnlyDialog(title: string, html: string): Promise<void> {
@@ -978,7 +1352,52 @@ function redactReport(value: unknown): unknown {
   if (!isRecord(value)) return value;
   const clone = structuredClone(value);
   delete clone.undoSnapshot;
+  if (Array.isArray(clone.residualDifferences)) {
+    clone.residualDifferences = clone.residualDifferences.map((entry: unknown) => {
+      if (!isRecord(entry) || typeof entry.path !== 'string') return { path: '/invalid-residual', redacted: true };
+      return {
+        path: entry.path,
+        ...('before' in entry ? { before: safeResidualProjection(entry.before) } : {}),
+        ...('after' in entry ? { after: safeResidualProjection(entry.after) } : {}),
+      };
+    });
+  }
   return clone;
+}
+
+function safeResidualProjection(value: unknown): unknown {
+  if (value === undefined || value === null || typeof value === 'boolean' || typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    if (/^Compendium\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}$/.test(value)
+      || /^[A-Za-z0-9]{16}$/.test(value) || /^[a-f0-9]{64}$/.test(value)) return value;
+    return { contentHash: sha256(value) };
+  }
+  const metadata: Record<string, unknown> = {};
+  collectSafeResidualMetadata(value, '', metadata);
+  return {
+    contentHash: sha256(canonicalStringify(value)),
+    ...(Object.keys(metadata).length ? { metadata } : {}),
+  };
+}
+
+const SAFE_RESIDUAL_KEYS = new Set([
+  '_id', 'id', 'type', 'uuid', 'selectedUuid', 'logicalRefKey', 'manifestId', 'groupId', 'refId',
+  'featureId', 'activityId', 'documentType', 'managed', 'generatedContentHash', 'compendiumSource', 'cachedFor',
+]);
+
+function collectSafeResidualMetadata(value: unknown, path: string, output: Record<string, unknown>): void {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectSafeResidualMetadata(entry, `${path}/${index}`, output));
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, entry] of Object.entries(value)) {
+    const nextPath = `${path}/${jsonPointerSegment(key)}`;
+    if (SAFE_RESIDUAL_KEYS.has(key) && (entry === null || ['string', 'number', 'boolean'].includes(typeof entry))) {
+      output[nextPath] = entry;
+    }
+    if (typeof entry === 'object' && entry !== null) collectSafeResidualMetadata(entry, nextPath, output);
+  }
 }
 
 function dedupeCandidates<T extends { uuid: string }>(values: readonly T[]): T[] {

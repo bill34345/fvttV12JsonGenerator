@@ -8,9 +8,46 @@ import type { PackageClass } from './types';
 import { generateRealParity, writeParityAcceptance } from './parity';
 import { launchProfile, stopProfile, type ProfileId } from './launch';
 import { runCumulativeReport, runDiagnosticReport, runInventoryDiagnosis, runPerformanceBaseline } from './diagnose';
+import {
+  buildSpellResolverForLab,
+  installSpellResolver,
+  parseSpellResolverCliArgs,
+  prepareSpellResolverWorld,
+  uninstallSpellResolver,
+  verifySpellResolverInstall,
+} from './spellResolver';
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
+if (command === 'spell-resolver') {
+  const request = parseSpellResolverCliArgs(args);
+  const { action } = request;
+  const config = createLabConfig();
+  if (action === 'build') {
+    const result = await buildSpellResolverForLab(config);
+    console.log(JSON.stringify({ ok: true, action, output: result.root, hash: result.hash, files: result.files.length }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'install') {
+    const result = await installSpellResolver(config, { apply: request.apply });
+    console.log(JSON.stringify({ ok: true, action, ...result }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'verify-install') {
+    console.log(JSON.stringify({ action, ...(await verifySpellResolverInstall(config)) }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'prepare-world') {
+    const result = await prepareSpellResolverWorld(config, request.world, { apply: request.apply });
+    console.log(JSON.stringify({ ok: true, action, ...result }, null, 2));
+    process.exit(0);
+  }
+  if (action === 'uninstall') {
+    const result = await uninstallSpellResolver(config, { apply: request.apply });
+    console.log(JSON.stringify({ ok: true, action, ...result }, null, 2));
+    process.exit(0);
+  }
+}
 if (command === 'diagnose') {
   const [action, ...diagnoseArgs] = args;
   const config = createLabConfig();

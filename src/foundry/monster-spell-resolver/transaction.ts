@@ -53,6 +53,12 @@ export interface HydrationTransactionResult {
   managedProjectionHash: string;
 }
 
+export interface ResolverManagedDocumentProjection {
+  logicalRefKey: string;
+  activities: Array<Record<string, unknown>>;
+  cachedSpells: Array<Record<string, unknown>>;
+}
+
 interface ManagedSnapshot {
   resolverFlags: unknown;
   itemIds: string[];
@@ -75,7 +81,7 @@ export async function executeHydrationTransaction(input: ExecuteHydrationTransac
 
 async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<HydrationTransactionResult> {
   validateTransactionInput(input);
-  const beforeProjection = projectCurrentManagedContent(input.actor, input.manifest.manifestId);
+  const beforeProjection = projectHydrationBindingProjection(input.actor, input.manifest);
   const beforeProjectionHash = hashProjectionList(beforeProjection);
   const resolution = input.actor.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
   if (resolution?.status === 'hydrated' && resolution.planHash === input.plan.planHash) {
@@ -85,11 +91,12 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     }
     return { status: 'noop', planHash: input.plan.planHash, managedProjectionHash: beforeProjectionHash };
   }
-  const planBoundProjectionHash = hashProjectionList(beforeProjection.map((entry) =>
-    input.plan.selections.some((selection) => selection.logicalRefKey === entry.logicalRefKey
-      && (selection.manualDecision === 'keep' || selection.manualDecision === 'overwrite'))
-      ? { ...entry, manualConflict: true }
-      : entry));
+  const explicitConflictKeys = input.plan.selections
+    .filter((selection) => selection.manualDecision === 'keep' || selection.manualDecision === 'overwrite')
+    .map((selection) => selection.logicalRefKey);
+  const planBoundProjectionHash = hashProjectionList(
+    projectHydrationBindingProjection(input.actor, input.manifest, explicitConflictKeys),
+  );
   if (planBoundProjectionHash !== input.plan.currentManagedProjectionHash) {
     throw new Error('Ready plan is stale for the Actor current managed projection.');
   }
@@ -124,6 +131,11 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     await cleanupStaleManagedContent(input, journal);
     validateHydratedState(input.actor, input.manifest, input.plan);
     const managedProjectionHash = hashProjectionList(projectCurrentManagedContent(input.actor, input.manifest.manifestId));
+    const generatedProjection = mergeGeneratedProjectionForCommit(
+      projectResolverManagedDocuments(input.actor, input.manifest.manifestId),
+      resolution?.generatedProjection,
+      input.plan,
+    );
     const committedResolution = {
       status: 'hydrated' as const,
       manifestHash: input.plan.manifestHash,
@@ -147,6 +159,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
         })),
         literalRestrictions,
       },
+      generatedProjection,
       undoSnapshot: snapshot,
     };
     await requireApi(input.actor, 'update')({
@@ -159,6 +172,33 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     const message = `Spell hydration failed: ${errorMessage(cause)}; rollback ${rollbackSucceeded ? 'restored the managed snapshot' : 'left residual differences'}.`;
     throw new HydrationTransactionError(message, rollbackSucceeded, residualDifferences, { cause });
   }
+}
+
+function mergeGeneratedProjectionForCommit(
+  current: ResolverManagedDocumentProjection[],
+  priorValue: unknown,
+  plan: SpellHydrationPlan,
+): ResolverManagedDocumentProjection[] {
+  const prior = new Map(
+    (Array.isArray(priorValue) ? priorValue : [])
+      .filter(isStoredGeneratedProjection)
+      .map((entry) => [entry.logicalRefKey, entry] as const),
+  );
+  const keep = new Set(plan.selections
+    .filter((selection) => selection.manualDecision === 'keep')
+    .map((selection) => selection.logicalRefKey));
+  return current.flatMap((entry) => {
+    if (!keep.has(entry.logicalRefKey)) return [entry];
+    const baseline = prior.get(entry.logicalRefKey);
+    return baseline ? [structuredClone(baseline)] : [];
+  }).sort((left, right) => left.logicalRefKey.localeCompare(right.logicalRefKey, 'en'));
+}
+
+function isStoredGeneratedProjection(value: unknown): value is ResolverManagedDocumentProjection {
+  return isRecord(value)
+    && typeof value.logicalRefKey === 'string'
+    && Array.isArray(value.activities) && value.activities.every(isRecord)
+    && Array.isArray(value.cachedSpells) && value.cachedSpells.every(isRecord);
 }
 
 function assertPreWriteConflictAuthorization(actor: any, manifest: PortableSpellManifest, plan: SpellHydrationPlan): void {
@@ -425,6 +465,129 @@ export function projectCurrentManagedContent(actor: any, manifestId: string): Ma
         .map((entry) => computeManagedSourceHash(documentSource(entry.spell))).sort(),
     })),
   }));
+}
+
+/**
+ * The exact Actor projection bound into a hydration plan. Persisted hydrated or
+ * stale resolutions retain one projection row for every manifest ref even when
+ * a whole managed pair has been deleted. Pending Actors deliberately use only
+ * documents that actually exist.
+ */
+export function projectHydrationBindingProjection(
+  actor: any,
+  manifest: PortableSpellManifest,
+  manualConflictLogicalRefs: Iterable<string> = [],
+): ManagedSpellProjection[] {
+  const projections = new Map(projectCurrentManagedContent(actor, manifest.manifestId)
+    .map((entry) => [entry.logicalRefKey, entry]));
+  const resolutionStatus = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.status;
+  if (resolutionStatus === 'hydrated' || resolutionStatus === 'stale') {
+    for (const group of manifest.spellcastingGroups) {
+      for (const ref of group.spellRefs) {
+        const logicalRefKey = logicalSpellRefKey(manifest.manifestId, group.groupId, ref.refId);
+        if (!projections.has(logicalRefKey)) projections.set(logicalRefKey, { logicalRefKey });
+      }
+    }
+  }
+  const conflicts = new Set(manualConflictLogicalRefs);
+  return [...projections.values()]
+    .sort((left, right) => left.logicalRefKey.localeCompare(right.logicalRefKey, 'en'))
+    .map((entry) => conflicts.has(entry.logicalRefKey) ? { ...entry, manualConflict: true } : entry);
+}
+
+/**
+ * Stable resolver-owned projection used for human review. Activity mechanics are
+ * retained, while cached Spells expose identity/provenance metadata only so a
+ * premium compendium body is never duplicated into Actor flags.
+ */
+export function projectResolverManagedDocuments(actor: any, manifestId: string): ResolverManagedDocumentProjection[] {
+  const managed = collectManagedDocuments(actor, manifestId);
+  const keys = new Set([
+    ...managed.activities.map((entry) => entry.identity.logicalRefKey),
+    ...managed.spells.map((entry) => entry.identity.logicalRefKey),
+  ]);
+  return [...keys].sort((left, right) => left.localeCompare(right, 'en')).map((logicalRefKey) => ({
+    logicalRefKey,
+    activities: managed.activities.filter((entry) => entry.identity.logicalRefKey === logicalRefKey)
+      .map((entry) => projectActivity(entry.feature, documentSource(entry.activity))).sort(sortProjectedDocuments),
+    cachedSpells: managed.spells.filter((entry) => entry.identity.logicalRefKey === logicalRefKey)
+      .map((entry) => projectCachedSpell(documentSource(entry.spell))).sort(sortProjectedDocuments),
+  }));
+}
+
+export function projectProposedResolverDocuments(
+  logicalRefKey: string,
+  featureId: string,
+  activitySource: Record<string, any>,
+  candidate: { uuid: string; name?: string; identifier?: string; rules?: string; sourceBook?: string; level?: number; school?: string },
+): ResolverManagedDocumentProjection {
+  const activityId = String(activitySource._id ?? '');
+  const resolver = isRecord(activitySource.flags?.[RESOLVER_MODULE_ID]) ? activitySource.flags[RESOLVER_MODULE_ID] : {};
+  return {
+    logicalRefKey,
+    activities: [projectActivity({ id: featureId }, activitySource)],
+    cachedSpells: [compactRecord({
+      id: generatedResolverDocumentId({
+        manifestId: String(resolver.manifestId ?? ''),
+        groupId: String(resolver.groupId ?? ''),
+        refId: String(resolver.refId ?? ''),
+        featureId,
+      }, 'spell'),
+      type: 'spell',
+      name: candidate.name,
+      identifier: candidate.identifier,
+      rules: candidate.rules,
+      sourceBook: candidate.sourceBook,
+      level: candidate.level,
+      school: candidate.school,
+      compendiumSource: candidate.uuid,
+      cachedFor: `.Item.${featureId}.Activity.${activityId}`,
+      resolver: { ...resolver, documentType: 'spell' },
+    })],
+  };
+}
+
+function projectActivity(feature: any, source: Record<string, any>): Record<string, unknown> {
+  const fields = ['type', 'name', 'activation', 'consumption', 'description', 'duration', 'range', 'target', 'uses', 'ability', 'attack', 'save', 'spell'];
+  const projected: Record<string, unknown> = { id: source._id, featureId: documentId(feature) };
+  for (const field of fields) if (source[field] !== undefined) projected[field] = structuredClone(source[field]);
+  if (isRecord(projected.uses)) delete projected.uses.spent;
+  if (isRecord(source.flags?.[RESOLVER_MODULE_ID])) {
+    const resolver = structuredClone(source.flags[RESOLVER_MODULE_ID]);
+    delete resolver.generatedContentHash;
+    delete resolver.transactionId;
+    projected.resolver = resolver;
+  }
+  return compactRecord(projected);
+}
+
+function projectCachedSpell(source: Record<string, any>): Record<string, unknown> {
+  const system = isRecord(source.system) ? source.system : {};
+  const sourceMetadata = isRecord(system.source) ? system.source : {};
+  const resolver = isRecord(source.flags?.[RESOLVER_MODULE_ID]) ? structuredClone(source.flags[RESOLVER_MODULE_ID]) : undefined;
+  if (resolver) delete resolver.generatedContentHash;
+  if (resolver) delete resolver.transactionId;
+  return compactRecord({
+    id: source._id,
+    type: source.type,
+    name: source.name,
+    identifier: system.identifier,
+    rules: sourceMetadata.rules,
+    sourceBook: sourceMetadata.book,
+    level: system.level,
+    school: system.school,
+    compendiumSource: source._stats?.compendiumSource,
+    cachedFor: source.flags?.dnd5e?.cachedFor,
+    resolver,
+  });
+}
+
+function compactRecord(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
+}
+
+function sortProjectedDocuments(left: Record<string, unknown>, right: Record<string, unknown>): number {
+  return String(left.id ?? '').localeCompare(String(right.id ?? ''), 'en');
 }
 
 function hashProjectionList(projection: ManagedSpellProjection[]): string {

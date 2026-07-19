@@ -6,6 +6,88 @@ read-only: inventory uses SSH and server-only package acquisition uses SCP.
 The workflow never creates production archives or removes or changes production
 files. SSH transport compression may be enabled in memory with `scp -C`.
 
+## Target-world spell resolver lifecycle
+
+The companion resolver has a separate fail-closed lifecycle. Its only install
+destination is:
+
+```text
+.local/foundry-v14/data/server-mirror/Data/modules/fvtt-json-generator-spell-resolver
+```
+
+Build and inspect the deterministic package, then install it into that exact
+project-local mirror:
+
+```powershell
+bun run foundry:lab spell-resolver build
+bun run foundry:lab spell-resolver install --apply
+bun run foundry:lab spell-resolver verify-install
+```
+
+`build` validates the physical `dist` directory, module output, and ZIP path
+before its builder runs and again immediately before destructive or writing
+boundaries. Existing and dangling symlinks, junctions, and reparse points are
+rejected. `install`, including its dry-run, revalidates the module ID, locked
+Foundry/dnd5e compatibility, browser entry, complete build hash, and any module
+already occupying the destination. An existing exact module is moved to an
+ignored, recoverable backup before atomic replacement. Final verification is
+part of the replacement transaction: failure first attempts to quarantine the
+replacement, then restores the prior module or leaves the destination absent
+after a failed first install. If quarantine itself fails, the replacement is
+removed only after its package tree, exact module identity, and validated build
+hash are revalidated. Quarantine itself is subject to that same build-hash gate;
+otherwise it is left in place, restoration is refused, and every recovery error
+remains visible. Any failed backup restoration is reported explicitly as
+`recovery required`. Backups and staging trees are also hash-checked again before
+restore or cleanup. Junction
+escapes, a production path, another profile, an
+unexpected module ID, or a missing build fail before the mirror changes.
+`verify-install` resolves the exact physical build, app, dnd5e, and module
+paths, then proves only that installed bytes match the current validated build
+for Foundry 14.364 and dnd5e 5.3.3. It does not claim the module has run.
+
+Enable the module only in the approved disposable matrix world:
+
+```powershell
+bun run foundry:lab spell-resolver prepare-world --world=fvtt-v14-module-matrix --apply
+```
+
+The command verifies the exact world metadata and installed package. Dry-run
+requires the world to be stopped, holds the Windows `LOCK` handle throughout
+snapshot copy and tree validation, and opens only the cleaned disposable copy with
+`createIfMissing: false`. Apply first creates a durable ignored backup without
+opening the original database through ClassicLevel. It holds the same lock
+through backup copy and validation. Apply hashes the durable backup before and
+after copying it into a task-owned temporary snapshot, opens and reads only that
+temporary snapshot, removes it, and verifies the durable backup hash again. It then
+revalidates the original path and every database tree entry immediately before
+opening the original with `createIfMissing: false`. ClassicLevel's exclusive
+open remains the final lock boundary. The writer rechecks the exact
+`core.moduleConfiguration` record, preserves every unrelated module choice,
+and enables only the resolver. The zero-data runtime `LOCK` file is omitted
+from durable backups. Missing, corrupt, or locked databases, `cor-cotn`,
+unknown worlds, other data roots, multiply linked files, internal or parent
+reparse points, and path escapes fail closed before the validated database is
+opened. Revalidation is placed immediately beside filesystem mutations, but it
+does not claim that ordinary path checks can eliminate every operating-system
+TOCTOU race. Run these commands only while no other process is rearranging the
+lab directory tree; a world that starts concurrently is expected to make the
+exclusive database open fail rather than be silently overwritten.
+
+Every spell-resolver subcommand accepts only its documented arguments.
+Unknown, duplicate, or action-inappropriate flags fail instead of being
+silently ignored.
+
+To remove the module from the mirror, use:
+
+```powershell
+bun run foundry:lab spell-resolver uninstall --apply
+```
+
+Uninstall revalidates the manifest ID and moves only the exact module directory
+to a recoverable ignored backup. Disabling the module in a world and proving
+that hydrated Spells still cast are separate runtime acceptance steps.
+
 ## Package acquisition
 
 First capture and classify the live inventory, then review the dry-run:

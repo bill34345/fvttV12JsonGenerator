@@ -43,3 +43,15 @@
   position: sticky;
   inset-block-end: 0;
 }
+
+.fvtt-json-generator-spell-resolver-status-icon--hydrated {
+  color: var(--color-level-success, #2e7d32);
+}
+
+.fvtt-json-generator-spell-resolver-status-icon--warning {
+  color: var(--color-level-warning, #b26a00);
+}
+
+.fvtt-json-generator-spell-resolver-status-icon--error {
+  color: var(--color-level-error, #b00020);
+}

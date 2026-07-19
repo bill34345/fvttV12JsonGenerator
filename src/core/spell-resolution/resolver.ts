@@ -236,18 +236,37 @@ function candidateKeys(candidate: SpellCandidateMetadata): Set<string> {
 }
 
 function savedCandidateStillValid(saved: SavedSpellMapping, selected: SpellCandidateMetadata, candidates: SpellCandidateMetadata[], ref: PortableSpellRef): selected is SpellCandidateMetadata & { rules: SpellRulesGeneration } {
-  if (selected.rules !== saved.rules || !candidateMatchesRef(selected, ref) || candidateContradictions(selected, ref).length > 0) return false;
+  if (selected.rules !== saved.rules) return false;
+  if (saved.selectionOrigin === 'manual-review') return isValidManualReviewCandidate(selected, candidates, ref);
+  if (!candidateMatchesRef(selected, ref) || candidateContradictions(selected, ref).length > 0) return false;
   if (ref.sourceBookHint && normalizeOptional(selected.sourceBook) !== normalizeSpellIdentity(ref.sourceBookHint)) return false;
   if (saved.rules === '2024') return true;
 
   const sameKey = candidates.filter((candidate) => candidateMatchesRef(candidate, ref));
   if (sameKey.some((candidate) => candidate.rules !== '2014')) return false;
-  if (saved.selectionOrigin === 'manual-review') return true;
   const valid2014 = sameKey.filter((candidate) => candidate.rules === '2014' && candidateContradictions(candidate, ref).length === 0);
   const hinted2014 = ref.sourceBookHint
     ? valid2014.filter((candidate) => candidate.sourceBook !== undefined && normalizeSpellIdentity(candidate.sourceBook) === normalizeSpellIdentity(ref.sourceBookHint!))
     : valid2014;
   return hinted2014.length === 1 && hinted2014[0]?.uuid === selected.uuid;
+}
+
+export function isValidManualReviewCandidate(
+  selected: SpellCandidateMetadata,
+  candidates: readonly SpellCandidateMetadata[],
+  ref: PortableSpellRef,
+): selected is SpellCandidateMetadata & { rules: SpellRulesGeneration } {
+  if ((selected.rules !== '2024' && selected.rules !== '2014')
+    || !candidates.some((candidate) => candidate.uuid === selected.uuid)
+    || candidateContradictions(selected, ref).length > 0) return false;
+  if (ref.sourceBookHint && normalizeOptional(selected.sourceBook) !== normalizeSpellIdentity(ref.sourceBookHint)) return false;
+
+  const sameKey = candidates.filter((candidate) => candidateMatchesRef(candidate, ref));
+  const exactSelection = candidateMatchesRef(selected, ref);
+  const reviewPool = exactSelection ? sameKey : approximateSuggestions(ref, [...candidates]);
+  if (!exactSelection && (sameKey.length > 0 || !reviewPool.some((candidate) => candidate.uuid === selected.uuid))) return false;
+  if (selected.rules === '2014' && reviewPool.some((candidate) => candidate.rules !== '2014')) return false;
+  return true;
 }
 
 function normalizedSet(values: (string | undefined)[]): Set<string> {

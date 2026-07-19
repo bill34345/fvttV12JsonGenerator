@@ -15,6 +15,10 @@ describe('Foundry lab configuration', () => {
     expect(config.profiles.serverMirror.port).toBe(30001);
     expect(config.profiles.coreTest.host).toBe('127.0.0.1');
     expect(config.sshTarget).toBe('Administrator@49.232.12.153');
+    expect(config.spellResolver).toEqual({
+      moduleId: 'fvtt-json-generator-spell-resolver',
+      disposableWorldId: 'fvtt-v14-module-matrix',
+    });
   });
 
   it('rejects destructive targets outside the ignored lab root', () => {
@@ -54,6 +58,30 @@ describe('Foundry lab configuration', () => {
       );
       expect(() => assertInsideLabRoot(config, join(junction, 'missing', 'artifact'))).toThrow(
         'Target escapes Foundry lab root',
+      );
+    } finally {
+      try {
+        await unlink(junction);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a dangling junction before its outside target becomes available', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-dangling-junction-'));
+    const repoRoot = join(tempRoot, 'repo');
+    const outsideRoot = join(tempRoot, 'outside-not-created');
+    const config = createLabConfig(repoRoot);
+    const junction = join(config.labRoot, 'escape');
+
+    try {
+      await mkdir(config.labRoot, { recursive: true });
+      await symlink(outsideRoot, junction, 'junction');
+
+      expect(() => assertInsideLabRoot(config, join(junction, 'future', 'artifact'))).toThrow(
+        /junction|reparse|symlink|unsafe/i,
       );
     } finally {
       try {

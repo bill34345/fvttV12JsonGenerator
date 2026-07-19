@@ -1,12 +1,9 @@
+import { lstatSync, readdirSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 const MODULE_ID = 'fvtt-json-generator-spell-resolver';
 const REPO_ROOT = resolve(import.meta.dir, '..');
-const SOURCE_ROOT = resolve(REPO_ROOT, 'src/foundry/monster-spell-resolver');
-const DIST_ROOT = resolve(REPO_ROOT, 'dist');
-const OUTPUT_DIR = resolve(DIST_ROOT, MODULE_ID);
-const ZIP_PATH = resolve(DIST_ROOT, `${MODULE_ID}.zip`);
 const STATIC_FILES = [
   'module.json',
   'lang/en.json',
@@ -14,6 +11,7 @@ const STATIC_FILES = [
   'styles/resolver.css',
   'templates/report.hbs',
   'templates/review.hbs',
+  'templates/settings.hbs',
 ] as const;
 const FORBIDDEN_TEXT = [
   /node:/i,
@@ -31,15 +29,22 @@ export interface SpellResolverBuildResult {
 }
 
 export async function buildSpellResolverPackage(): Promise<SpellResolverBuildResult> {
-  assertOutputBoundary(OUTPUT_DIR);
-  assertOutputBoundary(ZIP_PATH);
-  await rm(OUTPUT_DIR, { recursive: true, force: true });
-  await rm(ZIP_PATH, { force: true });
-  await mkdir(resolve(OUTPUT_DIR, 'scripts'), { recursive: true });
+  return buildSpellResolverPackageForRepo(REPO_ROOT);
+}
+
+export async function buildSpellResolverPackageForRepo(repoRoot: string): Promise<SpellResolverBuildResult> {
+  const paths = assertSpellResolverBuildMutationBoundary(repoRoot);
+  assertSpellResolverBuildMutationBoundary(repoRoot);
+  await rm(paths.outputDir, { recursive: true, force: true });
+  assertSpellResolverBuildMutationBoundary(repoRoot);
+  await rm(paths.zipPath, { force: true });
+  assertSpellResolverBuildMutationBoundary(repoRoot);
+  await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
+  assertSpellResolverBuildMutationBoundary(repoRoot);
 
   const build = await Bun.build({
-    entrypoints: [resolve(SOURCE_ROOT, 'index.ts')],
-    outdir: resolve(OUTPUT_DIR, 'scripts'),
+    entrypoints: [resolve(paths.sourceRoot, 'index.ts')],
+    outdir: resolve(paths.outputDir, 'scripts'),
     naming: 'index.js',
     target: 'browser',
     format: 'esm',
@@ -51,30 +56,38 @@ export async function buildSpellResolverPackage(): Promise<SpellResolverBuildRes
     throw new Error(`Spell resolver browser build failed:\n${build.logs.map((log) => String(log)).join('\n')}`);
   }
 
-  for (const path of STATIC_FILES) await copyFileDeterministically(resolve(SOURCE_ROOT, path), resolve(OUTPUT_DIR, path));
-  await validateBuiltManifest();
-  const entries = await collectFiles(OUTPUT_DIR);
-  await scanFiles(entries);
+  for (const path of STATIC_FILES) {
+    assertSpellResolverBuildMutationBoundary(repoRoot);
+    await copyFileDeterministically(
+      resolve(paths.sourceRoot, path),
+      resolve(paths.outputDir, path),
+      () => assertSpellResolverBuildMutationBoundary(repoRoot),
+    );
+  }
+  await validateBuiltManifest(paths.outputDir);
+  const entries = await collectFiles(paths.outputDir);
+  await scanFiles(entries, paths.outputDir);
   const zip = createDeterministicZip(await Promise.all(entries.map(async (path) => ({
-    name: normalizeArchivePath(relative(OUTPUT_DIR, path)),
+    name: normalizeArchivePath(relative(paths.outputDir, path)),
     bytes: new Uint8Array(await readFile(path)),
   }))));
-  await writeFile(ZIP_PATH, zip);
+  assertSpellResolverBuildMutationBoundary(repoRoot);
+  await writeFile(paths.zipPath, zip);
   scanBytes(zip, 'archive');
   const archiveEntries = listZipEntries(zip);
-  const expectedEntries = entries.map((path) => normalizeArchivePath(relative(OUTPUT_DIR, path)));
+  const expectedEntries = entries.map((path) => normalizeArchivePath(relative(paths.outputDir, path)));
   if (JSON.stringify(archiveEntries) !== JSON.stringify(expectedEntries)) {
     throw new Error('ZIP directory does not exactly match the deterministic build tree.');
   }
   return {
-    outputDir: OUTPUT_DIR,
-    zipPath: ZIP_PATH,
+    outputDir: paths.outputDir,
+    zipPath: paths.zipPath,
     archiveEntries,
   };
 }
 
-async function validateBuiltManifest(): Promise<void> {
-  const manifestPath = resolve(OUTPUT_DIR, 'module.json');
+async function validateBuiltManifest(outputDir: string): Promise<void> {
+  const manifestPath = resolve(outputDir, 'module.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
     id?: string;
     esmodules?: string[];
@@ -89,13 +102,19 @@ async function validateBuiltManifest(): Promise<void> {
   ];
   for (const path of referenced) {
     if (!isSafeArchivePath(path)) throw new Error(`Unsafe or empty module asset path: ${path}`);
-    await readFile(resolve(OUTPUT_DIR, path));
+    await readFile(resolve(outputDir, path));
   }
 }
 
-async function copyFileDeterministically(source: string, destination: string): Promise<void> {
+async function copyFileDeterministically(
+  source: string,
+  destination: string,
+  assertMutationBoundary: () => void,
+): Promise<void> {
   const bytes = await readFile(source);
+  assertMutationBoundary();
   await mkdir(dirname(destination), { recursive: true });
+  assertMutationBoundary();
   await writeFile(destination, bytes);
 }
 
@@ -115,8 +134,8 @@ async function collectFiles(root: string): Promise<string[]> {
   return files.sort((left, right) => normalizeArchivePath(relative(root, left)).localeCompare(normalizeArchivePath(relative(root, right)), 'en'));
 }
 
-async function scanFiles(files: string[]): Promise<void> {
-  for (const path of files) scanBytes(new Uint8Array(await readFile(path)), normalizeArchivePath(relative(OUTPUT_DIR, path)));
+async function scanFiles(files: string[], outputDir: string): Promise<void> {
+  for (const path of files) scanBytes(new Uint8Array(await readFile(path)), normalizeArchivePath(relative(outputDir, path)));
 }
 
 function scanBytes(bytes: Uint8Array, label: string): void {
@@ -217,10 +236,79 @@ function normalizeArchivePath(path: string): string {
   return path.split(sep).join('/');
 }
 
-function assertOutputBoundary(path: string): void {
-  const rel = relative(DIST_ROOT, path);
-  if (!rel || rel.startsWith('..') || resolve(DIST_ROOT, rel) !== resolve(path)) {
-    throw new Error(`Refusing to mutate a build path outside the repository dist directory: ${path}`);
+export interface SpellResolverBuildPaths {
+  repoRoot: string;
+  sourceRoot: string;
+  distRoot: string;
+  outputDir: string;
+  zipPath: string;
+}
+
+export function assertSpellResolverBuildMutationBoundary(repoRoot: string): SpellResolverBuildPaths {
+  const root = resolve(repoRoot);
+  const paths: SpellResolverBuildPaths = {
+    repoRoot: root,
+    sourceRoot: resolve(root, 'src/foundry/monster-spell-resolver'),
+    distRoot: resolve(root, 'dist'),
+    outputDir: resolve(root, 'dist', MODULE_ID),
+    zipPath: resolve(root, 'dist', `${MODULE_ID}.zip`),
+  };
+  const rootStats = lstatSync(root);
+  if (!rootStats.isDirectory() || rootStats.isSymbolicLink()) {
+    throw new Error(`Spell resolver build repository root is unsafe: ${root}`);
+  }
+  for (const [label, target] of [
+    ['dist root', paths.distRoot],
+    ['output directory', paths.outputDir],
+    ['ZIP path', paths.zipPath],
+  ] as const) {
+    const rel = relative(root, target);
+    if (!rel || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+      throw new Error(`Spell resolver build ${label} is outside the repository: ${target}`);
+    }
+    assertBuildPathHasNoReparse(root, target, label);
+  }
+  assertBuildTreeHasNoReparse(paths.outputDir);
+  return paths;
+}
+
+function assertBuildPathHasNoReparse(root: string, target: string, label: string): void {
+  let current = root;
+  for (const segment of relative(root, target).split(sep).filter(Boolean)) {
+    current = resolve(current, segment);
+    try {
+      const stats = lstatSync(current);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`Spell resolver build ${label} contains a symlink, junction, or reparse point: ${current}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
+}
+
+function assertBuildTreeHasNoReparse(root: string): void {
+  let rootStats;
+  try {
+    rootStats = lstatSync(root);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  if (rootStats.isSymbolicLink()) {
+    throw new Error(`Spell resolver build output contains a symlink, junction, or reparse point: ${root}`);
+  }
+  if (!rootStats.isDirectory()) {
+    throw new Error(`Spell resolver build output must be a directory when present: ${root}`);
+  }
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = resolve(root, entry.name);
+    const stats = lstatSync(path);
+    if (stats.isSymbolicLink()) {
+      throw new Error(`Spell resolver build output contains a symlink, junction, or reparse point: ${path}`);
+    }
+    if (stats.isDirectory()) assertBuildTreeHasNoReparse(path);
+    else if (!stats.isFile()) throw new Error(`Unsupported spell resolver build output entry: ${path}`);
   }
 }
 

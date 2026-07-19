@@ -1,4 +1,4 @@
-import { existsSync, realpathSync } from 'node:fs';
+import { lstatSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 export interface FoundryLabConfig {
@@ -13,6 +13,10 @@ export interface FoundryLabConfig {
   sshTarget: string;
   remoteDataPath: string;
   versions: { foundry: '14.364'; node: '24.17.0'; dnd5e: '5.3.3' };
+  spellResolver: {
+    moduleId: 'fvtt-json-generator-spell-resolver';
+    disposableWorldId: 'fvtt-v14-module-matrix';
+  };
   profiles: {
     coreTest: { id: 'core-test'; dataPath: string; host: '127.0.0.1'; port: 30000 };
     serverMirror: { id: 'server-mirror'; dataPath: string; host: '127.0.0.1'; port: 30001 };
@@ -34,6 +38,10 @@ export function createLabConfig(repoRoot = process.cwd()): FoundryLabConfig {
     sshTarget: 'Administrator@49.232.12.153',
     remoteDataPath: 'E:/Bill/fvtt_v13/data',
     versions: { foundry: '14.364', node: '24.17.0', dnd5e: '5.3.3' },
+    spellResolver: {
+      moduleId: 'fvtt-json-generator-spell-resolver',
+      disposableWorldId: 'fvtt-v14-module-matrix',
+    },
     profiles: {
       coreTest: {
         id: 'core-test',
@@ -56,11 +64,20 @@ function resolvesOutside(root: string, target: string): boolean {
   return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
 }
 
-function resolveThroughExistingAncestor(target: string): string {
+export function resolveThroughExistingAncestor(target: string): string {
   let existingAncestor = resolve(target);
   const missingSegments: string[] = [];
 
-  while (!existsSync(existingAncestor)) {
+  while (true) {
+    try {
+      const stats = lstatSync(existingAncestor);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`Unsafe symlink or junction in path: ${existingAncestor}`);
+      }
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     const parent = dirname(existingAncestor);
     if (parent === existingAncestor) return resolve(existingAncestor, ...missingSegments.reverse());
     missingSegments.push(basename(existingAncestor));
@@ -70,11 +87,53 @@ function resolveThroughExistingAncestor(target: string): string {
   return resolve(realpathSync.native(existingAncestor), ...missingSegments.reverse());
 }
 
+export function assertNoReparsePathComponents(root: string, target: string, label: string): void {
+  const lexicalRoot = resolve(root);
+  const lexicalTarget = resolve(target);
+  if (resolvesOutside(lexicalRoot, lexicalTarget)) {
+    throw new Error(`${label} escapes its approved root: ${lexicalTarget}`);
+  }
+  const rel = relative(lexicalRoot, lexicalTarget);
+  let current = lexicalRoot;
+  for (const segment of rel.split(sep).filter(Boolean)) {
+    current = resolve(current, segment);
+    try {
+      const stats = lstatSync(current);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`${label} contains an unsafe symlink, junction, or reparse point: ${current}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
+}
+
+export function assertExactRepoPath(
+  config: FoundryLabConfig,
+  target: string,
+  repoRelativeSegments: readonly string[],
+  label: string,
+): void {
+  const lexicalExpected = resolve(config.repoRoot, ...repoRelativeSegments);
+  if (relative(lexicalExpected, resolve(target)) !== '') {
+    throw new Error(`${label} must be the exact repository path: ${lexicalExpected}`);
+  }
+  assertNoReparsePathComponents(config.repoRoot, target, label);
+
+  const realRepoRoot = resolveThroughExistingAncestor(config.repoRoot);
+  const physicalExpected = resolve(realRepoRoot, ...repoRelativeSegments);
+  const physicalTarget = resolveThroughExistingAncestor(target);
+  if (relative(physicalExpected, physicalTarget) !== '') {
+    throw new Error(`${label} must not cross a symlink or junction: ${lexicalExpected}`);
+  }
+}
+
 export function assertInsideLabRoot(config: FoundryLabConfig, target: string): void {
   const candidate = resolve(target);
   if (!isAbsolute(candidate) || resolvesOutside(config.labRoot, candidate)) {
     throw new Error(`Target escapes Foundry lab root: ${candidate}`);
   }
+  assertNoReparsePathComponents(config.repoRoot, candidate, 'Target escapes Foundry lab root; path');
 
   const realRepoRoot = resolveThroughExistingAncestor(config.repoRoot);
   const realLabRoot = resolveThroughExistingAncestor(config.labRoot);

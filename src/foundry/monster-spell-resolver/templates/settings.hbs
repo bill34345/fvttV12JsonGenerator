@@ -1,0 +1,43 @@
+<section class="fvtt-json-generator-spell-resolver-settings">
+  <p>{{localize "FVTTJSONSPELL.Settings.Menu.Hint"}}</p>
+  <div class="form-group">
+    <label>{{localize "FVTTJSONSPELL.Settings.DebugLogging.Name"}}</label>
+    <input type="checkbox" name="debugLogging" {{checked debugLogging}}>
+    <p class="hint">{{localize "FVTTJSONSPELL.Settings.DebugLogging.Hint"}}</p>
+  </div>
+
+  <fieldset>
+    <legend>{{localize "FVTTJSONSPELL.Settings.SourcePriority.Name"}}</legend>
+    <p class="hint">{{localize "FVTTJSONSPELL.Settings.SourcePriority.Hint"}}</p>
+    {{#each priority}}
+    <div class="form-group fvtt-json-generator-spell-resolver-priority-row">
+      <input name="priority.{{index}}.packageId" value="{{packageId}}" placeholder="{{localize 'FVTTJSONSPELL.Settings.PackageId'}}" required>
+      <input name="priority.{{index}}.packId" value="{{packId}}" placeholder="{{localize 'FVTTJSONSPELL.Settings.PackId'}}">
+      <button type="button" data-action="movePriority" data-index="{{index}}" data-direction="up" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-arrow-up"></i></button>
+      <button type="button" data-action="movePriority" data-index="{{index}}" data-direction="down" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-arrow-down"></i></button>
+      <button type="button" data-action="removePriority" data-index="{{index}}"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    {{/each}}
+    <button type="button" data-action="addPriority"><i class="fa-solid fa-plus"></i> {{localize "FVTTJSONSPELL.Settings.AddPriority"}}</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "FVTTJSONSPELL.Settings.IndexSources"}}</legend>
+    <p>{{localize "FVTTJSONSPELL.Settings.CandidateCount" count=candidateCount}}</p>
+    <h4>{{localize "FVTTJSONSPELL.Settings.Packages"}}</h4>
+    <ul>{{#each packages}}<li><code>{{packageId}}</code> {{version}} —
+      {{localize "FVTTJSONSPELL.Settings.RulesCounts" total=spellCount count2024=rules2024Count count2014=rules2014Count unknown=unknownRulesCount}}
+    </li>{{/each}}</ul>
+    <h4>{{localize "FVTTJSONSPELL.Settings.Packs"}}</h4>
+    <ul>{{#each packs}}<li><code>{{packageId}} / {{packId}}</code> {{packageVersion}} —
+      {{localize "FVTTJSONSPELL.Settings.RulesCounts" total=spellCount count2024=rules2024Count count2014=rules2014Count unknown=unknownRulesCount}}
+    </li>{{/each}}</ul>
+    <p>{{localize "FVTTJSONSPELL.Settings.DiagnosticCount" count=diagnosticCount}}</p>
+    {{#if sourceDiagnostics.length}}<h4>{{localize "FVTTJSONSPELL.Settings.Diagnostics"}}</h4><ul>
+      {{#each sourceDiagnostics}}<li class="fvtt-json-generator-spell-resolver-break"><code>{{code}}</code> <code>{{pack}}</code> <code>{{path}}</code> — {{message}} {{#if blocking}}({{localize "FVTTJSONSPELL.Settings.Blocking"}}){{/if}}</li>{{/each}}
+    </ul>{{/if}}
+    {{#if rebuildFailed}}<p class="notification error">{{localize "FVTTJSONSPELL.Settings.RebuildFailed"}}</p>{{/if}}
+    {{#if rebuildBlocked}}<p class="notification error">{{localize "FVTTJSONSPELL.Settings.RebuildBlocked"}}</p>{{/if}}
+    <button type="button" data-action="rebuildIndex" {{#unless canRebuild}}disabled{{/unless}}><i class="fa-solid fa-rotate"></i> {{localize "FVTTJSONSPELL.Settings.Rebuild"}}</button>
+  </fieldset>
+</section>
