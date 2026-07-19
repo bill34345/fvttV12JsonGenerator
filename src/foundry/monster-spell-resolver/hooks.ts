@@ -683,7 +683,7 @@ function validateSelectedSpellFacts(
     throw new SelectedSpellValidationError(selection.logicalRefKey, `Selected Spell is no longer bound to its indexed candidate and manifest ref: ${selection.uuid}`);
   }
   const source = documentSource(document);
-  const system = isRecord(document?.system) ? document.system : (isRecord(source.system) ? source.system : {});
+  const system = isRecord(source.system) ? source.system : (isRecord(document?.system) ? document.system : {});
   const sourceData = isRecord(system.source) ? system.source : {};
   const full: Pick<SpellCandidateMetadata, 'name' | 'identifier' | 'rules' | 'sourceBook' | 'level' | 'school'> = {
     name: typeof document.name === 'string' ? document.name : String(source.name ?? ''),

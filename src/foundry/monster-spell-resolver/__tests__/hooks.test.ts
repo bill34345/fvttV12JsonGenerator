@@ -651,6 +651,31 @@ describe('Actor-level resolve pipeline', () => {
     expect(fixture.target.updateCalls).toEqual([]);
   });
 
+  test('validates fetched Spell facts against raw source data when dnd5e prepared data derives a source book', async () => {
+    const fixture = serviceFixture();
+    const runtime = fixture.dependencies.getRuntime();
+    delete runtime.sourceIndex.candidates[0].sourceBook;
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.dependencies.fetchSelectedDocument = async (uuid: string) => ({
+      documentName: 'Item', type: 'spell', uuid, name: 'Mage Armor',
+      system: {
+        identifier: 'mage-armor', source: { rules: '2024', book: 'SRD 5.2' }, level: 1, school: 'abj',
+      },
+      toObject: () => ({
+        name: 'Mage Armor', type: 'spell',
+        system: {
+          identifier: 'mage-armor', source: { rules: '2024', book: '' }, level: 1, school: 'abj',
+        },
+      }),
+    });
+
+    await createResolverActorService(fixture.dependencies).processActor(fixture.target);
+
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.review).toBe(0);
+    expect(fixture.calls.notifications.flat().join(' ')).not.toContain('changed after indexing');
+  });
+
   test('requires exact selected document UUID and fails closed on malformed sourcePriority', async () => {
     const missingUuid = serviceFixture({ fetchSelectedDocument: async () => ({ documentName: 'Item', type: 'spell' }) });
     const service = createResolverActorService(missingUuid.dependencies);
