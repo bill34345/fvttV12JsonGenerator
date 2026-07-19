@@ -1,0 +1,1253 @@
+{
+  "name": "鼠神邪术师 (Warlock of the Rat God)",
+  "type": "npc",
+  "img": "",
+  "system": {
+    "currency": {
+      "pp": 0,
+      "gp": 0,
+      "ep": 0,
+      "sp": 0,
+      "cp": 0
+    },
+    "abilities": {
+      "str": {
+        "value": 7,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "dex": {
+        "value": 14,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "con": {
+        "value": 13,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "int": {
+        "value": 13,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "wis": {
+        "value": 11,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      },
+      "cha": {
+        "value": 15,
+        "proficient": 0,
+        "max": null,
+        "bonuses": {
+          "check": "",
+          "save": ""
+        },
+        "check": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        },
+        "save": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          }
+        }
+      }
+    },
+    "bonuses": {
+      "mwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rwak": {
+        "attack": "",
+        "damage": ""
+      },
+      "msak": {
+        "attack": "",
+        "damage": ""
+      },
+      "rsak": {
+        "attack": "",
+        "damage": ""
+      },
+      "abilities": {
+        "check": "",
+        "save": "",
+        "skill": ""
+      },
+      "spell": {
+        "dc": ""
+      }
+    },
+    "skills": {
+      "acr": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ani": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "arc": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ath": {
+        "ability": "str",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "dec": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 1,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "his": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ins": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "itm": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "inv": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "med": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "nat": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prc": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "prf": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "per": {
+        "ability": "cha",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "rel": {
+        "ability": "int",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "slt": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "ste": {
+        "ability": "dex",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 1,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "sur": {
+        "ability": "wis",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "bonuses": {
+          "check": "",
+          "passive": ""
+        }
+      },
+      "value": []
+    },
+    "tools": {},
+    "spells": {
+      "spell1": {
+        "value": 0,
+        "override": null
+      },
+      "spell2": {
+        "value": 0,
+        "override": null
+      },
+      "spell3": {
+        "value": 0,
+        "override": null
+      },
+      "spell4": {
+        "value": 0,
+        "override": null
+      },
+      "spell5": {
+        "value": 0,
+        "override": null
+      },
+      "spell6": {
+        "value": 0,
+        "override": null
+      },
+      "spell7": {
+        "value": 0,
+        "override": null
+      },
+      "spell8": {
+        "value": 0,
+        "override": null
+      },
+      "spell9": {
+        "value": 0,
+        "override": null
+      },
+      "pact": {
+        "value": 0,
+        "override": null
+      }
+    },
+    "attributes": {
+      "init": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonus": "@prof * 2"
+      },
+      "movement": {
+        "walk": 30,
+        "fly": null,
+        "swim": 30,
+        "climb": 30,
+        "burrow": null,
+        "hover": false,
+        "units": "ft"
+      },
+      "attunement": {
+        "max": 3
+      },
+      "senses": {
+        "ranges": {
+          "darkvision": 60,
+          "blindsight": 0,
+          "tremorsense": 0,
+          "truesight": 0
+        },
+        "special": "",
+        "units": "ft"
+      },
+      "spellcasting": "",
+      "exhaustion": 0,
+      "concentration": {
+        "ability": "",
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "bonuses": {
+          "save": ""
+        },
+        "limit": 1
+      },
+      "ac": {
+        "flat": 12,
+        "calc": "flat"
+      },
+      "hd": {
+        "spent": 0
+      },
+      "hp": {
+        "value": 27,
+        "max": 27,
+        "temp": null,
+        "tempmax": null,
+        "formula": "6d6 + 6"
+      },
+      "death": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "success": 0,
+        "failure": 0,
+        "bonuses": {
+          "save": ""
+        }
+      },
+      "spell": {
+        "level": 0
+      },
+      "loyalty": {
+        "value": null
+      },
+      "prof": 2
+    },
+    "details": {
+      "biography": {
+        "value": "<ul><li>“倘若我们奉上一切亮晶晶之物，鼠神大人就会降临，并帮助我们！我们会得到食物！我们能吃！很吃个够！吃数不胜数的食物！我们会把这个世界吃干抹净！整片大地！没错！没错！没错！”</li><li>许多鼠怪都崇拜着一个被称为“鼠神Rat God”的邪魔存在。这位“鼠神”对那些最狡猾也最聪明的鼠怪发出耳畔低语，通过签订魔能契约赐予它们力量。而离谱的是，鼠怪们根本对祂一无所知，所以它们创造了不少传说与寓言来证明祂曾创下过伟业。</li><li>护甲等级：12（有法师护甲mage armor时15）</li></ul>",
+        "public": ""
+      },
+      "alignment": "混乱邪恶",
+      "ideal": "",
+      "bond": "",
+      "flaw": "",
+      "race": null,
+      "type": {
+        "value": "怪兽"
+      },
+      "cr": 2,
+      "habitat": {
+        "value": [],
+        "custom": ""
+      },
+      "treasure": {
+        "value": []
+      },
+      "spellLevel": 0,
+      "xp": {
+        "value": 450
+      }
+    },
+    "resources": {
+      "legact": {
+        "max": 0,
+        "spent": 0
+      },
+      "legres": {
+        "max": 0,
+        "spent": 0
+      },
+      "lair": {
+        "value": false,
+        "initiative": null,
+        "inside": false
+      }
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "traits": {
+      "size": "sm",
+      "di": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dr": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dv": {
+        "value": [],
+        "custom": "",
+        "bypasses": []
+      },
+      "dm": {
+        "amount": {},
+        "bypasses": []
+      },
+      "ci": {
+        "value": [],
+        "custom": ""
+      },
+      "languages": {
+        "value": [
+          "common"
+        ],
+        "custom": ""
+      },
+      "important": false
+    }
+  },
+  "prototypeToken": {
+    "name": "鼠神邪术师 (Warlock of the Rat God)",
+    "displayName": 0,
+    "actorLink": false,
+    "appendNumber": false,
+    "prependAdjective": false,
+    "width": 1,
+    "height": 1,
+    "texture": {
+      "src": "",
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "offsetX": 0,
+      "offsetY": 0,
+      "fit": "contain",
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0,
+      "tint": "#ffffff",
+      "alphaThreshold": 0.75
+    },
+    "lockRotation": true,
+    "rotation": 0,
+    "alpha": 1,
+    "disposition": -1,
+    "displayBars": 0,
+    "bar1": {
+      "attribute": "attributes.hp"
+    },
+    "bar2": {
+      "attribute": null
+    },
+    "light": {
+      "negative": false,
+      "priority": 0,
+      "alpha": 0.5,
+      "angle": 360,
+      "bright": 0,
+      "color": null,
+      "coloration": 1,
+      "dim": 0,
+      "attenuation": 0.5,
+      "luminosity": 0.5,
+      "saturation": 0,
+      "contrast": 0,
+      "shadows": 0,
+      "animation": {
+        "type": null,
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      },
+      "darkness": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    "sight": {
+      "enabled": false,
+      "range": 0,
+      "angle": 360,
+      "visionMode": "basic",
+      "color": null,
+      "attenuation": 0.1,
+      "brightness": 0,
+      "saturation": 0,
+      "contrast": 0
+    },
+    "detectionModes": [],
+    "occludable": {
+      "radius": 0
+    },
+    "ring": {
+      "enabled": true,
+      "colors": {
+        "ring": null,
+        "background": null
+      },
+      "effects": 1,
+      "subject": {
+        "scale": 2,
+        "texture": null
+      }
+    },
+    "flags": {},
+    "randomImg": false,
+    "hexagonalShape": 0
+  },
+  "items": [
+    {
+      "name": "天生施法 (Innate Spellcasting)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>天生施法Innate Spellcasting。邪术师的天生施法属性为魅力，他可以天生性的施展以下法术（法术豁免DC12，法术攻击命中加值+4），且无需材料成分：</li><li>随意：魔能爆eldritch blast（2条射线），法师护甲mage armor（仅自身），次级幻象minor illusion，奇术thaumaturgy</li><li>每项1/日：卜筮术augury，燃烧之手burning hands，动物咒唤术conjure animals（仅限巨鼠Giant Rat），妖火faerie fire，隐形术invisibility，迷踪步misty step</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activities": {
+          "dnd5eactivityf7a": {
+            "_id": "dnd5eactivityf7a",
+            "type": "utility",
+            "description": {
+              "chatFlavor": "天生施法Innate Spellcasting。邪术师的天生施法属性为魅力，他可以天生性的施展以下法术（法术豁免DC12，法术攻击命中加值+4），且无需材料成分：\n\n随意：魔能爆eldritch blast（2条射线），法师护甲mage armor（仅自身），次级幻象minor illusion，奇术thaumaturgy\n\n每项1/日：卜筮术augury，燃烧之手burning hands，动物咒唤术conjure animals（仅限巨鼠Giant Rat），妖火faerie fire，隐形术invisibility，迷踪步misty step"
+            },
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {},
+          "spellcastingFeatureKey": "innate-spellcasting"
+        },
+        "fvtt-json-generator-spell-resolver": {
+          "featureItemKey": "innate-spellcasting",
+          "groupId": "innate-spellcasting"
+        }
+      },
+      "_stats": {
+        "coreVersion": "14.361",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3"
+      }
+    },
+    {
+      "name": "敏锐嗅觉 (Keen Smell)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>鼠怪依赖嗅觉所进行的感知（察觉）检定具有优势。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activities": {
+          "dnd5eactivityd7e": {
+            "_id": "dnd5eactivityd7e",
+            "type": "utility",
+            "description": {
+              "chatFlavor": "鼠怪依赖嗅觉所进行的感知（察觉）检定具有优势。"
+            },
+            "activation": {
+              "type": "",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "特性",
+          "actionSection": "特性"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      },
+      "_stats": {
+        "coreVersion": "14.361",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3"
+      }
+    },
+    {
+      "name": "潜伏者 (Skulker)",
+      "type": "feat",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>在每个鼠怪自己的回合中，它都可以用附赠动作执行躲藏动作。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activities": {
+          "dnd5eactivity573": {
+            "_id": "dnd5eactivity573",
+            "type": "utility",
+            "description": {
+              "chatFlavor": "在每个鼠怪自己的回合中，它都可以用附赠动作执行躲藏动作。"
+            },
+            "activation": {
+              "type": "bonus",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "monster",
+          "subtype": ""
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "附赠动作",
+          "actionSection": "附赠动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      },
+      "_stats": {
+        "coreVersion": "14.361",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3"
+      }
+    },
+    {
+      "name": "啃咬 (Bite)",
+      "type": "weapon",
+      "img": "icons/svg/sword.svg",
+      "system": {
+        "description": {
+          "value": "<ul><li>近战武器攻击：命中+4，触及5尺，单一目标。命中：4（1d4+2）穿刺伤害。</li></ul>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Imported"
+        },
+        "activities": {
+          "dnd5eactivityb60": {
+            "_id": "dnd5eactivityb60",
+            "type": "attack",
+            "attack": {
+              "ability": "",
+              "bonus": "4",
+              "flat": true,
+              "type": {
+                "value": "mwak",
+                "classification": "weapon"
+              }
+            },
+            "damage": {
+              "parts": [
+                {
+                  "number": 1,
+                  "denomination": 4,
+                  "bonus": "2",
+                  "types": [
+                    "piercing"
+                  ],
+                  "custom": {
+                    "enabled": false,
+                    "formula": ""
+                  },
+                  "scaling": {
+                    "mode": "whole",
+                    "number": 1,
+                    "formula": ""
+                  }
+                }
+              ],
+              "includeBase": true
+            },
+            "range": {
+              "override": false,
+              "value": null,
+              "long": null,
+              "reach": 5,
+              "units": "ft",
+              "special": ""
+            },
+            "target": {
+              "override": false,
+              "prompt": true,
+              "template": {
+                "count": "",
+                "contiguous": false,
+                "type": "",
+                "size": "",
+                "width": "",
+                "height": "",
+                "units": "ft"
+              },
+              "affects": {
+                "count": "",
+                "type": "",
+                "choice": false,
+                "special": ""
+              }
+            },
+            "description": {
+              "chatFlavor": "近战武器攻击：命中+4，触及5尺，单一目标。命中：4（1d4+2）穿刺伤害。"
+            },
+            "activation": {
+              "type": "action",
+              "value": null,
+              "override": false,
+              "condition": ""
+            }
+          }
+        },
+        "type": {
+          "value": "natural",
+          "classification": "weapon"
+        },
+        "equipped": true,
+        "range": {
+          "value": null,
+          "long": null,
+          "reach": 5,
+          "units": "ft"
+        }
+      },
+      "effects": [],
+      "flags": {
+        "tidy5e-sheet": {
+          "section": "动作",
+          "actionSection": "动作"
+        },
+        "fvttJsonGenerator": {
+          "effectHints": {}
+        }
+      },
+      "_stats": {
+        "coreVersion": "14.361",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3"
+      }
+    }
+  ],
+  "effects": [],
+  "folder": null,
+  "flags": {
+    "fvtt-json-generator-spell-resolver": {
+      "spellManifest": {
+        "schemaVersion": 1,
+        "manifestId": "intake-55dc6bc354df0709-warlock-of-the-rat-god-innate-spellcasting-448",
+        "sourceSha256": "55dc6bc354df07095308c7c75bf17cf3a09e72c96e8d38141714007c750dcdc0",
+        "rulesPreference": "2024",
+        "spellcastingGroups": [
+          {
+            "groupId": "innate-spellcasting",
+            "featureItemKey": "innate-spellcasting",
+            "ability": "cha",
+            "saveDc": 12,
+            "attackBonus": 4,
+            "spellRefs": [
+              {
+                "refId": "eldritch-blast",
+                "identifier": "eldritch blast",
+                "originalName": "魔能爆eldritch blast",
+                "englishName": "eldritch blast",
+                "chineseName": "魔能爆",
+                "aliases": [],
+                "method": "at-will",
+                "ignoresMaterialComponents": true,
+                "restrictions": [
+                  {
+                    "kind": "other",
+                    "text": "2条射线",
+                    "value": "2条射线",
+                    "evidence": [
+                      {
+                        "start": 552,
+                        "end": 556,
+                        "quote": "2条射线"
+                      }
+                    ]
+                  }
+                ],
+                "evidence": [
+                  {
+                    "start": 534,
+                    "end": 551,
+                    "quote": "魔能爆eldritch blast"
+                  }
+                ]
+              },
+              {
+                "refId": "mage-armor",
+                "identifier": "mage armor",
+                "originalName": "法师护甲mage armor",
+                "englishName": "mage armor",
+                "chineseName": "法师护甲",
+                "aliases": [],
+                "method": "at-will",
+                "ignoresMaterialComponents": true,
+                "restrictions": [
+                  {
+                    "kind": "target",
+                    "text": "仅自身",
+                    "value": "仅自身",
+                    "evidence": [
+                      {
+                        "start": 573,
+                        "end": 576,
+                        "quote": "仅自身"
+                      }
+                    ]
+                  }
+                ],
+                "evidence": [
+                  {
+                    "start": 558,
+                    "end": 572,
+                    "quote": "法师护甲mage armor"
+                  }
+                ]
+              },
+              {
+                "refId": "minor-illusion",
+                "identifier": "minor illusion",
+                "originalName": "次级幻象minor illusion",
+                "englishName": "minor illusion",
+                "chineseName": "次级幻象",
+                "aliases": [],
+                "method": "at-will",
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 578,
+                    "end": 596,
+                    "quote": "次级幻象minor illusion"
+                  }
+                ]
+              },
+              {
+                "refId": "thaumaturgy",
+                "identifier": "thaumaturgy",
+                "originalName": "奇术thaumaturgy",
+                "englishName": "thaumaturgy",
+                "chineseName": "奇术",
+                "aliases": [],
+                "method": "at-will",
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 597,
+                    "end": 610,
+                    "quote": "奇术thaumaturgy"
+                  }
+                ]
+              },
+              {
+                "refId": "augury",
+                "identifier": "augury",
+                "originalName": "卜筮术augury",
+                "englishName": "augury",
+                "chineseName": "卜筮术",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 618,
+                    "end": 627,
+                    "quote": "卜筮术augury"
+                  }
+                ]
+              },
+              {
+                "refId": "burning-hands",
+                "identifier": "burning hands",
+                "originalName": "燃烧之手burning hands",
+                "englishName": "burning hands",
+                "chineseName": "燃烧之手",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 628,
+                    "end": 645,
+                    "quote": "燃烧之手burning hands"
+                  }
+                ]
+              },
+              {
+                "refId": "conjure-animals",
+                "identifier": "conjure animals",
+                "originalName": "动物咒唤术conjure animals",
+                "englishName": "conjure animals",
+                "chineseName": "动物咒唤术",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [
+                  {
+                    "kind": "summoning",
+                    "text": "仅限巨鼠Giant Rat",
+                    "value": "仅限巨鼠Giant Rat",
+                    "evidence": [
+                      {
+                        "start": 667,
+                        "end": 680,
+                        "quote": "仅限巨鼠Giant Rat"
+                      }
+                    ]
+                  }
+                ],
+                "evidence": [
+                  {
+                    "start": 646,
+                    "end": 666,
+                    "quote": "动物咒唤术conjure animals"
+                  }
+                ]
+              },
+              {
+                "refId": "faerie-fire",
+                "identifier": "faerie fire",
+                "originalName": "妖火faerie fire",
+                "englishName": "faerie fire",
+                "chineseName": "妖火",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 682,
+                    "end": 695,
+                    "quote": "妖火faerie fire"
+                  }
+                ]
+              },
+              {
+                "refId": "invisibility",
+                "identifier": "invisibility",
+                "originalName": "隐形术invisibility",
+                "englishName": "invisibility",
+                "chineseName": "隐形术",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 696,
+                    "end": 711,
+                    "quote": "隐形术invisibility"
+                  }
+                ]
+              },
+              {
+                "refId": "misty-step",
+                "identifier": "misty step",
+                "originalName": "迷踪步misty step",
+                "englishName": "misty step",
+                "chineseName": "迷踪步",
+                "aliases": [],
+                "method": "innate",
+                "uses": {
+                  "value": 1,
+                  "recovery": "day",
+                  "shared": false
+                },
+                "ignoresMaterialComponents": true,
+                "restrictions": [],
+                "evidence": [
+                  {
+                    "start": 712,
+                    "end": 725,
+                    "quote": "迷踪步misty step"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "spellResolution": {
+        "status": "pending",
+        "manifestHash": "ba9c849d19d17b8afa0716b3c352f019a00d04be3bf3b28675d4e2a564254eeb"
+      }
+    }
+  },
+  "_stats": {
+    "coreVersion": "14.361",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.3",
+    "createdTime": 1784438779582,
+    "modifiedTime": 1784438779582
+  }
+}
