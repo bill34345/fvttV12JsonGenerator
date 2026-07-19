@@ -134,9 +134,19 @@ function validateCreature(
     finding('MISSING_CREATURE', '/creature', 'creature must be an object.', 'schema');
     return;
   }
-  if (!creature.identity?.name?.trim()) finding('MISSING_REQUIRED_FIELD', '/creature/identity/name', 'Monster name is required.', 'schema');
+  if (typeof creature.identity?.name !== 'string' || !creature.identity.name.trim()) {
+    finding('MISSING_REQUIRED_FIELD', '/creature/identity/name', 'Monster name is required.', 'schema');
+  }
   if (!SIZES.has(String(creature.identity?.size))) finding('INVALID_SIZE', '/creature/identity/size', 'Monster size is missing or unsupported.', 'schema');
-  if (!creature.identity?.creatureType?.trim()) finding('MISSING_REQUIRED_FIELD', '/creature/identity/creatureType', 'Creature type is required.', 'schema');
+  if (typeof creature.identity?.creatureType !== 'string' || !creature.identity.creatureType.trim()) {
+    finding('MISSING_REQUIRED_FIELD', '/creature/identity/creatureType', 'Creature type is required.', 'schema');
+  }
+  if (creature.biography != null && typeof creature.biography !== 'string') {
+    finding('INVALID_BIOGRAPHY', '/creature/biography', 'Biography must be a string when present.', 'schema');
+  }
+  if (creature.languages?.custom != null && typeof creature.languages.custom !== 'string') {
+    finding('INVALID_LANGUAGE_CUSTOM', '/creature/languages/custom', 'Custom language text must be a string when present.', 'schema');
+  }
 
   for (const ability of ABILITIES) {
     const value = creature.abilities?.[ability];
@@ -168,14 +178,29 @@ function validateCreature(
     }
     const names = new Set<string>();
     features.forEach((feature, index) => {
-      if (!feature?.name?.trim()) finding('MISSING_FEATURE_NAME', `/creature/${section}/${index}/name`, 'Feature name is required.', 'schema');
-      if (!feature?.description?.trim()) finding('MISSING_FEATURE_DESCRIPTION', `/creature/${section}/${index}/description`, 'Feature description is required.', 'schema');
-      const normalized = feature?.name?.trim().toLowerCase();
+      if (typeof feature?.name !== 'string' || !feature.name.trim()) {
+        finding('MISSING_FEATURE_NAME', `/creature/${section}/${index}/name`, 'Feature name is required.', 'schema');
+      }
+      if (typeof feature?.description !== 'string' || !feature.description.trim()) {
+        finding('MISSING_FEATURE_DESCRIPTION', `/creature/${section}/${index}/description`, 'Feature description is required.', 'schema');
+      }
+      const normalized = typeof feature?.name === 'string' ? feature.name.trim().toLowerCase() : '';
       if (normalized && names.has(normalized)) finding('DUPLICATE_FEATURE', `/creature/${section}/${index}/name`, `Duplicate feature name: ${feature.name}`, 'semantic');
       if (normalized) names.add(normalized);
-      feature?.damage?.forEach((part, damageIndex) => {
-        if (!isDiceFormula(part.formula)) finding('INVALID_DICE_FORMULA', `/creature/${section}/${index}/damage/${damageIndex}/formula`, `Invalid damage formula: ${part.formula}`, 'schema');
-      });
+      if (feature?.damage !== undefined && !Array.isArray(feature.damage)) {
+        finding('INVALID_DAMAGE', `/creature/${section}/${index}/damage`, 'Feature damage must be an array when present.', 'schema');
+      } else if (Array.isArray(feature?.damage)) {
+        feature.damage.forEach((part, damageIndex) => {
+          const partPath = `/creature/${section}/${index}/damage/${damageIndex}`;
+          if (!isRecord(part)) {
+            finding('INVALID_DAMAGE_PART', partPath, 'Each damage entry must be an object.', 'schema');
+            return;
+          }
+          if (typeof part.formula !== 'string' || !isDiceFormula(part.formula)) {
+            finding('INVALID_DICE_FORMULA', `${partPath}/formula`, 'Damage formula must be a valid dice-formula string.', 'schema');
+          }
+        });
+      }
     });
   }
 }
@@ -386,6 +411,7 @@ function validateSpellcasting(
     if (Array.isArray(group.usageGroups)) {
       group.usageGroups.forEach((usageGroup, usageIndex) => {
         const usagePath = `${path}/usageGroups/${usageIndex}`;
+        validateUsageEvidenceWithinGroup(source, group, usageGroup, usagePath, finding);
         validateSpellUsageGroup(source, usageGroup, usagePath, finding);
         if (!isRecord(usageGroup) || !Array.isArray(usageGroup.spellRefs)) return;
         usageGroup.spellRefs.forEach((ref, refIndex) => {
@@ -434,6 +460,37 @@ function validateSpellcasting(
       );
     }
   }
+}
+
+function validateUsageEvidenceWithinGroup(
+  source: string,
+  group: CanonicalSpellcastingGroup,
+  usageGroup: CanonicalSpellUsageGroup,
+  path: string,
+  finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+): void {
+  const verifiedGroupEvidence = Array.isArray(group.evidence)
+    ? group.evidence.filter((ref) => isValidEvidenceShape(ref)
+      && typeof group.description === 'string'
+      && ref.quote === group.description
+      && source.slice(ref.start, ref.end) === ref.quote)
+    : [];
+  if (!Array.isArray(usageGroup?.evidence)) return;
+  usageGroup.evidence.forEach((ref, index) => {
+    if (!isValidEvidenceShape(ref)) return;
+    const contained = verifiedGroupEvidence.some((groupRef) => (
+      ref.start >= groupRef.start && ref.end <= groupRef.end
+    ));
+    if (!contained) {
+      finding(
+        'SPELL_USAGE_OUTSIDE_GROUP',
+        `${path}/evidence/${index}`,
+        'Usage grant evidence must be fully contained in the exact complete spellcasting group description evidence.',
+        'evidence',
+        [ref],
+      );
+    }
+  });
 }
 
 function validateSpellcastingGroupFields(

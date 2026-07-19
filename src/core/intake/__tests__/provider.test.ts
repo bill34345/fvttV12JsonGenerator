@@ -75,7 +75,8 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v4');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v12');
+    expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
     expect(prompt).toContain('partition the full candidate range');
@@ -93,6 +94,27 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('minimal, self-contained grant span');
     expect(prompt).toContain('begin with the usage label after optional Markdown');
     expect(prompt).toContain('standalone list conjunctions');
+    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
+    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
+    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
+    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
+    expect(prompt).toContain('not a bare ability token or partial clause suffix');
+    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
+    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
+    expect(prompt).toContain('represented by spell or restriction evidence');
+    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
+    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
+    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
+    expect(prompt).toContain('must be disjoint');
+    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
+    expect(prompt).toContain('never encode absence as numeric 0');
+    expect(prompt).toContain('Biography, when present, must remain one JSON string');
+    expect(prompt).toContain('languages.custom is an optional JSON string, never an array or object');
+    expect(prompt).toContain('defenses use all four empty arrays');
+    expect(prompt).toContain('Do not emit an evidence claim or uncertainty solely because the source omits that optional list section');
+    expect(prompt).toContain('not an inferred immunity, resistance, skill, or language');
+    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
+    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
   });
 
   test('review prompt independently checks source action economy against IR and Actor activation', async () => {
@@ -106,7 +128,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v5');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v15');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
@@ -115,6 +137,36 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('usage evidence must cover the complete grant span');
     expect(prompt).toContain('visible description must match verified group evidence');
     expect(prompt).toContain('minimal and self-contained');
+    expect(prompt).toContain('null/undefined/omitted are equivalent');
+    expect(prompt).toContain('fixed diagnostic shape');
+    expect(prompt).toContain('never report those placeholders');
+    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
+    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
+    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
+    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
+    expect(prompt).toContain('not a bare ability token or partial clause suffix');
+    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
+    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
+    expect(prompt).toContain('represented by spell or restriction evidence');
+    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
+    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
+    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
+    expect(prompt).toContain('must be disjoint');
+    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
+    expect(prompt).toContain('never encode absence as numeric 0');
+    expect(prompt).toContain('Biography, when present, must remain one JSON string');
+    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
+    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
+    expect(prompt).toContain('must create exactly one visible feat item');
+    expect(prompt).toContain('two views of the same generated feature');
+    expect(prompt).toContain('Report duplication only if creature.traits independently contains an additional spellcasting feature');
+    expect(prompt).toContain('findings must contain only actual unresolved defects');
+    expect(prompt).toContain('Do not echo a dismissed candidate finding');
+    expect(prompt).toContain('法术清单 metadata plus that one generated feat is not two traits');
+    expect(prompt).toContain('defenses use all four empty arrays');
+    expect(prompt).toContain('Each finding must use exactly {id,code,path,message,blocking,evidence?}');
+    expect(prompt).toContain('/creature/attributes/ac claim and its exact evidence jointly support base AC and acNote');
+    expect(prompt).toContain('do not require a second acNote claim');
   });
 
   test('repair prompt preserves the same source-evidenced spellcasting boundary', async () => {
@@ -128,9 +180,39 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v2');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v12');
     expect(prompt).toContain('same structured spellcasting contract');
     expect(prompt).toContain('Do not invent');
+    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
+    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
+    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
+    expect(prompt).toContain('deterministic-validation stage may run before Markdown or Actor projection exists');
+    expect(prompt).toContain('Every EvidenceRef must use exact keys {start,end,quote}');
+    expect(prompt).toContain('quote must be non-empty and exactly equal source.slice(start,end)');
+    expect(prompt).toContain('absolute JavaScript UTF-16 offsets');
+    expect(prompt).toContain('Start from the supplied IR and change only paths implicated by the supplied findings');
+    expect(prompt).toContain('Preserve every unrelated valid field and EvidenceRef exactly');
+    expect(prompt).toContain('Never drop quote or fabricate quote text from offsets');
+    expect(prompt).toContain('keep a blocking uncertainty instead of claiming the IR is repaired');
+    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
+    expect(prompt).toContain('not a bare ability token or partial clause suffix');
+    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
+    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
+    expect(prompt).toContain('represented by spell or restriction evidence');
+    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
+    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
+    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
+    expect(prompt).toContain('must be disjoint');
+    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
+    expect(prompt).toContain('never encode absence as numeric 0');
+    expect(prompt).toContain('Biography, when present, must remain one JSON string');
+    expect(prompt).toContain('languages.custom is an optional JSON string, never an array or object');
+    expect(prompt).toContain('defenses use all four empty arrays');
+    expect(prompt).toContain('Do not emit an evidence claim or uncertainty solely because the source omits that optional list section');
+    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
+    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
+    expect(prompt).toContain('Remove or resolve finding-related process uncertainties once exact evidence is established');
+    expect(prompt).toContain('Preserve unrelated real source uncertainties');
   });
 
   test('retries retryable 429 once and audits without secrets', async () => {
@@ -157,6 +239,91 @@ describe('OpenAI-compatible monster intake provider', () => {
     await expect(provider.discover({ source: 'x', sourceSha256: 'h', chunkStart: 0, chunkEnd: 1 }))
       .rejects.toMatchObject({ code: 'invalid_response', retryable: false });
     expect(calls).toBe(1);
+  });
+
+  test('rejects a review finding that omits the required schema fields', async () => {
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{ severity: 'blocking', message: 'Unstructured reviewer prose.' }],
+    })));
+
+    await expect(provider.review({} as never)).rejects.toMatchObject({
+      code: 'invalid_response',
+      retryable: false,
+    });
+  });
+
+  test.each([
+    {
+      label: 'malformed evidence elements',
+      finding: {
+        id: 'bad-evidence', code: 'BAD_EVIDENCE', path: '/', message: 'Malformed evidence.', blocking: true,
+        evidence: [null, { start: '0', end: -1, quote: 42 }],
+      },
+    },
+    {
+      label: 'unknown finding key',
+      finding: {
+        id: 'extra', code: 'EXTRA', path: '/', message: 'Unexpected key.', blocking: true,
+        severity: 'blocking',
+      },
+    },
+    {
+      label: 'evidence range whose UTF-16 length differs from quote',
+      finding: {
+        id: 'length', code: 'LENGTH', path: '/', message: 'Length mismatch.', blocking: true,
+        evidence: [{ start: 0, end: 2, quote: 'x' }],
+      },
+    },
+  ])('rejects malformed structured review finding: $label', async ({ finding }) => {
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [finding],
+    })));
+
+    await expect(provider.review({} as never)).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  test.each([
+    {
+      label: 'revise with no findings',
+      payload: { schemaVersion: 1, verdict: 'revise', findings: [] },
+    },
+    {
+      label: 'accepted with a blocking finding',
+      payload: {
+        schemaVersion: 1,
+        verdict: 'accepted',
+        findings: [{ id: 'real', code: 'REAL', path: '/', message: 'Still blocking.', blocking: true }],
+      },
+    },
+  ])('rejects inconsistent review response: $label', async ({ payload }) => {
+    const provider = makeProvider(async () => response(200, JSON.stringify(payload)));
+    await expect(provider.review({} as never)).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  test.each([
+    {
+      label: 'revise with one structured blocking finding',
+      payload: {
+        schemaVersion: 1,
+        verdict: 'revise',
+        findings: [{ id: 'real', code: 'REAL', path: '/creature/ac', message: 'Actual drift.', blocking: true }],
+      },
+    },
+    {
+      label: 'accepted with one structured nonblocking warning',
+      payload: {
+        schemaVersion: 1,
+        verdict: 'accepted',
+        findings: [{ id: 'warning', code: 'WARNING', path: '/', message: 'Literal limitation.', blocking: false }],
+      },
+    },
+  ])('accepts consistent structured review response: $label', async ({ payload }) => {
+    const provider = makeProvider(async () => response(200, JSON.stringify(payload)));
+    await expect(provider.review({} as never)).resolves.toEqual(payload as any);
   });
 
   test('bounds timeout retries to two attempts', async () => {

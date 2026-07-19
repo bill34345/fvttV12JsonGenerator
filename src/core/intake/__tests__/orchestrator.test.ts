@@ -14,7 +14,7 @@ import type {
   ReviewRequest,
 } from '../types';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
-import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE, ratEvidence } from './fixtures/rat-warlock';
 
 class FakeProvider implements MonsterIntakeAiProvider {
   readonly providerName = 'fake';
@@ -24,6 +24,7 @@ class FakeProvider implements MonsterIntakeAiProvider {
   extractionCalls = 0;
   reviewCalls = 0;
   repairCalls = 0;
+  repairRequests: RepairRequest[] = [];
   reviewVerdicts: AiReviewResult['verdict'][] = ['accepted'];
 
   async discover(request: DiscoveryRequest): Promise<DiscoveryResult> {
@@ -37,7 +38,11 @@ class FakeProvider implements MonsterIntakeAiProvider {
     this.reviewCalls += 1;
     return { schemaVersion: 1, verdict, findings: verdict === 'accepted' ? [] : [{ id: 'review-revise', code: 'REVIEW_REVISE', path: '/creature', message: 'revise', blocking: true, origin: 'ai-review' }] };
   }
-  async repair(_request: RepairRequest): Promise<MonsterIntakeIR> { this.repairCalls += 1; return buildValidLurkerIr(); }
+  async repair(request: RepairRequest): Promise<MonsterIntakeIR> {
+    this.repairCalls += 1;
+    this.repairRequests.push(request);
+    return buildValidLurkerIr();
+  }
 }
 
 class RatWarlockProvider implements MonsterIntakeAiProvider {
@@ -68,6 +73,38 @@ class RatWarlockProvider implements MonsterIntakeAiProvider {
 function roots() {
   const root = mkdtempSync(join(tmpdir(), 'monster-intake-'));
   return { runRoot: join(root, 'runs'), vaultPath: join(root, 'vault') };
+}
+
+function buildDeterministicallyInvalidLurkerIr(): MonsterIntakeIR {
+  const ir = buildValidLurkerIr();
+  ir.claims = ir.claims.filter((claim) => claim.path !== '/creature/attributes/ac');
+  return ir;
+}
+
+function structuredSpellcastingEvidence(ir: MonsterIntakeIR): Array<{
+  category: 'group' | 'ability' | 'saveDc' | 'attackBonus' | 'componentWaiver' | 'usageGrant' | 'spellRef' | 'restriction';
+  ref: { start: number; end: number; quote: string };
+}> {
+  const evidence: ReturnType<typeof structuredSpellcastingEvidence> = [];
+  for (const group of ir.creature.spellcasting ?? []) {
+    for (const ref of group.evidence) evidence.push({ category: 'group', ref });
+    for (const ref of group.abilityEvidence) evidence.push({ category: 'ability', ref });
+    for (const ref of group.saveDcEvidence ?? []) evidence.push({ category: 'saveDc', ref });
+    for (const ref of group.attackBonusEvidence ?? []) evidence.push({ category: 'attackBonus', ref });
+    for (const waiver of group.componentWaivers) {
+      for (const ref of waiver.evidence) evidence.push({ category: 'componentWaiver', ref });
+    }
+    for (const usageGroup of group.usageGroups) {
+      for (const ref of usageGroup.evidence) evidence.push({ category: 'usageGrant', ref });
+      for (const spellRef of usageGroup.spellRefs) {
+        for (const ref of spellRef.evidence) evidence.push({ category: 'spellRef', ref });
+        for (const restriction of spellRef.restrictions) {
+          for (const ref of restriction.evidence) evidence.push({ category: 'restriction', ref });
+        }
+      }
+    }
+  }
+  return evidence;
 }
 
 describe('AI monster intake orchestrator', () => {
@@ -156,6 +193,27 @@ describe('AI monster intake orchestrator', () => {
     });
   });
 
+  test('repairs only the end offset when a short repeated quote starts at an exact occurrence', () => {
+    const source = 'Mage lore\nMage stat block';
+    const secondStart = source.lastIndexOf('Mage');
+    const ir = buildValidLurkerIr();
+    ir.claims[0]!.evidence[0] = {
+      start: secondStart,
+      end: secondStart + 1,
+      quote: 'Mage',
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'mage', label: 'Mage', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.claims[0]!.evidence[0]).toEqual({
+      start: secondStart,
+      end: secondStart + 'Mage'.length,
+      quote: 'Mage',
+    });
+  });
+
   test('anchors a repeated exact quote when one occurrence is clearly nearer despite large model offset drift', () => {
     const source = 'Repeated title\nintroductory narrative that is deliberately long\nRepeated title\nstat block';
     const secondStart = source.lastIndexOf('Repeated title');
@@ -181,13 +239,179 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.coverage[0]!.start).toBe(secondStart);
   });
 
+  test('re-anchors every nested Rat spellcasting evidence kind after provider offset drift', () => {
+    const ir = buildRatWarlockIr();
+    // Real provider JSON has no shared object identity between the group and its grouping claim.
+    ir.creature.spellcasting![0]!.evidence[0] = { ...ir.creature.spellcasting![0]!.evidence[0]! };
+    const before = structuredSpellcastingEvidence(ir);
+    expect(new Set(before.map(({ category }) => category))).toEqual(new Set([
+      'group', 'ability', 'saveDc', 'attackBonus', 'componentWaiver', 'usageGrant', 'spellRef', 'restriction',
+    ]));
+    for (const { ref } of before) {
+      ref.start += 7;
+      ref.end = ref.start + 1;
+    }
+    expect(before.every(({ ref }) => RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) !== ref.quote)).toBe(true);
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(structuredSpellcastingEvidence(anchored)
+      .filter(({ ref }) => RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) !== ref.quote)
+      .map(({ category, ref }) => `${category}:${ref.quote}`)).toEqual([]);
+  });
+
+  test('canonicalizes uniquely sourced spell identity and restriction evidence into disjoint child ranges', () => {
+    const ir = buildRatWarlockIr() as any;
+    const spell = ir.creature.spellcasting[0].usageGroups[0].spellRefs[0];
+    spell.evidence = [ratEvidence('魔能爆eldritch blast（2条射线）')];
+    spell.restrictions[0].evidence = [{ start: 999, end: 1000, quote: '2条射线' }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence).toEqual([
+      ratEvidence('魔能爆eldritch blast'),
+    ]);
+    expect(anchored.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.restrictions[0]!.evidence).toEqual([
+      ratEvidence('2条射线'),
+    ]);
+  });
+
+  test('canonicalizes a non-Rat English spell and limitation only when each literal is unique in its grant', () => {
+    const source = 'Innate Spellcasting.\nAt Will: Arc Bolt (self only)';
+    const ir = buildRatWarlockIr() as any;
+    const group = ir.creature.spellcasting[0];
+    group.evidence = [{ start: 0, end: source.length, quote: source }];
+    group.usageGroups = [{
+      usage: 'at-will',
+      evidence: [{ start: source.indexOf('At Will:'), end: source.length, quote: 'At Will: Arc Bolt (self only)' }],
+      spellRefs: [{
+        refId: 'arc-bolt', identifier: 'arc-bolt', originalName: 'Arc Bolt', englishName: 'Arc Bolt', aliases: [],
+        evidence: [{ start: 0, end: source.length, quote: source }],
+        restrictions: [{ kind: 'target', text: 'self only', evidence: [{ start: 0, end: 1, quote: 'x' }] }],
+      }],
+    }];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'arc-caster', label: 'Arc Caster', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    const ref = anchored.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!;
+    expect(ref.evidence).toEqual([{
+      start: source.indexOf('Arc Bolt'), end: source.indexOf('Arc Bolt') + 'Arc Bolt'.length, quote: 'Arc Bolt',
+    }]);
+    expect(ref.restrictions[0]!.evidence).toEqual([{
+      start: source.indexOf('self only'), end: source.indexOf('self only') + 'self only'.length, quote: 'self only',
+    }]);
+  });
+
+  test('does not guess between repeated long spell literals or rewrite confirmed resume evidence', () => {
+    const source = 'At Will: Magic Missile, Magic Missile';
+    const ir = buildRatWarlockIr() as any;
+    const group = ir.creature.spellcasting[0];
+    group.evidence = [{ start: 0, end: source.length, quote: source }];
+    const secondStart = source.lastIndexOf('Magic Missile');
+    const existing = { start: secondStart + 3, end: secondStart + 4, quote: 'Magic Missile' };
+    group.usageGroups = [{
+      usage: 'at-will', evidence: [{ start: 0, end: source.length, quote: source }],
+      spellRefs: [{
+        refId: 'magic-missile', identifier: 'magic-missile', originalName: 'Magic Missile', englishName: 'Magic Missile', aliases: [],
+        evidence: [existing], restrictions: [],
+      }],
+    }];
+    const candidate = { id: 'blink-caster', label: 'Blink Caster', start: 0, end: source.length, quote: source };
+
+    expect(anchorIrEvidence(source, candidate, ir).creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence)
+      .toEqual([existing]);
+
+    const uniqueSource = 'At Will: Blink';
+    const confirmed = structuredClone(ir);
+    confirmed.creature.spellcasting![0]!.evidence = [{ start: 0, end: uniqueSource.length, quote: uniqueSource }];
+    confirmed.creature.spellcasting![0]!.usageGroups[0]!.evidence = [{ start: 0, end: uniqueSource.length, quote: uniqueSource }];
+    const userEvidence = { start: 0, end: 7, quote: 'At Will' };
+    confirmed.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence = [userEvidence];
+    confirmed.creature.senses.blindsight = 0;
+    confirmed.creature.actions[0]!.attack!.range = 0;
+    const resumed = anchorIrEvidence(uniqueSource, {
+      id: 'confirmed', label: 'Confirmed', start: 0, end: uniqueSource.length, quote: uniqueSource,
+    }, confirmed, { canonicalizeModelSpellEvidence: false, normalizeAbsentOptionalZeroes: false });
+    expect(resumed.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence).toEqual([userEvidence]);
+    expect(resumed.creature.senses.blindsight).toBe(0);
+    expect(resumed.creature.actions[0]!.attack!.range).toBe(0);
+  });
+
+  test('anchors a short nested quote to its unique verified group scope even when the model points at an outside occurrence', () => {
+    const ir = buildRatWarlockIr();
+    const spellcastingStart = RAT_WARLOCK_SOURCE.indexOf('天生施法Innate Spellcasting');
+    const abilityStart = RAT_WARLOCK_SOURCE.indexOf('魅力', spellcastingStart);
+    const outsideAbilityStart = RAT_WARLOCK_SOURCE.indexOf('魅力');
+    expect(outsideAbilityStart).toBeLessThan(spellcastingStart);
+    ir.creature.spellcasting![0]!.abilityEvidence = [{
+      start: outsideAbilityStart, end: outsideAbilityStart + '魅力'.length, quote: '魅力',
+    }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.spellcasting![0]!.abilityEvidence[0]).toEqual({
+      start: abilityStart, end: abilityStart + '魅力'.length, quote: '魅力',
+    });
+  });
+
+  test('leaves a short nested quote invalid when it repeats inside its verified group scope', () => {
+    const ir = buildRatWarlockIr();
+    const firstPlusFour = RAT_WARLOCK_SOURCE.indexOf('+4');
+    const spellcastingPlusFour = RAT_WARLOCK_SOURCE.indexOf('+4', RAT_WARLOCK_SOURCE.indexOf('天生施法Innate Spellcasting'));
+    ir.creature.spellcasting![0]!.evidence = [{
+      start: firstPlusFour,
+      end: spellcastingPlusFour + '+4'.length,
+      quote: RAT_WARLOCK_SOURCE.slice(firstPlusFour, spellcastingPlusFour + '+4'.length),
+    }];
+    const reportedStart = spellcastingPlusFour - 2;
+    ir.creature.spellcasting![0]!.attackBonusEvidence = [{ start: reportedStart, end: reportedStart + 1, quote: '+4' }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.spellcasting![0]!.attackBonusEvidence![0]).toEqual({
+      start: reportedStart, end: reportedStart + 1, quote: '+4',
+    });
+  });
+
+  test('relocates exact usage evidence from an unrelated candidate location into its verified group scope', () => {
+    const ir = buildRatWarlockIr();
+    const usage = ir.creature.spellcasting![0]!.usageGroups[0]!;
+    const originalStart = usage.evidence[0]!.start;
+    const unrelated = `\n\nUnrelated feature.\n${usage.evidence[0]!.quote}`;
+    const source = `${RAT_WARLOCK_SOURCE}${unrelated}`;
+    const outsideStart = source.lastIndexOf(usage.evidence[0]!.quote);
+    usage.evidence = [{ start: outsideStart, end: outsideStart + usage.evidence[0]!.quote.length, quote: usage.evidence[0]!.quote }];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.spellcasting![0]!.usageGroups[0]!.evidence[0]!.start).toBe(originalStart);
+  });
+
   test('normalizes model-overloaded AC notes and feature activity types into stable IR fields', () => {
     const ir = buildValidLurkerIr();
     (ir.creature.attributes as unknown as { acKind: string }).acKind = '（有法师护甲时15）';
     (ir.creature.actions[1] as unknown as { activityType: string }).activityType = 'action';
     (ir.creature.traits[2] as unknown as { activityType: string }).activityType = 'bonus';
     ir.creature.languages.values = ['通用语'];
+    (ir.creature.languages as any).custom = [];
     ir.creature.actions[1]!.damage![0]!.type = '穿刺';
+    ir.creature.senses.blindsight = 0;
+    ir.creature.senses.tremorsense = 0;
+    ir.creature.senses.truesight = 0;
+    ir.creature.actions[1]!.attack!.range = 0;
+    ir.creature.actions[1]!.attack!.longRange = 0;
 
     const anchored = anchorIrEvidence(LURKER_SOURCE, {
       id: 'lurker',
@@ -203,7 +427,66 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.creature.traits[2]!.activityType).toBe('utility');
     expect(anchored.creature.traits[2]!.activationType).toBe('bonus');
     expect(anchored.creature.languages.values).toEqual(['common']);
+    expect(anchored.creature.languages.custom).toBeUndefined();
     expect(anchored.creature.actions[1]!.damage![0]!.type).toBe('piercing');
+    expect(anchored.creature.senses.blindsight).toBeUndefined();
+    expect(anchored.creature.senses.tremorsense).toBeUndefined();
+    expect(anchored.creature.senses.truesight).toBeUndefined();
+    expect(anchored.creature.actions[1]!.attack!.range).toBeUndefined();
+    expect(anchored.creature.actions[1]!.attack!.longRange).toBeUndefined();
+  });
+
+  test('preserves explicit zero nullable distances from leaf claims across feature sections', () => {
+    const suffix = '\nSenses: blindsight 0 ft.\nNeedle. Ranged Weapon Attack. Range 0 ft. Long range 0 ft.\nSnap. Ranged Spell Attack. Range 0 ft.';
+    const source = `${LURKER_SOURCE}${suffix}`;
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.senses.blindsight = 0;
+    ir.creature.actions[1].attack.range = 0;
+    ir.creature.actions[1].attack.longRange = 0;
+    ir.creature.reactions.push({
+      name: 'Snap', description: 'Ranged Spell Attack. Range 0 ft.', activityType: 'attack', activationType: 'reaction',
+      attack: { type: 'rsak', toHit: 0, range: 0 }, damage: [],
+    });
+    const sensesQuote = 'Senses: blindsight 0 ft.';
+    const attackQuote = 'Needle. Ranged Weapon Attack. Range 0 ft. Long range 0 ft.';
+    const reactionQuote = 'Snap. Ranged Spell Attack. Range 0 ft.';
+    const evidence = (quote: string) => ({ start: source.indexOf(quote), end: source.indexOf(quote) + quote.length, quote });
+    ir.claims.push({ path: '/creature/senses/blindsight', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(sensesQuote)] });
+    ir.claims.push({ path: '/creature/actions/1/attack/range', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(attackQuote)] });
+    ir.claims.push({ path: '/creature/actions/1/attack/longRange', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(attackQuote)] });
+    ir.claims.push({ path: '/creature/reactions/0/attack/range', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(reactionQuote)] });
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'zero-caster', label: 'Zero Caster', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.senses.blindsight).toBe(0);
+    expect(anchored.creature.actions[1]!.attack!.range).toBe(0);
+    expect(anchored.creature.actions[1]!.attack!.longRange).toBe(0);
+    expect(anchored.creature.reactions[0]!.attack!.range).toBe(0);
+  });
+
+  test.each([
+    { field: 'blindsight', sourceText: 'Senses: blindsight 0.5 ft.', path: '/creature/senses/blindsight' },
+    { field: 'range', sourceText: 'Needle. Range 05 ft.', path: '/creature/actions/1/attack/range' },
+    { field: 'longRange', sourceText: 'Needle. Long range 0-30 ft.', path: '/creature/actions/1/attack/longRange' },
+  ])('does not preserve zero from nonzero numeric prefix evidence: $sourceText', ({ field, sourceText, path }) => {
+    const source = `${LURKER_SOURCE}\n${sourceText}`;
+    const ir = buildValidLurkerIr() as any;
+    if (field === 'blindsight') ir.creature.senses.blindsight = 0;
+    else ir.creature.actions[1].attack[field] = 0;
+    const start = source.indexOf(sourceText);
+    ir.claims.push({
+      path, valueKind: 'explicit', confidence: 'high', value: 0,
+      evidence: [{ start, end: start + sourceText.length, quote: sourceText }],
+    });
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'numeric-prefix', label: 'Numeric Prefix', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    if (field === 'blindsight') expect(anchored.creature.senses.blindsight).toBeUndefined();
+    else expect((anchored.creature.actions[1]!.attack as any)[field]).toBeUndefined();
   });
 
   test('drops only unanchorable whitespace coverage while preserving invalid mechanical coverage', () => {
@@ -232,6 +515,118 @@ describe('AI monster intake orchestrator', () => {
 
     expect(anchored.coverage.some((entry) => entry.quote === ' \n')).toBe(false);
     expect(anchored.coverage.some((entry) => entry.quote === 'WRONG!')).toBe(true);
+  });
+
+  test('removes a whole-source offset uncertainty only when exact evidence and coverage disprove it', () => {
+    const ir = buildRatWarlockIr();
+    ir.uncertainties = [{
+      id: 'offset-conflict', code: 'coverage-offset-conflict', path: '/coverage',
+      message: `Candidate end ${RAT_WARLOCK_SOURCE.length} conflicts with source length 999.`,
+      blocking: true, evidence: [ir.coverage.at(-1)!],
+    }];
+    const candidate = {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    };
+
+    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, ir).uncertainties).toEqual([]);
+    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, ir, {
+      removeDisprovedProcessUncertainties: false,
+    }).uncertainties).toHaveLength(1);
+
+    const whitespaceOnlyGap = structuredClone(ir);
+    whitespaceOnlyGap.coverage[0]!.end -= 3;
+    whitespaceOnlyGap.coverage[0]!.quote = RAT_WARLOCK_SOURCE.slice(
+      whitespaceOnlyGap.coverage[0]!.start,
+      whitespaceOnlyGap.coverage[0]!.end,
+    );
+    expect(RAT_WARLOCK_SOURCE.slice(
+      whitespaceOnlyGap.coverage[0]!.end,
+      whitespaceOnlyGap.coverage[1]!.start,
+    )).toMatch(/^\s+$/u);
+    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, whitespaceOnlyGap).uncertainties).toEqual([]);
+
+    const invalid = structuredClone(ir);
+    invalid.claims[0]!.evidence[0] = { start: 999, end: 1000, quote: '鼠' };
+    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, invalid).uncertainties).toHaveLength(1);
+
+    const uncoveredText = structuredClone(ir);
+    uncoveredText.coverage[1]!.start += 1;
+    uncoveredText.coverage[1]!.quote = RAT_WARLOCK_SOURCE.slice(
+      uncoveredText.coverage[1]!.start,
+      uncoveredText.coverage[1]!.end,
+    );
+    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, uncoveredText).uncertainties).toHaveLength(1);
+  });
+
+  test('keeps genuine semantic uncertainty even when whole-source evidence is exact', () => {
+    const ir = buildRatWarlockIr();
+    ir.uncertainties = [{
+      id: 'shared-use', code: 'AMBIGUOUS_SHARED_USE', path: '/creature/spellcasting/0/usageGroups',
+      message: 'The source is ambiguous about whether daily uses are shared.', blocking: true,
+      evidence: [ir.creature.spellcasting![0]!.usageGroups[1]!.evidence[0]!],
+    }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toHaveLength(1);
+    expect(anchored.uncertainties[0]!.code).toBe('AMBIGUOUS_SHARED_USE');
+  });
+
+  test('keeps semantic target-offset uncertainty despite exact whole-source evidence', () => {
+    const ir = buildRatWarlockIr();
+    ir.uncertainties = [{
+      id: 'target-offset', code: 'AMBIGUOUS_TARGET_OFFSET', path: '/creature/actions/0',
+      message: 'The target position is ambiguous because it may be offset from the caster.', blocking: true,
+      evidence: [ir.claims.find((claim) => claim.path === '/creature/actions/0')!.evidence[0]!],
+    }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toHaveLength(1);
+    expect(anchored.uncertainties[0]!.code).toBe('AMBIGUOUS_TARGET_OFFSET');
+  });
+
+  test.each([
+    { label: 'non-array evidence container', evidence: { start: 0, end: 1, quote: RAT_WARLOCK_SOURCE.slice(0, 1) } },
+    { label: 'empty evidence object', evidence: [{}] },
+    {
+      label: 'out-of-range empty quote',
+      evidence: [{ start: RAT_WARLOCK_SOURCE.length + 1, end: RAT_WARLOCK_SOURCE.length + 2, quote: '' }],
+    },
+  ])('keeps process uncertainty when IR contains $label', ({ evidence }) => {
+    const ir = buildRatWarlockIr() as any;
+    ir.uncertainties = [{
+      id: 'offset-conflict', code: 'coverage-offset-conflict', path: '/coverage',
+      message: 'Candidate end conflicts with source length.', blocking: true,
+      evidence: [ir.coverage.at(-1)],
+    }];
+    ir.claims[0].evidence = evidence;
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toHaveLength(1);
+  });
+
+  test('keeps process uncertainty when nested abilityEvidence is malformed', () => {
+    const ir = buildRatWarlockIr() as any;
+    ir.uncertainties = [{
+      id: 'offset-conflict', code: 'coverage-offset-conflict', path: '/coverage',
+      message: 'Candidate end conflicts with source length.', blocking: true,
+      evidence: [ir.coverage.at(-1)],
+    }];
+    ir.creature.spellcasting[0].abilityEvidence = [{}];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toHaveLength(1);
   });
 
   test('dry run validates and estimates without calling a provider or writing a bundle', async () => {
@@ -300,11 +695,13 @@ describe('AI monster intake orchestrator', () => {
 
   test('keeps spell resolution pending when deterministic validation blocks only an unrelated actor field', async () => {
     const provider = new RatWarlockProvider();
-    provider.extract = async () => {
+    const invalidIr = () => {
       const ir = buildRatWarlockIr() as any;
       ir.creature.identity.name = '';
       return ir;
     };
+    provider.extract = async () => invalidIr();
+    provider.repair = async () => invalidIr();
 
     const result = await runMonsterIntake({
       source: RAT_WARLOCK_SOURCE,
@@ -491,11 +888,13 @@ describe('AI monster intake orchestrator', () => {
 
   test('reports malformed caster intake as spell resolution needing review without crashing', async () => {
     const provider = new RatWarlockProvider();
-    provider.extract = async () => {
+    const invalidIr = () => {
       const ir = buildRatWarlockIr() as any;
       ir.creature.spellcasting = [null];
       return ir;
     };
+    provider.extract = async () => invalidIr();
+    provider.repair = async () => invalidIr();
 
     const result = await runMonsterIntake({
       source: RAT_WARLOCK_SOURCE,
@@ -518,6 +917,81 @@ describe('AI monster intake orchestrator', () => {
     expect(provider.reviewCalls).toBe(2);
     expect(provider.repairCalls).toBe(1);
     expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+  });
+
+  test('uses the single repair budget for initial deterministic blockers before rendering', async () => {
+    const provider = new FakeProvider();
+    provider.extract = async () => {
+      provider.extractionCalls += 1;
+      return buildDeterministicallyInvalidLurkerIr();
+    };
+
+    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
+
+    expect(result.status).toBe('succeeded');
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
+    expect(provider.repairRequests).toHaveLength(1);
+    expect(provider.repairRequests[0]).toMatchObject({
+      stage: 'deterministic-validation',
+      source: LURKER_SOURCE,
+      deterministicFindings: expect.arrayContaining([expect.objectContaining({
+        code: 'MISSING_REQUIRED_CLAIM', path: '/creature/attributes/ac', blocking: true,
+      })]),
+    });
+    expect(provider.repairRequests[0]).not.toHaveProperty('markdown');
+    expect(provider.repairRequests[0]).not.toHaveProperty('actorProjection');
+    expect(provider.repairRequests[0]).not.toHaveProperty('review');
+  });
+
+  test('returns needs_review without rendering when deterministic repair is still invalid', async () => {
+    const provider = new FakeProvider();
+    provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
+    provider.repair = async (request) => {
+      provider.repairCalls += 1;
+      provider.repairRequests.push(request);
+      return buildDeterministicallyInvalidLurkerIr();
+    };
+
+    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
+    const creature = result.creatures[0]!;
+
+    expect(result.status).toBe('needs_review');
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
+    expect(existsSync(join(creature.bundlePath, 'standard.md'))).toBe(false);
+    expect(existsSync(join(creature.bundlePath, 'candidate-actor.json'))).toBe(false);
+  });
+
+  test('does not make a second repair when deterministic repair is followed by reviewer revise', async () => {
+    const provider = new FakeProvider();
+    provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
+    provider.reviewVerdicts = ['revise'];
+
+    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
+    expect(provider.repairRequests).toHaveLength(1);
+    expect(provider.repairRequests[0]).toMatchObject({ stage: 'deterministic-validation' });
+  });
+
+  test('fails closed when the deterministic repair provider call fails', async () => {
+    const provider = new FakeProvider();
+    provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
+    provider.repair = async (request) => {
+      provider.repairCalls += 1;
+      provider.repairRequests.push(request);
+      throw new Error('repair provider unavailable');
+    };
+
+    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
+    const creature = result.creatures[0]!;
+
+    expect(result.status).toBe('failed');
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
+    expect(creature.findings).toContainEqual(expect.objectContaining({
+      code: 'PROVIDER_FAILURE', message: 'repair provider unavailable', blocking: true,
+    }));
+    expect(existsSync(join(creature.bundlePath, 'standard.md'))).toBe(false);
   });
 
   test('reuses identical promoted content but blocks a conflicting target', async () => {
@@ -561,6 +1035,88 @@ describe('AI monster intake orchestrator', () => {
     expect(JSON.parse(readFileSync(resumed.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
     expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.md'), 'utf-8')).toBe('existing conflicting markdown');
     expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.json'), 'utf-8')).toContain('existing actor');
+  });
+
+  test('does not use deterministic AI repair to overwrite a user-confirmed resumed IR', async () => {
+    const paths = roots();
+    const initialProvider = new FakeProvider();
+    initialProvider.reviewVerdicts = ['needs_review'];
+    const blocked = await runMonsterIntake(
+      { source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths },
+      initialProvider,
+    );
+    const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
+    const storedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8')) as MonsterIntakeIR;
+    storedIr.claims = storedIr.claims.filter((claim) => claim.path !== '/creature/attributes/ac');
+    storedIr.uncertainties.push({
+      id: 'resume-user-choice',
+      code: 'USER_CHOICE',
+      path: '/creature/biography',
+      message: 'Choose the literal biography handling.',
+      blocking: true,
+      evidence: [{ start: 0, end: 4, quote: LURKER_SOURCE.slice(0, 4) }],
+      candidates: ['preserve this literal choice'],
+    });
+    writeFileSync(storedIrPath, JSON.stringify(storedIr, null, 2));
+    const decisionsPath = join(blocked.runPath, 'decisions.json');
+    writeFileSync(decisionsPath, JSON.stringify({
+      runId: blocked.runId,
+      sourceSha256: blocked.sourceSha256,
+      decisions: [{ issueId: 'resume-user-choice', action: 'select', value: 'preserve this literal choice' }],
+    }));
+    const resumeProvider = new FakeProvider();
+
+    const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, resumeProvider, paths.vaultPath);
+    const resumedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8')) as MonsterIntakeIR;
+
+    expect(resumed.status).toBe('needs_review');
+    expect(resumed.creatures[0]!.calls).toEqual({ extraction: 0, review: 0, repair: 0 });
+    expect(resumeProvider.repairCalls).toBe(0);
+    expect(resumedIr.claims).toContainEqual(expect.objectContaining({
+      path: '/creature/biography',
+      valueKind: 'user-confirmed',
+      value: 'preserve this literal choice',
+      decisionId: 'resume-user-choice',
+    }));
+    expect(resumedIr.claims.some((claim) => claim.path === '/creature/attributes/ac')).toBe(false);
+  });
+
+  test('does not use semantic AI repair to overwrite a deterministically valid resumed IR', async () => {
+    const paths = roots();
+    const initialProvider = new FakeProvider();
+    initialProvider.reviewVerdicts = ['needs_review'];
+    const blocked = await runMonsterIntake(
+      { source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths },
+      initialProvider,
+    );
+    const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
+    const storedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8')) as MonsterIntakeIR;
+    const confirmedClaim = storedIr.claims.find((claim) => claim.path === '/creature/identity/name')!;
+    confirmedClaim.valueKind = 'user-confirmed';
+    confirmedClaim.value = storedIr.creature.identity.name;
+    confirmedClaim.decisionId = 'resume-confirmed-name';
+    writeFileSync(storedIrPath, JSON.stringify(storedIr, null, 2));
+    const decisionsPath = join(blocked.runPath, 'decisions.json');
+    writeFileSync(decisionsPath, JSON.stringify({
+      runId: blocked.runId,
+      sourceSha256: blocked.sourceSha256,
+      decisions: [],
+    }));
+    const resumeProvider = new FakeProvider();
+    resumeProvider.reviewVerdicts = ['revise'];
+
+    const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, resumeProvider, paths.vaultPath);
+    const resumedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8')) as MonsterIntakeIR;
+
+    expect(resumed.status).toBe('needs_review');
+    expect(resumed.creatures[0]!.calls).toEqual({ extraction: 0, review: 1, repair: 0 });
+    expect(resumeProvider.repairCalls).toBe(0);
+    expect(resumedIr.claims).toContainEqual(expect.objectContaining({
+      path: '/creature/identity/name',
+      valueKind: 'user-confirmed',
+      value: storedIr.creature.identity.name,
+      decisionId: 'resume-confirmed-name',
+    }));
   });
 
   test('rejects resume decisions for a different source hash', async () => {

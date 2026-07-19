@@ -13,6 +13,7 @@ import { renderMonsterIntakeMarkdown } from './renderer';
 import type {
   AiReviewResult,
   DiscoveryCandidate,
+  EvidenceRef,
   IntakeDecision,
   IntakeDecisionsFile,
   IntakeFinding,
@@ -135,7 +136,11 @@ export async function resumeMonsterIntake(
   for (const candidate of discovery.candidates) {
     const creaturePath = join(runPath, 'creatures', safeId(candidate.id));
     const oldIr = readJson<MonsterIntakeIR>(join(creaturePath, 'intake-ir.json'));
-    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(oldIr, byIssue));
+    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(oldIr, byIssue), {
+      canonicalizeModelSpellEvidence: false,
+      normalizeAbsentOptionalZeroes: false,
+      removeDisprovedProcessUncertainties: false,
+    });
     results.push(await processExistingIr(options, provider, runPath, candidate, decidedIr));
   }
   const status = aggregateStatus(results);
@@ -194,10 +199,20 @@ async function processIr(
   const bundlePath = join(runPath, 'creatures', safeId(candidate.id));
   mkdirSync(bundlePath, { recursive: true });
   let ir = initialIr;
-  for (let pass = 0; pass < 2; pass++) {
+  while (true) {
     writeJson(join(bundlePath, 'intake-ir.json'), ir);
     const validation = validateMonsterIntakeIR(options.source, ir, { coverageRange: candidate });
     if (validation.blocking.length > 0) {
+      if (calls.extraction === 1 && calls.repair === 0) {
+        calls.repair += 1;
+        ir = anchorIrEvidence(options.source, candidate, await provider.repair({
+          stage: 'deterministic-validation',
+          source: options.source,
+          ir,
+          deterministicFindings: validation.findings,
+        }));
+        continue;
+      }
       const spellResolution = spellResolutionForFindings(
         spellResolutionFromIr(ir, 'pending', bundlePath),
         validation.findings,
@@ -219,9 +234,17 @@ async function processIr(
     const review = await provider.review({ source: options.source, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
     writeJson(join(bundlePath, 'ai-review.json'), review);
     const combined = combineFindings(report.findings, review);
-    if (review.verdict === 'revise' && pass === 0) {
+    if (review.verdict === 'revise' && calls.extraction === 1 && calls.repair === 0) {
       calls.repair += 1;
-      ir = anchorIrEvidence(options.source, candidate, await provider.repair({ source: options.source, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings, review }));
+      ir = anchorIrEvidence(options.source, candidate, await provider.repair({
+        stage: 'semantic-review',
+        source: options.source,
+        ir,
+        markdown,
+        actorProjection: report.projection,
+        deterministicFindings: report.findings,
+        review,
+      }));
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
@@ -245,9 +268,6 @@ async function processIr(
       actorPath: promoted.actorPath,
     };
   }
-  return result(candidate, bundlePath, 'needs_review', [{
-    id: 'repair-limit', code: 'REPAIR_LIMIT', path: '/', message: 'One automatic semantic repair did not produce an accepted result.', blocking: true, origin: 'ai-review',
-  }], calls, spellResolutionFromIr(ir, 'pending', bundlePath));
 }
 
 async function promoteAccepted(
@@ -591,36 +611,28 @@ function setJsonPointer(target: unknown, pointer: string, value: unknown): void 
   cursor[parts.at(-1)!] = value;
 }
 
-export function anchorIrEvidence(source: string, candidate: DiscoveryCandidate, ir: MonsterIntakeIR): MonsterIntakeIR {
+export function anchorIrEvidence(
+  source: string,
+  candidate: DiscoveryCandidate,
+  ir: MonsterIntakeIR,
+  options: {
+    canonicalizeModelSpellEvidence?: boolean;
+    normalizeAbsentOptionalZeroes?: boolean;
+    removeDisprovedProcessUncertainties?: boolean;
+  } = {},
+): MonsterIntakeIR {
   const next = structuredClone(ir);
-  normalizeModelIr(next);
-  const refs = [
-    ...next.claims.flatMap((claim) => claim.evidence),
-    ...next.coverage,
-    ...next.uncertainties.flatMap((uncertainty) => uncertainty.evidence),
-  ];
-  for (const ref of refs) {
-    if (Number.isInteger(ref.start) && Number.isInteger(ref.end) && source.slice(ref.start, ref.end) === ref.quote) continue;
-    if (!ref.quote) continue;
-    const local = source.slice(candidate.start, candidate.end);
-    const offsets: number[] = [];
-    for (let offset = local.indexOf(ref.quote); offset >= 0; offset = local.indexOf(ref.quote, offset + 1)) {
-      offsets.push(candidate.start + offset);
-    }
-    if (offsets.length === 0) continue;
-    const ranked = offsets
-      .map((offset) => ({ offset, distance: Math.abs(offset - ref.start) }))
-      .sort((left, right) => left.distance - right.distance || left.offset - right.offset);
-    const nearest = ranked[0]!;
-    const nextNearest = ranked[1];
-    const unambiguous = ranked.length === 1
-      || (ref.quote.length >= 8
-        && nextNearest !== undefined
-        && nearest.distance < nextNearest.distance
-        && nextNearest.distance - nearest.distance >= Math.max(4, Math.ceil(ref.quote.length / 2)));
-    if (!unambiguous) continue;
-    ref.start = nearest.offset;
-    ref.end = ref.start + ref.quote.length;
+  const candidateScope = [{ start: candidate.start, end: candidate.end }];
+  for (const ref of collectGeneralEvidenceRefs(next)) anchorEvidenceRef(source, candidateScope, ref);
+  normalizeModelIr(next, source, options.normalizeAbsentOptionalZeroes ?? true);
+  anchorSpellcastingEvidence(source, candidateScope, next, options.canonicalizeModelSpellEvidence ?? true);
+  if (options.removeDisprovedProcessUncertainties ?? true) {
+    next.uncertainties = next.uncertainties.filter((uncertainty) => !isDisprovedWholeSourceOffsetUncertainty(
+      source,
+      candidate,
+      next,
+      uncertainty,
+    ));
   }
   next.coverage = next.coverage.filter((entry) => (
     source.slice(entry.start, entry.end) === entry.quote || /\S/u.test(entry.quote)
@@ -628,14 +640,240 @@ export function anchorIrEvidence(source: string, candidate: DiscoveryCandidate, 
   return next;
 }
 
-function normalizeModelIr(ir: MonsterIntakeIR): void {
+function isDisprovedWholeSourceOffsetUncertainty(
+  source: string,
+  candidate: DiscoveryCandidate,
+  ir: MonsterIntakeIR,
+  uncertainty: MonsterIntakeIR['uncertainties'][number],
+): boolean {
+  const processText = `${uncertainty.code} ${uncertainty.path} ${uncertainty.message}`;
+  const processCoordinateSignature = /(?:utf[ -]?16|(?:source|candidate|evidence|coverage)[\s:_-]*(?:offset|length|range|end|slice)|(?:offset|length|range|end|slice)[\s:_-]*(?:source|candidate|evidence|coverage))/iu;
+  if (!processCoordinateSignature.test(processText)) return false;
+  if (candidate.start !== 0 || candidate.end !== source.length || candidate.quote !== source) return false;
+  if (ir.source?.length !== source.length || ir.source.sha256 !== sha256(source)) return false;
+  if (!hasExactCompleteCoverage(source, candidate, ir.coverage)) return false;
+  return allEvidenceRefsExact(source, ir);
+}
+
+function hasExactCompleteCoverage(
+  source: string,
+  candidate: DiscoveryCandidate,
+  coverage: MonsterIntakeIR['coverage'],
+): boolean {
+  if (!Array.isArray(coverage) || coverage.length === 0) return false;
+  const ordered = [...coverage].sort((left, right) => left.start - right.start || left.end - right.end);
+  let cursor = candidate.start;
+  for (const entry of ordered) {
+    if (!Number.isInteger(entry.start) || !Number.isInteger(entry.end) || entry.start < cursor || entry.end < entry.start) return false;
+    if (/\S/u.test(source.slice(cursor, entry.start))) return false;
+    if (source.slice(entry.start, entry.end) !== entry.quote) return false;
+    cursor = entry.end;
+  }
+  return !/\S/u.test(source.slice(cursor, candidate.end));
+}
+
+function allEvidenceRefsExact(source: string, value: unknown, context = ''): boolean {
+  if (context === 'evidence' || context === 'coverage' || /Evidence$/u.test(context)) {
+    return Array.isArray(value) && value.length > 0 && value.every((entry) => isExactEvidenceRef(source, entry));
+  }
+  if (Array.isArray(value)) {
+    return value.every((entry) => allEvidenceRefsExact(source, entry));
+  }
+  if (!value || typeof value !== 'object') return true;
+  const record = value as Record<string, unknown>;
+  return Object.entries(record).every(([key, entry]) => allEvidenceRefsExact(source, entry, key));
+}
+
+function isExactEvidenceRef(source: string, value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const ref = value as Record<string, unknown>;
+  return Number.isInteger(ref.start)
+    && Number.isInteger(ref.end)
+    && (ref.start as number) >= 0
+    && (ref.end as number) >= (ref.start as number)
+    && (ref.end as number) <= source.length
+    && typeof ref.quote === 'string'
+    && ref.quote.length > 0
+    && source.slice(ref.start as number, ref.end as number) === ref.quote;
+}
+
+interface EvidenceScope {
+  start: number;
+  end: number;
+}
+
+function anchorEvidenceRef(source: string, scopes: EvidenceScope[], ref: EvidenceRef): void {
+  if (typeof ref.quote !== 'string' || ref.quote.length === 0) return;
+  const exactInsideScope = Number.isInteger(ref.start)
+    && Number.isInteger(ref.end)
+    && source.slice(ref.start, ref.end) === ref.quote
+    && scopes.some((scope) => ref.start >= scope.start && ref.end <= scope.end);
+  if (exactInsideScope) return;
+
+  const offsets = new Set<number>();
+  for (const scope of scopes) {
+    const local = source.slice(scope.start, scope.end);
+    for (let offset = local.indexOf(ref.quote); offset >= 0; offset = local.indexOf(ref.quote, offset + 1)) {
+      offsets.add(scope.start + offset);
+    }
+  }
+  if (offsets.size === 0) return;
+  const hasReportedStart = Number.isInteger(ref.start);
+  const ranked = [...offsets]
+    .map((offset) => ({ offset, distance: hasReportedStart ? Math.abs(offset - ref.start) : Number.POSITIVE_INFINITY }))
+    .sort((left, right) => left.distance - right.distance || left.offset - right.offset);
+  const nearest = ranked[0]!;
+  const nextNearest = ranked[1];
+  const reportedStartMatchesExactOccurrence = hasReportedStart && offsets.has(ref.start);
+  const unambiguous = reportedStartMatchesExactOccurrence
+    || ranked.length === 1
+    || (ref.quote.length >= 8
+      && nextNearest !== undefined
+      && nearest.distance < nextNearest.distance
+      && nextNearest.distance - nearest.distance >= Math.max(4, Math.ceil(ref.quote.length / 2)));
+  if (!unambiguous) return;
+  ref.start = nearest.offset;
+  ref.end = ref.start + ref.quote.length;
+}
+
+function anchorSpellcastingEvidence(
+  source: string,
+  candidateScopes: EvidenceScope[],
+  ir: MonsterIntakeIR,
+  canonicalizeModelSpellEvidence: boolean,
+): void {
+  const spellcasting = asRecord(ir.creature)?.spellcasting;
+  if (!Array.isArray(spellcasting)) return;
+  for (const groupValue of spellcasting) {
+    const group = asRecord(groupValue);
+    if (!group) continue;
+    const groupEvidence = evidenceArray(group.evidence);
+    for (const ref of groupEvidence) anchorEvidenceRef(source, candidateScopes, ref);
+    const groupScopes = exactEvidenceScopes(source, candidateScopes, groupEvidence);
+    for (const ref of evidenceArray(group.abilityEvidence)) anchorEvidenceRef(source, groupScopes, ref);
+    for (const ref of evidenceArray(group.saveDcEvidence)) anchorEvidenceRef(source, groupScopes, ref);
+    for (const ref of evidenceArray(group.attackBonusEvidence)) anchorEvidenceRef(source, groupScopes, ref);
+    if (Array.isArray(group.componentWaivers)) {
+      for (const waiver of group.componentWaivers) {
+        for (const ref of evidenceArray(asRecord(waiver)?.evidence)) anchorEvidenceRef(source, groupScopes, ref);
+      }
+    }
+    if (!Array.isArray(group.usageGroups)) continue;
+    for (const usageValue of group.usageGroups) {
+      const usage = asRecord(usageValue);
+      if (!usage) continue;
+      const usageEvidence = evidenceArray(usage.evidence);
+      for (const ref of usageEvidence) anchorEvidenceRef(source, groupScopes, ref);
+      const usageScopes = exactEvidenceScopes(source, groupScopes, usageEvidence);
+      if (!Array.isArray(usage.spellRefs)) continue;
+      for (const spellValue of usage.spellRefs) {
+        const spell = asRecord(spellValue);
+        if (!spell) continue;
+        const spellCanonicalization = canonicalizeModelSpellEvidence
+          ? canonicalizeEvidenceFromLiteral(source, usageScopes, spell, 'originalName')
+          : 'unavailable';
+        if (spellCanonicalization !== 'ambiguous') {
+          for (const ref of evidenceArray(spell.evidence)) anchorEvidenceRef(source, usageScopes, ref);
+        }
+        if (!Array.isArray(spell.restrictions)) continue;
+        for (const restriction of spell.restrictions) {
+          const restrictionRecord = asRecord(restriction);
+          if (!restrictionRecord) continue;
+          const restrictionCanonicalization = canonicalizeModelSpellEvidence
+            ? canonicalizeEvidenceFromLiteral(source, usageScopes, restrictionRecord, 'text')
+            : 'unavailable';
+          if (restrictionCanonicalization !== 'ambiguous') {
+            for (const ref of evidenceArray(restrictionRecord.evidence)) anchorEvidenceRef(source, usageScopes, ref);
+          }
+        }
+      }
+    }
+  }
+}
+
+function canonicalizeEvidenceFromLiteral(
+  source: string,
+  scopes: EvidenceScope[],
+  target: Record<string, unknown>,
+  literalKey: string,
+): 'canonicalized' | 'ambiguous' | 'unavailable' {
+  const literal = target[literalKey];
+  if (typeof literal !== 'string' || literal.length === 0) return 'unavailable';
+  const offsets = new Set<number>();
+  for (const scope of scopes) {
+    const local = source.slice(scope.start, scope.end);
+    for (let offset = local.indexOf(literal); offset >= 0; offset = local.indexOf(literal, offset + 1)) {
+      offsets.add(scope.start + offset);
+    }
+  }
+  if (offsets.size > 1) return 'ambiguous';
+  if (offsets.size === 0) return 'unavailable';
+  const start = [...offsets][0]!;
+  target.evidence = [{ start, end: start + literal.length, quote: literal }];
+  return 'canonicalized';
+}
+
+function exactEvidenceScopes(
+  source: string,
+  parentScopes: EvidenceScope[],
+  evidence: EvidenceRef[],
+): EvidenceScope[] {
+  return evidence.filter((ref) => (
+    Number.isInteger(ref.start)
+    && Number.isInteger(ref.end)
+    && source.slice(ref.start, ref.end) === ref.quote
+    && parentScopes.some((scope) => ref.start >= scope.start && ref.end <= scope.end)
+  ));
+}
+
+function evidenceArray(value: unknown): EvidenceRef[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is EvidenceRef => Boolean(entry && typeof entry === 'object'));
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function collectGeneralEvidenceRefs(ir: MonsterIntakeIR): EvidenceRef[] {
+  const refs: EvidenceRef[] = [];
+  const addEvidenceArray = (value: unknown): void => {
+    refs.push(...evidenceArray(value));
+  };
+
+  for (const claim of Array.isArray(ir.claims) ? ir.claims : []) addEvidenceArray(asRecord(claim)?.evidence);
+  addEvidenceArray(ir.coverage);
+  for (const uncertainty of Array.isArray(ir.uncertainties) ? ir.uncertainties : []) {
+    addEvidenceArray(asRecord(uncertainty)?.evidence);
+  }
+  return refs;
+}
+
+function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOptionalZeroes: boolean): void {
   const attributes = ir.creature.attributes as MonsterIntakeIR['creature']['attributes'] & { acKind?: unknown; initiative?: number | null };
   if (typeof attributes.acKind === 'string' && !['flat', 'natural', 'default'].includes(attributes.acKind)) {
     attributes.acNote = attributes.acNote?.trim() || attributes.acKind;
     delete attributes.acKind;
   }
   if (attributes.initiative === null) delete attributes.initiative;
-  ir.creature.languages.values = ir.creature.languages.values.map(normalizeLanguageValue);
+  if (normalizeAbsentOptionalZeroes) {
+    const senses = ir.creature.senses as MonsterIntakeIR['creature']['senses'] & Record<string, unknown>;
+    const senseZeroLabels: Array<[keyof typeof senses, RegExp]> = [
+      ['blindsight', /(?:blindsight|盲视|盲感)\s*[:：]?\s*0(?![\d.,\-–—])(?:\s*(?:ft|feet|尺))?/iu],
+      ['tremorsense', /(?:tremorsense|震颤感知)\s*[:：]?\s*0(?![\d.,\-–—])(?:\s*(?:ft|feet|尺))?/iu],
+      ['truesight', /(?:truesight|真实视觉)\s*[:：]?\s*0(?![\d.,\-–—])(?:\s*(?:ft|feet|尺))?/iu],
+    ];
+    for (const [field, explicitZero] of senseZeroLabels) {
+      if (senses[field] === 0 && !hasExactClaimEvidence(ir, source, [`/creature/senses/${String(field)}`, '/creature/senses'], explicitZero)) {
+        delete senses[field];
+      }
+    }
+  }
+  const languages = ir.creature.languages as MonsterIntakeIR['creature']['languages'] & { custom?: unknown };
+  if (Array.isArray(languages.custom) && languages.custom.length === 0) delete languages.custom;
+  languages.values = languages.values.map(normalizeLanguageValue);
   for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
     for (const feature of ir.creature[section]) {
       const overloadedActivityType = String(feature.activityType);
@@ -646,9 +884,41 @@ function normalizeModelIr(ir: MonsterIntakeIR): void {
       if (!['attack', 'save', 'damage', 'utility'].includes(String(feature.activityType))) {
         feature.activityType = feature.attack ? 'attack' : feature.save ? 'save' : feature.damage?.length ? 'damage' : 'utility';
       }
+      if (feature.attack && normalizeAbsentOptionalZeroes) {
+        const featureIndex = ir.creature[section].indexOf(feature);
+        const featurePath = `/creature/${section}/${featureIndex}`;
+        const zeroBoundary = '(?![\\d.,\\-–—])';
+        if (feature.attack.range === 0 && !hasExactClaimEvidence(
+          ir,
+          source,
+          [`${featurePath}/attack/range`, featurePath],
+          new RegExp(`(?:range|射程)\\s*[:：]?\\s*0${zeroBoundary}(?:\\s*(?:ft|feet|尺))?`, 'iu'),
+        )) {
+          delete feature.attack.range;
+        }
+        if (feature.attack.longRange === 0 && !hasExactClaimEvidence(
+          ir,
+          source,
+          [`${featurePath}/attack/longRange`, featurePath],
+          new RegExp(`(?:long\\s+range|long-range|远距|长射程)\\s*[:：]?\\s*0${zeroBoundary}(?:\\s*(?:ft|feet|尺))?`, 'iu'),
+        )) {
+          delete feature.attack.longRange;
+        }
+      }
       for (const damage of feature.damage ?? []) damage.type = normalizeDamageValue(damage.type);
     }
   }
+}
+
+function hasExactClaimEvidence(
+  ir: MonsterIntakeIR,
+  source: string,
+  claimPaths: string[],
+  explicitValue: RegExp,
+): boolean {
+  return ir.claims.some((claim) => claimPaths.includes(claim.path) && claim.evidence.some((ref) => (
+    source.slice(ref.start, ref.end) === ref.quote && explicitValue.test(ref.quote)
+  )));
 }
 
 function normalizeLanguageValue(value: string): string {

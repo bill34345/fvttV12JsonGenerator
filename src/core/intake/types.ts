@@ -227,9 +227,22 @@ export interface AiReviewResult {
   findings: IntakeFinding[];
 }
 
-export interface RepairRequest extends ReviewRequest {
-  review: AiReviewResult;
-}
+export type RepairRequest =
+  | {
+      stage: 'deterministic-validation';
+      source: string;
+      ir: MonsterIntakeIR;
+      deterministicFindings: IntakeFinding[];
+    }
+  | {
+      stage: 'semantic-review';
+      source: string;
+      ir: MonsterIntakeIR;
+      markdown: string;
+      actorProjection: unknown;
+      deterministicFindings: IntakeFinding[];
+      review: AiReviewResult;
+    };
 
 export interface MonsterIntakeAiProvider {
   readonly providerName: string;

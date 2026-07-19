@@ -231,34 +231,45 @@ describe('source-evidenced spellcasting intake', () => {
   });
 
   test('accepts a generalized multiline English At Will grant with Markdown list markers', () => {
+    const { source, ir } = buildEnglishCasterCase({ multilineUsage: true });
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+  });
+
+  test('blocks an exact usage grant from an unrelated source block outside its spellcasting group evidence', () => {
     const ir = buildRatWarlockIr() as any;
     const usage = ir.creature.spellcasting[0].usageGroups[0];
-    const englishLine = `**At Will:**\n${usage.spellRefs.map((ref: any, index: number) => {
-      const restriction = ref.restrictions[0]?.text;
-      const conjunction = index === usage.spellRefs.length - 1 ? 'and ' : '';
-      return `- ${conjunction}${ref.originalName}${restriction ? `（${restriction}）` : ''}`;
-    }).join('\n')}`;
-    const source = `${RAT_WARLOCK_SOURCE}\n${englishLine}`;
-    const start = source.length - englishLine.length;
-    usage.evidence = [{ start, end: source.length, quote: englishLine }];
+    const originalGrant = usage.evidence[0];
+    const unrelated = `\n\nUnrelated feature with narrative text.\n${originalGrant.quote}`;
+    const source = `${RAT_WARLOCK_SOURCE}${unrelated}`;
+    const outsideStart = source.lastIndexOf(originalGrant.quote);
+    const delta = outsideStart - originalGrant.start;
+    usage.evidence = [{ start: outsideStart, end: outsideStart + originalGrant.quote.length, quote: originalGrant.quote }];
     for (const ref of usage.spellRefs) {
-      const refStart = source.indexOf(ref.originalName, start);
-      ref.evidence = [{ start: refStart, end: refStart + ref.originalName.length, quote: ref.originalName }];
+      for (const evidence of ref.evidence) {
+        evidence.start += delta;
+        evidence.end += delta;
+      }
       for (const restriction of ref.restrictions) {
-        const restrictionStart = source.indexOf(restriction.text, refStart);
-        restriction.evidence = [{
-          start: restrictionStart,
-          end: restrictionStart + restriction.text.length,
-          quote: restriction.text,
-        }];
+        for (const evidence of restriction.evidence) {
+          evidence.start += delta;
+          evidence.end += delta;
+        }
       }
     }
     ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
-    const mechanical = ir.coverage.find((entry: any) => entry.classification === 'mechanical');
-    mechanical.end = source.length;
-    mechanical.quote = source.slice(mechanical.start);
+    ir.coverage.push({
+      start: RAT_WARLOCK_SOURCE.length,
+      end: source.length,
+      quote: source.slice(RAT_WARLOCK_SOURCE.length),
+      classification: 'narrative',
+      claimPaths: [],
+    });
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'SPELL_USAGE_OUTSIDE_GROUP',
+      path: '/creature/spellcasting/0/usageGroups/0/evidence/0',
+    }));
   });
 
   test('accepts a non-Rat English caster with a distinct instance refId and an explicit evidenced alias', () => {
@@ -479,6 +490,23 @@ describe('source-evidenced spellcasting intake', () => {
     expect(findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_SPELLCASTING_PROPERTY', path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0/restrictions/0/uuid' }));
   });
 
+  test('rejects provider-style literal and literalValue restriction aliases instead of normalizing them', () => {
+    const ir = buildRatWarlockIr() as any;
+    const restriction = ir.creature.spellcasting[0].usageGroups[0].spellRefs[0].restrictions[0];
+    restriction.literal = restriction.text;
+    restriction.literalValue = restriction.text;
+
+    const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking;
+    expect(findings).toContainEqual(expect.objectContaining({
+      code: 'UNKNOWN_SPELLCASTING_PROPERTY',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0/restrictions/0/literal',
+    }));
+    expect(findings).toContainEqual(expect.objectContaining({
+      code: 'UNKNOWN_SPELLCASTING_PROPERTY',
+      path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0/restrictions/0/literalValue',
+    }));
+  });
+
   test('fails closed instead of throwing on malformed spellcasting envelope fields', () => {
     const ir = buildRatWarlockIr() as any;
     delete ir.source;
@@ -577,6 +605,7 @@ function buildEnglishCasterCase(
     abilityClause?: string;
     materialClause?: string;
     ability?: 'wis' | 'int';
+    multilineUsage?: boolean;
   } = {},
 ): { source: string; ir: ReturnType<typeof buildValidLurkerIr> } {
   const spellName = options.spellName ?? 'Sacred Flame';
@@ -585,7 +614,10 @@ function buildEnglishCasterCase(
   const spellGrant = `${spellName} (alias: "${explicitAlias}")`;
   const abilityClause = options.abilityClause ?? 'Its spellcasting ability is Wisdom';
   const materialClause = options.materialClause ?? 'It requires no material components';
-  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. ${abilityClause} (spell save DC 13, +5 to hit with spell attacks). ${materialClause}.\nAt Will: ${spellGrant}`;
+  const usageGrant = options.multilineUsage
+    ? `**At Will:**\n- ${spellGrant}`
+    : `At Will: ${spellGrant}`;
+  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. ${abilityClause} (spell save DC 13, +5 to hit with spell attacks). ${materialClause}.\n${usageGrant}`;
   const source = `${LURKER_SOURCE}\n${description}`;
   const ir = buildValidLurkerIr() as any;
   const start = source.length - description.length;
@@ -602,7 +634,7 @@ function buildEnglishCasterCase(
     attackBonus: 5, attackBonusEvidence: [evidence('+5 to hit with spell attacks')],
     componentWaivers: [{ component: 'material', evidence: [evidence(materialClause)] }],
     usageGroups: [{
-      usage: 'at-will', evidence: [evidence(`At Will: ${spellGrant}`)],
+      usage: 'at-will', evidence: [evidence(usageGrant)],
       spellRefs: [{
         refId: `instance-${identifier}-1`, identifier, originalName: spellName,
         englishName: spellName, aliases: [spellName, explicitAlias],

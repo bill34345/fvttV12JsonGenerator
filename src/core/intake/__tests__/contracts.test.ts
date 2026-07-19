@@ -29,6 +29,85 @@ describe('MonsterIntakeIR validation', () => {
     ))).toBe(false);
   });
 
+  it('fails closed on a non-string biography instead of reaching the renderer', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.biography = ['provider', 'array'];
+
+    expect(() => validateMonsterIntakeIR(LURKER_SOURCE, ir)).not.toThrow();
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_BIOGRAPHY',
+      path: '/creature/biography',
+    }));
+  });
+
+  it('treats a null optional biography as absent provider data', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.biography = null;
+
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).not.toContainEqual(expect.objectContaining({
+      code: 'INVALID_BIOGRAPHY',
+      path: '/creature/biography',
+    }));
+  });
+
+  it('fails closed on a non-empty array in optional language custom text', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.languages.custom = ['Draconic'];
+
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_LANGUAGE_CUSTOM',
+      path: '/creature/languages/custom',
+    }));
+  });
+
+  it('fails closed on non-string identity and feature text fields', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.identity.name = {};
+    ir.creature.identity.creatureType = [];
+    ir.creature.traits[0].name = {};
+    ir.creature.traits[0].description = [];
+
+    expect(() => validateMonsterIntakeIR(LURKER_SOURCE, ir)).not.toThrow();
+    const paths = validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking.map((finding) => finding.path);
+    expect(paths).toContain('/creature/identity/name');
+    expect(paths).toContain('/creature/identity/creatureType');
+    expect(paths).toContain('/creature/traits/0/name');
+    expect(paths).toContain('/creature/traits/0/description');
+  });
+
+  it.each([
+    {
+      label: 'object damage container',
+      damage: { formula: '1d6' },
+      code: 'INVALID_DAMAGE',
+      path: '/creature/traits/0/damage',
+    },
+    {
+      label: 'null damage element',
+      damage: [null],
+      code: 'INVALID_DAMAGE_PART',
+      path: '/creature/traits/0/damage/0',
+    },
+    {
+      label: 'primitive damage element',
+      damage: [3],
+      code: 'INVALID_DAMAGE_PART',
+      path: '/creature/traits/0/damage/0',
+    },
+    {
+      label: 'object damage formula',
+      damage: [{ formula: {} }],
+      code: 'INVALID_DICE_FORMULA',
+      path: '/creature/traits/0/damage/0/formula',
+    },
+  ])('fails closed on a malformed $label', ({ damage, code, path }) => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.traits[0].damage = damage;
+
+    expect(() => validateMonsterIntakeIR(LURKER_SOURCE, ir)).not.toThrow();
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+  });
+
   it('requires every core field and an evidence claim', () => {
     const ir = buildValidLurkerIr();
     delete (ir.creature.attributes as Partial<typeof ir.creature.attributes>).ac;
