@@ -16,11 +16,17 @@ import {
 function ownedFixture() {
   const actor: any = {
     id: 'Actor00000000001', type: 'npc',
-    flags: { [RESOLVER_MODULE_ID]: { spellManifest: { manifestId: 'manifest-a' } } },
+    flags: { [RESOLVER_MODULE_ID]: { spellManifest: {
+      manifestId: 'manifest-a',
+      spellcastingGroups: [{ groupId: 'group-a', featureItemKey: 'feature-a', spellRefs: [{ refId: 'ref-a' }] }],
+    } } },
   };
   const feature: any = {
     id: 'Feature000000001', type: 'feat', parent: actor, actor,
-    flags: { [RESOLVER_MODULE_ID]: { featureItemKey: 'feature-a', groupId: 'group-a' } },
+    flags: {
+      fvttJsonGenerator: { spellcastingFeatureKey: 'feature-a' },
+      [RESOLVER_MODULE_ID]: { featureItemKey: 'feature-a', groupId: 'group-a' },
+    },
     system: {},
   };
   feature.system.parent = feature;
@@ -68,6 +74,13 @@ describe('resolver ownership hard gate', () => {
     }> = [
       { target: 'feature', mutate: (fresh) => { fresh.actor.flags[RESOLVER_MODULE_ID].spellManifest.manifestId = 'foreign'; } },
       { target: 'feature', mutate: (fresh) => { fresh.feature.flags[RESOLVER_MODULE_ID].groupId = 'foreign'; } },
+      { target: 'feature', mutate: (fresh) => { fresh.feature.flags[RESOLVER_MODULE_ID].featureItemKey = 'foreign-feature'; } },
+      { target: 'feature', mutate: (fresh) => { fresh.feature.flags.fvttJsonGenerator.spellcastingFeatureKey = 'foreign-feature'; } },
+      { target: 'feature', mutate: (fresh) => { delete fresh.feature.flags.fvttJsonGenerator.spellcastingFeatureKey; } },
+      { target: 'feature', mutate: (fresh) => { fresh.actor.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups[0].featureItemKey = 'foreign-feature'; } },
+      { target: 'feature', mutate: (fresh) => { fresh.actor.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups.push({ groupId: 'group-a', featureItemKey: 'feature-a', spellRefs: [] }); } },
+      { target: 'feature', mutate: (fresh) => { fresh.actor.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups[0].spellRefs[0].refId = 'foreign-ref'; } },
+      { target: 'feature', mutate: (fresh) => { fresh.actor.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups[0].spellRefs.push({ refId: 'ref-a' }); } },
       { target: 'feature', mutate: (fresh) => { fresh.feature.parent = { id: fresh.actor.id }; } },
       { target: 'feature', mutate: (fresh) => { fresh.feature.actor = { id: fresh.actor.id }; } },
       { target: 'activity', mutate: (fresh) => { fresh.activity.flags[RESOLVER_MODULE_ID].managed = false; } },
@@ -107,6 +120,16 @@ describe('resolver ownership hard gate', () => {
     foreign.flags = { dnd5e: { cachedFor: activity.relativeUUID }, foreign: { managed: true } };
     expect(() => assertResolverDocumentOwnership(actor, feature, foreign, identity, 'spell', activity.relativeUUID))
       .toThrow(ResolverOwnershipError);
+  });
+
+  test('checks schema linkage without mutating unrelated feature flags or Actor content', () => {
+    const { actor, feature, identity } = ownedFixture();
+    actor.flags.foreign = { actorState: { keep: true } };
+    feature.flags.foreign = { featureState: { keep: true } };
+    const before = structuredClone({ actorFlags: actor.flags, featureFlags: feature.flags });
+
+    expect(() => assertLinkedFeatureOwnership(actor, feature, identity)).not.toThrow();
+    expect({ actorFlags: actor.flags, featureFlags: feature.flags }).toEqual(before);
   });
 
   test('adopts only a cache created after the snapshot with exact native provenance', () => {

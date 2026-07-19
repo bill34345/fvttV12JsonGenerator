@@ -169,7 +169,10 @@ describe('Actor-level resolve pipeline', () => {
     target.type = 'npc';
     const feature: any = {
       id: 'FEAT000000000001', _id: 'FEAT000000000001', type: 'feat', parent: target, actor: target,
-      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'spellcasting' },
+        [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' },
+      },
       system: { activities: new Map() },
     };
     const identity = {
@@ -467,7 +470,10 @@ describe('Actor-level resolve pipeline', () => {
     fixture.target.type = 'npc';
     const feature: any = {
       id: 'FEAT0PROTECTED01', type: 'feat', parent: fixture.target, actor: fixture.target,
-      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'spellcasting' },
+        [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' },
+      },
       system: { activities: new Map() },
     };
     const identity = {
@@ -705,7 +711,10 @@ describe('Actor-level resolve pipeline', () => {
     };
     const feature: any = {
       id: identity.featureId, type: 'feat', parent: target, actor: target,
-      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'spellcasting' },
+        [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' },
+      },
       system: { activities: new Map() },
     };
     const relativeUUID = `Actor.${target.id}.Item.${feature.id}.Activity.${identity.activityId}`;
@@ -941,7 +950,10 @@ describe('Actor-level resolve pipeline', () => {
     const selectedUuid = 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop';
     const feature: any = {
       id: 'FEAT000000000001', _id: 'FEAT000000000001', type: 'feat',
-      flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'spellcasting' },
+        [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' },
+      },
       system: { activities: new Map() },
     };
     const activitySource = {
@@ -1017,8 +1029,8 @@ describe('Actor-level resolve pipeline', () => {
     ];
     fixture.target.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
     fixture.target.items = [
-      { id: 'FEATUREGROUP0001', flags: { [RESOLVER_MODULE_ID]: { groupId: 'group-a', featureItemKey: 'feature-a' } }, system: { activities: new Map() } },
-      { id: 'FEATUREGROUP0002', flags: { [RESOLVER_MODULE_ID]: { groupId: 'group-b', featureItemKey: 'feature-b' } }, system: { activities: new Map() } },
+      { id: 'FEATUREGROUP0001', flags: { fvttJsonGenerator: { spellcastingFeatureKey: 'feature-a' }, [RESOLVER_MODULE_ID]: { groupId: 'group-a', featureItemKey: 'feature-a' } }, system: { activities: new Map() } },
+      { id: 'FEATUREGROUP0002', flags: { fvttJsonGenerator: { spellcastingFeatureKey: 'feature-b' }, [RESOLVER_MODULE_ID]: { groupId: 'group-b', featureItemKey: 'feature-b' } }, system: { activities: new Map() } },
     ];
     const selected = fixture.dependencies.getRuntime().sourceIndex.candidates[0];
     const results = ['group-a', 'group-b'].map((groupId) => ({
@@ -1340,7 +1352,10 @@ function createUndoActor() {
   const logicalRefKey = logicalSpellRefKey(validManifest.manifestId, 'innate', 'mage-armor');
   const feature: any = {
     id: featureId, _id: featureId, type: 'feat', parent: actor, actor,
-    flags: { [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' } },
+    flags: {
+      fvttJsonGenerator: { spellcastingFeatureKey: 'spellcasting' },
+      [RESOLVER_MODULE_ID]: { groupId: 'innate', featureItemKey: 'spellcasting' },
+    },
     system: { activities: new Map() },
     async deleteActivity(id: string) { mutations.count++; this.system.activities.delete(id); },
   };

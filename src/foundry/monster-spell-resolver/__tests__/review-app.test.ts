@@ -86,6 +86,48 @@ describe('resolver review model and dialog semantics', () => {
     expect(createResolverReviewSession(missing).canApply()).toBe(false);
   });
 
+  test('offers only candidates with supported rules metadata and explains rejected sources', () => {
+    const ambiguous = model();
+    ambiguous.spells[0]!.manualConflict = undefined;
+    ambiguous.spells[0]!.candidateDecisionRequired = true;
+    ambiguous.spells[0]!.candidates = [
+      { packageId: 'missing-rules', packId: 'spells', uuid: 'Compendium.missing-rules.spells.Item.aaaaaaaaaaaaaaaa' },
+      { packageId: 'future-rules', packId: 'spells', rules: '2025', uuid: 'Compendium.future-rules.spells.Item.bbbbbbbbbbbbbbbb' },
+      { packageId: 'legacy-rules', packId: 'spells', rules: '2014', uuid: 'Compendium.legacy-rules.spells.Item.cccccccccccccccc' },
+    ];
+    const before = structuredClone(ambiguous);
+    const session = createResolverReviewSession(ambiguous);
+
+    expect(() => session.selectCandidate(
+      ambiguous.spells[0]!.logicalRefKey,
+      ambiguous.spells[0]!.candidates[0]!.uuid,
+    )).toThrow(/rules metadata is missing/i);
+    expect(() => session.selectCandidate(
+      ambiguous.spells[0]!.logicalRefKey,
+      ambiguous.spells[0]!.candidates[1]!.uuid,
+    )).toThrow(/unsupported rules metadata 2025/i);
+    expect(session.canApply()).toBe(false);
+
+    const html = renderResolverReviewHtml(ambiguous, (key) => ({
+      'FVTTJSONSPELL.Review.Unknown': 'Unknown',
+      'FVTTJSONSPELL.Review.CandidateMissingRules': 'Cannot select: rules metadata is missing.',
+      'FVTTJSONSPELL.Review.CandidateUnsupportedRules': 'Cannot select: unsupported rules metadata.',
+    })[key] ?? key);
+    expect(html).toContain('value="Compendium.missing-rules.spells.Item.aaaaaaaaaaaaaaaa" disabled');
+    expect(html).toContain('Cannot select: rules metadata is missing.');
+    expect(html).toContain('value="Compendium.future-rules.spells.Item.bbbbbbbbbbbbbbbb" disabled');
+    expect(html).toContain('Cannot select: unsupported rules metadata.');
+    expect(html).toContain('value="Compendium.legacy-rules.spells.Item.cccccccccccccccc"');
+    expect(html).not.toContain('value="Compendium.legacy-rules.spells.Item.cccccccccccccccc" disabled');
+
+    session.selectCandidate(
+      ambiguous.spells[0]!.logicalRefKey,
+      ambiguous.spells[0]!.candidates[2]!.uuid,
+    );
+    expect(session.canApply()).toBe(true);
+    expect(ambiguous).toEqual(before);
+  });
+
   test('requires both manual-conflict and candidate decisions, and blank selection clears prior choice', () => {
     const dual = model();
     dual.spells[0]!.candidateDecisionRequired = true;

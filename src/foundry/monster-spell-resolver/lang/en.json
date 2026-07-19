@@ -30,6 +30,8 @@
   "FVTTJSONSPELL.Review.Source": "Destination source",
   "FVTTJSONSPELL.Review.SelectSource": "Select a concrete source",
   "FVTTJSONSPELL.Review.Unknown": "Unknown",
+  "FVTTJSONSPELL.Review.CandidateMissingRules": "Cannot select: rules metadata is missing.",
+  "FVTTJSONSPELL.Review.CandidateUnsupportedRules": "Cannot select: rules metadata is unsupported.",
   "FVTTJSONSPELL.Review.ManualConflict": "Resolver-managed content was edited manually",
   "FVTTJSONSPELL.Review.ManualConflictInvalid": "The current managed structure cannot be kept safely",
   "FVTTJSONSPELL.Review.KeepManual": "Keep manual changes",

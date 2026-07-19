@@ -84,8 +84,16 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
         candidateSelections.delete(logicalRefKey);
         return;
       }
-      if (!spell?.candidates.some((candidate) => candidate.uuid === selectedUuid)) {
+      const candidate = spell?.candidates.find((entry) => entry.uuid === selectedUuid);
+      if (!candidate) {
         throw new TypeError(`Candidate ${selectedUuid} is not offered for ${logicalRefKey}.`);
+      }
+      const rulesIssue = candidateRulesIssue(candidate);
+      if (rulesIssue === 'missing') {
+        throw new Error(`Candidate ${selectedUuid} cannot be selected because rules metadata is missing.`);
+      }
+      if (rulesIssue === 'unsupported') {
+        throw new Error(`Candidate ${selectedUuid} cannot be selected because it has unsupported rules metadata ${candidate.rules}.`);
       }
       candidateSelections.set(logicalRefKey, selectedUuid);
     },
@@ -93,7 +101,11 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
       return model.spells.every((spell) => {
         if (!spell.blocking) return true;
         if (spell.manualConflict && !manualDecisions.has(spell.logicalRefKey)) return false;
-        if (requiresCandidateDecision(spell) && !candidateSelections.has(spell.logicalRefKey)) return false;
+        if (requiresCandidateDecision(spell)) {
+          const selectedUuid = candidateSelections.get(spell.logicalRefKey);
+          const selected = spell.candidates.find((candidate) => candidate.uuid === selectedUuid);
+          if (!selected || candidateRulesIssue(selected)) return false;
+        }
         return Boolean(spell.manualConflict || requiresCandidateDecision(spell));
       });
     },
@@ -116,6 +128,20 @@ function requiresCandidateDecision(spell: ResolverReviewSpell): boolean {
   return spell.candidateDecisionRequired === true;
 }
 
+function candidateRulesIssue(candidate: ResolverReviewCandidate): 'missing' | 'unsupported' | undefined {
+  if (candidate.rules === undefined || candidate.rules.trim() === '') return 'missing';
+  return candidate.rules === '2024' || candidate.rules === '2014' ? undefined : 'unsupported';
+}
+
+function candidateRulesExplanation(candidate: ResolverReviewCandidate, localize: ResolverLocalizer): string {
+  const issue = candidateRulesIssue(candidate);
+  if (!issue) return '';
+  const key = issue === 'missing'
+    ? 'FVTTJSONSPELL.Review.CandidateMissingRules'
+    : 'FVTTJSONSPELL.Review.CandidateUnsupportedRules';
+  return escape(localize(key));
+}
+
 export type ResolverLocalizer = (key: string, data?: Record<string, unknown>) => string;
 
 export function renderResolverReviewHtml(model: ResolverReviewModel, localize: ResolverLocalizer = defaultLocalizer()): string {
@@ -124,10 +150,10 @@ export function renderResolverReviewHtml(model: ResolverReviewModel, localize: R
     const evidence = (spell.sourceEvidence ?? spell.evidence).map((entry) => `${entry.start}-${entry.end}: ${entry.quote}`).join('\n');
     const candidates = spell.candidates.map((candidate) => `<li class="fvtt-json-generator-spell-resolver-break">
       ${escape(candidate.packageId)} / ${escape(candidate.packId)} · ${escape(display(candidate.sourceBook))} ·
-      ${escape(display(candidate.rules))} · ${escape(display(candidate.level))} · <code>${escape(candidate.uuid)}</code></li>`).join('');
+      ${escape(display(candidate.rules))} · ${escape(display(candidate.level))} · <code>${escape(candidate.uuid)}</code>${candidateRulesIssue(candidate) ? ` <strong>${candidateRulesExplanation(candidate, localize)}</strong>` : ''}</li>`).join('');
     const select = requiresCandidateDecision(spell) ? `<label>${escape(localize('FVTTJSONSPELL.Review.Source'))}
       <select data-logical-ref-key="${escapeAttribute(spell.logicalRefKey)}"><option value="">${escape(localize('FVTTJSONSPELL.Review.SelectSource'))}</option>
-      ${spell.candidates.map((candidate) => `<option value="${escapeAttribute(candidate.uuid)}">${escape(candidate.packageId)} / ${escape(candidate.packId)} / ${escape(display(candidate.rules))} / ${escape(candidate.uuid)}</option>`).join('')}</select></label>` : '';
+      ${spell.candidates.map((candidate) => `<option value="${escapeAttribute(candidate.uuid)}"${candidateRulesIssue(candidate) ? ' disabled' : ''}>${escape(candidate.packageId)} / ${escape(candidate.packId)} / ${escape(display(candidate.rules))} / ${escape(candidate.uuid)}${candidateRulesIssue(candidate) ? ` / ${candidateRulesExplanation(candidate, localize)}` : ''}</option>`).join('')}</select></label>` : '';
     const manual = spell.manualConflict ? `<fieldset data-review-key="${escapeAttribute(spell.logicalRefKey)}">
       <legend>${escape(localize(spell.manualConflict.keepable ? 'FVTTJSONSPELL.Review.ManualConflict' : 'FVTTJSONSPELL.Review.ManualConflictInvalid'))}</legend>
       <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="keep" ${spell.manualConflict.keepable ? '' : 'disabled'}> ${escape(localize('FVTTJSONSPELL.Review.KeepManual'))}</label>

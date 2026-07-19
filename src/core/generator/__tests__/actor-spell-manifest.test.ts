@@ -250,6 +250,21 @@ describe('portable Actor spell manifest boundary', () => {
       .toThrow(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value/);
   });
 
+  it('rejects a bare target-world Actor UUID hidden in generated portable Actor content', () => {
+    const parsed = baseParsed('Bare Actor UUID Description');
+    parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
+    parsed.structuredActions = {
+      特性: [spellcastingTrait(
+        'feature-a',
+        'Source Feature',
+        'Source text names Actor.abcdefghijklmnop.',
+      )],
+    };
+
+    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
+      .toThrow(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value.*Actor\.abcdefghijklmnop/);
+  });
+
   it('does not reject ordinary item and compendium prose in a linked source feature', () => {
     const parsed = baseParsed('Ordinary Prose');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');

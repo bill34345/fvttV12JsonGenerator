@@ -581,7 +581,11 @@ class TransactionActor {
   constructor(private readonly autoCache = false) {
     const feature: any = {
       id: 'FeatureTransact1', _id: 'FeatureTransact1', type: 'feat', parent: this, actor: this, name: 'Same Display Name',
-      flags: { [RESOLVER_MODULE_ID]: { featureItemKey: 'innate-feature', groupId: 'innate-cha' }, foreign: { feature: true } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'innate-feature' },
+        [RESOLVER_MODULE_ID]: { featureItemKey: 'innate-feature', groupId: 'innate-cha' },
+        foreign: { feature: true },
+      },
       system: { identifier: 'innate-feature', activities: new Map(), untouched: { deep: true } },
     };
     feature.system.parent = feature;

@@ -31,14 +31,28 @@ export function assertLinkedFeatureOwnership(
   if (documentId(feature) !== identity.featureId) fail('Linked feature ID does not match resolver identity.');
   if (feature.parent !== actor || feature.actor !== actor) fail('Linked feature is not currently embedded in the expected Actor.');
 
-  const manifestId = actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest?.manifestId;
-  if (manifestId !== identity.manifestId) fail('Actor resolver manifest ID does not match the managed identity.');
+  const manifest = actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest;
+  if (manifest?.manifestId !== identity.manifestId) fail('Actor resolver manifest ID does not match the managed identity.');
+  const manifestGroups = Array.isArray(manifest?.spellcastingGroups)
+    ? manifest.spellcastingGroups.filter((group: unknown) => isRecord(group) && group.groupId === identity.groupId)
+    : [];
+  if (manifestGroups.length !== 1) fail('Actor resolver manifest does not contain exactly one expected spellcasting group.');
+  const manifestFeatureItemKey = manifestGroups[0]?.featureItemKey;
+  if (typeof manifestFeatureItemKey !== 'string' || manifestFeatureItemKey.length === 0) {
+    fail('Actor resolver manifest group has an invalid featureItemKey.');
+  }
+  const manifestRefs = Array.isArray(manifestGroups[0]?.spellRefs)
+    ? manifestGroups[0].spellRefs.filter((ref: unknown) => isRecord(ref) && ref.refId === identity.refId)
+    : [];
+  if (manifestRefs.length !== 1) fail('Actor resolver manifest group does not contain exactly one expected spell reference.');
   const featureFlags = feature.flags?.[RESOLVER_MODULE_ID];
   if (!isRecord(featureFlags)
     || featureFlags.groupId !== identity.groupId
-    || typeof featureFlags.featureItemKey !== 'string'
-    || featureFlags.featureItemKey.length === 0) {
+    || featureFlags.featureItemKey !== manifestFeatureItemKey) {
     fail('Feature is not explicitly linked to the expected generated spellcasting group.');
+  }
+  if (feature.flags?.fvttJsonGenerator?.spellcastingFeatureKey !== manifestFeatureItemKey) {
+    fail('Feature lacks the exact project-generator spellcasting feature marker.');
   }
 }
 

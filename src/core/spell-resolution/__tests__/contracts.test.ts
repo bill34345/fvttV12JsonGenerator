@@ -131,6 +131,7 @@ describe('portable spell manifest contract', () => {
 
   test.each([
     'Compendium.dnd5e.spells.Item.abcdefghijklmnop',
+    'Actor.abcdefghijklmnop',
     'Actor.abcdefghijklmnop.Item.ponmlkjihgfedcba',
     'Item.abcdefghijklmnop',
   ])('rejects target-world identifier text at the exact manifest paths: %s', (targetIdentifier) => {

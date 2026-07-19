@@ -30,6 +30,8 @@
   "FVTTJSONSPELL.Review.Source": "目标来源",
   "FVTTJSONSPELL.Review.SelectSource": "选择一个具体来源",
   "FVTTJSONSPELL.Review.Unknown": "未知",
+  "FVTTJSONSPELL.Review.CandidateMissingRules": "不可选择：缺少规则世代元数据。",
+  "FVTTJSONSPELL.Review.CandidateUnsupportedRules": "不可选择：规则世代元数据不受支持。",
   "FVTTJSONSPELL.Review.ManualConflict": "解析器管理的内容已被人工修改",
   "FVTTJSONSPELL.Review.ManualConflictInvalid": "当前管理结构无法安全保留",
   "FVTTJSONSPELL.Review.KeepManual": "保留人工修改",

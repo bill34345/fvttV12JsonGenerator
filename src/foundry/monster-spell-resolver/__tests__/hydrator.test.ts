@@ -155,7 +155,10 @@ class FakeActor {
     this.flags = { [RESOLVER_MODULE_ID]: { spellManifest: manifest } };
     const feature: any = {
       id: 'FeatureHydrate01', _id: 'FeatureHydrate01', type: 'feat', parent: this, actor: this,
-      flags: { [RESOLVER_MODULE_ID]: { featureItemKey: 'innate-feature', groupId: 'innate-cha' } },
+      flags: {
+        fvttJsonGenerator: { spellcastingFeatureKey: 'innate-feature' },
+        [RESOLVER_MODULE_ID]: { featureItemKey: 'innate-feature', groupId: 'innate-cha' },
+      },
       system: { identifier: 'innate-feature', activities: new Map() },
     };
     feature.system.parent = feature;

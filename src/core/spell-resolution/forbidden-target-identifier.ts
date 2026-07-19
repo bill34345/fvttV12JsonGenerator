@@ -8,7 +8,7 @@ export interface ForbiddenTargetWorldIdentifierMatch {
 
 // Foundry document IDs are 16 alphanumeric characters. Match only UUID syntax,
 // not ordinary prose that happens to mention an item or a compendium.
-const TARGET_IDENTIFIER_PATTERN = /\b(?:Compendium\.(?:[A-Za-z0-9_-]+\.){2,4}[A-Za-z0-9]{16}|Actor\.[A-Za-z0-9]{16}\.Item\.[A-Za-z0-9]{16}|Item\.[A-Za-z0-9]{16})\b/g;
+const TARGET_IDENTIFIER_PATTERN = /\b(?:Compendium\.(?:[A-Za-z0-9_-]+\.){2,4}[A-Za-z0-9]{16}|Actor\.[A-Za-z0-9]{16}(?:\.Item\.[A-Za-z0-9]{16})?|Item\.[A-Za-z0-9]{16})\b/g;
 
 export function findForbiddenTargetWorldIdentifiers(value: unknown): ForbiddenTargetWorldIdentifierMatch[] {
   const findings: ForbiddenTargetWorldIdentifierMatch[] = [];
