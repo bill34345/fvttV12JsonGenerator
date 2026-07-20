@@ -19,9 +19,13 @@ const SOURCE_SPELL_REF_KEYS = new Set([
 ]);
 const SPELLCASTING_GROUP_KEYS = new Set([
   'groupId', 'featureName', 'featureEnglishName', 'description', 'evidence', 'ability', 'abilityEvidence',
-  'saveDc', 'saveDcEvidence', 'attackBonus', 'attackBonusEvidence', 'componentWaivers', 'usageGroups',
+  'casterLevel', 'casterLevelEvidence', 'saveDc', 'saveDcEvidence', 'attackBonus', 'attackBonusEvidence',
+  'componentWaivers', 'usageGroups',
 ]);
 const SPELL_USAGE_GROUP_KEYS = new Set(['usage', 'evidence', 'spellRefs']);
+const PREPARED_SLOT_USAGE_GROUP_KEYS = new Set([
+  ...SPELL_USAGE_GROUP_KEYS, 'level', 'levelEvidence', 'slots', 'slotsEvidence',
+]);
 const COMPONENT_WAIVER_KEYS = new Set(['component', 'evidence']);
 const SPELL_RESTRICTION_KEYS = new Set(['kind', 'text', 'value', 'evidence']);
 const SPELL_EVIDENCE_KEYS = new Set(['start', 'end', 'quote']);
@@ -75,7 +79,7 @@ export function validateMonsterIntakeIR(
     finding('SOURCE_LENGTH_MISMATCH', '/source/length', 'IR source length does not match UTF-16 source length.', 'evidence');
   }
 
-  validateCreature(ir, finding);
+  validateCreature(source, ir, finding);
   validateExplicitAcConflicts(source, options.coverageRange, finding);
 
   const claims = Array.isArray(ir.claims) ? ir.claims : [];
@@ -126,6 +130,7 @@ export function validateMonsterIntakeIR(
 }
 
 function validateCreature(
+  source: string,
   ir: MonsterIntakeIR,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
 ): void {
@@ -146,6 +151,24 @@ function validateCreature(
   }
   if (creature.languages?.custom != null && typeof creature.languages.custom !== 'string') {
     finding('INVALID_LANGUAGE_CUSTOM', '/creature/languages/custom', 'Custom language text must be a string when present.', 'schema');
+  }
+  if (creature.legendary !== undefined) {
+    if (!isRecord(creature.legendary)) {
+      finding('INVALID_LEGENDARY_METADATA', '/creature/legendary', 'legendary must be an object when present.', 'schema');
+    } else {
+      if (!Number.isInteger(creature.legendary.max) || (creature.legendary.max as number) < 1) {
+        finding('INVALID_LEGENDARY_ACTION_COUNT', '/creature/legendary/max', 'legendary.max must be a positive integer.', 'schema');
+      }
+      if (typeof creature.legendary.preamble !== 'string' || !creature.legendary.preamble.trim()) {
+        finding('INVALID_LEGENDARY_PREAMBLE', '/creature/legendary/preamble', 'legendary.preamble must preserve the exact visible source text.', 'schema');
+      }
+      const evidence = creature.legendary.evidence;
+      if (!Array.isArray(evidence) || !evidence.some((ref) => isValidEvidenceShape(ref)
+        && source.slice(ref.start, ref.end) === ref.quote
+        && ref.quote === creature.legendary!.preamble)) {
+        finding('LEGENDARY_PREAMBLE_EVIDENCE_MISMATCH', '/creature/legendary/preamble', 'Legendary preamble must exactly match source evidence.', 'evidence', evidence as EvidenceRef[] | undefined);
+      }
+    }
   }
 
   for (const ability of ABILITIES) {
@@ -421,11 +444,14 @@ function validateSpellcasting(
             portable: `/spellcastingGroups/${groupIndex}/spellRefs/${portableRefIndex}`,
             intake: intakeRefPath,
           });
-          const atWill = usageGroup.usage === 'at-will';
+          const atWill = usageGroup.usage === 'at-will' || usageGroup.usage === 'prepared-cantrip';
+          const prepared = usageGroup.usage === 'prepared-slots';
           spellRefs.push({
             ...(isRecord(ref) ? ref : {}),
-            method: atWill ? 'at-will' : 'innate',
-            ...(atWill ? {} : { uses: { value: 1, recovery: 'day', shared: false } }),
+            method: atWill ? 'at-will' : prepared ? 'prepared' : 'innate',
+            ...(prepared
+              ? { castingLevel: usageGroup.level }
+              : atWill ? {} : { uses: { value: 1, recovery: 'day', shared: false } }),
             ignoresMaterialComponents: Array.isArray(group.componentWaivers)
               && group.componentWaivers.some((waiver) => isRecord(waiver) && waiver.component === 'material'),
           });
@@ -441,6 +467,8 @@ function validateSpellcasting(
       spellRefs,
     });
   });
+
+  validatePreparedSpellcastingCompatibility(groups, finding);
 
   const portableValidation = validatePortableSpellManifest({
     schemaVersion: 1,
@@ -458,6 +486,46 @@ function validateSpellcasting(
         portableFinding.code.includes('EVIDENCE') ? 'evidence' : 'semantic',
         portableFinding.evidence,
       );
+    }
+  }
+}
+
+function validatePreparedSpellcastingCompatibility(
+  groups: CanonicalSpellcastingGroup[],
+  finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+): void {
+  const prepared = groups.map((group, index) => ({ group, index })).filter(({ group }) => (
+    isRecord(group) && Array.isArray(group.usageGroups) && group.usageGroups.some((usage) => (
+      isRecord(usage) && (usage.usage === 'prepared-cantrip' || usage.usage === 'prepared-slots')
+    ))
+  ));
+  if (prepared.length < 2) return;
+  const first = prepared[0]!.group;
+  const slots = new Map<number, number>();
+  for (const { group, index } of prepared) {
+    if (group.ability !== first.ability || group.casterLevel !== first.casterLevel) {
+      finding(
+        'CONFLICTING_PREPARED_SPELLCASTING_PROFILE',
+        `/creature/spellcasting/${index}`,
+        'Prepared spellcasting groups sharing one Actor must use the same ability and caster level.',
+        'semantic',
+        group.evidence,
+      );
+    }
+    for (const usage of group.usageGroups) {
+      if (usage.usage !== 'prepared-slots') continue;
+      const existing = slots.get(usage.level);
+      if (existing !== undefined && existing !== usage.slots) {
+        finding(
+          'CONFLICTING_PREPARED_SPELL_SLOTS',
+          `/creature/spellcasting/${index}/usageGroups`,
+          `Prepared level-${usage.level} slot pools disagree (${existing} versus ${usage.slots}).`,
+          'semantic',
+          usage.evidence,
+        );
+      } else {
+        slots.set(usage.level, usage.slots);
+      }
     }
   }
 }
@@ -538,6 +606,30 @@ function validateSpellcastingGroupFields(
       group.abilityEvidence,
     );
   }
+  const hasPreparedUsage = Array.isArray(group.usageGroups)
+    && group.usageGroups.some((usageGroup) => isRecord(usageGroup)
+      && (usageGroup.usage === 'prepared-cantrip' || usageGroup.usage === 'prepared-slots'));
+  if (group.casterLevel !== undefined || group.casterLevelEvidence !== undefined || hasPreparedUsage) {
+    if (!Number.isInteger(group.casterLevel) || (group.casterLevel as number) < 1 || (group.casterLevel as number) > 20) {
+      finding(
+        'INVALID_SPELLCASTER_LEVEL',
+        `${path}/casterLevel`,
+        'Prepared spellcasting requires a casterLevel integer from 1 to 20.',
+        'schema',
+      );
+    }
+    validateSpellEvidenceArray(source, group.casterLevelEvidence, `${path}/casterLevelEvidence`, finding);
+    if (Number.isInteger(group.casterLevel)
+      && !evidenceEntailsCasterLevel(source, group.casterLevelEvidence, group.casterLevel as number)) {
+      finding(
+        'SPELLCASTER_LEVEL_EVIDENCE_MISMATCH',
+        `${path}/casterLevel`,
+        `Exact spellcasting evidence does not entail caster level ${group.casterLevel}.`,
+        'evidence',
+        group.casterLevelEvidence,
+      );
+    }
+  }
   if (group.saveDc !== undefined) {
     if (!Number.isFinite(group.saveDc)) finding('INVALID_SAVE_DC', `${path}/saveDc`, 'Spell save DC must be finite.', 'schema');
     validateSpellEvidenceArray(source, group.saveDcEvidence, `${path}/saveDcEvidence`, finding);
@@ -607,12 +699,21 @@ function validateSpellUsageGroup(
   path: string,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
 ): void {
-  if (!isRecord(usageGroup) || !['at-will', '1/day-each'].includes(String(usageGroup.usage))) {
-    finding('INVALID_SPELL_USE_GROUP', `${path}/usage`, 'Only at-will and independent 1/day-each spell use groups are supported.', 'semantic');
+  if (!isRecord(usageGroup)
+    || !['at-will', '1/day-each', 'prepared-cantrip', 'prepared-slots'].includes(String(usageGroup.usage))) {
+    finding(
+      'INVALID_SPELL_USE_GROUP',
+      `${path}/usage`,
+      'Only at-will, independent 1/day-each, prepared-cantrip, and prepared-slots spell use groups are supported.',
+      'semantic',
+    );
     return;
   }
+  const allowedKeys = usageGroup.usage === 'prepared-slots'
+    ? PREPARED_SLOT_USAGE_GROUP_KEYS
+    : SPELL_USAGE_GROUP_KEYS;
   for (const key of Object.keys(usageGroup)) {
-    if (SPELL_USAGE_GROUP_KEYS.has(key)) continue;
+    if (allowedKeys.has(key)) continue;
     finding(
       key === 'shared' || key === 'uses' || key === 'sharedUses'
         ? 'INVALID_SPELL_USE_GROUP'
@@ -623,6 +724,51 @@ function validateSpellUsageGroup(
     );
   }
   validateSpellEvidenceArray(source, usageGroup.evidence, `${path}/evidence`, finding);
+  if (usageGroup.usage === 'prepared-slots') {
+    if (!Number.isInteger(usageGroup.level) || (usageGroup.level as number) < 1 || (usageGroup.level as number) > 9) {
+      finding('INVALID_SPELL_USE_GROUP', `${path}/level`, 'Prepared spell level must be an integer from 1 to 9.', 'schema');
+    }
+    validateSpellEvidenceArray(source, usageGroup.levelEvidence, `${path}/levelEvidence`, finding);
+    if (Number.isInteger(usageGroup.level)
+      && !evidenceEntailsSpellLevel(source, usageGroup.levelEvidence, usageGroup.level as number)) {
+      finding(
+        'SPELL_SLOT_LEVEL_EVIDENCE_MISMATCH',
+        `${path}/level`,
+        `Exact prepared-spell evidence does not entail spell level ${usageGroup.level}.`,
+        'evidence',
+        usageGroup.levelEvidence as EvidenceRef[] | undefined,
+      );
+    }
+    if (!Number.isInteger(usageGroup.slots) || (usageGroup.slots as number) < 1) {
+      finding('INVALID_SPELL_USE_GROUP', `${path}/slots`, 'Prepared spell slots must be a positive integer.', 'schema');
+    }
+    validateSpellEvidenceArray(source, usageGroup.slotsEvidence, `${path}/slotsEvidence`, finding);
+    if (Number.isInteger(usageGroup.slots)
+      && !evidenceEntailsSpellSlots(source, usageGroup.slotsEvidence, usageGroup.slots as number)) {
+      finding(
+        'SPELL_SLOT_COUNT_EVIDENCE_MISMATCH',
+        `${path}/slots`,
+        `Exact prepared-spell evidence does not entail ${usageGroup.slots} spell slots.`,
+        'evidence',
+        usageGroup.slotsEvidence as EvidenceRef[] | undefined,
+      );
+    }
+    for (const [field, evidence] of [
+      ['levelEvidence', usageGroup.levelEvidence],
+      ['slotsEvidence', usageGroup.slotsEvidence],
+    ] as const) {
+      if (Array.isArray(evidence) && evidence.length > 0
+        && !allEvidenceWithinGrants(evidence, usageGroup.evidence)) {
+        finding(
+          'SPELL_SLOT_EVIDENCE_OUTSIDE_GRANT',
+          `${path}/${field}`,
+          'Prepared spell level and slot evidence must be contained in the explicit usage-group grant span.',
+          'evidence',
+          evidence as EvidenceRef[],
+        );
+      }
+    }
+  }
   if (!Array.isArray(usageGroup.spellRefs) || usageGroup.spellRefs.length === 0) {
     finding('INVALID_SPELL_REFS', `${path}/spellRefs`, 'Spell use group must contain at least one source-granted spell.', 'schema');
   } else {
@@ -699,6 +845,27 @@ function exactEvidenceText(source: string, evidence: unknown): string {
       || source.slice(value.start as number, value.end as number) !== value.quote) return [];
     return [value.quote];
   }).join('\n');
+}
+
+function evidenceEntailsCasterLevel(source: string, evidence: unknown, casterLevel: number): boolean {
+  const text = exactEvidenceText(source, evidence);
+  const level = String(casterLevel);
+  return new RegExp(
+    `(?:\\b${level}(?:st|nd|rd|th)[\\s-]*level\\s+(?:spellcaster|caster)\\b|\\b(?:spellcaster|caster)\\s+level\\s+${level}\\b|${level}\\s*\\u7ea7(?:\\u7684)?\\u65bd\\u6cd5\\u8005)`,
+    'iu',
+  ).test(text);
+}
+
+function evidenceEntailsSpellLevel(source: string, evidence: unknown, spellLevel: number): boolean {
+  const text = exactEvidenceText(source, evidence);
+  const level = String(spellLevel);
+  return new RegExp(`(?:\\b${level}(?:st|nd|rd|th)?[\\s-]*level\\b|${level}\\s*\\u73af)`, 'iu').test(text);
+}
+
+function evidenceEntailsSpellSlots(source: string, evidence: unknown, slots: number): boolean {
+  const text = exactEvidenceText(source, evidence);
+  const count = String(slots);
+  return new RegExp(`(?:\\b${count}\\s*(?:spell\\s+)?slots?\\b|${count}\\s*\\u6cd5\\u4f4d)`, 'iu').test(text);
 }
 
 function normalizeEvidenceToken(value: unknown): string {
@@ -787,7 +954,7 @@ function evidenceEntailsAbility(source: string, evidence: EvidenceRef[] | undefi
   const text = exactEvidenceText(source, evidence).normalize('NFKC').toLocaleLowerCase('en-US');
   return labels[ability].some((label) => {
     const escaped = escapeRegExp(label);
-    return new RegExp(`(?:spellcasting\\s+ability\\s+(?:is|uses?)\\s*${escaped}|uses?\\s+${escaped}\\s+as\\s+(?:(?:its|the)\\s+)?spellcasting\\s+ability|\\u65bd\\u6cd5\\u5c5e\\u6027\\u4e3a\\s*${escaped}|\\u4f7f\\u7528\\s*${escaped}\\s*\\u4f5c\\u4e3a\\s*\\u65bd\\u6cd5\\u5c5e\\u6027)(?![\\p{L}\\p{N}])`, 'iu').test(text);
+    return new RegExp(`(?:spellcasting\\s+ability\\s+(?:is|uses?)\\s*${escaped}|uses?\\s+${escaped}\\s+as\\s+(?:(?:its|the)\\s+)?spellcasting\\s+ability|\\u65bd\\u6cd5(?:\\u5173\\u952e)?\\u5c5e\\u6027(?:\\u662f|\\u4e3a)\\s*${escaped}|\\u4f7f\\u7528\\s*${escaped}\\s*\\u4f5c\\u4e3a\\s*\\u65bd\\u6cd5\\u5c5e\\u6027)(?![\\p{L}\\p{N}])`, 'iu').test(text);
   });
 }
 
@@ -811,7 +978,7 @@ function evidenceEntailsMaterialWaiver(source: string, evidence: EvidenceRef[]):
 function textEntailsMaterialWaiver(value: unknown): boolean {
   const text = String(value ?? '').normalize('NFKC').toLocaleLowerCase('en-US');
   return /(?:without|requires?\s+no|requiring\s+no)\s+material\s+components?/iu.test(text)
-    || /(?:\u65e0\u9700|\u4e0d\u9700|\u4e0d\u9700\u8981)\s*(?:\u4efb\u4f55|\u4efb\u610f|\u5168\u90e8|\u6240\u6709)?\s*(?:\u6750\u6599|\u6cd5\u672f)\u6210\u5206/u.test(text);
+    || /(?:\u65e0\u9700|\u4e0d\u9700|\u4e0d\u9700\u8981)\s*(?:\u4efb\u4f55|\u4efb\u610f|\u5168\u90e8|\u6240\u6709)?\s*(?:(?:\u6750\u6599|\u6cd5\u672f)\u6210\u5206|\u6784\u6750)/u.test(text);
 }
 
 function escapeRegExp(value: string): string {
@@ -826,24 +993,14 @@ function validateSpellcastingNotDuplicated(
 ): void {
   const names = [group.featureName, group.featureEnglishName].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
   const traits = Array.isArray(ir.creature.traits) ? ir.creature.traits : [];
-  const groupClaim = Array.isArray(ir.claims)
-    ? ir.claims.find((claim) => isRecord(claim) && claim.path === path)
-    : undefined;
-  const duplicateIndex = traits.findIndex((trait, traitIndex) => {
+  const duplicateIndex = traits.findIndex((trait) => {
     if (!isRecord(trait)) return false;
     const sameName = [trait.name, trait.englishName]
       .some((name) => typeof name === 'string' && names.some((groupName) => normalizeFeatureName(name) === normalizeFeatureName(groupName)));
     const sameDescription = typeof trait.description === 'string'
       && typeof group.description === 'string'
       && normalizeDescription(trait.description) === normalizeDescription(group.description);
-    const traitClaim = Array.isArray(ir.claims)
-      ? ir.claims.find((claim) => isRecord(claim) && claim.path === `/creature/traits/${traitIndex}`)
-      : undefined;
-    const overlappingProvenance = evidenceArraysOverlap(
-      isRecord(groupClaim) && Array.isArray(groupClaim.evidence) ? groupClaim.evidence : [],
-      isRecord(traitClaim) && Array.isArray(traitClaim.evidence) ? traitClaim.evidence : [],
-    );
-    return sameName || sameDescription || overlappingProvenance;
+    return sameName || sameDescription;
   });
   if (duplicateIndex >= 0) {
     finding(
@@ -1058,7 +1215,11 @@ function matchGrantLabel(quote: string, usage: CanonicalSpellUsageGroup['usage']
 function grantLabelPattern(usage: CanonicalSpellUsageGroup['usage'], anchored: boolean): RegExp {
   const label = usage === 'at-will'
     ? '(?:随意|at[\\s-]*will)'
-    : '(?:每(?:项|个)\\s*1\\s*\\/\\s*日|1\\s*\\/\\s*day\\s*each)';
+    : usage === '1/day-each'
+      ? '(?:每(?:项|个)\\s*1\\s*\\/\\s*日|1\\s*次\\s*\\/\\s*每日|1\\s*\\/\\s*day\\s*each)'
+      : usage === 'prepared-cantrip'
+        ? '(?:戏法(?:\\s*[（(]\\s*随意\\s*[）)])?|cantrips?(?:\\s*[（(]\\s*at[\\s-]*will\\s*[）)])?)'
+        : '(?:(?:[1-9](?:st|nd|rd|th)?\\s*(?:[-–—]\\s*)?level|[1-9]\\s*环)\\s*[（(]?\\s*\\d+\\s*(?:法位|spell\\s+slots?|slots?)\\s*[）)]?)';
   const prefix = anchored
     ? '^\\s*(?:(?:[-+*]|>)\\s+)?(?:[*_~]{1,3})?\\s*'
     : '';
@@ -1076,14 +1237,6 @@ function allEvidenceWithinGrants(evidence: unknown[], grants: unknown): boolean 
     isValidEvidenceShape(parent)
     && child.start >= parent.start
     && child.end <= parent.end
-  )));
-}
-
-function evidenceArraysOverlap(left: unknown[], right: unknown[]): boolean {
-  return left.some((leftRef) => isValidEvidenceShape(leftRef) && right.some((rightRef) => (
-    isValidEvidenceShape(rightRef)
-    && leftRef.start < rightRef.end
-    && rightRef.start < leftRef.end
   )));
 }
 

@@ -19,6 +19,77 @@ async function generatedRatWarlock() {
 }
 
 describe('intake Markdown renderer and deterministic verifier', () => {
+  test('preserves a source-explicit creature subtype through Markdown and Actor verification', async () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.identity.creatureTypeCustom = 'goblinoid';
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+    const actor = generated.rawJson as any;
+
+    expect(markdown).toContain('生物类型备注: goblinoid');
+    expect(actor.system.details.type.custom).toBe('goblinoid');
+
+    actor.system.details.type.custom = '';
+    const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(report.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT' }));
+  });
+
+  test('preserves block separation when projecting list-form Actor biography HTML', () => {
+    const projection = projectActor({
+      system: {
+        abilities: {}, attributes: {}, traits: {},
+        details: { biography: { value: '<ul><li>Prosthetic limb (right hand).</li><li>Armor Class: 13 (chain shirt)</li></ul>' } },
+      },
+      items: [],
+    });
+
+    expect(projection.biography).toBe('Prosthetic limb (right hand).\nArmor Class: 13 (chain shirt)');
+  });
+
+  test('projects the source-exact activity chat flavor before a lossy item HTML description', () => {
+    const projection = projectActor({
+      system: { abilities: {}, attributes: {}, traits: {}, details: {} },
+      items: [{
+        name: 'Spellcasting', type: 'feat',
+        system: {
+          description: { value: '<p>*Spellcasting**. lossy HTML</p>' },
+          activities: { one: { description: { chatFlavor: '**Spellcasting**. exact source' } } },
+        },
+      }],
+    });
+
+    expect((projection.items as Array<Record<string, unknown>>)[0]!.description).toBe('**Spellcasting**. exact source');
+  });
+
+  test('preserves a conditional legendary-action preamble literally while setting the explicit resource maximum', async () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.legendary = {
+      max: 2,
+      preamble: 'Only while fully controlled, the creature can take 2 legendary actions, regaining them at the start of its turn.',
+      evidence: [],
+    };
+    ir.creature.legendaryActions = [{
+      name: 'Dash',
+      description: 'The creature moves up to its speed.',
+      activityType: 'utility',
+      activationType: 'legendary',
+      legendaryCost: 1,
+    }];
+
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+    const actor = generated.rawJson as any;
+
+    expect(actor.system.resources.legact).toMatchObject({ max: 2, spent: 0 });
+    expect(actor.system.details.biography.value).toContain(ir.creature.legendary.preamble);
+    const activity = Object.values(actor.items.find((item: any) => item.name.includes('Dash')).system.activities)[0] as any;
+    expect(activity.activation).toMatchObject({ type: 'legendary', value: 1 });
+  });
+
   test('accepts an intact portable Rat Warlock actor while reporting target-world resolution pending', async () => {
     const { ir, markdown, actor } = await generatedRatWarlock();
 
@@ -204,6 +275,50 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(scoped.saves).toEqual({});
     expect(scoped.initiative).toBeUndefined();
     expect((scoped.senses as Record<string, unknown>).special).toBeUndefined();
+  });
+
+  test('renders a source-explicit hybrid weapon with both melee reach and thrown range', async () => {
+    const ir = buildValidLurkerIr();
+    const hybrid = ir.creature.actions[1]!;
+    hybrid.attack = { type: 'mwak', toHit: 4, reach: 5, range: 20, longRange: 60 };
+
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown,
+      fvttVersion: '14',
+      effectProfile: 'core',
+      translationService: null,
+    });
+    const item = (generated.rawJson as any).items.find((candidate: any) => candidate.name.includes('Claw'));
+    const activity = Object.values(item.system.activities)[0] as any;
+
+    expect(markdown).toContain('范围: 触及 5 尺或射程 20/60 尺');
+    expect(activity.attack.type.value).toBe('mwak');
+    expect(activity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
+    const projection = projectActor(generated.rawJson);
+    expect((projection.items as Array<Record<string, unknown>>).find((candidate) => String(candidate.name).includes('Claw')))
+      .toMatchObject({ reach: 5, range: 20, longRange: 60 });
+    expect(verifyMonsterIntake(LURKER_SOURCE, ir, markdown, generated.rawJson).findings).toEqual([]);
+  });
+
+  test('renders and verifies a source-explicit two-action legendary cost', async () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.legendaryActions = [{
+      name: 'Zone', description: 'Zone (Costs 2 Actions).', activityType: 'utility',
+      activationType: 'legendary', legendaryCost: 2,
+    }];
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+    const actor = generated.rawJson as any;
+    const item = actor.items.find((candidate: any) => candidate.name.includes('Zone'));
+    const activity = Object.values(item.system.activities)[0] as any;
+
+    expect(activity.activation).toMatchObject({ type: 'legendary', value: 2 });
+    expect(projectActor(actor).items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: expect.stringContaining('Zone'), activationValue: 2 }),
+    ]));
   });
 
   test.each(['12', '14'] as const)('preserves the Lurker through project generation for Foundry v%s', async (fvttVersion) => {

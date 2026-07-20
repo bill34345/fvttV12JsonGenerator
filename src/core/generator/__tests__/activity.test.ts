@@ -28,6 +28,24 @@ describe('ActivityGenerator', () => {
     expect(activity.damage.parts[0].types).toContain('piercing');
   });
 
+  it('generates a melee attack with reach and no thrown range', () => {
+    const action: ActionData = {
+      name: 'Mace',
+      type: 'attack',
+      attack: {
+        type: 'mwak',
+        toHit: 2,
+        range: '',
+        reach: '5 ft',
+        damage: [{ formula: '1d6', type: 'bludgeoning' }],
+      },
+    };
+
+    const activity = Object.values(generator.generate(action))[0] as any;
+
+    expect(activity.range).toMatchObject({ reach: 5, value: null, long: null, units: 'ft' });
+  });
+
   it('should generate save activity', () => {
     const action: ActionData = {
       name: 'Breath',

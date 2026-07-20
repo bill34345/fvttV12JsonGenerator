@@ -136,7 +136,10 @@ export async function resumeMonsterIntake(
   for (const candidate of discovery.candidates) {
     const creaturePath = join(runPath, 'creatures', safeId(candidate.id));
     const oldIr = readJson<MonsterIntakeIR>(join(creaturePath, 'intake-ir.json'));
-    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(oldIr, byIssue), {
+    // Refresh provider-owned evidence and source-proven normalizations first. User decisions are
+    // applied afterward and then protected from canonical rewrites by the conservative pass.
+    const refreshedIr = anchorIrEvidence(source, candidate, oldIr);
+    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(refreshedIr, byIssue), {
       canonicalizeModelSpellEvidence: false,
       normalizeAbsentOptionalZeroes: false,
       removeDisprovedProcessUncertainties: false,
@@ -231,7 +234,9 @@ async function processIr(
     const report = verifyMonsterIntake(options.source, ir, markdown, generated.rawJson, candidate);
     writeReports(bundlePath, report);
     calls.review += 1;
-    const review = await provider.review({ source: options.source, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
+    const rawReview = await provider.review({ source: options.source, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
+    writeJson(join(bundlePath, 'ai-review.raw.json'), rawReview);
+    const review = adjudicateReview(options.source, candidate, ir, report.projection, rawReview);
     writeJson(join(bundlePath, 'ai-review.json'), review);
     const combined = combineFindings(report.findings, review);
     if (review.verdict === 'revise' && calls.extraction === 1 && calls.repair === 0) {
@@ -470,6 +475,155 @@ function combineFindings(deterministic: IntakeFinding[], review: AiReviewResult)
   return [...deterministic, ...(Array.isArray(review.findings) ? review.findings.map((finding) => ({ ...finding, origin: 'ai-review' as const })) : [])];
 }
 
+export function adjudicateReview(
+  source: string,
+  candidate: DiscoveryCandidate,
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  review: AiReviewResult,
+): AiReviewResult {
+  const findings = review.findings.filter((finding) => !(
+    isDisprovedDuplicateSpellcastingFinding(ir, projection, finding)
+    || isDisprovedSpellcastingDescriptionFinding(ir, projection, finding)
+    || isDisprovedComponentWaiverFinding(source, candidate, ir, finding)
+    || isDisprovedSkillLabelFinding(ir, projection, finding)
+    || isDisprovedAcNoteFormatFinding(ir, projection, finding)
+    || isDisprovedUsageEvidenceFinding(source, ir, finding)
+    || isOutsideCandidateFinding(source, candidate, ir, finding)
+  ));
+  return {
+    ...review,
+    verdict: findings.some((finding) => finding.blocking) ? review.verdict : 'accepted',
+    findings,
+  };
+}
+
+function isDisprovedAcNoteFormatFinding(
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code !== 'MARKDOWN_FRONTMATTER_ACNOTE_FORMAT' || !ir.creature.attributes.acNote?.trim()) return false;
+  const note = ir.creature.attributes.acNote.trim();
+  const literalNote = /^[（(]/u.test(note) ? note : `（${note}）`;
+  return String(projection.biography ?? '').includes(`护甲等级：${ir.creature.attributes.ac}${literalNote}`);
+}
+
+function isDisprovedComponentWaiverFinding(
+  source: string,
+  candidate: DiscoveryCandidate,
+  ir: MonsterIntakeIR,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code.toUpperCase() !== 'SPELL_COMPONENT_WAIVER_LOST') return false;
+  const groupIndex = finding.path.match(/^\/creature\/spellcasting\/(\d+)\/componentWaivers$/u)?.[1];
+  const group = groupIndex === undefined ? undefined : ir.creature.spellcasting?.[Number(groupIndex)];
+  if (!group || group.componentWaivers.length > 0) return false;
+  const candidateSource = source.slice(candidate.start, candidate.end);
+  return !textStatesMaterialWaiver(candidateSource) && !textStatesMaterialWaiver(group.description);
+}
+
+function isDisprovedSkillLabelFinding(
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code !== 'MARKDOWN_SKILL_DRIFT') return false;
+  const projected = asRecord(projection.skills) ?? {};
+  return Object.entries(ir.creature.skills).every(([skill, total]) => projected[skill] === total)
+    && Object.keys(projected).every((skill) => ir.creature.skills[skill] === projected[skill]);
+}
+
+function textStatesMaterialWaiver(value: string): boolean {
+  const text = value.normalize('NFKC').toLocaleLowerCase('en-US');
+  return /(?:without|requires?\s+no|requiring\s+no)\s+material\s+components?/iu.test(text)
+    || /(?:无需|不需|不需要)\s*(?:任何|任意|全部|所有)?\s*(?:(?:材料|法术)成分|构材)/u.test(text);
+}
+
+function isDisprovedSpellcastingDescriptionFinding(
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code !== 'ACTOR_SPELLCASTING_DESCRIPTION_DRIFT') return false;
+  const items = Array.isArray(projection.items) ? projection.items : [];
+  return (ir.creature.spellcasting ?? []).every((group) => items.some((value) => {
+    const item = asRecord(value) ?? {};
+    const name = String(item.name ?? '');
+    return (name.includes(group.featureName)
+      || (group.featureEnglishName !== undefined && name.includes(group.featureEnglishName)))
+      && item.description === group.description;
+  }));
+}
+
+function isOutsideCandidateFinding(
+  source: string,
+  candidate: DiscoveryCandidate,
+  ir: MonsterIntakeIR,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  const evidence = finding.evidence ?? [];
+  if (evidence.length > 0 && evidence.every((ref) => ref.end <= candidate.start || ref.start >= candidate.end)) return true;
+  if (finding.code !== 'UNCOVERED_SOURCE_ENTRY' || (candidate.start === 0 && candidate.end === source.length)) return false;
+  if (evidence.some((ref) => ref.start < candidate.end && ref.end > candidate.start)) return false;
+  const ordered = [...ir.coverage].sort((left, right) => left.start - right.start || left.end - right.end);
+  return ordered.length > 0
+    && ordered[0]!.start === candidate.start
+    && ordered.at(-1)!.end === candidate.end
+    && ordered.every((entry, index) => source.slice(entry.start, entry.end) === entry.quote
+      && (index === 0 || ordered[index - 1]!.end === entry.start));
+}
+
+function isDisprovedDuplicateSpellcastingFinding(
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  const code = finding.code.toUpperCase();
+  if (!code.startsWith('DUPLICATE_SPELLCASTING_')
+    && code !== 'SPELL_GROUP_DUPLICATED_AS_TRAIT'
+    && code !== 'SPELLCASTING_GROUP_DUPLICATED_AS_TRAIT') return false;
+  const groups = ir.creature.spellcasting ?? [];
+  if (groups.length === 0) return false;
+  if (groups.some((group) => ir.creature.traits.some((trait) => (
+    trait.description === group.description
+    || trait.name === group.featureName
+    || (group.featureEnglishName !== undefined && trait.englishName === group.featureEnglishName)
+  )))) return false;
+  const items = Array.isArray(projection.items) ? projection.items : [];
+  return groups.every((group) => items.filter((value) => {
+    const item = asRecord(value) ?? {};
+    const name = String(item.name ?? '');
+    return name.includes(group.featureName)
+      || (group.featureEnglishName !== undefined && name.includes(group.featureEnglishName));
+  }).length === 1);
+}
+
+function isDisprovedUsageEvidenceFinding(
+  source: string,
+  ir: MonsterIntakeIR,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code !== 'SPELL_USAGE_EVIDENCE_INCOMPLETE') return false;
+  const match = finding.path.match(/^\/ir\/creature\/spellcasting\/(\d+)\/usageGroups\/(\d+)$/u);
+  if (!match) return false;
+  const usage = ir.creature.spellcasting?.[Number(match[1])]?.usageGroups[Number(match[2])];
+  if (!usage || usage.evidence.length === 0) return false;
+  return usage.evidence.every((grant) => {
+    if (source.slice(grant.start, grant.end) !== grant.quote) return false;
+    const childEvidence = usage.spellRefs.flatMap((spell) => [
+      ...spell.evidence,
+      ...spell.restrictions.flatMap((restriction) => restriction.evidence),
+    ]);
+    if (childEvidence.length === 0 || childEvidence.some((ref) => (
+      source.slice(ref.start, ref.end) !== ref.quote || ref.start < grant.start || ref.end > grant.end
+    ))) return false;
+    const lineEnd = source.indexOf('\n', grant.end);
+    const trailing = source.slice(grant.end, lineEnd < 0 ? source.length : lineEnd);
+    return !/\S/u.test(trailing);
+  });
+}
+
 function result(
   candidate: DiscoveryCandidate,
   bundlePath: string,
@@ -622,6 +776,8 @@ export function anchorIrEvidence(
   } = {},
 ): MonsterIntakeIR {
   const next = structuredClone(ir);
+  // Request-owned bookkeeping is deterministic and must not drift with provider output.
+  next.source = { sha256: sha256(source), length: source.length };
   const candidateScope = [{ start: candidate.start, end: candidate.end }];
   for (const ref of collectGeneralEvidenceRefs(next)) anchorEvidenceRef(source, candidateScope, ref);
   normalizeModelIr(next, source, options.normalizeAbsentOptionalZeroes ?? true);
@@ -751,6 +907,7 @@ function anchorSpellcastingEvidence(
     for (const ref of groupEvidence) anchorEvidenceRef(source, candidateScopes, ref);
     const groupScopes = exactEvidenceScopes(source, candidateScopes, groupEvidence);
     for (const ref of evidenceArray(group.abilityEvidence)) anchorEvidenceRef(source, groupScopes, ref);
+    for (const ref of evidenceArray(group.casterLevelEvidence)) anchorEvidenceRef(source, groupScopes, ref);
     for (const ref of evidenceArray(group.saveDcEvidence)) anchorEvidenceRef(source, groupScopes, ref);
     for (const ref of evidenceArray(group.attackBonusEvidence)) anchorEvidenceRef(source, groupScopes, ref);
     if (Array.isArray(group.componentWaivers)) {
@@ -765,6 +922,12 @@ function anchorSpellcastingEvidence(
       const usageEvidence = evidenceArray(usage.evidence);
       for (const ref of usageEvidence) anchorEvidenceRef(source, groupScopes, ref);
       const usageScopes = exactEvidenceScopes(source, groupScopes, usageEvidence);
+      if (canonicalizeModelSpellEvidence && usage.usage === 'prepared-slots') {
+        canonicalizePreparedNumericEvidence(source, usageScopes, usage, 'level', 'levelEvidence');
+        canonicalizePreparedNumericEvidence(source, usageScopes, usage, 'slots', 'slotsEvidence');
+      }
+      for (const ref of evidenceArray(usage.levelEvidence)) anchorEvidenceRef(source, usageScopes, ref);
+      for (const ref of evidenceArray(usage.slotsEvidence)) anchorEvidenceRef(source, usageScopes, ref);
       if (!Array.isArray(usage.spellRefs)) continue;
       for (const spellValue of usage.spellRefs) {
         const spell = asRecord(spellValue);
@@ -789,6 +952,32 @@ function anchorSpellcastingEvidence(
       }
     }
   }
+}
+
+function canonicalizePreparedNumericEvidence(
+  source: string,
+  scopes: EvidenceScope[],
+  usage: Record<string, unknown>,
+  valueKey: 'level' | 'slots',
+  evidenceKey: 'levelEvidence' | 'slotsEvidence',
+): void {
+  const value = usage[valueKey];
+  if (!Number.isInteger(value) || (value as number) < 1) return;
+  const number = String(value);
+  const pattern = valueKey === 'level'
+    ? new RegExp(`\\b${number}(?:st|nd|rd|th)?[\\s-]*level\\b|${number}\\s*环`, 'giu')
+    : new RegExp(`\\b${number}\\s*(?:spell\\s+)?slots?\\b|${number}\\s*法位`, 'giu');
+  const matches = new Map<number, EvidenceRef>();
+  for (const scope of scopes) {
+    const local = source.slice(scope.start, scope.end);
+    pattern.lastIndex = 0;
+    for (let match = pattern.exec(local); match; match = pattern.exec(local)) {
+      const start = scope.start + match.index;
+      matches.set(start, { start, end: start + match[0].length, quote: match[0] });
+      if (match[0].length === 0) pattern.lastIndex += 1;
+    }
+  }
+  if (matches.size === 1) usage[evidenceKey] = [[...matches.values()][0]!];
 }
 
 function canonicalizeEvidenceFromLiteral(
@@ -848,10 +1037,14 @@ function collectGeneralEvidenceRefs(ir: MonsterIntakeIR): EvidenceRef[] {
   for (const uncertainty of Array.isArray(ir.uncertainties) ? ir.uncertainties : []) {
     addEvidenceArray(asRecord(uncertainty)?.evidence);
   }
+  addEvidenceArray(ir.creature.legendary?.evidence);
   return refs;
 }
 
 function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOptionalZeroes: boolean): void {
+  if (Array.isArray(ir.claims)) {
+    ir.claims = ir.claims.filter((claim) => !isUnsupportedEmptyContainerClaim(ir, source, claim));
+  }
   const attributes = ir.creature.attributes as MonsterIntakeIR['creature']['attributes'] & { acKind?: unknown; initiative?: number | null };
   if (typeof attributes.acKind === 'string' && !['flat', 'natural', 'default'].includes(attributes.acKind)) {
     attributes.acNote = attributes.acNote?.trim() || attributes.acKind;
@@ -875,7 +1068,7 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
   if (Array.isArray(languages.custom) && languages.custom.length === 0) delete languages.custom;
   languages.values = languages.values.map(normalizeLanguageValue);
   for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
-    for (const feature of ir.creature[section]) {
+    for (const [featureIndex, feature] of ir.creature[section].entries()) {
       const overloadedActivityType = String(feature.activityType);
       if (['action', 'bonus', 'reaction', 'legendary', 'special'].includes(overloadedActivityType)) {
         feature.activationType = overloadedActivityType as NonNullable<typeof feature.activationType>;
@@ -884,8 +1077,28 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
       if (!['attack', 'save', 'damage', 'utility'].includes(String(feature.activityType))) {
         feature.activityType = feature.attack ? 'attack' : feature.save ? 'save' : feature.damage?.length ? 'damage' : 'utility';
       }
+      if (feature.activityType === 'attack' && !feature.attack) {
+        feature.activityType = feature.damage?.length ? 'damage' : 'utility';
+      }
+      if (section === 'legendaryActions' && feature.legendaryCost === undefined) {
+        const costMatch = `${feature.name}\n${feature.description}`.match(/(?:costs?|uses?|需要)\s*(\d+)\s*(?:legendary\s+actions?|actions?|动作)/iu);
+        const cost = Number(costMatch?.[1]);
+        if (Number.isInteger(cost) && cost > 0) feature.legendaryCost = cost;
+      }
+      if (feature.save && !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(String(feature.save.ability))) {
+        const dcIsLiteral = descriptionStatesSaveDc(feature.description, feature.save.dc);
+        const abilityIsLiteral = descriptionStatesSaveAbility(feature.description);
+        if (dcIsLiteral && !abilityIsLiteral) {
+          delete feature.save;
+          if (feature.activityType === 'save') feature.activityType = feature.damage?.length ? 'damage' : 'utility';
+          const abilityPath = `/creature/${section}/${featureIndex}/save/ability`;
+          ir.uncertainties = ir.uncertainties.filter((uncertainty) => !(
+            uncertainty.path === abilityPath
+            && uncertainty.code.toLocaleLowerCase('en-US').replace(/[_\s]+/gu, '-') === 'ambiguous-save-ability'
+          ));
+        }
+      }
       if (feature.attack && normalizeAbsentOptionalZeroes) {
-        const featureIndex = ir.creature[section].indexOf(feature);
         const featurePath = `/creature/${section}/${featureIndex}`;
         const zeroBoundary = '(?![\\d.,\\-–—])';
         if (feature.attack.range === 0 && !hasExactClaimEvidence(
@@ -908,6 +1121,76 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
       for (const damage of feature.damage ?? []) damage.type = normalizeDamageValue(damage.type);
     }
   }
+  ir.uncertainties = ir.uncertainties.filter((uncertainty) => !isDisprovedStatblockUncertainty(ir, source, uncertainty));
+}
+
+function isUnsupportedEmptyContainerClaim(ir: MonsterIntakeIR, source: string, claim: MonsterIntakeIR['claims'][number]): boolean {
+  if (!['/creature/saves', '/creature/skills', '/creature/defenses'].includes(claim.path)) return false;
+  const empty = claim.path === '/creature/saves' ? Object.keys(ir.creature.saves).length === 0
+    : claim.path === '/creature/skills' ? Object.keys(ir.creature.skills).length === 0
+      : Object.values(ir.creature.defenses).every((value) => value.length === 0);
+  if (!empty) return false;
+  return !claim.evidence.some((ref) => source.slice(ref.start, ref.end) === ref.quote);
+}
+
+function isDisprovedStatblockUncertainty(
+  ir: MonsterIntakeIR,
+  source: string,
+  uncertainty: MonsterIntakeIR['uncertainties'][number],
+): boolean {
+  const code = uncertainty.code.toLocaleLowerCase('en-US').replace(/[_\s]+/gu, '-');
+  if (code === 'creature-type-custom-not-standardized') {
+    return uncertainty.path === '/creature/identity/creatureType'
+      && ir.creature.identity.creatureType === 'humanoid'
+      && Boolean(ir.creature.identity.creatureTypeCustom?.trim())
+      && /(?:任意种族|any\s+race)/iu.test(source);
+  }
+  const featureMatch = uncertainty.path.match(/^\/creature\/(traits|actions|bonusActions|reactions|legendaryActions)\/(\d+)(?:\/(.*))?$/u);
+  if (!featureMatch) return false;
+  const section = featureMatch[1] as 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'legendaryActions';
+  const feature = ir.creature[section][Number(featureMatch[2])];
+  if (!feature) return false;
+  if (code === 'attack-type-ambiguous') {
+    return featureMatch[3] === 'attack/type'
+      && Boolean(feature.attack?.reach && feature.attack.range)
+      && /(?:melee\s+or\s+ranged|近战或远程)/iu.test(feature.description);
+  }
+  if (code === 'save-ability-unstated') {
+    return featureMatch[3]?.startsWith('save') === true
+      && feature.save === undefined
+      && /(?:save|豁免)[^\n\d]{0,20}DC\s*[:：]?\s*\d+/iu.test(feature.description.normalize('NFKC'));
+  }
+  if (code === 'legendary-cost-not-structured') {
+    return section === 'legendaryActions' && Number.isInteger(feature.legendaryCost) && feature.legendaryCost! > 0;
+  }
+  if (code === 'attack-damage-total-vs-formula') {
+    const damageIndex = featureMatch[3]?.match(/^damage\/(\d+)$/u)?.[1];
+    const damage = damageIndex === undefined ? undefined : feature.damage?.[Number(damageIndex)];
+    return damage !== undefined && descriptionAverageMatchesFormula(feature.description, damage.formula);
+  }
+  return false;
+}
+
+function descriptionAverageMatchesFormula(description: string, formula: string): boolean {
+  const compactFormula = formula.replace(/\s+/gu, '');
+  const dice = compactFormula.match(/^(\d+)d(\d+)([+-]\d+)?$/iu);
+  if (!dice) return false;
+  const escaped = compactFormula.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\+/gu, '\\s*\\+\\s*').replace(/-/gu, '\\s*-\\s*');
+  const stated = description.normalize('NFKC').match(new RegExp(`(\\d+)\\s*[（(]\\s*${escaped}\\s*[）)]`, 'iu'));
+  if (!stated) return false;
+  const average = Math.floor(Number(dice[1]) * (Number(dice[2]) + 1) / 2 + Number(dice[3] ?? 0));
+  return Number(stated[1]) === average;
+}
+
+function descriptionStatesSaveDc(description: string, dc: number): boolean {
+  const value = String(dc).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:save|豁免)[^\\n\\d]{0,20}DC\\s*[:：]?\\s*${value}(?!\\d)|DC\\s*[:：]?\\s*${value}(?!\\d)`, 'iu').test(description.normalize('NFKC'));
+}
+
+function descriptionStatesSaveAbility(description: string): boolean {
+  const text = description.normalize('NFKC');
+  return /(?:strength|dexterity|constitution|intelligence|wisdom|charisma)\s+(?:saving throw|save)(?![\p{L}\p{N}])/iu.test(text)
+    || /(?:力量|敏捷|体质|智力|感知|魅力)\s*豁免/u.test(text);
 }
 
 function hasExactClaimEvidence(

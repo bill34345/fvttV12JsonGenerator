@@ -33,6 +33,33 @@ function ratCases() {
 }
 
 describe('native dnd5e 5.3.3 Cast Activity source', () => {
+  test('uses native Actor spell slots for a source-leveled prepared spell', () => {
+    const base = structuredClone(ratCases()[0]!.ref);
+    const ref: PortableSpellRef = {
+      ...base,
+      refId: 'prepared-command',
+      identifier: 'command',
+      originalName: '命令术command',
+      englishName: 'Command',
+      method: 'prepared',
+      castingLevel: 1,
+      restrictions: [],
+      evidence: [],
+    };
+    delete ref.uses;
+    const built = buildCastActivitySource({
+      manifestId: 'prepared-priest',
+      featureId: 'PriestFeature001',
+      group: { groupId: 'prepared-wisdom', featureItemKey: 'prepared-wisdom', ability: 'wis', spellRefs: [ref] },
+      ref,
+      selectedUuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',
+    });
+
+    expect(built.activity.consumption).toEqual({ spellSlot: true, targets: [] });
+    expect(built.activity.uses).toBeUndefined();
+    expect(built.activity.spell).toMatchObject({ ability: 'wis', level: 1, spellbook: true });
+  });
+
   test('projects all ten real Rat refs to native Cast source without destination rewrites or macros', () => {
     const cases = ratCases();
     expect(cases).toHaveLength(10);

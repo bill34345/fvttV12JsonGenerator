@@ -99,11 +99,32 @@ export interface CanonicalSpellComponentWaiver {
   evidence: EvidenceRef[];
 }
 
-export interface CanonicalSpellUsageGroup {
+interface CanonicalIndependentSpellUsageGroup {
   usage: 'at-will' | '1/day-each';
   evidence: EvidenceRef[];
   spellRefs: CanonicalSpellRef[];
 }
+
+interface CanonicalPreparedCantripUsageGroup {
+  usage: 'prepared-cantrip';
+  evidence: EvidenceRef[];
+  spellRefs: CanonicalSpellRef[];
+}
+
+interface CanonicalPreparedSlotUsageGroup {
+  usage: 'prepared-slots';
+  level: number;
+  levelEvidence: EvidenceRef[];
+  slots: number;
+  slotsEvidence: EvidenceRef[];
+  evidence: EvidenceRef[];
+  spellRefs: CanonicalSpellRef[];
+}
+
+export type CanonicalSpellUsageGroup =
+  | CanonicalIndependentSpellUsageGroup
+  | CanonicalPreparedCantripUsageGroup
+  | CanonicalPreparedSlotUsageGroup;
 
 export interface CanonicalSpellcastingGroup {
   groupId: string;
@@ -113,6 +134,8 @@ export interface CanonicalSpellcastingGroup {
   evidence: EvidenceRef[];
   ability: AbilityKey;
   abilityEvidence: EvidenceRef[];
+  casterLevel?: number;
+  casterLevelEvidence?: EvidenceRef[];
   saveDc?: number;
   saveDcEvidence?: EvidenceRef[];
   attackBonus?: number;
@@ -156,6 +179,11 @@ export interface CanonicalMonster {
   };
   languages: { values: string[]; custom?: string };
   biography?: string;
+  legendary?: {
+    max: number;
+    preamble: string;
+    evidence: EvidenceRef[];
+  };
   spellcasting?: CanonicalSpellcastingGroup[];
   traits: CanonicalFeature[];
   actions: CanonicalFeature[];

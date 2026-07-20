@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { anchorIrEvidence, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
+import { adjudicateReview, anchorIrEvidence, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
 import type {
   AiReviewResult,
   DiscoveryRequest,
@@ -108,6 +108,18 @@ function structuredSpellcastingEvidence(ir: MonsterIntakeIR): Array<{
 }
 
 describe('AI monster intake orchestrator', () => {
+  test('replaces provider-owned source bookkeeping with the immutable request metadata', () => {
+    const expectedSource = buildValidLurkerIr().source;
+    const ir = buildValidLurkerIr();
+    ir.source = { sha256: 'provider-drift', length: LURKER_SOURCE.length + 340 };
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.source).toEqual(expectedSource);
+  });
+
   test('chunks long UTF-16 source with the fixed overlap and deduplicates overlapping boundary discoveries', () => {
     const source = `${'a'.repeat(23_500)}MONSTER${'b'.repeat(25_500)}`;
     const chunks = chunkSource(source);
@@ -436,6 +448,142 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.creature.actions[1]!.attack!.longRange).toBeUndefined();
   });
 
+  test('normalizes an attack label without an attack payload to literal utility instead of inventing an attack roll', () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.actions[0]!.activityType = 'attack';
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'multiattack', label: 'Multiattack', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.actions[0]!.attack).toBeUndefined();
+    expect(anchored.creature.actions[0]!.activityType).toBe('utility');
+  });
+
+  test('drops a provider-invented empty-container claim whose evidence is not an exact source slice', () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.defenses = { resistances: [], immunities: [], vulnerabilities: [], conditionImmunities: [] };
+    ir.claims = ir.claims.filter((claim) => claim.path !== '/creature/defenses');
+    ir.claims.push({
+      path: '/creature/defenses', valueKind: 'explicit', confidence: 'low',
+      value: structuredClone(ir.creature.defenses),
+      evidence: [{ start: 0, end: LURKER_SOURCE.length, quote: `unrelated ${LURKER_SOURCE}` }],
+    });
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'empty-default', label: 'Empty Default', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.claims.some((claim) => claim.path === '/creature/defenses')).toBe(false);
+  });
+
+  test('re-anchors the exact legendary preamble and preserves its conditional availability', () => {
+    const preamble = 'Only while fully controlled, the creature can take 2 legendary actions.';
+    const source = `${LURKER_SOURCE}\n${preamble}`;
+    const ir = buildValidLurkerIr();
+    ir.creature.legendary = {
+      max: 2,
+      preamble,
+      evidence: [{ start: 0, end: preamble.length, quote: preamble }],
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'conditional-legendary', label: 'Conditional Legendary', start: 0, end: source.length, quote: source,
+    }, ir);
+    const start = source.indexOf(preamble);
+
+    expect(anchored.creature.legendary!.evidence).toEqual([{ start, end: start + preamble.length, quote: preamble }]);
+    expect(anchored.creature.legendary!.preamble).toBe(preamble);
+  });
+
+  test('keeps a literal save DC but drops unsupported structured save automation when the source omits the ability', () => {
+    const description = 'Creatures in the sphere are affected by confusion (save DC 12).';
+    const source = `${LURKER_SOURCE}\n${description}`;
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.legendaryActions.push({
+      name: 'Zone of Calamity', description, activityType: 'save', activationType: 'legendary',
+      save: { dc: 12, ability: 'unknown', condition: 'affected by confusion' },
+    });
+    ir.uncertainties.push({
+      id: 'ambiguous-save-ability', code: 'ambiguous-save-ability',
+      path: '/creature/legendaryActions/0/save/ability',
+      message: 'The source gives DC 12 but does not name a save ability.', blocking: true,
+      evidence: [{ start: source.indexOf(description), end: source.length, quote: description }],
+    });
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'literal-save-dc', label: 'Literal Save DC', start: 0, end: source.length, quote: source,
+    }, ir);
+    const feature = anchored.creature.legendaryActions[0]!;
+
+    expect(feature.description).toContain('save DC 12');
+    expect(feature.save).toBeUndefined();
+    expect(feature.activityType).toBe('utility');
+    expect(anchored.uncertainties).toHaveLength(0);
+  });
+
+  test('does not discard a valid explicit save ability or an unrelated uncertainty', () => {
+    const ir = buildValidLurkerIr();
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'lurker', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.bonusActions.find((feature) => feature.save)?.save?.ability).toBe('cha');
+    expect(anchored.uncertainties).toEqual(ir.uncertainties);
+  });
+
+  test('normalizes source-proven statblock conventions instead of retaining false AI ambiguities', () => {
+    const hybrid = 'Dagger. Melee or Ranged Weapon Attack: reach 5 ft. or range 20/60 ft.';
+    const zone = 'Zone of Calamity (Costs 2 Actions). Creatures are affected (save DC 12).';
+    const mace = 'Mace. Hit: 3 (1d6) bludgeoning damage.';
+    const race = 'Medium humanoid (any race), any alignment.';
+    const source = `${LURKER_SOURCE}\n${hybrid}\n${zone}\n${mace}\n${race}`;
+    const ir = buildValidLurkerIr() as any;
+    Object.assign(ir.creature.actions[1], {
+      name: 'Dagger', description: hybrid,
+      attack: { type: 'mwak', toHit: 4, reach: 5, range: 20, longRange: 60 },
+      damage: [{ formula: '1d4+2', type: 'piercing', relationship: 'base' }],
+    });
+    ir.creature.actions.push({
+      name: 'Mace', description: mace, activityType: 'attack',
+      attack: { type: 'mwak', toHit: 2, reach: 5 },
+      damage: [{ formula: '1d6', type: 'bludgeoning', relationship: 'base' }],
+    });
+    ir.creature.legendaryActions.push({ name: 'Zone of Calamity (Costs 2 Actions)', description: zone, activityType: 'utility', activationType: 'legendary' });
+    ir.creature.identity.creatureType = 'humanoid';
+    ir.creature.identity.creatureTypeCustom = 'any race';
+    ir.uncertainties = [
+      { id: 'hybrid', code: 'attack-type-ambiguous', path: '/creature/actions/1/attack/type', message: 'hybrid', blocking: true, evidence: [] },
+      { id: 'save', code: 'save-ability-unstated', path: '/creature/legendaryActions/0/save', message: 'no ability', blocking: true, evidence: [] },
+      { id: 'cost', code: 'legendary-cost-not-structured', path: '/creature/legendaryActions/0', message: 'cost', blocking: true, evidence: [] },
+      { id: 'average', code: 'attack-damage-total-vs-formula', path: '/creature/actions/2/damage/0', message: 'average', blocking: true, evidence: [] },
+      { id: 'race', code: 'creature-type-custom-not-standardized', path: '/creature/identity/creatureType', message: 'race', blocking: true, evidence: [] },
+    ];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'statblock-conventions', label: 'Statblock Conventions', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.legendaryActions[0]!.legendaryCost).toBe(2);
+    expect(anchored.uncertainties).toEqual([]);
+  });
+
+  test('retains close negative ambiguities when the source does not prove the convention', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.actions[1].attack = { type: 'mwak', toHit: 4, reach: 5 };
+    ir.creature.actions[1].description = 'Dagger. Melee or Ranged Weapon Attack.';
+    ir.uncertainties = [{
+      id: 'hybrid', code: 'attack-type-ambiguous', path: '/creature/actions/1/attack/type',
+      message: 'The ranged distance is absent.', blocking: true, evidence: [],
+    }];
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'unproven-hybrid', label: 'Unproven Hybrid', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toHaveLength(1);
+  });
+
   test('preserves explicit zero nullable distances from leaf claims across feature sections', () => {
     const suffix = '\nSenses: blindsight 0 ft.\nNeedle. Ranged Weapon Attack. Range 0 ft. Long range 0 ft.\nSnap. Ranged Spell Attack. Range 0 ft.';
     const source = `${LURKER_SOURCE}${suffix}`;
@@ -675,6 +823,59 @@ describe('AI monster intake orchestrator', () => {
     const actor = JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8'));
     expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
     expect(actor.items.filter((item: any) => item.type === 'spell')).toEqual([]);
+  });
+
+  test('adjudicates a duplicate-spellcasting reviewer finding when IR and projection prove one generated feat only', async () => {
+    const provider = new RatWarlockProvider();
+    provider.review = async () => ({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'false-duplicate', code: 'SPELL_GROUP_DUPLICATED_AS_TRAIT', path: '/markdown/traits',
+        message: 'The generated visible spellcasting feat is duplicated.', blocking: true, origin: 'ai-review',
+      }, {
+        id: 'false-skill-label', code: 'MARKDOWN_SKILL_DRIFT', path: '/markdown/skills/localized-label',
+        message: 'A canonical localized skill label changed.', blocking: true, origin: 'ai-review',
+      }, {
+        id: 'false-usage-boundary', code: 'SPELL_USAGE_EVIDENCE_INCOMPLETE',
+        path: '/ir/creature/spellcasting/0/usageGroups/0',
+        message: 'The exact grant allegedly omits a line terminator.', blocking: true, origin: 'ai-review',
+      }],
+    });
+
+    const intake = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE, sourceName: 'rat-warlock.txt', fvttVersion: '14', effectProfile: 'core', ...roots(),
+    }, provider);
+
+    expect(intake.status).toBe('succeeded');
+    expect(JSON.parse(readFileSync(join(intake.creatures[0]!.bundlePath, 'ai-review.raw.json'), 'utf-8')).verdict).toBe('revise');
+    expect(JSON.parse(readFileSync(join(intake.creatures[0]!.bundlePath, 'ai-review.json'), 'utf-8'))).toEqual({
+      schemaVersion: 1, verdict: 'accepted', findings: [],
+    });
+  });
+
+  test('keeps a reviewer component-waiver finding when the original candidate source still states the omitted waiver', () => {
+    const ir = buildRatWarlockIr();
+    const group = ir.creature.spellcasting![0]!;
+    group.componentWaivers = [];
+    group.description = group.description.replace('无需材料成分', '');
+    const review: AiReviewResult = {
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'lost-waiver', code: 'SPELL_COMPONENT_WAIVER_LOST',
+        path: '/creature/spellcasting/0/componentWaivers',
+        message: 'The source material waiver was omitted from the IR and Actor.',
+        blocking: true, origin: 'ai-review',
+      }],
+    };
+
+    const adjudicated = adjudicateReview(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir, {}, review);
+
+    expect(adjudicated.verdict).toBe('revise');
+    expect(adjudicated.findings).toContainEqual(expect.objectContaining({ id: 'lost-waiver', blocking: true }));
   });
 
   test('keeps deterministic spell resolution pending when an unrelated AI biography finding needs review', async () => {

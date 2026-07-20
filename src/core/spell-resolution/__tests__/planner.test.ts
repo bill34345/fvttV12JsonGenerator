@@ -75,9 +75,18 @@ function plan(input: Omit<Parameters<typeof planSpellHydration>[0], 'sourceInven
 }
 
 describe('all-or-nothing hydration preflight', () => {
-  test.each(['prepared', 'pact'] as const)('fails incompatible before planning unsupported %s Cast Activities', (method) => {
+  test('accepts a source-leveled prepared Cast ref and keeps pact unsupported', () => {
+    const prepared = manifest();
+    prepared.spellcastingGroups[0]!.spellRefs[0]!.method = 'prepared';
+    prepared.spellcastingGroups[0]!.spellRefs[0]!.castingLevel = 3;
+
+    const preparedResult = plan({ manifest: prepared, candidates: [spell('fireball'), spell('cure-wounds')] });
+
+    expect(preparedResult.status).toBe('ready');
+    expect(preparedResult.report.findings).toEqual([]);
+
     const unsupported = manifest();
-    unsupported.spellcastingGroups[0]!.spellRefs[0]!.method = method;
+    unsupported.spellcastingGroups[0]!.spellRefs[0]!.method = 'pact';
 
     const result = plan({ manifest: unsupported, candidates: [spell('fireball'), spell('cure-wounds')] });
 
@@ -86,6 +95,21 @@ describe('all-or-nothing hydration preflight', () => {
     expect(requireBlocked(result).findings).toContainEqual(expect.objectContaining({
       code: 'UNSUPPORTED_CAST_METHOD',
       path: '/spellcastingGroups/0/spellRefs/0/method',
+      blocking: true,
+    }));
+  });
+
+  test('fails incompatible before planning a prepared Cast ref without an explicit casting level', () => {
+    const unsupported = manifest();
+    unsupported.spellcastingGroups[0]!.spellRefs[0]!.method = 'prepared';
+
+    const result = plan({ manifest: unsupported, candidates: [spell('fireball'), spell('cure-wounds')] });
+
+    expect(result.status).toBe('incompatible');
+    expect('plan' in result).toBe(false);
+    expect(requireBlocked(result).findings).toContainEqual(expect.objectContaining({
+      code: 'UNSUPPORTED_CAST_LEVEL',
+      path: '/spellcastingGroups/0/spellRefs/0/castingLevel',
       blocking: true,
     }));
   });

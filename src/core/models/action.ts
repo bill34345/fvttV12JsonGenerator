@@ -183,6 +183,7 @@ export interface StructuredActionData {
   target?: ActionTarget;
   recharge?: [number, number];
   perLongRest?: number;
+  legendaryCost?: number;
   concentration?: boolean;
   describe?: string;
   failEffects?: SaveEffect[];

@@ -114,6 +114,9 @@ export class StructuredActionParser {
       action.perLongRest = this.parseNumber((entry as Record<string, unknown>)['每日'] ?? (entry as Record<string, unknown>)['perLongRest']);
     }
 
+    const legendaryCost = (entry as Record<string, unknown>)['传奇动作消耗'] ?? (entry as Record<string, unknown>)['legendaryCost'];
+    if (legendaryCost !== undefined) action.legendaryCost = this.parseNumber(legendaryCost);
+
     if ((entry as Record<string, unknown>)['需专注'] ?? (entry as Record<string, unknown>)['concentration']) {
       action.concentration = Boolean((entry as Record<string, unknown>)['需专注'] ?? (entry as Record<string, unknown>)['concentration']);
     }

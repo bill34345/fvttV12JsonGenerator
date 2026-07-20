@@ -50,6 +50,10 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
   "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
   "法术清单": { key: "spellManifest", path: "spellManifest", type: "object" },
+  "施法属性": { key: "spellcasting", path: "system.attributes.spellcasting", type: "string" },
+  "施法者等级": { key: "spellLevel", path: "system.details.spellLevel", type: "number" },
+  "法术位": { key: "spellSlots", path: "system.spells", type: "object" },
+  "传奇动作次数": { key: "legact", path: "system.attributes.legact", type: "number" },
 
   // Lists / Traits
   "豁免熟练": { key: "saves", path: "system.abilities", type: "array" }, // Special handling in parser
@@ -89,6 +93,7 @@ export interface ParsedNPC {
     init?: number;
     prof?: number;
     legact?: { value: number; max: number };
+    spellcasting?: keyof ParsedNPC['abilities'];
   };
 
   details: {
@@ -98,6 +103,7 @@ export interface ParsedNPC {
     alignment?: string;
     creatureType?: string;
     creatureTypeCustom?: string;
+    spellLevel?: number;
   };
 
   traits: {
@@ -128,6 +134,7 @@ export interface ParsedNPC {
   regional_effects?: any;
   spellcasting?: any;
   spellManifest?: PortableSpellManifest;
+  spellSlots?: Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
 
   structuredActions?: {
     特性?: StructuredActionData[];

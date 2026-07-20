@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, test } from 'bun:test';
 import yaml from 'js-yaml';
-import { renderMonsterIntakeMarkdown } from '../renderer';
+import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
+import { anchorIrEvidence } from '../orchestrator';
+import { renderMonsterIntakeMarkdown, renderPreparedSpellcastingProfile } from '../renderer';
+import { verifyMonsterIntake } from '../verifier';
 import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE, ratEvidence } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
@@ -12,6 +15,177 @@ const EXPECTED_GROUPS = [
 ];
 
 describe('source-evidenced spellcasting intake', () => {
+  test('accepts a source-evidenced level-5 prepared caster with cantrips and 4/3/2 slots', () => {
+    const { source, ir } = buildPreparedCasterCase();
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect((ir as any).creature.spellcasting[0]).toMatchObject({
+      ability: 'wis',
+      casterLevel: 5,
+      usageGroups: [
+        { usage: 'prepared-cantrip' },
+        { usage: 'prepared-slots', level: 1, slots: 4 },
+        { usage: 'prepared-slots', level: 2, slots: 3 },
+        { usage: 'prepared-slots', level: 3, slots: 2 },
+      ],
+    });
+  });
+
+  test('merges compatible prepared groups and fails closed on conflicting native Actor profiles', () => {
+    const { source, ir } = buildPreparedCasterCase();
+    const first = ir.creature.spellcasting![0]!;
+    const second = structuredClone(first);
+    first.usageGroups = first.usageGroups.slice(0, 2);
+    second.groupId = 'prepared-wisdom-secondary';
+    second.featureName = 'Secondary Spellcasting';
+    second.usageGroups = second.usageGroups.slice(2);
+    ir.creature.spellcasting!.push(second);
+
+    expect(renderPreparedSpellcastingProfile(ir.creature)).toEqual({
+      ability: 'wis', casterLevel: 5, slots: { 1: 4, 2: 3, 3: 2 },
+    });
+
+    for (const [label, mutate, expectedCode] of [
+      ['ability', (group: any) => { group.ability = 'cha'; }, 'CONFLICTING_PREPARED_SPELLCASTING_PROFILE'],
+      ['caster level', (group: any) => { group.casterLevel = 6; }, 'CONFLICTING_PREPARED_SPELLCASTING_PROFILE'],
+      ['same-level slots', (group: any) => {
+        group.usageGroups = [structuredClone(first.usageGroups[1])];
+        group.usageGroups[0].slots = 3;
+      }, 'CONFLICTING_PREPARED_SPELL_SLOTS'],
+    ] as const) {
+      const conflicted = structuredClone(ir);
+      mutate(conflicted.creature.spellcasting![1]);
+      expect(() => renderPreparedSpellcastingProfile(conflicted.creature), label).toThrow();
+      expect(validateMonsterIntakeIR(source, conflicted).findings, label).toContainEqual(expect.objectContaining({ code: expectedCode }));
+    }
+  });
+
+  test('expands bare prepared-slot numbers to the unique source-explicit level and slot labels', () => {
+    const { source, ir } = buildPreparedCasterCase();
+    const usage = ir.creature.spellcasting![0]!.usageGroups[1] as any;
+    const levelStart = source.indexOf('1st level', usage.evidence[0].start);
+    const slotStart = source.indexOf('4 slots', usage.evidence[0].start);
+    usage.levelEvidence = [{ start: levelStart, end: levelStart + 1, quote: '1' }];
+    usage.slotsEvidence = [{ start: slotStart, end: slotStart + 1, quote: '4' }];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'prepared-caster', label: 'Prepared Caster', start: 0, end: source.length, quote: source,
+    }, ir);
+    const anchoredUsage = anchored.creature.spellcasting![0]!.usageGroups[1] as any;
+
+    expect(anchoredUsage.levelEvidence[0].quote).toBe('1st level');
+    expect(anchoredUsage.slotsEvidence[0].quote).toBe('4 slots');
+    expect(validateMonsterIntakeIR(source, anchored).blocking).toEqual([]);
+  });
+
+  test('renders prepared spellcasting through standard Markdown into native v14 Actor slots and a pending manifest', async () => {
+    const { source, ir } = buildPreparedCasterCase();
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const frontmatter = yaml.load(markdown.slice(4, markdown.lastIndexOf('---'))) as any;
+
+    expect(frontmatter.施法属性).toBe('wis');
+    expect(frontmatter.施法者等级).toBe(5);
+    expect(frontmatter.法术位).toEqual({ 1: 4, 2: 3, 3: 2 });
+    expect(frontmatter.法术清单.spellcastingGroups[0].spellRefs.map((ref: any) => ({
+      identifier: ref.identifier,
+      method: ref.method,
+      castingLevel: ref.castingLevel,
+    }))).toEqual([
+      { identifier: 'light', method: 'at-will', castingLevel: undefined },
+      { identifier: 'sacred-flame', method: 'at-will', castingLevel: undefined },
+      { identifier: 'spare-the-dying', method: 'at-will', castingLevel: undefined },
+      { identifier: 'command', method: 'prepared', castingLevel: 1 },
+      { identifier: 'cure-wounds', method: 'prepared', castingLevel: 1 },
+      { identifier: 'guiding-bolt', method: 'prepared', castingLevel: 1 },
+      { identifier: 'lesser-restoration', method: 'prepared', castingLevel: 2 },
+      { identifier: 'spiritual-weapon', method: 'prepared', castingLevel: 2 },
+      { identifier: 'dispel-magic', method: 'prepared', castingLevel: 3 },
+      { identifier: 'revivify', method: 'prepared', castingLevel: 3 },
+    ]);
+
+    const generated = await convertMarkdownContentToJson({
+      content: markdown,
+      fvttVersion: '14',
+      effectProfile: 'core',
+      translationService: null,
+    });
+    const actor = generated.rawJson as any;
+    expect(actor.system.attributes.spellcasting).toBe('wis');
+    expect(actor.system.details.spellLevel).toBe(5);
+    expect(actor.system.spells.spell1).toMatchObject({ value: 4, override: null });
+    expect(actor.system.spells.spell2).toMatchObject({ value: 3, override: null });
+    expect(actor.system.spells.spell3).toMatchObject({ value: 2, override: null });
+    expect(actor.flags['fvtt-json-generator-spell-resolver'].spellResolution.status).toBe('pending');
+
+    expect(verifyMonsterIntake(source, ir, markdown, actor).status).toBe('accepted');
+    for (const [label, mutate, code, path] of [
+      ['ability', (value: any) => { value.system.attributes.spellcasting = 'cha'; }, 'PREPARED_SPELLCASTING_ABILITY_DRIFT', '/actor/system/attributes/spellcasting'],
+      ['caster level', (value: any) => { value.system.details.spellLevel = 6; }, 'PREPARED_SPELLCASTER_LEVEL_DRIFT', '/actor/system/details/spellLevel'],
+      ['slot pool', (value: any) => { value.system.spells.spell1.value = 9; }, 'PREPARED_SPELL_SLOT_DRIFT', '/actor/system/spells/spell1/value'],
+    ] as const) {
+      const drifted = structuredClone(actor);
+      mutate(drifted);
+      expect(verifyMonsterIntake(source, ir, markdown, drifted).findings, label).toContainEqual(expect.objectContaining({ code, path }));
+    }
+  });
+
+  test.each([
+    {
+      label: 'missing caster-level evidence',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].casterLevelEvidence = []; },
+      code: 'SPELLCASTER_LEVEL_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/casterLevel',
+    },
+    {
+      label: 'contradictory caster level',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].casterLevel = 6; },
+      code: 'SPELLCASTER_LEVEL_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/casterLevel',
+    },
+    {
+      label: 'missing slot-level evidence',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].levelEvidence = []; },
+      code: 'SPELL_SLOT_LEVEL_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/1/level',
+    },
+    {
+      label: 'contradictory slot level',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].level = 2; },
+      code: 'SPELL_SLOT_LEVEL_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/1/level',
+    },
+    {
+      label: 'missing slot-count evidence',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].slotsEvidence = []; },
+      code: 'SPELL_SLOT_COUNT_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/1/slots',
+    },
+    {
+      label: 'contradictory slot count',
+      mutate: (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].slots = 9; },
+      code: 'SPELL_SLOT_COUNT_EVIDENCE_MISMATCH',
+      path: '/creature/spellcasting/0/usageGroups/1/slots',
+    },
+  ])('blocks prepared casting with $label', ({ mutate, code, path }) => {
+    const { source, ir } = buildPreparedCasterCase();
+    mutate(ir);
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+  });
+
+  test.each([
+    ['zero slots', (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].slots = 0; }, '/creature/spellcasting/0/usageGroups/1/slots'],
+    ['shared extension', (ir: any) => { ir.creature.spellcasting[0].usageGroups[1].shared = true; }, '/creature/spellcasting/0/usageGroups/1/shared'],
+  ])('rejects an unsupported prepared slot pool: %s', (_label, mutate, path) => {
+    const { source, ir } = buildPreparedCasterCase();
+    mutate(ir);
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_SPELL_USE_GROUP',
+      path,
+    }));
+  });
+
   test('represents Rat Warlock spellcasting facts and exact evidence', () => {
     const ir = buildRatWarlockIr();
     const group = (ir.creature as any).spellcasting[0];
@@ -50,6 +224,14 @@ describe('source-evidenced spellcasting intake', () => {
     }
     const mageArmor = refs.find((ref: any) => ref.identifier === 'mage-armor');
     expect(mageArmor.evidence[0].start).toBeGreaterThan(RAT_WARLOCK_SOURCE.indexOf('随意：'));
+  });
+
+  test('accepts the standard Chinese 1次/每日 statblock label as independent 1/day-each uses', () => {
+    const source = RAT_WARLOCK_SOURCE.replace('每项1/日', '1次/每日');
+    const ir = JSON.parse(JSON.stringify(buildRatWarlockIr()).replaceAll('每项1/日', '1次/每日')) as any;
+    ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
+
+    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
   });
 
   test('partitions Rat lore as narrative and the statblock as mechanical exactly once', () => {
@@ -176,6 +358,27 @@ describe('source-evidenced spellcasting intake', () => {
     expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
   });
 
+  test.each([
+    ['施法关键属性是感知', false],
+    ['关键属性是感知', true],
+  ])('recognizes Chinese prepared-caster ability wording without accepting an unrelated attribute phrase: %s', (phrase, shouldBlock) => {
+    const prepared = buildPreparedCasterCase();
+    const source = `${prepared.source}\n${phrase}`;
+    const ir = prepared.ir as any;
+    const phraseStart = source.lastIndexOf(phrase);
+    const group = ir.creature.spellcasting[0];
+    group.description = source.slice(group.evidence[0].start);
+    group.evidence = [{ start: group.evidence[0].start, end: source.length, quote: group.description }];
+    group.abilityEvidence = [{ start: phraseStart, end: source.length, quote: phrase }];
+    ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
+    const mechanical = ir.coverage.find((entry: any) => entry.classification === 'mechanical');
+    mechanical.end = source.length;
+    mechanical.quote = source.slice(mechanical.start);
+
+    const codes = validateMonsterIntakeIR(source, ir).blocking.map((finding) => finding.code);
+    expect(codes.includes('SPELL_ABILITY_EVIDENCE_MISMATCH')).toBe(shouldBlock);
+  });
+
   test('blocks a whole-source grant span that swallows an earlier non-grant mention', () => {
     const ir = buildRatWarlockIr() as any;
     const usage = ir.creature.spellcasting[0].usageGroups[0];
@@ -296,6 +499,12 @@ describe('source-evidenced spellcasting intake', () => {
       ability: 'wis' as const,
       materialClause: '它无需法术成分',
     },
+    {
+      label: 'Chinese source wording for material components',
+      abilityClause: '它的施法属性为感知',
+      ability: 'wis' as const,
+      materialClause: '它无需任何构材',
+    },
   ])('accepts generalized evidenced spellcasting syntax: $label', ({ abilityClause, materialClause, ability }) => {
     const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause, ability });
 
@@ -358,6 +567,12 @@ describe('source-evidenced spellcasting intake', () => {
       label: 'non-material component waiver',
       abilityClause: '它使用感知作为施法属性',
       materialClause: '它无需任何言语成分',
+      expectedCode: 'SPELL_COMPONENT_WAIVER_EVIDENCE_MISMATCH',
+    },
+    {
+      label: 'non-component action waiver',
+      abilityClause: '它使用感知作为施法属性',
+      materialClause: '它无需任何施法动作',
       expectedCode: 'SPELL_COMPONENT_WAIVER_EVIDENCE_MISMATCH',
     },
   ])('rejects close generalized syntax negative: $label', ({ abilityClause, materialClause, expectedCode }) => {
@@ -439,6 +654,22 @@ describe('source-evidenced spellcasting intake', () => {
     });
 
     expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'DUPLICATE_STRUCTURED_SPELLCASTING',
+      path: '/creature/traits/0',
+    }));
+  });
+
+  test('does not misclassify incidental claim-boundary overlap as duplicated spellcasting', () => {
+    const ir = buildRatWarlockIr() as any;
+    const groupStart = ir.creature.spellcasting[0].evidence[0].start;
+    const traitClaim = ir.claims.find((claim: any) => claim.path === '/creature/traits/0');
+    traitClaim.evidence = [{
+      start: groupStart - 8,
+      end: groupStart + 8,
+      quote: RAT_WARLOCK_SOURCE.slice(groupStart - 8, groupStart + 8),
+    }];
+
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).not.toContainEqual(expect.objectContaining({
       code: 'DUPLICATE_STRUCTURED_SPELLCASTING',
       path: '/creature/traits/0',
     }));
@@ -641,6 +872,79 @@ function buildEnglishCasterCase(
         restrictions: [], evidence: [evidence(spellGrant)],
       }],
     }],
+  }];
+  ir.claims.push({
+    path: '/creature/spellcasting/0', valueKind: 'explicit', confidence: 'high',
+    evidence: [{ start, end: source.length, quote: description }],
+  });
+  const mechanical = ir.coverage.find((entry: any) => entry.classification === 'mechanical');
+  mechanical.end = source.length;
+  mechanical.quote = source.slice(mechanical.start);
+  mechanical.claimPaths.push('/creature/spellcasting/0');
+  return { source, ir };
+}
+
+function buildPreparedCasterCase(): { source: string; ir: ReturnType<typeof buildValidLurkerIr> } {
+  const description = [
+    'Spellcasting. The priest is a 5th-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 13, +5 to hit with spell attacks). The priest has the following cleric spells prepared:',
+    'Cantrips (at will): light, sacred flame, spare the dying',
+    '1st level (4 slots): command, cure wounds, guiding bolt',
+    '2nd level (3 slots): lesser restoration, spiritual weapon',
+    '3rd level (2 slots): dispel magic, revivify',
+  ].join('\n');
+  const source = `${LURKER_SOURCE}\n${description}`;
+  const ir = buildValidLurkerIr() as any;
+  const start = source.length - description.length;
+  const evidence = (quote: string) => {
+    const quoteStart = source.indexOf(quote, start);
+    return { start: quoteStart, end: quoteStart + quote.length, quote };
+  };
+  const spellRef = (name: string) => ({
+    refId: `prepared-${name.replace(/\s+/gu, '-')}`,
+    identifier: name.replace(/\s+/gu, '-'),
+    originalName: name,
+    englishName: name,
+    aliases: [],
+    restrictions: [],
+    evidence: [evidence(name)],
+  });
+  const preparedSlots = (level: number, slots: number, names: string[]) => {
+    const ordinal = level === 1 ? '1st' : level === 2 ? '2nd' : '3rd';
+    const grant = `${ordinal} level (${slots} slots): ${names.join(', ')}`;
+    return {
+      usage: 'prepared-slots',
+      level,
+      levelEvidence: [evidence(`${ordinal} level (${slots} slots)`)],
+      slots,
+      slotsEvidence: [evidence(`${ordinal} level (${slots} slots)`)],
+      evidence: [evidence(grant)],
+      spellRefs: names.map(spellRef),
+    };
+  };
+  const cantripGrant = 'Cantrips (at will): light, sacred flame, spare the dying';
+  ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
+  ir.creature.spellcasting = [{
+    groupId: 'prepared-wisdom',
+    featureName: 'Spellcasting',
+    description,
+    evidence: [{ start, end: source.length, quote: description }],
+    ability: 'wis',
+    abilityEvidence: [evidence('Its spellcasting ability is Wisdom')],
+    casterLevel: 5,
+    casterLevelEvidence: [evidence('The priest is a 5th-level spellcaster')],
+    saveDc: 13,
+    saveDcEvidence: [evidence('spell save DC 13')],
+    attackBonus: 5,
+    attackBonusEvidence: [evidence('+5 to hit with spell attacks')],
+    componentWaivers: [],
+    usageGroups: [{
+      usage: 'prepared-cantrip',
+      evidence: [evidence(cantripGrant)],
+      spellRefs: ['light', 'sacred flame', 'spare the dying'].map(spellRef),
+    },
+    preparedSlots(1, 4, ['command', 'cure wounds', 'guiding bolt']),
+    preparedSlots(2, 3, ['lesser restoration', 'spiritual weapon']),
+    preparedSlots(3, 2, ['dispel magic', 'revivify'])],
   }];
   ir.claims.push({
     path: '/creature/spellcasting/0', valueKind: 'explicit', confidence: 'high',

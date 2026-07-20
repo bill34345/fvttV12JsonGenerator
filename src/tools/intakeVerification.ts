@@ -16,10 +16,24 @@ export function verifyIntakeFiles(options: {
   const ir = JSON.parse(readFileSync(resolve(options.irPath), 'utf-8')) as MonsterIntakeIR;
   const markdown = readFileSync(resolve(options.markdownPath), 'utf-8');
   const actor = JSON.parse(readFileSync(resolve(options.actorPath), 'utf-8')) as unknown;
-  const report = verifyMonsterIntake(source, ir, markdown, actor);
+  const report = verifyMonsterIntake(source, ir, markdown, actor, inferIntakeCoverageRange(ir));
   if (options.jsonOutput) writeFileSync(resolve(options.jsonOutput), JSON.stringify(report, null, 2));
   if (options.markdownOutput) writeFileSync(resolve(options.markdownOutput), renderIntakeVerificationMarkdown(report));
   return report;
+}
+
+export function inferIntakeCoverageRange(ir: MonsterIntakeIR): { start: number; end: number } | undefined {
+  const ranges = ir.coverage.filter((entry) => (
+    Number.isInteger(entry.start)
+    && Number.isInteger(entry.end)
+    && entry.start >= 0
+    && entry.end >= entry.start
+  ));
+  if (ranges.length === 0) return undefined;
+  return {
+    start: Math.min(...ranges.map((entry) => entry.start)),
+    end: Math.max(...ranges.map((entry) => entry.end)),
+  };
 }
 
 if (import.meta.main) {

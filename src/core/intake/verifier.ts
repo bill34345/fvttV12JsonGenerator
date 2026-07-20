@@ -13,6 +13,7 @@ import type {
   MonsterIntakeIR,
   PortableSpellResolutionStatus,
 } from './types';
+import { renderPreparedSpellcastingProfile } from './renderer';
 import { validateMonsterIntakeIR } from './validator';
 
 export interface IntakeVerificationReport {
@@ -54,6 +55,7 @@ export function verifyMonsterIntake(
   compare(add, 'ACTOR_INITIATIVE_DRIFT', '/creature/attributes/initiative', expected.attributes.initiative, projection.initiative);
   compare(add, 'ACTOR_SIZE_DRIFT', '/creature/identity/size', expected.identity.size, projection.size);
   compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureType(expected.identity.creatureType), normalizeCreatureType(projection.creatureType));
+  compare(add, 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT', '/creature/identity/creatureTypeCustom', compact(expected.identity.creatureTypeCustom), compact(projection.creatureTypeCustom));
   for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as AbilityKey[]) {
     compare(add, 'ACTOR_ABILITY_DRIFT', `/creature/abilities/${ability}`, expected.abilities[ability], (projection.abilities as Record<string, unknown>)?.[ability]);
   }
@@ -118,6 +120,47 @@ function verifyPortableSpellResolution(
     .flatMap((group) => group.usageGroups)
     .reduce((count, group) => count + group.spellRefs.length, 0);
   const findingStart = findingCount();
+
+  let expectedPrepared: ReturnType<typeof renderPreparedSpellcastingProfile>;
+  try {
+    expectedPrepared = renderPreparedSpellcastingProfile(ir.creature);
+  } catch (error) {
+    add(
+      'CONFLICTING_PREPARED_SPELLCASTING_PROFILE',
+      '/creature/spellcasting',
+      error instanceof Error ? error.message : 'Prepared spellcasting groups cannot share one Actor profile.',
+    );
+  }
+  if (expectedPrepared) {
+    const actorSystem = asRecord(actorRoot.system);
+    const attributes = asRecord(actorSystem.attributes);
+    const details = asRecord(actorSystem.details);
+    const spells = asRecord(actorSystem.spells);
+    if (attributes.spellcasting !== expectedPrepared.ability) {
+      add(
+        'PREPARED_SPELLCASTING_ABILITY_DRIFT',
+        '/actor/system/attributes/spellcasting',
+        `Prepared spellcasting ability must remain ${expectedPrepared.ability}.`,
+      );
+    }
+    if (details.spellLevel !== expectedPrepared.casterLevel) {
+      add(
+        'PREPARED_SPELLCASTER_LEVEL_DRIFT',
+        '/actor/system/details/spellLevel',
+        `Prepared spellcaster level must remain ${expectedPrepared.casterLevel}.`,
+      );
+    }
+    for (const [level, value] of Object.entries(expectedPrepared.slots)) {
+      const slot = asRecord(spells[`spell${level}`]);
+      if (slot.value !== value) {
+        add(
+          'PREPARED_SPELL_SLOT_DRIFT',
+          `/actor/system/spells/spell${level}/value`,
+          `Prepared level-${level} spell slots must remain ${value}.`,
+        );
+      }
+    }
+  }
 
   if (!expectedManifest) {
     add('RENDERED_SPELL_MANIFEST_MISSING', '/markdown', 'Rendered caster Markdown is missing its portable spell manifest.');
@@ -377,6 +420,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
     initiative: options.includeInitiative === false ? undefined : abilityMod(abilityValues.dex) + numeric(asRecord(attrs.init).bonus),
     size: normalizeSize(traits.size),
     creatureType: asRecord(details.type).value,
+    creatureTypeCustom: asRecord(details.type).custom,
     abilities: projectedAbilities,
     saves,
     skills,
@@ -436,11 +480,13 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     name: item.name,
     type: item.type,
     activation: activation.type ?? activityActivation.type,
-    description: stripHtml(String(description.value ?? activityDescription.chatFlavor ?? '')),
+    activationValue: activation.value ?? activityActivation.value,
+    description: stripHtml(String(activityDescription.chatFlavor ?? description.value ?? '')),
     attackType: asRecord(attack.type).value,
     toHit,
     reach: range.reach,
     range: range.value,
+    longRange: range.long,
     damageFormula,
     damageTypes,
     saveDc: numericOrUndefined(saveDc.value ?? saveDc.formula),
@@ -484,6 +530,10 @@ function compareFeatureSections(
       compare(add, 'ACTOR_TO_HIT_DRIFT', `/creature/${section}/${index}/attack/toHit`, feature.attack.toHit, found.toHit);
       compare(add, 'ACTOR_REACH_DRIFT', `/creature/${section}/${index}/attack/reach`, feature.attack.reach, found.reach);
       compare(add, 'ACTOR_RANGE_DRIFT', `/creature/${section}/${index}/attack/range`, feature.attack.range, found.range);
+      compare(add, 'ACTOR_LONG_RANGE_DRIFT', `/creature/${section}/${index}/attack/longRange`, feature.attack.longRange, found.longRange);
+    }
+    if (feature.legendaryCost !== undefined) {
+      compare(add, 'ACTOR_LEGENDARY_COST_DRIFT', `/creature/${section}/${index}/legendaryCost`, feature.legendaryCost, found.activationValue);
     }
     for (const [damageIndex, damage] of (feature.damage ?? []).entries()) {
       if (damage.relationship !== 'base') continue;
@@ -585,7 +635,14 @@ function normalizeDamageType(value: string): string {
 }
 
 function stripHtml(value: string): string {
-  return value.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return value
+    .replace(/<br\s*\/?\s*>/giu, '\n')
+    .replace(/<\/(?:p|li|div|h[1-6])\s*>/giu, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/[ \t]+\n/gu, '\n')
+    .replace(/\n{2,}/gu, '\n')
+    .trim();
 }
 
 function dedupe(findings: IntakeFinding[]): IntakeFinding[] {

@@ -452,7 +452,7 @@ export class ActivityGenerator {
 
   private buildAttackRange(attack: NonNullable<ActionData['attack']>): Record<string, unknown> {
     if (attack.type === 'mwak') {
-      const thrownMatch = attack.range.match(/(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
+      const thrownMatch = attack.range?.match(/(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
       const value = thrownMatch?.[1] ? Number.parseInt(thrownMatch[1], 10) : null;
       const long = thrownMatch?.[2] ? Number.parseInt(thrownMatch[2], 10) : null;
       return {

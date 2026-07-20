@@ -75,7 +75,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v12');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v15');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
@@ -83,9 +83,21 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('activationType(action|bonus|reaction|legendary|special)');
     expect(prompt).toContain('regardless of which section contains the feature');
     expect(prompt).toContain('Never use special merely because a feature appears under traits');
+    expect(prompt).toContain('If a save DC is explicit but its ability is not');
+    expect(prompt).toContain('do not emit structured save automation');
+    expect(prompt).toContain('canonical hybrid representation');
+    expect(prompt).toContain('legendaryCost is a supported feature field');
+    expect(prompt).toContain('printed average damage');
+    expect(prompt).toContain('Medium (any race)');
     expect(prompt).toContain('explicitly granted spells only');
     expect(prompt).toContain('never invent expectedLevel, expectedSchool, sourceBookHint, UUID, rules text, damage, or effects');
     expect(prompt).toContain('usageGroups');
+    expect(prompt).toContain('prepared-cantrip');
+    expect(prompt).toContain('prepared-slots');
+    expect(prompt).toContain('casterLevelEvidence');
+    expect(prompt).toContain('levelEvidence');
+    expect(prompt).toContain('slotsEvidence');
+    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
     expect(prompt).toContain('evidence to every spell, saveDc, attackBonus, component waiver, and restriction');
     expect(prompt).toContain('Do not also emit structured spellcasting as an ordinary trait');
     expect(prompt).toContain('complete literal grant line or span');
@@ -128,11 +140,15 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v15');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v20');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
     expect(prompt).toContain('same structured spellcasting contract');
+    expect(prompt).toContain('prepared-cantrip');
+    expect(prompt).toContain('prepared-slots');
+    expect(prompt).toContain('casterLevelEvidence');
+    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
     expect(prompt).toContain('explicitly granted');
     expect(prompt).toContain('usage evidence must cover the complete grant span');
     expect(prompt).toContain('visible description must match verified group evidence');
@@ -180,8 +196,12 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v12');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v14');
     expect(prompt).toContain('same structured spellcasting contract');
+    expect(prompt).toContain('prepared-cantrip');
+    expect(prompt).toContain('prepared-slots');
+    expect(prompt).toContain('casterLevelEvidence');
+    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
     expect(prompt).toContain('Do not invent');
     expect(prompt).toContain('exact keys {kind,text,value,evidence}');
     expect(prompt).toContain('Never use literal or literalValue as restriction keys');
@@ -284,6 +304,25 @@ describe('OpenAI-compatible monster intake provider', () => {
     })));
 
     await expect(provider.review({} as never)).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  test('re-anchors a unique review evidence quote before enforcing the strict UTF-16 range contract', async () => {
+    const source = 'prefix exact review quote suffix';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'offset', code: 'OFFSET', path: '/', message: 'Offset drift.', blocking: true,
+        evidence: [{ start: 0, end: 2, quote: 'exact review quote' }],
+      }],
+    })));
+
+    const review = await provider.review({ source } as never);
+    expect(review.findings[0]!.evidence).toEqual([{
+      start: source.indexOf('exact review quote'),
+      end: source.indexOf('exact review quote') + 'exact review quote'.length,
+      quote: 'exact review quote',
+    }]);
   });
 
   test.each([

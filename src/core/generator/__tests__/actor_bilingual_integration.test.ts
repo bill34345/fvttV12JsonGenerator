@@ -176,6 +176,7 @@ describe('ActorGenerator english bilingual integration', () => {
     expect(actor.system.traits.dr.value).toEqual([]);
     expect(actor.system.traits.dv.value).toEqual([]);
     expect(actor.system.traits.dm.amount).toEqual({});
+    expect(actor.system.attributes.init.bonus).toBe('');
     expect(actor.img).toBe('');
     expect(actor.prototypeToken.texture.src).toBe('');
     expect(actor.prototypeToken.width).toBe(1);

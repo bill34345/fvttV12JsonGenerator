@@ -181,6 +181,14 @@ export class YamlParser {
         result.attributes.init = parseInt(processedValue);
       } else if (internalKey === 'prof') {
         result.attributes.prof = parseInt(processedValue);
+      } else if (internalKey === 'spellcasting') {
+        const ability = this.normalizeAbility(processedValue);
+        if (!ability) throw new Error(`InvalidSpellcastingAbility: ${String(processedValue)}`);
+        result.attributes.spellcasting = ability;
+      } else if (internalKey === 'legact') {
+        const count = parseInt(processedValue);
+        if (!Number.isInteger(count) || count < 1) throw new Error('InvalidLegendaryActionCount: expected a positive integer.');
+        result.attributes.legact = { value: count, max: count };
       }
     } else if (path.startsWith('system.details')) {
       if (internalKey === 'cr') result.details.cr = this.parseChallengeRating(processedValue);
@@ -188,6 +196,7 @@ export class YamlParser {
       if (internalKey === 'alignment') result.details.alignment = processedValue;
       if (internalKey === 'creatureType') result.details.creatureType = processedValue;
       if (internalKey === 'creatureTypeCustom') result.details.creatureTypeCustom = processedValue;
+      if (internalKey === 'spellLevel') result.details.spellLevel = parseInt(processedValue);
       if (internalKey === 'biography') {
         const existingBiography = result.details.biography?.trim();
         const frontmatterBiography = String(processedValue ?? '').trim();
@@ -198,6 +207,20 @@ export class YamlParser {
             .trim();
         }
       }
+    } else if (path === 'system.spells') {
+      if (!processedValue || typeof processedValue !== 'object' || Array.isArray(processedValue)) {
+        throw new Error('InvalidSpellSlots: 法术位 must be an object keyed by spell level.');
+      }
+      const slots: ParsedNPC['spellSlots'] = {};
+      for (const [levelText, countValue] of Object.entries(processedValue as Record<string, unknown>)) {
+        const level = Number(levelText);
+        const count = Number(countValue);
+        if (!Number.isInteger(level) || level < 1 || level > 9 || !Number.isInteger(count) || count < 1) {
+          throw new Error(`InvalidSpellSlots: level ${levelText} must have a positive integer count.`);
+        }
+        slots[level as keyof NonNullable<ParsedNPC['spellSlots']>] = count;
+      }
+      result.spellSlots = slots;
     } else if (path === 'items') {
       if (internalKey === 'actions' || internalKey === '动作') result.actions = processedValue;
       if (internalKey === 'reactions' || internalKey === '反应') result.reactions = processedValue;

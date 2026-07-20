@@ -150,21 +150,41 @@ export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPre
 /**
  * Keep the Foundry-independent planner aligned with the deliberately narrow
  * dnd5e 5.3.3 Cast builder so an unsupported manifest can never enter a write
- * transaction. First release supports only unlimited at-will casts and
- * independent innate 1/day casts.
+ * transaction. Supported contracts are unlimited at-will casts, independent
+ * innate 1/day casts, and source-leveled prepared casts that consume the
+ * Actor's native dnd5e spell-slot pool.
  */
 function validateHydratorCastSupport(manifest: PortableSpellManifest): SpellResolutionFinding[] {
   const findings: SpellResolutionFinding[] = [];
   manifest.spellcastingGroups.forEach((group, groupIndex) => {
     group.spellRefs.forEach((ref, refIndex) => {
       const refPath = `/spellcastingGroups/${groupIndex}/spellRefs/${refIndex}`;
-      if (ref.method === 'prepared' || ref.method === 'pact') {
+      if (ref.method === 'pact') {
         findings.push(finding(
           'UNSUPPORTED_CAST_METHOD',
           `${refPath}/method`,
           `首版 Cast Activity 不支持 ${ref.method} 施法方式；尚未创建任何写入计划。`,
           ref.evidence,
         ));
+        return;
+      }
+      if (ref.method === 'prepared') {
+        if (ref.uses !== undefined) {
+          findings.push(finding(
+            'UNSUPPORTED_CAST_USES',
+            `${refPath}/uses`,
+            'Prepared Cast Activities consume native Actor spell slots and must not declare per-spell uses.',
+            ref.evidence,
+          ));
+        }
+        if (!Number.isInteger(ref.castingLevel) || ref.castingLevel! < 1 || ref.castingLevel! > 9) {
+          findings.push(finding(
+            'UNSUPPORTED_CAST_LEVEL',
+            `${refPath}/castingLevel`,
+            'Prepared Cast Activities require a source-derived castingLevel from 1 through 9.',
+            ref.evidence,
+          ));
+        }
         return;
       }
       if (ref.method === 'at-will') {

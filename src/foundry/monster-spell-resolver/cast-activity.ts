@@ -37,7 +37,7 @@ export interface NativeCastActivitySource {
   type: 'cast';
   name: string;
   consumption: {
-    spellSlot: false;
+    spellSlot: boolean;
     targets: Array<{ type: 'activityUses'; value: '1' }>;
   };
   uses?: {
@@ -53,6 +53,7 @@ export interface NativeCastActivitySource {
   spell: {
     uuid: string;
     ability?: PortableSpellcastingGroup['ability'];
+    level?: number;
     challenge: { override: boolean; attack?: string; save?: string };
     properties: string[];
     spellbook: true;
@@ -118,8 +119,8 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
   if (input.group.spellRefs.filter((entry) => entry.refId === input.ref.refId).length !== 1) {
     throw new TypeError('refId must identify exactly one ref in the supplied manifest group.');
   }
-  if (input.ref.method !== 'at-will' && input.ref.method !== 'innate') {
-    throw new TypeError(`Unsupported Cast method ${input.ref.method}; Task 7 only encodes source-evidenced innate/at-will casting.`);
+  if (!['at-will', 'innate', 'prepared'].includes(input.ref.method)) {
+    throw new TypeError(`Unsupported Cast method ${input.ref.method}; only source-evidenced at-will, innate, and prepared casting are supported.`);
   }
 
   const generatedIdentity: ResolverGeneratedIdentity = {
@@ -136,7 +137,14 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     activityId,
   };
 
-  const consumption: NativeCastActivitySource['consumption'] = { spellSlot: false, targets: [] };
+  const prepared = input.ref.method === 'prepared';
+  if (prepared && (!Number.isInteger(input.ref.castingLevel) || input.ref.castingLevel! < 1 || input.ref.castingLevel! > 9)) {
+    throw new TypeError('Prepared Cast refs require a source-derived castingLevel from 1 through 9.');
+  }
+  if (prepared && input.ref.uses !== undefined) {
+    throw new TypeError('Prepared Cast refs consume native Actor spell slots and must not declare per-spell uses.');
+  }
+  const consumption: NativeCastActivitySource['consumption'] = { spellSlot: prepared, targets: [] };
   let uses: NativeCastActivitySource['uses'];
   if (input.ref.uses !== undefined) {
     if (input.ref.uses.value !== 1 || input.ref.uses.recovery !== 'day' || input.ref.uses.shared) {
@@ -144,7 +152,7 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     }
     uses = { spent: 0, max: '1', recovery: [{ period: 'day', type: 'recoverAll' }] };
     consumption.targets = [{ type: 'activityUses', value: '1' }];
-  } else if (input.ref.method !== 'at-will') {
+  } else if (input.ref.method === 'innate') {
     throw new TypeError('Innate Cast refs without an explicit supported use contract fail closed.');
   }
 
@@ -178,6 +186,7 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     spell: {
       uuid: input.selectedUuid,
       ...(input.group.ability === undefined ? {} : { ability: input.group.ability }),
+      ...(prepared ? { level: input.ref.castingLevel } : {}),
       challenge,
       // Cast spell.properties is the ignored-component set. [] means preserve
       // all source requirements; [material] waives only material components.

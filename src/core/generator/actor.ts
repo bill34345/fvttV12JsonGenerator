@@ -335,6 +335,22 @@ export class ActorGenerator {
       if (typeof parsed.attributes.prof === 'number' && Number.isFinite(parsed.attributes.prof)) {
         actor.system.attributes.prof = parsed.attributes.prof;
       }
+      if (parsed.attributes.spellcasting) {
+        actor.system.attributes.spellcasting = parsed.attributes.spellcasting;
+      }
+    }
+
+    if (typeof parsed.details.spellLevel === 'number' && Number.isInteger(parsed.details.spellLevel)) {
+      actor.system.details.spellLevel = parsed.details.spellLevel;
+    }
+    if (parsed.spellSlots) {
+      for (const [level, value] of Object.entries(parsed.spellSlots)) {
+        const slot = actor.system.spells?.[`spell${level}`];
+        if (slot && typeof value === 'number') {
+          slot.value = value;
+          slot.override = null;
+        }
+      }
     }
 
     if (this.shouldDeriveLegendaryActions(actor.system.resources.legact) && Array.isArray(parsed.legendary_actions)) {
@@ -688,6 +704,7 @@ export class ActorGenerator {
       details.alignment = '';
       if (details.type && typeof details.type === 'object') {
         details.type.value = '';
+        details.type.custom = '';
       }
       details.cr = 0;
       if (details.xp && typeof details.xp === 'object') {
@@ -713,6 +730,9 @@ export class ActorGenerator {
     }
 
     if (actor.system?.attributes) {
+      if (actor.system.attributes.init && typeof actor.system.attributes.init === 'object') {
+        actor.system.attributes.init.bonus = '';
+      }
       actor.system.attributes.movement = {
         walk: null, fly: null, swim: null, climb: null, burrow: null, hover: false
       };
@@ -858,7 +878,7 @@ export class ActorGenerator {
     );
 
     const legendaryCost = effectiveActivationType === 'legendary'
-      ? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' ')) ?? 1
+      ? action.legendaryCost ?? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' ')) ?? 1
       : null;
     for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
       activity.activation = {

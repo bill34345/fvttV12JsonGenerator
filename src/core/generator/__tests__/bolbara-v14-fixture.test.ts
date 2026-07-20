@@ -4,8 +4,8 @@ import { ParserFactory } from '../../parser/router';
 import { ActorGenerator } from '../actor';
 
 describe('Bolbara v14 structured fixture', () => {
-  it('preserves attack ranges and legendary activation semantics', async () => {
-    const source = readFileSync('obsidian/dnd数据转fvttjson/input/bolbara.md', 'utf8');
+  it('preserves source mechanics while remaining a portable pending caster', async () => {
+    const source = readFileSync('obsidian/dnd数据转fvttjson/input/bol-bara.md', 'utf8');
     const parser = new ParserFactory();
     const parsed = parser.parse(source);
     const actor = await new ActorGenerator({
@@ -14,48 +14,39 @@ describe('Bolbara v14 structured fixture', () => {
       effectProfile: 'core',
     }).generateForRoute(parsed, 'chinese');
 
-    expect(actor.system.attributes.ac.flat).toBe(15);
+    expect(actor.system.attributes.ac.flat).toBe(13);
     expect(actor.system.attributes.hp.formula).toBe('9d6 + 9');
+    expect(actor.system.attributes.init.bonus).toBe('');
+    expect(actor.system.details.type).toMatchObject({ value: 'humanoid', custom: '地精类' });
     expect(actor.system.resources.legact).toEqual({ max: 2, spent: 0 });
 
-    const dagger = actor.items.find((item: any) => item.name === '匕首 (Dagger)');
+    const dagger = actor.items.find((item: any) => item.name.includes('Dagger'));
     const daggerActivity = Object.values(dagger.system.activities)[0] as any;
-    expect(daggerActivity.attack.type.value).toBe('mwak');
+    expect(daggerActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'mwak' } });
     expect(daggerActivity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
     expect(daggerActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 4, bonus: '2', types: ['piercing'] });
 
-    const blast = actor.items.find((item: any) => item.name === '魔能爆 (Eldritch Blast)');
+    const blast = actor.items.find((item: any) => item.name.includes('Eldritch Blast'));
     const blastActivity = Object.values(blast.system.activities)[0] as any;
-    expect(blastActivity.attack.type.value).toBe('rsak');
+    expect(blastActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'rsak' } });
     expect(blastActivity.range).toMatchObject({ value: 120, long: null, units: 'ft' });
     expect(blastActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 10, bonus: '2', types: ['force'] });
 
-    const dash = actor.items.find((item: any) => item.name === '无形冲刺 (Incorporeal Dash)');
+    const dash = actor.items.find((item: any) => item.name.includes('Incorporeal Dash'));
     const dashActivity = Object.values(dash.system.activities)[0] as any;
     expect(dashActivity.activation).toMatchObject({ type: 'legendary', value: 1 });
 
-    const zone = actor.items.find((item: any) => item.name.startsWith('灾祸之域 (Zone of Calamity'));
+    const zone = actor.items.find((item: any) => item.name.includes('Zone of Calamity'));
     const zoneActivity = Object.values(zone.system.activities)[0] as any;
-    expect(zoneActivity.type).toBe('save');
+    expect(zoneActivity.type).toBe('utility');
     expect(zoneActivity.activation).toMatchObject({ type: 'legendary', value: 2 });
-    expect(zoneActivity.save).toEqual({
-      ability: ['wis'],
-      dc: { calculation: '', formula: '12' },
-    });
-    expect(zoneActivity.damage).toEqual({ onSave: 'none', parts: [] });
-    expect(zoneActivity.target.template).toMatchObject({ type: 'sphere', size: 15, units: 'ft' });
+    expect(zoneActivity.save).toBeUndefined();
+    expect(zone.system.description.value).toContain('DC 12');
 
-    for (const spellName of ['charm person', 'hex', 'hold person', 'invisibility']) {
-      const spell = actor.items.find((item: any) => item.name === spellName);
-      expect(spell.system.uses).toEqual({
-        spent: 0,
-        max: '1',
-        recovery: [{ period: 'day', type: 'recoverAll' }],
-      });
-    }
-    for (const spellName of ['eldritch blast', 'false life', 'mage armor', 'mage hand']) {
-      const spell = actor.items.find((item: any) => item.name === spellName);
-      expect(spell.system.uses).toBeUndefined();
-    }
+    const resolver = actor.flags['fvtt-json-generator-spell-resolver'];
+    expect(resolver.spellResolution.status).toBe('pending');
+    expect(resolver.spellManifest.spellcastingGroups[0].spellRefs).toHaveLength(8);
+    expect(actor.items.filter((item: any) => item.type === 'spell')).toEqual([]);
+    expect(actor.items.flatMap((item: any) => Object.values(item.system.activities ?? {})).some((activity: any) => activity.type === 'cast')).toBe(false);
   });
 });

@@ -37,11 +37,13 @@ const CONDITION_ZH: Record<string, string> = {
 
 export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
   const creature = ir.creature;
+  const prepared = renderPreparedSpellcastingProfile(creature);
   const data: Record<string, unknown> = {
     名称: displayName(creature.identity.name, creature.identity.englishName),
     类型: 'npc',
     体型: SIZE_ZH[creature.identity.size],
     生物类型: TYPE_ZH[creature.identity.creatureType.toLowerCase()] ?? creature.identity.creatureTypeCustom ?? creature.identity.creatureType,
+    生物类型备注: creature.identity.creatureTypeCustom,
     阵营: creature.identity.alignment ? ALIGNMENT_ZH[creature.identity.alignment.toLowerCase()] ?? creature.identity.alignment : undefined,
     能力: Object.fromEntries(Object.entries(ABILITY_ZH).map(([key, label]) => [label, creature.abilities[key as AbilityKey]])),
     护甲等级: creature.attributes.ac,
@@ -63,6 +65,10 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     语言: creature.languages.values.map((value) => languageZh(value)),
     语言备注: creature.languages.custom,
     传记: renderBiography(creature),
+    传奇动作次数: creature.legendary?.max,
+    施法属性: prepared?.ability,
+    施法者等级: prepared?.casterLevel,
+    法术位: prepared?.slots,
     法术清单: renderSpellManifest(ir),
     特性: [
       ...(creature.spellcasting ?? []).map((group) => renderSpellcastingFeature(group)),
@@ -103,16 +109,48 @@ function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | und
         ...(ref.englishName === undefined ? {} : { englishName: ref.englishName }),
         ...(ref.chineseName === undefined ? {} : { chineseName: ref.chineseName }),
         aliases: ref.aliases,
-        method: usageGroup.usage === 'at-will' ? 'at-will' : 'innate',
+        method: usageGroup.usage === 'at-will' || usageGroup.usage === 'prepared-cantrip'
+          ? 'at-will'
+          : usageGroup.usage === 'prepared-slots' ? 'prepared' : 'innate',
         ...(usageGroup.usage === '1/day-each'
           ? { uses: { value: 1, recovery: 'day', shared: false } }
           : {}),
+        ...(usageGroup.usage === 'prepared-slots' ? { castingLevel: usageGroup.level } : {}),
         ignoresMaterialComponents: group.componentWaivers.some((waiver) => waiver.component === 'material'),
         restrictions: ref.restrictions,
         evidence: ref.evidence,
       }))),
     })),
   };
+}
+
+export function renderPreparedSpellcastingProfile(creature: CanonicalMonster): {
+  ability: AbilityKey;
+  casterLevel: number;
+  slots: Record<number, number>;
+} | undefined {
+  const groups = (creature.spellcasting ?? []).filter((group) => group.usageGroups.some((usage) => (
+    usage.usage === 'prepared-cantrip' || usage.usage === 'prepared-slots'
+  )));
+  if (groups.length === 0) return undefined;
+  const first = groups[0]!;
+  const casterLevel = first.casterLevel;
+  if (!Number.isInteger(casterLevel)) throw new Error('Prepared spellcasting requires an explicit caster level.');
+  const slots: Record<number, number> = {};
+  for (const group of groups) {
+    if (group.ability !== first.ability || group.casterLevel !== casterLevel) {
+      throw new Error('Conflicting prepared spellcasting ability or caster level cannot share one Actor profile.');
+    }
+    for (const usage of group.usageGroups) {
+      if (usage.usage !== 'prepared-slots') continue;
+      const existing = slots[usage.level];
+      if (existing !== undefined && existing !== usage.slots) {
+        throw new Error(`Conflicting prepared level-${usage.level} slot pools cannot share one Actor profile.`);
+      }
+      slots[usage.level] = usage.slots;
+    }
+  }
+  return { ability: first.ability, casterLevel: casterLevel!, slots };
 }
 
 function renderSpellManifestId(ir: MonsterIntakeIR): string {
@@ -155,11 +193,11 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
   if (feature.attack) {
     result.攻击类型 = feature.attack.type;
     result.命中 = feature.attack.toHit;
-    result.范围 = feature.attack.reach
-      ? `触及 ${feature.attack.reach} 尺`
-      : feature.attack.range
-        ? `${feature.attack.range}${feature.attack.longRange ? `/${feature.attack.longRange}` : ''} 尺`
-        : undefined;
+    const reach = feature.attack.reach ? `触及 ${feature.attack.reach} 尺` : undefined;
+    const range = feature.attack.range
+      ? `${feature.attack.range}${feature.attack.longRange ? `/${feature.attack.longRange}` : ''} 尺`
+      : undefined;
+    result.范围 = reach && range ? `${reach}或射程 ${range}` : reach ?? range;
   }
   const structuredDamage = feature.damage?.filter((damage) => damage.relationship === 'base' || damage.relationship === 'additional');
   if (structuredDamage?.length) {
@@ -181,6 +219,7 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
 
 function renderBiography(creature: CanonicalMonster): string | undefined {
   const parts = creature.biography?.trim() ? [creature.biography.trim()] : [];
+  if (creature.legendary?.preamble.trim()) parts.push(creature.legendary.preamble.trim());
   if (creature.attributes.acNote?.trim()) {
     const note = creature.attributes.acNote.trim();
     const literalNote = /^[（(]/u.test(note) ? note : `（${note}）`;
