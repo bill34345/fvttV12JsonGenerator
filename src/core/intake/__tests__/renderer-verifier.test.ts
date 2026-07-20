@@ -106,6 +106,16 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(renderIntakeVerificationMarkdown(report)).toContain('法术：已整理 10 项；目标世界解析待完成');
   });
 
+  test('accepts a portable spell manifest from CRLF Markdown', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+
+    const report = verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown.replace(/\n/g, '\r\n'), actor);
+
+    expect(report.status).toBe('accepted');
+    expect(report.findings).toEqual([]);
+    expect(report.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+  });
+
   test('extracts the first closing frontmatter delimiter when later Markdown contains a horizontal rule', async () => {
     const { ir, markdown, actor } = await generatedRatWarlock();
     const markdownWithBodyRule = `${markdown}\nSource notes after frontmatter\n---\nThis is body text, not YAML.\n`;

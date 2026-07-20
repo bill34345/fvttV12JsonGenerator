@@ -297,13 +297,14 @@ function verifyPortableSpellResolution(
 }
 
 function extractRenderedSpellManifest(markdown: string): PortableSpellManifest | undefined {
-  if (!markdown.startsWith('---\n')) return undefined;
-  const firstClosing = markdown.indexOf('\n---\n', 4);
+  const normalized = markdown.replace(/\r\n?/g, '\n');
+  if (!normalized.startsWith('---\n')) return undefined;
+  const firstClosing = normalized.indexOf('\n---\n', 4);
   const end = firstClosing >= 0
     ? firstClosing
-    : markdown.endsWith('\n---') ? markdown.length - '\n---'.length : -1;
+    : normalized.endsWith('\n---') ? normalized.length - '\n---'.length : -1;
   if (end <= 3) return undefined;
-  const root = asRecord(yaml.load(markdown.slice(4, end)));
+  const root = asRecord(yaml.load(normalized.slice(4, end)));
   const candidate = Object.values(root).find((value) => {
     const record = asRecord(value);
     return record.schemaVersion === 1 && record.rulesPreference === '2024' && Array.isArray(record.spellcastingGroups);
