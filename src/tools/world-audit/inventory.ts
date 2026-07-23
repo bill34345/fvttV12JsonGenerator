@@ -117,6 +117,13 @@ const EMBEDDED_DOCUMENT_NAMES: Record<string, string> = Object.fromEntries(
   ]),
 );
 
+const EMBEDDED_OVERVIEW_DESCRIPTORS: EmbeddedDescriptor[] = [
+  ...flattenDescriptors(EMBEDDED_DESCRIPTORS),
+  { collection: "scenes.tokens", property: "delta", documentName: "ActorDelta" },
+  { collection: "scenes.tokens.delta", property: "items", documentName: "Item" },
+  { collection: "scenes.tokens.delta", property: "effects", documentName: "ActiveEffect" },
+];
+
 const ASSET_EXTENSION = /\.(?:apng|avif|bmp|flac|gif|glb|gltf|jpeg|jpg|m4a|mp3|mp4|oga|ogg|ogv|otf|png|svg|ttf|wav|webm|webp|woff2?)(?:[?#].*)?$/i;
 
 export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
@@ -314,16 +321,64 @@ function normalizeDocuments(
   records: LevelRecord[],
 ): AuditDocument[] {
   const documents = new Map<string, AuditDocument>();
+  const reachableIdentities = collectReachableRecordIdentities(topRecords, records);
   for (const record of topRecords) {
     const document = topRecordToDocument(record);
     documents.set(document.uuid, document);
     appendParentArrayDocuments(document, EMBEDDED_DESCRIPTORS, documents);
   }
   for (const record of records.filter((candidate) => candidate.namespace !== candidate.collection)) {
+    if (!reachableIdentities.has(recordIdentity(record.namespace, recordIdPath(record)))) continue;
     const document = embeddedRecordToDocument(record);
     if (document) documents.set(document.uuid, document);
   }
   return [...documents.values()].sort((left, right) => compareOrdinal(left.uuid, right.uuid));
+}
+
+function collectReachableRecordIdentities(
+  topRecords: LevelRecord[],
+  allRecords: LevelRecord[],
+): Set<string> {
+  const childrenByParent = new Map<string, LevelRecord[]>();
+  for (const record of allRecords) {
+    if (record.namespace === record.collection) continue;
+    const namespaceParts = record.namespace.split(".");
+    const parentIdentity = recordIdentity(
+      namespaceParts.slice(0, -1).join("."),
+      recordIdPath(record).slice(0, -1),
+    );
+    const children = childrenByParent.get(parentIdentity);
+    if (children) children.push(record);
+    else childrenByParent.set(parentIdentity, [record]);
+  }
+
+  const reachable = new Set<string>();
+  const queue = [...topRecords];
+  for (const record of topRecords) {
+    reachable.add(recordIdentity(record.namespace, recordIdPath(record)));
+  }
+  for (let index = 0; index < queue.length; index += 1) {
+    const parent = queue[index]!;
+    const parentIdentity = recordIdentity(parent.namespace, recordIdPath(parent));
+    for (const child of childrenByParent.get(parentIdentity) ?? []) {
+      const property = child.embeddedPath.at(-1);
+      const childId = recordIdPath(child).at(-1);
+      if (!property || !childId || !containsEmbeddedMembership(parent.value[property], childId)) continue;
+      const childIdentity = recordIdentity(child.namespace, recordIdPath(child));
+      if (reachable.has(childIdentity)) continue;
+      reachable.add(childIdentity);
+      queue.push(child);
+    }
+  }
+  return reachable;
+}
+
+function containsEmbeddedMembership(value: unknown, expectedId: string): boolean {
+  const memberships = Array.isArray(value) ? value : [value];
+  return memberships.some((membership) => (
+    membership === expectedId
+    || (isRecord(membership) && stringValue(membership._id) === expectedId)
+  ));
 }
 
 function topRecordToDocument(record: LevelRecord): AuditDocument {
@@ -410,7 +465,7 @@ function buildOverview(
   for (const collection of collections) {
     overview[`${collection}.topLevel`] = topCounts.get(collection) ?? 0;
   }
-  for (const descriptor of flattenDescriptors(EMBEDDED_DESCRIPTORS)) {
+  for (const descriptor of EMBEDDED_OVERVIEW_DESCRIPTORS) {
     const namespace = `${descriptor.collection}.${descriptor.property}`;
     const summary = summarizeEmbeddedNamespace(topRecords, records, descriptor);
     if (summary.parentArray === 0 && summary.embeddedKeys === 0) continue;

@@ -500,6 +500,17 @@ test("reconstructs Foundry 14 embedded-only namespaces into one deduplicated ana
     "actors.effects.embeddedKeys": 1,
     "scenes.tokens.parentArray": 3,
     "scenes.tokens.embeddedKeys": 3,
+    "scenes.tokens.delta.parentArray": 2,
+    "scenes.tokens.delta.materializedChildren": 2,
+    "scenes.tokens.delta.embeddedKeys": 2,
+    "scenes.tokens.delta.orphanEmbeddedKeys": 0,
+    "scenes.tokens.delta.missingEmbeddedKeys": 0,
+    "scenes.tokens.delta.items.parentArray": 1,
+    "scenes.tokens.delta.items.materializedChildren": 1,
+    "scenes.tokens.delta.items.embeddedKeys": 1,
+    "scenes.tokens.delta.effects.parentArray": 1,
+    "scenes.tokens.delta.effects.materializedChildren": 1,
+    "scenes.tokens.delta.effects.embeddedKeys": 1,
     "journal.pages.parentArray": 2,
     "journal.pages.embeddedKeys": 2,
   });
@@ -545,8 +556,25 @@ test("does not promote orphan embedded keys that are absent from the parent ID a
       _id: "ORPHAN",
       actorId: "A1",
       actorLink: true,
-      delta: null,
+      delta: "ORPHAN-DELTA",
     }),
+    embedded("scenes", "scenes.tokens.delta", ["S1", "ORPHAN", "ORPHAN-DELTA"], {
+      _id: "ORPHAN-DELTA",
+      items: ["ORPHAN-DELTA-ITEM"],
+      effects: ["ORPHAN-DELTA-EFFECT"],
+    }),
+    embedded(
+      "scenes",
+      "scenes.tokens.delta.items",
+      ["S1", "ORPHAN", "ORPHAN-DELTA", "ORPHAN-DELTA-ITEM"],
+      { _id: "ORPHAN-DELTA-ITEM", effects: [] },
+    ),
+    embedded(
+      "scenes",
+      "scenes.tokens.delta.effects",
+      ["S1", "ORPHAN", "ORPHAN-DELTA", "ORPHAN-DELTA-EFFECT"],
+      { _id: "ORPHAN-DELTA-EFFECT" },
+    ),
   ]));
 
   expect(rowById(analysis.scenes, "S1")).toMatchObject({ tokenCount: 0 });
@@ -572,6 +600,19 @@ test("does not promote orphan embedded keys that are absent from the parent ID a
     "scenes.tokens.embeddedKeys": 1,
     "scenes.tokens.orphanEmbeddedKeys": 1,
     "scenes.tokens.missingEmbeddedKeys": 0,
+    "scenes.tokens.delta.parentArray": 0,
+    "scenes.tokens.delta.materializedChildren": 0,
+    "scenes.tokens.delta.embeddedKeys": 1,
+    "scenes.tokens.delta.orphanEmbeddedKeys": 1,
+    "scenes.tokens.delta.missingEmbeddedKeys": 0,
+    "scenes.tokens.delta.items.parentArray": 0,
+    "scenes.tokens.delta.items.materializedChildren": 0,
+    "scenes.tokens.delta.items.embeddedKeys": 1,
+    "scenes.tokens.delta.items.orphanEmbeddedKeys": 1,
+    "scenes.tokens.delta.effects.parentArray": 0,
+    "scenes.tokens.delta.effects.materializedChildren": 0,
+    "scenes.tokens.delta.effects.embeddedKeys": 1,
+    "scenes.tokens.delta.effects.orphanEmbeddedKeys": 1,
   });
   expect(analysis.unresolved).toContainEqual(expect.stringMatching(/scenes\.tokens.*mismatch/i));
 });
@@ -581,7 +622,7 @@ test("keeps dangling parent IDs visible without treating them as materialized do
     top("scenes", "S1", {
       _id: "S1",
       name: "Dangling parent reference control",
-      tokens: ["MISSING-TOKEN-KEY"],
+      tokens: ["MISSING-TOKEN-KEY", "LIVE-TOKEN"],
       notes: [],
       walls: [],
       lights: [],
@@ -590,17 +631,120 @@ test("keeps dangling parent IDs visible without treating them as materialized do
       regions: [],
       sounds: [],
     }),
+    embedded("scenes", "scenes.tokens", ["S1", "LIVE-TOKEN"], {
+      _id: "LIVE-TOKEN",
+      actorId: null,
+      actorLink: false,
+      delta: "MISSING-DELTA",
+    }),
   ]));
 
-  expect(rowById(analysis.scenes, "S1")).toMatchObject({ tokenCount: 0 });
+  expect(rowById(analysis.scenes, "S1")).toMatchObject({ tokenCount: 1 });
   expect(analysis.overview).toMatchObject({
-    "scenes.tokens.parentArray": 1,
-    "scenes.tokens.materializedChildren": 0,
-    "scenes.tokens.embeddedKeys": 0,
+    "scenes.tokens.parentArray": 2,
+    "scenes.tokens.materializedChildren": 1,
+    "scenes.tokens.embeddedKeys": 1,
     "scenes.tokens.orphanEmbeddedKeys": 0,
     "scenes.tokens.missingEmbeddedKeys": 1,
+    "scenes.tokens.delta.parentArray": 1,
+    "scenes.tokens.delta.materializedChildren": 0,
+    "scenes.tokens.delta.embeddedKeys": 0,
+    "scenes.tokens.delta.orphanEmbeddedKeys": 0,
+    "scenes.tokens.delta.missingEmbeddedKeys": 1,
   });
   expect(analysis.unresolved).toContainEqual(expect.stringMatching(/scenes\.tokens.*mismatch/i));
+});
+
+test("keeps orphan embedded Effects and Journal Pages out of business consumers", () => {
+  const records = [
+    top("actors", "OWNER", {
+      _id: "OWNER",
+      name: "Owner",
+      ownership: {},
+      items: ["LIVE-ITEM"],
+      effects: [],
+    }),
+    top("actors", "LIVE", {
+      _id: "LIVE",
+      name: "Live target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", "ORPHAN", {
+      _id: "ORPHAN",
+      name: "Orphan-only target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["OWNER", "LIVE-ITEM"], {
+      _id: "LIVE-ITEM",
+      name: "Live item",
+      effects: ["LIVE-EFFECT"],
+    }),
+    embedded("actors", "actors.items.effects", ["OWNER", "LIVE-ITEM", "LIVE-EFFECT"], {
+      _id: "LIVE-EFFECT",
+      name: "Live effect",
+      origin: "Actor.LIVE",
+    }),
+    embedded("actors", "actors.items", ["OWNER", "ORPHAN-ITEM"], {
+      _id: "ORPHAN-ITEM",
+      name: "Orphan item",
+      effects: ["ORPHAN-EFFECT"],
+    }),
+    embedded("actors", "actors.items.effects", ["OWNER", "ORPHAN-ITEM", "ORPHAN-EFFECT"], {
+      _id: "ORPHAN-EFFECT",
+      name: "Orphan effect",
+      origin: "Actor.ORPHAN",
+    }),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Membership-controlled pages",
+      pages: ["LIVE-PAGE"],
+    }),
+    embedded("journal", "journal.pages", ["J1", "LIVE-PAGE"], {
+      _id: "LIVE-PAGE",
+      name: "Live page",
+      type: "text",
+      src: "maps/live.webp",
+      text: { content: "@UUID[Actor.LIVE]" },
+    }),
+    embedded("journal", "journal.pages", ["J1", "ORPHAN-PAGE"], {
+      _id: "ORPHAN-PAGE",
+      name: "Orphan page",
+      type: "text",
+      src: "maps/orphan.webp",
+      text: { content: "@UUID[Actor.ORPHAN]" },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records, [
+    tree("maps/live.webp"),
+    tree("maps/orphan.webp"),
+  ]));
+
+  expect(rowById(analysis.actors, "LIVE").usageStatuses).toEqual(expect.arrayContaining([
+    "used-structured",
+    "used-uuid",
+  ]));
+  expect(rowById(analysis.actors, "ORPHAN").usageStatuses).toEqual(["no-detected-reference"]);
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.OWNER.Item.ORPHAN-ITEM.ActiveEffect.ORPHAN-EFFECT",
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: "JournalEntry.J1.JournalEntryPage.ORPHAN-PAGE",
+  }));
+  expect(analysis.assets).toContainEqual(expect.objectContaining({
+    path: "maps/live.webp",
+    referenced: true,
+    unreferencedCandidate: false,
+  }));
+  expect(analysis.assets).toContainEqual(expect.objectContaining({
+    path: "maps/orphan.webp",
+    referenced: false,
+    unreferencedCandidate: true,
+  }));
 });
 
 test("limits exact name matching to scripts and marks duplicate names for manual review", () => {
