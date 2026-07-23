@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { analyzeWorld } from "../world-audit/inventory";
+import {
+  analyzeWorld,
+  materializeFoundryEmbeddedRecords,
+} from "../world-audit/inventory";
 import type { LevelRecord, TreeEntry, WorldSnapshot } from "../world-audit/model";
 
 function top(
@@ -520,6 +523,156 @@ test("reconstructs Foundry 14 embedded-only namespaces into one deduplicated ana
     name: "Unrelated world item",
     "Document Kind": "Item",
   }));
+});
+
+test("continues raw descendants through inline embedded virtual parents", () => {
+  const analysis = analyzeWorld(snapshot([
+    top("actors", "OWNER", {
+      _id: "OWNER",
+      name: "Inline item owner",
+      ownership: {},
+      items: [{
+        _id: "INLINE-ITEM",
+        name: "Inline item",
+        effects: ["RAW-EFFECT"],
+      }],
+      effects: [],
+    }),
+    top("actors", "EFFECT-TARGET", {
+      _id: "EFFECT-TARGET",
+      name: "Effect target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    embedded(
+      "actors",
+      "actors.items.effects",
+      ["OWNER", "INLINE-ITEM", "RAW-EFFECT"],
+      {
+        _id: "RAW-EFFECT",
+        name: "Raw effect under inline item",
+        origin: "Actor.EFFECT-TARGET",
+      },
+    ),
+    top("scenes", "INLINE-SCENE", {
+      _id: "INLINE-SCENE",
+      name: "Inline token scene",
+      tokens: [{
+        _id: "INLINE-TOKEN",
+        name: "Inline token",
+        actorId: "EFFECT-TARGET",
+        actorLink: true,
+        delta: "RAW-DELTA",
+      }],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+    embedded(
+      "scenes",
+      "scenes.tokens.delta",
+      ["INLINE-SCENE", "INLINE-TOKEN", "RAW-DELTA"],
+      {
+        _id: "RAW-DELTA",
+        items: ["RAW-DELTA-ITEM"],
+        effects: [],
+      },
+    ),
+    embedded(
+      "scenes",
+      "scenes.tokens.delta.items",
+      ["INLINE-SCENE", "INLINE-TOKEN", "RAW-DELTA", "RAW-DELTA-ITEM"],
+      {
+        _id: "RAW-DELTA-ITEM",
+        name: "Raw delta item",
+        effects: [],
+      },
+    ),
+  ]));
+
+  expect(analysis.references).toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.OWNER.Item.INLINE-ITEM.ActiveEffect.RAW-EFFECT",
+    targetUuid: "Actor.EFFECT-TARGET",
+    evidence: "structured-field",
+    verifiedTarget: true,
+  }));
+  expect(rowById(analysis.scenes, "INLINE-SCENE")).toMatchObject({
+    tokenCount: 1,
+    tokenDeltaItemCount: 1,
+    tokenDeltaEffectCount: 0,
+  });
+  expect(analysis.overview).toMatchObject({
+    "actors.items.parentArray": 1,
+    "actors.items.materializedChildren": 1,
+    "actors.items.embeddedKeys": 0,
+    "actors.items.orphanEmbeddedKeys": 0,
+    "actors.items.missingEmbeddedKeys": 0,
+    "actors.items.effects.parentArray": 1,
+    "actors.items.effects.materializedChildren": 1,
+    "actors.items.effects.embeddedKeys": 1,
+    "actors.items.effects.orphanEmbeddedKeys": 0,
+    "actors.items.effects.missingEmbeddedKeys": 0,
+    "scenes.tokens.parentArray": 1,
+    "scenes.tokens.materializedChildren": 1,
+    "scenes.tokens.embeddedKeys": 0,
+    "scenes.tokens.orphanEmbeddedKeys": 0,
+    "scenes.tokens.missingEmbeddedKeys": 0,
+    "scenes.tokens.delta.parentArray": 1,
+    "scenes.tokens.delta.materializedChildren": 1,
+    "scenes.tokens.delta.embeddedKeys": 1,
+    "scenes.tokens.delta.orphanEmbeddedKeys": 0,
+    "scenes.tokens.delta.missingEmbeddedKeys": 0,
+    "scenes.tokens.delta.items.parentArray": 1,
+    "scenes.tokens.delta.items.materializedChildren": 1,
+    "scenes.tokens.delta.items.embeddedKeys": 1,
+    "scenes.tokens.delta.items.orphanEmbeddedKeys": 0,
+    "scenes.tokens.delta.items.missingEmbeddedKeys": 0,
+  });
+  expect(analysis.unresolved).not.toContainEqual(expect.stringMatching(/embedded count mismatch/i));
+});
+
+test("keeps embedded order and deduplication scoped to the complete parent path", () => {
+  const materialized = materializeFoundryEmbeddedRecords([
+    top("actors", "FIRST-PARENT", {
+      _id: "FIRST-PARENT",
+      items: ["SHARED", "SECOND", "SHARED"],
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["FIRST-PARENT", "SHARED"], {
+      _id: "SHARED",
+      name: "First parent shared item",
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["FIRST-PARENT", "SECOND"], {
+      _id: "SECOND",
+      name: "Second item",
+      effects: [],
+    }),
+    top("actors", "SECOND-PARENT", {
+      _id: "SECOND-PARENT",
+      items: ["SHARED"],
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["SECOND-PARENT", "SHARED"], {
+      _id: "SHARED",
+      name: "Second parent shared item",
+      effects: [],
+    }),
+  ]);
+
+  const firstParent = materialized.find((record) => record.key === "!actors!FIRST-PARENT");
+  const secondParent = materialized.find((record) => record.key === "!actors!SECOND-PARENT");
+  expect(
+    (firstParent?.value.items as Array<Record<string, unknown>>).map((item) => item.name),
+  ).toEqual(["First parent shared item", "Second item"]);
+  expect(
+    (secondParent?.value.items as Array<Record<string, unknown>>).map((item) => item.name),
+  ).toEqual(["Second parent shared item"]);
 });
 
 test("does not promote orphan embedded keys that are absent from the parent ID array", () => {

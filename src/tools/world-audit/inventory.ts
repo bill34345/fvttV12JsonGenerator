@@ -58,6 +58,20 @@ interface EmbeddedNamespaceSummary {
   missingEmbeddedKeys: number;
 }
 
+interface EmbeddedParentNode {
+  identity: string;
+  namespace: string;
+  idPath: string[];
+  value: Record<string, unknown>;
+  childIdentities: Set<string>;
+}
+
+interface MaterializedEmbeddedGraph {
+  records: LevelRecord[];
+  nodesByIdentity: Map<string, EmbeddedParentNode>;
+  reachableIdentities: Set<string>;
+}
+
 const COLLECTION_DOCUMENT_NAMES: Record<string, string> = {
   actors: "Actor",
   adventures: "Adventure",
@@ -124,17 +138,34 @@ const EMBEDDED_OVERVIEW_DESCRIPTORS: EmbeddedDescriptor[] = [
   { collection: "scenes.tokens.delta", property: "effects", documentName: "ActiveEffect" },
 ];
 
+const KNOWN_EMBEDDED_NAMESPACES = new Set(
+  EMBEDDED_OVERVIEW_DESCRIPTORS.map(
+    (descriptor) => `${descriptor.collection}.${descriptor.property}`,
+  ),
+);
+
 const ASSET_EXTENSION = /\.(?:apng|avif|bmp|flac|gif|glb|gltf|jpeg|jpg|m4a|mp3|mp4|oga|ogg|ogv|otf|png|svg|ttf|wav|webm|webp|woff2?)(?:[?#].*)?$/i;
 
 export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
   const unresolved = new Set<string>();
-  const materializedRecords = materializeFoundryEmbeddedRecords(snapshot.records);
+  const graph = buildMaterializedEmbeddedGraph(snapshot.records);
+  const materializedRecords = graph.records;
   const topRecords = materializedRecords
     .filter((record) => record.namespace === record.collection)
     .sort(compareRecords);
   const topDocuments = topRecords.map(topRecordToDocument);
-  const allDocuments = normalizeDocuments(topRecords, materializedRecords);
-  const overview = buildOverview(topRecords, materializedRecords, unresolved);
+  const allDocuments = normalizeDocuments(
+    topRecords,
+    materializedRecords,
+    graph.reachableIdentities,
+  );
+  const overview = buildOverview(
+    topRecords,
+    materializedRecords,
+    graph.nodesByIdentity,
+    graph.reachableIdentities,
+    unresolved,
+  );
   for (const collection of Object.keys(snapshot.collectionBytes)) {
     overview[`${collection}.topLevel`] ??= 0;
   }
@@ -244,84 +275,167 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
  * namespace plus complete parent/child key paths, independent of document names.
  */
 export function materializeFoundryEmbeddedRecords(records: LevelRecord[]): LevelRecord[] {
-  const childrenByParent = new Map<string, LevelRecord[]>();
+  return buildMaterializedEmbeddedGraph(records).records;
+}
+
+function buildMaterializedEmbeddedGraph(records: LevelRecord[]): MaterializedEmbeddedGraph {
+  // Expanded object memberships have no LevelRecord of their own. Give them
+  // the same complete-path identity as raw records so either form can remain a
+  // traversable parent for raw descendants without promoting orphan sublevels.
+  const rawByIdentity = new Map<string, LevelRecord>();
+  const parentsWithRawChildren = new Set<string>();
   for (const record of records) {
+    const identity = recordIdentity(record.namespace, recordIdPath(record));
+    if (!rawByIdentity.has(identity)) rawByIdentity.set(identity, record);
     if (record.namespace === record.collection) continue;
     const namespaceParts = record.namespace.split(".");
     const parentNamespace = namespaceParts.slice(0, -1).join(".");
     const idPath = recordIdPath(record);
-    const parentKey = recordIdentity(parentNamespace, idPath.slice(0, -1));
-    const children = childrenByParent.get(parentKey);
-    if (children) children.push(record);
-    else childrenByParent.set(parentKey, [record]);
+    parentsWithRawChildren.add(recordIdentity(parentNamespace, idPath.slice(0, -1)));
   }
-  for (const children of childrenByParent.values()) children.sort(compareRecords);
 
-  const cache = new Map<string, Record<string, unknown>>();
-  const materialize = (record: LevelRecord): Record<string, unknown> => {
-    const identity = recordIdentity(record.namespace, recordIdPath(record));
-    const cached = cache.get(identity);
+  const nodesByIdentity = new Map<string, EmbeddedParentNode>();
+  const materializeNode = (
+    namespace: string,
+    idPath: string[],
+    sourceValue: Record<string, unknown>,
+  ): EmbeddedParentNode => {
+    const identity = recordIdentity(namespace, idPath);
+    const cached = nodesByIdentity.get(identity);
     if (cached) return cached;
 
-    const value = { ...record.value };
-    cache.set(identity, value);
-    const children = childrenByParent.get(identity) ?? [];
-    const byProperty = new Map<string, LevelRecord[]>();
-    for (const child of children) {
-      const property = child.embeddedPath.at(-1);
-      if (!property) continue;
-      const siblings = byProperty.get(property);
-      if (siblings) siblings.push(child);
-      else byProperty.set(property, [child]);
-    }
+    const node: EmbeddedParentNode = {
+      identity,
+      namespace,
+      idPath: [...idPath],
+      value: { ...sourceValue },
+      childIdentities: new Set<string>(),
+    };
+    nodesByIdentity.set(identity, node);
 
-    for (const [property, childRecords] of byProperty) {
-      const childById = new Map<string, LevelRecord>();
-      for (const child of childRecords) {
-        const childId = recordId(child);
-        if (childId && !childById.has(childId)) childById.set(childId, child);
+    const resolveChild = (
+      property: string,
+      id: string,
+      inlineValue: Record<string, unknown> | undefined,
+    ): EmbeddedParentNode | undefined => {
+      const childNamespace = `${namespace}.${property}`;
+      const childIdPath = [...idPath, id];
+      const childIdentity = recordIdentity(childNamespace, childIdPath);
+      const raw = rawByIdentity.get(childIdentity);
+      if (raw) {
+        return materializeNode(raw.namespace, recordIdPath(raw), raw.value);
       }
-      const current = value[property];
+      if (
+        inlineValue
+        && (
+          KNOWN_EMBEDDED_NAMESPACES.has(childNamespace)
+          || parentsWithRawChildren.has(childIdentity)
+        )
+      ) {
+        return materializeNode(childNamespace, childIdPath, inlineValue);
+      }
+      return undefined;
+    };
+
+    for (const [property, current] of Object.entries(sourceValue)) {
+      const childNamespace = `${namespace}.${property}`;
+      const knownEmbeddedProperty = KNOWN_EMBEDDED_NAMESPACES.has(childNamespace);
 
       if (Array.isArray(current)) {
-        const seen = new Set<string>();
-        value[property] = current.flatMap((entry) => {
+        const hasGraphMembership = knownEmbeddedProperty || current.some((entry) => {
           const id = typeof entry === "string"
             ? entry
             : isRecord(entry)
               ? stringValue(entry._id)
               : undefined;
-          if (!id) return isRecord(entry) ? [{ ...entry }] : [];
+          if (!id) return false;
+          const childIdentity = recordIdentity(childNamespace, [...idPath, id]);
+          return rawByIdentity.has(childIdentity) || parentsWithRawChildren.has(childIdentity);
+        });
+        if (!hasGraphMembership) continue;
+
+        const seen = new Set<string>();
+        node.value[property] = current.flatMap((entry) => {
+          const id = typeof entry === "string"
+            ? entry
+            : isRecord(entry)
+              ? stringValue(entry._id)
+              : undefined;
+          if (!id) return [isRecord(entry) ? { ...entry } : entry];
           if (seen.has(id)) return [];
           seen.add(id);
-          const stored = childById.get(id);
-          if (stored) return [materialize(stored)];
+          const child = resolveChild(property, id, isRecord(entry) ? entry : undefined);
+          if (child) {
+            node.childIdentities.add(child.identity);
+            return [child.value];
+          }
           return isRecord(entry) ? [{ ...entry }] : [entry];
         });
         continue;
       }
 
       if (typeof current === "string") {
-        const stored = childById.get(current);
-        if (stored) value[property] = materialize(stored);
+        const child = resolveChild(property, current, undefined);
+        if (child) {
+          node.childIdentities.add(child.identity);
+          node.value[property] = child.value;
+        }
         continue;
       }
+
+      if (isRecord(current)) {
+        const id = stringValue(current._id);
+        if (!id) continue;
+        const child = resolveChild(property, id, current);
+        if (child) {
+          node.childIdentities.add(child.identity);
+          node.value[property] = child.value;
+        }
+      }
     }
-    return value;
+    return node;
   };
 
-  return records.map((record) => ({
+  const materializedRecords = records.map((record) => ({
     ...record,
-    value: materialize(record),
+    value: materializeNode(record.namespace, recordIdPath(record), record.value).value,
   }));
+
+  const reachableIdentities = new Set<string>();
+  const queue: EmbeddedParentNode[] = [];
+  for (const record of materializedRecords.filter(
+    (candidate) => candidate.namespace === candidate.collection,
+  )) {
+    const identity = recordIdentity(record.namespace, recordIdPath(record));
+    const node = nodesByIdentity.get(identity);
+    if (!node || reachableIdentities.has(identity)) continue;
+    reachableIdentities.add(identity);
+    queue.push(node);
+  }
+  for (let index = 0; index < queue.length; index += 1) {
+    const parent = queue[index]!;
+    for (const childIdentity of parent.childIdentities) {
+      if (reachableIdentities.has(childIdentity)) continue;
+      const child = nodesByIdentity.get(childIdentity);
+      if (!child) continue;
+      reachableIdentities.add(childIdentity);
+      queue.push(child);
+    }
+  }
+
+  return {
+    records: materializedRecords,
+    nodesByIdentity,
+    reachableIdentities,
+  };
 }
 
 function normalizeDocuments(
   topRecords: LevelRecord[],
   records: LevelRecord[],
+  reachableIdentities: Set<string>,
 ): AuditDocument[] {
   const documents = new Map<string, AuditDocument>();
-  const reachableIdentities = collectReachableRecordIdentities(topRecords, records);
   for (const record of topRecords) {
     const document = topRecordToDocument(record);
     documents.set(document.uuid, document);
@@ -333,52 +447,6 @@ function normalizeDocuments(
     if (document) documents.set(document.uuid, document);
   }
   return [...documents.values()].sort((left, right) => compareOrdinal(left.uuid, right.uuid));
-}
-
-function collectReachableRecordIdentities(
-  topRecords: LevelRecord[],
-  allRecords: LevelRecord[],
-): Set<string> {
-  const childrenByParent = new Map<string, LevelRecord[]>();
-  for (const record of allRecords) {
-    if (record.namespace === record.collection) continue;
-    const namespaceParts = record.namespace.split(".");
-    const parentIdentity = recordIdentity(
-      namespaceParts.slice(0, -1).join("."),
-      recordIdPath(record).slice(0, -1),
-    );
-    const children = childrenByParent.get(parentIdentity);
-    if (children) children.push(record);
-    else childrenByParent.set(parentIdentity, [record]);
-  }
-
-  const reachable = new Set<string>();
-  const queue = [...topRecords];
-  for (const record of topRecords) {
-    reachable.add(recordIdentity(record.namespace, recordIdPath(record)));
-  }
-  for (let index = 0; index < queue.length; index += 1) {
-    const parent = queue[index]!;
-    const parentIdentity = recordIdentity(parent.namespace, recordIdPath(parent));
-    for (const child of childrenByParent.get(parentIdentity) ?? []) {
-      const property = child.embeddedPath.at(-1);
-      const childId = recordIdPath(child).at(-1);
-      if (!property || !childId || !containsEmbeddedMembership(parent.value[property], childId)) continue;
-      const childIdentity = recordIdentity(child.namespace, recordIdPath(child));
-      if (reachable.has(childIdentity)) continue;
-      reachable.add(childIdentity);
-      queue.push(child);
-    }
-  }
-  return reachable;
-}
-
-function containsEmbeddedMembership(value: unknown, expectedId: string): boolean {
-  const memberships = Array.isArray(value) ? value : [value];
-  return memberships.some((membership) => (
-    membership === expectedId
-    || (isRecord(membership) && stringValue(membership._id) === expectedId)
-  ));
 }
 
 function topRecordToDocument(record: LevelRecord): AuditDocument {
@@ -457,6 +525,8 @@ function appendNestedDocuments(
 function buildOverview(
   topRecords: LevelRecord[],
   records: LevelRecord[],
+  nodesByIdentity: Map<string, EmbeddedParentNode>,
+  reachableIdentities: Set<string>,
   unresolved: Set<string>,
 ): Record<string, number | string | boolean> {
   const overview: Record<string, number | string | boolean> = {};
@@ -467,7 +537,12 @@ function buildOverview(
   }
   for (const descriptor of EMBEDDED_OVERVIEW_DESCRIPTORS) {
     const namespace = `${descriptor.collection}.${descriptor.property}`;
-    const summary = summarizeEmbeddedNamespace(topRecords, records, descriptor);
+    const summary = summarizeEmbeddedNamespace(
+      records,
+      nodesByIdentity,
+      reachableIdentities,
+      descriptor,
+    );
     if (summary.parentArray === 0 && summary.embeddedKeys === 0) continue;
     overview[`${namespace}.parentArray`] = summary.parentArray;
     overview[`${namespace}.materializedChildren`] = summary.materializedChildren;
@@ -486,31 +561,20 @@ function buildOverview(
 }
 
 function summarizeEmbeddedNamespace(
-  topRecords: LevelRecord[],
   allRecords: LevelRecord[],
+  nodesByIdentity: Map<string, EmbeddedParentNode>,
+  reachableIdentities: Set<string>,
   descriptor: EmbeddedDescriptor,
 ): EmbeddedNamespaceSummary {
   const namespace = `${descriptor.collection}.${descriptor.property}`;
   const embeddedRecords = allRecords.filter((record) => record.namespace === namespace);
   const embeddedIdentities = new Set(
-    embeddedRecords.map((record) => recordIdPath(record).join(".")),
+    embeddedRecords.map((record) => recordIdentity(record.namespace, recordIdPath(record))),
   );
-  const collectionPath = descriptor.collection.split(".");
-  const rootCollection = collectionPath[0] ?? descriptor.collection;
-  let parents = topRecords
-    .filter((record) => record.collection === rootCollection)
-    .map((record) => ({ value: record.value, idPath: recordIdPath(record) }));
-  for (const property of collectionPath.slice(1)) {
-    parents = parents.flatMap((parent) => {
-      const children = parent.value[property];
-      const memberships = Array.isArray(children) ? children : [children];
-      return memberships.flatMap((membership) => {
-        if (!isRecord(membership)) return [];
-        const id = stringValue(membership._id);
-        return id ? [{ value: membership, idPath: [...parent.idPath, id] }] : [];
-      });
-    });
-  }
+  const parents = [...nodesByIdentity.values()].filter(
+    (node) => node.namespace === descriptor.collection
+      && reachableIdentities.has(node.identity),
+  );
   const membershipIdentities = new Set<string>();
   let parentArray = 0;
   let materializedChildren = 0;
@@ -528,7 +592,7 @@ function summarizeEmbeddedNamespace(
           : undefined;
       if (isRecord(membership)) materializedChildren += 1;
       if (!id) continue;
-      const identity = [...parent.idPath, id].join(".");
+      const identity = recordIdentity(namespace, [...parent.idPath, id]);
       membershipIdentities.add(identity);
       if (typeof membership === "string" && !embeddedIdentities.has(identity)) {
         missingEmbeddedKeys += 1;
@@ -541,7 +605,9 @@ function summarizeEmbeddedNamespace(
     materializedChildren,
     embeddedKeys: embeddedRecords.length,
     orphanEmbeddedKeys: embeddedRecords.filter(
-      (record) => !membershipIdentities.has(recordIdPath(record).join(".")),
+      (record) => !membershipIdentities.has(
+        recordIdentity(record.namespace, recordIdPath(record)),
+      ),
     ).length,
     missingEmbeddedKeys,
   };
