@@ -1,14 +1,24 @@
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, open, readdir, readFile, readlink, realpath, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { cp, lstat, mkdir, readdir, readFile, realpath, rm } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { FileHandle } from "node:fs/promises";
+import type { ChildProcess } from "node:child_process";
 import type { LevelRecord, SnapshotOptions, TreeEntry, WorldSnapshot } from "./model";
 
 export type SnapshotCollectionReader = (
   databasePath: string,
   classicLevelEntry: string,
 ) => Promise<Array<{ key: string; value: Record<string, unknown> }>>;
+
+export interface SnapshotLifecycleHooks {
+  afterCopy?: () => Promise<void>;
+  beforeSnapshotHash?: () => Promise<void>;
+}
+
+export interface StoppedWorldLockGuard {
+  close(): Promise<void>;
+}
 
 interface ClassicLevelDatabase {
   iterator(): AsyncIterable<[string, Record<string, unknown>]>;
@@ -36,7 +46,12 @@ export function parseFoundryLevelKey(collection: string, key: string): Omit<Leve
 
   const namespaceParts = namespace.split(".");
   const identifiers = idPath.split(".");
-  if (namespaceParts[0] !== collection || namespaceParts.some((part) => !part) || identifiers.some((id) => !id)) {
+  if (
+    namespaceParts[0] !== collection
+    || namespaceParts.some((part) => !part)
+    || identifiers.some((id) => !id)
+    || namespaceParts.length !== identifiers.length
+  ) {
     throw new Error(`Invalid Foundry LevelDB namespace in ${collection}: ${key}`);
   }
 
@@ -53,7 +68,7 @@ export async function hashTree(root: string): Promise<{ entries: TreeEntry[]; tr
   const resolvedRoot = resolve(root);
   const entries: TreeEntry[] = [];
   await collectTreeEntries(resolvedRoot, resolvedRoot, entries);
-  entries.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  entries.sort((left, right) => compareOrdinal(left.relativePath, right.relativePath));
 
   const treeHash = createHash("sha256");
   for (const entry of entries) {
@@ -65,6 +80,7 @@ export async function hashTree(root: string): Promise<{ entries: TreeEntry[]; tr
 export async function createWorldSnapshot(
   options: SnapshotOptions,
   reader: SnapshotCollectionReader = readClassicLevelSnapshot,
+  hooks: SnapshotLifecycleHooks = {},
 ): Promise<WorldSnapshot> {
   const sourceWorldRoot = resolve(options.sourceWorldRoot);
   const snapshotWorldRoot = await resolveSnapshotRoot(options.snapshotWorldRoot);
@@ -74,58 +90,103 @@ export async function createWorldSnapshot(
   await mkdir(dirname(snapshotWorldRoot), { recursive: true });
 
   const collections = await findLiveCollections(sourceWorldRoot);
-  const lockHandles = await openCollectionLocks(sourceWorldRoot, collections);
+  const lockPaths = collections.map((collection) => join(sourceWorldRoot, "data", collection, "LOCK"));
   let sourceBefore: Awaited<ReturnType<typeof hashTree>> | undefined;
   let sourceAfter: Awaited<ReturnType<typeof hashTree>> | undefined;
   let snapshotTree: Awaited<ReturnType<typeof hashTree>> | undefined;
+  let snapshotMayExist = false;
 
   try {
-    sourceBefore = await hashTree(sourceWorldRoot);
-    await cp(sourceWorldRoot, snapshotWorldRoot, {
-      recursive: true,
-      force: false,
-      errorOnExist: true,
-      preserveTimestamps: true,
-    });
-    sourceAfter = await hashTree(sourceWorldRoot);
-    if (sourceBefore.treeHash !== sourceAfter.treeHash) {
-      await rm(snapshotWorldRoot, { recursive: true, force: true });
-      throw new Error("Source world changed while the snapshot was being copied");
+    const guard = await acquireStoppedWorldLocks(lockPaths);
+    try {
+      sourceBefore = await hashTree(sourceWorldRoot);
+      snapshotMayExist = true;
+      await cp(sourceWorldRoot, snapshotWorldRoot, {
+        recursive: true,
+        force: false,
+        errorOnExist: true,
+        preserveTimestamps: true,
+      });
+      await hooks.afterCopy?.();
+      sourceAfter = await hashTree(sourceWorldRoot);
+      if (sourceBefore.treeHash !== sourceAfter.treeHash) {
+        throw new Error("Source world changed while the snapshot was being copied");
+      }
+
+      await hooks.beforeSnapshotHash?.();
+      snapshotTree = await hashTree(snapshotWorldRoot);
+      if (sourceBefore.treeHash !== snapshotTree.treeHash) {
+        throw new Error("Snapshot bytes do not match the stopped source world");
+      }
+    } finally {
+      await guard.close();
     }
 
-    snapshotTree = await hashTree(snapshotWorldRoot);
-    if (sourceBefore.treeHash !== snapshotTree.treeHash) {
-      await rm(snapshotWorldRoot, { recursive: true, force: true });
-      throw new Error("Snapshot bytes do not match the stopped source world");
+    if (!sourceBefore || !sourceAfter || !snapshotTree) {
+      throw new Error("Unable to create a complete world snapshot");
     }
-  } finally {
-    await closeHandles(lockHandles);
-  }
 
-  if (!sourceBefore || !sourceAfter || !snapshotTree) {
-    throw new Error("Unable to create a complete world snapshot");
-  }
-
-  const records: LevelRecord[] = [];
-  for (const collection of collections) {
-    const databasePath = join(snapshotWorldRoot, "data", collection);
-    assertPathContained(snapshotWorldRoot, databasePath, "Snapshot database path");
-    const collectionRecords = await reader(databasePath, options.classicLevelEntry);
-    for (const { key, value } of collectionRecords) {
-      records.push({ ...parseFoundryLevelKey(collection, key), value });
+    const records: LevelRecord[] = [];
+    for (const collection of collections) {
+      const databasePath = join(snapshotWorldRoot, "data", collection);
+      assertPathContained(snapshotWorldRoot, databasePath, "Snapshot database path");
+      const collectionRecords = await reader(databasePath, options.classicLevelEntry);
+      for (const { key, value } of collectionRecords) {
+        records.push({ ...parseFoundryLevelKey(collection, key), value });
+      }
     }
+
+    return {
+      sourceWorldRoot,
+      snapshotWorldRoot,
+      sourceTreeHashBefore: sourceBefore.treeHash,
+      sourceTreeHashAfter: sourceAfter.treeHash,
+      sourceTree: sourceBefore.entries,
+      snapshotTree: snapshotTree.entries,
+      collectionBytes: calculateCollectionBytes(snapshotTree.entries, collections),
+      records,
+    };
+  } catch (error) {
+    if (snapshotMayExist) {
+      await removeIncompleteSnapshot(snapshotWorldRoot, error);
+    }
+    throw error;
+  }
+}
+
+export async function acquireStoppedWorldLocks(lockPaths: string[]): Promise<StoppedWorldLockGuard> {
+  if (process.platform !== "win32") {
+    throw new Error("Stopped-world lock guard is supported only on Windows; refusing to snapshot without it");
+  }
+  for (const lockPath of lockPaths) {
+    const stat = await lstat(lockPath);
+    if (!stat.isFile()) throw new Error(`Stopped-world lock is not a regular file: ${lockPath}`);
   }
 
-  return {
-    sourceWorldRoot,
-    snapshotWorldRoot,
-    sourceTreeHashBefore: sourceBefore.treeHash,
-    sourceTreeHashAfter: sourceAfter.treeHash,
-    sourceTree: sourceBefore.entries,
-    snapshotTree: snapshotTree.entries,
-    collectionBytes: calculateCollectionBytes(snapshotTree.entries, collections),
-    records,
-  };
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$paths = @($env:WORLD_AUDIT_LOCK_PATHS_JSON | ConvertFrom-Json)",
+    "$locks = [System.Collections.Generic.List[System.IO.FileStream]]::new()",
+    "try {",
+    "  foreach ($path in $paths) {",
+    "    $locks.Add([System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read))",
+    "  }",
+    "  [Console]::Out.WriteLine('READY')",
+    "  while ($true) { Start-Sleep -Seconds 3600 }",
+    "} catch {",
+    "  [Console]::Error.WriteLine($_.Exception.Message)",
+    "  exit 1",
+    "} finally {",
+    "  foreach ($lock in $locks) { $lock.Dispose() }",
+    "}",
+  ].join("\n");
+  const child = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
+    env: { ...process.env, WORLD_AUDIT_LOCK_PATHS_JSON: JSON.stringify(lockPaths) },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  await waitForLockGuardReady(child);
+  return new PowerShellStoppedWorldLockGuard(child);
 }
 
 async function readClassicLevelSnapshot(
@@ -218,24 +279,23 @@ async function resolveFuturePhysicalPath(path: string): Promise<string> {
 }
 
 async function assertNoLinksOrReparsePoints(path: string): Promise<void> {
+  const physicalRoot = await realpath(path);
+  await assertNoLinksOrReparsePointsAt(path, physicalRoot);
+}
+
+async function assertNoLinksOrReparsePointsAt(path: string, expectedPhysicalPath: string): Promise<void> {
   const stat = await lstat(path);
   if (stat.isSymbolicLink()) {
     throw new Error(`Symbolic link or reparse point is not permitted: ${path}`);
   }
-  if (process.platform === "win32") {
-    try {
-      await readlink(path);
-      throw new Error(`Symbolic link or reparse point is not permitted: ${path}`);
-    } catch (error) {
-      if (!isMissingLinkTarget(error)) {
-        throw error;
-      }
-    }
+  const physicalPath = await realpath(path);
+  if (normalizeForComparison(physicalPath) !== normalizeForComparison(expectedPhysicalPath)) {
+    throw new Error(`Reparse point changes the physical path: ${path}`);
   }
   if (!stat.isDirectory()) return;
 
   for (const entry of await readdir(path, { withFileTypes: true })) {
-    await assertNoLinksOrReparsePoints(join(path, entry.name));
+    await assertNoLinksOrReparsePointsAt(join(path, entry.name), join(expectedPhysicalPath, entry.name));
   }
 }
 
@@ -259,24 +319,7 @@ async function findLiveCollections(sourceWorldRoot: string): Promise<string[]> {
   return entries
     .filter((entry) => entry.isDirectory() && !isEvidenceOnlyBackup(entry.name))
     .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-}
-
-async function openCollectionLocks(sourceWorldRoot: string, collections: string[]): Promise<FileHandle[]> {
-  const handles: FileHandle[] = [];
-  try {
-    for (const collection of collections) {
-      handles.push(await open(join(sourceWorldRoot, "data", collection, "LOCK"), "r+"));
-    }
-    return handles;
-  } catch (error) {
-    await closeHandles(handles);
-    throw error;
-  }
-}
-
-async function closeHandles(handles: FileHandle[]): Promise<void> {
-  await Promise.all(handles.map(async (handle) => handle.close()));
+    .sort(compareOrdinal);
 }
 
 function calculateCollectionBytes(entries: TreeEntry[], collections: string[]): Record<string, number> {
@@ -313,10 +356,58 @@ function normalizeForComparison(path: string): string {
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
+function compareOrdinal(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function isMissingPath(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
-function isMissingLinkTarget(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "EINVAL";
+async function removeIncompleteSnapshot(snapshotWorldRoot: string, originalError: unknown): Promise<void> {
+  try {
+    await rm(snapshotWorldRoot, { recursive: true, force: true });
+  } catch (cleanupError) {
+    throw new AggregateError([originalError, cleanupError], "Snapshot failed and incomplete snapshot cleanup also failed");
+  }
+}
+
+async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
+  await new Promise<void>((resolveReady, rejectReady) => {
+    let stderr = "";
+    let stdout = "";
+    let settled = false;
+    const rejectOnce = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      rejectReady(error);
+    };
+    child.once("error", (error) => rejectOnce(error));
+    child.stderr?.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+      if (!settled && stdout.includes("READY")) {
+        settled = true;
+        resolveReady();
+      }
+    });
+    child.once("exit", (code) => {
+      rejectOnce(new Error(`Stopped-world lock guard could not be acquired (exit ${code}): ${stderr.trim()}`));
+    });
+  });
+}
+
+class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
+  constructor(private readonly child: ChildProcess) {}
+
+  async close(): Promise<void> {
+    if (this.child.exitCode !== null) return;
+    await new Promise<void>((resolveClose, rejectClose) => {
+      this.child.once("error", rejectClose);
+      this.child.once("exit", () => resolveClose());
+      if (!this.child.kill()) {
+        rejectClose(new Error("Stopped-world lock guard could not be stopped"));
+      }
+    });
+  }
 }
