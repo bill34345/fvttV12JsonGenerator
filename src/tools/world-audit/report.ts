@@ -484,9 +484,7 @@ export function createAuditValidation(
   const duplicateIds: Array<Record<string, unknown>> = [];
   const ids = new Map<string, number>();
   for (const record of snapshot.records) {
-    const id = typeof record.value._id === "string"
-      ? record.value._id
-      : record.key.split("!")[2]?.split(".").at(-1) ?? "";
+    const id = record.key.split("!")[2] ?? "";
     const key = `${record.namespace}\0${id}`;
     ids.set(key, (ids.get(key) ?? 0) + 1);
   }

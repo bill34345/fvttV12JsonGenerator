@@ -50,6 +50,14 @@ interface EmbeddedDescriptor {
   children?: EmbeddedDescriptor[];
 }
 
+interface EmbeddedNamespaceSummary {
+  parentArray: number;
+  materializedChildren: number;
+  embeddedKeys: number;
+  orphanEmbeddedKeys: number;
+  missingEmbeddedKeys: number;
+}
+
 const COLLECTION_DOCUMENT_NAMES: Record<string, string> = {
   actors: "Actor",
   adventures: "Adventure",
@@ -113,12 +121,13 @@ const ASSET_EXTENSION = /\.(?:apng|avif|bmp|flac|gif|glb|gltf|jpeg|jpg|m4a|mp3|m
 
 export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
   const unresolved = new Set<string>();
-  const topRecords = snapshot.records
+  const materializedRecords = materializeFoundryEmbeddedRecords(snapshot.records);
+  const topRecords = materializedRecords
     .filter((record) => record.namespace === record.collection)
     .sort(compareRecords);
   const topDocuments = topRecords.map(topRecordToDocument);
-  const allDocuments = normalizeDocuments(topRecords, snapshot.records);
-  const overview = buildOverview(topRecords, snapshot.records, unresolved);
+  const allDocuments = normalizeDocuments(topRecords, materializedRecords);
+  const overview = buildOverview(topRecords, materializedRecords, unresolved);
   for (const collection of Object.keys(snapshot.collectionBytes)) {
     overview[`${collection}.topLevel`] ??= 0;
   }
@@ -216,6 +225,88 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
     unresolved: [...unresolved].sort(compareOrdinal),
     unusedActorCandidates,
   };
+}
+
+/**
+ * Reconstruct Foundry 14's normalized embedded-document view without mutating
+ * the verified LevelDB records. Parent fields contain child IDs while the child
+ * documents live in namespaced sublevels; this mirrors Foundry's
+ * EmbeddedCollectionField.expandEmbedded behavior.
+ *
+ * anti-overfit: allow schema-derived - Foundry 14 stores embedded documents by
+ * namespace plus complete parent/child key paths, independent of document names.
+ */
+export function materializeFoundryEmbeddedRecords(records: LevelRecord[]): LevelRecord[] {
+  const childrenByParent = new Map<string, LevelRecord[]>();
+  for (const record of records) {
+    if (record.namespace === record.collection) continue;
+    const namespaceParts = record.namespace.split(".");
+    const parentNamespace = namespaceParts.slice(0, -1).join(".");
+    const idPath = recordIdPath(record);
+    const parentKey = recordIdentity(parentNamespace, idPath.slice(0, -1));
+    const children = childrenByParent.get(parentKey);
+    if (children) children.push(record);
+    else childrenByParent.set(parentKey, [record]);
+  }
+  for (const children of childrenByParent.values()) children.sort(compareRecords);
+
+  const cache = new Map<string, Record<string, unknown>>();
+  const materialize = (record: LevelRecord): Record<string, unknown> => {
+    const identity = recordIdentity(record.namespace, recordIdPath(record));
+    const cached = cache.get(identity);
+    if (cached) return cached;
+
+    const value = { ...record.value };
+    cache.set(identity, value);
+    const children = childrenByParent.get(identity) ?? [];
+    const byProperty = new Map<string, LevelRecord[]>();
+    for (const child of children) {
+      const property = child.embeddedPath.at(-1);
+      if (!property) continue;
+      const siblings = byProperty.get(property);
+      if (siblings) siblings.push(child);
+      else byProperty.set(property, [child]);
+    }
+
+    for (const [property, childRecords] of byProperty) {
+      const childById = new Map<string, LevelRecord>();
+      for (const child of childRecords) {
+        const childId = recordId(child);
+        if (childId && !childById.has(childId)) childById.set(childId, child);
+      }
+      const current = value[property];
+
+      if (Array.isArray(current)) {
+        const seen = new Set<string>();
+        value[property] = current.flatMap((entry) => {
+          const id = typeof entry === "string"
+            ? entry
+            : isRecord(entry)
+              ? stringValue(entry._id)
+              : undefined;
+          if (!id) return isRecord(entry) ? [{ ...entry }] : [];
+          if (seen.has(id)) return [];
+          seen.add(id);
+          const stored = childById.get(id);
+          if (stored) return [materialize(stored)];
+          return isRecord(entry) ? [{ ...entry }] : [entry];
+        });
+        continue;
+      }
+
+      if (typeof current === "string") {
+        const stored = childById.get(current);
+        if (stored) value[property] = materialize(stored);
+        continue;
+      }
+    }
+    return value;
+  };
+
+  return records.map((record) => ({
+    ...record,
+    value: materialize(record),
+  }));
 }
 
 function normalizeDocuments(
@@ -321,35 +412,84 @@ function buildOverview(
   }
   for (const descriptor of flattenDescriptors(EMBEDDED_DESCRIPTORS)) {
     const namespace = `${descriptor.collection}.${descriptor.property}`;
-    const parentCount = countParentArrays(topRecords, descriptor);
-    const embeddedCount = records.filter((record) => record.namespace === namespace).length;
-    if (parentCount === 0 && embeddedCount === 0) continue;
-    overview[`${namespace}.parentArray`] = parentCount;
-    overview[`${namespace}.embeddedKeys`] = embeddedCount;
-    if (parentCount !== embeddedCount) {
+    const summary = summarizeEmbeddedNamespace(topRecords, records, descriptor);
+    if (summary.parentArray === 0 && summary.embeddedKeys === 0) continue;
+    overview[`${namespace}.parentArray`] = summary.parentArray;
+    overview[`${namespace}.materializedChildren`] = summary.materializedChildren;
+    overview[`${namespace}.embeddedKeys`] = summary.embeddedKeys;
+    overview[`${namespace}.orphanEmbeddedKeys`] = summary.orphanEmbeddedKeys;
+    overview[`${namespace}.missingEmbeddedKeys`] = summary.missingEmbeddedKeys;
+    if (summary.orphanEmbeddedKeys > 0 || summary.missingEmbeddedKeys > 0) {
       unresolved.add(
-        `${namespace} embedded count mismatch: parent arrays=${parentCount}, embedded keys=${embeddedCount}`,
+        `${namespace} embedded count mismatch: parent array=${summary.parentArray}, `
+        + `materialized children=${summary.materializedChildren}, embedded keys=${summary.embeddedKeys}, `
+        + `orphan embedded keys=${summary.orphanEmbeddedKeys}, missing embedded keys=${summary.missingEmbeddedKeys}`,
       );
     }
   }
   return overview;
 }
 
-function countParentArrays(topRecords: LevelRecord[], descriptor: EmbeddedDescriptor): number {
-  const parentCollection = descriptor.collection.split(".")[0] ?? descriptor.collection;
-  const parents = topRecords.filter((record) => record.collection === parentCollection);
-  if (!descriptor.collection.includes(".")) {
-    return parents.reduce((total, parent) => total + records(parent.value[descriptor.property]).length, 0);
-  }
-  const path = descriptor.collection.split(".").slice(1);
-  let current: Record<string, unknown>[] = parents.map((parent) => parent.value);
-  for (const segment of path) {
-    current = current.flatMap((value) => records(value[segment]));
-  }
-  return current.reduce(
-    (total, value) => total + (isRecord(value) ? records(value[descriptor.property]).length : 0),
-    0,
+function summarizeEmbeddedNamespace(
+  topRecords: LevelRecord[],
+  allRecords: LevelRecord[],
+  descriptor: EmbeddedDescriptor,
+): EmbeddedNamespaceSummary {
+  const namespace = `${descriptor.collection}.${descriptor.property}`;
+  const embeddedRecords = allRecords.filter((record) => record.namespace === namespace);
+  const embeddedIdentities = new Set(
+    embeddedRecords.map((record) => recordIdPath(record).join(".")),
   );
+  const collectionPath = descriptor.collection.split(".");
+  const rootCollection = collectionPath[0] ?? descriptor.collection;
+  let parents = topRecords
+    .filter((record) => record.collection === rootCollection)
+    .map((record) => ({ value: record.value, idPath: recordIdPath(record) }));
+  for (const property of collectionPath.slice(1)) {
+    parents = parents.flatMap((parent) => {
+      const children = parent.value[property];
+      const memberships = Array.isArray(children) ? children : [children];
+      return memberships.flatMap((membership) => {
+        if (!isRecord(membership)) return [];
+        const id = stringValue(membership._id);
+        return id ? [{ value: membership, idPath: [...parent.idPath, id] }] : [];
+      });
+    });
+  }
+  const membershipIdentities = new Set<string>();
+  let parentArray = 0;
+  let materializedChildren = 0;
+  let missingEmbeddedKeys = 0;
+
+  for (const parent of parents) {
+    const value = parent.value[descriptor.property];
+    const memberships = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+    for (const membership of memberships) {
+      parentArray += 1;
+      const id = typeof membership === "string"
+        ? membership
+        : isRecord(membership)
+          ? stringValue(membership._id)
+          : undefined;
+      if (isRecord(membership)) materializedChildren += 1;
+      if (!id) continue;
+      const identity = [...parent.idPath, id].join(".");
+      membershipIdentities.add(identity);
+      if (typeof membership === "string" && !embeddedIdentities.has(identity)) {
+        missingEmbeddedKeys += 1;
+      }
+    }
+  }
+
+  return {
+    parentArray,
+    materializedChildren,
+    embeddedKeys: embeddedRecords.length,
+    orphanEmbeddedKeys: embeddedRecords.filter(
+      (record) => !membershipIdentities.has(recordIdPath(record).join(".")),
+    ).length,
+    missingEmbeddedKeys,
+  };
 }
 
 function resolveFolders(
@@ -1074,6 +1214,14 @@ function flattenDescriptors(descriptors: EmbeddedDescriptor[]): EmbeddedDescript
 
 function recordId(record: LevelRecord): string {
   return stringValue(record.value._id) ?? record.key.split("!")[2]?.split(".").at(-1) ?? "";
+}
+
+function recordIdPath(record: LevelRecord): string[] {
+  return record.key.split("!")[2]?.split(".").filter(Boolean) ?? [];
+}
+
+function recordIdentity(namespace: string, idPath: string[]): string {
+  return `${namespace}\0${idPath.join(".")}`;
 }
 
 function records(value: unknown): Record<string, unknown>[] {

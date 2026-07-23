@@ -8,7 +8,11 @@ import {
   runWorldFootprintAudit,
   type AuditCliOptions,
 } from "../worldFootprintAudit";
-import { createTrackedSummaryProjection } from "../world-audit/report";
+import {
+  createAuditValidation,
+  createTrackedSummaryProjection,
+} from "../world-audit/report";
+import { analyzeWorld } from "../world-audit/inventory";
 import type { LevelRecord, WorldSnapshot } from "../world-audit/model";
 
 const SHEET_NAMES = [
@@ -411,6 +415,44 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }
+});
+
+test("scopes duplicate embedded IDs by namespace and complete parent chain", () => {
+  const repeatedLeafUnderDifferentParents = [
+    top("actors", "A1", { _id: "A1", items: ["I1"], effects: [] }),
+    top("actors", "A2", { _id: "A2", items: ["I1"], effects: [] }),
+    embedded("actors", "actors.items", ["A1", "I1"], { _id: "I1", effects: [] }),
+    embedded("actors", "actors.items", ["A2", "I1"], { _id: "I1", effects: [] }),
+  ];
+  const uniqueSnapshot: WorldSnapshot = {
+    sourceWorldRoot: "I:\\fixture\\source",
+    snapshotWorldRoot: "I:\\fixture\\snapshot",
+    sourceTreeHashBefore: "a".repeat(64),
+    sourceTreeHashAfter: "a".repeat(64),
+    sourceTree: [],
+    snapshotTree: [],
+    collectionBytes: { actors: 1 },
+    records: repeatedLeafUnderDifferentParents,
+  };
+  expect(createAuditValidation(uniqueSnapshot, analyzeWorld(uniqueSnapshot)).duplicateIds).toEqual([]);
+
+  const duplicateRecord = embedded(
+    "actors",
+    "actors.items.effects",
+    ["A1", "I1", "E1"],
+    { _id: "E1" },
+  );
+  const duplicateSnapshot = {
+    ...uniqueSnapshot,
+    records: [...repeatedLeafUnderDifferentParents, duplicateRecord, { ...duplicateRecord }],
+  };
+  expect(createAuditValidation(duplicateSnapshot, analyzeWorld(duplicateSnapshot)).duplicateIds).toEqual([
+    {
+      namespace: "actors.items.effects",
+      id: "A1.I1.E1",
+      count: 2,
+    },
+  ]);
 });
 
 test("rejects unknown CLI arguments, wrong pinned versions, and destinations inside the source world", async () => {

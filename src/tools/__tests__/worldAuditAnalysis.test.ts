@@ -283,6 +283,326 @@ test("classifies reference evidence, Actor cleanup status, chapters, language, a
   expect(JSON.stringify(analysis)).not.toContain("must-not-leak");
 });
 
+test("reconstructs Foundry 14 embedded-only namespaces into one deduplicated analysis view", () => {
+  const records = [
+    top("folders", "SCENES", { _id: "SCENES", name: "Chapter 4", type: "Scene", folder: null }),
+    top("actors", "A1", {
+      _id: "A1",
+      name: "Embedded Scene Actor",
+      type: "npc",
+      folder: null,
+      ownership: {},
+      items: ["I1"],
+      effects: ["AE1"],
+    }),
+    top("actors", "A2", {
+      _id: "A2",
+      name: "Journal Target",
+      type: "npc",
+      folder: null,
+      ownership: {},
+      items: ["I1"],
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["A1", "I1"], {
+      _id: "I1",
+      name: "First scoped item",
+      effects: ["IE1"],
+    }),
+    embedded("actors", "actors.items.effects", ["A1", "I1", "IE1"], {
+      _id: "IE1",
+      name: "First item effect",
+      origin: "Actor.A2",
+    }),
+    embedded("actors", "actors.effects", ["A1", "AE1"], {
+      _id: "AE1",
+      name: "Actor effect",
+      origin: "Actor.A1.Item.I1",
+    }),
+    embedded("actors", "actors.items", ["A2", "I1"], {
+      _id: "I1",
+      name: "Second parent reuses the leaf ID",
+      effects: [],
+    }),
+    top("scenes", "S1", {
+      _id: "S1",
+      name: "Embedded scene",
+      folder: "SCENES",
+      width: 3000,
+      height: 2000,
+      tokens: ["T1"],
+      notes: [],
+      walls: ["W1"],
+      lights: ["L1"],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+    embedded("scenes", "scenes.tokens", ["S1", "T1"], {
+      _id: "T1",
+      name: "Linked token",
+      actorId: "A1",
+      actorLink: true,
+      delta: "D1",
+    }),
+    embedded("scenes", "scenes.tokens.delta", ["S1", "T1", "D1"], {
+      _id: "D1",
+      items: ["DI1"],
+      effects: ["DE1"],
+    }),
+    embedded("scenes", "scenes.tokens.delta.items", ["S1", "T1", "D1", "DI1"], {
+      _id: "DI1",
+      name: "Token delta item",
+      effects: [],
+    }),
+    embedded("scenes", "scenes.tokens.delta.effects", ["S1", "T1", "D1", "DE1"], {
+      _id: "DE1",
+      name: "Token delta effect",
+    }),
+    embedded("scenes", "scenes.walls", ["S1", "W1"], { _id: "W1" }),
+    embedded("scenes", "scenes.lights", ["S1", "L1"], { _id: "L1" }),
+    top("scenes", "S2", {
+      _id: "S2",
+      name: "Broken embedded scene",
+      folder: null,
+      width: 1000,
+      height: 1000,
+      tokens: ["T1"],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+    embedded("scenes", "scenes.tokens", ["S2", "T1"], {
+      _id: "T1",
+      name: "Broken token",
+      actorId: "MISSING",
+      actorLink: false,
+      delta: "D1",
+    }),
+    embedded("scenes", "scenes.tokens.delta", ["S2", "T1", "D1"], {
+      _id: "D1",
+      items: [],
+      effects: [],
+    }),
+    top("scenes", "S3", {
+      _id: "S3",
+      name: "Expanded-array compatibility control",
+      folder: null,
+      width: 1000,
+      height: 1000,
+      tokens: [{ _id: "T3", name: "Parent token", actorId: "A2", actorLink: true, delta: null }],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+    embedded("scenes", "scenes.tokens", ["S3", "T3"], {
+      _id: "T3",
+      name: "Stored token",
+      actorId: "A2",
+      actorLink: true,
+      delta: null,
+    }),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Embedded pages",
+      folder: null,
+      pages: ["P1", "P2"],
+    }),
+    embedded("journal", "journal.pages", ["J1", "P1"], {
+      _id: "P1",
+      name: "Language page",
+      type: "text",
+      text: { content: "<p>English 中</p>" },
+    }),
+    embedded("journal", "journal.pages", ["J1", "P2"], {
+      _id: "P2",
+      name: "Module page",
+      type: "text",
+      flags: { "simple-quest": { state: "private" } },
+      text: { content: "@UUID[Actor.A2]" },
+    }),
+    top("items", "WORLD", {
+      _id: "WORLD",
+      name: "Unrelated world item",
+      type: "loot",
+      folder: null,
+      effects: [],
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+
+  expect(rowById(analysis.actors, "A1")).toMatchObject({
+    noSceneToken: false,
+    usageStatuses: expect.arrayContaining(["used-structured"]),
+    chapter: {
+      category: "explicit-chapter",
+      chapterLabels: ["Chapter 4"],
+      confidence: "high",
+    },
+  });
+  expect(rowById(analysis.actors, "A2")).toMatchObject({
+    noSceneToken: false,
+    usageStatuses: expect.arrayContaining(["used-structured", "used-uuid"]),
+  });
+  expect(rowById(analysis.scenes, "S1")).toMatchObject({
+    tokenCount: 1,
+    wallCount: 1,
+    lightCount: 1,
+    tokenDeltaItemCount: 1,
+    tokenDeltaEffectCount: 1,
+  });
+  expect(rowById(analysis.scenes, "S2")).toMatchObject({ tokenCount: 1 });
+  expect(rowById(analysis.scenes, "S3")).toMatchObject({ tokenCount: 1 });
+  expect(analysis.brokenTokenActorRefs).toEqual([
+    expect.objectContaining({
+      sceneId: "S2",
+      tokenId: "T1",
+      actorId: "MISSING",
+      deltaItemCount: 0,
+      deltaEffectCount: 0,
+    }),
+  ]);
+  expect(analysis.journalPages).toEqual([
+    expect.objectContaining({ id: "P1", language: "mixed", moduleOwner: "core" }),
+    expect.objectContaining({ id: "P2", language: "Latin-only", moduleOwner: "simple-quest" }),
+  ]);
+  expect(analysis.references).toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.A1.Item.I1.ActiveEffect.IE1",
+    targetUuid: "Actor.A2",
+    evidence: "structured-field",
+    verifiedTarget: true,
+  }));
+  expect(analysis.references.filter((edge) => (
+    edge.sourceUuid === "Scene.S3"
+    && edge.targetUuid === "Actor.A2"
+    && edge.fieldPath === "tokens[0].actorId"
+  ))).toHaveLength(1);
+  expect(analysis.overview).toMatchObject({
+    "actors.items.parentArray": 2,
+    "actors.items.materializedChildren": 2,
+    "actors.items.embeddedKeys": 2,
+    "actors.items.orphanEmbeddedKeys": 0,
+    "actors.items.missingEmbeddedKeys": 0,
+    "actors.items.effects.parentArray": 1,
+    "actors.items.effects.materializedChildren": 1,
+    "actors.items.effects.embeddedKeys": 1,
+    "actors.effects.parentArray": 1,
+    "actors.effects.embeddedKeys": 1,
+    "scenes.tokens.parentArray": 3,
+    "scenes.tokens.embeddedKeys": 3,
+    "journal.pages.parentArray": 2,
+    "journal.pages.embeddedKeys": 2,
+  });
+  expect(analysis.unresolved).not.toContainEqual(expect.stringMatching(/embedded count mismatch/i));
+  expect(analysis.worldItems).toContainEqual(expect.objectContaining({
+    id: "WORLD",
+    name: "Unrelated world item",
+    "Document Kind": "Item",
+  }));
+});
+
+test("does not promote orphan embedded keys that are absent from the parent ID array", () => {
+  const analysis = analyzeWorld(snapshot([
+    top("actors", "A1", {
+      _id: "A1",
+      name: "Orphan control actor",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    embedded("actors", "actors.items", ["A1", "ORPHAN-ITEM"], {
+      _id: "ORPHAN-ITEM",
+      name: "Orphan item",
+      effects: ["ORPHAN-EFFECT"],
+    }),
+    embedded("actors", "actors.items.effects", ["A1", "ORPHAN-ITEM", "ORPHAN-EFFECT"], {
+      _id: "ORPHAN-EFFECT",
+      name: "Orphan effect",
+    }),
+    top("scenes", "S1", {
+      _id: "S1",
+      name: "Orphan control scene",
+      tokens: [],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+    embedded("scenes", "scenes.tokens", ["S1", "ORPHAN"], {
+      _id: "ORPHAN",
+      actorId: "A1",
+      actorLink: true,
+      delta: null,
+    }),
+  ]));
+
+  expect(rowById(analysis.scenes, "S1")).toMatchObject({ tokenCount: 0 });
+  expect(rowById(analysis.actors, "A1")).toMatchObject({
+    noSceneToken: true,
+    usageStatuses: ["no-detected-reference"],
+  });
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: "Scene.S1",
+    targetUuid: "Actor.A1",
+  }));
+  expect(analysis.overview).toMatchObject({
+    "actors.items.parentArray": 0,
+    "actors.items.materializedChildren": 0,
+    "actors.items.embeddedKeys": 1,
+    "actors.items.orphanEmbeddedKeys": 1,
+    "actors.items.effects.parentArray": 0,
+    "actors.items.effects.materializedChildren": 0,
+    "actors.items.effects.embeddedKeys": 1,
+    "actors.items.effects.orphanEmbeddedKeys": 1,
+    "scenes.tokens.parentArray": 0,
+    "scenes.tokens.materializedChildren": 0,
+    "scenes.tokens.embeddedKeys": 1,
+    "scenes.tokens.orphanEmbeddedKeys": 1,
+    "scenes.tokens.missingEmbeddedKeys": 0,
+  });
+  expect(analysis.unresolved).toContainEqual(expect.stringMatching(/scenes\.tokens.*mismatch/i));
+});
+
+test("keeps dangling parent IDs visible without treating them as materialized documents", () => {
+  const analysis = analyzeWorld(snapshot([
+    top("scenes", "S1", {
+      _id: "S1",
+      name: "Dangling parent reference control",
+      tokens: ["MISSING-TOKEN-KEY"],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      sounds: [],
+    }),
+  ]));
+
+  expect(rowById(analysis.scenes, "S1")).toMatchObject({ tokenCount: 0 });
+  expect(analysis.overview).toMatchObject({
+    "scenes.tokens.parentArray": 1,
+    "scenes.tokens.materializedChildren": 0,
+    "scenes.tokens.embeddedKeys": 0,
+    "scenes.tokens.orphanEmbeddedKeys": 0,
+    "scenes.tokens.missingEmbeddedKeys": 1,
+  });
+  expect(analysis.unresolved).toContainEqual(expect.stringMatching(/scenes\.tokens.*mismatch/i));
+});
+
 test("limits exact name matching to scripts and marks duplicate names for manual review", () => {
   const records = [
     top("actors", "A1", { _id: "A1", name: "Duplicate", ownership: {}, items: [], effects: [] }),
