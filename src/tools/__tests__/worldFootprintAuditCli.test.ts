@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -95,6 +96,15 @@ async function createFixtureRoot(): Promise<{
     }, null, 2)}\n`,
     "utf8",
   );
+  const worldEvidenceTime = new Date("2026-07-24T01:02:03.000Z");
+  await utimes(join(worldRoot, "world.json"), worldEvidenceTime, worldEvidenceTime);
+  await mkdir(snapshotDir, { recursive: true });
+  await writeFile(
+    join(snapshotDir, "world.json"),
+    await readFile(join(worldRoot, "world.json"), "utf8"),
+    "utf8",
+  );
+  await utimes(join(snapshotDir, "world.json"), worldEvidenceTime, worldEvidenceTime);
   await writeFile(
     join(systemRoot, "system.json"),
     `${JSON.stringify({ id: "dnd5e", version: "5.3.3" }, null, 2)}\n`,
@@ -108,6 +118,7 @@ async function createFixtureRoot(): Promise<{
       _id: "A1",
       name: "Scene-free but journal-linked",
       type: "npc",
+      _stats: { modifiedTime: Date.parse("2026-07-23T12:00:00.000Z") },
       ownership: {},
       items: [],
       effects: [],
@@ -129,6 +140,27 @@ async function createFixtureRoot(): Promise<{
         name: "Secret page",
         type: "text",
         text: { content: `${rawJournalBody} @UUID[Actor.A1]` },
+      }, {
+        _id: "P2",
+        name: "Calendar page",
+        type: "calendaria.calendarnote",
+        text: { content: "Calendar body" },
+      }, {
+        _id: "P3",
+        name: "Quest page",
+        type: "text",
+        flags: { "simple-quest": { state: "private" } },
+        text: { content: "Quest body" },
+      }, {
+        _id: "P4",
+        name: "Image page",
+        type: "image",
+        src: "maps/unused.webp",
+      }, {
+        _id: "P5",
+        name: "Unknown page",
+        type: "mystery",
+        text: { content: "Unknown body" },
       }],
     }),
     embedded("journal", "journal.pages", ["J1", "P1"], {
@@ -136,6 +168,31 @@ async function createFixtureRoot(): Promise<{
       name: "Secret page",
       type: "text",
       text: { content: `${rawJournalBody} @UUID[Actor.A1]` },
+    }),
+    embedded("journal", "journal.pages", ["J1", "P2"], {
+      _id: "P2",
+      name: "Calendar page",
+      type: "calendaria.calendarnote",
+      text: { content: "Calendar body" },
+    }),
+    embedded("journal", "journal.pages", ["J1", "P3"], {
+      _id: "P3",
+      name: "Quest page",
+      type: "text",
+      flags: { "simple-quest": { state: "private" } },
+      text: { content: "Quest body" },
+    }),
+    embedded("journal", "journal.pages", ["J1", "P4"], {
+      _id: "P4",
+      name: "Image page",
+      type: "image",
+      src: "maps/unused.webp",
+    }),
+    embedded("journal", "journal.pages", ["J1", "P5"], {
+      _id: "P5",
+      name: "Unknown page",
+      type: "mystery",
+      text: { content: "Unknown body" },
     }),
     top("scenes", "S1", {
       _id: "S1",
@@ -195,10 +252,8 @@ async function createFixtureRoot(): Promise<{
 test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 workbook datasets", async () => {
   const fixture = await createFixtureRoot();
   try {
-    const generatedAt = "2026-07-24T00:00:00.000Z";
     const manifest = await runWorldFootprintAudit(fixture.options, {
       createSnapshot: async () => fixture.snapshot,
-      generatedAt: () => generatedAt,
     });
     const output = async (name: string) => readFile(join(fixture.options.outputDir, name), "utf8");
     const workbookText = await output("workbook-source.json");
@@ -210,7 +265,14 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
     const unresolved = await output("unresolved.md");
     const inventoryText = await output("inventory.json");
     const inventory = JSON.parse(inventoryText) as Record<string, unknown>;
-    const baseline = JSON.parse(await output("baseline.json")) as { status: string };
+    const baseline = JSON.parse(await output("baseline.json")) as {
+      status: string;
+      target: Record<string, string>;
+      sourceTreeHash: string;
+      remoteAccessed: boolean;
+      performanceLayers: Record<string, unknown>;
+      blockers: string[];
+    };
     const projection = createTrackedSummaryProjection(fixture.snapshot);
 
     expect(Object.keys(workbookSource.sheets)).toEqual([...SHEET_NAMES]);
@@ -233,6 +295,8 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
       id: "A1",
     }));
     expect(manifest.remoteAccessed).toBe(false);
+    expect(manifest.generatedAt).toBe("2026-07-24T01:02:03.000Z");
+    expect(manifest.generatedAtSemantics).toBe("latest-source-evidence-timestamp");
     expect(manifest.target).toEqual({ worldId: "cor-cotn", foundry: "14.364", dnd5e: "5.3.3" });
     expect(manifest.sourceTreeHashBefore).toBe(manifest.sourceTreeHashAfter);
     expect(Object.keys(manifest.files).sort()).toEqual([
@@ -245,6 +309,16 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
       "workbook-source.json",
     ]);
     expect(baseline.status).toBe("pending-runtime-sampling");
+    expect(baseline.target).toEqual({ worldId: "cor-cotn", foundry: "14.364", dnd5e: "5.3.3" });
+    expect(baseline.sourceTreeHash).toBe(fixture.snapshot.sourceTreeHashBefore);
+    expect(baseline.remoteAccessed).toBe(false);
+    expect(Object.keys(baseline.performanceLayers)).toEqual([
+      "disk",
+      "initialization",
+      "canvasGpu",
+      "continuousRuntime",
+    ]);
+    expect(baseline.blockers.length).toBeGreaterThan(0);
     expect(inventory).not.toHaveProperty("references");
     expect(inventory).not.toHaveProperty("chapters");
     expect(summary).toContain("无 Scene 引用");
@@ -257,9 +331,56 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
     expect(summary).toContain("Compendium");
     expect(summary).toContain("Module");
     expect(summary).toContain("不自动删除");
+    expect(projection.collections.map((row) => row.name)).toEqual([
+      "actors",
+      "journal",
+      "scenes",
+      "settings",
+      "users",
+    ]);
+    expect(projection.collections).toContainEqual(expect.objectContaining({
+      name: "actors",
+      count: 2,
+      levelKeys: 2,
+      embedded: 0,
+      bytes: 200,
+    }));
+    expect(projection.collections).toContainEqual(expect.objectContaining({
+      name: "journal",
+      count: 1,
+      levelKeys: 6,
+      embedded: 5,
+      bytes: 150,
+    }));
+    expect(projection.collections.map((row) => row.name)).not.toContain("topLevelDocuments");
+    expect(projection.collections.map((row) => row.name)).not.toContain("referenceEdges");
+    expect(projection.collections.map((row) => row.name)).not.toContain("brokenTokenActorReferences");
+    expect((workbookSource.sheets["Overview"] ?? [])
+      .filter((row) => row.category === "collection")
+      .map((row) => row.collection)).toEqual([
+        "actors",
+        "journal",
+        "scenes",
+        "settings",
+        "users",
+      ]);
+    expect(projection.journals.moduleOwnerCounts).toEqual([
+      { label: "calendaria", count: 1 },
+      { label: "core", count: 2 },
+      { label: "simple-quest", count: 1 },
+      { label: "unspecified", count: 1 },
+    ]);
+    expect(summary).toContain("calendaria=1");
+    expect(summary).toContain("simple-quest=1");
+    expect(summary).toContain("core=2");
+    expect(summary).toContain("unspecified=1");
     expect(unresolved).toContain("静态扫描不能证明动态名称查找绝对安全");
     expect(inventoryText.endsWith("\n")).toBe(true);
     expect(workbookText.endsWith("\n")).toBe(true);
+    for (const [name, expectedHash] of Object.entries(manifest.files)) {
+      const actualHash = createHash("sha256").update(await output(name), "utf8").digest("hex");
+      expect(actualHash).toBe(expectedHash);
+    }
 
     for (const secret of [
       "RAW-JOURNAL-BODY-MUST-NOT-LEAK",
@@ -284,7 +405,6 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
     const firstRun = await Promise.all(requiredFiles.map(output));
     await runWorldFootprintAudit(fixture.options, {
       createSnapshot: async () => fixture.snapshot,
-      generatedAt: () => generatedAt,
     });
     const secondRun = await Promise.all(requiredFiles.map(output));
     expect(secondRun).toEqual(firstRun);
@@ -311,7 +431,6 @@ test("rejects unknown CLI arguments, wrong pinned versions, and destinations ins
   try {
     const injected = {
       createSnapshot: async () => fixture.snapshot,
-      generatedAt: () => "2026-07-24T00:00:00.000Z",
     };
     await expect(runWorldFootprintAudit({
       ...fixture.options,
@@ -328,6 +447,127 @@ test("rejects unknown CLI arguments, wrong pinned versions, and destinations ins
       "utf8",
     );
     await expect(runWorldFootprintAudit(fixture.options, injected)).rejects.toThrow(/Foundry 14\.364/);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("removes a stale manifest before partial promotion and preserves unrelated output files", async () => {
+  const fixture = await createFixtureRoot();
+  try {
+    const runtime = { createSnapshot: async () => fixture.snapshot };
+    await runWorldFootprintAudit(fixture.options, runtime);
+    const manifestPath = join(fixture.options.outputDir, "audit-manifest.json");
+    expect((await stat(manifestPath)).isFile()).toBe(true);
+    const foreignPath = join(fixture.options.outputDir, "operator-notes.txt");
+    await writeFile(foreignPath, "preserve me\n", "utf8");
+
+    await expect(runWorldFootprintAudit(fixture.options, {
+      ...runtime,
+      beforePromoteFile: async (_name: string, index: number) => {
+        if (index === 1) throw new Error("injected mid-promotion failure");
+      },
+    })).rejects.toThrow(/injected mid-promotion failure/);
+
+    await expect(readFile(manifestPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readFile(foreignPath, "utf8")).toBe("preserve me\n");
+    expect((await readdir(fixture.options.outputDir)).some(
+      (name) => name.startsWith(".world-audit-report-staging-"),
+    )).toBe(false);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("validates pending, partial, and complete baselines against the exact snapshot", async () => {
+  const fixture = await createFixtureRoot();
+  try {
+    const runtime = { createSnapshot: async () => fixture.snapshot };
+    const base = {
+      target: { worldId: "cor-cotn", foundry: "14.364", dnd5e: "5.3.3" },
+      sourceTreeHash: fixture.snapshot.sourceTreeHashBefore,
+      remoteAccessed: false,
+    };
+    const measured = (metric: string, value: number) => ({
+      status: "measured",
+      metrics: { [metric]: value },
+    });
+    const blocked = (note: string) => ({ status: "blocked", metrics: {}, note });
+    const partial = {
+      ...base,
+      status: "partial",
+      performanceLayers: {
+        disk: measured("sourceTreeBytes", 600),
+        initialization: measured("readyMs", 1200),
+        canvasGpu: blocked("Task 4 scene sample pending"),
+        continuousRuntime: blocked("Long-session sample pending"),
+      },
+      blockers: ["Task 4 scene and long-session sampling pending"],
+    };
+    const complete = {
+      ...base,
+      status: "complete",
+      performanceLayers: {
+        disk: measured("sourceTreeBytes", 600),
+        initialization: measured("readyMs", 1200),
+        canvasGpu: measured("frameMsP95", 18),
+        continuousRuntime: measured("heapDeltaBytes", 1024),
+      },
+      blockers: [],
+    };
+
+    for (const [name, baseline] of Object.entries({ partial, complete })) {
+      const baselineFile = join(fixture.root, `${name}.json`);
+      await writeFile(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`, "utf8");
+      const outputDir = join(fixture.root, "baseline-output", name);
+      await runWorldFootprintAudit({
+        ...fixture.options,
+        outputDir,
+        snapshotDir: join(outputDir, "snapshot"),
+        baselineFile,
+      }, runtime);
+      expect(JSON.parse(await readFile(join(outputDir, "baseline.json"), "utf8")).status).toBe(name);
+    }
+
+    const invalidBaselines = [
+      { status: "complete" },
+      { ...complete, unexpected: "not part of the baseline schema" },
+      { ...complete, target: { ...complete.target, extraVersion: "5.3.3" } },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          initialization: {
+            ...complete.performanceLayers.initialization,
+            samples: [],
+          },
+        },
+      },
+      { ...complete, target: { ...complete.target, dnd5e: "5.3.2" } },
+      { ...complete, sourceTreeHash: "b".repeat(64) },
+      { ...complete, remoteAccessed: true },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          initialization: { status: "measured", metrics: [] },
+        },
+      },
+      {
+        ...partial,
+        blockers: [],
+      },
+    ];
+    for (const [index, baseline] of invalidBaselines.entries()) {
+      const baselineFile = join(fixture.root, `invalid-${index}.json`);
+      await writeFile(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`, "utf8");
+      await expect(runWorldFootprintAudit({
+        ...fixture.options,
+        outputDir: join(fixture.root, "invalid-output", String(index)),
+        snapshotDir: join(fixture.root, "invalid-output", String(index), "snapshot"),
+        baselineFile,
+      }, runtime)).rejects.toThrow(/baseline/i);
+    }
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }

@@ -119,6 +119,9 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
   const topDocuments = topRecords.map(topRecordToDocument);
   const allDocuments = normalizeDocuments(topRecords, snapshot.records);
   const overview = buildOverview(topRecords, snapshot.records, unresolved);
+  for (const collection of Object.keys(snapshot.collectionBytes)) {
+    overview[`${collection}.topLevel`] ??= 0;
+  }
   const { folderRows, folderPathsByDocumentUuid } = resolveFolders(topDocuments, unresolved);
   const { playerProtectedActorUuids, ownershipSummaries, userRoleSummary } = summarizeOwnership(topDocuments);
   const referenceExtraction = extractWorldReferences(allDocuments);
@@ -312,8 +315,9 @@ function buildOverview(
 ): Record<string, number | string | boolean> {
   const overview: Record<string, number | string | boolean> = {};
   const topCounts = countBy(topRecords, (record) => record.collection);
-  for (const [collection, count] of [...topCounts].sort(([left], [right]) => compareOrdinal(left, right))) {
-    overview[collection] = count;
+  const collections = [...new Set(records.map((record) => record.collection))].sort(compareOrdinal);
+  for (const collection of collections) {
+    overview[`${collection}.topLevel`] = topCounts.get(collection) ?? 0;
   }
   for (const descriptor of flattenDescriptors(EMBEDDED_DESCRIPTORS)) {
     const namespace = `${descriptor.collection}.${descriptor.property}`;
@@ -553,11 +557,44 @@ function collectJournalPages(
         name: stringValue(page.name) ?? "",
         type: stringValue(page.type) ?? "",
         language: classifyLanguage(content),
+        moduleOwner: journalPageModuleOwner(page),
         chapter: chaptersByUuid.get(uuid) ?? emptyChapter(uuid),
       });
     }
   }
   return rows.sort(compareRowsByUuid);
+}
+
+function journalPageModuleOwner(page: Record<string, unknown>): string {
+  const pageType = stringValue(page.type) ?? "";
+  const customType = /^([a-z0-9][a-z0-9_-]*)\.[a-z0-9][a-z0-9_.-]*$/i.exec(pageType)?.[1];
+  if (customType) return customType.toLowerCase();
+
+  const flags = isRecord(page.flags) ? page.flags : {};
+  const moduleFlag = Object.keys(flags)
+    .filter(isSafePackageId)
+    .filter((key) => !["core", "dnd5e", "foundry", "world"].includes(key.toLowerCase()))
+    .sort(compareOrdinal)[0];
+  if (moduleFlag) return moduleFlag;
+
+  const stats = isRecord(page._stats) ? page._stats : {};
+  for (const field of ["moduleId", "packageId"]) {
+    const packageId = stringValue(stats[field]);
+    if (packageId && isSafePackageId(packageId) && !["core", "dnd5e", "world"].includes(packageId.toLowerCase())) {
+      return packageId;
+    }
+  }
+  for (const field of ["compendiumSource", "sourceId"]) {
+    const source = stringValue(stats[field]);
+    const packageId = /^Compendium\.([a-z0-9][a-z0-9_-]*)\./i.exec(source ?? "")?.[1];
+    if (packageId && !["core", "dnd5e", "world"].includes(packageId.toLowerCase())) return packageId;
+  }
+
+  return ["text", "image", "pdf", "video"].includes(pageType.toLowerCase()) ? "core" : "unspecified";
+}
+
+function isSafePackageId(value: string): boolean {
+  return /^[a-z0-9][a-z0-9_-]*$/i.test(value);
 }
 
 function sceneRow(

@@ -380,8 +380,10 @@ test("counts top-level and embedded records independently and keeps Cards in Wor
 
   const analysis = analyzeWorld(snapshot(records));
 
-  expect(analysis.overview.actors).toBe(1);
-  expect(analysis.overview.cards).toBe(1);
+  expect(analysis.overview["actors.topLevel"]).toBe(1);
+  expect(analysis.overview["cards.topLevel"]).toBe(1);
+  expect(analysis.overview).not.toHaveProperty("actors");
+  expect(analysis.overview).not.toHaveProperty("cards");
   expect(analysis.overview["actors.items.parentArray"]).toBe(1);
   expect(analysis.overview["actors.items.embeddedKeys"]).toBe(2);
   expect(analysis.unresolved).toContainEqual(expect.stringMatching(/actors\.items.*mismatch/i));
@@ -419,6 +421,63 @@ test("labels journal text after stripping HTML", () => {
     "CJK-present",
     "CJK-present",
   ]);
+});
+
+test("derives Journal page module owners without exposing flag values or page bodies", () => {
+  const analysis = analyzeWorld(snapshot([
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Module ownership",
+      pages: [
+        {
+          _id: "CAL",
+          name: "Calendar note",
+          type: "calendaria.calendarnote",
+          text: { content: "CALENDAR-BODY-MUST-NOT-LEAK" },
+        },
+        {
+          _id: "QUEST",
+          name: "Quest",
+          type: "text",
+          flags: {
+            "simple-quest": {
+              privateState: "SIMPLE-QUEST-FLAG-MUST-NOT-LEAK",
+            },
+          },
+          text: { content: "QUEST-BODY-MUST-NOT-LEAK" },
+        },
+        {
+          _id: "CORE",
+          name: "Image",
+          type: "image",
+          src: "images/map.webp",
+        },
+        {
+          _id: "UNKNOWN",
+          name: "Unknown custom page",
+          type: "mystery",
+          text: { content: "UNKNOWN-BODY-MUST-NOT-LEAK" },
+        },
+      ],
+    }),
+  ]));
+
+  expect(analysis.journalPages).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "CAL", moduleOwner: "calendaria" }),
+    expect.objectContaining({ id: "QUEST", moduleOwner: "simple-quest" }),
+    expect.objectContaining({ id: "CORE", moduleOwner: "core" }),
+    expect.objectContaining({ id: "UNKNOWN", moduleOwner: "unspecified" }),
+  ]));
+  const serialized = JSON.stringify(analysis.journalPages);
+  for (const secret of [
+    "CALENDAR-BODY-MUST-NOT-LEAK",
+    "SIMPLE-QUEST-FLAG-MUST-NOT-LEAK",
+    "QUEST-BODY-MUST-NOT-LEAK",
+    "UNKNOWN-BODY-MUST-NOT-LEAK",
+    "privateState",
+  ]) {
+    expect(serialized).not.toContain(secret);
+  }
 });
 
 test("never traverses User authentication data or secret-like fields and Settings values", () => {

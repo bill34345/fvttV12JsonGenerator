@@ -34,9 +34,27 @@ export const WORKBOOK_SHEET_NAMES = [
   "User Decisions",
 ] as const;
 
+export type AuditBaselineStatus = "pending-runtime-sampling" | "partial" | "complete";
+export type AuditBaselineLayerStatus = "pending" | "blocked" | "measured";
+
+export interface AuditBaselineLayer {
+  status: AuditBaselineLayerStatus;
+  metrics: Record<string, string | number | boolean>;
+  note?: string;
+}
+
 export interface AuditBaseline {
-  status: string;
-  [key: string]: unknown;
+  status: AuditBaselineStatus;
+  target: typeof AUDIT_TARGET;
+  sourceTreeHash: string;
+  remoteAccessed: false;
+  performanceLayers: {
+    disk: AuditBaselineLayer;
+    initialization: AuditBaselineLayer;
+    canvasGpu: AuditBaselineLayer;
+    continuousRuntime: AuditBaselineLayer;
+  };
+  blockers: string[];
 }
 
 export interface AuditValidation {
@@ -60,7 +78,14 @@ export interface TrackedSummaryProjection {
     totalBytes: number;
     collectionBytes: Array<{ collection: string; bytes: number }>;
   };
-  collections: Array<{ name: string; count: number }>;
+  collections: Array<{
+    name: string;
+    count: number;
+    levelKeys: number;
+    embedded: number;
+    bytes: number;
+    matchesParentArrays: boolean;
+  }>;
   actors: {
     total: number;
     withoutSceneReference: number;
@@ -111,23 +136,137 @@ export interface AuditReport {
   validation: AuditValidation;
 }
 
-export function createPendingBaseline(): AuditBaseline {
+export function createPendingBaseline(snapshot: WorldSnapshot): AuditBaseline {
   return {
     status: "pending-runtime-sampling",
     target: AUDIT_TARGET,
-    note: "Task 4 must supply a runtime baseline collected through the stopped local-world workflow.",
+    sourceTreeHash: snapshot.sourceTreeHashBefore,
+    remoteAccessed: false,
+    performanceLayers: {
+      disk: {
+        status: "measured",
+        metrics: {
+          sourceTreeBytes: snapshot.sourceTree.reduce((total, entry) => total + entry.bytes, 0),
+          collectionCount: Object.keys(snapshot.collectionBytes).length,
+        },
+      },
+      initialization: {
+        status: "pending",
+        metrics: {},
+        note: "Task 4 runtime initialization sampling has not been supplied.",
+      },
+      canvasGpu: {
+        status: "pending",
+        metrics: {},
+        note: "Task 4 active Scene Canvas/GPU sampling has not been supplied.",
+      },
+      continuousRuntime: {
+        status: "pending",
+        metrics: {},
+        note: "Task 4 continuous-runtime sampling has not been supplied.",
+      },
+    },
+    blockers: ["Task 4 runtime sampling has not been supplied."],
+  };
+}
+
+export function validateAuditBaseline(value: unknown, snapshot: WorldSnapshot): AuditBaseline {
+  if (!isRecord(value)) throw new Error("Baseline must be a JSON object");
+  assertExactRecordKeys(
+    value,
+    ["status", "target", "sourceTreeHash", "remoteAccessed", "performanceLayers", "blockers"],
+    "Baseline",
+  );
+  if (!["pending-runtime-sampling", "partial", "complete"].includes(String(value.status))) {
+    throw new Error("Baseline status must be pending-runtime-sampling, partial, or complete");
+  }
+  if (
+    !isRecord(value.target)
+    || value.target.worldId !== AUDIT_TARGET.worldId
+    || value.target.foundry !== AUDIT_TARGET.foundry
+    || value.target.dnd5e !== AUDIT_TARGET.dnd5e
+  ) {
+    throw new Error("Baseline target must be cor-cotn / Foundry 14.364 / dnd5e 5.3.3");
+  }
+  assertExactRecordKeys(value.target, ["worldId", "foundry", "dnd5e"], "Baseline target");
+  if (value.sourceTreeHash !== snapshot.sourceTreeHashBefore) {
+    throw new Error("Baseline sourceTreeHash must match the current verified snapshot");
+  }
+  if (value.remoteAccessed !== false) {
+    throw new Error("Baseline remoteAccessed must be false");
+  }
+  if (!isRecord(value.performanceLayers)) {
+    throw new Error("Baseline performanceLayers must contain all four performance layers");
+  }
+
+  const layerNames = ["disk", "initialization", "canvasGpu", "continuousRuntime"] as const;
+  if (
+    Object.keys(value.performanceLayers).sort(compareOrdinal).join("\0")
+    !== [...layerNames].sort(compareOrdinal).join("\0")
+  ) {
+    throw new Error("Baseline performanceLayers must contain exactly disk, initialization, canvasGpu, and continuousRuntime");
+  }
+  const performanceLayers = {} as AuditBaseline["performanceLayers"];
+  for (const name of layerNames) {
+    performanceLayers[name] = validateBaselineLayer(value.performanceLayers[name], name);
+  }
+  if (!Array.isArray(value.blockers) || value.blockers.some((entry) => typeof entry !== "string" || !entry.trim())) {
+    throw new Error("Baseline blockers must be an array of non-empty strings");
+  }
+
+  const status = value.status as AuditBaselineStatus;
+  const measuredCount = layerNames.filter((name) => performanceLayers[name].status === "measured").length;
+  if (status === "complete" && (measuredCount !== layerNames.length || value.blockers.length !== 0)) {
+    throw new Error("Complete baseline requires every performance layer measured and no blockers");
+  }
+  if (status === "partial" && (measuredCount === 0 || measuredCount === layerNames.length || value.blockers.length === 0)) {
+    throw new Error("Partial baseline requires some measured layers, some incomplete layers, and blockers");
+  }
+  if (status === "pending-runtime-sampling" && (measuredCount === layerNames.length || value.blockers.length === 0)) {
+    throw new Error("Pending baseline requires incomplete runtime sampling and blockers");
+  }
+
+  return {
+    status,
+    target: AUDIT_TARGET,
+    sourceTreeHash: snapshot.sourceTreeHashBefore,
+    remoteAccessed: false,
+    performanceLayers,
+    blockers: [...value.blockers],
   };
 }
 
 export function createTrackedSummaryProjection(
   snapshot: WorldSnapshot,
   analysis: AuditAnalysis = analyzeWorld(snapshot),
-  baseline: AuditBaseline = createPendingBaseline(),
+  baseline: AuditBaseline = createPendingBaseline(snapshot),
 ): TrackedSummaryProjection {
+  const validation = createAuditValidation(snapshot, analysis);
+  const crossChecks = new Map(validation.collectionKeyCrossChecks.map((row) => [row.name, row]));
   const collectionRows = Object.entries(analysis.overview)
-    .filter(([name, count]) => !name.includes(".") && typeof count === "number")
-    .map(([name, count]) => ({ name, count: count as number }))
+    .filter(([name, count]) => name.endsWith(".topLevel") && typeof count === "number")
+    .map(([key, count]) => {
+      const name = key.slice(0, -".topLevel".length);
+      const crossCheck = crossChecks.get(name);
+      if (!crossCheck || crossCheck.topLevel !== count) {
+        throw new Error(`Collection summary does not reconcile with key classifications: ${name}`);
+      }
+      return {
+        name,
+        count: count as number,
+        levelKeys: crossCheck.levelKeys,
+        embedded: crossCheck.embedded,
+        bytes: snapshot.collectionBytes[name] ?? 0,
+        matchesParentArrays: crossCheck.matchesParentArrays,
+      };
+    })
     .sort((left, right) => compareOrdinal(left.name, right.name));
+  if (
+    collectionRows.length !== validation.collectionKeyCrossChecks.length
+    || collectionRows.some((row) => !crossChecks.has(row.name))
+  ) {
+    throw new Error("Collection summary keys do not match the snapshot collection classifications");
+  }
   const languageCounts = countRows(analysis.journalPages, "language");
   const pageTypeCounts = countRows(analysis.journalPages, "type");
   const moduleOwnerCounts = countRows(analysis.journalPages, "moduleOwner");
@@ -178,7 +317,7 @@ export function createTrackedSummaryProjection(
       automaticDeletion: false,
       allowedValues: USER_DECISION_VALUES,
     },
-    validation: createAuditValidation(snapshot, analysis),
+    validation,
   };
 }
 
@@ -219,7 +358,7 @@ export function createAuditReport(
     baseline,
     unresolvedMarkdown: renderUnresolvedMarkdown(analysis),
     summaryMarkdown: renderSummaryMarkdown(trackedSummary),
-    workbookSource: createWorkbookSource(analysis),
+    workbookSource: createWorkbookSource(analysis, trackedSummary),
     trackedSummary,
     validation,
   };
@@ -229,7 +368,10 @@ export function createAuditValidation(
   snapshot: WorldSnapshot,
   analysis: AuditAnalysis,
 ): AuditValidation {
-  const collections = [...new Set(snapshot.records.map((record) => record.collection))].sort(compareOrdinal);
+  const collections = [...new Set([
+    ...snapshot.records.map((record) => record.collection),
+    ...Object.keys(snapshot.collectionBytes),
+  ])].sort(compareOrdinal);
   const collectionKeyCrossChecks = collections.map((name) => {
     const records = snapshot.records.filter((record) => record.collection === name);
     const topLevel = records.filter((record) => record.namespace === name).length;
@@ -271,10 +413,25 @@ export function createAuditValidation(
   };
 }
 
-function createWorkbookSource(analysis: AuditAnalysis): WorkbookSource {
-  const overview = Object.entries(analysis.overview)
-    .map(([metric, value]) => ({ metric, value }))
-    .sort((left, right) => compareOrdinal(left.metric, right.metric));
+function createWorkbookSource(
+  analysis: AuditAnalysis,
+  trackedSummary: TrackedSummaryProjection,
+): WorkbookSource {
+  const overview = [
+    ...trackedSummary.collections.map((row) => ({
+      category: "collection",
+      collection: row.name,
+      topLevel: row.count,
+      levelKeys: row.levelKeys,
+      embedded: row.embedded,
+      bytes: row.bytes,
+      matchesParentArrays: row.matchesParentArrays,
+    })),
+    ...Object.entries(analysis.overview)
+      .filter(([metric]) => !metric.endsWith(".topLevel"))
+      .map(([metric, value]) => ({ category: "aggregate", metric, value }))
+      .sort((left, right) => compareOrdinal(left.metric, right.metric)),
+  ];
   const unusedActorCandidates = analysis.unusedActorCandidates.map((row) => ({
     ...row,
     referenceEvidence: "no-detected-reference",
@@ -320,8 +477,10 @@ function createWorkbookSource(analysis: AuditAnalysis): WorkbookSource {
 
 function renderSummaryMarkdown(summary: TrackedSummaryProjection): string {
   const collectionRows = summary.collections.length > 0
-    ? summary.collections.map((row) => `| ${row.name} | ${row.count} |`).join("\n")
-    : "| （无） | 0 |";
+    ? summary.collections.map((row) => (
+      `| ${row.name} | ${row.count} | ${row.levelKeys} | ${row.embedded} | ${row.bytes} | ${row.matchesParentArrays ? "是" : "否"} |`
+    )).join("\n")
+    : "| （无） | 0 | 0 | 0 | 0 | 是 |";
   const byteRows = summary.disk.collectionBytes.length > 0
     ? summary.disk.collectionBytes.map((row) => `| ${row.collection} | ${row.bytes} |`).join("\n")
     : "| （无） | 0 |";
@@ -346,8 +505,8 @@ function renderSummaryMarkdown(summary: TrackedSummaryProjection): string {
 
 源树磁盘总量：${summary.disk.totalBytes} bytes。
 
-| 集合 | 顶层数量 |
-| --- | ---: |
+| 集合 | 顶层数量 | LevelDB keys | 内嵌 | 磁盘 bytes | 与父数组匹配 |
+| --- | ---: | ---: | ---: | ---: | --- |
 ${collectionRows}
 
 | 数据集合 | 磁盘 bytes |
@@ -452,4 +611,62 @@ function sortRecord<T>(record: Record<string, T>): Record<string, T> {
 
 function compareOrdinal(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function validateBaselineLayer(value: unknown, name: string): AuditBaselineLayer {
+  if (!isRecord(value) || !["pending", "blocked", "measured"].includes(String(value.status))) {
+    throw new Error(`Baseline ${name} layer has an invalid status`);
+  }
+  assertAllowedRecordKeys(value, ["status", "metrics", "note"], `Baseline ${name} layer`);
+  if (!isRecord(value.metrics)) {
+    throw new Error(`Baseline ${name} layer metrics must be an object`);
+  }
+  const metrics: Record<string, string | number | boolean> = {};
+  for (const [key, metric] of Object.entries(value.metrics)) {
+    if (
+      !key
+      || !["string", "number", "boolean"].includes(typeof metric)
+      || (typeof metric === "number" && !Number.isFinite(metric))
+    ) {
+      throw new Error(`Baseline ${name} layer contains malformed metrics`);
+    }
+    metrics[key] = metric as string | number | boolean;
+  }
+  const status = value.status as AuditBaselineLayerStatus;
+  const note = typeof value.note === "string" ? value.note.trim() : "";
+  if (status === "measured" && Object.keys(metrics).length === 0) {
+    throw new Error(`Baseline ${name} measured layer requires metrics`);
+  }
+  if (status !== "measured" && (Object.keys(metrics).length !== 0 || !note)) {
+    throw new Error(`Baseline ${name} incomplete layer requires an empty metrics object and a note`);
+  }
+  return { status, metrics, ...(note ? { note } : {}) };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertExactRecordKeys(
+  value: Record<string, unknown>,
+  expected: readonly string[],
+  label: string,
+): void {
+  const actual = Object.keys(value).sort(compareOrdinal);
+  const sortedExpected = [...expected].sort(compareOrdinal);
+  if (actual.join("\0") !== sortedExpected.join("\0")) {
+    throw new Error(`${label} must contain exactly: ${expected.join(", ")}`);
+  }
+}
+
+function assertAllowedRecordKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  label: string,
+): void {
+  const allowedSet = new Set(allowed);
+  const extra = Object.keys(value).filter((key) => !allowedSet.has(key));
+  if (extra.length > 0) {
+    throw new Error(`${label} contains unsupported fields: ${extra.sort(compareOrdinal).join(", ")}`);
+  }
 }
