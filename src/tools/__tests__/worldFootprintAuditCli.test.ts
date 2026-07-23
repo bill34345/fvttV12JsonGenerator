@@ -479,6 +479,35 @@ test("removes a stale manifest before partial promotion and preserves unrelated 
   }
 });
 
+test("rejects complete baselines made from arbitrary single-value metrics", async () => {
+  const fixture = await createFixtureRoot();
+  try {
+    const baselineFile = join(fixture.root, "pseudo-complete.json");
+    await writeFile(baselineFile, `${JSON.stringify({
+      status: "complete",
+      target: { worldId: "cor-cotn", foundry: "14.364", dnd5e: "5.3.3" },
+      sourceTreeHash: fixture.snapshot.sourceTreeHashBefore,
+      remoteAccessed: false,
+      performanceLayers: {
+        disk: { status: "measured", metrics: { sourceTreeBytes: 600 } },
+        initialization: { status: "measured", metrics: { readyMs: 1200 } },
+        canvasGpu: { status: "measured", metrics: { frameMsP95: 18 } },
+        continuousRuntime: { status: "measured", metrics: { heapDeltaBytes: 1024 } },
+      },
+      blockers: [],
+    }, null, 2)}\n`, "utf8");
+
+    await expect(runWorldFootprintAudit({
+      ...fixture.options,
+      baselineFile,
+    }, {
+      createSnapshot: async () => fixture.snapshot,
+    })).rejects.toThrow(/baseline/i);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test("validates pending, partial, and complete baselines against the exact snapshot", async () => {
   const fixture = await createFixtureRoot();
   try {
@@ -488,30 +517,77 @@ test("validates pending, partial, and complete baselines against the exact snaps
       sourceTreeHash: fixture.snapshot.sourceTreeHashBefore,
       remoteAccessed: false,
     };
-    const measured = (metric: string, value: number) => ({
+    const measured = (metrics: Record<string, unknown>) => ({
       status: "measured",
-      metrics: { [metric]: value },
+      metrics,
     });
     const blocked = (note: string) => ({ status: "blocked", metrics: {}, note });
+    const memory = (browserProcessMemoryBytes: number, performanceMemoryUsedJsHeapBytes: number | null) => ({
+      browserProcessMemoryBytes,
+      performanceMemoryUsedJsHeapBytes,
+    });
+    const diskMetrics = {
+      sourceTreeBytes: 600,
+      snapshotTreeBytes: 600,
+      snapshotCopyDurationMs: 42.5,
+    };
+    const initializationMetrics = {
+      serverStartToHttpReadyMs: 900.25,
+      browserNavigationToWorldReadyMs: 1200.5,
+      requestCount: 42,
+      responseBytes: 123_456,
+      largestResponseBytes: 32_768,
+      browserProcessMemoryBytes: 200_000_000,
+      performanceMemoryUsedJsHeapBytes: 75_000_000,
+      performanceMemoryTotalJsHeapBytes: 100_000_000,
+      performanceMemoryJsHeapSizeLimitBytes: 4_000_000_000,
+    };
+    const canvasMetrics = {
+      activeSceneId: "S1",
+      tokenCount: 1,
+      wallCount: 0,
+      lightCount: 0,
+      tileCount: 0,
+      textureCandidateCount: 1,
+      animationCandidateCount: 0,
+      consoleErrorCount: 0,
+      consoleWarningCount: 2,
+      repeatedWarningCount: 1,
+    };
+    const continuousMetrics = {
+      idleIntervalMs: 60_000,
+      idleSamples: [
+        { elapsedMs: 0, ...memory(200_000_000, 75_000_000) },
+        { elapsedMs: 30_000, ...memory(201_000_000, 75_500_000) },
+        { elapsedMs: 60_000, ...memory(202_000_000, 76_000_000) },
+      ],
+      shortSequenceLabel: "open S1, open Actor A1, return to S1",
+      shortSequenceBefore: memory(202_000_000, 76_000_000),
+      shortSequenceAfter: memory(204_000_000, 77_500_000),
+      shortSequenceDelta: memory(2_000_000, 1_500_000),
+    };
     const partial = {
       ...base,
       status: "partial",
       performanceLayers: {
-        disk: measured("sourceTreeBytes", 600),
-        initialization: measured("readyMs", 1200),
+        disk: measured(diskMetrics),
+        initialization: measured(initializationMetrics),
         canvasGpu: blocked("Task 4 scene sample pending"),
         continuousRuntime: blocked("Long-session sample pending"),
       },
-      blockers: ["Task 4 scene and long-session sampling pending"],
+      blockers: [
+        { layer: "canvasGpu", reason: "Task 4 scene sample pending" },
+        { layer: "continuousRuntime", reason: "Long-session sample pending" },
+      ],
     };
     const complete = {
       ...base,
       status: "complete",
       performanceLayers: {
-        disk: measured("sourceTreeBytes", 600),
-        initialization: measured("readyMs", 1200),
-        canvasGpu: measured("frameMsP95", 18),
-        continuousRuntime: measured("heapDeltaBytes", 1024),
+        disk: measured(diskMetrics),
+        initialization: measured(initializationMetrics),
+        canvasGpu: measured(canvasMetrics),
+        continuousRuntime: measured(continuousMetrics),
       },
       blockers: [],
     };
@@ -531,6 +607,15 @@ test("validates pending, partial, and complete baselines against the exact snaps
 
     const invalidBaselines = [
       { status: "complete" },
+      {
+        ...complete,
+        performanceLayers: {
+          disk: measured({ sourceTreeBytes: 600 }),
+          initialization: measured({ readyMs: 1200 }),
+          canvasGpu: measured({ frameMsP95: 18 }),
+          continuousRuntime: measured({ heapDeltaBytes: 1024 }),
+        },
+      },
       { ...complete, unexpected: "not part of the baseline schema" },
       { ...complete, target: { ...complete.target, extraVersion: "5.3.3" } },
       {
@@ -554,8 +639,99 @@ test("validates pending, partial, and complete baselines against the exact snaps
         },
       },
       {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          disk: measured({ ...diskMetrics, snapshotCopyDurationMs: -1 }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          disk: measured({ ...diskMetrics, sourceTreeBytes: 599 }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          disk: measured({ ...diskMetrics, inventedMetric: 1 }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          initialization: measured({ ...initializationMetrics, requestCount: 1.5 }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          canvasGpu: measured({ ...canvasMetrics, activeSceneId: "" }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          canvasGpu: measured({ ...canvasMetrics, activeSceneId: "NOT-A-SCENE" }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          canvasGpu: measured({ ...canvasMetrics, tokenCount: 2 }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          continuousRuntime: measured({
+            ...continuousMetrics,
+            idleSamples: [continuousMetrics.idleSamples[0]],
+          }),
+        },
+      },
+      {
+        ...complete,
+        performanceLayers: {
+          ...complete.performanceLayers,
+          continuousRuntime: measured({
+            ...continuousMetrics,
+            shortSequenceDelta: memory(1, 1),
+          }),
+        },
+      },
+      {
+        ...partial,
+        performanceLayers: {
+          ...partial.performanceLayers,
+          initialization: measured({ readyMs: 1200 }),
+        },
+      },
+      {
         ...partial,
         blockers: [],
+      },
+      {
+        ...partial,
+        blockers: [{ layer: "canvasGpu", reason: "Only one incomplete layer is acknowledged" }],
+      },
+      {
+        ...partial,
+        blockers: [
+          ...partial.blockers,
+          { layer: "disk", reason: "Measured layers cannot have blockers" },
+        ],
+      },
+      {
+        ...partial,
+        status: "pending-runtime-sampling",
       },
     ];
     for (const [index, baseline] of invalidBaselines.entries()) {
