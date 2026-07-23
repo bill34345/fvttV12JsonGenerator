@@ -1263,6 +1263,181 @@ test("distinguishes credential tokens from ordinary Foundry tokenId and tokenUui
   expect(serialized).not.toContain("SECRETACCESS1234");
 });
 
+test("extracts legacy Foundry world-document links from normalized Journal pages", () => {
+  const actorId = "ACTOR00000000001";
+  const adjacentActorId = "ADJACENT00000001";
+  const labelActorId = "LABEL00000000001";
+  const sceneId = "SCENE00000000001";
+  const records = [
+    top("actors", actorId, {
+      _id: actorId,
+      name: "Legacy target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", labelActorId, {
+      _id: labelActorId,
+      name: "Label-only control",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", adjacentActorId, {
+      _id: adjacentActorId,
+      name: "Adjacent UUID control",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("scenes", sceneId, {
+      _id: sceneId,
+      name: "Legacy scene target",
+      tokens: [],
+      notes: [],
+      walls: [],
+      lights: [],
+      tiles: [],
+      drawings: [],
+      regions: [],
+      templates: [],
+      sounds: [],
+    }),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Normalized legacy links",
+      pages: ["P1"],
+    }),
+    embedded("journal", "journal.pages", ["J1", "P1"], {
+      _id: "P1",
+      name: "Legacy link page",
+      type: "text",
+      text: {
+        content: [
+          `@Actor[${actorId}]{Label mentions Actor.${labelActorId}}`,
+          `@Actor[${actorId}]`,
+          `@Scene[${sceneId}#section]{Scene label}`,
+          `Actor.${adjacentActorId}`,
+        ].join(" "),
+      },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const pageUuid = "JournalEntry.J1.JournalEntryPage.P1";
+  const actorEdges = analysis.references.filter(
+    (edge) => edge.sourceUuid === pageUuid && edge.targetUuid === `Actor.${actorId}`,
+  );
+
+  expect(actorEdges).toEqual([{
+    sourceUuid: pageUuid,
+    targetUuid: `Actor.${actorId}`,
+    evidence: "uuid-link",
+    fieldPath: "text.content",
+    verifiedTarget: true,
+  }]);
+  expect(analysis.references).toContainEqual({
+    sourceUuid: pageUuid,
+    targetUuid: `Scene.${sceneId}`,
+    evidence: "uuid-link",
+    fieldPath: "text.content",
+    verifiedTarget: true,
+  });
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: pageUuid,
+    targetUuid: `Actor.${labelActorId}`,
+  }));
+  expect(analysis.references).toContainEqual({
+    sourceUuid: pageUuid,
+    targetUuid: `Actor.${adjacentActorId}`,
+    evidence: "uuid-link",
+    fieldPath: "text.content",
+    verifiedTarget: true,
+  });
+  expect(rowById(analysis.actors, actorId).usageStatuses).toContain("used-uuid");
+  expect(analysis.unusedActorCandidates).not.toContainEqual(
+    expect.objectContaining({ id: actorId }),
+  );
+  expect(rowById(analysis.actors, labelActorId).usageStatuses).toEqual(["no-detected-reference"]);
+});
+
+test("rejects non-world, malformed, name-only, and sensitive legacy link candidates", () => {
+  const actorId = "ACTOR00000000001";
+  const secretActorId = "SECRET0000000001";
+  const records = [
+    top("actors", actorId, {
+      _id: actorId,
+      name: "Public target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", secretActorId, {
+      _id: secretActorId,
+      name: "Secret target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("items", "ITEM000000000001", {
+      _id: "ITEM000000000001",
+      name: "Unrelated item",
+      effects: [],
+    }),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Legacy negative controls",
+      pages: ["P1"],
+    }),
+    embedded("journal", "journal.pages", ["J1", "P1"], {
+      _id: "P1",
+      name: "Legacy negative page",
+      type: "text",
+      text: {
+        content: [
+          `@Actor[${actorId}.invalid]`,
+          `@Actor[${actorId}`,
+          "@Actor[Public target]",
+          `@Compendium[Actor.${actorId}]`,
+          `@Roll[Actor.${actorId}]`,
+          "@PlaylistSound[Playlist.PLAYLIST00000001.PlaylistSound.SOUND00000000001]",
+          `@FogExploration[Actor.${actorId}]`,
+        ].join(" "),
+      },
+      flags: {
+        integration: {
+          accessToken: `@Actor[${secretActorId}]{must remain secret}`,
+        },
+      },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const pageUuid = "JournalEntry.J1.JournalEntryPage.P1";
+
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: pageUuid,
+    targetUuid: `Actor.${actorId}`,
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: pageUuid,
+    targetUuid: `Actor.${secretActorId}`,
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: pageUuid,
+    targetUuid: expect.stringMatching(/Compendium|PlaylistSound|FogExploration|Roll\./),
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: pageUuid,
+    targetUuid: "Playlist.PLAYLIST00000001.PlaylistSound.SOUND00000000001",
+  }));
+  expect(rowById(analysis.actors, actorId).usageStatuses).toEqual(["no-detected-reference"]);
+  expect(rowById(analysis.actors, secretActorId).usageStatuses).toEqual(["no-detected-reference"]);
+  expect(rowById(analysis.worldItems, "ITEM000000000001")).toMatchObject({
+    uuid: "Item.ITEM000000000001",
+  });
+});
+
 test("validates complete UUID spans without truncating invalid wrappers or suffixes", () => {
   const records = [
     top("actors", "A1", {

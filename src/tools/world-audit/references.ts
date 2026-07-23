@@ -69,6 +69,17 @@ const UUID_PATTERN = new RegExp(
   "g",
 );
 const WRAPPED_UUID_PATTERN = /@?UUID\[([^\]]*)\]/g;
+const TYPED_LINK_WRAPPER_PATTERN = /@([A-Za-z][A-Za-z0-9]*)\[([^\]]*)](?:\{([^}]*)})?/g;
+const LEGACY_WORLD_LINK_DOCUMENT_NAMES = new Set([
+  "Actor",
+  "Cards",
+  "Item",
+  "Scene",
+  "JournalEntry",
+  "Macro",
+  "RollTable",
+]);
+const VALID_LEGACY_WORLD_ID_PATTERN = /^[A-Za-z0-9]{16}$/;
 const POSSIBLE_ID_PATTERN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{16}(?![A-Za-z0-9_-])/g;
 
 export function extractWorldReferences(documents: AuditDocument[]): ReferenceExtraction {
@@ -348,6 +359,28 @@ function extractUuids(value: string): string[] {
     }
     const candidate = match[1];
     if (candidate && isValidFoundryUuid(candidate)) found.add(candidate);
+  }
+  for (const match of value.matchAll(TYPED_LINK_WRAPPER_PATTERN)) {
+    if (match.index !== undefined) {
+      wrapperSpans.push({ start: match.index, end: match.index + match[0].length });
+    }
+    const documentName = match[1];
+    const targetAndHash = match[2] ?? "";
+    const hashIndex = targetAndHash.indexOf("#");
+    const target = hashIndex === -1 ? targetAndHash : targetAndHash.slice(0, hashIndex);
+    const hash = hashIndex === -1 ? undefined : targetAndHash.slice(hashIndex + 1);
+    // anti-overfit: allow schema-derived - Foundry 14.364 TextEditor legacy
+    // links use @Type[id] syntax. Canonicalize only the linkable world
+    // Document types that map to audited top-level collections, and only when
+    // the target passes Foundry's exact 16-character alphanumeric ID rule.
+    if (
+      documentName
+      && LEGACY_WORLD_LINK_DOCUMENT_NAMES.has(documentName)
+      && VALID_LEGACY_WORLD_ID_PATTERN.test(target)
+      && (hash === undefined || hash.length > 0)
+    ) {
+      found.add(`${documentName}.${target}`);
+    }
   }
   let standaloneText = value;
   for (const span of [...wrapperSpans].sort((left, right) => right.start - left.start)) {
