@@ -479,6 +479,80 @@ test("the stopped-world guard blocks a contender ClassicLevel open until release
   await contenderAfterRelease.close();
 });
 
+test("the stopped-world guard holds and releases multiple real Windows LOCK files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const firstDatabasePath = join(root, "actors");
+  const secondDatabasePath = join(root, "scenes");
+  const { ClassicLevel } = await loadClassicLevel();
+  const firstSeed = new ClassicLevel(firstDatabasePath, { keyEncoding: "utf8", valueEncoding: "json" });
+  const secondSeed = new ClassicLevel(secondDatabasePath, { keyEncoding: "utf8", valueEncoding: "json" });
+  await firstSeed.put("!actors!A1", { _id: "A1" });
+  await secondSeed.put("!scenes!S1", { _id: "S1" });
+  await firstSeed.close();
+  await secondSeed.close();
+
+  try {
+    const guard = await acquireStoppedWorldLocks([
+      join(firstDatabasePath, "LOCK"),
+      join(secondDatabasePath, "LOCK"),
+    ]);
+    try {
+      for (const databasePath of [firstDatabasePath, secondDatabasePath]) {
+        const contender = new ClassicLevel(databasePath, {
+          createIfMissing: false,
+          keyEncoding: "utf8",
+          valueEncoding: "json",
+        });
+        await expect(contender.open()).rejects.toThrow("Database failed to open");
+      }
+    } finally {
+      await guard.close();
+    }
+
+    for (const databasePath of [firstDatabasePath, secondDatabasePath]) {
+      const contender = new ClassicLevel(databasePath, {
+        createIfMissing: false,
+        keyEncoding: "utf8",
+        valueEncoding: "json",
+      });
+      await contender.open();
+      await contender.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the stopped-world guard fails closed when any one of multiple real Windows LOCK files is occupied", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const firstDatabasePath = join(root, "actors");
+  const occupiedDatabasePath = join(root, "scenes");
+  const { ClassicLevel } = await loadClassicLevel();
+  const firstSeed = new ClassicLevel(firstDatabasePath, { keyEncoding: "utf8", valueEncoding: "json" });
+  const occupied = new ClassicLevel(occupiedDatabasePath, { keyEncoding: "utf8", valueEncoding: "json" });
+  await firstSeed.put("!actors!A1", { _id: "A1" });
+  await firstSeed.close();
+  await occupied.put("!scenes!S1", { _id: "S1" });
+
+  try {
+    await expect(acquireStoppedWorldLocks([
+      join(firstDatabasePath, "LOCK"),
+      join(occupiedDatabasePath, "LOCK"),
+    ])).rejects.toThrow(/stopped-world lock|LOCK/i);
+
+    const firstAfterRejection = new ClassicLevel(firstDatabasePath, {
+      createIfMissing: false,
+      keyEncoding: "utf8",
+      valueEncoding: "json",
+    });
+    await firstAfterRejection.open();
+    await firstAfterRejection.close();
+  } finally {
+    await occupied.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("the default reader closes the snapshot ClassicLevel database before returning", async () => {
   const root = await mkdtemp(join(tmpdir(), "world-audit-"));
   const source = await createWorld(root);

@@ -220,10 +220,12 @@ export async function acquireStoppedWorldLocks(
 
   const script = [
     "$ErrorActionPreference = 'Stop'",
-    "$paths = @($env:WORLD_AUDIT_LOCK_PATHS_JSON | ConvertFrom-Json)",
+    "$parsedPaths = $env:WORLD_AUDIT_LOCK_PATHS_JSON | ConvertFrom-Json",
+    "$paths = @($parsedPaths | ForEach-Object { $_ })",
     "$locks = [System.Collections.Generic.List[System.IO.FileStream]]::new()",
     "try {",
     "  foreach ($path in $paths) {",
+    "    if ($path -isnot [string] -or [string]::IsNullOrWhiteSpace($path)) { throw 'Stopped-world lock path must be a non-empty string' }",
     "    $locks.Add([System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read))",
     "  }",
     "  [Console]::Out.WriteLine('READY')",
