@@ -508,6 +508,85 @@ test("never traverses User authentication data or secret-like fields and Setting
   }
 });
 
+test("distinguishes credential tokens from ordinary Foundry tokenId and tokenUuid fields", () => {
+  const possibleId = "abcdefghijklmnop";
+  const uuidId = "qrstuvwxyzABCDEF";
+  const records = [
+    top("actors", possibleId, {
+      _id: possibleId,
+      name: "Possible Token Target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", uuidId, {
+      _id: uuidId,
+      name: "UUID Token Target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", "A2", {
+      _id: "A2",
+      name: "Secret Auth Target",
+      ownership: {},
+      items: [],
+      effects: [],
+    }),
+    top("actors", "SOURCE", {
+      _id: "SOURCE",
+      name: "Reference Source",
+      ownership: {},
+      items: [],
+      effects: [],
+      flags: {
+        auth: {
+          accessToken: "@UUID[Actor.A2]",
+          bearerToken: "SECRETACCESS1234",
+        },
+        module: {
+          tokenId: possibleId,
+          tokenUuid: `Actor.${uuidId}`,
+        },
+      },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const actor = (id: string) => rowById(analysis.actors, id);
+  const serialized = JSON.stringify(analysis);
+
+  expect(analysis.references).toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.SOURCE",
+    targetUuid: `Actor.${possibleId}`,
+    evidence: "possible-setting-string",
+    fieldPath: "flags.module.tokenId",
+    verifiedTarget: true,
+  }));
+  expect(analysis.references).toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.SOURCE",
+    targetUuid: `Actor.${uuidId}`,
+    evidence: "uuid-link",
+    fieldPath: "flags.module.tokenUuid",
+    verifiedTarget: true,
+  }));
+  expect(actor(possibleId).usageStatuses).toContain("possible-script-reference");
+  expect(actor(possibleId).usageStatuses).not.toContain("no-detected-reference");
+  expect(actor(uuidId).usageStatuses).toContain("used-uuid");
+  expect(analysis.unusedActorCandidates).not.toContainEqual(expect.objectContaining({ id: possibleId }));
+  expect(analysis.unusedActorCandidates).not.toContainEqual(expect.objectContaining({ id: uuidId }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.SOURCE",
+    targetUuid: "Actor.A2",
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    sourceUuid: "Actor.SOURCE",
+    targetUuid: "Unresolved.SECRETACCESS1234",
+  }));
+  expect(serialized).not.toContain("@UUID[Actor.A2]");
+  expect(serialized).not.toContain("SECRETACCESS1234");
+});
+
 test("validates complete UUID spans without truncating invalid wrappers or suffixes", () => {
   const records = [
     top("actors", "A1", {

@@ -416,7 +416,7 @@ export function isSensitiveFieldPath(fieldPath: string): boolean {
     .map((token) => token.toLowerCase())
     .filter(Boolean);
   const compact = tokens.join("");
-  return tokens.some((token) => [
+  if (tokens.some((token) => [
     "auth",
     "authentication",
     "authorization",
@@ -425,14 +425,22 @@ export function isSensitiveFieldPath(fieldPath: string): boolean {
     "password",
     "salt",
     "secret",
-    "session",
-    "token",
-  ].includes(token))
-    || compact.includes("apikey")
-    || compact.includes("passwordhash")
-    || compact.includes("refreshtoken")
-    || compact.includes("accesstoken")
-    || compact.includes("sessioncredential");
+  ].includes(token))) {
+    return true;
+  }
+  return [
+    "accesstoken",
+    "apikey",
+    "authtoken",
+    "bearertoken",
+    "clientsecret",
+    "oauthtoken",
+    "passwordhash",
+    "passwordsalt",
+    "refreshtoken",
+    "sessioncredential",
+    "sessiontoken",
+  ].some((marker) => compact.includes(marker));
 }
 
 export function isSecretSettingKey(key: string): boolean {
