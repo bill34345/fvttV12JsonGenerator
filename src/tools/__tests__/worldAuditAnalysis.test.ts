@@ -1361,6 +1361,58 @@ test("extracts legacy Foundry world-document links from normalized Journal pages
   expect(rowById(analysis.actors, labelActorId).usageStatuses).toEqual(["no-detected-reference"]);
 });
 
+test("ignores UUID wrappers inside legacy labels without suppressing top-level or adjacent UUID wrappers", () => {
+  const legacyActorId = "LEGACY0000000001";
+  const labelActorId = "LABEL00000000001";
+  const topLevelActorId = "TOPLEVEL00000001";
+  const adjacentActorId = "ADJACENT00000001";
+  const records = [
+    ...[legacyActorId, labelActorId, topLevelActorId, adjacentActorId].map((id) => top("actors", id, {
+      _id: id,
+      name: `Actor ${id}`,
+      ownership: {},
+      items: [],
+      effects: [],
+    })),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "Nested UUID wrapper controls",
+      pages: ["P1"],
+    }),
+    embedded("journal", "journal.pages", ["J1", "P1"], {
+      _id: "P1",
+      name: "Nested UUID wrapper page",
+      type: "text",
+      text: {
+        content: [
+          `@Actor[${legacyActorId}]{Label @UUID[Actor.${labelActorId}]}`,
+          `@UUID[Actor.${topLevelActorId}]`,
+          `@Actor[${legacyActorId}]@UUID[Actor.${adjacentActorId}]`,
+        ].join(" "),
+      },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const pageUuid = "JournalEntry.J1.JournalEntryPage.P1";
+  const pageActorTargets = analysis.references
+    .filter((edge) => edge.sourceUuid === pageUuid && edge.targetUuid.startsWith("Actor."))
+    .map((edge) => edge.targetUuid);
+
+  expect(pageActorTargets).toEqual([
+    `Actor.${adjacentActorId}`,
+    `Actor.${legacyActorId}`,
+    `Actor.${topLevelActorId}`,
+  ]);
+  expect(rowById(analysis.actors, labelActorId).usageStatuses).toEqual(["no-detected-reference"]);
+  expect(analysis.unusedActorCandidates).toContainEqual(
+    expect.objectContaining({ id: labelActorId }),
+  );
+  for (const referencedId of [legacyActorId, topLevelActorId, adjacentActorId]) {
+    expect(rowById(analysis.actors, referencedId).usageStatuses).toContain("used-uuid");
+  }
+});
+
 test("rejects non-world, malformed, name-only, and sensitive legacy link candidates", () => {
   const actorId = "ACTOR00000000001";
   const secretActorId = "SECRET0000000001";

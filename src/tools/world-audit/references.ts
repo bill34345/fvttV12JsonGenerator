@@ -353,16 +353,16 @@ function extractStructuredReferences(
 function extractUuids(value: string): string[] {
   const found = new Set<string>();
   const wrapperSpans: Array<{ start: number; end: number }> = [];
-  for (const match of value.matchAll(WRAPPED_UUID_PATTERN)) {
-    if (match.index !== undefined) {
-      wrapperSpans.push({ start: match.index, end: match.index + match[0].length });
-    }
-    const candidate = match[1];
-    if (candidate && isValidFoundryUuid(candidate)) found.add(candidate);
-  }
+  const typedWrapperSpans: Array<{ start: number; end: number; documentName: string }> = [];
   for (const match of value.matchAll(TYPED_LINK_WRAPPER_PATTERN)) {
     if (match.index !== undefined) {
-      wrapperSpans.push({ start: match.index, end: match.index + match[0].length });
+      const span = {
+        start: match.index,
+        end: match.index + match[0].length,
+        documentName: match[1] ?? "",
+      };
+      typedWrapperSpans.push(span);
+      wrapperSpans.push(span);
     }
     const documentName = match[1];
     const targetAndHash = match[2] ?? "";
@@ -381,6 +381,19 @@ function extractUuids(value: string): string[] {
     ) {
       found.add(`${documentName}.${target}`);
     }
+  }
+  for (const match of value.matchAll(WRAPPED_UUID_PATTERN)) {
+    if (match.index === undefined) continue;
+    const span = { start: match.index, end: match.index + match[0].length };
+    wrapperSpans.push(span);
+    const nestedInTypedWrapper = typedWrapperSpans.some((typedSpan) => (
+      typedSpan.start <= span.start
+      && typedSpan.end >= span.end
+      && (typedSpan.start < span.start || typedSpan.end > span.end)
+      && !(typedSpan.documentName === "UUID" && typedSpan.start === span.start)
+    ));
+    const candidate = match[1];
+    if (!nestedInTypedWrapper && candidate && isValidFoundryUuid(candidate)) found.add(candidate);
   }
   let standaloneText = value;
   for (const span of [...wrapperSpans].sort((left, right) => right.start - left.start)) {
