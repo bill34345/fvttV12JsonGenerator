@@ -18,6 +18,8 @@ export interface SnapshotLifecycleHooks {
   beforePromote?: () => Promise<void>;
 }
 
+const GUARD_TIMEOUT_MS = 10_000;
+
 export interface StoppedWorldLockGuard {
   close(): Promise<void>;
   unexpectedExit: Promise<Error>;
@@ -90,6 +92,7 @@ export async function createWorldSnapshot(
   const snapshotWorldRoot = await resolveSnapshotRoot(options.snapshotWorldRoot);
   await assertDistinctPhysicalRoots(sourceWorldRoot, snapshotWorldRoot);
   await assertNoLinksOrReparsePoints(sourceWorldRoot);
+  await assertWindowsReparsePointFree(sourceWorldRoot);
   await assertExpectedWorldMetadata(sourceWorldRoot, options);
   await mkdir(dirname(snapshotWorldRoot), { recursive: true });
   const stagingWorldRoot = await mkdtemp(join(dirname(snapshotWorldRoot), `.world-audit-${basename(snapshotWorldRoot)}-`));
@@ -197,7 +200,7 @@ export async function acquireStoppedWorldLocks(lockPaths: string[]): Promise<Sto
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
-  await waitForLockGuardReady(child);
+  await withTimeout(waitForLockGuardReady(child), GUARD_TIMEOUT_MS, () => child.kill("SIGKILL"), "Stopped-world lock guard readiness timed out");
   return new PowerShellStoppedWorldLockGuard(child);
 }
 
@@ -409,6 +412,25 @@ async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
   });
 }
 
+async function assertWindowsReparsePointFree(root: string): Promise<void> {
+  if (process.platform !== "win32") return;
+  const script = "$ErrorActionPreference='Stop'; $root=$env:WORLD_AUDIT_REPARSE_ROOT | ConvertFrom-Json; $all=@(Get-Item -LiteralPath $root -Force); $all += @(Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction Stop); $bad=@($all | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 }); if($bad.Count -gt 0){ [Console]::Out.WriteLine($bad[0].FullName); exit 2 }";
+  const child = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { env: { ...process.env, WORLD_AUDIT_REPARSE_ROOT: JSON.stringify(root) }, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  let stdout = ""; let stderr = "";
+  child.stdout?.on("data", (chunk: Buffer | string) => { stdout += chunk.toString(); });
+  child.stderr?.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
+  const exit = new Promise<number | null>((resolveExit, rejectExit) => { child.once("error", rejectExit); child.once("exit", resolveExit); });
+  const code = await withTimeout(exit, GUARD_TIMEOUT_MS, () => child.kill("SIGKILL"), "Windows reparse-point scan timed out");
+  if (code !== 0 || stderr || stdout.includes("\n")) throw new Error(`Windows reparse-point scan failed: ${stdout.trim() || stderr.trim() || `exit ${code}`}`);
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, onTimeout: () => void, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([operation, new Promise<T>((_, reject) => { timer = setTimeout(() => { onTimeout(); reject(new Error(message)); }, timeoutMs); })]);
+  } finally { if (timer) clearTimeout(timer); }
+}
+
 class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
   private closing = false;
   private reportUnexpectedExit: (error: Error) => void = () => {};
@@ -434,12 +456,12 @@ class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
   async close(): Promise<void> {
     if (this.child.exitCode !== null) return;
     this.closing = true;
-    await new Promise<void>((resolveClose, rejectClose) => {
+    await withTimeout(new Promise<void>((resolveClose, rejectClose) => {
       this.child.once("error", rejectClose);
       this.child.once("exit", () => resolveClose());
       if (!this.child.kill()) {
         rejectClose(new Error("Stopped-world lock guard could not be stopped"));
       }
-    });
+    }), GUARD_TIMEOUT_MS, () => this.child.kill("SIGKILL"), "Stopped-world lock guard close timed out");
   }
 }
