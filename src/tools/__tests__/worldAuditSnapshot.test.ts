@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import { lstat, mkdtemp, mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,10 +7,55 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   acquireStoppedWorldLocks,
+  assertWindowsReparsePointFree,
   createWorldSnapshot,
   hashTree,
   parseFoundryLevelKey,
 } from "../world-audit/snapshot";
+
+class FakePowerShellProcess extends EventEmitter {
+  readonly stdout = new EventEmitter();
+  readonly stderr = new EventEmitter();
+  exitCode: number | null = null;
+  readonly kills: Array<NodeJS.Signals | number | undefined> = [];
+
+  kill(signal?: NodeJS.Signals | number): boolean {
+    this.kills.push(signal);
+    return true;
+  }
+
+  emitExit(code: number | null): void {
+    this.exitCode = code;
+    this.emit("exit", code);
+  }
+}
+
+function createManualTimeoutScheduler() {
+  const callbacks = new Map<number, () => void>();
+  const active = new Set<number>();
+  let nextId = 0;
+  return {
+    clearCalls: 0,
+    setTimeout(callback: () => void): number {
+      const id = nextId++;
+      callbacks.set(id, callback);
+      active.add(id);
+      return id;
+    },
+    clearTimeout(id: number): void {
+      this.clearCalls += 1;
+      active.delete(id);
+    },
+    fireLast(): void {
+      const id = [...active].at(-1);
+      if (id === undefined) throw new Error("Expected a pending timeout");
+      callbacks.get(id)?.();
+    },
+    fireCleared(id: number): void {
+      callbacks.get(id)?.();
+    },
+  };
+}
 
 const classicLevelEntry = resolve(
   ".local/foundry-v14/app/14.364/node_modules/classic-level/index.js",
@@ -254,6 +300,129 @@ test("rejects a Windows junction in the source tree", async () => {
   await expect(createWorldSnapshot(snapshotOptions(source, join(root, "snapshot")), async () => [])).rejects.toThrow(
     /reparse|physical/i,
   );
+});
+
+test("rejects explicit reparse-point scan findings, malformed success output, and nonzero scan exits", async () => {
+  for (const fixture of [
+    { code: 2, stdout: "C:\\world\\junction\n", stderr: "" },
+    { code: 0, stdout: "unexpected scanner output", stderr: "" },
+    { code: 1, stdout: "", stderr: "scan failed" },
+  ]) {
+    const process = new FakePowerShellProcess();
+    const result = assertWindowsReparsePointFree("C:\\world", {
+      timeoutMs: 10,
+      spawnPowerShell: () => process,
+    });
+    process.stdout.emit("data", fixture.stdout);
+    process.stderr.emit("data", fixture.stderr);
+    process.emitExit(fixture.code);
+    await expect(result).rejects.toThrow("Windows reparse-point scan failed");
+  }
+});
+
+test("kills and rejects a reparse-point scan that exceeds its timeout", async () => {
+  const process = new FakePowerShellProcess();
+  const scheduler = createManualTimeoutScheduler();
+  let spawned: () => void = () => {};
+  const didSpawn = new Promise<void>((resolveSpawned) => { spawned = resolveSpawned; });
+
+  const result = assertWindowsReparsePointFree("C:\\world", {
+    timeoutMs: 10,
+    scheduler,
+    spawnPowerShell: () => {
+      spawned();
+      return process;
+    },
+  });
+  await didSpawn;
+  scheduler.fireLast();
+
+  await expect(result).rejects.toThrow("Windows reparse-point scan timed out");
+  expect(process.kills).toEqual(["SIGKILL"]);
+});
+
+test("kills and rejects a lock guard that never reports readiness", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const lockPath = join(root, "LOCK");
+  await writeFile(lockPath, "");
+  const process = new FakePowerShellProcess();
+  const scheduler = createManualTimeoutScheduler();
+  let spawned: () => void = () => {};
+  const didSpawn = new Promise<void>((resolveSpawned) => { spawned = resolveSpawned; });
+
+  const result = acquireStoppedWorldLocks([lockPath], {
+    timeoutMs: 10,
+    scheduler,
+    spawnPowerShell: () => {
+      spawned();
+      return process;
+    },
+  });
+  await didSpawn;
+  scheduler.fireLast();
+
+  await expect(result).rejects.toThrow("Stopped-world lock guard readiness timed out");
+  expect(process.kills).toEqual(["SIGKILL"]);
+});
+
+test("guard close times out, force-kills, and rejects without double-settling its readiness timeout", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const lockPath = join(root, "LOCK");
+  await writeFile(lockPath, "");
+  const process = new FakePowerShellProcess();
+  const scheduler = createManualTimeoutScheduler();
+  let spawned: () => void = () => {};
+  const didSpawn = new Promise<void>((resolveSpawned) => { spawned = resolveSpawned; });
+
+  const guardPromise = acquireStoppedWorldLocks([lockPath], {
+    timeoutMs: 10,
+    scheduler,
+    spawnPowerShell: () => {
+      spawned();
+      return process;
+    },
+  });
+  await didSpawn;
+  process.stdout.emit("data", "READY\n");
+  const guard = await guardPromise;
+  expect(scheduler.clearCalls).toBe(1);
+  expect(process.kills).toEqual([]);
+  scheduler.fireCleared(0);
+  expect(process.kills).toEqual([]);
+
+  const close = guard.close();
+  expect(process.kills).toEqual([undefined]);
+  scheduler.fireLast();
+  await expect(close).rejects.toThrow("Stopped-world lock guard close timed out");
+  expect(process.kills).toEqual([undefined, "SIGKILL"]);
+});
+
+test("preserves the snapshot failure when guard close also fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const source = await createWorld(root);
+  const snapshot = join(root, "snapshot");
+  const originalError = new Error("copy hook failed");
+  const closeError = new Error("guard close timed out");
+  const guard = {
+    unexpectedExit: new Promise<Error>(() => {}),
+    terminateForTest: () => {},
+    close: async () => { throw closeError; },
+  };
+
+  let rejected: unknown;
+  try {
+    await createWorldSnapshot(snapshotOptions(source, snapshot), async () => [], {
+      afterGuardAcquired: async () => { throw originalError; },
+    }, {
+      acquireStoppedWorldLocks: async () => guard,
+    });
+  } catch (error) {
+    rejected = error;
+  }
+
+  expect(rejected).toBeInstanceOf(AggregateError);
+  expect((rejected as AggregateError).errors).toContain(originalError);
+  expect((rejected as AggregateError).errors).toContain(closeError);
 });
 
 test("rejects a pre-opened disposable LevelDB before snapshotting", async () => {

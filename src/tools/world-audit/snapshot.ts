@@ -3,7 +3,6 @@ import { spawn } from "node:child_process";
 import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { ChildProcess } from "node:child_process";
 import type { LevelRecord, SnapshotOptions, TreeEntry, WorldSnapshot } from "./model";
 
 export type SnapshotCollectionReader = (
@@ -19,6 +18,29 @@ export interface SnapshotLifecycleHooks {
 }
 
 const GUARD_TIMEOUT_MS = 10_000;
+
+export interface WorldAuditTimeoutScheduler {
+  setTimeout(callback: () => void, timeoutMs: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
+export interface WorldAuditProcess {
+  readonly exitCode: number | null;
+  readonly stdout?: { on(event: "data", listener: (chunk: Buffer | string) => void): unknown };
+  readonly stderr?: { on(event: "data", listener: (chunk: Buffer | string) => void): unknown };
+  once(event: string, listener: (...args: any[]) => void): unknown;
+  kill(signal?: NodeJS.Signals | number): boolean;
+}
+
+export interface WorldAuditProcessHooks {
+  spawnPowerShell?: (script: string, environment: NodeJS.ProcessEnv) => WorldAuditProcess;
+  timeoutMs?: number;
+  scheduler?: WorldAuditTimeoutScheduler;
+}
+
+export interface SnapshotRuntime {
+  acquireStoppedWorldLocks?: (lockPaths: string[]) => Promise<StoppedWorldLockGuard>;
+}
 
 export interface StoppedWorldLockGuard {
   close(): Promise<void>;
@@ -87,6 +109,7 @@ export async function createWorldSnapshot(
   options: SnapshotOptions,
   reader: SnapshotCollectionReader = readClassicLevelSnapshot,
   hooks: SnapshotLifecycleHooks = {},
+  runtime: SnapshotRuntime = {},
 ): Promise<WorldSnapshot> {
   const sourceWorldRoot = resolve(options.sourceWorldRoot);
   const snapshotWorldRoot = await resolveSnapshotRoot(options.snapshotWorldRoot);
@@ -105,9 +128,10 @@ export async function createWorldSnapshot(
   let stagingOwned = true;
 
   try {
-    const guard = await acquireStoppedWorldLocks(lockPaths);
+    const guard = await (runtime.acquireStoppedWorldLocks ?? acquireStoppedWorldLocks)(lockPaths);
     let guardFailure: Error | undefined;
     void guard.unexpectedExit.then((error) => { guardFailure = error; });
+    let snapshotError: unknown;
     try {
       await hooks.afterGuardAcquired?.(guard);
       sourceBefore = await hashTree(sourceWorldRoot);
@@ -130,8 +154,21 @@ export async function createWorldSnapshot(
       if (sourceBefore.treeHash !== snapshotTree.treeHash) {
         throw new Error("Snapshot bytes do not match the stopped source world");
       }
+    } catch (error) {
+      snapshotError = error;
+      throw error;
     } finally {
-      await guard.close();
+      try {
+        await guard.close();
+      } catch (closeError) {
+        if (snapshotError) {
+          throw new AggregateError(
+            [snapshotError, closeError],
+            "Snapshot failed and stopped-world lock guard cleanup also failed",
+          );
+        }
+        throw closeError;
+      }
     }
 
     if (!sourceBefore || !sourceAfter || !snapshotTree) {
@@ -169,7 +206,10 @@ export async function createWorldSnapshot(
   }
 }
 
-export async function acquireStoppedWorldLocks(lockPaths: string[]): Promise<StoppedWorldLockGuard> {
+export async function acquireStoppedWorldLocks(
+  lockPaths: string[],
+  processHooks: WorldAuditProcessHooks = {},
+): Promise<StoppedWorldLockGuard> {
   if (process.platform !== "win32") {
     throw new Error("Stopped-world lock guard is supported only on Windows; refusing to snapshot without it");
   }
@@ -195,13 +235,15 @@ export async function acquireStoppedWorldLocks(lockPaths: string[]): Promise<Sto
     "  foreach ($lock in $locks) { $lock.Dispose() }",
     "}",
   ].join("\n");
-  const child = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
-    env: { ...process.env, WORLD_AUDIT_LOCK_PATHS_JSON: JSON.stringify(lockPaths) },
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-  await withTimeout(waitForLockGuardReady(child), GUARD_TIMEOUT_MS, () => child.kill("SIGKILL"), "Stopped-world lock guard readiness timed out");
-  return new PowerShellStoppedWorldLockGuard(child);
+  const child = spawnAuditPowerShell(
+    script,
+    { ...process.env, WORLD_AUDIT_LOCK_PATHS_JSON: JSON.stringify(lockPaths) },
+    processHooks,
+  );
+  const timeoutMs = processHooks.timeoutMs ?? GUARD_TIMEOUT_MS;
+  const scheduler = processHooks.scheduler ?? defaultTimeoutScheduler;
+  await withTimeout(waitForLockGuardReady(child), timeoutMs, () => child.kill("SIGKILL"), "Stopped-world lock guard readiness timed out", scheduler);
+  return new PowerShellStoppedWorldLockGuard(child, timeoutMs, scheduler);
 }
 
 async function readClassicLevelSnapshot(
@@ -387,7 +429,7 @@ async function removeIncompleteSnapshot(snapshotWorldRoot: string, originalError
   }
 }
 
-async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
+async function waitForLockGuardReady(child: WorldAuditProcess): Promise<void> {
   await new Promise<void>((resolveReady, rejectReady) => {
     let stderr = "";
     let stdout = "";
@@ -397,7 +439,7 @@ async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
       settled = true;
       rejectReady(error);
     };
-    child.once("error", (error) => rejectOnce(error));
+    child.once("error", (error: Error) => rejectOnce(error));
     child.stderr?.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
     child.stdout?.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
@@ -406,29 +448,85 @@ async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
         resolveReady();
       }
     });
-    child.once("exit", (code) => {
+    child.once("exit", (code: number | null) => {
       rejectOnce(new Error(`Stopped-world lock guard could not be acquired (exit ${code}): ${stderr.trim()}`));
     });
   });
 }
 
-async function assertWindowsReparsePointFree(root: string): Promise<void> {
+export async function assertWindowsReparsePointFree(
+  root: string,
+  processHooks: WorldAuditProcessHooks = {},
+): Promise<void> {
   if (process.platform !== "win32") return;
   const script = "$ErrorActionPreference='Stop'; $root=$env:WORLD_AUDIT_REPARSE_ROOT | ConvertFrom-Json; $all=@(Get-Item -LiteralPath $root -Force); $all += @(Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction Stop); $bad=@($all | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 }); if($bad.Count -gt 0){ [Console]::Out.WriteLine($bad[0].FullName); exit 2 }";
-  const child = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { env: { ...process.env, WORLD_AUDIT_REPARSE_ROOT: JSON.stringify(root) }, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  const child = spawnAuditPowerShell(
+    script,
+    { ...process.env, WORLD_AUDIT_REPARSE_ROOT: JSON.stringify(root) },
+    processHooks,
+  );
   let stdout = ""; let stderr = "";
   child.stdout?.on("data", (chunk: Buffer | string) => { stdout += chunk.toString(); });
   child.stderr?.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
   const exit = new Promise<number | null>((resolveExit, rejectExit) => { child.once("error", rejectExit); child.once("exit", resolveExit); });
-  const code = await withTimeout(exit, GUARD_TIMEOUT_MS, () => child.kill("SIGKILL"), "Windows reparse-point scan timed out");
-  if (code !== 0 || stderr || stdout.includes("\n")) throw new Error(`Windows reparse-point scan failed: ${stdout.trim() || stderr.trim() || `exit ${code}`}`);
+  const code = await withTimeout(
+    exit,
+    processHooks.timeoutMs ?? GUARD_TIMEOUT_MS,
+    () => child.kill("SIGKILL"),
+    "Windows reparse-point scan timed out",
+    processHooks.scheduler ?? defaultTimeoutScheduler,
+  );
+  if (code !== 0 || stderr || stdout.trim() !== "") throw new Error(`Windows reparse-point scan failed: ${stdout.trim() || stderr.trim() || `exit ${code}`}`);
 }
 
-async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, onTimeout: () => void, message: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([operation, new Promise<T>((_, reject) => { timer = setTimeout(() => { onTimeout(); reject(new Error(message)); }, timeoutMs); })]);
-  } finally { if (timer) clearTimeout(timer); }
+const defaultTimeoutScheduler: WorldAuditTimeoutScheduler = {
+  setTimeout: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
+  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+
+function spawnAuditPowerShell(
+  script: string,
+  environment: NodeJS.ProcessEnv,
+  processHooks: WorldAuditProcessHooks,
+): WorldAuditProcess {
+  if (processHooks.spawnPowerShell) return processHooks.spawnPowerShell(script, environment);
+  return spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
+    env: environment,
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  }) as unknown as WorldAuditProcess;
+}
+
+async function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  onTimeout: () => void,
+  message: string,
+  scheduler: WorldAuditTimeoutScheduler,
+): Promise<T> {
+  return await new Promise<T>((resolveResult, rejectResult) => {
+    let settled = false;
+    const timer = scheduler.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      onTimeout();
+      rejectResult(new Error(message));
+    }, timeoutMs);
+    operation.then(
+      (result) => {
+        if (settled) return;
+        settled = true;
+        scheduler.clearTimeout(timer);
+        resolveResult(result);
+      },
+      (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        scheduler.clearTimeout(timer);
+        rejectResult(error);
+      },
+    );
+  });
 }
 
 class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
@@ -436,10 +534,14 @@ class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
   private reportUnexpectedExit: (error: Error) => void = () => {};
   readonly unexpectedExit: Promise<Error>;
 
-  constructor(private readonly child: ChildProcess) {
+  constructor(
+    private readonly child: WorldAuditProcess,
+    private readonly timeoutMs: number,
+    private readonly scheduler: WorldAuditTimeoutScheduler,
+  ) {
     this.unexpectedExit = new Promise((resolveUnexpectedExit) => {
       this.reportUnexpectedExit = resolveUnexpectedExit;
-      child.once("exit", (code) => {
+      child.once("exit", (code: number | null) => {
         if (!this.closing) {
           this.reportUnexpectedExit(new Error(`Stopped-world lock guard exited unexpectedly (exit ${code})`));
         }
@@ -457,11 +559,11 @@ class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
     if (this.child.exitCode !== null) return;
     this.closing = true;
     await withTimeout(new Promise<void>((resolveClose, rejectClose) => {
-      this.child.once("error", rejectClose);
+      this.child.once("error", (error: Error) => rejectClose(error));
       this.child.once("exit", () => resolveClose());
       if (!this.child.kill()) {
         rejectClose(new Error("Stopped-world lock guard could not be stopped"));
       }
-    }), GUARD_TIMEOUT_MS, () => this.child.kill("SIGKILL"), "Stopped-world lock guard close timed out");
+    }), this.timeoutMs, () => this.child.kill("SIGKILL"), "Stopped-world lock guard close timed out", this.scheduler);
   }
 }
