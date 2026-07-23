@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { lstat, mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -112,7 +112,9 @@ test("copies a stopped world without changing source bytes and opens only the co
     return [{ key: "!actors!A1", value: { _id: "A1", name: "Fixture" } }];
   });
 
-  expect(opened).toEqual([join(snapshot, "data", "actors")]);
+  expect(opened).toHaveLength(1);
+  expect(opened[0]).toContain(".world-audit-snapshot-");
+  expect(opened[0]).not.toContain(source);
   expect(result.sourceTreeHashBefore).toBe(result.sourceTreeHashAfter);
   expect(await hashTree(source)).toEqual(before);
   expect(await readFile(join(source, "data", "actors", "record.bin"), "utf8")).toBe("unchanged");
@@ -191,7 +193,9 @@ test("does not treat backup collection directories as live databases", async () 
     return [];
   });
 
-  expect(opened).toEqual([join(snapshot, "data", "actors")]);
+  expect(opened).toHaveLength(1);
+  expect(opened[0]).toContain(".world-audit-snapshot-");
+  expect(opened[0]).not.toContain(source);
 });
 
 test("removes an incomplete snapshot when source bytes drift after copy", async () => {
@@ -214,7 +218,7 @@ test("removes an incomplete snapshot when snapshot verification fails", async ()
   const snapshot = join(root, "snapshot");
 
   await expect(createWorldSnapshot(snapshotOptions(source, snapshot), async () => [], {
-    beforeSnapshotHash: async () => writeFile(join(snapshot, "tamper.bin"), "tamper"),
+    beforeSnapshotHash: async (stagingWorldRoot) => writeFile(join(stagingWorldRoot, "tamper.bin"), "tamper"),
   })).rejects.toThrow("Snapshot bytes do not match");
 
   await expect(lstat(snapshot)).rejects.toMatchObject({ code: "ENOENT" });
@@ -315,4 +319,42 @@ test("the default reader closes the snapshot ClassicLevel database before return
   });
   await contender.open();
   await contender.close();
+});
+
+test("fails and cleans owned staging when the lock guard exits during a blocked lifecycle", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const source = await createWorld(root);
+  const snapshot = join(root, "snapshot");
+  let release: () => void = () => {};
+  let guardToKill: { terminateForTest(): void; unexpectedExit: Promise<Error> } | undefined;
+  const blocked = new Promise<void>((resolveBlocked) => { release = resolveBlocked; });
+
+  const result = createWorldSnapshot(snapshotOptions(source, snapshot), async () => [], {
+    afterGuardAcquired: async (guard) => { guardToKill = guard; },
+    afterCopy: async () => {
+      guardToKill?.terminateForTest();
+      await guardToKill?.unexpectedExit;
+      await blocked;
+    },
+  });
+  setTimeout(release, 30);
+
+  await expect(result).rejects.toThrow("lock guard exited unexpectedly");
+  await expect(lstat(snapshot)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("preserves a concurrent foreign destination and removes only owned staging", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const source = await createWorld(root);
+  const snapshot = join(root, "snapshot");
+
+  await expect(createWorldSnapshot(snapshotOptions(source, snapshot), async () => [], {
+    beforePromote: async () => {
+      await mkdir(snapshot);
+      await writeFile(join(snapshot, "foreign.txt"), "foreign");
+    },
+  })).rejects.toThrow();
+
+  expect(await readFile(join(snapshot, "foreign.txt"), "utf8")).toBe("foreign");
+  expect((await readdir(root)).filter((name) => name.startsWith(".world-audit-snapshot-")).length).toBe(0);
 });

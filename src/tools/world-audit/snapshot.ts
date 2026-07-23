@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { cp, lstat, mkdir, readdir, readFile, realpath, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ChildProcess } from "node:child_process";
@@ -12,12 +12,16 @@ export type SnapshotCollectionReader = (
 ) => Promise<Array<{ key: string; value: Record<string, unknown> }>>;
 
 export interface SnapshotLifecycleHooks {
+  afterGuardAcquired?: (guard: StoppedWorldLockGuard) => Promise<void>;
   afterCopy?: () => Promise<void>;
-  beforeSnapshotHash?: () => Promise<void>;
+  beforeSnapshotHash?: (stagingWorldRoot: string) => Promise<void>;
+  beforePromote?: () => Promise<void>;
 }
 
 export interface StoppedWorldLockGuard {
   close(): Promise<void>;
+  unexpectedExit: Promise<Error>;
+  terminateForTest(): void;
 }
 
 interface ClassicLevelDatabase {
@@ -88,33 +92,38 @@ export async function createWorldSnapshot(
   await assertNoLinksOrReparsePoints(sourceWorldRoot);
   await assertExpectedWorldMetadata(sourceWorldRoot, options);
   await mkdir(dirname(snapshotWorldRoot), { recursive: true });
+  const stagingWorldRoot = await mkdtemp(join(dirname(snapshotWorldRoot), `.world-audit-${basename(snapshotWorldRoot)}-`));
 
   const collections = await findLiveCollections(sourceWorldRoot);
   const lockPaths = collections.map((collection) => join(sourceWorldRoot, "data", collection, "LOCK"));
   let sourceBefore: Awaited<ReturnType<typeof hashTree>> | undefined;
   let sourceAfter: Awaited<ReturnType<typeof hashTree>> | undefined;
   let snapshotTree: Awaited<ReturnType<typeof hashTree>> | undefined;
-  let snapshotMayExist = false;
+  let stagingOwned = true;
 
   try {
     const guard = await acquireStoppedWorldLocks(lockPaths);
+    let guardFailure: Error | undefined;
+    void guard.unexpectedExit.then((error) => { guardFailure = error; });
     try {
+      await hooks.afterGuardAcquired?.(guard);
       sourceBefore = await hashTree(sourceWorldRoot);
-      snapshotMayExist = true;
-      await cp(sourceWorldRoot, snapshotWorldRoot, {
+      await cp(sourceWorldRoot, stagingWorldRoot, {
         recursive: true,
         force: false,
         errorOnExist: true,
         preserveTimestamps: true,
       });
       await hooks.afterCopy?.();
+      if (guardFailure) throw guardFailure;
       sourceAfter = await hashTree(sourceWorldRoot);
       if (sourceBefore.treeHash !== sourceAfter.treeHash) {
         throw new Error("Source world changed while the snapshot was being copied");
       }
 
-      await hooks.beforeSnapshotHash?.();
-      snapshotTree = await hashTree(snapshotWorldRoot);
+      await hooks.beforeSnapshotHash?.(stagingWorldRoot);
+      if (guardFailure) throw guardFailure;
+      snapshotTree = await hashTree(stagingWorldRoot);
       if (sourceBefore.treeHash !== snapshotTree.treeHash) {
         throw new Error("Snapshot bytes do not match the stopped source world");
       }
@@ -125,16 +134,19 @@ export async function createWorldSnapshot(
     if (!sourceBefore || !sourceAfter || !snapshotTree) {
       throw new Error("Unable to create a complete world snapshot");
     }
-
     const records: LevelRecord[] = [];
     for (const collection of collections) {
-      const databasePath = join(snapshotWorldRoot, "data", collection);
-      assertPathContained(snapshotWorldRoot, databasePath, "Snapshot database path");
+      const databasePath = join(stagingWorldRoot, "data", collection);
+      assertPathContained(stagingWorldRoot, databasePath, "Snapshot database path");
       const collectionRecords = await reader(databasePath, options.classicLevelEntry);
       for (const { key, value } of collectionRecords) {
         records.push({ ...parseFoundryLevelKey(collection, key), value });
       }
     }
+    await hooks.beforePromote?.();
+    if (guardFailure) throw guardFailure;
+    await rename(stagingWorldRoot, snapshotWorldRoot);
+    stagingOwned = false;
 
     return {
       sourceWorldRoot,
@@ -147,8 +159,8 @@ export async function createWorldSnapshot(
       records,
     };
   } catch (error) {
-    if (snapshotMayExist) {
-      await removeIncompleteSnapshot(snapshotWorldRoot, error);
+    if (stagingOwned) {
+      await removeIncompleteSnapshot(stagingWorldRoot, error);
     }
     throw error;
   }
@@ -398,10 +410,30 @@ async function waitForLockGuardReady(child: ChildProcess): Promise<void> {
 }
 
 class PowerShellStoppedWorldLockGuard implements StoppedWorldLockGuard {
-  constructor(private readonly child: ChildProcess) {}
+  private closing = false;
+  private reportUnexpectedExit: (error: Error) => void = () => {};
+  readonly unexpectedExit: Promise<Error>;
+
+  constructor(private readonly child: ChildProcess) {
+    this.unexpectedExit = new Promise((resolveUnexpectedExit) => {
+      this.reportUnexpectedExit = resolveUnexpectedExit;
+      child.once("exit", (code) => {
+        if (!this.closing) {
+          this.reportUnexpectedExit(new Error(`Stopped-world lock guard exited unexpectedly (exit ${code})`));
+        }
+      });
+      child.once("error", (error) => this.reportUnexpectedExit(new Error(`Stopped-world lock guard exited unexpectedly: ${error.message}`)));
+    });
+  }
+
+  terminateForTest(): void {
+    this.child.kill("SIGKILL");
+    this.reportUnexpectedExit(new Error("Stopped-world lock guard exited unexpectedly (test termination)"));
+  }
 
   async close(): Promise<void> {
     if (this.child.exitCode !== null) return;
+    this.closing = true;
     await new Promise<void>((resolveClose, rejectClose) => {
       this.child.once("error", rejectClose);
       this.child.once("exit", () => resolveClose());
