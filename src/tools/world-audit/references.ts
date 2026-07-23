@@ -62,11 +62,13 @@ const UUID_DOCUMENT_NAMES = new Set([
   "Wall",
 ]);
 
+const UUID_CORE_PATTERN =
+  `(?:Compendium\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+(?:\\.(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+)?|(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+(?:\\.(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+)*)`;
 const UUID_PATTERN = new RegExp(
-  `\\b(?:Compendium\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+(?:\\.(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+)?|(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+(?:\\.(?:${[...UUID_DOCUMENT_NAMES].sort().join("|")})\\.[A-Za-z0-9_-]+)*)`,
+  `(?<![A-Za-z0-9_.-])${UUID_CORE_PATTERN}(?![A-Za-z0-9_.-])`,
   "g",
 );
-const WRAPPED_UUID_PATTERN = /@?UUID\[([^\]]+)\]/g;
+const WRAPPED_UUID_PATTERN = /@?UUID\[([^\]]*)\]/g;
 const POSSIBLE_ID_PATTERN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{16}(?![A-Za-z0-9_-])/g;
 
 export function extractWorldReferences(documents: AuditDocument[]): ReferenceExtraction {
@@ -121,9 +123,17 @@ export function extractWorldReferences(documents: AuditDocument[]): ReferenceExt
   };
 
   for (const document of sortedDocuments) {
-    extractStructuredReferences(document, addCollectionId, addTarget);
+    const secretSetting = document.collection === "settings"
+      && isSecretSettingKey(stringValue(document.value.key) ?? document.id);
+    extractStructuredReferences(
+      document,
+      addCollectionId,
+      addTarget,
+      !secretSetting && document.collection !== "users",
+    );
+    if (document.collection === "users" || secretSetting) continue;
     visitStrings(document.value, "", (fieldPath, value) => {
-      if (isAuthenticationField(document.collection, fieldPath)) return;
+      if (isSensitiveFieldPath(fieldPath)) return;
       if (isEmbeddedArrayPath(document.collection, fieldPath)) return;
       if (!isStructuredUuidField(fieldPath)) {
         for (const uuid of extractUuids(value)) {
@@ -183,6 +193,7 @@ function extractStructuredReferences(
   document: AuditDocument,
   addCollectionId: AddCollectionId,
   addTarget: AddTarget,
+  allowValueTraversal: boolean,
 ): void {
   const value = document.value;
   if (document.collection === "scenes") {
@@ -306,8 +317,9 @@ function extractStructuredReferences(
     addCollectionId(document.uuid, "folders", value.folder, "structured-field", "folder");
   }
 
+  if (!allowValueTraversal) return;
   visitEntries(value, "", (fieldPath, fieldValue) => {
-    if (isAuthenticationField(document.collection, fieldPath)) return;
+    if (isSensitiveFieldPath(fieldPath)) return;
     if (isEmbeddedArrayPath(document.collection, fieldPath)) return;
     const leaf = fieldPath.split(".").at(-1) ?? "";
     if (leaf === "origin" && typeof fieldValue === "string") {
@@ -329,11 +341,19 @@ function extractStructuredReferences(
 
 function extractUuids(value: string): string[] {
   const found = new Set<string>();
+  const wrapperSpans: Array<{ start: number; end: number }> = [];
   for (const match of value.matchAll(WRAPPED_UUID_PATTERN)) {
+    if (match.index !== undefined) {
+      wrapperSpans.push({ start: match.index, end: match.index + match[0].length });
+    }
     const candidate = match[1];
     if (candidate && isValidFoundryUuid(candidate)) found.add(candidate);
   }
-  for (const match of value.matchAll(UUID_PATTERN)) {
+  let standaloneText = value;
+  for (const span of [...wrapperSpans].sort((left, right) => right.start - left.start)) {
+    standaloneText = `${standaloneText.slice(0, span.start)}${" ".repeat(span.end - span.start)}${standaloneText.slice(span.end)}`;
+  }
+  for (const match of standaloneText.matchAll(UUID_PATTERN)) {
     if (isValidFoundryUuid(match[0])) found.add(match[0]);
   }
   return [...found].sort(compareOrdinal);
@@ -389,17 +409,34 @@ function isStructuredUuidField(fieldPath: string): boolean {
   return ["compendiumSource", "documentUuid", "origin", "sourceId"].includes(leaf);
 }
 
-function isAuthenticationField(collection: string, fieldPath: string): boolean {
-  if (collection !== "users") return false;
-  return fieldPath.split(/[.[\]]/).some((segment) => [
+export function isSensitiveFieldPath(fieldPath: string): boolean {
+  const tokens = fieldPath
+    .replace(/([a-z0-9])([A-Z])/g, "$1.$2")
+    .split(/[^A-Za-z0-9]+/)
+    .map((token) => token.toLowerCase())
+    .filter(Boolean);
+  const compact = tokens.join("");
+  return tokens.some((token) => [
     "auth",
     "authentication",
+    "authorization",
+    "credential",
+    "credentials",
     "password",
-    "passwordsalt",
     "salt",
+    "secret",
     "session",
     "token",
-  ].includes(segment.toLowerCase()));
+  ].includes(token))
+    || compact.includes("apikey")
+    || compact.includes("passwordhash")
+    || compact.includes("refreshtoken")
+    || compact.includes("accesstoken")
+    || compact.includes("sessioncredential");
+}
+
+export function isSecretSettingKey(key: string): boolean {
+  return isSensitiveFieldPath(key);
 }
 
 function isEmbeddedArrayPath(collection: string, fieldPath: string): boolean {

@@ -1,4 +1,9 @@
-import type { AuditDocument, ReferenceEdge } from "./references";
+import {
+  isSecretSettingKey,
+  isSensitiveFieldPath,
+  type AuditDocument,
+  type ReferenceEdge,
+} from "./references";
 
 export type UsageStatus =
   | "used-structured"
@@ -56,7 +61,9 @@ export function classifyWorldChapters(input: ChapterClassificationInput): Chapte
   const documents = [...input.documents].sort((left, right) => compareOrdinal(left.uuid, right.uuid));
   const mutable = new Map<string, MutableClassification>();
   for (const document of documents) {
-    const name = stringValue(document.value.name) ?? "";
+    const secretSetting = document.collection === "settings"
+      && isSecretSettingKey(stringValue(document.value.key) ?? document.id);
+    const name = secretSetting ? "" : stringValue(document.value.name) ?? "";
     const folderPath = input.folderPathsByDocumentUuid.get(document.uuid) ?? "";
     const classification: MutableClassification = {
       documentUuid: document.uuid,
@@ -67,9 +74,11 @@ export function classifyWorldChapters(input: ChapterClassificationInput): Chapte
       worldCommon: /\b(?:world|global|common|shared)\b/i.test(`${name} ${folderPath}`),
       testTemporary: /\b(?:test|testing|temporary|temp|scratch|deprecated)\b/i.test(`${name} ${folderPath}`),
     };
-    addChapterMatches(classification, folderPath, "explicit-folder", "high");
-    addChapterMatches(classification, name, "explicit-name", "high");
-    if (classification.highLabels.size === 0 && document.collection !== "users") {
+    if (!secretSetting) {
+      addChapterMatches(classification, folderPath, "explicit-folder", "high");
+      addChapterMatches(classification, name, "explicit-name", "high");
+    }
+    if (classification.highLabels.size === 0 && document.collection !== "users" && !secretSetting) {
       addLowTextMatches(classification, document.value);
     }
     mutable.set(document.uuid, classification);
@@ -206,6 +215,7 @@ function addChapterMatches(
 function addLowTextMatches(target: MutableClassification, value: unknown): void {
   visitStrings(value, "", (fieldPath, text) => {
     if (/^(?:name|folder)$/.test(fieldPath)) return;
+    if (isSensitiveFieldPath(fieldPath)) return;
     for (const label of extractChapterLabels(text)) {
       target.lowLabels.add(label);
       target.evidence.push({ kind: "text-inference", value: `${fieldPath}: ${label}` });

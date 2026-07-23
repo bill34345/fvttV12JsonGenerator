@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import {
   classifyWorldChapters,
   USAGE_STATUS_ORDER,
@@ -8,6 +8,8 @@ import {
 import type { LevelRecord, TreeEntry, WorldSnapshot } from "./model";
 import {
   extractWorldReferences,
+  isSecretSettingKey,
+  isSensitiveFieldPath,
   type AuditDocument,
   type ReferenceEdge,
 } from "./references";
@@ -643,14 +645,43 @@ function collectSettingsAndModules(
   documents: AuditDocument[],
   userRoles: Map<string, number>,
 ): Array<Record<string, unknown>> {
-  const rows: Array<Record<string, unknown>> = documents
-    .filter((document) => document.collection === "settings")
-    .map((document) => ({
+  const rows: Array<Record<string, unknown>> = [];
+  const moduleStates = new Map<string, boolean>();
+  for (const document of documents.filter((candidate) => candidate.collection === "settings")) {
+    const key = stringValue(document.value.key) ?? document.id;
+    if (isSecretSettingKey(key)) continue;
+    rows.push({
       id: document.id,
       uuid: document.uuid,
-      key: stringValue(document.value.key) ?? document.id,
+      key,
       valueType: describeType(document.value.value),
-    }));
+      valueSize: serializedByteSize(document.value.value),
+    });
+    if (key !== "core.moduleConfiguration") continue;
+    const configuration = parseModuleConfiguration(document.value.value);
+    for (const [moduleId, enabled] of Object.entries(configuration).sort(([left], [right]) => compareOrdinal(left, right))) {
+      if (typeof enabled === "boolean") moduleStates.set(moduleId, enabled);
+    }
+  }
+  for (const [moduleId, enabled] of [...moduleStates].sort(([left], [right]) => compareOrdinal(left, right))) {
+    rows.push({
+      id: moduleId,
+      uuid: `Module.${moduleId}`,
+      kind: "Module Activation",
+      enabled,
+    });
+  }
+  if (moduleStates.size > 0) {
+    const enabledCount = [...moduleStates.values()].filter(Boolean).length;
+    rows.push({
+      id: "module-activation-summary",
+      uuid: "Summary.module-activation",
+      kind: "Module Activation Summary",
+      moduleCount: moduleStates.size,
+      enabledCount,
+      disabledCount: moduleStates.size - enabledCount,
+    });
+  }
   rows.push({
     id: "user-role-summary",
     uuid: "Summary.user-roles",
@@ -671,25 +702,57 @@ function collectPacksAndAdventures(
     const match = /^packs\/([^/]+)\//.exec(normalized);
     if (match?.[1]) physicalPacks.add(match[1]);
   }
+  try {
+    for (const entry of readdirSync(joinPath(snapshot.snapshotWorldRoot, "packs"), { withFileTypes: true })) {
+      if (entry.isDirectory()) physicalPacks.add(entry.name);
+    }
+  } catch {
+    // TreeEntry evidence remains authoritative when the copied packs directory is absent.
+  }
   const declaredPacks = readDeclaredPacks(snapshot.snapshotWorldRoot);
-  const declaredNames = new Set(declaredPacks.map((pack) => pack.name));
-  const packNames = new Set([...physicalPacks, ...declaredNames]);
   const rows: Array<Record<string, unknown>> = [];
-  for (const packName of [...packNames].sort(compareOrdinal)) {
-    const declaration = declaredPacks.find((pack) => pack.name === packName);
-    const physical = physicalPacks.has(packName);
-    const declared = declaredNames.has(packName);
-    if (physical && !declared) unresolved.add(`Undeclared pack directory: ${packName}`);
-    if (declared && !physical) unresolved.add(`Declared pack is missing physical directory: ${packName}`);
+  const claimedDirectories = new Set<string>();
+  for (const declaration of declaredPacks.sort((left, right) => compareOrdinal(left.name, right.name))) {
+    const physicalDirectory = packNameFromPath(declaration.path) || declaration.name;
+    claimedDirectories.add(physicalDirectory);
+    const physical = physicalPacks.has(physicalDirectory);
+    if (!physical) {
+      unresolved.add(
+        `Declared pack is missing physical directory: ${declaration.name} (${physicalDirectory})`,
+      );
+    }
     rows.push({
-      uuid: `Pack.${packName}`,
-      pack: packName,
-      label: declaration?.label ?? "",
-      type: declaration?.type ?? "",
-      path: declaration?.path ?? `packs/${packName}`,
-      declared,
+      uuid: `Pack.${declaration.name}`,
+      pack: declaration.name,
+      label: declaration.label,
+      type: declaration.type,
+      path: declaration.path,
+      physicalDirectory,
+      declared: true,
       physical,
-      sampleInspected: packName === "Adventure-BxzlyiYWyXYyz9XI",
+      sampleInspected: false,
+      ...(isAdventureSample(declaration.name, physicalDirectory)
+        ? { sampleInspectionStatus: "pending-record-inspection" }
+        : {}),
+      modified: false,
+    });
+  }
+  for (const physicalDirectory of [...physicalPacks].sort(compareOrdinal)) {
+    if (claimedDirectories.has(physicalDirectory)) continue;
+    unresolved.add(`Undeclared pack directory: ${physicalDirectory}`);
+    rows.push({
+      uuid: `Pack.${physicalDirectory}`,
+      pack: physicalDirectory,
+      label: "",
+      type: "",
+      path: `packs/${physicalDirectory}`,
+      physicalDirectory,
+      declared: false,
+      physical: true,
+      sampleInspected: false,
+      ...(isAdventureSample(physicalDirectory, physicalDirectory)
+        ? { sampleInspectionStatus: "pending-record-inspection" }
+        : {}),
       modified: false,
     });
   }
@@ -711,7 +774,11 @@ function collectAssets(
 ): Array<Record<string, unknown>> {
   const referenced = new Set<string>();
   for (const document of documents) {
-    const assetSource = document.collection === "users"
+    const secretSetting = document.collection === "settings"
+      && isSecretSettingKey(stringValue(document.value.key) ?? document.id);
+    const assetSource = secretSetting
+      ? {}
+      : document.collection === "users"
       ? { avatar: document.value.avatar }
       : document.value;
     for (const path of collectAssetPaths(assetSource)) referenced.add(normalizeAssetReference(path));
@@ -807,7 +874,8 @@ function estimateGpuRisk(scene: Record<string, unknown>): string {
 
 function collectAssetPaths(value: unknown): string[] {
   const paths = new Set<string>();
-  visitStrings(value, (text) => {
+  visitStrings(value, "", (fieldPath, text) => {
+    if (isSensitiveFieldPath(fieldPath)) return;
     for (const candidate of text.split(/[\s"'()<>]+/)) {
       const cleaned = candidate.replace(/[),.;]+$/, "");
       if (ASSET_EXTENSION.test(cleaned)) paths.add(cleaned);
@@ -860,7 +928,12 @@ function readDeclaredPacks(snapshotWorldRoot: string): Array<{
 }
 
 function packNameFromPath(path: string): string {
-  return normalizePath(path).split("/").filter(Boolean).at(-1) ?? "";
+  return normalizePath(path).replace(/\/+$/, "").split("/").filter(Boolean).at(-1) ?? "";
+}
+
+function isAdventureSample(logicalName: string, physicalDirectory: string): boolean {
+  return logicalName === "Adventure-BxzlyiYWyXYyz9XI"
+    || physicalDirectory === "Adventure-BxzlyiYWyXYyz9XI";
 }
 
 function joinPath(root: string, child: string): string {
@@ -898,17 +971,39 @@ function nestedString(value: Record<string, unknown>, path: string[]): string | 
   return stringValue(current);
 }
 
-function visitStrings(value: unknown, visit: (value: string) => void): void {
+function visitStrings(
+  value: unknown,
+  path: string,
+  visit: (fieldPath: string, value: string) => void,
+): void {
   if (typeof value === "string") {
-    visit(value);
+    visit(path, value);
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry) => visitStrings(entry, visit));
+    value.forEach((entry, index) => visitStrings(entry, `${path}[${index}]`, visit));
     return;
   }
   if (!isRecord(value)) return;
-  Object.values(value).forEach((entry) => visitStrings(entry, visit));
+  for (const [key, entry] of Object.entries(value)) {
+    visitStrings(entry, path ? `${path}.${key}` : key, visit);
+  }
+}
+
+function parseModuleConfiguration(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) return value;
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function serializedByteSize(value: unknown): number {
+  const serialized = typeof value === "string" ? value : JSON.stringify(value) ?? "";
+  return Buffer.byteLength(serialized, "utf8");
 }
 
 function sortRecord(
@@ -978,12 +1073,24 @@ function titleCase(value: string): string {
 
 function decodeBasicEntities(value: string): string {
   return value
+    .replace(/&#x([0-9a-f]+);/gi, (match, digits: string) => decodeNumericEntity(match, digits, 16))
+    .replace(/&#([0-9]+);/g, (match, digits: string) => decodeNumericEntity(match, digits, 10))
     .replace(/&nbsp;|&#160;/gi, " ")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, "\"")
     .replace(/&#39;|&apos;/gi, "'");
+}
+
+function decodeNumericEntity(match: string, digits: string, radix: number): string {
+  const codePoint = Number.parseInt(digits, radix);
+  if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return match;
+  try {
+    return String.fromCodePoint(codePoint);
+  } catch {
+    return match;
+  }
 }
 
 function compareRecords(left: LevelRecord, right: LevelRecord): number {

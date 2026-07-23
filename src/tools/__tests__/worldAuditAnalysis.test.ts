@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { analyzeWorld } from "../world-audit/inventory";
@@ -403,6 +403,8 @@ test("labels journal text after stripping HTML", () => {
         { _id: "P2", type: "text", text: { content: "<strong>English</strong>" } },
         { _id: "P3", type: "text", text: { content: "<p>&nbsp;</p>" } },
         { _id: "P4", type: "text", text: { content: "<p>123 !!!</p>" } },
+        { _id: "P5", type: "text", text: { content: "<p>&#20013;&#25991;</p>" } },
+        { _id: "P6", type: "text", text: { content: "<p>&#x4E2D;&#x6587;</p>" } },
       ],
     }),
   ];
@@ -414,7 +416,135 @@ test("labels journal text after stripping HTML", () => {
     "Latin-only",
     "no-text",
     "other-text",
+    "CJK-present",
+    "CJK-present",
   ]);
+});
+
+test("never traverses User authentication data or secret-like fields and Settings values", () => {
+  const records = [
+    top("actors", "abcdefghijklmnop", {
+      _id: "abcdefghijklmnop",
+      name: "Secret Target",
+      ownership: {},
+      items: [],
+      effects: [],
+      flags: {
+        integration: {
+          passwordHash: "@UUID[Actor.A2]",
+          apiKey: "abcdefghijklmnop",
+          sessionCredential: "must-not-leak-session.webp",
+        },
+      },
+    }),
+    top("actors", "A1", { _id: "A1", name: "Bound", ownership: {}, items: [], effects: [] }),
+    top("actors", "A2", { _id: "A2", name: "Hidden", ownership: {}, items: [], effects: [] }),
+    top("users", "U1", {
+      _id: "U1",
+      name: "Player",
+      character: "A1",
+      role: 1,
+      refreshToken: "@UUID[Actor.A2]",
+      passwordHash: "Actor.A2",
+      accessToken: "abcdefghijklmnop",
+      credentials: { apiKey: "must-not-leak-api-key.webp" },
+    }),
+    top("settings", "SECRET", {
+      _id: "SECRET",
+      key: "integration.apiKey",
+      name: "Chapter 99 must-not-leak-setting-name",
+      value: JSON.stringify({
+        token: "@UUID[Actor.A2]",
+        password: "abcdefghijklmnop",
+        secret: "must-not-leak-setting.webp",
+      }),
+    }),
+    top("settings", "UNKNOWN", {
+      _id: "UNKNOWN",
+      key: "integration.displayMode",
+      value: { mode: "compact", retries: 2 },
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const serialized = JSON.stringify(analysis);
+
+  expect(analysis.references).toContainEqual(expect.objectContaining({
+    sourceUuid: "User.U1",
+    targetUuid: "Actor.A1",
+    evidence: "structured-field",
+    fieldPath: "character",
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    targetUuid: "Actor.A2",
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    targetUuid: "Actor.abcdefghijklmnop",
+  }));
+  expect(analysis.references).not.toContainEqual(expect.objectContaining({
+    targetUuid: "Unresolved.abcdefghijklmnop",
+  }));
+  expect(analysis.settingsAndModules).toContainEqual(expect.objectContaining({
+    id: "UNKNOWN",
+    key: "integration.displayMode",
+    valueType: "object",
+    valueSize: expect.any(Number),
+  }));
+  expect(analysis.chapters).toContainEqual(expect.objectContaining({
+    documentUuid: "Setting.SECRET",
+    category: "unclassified",
+    chapterLabels: [],
+    confidence: "none",
+  }));
+  for (const secret of [
+    "must-not-leak",
+    "@UUID[Actor.A2]",
+    "integration.apiKey",
+    "refreshToken",
+    "passwordHash",
+    "accessToken",
+  ]) {
+    expect(serialized).not.toContain(secret);
+  }
+});
+
+test("validates complete UUID spans without truncating invalid wrappers or suffixes", () => {
+  const records = [
+    top("actors", "A1", {
+      _id: "A1",
+      name: "Embedded Owner",
+      ownership: {},
+      items: [{ _id: "I1", name: "Embedded Item", effects: [] }],
+      effects: [],
+    }),
+    top("actors", "A2", { _id: "A2", name: "Target", ownership: {}, items: [], effects: [] }),
+    top("journal", "J1", {
+      _id: "J1",
+      name: "UUID controls",
+      pages: [
+        { _id: "VALID", text: { content: "@UUID[Actor.A2]" } },
+        { _id: "BAD_WRAPPED", text: { content: "@UUID[Actor.A2.invalid]" } },
+        { _id: "BAD_PLAIN_WRAPPED", text: { content: "UUID[Actor.A2.invalid]" } },
+        { _id: "BAD_SUFFIX", text: { content: "Actor.A2.backup" } },
+        { _id: "EMBEDDED", text: { content: "Actor.A1.Item.I1" } },
+      ],
+    }),
+  ];
+
+  const analysis = analyzeWorld(snapshot(records));
+  const pageEdge = (pageId: string, targetUuid: string) => analysis.references.find(
+    (edge) => edge.sourceUuid === `JournalEntry.J1.JournalEntryPage.${pageId}`
+      && edge.targetUuid === targetUuid,
+  );
+
+  expect(pageEdge("VALID", "Actor.A2")).toMatchObject({ evidence: "uuid-link", verifiedTarget: true });
+  expect(pageEdge("EMBEDDED", "Actor.A1.Item.I1")).toMatchObject({
+    evidence: "uuid-link",
+    verifiedTarget: true,
+  });
+  expect(pageEdge("BAD_WRAPPED", "Actor.A2")).toBeUndefined();
+  expect(pageEdge("BAD_PLAIN_WRAPPED", "Actor.A2")).toBeUndefined();
+  expect(pageEdge("BAD_SUFFIX", "Actor.A2")).toBeUndefined();
 });
 
 test("recognizes Compendium sources, generic Scene Note fields, origins, and Card faces as structured evidence", () => {
@@ -492,40 +622,129 @@ test("recognizes Compendium sources, generic Scene Note fields, origins, and Car
   }));
 });
 
+test("derives active and inactive modules without exposing raw Setting values", () => {
+  const objectAnalysis = analyzeWorld(snapshot([
+    top("settings", "MODULES", {
+      _id: "MODULES",
+      key: "core.moduleConfiguration",
+      value: { beta: false, alpha: true },
+    }),
+  ]));
+  const stringAnalysis = analyzeWorld(snapshot([
+    top("settings", "MODULES_JSON", {
+      _id: "MODULES_JSON",
+      key: "core.moduleConfiguration",
+      value: JSON.stringify({ gamma: true, delta: false }),
+    }),
+  ]));
+
+  expect(objectAnalysis.settingsAndModules).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "alpha", kind: "Module Activation", enabled: true }),
+    expect.objectContaining({ id: "beta", kind: "Module Activation", enabled: false }),
+    expect.objectContaining({
+      id: "module-activation-summary",
+      enabledCount: 1,
+      disabledCount: 1,
+      moduleCount: 2,
+    }),
+  ]));
+  expect(stringAnalysis.settingsAndModules).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "delta", enabled: false }),
+    expect.objectContaining({ id: "gamma", enabled: true }),
+  ]));
+  expect(JSON.stringify(objectAnalysis.settingsAndModules)).not.toContain('"value"');
+  expect(JSON.stringify(stringAnalysis.settingsAndModules)).not.toContain('{"gamma":true');
+});
+
+test("matches physical pack directories by manifest path while preserving the logical name", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-analysis-"));
+  try {
+    await mkdir(join(root, "packs", "storage-dir"), { recursive: true });
+    await writeFile(join(root, "world.json"), JSON.stringify({
+      packs: [{ name: "logical-pack", label: "Logical", path: "packs/storage-dir", type: "Item" }],
+    }));
+
+    const analysis = analyzeWorld(snapshot([], [
+      tree("world.json"),
+      tree("packs/storage-dir/000001.ldb"),
+    ], root));
+
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "logical-pack",
+      physicalDirectory: "storage-dir",
+      declared: true,
+      physical: true,
+    }));
+    expect(analysis.unresolved).not.toContainEqual(expect.stringMatching(/logical-pack|storage-dir/i));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("does not claim the named Adventure sample was inspected when it has no records", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-analysis-"));
+  try {
+    await mkdir(join(root, "packs", "Adventure-BxzlyiYWyXYyz9XI"), { recursive: true });
+    await writeFile(join(root, "world.json"), JSON.stringify({
+      packs: [{
+        name: "Adventure-BxzlyiYWyXYyz9XI",
+        path: "packs/Adventure-BxzlyiYWyXYyz9XI",
+        type: "Adventure",
+      }],
+    }));
+
+    const analysis = analyzeWorld(snapshot([], [tree("world.json")], root));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "Adventure-BxzlyiYWyXYyz9XI",
+      physical: true,
+      sampleInspected: false,
+      sampleInspectionStatus: "pending-record-inspection",
+      modified: false,
+    }));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("reports declared and physical packs and keeps Adventure sample read-only", async () => {
   const root = await mkdtemp(join(tmpdir(), "world-audit-analysis-"));
-  await mkdir(join(root, "packs", "declared-pack"), { recursive: true });
-  await mkdir(join(root, "packs", "undeclared-pack"), { recursive: true });
-  await mkdir(join(root, "packs", "Adventure-BxzlyiYWyXYyz9XI"), { recursive: true });
-  await writeFile(join(root, "world.json"), JSON.stringify({
-    packs: [{ name: "declared-pack", label: "Declared", path: "packs/declared-pack", type: "Item" }],
-  }));
+  try {
+    await mkdir(join(root, "packs", "declared-pack"), { recursive: true });
+    await mkdir(join(root, "packs", "undeclared-pack"), { recursive: true });
+    await mkdir(join(root, "packs", "Adventure-BxzlyiYWyXYyz9XI"), { recursive: true });
+    await writeFile(join(root, "world.json"), JSON.stringify({
+      packs: [{ name: "declared-pack", label: "Declared", path: "packs/declared-pack", type: "Item" }],
+    }));
 
-  const analysis = analyzeWorld(snapshot(
-    [top("adventures", "BxzlyiYWyXYyz9XI", { _id: "BxzlyiYWyXYyz9XI", name: "Sample" })],
-    [
-      tree("world.json"),
-      tree("packs/declared-pack/000001.ldb"),
-      tree("packs/undeclared-pack/000001.ldb"),
-      tree("packs/Adventure-BxzlyiYWyXYyz9XI/000001.ldb"),
-    ],
-    root,
-  ));
+    const analysis = analyzeWorld(snapshot(
+      [top("adventures", "BxzlyiYWyXYyz9XI", { _id: "BxzlyiYWyXYyz9XI", name: "Sample" })],
+      [
+        tree("world.json"),
+        tree("packs/declared-pack/000001.ldb"),
+        tree("packs/undeclared-pack/000001.ldb"),
+        tree("packs/Adventure-BxzlyiYWyXYyz9XI/000001.ldb"),
+      ],
+      root,
+    ));
 
-  expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
-    pack: "declared-pack",
-    declared: true,
-    physical: true,
-  }));
-  expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
-    pack: "undeclared-pack",
-    declared: false,
-    physical: true,
-  }));
-  expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
-    pack: "Adventure-BxzlyiYWyXYyz9XI",
-    sampleInspected: true,
-    modified: false,
-  }));
-  expect(analysis.unresolved).toContainEqual(expect.stringMatching(/undeclared pack directory.*undeclared-pack/i));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "declared-pack",
+      declared: true,
+      physical: true,
+    }));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "undeclared-pack",
+      declared: false,
+      physical: true,
+    }));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "Adventure-BxzlyiYWyXYyz9XI",
+      sampleInspected: false,
+      sampleInspectionStatus: "pending-record-inspection",
+      modified: false,
+    }));
+    expect(analysis.unresolved).toContainEqual(expect.stringMatching(/undeclared pack directory.*undeclared-pack/i));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
