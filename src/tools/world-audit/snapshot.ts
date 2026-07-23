@@ -117,10 +117,10 @@ export async function createWorldSnapshot(
   await assertNoLinksOrReparsePoints(sourceWorldRoot);
   await assertWindowsReparsePointFree(sourceWorldRoot);
   await assertExpectedWorldMetadata(sourceWorldRoot, options);
+  const collections = await findLiveCollections(sourceWorldRoot);
   await mkdir(dirname(snapshotWorldRoot), { recursive: true });
   const stagingWorldRoot = await mkdtemp(join(dirname(snapshotWorldRoot), `.world-audit-${basename(snapshotWorldRoot)}-`));
 
-  const collections = await findLiveCollections(sourceWorldRoot);
   const lockPaths = collections.map((collection) => join(sourceWorldRoot, "data", collection, "LOCK"));
   let sourceBefore: Awaited<ReturnType<typeof hashTree>> | undefined;
   let sourceAfter: Awaited<ReturnType<typeof hashTree>> | undefined;

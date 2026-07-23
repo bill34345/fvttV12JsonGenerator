@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { lstat, mkdtemp, mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -224,6 +224,17 @@ test("fails closed when a live collection has no LOCK file", async () => {
 
   await expect(createWorldSnapshot(snapshotOptions(source, snapshot), async () => [])).rejects.toMatchObject({ code: "ENOENT" });
   await expect(lstat(snapshot)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("does not leave owned staging when live collection discovery fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const source = await createWorld(root);
+  const snapshot = join(root, "snapshot");
+  await rm(join(source, "data"), { recursive: true, force: true });
+
+  await expect(createWorldSnapshot(snapshotOptions(source, snapshot), async () => [])).rejects.toMatchObject({ code: "ENOENT" });
+
+  expect((await readdir(root)).filter((name) => name.startsWith(".world-audit-snapshot-")).length).toBe(0);
 });
 
 test("does not treat backup collection directories as live databases", async () => {
