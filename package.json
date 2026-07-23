@@ -23,6 +23,7 @@
     "verify:actor": "bun run src/tools/actorVerification.ts",
     "verify:intake": "bun run src/tools/intakeVerification.ts",
     "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
+    "audit:world-footprint": "bun run src/tools/worldFootprintAudit.ts --world-root \".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn\" --app-root \".local/foundry-v14/app/14.364\" --output-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724\" --snapshot-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724/snapshot\"",
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all",
     "foundry:lab": "bun run scripts/foundry-lab/cli.ts",
     "test:foundry-lab": "bun test scripts/foundry-lab/__tests__",
