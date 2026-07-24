@@ -399,8 +399,8 @@ export function createTrackedSummaryProjection(
       confidence: confidenceCounts,
     },
     packaging: {
-      adventureRows: analysis.compendiumsAndAdventures.filter((row) => row.kind === "Adventure").length,
-      compendiumRows: analysis.compendiumsAndAdventures.filter((row) => row.kind !== "Adventure").length,
+      adventureRows: analysis.compendiumsAndAdventures.filter((row) => row.type === "Adventure").length,
+      compendiumRows: analysis.compendiumsAndAdventures.filter((row) => row.type !== "Adventure").length,
     },
     performance: {
       baselineStatus: baseline.status,
@@ -628,7 +628,7 @@ Journal 共 ${summary.journals.total} 个，页面 ${summary.journals.pages} 个
 
 ## 8. 性能层与基线
 
-基线状态：\`${summary.performance.baselineStatus}\`。性能判断分为四层：磁盘体量、客户端初始化、活动 Scene 的 Canvas/GPU 负担、持续运行期间的累积风险。静态体量不能替代 Task 4 的冷启动和运行时采样。
+基线状态：\`${summary.performance.baselineStatus}\`。性能判断分为四层：磁盘体量、客户端初始化、活动 Scene 的 Canvas/GPU 负担、持续运行期间的累积风险。静态体量不能替代 Task 6 的冷启动和运行时采样。
 
 ## 9. 决策优先级
 

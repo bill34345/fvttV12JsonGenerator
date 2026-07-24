@@ -97,9 +97,38 @@ async function createFixtureRoot(): Promise<{
       coreVersion: "14.364",
       system: "dnd5e",
       systemVersion: "5.3.3",
+      packs: [
+        {
+          name: "Adventure-BxzlyiYWyXYyz9XI",
+          label: "Adventure fixture",
+          path: "packs/Adventure-BxzlyiYWyXYyz9XI",
+          type: "Adventure",
+        },
+        {
+          name: "Item-BBcWyzo1SRcrMaD1",
+          label: "Item fixture",
+          path: "packs/Item-BBcWyzo1SRcrMaD1",
+          type: "Item",
+        },
+        {
+          name: "and",
+          label: "Second item fixture",
+          path: "packs/and",
+          type: "Item",
+        },
+      ],
     }, null, 2)}\n`,
     "utf8",
   );
+  for (const pack of [
+    "Adventure-BxzlyiYWyXYyz9XI",
+    "Item-BBcWyzo1SRcrMaD1",
+    "Item-t3wcdnI1LAfKqPlz",
+    "and",
+    "mass-edit-presets-main",
+  ]) {
+    await mkdir(join(worldRoot, "packs", pack), { recursive: true });
+  }
   const worldEvidenceTime = new Date("2026-07-24T01:02:03.000Z");
   await utimes(join(worldRoot, "world.json"), worldEvidenceTime, worldEvidenceTime);
   await mkdir(snapshotDir, { recursive: true });
@@ -108,6 +137,15 @@ async function createFixtureRoot(): Promise<{
     await readFile(join(worldRoot, "world.json"), "utf8"),
     "utf8",
   );
+  for (const pack of [
+    "Adventure-BxzlyiYWyXYyz9XI",
+    "Item-BBcWyzo1SRcrMaD1",
+    "Item-t3wcdnI1LAfKqPlz",
+    "and",
+    "mass-edit-presets-main",
+  ]) {
+    await mkdir(join(snapshotDir, "packs", pack), { recursive: true });
+  }
   await utimes(join(snapshotDir, "world.json"), worldEvidenceTime, worldEvidenceTime);
   await writeFile(
     join(systemRoot, "system.json"),
@@ -334,6 +372,11 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
     expect(summary).toContain("Adventure");
     expect(summary).toContain("Compendium");
     expect(summary).toContain("Module");
+    expect(projection.packaging).toEqual({
+      adventureRows: 1,
+      compendiumRows: 4,
+    });
+    expect(summary).toContain("Task 6");
     expect(summary).toContain("不自动删除");
     expect(projection.collections.map((row) => row.name)).toEqual([
       "actors",
