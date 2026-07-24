@@ -202,8 +202,9 @@ Scene 内嵌项包括：
 - duplicate full identities 为 0；
 - `remoteAccessed=false`；
 - 性能 baseline schema 验证通过，磁盘层为 measured，其他三层为 blocked；
+- 最终真实世界摘要报告 Adventure 1 行、其他 Compendium/pack 4 行，并明确把浏览器冷启动与运行时采样归入 Task 6；
 - 最终工作簿导出后重新导入，16 个 sheet 名称与顺序一致，80,273 个详细行、16 个决策验证范围和 `Keep / Delete / Archive / Restore Reference / Needs Review` 词表均保留；
-- 工作簿公式错误扫描为 0，16 个 sheet preview 全部重新生成；最终文件为 3,395,177 bytes，SHA-256 `5d4502c7956ccbe1c3947769be56fc7cb9e06fbfb51d659b388ac657a108566a`，manifest 精确绑定该文件。
+- 工作簿公式错误扫描为 0，16 个 sheet preview 全部重新生成；最终文件为 3,395,192 bytes，SHA-256 `a2c52128d271628106e95d8e5d91ecf634633ef7f5aa35ca20d0960fc2e31816`，manifest 精确绑定该文件。
 
 人工/语义验收通过：
 
@@ -222,6 +223,7 @@ Scene 内嵌项包括：
 - modern verified UUID 正向控制；
 - sensitive field 和 User 非 character 引用负向控制。
 - Overview 明确显示性能总体 `partial`、磁盘层 `measured`、其余三层 `blocked`、`remoteAccessed=false` 和阻塞原因；
+- Compendiums and Adventures 明细预览保持 5 行，并可见 1 个 Adventure 与其他 4 个 pack；
 - 16 个工作表预览已逐一生成；Overview、详细对象表和 User Decisions 保持可读，决策列仍是受控词表而不是自由清理指令。
 
 仍未完成：
