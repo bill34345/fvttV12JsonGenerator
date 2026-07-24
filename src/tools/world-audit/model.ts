@@ -42,3 +42,7 @@ export interface SnapshotOptions {
   expectedCoreVersion: "14.364";
   expectedSystem: "dnd5e";
 }
+
+export function isWorldSnapshotRecord(record: LevelRecord): boolean {
+  return record.storageScope !== "pack";
+}

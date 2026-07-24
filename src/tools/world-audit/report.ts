@@ -1,5 +1,5 @@
 import { analyzeWorld, type AuditAnalysis } from "./inventory";
-import type { WorldSnapshot } from "./model";
+import { isWorldSnapshotRecord, type WorldSnapshot } from "./model";
 
 export const AUDIT_TARGET = {
   worldId: "cor-cotn",
@@ -461,7 +461,7 @@ export function createAuditValidation(
   snapshot: WorldSnapshot,
   analysis: AuditAnalysis,
 ): AuditValidation {
-  const worldRecords = snapshot.records.filter((record) => record.storageScope !== "pack");
+  const worldRecords = snapshot.records.filter(isWorldSnapshotRecord);
   const collections = [...new Set([
     ...worldRecords.map((record) => record.collection),
     ...Object.keys(snapshot.collectionBytes),
@@ -914,7 +914,8 @@ function validateCanvasGpuMetrics(value: unknown, snapshot: WorldSnapshot): Audi
     throw new Error("Baseline canvasGpu.repeatedWarningCount cannot exceed consoleWarningCount");
   }
   const scene = snapshot.records.find((record) => (
-    record.collection === "scenes"
+    isWorldSnapshotRecord(record)
+    && record.collection === "scenes"
     && record.namespace === "scenes"
     && record.value._id === activeSceneId
   ));

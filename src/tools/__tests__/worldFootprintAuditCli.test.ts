@@ -11,6 +11,7 @@ import {
 import {
   createAuditValidation,
   createTrackedSummaryProjection,
+  validateAuditBaseline,
 } from "../world-audit/report";
 import { analyzeWorld } from "../world-audit/inventory";
 import type { LevelRecord, WorldSnapshot } from "../world-audit/model";
@@ -853,6 +854,46 @@ test("validates pending, partial, and complete baselines against the exact snaps
       },
       blockers: [],
     };
+
+    const packScene = {
+      ...top("scenes", "S1", {
+        _id: "S1",
+        name: "Pack-only scene must not satisfy world baseline",
+        tokens: [{ _id: "PT1" }, { _id: "PT2" }],
+        walls: [{}],
+        lights: [],
+        tiles: [],
+      }),
+      storageScope: "pack" as const,
+      storageRelativePath: "packs/chapter-bundle",
+    };
+    const packOnlySceneSnapshot: WorldSnapshot = {
+      ...fixture.snapshot,
+      records: [
+        ...fixture.snapshot.records.filter((record) => (
+          record.collection !== "scenes" || record.namespace !== "scenes"
+        )),
+        packScene,
+      ],
+    };
+    expect(() => validateAuditBaseline({
+      ...complete,
+      performanceLayers: {
+        ...complete.performanceLayers,
+        canvasGpu: measured({
+          ...canvasMetrics,
+          tokenCount: 2,
+          wallCount: 1,
+        }),
+      },
+    }, packOnlySceneSnapshot)).toThrow(/top-level Scene/i);
+
+    const sameIdPackFirstSnapshot: WorldSnapshot = {
+      ...fixture.snapshot,
+      records: [packScene, ...fixture.snapshot.records],
+    };
+    expect(validateAuditBaseline(complete, sameIdPackFirstSnapshot)
+      .performanceLayers.canvasGpu).toEqual({ status: "measured", metrics: canvasMetrics });
 
     for (const [name, baseline] of Object.entries({ partial, complete })) {
       const baselineFile = join(fixture.root, `${name}.json`);

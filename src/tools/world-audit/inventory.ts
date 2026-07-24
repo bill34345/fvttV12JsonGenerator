@@ -5,7 +5,7 @@ import {
   type ChapterClassification,
   type UsageStatus,
 } from "./classification";
-import type { LevelRecord, TreeEntry, WorldSnapshot } from "./model";
+import { isWorldSnapshotRecord, type LevelRecord, type TreeEntry, type WorldSnapshot } from "./model";
 import {
   extractWorldReferences,
   isSecretSettingKey,
@@ -149,7 +149,7 @@ const ASSET_EXTENSION = /\.(?:apng|avif|bmp|flac|gif|glb|gltf|jpeg|jpg|m4a|mp3|m
 export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
   const unresolved = new Set<string>();
   const graph = buildMaterializedEmbeddedGraph(
-    snapshot.records.filter((record) => record.storageScope !== "pack"),
+    snapshot.records.filter(isWorldSnapshotRecord),
   );
   const materializedRecords = graph.records;
   const topRecords = materializedRecords
