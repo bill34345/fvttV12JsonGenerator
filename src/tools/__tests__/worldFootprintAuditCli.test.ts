@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   parseAuditCliArguments,
   runWorldFootprintAudit,
@@ -532,6 +532,85 @@ test("rejects unknown CLI arguments, wrong pinned versions, and destinations ins
       "utf8",
     );
     await expect(runWorldFootprintAudit(fixture.options, injected)).rejects.toThrow(/Foundry 14\.364/);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("rejects output and snapshot destinations that are ancestors of the source world", async () => {
+  const fixture = await createFixtureRoot();
+  try {
+    let createSnapshotCalls = 0;
+    const injected = {
+      createSnapshot: async () => {
+        createSnapshotCalls += 1;
+        return fixture.snapshot;
+      },
+    };
+    const sourceParent = dirname(fixture.options.worldRoot);
+    const projectLikeAncestor = fixture.root;
+    const worldManifestBefore = await readFile(join(fixture.options.worldRoot, "world.json"), "utf8");
+
+    await expect(runWorldFootprintAudit({
+      ...fixture.options,
+      outputDir: sourceParent,
+    }, injected)).rejects.toThrow(/output.*overlap.*source world/i);
+    await expect(runWorldFootprintAudit({
+      ...fixture.options,
+      outputDir: projectLikeAncestor,
+    }, injected)).rejects.toThrow(/output.*overlap.*source world/i);
+    await expect(runWorldFootprintAudit({
+      ...fixture.options,
+      snapshotDir: sourceParent,
+    }, injected)).rejects.toThrow(/snapshot.*overlap.*source world/i);
+
+    expect(createSnapshotCalls).toBe(0);
+    expect(await readFile(join(fixture.options.worldRoot, "world.json"), "utf8")).toBe(worldManifestBefore);
+    for (const rejectedOutput of [sourceParent, projectLikeAncestor]) {
+      await expect(readFile(join(rejectedOutput, "audit-manifest.json"), "utf8"))
+        .rejects.toMatchObject({ code: "ENOENT" });
+    }
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("rejects a destination whose junction resolves to a source-world ancestor", async () => {
+  if (process.platform !== "win32") return;
+
+  const fixture = await createFixtureRoot();
+  try {
+    const sourceParent = dirname(fixture.options.worldRoot);
+    const junction = join(fixture.root, "physical-source-parent");
+    await symlink(sourceParent, junction, "junction");
+    let createSnapshotCalls = 0;
+
+    await expect(runWorldFootprintAudit({
+      ...fixture.options,
+      outputDir: junction,
+    }, {
+      createSnapshot: async () => {
+        createSnapshotCalls += 1;
+        return fixture.snapshot;
+      },
+    })).rejects.toThrow(/output.*overlap.*source world/i);
+    expect(createSnapshotCalls).toBe(0);
+    await expect(readFile(join(junction, "audit-manifest.json"), "utf8"))
+      .rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("allows sibling evidence with a snapshot nested under the output directory", async () => {
+  const fixture = await createFixtureRoot();
+  try {
+    const manifest = await runWorldFootprintAudit(fixture.options, {
+      createSnapshot: async () => fixture.snapshot,
+    });
+
+    expect(manifest.target.worldId).toBe("cor-cotn");
+    expect((await stat(join(fixture.options.outputDir, "audit-manifest.json"))).isFile()).toBe(true);
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }

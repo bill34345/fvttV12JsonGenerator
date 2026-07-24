@@ -4,6 +4,11 @@ import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm } fr
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { LevelRecord, SnapshotOptions, TreeEntry, WorldSnapshot } from "./model";
+import {
+  normalizePhysicalPathForComparison,
+  physicalPathsOverlap,
+  resolveFuturePhysicalPath,
+} from "./pathSafety";
 
 export type SnapshotCollectionReader = (
   databasePath: string,
@@ -315,25 +320,8 @@ async function assertDistinctPhysicalRoots(sourceWorldRoot: string, snapshotWorl
   const sourcePhysicalRoot = await realpath(sourceWorldRoot);
   const snapshotPhysicalRoot = await resolveFuturePhysicalPath(snapshotWorldRoot);
   assertPathContained(sourcePhysicalRoot, sourcePhysicalRoot, "Source world root");
-  if (pathsOverlap(sourcePhysicalRoot, snapshotPhysicalRoot)) {
+  if (physicalPathsOverlap(sourcePhysicalRoot, snapshotPhysicalRoot)) {
     throw new Error("Snapshot destination must be outside the source world");
-  }
-}
-
-async function resolveFuturePhysicalPath(path: string): Promise<string> {
-  let ancestor = resolve(path);
-  const missingSegments: string[] = [];
-  while (true) {
-    try {
-      const physicalAncestor = await realpath(ancestor);
-      return resolve(physicalAncestor, ...missingSegments.reverse());
-    } catch (error) {
-      if (!isMissingPath(error)) throw error;
-      const parent = dirname(ancestor);
-      if (parent === ancestor) throw error;
-      missingSegments.push(basename(ancestor));
-      ancestor = parent;
-    }
   }
 }
 
@@ -348,7 +336,10 @@ async function assertNoLinksOrReparsePointsAt(path: string, expectedPhysicalPath
     throw new Error(`Symbolic link or reparse point is not permitted: ${path}`);
   }
   const physicalPath = await realpath(path);
-  if (normalizeForComparison(physicalPath) !== normalizeForComparison(expectedPhysicalPath)) {
+  if (
+    normalizePhysicalPathForComparison(physicalPath)
+    !== normalizePhysicalPathForComparison(expectedPhysicalPath)
+  ) {
     throw new Error(`Reparse point changes the physical path: ${path}`);
   }
   if (!stat.isDirectory()) return;
@@ -394,25 +385,12 @@ function isEvidenceOnlyBackup(name: string): boolean {
   return name.includes(".backup-") || name.startsWith("backup-");
 }
 
-function pathsOverlap(left: string, right: string): boolean {
-  const leftNormalized = normalizeForComparison(left);
-  const rightNormalized = normalizeForComparison(right);
-  return leftNormalized === rightNormalized
-    || rightNormalized.startsWith(`${leftNormalized}/`)
-    || leftNormalized.startsWith(`${rightNormalized}/`);
-}
-
 function assertPathContained(root: string, path: string, label: string): void {
   const relativePath = relative(resolve(root), resolve(path));
   if (relativePath === "" || (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`) && !relativePath.startsWith(sep))) {
     return;
   }
   throw new Error(`${label} escapes its allowed root: ${path}`);
-}
-
-function normalizeForComparison(path: string): string {
-  const normalized = resolve(path).split(sep).join("/").replace(/\/+$/, "");
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
 function compareOrdinal(left: string, right: string): number {

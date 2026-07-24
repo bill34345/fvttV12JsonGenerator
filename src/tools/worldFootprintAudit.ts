@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeWorld } from "./world-audit/inventory";
 import type { SnapshotOptions, WorldSnapshot } from "./world-audit/model";
@@ -13,6 +13,7 @@ import {
   type AuditValidation,
   validateAuditBaseline,
 } from "./world-audit/report";
+import { physicalPathsOverlap, resolveFuturePhysicalPath } from "./world-audit/pathSafety";
 import { createWorldSnapshot } from "./world-audit/snapshot";
 
 export interface AuditCliOptions {
@@ -215,29 +216,8 @@ async function assertDestinationOutsideWorld(
 ): Promise<void> {
   const physicalWorld = await realpath(worldRoot);
   const physicalDestination = await resolveFuturePhysicalPath(destination);
-  const rel = relative(physicalWorld, physicalDestination);
-  if (
-    rel === ""
-    || (!rel.startsWith("..") && !rel.startsWith(sep) && !rel.includes(`..${sep}`))
-  ) {
-    throw new Error(`${label} must not be inside the audited source world`);
-  }
-}
-
-async function resolveFuturePhysicalPath(path: string): Promise<string> {
-  let ancestor = resolve(path);
-  const missing: string[] = [];
-  while (true) {
-    try {
-      const physical = await realpath(ancestor);
-      return resolve(physical, ...missing.reverse());
-    } catch (error) {
-      if (!isMissingPath(error)) throw error;
-      const parent = dirname(ancestor);
-      if (parent === ancestor) throw error;
-      missing.push(ancestor.slice(parent.length).replace(/^[\\/]+/, ""));
-      ancestor = parent;
-    }
+  if (physicalPathsOverlap(physicalWorld, physicalDestination)) {
+    throw new Error(`${label} must not be inside or otherwise overlap the audited source world`);
   }
 }
 
