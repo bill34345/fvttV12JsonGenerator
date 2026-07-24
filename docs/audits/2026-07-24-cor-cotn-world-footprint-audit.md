@@ -5,7 +5,7 @@
 
 ## 结论
 
-静态审计已通过机械验证和人工语义抽样，但它不是清理执行，也不是性能基线完成证明。
+静态审计和最终 Excel 决策工作簿已通过机械验证与人工语义抽样。性能基线严格记录为 `partial`：磁盘层已测量，初始化、Canvas/GPU 与持续运行三层因规定的 in-app Browser 不可用而明确阻塞。它不是清理执行，也不是完整运行时性能证明。
 
 最重要的结论是：
 
@@ -13,7 +13,7 @@
 2. 检测到 533 个 Token 指向缺失 Actor，涉及 104 个 Scene 和 44 个缺失 Actor ID；这是当前最高优先级的完整性风险。
 3. 415 个 JournalEntry 包含 734 个 Page。正文分类得到 20 个 mixed 页面、306 个 Latin-only 页面和 408 个 no-text 页面；不能把后两类统称为“英文正文”。
 4. 世界级静态引用还指向 2,289 个在复制世界中缺失的 world-local 素材；另有 1,188 个现存、未检测到引用的 world-local 素材候选。素材清理主要影响磁盘和传输，不能直接等同于降低浏览器堆内存。
-5. 性能基线和最终 Excel 工作簿尚未完成，因此本报告不声明冷启动、Canvas/GPU 或持续运行内存已经测量。
+5. 最终 Excel 工作簿已完成并绑定当前证据；性能基线只完成磁盘层，因此本报告不声明浏览器冷启动、Canvas/GPU 或持续运行内存已经测量。
 
 本次没有删除、归档、迁移或修改任何世界文档、资产、Setting、用户记录或 Compendium。
 
@@ -22,6 +22,8 @@
 - 原世界在审计前已停止：项目本地端口无监听，未发现指向 exact `server-mirror` 的 Foundry 进程。
 - CLI 持有原世界全部集合的 `LOCK` 文件，只复制快照；ClassicLevel 仅打开经过哈希验证的快照。
 - 原世界复制前后树哈希一致。
+- 第一次临时运行因监听到 `::` 而被主动拒绝；仅停止该次自有 PID，并从原世界重新创建内容一致副本。验收运行只监听 `127.0.0.1:30002`，结束后自有 PID 已停止且端口已释放。
+- 原世界树和 `options.json` 在临时运行前后哈希不变；临时运行没有修改原世界、认证、用户或密码。
 - manifest 最后发布，列出的 7 个证据文件全部通过独立 SHA-256 复核。
 - `remoteAccessed=false`；没有访问远程 `8080`、`51020` 或其他生产实例。
 - 玩家姓名、Journal 正文、Macro 源码、密码、认证字段和秘密未进入本 tracked 报告。
@@ -30,7 +32,7 @@
 
 ## 世界体量
 
-完整复制世界树为 824,483,516 bytes。主要 LevelDB 集合如下：
+完整复制世界树为 1,824,483,516 bytes。主要 LevelDB 集合如下：
 
 | 集合 | 顶层文档 | 内嵌文档 | 数据库 bytes |
 | --- | ---: | ---: | ---: |
@@ -179,14 +181,14 @@ Scene 内嵌项包括：
 
 ## 性能基线状态
 
-当前状态是 `pending-runtime-sampling`。四层均未完成：
+当前状态是 `partial`，没有用服务端启动成功替代浏览器层验收：
 
-1. 磁盘层：尚未记录可比较的 snapshot copy duration；
-2. 初始化层：尚未测量 HTTP ready、world ready、网络字节和浏览器内存；
-3. Canvas/GPU 层：尚未在固定活动 Scene 上采样；
-4. 持续运行层：尚未完成 idle 与固定短序列采样。
+1. 磁盘层 `measured`：源树与快照均为 1,824,483,516 bytes；受 LOCK 保护、哈希核验的内容一致复制耗时 5,345.705 ms。
+2. 初始化层 `blocked`：隔离副本上的 Foundry `14.364` / dnd5e `5.3.3` 已在 `127.0.0.1:30002` 返回 HTTP 200，日志显示目标临时世界完成加载；但规定的 in-app Browser 后端返回不可用且浏览器清单为空，因此没有取得浏览器导航、响应聚合、网络字节或浏览器内存字段，本层不升级为 measured。
+3. Canvas/GPU 层 `blocked`：无法通过规定浏览器进入已认证活动 Scene，因此没有 Canvas/GPU 样本。
+4. 持续运行层 `blocked`：无法执行固定 idle 区间与短操作序列，因此没有持续运行样本，也不作长会话结论。
 
-数据库字节、文档数量和 Scene 复杂度只是静态体量，不能替代浏览器性能结论。后续基线必须在内容一致的临时世界副本上完成，不能运行或修改原始 `cor-cotn`。
+没有改用其他浏览器，没有重置认证、用户或密码，也没有访问远程实例。数据库字节、文档数量、Scene 复杂度与服务端 Working Set 只能描述静态体量或服务端进程，不能替代浏览器性能结论。后续补测仍必须使用内容一致的临时世界副本，不能运行或修改原始 `cor-cotn`。
 
 ## 验收层级
 
@@ -198,7 +200,10 @@ Scene 内嵌项包括：
 - 原世界复制前后树哈希一致；
 - 顶层和内嵌 key 数量与真实 LevelDB namespaces 对账；
 - duplicate full identities 为 0；
-- `remoteAccessed=false`。
+- `remoteAccessed=false`；
+- 性能 baseline schema 验证通过，磁盘层为 measured，其他三层为 blocked；
+- 最终工作簿导出后重新导入，16 个 sheet 名称与顺序一致，80,273 个详细行、16 个决策验证范围和 `Keep / Delete / Archive / Restore Reference / Needs Review` 词表均保留；
+- 工作簿公式错误扫描为 0，16 个 sheet preview 全部重新生成；最终文件为 3,395,177 bytes，SHA-256 `5d4502c7956ccbe1c3947769be56fc7cb9e06fbfb51d659b388ac657a108566a`，manifest 精确绑定该文件。
 
 人工/语义验收通过：
 
@@ -216,11 +221,12 @@ Scene 内嵌项包括：
 - legacy links raw unique edges 与报告 274/274 对账；
 - modern verified UUID 正向控制；
 - sensitive field 和 User 非 character 引用负向控制。
+- Overview 明确显示性能总体 `partial`、磁盘层 `measured`、其余三层 `blocked`、`remoteAccessed=false` 和阻塞原因；
+- 16 个工作表预览已逐一生成；Overview、详细对象表和 User Decisions 保持可读，决策列仍是受控词表而不是自由清理指令。
 
 仍未完成：
 
-- 最终 16-sheet Excel 工作簿；
-- 四层本地性能基线；
+- 初始化、Canvas/GPU 与持续运行三层浏览器性能采样；
 - 任何清理、修复、归档、章节打包或生产操作。
 
 ## 决策顺序
@@ -228,7 +234,7 @@ Scene 内嵌项包括：
 1. 先复核 533 条 broken Token/Actor rows 和 orphan embedded records；
 2. 再人工检查 2 个 Actor 候选，决定 Keep、Archive、Delete 或 Needs Review；
 3. 单独处理 2,289 个缺失素材引用和 1,188 个未引用素材候选；
-4. 完成内容一致临时世界的四层性能基线；
+4. 在 in-app Browser 可用时补完内容一致临时世界的三层浏览器性能采样；
 5. 最后再决定章节 Adventure / Compendium / Module 的实际迁移方案。
 
 本报告不替用户填写任何删除决定。
