@@ -71,6 +71,11 @@ interface FoundryWorldMetadata {
   system?: unknown;
 }
 
+interface LivePackDatabase {
+  physicalDirectory: string;
+  relativePath: string;
+}
+
 export function parseFoundryLevelKey(collection: string, key: string): Omit<LevelRecord, "value"> {
   const [prefix, namespace, idPath, ...extra] = key.split("!");
   if (prefix !== "" || !namespace || !idPath || extra.length > 0) {
@@ -123,10 +128,14 @@ export async function createWorldSnapshot(
   await assertWindowsReparsePointFree(sourceWorldRoot);
   await assertExpectedWorldMetadata(sourceWorldRoot, options);
   const collections = await findLiveCollections(sourceWorldRoot);
+  const packDatabases = await findLivePackDatabases(sourceWorldRoot);
   await mkdir(dirname(snapshotWorldRoot), { recursive: true });
   const stagingWorldRoot = await mkdtemp(join(dirname(snapshotWorldRoot), `.world-audit-${basename(snapshotWorldRoot)}-`));
 
-  const lockPaths = collections.map((collection) => join(sourceWorldRoot, "data", collection, "LOCK"));
+  const lockPaths = [
+    ...collections.map((collection) => join(sourceWorldRoot, "data", collection, "LOCK")),
+    ...packDatabases.map((pack) => join(sourceWorldRoot, "packs", pack.physicalDirectory, "LOCK")),
+  ];
   let sourceBefore: Awaited<ReturnType<typeof hashTree>> | undefined;
   let sourceAfter: Awaited<ReturnType<typeof hashTree>> | undefined;
   let snapshotTree: Awaited<ReturnType<typeof hashTree>> | undefined;
@@ -180,13 +189,47 @@ export async function createWorldSnapshot(
       throw new Error("Unable to create a complete world snapshot");
     }
     const records: LevelRecord[] = [];
+    const openedCollections: NonNullable<WorldSnapshot["openedCollections"]> = [];
     for (const collection of collections) {
       const databasePath = join(stagingWorldRoot, "data", collection);
       assertPathContained(stagingWorldRoot, databasePath, "Snapshot database path");
       const collectionRecords = await reader(databasePath, options.classicLevelEntry);
       for (const { key, value } of collectionRecords) {
-        records.push({ ...parseFoundryLevelKey(collection, key), value });
+        records.push({
+          ...parseFoundryLevelKey(collection, key),
+          value,
+          storageScope: "world",
+          storageRelativePath: `data/${collection}`,
+        });
       }
+      openedCollections.push({
+        scope: "world",
+        relativePath: `data/${collection}`,
+        recordCount: collectionRecords.length,
+        logicalCollections: [collection],
+      });
+    }
+    for (const pack of packDatabases) {
+      const databasePath = join(stagingWorldRoot, "packs", pack.physicalDirectory);
+      assertPathContained(stagingWorldRoot, databasePath, "Snapshot pack database path");
+      const collectionRecords = await reader(databasePath, options.classicLevelEntry);
+      const logicalCollections = new Set<string>();
+      for (const { key, value } of collectionRecords) {
+        const collection = foundryCollectionFromKey(key);
+        logicalCollections.add(collection);
+        records.push({
+          ...parseFoundryLevelKey(collection, key),
+          value,
+          storageScope: "pack",
+          storageRelativePath: pack.relativePath,
+        });
+      }
+      openedCollections.push({
+        scope: "pack",
+        relativePath: pack.relativePath,
+        recordCount: collectionRecords.length,
+        logicalCollections: [...logicalCollections].sort(compareOrdinal),
+      });
     }
     await hooks.beforePromote?.();
     if (guardFailure) throw guardFailure;
@@ -202,6 +245,7 @@ export async function createWorldSnapshot(
       snapshotTree: snapshotTree.entries,
       collectionBytes: calculateCollectionBytes(snapshotTree.entries, collections),
       records,
+      openedCollections,
     };
   } catch (error) {
     if (stagingOwned) {
@@ -370,6 +414,50 @@ async function findLiveCollections(sourceWorldRoot: string): Promise<string[]> {
     .filter((entry) => entry.isDirectory() && !isEvidenceOnlyBackup(entry.name))
     .map((entry) => entry.name)
     .sort(compareOrdinal);
+}
+
+async function findLivePackDatabases(sourceWorldRoot: string): Promise<LivePackDatabase[]> {
+  const packsRoot = join(sourceWorldRoot, "packs");
+  let entries;
+  try {
+    entries = await readdir(packsRoot, { withFileTypes: true });
+  } catch (error) {
+    if (isMissingPath(error)) return [];
+    throw error;
+  }
+  const databases: LivePackDatabase[] = [];
+  for (const entry of entries.sort((left, right) => compareOrdinal(left.name, right.name))) {
+    if (!entry.isDirectory()) continue;
+    const databasePath = join(packsRoot, entry.name);
+    if (
+      await isRegularFile(join(databasePath, "LOCK"))
+      && await isRegularFile(join(databasePath, "CURRENT"))
+    ) {
+      databases.push({
+        physicalDirectory: entry.name,
+        relativePath: `packs/${entry.name}`,
+      });
+    }
+  }
+  return databases;
+}
+
+async function isRegularFile(path: string): Promise<boolean> {
+  try {
+    return (await lstat(path)).isFile();
+  } catch (error) {
+    if (isMissingPath(error)) return false;
+    throw error;
+  }
+}
+
+function foundryCollectionFromKey(key: string): string {
+  const [prefix, namespace] = key.split("!");
+  const collection = namespace?.split(".")[0];
+  if (prefix !== "" || !collection) {
+    throw new Error(`Invalid Foundry LevelDB key in pack: ${key}`);
+  }
+  return collection;
 }
 
 function calculateCollectionBytes(entries: TreeEntry[], collections: string[]): Record<string, number> {

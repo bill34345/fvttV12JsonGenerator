@@ -461,12 +461,13 @@ export function createAuditValidation(
   snapshot: WorldSnapshot,
   analysis: AuditAnalysis,
 ): AuditValidation {
+  const worldRecords = snapshot.records.filter((record) => record.storageScope !== "pack");
   const collections = [...new Set([
-    ...snapshot.records.map((record) => record.collection),
+    ...worldRecords.map((record) => record.collection),
     ...Object.keys(snapshot.collectionBytes),
   ])].sort(compareOrdinal);
   const collectionKeyCrossChecks = collections.map((name) => {
-    const records = snapshot.records.filter((record) => record.collection === name);
+    const records = worldRecords.filter((record) => record.collection === name);
     const topLevel = records.filter((record) => record.namespace === name).length;
     const embedded = records.length - topLevel;
     const hasMismatch = analysis.unresolved.some((entry) => (
@@ -483,7 +484,7 @@ export function createAuditValidation(
 
   const duplicateIds: Array<Record<string, unknown>> = [];
   const ids = new Map<string, number>();
-  for (const record of snapshot.records) {
+  for (const record of worldRecords) {
     const id = record.key.split("!")[2] ?? "";
     const key = `${record.namespace}\0${id}`;
     ids.set(key, (ids.get(key) ?? 0) + 1);
@@ -560,7 +561,9 @@ function createWorkbookSource(
     "Settings and Modules": withDecision(analysis.settingsAndModules),
     "Compendiums and Adventures": withDecision(analysis.compendiumsAndAdventures),
     "Assets": withDecision(analysis.assets),
-    "Chapter Classification": withDecision(analysis.chapters),
+    "Chapter Classification": withDecision(
+      analysis.chapters.map((chapter) => flattenChapterClassification(chapter)),
+    ),
     "User Decisions": withDecision(userDecisions),
   };
   return { allowedUserDecisions: USER_DECISION_VALUES, sheets };
@@ -669,7 +672,52 @@ ${rows}
 }
 
 function withDecision<T extends object>(rows: T[]): Array<Record<string, unknown>> {
-  return rows.map((row) => ({ ...row, "User Decision": "" }));
+  return rows.map((row) => ({ ...flattenNestedChapter(row), "User Decision": "" }));
+}
+
+function flattenNestedChapter<T extends object>(row: T): Record<string, unknown> {
+  const source = row as Record<string, unknown>;
+  if (!isRecord(source.chapter)) return { ...source };
+  const { chapter, ...rest } = source;
+  return {
+    ...rest,
+    chapterCategory: stringValue(chapter.category),
+    chapterLabels: primitiveStringArray(chapter.chapterLabels),
+    chapterConfidence: stringValue(chapter.confidence),
+    chapterEvidenceSummary: summarizeChapterEvidence(chapter.evidence),
+  };
+}
+
+function flattenChapterClassification(
+  chapter: AuditAnalysis["chapters"][number],
+): Record<string, unknown> {
+  return {
+    documentUuid: chapter.documentUuid,
+    chapterCategory: chapter.category,
+    chapterLabels: [...chapter.chapterLabels],
+    chapterConfidence: chapter.confidence,
+    chapterEvidenceSummary: summarizeChapterEvidence(chapter.evidence),
+  };
+}
+
+function summarizeChapterEvidence(value: unknown): string {
+  if (!Array.isArray(value)) return "none";
+  const entries = value
+    .filter(isRecord)
+    .map((entry) => `${stringValue(entry.kind)}=${stringValue(entry.value)}`)
+    .filter((entry) => entry !== "=")
+    .sort(compareOrdinal);
+  if (entries.length === 0) return "none";
+  const limit = 8;
+  return entries.length <= limit
+    ? entries.join(" | ")
+    : `${entries.slice(0, limit).join(" | ")} | +${entries.length - limit} more`;
+}
+
+function primitiveStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
 
 function countRows(
@@ -1085,6 +1133,10 @@ function requireNullableNonNegativeInteger(value: unknown, label: string): numbe
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }
 
 function assertExactRecordKeys(

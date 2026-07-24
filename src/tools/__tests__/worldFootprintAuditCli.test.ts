@@ -283,6 +283,20 @@ async function createFixtureRoot(): Promise<{
     ],
     collectionBytes: { actors: 200, journal: 150, scenes: 125, users: 75 },
     records,
+    openedCollections: [
+      {
+        scope: "pack",
+        relativePath: "packs/Adventure-BxzlyiYWyXYyz9XI",
+        recordCount: 0,
+        logicalCollections: [],
+      },
+      {
+        scope: "pack",
+        relativePath: "packs/Item-BBcWyzo1SRcrMaD1",
+        recordCount: 3,
+        logicalCollections: ["items"],
+      },
+    ],
   };
   return {
     root,
@@ -320,18 +334,45 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
     expect(Object.keys(workbookSource.sheets)).toEqual([...SHEET_NAMES]);
     expect(workbookSource.allowedUserDecisions).toEqual([...DECISIONS]);
     for (const rows of Object.values(workbookSource.sheets)) {
-      for (const row of rows) expect(row["User Decision"]).toBe("");
+      for (const row of rows) {
+        expect(row["User Decision"]).toBe("");
+        for (const value of Object.values(row)) {
+          if (Array.isArray(value)) {
+            expect(value.every((entry) => (
+              entry === null || ["string", "number", "boolean"].includes(typeof entry)
+            ))).toBe(true);
+          } else {
+            expect(value === null || typeof value !== "object").toBe(true);
+          }
+        }
+      }
     }
     expect(workbookSource.sheets["Actors"]).toContainEqual(expect.objectContaining({
       id: "A1",
       noSceneToken: true,
       usageStatuses: expect.arrayContaining(["used-uuid"]),
+      incomingReferenceCount: 1,
+      incomingSourceCount: 1,
+      incomingSourceSample: ["JournalEntry.J1.JournalEntryPage.P1"],
+      incomingEvidence: ["uuid-link"],
+      incomingFieldPathSample: ["text.content"],
+      incomingTruncated: false,
+      completeReferenceScan: true,
+      completeScanEvidence: expect.stringContaining("covered"),
+      candidateReason: expect.stringContaining("not a candidate"),
+      chapterCategory: "unclassified",
+      chapterLabels: [],
+      chapterConfidence: "none",
+      chapterEvidenceSummary: expect.any(String),
     }));
+    expect((workbookSource.sheets["Actors"] ?? []).find((row) => row.id === "A1")).not.toHaveProperty("chapter");
     expect(workbookSource.sheets["Unused Actor Candidates"]).toContainEqual(expect.objectContaining({
       id: "A2",
       referenceEvidence: "no-detected-reference",
       recommendation: "Needs Review",
       risk: expect.stringContaining("static"),
+      completeReferenceScan: true,
+      candidateReason: expect.stringContaining("candidate"),
     }));
     expect(workbookSource.sheets["Unused Actor Candidates"]).not.toContainEqual(expect.objectContaining({
       id: "A1",
@@ -411,6 +452,28 @@ test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 work
         "settings",
         "users",
       ]);
+    expect(workbookSource.sheets["Broken Token Actor Refs"]).toContainEqual(expect.objectContaining({
+      actorId: "MISSING",
+      deltaItemCount: 0,
+      deltaEffectCount: 0,
+      deltaSummary: expect.any(String),
+    }));
+    expect((workbookSource.sheets["Broken Token Actor Refs"] ?? [])[0]).not.toHaveProperty("deltaStructure");
+    expect(workbookSource.sheets["Chapter Classification"]).toContainEqual(expect.objectContaining({
+      documentUuid: "Actor.A1",
+      chapterCategory: "unclassified",
+      chapterLabels: [],
+      chapterConfidence: "none",
+      chapterEvidenceSummary: expect.any(String),
+    }));
+    expect((workbookSource.sheets["Chapter Classification"] ?? [])[0]).not.toHaveProperty("evidence");
+    expect(workbookSource.sheets["Compendiums and Adventures"]).toContainEqual(expect.objectContaining({
+      pack: "Adventure-BxzlyiYWyXYyz9XI",
+      type: "Adventure",
+      sampleInspected: true,
+      sampleRecordCount: 0,
+      sampleInspectionStatus: "inspected-empty",
+    }));
     expect(projection.journals.moduleOwnerCounts).toEqual([
       { label: "calendaria", count: 1 },
       { label: "core", count: 2 },
@@ -496,6 +559,41 @@ test("scopes duplicate embedded IDs by namespace and complete parent chain", () 
       count: 2,
     },
   ]);
+});
+
+test("keeps opened pack records out of world collection validation", () => {
+  const worldActor = top("actors", "A1", { _id: "A1", name: "World actor" });
+  const packActor = {
+    ...top("actors", "A1", { _id: "A1", name: "Pack actor" }),
+    storageScope: "pack" as const,
+    storageRelativePath: "packs/chapter-bundle",
+  };
+  const fixtureSnapshot: WorldSnapshot = {
+    sourceWorldRoot: "I:\\fixture\\source",
+    snapshotWorldRoot: "I:\\fixture\\snapshot",
+    sourceTreeHashBefore: "a".repeat(64),
+    sourceTreeHashAfter: "a".repeat(64),
+    sourceTree: [],
+    snapshotTree: [],
+    collectionBytes: { actors: 1 },
+    records: [worldActor, packActor],
+    openedCollections: [{
+      scope: "pack",
+      relativePath: "packs/chapter-bundle",
+      recordCount: 1,
+      logicalCollections: ["actors"],
+    }],
+  };
+
+  const validation = createAuditValidation(fixtureSnapshot, analyzeWorld(fixtureSnapshot));
+  expect(validation.collectionKeyCrossChecks).toEqual([{
+    name: "actors",
+    levelKeys: 1,
+    topLevel: 1,
+    embedded: 0,
+    matchesParentArrays: true,
+  }]);
+  expect(validation.duplicateIds).toEqual([]);
 });
 
 test("rejects unknown CLI arguments, wrong pinned versions, and destinations inside the source world", async () => {

@@ -166,6 +166,63 @@ test("copies a stopped world without changing source bytes and opens only the co
   expect(await readFile(join(source, "data", "actors", "record.bin"), "utf8")).toBe("unchanged");
 });
 
+test("opens copied pack databases by physical relative path and records empty packs", async () => {
+  const root = await mkdtemp(join(tmpdir(), "world-audit-"));
+  const source = await createWorld(root);
+  const snapshot = join(root, "snapshot");
+  for (const pack of ["chapter-bundle", "shared-items"]) {
+    await mkdir(join(source, "packs", pack), { recursive: true });
+    await writeFile(join(source, "packs", pack, "LOCK"), "");
+    await writeFile(join(source, "packs", pack, "CURRENT"), "MANIFEST-000001\n");
+  }
+  await mkdir(join(source, "packs", "not-a-database"), { recursive: true });
+  await writeFile(join(source, "packs", "not-a-database", "LOCK"), "");
+  await writeFile(join(source, "packs", "not-a-database", "readme.txt"), "not LevelDB");
+
+  const opened: string[] = [];
+  const result = await createWorldSnapshot(snapshotOptions(source, snapshot), async (databasePath) => {
+    opened.push(databasePath);
+    if (databasePath.endsWith(join("packs", "chapter-bundle"))) return [];
+    if (databasePath.endsWith(join("packs", "shared-items"))) {
+      return [{ key: "!items!I1", value: { _id: "I1", name: "Fixture item" } }];
+    }
+    return [{ key: "!actors!A1", value: { _id: "A1", name: "Fixture actor" } }];
+  });
+
+  expect(opened).toHaveLength(3);
+  expect(opened.every((path) => path.includes(".world-audit-snapshot-"))).toBe(true);
+  expect(opened.some((path) => path.includes("not-a-database"))).toBe(false);
+  expect(result.openedCollections).toEqual([
+    {
+      scope: "world",
+      relativePath: "data/actors",
+      recordCount: 1,
+      logicalCollections: ["actors"],
+    },
+    {
+      scope: "pack",
+      relativePath: "packs/chapter-bundle",
+      recordCount: 0,
+      logicalCollections: [],
+    },
+    {
+      scope: "pack",
+      relativePath: "packs/shared-items",
+      recordCount: 1,
+      logicalCollections: ["items"],
+    },
+  ]);
+  expect(result.records).toContainEqual(expect.objectContaining({
+    collection: "items",
+    key: "!items!I1",
+    storageScope: "pack",
+    storageRelativePath: "packs/shared-items",
+  }));
+  expect(result.records).not.toContainEqual(expect.objectContaining({
+    storageRelativePath: "packs/chapter-bundle",
+  }));
+});
+
 test("rejects a snapshot destination inside the source before creating it", async () => {
   const root = await mkdtemp(join(tmpdir(), "world-audit-"));
   const source = join(root, "cor-cotn");

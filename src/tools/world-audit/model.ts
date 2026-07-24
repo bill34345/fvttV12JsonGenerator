@@ -11,6 +11,15 @@ export interface LevelRecord {
   parentIds: string[];
   embeddedPath: string[];
   value: Record<string, unknown>;
+  storageScope?: "world" | "pack";
+  storageRelativePath?: string;
+}
+
+export interface OpenedSnapshotCollection {
+  scope: "world" | "pack";
+  relativePath: string;
+  recordCount: number;
+  logicalCollections: string[];
 }
 
 export interface WorldSnapshot {
@@ -22,6 +31,7 @@ export interface WorldSnapshot {
   snapshotTree: TreeEntry[];
   collectionBytes: Record<string, number>;
   records: LevelRecord[];
+  openedCollections?: OpenedSnapshotCollection[];
 }
 
 export interface SnapshotOptions {

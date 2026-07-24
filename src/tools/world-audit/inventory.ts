@@ -148,7 +148,9 @@ const ASSET_EXTENSION = /\.(?:apng|avif|bmp|flac|gif|glb|gltf|jpeg|jpg|m4a|mp3|m
 
 export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
   const unresolved = new Set<string>();
-  const graph = buildMaterializedEmbeddedGraph(snapshot.records);
+  const graph = buildMaterializedEmbeddedGraph(
+    snapshot.records.filter((record) => record.storageScope !== "pack"),
+  );
   const materializedRecords = graph.records;
   const topRecords = materializedRecords
     .filter((record) => record.namespace === record.collection)
@@ -200,6 +202,8 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
         chapter,
         duplicateNameTarget: referenceExtraction.duplicateNameTargets.has(document.uuid),
       });
+      const incomingSummary = summarizeIncomingActorReferences(incoming);
+      const candidate = statuses.length === 1 && statuses[0] === "no-detected-reference";
       return {
         id: document.id,
         uuid: document.uuid,
@@ -210,6 +214,13 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
         usageStatuses: statuses,
         noSceneToken: !sceneActorIds.has(document.id),
         chapter,
+        ...incomingSummary,
+        completeReferenceScan: true,
+        completeScanEvidence:
+          "covered static scans complete: structured fields, UUID/legacy links, explicit IDs, script/name candidates, Setting strings, Scene Tokens, User bindings, ownership, and duplicate names",
+        candidateReason: candidate
+          ? "candidate: no verified incoming reference, player protection, or duplicate-name ambiguity was detected after the covered static scans; deletion is not decided"
+          : `not a candidate: ${statuses.join(", ")}`,
       };
     })
     .sort(compareRowsByUuid);
@@ -219,12 +230,7 @@ export function analyzeWorld(snapshot: WorldSnapshot): AuditAnalysis {
       const statuses = actor.usageStatuses as UsageStatus[];
       return statuses.length === 1 && statuses[0] === "no-detected-reference";
     })
-    .map((actor) => ({
-      id: actor.id,
-      uuid: actor.uuid,
-      name: actor.name,
-      noSceneToken: actor.noSceneToken,
-    }));
+    .map((actor) => ({ ...actor }));
 
   const journals = topDocuments
     .filter((document) => document.collection === "journal")
@@ -736,6 +742,35 @@ function groupIncomingReferences(references: ReferenceEdge[]): Map<string, Refer
   return grouped;
 }
 
+function summarizeIncomingActorReferences(
+  incoming: ReferenceEdge[],
+): Record<string, unknown> {
+  const sources = [...new Set(incoming.map((edge) => edge.sourceUuid))].sort(compareOrdinal);
+  const evidence = [...new Set(incoming.map((edge) => edge.evidence))].sort(compareOrdinal);
+  const fieldPaths = [...new Set(incoming.map((edge) => edge.fieldPath))].sort(compareOrdinal);
+  const sourceSample = boundedStableSample(sources, 5);
+  const fieldPathSample = boundedStableSample(fieldPaths, 5);
+  return {
+    incomingReferenceCount: incoming.length,
+    incomingSourceCount: sources.length,
+    incomingSourceSample: sourceSample.values,
+    incomingEvidence: evidence,
+    incomingFieldPathSample: fieldPathSample.values,
+    incomingTruncated: sourceSample.truncated || fieldPathSample.truncated,
+  };
+}
+
+function boundedStableSample(
+  values: string[],
+  limit: number,
+): { values: string[]; truncated: boolean } {
+  if (values.length <= limit) return { values, truncated: false };
+  return {
+    values: [...values.slice(0, limit), `+${values.length - limit} more`],
+    truncated: true,
+  };
+}
+
 function actorUsageStatuses(input: {
   incoming: ReferenceEdge[];
   playerProtected: boolean;
@@ -790,7 +825,7 @@ function collectBrokenTokenActorReferences(
         actorLink: Boolean(token.actorLink),
         deltaItemCount: records(delta.items).length,
         deltaEffectCount: records(delta.effects).length,
-        deltaStructure: summarizeStructure(delta),
+        deltaSummary: summarizeStructure(delta),
       });
     }
   }
@@ -994,6 +1029,11 @@ function collectPacksAndAdventures(
   documents: AuditDocument[],
   unresolved: Set<string>,
 ): Array<Record<string, unknown>> {
+  const openedPacks = new Map(
+    (snapshot.openedCollections ?? [])
+      .filter((collection) => collection.scope === "pack")
+      .map((collection) => [normalizedRelativePathKey(collection.relativePath), collection]),
+  );
   const physicalPacks = new Set<string>();
   for (const entry of snapshot.snapshotTree) {
     const normalized = normalizePath(entry.relativePath);
@@ -1014,6 +1054,7 @@ function collectPacksAndAdventures(
     const physicalDirectory = packNameFromPath(declaration.path) || declaration.name;
     claimedDirectories.add(physicalDirectory);
     const physical = physicalPacks.has(physicalDirectory);
+    const opened = openedPacks.get(normalizedRelativePathKey(`packs/${physicalDirectory}`));
     if (!physical) {
       unresolved.add(
         `Declared pack is missing physical directory: ${declaration.name} (${physicalDirectory})`,
@@ -1028,16 +1069,18 @@ function collectPacksAndAdventures(
       physicalDirectory,
       declared: true,
       physical,
-      sampleInspected: false,
-      ...(isAdventureSample(declaration.name, physicalDirectory)
-        ? { sampleInspectionStatus: "pending-record-inspection" }
-        : {}),
+      sampleInspected: opened !== undefined,
+      sampleRecordCount: opened?.recordCount ?? null,
+      sampleInspectionStatus: opened
+        ? opened.recordCount === 0 ? "inspected-empty" : "inspected-records"
+        : "pending-record-inspection",
       modified: false,
     });
   }
   for (const physicalDirectory of [...physicalPacks].sort(compareOrdinal)) {
     if (claimedDirectories.has(physicalDirectory)) continue;
     unresolved.add(`Undeclared pack directory: ${physicalDirectory}`);
+    const opened = openedPacks.get(normalizedRelativePathKey(`packs/${physicalDirectory}`));
     rows.push({
       uuid: `Pack.${physicalDirectory}`,
       pack: physicalDirectory,
@@ -1047,10 +1090,11 @@ function collectPacksAndAdventures(
       physicalDirectory,
       declared: false,
       physical: true,
-      sampleInspected: false,
-      ...(isAdventureSample(physicalDirectory, physicalDirectory)
-        ? { sampleInspectionStatus: "pending-record-inspection" }
-        : {}),
+      sampleInspected: opened !== undefined,
+      sampleRecordCount: opened?.recordCount ?? null,
+      sampleInspectionStatus: opened
+        ? opened.recordCount === 0 ? "inspected-empty" : "inspected-records"
+        : "pending-record-inspection",
       modified: false,
     });
   }
@@ -1229,11 +1273,6 @@ function packNameFromPath(path: string): string {
   return normalizePath(path).replace(/\/+$/, "").split("/").filter(Boolean).at(-1) ?? "";
 }
 
-function isAdventureSample(logicalName: string, physicalDirectory: string): boolean {
-  return logicalName === "Adventure-BxzlyiYWyXYyz9XI"
-    || physicalDirectory === "Adventure-BxzlyiYWyXYyz9XI";
-}
-
 function joinPath(root: string, child: string): string {
   return root.replace(/[\\/]+$/, "") + (root.includes("\\") ? "\\" : "/") + child;
 }
@@ -1248,10 +1287,13 @@ function emptyChapter(documentUuid: string): ChapterClassification {
   };
 }
 
-function summarizeStructure(value: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).sort(([left], [right]) => compareOrdinal(left, right)).map(
-    ([key, entry]) => [key, Array.isArray(entry) ? { kind: "array", count: entry.length } : { kind: describeType(entry) }],
-  ));
+function summarizeStructure(value: Record<string, unknown>): string {
+  const parts = Object.entries(value)
+    .sort(([left], [right]) => compareOrdinal(left, right))
+    .map(([key, entry]) => (
+      Array.isArray(entry) ? `${key}=array(${entry.length})` : `${key}=${describeType(entry)}`
+    ));
+  return parts.length > 0 ? parts.join("; ") : "empty";
 }
 
 function describeType(value: unknown): string {
@@ -1367,6 +1409,10 @@ function isPresent<T>(value: T | undefined): value is T {
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function normalizedRelativePathKey(path: string): string {
+  return normalizePath(path).replace(/\/+$/, "").toLowerCase();
 }
 
 function singular(value: string): string {

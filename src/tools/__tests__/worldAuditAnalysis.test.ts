@@ -239,14 +239,27 @@ test("classifies reference evidence, Actor cleanup status, chapters, language, a
     chapterLabels: ["Chapter 2", "Chapter 3"],
     confidence: "high",
   });
+  expect(actor("A1")).toMatchObject({
+    incomingReferenceCount: 1,
+    incomingSourceCount: 1,
+    incomingSourceSample: ["Scene.S1"],
+    incomingEvidence: ["structured-field"],
+    incomingFieldPathSample: ["tokens[0].actorId"],
+    incomingTruncated: false,
+    completeReferenceScan: true,
+  });
+  expect(String(actor("A1").candidateReason)).toContain("not a candidate");
+  expect(String(actor("A1").completeScanEvidence)).toContain("covered");
   expect(analysis.brokenTokenActorRefs).toEqual([
     expect.objectContaining({
       actorId: "MISSING",
       tokenId: "T2",
       deltaItemCount: 1,
       deltaEffectCount: 1,
+      deltaSummary: expect.stringContaining("items=array(1)"),
     }),
   ]);
+  expect(analysis.brokenTokenActorRefs[0]).not.toHaveProperty("deltaStructure");
   expect(analysis.journalPages[0]?.language).toBe("mixed");
   expect(analysis.unusedActorCandidates).not.toContainEqual(expect.objectContaining({ id: "A3" }));
   expect(analysis.unusedActorCandidates).toContainEqual(expect.objectContaining({ id: "A5" }));
@@ -284,6 +297,47 @@ test("classifies reference evidence, Actor cleanup status, chapters, language, a
     unreferencedCandidate: true,
   }));
   expect(JSON.stringify(analysis)).not.toContain("must-not-leak");
+});
+
+test("bounds Actor incoming evidence samples deterministically without exposing User names", () => {
+  const actor = top("actors", "A1", {
+    _id: "A1",
+    name: "Decision target",
+    ownership: {},
+    items: [],
+    effects: [],
+  });
+  const macros = Array.from({ length: 7 }, (_, index) => top("macros", `M${index + 1}`, {
+    _id: `M${index + 1}`,
+    name: `Macro ${index + 1}`,
+    command: "@UUID[Actor.A1]",
+  }));
+  const analysis = analyzeWorld(snapshot([
+    actor,
+    ...macros,
+    top("users", "U1", {
+      _id: "U1",
+      name: "PLAYER-NAME-MUST-NOT-LEAK-IN-ACTOR-EVIDENCE",
+      role: 1,
+      character: "A1",
+    }),
+  ]));
+  const row = rowById(analysis.actors, "A1");
+
+  expect(row.incomingReferenceCount).toBe(8);
+  expect(row.incomingSourceCount).toBe(8);
+  expect(row.incomingSourceSample).toEqual([
+    "Macro.M1",
+    "Macro.M2",
+    "Macro.M3",
+    "Macro.M4",
+    "Macro.M5",
+    "+3 more",
+  ]);
+  expect(row.incomingEvidence).toEqual(["structured-field", "uuid-link"]);
+  expect(row.incomingFieldPathSample).toEqual(["character", "command"]);
+  expect(row.incomingTruncated).toBe(true);
+  expect(JSON.stringify(row)).not.toContain("PLAYER-NAME-MUST-NOT-LEAK-IN-ACTOR-EVIDENCE");
 });
 
 test("reconstructs Foundry 14 embedded-only namespaces into one deduplicated analysis view", () => {
@@ -1663,23 +1717,78 @@ test("matches physical pack directories by manifest path while preserving the lo
   }
 });
 
-test("does not claim the named Adventure sample was inspected when it has no records", async () => {
+test("reports generic opened pack inspection while leaving non-databases pending", async () => {
   const root = await mkdtemp(join(tmpdir(), "world-audit-analysis-"));
   try {
-    await mkdir(join(root, "packs", "Adventure-BxzlyiYWyXYyz9XI"), { recursive: true });
+    await mkdir(join(root, "packs", "empty-adventure-db"), { recursive: true });
+    await mkdir(join(root, "packs", "nonempty-item-db"), { recursive: true });
+    await mkdir(join(root, "packs", "not-a-database"), { recursive: true });
     await writeFile(join(root, "world.json"), JSON.stringify({
-      packs: [{
-        name: "Adventure-BxzlyiYWyXYyz9XI",
-        path: "packs/Adventure-BxzlyiYWyXYyz9XI",
-        type: "Adventure",
-      }],
+      packs: [
+        {
+          name: "chapter-export",
+          path: "packs/empty-adventure-db",
+          type: "Adventure",
+        },
+        {
+          name: "shared-items",
+          path: "packs/nonempty-item-db",
+          type: "Item",
+        },
+        {
+          name: "documentation-only",
+          path: "packs/not-a-database",
+          type: "JournalEntry",
+        },
+      ],
     }));
 
-    const analysis = analyzeWorld(snapshot([], [tree("world.json")], root));
+    const fixtureSnapshot = snapshot([], [
+      tree("world.json"),
+      tree("packs/empty-adventure-db/LOCK"),
+      tree("packs/nonempty-item-db/LOCK"),
+      tree("packs/not-a-database/readme.txt"),
+    ], root) as WorldSnapshot & {
+      openedCollections: Array<Record<string, unknown>>;
+    };
+    fixtureSnapshot.openedCollections = [
+      {
+        scope: "pack",
+        relativePath: "packs/empty-adventure-db",
+        recordCount: 0,
+        logicalCollections: [],
+      },
+      {
+        scope: "pack",
+        relativePath: "packs/nonempty-item-db",
+        recordCount: 2,
+        logicalCollections: ["items"],
+      },
+    ];
+
+    const analysis = analyzeWorld(fixtureSnapshot);
     expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
-      pack: "Adventure-BxzlyiYWyXYyz9XI",
+      pack: "chapter-export",
+      type: "Adventure",
+      physical: true,
+      sampleInspected: true,
+      sampleRecordCount: 0,
+      sampleInspectionStatus: "inspected-empty",
+      modified: false,
+    }));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "shared-items",
+      type: "Item",
+      sampleInspected: true,
+      sampleRecordCount: 2,
+      sampleInspectionStatus: "inspected-records",
+      modified: false,
+    }));
+    expect(analysis.compendiumsAndAdventures).toContainEqual(expect.objectContaining({
+      pack: "documentation-only",
       physical: true,
       sampleInspected: false,
+      sampleRecordCount: null,
       sampleInspectionStatus: "pending-record-inspection",
       modified: false,
     }));
