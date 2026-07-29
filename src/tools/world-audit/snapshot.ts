@@ -45,6 +45,7 @@ export interface WorldAuditProcessHooks {
 
 export interface SnapshotRuntime {
   acquireStoppedWorldLocks?: (lockPaths: string[]) => Promise<StoppedWorldLockGuard>;
+  promoteSnapshot?: (stagingWorldRoot: string, snapshotWorldRoot: string) => Promise<void>;
 }
 
 export interface StoppedWorldLockGuard {
@@ -233,7 +234,7 @@ export async function createWorldSnapshot(
     }
     await hooks.beforePromote?.();
     if (guardFailure) throw guardFailure;
-    await rename(stagingWorldRoot, snapshotWorldRoot);
+    await (runtime.promoteSnapshot ?? promoteSnapshotWithRetry)(stagingWorldRoot, snapshotWorldRoot);
     stagingOwned = false;
 
     return {
@@ -253,6 +254,34 @@ export async function createWorldSnapshot(
     }
     throw error;
   }
+}
+
+export async function promoteSnapshotWithRetry(
+  stagingWorldRoot: string,
+  snapshotWorldRoot: string,
+  runtime: {
+    rename?: typeof rename;
+    delay?: (milliseconds: number) => Promise<void>;
+    delays?: readonly number[];
+  } = {},
+): Promise<void> {
+  const renameDirectory = runtime.rename ?? rename;
+  const delay = runtime.delay ?? ((milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds)));
+  const delays = runtime.delays ?? [25, 100, 250, 500];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await renameDirectory(stagingWorldRoot, snapshotWorldRoot);
+      return;
+    } catch (error) {
+      if (!isTransientWindowsRenameError(error) || attempt >= delays.length) throw error;
+      await delay(delays[attempt]!);
+    }
+  }
+}
+
+function isTransientWindowsRenameError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  return code === "EPERM" || code === "EACCES";
 }
 
 export async function acquireStoppedWorldLocks(

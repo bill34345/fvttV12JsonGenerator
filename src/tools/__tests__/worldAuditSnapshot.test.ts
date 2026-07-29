@@ -11,6 +11,7 @@ import {
   createWorldSnapshot,
   hashTree,
   parseFoundryLevelKey,
+  promoteSnapshotWithRetry,
 } from "../world-audit/snapshot";
 
 class FakePowerShellProcess extends EventEmitter {
@@ -668,4 +669,34 @@ test("preserves a concurrent foreign destination and removes only owned staging"
 
   expect(await readFile(join(snapshot, "foreign.txt"), "utf8")).toBe("foreign");
   expect((await readdir(root)).filter((name) => name.startsWith(".world-audit-snapshot-")).length).toBe(0);
+});
+
+test("retries bounded transient Windows directory promotion failures", async () => {
+  const attempts: string[] = [];
+  const delays: number[] = [];
+  await promoteSnapshotWithRetry("staging", "snapshot", {
+    rename: async (source, destination) => {
+      attempts.push(`${source}->${destination}`);
+      if (attempts.length < 3) {
+        throw Object.assign(new Error("temporarily locked"), { code: "EPERM" });
+      }
+    },
+    delay: async (milliseconds) => { delays.push(milliseconds); },
+    delays: [10, 20, 30],
+  });
+
+  expect(attempts).toHaveLength(3);
+  expect(delays).toEqual([10, 20]);
+});
+
+test("does not retry a non-transient directory promotion failure", async () => {
+  let attempts = 0;
+  await expect(promoteSnapshotWithRetry("staging", "snapshot", {
+    rename: async () => {
+      attempts += 1;
+      throw Object.assign(new Error("destination exists"), { code: "EEXIST" });
+    },
+    delay: async () => { throw new Error("delay must not run"); },
+  })).rejects.toMatchObject({ code: "EEXIST" });
+  expect(attempts).toBe(1);
 });
