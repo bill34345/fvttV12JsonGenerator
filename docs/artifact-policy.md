@@ -31,7 +31,8 @@ or intermediate processing rather than stable source control evidence.
 - Intermediate Markdown: `obsidian/dnd数据转fvttjson/middle/` and
   `middle-test/`.
 - Root/local output and scratch: `output/`, `output.json`, `temp/`,
-  `temp-items/`, `temp-*`, coverage, build output, and Web job output.
+  `outputs/`, `temp-items/`, `temp-*`, coverage, build output, and Web job
+  output.
 
 These paths are ignored and must not be tracked. Final Actor JSON must still be
 produced in the default vault output by the project CLI/workflow; “disposable”
@@ -84,6 +85,9 @@ sessions, and local runtime data. It is never tracked.
 - `.local/`, local Foundry worlds/modules/data, browser/runtime profiles.
 - cookies, cookie headers, credential/session/private-key paths.
 - crawler storage and authenticated crawl state.
+- authenticated crawl artifacts below
+  `obsidian/dnd数据转fvttjson/crawls/`.
+- remote attachment staging below `.codex-remote-attachments/`.
 - `obsidian/dnd数据转fvttjson/.fvtt-sync-manifest.json`.
 - `.obsidian/workspace.json` and `workspace-mobile.json`.
 - local sync backups and Web job state.

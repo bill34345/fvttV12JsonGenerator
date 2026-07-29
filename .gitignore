@@ -56,9 +56,11 @@ obsidian/dnd数据转fvttjson/.obsidian/workspace-mobile.json
 audits/
 middle/
 tmp-test-*/
+.codex-remote-attachments/
 
 # Temporary generated outputs
 output/
+outputs/
 output.json
 temp/
 temp-items/
@@ -67,6 +69,9 @@ temp-*
 debug-*.ts
 debug-*.js
 test_*.js
+
+# Authenticated crawl source/runtime artifacts
+obsidian/dnd数据转fvttjson/crawls/
 
 # Accidental files
 nul
