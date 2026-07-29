@@ -1,0 +1,26 @@
+.cmg-settings {
+  display: grid;
+  gap: 1rem;
+}
+
+.cmg-settings fieldset {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cmg-settings label {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(8rem, 12rem);
+}
+
+.cmg-settings label:has(input[type="checkbox"]) {
+  display: flex;
+}
+
+.message-header .message-sender .avatar.cmg-avatar-hidden {
+  min-height: 32px;
+  min-width: 32px;
+  visibility: hidden;
+}

@@ -29,6 +29,9 @@
     "test:foundry-lab": "bun test scripts/foundry-lab/__tests__",
     "build:spell-resolver": "bun run scripts/buildSpellResolver.ts",
     "test:spell-resolver": "bun test src/core/spell-resolution src/foundry/monster-spell-resolver",
+    "build:chat-memory-guard": "bun run scripts/buildChatMemoryGuard.ts",
+    "install:chat-memory-guard": "bun run scripts/buildChatMemoryGuard.ts --install",
+    "test:chat-memory-guard": "bun test src/foundry/chat-memory-guard --max-concurrency 4",
     "references": "bun run src/tools/referenceCache.ts"
   },
   "devDependencies": {

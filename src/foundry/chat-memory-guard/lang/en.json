@@ -1,0 +1,23 @@
+{
+  "CMG.Settings.MenuName": "Chat Memory Guard",
+  "CMG.Settings.MenuLabel": "Configure Chat Memory Guard",
+  "CMG.Settings.MenuHint": "Bounds chat-card and avatar-thumbnail retention in this browser without deleting world chat records.",
+  "CMG.Settings.Intro": "GMs manage world defaults. Each player may follow them or override settings only for their browser.",
+  "CMG.Settings.WorldDefaults": "GM World Defaults",
+  "CMG.Settings.WorldGmOnly": "Only a GM can change world defaults.",
+  "CMG.Settings.ClientOverrides": "This Browser's Overrides",
+  "CMG.Settings.FollowWorldDefaults": "Follow world defaults",
+  "CMG.Settings.Enabled": "Enabled",
+  "CMG.Settings.RetainedMessages": "Rendered messages retained (20–200)",
+  "CMG.Settings.AvatarSource": "Speaker avatar source",
+  "CMG.Settings.ImageMode": "Avatar image mode",
+  "CMG.Settings.ThumbnailMaxEdge": "Thumbnail longest edge (48–256 px)",
+  "CMG.Settings.ThumbnailQuality": "WebP quality (40–95)",
+  "CMG.Settings.Save": "Save and apply now",
+  "CMG.Avatar.system": "Current system avatar",
+  "CMG.Avatar.token": "Prefer Token artwork",
+  "CMG.Avatar.actor": "Prefer Actor artwork",
+  "CMG.Avatar.hidden": "Hide avatar",
+  "CMG.ImageMode.original": "Original",
+  "CMG.ImageMode.thumbnail": "Session WebP thumbnail"
+}

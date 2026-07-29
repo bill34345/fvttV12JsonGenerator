@@ -1,0 +1,47 @@
+<section class="cmg-settings">
+  <p>{{localize "CMG.Settings.Intro"}}</p>
+
+  <fieldset {{#unless isGM}}disabled{{/unless}}>
+    <legend>{{localize "CMG.Settings.WorldDefaults"}}</legend>
+    {{#unless isGM}}<p class="hint">{{localize "CMG.Settings.WorldGmOnly"}}</p>{{/unless}}
+    <label><input type="checkbox" name="world.enabled" {{checked world.enabled}}> {{localize "CMG.Settings.Enabled"}}</label>
+    <label>{{localize "CMG.Settings.RetainedMessages"}}
+      <input type="number" name="world.retainedMessages" min="20" max="200" value="{{world.retainedMessages}}">
+    </label>
+    <label>{{localize "CMG.Settings.AvatarSource"}}
+      <select name="world.avatarSource">{{selectOptions avatarSources selected=world.avatarSource localize=true}}</select>
+    </label>
+    <label>{{localize "CMG.Settings.ImageMode"}}
+      <select name="world.imageMode">{{selectOptions imageModes selected=world.imageMode localize=true}}</select>
+    </label>
+    <label>{{localize "CMG.Settings.ThumbnailMaxEdge"}}
+      <input type="number" name="world.thumbnailMaxEdge" min="48" max="256" value="{{world.thumbnailMaxEdge}}">
+    </label>
+    <label>{{localize "CMG.Settings.ThumbnailQuality"}}
+      <input type="number" name="world.thumbnailQuality" min="40" max="95" value="{{world.thumbnailQuality}}">
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "CMG.Settings.ClientOverrides"}}</legend>
+    <label><input type="checkbox" name="client.followWorldDefaults" {{checked client.followWorldDefaults}}>
+      {{localize "CMG.Settings.FollowWorldDefaults"}}
+    </label>
+    <label><input type="checkbox" name="client.enabled" {{checked client.overrides.enabled}}> {{localize "CMG.Settings.Enabled"}}</label>
+    <label>{{localize "CMG.Settings.RetainedMessages"}}
+      <input type="number" name="client.retainedMessages" min="20" max="200" value="{{client.overrides.retainedMessages}}">
+    </label>
+    <label>{{localize "CMG.Settings.AvatarSource"}}
+      <select name="client.avatarSource">{{selectOptions avatarSources selected=client.overrides.avatarSource localize=true}}</select>
+    </label>
+    <label>{{localize "CMG.Settings.ImageMode"}}
+      <select name="client.imageMode">{{selectOptions imageModes selected=client.overrides.imageMode localize=true}}</select>
+    </label>
+    <label>{{localize "CMG.Settings.ThumbnailMaxEdge"}}
+      <input type="number" name="client.thumbnailMaxEdge" min="48" max="256" value="{{client.overrides.thumbnailMaxEdge}}">
+    </label>
+    <label>{{localize "CMG.Settings.ThumbnailQuality"}}
+      <input type="number" name="client.thumbnailQuality" min="40" max="95" value="{{client.overrides.thumbnailQuality}}">
+    </label>
+  </fieldset>
+</section>

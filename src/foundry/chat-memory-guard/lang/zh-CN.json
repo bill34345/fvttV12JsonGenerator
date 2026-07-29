@@ -1,0 +1,23 @@
+{
+  "CMG.Settings.MenuName": "聊天内存保护",
+  "CMG.Settings.MenuLabel": "配置聊天内存保护",
+  "CMG.Settings.MenuHint": "限制当前浏览器中聊天卡片和头像缩略图的保留数量，不删除世界聊天记录。",
+  "CMG.Settings.Intro": "世界默认值由 GM 管理；每位玩家可选择跟随世界设置或只覆盖自己的浏览器。",
+  "CMG.Settings.WorldDefaults": "GM 世界默认值",
+  "CMG.Settings.WorldGmOnly": "只有 GM 可以修改世界默认值。",
+  "CMG.Settings.ClientOverrides": "本浏览器个人覆盖",
+  "CMG.Settings.FollowWorldDefaults": "跟随世界默认值",
+  "CMG.Settings.Enabled": "启用",
+  "CMG.Settings.RetainedMessages": "保留的已渲染消息数（20–200）",
+  "CMG.Settings.AvatarSource": "发言者头像来源",
+  "CMG.Settings.ImageMode": "头像图片模式",
+  "CMG.Settings.ThumbnailMaxEdge": "缩略图最长边（48–256 px）",
+  "CMG.Settings.ThumbnailQuality": "WebP 质量（40–95）",
+  "CMG.Settings.Save": "保存并立即应用",
+  "CMG.Avatar.system": "系统当前头像",
+  "CMG.Avatar.token": "Token 图优先",
+  "CMG.Avatar.actor": "Actor 图优先",
+  "CMG.Avatar.hidden": "隐藏头像",
+  "CMG.ImageMode.original": "原图",
+  "CMG.ImageMode.thumbnail": "会话级 WebP 缩略图"
+}
