@@ -31,6 +31,7 @@ export interface ObsidianSyncOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   excludeInputPaths?: string[];
+  includeInputPaths?: string[];
   forceInputPaths?: string[];
   imageAssets?: ImageAssetOptions;
 }
@@ -141,7 +142,13 @@ export class ObsidianSyncWorkflow {
     result.createdExample = this.ensureExampleFile(examplesDir);
 
     const manifest = this.loadManifest(manifestPath);
-    const markdownFiles = this.collectMarkdownFiles(inputDir, options.excludeInputPaths ?? []);
+    const collectedMarkdownFiles = this.collectMarkdownFiles(inputDir, options.excludeInputPaths ?? []);
+    const includedInputs = options.includeInputPaths
+      ? new Set(options.includeInputPaths.map((path) => this.normalizeForComparison(this.resolvePath(path))))
+      : null;
+    const markdownFiles = includedInputs
+      ? collectedMarkdownFiles.filter((path) => includedInputs.has(this.normalizeForComparison(path)))
+      : collectedMarkdownFiles;
     const forcedInputs = new Set(
       (options.forceInputPaths ?? []).map((path) => this.normalizeForComparison(this.resolvePath(path))),
     );
@@ -249,20 +256,22 @@ export class ObsidianSyncWorkflow {
       }
     }
 
-    for (const [key, entry] of Object.entries(manifest)) {
-      if (seen.has(key)) continue;
-      const staleOutputPath = isAbsolute(entry.output)
-        ? entry.output
-        : resolve(vaultDir, entry.output);
-      if (existsSync(staleOutputPath)) {
-        rmSync(staleOutputPath, { force: true });
+    if (!includedInputs) {
+      for (const [key, entry] of Object.entries(manifest)) {
+        if (seen.has(key)) continue;
+        const staleOutputPath = isAbsolute(entry.output)
+          ? entry.output
+          : resolve(vaultDir, entry.output);
+        if (existsSync(staleOutputPath)) {
+          rmSync(staleOutputPath, { force: true });
+        }
+        manifest[key] = {
+          ...entry,
+          status: 'stale',
+          lastAttemptAt: new Date().toISOString(),
+          lastError: 'source markdown removed',
+        };
       }
-      manifest[key] = {
-        ...entry,
-        status: 'stale',
-        lastAttemptAt: new Date().toISOString(),
-        lastError: 'source markdown removed',
-      };
     }
 
     this.saveManifest(manifestPath, manifest);

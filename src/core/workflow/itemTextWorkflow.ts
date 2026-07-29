@@ -68,6 +68,7 @@ export class ItemTextWorkflow {
           vaultPath: options.vaultPath,
           fvttVersion: options.fvttVersion ?? "12",
           effectProfile: options.effectProfile ?? "core",
+          includeInputPaths: promotedInputPaths,
           forceInputPaths: promotedInputPaths,
         });
 
