@@ -16,9 +16,31 @@ import {
   uninstallSpellResolver,
   verifySpellResolverInstall,
 } from './spellResolver';
+import { patchPlutoniumQuickInsertInstall } from './patchPlutoniumQuickInsert';
+import { buildBloodHunterHomebrew } from './bloodHunterHomebrew';
+import { patchSequencerSpritesheetWorkerInstall } from './patchSequencerSpritesheetWorkers';
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
+if (command === 'patch-sequencer-spritesheet-workers') {
+  const result = await patchSequencerSpritesheetWorkerInstall(createLabConfig(), {
+    apply,
+    restore: args.includes('--restore'),
+  });
+  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  process.exit(0);
+}
+if (command === 'patch-plutonium-quick-insert') {
+  const result = await patchPlutoniumQuickInsertInstall(createLabConfig(), { apply });
+  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  process.exit(0);
+}
+if (command === 'build-blood-hunter-homebrew') {
+  const sourceFile = args.find((arg) => arg.startsWith('--source='))?.slice('--source='.length);
+  const result = await buildBloodHunterHomebrew(createLabConfig(), { apply, sourceFile });
+  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  process.exit(0);
+}
 if (command === 'spell-resolver') {
   const request = parseSpellResolverCliArgs(args);
   const { action } = request;
