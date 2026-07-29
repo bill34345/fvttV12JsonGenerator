@@ -378,6 +378,15 @@ export class ItemParser implements ItemParserStrategy {
 
     const lower = rawType.toLowerCase().trim();
 
+    // source-derived: item metadata uses these accessory labels as the whole
+    // type token, optionally followed by a parenthesized subtype.
+    if (
+      /^(?:饰品|饰物)(?:\s*[（(][^）)]*[）)])?$/.test(lower)
+      || /^accessory(?:\s*\([^)]*\))?$/.test(lower)
+    ) {
+      return 'equipment';
+    }
+
     // Chinese type mappings
     const chineseMap: Record<string, ItemType> = {
       '武器': 'weapon',
@@ -516,7 +525,7 @@ export class ItemParser implements ItemParserStrategy {
     const parts = content.split(/[,，]/).map(p => p.trim());
 
     // Chinese item type keywords
-    const typeKeywords = ['武器', '装备', '护甲', '奇物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container'];
+    const typeKeywords = ['武器', '装备', '护甲', '奇物', '饰品', '饰物', '消耗品', '工具', '弹药', '容器', '魔杖', '权杖', 'rod', 'wand', 'staff', 'weapon', 'equipment', 'armor', 'consumable', 'tool', 'ammunition', 'container', 'accessory'];
 
     // Attunement keywords
     const attunementKeywords = ['需同调', 'require-attunement', 'requires attunement', 'attunement required'];

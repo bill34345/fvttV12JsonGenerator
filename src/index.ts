@@ -9,6 +9,7 @@ import { detectItemRoute } from './core/parser/item-router';
 import { ObsidianSyncWorkflow } from './core/workflow/obsidianSync';
 import { JsonTranslationSyncWorkflow } from './core/workflow/jsonTranslationSync';
 import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
+import { ItemTextWorkflow } from './core/workflow/itemTextWorkflow';
 import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
@@ -84,6 +85,9 @@ function filterStructuredActionsByStage(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+const DEFAULT_VAULT = 'obsidian/dnd数据转fvttjson';
+const DEFAULT_EMIT_DIR = join(DEFAULT_VAULT, 'input');
+
 const program = new Command();
 
 program
@@ -93,7 +97,7 @@ program
   .argument('[input]', 'Input markdown file')
   .option('-o, --output <output>', 'Output JSON file')
   .option('--sync', 'Sync Obsidian vault input folder to output JSON')
-  .option('--vault <path>', 'Obsidian vault path', 'obsidian/dnd数据转fvttjson')
+  .option('--vault <path>', 'Obsidian vault path', DEFAULT_VAULT)
   .option('--clear-backup', 'Clear output_backup folder before sync')
   .option('--translate-json', 'Translate pending JSON files in place')
   .option('--translate-dir <path>', 'Directory for --translate-json', 'data/need_tran')
@@ -103,7 +107,8 @@ program
   .option('--ingest-plaintext <source>', '[legacy rule-based] Split a plain-text creature collection into project markdown files')
   .option('--ingest-plaintext-actors <source>', '[legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
   .option('--ingest-items <source>', 'Split a plain-text item collection into project markdown files')
-  .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', 'obsidian/dnd数据转fvttjson/input')
+  .option('--ingest-items-json <source>', 'Generate project item markdown and Item JSON from a plain-text item collection')
+  .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', DEFAULT_EMIT_DIR)
   .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
@@ -306,11 +311,45 @@ program
         return;
       }
 
+      if (options.ingestItemsJson) {
+        const workflow = new ItemTextWorkflow();
+        const result = await workflow.run({
+          sourcePath: options.ingestItemsJson,
+          vaultPath: options.vault,
+          dryRun: Boolean(options.dryRun),
+          fvttVersion,
+          effectProfile,
+        });
+
+        console.log(`Ingested items from: ${result.ingestion.sourcePath}`);
+        console.log(`Detected items: ${result.ingestion.files.length}`);
+        console.log(`Markdown dir: ${result.ingestion.emitDir}`);
+        console.log(`JSON dir: ${join(options.vault, "output", "items")}`);
+        console.log(`Dry run: ${result.ingestion.dryRun ? 'yes' : 'no'}`);
+
+        for (const file of result.ingestion.files) {
+          console.log(`- ${file.fileName}`);
+        }
+
+        if (result.sync.failures.length > 0) {
+          for (const failure of result.sync.failures) {
+            console.error(`Failed: ${failure.input} -> ${failure.error}`);
+          }
+          process.exit(1);
+        }
+
+        return;
+      }
+
       if (options.ingestItems) {
         const workflow = new ItemsIngestionWorkflow();
+        const emitDirSource = program.getOptionValueSource('emitDir');
+        const itemEmitDir = emitDirSource === 'default'
+          ? join(options.vault, "middle", "items")
+          : options.emitDir;
         const result = await workflow.ingest({
           sourcePath: options.ingestItems,
-          emitDir: options.emitDir,
+          emitDir: itemEmitDir,
           dryRun: Boolean(options.dryRun),
         });
 
