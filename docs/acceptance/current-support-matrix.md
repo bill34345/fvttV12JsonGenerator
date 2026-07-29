@@ -1,7 +1,9 @@
 # Current Support Matrix
 
-**Current as of:** 2026-07-17
+**Current as of:** 2026-07-26
 **Canonical role:** this file is the current support summary. Dated reports remain immutable evidence snapshots; later amendments clarify their present interpretation without erasing earlier failures or narrower passes.
+
+**Current v14 module lock:** MIDI-QOL `14.0.11` + DAE `14.0.12`. Rows below that name MIDI-QOL `14.0.9` describe preserved historical runtime evidence; they have not been silently promoted to `14.0.11` acceptance.
 
 ## Status vocabulary
 

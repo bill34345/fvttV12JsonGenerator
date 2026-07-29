@@ -10,7 +10,7 @@
 | Foundry v13 | dnd5e 4.3.9 | `core`、`modded-v12` | 保留兼容路径 |
 | Foundry v14 | dnd5e 5.3.3 | `core`、`modded-v14` | Actor 核心与最小模组运行验收通过 |
 
-`modded-v14` 锁定 MIDI-QOL 14.0.9 和 DAE 14.0.12。完整生产模组集合仍存在已复现错误，整体兼容性状态是 **Partial**，不能表述为全部通过。详见 [`docs/acceptance/v14-live-runtime-smoke-test.md`](docs/acceptance/v14-live-runtime-smoke-test.md)。
+`modded-v14` 当前锁定 MIDI-QOL 14.0.11 和 DAE 14.0.12；旧的 14.0.9 实机结果保留为历史证据，不能自动升级为 14.0.11 的运行时验收。完整生产模组集合整体兼容性状态仍是 **Partial**。详见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
 
 ## 安装
 
@@ -223,7 +223,7 @@ bun run test:foundry-lab
 - 六个 minimal modded Actor 与来源驱动的 MIDI-QOL OverTime：通过；
 - `cor-cotn` 本地副本的角色卡、豁免聊天卡、Journal、Scene 和 Token 抽样流程：通过；
 - 完整生产模组集合无错误共存：失败，仍为 Partial；
-- 来源驱动的 DAE `isDamaged` 已通过锁定 DAE 14.0.12 + MIDI-QOL 14.0.9 的实机移除与 core 保留对照；独立 Item v14 已通过导入、AC、两项 Activity、倒地、次数、专注及无文件弹框导出回读。经用户授权的真实账号 GoddessFantasy 采集已完成 37 个主题、47 个 statblock 的抓取、生成、47/47 verifier 与扩展语义核验；完整生产模组共存仍为 Partial。当前分层结论见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
+- 来源驱动的 DAE `isDamaged` 已通过 DAE 14.0.12 + MIDI-QOL 14.0.9 的历史实机移除与 core 保留对照；当前生成目标已锁定 MIDI-QOL 14.0.11，但这项旧证据尚未在新版本重新执行。独立 Item v14 已通过导入、AC、两项 Activity、倒地、次数、专注及无文件弹框导出回读。完整生产模组共存仍为 Partial。当前分层结论见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
 
 ## 更多资料
 

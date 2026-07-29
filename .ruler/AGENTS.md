@@ -27,6 +27,13 @@
 - Convert Obsidian NPC/monster markdown into Foundry VTT dnd5e Actor JSON.
 - Supported sources currently include Chinese YAML/Markdown and English bestiary-style markdown.
 
+## Long-Running Project Hardening Program
+
+- For the remediation program started on 2026-07-15, read and maintain `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md` before changing code.
+- Treat that ExecPlan as the authoritative finding ledger, progress record, decision log, evidence index, and cross-session recovery document. Chat summaries, Goal text, memories, and checkpoints are supporting context only.
+- At every stopping point, update the ExecPlan's progress, discoveries, decisions, finding states, verification evidence, and exact remaining work.
+- Do not close a finding until both mechanical verification and semantic acceptance are recorded. Continue to the next authorized milestone without asking for a generic next step; pause only for a material product choice, new authority, irreversible action, credentials, or an external-state dependency.
+
 ## Workflow Layers
 
 - Root instructions cover project-wide gates and route work to the right workflow.
@@ -105,6 +112,15 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
 
 - Workspace root: the directory containing this `AGENTS.md`.
 - All project-relative paths below are relative to the workspace root.
+- Local Foundry v14 application root: `.local/foundry-v14/app/14.364`.
+- Local Foundry v14 server entry: `.local/foundry-v14/app/14.364/main.js`.
+- Local Foundry v14 test data path: `.local/foundry-v14/data/server-mirror`.
+- Local Foundry v14 test modules: `.local/foundry-v14/data/server-mirror/Data/modules`.
+- Local Foundry v14 test systems: `.local/foundry-v14/data/server-mirror/Data/systems`.
+- Local Foundry v14 test worlds: `.local/foundry-v14/data/server-mirror/Data/worlds`.
+- For local Foundry runtime or module work, use the project-local `server-mirror` paths above first; do not rediscover them by scanning the machine unless a listed path is missing or the user asks for a fresh inventory.
+- `C:\Users\Administrator\AppData\Local\FoundryVTT` is the desktop-default data shell on this machine, not the populated project test mirror; as last verified on 2026-07-14, its `Data/modules` contained no installed modules.
+- The project-local mirror is not the production server. Do not inspect or modify production merely because a task refers to "local Foundry", "FVTT", or "mods".
 - Obsidian vault: `obsidian/dnd数据转fvttjson`
 - Default input dir: `obsidian/dnd数据转fvttjson/input`
 - Default output dir: `obsidian/dnd数据转fvttjson/output`

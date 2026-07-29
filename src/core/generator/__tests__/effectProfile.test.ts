@@ -386,7 +386,7 @@ describe('ActorGenerator effect profiles', () => {
     );
   });
 
-  it('modded-v14 converts source-derived midi-qol OverTime to the ActiveEffect change read by MIDI 14.0.9 while core strips it', () => {
+  it('modded-v14 converts source-derived midi-qol OverTime to the ActiveEffect change read by MIDI 14.0.11 while core strips it', () => {
     const effect: MutableTestEffect = {
       name: '流血 (Bleeding)',
       flags: {

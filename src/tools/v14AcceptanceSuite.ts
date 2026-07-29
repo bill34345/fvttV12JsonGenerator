@@ -155,7 +155,7 @@ export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): stri
     '## Module Compatibility',
     '',
     result.effectProfile === 'modded-v14'
-      ? '- MIDI-QOL `14.0.9` and DAE `14.0.12` are the locked v14 module references for generated automation.'
+      ? '- MIDI-QOL `14.0.11` and DAE `14.0.12` are the locked v14 module references for generated automation.'
       : '- Module automation is not emitted for the `core` profile.',
     '- Times Up: not used for v14; v14 duration handling is core/DAE-based.',
     '- Item Macro: not required for v14 acceptance; no v14-verified dependency is assumed.',

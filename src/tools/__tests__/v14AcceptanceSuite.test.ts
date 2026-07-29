@@ -205,7 +205,7 @@ describe('v14AcceptanceSuite', () => {
       )).toBe(false);
       const report = readFileSync(reportPath, 'utf-8');
       expect(report).toContain('Effect profile: `modded-v14`');
-      expect(report).toContain('MIDI-QOL `14.0.9`');
+      expect(report).toContain('MIDI-QOL `14.0.11`');
       expect(report).toContain('Times Up: not used for v14');
     } finally {
       rmSync(root, { recursive: true, force: true });

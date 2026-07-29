@@ -63,7 +63,7 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
       requiredForGeneration: false,
     },
     modules: {
-      midiQol: '14.0.9',
+      midiQol: '14.0.11',
       dae: '14.0.12',
       timesUp: null,
       itemMacro: null,

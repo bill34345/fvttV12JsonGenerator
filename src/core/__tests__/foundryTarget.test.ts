@@ -17,7 +17,7 @@ describe('foundryTarget', () => {
     expect(target.reference.dnd5eRepo).toBe('.local/references/dnd5e/5.3.3/repo');
     expect(target.effectProfiles).toEqual(['core', 'modded-v14']);
     expect(target.modules).toEqual({
-      midiQol: '14.0.9',
+      midiQol: '14.0.11',
       dae: '14.0.12',
       timesUp: null,
       itemMacro: null,

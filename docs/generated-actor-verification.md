@@ -32,7 +32,7 @@ When generating for `--fvtt-version 14`, also check:
 
 When generating for `--fvtt-version 14 --effect-profile modded-v14`, also check:
 
-- The locked module evidence is MIDI-QOL `14.0.9` and DAE `14.0.12`.
+- The current locked module target is MIDI-QOL `14.0.11` and DAE `14.0.12`. Reports executed against MIDI-QOL `14.0.9` remain historical evidence and do not prove the `14.0.11` runtime.
 - Times Up fields or assumptions are not required for v14 output.
 - Item Macro is not treated as a required dependency unless a v14-verified version is separately documented.
 - `flags.midi-qol.OverTime` is emitted only when the source text explicitly provides a repeated-effect formula and damage type.

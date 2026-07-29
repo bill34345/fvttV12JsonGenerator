@@ -129,7 +129,7 @@ export class EffectProfileApplier {
         flags.dae = {
           ...(flags.dae && typeof flags.dae === 'object' ? flags.dae : {}),
           // source-derived mapping checked against DAE 14.0.12's registered
-          // `isDamaged` duration key; MIDI-QOL 14.0.9 consumes the key when
+          // `isDamaged` duration key; MIDI-QOL 14.0.11 consumes the key when
           // its damage workflow removes the effect.
           specialDuration: ['isDamaged'],
         };
@@ -140,7 +140,7 @@ export class EffectProfileApplier {
         continue;
       }
 
-      // schema-derived: MIDI-QOL 14.0.9 scans v14 ActiveEffect system.changes
+      // schema-derived: MIDI-QOL 14.0.11 scans v14 ActiveEffect system.changes
       // for flags.midi-qol.OverTime; a document flag is not consumed there.
       const system = (effect.system ??= {});
       const changes = Array.isArray(system.changes) ? system.changes : [];
