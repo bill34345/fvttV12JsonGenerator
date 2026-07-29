@@ -77,6 +77,22 @@ bun run sync:vault
 - 通过 `.fvtt-sync-manifest.json` 跳过未变化输入；
 - 在源文件删除后移除过期输出。
 
+纯文本 Item 合集可以先拆分到 `middle/items`，也可以在同一次项目工作流中推广 Markdown 并生成最终 JSON：
+
+```powershell
+# 只拆分中间 Markdown
+bun run src/index.ts --ingest-items "path/to/items.md" `
+  --vault "obsidian/dnd数据转fvttjson"
+
+# 生成 middle/items、input/items 和 output/items
+bun run src/index.ts --ingest-items-json "path/to/items.md" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
+```
+
+Item 专用运行只处理本次推广的 Item 文件，不会顺带重生成或清理 vault 中其他 Actor 输出。
+
 ## AI 怪物资料整理（推荐）
 
 第一次拿到 TXT 或格式混乱的 Markdown 时，推荐让 AI 负责发现怪物边界与提取来源证据，再由项目确定性生成标准 Markdown 和 Actor JSON。AI 不直接写最终 JSON，任一证据、覆盖、投影或独立 review 门失败都会进入 `needs_review` 或 `failed`，不会静默回退旧转换器。
