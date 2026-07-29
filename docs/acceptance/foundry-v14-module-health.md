@@ -1,6 +1,11 @@
 # Foundry v14 module health report
 
-Generated: 2026-07-11T07:49:37.753Z
+Baseline generated: 2026-07-11T07:49:37.753Z
+
+Incremental local update: 2026-07-28. Only the rows explicitly marked `Partial` below were
+updated from later authenticated runtime and A/B evidence; the full 249-module inventory and
+120-minute soak matrix were not rerun. `Partial` therefore means the named behavior was tested,
+not that the module has passed complete long-session acceptance.
 
 Foundry 14.364; dnd5e 5.3.3.
 
@@ -30,12 +35,12 @@ Foundry 14.364; dnd5e 5.3.3.
 | recycle-bin | 2.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | advanced-drawing-tools | 14.0.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | always-hp | 14.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| autoanimations | 7.0.15 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| autoanimations | 7.0.17 | Partial | 20 real AA API plays completed without accumulating TextureLoader, PIXI cache, DOM, persistent Effect, or JS heap; three-way animation-stack A/B completed; `killAllAnim=on` is the enabled state in 7.0.17 | keep active; preserve `killAllAnim=on`; long-session and visual acceptance remain |
 | automated-conditions-5e | 14.533.7.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | automated-evocations | 6.0.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | babele | 2.9.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | multi-token-edit | 3.2.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| calendaria | 1.1.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| calendaria | 1.2.0 | Partial | dependency 3DS:ATLAS 1.0 enabled; 39 calendarnote pages restored and startup rechecked without the prior initialization failure | keep current low-load feature configuration; verify whether chat timestamp periodic updates have a supported setting before changing |
 | _chatcommands | 2.0.6 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | chat-media | 14.0.1 | Warning | manifest metadata is compatible; runtime behavior not yet accepted; writes deprecated ChatLog.MESSAGE_PATTERNS during Foundry 14 startup | continue only with monitoring and update before Foundry removes compatibility support |
 | color-picker | 1.7 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
@@ -44,7 +49,7 @@ Foundry 14.364; dnd5e 5.3.3.
 | dfreds-chat-pins | 6.1.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | dfreds-convenient-effects | 9.0.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | dfreds-droppables | 6.1.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| dice-so-nice | 6.2.8 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| dice-so-nice | 6.2.9 | Partial | client-scope preference boundary verified; `persistentDice=false` and `allowInteractivity=false`; first 1d20 showed one 82.4 ms warm-up pause while repeated rolls were smooth | keep 3D dice; player settings require per-client handling; hidden-sidebar-statistics status still needs verification |
 | dice-calculator | 3.6.7 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | fuzzy-foundry | 5.0.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | dungeon-strugglers-collection | 1.1.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
@@ -71,11 +76,11 @@ Foundry 14.364; dnd5e 5.3.3.
 | lib-dfreds-ui-extender | 2.3.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | scene-packer | 2.8.12 | Warning | manifest metadata is compatible; runtime behavior not yet accepted; accesses deprecated global CompendiumCollection during Foundry 14 startup | continue only with monitoring and update before Foundry 15 |
 | lib-wrapper | 1.13.5.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| midi-qol | 14.0.9 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| midi-qol | 14.0.11 | Partial | current local/target version; Blood Hunter structures are checked against its source, while older 14.0.9 runtime evidence remains historical | requires bounded 14.0.11 runtime and semantic acceptance |
 | monks-active-tiles | 14.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | monks-bloodsplats | 14.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | monks-chat-timer | 14.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| monks-combat-details | 14.02 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| monks-combat-details | 14.02 | Partial | combat tests covered `select-combatant=false`, `opencombat=none`, `popout-combat=false`, `auto-scroll=false`, and `pan-to-combatant=true` | retain settings; long-session acceptance still required |
 | monks-combat-marker | 12.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | monks-common-display | 14.01 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | monks-enhanced-journal | 13.06 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
@@ -93,7 +98,7 @@ Foundry 14.364; dnd5e 5.3.3.
 | quick-insert | 3.7.6 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | quickscale | 1.7.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | dnd-ravenloft-horrors-within | 1.0.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| sequencer | 4.2.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| sequencer | 4.2.3 | Partial | rollbackable 7→2 spritesheet Worker patch completed 20 real AA plays; two ~286 MiB committed WASM regions were measured at only ~1.15 MiB resident each | keep exact-version patch with guards; Blob cache live usage and long-session acceptance remain open |
 | share-media | 3.14.2 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | simplecover5e | 2.1.3 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | simple-quest | 2.3.10 | Incompatible | manifest metadata is compatible; runtime behavior not yet accepted; Find the Culprit confirmation run reproduced t.find is not a function in getSceneControlButtons with Simple Quest 2.3.10 active in the minimized set | disable by default on Foundry 14.364 pending a v14-compatible release or source fix |
@@ -103,8 +108,8 @@ Foundry 14.364; dnd5e 5.3.3.
 | tagger | 1.6.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | tidy5e-sheet | 13.5.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | tile-scroll | 5.0.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| token-action-hud-core | 2.1.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
-| token-action-hud-dnd5e | 2.1.0 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+| token-action-hud-core | 2.1.1 | Partial | fair combat A/B covered turn changes, real clicks, automatic-selection-off, and manual token selection; TAH outperformed the tested Argon replacement | keep enabled; repeat only if module version changes and complete long-session acceptance |
+| token-action-hud-dnd5e | 2.1.0 | Partial | tested together with TAH Core under the same combat A/B and retained as the dnd5e action-HUD adapter | keep enabled with TAH Core; complete long-session acceptance |
 | tokenmagic | 0.8.4 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | translate-all | 2.1.0 | Incompatible | manifest metadata is compatible; runtime behavior not yet accepted; previous live isolation reproduced an unauthorized OpenAI models request and HTTP 401 when no key was configured; it was disabled for this diagnostic run | leave disabled unless initialization and credential handling are corrected |
 | foundry_chn | 14.362 | OK | manifest metadata is compatible; runtime behavior not yet accepted; local setup, join, world, settings, and module management UI rendered in Chinese under cn.foundry_chn | continue enabled |

@@ -1,5 +1,10 @@
 # Foundry v14 Production Optimization Implementation Plan
 
+> **Historical plan — superseded for future execution.** The current migration entrypoint is
+> [`docs/plans/2026-07-27-cor-cotn-production-migration.md`](../../plans/2026-07-27-cor-cotn-production-migration.md).
+> This file preserves the 2026-07-12 plan and must not be executed directly without a fresh
+> production inventory and explicit user authorization.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reproduce the locally accepted Foundry v14 optimizations on the production server while preserving the production world, deploying Swipe 2.3.0 and the validated Monk's Bloodsplats lifecycle patch, and proving real browser behavior after each change group.
