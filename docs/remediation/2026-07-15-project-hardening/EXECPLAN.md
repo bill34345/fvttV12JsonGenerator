@@ -153,6 +153,17 @@ This table is authoritative. A child plan may add detail but may not silently ch
 
 ## Progress
 
+### 2026-07-29 Remaining Branch Integration
+
+- [x] Refreshed `origin/master` and audited every local/remote branch plus every attached worktree before integration. The clean branch tips not already reachable from `master` were `codex/item-generation-workflow-repair`, `codex/actor-refactor`, and `codex/crawlee-goddessfantasy`; `codex/goddessfantasy-image-assets-workbench` was an alias of the crawl tip.
+- [x] Preserved the dirty detached worktree and the dirty `codex/npc-monster-workflow-repair` worktree byte-for-byte. Their uncommitted user-owned changes were not staged, copied, reset, or represented as branch content.
+- [x] Merged the Item branch with an explicit merge commit while keeping the newer v12/v14 parser and generator already on `master`. The retained contribution adds `--ingest-items-json`, the default `middle/items` split path, scoped promotion to `input/items`, and final workflow-generated JSON under `output/items`.
+- [x] Pre-landing review found that the historical Item workflow would synchronize the whole vault and could regenerate unrelated Actors or mark unrelated manifest outputs stale. Added `includeInputPaths` partial-sync semantics and a regression proving an unrelated Actor input/output remains untouched.
+- [x] Recorded `codex/actor-refactor` and `codex/crawlee-goddessfantasy` with explicit `ours` merge commits because their actual code is superseded by the current actor-refactor-v2/semantic fixes and the clean/hardened crawl implementation. No historical encoded Actor modules, authenticated crawl HTML, sync manifests, generated JSON, or local Web artifacts were restored.
+- [x] Focused Item/parser/workflow/CLI tests pass `61 / 61`; both TypeScript checks and the anti-overfit audit pass. A real four-Item source collection generated through the CLI for Foundry `14.361` / dnd5e `5.3.3`; direct semantic inspection confirmed equipment type, `legendary`/`veryRare`, required attunement, cast/save/utility/attack activity routing, and Shield damage formula `2d6+2+@mod`.
+- [x] Final integration-candidate verification passes `ci:verify` with `1,452 / 1,452` tests and `6,792` expectations, production coverage `86.14%` lines / `89.72%` functions, 169-source anti-overfit, 1,822-path hygiene, locked dnd5e `5.3.3` reference verification, Web build, and offline Actor smoke. Foundry Lab passes `185 / 185` with `1,114` expectations; Chat Memory Guard passes `26 / 26` with `70` expectations.
+- [ ] Fast-forward the verified candidate to local `master`, rerun the fresh master gate, verify no remote drift, push only `master`, and confirm local/remote SHA equality. No feature branch or dirty worktree will be deleted.
+
 ### 2026-07-27 Unused Scene Image External Archive
 
 - [x] User authorized moving no-longer-used `cor-cotn` scene images out of the world package while preserving their complete world-relative subdirectory structure inside one external archive folder.
@@ -812,6 +823,10 @@ Semantic acceptance proves the user's actual goal:
 
 ## Surprises & Discoveries
 
+- Observation: “Unmerged branch” was not equivalent to “missing current implementation” in this repository.
+  Evidence: the old actor branch was superseded by actor-refactor-v2 and later semantic fixes; the authenticated crawl branch was superseded by a clean merge plus hardened crawl/Web commits; only the Item branch retained a genuinely absent CLI/workflow capability. A literal content merge would have restored stale parser/generator code and local/authenticated artifacts.
+- Observation: The historical Item dual-artifact workflow had a hidden whole-vault side effect even though its isolated tests passed.
+  Evidence: `ObsidianSyncWorkflow.sync()` collected every Markdown under `input/` and treated unseen manifest entries as deleted. The new scoped run supplies exact promoted paths, skips unrelated inputs, suppresses global stale cleanup during partial sync, and preserves a planted unrelated output byte-for-byte.
 - Observation: Non-GM privacy-safe replacement does not mean Foundry's own system avatar is anonymous, and hidden mode cannot guarantee zero transient decode before the module hook runs.
   Evidence: passwordless player `SY` had 17 visible no-OBSERVER Actor cards that correctly received no module token Blob replacement, but several Foundry/dnd5e system avatars were already the Actor portrait. Switching the client to hidden mode left 21/21 final cards with no `img`/`video` or avatar `src` and zero module thumbnail-cache bytes, while the locked Core/dnd5e hook order still permits a transient pre-removal request/decode.
 - Observation: A successfully served patched bundle is not evidence that the world client instantiated the patched Worker pool.
@@ -944,6 +959,13 @@ Semantic acceptance proves the user's actual goal:
   Evidence: the Compendiums and Adventures dataset correctly contained one `type: Adventure` row and four other pack rows, while the summary projected 0/5 by reading nonexistent `kind`; it also retained a stale Task 4 runtime reference. Commit `44e19a4` added positive real-schema coverage, switched the projection to `type`, corrected Task 6 wording, and the full real-world CLI regeneration now reports 1/4 consistently in summary and workbook detail.
 
 ## Decision Log
+
+- Decision: Integrate each remaining branch according to semantic ownership rather than replaying every historical tree change.
+  Rationale: The Item branch owns one missing workflow and was merged with current v12/v14 semantics plus a side-effect repair. Actor and authenticated-crawl histories are already represented by newer accepted implementations, so `ours` merge commits truthfully close their topology without resurrecting stale code, sensitive captures, or generated artifacts. Dirty uncommitted worktrees remain outside branch integration.
+  Date/Author: 2026-07-29, Codex with user authorization.
+- Decision: Restrict Item dual-artifact sync to the files promoted by the current invocation.
+  Rationale: An Item-only CLI command must not regenerate unrelated Actors or apply global stale-output cleanup. The shared sync workflow now distinguishes full-vault synchronization from explicit partial input selection, preserving existing full-sync behavior and manifest cleanup.
+  Date/Author: 2026-07-29, Codex.
 
 - Decision: Close `CHAT-MEM-001` at the approved bounded runtime boundary, while explicitly rejecting an absolute zero-render/zero-memory claim for hidden avatars.
   Rationale: all automated, deterministic-package, GM A/B, re-render, database-integrity, popout lifecycle, localization, avatar-mode, and non-GM privacy gates now pass. The plan explicitly leaves long-session and exhaustive third-party-card behavior user-observed, and the locked hook order proves only post-hook DOM/cache removal rather than prevention of every transient browser allocation.
