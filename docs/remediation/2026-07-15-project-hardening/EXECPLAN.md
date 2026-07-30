@@ -175,6 +175,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 - [x] Ran the final mechanical gates. Both TypeScript checks, coverage threshold verification (`85.83%` lines / `89.43%` functions), 169-source anti-overfit, 1,822-path hygiene, exact dnd5e 5.3.3 reference verification, Web build, offline Actor smoke, and `git diff --check` pass.
 - [x] Final aggregate test execution reached `1465 pass / 14 fail` with `6,791` assertions. Every failure requires the absent `.local/foundry-v14/app/14.364/node_modules/classic-level/index.js`; no current Actor/Item correctness test fails.
 - [x] Available Foundry Lab execution reached `176 pass / 9 fail`; all nine failures require the same absent ClassicLevel/runtime path. No fresh Foundry import, DataModel preparation, behavior, or export-readback Pass is claimed.
+- [x] Landed four local, scope-separated commits without staging `.pui/`: generator correctness `c3eb1d3`, canonical projection/verification `4bbfec7`, shared entry-point gating `6064025`, and migration/support documentation `95375c2`. No remote push or production operation was performed.
 
 **Discovery:** The instructed runtime paths `.local/foundry-v14/app/14.364/main.js`, `.local/foundry-v14/app/14.364/node_modules/classic-level/index.js`, and `.local/foundry-v14/data/server-mirror` are absent in this checkout. Therefore this milestone ran structural and non-runtime Lab gates but could not add fresh Foundry 14.364 import/DataModel/export evidence. Historical runtime reports remain bounded evidence only.
 
