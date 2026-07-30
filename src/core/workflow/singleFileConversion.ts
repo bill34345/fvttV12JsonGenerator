@@ -1,9 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { ActorGenerator, type ActorGeneratorOptions } from '../generator/actor';
+import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ActorValidator } from '../generator/validator';
-import { ItemGenerator } from '../generator/item-generator';
 import { ItemParser } from '../parser/item-parser';
 import { detectItemRoute } from '../parser/item-router';
 import { ParserFactory } from '../parser/router';
@@ -12,6 +11,13 @@ import {
   type ActorVerificationSummary,
 } from '../../tools/actorVerification';
 import type { FvttTargetVersion } from '../foundryTarget';
+import type {
+  GenerationDiagnostic,
+  GenerationVerification,
+} from '../generation/types';
+import { getFoundryTarget } from '../foundryTarget';
+import { generateActorArtifact } from './generationPipeline';
+import { generateItemArtifacts } from './itemGenerationWorkflow';
 
 export type { FvttTargetVersion } from '../foundryTarget';
 export type GeneratedDocumentKind = 'actor' | 'item';
@@ -42,8 +48,11 @@ export interface ConversionResult {
   effectProfile: EffectProfile;
   name: string;
   itemCount: number;
+  status: 'accepted' | 'needs_review' | 'failed';
+  diagnostics: GenerationDiagnostic[];
   warnings: string[];
-  verification: ActorVerificationSummary | null;
+  verification: GenerationVerification;
+  actorVerification: ActorVerificationSummary | null;
   rawJson: unknown;
 }
 
@@ -78,51 +87,94 @@ export async function convertMarkdownContentToJson(
   if (detectItemRoute(options.content)) {
     const parser = new ItemParser();
     const parsed = parser.parse(options.content);
-    const item = await new ItemGenerator({ fvttVersion }).generate(parsed);
-    const outputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
-    writeJsonIfRequested(outputPath, item);
+    const artifacts = await generateItemArtifacts(parsed, { fvttVersion, effectProfile });
+    const status = combineStatuses(artifacts.map((artifact) => artifact.verification.status));
+    const diagnostics = artifacts.flatMap((artifact) => artifact.diagnostics);
+    const verification: GenerationVerification = {
+      status,
+      diagnostics,
+      target: getFoundryTarget(fvttVersion),
+      mechanicsCoverage: artifacts.flatMap((artifact) => artifact.verification.mechanicsCoverage),
+    };
+    const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
+    if (status === 'accepted') {
+      writeItemArtifactsIfRequested(requestedOutputPath, artifacts);
+    }
+    const rawJson = artifacts.length === 1 ? artifacts[0]!.item : artifacts.map((artifact) => artifact.item);
 
     return {
       kind: 'item',
       sourcePath,
-      outputPath,
+      outputPath: status === 'accepted' ? requestedOutputPath : undefined,
       fvttVersion,
       effectProfile,
-      name: String(item.name ?? ''),
+      name: String(artifacts[0]?.item.name ?? parsed.name),
       itemCount: 0,
-      warnings: [],
-      verification: null,
-      rawJson: item,
+      status,
+      diagnostics,
+      warnings: warningMessages(diagnostics),
+      verification,
+      actorVerification: null,
+      rawJson,
     };
   }
 
   const parserFactory = new ParserFactory();
   const route = parserFactory.detectRoute(options.content);
   const parsed = parserFactory.parse(options.content);
-  const actor = await new ActorGenerator({
+  const generated = await generateActorArtifact({
+    parsed,
+    sourceText: options.content,
+    sourcePath,
+    route,
     fvttVersion,
     effectProfile,
     translationService: options.translationService,
-  }).generateForRoute(parsed, route);
-  const warnings = new ActorValidator().validate(parsed, actor);
-  const outputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
-  writeJsonIfRequested(outputPath, actor);
+  });
+  const actor = generated.actor;
+  const legacyWarnings = new ActorValidator().validate(parsed, actor);
+  const legacyDiagnostics: GenerationDiagnostic[] = legacyWarnings.map((message, index) => ({
+    code: 'GEN_LEGACY_VALIDATOR_WARNING',
+    severity: 'warning',
+    stage: 'semantic',
+    path: `legacy-validator/${index}`,
+    message,
+  }));
+  const diagnostics = [...generated.diagnostics, ...legacyDiagnostics];
+  const status = generated.verification.status === 'failed'
+    ? 'failed'
+    : legacyDiagnostics.length > 0 || generated.verification.status === 'needs_review'
+      ? 'needs_review'
+      : 'accepted';
+  const verification: GenerationVerification = {
+    ...generated.verification,
+    status,
+    diagnostics,
+  };
+  const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
+  if (status === 'accepted') {
+    writeJsonIfRequested(requestedOutputPath, actor);
+  }
+  const actorVerification = buildActorVerificationSummaryFromValues({
+    source: options.content,
+    actor,
+    sourcePath: sourcePath ?? '<uploaded-markdown>',
+    actorPath: requestedOutputPath ?? '<generated-preview>',
+  });
 
   return {
     kind: 'actor',
     sourcePath,
-    outputPath,
+    outputPath: status === 'accepted' ? requestedOutputPath : undefined,
     fvttVersion,
     effectProfile,
     name: String(actor.name ?? ''),
     itemCount: Array.isArray(actor.items) ? actor.items.length : 0,
-    warnings,
-    verification: buildActorVerificationSummaryFromValues({
-      source: options.content,
-      actor,
-      sourcePath: sourcePath ?? '<uploaded-markdown>',
-      actorPath: outputPath ?? '<generated-preview>',
-    }),
+    status,
+    diagnostics,
+    warnings: warningMessages(diagnostics),
+    verification,
+    actorVerification,
     rawJson: actor,
   };
 }
@@ -145,6 +197,35 @@ function writeJsonIfRequested(outputPath: string | undefined, value: unknown): v
   if (!outputPath) return;
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, JSON.stringify(value, null, 2));
+}
+
+function writeItemArtifactsIfRequested(
+  outputPath: string | undefined,
+  artifacts: Awaited<ReturnType<typeof generateItemArtifacts>>,
+): void {
+  if (!outputPath) return;
+  if (artifacts.length === 1) {
+    writeJsonIfRequested(outputPath, artifacts[0]!.item);
+    return;
+  }
+  mkdirSync(outputPath, { recursive: true });
+  for (const artifact of artifacts) {
+    writeJsonIfRequested(join(outputPath, artifact.fileName), artifact.item);
+  }
+}
+
+function combineStatuses(
+  statuses: Array<GenerationVerification['status']>,
+): GenerationVerification['status'] {
+  if (statuses.includes('failed')) return 'failed';
+  if (statuses.includes('needs_review')) return 'needs_review';
+  return 'accepted';
+}
+
+function warningMessages(diagnostics: GenerationDiagnostic[]): string[] {
+  return diagnostics
+    .filter((diagnostic) => diagnostic.severity === 'warning')
+    .map((diagnostic) => `[${diagnostic.code}] ${diagnostic.path}: ${diagnostic.message}`);
 }
 
 function resolvePath(path: string): string {

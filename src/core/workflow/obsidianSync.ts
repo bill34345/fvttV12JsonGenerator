@@ -10,12 +10,12 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   processParsedNpcImage,
   type ImageAssetOptions,
   type ImageAssetWarning,
 } from '../assets/imageAssets';
-import { ActorGenerator } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
 import { ItemParser } from '../parser/item-parser';
@@ -24,6 +24,8 @@ import { ParserFactory } from '../parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';
 import type { FvttTargetVersion } from '../foundryTarget';
+import { generateActorArtifact } from './generationPipeline';
+import { generateItemArtifacts } from './itemGenerationWorkflow';
 
 export interface ObsidianSyncOptions {
   vaultPath: string;
@@ -43,6 +45,7 @@ interface TranslationServiceLike {
 interface ManifestEntry {
   hash: string;
   output: string;
+  outputs?: string[];
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   status: 'success' | 'failed' | 'stale';
@@ -96,11 +99,6 @@ export class ObsidianSyncWorkflow {
   public async sync(options: ObsidianSyncOptions): Promise<ObsidianSyncResult> {
     const fvttVersion = options.fvttVersion ?? '12';
     const effectProfile = options.effectProfile ?? 'core';
-    const generator = new ActorGenerator({
-      fvttVersion,
-      translationService: this.options.translationService,
-      effectProfile,
-    });
     const vaultDir = this.resolvePath(options.vaultPath);
     const inputDir = join(vaultDir, 'input');
     const examplesDir = join(vaultDir, 'examples');
@@ -173,13 +171,16 @@ export class ObsidianSyncWorkflow {
         const prev = manifest[relInput];
         const forceProcess = forcedInputs.has(this.normalizeForComparison(inputPath));
 
-        if (!forceProcess && prev?.status === 'success' && prev.hash === hash && existsSync(outputPath)) {
+        const previousOutputsExist = prev?.outputs?.length
+          ? prev.outputs.every((path) => existsSync(isAbsolute(path) ? path : resolve(vaultDir, path)))
+          : existsSync(outputPath);
+        if (!forceProcess && prev?.status === 'success' && prev.hash === hash && previousOutputsExist) {
           result.skipped++;
           continue;
         }
 
         const isItem = detectItemRoute(content);
-        let outputData: unknown;
+        let outputArtifacts: Array<{ path: string; data: unknown }> = [];
 
         if (isItem) {
           let normalizedBody: string | undefined;
@@ -189,9 +190,24 @@ export class ObsidianSyncWorkflow {
             normalizedBody = await this.itemAiNormalizer.normalizeItem(bodyText);
           }
           const parsedItem = this.itemParser.parse(content, normalizedBody);
-          const { ItemGenerator } = await import('../generator/item-generator');
-          const itemGenerator = new ItemGenerator({ fvttVersion });
-          outputData = await itemGenerator.generate(parsedItem);
+          const artifacts = await generateItemArtifacts(parsedItem, { fvttVersion, effectProfile });
+          const rejected = artifacts.find((artifact) => artifact.verification.status !== 'accepted');
+          if (rejected) {
+            throw new Error(
+              `${rejected.verification.status}: ${rejected.diagnostics
+                .map((entry) => `[${entry.code}] ${entry.path}: ${entry.message}`)
+                .join('; ')}`,
+            );
+          }
+          if (artifacts.length === 1) {
+            outputArtifacts = [{ path: outputPath, data: artifacts[0]!.item }];
+          } else {
+            const stageOutputDir = outputPath.replace(/\.json$/i, '');
+            outputArtifacts = artifacts.map((artifact) => ({
+              path: join(stageOutputDir, artifact.fileName),
+              data: artifact.item,
+            }));
+          }
         } else {
           const route = this.parserFactory.detectRoute(content);
           const parsed = this.parserFactory.parse(content);
@@ -215,24 +231,44 @@ export class ObsidianSyncWorkflow {
               }
             }
           }
-          outputData = await generator.generateForRoute(parsed, route);
+          const generated = await generateActorArtifact({
+            parsed,
+            sourceText: content,
+            sourcePath: inputPath,
+            route,
+            fvttVersion,
+            effectProfile,
+            translationService: this.options.translationService,
+          });
+          if (generated.verification.status !== 'accepted') {
+            throw new Error(
+              `${generated.verification.status}: ${generated.diagnostics
+                .map((entry) => `[${entry.code}] ${entry.path}: ${entry.message}`)
+                .join('; ')}`,
+            );
+          }
+          outputArtifacts = [{ path: outputPath, data: generated.actor }];
         }
 
-        if (existsSync(outputPath)) {
-          const ts = new Date().toISOString().replace(/[:.]/g, '-');
-          const backupRel = outputRel.replace(/\.json$/i, `.${ts}.json`);
-          const backupPath = join(backupDir, backupRel);
-          this.ensureDir(dirname(backupPath));
-          renameSync(outputPath, backupPath);
-          result.backedUp++;
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        for (const artifact of outputArtifacts) {
+          if (existsSync(artifact.path)) {
+            const relArtifact = relative(outputDir, artifact.path);
+            const backupRel = relArtifact.replace(/\.json$/i, `.${ts}.json`);
+            const backupPath = join(backupDir, backupRel);
+            this.ensureDir(dirname(backupPath));
+            renameSync(artifact.path, backupPath);
+            result.backedUp++;
+          }
+          this.ensureDir(dirname(artifact.path));
+          writeFileSync(artifact.path, JSON.stringify(artifact.data, null, 2));
         }
-
-        this.ensureDir(dirname(outputPath));
-        writeFileSync(outputPath, JSON.stringify(outputData, null, 2));
 
         manifest[relInput] = {
           hash,
-          output: this.normalizeRelPath(relative(vaultDir, outputPath)),
+          output: this.normalizeRelPath(relative(vaultDir, outputArtifacts[0]?.path ?? outputPath)),
+          outputs: outputArtifacts.map((artifact) =>
+            this.normalizeRelPath(relative(vaultDir, artifact.path))),
           fvttVersion,
           effectProfile,
           status: 'success',
@@ -259,11 +295,14 @@ export class ObsidianSyncWorkflow {
     if (!includedInputs) {
       for (const [key, entry] of Object.entries(manifest)) {
         if (seen.has(key)) continue;
-        const staleOutputPath = isAbsolute(entry.output)
-          ? entry.output
-          : resolve(vaultDir, entry.output);
-        if (existsSync(staleOutputPath)) {
-          rmSync(staleOutputPath, { force: true });
+        const staleOutputs = entry.outputs?.length ? entry.outputs : [entry.output];
+        for (const staleOutput of staleOutputs) {
+          const staleOutputPath = isAbsolute(staleOutput)
+            ? staleOutput
+            : resolve(vaultDir, staleOutput);
+          if (existsSync(staleOutputPath)) {
+            rmSync(staleOutputPath, { force: true });
+          }
         }
         manifest[key] = {
           ...entry,
@@ -282,7 +321,7 @@ export class ObsidianSyncWorkflow {
     const target = join(examplesDir, 'npc-example.md');
     if (existsSync(target)) return false;
 
-    const source = resolve(process.cwd(), 'templates', 'npc-example.md');
+    const source = fileURLToPath(new URL('../../../templates/npc-example.md', import.meta.url));
     if (existsSync(source)) {
       writeFileSync(target, readFileSync(source, 'utf-8'));
     } else {

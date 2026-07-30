@@ -103,7 +103,9 @@ describe('web API', () => {
     expect(body.data.name).toContain('Alyxian');
     expect(body.data.itemCount).toBeGreaterThan(0);
     expect(body.data.outputPath).toBe(outputPath);
-    expect(body.data.verification.actor.name).toBe(body.data.name);
+    expect(body.data.status).toBe('accepted');
+    expect(body.data.verification.status).toBe('accepted');
+    expect(body.data.actorVerification.actor.name).toBe(body.data.name);
     expect(existsSync(outputPath)).toBe(true);
   });
 
@@ -205,7 +207,9 @@ describe('web API', () => {
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.data.kind).toBe('item');
-    expect(body.data.verification).toBeNull();
+    expect(body.data.verification.status).toBe('accepted');
+    expect(body.data.actorVerification).toBeNull();
+    expect(body.data.diagnostics).toEqual([]);
   });
 
   it('rejects paths outside the workspace with a stable API error', async () => {

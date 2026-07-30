@@ -322,8 +322,15 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
     kind: summary.kind as ConversionResult['kind'],
     name: String(summary.name ?? ''),
     itemCount: Number(summary.itemCount ?? 0),
+    status: summary.status === 'needs_review' || summary.status === 'failed'
+      ? summary.status
+      : 'accepted',
+    diagnostics: Array.isArray(summary.diagnostics)
+      ? summary.diagnostics as ConversionResult['diagnostics']
+      : [],
     warnings: job.warnings,
-    verification: (summary.verification ?? null) as ConversionResult['verification'],
+    verification: summary.verification as ConversionResult['verification'],
+    actorVerification: (summary.actorVerification ?? null) as ConversionResult['actorVerification'],
     rawJson: summary.rawJson,
     outputPath: typeof summary.outputPath === 'string' ? summary.outputPath : undefined,
     fvttVersion: normalizeFvttVersion(typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined),

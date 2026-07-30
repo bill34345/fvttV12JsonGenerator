@@ -1,89 +1,19 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Command } from 'commander';
-import { ActorGenerator } from './core/generator/actor';
 import type { EffectProfile } from './core/generator/effectProfileApplier';
 import { PlainTextIngestionWorkflow } from './core/ingest/plaintext';
-import { ParserFactory } from './core/parser/router';
-import { detectItemRoute } from './core/parser/item-router';
 import { ObsidianSyncWorkflow } from './core/workflow/obsidianSync';
 import { JsonTranslationSyncWorkflow } from './core/workflow/jsonTranslationSync';
 import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
 import { ItemTextWorkflow } from './core/workflow/itemTextWorkflow';
-import { ActorValidator } from './core/generator/validator';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from './core/foundryTarget';
 import { loadMonsterIntakeConfig } from './core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from './core/intake/provider';
 import { resumeMonsterIntake, runMonsterIntake } from './core/intake/orchestrator';
-
-interface StructuredActions {
-  attacks?: any[];
-  saves?: any[];
-  utilities?: any[];
-  casts?: any[];
-  effects?: any[];
-  uses?: any[];
-  spells?: any[];
-}
-
-interface StageRequirement {
-  name: string;
-  description?: string;
-  requirements?: string[];
-}
-
-function filterStructuredActionsByStage(
-  structuredActions: StructuredActions | undefined,
-  stages: StageRequirement[],
-  stageIndex: number
-): StructuredActions | undefined {
-  if (!structuredActions) return undefined;
-
-  // Cumulative requirements from all previous stages (for most effects)
-  const cumulativeRequirements = new Set<string>();
-  for (let i = 0; i <= stageIndex; i++) {
-    const reqs = stages[i]?.requirements;
-    if (reqs) {
-      for (const req of reqs) {
-        cumulativeRequirements.add(req);
-      }
-    }
-  }
-
-  // Current stage requirements only (for AC bonus replacement)
-  const currentStageRequirements = new Set<string>(
-    stages[stageIndex]?.requirements ?? []
-  );
-
-  const filter = <T extends { desc?: string; useAction?: { description?: string }; passiveEffect?: { type?: string } }>(arr: T[] | undefined): T[] | undefined => {
-    if (!arr) return undefined;
-    const filtered = arr.filter(item => {
-      const text = item.desc || item.useAction?.description;
-      // For AC bonus effects, only include if desc matches CURRENT stage requirements
-      // (AC bonus is stage-specific, not cumulative)
-      if (item.passiveEffect?.type === 'acBonus') {
-        return typeof text === 'string' && currentStageRequirements.has(text);
-      }
-      // For other effects, include if desc matches cumulative requirements
-      if (!text) return true;
-      return cumulativeRequirements.has(text);
-    });
-    return filtered.length > 0 ? filtered : undefined;
-  };
-
-  const result: StructuredActions = {};
-  if (structuredActions.attacks) result.attacks = structuredActions.attacks;
-  if (structuredActions.saves) result.saves = filter(structuredActions.saves);
-  if (structuredActions.utilities) result.utilities = filter(structuredActions.utilities);
-  if (structuredActions.casts) result.casts = filter(structuredActions.casts);
-  if (structuredActions.effects) result.effects = filter(structuredActions.effects);
-  if (structuredActions.uses) result.uses = filter(structuredActions.uses);
-  if (structuredActions.spells) result.spells = filter(structuredActions.spells);
-
-  return Object.keys(result).length > 0 ? result : undefined;
-}
+import { convertMarkdownContentToJson } from './core/workflow/singleFileConversion';
 
 const DEFAULT_VAULT = 'obsidian/dnd数据转fvttjson';
 const DEFAULT_EMIT_DIR = join(DEFAULT_VAULT, 'input');
@@ -371,107 +301,26 @@ program
 
       console.log(`Processing ${input}...`);
       const content = readFileSync(input, 'utf-8');
-
-      if (detectItemRoute(content)) {
-        const { ItemParser } = await import('./core/parser/item-parser');
-        const { ItemGenerator } = await import('./core/generator/item-generator');
-
-        const parser = new ItemParser();
-        const parsed = parser.parse(content);
-
-        const generator = new ItemGenerator({ fvttVersion });
-
-        const stages = parsed.stages;
-        const isMultiStage = stages && stages.length > 1;
-        const output = options.output || input.replace(/\.md$/, '.json');
-
-        if (isMultiStage) {
-          mkdirSync(output, { recursive: true });
-
-          const stageNameMap: Record<string, string> = {
-            '休眠态': '',
-            '觉醒态': ' (Awakened)',
-            '升华态': ' (Exalted)',
-          };
-
-          for (let i = 0; i < stages.length; i++) {
-            const stage = stages[i]!;
-
-            const stageSuffix = stageNameMap[stage.name] ?? ` (${stage.name})`;
-
-            const cumulativeRequirements: string[] = [];
-            for (let j = 0; j <= i; j++) {
-              const prevStage = stages[j]!;
-              if (prevStage.requirements) {
-                cumulativeRequirements.push(...prevStage.requirements);
-              }
-            }
-
-            const stageUsesMax = stage.name === '升华态' ? '7'
-              : stage.name === '觉醒态' ? '5'
-              : parsed.uses?.max || '3';
-
-            const stageUses = parsed.uses
-              ? { ...parsed.uses, max: stageUsesMax }
-              : { max: stageUsesMax, spent: 0, recovery: [{ period: 'dawn', type: 'recoverAll' }] };
-
-            const filteredStructuredActions = filterStructuredActionsByStage(
-              parsed.structuredActions,
-              stages,
-              i
-            );
-
-            const stageParsed = { ...parsed, uses: stageUses, structuredActions: filteredStructuredActions };
-
-            const stageItem = await generator.generate({
-              ...stageParsed,
-              name: `${parsed.name}${stageSuffix}`,
-              cumulativeRequirements,
-            });
-
-            const outputName = stageSuffix
-              ? `${parsed.name}${stageSuffix}.json`
-              : `${parsed.name}.json`;
-            const outputPath = join(output, outputName);
-
-            writeFileSync(outputPath, JSON.stringify(stageItem, null, 2));
-            console.log(`Successfully generated ${outputPath}`);
-            console.log(`Name: ${stageItem.name}`);
-          }
-        } else {
-          const item = await generator.generate(parsed);
-
-          writeFileSync(output, JSON.stringify(item, null, 2));
-          console.log(`Successfully generated ${output}`);
-          console.log(`Name: ${item.name}`);
-        }
-      } else {
-        const parserFactory = new ParserFactory();
-        const route = parserFactory.detectRoute(content);
-        const parsed = parserFactory.parse(content);
-
-        const generator = new ActorGenerator({ fvttVersion, effectProfile });
-        const actor = await generator.generateForRoute(parsed, route);
-
-        const validator = new ActorValidator();
-        const warnings = validator.validate(parsed, actor);
-        if (warnings.length > 0) {
-          console.warn('\n--- Validation Warnings ---');
-          for (const w of warnings) {
-            console.warn(`[WARN] ${w}`);
-          }
-          console.warn('---------------------------\n');
-        } else {
-          console.log('Validation passed: No issues detected.');
-        }
-
-        const output = options.output || input.replace(/\.md$/, '.json');
-        writeFileSync(output, JSON.stringify(actor, null, 2));
-
-        console.log(`Successfully generated ${output}`);
-        console.log(`Name: ${actor.name}`);
-        console.log(`Items: ${actor.items.length}`);
+      const output = options.output || input.replace(/\.md$/, '.json');
+      const result = await convertMarkdownContentToJson({
+        content,
+        sourcePath: input,
+        outputPath: output,
+        fvttVersion,
+        effectProfile,
+      });
+      for (const diagnostic of result.diagnostics) {
+        const writer = diagnostic.severity === 'error' ? console.error : console.warn;
+        writer(`[${diagnostic.severity.toUpperCase()}] ${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`);
       }
+      if (result.status !== 'accepted') {
+        console.error(`Generation ${result.status}; no formal output was written.`);
+        process.exitCode = result.status === 'needs_review' ? 2 : 1;
+        return;
+      }
+      console.log(`Successfully generated ${result.outputPath}`);
+      console.log(`Name: ${result.name}`);
+      console.log(`Items: ${result.itemCount}`);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       console.error(`Error: ${message}`);

@@ -77,8 +77,22 @@ export interface ConversionResult {
   effectProfile: EffectProfile;
   name: string;
   itemCount: number;
+  status: 'accepted' | 'needs_review' | 'failed';
+  diagnostics: Array<{
+    code: string;
+    severity: 'error' | 'warning' | 'info';
+    stage: 'parse' | 'ir' | 'projection' | 'schema' | 'semantic';
+    path: string;
+    message: string;
+  }>;
   warnings: string[];
-  verification: VerificationSummary | null;
+  verification: {
+    status: 'accepted' | 'needs_review' | 'failed';
+    diagnostics: ConversionResult['diagnostics'];
+    target: unknown;
+    mechanicsCoverage: unknown[];
+  };
+  actorVerification: VerificationSummary | null;
   rawJson: unknown;
   downloadUrl: string;
   jobId: string;

@@ -127,16 +127,20 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
     effectProfile: optionEffectProfile(body.options, fvttVersion),
   });
 
-  const file = addJobFile(job.id, {
-    path: outputPath,
-    fileName: basename(outputPath),
-    contentType: 'application/json; charset=utf-8',
-    label: result.name || basename(outputPath),
-  });
-  finishJob(job.id, 'succeeded', {
+  const file = result.status === 'accepted'
+    ? addJobFile(job.id, {
+        path: outputPath,
+        fileName: basename(outputPath),
+        contentType: 'application/json; charset=utf-8',
+        label: result.name || basename(outputPath),
+      })
+    : undefined;
+  finishJob(job.id, result.status === 'accepted' ? 'succeeded' : result.status, {
     ...summaryForConversion(result),
-    downloadUrl: file.downloadUrl,
-  }, result.warnings, []);
+    downloadUrl: file?.downloadUrl ?? '',
+  }, result.warnings, result.status === 'failed'
+    ? [{ error: result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; ') }]
+    : []);
 }
 
 async function runMonsterCollection(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -589,8 +593,11 @@ function summaryForConversion(result: ConversionResult): Record<string, unknown>
     outputPath: result.outputPath,
     fvttVersion: result.fvttVersion,
     effectProfile: result.effectProfile,
+    status: result.status,
+    diagnostics: result.diagnostics,
     warnings: result.warnings.length,
     verification: result.verification,
+    actorVerification: result.actorVerification,
     rawJson: result.rawJson,
   };
 }

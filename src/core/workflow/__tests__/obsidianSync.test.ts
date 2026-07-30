@@ -359,7 +359,15 @@ describe("ObsidianSyncWorkflow", () => {
 		expect(result.failed).toBe(0);
 		expect(result.processed).toBe(2);
 		expect(existsSync(join(vaultPath, "output", "items", "骑士之盾.json"))).toBe(true);
-		expect(existsSync(join(vaultPath, "output", "items", "三祷之坠.json"))).toBe(true);
+		const stagedOutputDir = join(vaultPath, "output", "items", "三祷之坠");
+		expect(existsSync(stagedOutputDir)).toBe(true);
+		const stagedOutputs = readdirSync(stagedOutputDir)
+			.filter((fileName) => fileName.endsWith(".json"));
+		expect(stagedOutputs).toHaveLength(3);
+		for (const fileName of stagedOutputs) {
+			const item = JSON.parse(readFileSync(join(stagedOutputDir, fileName), "utf-8"));
+			expect(item.flags?.fvttJsonGenerator?.stage?.name).toBeTruthy();
+		}
 
 		const shield = JSON.parse(
 			readFileSync(join(vaultPath, "output", "items", "骑士之盾.json"), "utf-8"),

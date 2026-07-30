@@ -77,6 +77,17 @@ export async function convertMonsterCollectionToJson(
         fvttVersion: options.fvttVersion,
         effectProfile: options.effectProfile,
       });
+      if (result.status !== 'accepted') {
+        items.push({
+          index,
+          sourceName,
+          status: 'failed',
+          result,
+          error: `${result.status}: ${result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; ')}`,
+          warnings: result.warnings,
+        });
+        continue;
+      }
       items.push({
         index,
         sourceName,
@@ -124,6 +135,17 @@ export async function convertItemCollectionToJson(
         fvttVersion: options.fvttVersion,
         effectProfile: options.effectProfile,
       });
+      if (result.status !== 'accepted') {
+        items.push({
+          index,
+          sourceName,
+          status: 'failed',
+          result,
+          error: `${result.status}: ${result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; ')}`,
+          warnings: result.warnings,
+        });
+        continue;
+      }
       items.push({
         index,
         sourceName,

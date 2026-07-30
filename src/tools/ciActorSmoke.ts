@@ -42,8 +42,8 @@ export async function runCiActorSmoke(): Promise<void> {
     if (JSON.stringify(itemNames) !== JSON.stringify(EXPECTED_WHITE_TUSK_ITEMS)) {
       throw new Error(`White Tusk source item boundary changed: ${JSON.stringify(itemNames)}`);
     }
-    if ((result.verification?.warnings.length ?? 0) !== 0) {
-      throw new Error(`Actor verifier reported warnings: ${JSON.stringify(result.verification?.warnings)}`);
+    if ((result.actorVerification?.warnings.length ?? 0) !== 0) {
+      throw new Error(`Actor verifier reported warnings: ${JSON.stringify(result.actorVerification?.warnings)}`);
     }
     if (JSON.stringify(result.rawJson).includes('<think>')) {
       throw new Error('generated Actor contains provider reasoning markup');

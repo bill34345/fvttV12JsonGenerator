@@ -73,7 +73,9 @@ describe('PlainTextActorWorkflow', () => {
     const tailCrash = actor.items.find((item) => item.name.includes('尾击'));
 
     expect(swallow).toBeDefined();
-    expect(actor.items.some((item) => item.system?.activation?.type === 'reaction')).toBe(true);
+    expect(actor.items.some((item) =>
+      Object.values(item.system?.activities ?? {})
+        .some((activity: any) => activity.activation?.type === 'reaction'))).toBe(true);
     expect((swallow?.effects ?? []).some((effect) => /Swallowed|吞咽中/i.test(String(effect?.name ?? '')))).toBe(false);
     expect((tailCrash?.effects ?? []).length ?? 0).toBe(0);
     expect(tailCrash?.flags?.fvttJsonGenerator?.effectHints).toEqual(
