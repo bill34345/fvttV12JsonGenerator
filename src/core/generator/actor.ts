@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs';
 import { ActionParser } from '../parser/action';
 import type { ActionData, Damage } from '../parser/action';
 import { EnglishActionParser } from '../parser/englishAction';
@@ -94,9 +93,19 @@ import {
   createSpellcastingDescriptionItem as createSpellcastingDescriptionItemExt,
   appendLegacySpellItems as appendLegacySpellItemsExt,
 } from './actor-legacy';
-import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
+import {
+  assertEffectProfileForTarget,
+  getFoundryTarget,
+  type FvttTargetVersion,
+} from '../foundryTarget';
 import { ActorLocalizer, type TranslationServiceLike } from './actor-localizer';
 import { applyActorTargetMetadata, normalizeTargetUses } from './actor-target-metadata';
+import {
+  loadOptionalGoldenMaster,
+  resolveGenerationResources,
+  type GenerationResources,
+} from '../generation/resources';
+import { createStableDocumentId } from '../utils/stable-id';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -104,6 +113,7 @@ export interface ActorGeneratorOptions {
   translationService?: TranslationServiceLike | null;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  resources?: GenerationResources;
 }
 
 interface GenerateOptions {
@@ -114,6 +124,7 @@ interface GenerateOptions {
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
+  activationCost?: number;
   usesPerLongRest?: number;
   requiresConcentration?: boolean;
   targetCondition?: string;
@@ -231,7 +242,9 @@ export class ActorGenerator {
     this.fvttVersion = options.fvttVersion ?? '12';
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
-    this.loadGoldenMaster();
+    assertEffectProfileForTarget(this.fvttVersion, this.effectProfile);
+    const resources = resolveGenerationResources(options.resources);
+    this.goldenMaster = loadOptionalGoldenMaster(resources);
   }
 
   public async generateForRoute(parsed: ParsedNPC, route: ParserRoute): Promise<any> {
@@ -250,17 +263,6 @@ export class ActorGenerator {
     }).localize(actor);
     assertPortableActorHasNoTargetWorldIdentifiers(localizedActor);
     return localizedActor;
-  }
-
-  private loadGoldenMaster() {
-    try {
-      const path = 'data/golden-master.json';
-      if (existsSync(path)) {
-        this.goldenMaster = JSON.parse(readFileSync(path, 'utf-8'));
-      }
-    } catch {
-      console.warn('Warning: Golden Master not loaded');
-    }
   }
 
   public generate(parsed: ParsedNPC, options: GenerateOptions = {}): any {
@@ -844,8 +846,14 @@ export class ActorGenerator {
       const actions = structured[key];
       if (!actions || !Array.isArray(actions)) continue;
 
-      for (const action of actions) {
-        this.appendSingleStructuredAction(items, action, activationType, activityContext);
+      for (const [index, action] of actions.entries()) {
+        this.appendSingleStructuredAction(
+          items,
+          action,
+          activationType,
+          activityContext,
+          `structuredActions/${key}/${index}/${action.name}`,
+        );
       }
     }
   }
@@ -855,6 +863,7 @@ export class ActorGenerator {
     action: StructuredActionData,
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive',
     activityContext: ActivityGenerationContext,
+    logicalPath: string,
   ): void {
     if (action.spellcastingFeatureKey && activationType !== 'passive') {
       throw new ActorSpellManifestError(
@@ -869,7 +878,10 @@ export class ActorGenerator {
         'Linked spellcasting features must remain passive.',
       );
     }
-    const activityData = this.structuredActionToActivityData(action);
+    const activityData = {
+      ...this.structuredActionToActivityData(action),
+      logicalPath,
+    };
     const activities = this.activityGenerator.generate(activityData, activityContext);
     const item = this.createItemFromAction(
       { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe } as any,
@@ -877,13 +889,16 @@ export class ActorGenerator {
       effectiveActivationType === 'passive' ? '' : effectiveActivationType,
     );
 
-    const legendaryCost = effectiveActivationType === 'legendary'
-      ? action.legendaryCost ?? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' ')) ?? 1
-      : null;
+    const activationCost = effectiveActivationType === 'legendary'
+      ? action.activation?.cost
+        ?? action.legendaryCost
+        ?? extractLegendaryCostFixed([action.name, action.englishName, action.describe].filter(Boolean).join(' '))
+        ?? 1
+      : action.activation?.cost ?? null;
     for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
       activity.activation = {
         type: effectiveActivationType === 'passive' ? '' : effectiveActivationType,
-        value: legendaryCost,
+        value: activationCost,
         override: false,
         condition: action.activation?.condition ?? '',
       };
@@ -907,7 +922,11 @@ export class ActorGenerator {
     }
 
     if (action.perLongRest) {
-      item.system.uses = { value: action.perLongRest, max: action.perLongRest, per: 'lr' };
+      item.system.uses = {
+        spent: 0,
+        max: String(action.perLongRest),
+        recovery: [{ period: 'lr', type: 'recoverAll' }],
+      };
     }
 
     if (action.spellcastingFeatureKey) {
@@ -1073,7 +1092,9 @@ export class ActorGenerator {
       resolvedActivationType,
       activationCondition,
       item.system.uses,
-      resolvedActivationType === 'legendary' ? (action.legendaryCost ?? 1) : null,
+      resolvedActivationType === 'legendary'
+        ? action.legendaryCost ?? 1
+        : action.activationCost ?? null,
     );
     this.applyNarrativeActivityTargeting(item, action);
     this.applyHeavyHitAutomation(item, action);
@@ -1341,7 +1362,7 @@ export class ActorGenerator {
             kind: branch.kind,
           },
         };
-        Object.assign(activities, generated);
+        ActivityGenerator.mergeUnique(activities, generated);
       }
       return;
     }
@@ -1431,7 +1452,7 @@ export class ActorGenerator {
         ...rider,
         baseAction: action.name,
       });
-      Object.assign(activities, generated);
+      ActivityGenerator.mergeUnique(activities, generated);
     }
   }
 
@@ -1467,7 +1488,7 @@ export class ActorGenerator {
         ...rider,
         baseAction: action.name,
       });
-      Object.assign(activities, generated);
+      ActivityGenerator.mergeUnique(activities, generated);
     }
   }
 
@@ -2374,7 +2395,7 @@ export class ActorGenerator {
             ...metadata,
           },
         };
-        Object.assign(activities, { [activity._id]: activity });
+        ActivityGenerator.mergeUnique(activities, { [activity._id]: activity });
       }
 
       if (effect) {
@@ -2436,21 +2457,21 @@ export class ActorGenerator {
         segment,
         hitDiceChange,
       );
-      activities[activity._id] = activity;
+      ActivityGenerator.mergeUnique(activities, { [activity._id]: activity });
       activityIds.loseHitDieActivityId = activity._id;
     }
 
     const tempHp = segment.outcomes.find((outcome) => outcome.kind === 'tempHp');
     if (tempHp) {
       const activity = this.createHitDiceOutcomeTempHpActivity(segment, tempHp);
-      activities[activity._id] = activity;
+      ActivityGenerator.mergeUnique(activities, { [activity._id]: activity });
       activityIds.tempHpActivityId = activity._id;
     }
 
     const followupSave = segment.outcomes.find((outcome) => outcome.kind === 'followupSave');
     if (followupSave) {
       const activity = this.createHitDiceOutcomeUtilityActivity(`${followupSave.label} Save`, segment, followupSave);
-      activities[activity._id] = activity;
+      ActivityGenerator.mergeUnique(activities, { [activity._id]: activity });
       activityIds.followupSaveActivityId = activity._id;
     }
 
@@ -2462,7 +2483,12 @@ export class ActorGenerator {
     segment: ExtractedRider,
     outcome: HitDiceOutcome,
   ): any {
-    const id = this.createRandomId();
+    const id = createStableDocumentId({
+      path: 'hitDiceOutcome',
+      segment: segment.key,
+      name,
+      outcome,
+    });
     return {
       _id: id,
       name,
@@ -2498,7 +2524,11 @@ export class ActorGenerator {
     segment: ExtractedRider,
     outcome: Extract<HitDiceOutcome, { kind: 'tempHp' }>,
   ): any {
-    const id = this.createRandomId();
+    const id = createStableDocumentId({
+      path: 'hitDiceOutcome/tempHp',
+      segment: segment.key,
+      outcome,
+    });
     return {
       _id: id,
       name: 'Gain Temporary HP',
@@ -2980,6 +3010,7 @@ export class ActorGenerator {
     }
     if (header.legendaryCost !== undefined) {
       derived.legendaryCost = header.legendaryCost;
+      derived.activationCost = header.legendaryCost;
     }
     if (derived.legendaryCost === undefined) {
       const fixedLegendaryCost = this.extractLegendaryCostFixed(rawLine);

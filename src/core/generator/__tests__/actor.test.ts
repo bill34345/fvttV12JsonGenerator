@@ -335,7 +335,8 @@ describe('ActorGenerator', () => {
     const activities = Object.values(laughter?.system.activities ?? {}) as any[];
 
     expect(laughter).toBeDefined();
-    expect(['', 'special']).toContain(laughter.system.activation.type);
+    expect(laughter.system.activation).toBeUndefined();
+    expect(['', 'special']).toContain(activities[0]?.activation?.type);
     expect(activities.some((activity) => activity.type === 'save')).toBe(true);
     const saveActivity = activities.find((activity) => activity.type === 'save');
     expect(saveActivity?.save.ability).toContain('wis');
@@ -511,11 +512,11 @@ describe('ActorGenerator', () => {
     ]);
 
     expect(pelagicScreech).toBeDefined();
-    expect(pelagicScreech.system.activation?.condition).toMatch(/bloodied/i);
+    expect((Object.values(pelagicScreech.system.activities)[0] as any)?.activation?.condition).toMatch(/bloodied/i);
     expect(pelagicScreech.system.uses).toEqual(
       expect.objectContaining({
-        value: 1,
-        max: 1,
+        spent: 0,
+        max: '1',
       }),
     );
     expect(Array.isArray(pelagicScreech.system.uses?.recovery)).toBe(true);

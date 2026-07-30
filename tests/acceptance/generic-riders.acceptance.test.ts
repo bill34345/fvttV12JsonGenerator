@@ -137,7 +137,8 @@ describe('generic rider extraction acceptance', () => {
   it('extracts linked attacks from reaction text', () => {
     const item = firstItem(generateWith(fixture('linked-attack-reaction.md'), 'reactions'));
 
-    expect(item.system.activation.type).toBe('reaction');
+    expect((Object.values(item.system.activities)[0] as any)?.activation?.type).toBe('reaction');
+    expect(item.system.activation).toBeUndefined();
     expect(rules(item).linkedAttacks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -151,7 +152,7 @@ describe('generic rider extraction acceptance', () => {
   it('extracts summon count, range, duration, and summoned actor name', () => {
     const item = firstItem(generateWith(fixture('summon-metadata.md')));
 
-    expect(item.system.uses).toEqual(expect.objectContaining({ value: 1, max: 1 }));
+    expect(item.system.uses).toEqual(expect.objectContaining({ spent: 0, max: '1' }));
     expect(rules(item).summons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

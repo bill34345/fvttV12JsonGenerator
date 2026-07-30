@@ -4,6 +4,7 @@ import { inferAttackAbility, type AttackAbility } from './attack-ability';
 import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
 import { mapDamageType } from './actor-text';
 import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
+import { createStableDocumentId } from '../utils/stable-id';
 
 export interface ActivityGenerationContext {
   abilities?: Partial<Record<AttackAbility, number>>;
@@ -22,7 +23,11 @@ export class ActivityGenerator {
 
   public generate(action: ActionData, context: ActivityGenerationContext = {}): Record<string, any> {
     const activities: Record<string, any> = {};
-    const id = this.generateId();
+    const id = this.generateId({
+      path: action.logicalPath ?? action.name,
+      type: action.type,
+      action,
+    });
 
     if (action.attack) {
       const nativeRoll = this.inferNativeWeaponRoll(action, context);
@@ -37,7 +42,7 @@ export class ActivityGenerator {
           flat: !(nativeRoll || explicitAbility),
           type: {
             value: action.attack.type,
-            classification: 'weapon'
+            classification: action.attack.type.endsWith('sak') ? 'spell' : 'weapon'
           }
         },
         damage: {
@@ -70,7 +75,7 @@ export class ActivityGenerator {
         damage: {
           ...(this.isV14() ? {
             onSave: (action.damage?.length ?? 0) > 0
-              ? this.resolveSaveDamageResult(action.save.onSave ?? action.save.onFail)
+              ? this.resolveSaveDamageResult(action.save.outcome, action.save.onSave)
               : 'none',
           } : {}),
           parts: (action.damage || []).map(d => this.formatDamage(d))
@@ -337,11 +342,19 @@ export class ActivityGenerator {
       };
     }
 
+    if (action.logicalPath) {
+      for (const activity of Object.values(activities) as any[]) {
+        const flags = (activity.flags ??= {});
+        const ownFlags = (flags.fvttJsonGenerator ??= {});
+        ownFlags.sourceLogicalPath = action.logicalPath;
+      }
+    }
+
     return activities;
   }
 
   public generateCast(spellUuid: string): Record<string, any> {
-    const id = this.generateId();
+    const id = this.generateId({ type: 'cast', spellUuid });
     return {
       [id]: {
         _id: id,
@@ -441,17 +454,25 @@ export class ActivityGenerator {
     return result.kind === 'native' ? { calculation: result.calculation } : null;
   }
 
-  private generateId(): string {
-    const chars = 'abcdef0123456789';
-    let result = 'dnd5eactivity';
-    for (let i = 0; i < 3; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  public static mergeUnique(
+    target: Record<string, any>,
+    incoming: Record<string, any>,
+  ): Record<string, any> {
+    for (const [id, activity] of Object.entries(incoming)) {
+      if (Object.prototype.hasOwnProperty.call(target, id)) {
+        throw new Error(`Activity ID collision at "${id}"; existing activity was not overwritten.`);
+      }
+      target[id] = activity;
     }
-    return result;
+    return target;
+  }
+
+  private generateId(seed: unknown): string {
+    return createStableDocumentId(seed);
   }
 
   private buildAttackRange(attack: NonNullable<ActionData['attack']>): Record<string, unknown> {
-    if (attack.type === 'mwak') {
+    if (attack.type === 'mwak' || attack.type === 'msak') {
       const thrownMatch = attack.range?.match(/(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
       const value = thrownMatch?.[1] ? Number.parseInt(thrownMatch[1], 10) : null;
       const long = thrownMatch?.[2] ? Number.parseInt(thrownMatch[2], 10) : null;
@@ -524,7 +545,11 @@ export class ActivityGenerator {
     }
 
     if (action.passiveEffect.type === 'acBonus') {
-      const id = this.generateId();
+      const id = this.generateId({
+        type: 'passive',
+        name: action.name,
+        passiveEffect: action.passiveEffect,
+      });
       return {
         _id: id,
         name: action.name || `AC +${action.passiveEffect.value} 加值`,
@@ -575,10 +600,23 @@ export class ActivityGenerator {
     return this.isV14() ? value : { ...value, value: dc };
   }
 
-  private resolveSaveDamageResult(text: string | undefined): string {
-    if (!text) return 'half';
-    if (/no damage|none|涓嶅彈|鏃犱激瀹?/i.test(text)) return 'none';
-    return 'half';
+  private resolveSaveDamageResult(
+    outcome: NonNullable<ActionData['save']>['outcome'],
+    legacyText: string | undefined,
+  ): 'none' | 'half' | 'full' {
+    if (outcome === 'half' || outcome === 'full' || outcome === 'none') {
+      return outcome;
+    }
+    if (outcome === 'literal') {
+      return 'none';
+    }
+    if (legacyText && /half\s+(?:as\s+much\s+)?damage|减半|一半/i.test(legacyText)) {
+      return 'half';
+    }
+    if (legacyText && /full\s+damage|same\s+damage/i.test(legacyText)) {
+      return 'full';
+    }
+    return 'none';
   }
 
   private isV14(): boolean {

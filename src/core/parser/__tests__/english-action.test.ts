@@ -69,6 +69,7 @@ describe('EnglishActionParser', () => {
     expect(result?.save).toEqual({
       dc: 21,
       ability: 'dex',
+      outcome: 'half',
       onSave: 'half damage',
     });
     expect(result?.recharge).toEqual({ value: 5, charged: true });

@@ -73,7 +73,7 @@ describe('Foundry v14 generator target', () => {
     const activities = generator.generate({
       name: 'Radiant Burst',
       type: 'save',
-      save: { dc: 15, ability: 'dex', onFail: 'half' },
+      save: { dc: 15, ability: 'dex', outcome: 'half', onSave: 'half damage' },
       damage: [{ formula: '4d6', type: 'radiant' }],
     });
     const activity = activities[Object.keys(activities)[0]!];
@@ -164,7 +164,7 @@ describe('Foundry v14 generator target', () => {
         type: { value: 'trinket', baseItem: '' },
       },
       effects: [],
-      flags: {},
+      flags: { fvttJsonGenerator: { effectHints: {} } },
       _stats: {
         duplicateSource: null,
         coreVersion: '14.361',

@@ -36,7 +36,7 @@ function createActor(): any {
 }
 
 describe('actor target metadata', () => {
-  it('stamps v12 documents while preserving legacy activation and uses fields', () => {
+  it('stamps v12 documents and removes legacy Item activation/uses fields', () => {
     const actor = createActor();
     applyActorTargetMetadata(actor, '12');
 
@@ -49,11 +49,17 @@ describe('actor target metadata', () => {
     expect(actor.effects[0]._stats.coreVersion).toBe('12.331');
     expect(actor.items[0]._stats.systemVersion).toBe('4.3.9');
     expect(actor.items[0].effects[0]._stats.systemVersion).toBe('4.3.9');
-    expect(actor.items[0].system.activation).toEqual({ type: 'reaction' });
-    expect(actor.items[0].system.uses).toEqual(expect.objectContaining({ value: 2, max: 2, per: 'day' }));
-    expect(actor.items[0].system.activities.control.uses).toEqual(
-      expect.objectContaining({ value: 1, max: 1, per: 'day' }),
-    );
+    expect(actor.items[0].system.activation).toBeUndefined();
+    expect(actor.items[0].system.uses).toEqual({
+      max: '2',
+      spent: 0,
+      recovery: [{ period: 'day', type: 'recoverAll' }],
+    });
+    expect(actor.items[0].system.activities.control.uses).toEqual({
+      max: '1',
+      spent: 0,
+      recovery: [],
+    });
   });
 
   it('normalizes v14 Item and Activity uses without changing unrelated structure', () => {

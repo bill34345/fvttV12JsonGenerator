@@ -171,7 +171,9 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(parsed.bonus_actions?.length).toBeGreaterThan(0);
     expect(parsed.reactions?.length).toBeGreaterThan(0);
     expect(actor.items.some((item: { name: string }) => item.name.includes('(Swallow)'))).toBe(true);
-    expect(actor.items.some((item: { system?: { activation?: { type?: string } } }) => item.system?.activation?.type === 'reaction')).toBe(true);
+    expect(actor.items.some((item: any) =>
+      Object.values(item.system?.activities ?? {})
+        .some((activity: any) => activity.activation?.type === 'reaction'))).toBe(true);
   });
 
   it('maps structured sense notes into actor senses.special for Scuttling Serpentmaw', async () => {
@@ -232,9 +234,7 @@ describe('PlainTextIngestionWorkflow', () => {
 
     expect(screech?.system?.uses).toEqual(
       expect.objectContaining({
-        value: 1,
-        max: 1,
-        per: 'day',
+        max: '1',
         spent: 0,
       }),
     );
@@ -247,7 +247,7 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(
       (Object.values(ram?.system?.activities ?? {})[0] as { uses?: { recovery?: unknown[] } } | undefined)?.uses?.recovery?.[0],
     ).toEqual(expect.objectContaining({ period: 'recharge', formula: '5' }));
-    expect(bodyShield?.system?.activation?.cost).toBe(2);
+    expect((Object.values(bodyShield?.system?.activities ?? {})[0] as any)?.activation?.value).toBe(2);
   });
 
   it('keeps the fixture markdown compatible with parser routing', () => {

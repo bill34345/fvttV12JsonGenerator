@@ -80,8 +80,7 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
 
   it('keeps Venomous Bite as a normal action instead of inheriting the bloodied rider gate', () => {
     const venomousBite = findItem(actor, 'Venomous Bite');
-    expect(venomousBite.system.activation?.type).toBe('action');
-    expect(venomousBite.system.activation?.condition ?? '').toBe('');
+    expect(venomousBite.system.activation).toBeUndefined();
 
     const attackActivity = getActivities(venomousBite).find((activity) => activity.type === 'attack');
     expect(attackActivity).toBeDefined();
@@ -192,8 +191,8 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
     for (const activity of riderSaves) {
       expect(activity.uses).toEqual(
         expect.objectContaining({
-          value: 1,
-          max: 1,
+          spent: 0,
+          max: '1',
           recovery: [expect.objectContaining({ period: 'day' })],
         }),
       );

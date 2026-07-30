@@ -45,8 +45,10 @@ describe('ActorGenerator Upgrade', () => {
     const actor = generator.generate(input);
     const item = actor.items.find((i: any) => i.name === 'Lair Swipe');
     expect(item).toBeTruthy();
-    expect(item.system.activation.type).toBe('lair');
-    expect(item.system.activation.cost).toBe(1);
+    expect(item.system.activation).toBeUndefined();
+    expect((Object.values(item.system.activities)[0] as any).activation).toEqual(
+      expect.objectContaining({ type: 'lair', value: null }),
+    );
   });
 
   it('should generate legendary actions with legendary activation and a default cost of 1', () => {
@@ -70,8 +72,7 @@ describe('ActorGenerator Upgrade', () => {
     const actor = generator.generate(input, { route: 'english' });
     const item = actor.items.find((i: any) => i.name === 'Tail Swipe');
     expect(item).toBeTruthy();
-    expect(item.system.activation.type).toBe('legendary');
-    expect(item.system.activation.cost).toBe(1);
+    expect(item.system.activation).toBeUndefined();
 
     const activity = Object.values(item.system.activities ?? {})[0] as any;
     expect(activity).toBeDefined();

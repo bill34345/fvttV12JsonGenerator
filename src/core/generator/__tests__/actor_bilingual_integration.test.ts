@@ -207,9 +207,12 @@ describe('ActorGenerator english bilingual integration', () => {
     const bonusItem = actor.items.find((item: any) => item.name.includes('Dash'));
     const reactionItem = actor.items.find((item: any) => item.name.includes('Parry'));
 
-    expect(actionItem.system.activation.type).toBe('action');
-    expect(bonusItem.system.activation.type).toBe('bonus');
-    expect(reactionItem.system.activation.type).toBe('reaction');
+    expect((Object.values(actionItem.system.activities)[0] as any).activation.type).toBe('action');
+    expect((Object.values(bonusItem.system.activities)[0] as any).activation.type).toBe('bonus');
+    expect((Object.values(reactionItem.system.activities)[0] as any).activation.type).toBe('reaction');
+    expect(actionItem.system.activation).toBeUndefined();
+    expect(bonusItem.system.activation).toBeUndefined();
+    expect(reactionItem.system.activation).toBeUndefined();
   });
 
   it('keeps english action item names source-faithful when only local glossary fallback is available', async () => {
@@ -465,11 +468,11 @@ describe('ActorGenerator english bilingual integration', () => {
     const charge = actor.items.find((item: any) => item.name.includes('Charge'));
 
     expect(aggressive).toBeDefined();
-    expect(aggressive.system.activation.type).toBe('bonus');
+    expect((Object.values(aggressive.system.activities)[0] as any).activation.type).toBe('bonus');
     expect(wielder).toBeDefined();
-    expect(wielder.system.activation.type).toBe('');
+    expect((Object.values(wielder.system.activities)[0] as any).activation.type).toBe('');
     expect(charge).toBeDefined();
-    expect(charge.system.activation.type).toBe('reaction');
+    expect((Object.values(charge.system.activities)[0] as any).activation.type).toBe('reaction');
     expect(actor.system.details.biography.value).toBe('');
   });
 });

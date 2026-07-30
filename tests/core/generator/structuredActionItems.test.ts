@@ -56,10 +56,11 @@ describe('appendStructuredActionItems', () => {
       const item = items.find((i: any) => i.name.includes('探测心灵感应'));
       expect(item).toBeDefined();
       expect(item.type).toBe('feat');
-      expect(item.system.activation?.type).toBe('');
       const activities = getActivities(item);
       expect(activities.length).toBeGreaterThan(0);
       expect(activities[0]?.type).toBe('utility');
+      expect(activities[0]?.activation?.type).toBe('');
+      expect(item.system.activation).toBeUndefined();
     });
 
     it('generates multiple utility actions in the same section', () => {
@@ -92,6 +93,54 @@ describe('appendStructuredActionItems', () => {
   });
 
   describe('attack action generation', () => {
+    it('projects and links source-derived structured embedded effects', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
+      const actionSection = String.fromCodePoint(21160, 20316);
+      const parsed = createMinimalParsedNPC({
+        [actionSection]: [{
+          name: 'Constraining Strike',
+          type: 'attack',
+          attackType: 'mwak',
+          toHit: 5,
+          range: 'reach 5 ft.',
+          damage: [{ formula: '1d6+3', type: 'bludgeoning' }],
+          describe: 'Hit: the target is grappled and restrained until it escapes.',
+          embeddedEffects: [
+            { type: 'grappled', describe: 'The target is grappled until it escapes.', duration: 'until it escapes' },
+            { type: 'restrained', describe: 'The target is restrained until it escapes.', duration: 'until it escapes' },
+          ],
+        }],
+      });
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((entry: any) => entry.name.includes('Constraining Strike'));
+      const activities = getActivities(item);
+      const effectIds = (item.effects ?? []).map((effect: any) => effect._id);
+
+      expect((item.effects ?? []).flatMap((effect: any) => effect.statuses ?? []).sort()).toEqual([
+        'grappled',
+        'restrained',
+      ]);
+      expect(activities[0].effects.map((entry: any) => entry._id).sort()).toEqual(effectIds.sort());
+    });
+
+    it('does not create an embedded effect from unrelated non-application prose', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
+      const featureSection = String.fromCodePoint(29305, 24615);
+      const parsed = createMinimalParsedNPC({
+        [featureSection]: [{
+          name: 'Escape Training',
+          type: 'utility',
+          describe: 'The creature has advantage on checks made to escape the grappled condition.',
+        }],
+      });
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((entry: any) => entry.name.includes('Escape Training'));
+
+      expect(item.effects ?? []).toEqual([]);
+    });
+
     it('uses native ability-based weapon rolls for exact attack and damage modifier matches', () => {
       const generator = new ActorGenerator();
       const structuredActions: StructuredActionData[] = [
@@ -201,12 +250,12 @@ describe('appendStructuredActionItems', () => {
 
       expect(item).toBeDefined();
       expect(item.type).toBe('weapon');
-      expect(item.system.activation?.type).toBe('action');
-
       const activities = getActivities(item);
       const attackActivity = activities.find((a: any) => a.type === 'attack');
       expect(attackActivity).toBeDefined();
+      expect(attackActivity.activation?.type).toBe('action');
       expect(attackActivity.attack?.type?.value).toBe('mwak');
+      expect(item.system.activation).toBeUndefined();
     });
 
     it('generates ranged attack action', () => {
@@ -287,7 +336,11 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((i: any) => i.name.includes('重击'));
 
       expect(item).toBeDefined();
-      expect(item.system.uses?.per).toBe('recharge');
+      expect(item.system.uses).toEqual({
+        spent: 0,
+        max: '',
+        recovery: [{ period: 'recharge', type: 'recoverAll' }],
+      });
     });
 
     it('passes explicit DC source ability through to native save calculation', () => {
@@ -356,11 +409,13 @@ describe('appendStructuredActionItems', () => {
 
       const mentalFog = items.find((i: any) => i.name.includes('精神迷雾'));
       expect(mentalFog).toBeDefined();
-      expect(mentalFog.system.activation?.type).toBe('legendary');
+      expect(getActivities(mentalFog)[0]?.activation?.type).toBe('legendary');
+      expect(mentalFog.system.activation).toBeUndefined();
 
       const soulbound = items.find((i: any) => i.name.includes('魂缚互换'));
       expect(soulbound).toBeDefined();
-      expect(soulbound.system.activation?.type).toBe('legendary');
+      expect(getActivities(soulbound)[0]?.activation?.type).toBe('legendary');
+      expect(soulbound.system.activation).toBeUndefined();
     });
   });
 
@@ -384,7 +439,8 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((i: any) => i.name.includes('被动特性'));
 
       expect(item).toBeDefined();
-      expect(item.system.activation?.type).toBe('');
+      expect(getActivities(item)[0]?.activation?.type).toBe('');
+      expect(item.system.activation).toBeUndefined();
     });
 
     it('maps 附赠动作 section to bonus activation', () => {
@@ -409,7 +465,8 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((i: any) => i.name.includes('快速打击'));
 
       expect(item).toBeDefined();
-      expect(item.system.activation?.type).toBe('bonus');
+      expect(getActivities(item)[0]?.activation?.type).toBe('bonus');
+      expect(item.system.activation).toBeUndefined();
     });
 
     it('maps 反应 section to reaction activation', () => {
@@ -434,7 +491,8 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((i: any) => i.name.includes('借机攻击'));
 
       expect(item).toBeDefined();
-      expect(item.system.activation?.type).toBe('reaction');
+      expect(getActivities(item)[0]?.activation?.type).toBe('reaction');
+      expect(item.system.activation).toBeUndefined();
     });
   });
 
@@ -462,8 +520,9 @@ describe('appendStructuredActionItems', () => {
       expect(item).toBeDefined();
       expect(item.system.uses).toEqual(
         expect.objectContaining({
-          value: 3,
-          max: 3,
+          spent: 0,
+          max: '3',
+          recovery: [{ period: 'lr', type: 'recoverAll' }],
         }),
       );
     });

@@ -4,14 +4,17 @@ export interface Damage {
   types?: string[];
 }
 
+export type SaveOutcome = 'none' | 'half' | 'full' | 'literal';
+
 export interface ActionData {
   name: string;
+  logicalPath?: string;
   englishName?: string;
   type: "attack" | "save" | "utility" | "effect" | "use" | "spell";
   desc?: string; 
   
   attack?: {
-    type: "mwak" | "rwak";
+    type: "mwak" | "rwak" | "msak" | "rsak";
     ability?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
     toHit: number;
     range: string;
@@ -27,6 +30,7 @@ export interface ActionData {
     ability: string;
     dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
     dcSourceKind?: 'ability' | 'spellcasting' | 'literal';
+    outcome?: SaveOutcome;
     onSave?: string;
     onFail?: string;
   };
@@ -168,6 +172,7 @@ export interface StructuredActionData {
   type: ActivityType;
   activation?: {
     type: ActivityActivationType;
+    cost?: number;
     condition?: string;
     explicit?: boolean;
   };
@@ -196,7 +201,7 @@ export interface StructuredActionData {
 
   // Nested attack structure compatible with ActivityGenerator
   attack?: {
-    type: "mwak" | "rwak";
+    type: "mwak" | "rwak" | "msak" | "rsak";
     toHit: number;
     range: string;
     reach?: string;

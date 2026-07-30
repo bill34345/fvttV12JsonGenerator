@@ -128,9 +128,12 @@ describe('Slithering Bloodfin acceptance gate', () => {
     const wriggly = findItem(actor, 'Wriggly');
     const deathBurst = findItem(actor, 'Death Burst');
 
-    expect(bloodFrenzy.system.activation?.type).toBe('');
-    expect(wriggly.system.activation?.type).toBe('special');
-    expect(deathBurst.system.activation?.type).toBe('special');
+    expect(bloodFrenzy.system.activation).toBeUndefined();
+    expect(wriggly.system.activation).toBeUndefined();
+    expect(deathBurst.system.activation).toBeUndefined();
+    expect(getFirstActivity(bloodFrenzy).activation?.type).toBe('');
+    expect(getFirstActivity(wriggly).activation?.type).toBe('special');
+    expect(getFirstActivity(deathBurst).activation?.type).toBe('special');
 
     for (const item of [bloodFrenzy, wriggly]) {
       const activities = getActivities(item);
@@ -328,7 +331,8 @@ describe('Slithering Bloodfin acceptance gate', () => {
 
   it('keeps Swallow as a bonus action', () => {
     const swallow = findItem(actor, 'Swallow');
-    expect(swallow.system.activation?.type).toBe('bonus');
+    expect(swallow.system.activation).toBeUndefined();
+    expect(getFirstActivity(swallow).activation?.type).toBe('bonus');
     const activities = getActivities(swallow);
     expect(activities.map((activity) => activity.type)).toEqual(['attack', 'damage', 'save']);
     expect(activities[0].effects ?? []).toHaveLength(2);
@@ -354,7 +358,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
 
   it('keeps Slippery and Pelagic Screech as reactions', () => {
     const slippery = findItem(actor, 'Slippery');
-    expect(slippery.system.activation?.type).toBe('reaction');
+    expect(slippery.system.activation).toBeUndefined();
     expect((slippery as any).flags?.['tidy5e-sheet']).toEqual(
       expect.objectContaining({
         section: '反应',
@@ -369,7 +373,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
     );
 
     const pelagicScreech = findItem(actor, 'Pelagic Screech');
-    expect(pelagicScreech.system.activation?.type).toBe('reaction');
+    expect(pelagicScreech.system.activation).toBeUndefined();
     expect((pelagicScreech as any).flags?.['tidy5e-sheet']).toEqual(
       expect.objectContaining({
         section: '反应',
@@ -388,8 +392,8 @@ describe('Slithering Bloodfin acceptance gate', () => {
     const pelagicScreech = findItem(actor, 'Pelagic Screech');
     expect(pelagicScreech.system.uses).toEqual(
       expect.objectContaining({
-        value: 1,
-        max: 1,
+        spent: 0,
+        max: '1',
       }),
     );
     expect(Array.isArray(pelagicScreech.system.uses?.recovery)).toBe(true);
@@ -444,7 +448,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
 
   it('preserves the bloodied-only gate for Pelagic Screech instead of dropping it into plain prose', () => {
     const pelagicScreech = findItem(actor, 'Pelagic Screech');
-    expect(String(pelagicScreech.system.activation?.condition ?? '')).toMatch(/bloodied|濒血/i);
+    expect(String(getFirstActivity(pelagicScreech).activation?.condition ?? '')).toMatch(/bloodied|濒血/i);
   });
 
   it('assigns real dnd5e status icons instead of leaving generated effects blank', () => {

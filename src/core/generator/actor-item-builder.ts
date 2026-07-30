@@ -1,6 +1,9 @@
 import type { ActionData } from '../parser/action';
 import type { StructuredActionData } from '../models/action';
-import type { ActivityGenerator } from './activity';
+import { ActivityGenerator } from './activity';
+import { statusIconPath } from './actor-effects';
+import { createStableDocumentId } from '../utils/stable-id';
+import { deriveExplicitSaveOutcome } from '../generation/save-outcome';
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -174,7 +177,11 @@ export function structuredActionToActivityData(action: StructuredActionData): an
   }
 
   if ((action.type === 'save' || action.DC) && action.DC) {
-    base.save = { dc: action.DC, ability: action.ability || 'str' };
+    base.save = {
+      dc: action.DC,
+      ability: action.ability || 'str',
+      outcome: deriveExplicitSaveOutcome(action as unknown as Record<string, any>),
+    };
     if (action.dcSourceAbility) base.save.dcSourceAbility = action.dcSourceAbility;
     if (action.dcSourceKind) base.save.dcSourceKind = action.dcSourceKind;
     if (action.aoe) {
@@ -220,12 +227,15 @@ export function attachSubActivities(
   const mainActivity = activities[mainActivityKey];
   if (!mainActivity) return;
 
-  for (const sub of subActions) {
-    const subData = structuredActionToActivityData(sub as StructuredActionData);
+  for (const [index, sub] of subActions.entries()) {
+    const subData = {
+      ...structuredActionToActivityData(sub as StructuredActionData),
+      logicalPath: `subActions/${index}/${sub.name}`,
+    };
     const subActivity = activityGenerator.generate(subData);
     const subKey = Object.keys(subActivity)[0];
     if (subKey && subActivity[subKey]) {
-      activities[subKey] = subActivity[subKey];
+      ActivityGenerator.mergeUnique(activities, subActivity);
       if (sub.trigger) {
         activities[subKey].trigger = { type: mapTriggerType(sub.trigger) };
       }
@@ -241,6 +251,98 @@ export function attachSubActivities(
  */
 export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActionData['embeddedEffects']): void {
   if (!embeddedEffects || !embeddedEffects.length) return;
+  const effects = Array.isArray(item.effects) ? item.effects : (item.effects = []);
+  const activities = item?.system?.activities;
+  const existingByStatus = new Map<string, any>();
+  for (const effect of effects) {
+    for (const status of effect?.statuses ?? []) {
+      existingByStatus.set(String(status), effect);
+    }
+  }
+
+  for (const [index, embedded] of embeddedEffects.entries()) {
+    const status = normalizeEmbeddedEffectStatus(embedded.type);
+    let effect = status ? existingByStatus.get(status) : undefined;
+    if (!effect) {
+      const id = createStableDocumentId({
+        item: item.name,
+        path: `embeddedEffects/${index}`,
+        embedded,
+      });
+      if (effects.some((entry: any) => entry?._id === id)) {
+        throw new Error(`Embedded Effect ID collision at "${id}".`);
+      }
+      effect = {
+        _id: id,
+        name: status ? `${embedded.type} (${status})` : embedded.type,
+        type: 'base',
+        system: {},
+        changes: [],
+        disabled: false,
+        duration: {
+          startTime: null,
+          seconds: null,
+          combat: null,
+          rounds: null,
+          turns: null,
+          startRound: null,
+          startTurn: null,
+        },
+        description: embedded.describe,
+        origin: null,
+        tint: '#ffffff',
+        transfer: false,
+        img: status ? statusIconPath(status) : 'icons/svg/aura.svg',
+        statuses: status ? [status] : [],
+        flags: {
+          fvttJsonGenerator: {
+            sourceDerivedEmbeddedEffect: true,
+            sourceDuration: embedded.duration ?? null,
+          },
+        },
+      };
+      effects.push(effect);
+      if (status) existingByStatus.set(status, effect);
+    }
+
+    for (const activity of Object.values(activities ?? {}) as any[]) {
+      if (!Array.isArray(activity.effects)) activity.effects = [];
+      if (!activity.effects.some((entry: any) => entry?._id === effect._id)) {
+        activity.effects.push({ _id: effect._id });
+      }
+    }
+  }
+}
+
+function normalizeEmbeddedEffectStatus(type: string): string | undefined {
+  const normalized = type.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    grappled: 'grappled',
+    restrained: 'restrained',
+    blinded: 'blinded',
+    deafened: 'deafened',
+    charmed: 'charmed',
+    frightened: 'frightened',
+    paralyzed: 'paralyzed',
+    petrified: 'petrified',
+    poisoned: 'poisoned',
+    prone: 'prone',
+    stunned: 'stunned',
+    unconscious: 'unconscious',
+    擒抱: 'grappled',
+    束缚: 'restrained',
+    目盲: 'blinded',
+    耳聋: 'deafened',
+    魅惑: 'charmed',
+    恐慌: 'frightened',
+    麻痹: 'paralyzed',
+    石化: 'petrified',
+    中毒: 'poisoned',
+    倒地: 'prone',
+    震慑: 'stunned',
+    昏迷: 'unconscious',
+  };
+  return aliases[normalized];
 }
 
 /**

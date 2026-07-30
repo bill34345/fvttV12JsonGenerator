@@ -120,7 +120,9 @@ export class EnglishActionParser {
   }
 
   private splitNameAndBody(line: string): { namePart: string; body: string } | null {
-    const statblockColonMatch = line.match(/^(.+?):\s+((?:Melee|Ranged)(?:\s+or\s+Ranged)?\s+Weapon\s+Attack:.+)$/i);
+    const statblockColonMatch = line.match(
+      /^(.+?):\s+((?:Melee|Ranged)(?:\s+or\s+Ranged)?\s+(?:Weapon|Spell)\s+Attack:.+)$/i,
+    );
     const match = statblockColonMatch ?? line.match(/^(.+?)\.\s+(.+)$/) ?? line.match(/^(.+?):\s+(.+)$/);
     if (!match?.[1] || !match[2]) {
       return null;
@@ -163,43 +165,43 @@ export class EnglishActionParser {
 
   private parseCompactAttack(line: string): ActionData | null {
     const match = line.match(
-      /^(.+?)\s*\[(Melee|Ranged)[^\]]*Weapon Attack\]:\s*\+(\d+)\s*(?:to\s+hit|hit),\s*([^,]+),\s*(.+)$/i,
+      /^(.+?)\s*\[(Melee|Ranged)[^\]]*(Weapon|Spell) Attack\]:\s*\+(\d+)\s*(?:to\s+hit|hit),\s*([^,]+),\s*(.+)$/i,
     );
-    if (!match?.[1] || !match[2] || !match[3] || !match[4] || !match[5]) {
+    if (!match?.[1] || !match[2] || !match[3] || !match[4] || !match[5] || !match[6]) {
       return null;
     }
 
-    const attackType = match[2].toLowerCase() === 'ranged' ? 'rwak' : 'mwak';
-    const damage = this.parseDamages(match[5]);
+    const attackType = this.mapAttackType(match[2], match[3]);
+    const damage = this.parseDamages(match[6]);
 
     return {
       name: match[1].trim(),
       type: 'attack',
       attack: {
         type: attackType,
-        toHit: Number.parseInt(match[3], 10),
-        range: match[4].trim(),
+        toHit: Number.parseInt(match[4], 10),
+        range: match[5].trim(),
         damage,
       },
-      desc: match[5].trim(),
+      desc: match[6].trim(),
     };
   }
 
   private parseStatblockAttack(body: string): ActionData['attack'] | undefined {
     const match = body.match(
-      /^(Melee(?:\s+or\s+Ranged)?|Ranged)\s+Weapon\s+Attack:\s*\+(\d+)\s+to\s+hit,\s*(reach|range)\s+([^,]+),/i,
+      /^(Melee(?:\s+or\s+Ranged)?|Ranged)\s+(Weapon|Spell)\s+Attack:\s*\+(\d+)\s+to\s+hit,\s*(reach|range)\s+([^,]+),/i,
     );
 
-    if (!match?.[1] || !match[2] || !match[3] || !match[4]) {
+    if (!match?.[1] || !match[2] || !match[3] || !match[4] || !match[5]) {
       return undefined;
     }
 
-    const attackType = match[1].toLowerCase().startsWith('ranged') ? 'rwak' : 'mwak';
-    const range = `${match[3].toLowerCase()} ${match[4].trim()}`;
+    const attackType = this.mapAttackType(match[1], match[2]);
+    const range = `${match[4].toLowerCase()} ${match[5].trim()}`;
 
     return {
       type: attackType,
-      toHit: Number.parseInt(match[2], 10),
+      toHit: Number.parseInt(match[3], 10),
       range,
       damage: this.parseDamages(this.extractAttackDamageText(body)),
     };
@@ -216,13 +218,37 @@ export class EnglishActionParser {
       return undefined;
     }
 
-    const onSave = /half\s+as\s+much\s+damage|half\s+damage/i.test(body) ? 'half damage' : undefined;
+    const explicitHalf = /half\s+as\s+much\s+damage|half\s+damage/i.test(body);
+    const explicitFull = /same\s+damage|full\s+damage/i.test(body);
+    const hasDamage = this.parseDamages(body).length > 0;
+    const failedSaveOnly = /(?:on|upon)\s+a\s+failed\s+(?:DC\s+\d+\s+[A-Za-z]+\s+saving\s+throw|save)|fails?\s+(?:the|a)\s+(?:DC\s+\d+\s+[A-Za-z]+\s+)?sav(?:e|ing throw)|taking\b.+\bon\s+a\s+failed\s+save/i.test(body);
+    const explicitNoEffect = /on\s+a\s+successful\s+(?:save|one)[^.]*(?:takes?\s+no\s+damage|no\s+effect)/i.test(body);
+    const outcome: NonNullable<ActionData['save']>['outcome'] = explicitHalf
+      ? 'half'
+      : explicitFull
+        ? 'full'
+        : explicitNoEffect || (hasDamage && failedSaveOnly)
+          ? 'none'
+          : 'literal';
 
     return {
       dc: Number.parseInt(match[1], 10),
       ability,
-      onSave,
+      outcome,
+      onSave: explicitHalf ? 'half damage' : explicitFull ? 'full damage' : undefined,
     };
+  }
+
+  private mapAttackType(
+    delivery: string,
+    category: string,
+  ): NonNullable<ActionData['attack']>['type'] {
+    const ranged = delivery.toLowerCase().startsWith('ranged');
+    const spell = category.toLowerCase() === 'spell';
+    if (spell) {
+      return ranged ? 'rsak' : 'msak';
+    }
+    return ranged ? 'rwak' : 'mwak';
   }
 
   private parseDamages(text: string): Damage[] {

@@ -69,6 +69,67 @@ describe('ActivityGenerator', () => {
     expect(activity.damage.parts[0].types).toContain('fire');
   });
 
+  it('projects explicit save outcomes without defaulting successful saves to half damage', () => {
+    const none = Object.values(new ActivityGenerator({ fvttVersion: '14' }).generate({
+      name: 'Poison Spray',
+      type: 'save',
+      save: { dc: 14, ability: 'con', outcome: 'none' },
+      damage: [{ formula: '2d12', type: 'poison' }],
+    }))[0] as any;
+    const half = Object.values(new ActivityGenerator({ fvttVersion: '14' }).generate({
+      name: 'Flame Burst',
+      type: 'save',
+      save: { dc: 15, ability: 'dex', outcome: 'half' },
+      damage: [{ formula: '4d6', type: 'fire' }],
+    }))[0] as any;
+    const literal = Object.values(new ActivityGenerator({ fvttVersion: '14' }).generate({
+      name: 'Dread Glare',
+      type: 'save',
+      save: { dc: 15, ability: 'wis', outcome: 'literal' },
+    }))[0] as any;
+
+    expect(none.damage.onSave).toBe('none');
+    expect(half.damage.onSave).toBe('half');
+    expect(literal.damage.onSave).toBe('none');
+  });
+
+  it('generates stable 16-character IDs with broad uniqueness', () => {
+    const first = new ActivityGenerator().generate({
+      name: 'Stable Strike',
+      type: 'attack',
+      attack: { type: 'mwak', toHit: 5, range: 'reach 5 ft.', damage: [{ formula: '1d6+3', type: 'slashing' }] },
+    });
+    const second = new ActivityGenerator().generate({
+      name: 'Stable Strike',
+      type: 'attack',
+      attack: { type: 'mwak', toHit: 5, range: 'reach 5 ft.', damage: [{ formula: '1d6+3', type: 'slashing' }] },
+    });
+    const firstId = Object.keys(first)[0]!;
+
+    expect(firstId).toMatch(/^[A-Za-z0-9]{16}$/);
+    expect(Object.keys(second)[0]).toBe(firstId);
+
+    const ids = new Set<string>();
+    for (let index = 0; index < 10_000; index++) {
+      const generated = new ActivityGenerator().generate({
+        name: `Generated Activity ${index}`,
+        type: 'utility',
+        desc: `source ordinal ${index}`,
+      });
+      ids.add(Object.keys(generated)[0]!);
+    }
+    expect(ids.size).toBe(10_000);
+  });
+
+  it('rejects an Activity map collision before overwrite', () => {
+    const target = { collision0000001: { _id: 'collision0000001', name: 'Existing' } };
+
+    expect(() => ActivityGenerator.mergeUnique(target, {
+      collision0000001: { _id: 'collision0000001', name: 'Replacement' },
+    })).toThrow(/collision/i);
+    expect(target.collision0000001.name).toBe('Existing');
+  });
+
   it('generates native save DC calculation when the source ability is explicit and exact', () => {
     const action: ActionData = {
       name: 'Radiant Burst',

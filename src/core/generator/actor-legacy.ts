@@ -1,6 +1,6 @@
 import type { ParsedNPC } from '../../config/mapping';
 import { spellsMapper } from '../mapper/spells';
-import type { ActivityGenerator } from './activity';
+import { ActivityGenerator } from './activity';
 import type { FvttTargetVersion } from '../foundryTarget';
 
 /**
@@ -115,7 +115,7 @@ export function appendLegacySpellItems(
     const info = spellsMapper.get(spellName);
     if (info) {
       const act = activityGenerator.generateCast(info.uuid);
-      Object.assign(spellcastingItem.system.activities, act);
+      ActivityGenerator.mergeUnique(spellcastingItem.system.activities, act);
       hasLinkedSpells = true;
     } else if (spellName) {
       items.push({

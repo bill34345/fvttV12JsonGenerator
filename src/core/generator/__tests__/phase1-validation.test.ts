@@ -104,13 +104,15 @@ describe('Phase 1: 1/Day Ability Uses', () => {
     actor = loadAndGenerate('slithering-bloodfin__滑行血鳍.md');
   });
 
-  it('远洋尖啸 [1/日] should have uses.value=1, uses.max=1', () => {
+  it('远洋尖啸 [1/日] should use the spent/max/recovery schema', () => {
     const xiao = actor.items.find((i: any) => i.name.includes('远洋尖啸'));
     expect(xiao).toBeDefined();
     expect(xiao.system.uses).toBeDefined();
-    expect(xiao.system.uses.value).toBe(1);
-    expect(xiao.system.uses.max).toBe(1);
-    expect(xiao.system.uses.per).toBeDefined();
+    expect(xiao.system.uses).toEqual({
+      spent: 0,
+      max: '1',
+      recovery: [{ period: 'day', type: 'recoverAll' }],
+    });
   });
 });
 
@@ -142,7 +144,8 @@ describe('Phase 1: Effect Binding', () => {
       expect(actor.items.some((i: any) => i.name.includes('Wriggly'))).toBe(false);
       return;
     }
-    expect(niuHua.system.activation.type).toBe('special');
+    expect((Object.values(niuHua.system.activities)[0] as any).activation.type).toBe('special');
+    expect(niuHua.system.activation).toBeUndefined();
     expect(niuHua.effects ?? []).toHaveLength(0);
   });
 });
@@ -157,13 +160,15 @@ describe('Phase 1: Bonus Action / Reaction Recognition', () => {
   it('吞咽 should be a bonus action', () => {
     const swallow = actor.items.find((i: any) => i.name.startsWith('吞咽'));
     expect(swallow).toBeDefined();
-    expect(swallow.system.activation.type).toBe('bonus');
+    expect((Object.values(swallow.system.activities)[0] as any).activation.type).toBe('bonus');
+    expect(swallow.system.activation).toBeUndefined();
   });
 
   it('滑溜 should be a reaction', () => {
     const slip = actor.items.find((i: any) => i.name.startsWith('滑溜'));
     expect(slip).toBeDefined();
-    expect(slip.system.activation.type).toBe('reaction');
+    expect((Object.values(slip.system.activities)[0] as any).activation.type).toBe('reaction');
+    expect(slip.system.activation).toBeUndefined();
   });
 });
 

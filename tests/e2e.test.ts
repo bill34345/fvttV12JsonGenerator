@@ -112,7 +112,8 @@ describe('End-to-End Conversion', () => {
     // 4. Lair Action item exists and has activation `lair`
     const lairAction = actor.items.find((i: any) => i.name === '动作A');
     expect(lairAction).toBeDefined();
-    expect(lairAction.system.activation.type).toBe('lair');
+    expect((Object.values(lairAction.system.activities)[0] as any)?.activation?.type).toBe('lair');
+    expect(lairAction.system.activation).toBeUndefined();
 
     // 5. Regional Effect item exists and has flags `tidy5e-sheet.section`
     const regionalEffect = actor.items.find((i: any) => i.name === '效应B');

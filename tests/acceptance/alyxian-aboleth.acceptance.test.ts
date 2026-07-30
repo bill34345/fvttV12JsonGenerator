@@ -110,12 +110,7 @@ describe('Alyxian Aboleth acceptance gate', () => {
 
   it('keeps legendary action costs on generated legendary items', () => {
     const mentalFog = findLegendaryItem(actor, 'Mental Fog');
-    expect(mentalFog.system.activation).toEqual(
-      expect.objectContaining({
-        type: 'legendary',
-        cost: 2,
-      }),
-    );
+    expect(mentalFog.system.activation).toBeUndefined();
     const saveActivity = getActivities(mentalFog).find((activity) => activity.type === 'save');
     expect(saveActivity.activation).toEqual(
       expect.objectContaining({
@@ -133,12 +128,7 @@ describe('Alyxian Aboleth acceptance gate', () => {
     );
 
     const compel = findLegendaryItem(actor, 'Compel');
-    expect(compel.system.activation).toEqual(
-      expect.objectContaining({
-        type: 'legendary',
-        cost: 1,
-      }),
-    );
+    expect(compel.system.activation).toBeUndefined();
     const compelActivity = getActivities(compel)[0];
     expect(compelActivity.activation).toEqual(
       expect.objectContaining({
@@ -152,8 +142,8 @@ describe('Alyxian Aboleth acceptance gate', () => {
     const resilience = findSingleItem(actor, 'Mindtaker Resilience');
     expect(resilience.system.uses).toEqual(
       expect.objectContaining({
-        value: 3,
-        max: 3,
+        spent: 0,
+        max: '3',
       }),
     );
     expect(Array.isArray(resilience.system.uses?.recovery)).toBe(true);

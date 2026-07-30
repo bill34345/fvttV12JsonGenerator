@@ -36,7 +36,7 @@ describe('ItemValidator', () => {
       const item: ItemDocument = {
         _id: 'def456',
         name: 'Chainmail',
-        type: 'armor',
+        type: 'equipment',
         system: {},
       };
       const warnings = validator.validate(parsed, item);
@@ -61,6 +61,22 @@ describe('ItemValidator', () => {
   });
 
   describe('name mismatch warning', () => {
+    it('accepts the canonical bilingual display name', () => {
+      const parsed: ParsedItem = {
+        name: '骑士之盾',
+        englishName: 'Shield of the Cavalier',
+        type: 'equipment',
+        armor: { value: 2 },
+      };
+      const item: ItemDocument = {
+        _id: 'bilingual123',
+        name: '骑士之盾 (Shield of the Cavalier)',
+        type: 'equipment',
+        system: {},
+      };
+      expect(validator.validate(parsed, item)).toEqual([]);
+    });
+
     it('should warn when name does not match', () => {
       const parsed: ParsedItem = {
         name: 'Shortbow',

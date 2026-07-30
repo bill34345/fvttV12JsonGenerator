@@ -1,18 +1,23 @@
 import type { ParsedItem } from '../models/item';
 import type { ItemDocument } from '../generator/item-generator';
+import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
 
 export class ItemValidator {
   public validate(parsed: ParsedItem, item: ItemDocument): string[] {
     const warnings: string[] = [];
 
     // Check: name matches
-    if (item.name !== parsed.name && parsed.name) {
-      warnings.push(`Name mismatch: Expected '${parsed.name}', got '${item.name}'`);
+    const expectedName = parsed.englishName
+      ? `${parsed.name} (${parsed.englishName})`
+      : parsed.name;
+    if (item.name !== expectedName && parsed.name) {
+      warnings.push(`Name mismatch: Expected '${expectedName}', got '${item.name}'`);
     }
 
     // Check: type matches
-    if (item.type !== parsed.type) {
-      warnings.push(`Type mismatch: Expected '${parsed.type}', got '${item.type}'`);
+    const expectedType = mapSourceItemTypeToFoundry(parsed.type);
+    if (item.type !== expectedType) {
+      warnings.push(`Type mismatch: Expected '${expectedType}', got '${item.type}'`);
     }
 
     // Check: required fields present based on type

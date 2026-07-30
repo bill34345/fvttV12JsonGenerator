@@ -4,8 +4,23 @@ export function normalizeTargetUses(
   uses: Record<string, unknown>,
   fvttVersion: FvttTargetVersion,
 ): Record<string, unknown> {
-  if (fvttVersion !== '14') return uses;
   const normalized = { ...uses };
+  if (normalized.spent === undefined) {
+    const max = typeof normalized.max === 'number'
+      ? normalized.max
+      : Number.parseInt(String(normalized.max ?? ''), 10);
+    const remaining = typeof normalized.value === 'number'
+      ? normalized.value
+      : Number.parseInt(String(normalized.value ?? ''), 10);
+    normalized.spent = Number.isFinite(max) && Number.isFinite(remaining)
+      ? Math.max(0, max - remaining)
+      : 0;
+  }
+  if (!Array.isArray(normalized.recovery)) {
+    normalized.recovery = normalized.per
+      ? [{ period: String(normalized.per), type: 'recoverAll' }]
+      : [];
+  }
   delete normalized.value;
   delete normalized.per;
   if (typeof normalized.max === 'number') {
@@ -42,11 +57,9 @@ export function applyActorTargetMetadata(
     applyDocumentStats(item);
     normalizeEffects(item.effects);
 
-    if (fvttVersion === '14') {
-      delete item.system?.activation;
-      if (item.system?.uses) {
-        item.system.uses = normalizeTargetUses(item.system.uses, fvttVersion);
-      }
+    delete item.system?.activation;
+    if (item.system?.uses) {
+      item.system.uses = normalizeTargetUses(item.system.uses, fvttVersion);
     }
 
     for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {

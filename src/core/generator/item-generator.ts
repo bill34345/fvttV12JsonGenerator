@@ -1,7 +1,17 @@
 import type { ParsedItem, ItemType, ActivityData } from '../models/item';
 import { ActivityGenerator } from './activity';
 import { generateEnhancedConditionEffects } from './actor-effects';
-import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
+import {
+  assertEffectProfileForTarget,
+  getFoundryTarget,
+  type FvttTargetVersion,
+} from '../foundryTarget';
+import {
+  EffectProfileApplier,
+  type EffectProfile,
+} from './effectProfileApplier';
+import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
+import { createStableDocumentId } from '../utils/stable-id';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -26,6 +36,7 @@ export interface ItemDocument {
  */
 export interface ItemGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
+  effectProfile?: EffectProfile;
 }
 
 /**
@@ -49,9 +60,13 @@ function generateItemId(): string {
 export class ItemGenerator {
   private activityGenerator: ActivityGenerator;
   private readonly fvttVersion: FvttTargetVersion;
+  private readonly effectProfile: EffectProfile;
+  private readonly effectProfileApplier = new EffectProfileApplier();
 
   constructor(private options: ItemGeneratorOptions = {}) {
     this.fvttVersion = options.fvttVersion ?? '12';
+    this.effectProfile = options.effectProfile ?? 'core';
+    assertEffectProfileForTarget(this.fvttVersion, this.effectProfile);
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
   }
 
@@ -80,6 +95,7 @@ export class ItemGenerator {
     }
 
     // 6. Return the item document
+    this.effectProfileApplier.apply({ items: [item] }, this.effectProfile);
     this.finalizeTargetFields(item);
     return item;
   }
@@ -89,7 +105,7 @@ export class ItemGenerator {
    */
   private loadBundledMinimalTemplate(type: ItemType): ItemDocument {
     const item = this.loadFallbackTemplate(type);
-    const foundryType = this.foundryItemType(type);
+    const foundryType = mapSourceItemTypeToFoundry(type);
     item.type = foundryType;
 
     item.system.properties ??= [];
@@ -124,19 +140,12 @@ export class ItemGenerator {
     return item;
   }
 
-  private foundryItemType(type: ItemType): string {
-    if (type === 'ammunition' || type === 'consumable') return 'consumable';
-    if (type === 'armor' || type === 'rod' || type === 'wand') return 'equipment';
-    if (type === 'staff') return 'weapon';
-    return type;
-  }
-
   private loadFallbackTemplate(type: ItemType = 'equipment'): ItemDocument {
     // Return a minimal valid item structure
     return {
       _id: 'fallback',
       name: 'Unknown Item',
-      type: this.foundryItemType(type),
+      type: mapSourceItemTypeToFoundry(type),
       img: 'icons/svg/item-bag.svg',
       system: {
         description: {
@@ -314,13 +323,12 @@ export class ItemGenerator {
     }
 
     for (const [key, activity] of Object.entries(activities)) {
-      // Generate a new ID for each activity
-      const newId = generateItemId();
+      const newId = createStableDocumentId({ item: item.name, path: `activities/${key}`, activity });
       const activityWithId = {
         ...activity,
         _id: newId,
       };
-      item.system.activities[newId] = activityWithId;
+      ActivityGenerator.mergeUnique(item.system.activities, { [newId]: activityWithId });
     }
   }
 
@@ -352,10 +360,14 @@ export class ItemGenerator {
       item.effects = [];
     }
 
-    const processActions = (actions: any[] | undefined) => {
+    const processActions = (group: string, actions: any[] | undefined) => {
       if (!actions) return;
       if (!item.effects) item.effects = [];
-      for (const action of actions) {
+      for (const [index, sourceAction] of actions.entries()) {
+        const action = {
+          ...sourceAction,
+          logicalPath: `item/${item.name}/structuredActions/${group}/${index}/${sourceAction.name}`,
+        };
       const passiveEffect = this.activityGenerator.generatePassiveEffect(action);
         if (passiveEffect) {
           passiveEffect.origin = `Item.${item._id}`;
@@ -375,24 +387,24 @@ export class ItemGenerator {
             const actionName = action.englishName
               ? `${action.name} (${action.englishName})`
               : action.name;
-            item.system.activities[id] = {
+            ActivityGenerator.mergeUnique(item.system.activities, { [id]: {
               ...activity,
               name: (activity as ActivityData).name || actionName,
               sort: sortOrder,
-            };
+            } });
             sortOrder += 100000;
           }
         }
       }
     };
 
-    processActions(structuredActions.attacks);
-    processActions(structuredActions.saves);
-    processActions(structuredActions.utilities);
-    processActions(structuredActions.casts);
-    processActions(structuredActions.effects);
-    processActions(structuredActions.uses);
-    processActions(structuredActions.spells);
+    processActions('attacks', structuredActions.attacks);
+    processActions('saves', structuredActions.saves);
+    processActions('utilities', structuredActions.utilities);
+    processActions('casts', structuredActions.casts);
+    processActions('effects', structuredActions.effects);
+    processActions('uses', structuredActions.uses);
+    processActions('spells', structuredActions.spells);
   }
 
   /**
