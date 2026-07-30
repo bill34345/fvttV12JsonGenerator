@@ -6,11 +6,13 @@
 
 | 目标 | 系统版本 | Effect profile | 当前状态 |
 | --- | --- | --- | --- |
-| Foundry v12 | dnd5e 4.3.9 | `core`、`modded-v12` | 默认目标 |
-| Foundry v13 | dnd5e 4.3.9 | `core`、`modded-v12` | 保留兼容路径 |
-| Foundry v14 | dnd5e 5.3.3 | `core`、`modded-v14` | Actor 核心与最小模组运行验收通过 |
+| Foundry v12 | dnd5e 4.3.9 | `core`、`modded-v12` | 默认目标；严格结构验证 |
+| Foundry v13 | dnd5e 4.3.9 | `core`、`modded-v12` | 与 v12 共用 4.3.9 投影器；严格结构验证 |
+| Foundry v14 | dnd5e 5.3.3 | `core`、`modded-v14` | 独立 5.3.3 投影器；运行时证据按验收报告限定 |
 
 `modded-v14` 当前锁定 MIDI-QOL 14.0.11 和 DAE 14.0.12；旧的 14.0.9 实机结果保留为历史证据，不能自动升级为 14.0.11 的运行时验收。完整生产模组集合整体兼容性状态仍是 **Partial**。详见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
+
+Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse → canonical IR → validate IR → target projector → validate output → write` 管线。诊断状态为 `failed` 或 `needs_review` 时不会写入正式 output；`core` profile 不包含 MIDI-QOL、DAE、Times Up 或 Item Macro 专属字段。
 
 ## 安装
 
@@ -52,6 +54,8 @@ bun run src/index.ts "templates/npc-example.md" `
 ```
 
 最终 Actor/Item JSON 必须由 CLI 或项目 workflow 生成；不要手工拼装或修补最终 JSON。
+
+dnd5e 4.3.9 Item 不再输出 legacy `system.activation` 或 `uses.value/uses.per`。迁移细节见 [`docs/migrations/2026-07-30-dnd5e-4.3.9-generation-schema.md`](docs/migrations/2026-07-30-dnd5e-4.3.9-generation-schema.md)。
 
 ## Obsidian 工作流
 

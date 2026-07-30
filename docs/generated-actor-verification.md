@@ -1,4 +1,4 @@
-# Generated Actor Verification
+# Generated Actor / Item Verification
 
 ## Required Source-To-JSON Checks
 
@@ -17,7 +17,31 @@ For each generated Actor JSON, manually compare the generated output against the
 - No false effects: prerequisite-only text does not create on-hit effects unless the source explicitly applies that effect.
 - Output provenance: final JSON came from the project CLI or workflow, not manual construction or repair.
 
+For each generated standalone Item, also compare:
+
+- Identity and category: bilingual name, source category, normalized Foundry document type, rarity, attunement, weight, price, and equipment subtype.
+- Activities: activation, attack/save/damage, range, duration, concentration, target, uses/recovery, and source-derived stage membership.
+- Effects: every structured embedded effect exists once, has a unique ID, and is referenced only by the Activities that apply it.
+- Profile isolation: `core` contains no MIDI-QOL, DAE, Times Up, or Item Macro fields; a modded profile uses only the locked target-version contract.
+- Stage provenance: names, requirements, uses, and mechanics come from structured source data. A literal-only stage must remain `needs_review`.
+
+## Shared Verification Gate
+
+All supported entry points must run the same canonical generation pipeline. Before a formal write:
+
+- Every canonical attack, damage, save outcome, activation, use, effect, range, and stage is projected once or explicitly marked `literal-only`/`unsupported`.
+- Activity/Effect IDs are stable, 16 characters, unique within their document, and map keys equal Activity `_id` values.
+- Duplicate IDs, dangling Effect references, lost mechanics, save-outcome drift, invalid target fields, or profile leakage are blocking errors.
+- `needs_review` and `failed` results do not enter formal single-file output or collection ZIP artifacts.
+
 ## Version-Specific Checks
+
+When generating for `--fvtt-version 12` or `13`, check:
+
+- Actor, embedded Item, standalone Item, and ActiveEffect `_stats.systemVersion` are dnd5e `4.3.9`.
+- Item activation lives on Activities; legacy Item-level `system.activation` is absent.
+- Uses use `spent`, `max`, and `recovery`; legacy `value` and `per` are absent.
+- The result passed locked 4.3.9 structural assertions. Do not report a Foundry runtime pass unless that exact artifact was imported and exercised in a separately recorded runtime.
 
 When generating for `--fvtt-version 14`, also check:
 
@@ -29,6 +53,7 @@ When generating for `--fvtt-version 14`, also check:
 - Uses data omits legacy `value` and `per`; generated source should use `spent`, `max`, and `recovery`.
 - Spell fallback items use `method` and `prepared`, not legacy `preparation.mode`.
 - Active Effect changes target schema-backed v14 fields, for example AC flat/formula fields rather than legacy AC bonus fields.
+- Runtime import/readback is a separate gate. State whether the exact project-local Foundry 14.364 runtime was available for this run.
 
 When generating for `--fvtt-version 14 --effect-profile modded-v14`, also check:
 
