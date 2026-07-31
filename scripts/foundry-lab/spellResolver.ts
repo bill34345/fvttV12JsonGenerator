@@ -9,7 +9,12 @@ import {
   buildSpellResolverPackage,
   type SpellResolverBuildResult,
 } from '../buildSpellResolver';
-import { assertExactRepoPath, assertInsideLabRoot, type FoundryLabConfig } from './config';
+import {
+  assertExactLabPath,
+  assertExactRepoPath,
+  assertInsideLabRoot,
+  type FoundryLabConfig,
+} from './config';
 
 export const SPELL_RESOLVER_MODULE_ID = 'fvtt-json-generator-spell-resolver' as const;
 const APPROVED_WORLD_ID = 'fvtt-v14-module-matrix' as const;
@@ -169,9 +174,21 @@ export function assertExactSpellResolverDestination(config: FoundryLabConfig, ta
   }
   assertInsideLabRoot(config, target);
   assertInsideLabRoot(config, dirname(target));
-  assertExactRepoPath(config, target, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules', SPELL_RESOLVER_MODULE_ID,
+  assertExactLabPath(config, target, [
+    'data', 'server-mirror', 'Data', 'modules', SPELL_RESOLVER_MODULE_ID,
   ], 'Spell resolver destination');
+}
+
+function assertExactSpellResolverModulesRoot(config: FoundryLabConfig, target: string): void {
+  assertExactLabPath(config, target, [
+    'data', 'server-mirror', 'Data', 'modules',
+  ], 'Spell resolver modules root');
+}
+
+function assertExactSpellResolverStaging(config: FoundryLabConfig, target: string): void {
+  assertExactLabPath(config, target, [
+    'data', 'server-mirror', 'Data', 'modules', `.${SPELL_RESOLVER_MODULE_ID}.installing`,
+  ], 'Spell resolver staging directory');
 }
 
 export async function buildSpellResolverForLab(
@@ -227,18 +244,11 @@ export async function installSpellResolver(config: FoundryLabConfig, options: Mu
 
   await options.installSeam?.beforeStagingMutation?.();
   assertExactSpellResolverDestination(config, paths.destination);
-  assertExactRepoPath(config, paths.modulesRoot, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-  ], 'Spell resolver modules root');
+  assertExactSpellResolverModulesRoot(config, paths.modulesRoot);
   await mkdir(paths.modulesRoot, { recursive: true });
-  assertExactRepoPath(config, paths.modulesRoot, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-  ], 'Spell resolver modules root');
+  assertExactSpellResolverModulesRoot(config, paths.modulesRoot);
   const staging = resolve(paths.modulesRoot, `.${SPELL_RESOLVER_MODULE_ID}.installing`);
-  assertExactRepoPath(config, staging, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-    `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-  ], 'Spell resolver staging directory');
+  assertExactSpellResolverStaging(config, staging);
   if (existsSync(staging)) throw new Error(`Refusing to overwrite stale spell resolver staging directory: ${staging}`);
 
   let backupPath: string | undefined;
@@ -251,24 +261,15 @@ export async function installSpellResolver(config: FoundryLabConfig, options: Mu
     ?? ((destination: string) => inspectPackageTree(destination, false));
   try {
     assertExactBuildDirectory(config, paths.buildDir);
-    assertExactRepoPath(config, staging, [
-      '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-      `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-    ], 'Spell resolver staging directory');
+    assertExactSpellResolverStaging(config, staging);
     await cp(paths.buildDir, staging, { recursive: true, force: false, errorOnExist: true });
-    assertExactRepoPath(config, staging, [
-      '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-      `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-    ], 'Spell resolver staging directory');
+    assertExactSpellResolverStaging(config, staging);
     const staged = await inspectPackageTree(staging, false);
     if (staged.hash !== build.hash) throw new Error('Staged spell resolver hash differs from the validated build.');
 
     await options.installSeam?.beforeDestinationMutation?.();
     assertExactSpellResolverDestination(config, paths.destination);
-    assertExactRepoPath(config, staging, [
-      '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-      `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-    ], 'Spell resolver staging directory');
+    assertExactSpellResolverStaging(config, staging);
     await assertPackageHash(staging, build.hash, 'Staged spell resolver changed before destination mutation');
 
     if (existing) {
@@ -287,15 +288,9 @@ export async function installSpellResolver(config: FoundryLabConfig, options: Mu
       movedExisting = true;
     }
     assertExactSpellResolverDestination(config, paths.destination);
-    assertExactRepoPath(config, staging, [
-      '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-      `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-    ], 'Spell resolver staging directory');
+    assertExactSpellResolverStaging(config, staging);
     await assertPackageHash(staging, build.hash, 'Staged spell resolver changed before installation');
-    assertExactRepoPath(config, staging, [
-      '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-      `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-    ], 'Spell resolver staging directory');
+    assertExactSpellResolverStaging(config, staging);
     await move(staging, paths.destination);
     replacementInstalled = true;
 
@@ -383,18 +378,12 @@ export async function installSpellResolver(config: FoundryLabConfig, options: Mu
     }
     if (existsSync(staging)) {
       try {
-        assertExactRepoPath(config, staging, [
-          '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-          `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-        ], 'Spell resolver staging directory');
+        assertExactSpellResolverStaging(config, staging);
         const remainingStaging = await inspectPackageTree(staging, false);
         if (remainingStaging.hash !== build.hash) {
           throw new Error('Spell resolver staging changed after validation; refusing cleanup.');
         }
-        assertExactRepoPath(config, staging, [
-          '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'modules',
-          `.${SPELL_RESOLVER_MODULE_ID}.installing`,
-        ], 'Spell resolver staging directory');
+        assertExactSpellResolverStaging(config, staging);
         await cleanupStaging(staging);
       } catch (cleanupError) {
         recoveryErrors.push(cleanupError);
@@ -484,11 +473,11 @@ export async function prepareSpellResolverWorld(
     throw new Error(`Spell resolver preparation is restricted to the exact disposable world ${APPROVED_WORLD_ID}.`);
   }
   const paths = spellResolverPaths(config);
-  assertExactRepoPath(config, paths.approvedWorldRoot, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID,
+  assertExactLabPath(config, paths.approvedWorldRoot, [
+    'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID,
   ], 'Disposable world root');
-  assertExactRepoPath(config, paths.approvedWorldSettings, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID, 'data', 'settings',
+  assertExactLabPath(config, paths.approvedWorldSettings, [
+    'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID, 'data', 'settings',
   ], 'Disposable world settings');
   const world = await readJson(resolve(paths.approvedWorldRoot, 'world.json'));
   if (world.id !== APPROVED_WORLD_ID
@@ -593,8 +582,8 @@ export function createClassicLevelWorldSettingsStore(
 ): WorldSettingsStore {
   const classicLevelPath = resolve(config.appRoot, 'node_modules/classic-level/index.js');
   const loadClassicLevel = async (): Promise<ClassicLevelConstructor> => {
-    assertExactRepoPath(config, classicLevelPath, [
-      '.local', 'foundry-v14', 'app', '14.364', 'node_modules', 'classic-level', 'index.js',
+    assertExactLabPath(config, classicLevelPath, [
+      'app', '14.364', 'node_modules', 'classic-level', 'index.js',
     ], 'Foundry classic-level entry');
     if (dependencies.ClassicLevel) return dependencies.ClassicLevel;
     const imported = await import(pathToFileURL(classicLevelPath).href) as { ClassicLevel?: ClassicLevelConstructor };
@@ -764,8 +753,8 @@ export async function withStoppedWorldSettingsLock<T>(
 }
 
 function assertExactWorldSettingsPath(config: FoundryLabConfig, settingsPath: string): void {
-  assertExactRepoPath(config, settingsPath, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID, 'data', 'settings',
+  assertExactLabPath(config, settingsPath, [
+    'data', 'server-mirror', 'Data', 'worlds', APPROVED_WORLD_ID, 'data', 'settings',
   ], 'Disposable world settings');
 }
 
@@ -913,19 +902,19 @@ function assertExactBuildDirectory(config: FoundryLabConfig, target: string): vo
 }
 
 function assertExactFoundryRuntimePaths(config: FoundryLabConfig): void {
-  const appSegments = ['.local', 'foundry-v14', 'app', '14.364'] as const;
-  assertExactRepoPath(config, config.appRoot, appSegments, 'Foundry application root');
-  assertExactRepoPath(config, resolve(config.appRoot, 'main.js'), [...appSegments, 'main.js'], 'Foundry server entry');
-  assertExactRepoPath(config, resolve(config.appRoot, 'package.json'), [...appSegments, 'package.json'], 'Foundry package manifest');
-  assertExactRepoPath(config, resolve(config.appRoot, 'node_modules/classic-level/index.js'), [
+  const appSegments = ['app', '14.364'] as const;
+  assertExactLabPath(config, config.appRoot, appSegments, 'Foundry application root');
+  assertExactLabPath(config, resolve(config.appRoot, 'main.js'), [...appSegments, 'main.js'], 'Foundry server entry');
+  assertExactLabPath(config, resolve(config.appRoot, 'package.json'), [...appSegments, 'package.json'], 'Foundry package manifest');
+  assertExactLabPath(config, resolve(config.appRoot, 'node_modules/classic-level/index.js'), [
     ...appSegments, 'node_modules', 'classic-level', 'index.js',
   ], 'Foundry classic-level entry');
   const systemSegments = [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'systems', 'dnd5e',
+    'data', 'server-mirror', 'Data', 'systems', 'dnd5e',
   ] as const;
   const systemRoot = resolve(config.profiles.serverMirror.dataPath, 'Data/systems/dnd5e');
-  assertExactRepoPath(config, systemRoot, systemSegments, 'server-mirror dnd5e root');
-  assertExactRepoPath(config, resolve(systemRoot, 'system.json'), [...systemSegments, 'system.json'], 'server-mirror dnd5e manifest');
+  assertExactLabPath(config, systemRoot, systemSegments, 'server-mirror dnd5e root');
+  assertExactLabPath(config, resolve(systemRoot, 'system.json'), [...systemSegments, 'system.json'], 'server-mirror dnd5e manifest');
 }
 
 function backupPathFor(paths: SpellResolverPaths, now: () => Date, operation: 'install' | 'uninstall'): string {

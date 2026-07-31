@@ -47,16 +47,17 @@ const classified = (
 
 describe('acquisition planning', () => {
   it('maps each package class to its safe acquisition action', () => {
-    expect(buildAcquisitionActions([classified('upstream-exact')])).toEqual([
+    const modulesRoot = join('configured-lab', 'Data/modules');
+    expect(buildAcquisitionActions([classified('upstream-exact')], modulesRoot)).toEqual([
       expect.objectContaining({ kind: 'download', id: 'sample', expectedVersion: '1.0.0' }),
     ]);
-    expect(buildAcquisitionActions([classified('account-protected')])).toEqual([
+    expect(buildAcquisitionActions([classified('account-protected')], modulesRoot)).toEqual([
       expect.objectContaining({ kind: 'authorized-manual-install', id: 'sample' }),
     ]);
-    expect(buildAcquisitionActions([classified('server-only')])).toEqual([
+    expect(buildAcquisitionActions([classified('server-only')], modulesRoot)).toEqual([
       expect.objectContaining({ kind: 'scp-directory', id: 'sample', remoteFolder: 'sample' }),
     ]);
-    expect(buildAcquisitionActions([classified('manual-review')])).toEqual([
+    expect(buildAcquisitionActions([classified('manual-review')], modulesRoot)).toEqual([
       expect.objectContaining({ kind: 'manual-review', id: 'sample' }),
     ]);
   });
@@ -65,7 +66,7 @@ describe('acquisition planning', () => {
     for (const id of ['sample:ads', 'sample?', 'sample.', 'sample ', 'CON']) {
       const entry = classified('upstream-exact');
       entry.active.id = id;
-      expect(() => buildAcquisitionActions([entry])).toThrow('safe path segment');
+      expect(() => buildAcquisitionActions([entry], 'configured-lab/Data/modules')).toThrow('safe path segment');
     }
   });
 
@@ -103,6 +104,52 @@ describe('acquisition planning', () => {
       expect(report.unresolved).toBe(0);
       expect(report.failed).toBe(0);
       expect(existsSync(config.labRoot)).toBe(false);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('installs modules and systems beneath an external configured lab root', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-acquire-external-'));
+    const repoRoot = join(tempRoot, 'repo');
+    const labRoot = join(tempRoot, 'external-foundry-lab');
+    const config = createBaseLabConfig(repoRoot, {
+      ...REMOTE_TEST_ENV,
+      FVTT_OPS_LAB_ROOT: labRoot,
+    });
+    try {
+      const report = await acquirePackages(config, [classified('upstream-exact')], { apply: true }, {
+        readDnd5eManifest: async () => ({
+          id: 'dnd5e', version: '5.3.3', download: 'https://example.test/dnd5e.zip',
+        }),
+        installArchive: async ({ stagingRoot, expectedId, expectedVersion }) => {
+          await mkdir(stagingRoot, { recursive: true });
+          const manifestName = expectedId === 'dnd5e' ? 'system.json' : 'module.json';
+          await writeFile(join(stagingRoot, manifestName), JSON.stringify({
+            id: expectedId,
+            version: expectedVersion,
+          }));
+        },
+      });
+
+      expect(report.complete).toBe(true);
+      expect(report.actions.every((action) => (
+        action.kind === 'authorized-manual-install'
+        || action.kind === 'manual-review'
+        || action.destination.startsWith(labRoot)
+      ))).toBe(true);
+      expect(existsSync(join(
+        labRoot,
+        'data/server-mirror/Data/modules/sample/module.json',
+      ))).toBe(true);
+      expect(existsSync(join(
+        labRoot,
+        'data/server-mirror/Data/systems/dnd5e/system.json',
+      ))).toBe(true);
+      expect(existsSync(join(
+        labRoot,
+        'data/core-test/Data/systems/dnd5e/system.json',
+      ))).toBe(true);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

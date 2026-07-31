@@ -43,12 +43,12 @@ describe('Foundry Lab spell resolver lifecycle', () => {
     }
   });
 
-  test('pins installation to the exact project-local server-mirror module destination', async () => {
+  test('pins installation to the exact configured server-mirror module destination', async () => {
     await withFixture(async ({ config }) => {
       const paths = spellResolverPaths(config);
       expect(paths.destination).toBe(resolve(
-        config.repoRoot,
-        '.local/foundry-v14/data/server-mirror/Data/modules',
+        config.labRoot,
+        'data/server-mirror/Data/modules',
         SPELL_RESOLVER_MODULE_ID,
       ));
       expect(() => assertExactSpellResolverDestination(config, paths.destination)).not.toThrow();
@@ -56,6 +56,31 @@ describe('Foundry Lab spell resolver lifecycle', () => {
       expect(() => assertExactSpellResolverDestination(config, resolve(config.labRoot, 'data/core-test/Data/modules', SPELL_RESOLVER_MODULE_ID))).toThrow(/exact|server-mirror/i);
       expect(() => assertExactSpellResolverDestination(config, resolve(config.repoRoot, '..', 'production', SPELL_RESOLVER_MODULE_ID))).toThrow(/lab root|exact/i);
     });
+  });
+
+  test('runs install, verification, world preflight, and uninstall against an external lab root', async () => {
+    await withFixture(async ({ config, settingsStore }) => {
+      const paths = spellResolverPaths(config);
+      expect(paths.destination).toStartWith(config.labRoot);
+      expect(paths.approvedWorldRoot).toStartWith(config.labRoot);
+      expect(paths.backupRoot).toStartWith(config.evidenceRoot);
+
+      const installed = await installSpellResolver(config, { apply: true, now: fixedNow });
+      expect(installed.destination).toBe(paths.destination);
+      expect(installed.changed).toBeTrue();
+      expect((await verifySpellResolverInstall(config)).ok).toBeTrue();
+
+      const preflight = await prepareSpellResolverWorld(config, 'fvtt-v14-module-matrix', {
+        apply: false,
+        settingsStore,
+      });
+      expect(preflight.after?.[SPELL_RESOLVER_MODULE_ID]).toBeTrue();
+
+      const uninstalled = await uninstallSpellResolver(config, { apply: true, now: fixedNow });
+      expect(uninstalled.changed).toBeTrue();
+      expect(uninstalled.backupPath).toStartWith(config.evidenceRoot);
+      expect(await Bun.file(resolve(paths.destination, 'module.json')).exists()).toBeFalse();
+    }, { externalLab: true });
   });
 
   test('rejects a module destination routed outside the lab through a junction', async () => {
@@ -924,10 +949,15 @@ async function withFixture(
     config: FoundryLabConfig;
     settingsStore: FakeWorldSettingsStore;
   }) => Promise<void>,
+  options: { externalLab?: boolean } = {},
 ): Promise<void> {
   const root = await mkdtemp(join(tmpdir(), 'spell-resolver-lab-'));
   const repoRoot = join(root, 'repo');
-  const config = createLabConfig(repoRoot);
+  const config = createLabConfig(repoRoot, options.externalLab ? {
+    FVTT_OPS_LAB_ROOT: join(root, 'external-foundry-lab'),
+    FVTT_OPS_EVIDENCE_ROOT: join(root, 'external-foundry-evidence'),
+    FVTT_OPS_BACKUP_ROOT: join(root, 'external-foundry-backups'),
+  } : {});
   const paths = spellResolverPaths(config);
   const worldRoot = resolve(config.profiles.serverMirror.dataPath, 'Data/worlds/fvtt-v14-module-matrix');
   const settingsPath = resolve(worldRoot, 'data/settings');

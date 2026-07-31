@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createLabConfig } from '../../config';
 
 import {
   CLASSPACK_MACRO_SENTINEL,
@@ -9,6 +10,7 @@ import {
   CLASSPACK_RUNTIME_ENTRY,
   CLASSPACK_V14_VERSION,
   assertCompatibleMacroCommand,
+  classpackV14Paths,
   normalizeClasspackRuntimeSource,
   patchClasspackManifest,
   rewriteLegacySavingThrow,
@@ -95,6 +97,29 @@ describe('dnd5e classpack v14 compatibility workflow', () => {
       packs,
       relationships: exactRelationships,
     })).toThrow('identity surface');
+  });
+
+  test('projects every mutable runtime path beneath an external lab root', () => {
+    const repoRoot = resolve('I:/OpenCode/fvttV12JsonGenerator');
+    const labRoot = resolve('J:/fvtt-ops/lab');
+    const paths = classpackV14Paths(createLabConfig(repoRoot, {
+      FVTT_OPS_LAB_ROOT: labRoot,
+    }));
+
+    expect(paths.moduleRoot).toBe(resolve(labRoot, 'data/server-mirror/Data/modules/dnd5e_classpack'));
+    expect(paths.runtimeFile).toBe(resolve(
+      labRoot,
+      'data/server-mirror/Data/modules/dnd5e_classpack/scripts/v14-migration.mjs',
+    ));
+    expect(paths.classicLevelEntry).toBe(resolve(
+      labRoot,
+      'app/14.364/node_modules/classic-level/index.js',
+    ));
+    expect(paths.worldRoot).toBe(resolve(
+      labRoot,
+      'data/server-mirror/Data/worlds/fvtt-v14-module-matrix',
+    ));
+    expect(paths.settingsPath).toBe(resolve(paths.worldRoot, 'data/settings'));
   });
 
   test('normalizes runtime assets so Windows checkouts remain dry-run stable', () => {

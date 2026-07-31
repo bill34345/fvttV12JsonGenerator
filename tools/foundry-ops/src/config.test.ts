@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  assertExactLabPath,
   assertInsideLabRoot,
   createLabConfig,
   requireProductionConnection,
@@ -102,6 +103,32 @@ describe('Foundry lab configuration', () => {
       }
       await rm(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('pins exact resources beneath an externally configured lab root', () => {
+    const repoRoot = resolve('I:/OpenCode/fvttV12JsonGenerator');
+    const labRoot = resolve('J:/fvtt-ops/lab');
+    const config = createLabConfig(repoRoot, { FVTT_OPS_LAB_ROOT: labRoot });
+    const expected = resolve(labRoot, 'app/14.364/main.js');
+
+    expect(() => assertExactLabPath(
+      config,
+      expected,
+      ['app', '14.364', 'main.js'],
+      'Foundry server entry',
+    )).not.toThrow();
+    expect(() => assertExactLabPath(
+      config,
+      resolve(labRoot, 'app/14.365/main.js'),
+      ['app', '14.364', 'main.js'],
+      'Foundry server entry',
+    )).toThrow(/exact configured Foundry lab path/i);
+    expect(() => assertExactLabPath(
+      config,
+      resolve(repoRoot, '.local/foundry-v14/app/14.364/main.js'),
+      ['app', '14.364', 'main.js'],
+      'Foundry server entry',
+    )).toThrow(/exact configured Foundry lab path/i);
   });
 
   it('rejects a dangling junction before its outside target becomes available', async () => {

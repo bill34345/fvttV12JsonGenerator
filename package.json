@@ -38,7 +38,7 @@
     "verify:actor": "bun run src/tools/actorVerification.ts",
     "verify:intake": "bun run src/tools/intakeVerification.ts",
     "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
-    "audit:world-footprint": "bun run tools/foundry-ops/src/cli.ts world audit --world-root \".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn\" --app-root \".local/foundry-v14/app/14.364\" --output-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724\" --snapshot-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724/snapshot\"",
+    "audit:world-footprint": "bun run tools/foundry-ops/src/cli.ts world audit",
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all",
     "foundry:ops": "bun run tools/foundry-ops/src/cli.ts",
     "foundry:lab": "bun run tools/foundry-ops/src/cli.ts lab",

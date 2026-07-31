@@ -181,11 +181,14 @@ function safeSegment(value: string, label: string): string {
   return value;
 }
 
-export function buildAcquisitionActions(classified: ClassifiedPackage[]): AcquisitionAction[] {
+export function buildAcquisitionActions(
+  classified: ClassifiedPackage[],
+  modulesRoot: string,
+): AcquisitionAction[] {
   return classified.map((entry): AcquisitionAction => {
     const id = safeSegment(entry.active.id, 'Package id');
     const expectedVersion = entry.active.version;
-    const destination = `.local/foundry-v14/data/server-mirror/Data/modules/${id}`;
+    const destination = join(modulesRoot, id);
     if (entry.packageClass === 'upstream-exact') {
       const url = entry.disk?.download;
       if (typeof url !== 'string') throw new Error(`Upstream package ${id} has no download URL`);
@@ -693,7 +696,10 @@ export async function acquirePackages(
   if (typeof dnd5e.download !== 'string') throw new Error('Locked dnd5e manifest has no download URL');
   requireHttpsUrl(dnd5e.download, 'Locked dnd5e download URL');
 
-  const moduleActions = buildAcquisitionActions(classified);
+  const moduleActions = buildAcquisitionActions(
+    classified,
+    resolve(config.profiles.serverMirror.dataPath, 'Data/modules'),
+  );
   const systemActions: AcquisitionAction[] = [config.profiles.coreTest, config.profiles.serverMirror].map(
     (profile) => ({
       kind: 'download',
@@ -748,7 +754,7 @@ export async function acquirePackages(
     }
     const destination = action.kind === 'authorized-manual-install'
       ? resolve(config.profiles.serverMirror.dataPath, 'Data/modules', safeSegment(action.id, 'Package id'))
-      : resolve(config.repoRoot, action.destination);
+      : resolve(action.destination);
     const stagingRoot = `${destination}.staging`;
     for (const path of [destination, stagingRoot]) assertInsideLabRoot(config, path);
     try {

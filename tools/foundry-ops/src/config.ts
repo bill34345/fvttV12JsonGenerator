@@ -181,6 +181,19 @@ export function assertExactRepoPath(
   }
 }
 
+export function assertExactLabPath(
+  config: FoundryLabConfig,
+  target: string,
+  labRelativeSegments: readonly string[],
+  label: string,
+): void {
+  const expected = resolve(config.labRoot, ...labRelativeSegments);
+  if (relative(expected, resolve(target)) !== '') {
+    throw new Error(`${label} must be the exact configured Foundry lab path: ${expected}`);
+  }
+  assertInsideLabRoot(config, target);
+}
+
 export function assertInsideLabRoot(config: FoundryLabConfig, target: string): void {
   const candidate = resolve(target);
   const approvedRoots = [...new Set([config.labRoot, config.evidenceRoot, config.backupRoot].map((root) => resolve(root)))];

@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
+  assertExactLabPath,
   assertExactRepoPath,
   assertInsideLabRoot,
   type FoundryLabConfig,
@@ -124,6 +125,35 @@ export interface ClasspackMigrationMarkerResult {
   targetDnd5e: '5.3.3';
   targetDae: '14.0.12';
   backupCreated: false;
+}
+
+export interface ClasspackV14Paths {
+  moduleRoot: string;
+  manifestFile: string;
+  macroPack: string;
+  runtimeFile: string;
+  classicLevelEntry: string;
+  worldRoot: string;
+  worldFile: string;
+  settingsPath: string;
+}
+
+export function classpackV14Paths(config: FoundryLabConfig): ClasspackV14Paths {
+  const moduleRoot = resolve(config.profiles.serverMirror.dataPath, 'Data/modules', CLASSPACK_MODULE_ID);
+  const worldRoot = resolve(
+    config.profiles.serverMirror.dataPath,
+    'Data/worlds/fvtt-v14-module-matrix',
+  );
+  return {
+    moduleRoot,
+    manifestFile: resolve(moduleRoot, 'module.json'),
+    macroPack: resolve(moduleRoot, 'packs/macro'),
+    runtimeFile: resolve(moduleRoot, CLASSPACK_RUNTIME_ENTRY),
+    classicLevelEntry: resolve(config.appRoot, 'node_modules/classic-level/index.js'),
+    worldRoot,
+    worldFile: resolve(worldRoot, 'world.json'),
+    settingsPath: resolve(worldRoot, 'data/settings'),
+  };
 }
 
 function sha256(value: string): string {
@@ -675,14 +705,13 @@ export async function markClasspackV14MigrationComplete(
   config: FoundryLabConfig,
   options: { apply: boolean },
 ): Promise<ClasspackMigrationMarkerResult> {
-  const moduleRoot = resolve(
-    config.profiles.serverMirror.dataPath,
-    'Data/modules',
-    CLASSPACK_MODULE_ID,
-  );
-  const manifestFile = resolve(moduleRoot, 'module.json');
-  assertInsideLabRoot(config, moduleRoot);
-  assertInsideLabRoot(config, manifestFile);
+  const { moduleRoot, manifestFile } = classpackV14Paths(config);
+  assertExactLabPath(config, moduleRoot, [
+    'data', 'server-mirror', 'Data', 'modules', CLASSPACK_MODULE_ID,
+  ], 'Classpack module root');
+  assertExactLabPath(config, manifestFile, [
+    'data', 'server-mirror', 'Data', 'modules', CLASSPACK_MODULE_ID, 'module.json',
+  ], 'Classpack manifest');
   const manifest = patchClasspackManifest(
     JSON.parse(await readFile(manifestFile, 'utf8')) as ClasspackManifest,
   );
@@ -711,9 +740,9 @@ export async function markClasspackV14MigrationComplete(
 }
 
 async function loadClassicLevel(config: FoundryLabConfig): Promise<ClassicLevelConstructor> {
-  const entry = resolve(config.appRoot, 'node_modules/classic-level/index.js');
-  assertExactRepoPath(config, entry, [
-    '.local', 'foundry-v14', 'app', '14.364', 'node_modules', 'classic-level', 'index.js',
+  const entry = classpackV14Paths(config).classicLevelEntry;
+  assertExactLabPath(config, entry, [
+    'app', '14.364', 'node_modules', 'classic-level', 'index.js',
   ], 'Foundry classic-level entry');
   const imported = await import(pathToFileURL(entry).href) as { ClassicLevel?: ClassicLevelConstructor };
   if (!imported.ClassicLevel) throw new Error(`ClassicLevel is unavailable at ${entry}`);
@@ -812,18 +841,12 @@ export async function setClasspackMatrixActivation(
     throw new Error('Classpack matrix activation requires at least one requested module state');
   }
   const worldId = 'fvtt-v14-module-matrix' as const;
-  const worldRoot = resolve(
-    config.profiles.serverMirror.dataPath,
-    'Data/worlds',
-    worldId,
-  );
-  const worldFile = resolve(worldRoot, 'world.json');
-  const settingsPath = resolve(worldRoot, 'data/settings');
-  assertExactRepoPath(config, worldRoot, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'worlds', worldId,
+  const { worldRoot, worldFile, settingsPath } = classpackV14Paths(config);
+  assertExactLabPath(config, worldRoot, [
+    'data', 'server-mirror', 'Data', 'worlds', worldId,
   ], 'Classpack disposable world root');
-  assertExactRepoPath(config, settingsPath, [
-    '.local', 'foundry-v14', 'data', 'server-mirror', 'Data', 'worlds', worldId, 'data', 'settings',
+  assertExactLabPath(config, settingsPath, [
+    'data', 'server-mirror', 'Data', 'worlds', worldId, 'data', 'settings',
   ], 'Classpack disposable world settings');
   const world = JSON.parse(await readFile(worldFile, 'utf8')) as Record<string, unknown>;
   if (world.id !== worldId || world.system !== 'dnd5e'
@@ -881,18 +904,21 @@ export async function prepareClasspackV14(
   config: FoundryLabConfig,
   options: { apply: boolean },
 ): Promise<ClasspackV14Result> {
-  const moduleRoot = resolve(
-    config.profiles.serverMirror.dataPath,
-    'Data/modules',
-    CLASSPACK_MODULE_ID,
-  );
-  const manifestFile = resolve(moduleRoot, 'module.json');
-  const macroPack = resolve(moduleRoot, 'packs/macro');
-  const runtimeFile = resolve(moduleRoot, CLASSPACK_RUNTIME_ENTRY);
+  const { moduleRoot, manifestFile, macroPack, runtimeFile } = classpackV14Paths(config);
   const runtimeSourceFile = fileURLToPath(new URL('./assets/dnd5e-classpack-v14.mjs', import.meta.url));
-  for (const target of [moduleRoot, manifestFile, macroPack, runtimeFile]) assertInsideLabRoot(config, target);
+  assertExactLabPath(config, moduleRoot, [
+    'data', 'server-mirror', 'Data', 'modules', CLASSPACK_MODULE_ID,
+  ], 'Classpack module root');
+  assertExactLabPath(config, manifestFile, [
+    'data', 'server-mirror', 'Data', 'modules', CLASSPACK_MODULE_ID, 'module.json',
+  ], 'Classpack manifest');
+  assertExactLabPath(config, runtimeFile, [
+    'data', 'server-mirror', 'Data', 'modules', CLASSPACK_MODULE_ID,
+    ...CLASSPACK_RUNTIME_ENTRY.split('/'),
+  ], 'Classpack runtime entry');
+  assertInsideLabRoot(config, macroPack);
   assertExactRepoPath(config, runtimeSourceFile, [
-    'scripts', 'foundry-lab', 'assets', 'dnd5e-classpack-v14.mjs',
+    'tools', 'foundry-ops', 'src', 'lab', 'assets', 'dnd5e-classpack-v14.mjs',
   ], 'Classpack runtime source');
 
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as ClasspackManifest;

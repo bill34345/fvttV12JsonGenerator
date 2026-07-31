@@ -4,7 +4,9 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { createLabConfig } from "../config";
 import {
+  defaultAuditCliOptions,
   parseAuditCliArguments,
   runWorldFootprintAudit,
   type AuditCliOptions,
@@ -71,14 +73,17 @@ function embedded(
   };
 }
 
-async function createFixtureRoot(): Promise<{
+async function createFixtureRoot(options: { externalLab?: boolean } = {}): Promise<{
   root: string;
   options: AuditCliOptions;
   snapshot: WorldSnapshot;
 }> {
   const root = await mkdtemp(join(tmpdir(), "world-footprint-audit-"));
-  const appRoot = join(root, ".local", "foundry-v14", "app", "14.364");
-  const dataRoot = join(root, ".local", "foundry-v14", "data", "server-mirror", "Data");
+  const labRoot = options.externalLab
+    ? join(root, "external-foundry-lab")
+    : join(root, ".local", "foundry-v14");
+  const appRoot = join(labRoot, "app", "14.364");
+  const dataRoot = join(labRoot, "data", "server-mirror", "Data");
   const worldRoot = join(dataRoot, "worlds", "cor-cotn");
   const systemRoot = join(dataRoot, "systems", "dnd5e");
   const outputDir = join(root, "evidence", "audit");
@@ -306,6 +311,31 @@ async function createFixtureRoot(): Promise<{
     snapshot,
   };
 }
+
+test("derives defaults from configured roots and accepts the same audit under an external lab", async () => {
+  const fixture = await createFixtureRoot({ externalLab: true });
+  try {
+    const labRoot = join(fixture.root, "external-foundry-lab");
+    const evidenceRoot = join(fixture.root, "external-foundry-evidence");
+    expect(defaultAuditCliOptions(createLabConfig(join(fixture.root, "repo"), {
+      FVTT_OPS_LAB_ROOT: labRoot,
+      FVTT_OPS_EVIDENCE_ROOT: evidenceRoot,
+    }))).toEqual({
+      worldRoot: resolve(labRoot, "data/server-mirror/Data/worlds/cor-cotn"),
+      appRoot: resolve(labRoot, "app/14.364"),
+      outputDir: resolve(evidenceRoot, "cor-cotn-world-audit-20260724"),
+      snapshotDir: resolve(evidenceRoot, "cor-cotn-world-audit-20260724/snapshot"),
+    });
+
+    const manifest = await runWorldFootprintAudit(fixture.options, {
+      createSnapshot: async () => fixture.snapshot,
+    });
+    expect(manifest.target).toEqual({ worldId: "cor-cotn", foundry: "14.364", dnd5e: "5.3.3" });
+    expect(manifest.remoteAccessed).toBeFalse();
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
 
 test("writes deterministic privacy-safe Task 3 deliverables with exactly 16 workbook datasets", async () => {
   const fixture = await createFixtureRoot();

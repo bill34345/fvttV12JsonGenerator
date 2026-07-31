@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createLabConfig, type FoundryLabConfig } from "./config";
 import { analyzeWorld } from "./world-audit/inventory";
 import type { SnapshotOptions, WorldSnapshot } from "./world-audit/model";
 import {
@@ -58,6 +59,18 @@ const DATA_FILE_NAMES = [
   "summary.md",
   "workbook-source.json",
 ] as const;
+const APP_LAB_RELATIVE_ROOT = "app/14.364";
+const WORLD_LAB_RELATIVE_ROOT = "data/server-mirror/Data/worlds/cor-cotn";
+
+export function defaultAuditCliOptions(config: FoundryLabConfig): AuditCliOptions {
+  const outputDir = resolve(config.evidenceRoot, "cor-cotn-world-audit-20260724");
+  return {
+    worldRoot: resolve(config.labRoot, WORLD_LAB_RELATIVE_ROOT),
+    appRoot: resolve(config.labRoot, APP_LAB_RELATIVE_ROOT),
+    outputDir,
+    snapshotDir: resolve(outputDir, "snapshot"),
+  };
+}
 
 export async function runWorldFootprintAudit(
   options: AuditCliOptions,
@@ -169,24 +182,17 @@ function resolveOptions(options: AuditCliOptions): AuditCliOptions {
 }
 
 async function validatePinnedTarget(options: AuditCliOptions): Promise<string> {
-  assertPinnedSuffix(
-    options.worldRoot,
-    ".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn",
-    "world root",
-  );
-  assertPinnedSuffix(options.appRoot, ".local/foundry-v14/app/14.364", "app root");
-  const projectRootFromWorld = stripSuffix(
-    options.worldRoot,
-    ".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn",
-  );
-  const projectRootFromApp = stripSuffix(options.appRoot, ".local/foundry-v14/app/14.364");
-  if (normalizePath(projectRootFromWorld) !== normalizePath(projectRootFromApp)) {
-    throw new Error("World root and app root must belong to the same project-local Foundry mirror");
+  assertPinnedSuffix(options.worldRoot, WORLD_LAB_RELATIVE_ROOT, "world root");
+  assertPinnedSuffix(options.appRoot, APP_LAB_RELATIVE_ROOT, "app root");
+  const labRootFromWorld = stripSuffix(options.worldRoot, WORLD_LAB_RELATIVE_ROOT);
+  const labRootFromApp = stripSuffix(options.appRoot, APP_LAB_RELATIVE_ROOT);
+  if (normalizePath(labRootFromWorld) !== normalizePath(labRootFromApp)) {
+    throw new Error("World root and app root must belong to the same configured Foundry lab");
   }
 
   const appPackage = await readJsonRecord(join(options.appRoot, "package.json"), "Foundry package");
   if (appPackage.name !== "foundryvtt" || appPackage.version !== "14.364.0") {
-    throw new Error("Audit requires exact project-local Foundry 14.364 (package version 14.364.0)");
+    throw new Error("Audit requires exact configured Foundry 14.364 (package version 14.364.0)");
   }
   const world = await readJsonRecord(join(options.worldRoot, "world.json"), "world manifest");
   if (
@@ -239,7 +245,7 @@ function assertPinnedSuffix(path: string, suffix: string, label: string): void {
   const normalized = normalizePath(path);
   const normalizedSuffix = normalizePathFragment(suffix);
   if (normalized !== normalizedSuffix && !normalized.endsWith(`/${normalizedSuffix}`)) {
-    throw new Error(`${label} must be the pinned project-local path ending in ${suffix}`);
+    throw new Error(`${label} must be the pinned Foundry lab path ending in ${suffix}`);
   }
 }
 
@@ -359,7 +365,10 @@ function isMissingPath(error: unknown): error is NodeJS.ErrnoException {
 }
 
 export async function main(): Promise<void> {
-  const options = parseAuditCliArguments(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const options = args.length > 0
+    ? parseAuditCliArguments(args)
+    : defaultAuditCliOptions(createLabConfig(process.cwd(), process.env));
   const manifest = await runWorldFootprintAudit(options);
   process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`);
 }

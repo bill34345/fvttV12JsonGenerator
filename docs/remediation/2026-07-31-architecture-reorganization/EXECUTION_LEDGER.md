@@ -1067,11 +1067,47 @@ owner 和迁移约束。
   发布边界、module ID、报告逻辑路径、tracked catalog 输出或 installer 的 owned-module/精确目标保护。
   `MON-001` 和 `WORLD-ASSET-001` 状态不变，长期真实验收仍由用户运行。
 
+### 2026-08-01：阶段 5C.3 第二批外置 root 消费者适配
+
+- 新增 Foundry Lab 的“精确配置路径”公共检查：调用方声明资源相对 lab root 的固定位置，检查器同时确认最终
+  绝对路径完全相等且没有经由 symbolic link / junction / reparse point 越界。它不是放宽安全范围，而是把
+  原来“必须位于仓库内 `.local/foundry-v14`”改成“必须位于当前显式配置的 lab root”；
+- World Footprint Audit（读取本地世界副本并生成体积/内容审计证据）不再由 `package.json` 写死四个旧路径。
+  无参数命令现在从 `FVTT_OPS_LAB_ROOT` 和 `FVTT_OPS_EVIDENCE_ROOT` 推导同一 `cor-cotn` 世界、Foundry
+  14.364 应用和证据目录；显式 CLI 参数仍保留，世界 ID、Foundry 版本、dnd5e 5.3.3、同一 lab root、
+  输出不得落入源世界等原门禁不变；
+- dnd5e Classpack v14 工具（只为该模块准备本地 v14 兼容文件，并只修改一次性测试世界的启用状态）现在统一
+  从配置投影 module、manifest、macro、runtime、ClassicLevel 和一次性世界路径。审查还发现 runtime 源文件
+  的仓库归属断言仍指向迁移前旧目录；已修正为实际的 `tools/foundry-ops/src/lab/assets`，源码继续固定在仓库，
+  只有运行副本随 lab root 移动；
+- Monster Spell Resolver（构建、安装、校验、卸载本项目的法术解析模块，并为一次性测试世界准备启用设置）
+  的安装目录、临时安装目录、Foundry/dnd5e 运行时、ClassicLevel 和一次性世界均改为精确配置路径。构建产物
+  仍固定在仓库 `dist`，备份仍固定在 evidence/backup root；原有外来模块占位拒绝、安装前后 hash、原版本
+  可恢复备份、失败隔离、LevelDB 停服锁和一次性世界限制全部保留；
+- 审计时额外发现 Package Acquisition（把校验过的模块包和 dnd5e 系统装进两个本地测试环境）仍先生成旧
+  `.local` 目标，再从仓库根拼接。现在 action 在组成阶段就接收 server-mirror 的配置后 modules root，执行
+  阶段直接使用该绝对目标；没有配置就不能凭隐藏默认值生成安装计划。临时外置 fixture 真实完成一个 module
+  和两个 dnd5e system 的事务安装，确认没有写回仓库；
+- 聚焦验证通过 92 tests / 981 expectations；Foundry Ops 完整 suite 通过 315 / 2,340；tools 与全仓
+  TypeScript 检查、diff check、Knip cycles 通过，dependency-cruiser 为 3,705 modules / 3,928 dependencies、
+  0 violations。第一次完整 CI 在测试执行前发现新增测试对可选 dry-run 字段的直接读取，已改为安全访问且仍
+  要求值严格为 `true`；修正后完整 `ci:verify` exit 0：Session Monitor build 1 / 1、CLI 12 / 57、
+  instrumented 1,634 / 7,745，合计 1,647 tests / 7,803 expectations、0 failures；production coverage
+  85.65% lines / 88.15% functions，anti-overfit 323 sources、hygiene 2,151 tracked paths、dnd5e 5.3.3
+  reference、Web production build 与 offline Actor smoke 全部通过；
+- 人工语义复核确认：四个消费者的旧默认路径仍指向原资源；配置外置根只改变运行数据和证据的物理位置，
+  不改变世界/module ID、锁定版本、仓库源码/build 归属、事务安装/回滚语义或生产权限。适配文件中已无
+  `.local/foundry-v14` 硬编码；仍指向仓库 `docs/acceptance` 的诊断/对账报告属于 tracked 文档输出，不是
+  待迁移的 runtime consumer；
+- 全程没有连接生产、启动真实 Foundry/Chrome、创建迁移目标、复制/移动/切换/删除真实 runtime 数据，也没有
+  执行 30 分钟或四小时验收。CI 中只有使用临时目录和伪 session 的几秒钟 Chrome restart smoke。
+  `MON-001` 与 `WORLD-ASSET-001` 状态不变；本阶段完成的是“已识别消费者可从外置根解析同一资源”的代码和
+  fixture 验收，不是 78.5 GiB 实际迁移或真实运行验收。
+
 ## 当前停止点
 
-阶段 5C.2 第一批低风险消费者已形成可安全暂停的检查点：两个独立 module installer、Session Monitor
-companion 和两条 v14 icon 工具链都已通过默认/外置 fixture 与完整 CI；没有真实迁移或数据写入。下一批先
-只读审计 world audit、classpack v14 和 Monster Spell Resolver 是否仍有仓库根/默认 lab 假设，再按产品逐个
-增加精确外置路径测试；不得为了统一而让独立 module 反向依赖 Foundry Ops。全部消费者通过后，才向用户索取
-具体目标盘和复制批次授权。实际迁移仍必须 copy-first、逐批 hash/count 对账、恢复抽样、短时本地 Foundry
-验收和旧路径兼容窗口；大规模复制、切换、移动、删除以及四小时监测均未授权。
+阶段 5C 的迁移方案、独立 reference cache，以及两批已识别消费者适配已形成可安全暂停的检查点。下一步不再是
+继续盲目改代码，而是需要用户选择具体外置目标盘/目录并授权第一批 copy-first 操作；在此之前不会创建目标或
+复制数据。获得授权后的执行顺序必须是：再次确认源清单未漂移，按计划批次复制，以 file count、bytes 和 root
+SHA-256 逐批对账，做恢复抽样，保留旧路径兼容窗口，再做短时本地 Foundry 验收。切换、移动、删除旧数据、
+生产访问和四小时/超过 30 分钟的长期监测仍是后续独立授权项；长期监测继续只登记给用户真实使用时执行。
