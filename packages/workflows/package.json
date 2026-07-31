@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./actor-verification": "./src/actorVerification.ts",
+    "./collection-conversion": "./src/collectionConversion.ts",
     "./external-ports": "./src/externalPorts.ts",
     "./generation-pipeline": "./src/generationPipeline.ts",
     "./icon-port": "./src/iconPort.ts",

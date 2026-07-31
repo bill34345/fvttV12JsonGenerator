@@ -122,3 +122,31 @@ export interface ItemIngestionPort {
     dryRun?: boolean;
   }): Promise<ItemIngestionResultPort>;
 }
+
+export interface MonsterCollectionBlockPort {
+  rawBlock: string;
+  chineseName: string;
+  englishName: string;
+}
+
+export interface ParsedMonsterBlockPort {
+  fileName: string;
+  markdown: string;
+}
+
+export interface ItemCollectionBlockPort {
+  rawBlock: string;
+  heading: string;
+  chineseName: string;
+  englishName: string;
+  stageName?: string;
+  itemType?: string;
+  rarity?: string;
+  requireAttunement?: boolean;
+}
+
+export interface CollectionIngestionPort {
+  splitMonsterCollection(content: string): MonsterCollectionBlockPort[];
+  parseMonsterBlock(rawBlock: string): ParsedMonsterBlockPort;
+  splitItemCollection(content: string): ItemCollectionBlockPort[];
+}

@@ -1,4 +1,5 @@
 export * from './actorVerification';
+export * from './collectionConversion';
 export * from './externalPorts';
 export * from './generationPipeline';
 export * from './iconPort';
