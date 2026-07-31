@@ -10,7 +10,7 @@ import {
   buildActorVerificationSummaryFromValues,
   type ActorVerificationSummary,
 } from '../verification/actorVerification';
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type {
   GenerationDiagnostic,
   GenerationVerification,
@@ -19,7 +19,7 @@ import type {
   ConversionStatus,
   GeneratedArtifactIdentity,
 } from '@fvtt-json-generator/contracts/artifacts';
-import { getFoundryTarget } from '../foundryTarget';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
@@ -29,7 +29,7 @@ import {
   writeIconReviewReport,
 } from '../icons/report';
 
-export type { FvttTargetVersion } from '../foundryTarget';
+export type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 export type { GeneratedDocumentKind } from '@fvtt-json-generator/contracts/artifacts';
 
 export interface ConvertMarkdownContentOptions {

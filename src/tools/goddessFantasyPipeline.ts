@@ -12,7 +12,7 @@ import {
   type PlainTextActorWorkflowOptions,
   type PlainTextActorWorkflowResult,
 } from '../core/application/workflows';
-import { assertEffectProfileForTarget, parseFvttTargetVersion, type FvttTargetVersion } from '../core/foundryTarget';
+import { assertEffectProfileForTarget, parseFvttTargetVersion, type FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 
 export interface GoddessFantasyPipelineOptions extends GoddessFantasyCrawlOptions {
   vaultPath?: string;

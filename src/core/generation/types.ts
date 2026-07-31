@@ -1,13 +1,13 @@
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
-import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
+import type { FvttTargetVersion, FoundryTarget } from '@fvtt-json-generator/generation/target';
 import type { CanonicalMonster } from '@fvtt-json-generator/models/canonical-monster';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 import type { ParsedItem, ItemType } from '@fvtt-json-generator/models/item';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
-import type { V14IconResolver } from '../icons/resolver';
+import type { GenerationIconResolver } from '@fvtt-json-generator/generation/ports';
 import type {
   ActorBehaviorExecutionMode,
   ActorBehaviorExpressionCoverage,
@@ -104,7 +104,7 @@ export interface GenerationProjectionOptions {
   targetVersion: FvttTargetVersion;
   route?: ParserRoute;
   translationService?: ActorGeneratorOptions['translationService'];
-  iconResolver?: V14IconResolver;
+  iconResolver?: GenerationIconResolver;
 }
 
 export interface GenerationProjector {

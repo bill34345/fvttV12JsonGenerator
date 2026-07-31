@@ -23,7 +23,7 @@ import { detectItemRoute } from '@fvtt-json-generator/parser/item-router';
 import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';

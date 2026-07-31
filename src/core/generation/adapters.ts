@@ -1,7 +1,7 @@
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import type { StructuredActionData } from '@fvtt-json-generator/models/action';
 import type { ParsedItem } from '@fvtt-json-generator/models/item';
-import { createStableDocumentId } from '../utils/stable-id';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
 import { mapSourceItemTypeToFoundry } from './item-type-mapping';
 import type {
   CanonicalActorDocument,

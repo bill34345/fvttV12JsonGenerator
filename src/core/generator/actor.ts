@@ -96,7 +96,7 @@ import {
   assertEffectProfileForTarget,
   getFoundryTarget,
   type FvttTargetVersion,
-} from '../foundryTarget';
+} from '@fvtt-json-generator/generation/target';
 import { ActorLocalizer, type TranslationServiceLike } from './actor-localizer';
 import { applyActorTargetMetadata, normalizeTargetUses } from './actor-target-metadata';
 import {
@@ -104,10 +104,10 @@ import {
   resolveGenerationResources,
   type GenerationResources,
 } from '../generation/resources';
-import { createStableDocumentId } from '../utils/stable-id';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
 import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
-import type { V14IconResolver } from '../icons/resolver';
+import type { GenerationIconResolver } from '@fvtt-json-generator/generation/ports';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -116,7 +116,7 @@ export interface ActorGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   resources?: GenerationResources;
-  iconResolver?: V14IconResolver;
+  iconResolver?: GenerationIconResolver;
 }
 
 interface GenerateOptions {
@@ -239,7 +239,7 @@ export class ActorGenerator {
   private effectProfile: EffectProfile;
   private route: ParserRoute = 'chinese';
   private effectProfileApplier = new EffectProfileApplier();
-  private iconResolver?: V14IconResolver;
+  private iconResolver?: GenerationIconResolver;
 
   constructor(options: ActorGeneratorOptions = {}) {
     this.translationService = options.translationService ?? undefined;

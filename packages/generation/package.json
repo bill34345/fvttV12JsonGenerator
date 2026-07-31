@@ -1,0 +1,21 @@
+{
+  "name": "@fvtt-json-generator/generation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ports": "./src/ports.ts",
+    "./stable-id": "./src/stableId.ts",
+    "./target": "./src/target.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/models": "workspace:*",
+    "@fvtt-json-generator/parser": "workspace:*",
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*"
+  }
+}

@@ -5,7 +5,7 @@ import type { EffectProfile } from './core/application/conversion';
 import { PlainTextIngestionWorkflow } from './core/ingest/plaintext';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
-import { assertEffectProfileForTarget, parseFvttTargetVersion } from './core/foundryTarget';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import { loadMonsterIntakeConfig } from './core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from './core/intake/provider';
 import {

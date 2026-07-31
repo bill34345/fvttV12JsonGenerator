@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./forbidden-target-identifier": "./src/forbiddenTargetIdentifier.ts",
+    "./hash-manifest": "./src/hashManifest.ts",
     "./schema": "./src/schema.ts",
     "./types": "./src/types.ts",
     "./validator": "./src/validator.ts"

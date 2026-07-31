@@ -9,7 +9,7 @@ import type {
 import { verifyGeneratedDocument } from '../generation/verification';
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
 import { createIconResolutionSession } from '../icons/workflow';

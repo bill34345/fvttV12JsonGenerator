@@ -6,8 +6,8 @@ import type {
   ActorResourceSemantics,
   ActorResourceTransition,
 } from '@fvtt-json-generator/models/resource';
-import type { FvttTargetVersion } from '../foundryTarget';
-import { createStableDocumentId } from '../utils/stable-id';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
 
 const FLAG_SCOPE = 'fvttJsonGenerator';
 

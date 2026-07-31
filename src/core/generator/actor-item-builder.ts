@@ -1,7 +1,7 @@
 import type { ActionData, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { ActivityGenerator } from './activity';
 import { statusIconPath } from './actor-effects';
-import { createStableDocumentId } from '../utils/stable-id';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
 import { deriveExplicitSaveOutcome } from '../generation/save-outcome';
 
 type GeneratedActionData = ActionData & {

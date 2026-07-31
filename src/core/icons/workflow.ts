@@ -1,4 +1,4 @@
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import { loadV14IconCatalog, loadV14IconOverrides } from './resources';
 import { V14IconResolver, createIconReviewReport } from './resolver';
 import type {

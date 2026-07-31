@@ -1,9 +1,10 @@
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
-import type { TranslationContext } from '../translation';
+import type {
+  TranslationContext,
+  TranslationServicePort,
+} from '@fvtt-json-generator/generation/ports';
 
-export interface TranslationServiceLike {
-  translate(text: string, context?: TranslationContext): Promise<{ text: string } | string>;
-}
+export type TranslationServiceLike = TranslationServicePort;
 
 export interface ActorLocalizerOptions {
   translationService?: TranslationServiceLike;

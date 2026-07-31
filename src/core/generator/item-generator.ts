@@ -5,14 +5,14 @@ import {
   assertEffectProfileForTarget,
   getFoundryTarget,
   type FvttTargetVersion,
-} from '../foundryTarget';
+} from '@fvtt-json-generator/generation/target';
 import {
   EffectProfileApplier,
   type EffectProfile,
 } from './effectProfileApplier';
 import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
-import { createStableDocumentId } from '../utils/stable-id';
-import type { V14IconResolver } from '../icons/resolver';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
+import type { GenerationIconResolver } from '@fvtt-json-generator/generation/ports';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -38,7 +38,7 @@ export interface ItemDocument {
 export interface ItemGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
-  iconResolver?: V14IconResolver;
+  iconResolver?: GenerationIconResolver;
 }
 
 /**

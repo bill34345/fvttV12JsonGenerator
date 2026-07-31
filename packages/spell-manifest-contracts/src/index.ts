@@ -3,6 +3,7 @@ export {
   findForbiddenTargetWorldIdentifiers,
   type ForbiddenTargetWorldIdentifierMatch,
 } from './forbiddenTargetIdentifier';
+export { hashManifest } from './hashManifest';
 export {
   listUnknownManifestProperties,
   type UnknownManifestProperty,

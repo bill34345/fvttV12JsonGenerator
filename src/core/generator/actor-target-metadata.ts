@@ -1,4 +1,4 @@
-import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
+import { getFoundryTarget, type FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 
 export function normalizeTargetUses(
   uses: Record<string, unknown>,

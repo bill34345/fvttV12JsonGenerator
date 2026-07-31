@@ -23,7 +23,7 @@ import {
 } from '../../../core/application/workflows';
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
 import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
-import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../../core/foundryTarget';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import { loadMonsterIntakeConfig } from '../../../core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from '../../../core/intake/provider';
 import type { IntakeDecision, MonsterIntakeAiProvider } from '../../../core/intake/types';

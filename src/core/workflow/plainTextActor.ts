@@ -4,7 +4,7 @@ import { PlainTextIngestionWorkflow, type PlainTextIngestionResult } from '../in
 import { type EffectProfile } from '../generator/effectProfileApplier';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
 import type { ImageAssetOptions } from '../assets/imageAssets';
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { IconWorkflowOptions } from '../icons/types';
 
 export interface PlainTextActorWorkflowOptions {

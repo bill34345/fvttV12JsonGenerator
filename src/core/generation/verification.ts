@@ -1,5 +1,5 @@
 import type { EffectProfile } from '../generator/effectProfileApplier';
-import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
+import { getFoundryTarget, type FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type {
   CanonicalGenerationDocument,
   CanonicalGenerationMechanic,

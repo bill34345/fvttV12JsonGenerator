@@ -1,6 +1,6 @@
 import { ActorGenerator } from '../generator/actor';
 import { ItemGenerator } from '../generator/item-generator';
-import type { FvttTargetVersion } from '../foundryTarget';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type {
   CanonicalGenerationDocument,
   GenerationProjectionOptions,

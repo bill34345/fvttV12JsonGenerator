@@ -1,5 +1,5 @@
-import type { FvttTargetVersion } from '../foundryTarget';
-import { hashManifest } from '../spell-resolution';
+import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
+import { hashManifest } from '@fvtt-json-generator/spell-manifest-contracts/hash-manifest';
 import {
   findForbiddenTargetWorldIdentifiers,
   RESOLVER_MODULE_ID,

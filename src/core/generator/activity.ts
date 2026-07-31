@@ -3,8 +3,8 @@ import { spellsMapper } from '../mapper/spells';
 import { inferAttackAbility, type AttackAbility } from './attack-ability';
 import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
 import { mapDamageType } from './actor-text';
-import { getFoundryTarget, type FvttTargetVersion } from '../foundryTarget';
-import { createStableDocumentId } from '../utils/stable-id';
+import { getFoundryTarget, type FvttTargetVersion } from '@fvtt-json-generator/generation/target';
+import { createStableDocumentId } from '@fvtt-json-generator/generation/stable-id';
 
 export interface ActivityGenerationContext {
   abilities?: Partial<Record<AttackAbility, number>>;

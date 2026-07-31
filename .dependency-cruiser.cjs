@@ -32,6 +32,15 @@ module.exports = {
       to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|models/|spell-manifest-contracts/))' },
     },
     {
+      name: 'generation-package-is-independent',
+      severity: 'error',
+      comment: 'Generation owns projection logic and depends only on portable contracts, models, parser output, and spell contracts.',
+      from: { path: '^packages/generation/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|generation/|models/|parser/|spell-manifest-contracts/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
@@ -87,6 +96,17 @@ module.exports = {
       },
       to: {
         path: '(^src/core/models/(action|item|resource|behavior)[.]ts$|^packages/parser/src/models/action[.]ts$)',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-generation-support-adapters',
+      severity: 'error',
+      comment: 'Production code imports generation target and stable-id exports; old core paths remain compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/(foundryTarget[.]ts|utils/stable-id[.]ts)$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/(foundryTarget[.]ts|utils/stable-id[.]ts)$',
       },
     },
     {

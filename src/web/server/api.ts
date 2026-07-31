@@ -24,7 +24,7 @@ import type { IntakeDecision } from '../../core/intake/types';
 import { getWebImageAssetPreset } from './imageAssetPreset';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
-import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../core/foundryTarget';
+import { assertEffectProfileForTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import {
   getWebSecurityConfig,
   isAuthorizedApiRequest,
