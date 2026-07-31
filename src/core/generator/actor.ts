@@ -106,6 +106,8 @@ import {
   type GenerationResources,
 } from '../generation/resources';
 import { createStableDocumentId } from '../utils/stable-id';
+import { applyActorResourceSemantics } from './actor-resource-semantics';
+import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -538,6 +540,8 @@ export class ActorGenerator {
     }
 
     actor.items = newItems;
+    applyActorResourceSemantics(actor, parsed.resourceSemantics, this.fvttVersion);
+    applyActorBehaviorSemantics(actor, parsed.behaviorSemantics, this.fvttVersion);
     if (parsed.spellManifest) {
       buildActorSpellManifest(actor, parsed.spellManifest, this.fvttVersion);
     } else {

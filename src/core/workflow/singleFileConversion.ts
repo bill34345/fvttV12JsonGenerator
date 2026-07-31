@@ -152,7 +152,9 @@ export async function convertMarkdownContentToJson(
     diagnostics,
   };
   const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
-  if (status === 'accepted') {
+  const reviewableBehaviorOutput = status === 'needs_review'
+    && isIntentionalBehaviorReviewOnly(diagnostics);
+  if (status === 'accepted' || reviewableBehaviorOutput) {
     writeJsonIfRequested(requestedOutputPath, actor);
   }
   const actorVerification = buildActorVerificationSummaryFromValues({
@@ -165,7 +167,7 @@ export async function convertMarkdownContentToJson(
   return {
     kind: 'actor',
     sourcePath,
-    outputPath: status === 'accepted' ? requestedOutputPath : undefined,
+    outputPath: status === 'accepted' || reviewableBehaviorOutput ? requestedOutputPath : undefined,
     fvttVersion,
     effectProfile,
     name: String(actor.name ?? ''),
@@ -177,6 +179,16 @@ export async function convertMarkdownContentToJson(
     actorVerification,
     rawJson: actor,
   };
+}
+
+function isIntentionalBehaviorReviewOnly(diagnostics: GenerationDiagnostic[]): boolean {
+  const reviewCodes = new Set([
+    'GEN_GM_ASSISTANCE_REQUIRED',
+    'GEN_EXTERNAL_RULE_REVIEW_REQUIRED',
+  ]);
+  return diagnostics.length > 0
+    && diagnostics.every((diagnostic) =>
+      diagnostic.severity === 'warning' && reviewCodes.has(diagnostic.code));
 }
 
 export function inferDefaultOutputPath(sourcePath: string, vaultPath: string): string {

@@ -1,4 +1,6 @@
 import type { StructuredActionData } from "../core/models/action";
+import type { ActorBehaviorSemantics } from "../core/models/behavior";
+import type { ActorResourceSemantics } from "../core/models/resource";
 import type { PortableSpellManifest } from "../core/spell-resolution";
 
 export interface FieldDefinition {
@@ -50,6 +52,8 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
   "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
   "法术清单": { key: "spellManifest", path: "spellManifest", type: "object" },
+  "资源机制": { key: "resourceSemantics", path: "resourceSemantics", type: "object" },
+  "行为机制": { key: "behaviorSemantics", path: "behaviorSemantics", type: "object" },
   "施法属性": { key: "spellcasting", path: "system.attributes.spellcasting", type: "string" },
   "施法者等级": { key: "spellLevel", path: "system.details.spellLevel", type: "number" },
   "法术位": { key: "spellSlots", path: "system.spells", type: "object" },
@@ -134,6 +138,8 @@ export interface ParsedNPC {
   regional_effects?: any;
   spellcasting?: any;
   spellManifest?: PortableSpellManifest;
+  resourceSemantics?: ActorResourceSemantics;
+  behaviorSemantics?: ActorBehaviorSemantics;
   spellSlots?: Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
 
   structuredActions?: {

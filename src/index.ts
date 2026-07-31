@@ -314,6 +314,12 @@ program
         writer(`[${diagnostic.severity.toUpperCase()}] ${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`);
       }
       if (result.status !== 'accepted') {
+        if (result.status === 'needs_review' && result.outputPath) {
+          console.warn(`Generated review-required output: ${result.outputPath}`);
+          console.warn('Status: needs_review (GM-assisted or external-rule mechanics are not automatic).');
+          process.exitCode = 2;
+          return;
+        }
         console.error(`Generation ${result.status}; no formal output was written.`);
         process.exitCode = result.status === 'needs_review' ? 2 : 1;
         return;

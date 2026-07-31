@@ -36,6 +36,10 @@ export function verifyGeneratedDocument(
     verifyIdsAndLinks(document, documentIndex, diagnostics);
     verifyDnd5eDocumentSchema(document, documentIndex, diagnostics);
   }
+  if (options.canonical.kind === 'actor') {
+    verifyActorResourceLinks(options.output, diagnostics);
+    verifyActorBehaviorLinks(options.output, diagnostics);
+  }
 
   if (options.effectProfile === 'core') {
     const leakPaths = findModuleAutomationPaths(options.output);
@@ -124,6 +128,140 @@ function verifyUses(
       'Legacy uses.value/uses.per fields are not supported.',
     ));
   }
+  const maximum = Number(uses.max);
+  if (
+    typeof uses.spent === 'number'
+    && Number.isFinite(maximum)
+    && (uses.spent < 0 || uses.spent > maximum)
+  ) {
+    diagnostics.push(error(
+      'GEN_USES_OUT_OF_BOUNDS',
+      'semantic',
+      path,
+      `Uses spent must remain within 0..${maximum}.`,
+    ));
+  }
+}
+
+function verifyActorResourceLinks(actor: any, diagnostics: GenerationDiagnostic[]): void {
+  const items = Array.isArray(actor?.items) ? actor.items : [];
+  const itemIds = new Set<string>();
+  for (const [index, item] of items.entries()) {
+    const id = String(item?._id ?? '');
+    if (id) {
+      if (!/^[A-Za-z0-9]{16}$/.test(id)) {
+        diagnostics.push(error(
+          'GEN_INVALID_ITEM_ID',
+          'schema',
+          `items/${index}/_id`,
+          'Resource-linked Item IDs must be stable 16-character IDs.',
+        ));
+      }
+      if (itemIds.has(id)) {
+        diagnostics.push(error(
+          'GEN_DUPLICATE_ITEM_ID',
+          'schema',
+          `items/${index}/_id`,
+          `Duplicate Actor Item ID "${id}".`,
+        ));
+      }
+      itemIds.add(id);
+    }
+  }
+
+  for (const [itemIndex, item] of items.entries()) {
+    const hasResourceRole = Boolean(
+      item?.flags?.fvttJsonGenerator?.resource
+      || Object.values(item?.system?.activities ?? {}).some((activity: any) =>
+        activity?.flags?.fvttJsonGenerator?.resourceConsumption
+        || activity?.flags?.fvttJsonGenerator?.resourceTransition),
+    );
+    if (hasResourceRole && !item?._id) {
+      diagnostics.push(error(
+        'GEN_RESOURCE_ITEM_ID_MISSING',
+        'schema',
+        `items/${itemIndex}/_id`,
+        'Every resource carrier or consumer must have a stable Item ID.',
+      ));
+    }
+    for (const [activityId, activity] of Object.entries(item?.system?.activities ?? {}) as Array<[string, any]>) {
+      for (const [targetIndex, target] of (activity?.consumption?.targets ?? []).entries()) {
+        if (target?.type !== 'itemUses' || !target?.target) continue;
+        if (!itemIds.has(String(target.target))) {
+          diagnostics.push(error(
+            'GEN_DANGLING_ITEM_USES_REFERENCE',
+            'semantic',
+            `items/${itemIndex}/system/activities/${activityId}/consumption/targets/${targetIndex}`,
+            `Activity references missing embedded Item "${String(target.target)}".`,
+          ));
+        }
+      }
+    }
+  }
+}
+
+function verifyActorBehaviorLinks(actor: any, diagnostics: GenerationDiagnostic[]): void {
+  const items = Array.isArray(actor?.items) ? actor.items : [];
+  const itemIds = new Set(items.map((item: any) => String(item?._id ?? '')).filter(Boolean));
+  const mechanicIds = new Set<string>();
+  for (const [itemIndex, item] of items.entries()) {
+    for (const [mechanicIndex, mechanic] of (item?.flags?.fvttJsonGenerator?.behaviorMechanics ?? []).entries()) {
+      const path = `items/${itemIndex}/flags/fvttJsonGenerator/behaviorMechanics/${mechanicIndex}`;
+      const id = String(mechanic?.id ?? '');
+      if (!id) {
+        diagnostics.push(error('GEN_BEHAVIOR_ID_MISSING', 'schema', `${path}/id`, 'Behavior mechanic ID is required.'));
+      } else if (mechanicIds.has(id)) {
+        diagnostics.push(error(
+          'GEN_DUPLICATE_BEHAVIOR_ID',
+          'semantic',
+          `${path}/id`,
+          `Duplicate projected behavior mechanic "${id}".`,
+        ));
+      } else {
+        mechanicIds.add(id);
+      }
+      for (const [referenceIndex, reference] of (mechanic?.references ?? []).entries()) {
+        if (!itemIds.has(String(reference?.itemId ?? ''))) {
+          diagnostics.push(error(
+            'GEN_DANGLING_BEHAVIOR_ITEM_REFERENCE',
+            'semantic',
+            `${path}/references/${referenceIndex}/itemId`,
+            `Behavior mechanic references missing embedded Item "${String(reference?.itemId ?? '')}".`,
+          ));
+        }
+      }
+      if (
+        (mechanic?.executionMode === 'gm-assisted' || mechanic?.executionMode === 'external-rule')
+        && (!Array.isArray(mechanic?.gmSteps) || mechanic.gmSteps.length === 0)
+      ) {
+        diagnostics.push(error(
+          'GEN_BEHAVIOR_GM_STEPS_MISSING',
+          'semantic',
+          `${path}/gmSteps`,
+          `${String(mechanic.executionMode)} behavior must include explicit GM steps.`,
+        ));
+      }
+      if (mechanic?.executionMode === 'external-rule' && !mechanic?.externalRule) {
+        diagnostics.push(error(
+          'GEN_BEHAVIOR_EXTERNAL_RULE_MISSING',
+          'semantic',
+          `${path}/externalRule`,
+          'external-rule behavior must preserve its external rule reference.',
+        ));
+      }
+    }
+    for (const [activityId, activity] of Object.entries(item?.system?.activities ?? {}) as Array<[string, any]>) {
+      const operation = activity?.flags?.fvttJsonGenerator?.behaviorOperation;
+      if (operation && !mechanicIds.has(String(operation.mechanicId ?? ''))) {
+        diagnostics.push(error(
+          'GEN_DANGLING_BEHAVIOR_OPERATION',
+          'semantic',
+          `items/${itemIndex}/system/activities/${activityId}/flags/fvttJsonGenerator/behaviorOperation`,
+          `Behavior operation references missing mechanic "${String(operation.mechanicId ?? '')}".`,
+        ));
+      }
+    }
+  }
 }
 
 function verifyIdsAndLinks(
@@ -179,6 +317,13 @@ function verifyMechanicCoverage(
   documents: any[],
   diagnostics: GenerationDiagnostic[],
 ): MechanicsCoverageEntry {
+  const behavior = mechanic.kind.startsWith('behavior-')
+    ? mechanic.value as {
+        id?: string;
+        coverage?: MechanicsCoverageEntry['expressionCoverage'];
+        executionMode?: MechanicsCoverageEntry['executionMode'];
+      } | undefined
+    : undefined;
   if (mechanic.projection !== 'projected') {
     diagnostics.push({
       code: mechanic.projection === 'literal-only'
@@ -198,6 +343,10 @@ function verifyMechanicCoverage(
       sourcePath: mechanic.path,
       status: mechanic.projection,
       outputPaths: [],
+      ...(behavior ? {
+        expressionCoverage: behavior.coverage,
+        executionMode: behavior.executionMode,
+      } : {}),
     };
   }
 
@@ -229,6 +378,42 @@ function verifyMechanicCoverage(
     if (mechanic.kind === 'stage' && document?.flags?.fvttJsonGenerator?.stage) {
       outputPaths.push(`documents/${documentIndex}/flags/fvttJsonGenerator/stage`);
     }
+    const mechanicId = (mechanic.value as { id?: string } | undefined)?.id;
+    if (
+      mechanic.kind === 'resource'
+      && mechanicId
+      && document?.flags?.fvttJsonGenerator?.resource?.id === mechanicId
+    ) {
+      outputPaths.push(`documents/${documentIndex}/flags/fvttJsonGenerator/resource`);
+    }
+    if (mechanic.kind === 'resource-consumption' && mechanicId) {
+      for (const [activityIndex, activity] of allActivities.entries()) {
+        if (activity?.flags?.fvttJsonGenerator?.resourceConsumption?.id === mechanicId) {
+          outputPaths.push(`documents/${documentIndex}/system/activities/${activityIndex}/flags/fvttJsonGenerator/resourceConsumption`);
+        }
+      }
+    }
+    if (mechanic.kind === 'resource-transition' && mechanicId) {
+      for (const [activityIndex, activity] of allActivities.entries()) {
+        if (activity?.flags?.fvttJsonGenerator?.resourceTransition?.id === mechanicId) {
+          outputPaths.push(`documents/${documentIndex}/system/activities/${activityIndex}/flags/fvttJsonGenerator/resourceTransition`);
+        }
+      }
+    }
+    if (mechanic.kind === 'resource-derived' && mechanicId) {
+      for (const [effectIndex, effect] of (document?.effects ?? []).entries()) {
+        if (effect?.flags?.fvttJsonGenerator?.resourceTier?.id === mechanicId) {
+          outputPaths.push(`documents/${documentIndex}/effects/${effectIndex}/flags/fvttJsonGenerator/resourceTier`);
+        }
+      }
+    }
+    if (mechanic.kind.startsWith('behavior-') && mechanicId) {
+      for (const [behaviorIndex, projected] of (document?.flags?.fvttJsonGenerator?.behaviorMechanics ?? []).entries()) {
+        if (projected?.id === mechanicId) {
+          outputPaths.push(`documents/${documentIndex}/flags/fvttJsonGenerator/behaviorMechanics/${behaviorIndex}`);
+        }
+      }
+    }
   }
 
   if (outputPaths.length === 0) {
@@ -244,7 +429,26 @@ function verifyMechanicCoverage(
       sourcePath: mechanic.path,
       status: 'missing',
       outputPaths,
+      ...(behavior ? {
+        expressionCoverage: behavior.coverage,
+        executionMode: behavior.executionMode,
+      } : {}),
     };
+  }
+
+  if (behavior?.executionMode === 'gm-assisted' || behavior?.executionMode === 'external-rule') {
+    diagnostics.push({
+      code: behavior.executionMode === 'external-rule'
+        ? 'GEN_EXTERNAL_RULE_REVIEW_REQUIRED'
+        : 'GEN_GM_ASSISTANCE_REQUIRED',
+      severity: 'warning',
+      stage: 'semantic',
+      path: mechanic.path,
+      message: behavior.executionMode === 'external-rule'
+        ? 'Mechanic preserves an external rule reference and requires external resolution.'
+        : 'Mechanic is structured and operable through explicit GM-assisted steps, not automatic.',
+      evidence: mechanic.evidence,
+    });
   }
 
   return {
@@ -253,6 +457,10 @@ function verifyMechanicCoverage(
     sourcePath: mechanic.path,
     status: 'projected',
     outputPaths,
+    ...(behavior ? {
+      expressionCoverage: behavior.coverage,
+      executionMode: behavior.executionMode,
+    } : {}),
   };
 }
 

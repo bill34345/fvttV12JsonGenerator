@@ -5,6 +5,8 @@ import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import { StructuredActionParser } from './structuredAction';
 import type { StructuredActionData } from '../models/action';
 import { validatePortableSpellManifestStructure } from '../spell-resolution';
+import { parseActorResourceSemantics } from './resourceSemantics';
+import { parseActorBehaviorSemantics } from './behaviorSemantics';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -144,7 +146,11 @@ export class YamlParser {
     const processedValue = this.processValue(mapping, value);
 
     // Determine target location in ParsedNPC
-    if (path === 'spellManifest') {
+    if (path === 'resourceSemantics') {
+      result.resourceSemantics = parseActorResourceSemantics(processedValue);
+    } else if (path === 'behaviorSemantics') {
+      result.behaviorSemantics = parseActorBehaviorSemantics(processedValue);
+    } else if (path === 'spellManifest') {
       const validation = validatePortableSpellManifestStructure(processedValue);
       if (!validation.ok) {
         const stableFindings = validation.findings.map((finding) => `${finding.code} ${finding.path}`).join('; ');
@@ -598,6 +604,9 @@ export class YamlParser {
         if (typeof item === 'string') {
           const s = item.trim();
           if (!s) return item;
+
+          if (mapping.key === 'ci' && s === '擒抱') return 'grappled';
+          if (mapping.key === 'languages' && s === '深潜语') return 'deep';
 
           const itemMapping = FIELD_MAPPING[s];
           if (itemMapping) return itemMapping.key;

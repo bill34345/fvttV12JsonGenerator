@@ -93,8 +93,47 @@ export function adaptParsedActorToCanonical(
       mechanics.push(...collectActionMechanics(action, `actor/structuredActions/${section}/${index}`));
     }
   }
+  for (const [index, resource] of (parsed.resourceSemantics?.resources ?? []).entries()) {
+    mechanics.push(mechanic('resource', `actor/resourceSemantics/resources/${index}`, resource));
+    for (const [derivedIndex, derived] of resource.derived.entries()) {
+      mechanics.push(mechanic(
+        'resource-derived',
+        `actor/resourceSemantics/resources/${index}/derived/${derivedIndex}`,
+        { ...derived, resourceId: resource.id },
+      ));
+    }
+  }
+  for (const [index, binding] of (parsed.resourceSemantics?.bindings ?? []).entries()) {
+    mechanics.push(mechanic(
+      'resource-consumption',
+      `actor/resourceSemantics/bindings/${index}`,
+      binding,
+    ));
+  }
+  for (const [index, transition] of (parsed.resourceSemantics?.transitions ?? []).entries()) {
+    mechanics.push(mechanic(
+      'resource-transition',
+      `actor/resourceSemantics/transitions/${index}`,
+      transition,
+    ));
+  }
+  for (const [index, behavior] of (parsed.behaviorSemantics?.mechanics ?? []).entries()) {
+    const kind = `behavior-${behavior.kind === 'choicePool' ? 'choice-pool'
+      : behavior.kind === 'externalRule' ? 'external-rule'
+        : behavior.kind}` as GenerationMechanicKind;
+    mechanics.push(mechanic(
+      kind,
+      `actor/behaviorSemantics/mechanics/${index}`,
+      behavior,
+      behavior.coverage === 'structured'
+        ? 'projected'
+        : behavior.coverage === 'literal'
+          ? 'literal-only'
+          : 'unsupported',
+    ));
+  }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'actor',
     identity: { name: parsed.name ?? '' },
     source: sourceFrom(options),
@@ -124,7 +163,7 @@ export function adaptParsedItemToCanonical(
     ));
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'item',
     identity: { name: parsed.name, englishName: parsed.englishName },
     source: sourceFrom(options),

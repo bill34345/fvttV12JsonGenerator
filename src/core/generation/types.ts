@@ -5,6 +5,10 @@ import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
 import type { CanonicalMonster, EvidenceRef } from '../intake/types';
 import type { ParsedItem, ItemType } from '../models/item';
 import type { ParserRoute } from '../parser/types';
+import type {
+  ActorBehaviorExecutionMode,
+  ActorBehaviorExpressionCoverage,
+} from '../models/behavior';
 
 export type { CanonicalFeature, CanonicalMonster, EvidenceRef } from '../intake/types';
 export type GenerationDocumentKind = 'actor' | 'item';
@@ -16,7 +20,19 @@ export type GenerationMechanicKind =
   | 'uses'
   | 'range'
   | 'effect'
-  | 'stage';
+  | 'stage'
+  | 'resource'
+  | 'resource-consumption'
+  | 'resource-transition'
+  | 'resource-derived'
+  | 'behavior-relation'
+  | 'behavior-lifecycle'
+  | 'behavior-trigger'
+  | 'behavior-stage'
+  | 'behavior-capacity'
+  | 'behavior-choice-pool'
+  | 'behavior-area'
+  | 'behavior-external-rule';
 export type MechanicProjectionState = 'projected' | 'literal-only' | 'unsupported';
 
 export interface CanonicalGenerationSource {
@@ -35,7 +51,7 @@ export interface CanonicalGenerationMechanic {
 }
 
 interface CanonicalGenerationBase {
-  schemaVersion: 1;
+  schemaVersion: 2;
   kind: GenerationDocumentKind;
   identity: {
     name: string;
@@ -76,6 +92,8 @@ export interface MechanicsCoverageEntry {
   sourcePath: string;
   status: 'projected' | 'literal-only' | 'unsupported' | 'missing' | 'duplicate';
   outputPaths: string[];
+  expressionCoverage?: ActorBehaviorExpressionCoverage;
+  executionMode?: ActorBehaviorExecutionMode;
 }
 
 export interface GenerationVerification {
