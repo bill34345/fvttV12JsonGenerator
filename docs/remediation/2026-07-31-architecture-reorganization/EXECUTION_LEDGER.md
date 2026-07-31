@@ -1025,10 +1025,23 @@ owner 和迁移约束。
   Foundry/Chrome、运行长时监测或复制/移动/删除任何运行数据。`WORLD-ASSET-001` 保持 `in_progress`，
   恢复抽样、实际迁移和旧路径退役仍未完成。
 
+### 2026-08-01：阶段 5C.1 当前提交验证刷新
+
+- 复查确认前一日来源不明、约占 2.3 GiB 且持续高 CPU 的 `bun -` 进程已经不存在；分支仍为
+  `codex/architecture-reorganization-20260731` @ `4df2999`，工作树只保留既有 ExecPlan 修改和未跟踪图片；
+- 前一日因负载超时的两个 Web crawl job 测试先单独复跑，分别约 0.75 秒和 0.64 秒完成，2 tests /
+  14 expectations 全部通过，证明失败是当时机器负载下的时间窗抖动，不是 Stage 5C.1 行为回归；
+- 当前提交的完整 `ci:verify` 随后 exit 0：Session Monitor build 1 / 1、CLI 12 / 57、instrumented
+  1,620 / 7,688，合计 1,633 tests / 7,746 expectations，0 failures；dependency-cruiser 3,702 modules /
+  3,921 dependencies、0 violations；production coverage 85.53% lines / 88.05% functions；anti-overfit
+  322 sources、hygiene 2,148 tracked paths、dnd5e 5.3.3 reference、Web build 和 offline Actor smoke 全部通过；
+- 因此阶段 5C.1 的当前-tip 机械验证现已补齐为通过。前一日失败记录保留作为测试环境诊断历史，但不再是
+  当前阻塞；没有为此终止用户进程、放宽测试、修改爬虫实现或接触生产/Foundry/Chrome。
+
 ## 当前停止点
 
 阶段 5C.1 已形成一个可安全暂停的检查点：真实迁移方案和 reference cache 外置配置均已完成并双验收，但
-没有目标盘，也没有任何复制授权。下一批先做“外置 root 消费者适配”，从独立 module installer、companion
+没有目标盘，也没有任何复制授权；当前提交的完整 CI 已在 2026-08-01 刷新通过。下一批先做“外置 root 消费者适配”，从独立 module installer、companion
 和 icon 工具开始，再处理 world audit、classpack/Monster Spell Resolver 的精确路径安全约束；每个产品继续
 保持自己的独立边界和回归测试。只有所有当前工具在临时外置 fixture 下解析到相同资源后，才向用户询问具体
 目标盘和复制批次。之后仍必须 copy-first、逐批 hash/count 对账、恢复抽样、短时本地 Foundry 验收和旧路径
