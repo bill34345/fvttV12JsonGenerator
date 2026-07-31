@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/web/dev.ts",
+    "src/web/server/index.ts",
+    "src/web/client/main.tsx",
+    "src/foundry/monster-spell-resolver/index.ts",
+    "src/foundry/session-monitor/index.ts",
+    "src/tools/actorVerification.ts",
+    "src/tools/antiOverfitAudit.ts",
+    "src/tools/ciActorSmoke.ts",
+    "src/tools/coverageGate.ts",
+    "src/tools/crawlSites.ts",
+    "src/tools/iconReviewGallery.ts",
+    "src/tools/intakeVerification.ts",
+    "src/tools/productionMigrationBuildCandidate.ts",
+    "src/tools/productionMigrationThreeWayAudit.ts",
+    "src/tools/referenceCache.ts",
+    "src/tools/referenceIndex.ts",
+    "src/tools/repositoryHygiene.ts",
+    "src/tools/v14AcceptanceSuite.ts",
+    "src/tools/worldFootprintAudit.ts",
+    "scripts/buildChatMemoryGuard.ts",
+    "scripts/buildSessionMonitor.ts",
+    "scripts/buildSpellResolver.ts",
+    "scripts/buildV14IconCatalog.ts",
+    "scripts/**/cli.ts",
+    "src/**/__tests__/**/*.{test,spec}.{ts,tsx}",
+    "scripts/**/__tests__/**/*.{test,spec}.{ts,tsx}",
+    "tests/**/*.{test,spec}.{ts,tsx}",
+    "vite.config.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,tsx}",
+    "tests/**/*.{ts,tsx}",
+    "*.{config,setup}.{ts,tsx,js,mjs,cjs}"
+  ],
+  "ignore": [
+    "src/temp/**",
+    ".local/**",
+    "coverage/**",
+    "dist/**",
+    "references/**",
+    "obsidian/**",
+    "data/**"
+  ],
+  "cycles": {
+    "dynamicImports": true
+  }
+}

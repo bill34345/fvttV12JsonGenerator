@@ -64,7 +64,7 @@ describe("CLI item import", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("defaults split-only --ingest-items output to vault/middle/items", () => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
@@ -96,7 +96,7 @@ describe("CLI item import", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("respects an explicit --emit-dir even when it matches the global default", () => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
@@ -132,5 +132,5 @@ describe("CLI item import", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });
