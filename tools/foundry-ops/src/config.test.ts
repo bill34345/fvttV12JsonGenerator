@@ -15,6 +15,7 @@ describe('Foundry lab configuration', () => {
 
     expect(config.versions).toEqual({ foundry: '14.364', node: '24.17.0', dnd5e: '5.3.3' });
     expect(config.labRoot).toBe(resolve(repo, '.local/foundry-v14'));
+    expect(config.backupRoot).toBe(resolve(repo, '.local/foundry-v14/backups'));
     expect(config.profiles.coreTest.port).toBe(30000);
     expect(config.profiles.serverMirror.port).toBe(30001);
     expect(config.profiles.coreTest.host).toBe('127.0.0.1');

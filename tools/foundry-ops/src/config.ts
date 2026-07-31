@@ -44,7 +44,7 @@ export function createLabConfig(repoRoot = process.cwd(), environment: Environme
   const root = resolve(repoRoot);
   const labRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.labRoot] || resolve(root, '.local/foundry-v14'));
   const evidenceRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.evidenceRoot] || resolve(labRoot, 'evidence'));
-  const backupRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.backupRoot] || resolve(evidenceRoot, 'backups'));
+  const backupRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.backupRoot] || resolve(labRoot, 'backups'));
   assertConfiguredRootIsSpecific(root, labRoot, FOUNDRY_OPS_ENVIRONMENT.labRoot);
   assertConfiguredRootIsSpecific(root, evidenceRoot, FOUNDRY_OPS_ENVIRONMENT.evidenceRoot);
   assertConfiguredRootIsSpecific(root, backupRoot, FOUNDRY_OPS_ENVIRONMENT.backupRoot);

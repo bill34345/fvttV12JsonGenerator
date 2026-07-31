@@ -48,6 +48,22 @@ describe('Foundry Ops CLI authority boundary', () => {
     }]);
   });
 
+  it('routes local scope coverage without production authorization', async () => {
+    const calls: Array<{ entrypoint: string; args: string[] }> = [];
+    const code = await runFoundryOpsCli(['assets', 'scope'], {
+      runEntrypoint: async (entrypoint, args) => {
+        calls.push({ entrypoint, args });
+        return 0;
+      },
+    }, {});
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([{
+      entrypoint: 'tools/foundry-ops/src/localScope.ts',
+      args: [],
+    }]);
+  });
+
   it('refuses an effective production read without a separate authorization flag', async () => {
     await expect(runFoundryOpsCli(['production', 'inventory', '--apply'], {
       runEntrypoint: async () => 0,

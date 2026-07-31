@@ -26,7 +26,7 @@ bun run foundry:ops catalog
 | `src/cli.ts`、`src/routing.ts`、`src/commandCatalog.ts` | 统一命令入口、命令分类和权限检查 |
 | `src/config.ts` | 本地路径、生产连接配置和防止路径逃逸的安全检查 |
 | `src/process.ts` | 启动外部程序，并从命令、输出和错误中隐藏敏感值 |
-| `src/asset-inventory/`、`src/assetInventory.ts` | 只读扫描本地 Foundry 资产，按类别写入 hash manifest 和精确重复项报告 |
+| `src/asset-inventory/`、`src/assetInventory.ts`、`src/localScope.ts` | 只读扫描本地 Foundry 资产，并登记整个 `.local` 顶层的所有权、隐私排除和待判断项 |
 | `src/lab/` | 本地 Foundry 实验环境、模组获取、诊断、补丁、启动和停止工具 |
 | `src/world-audit/`、`src/worldFootprintAudit.ts` | 对停止状态的本地世界建立只读快照并生成隐私安全的审计报告 |
 | `src/production-migration/`、两个 `productionMigration*.ts` | 比较三个本地世界副本并构建离线迁移候选；不会连接或修改生产服务器 |
@@ -64,6 +64,22 @@ bun run foundry:ops assets inventory --hash-concurrency=4
 
 扫描器不会跟随符号链接或 Windows junction，也不会扫描凭据目录、认证 cookie 或 Foundry profile 的 `Config`。遇到未授权链接、扫描期间变化或读取失败时，报告会标记为不完整并返回非零退出码。生成报告本身是唯一写入行为；命令不会复制、移动、删除资产，也不会访问生产环境。
 
+## `.local` 全范围登记
+
+Stage 5A 的 hash 清单只覆盖已经确认 owner 的 Foundry Lab 资产。要检查仓库里是否又出现未登记的本地目录或文件，运行：
+
+```powershell
+bun run foundry:ops assets scope
+```
+
+该命令只枚举 `.local` 顶层，并把每一项标成：
+
+- `已分类`：已经确认生产者、使用者、可重建性和保留级别；
+- `隐私排除`：知道它是什么，但不会递归读取浏览器 profile、OAuth、cookie、桥接状态或截图内容；
+- `待人工判断`：实物存在，但现有仓库证据不足以证明 owner 或 canonical copy，必须保留并等待单独决定。
+
+报告默认写到 `.local/foundry-v14/inventory/scope-coverage/<timestamp>/`。其中“范围完整”只表示当前每个顶层条目都已登记；只要仍有“待人工判断”，所有权分类就仍然不是完整状态。无论两者为何值，报告都不构成迁移或删除授权。
+
 ## 生产只读盘点
 
 生产只读命令必须同时满足三件事：
@@ -91,7 +107,7 @@ bun run foundry:ops production inventory --apply --allow-production-read
 |---|---|
 | `FVTT_OPS_LAB_ROOT` | 本地 Foundry 测试根目录 |
 | `FVTT_OPS_EVIDENCE_ROOT` | 本地证据和报告根目录 |
-| `FVTT_OPS_BACKUP_ROOT` | 本地备份根目录 |
+| `FVTT_OPS_BACKUP_ROOT` | 本地备份根目录；默认是 `FVTT_OPS_LAB_ROOT/backups` |
 | `FVTT_OPS_FOUNDRY_ZIP` | Foundry 安装包路径 |
 | `FVTT_OPS_WORLD_ID` | 默认世界标识；有精确安全限制的命令仍会校验自己的固定测试世界 |
 

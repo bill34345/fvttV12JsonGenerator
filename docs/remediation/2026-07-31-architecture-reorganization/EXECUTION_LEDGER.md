@@ -941,9 +941,49 @@ owner 和迁移约束。
 - 全程没有连接生产、启动 Foundry/Chrome、执行长时间监测、复制/移动/删除运行数据，也没有关闭
   `WORLD-ASSET-001` 或其他 hardening finding。
 
+### 2026-07-31：阶段 5B `.local` 全范围登记与备份根目录统一
+
+- 新增 `bun run foundry:ops assets scope`。分类 policy、文件系统元数据扫描和机器 JSON/中文报告输出继续分层；
+  顶层出现任何未登记文件或目录时 `coverageComplete: false` / exit 1，不会因名称相似自动归类；
+- 隐私条目强制使用 top-level metadata：Chrome profile、Session Monitor profile、OAuth 相关目录、认证
+  cookie、浏览器/MCP bridge 和屏幕截图均不递归、不读取正文、不计算 hash。普通非隐私目录只统计元数据，
+  不读正文；`.local/foundry-v14` 复用阶段 5A 已验收清单中 `$FVTT_OPS_LAB_ROOT` 内注册根的检查点；
+- 人工复核推翻了第一次机械成功：最初直接使用阶段 5A category totals，错误地把单独顶层登记的
+  `cor-cotn.7z` 也算进 `foundry-v14`。实现现按 root `displayPath` 过滤，回归测试锁定外部 root 不得混入；
+  最终 `foundry-v14` 检查点为 180,753 files / 84,246,439,023 bytes，`cor-cotn.7z` 单独为
+  1,648,542,975 bytes；
+- 最终真实报告位于
+  `.local/foundry-v14/inventory/scope-coverage/2026-07-31T14-39-32-176Z/`：当前 52 个 `.local`
+  顶层条目全部有声明，29 个已分类、20 个隐私排除、3 个待人工判断，unexpected 0、missing declaration 0、
+  measurement issue 0；`coverageComplete: true`、`measurementComplete: true`，但因待判断项存在，
+  `classificationComplete: false`；
+- 三个待判断项保留明确保护：`.local/8080` 是 2,284 files / 3.29 GiB 的完整世界目录加 ZIP，来源、
+  canonical copy 和消费者未证实，标记 critical；`.local/map` 是 4 个地图/遮罩/UVTT 文件，无法证明是
+  输入、交付还是 scratch，标记 preserve；`.local/tools` 混合 Auto-Wall 与 git-filter-repo 源码，未找到
+  durable consumer，保持 review-before-removal。三者都不是本批 blocker，也绝不是删除候选；
+- `.local/references` 由 tracked manifest/REFERENCE_INDEX/bootstrap 证明为可重新获取的版本参考缓存；
+  `rr-20260728-220757` 由生产迁移报告证明为唯一通过的本地恢复演练；`intake-runs`、final verification、
+  resolver/icon/diagnostic 等由现有验收记录证明为 evidence；公开 gstack clone 与覆盖率复现输出和证据分开；
+- 接受前检查发现 `rr-20260728-220757` 内有 95 个链接/联接点；扫描器现在规定普通递归目录只要跳过链接
+  就必须把计量判为不完整。该恢复演练根改为只登记顶层并引用既有 runbook，不再用不完整遍历伪装当前体积；
+- `FVTT_OPS_BACKUP_ROOT` 默认值由不存在的 `evidence/backups` 修正为实际 owner 使用的
+  `FVTT_OPS_LAB_ROOT/backups`；显式外部 override 不变，README 与 config test 同步锁定；
+- 机械验证：聚焦 scope/config/route/CLI tests 通过；Foundry Ops 完整 suite 为 306 tests / 2,292
+  expectations；production/all/packages/apps/modules/tools 类型检查通过；dependency-cruiser 为 3,697
+  modules / 3,910 dependencies、0 violations，Knip cycles 为 0；最终 `ci:verify` 的 Session Monitor build
+  1 / 1、CLI 12 / 57、instrumented 1,610 / 7,651，合计 1,623 tests / 7,709 expectations；production
+  coverage 85.54% lines / 88.02% functions，anti-overfit 321 sources、hygiene 2,137 tracked paths、locked
+  dnd5e 5.3.3 reference、Web build 与 offline Actor smoke 全部通过；hygiene 覆盖 2,143 个已暂存/跟踪路径；
+- 语义验收：人工阅读最终中文报告，确认“范围完整”和“所有权全部解决”被明确分开，三项未知来源没有被
+  猜成 cache，world/recovery/evidence 仍保持高保护，隐私报告没有内部文件名或 token-pattern 命中；CI 中
+  Session Monitor 等待文字仍来自隔离临时目录的 subprocess 测试，不是真实 Chrome/Foundry 长时运行；
+- 本阶段没有连接生产、启动 Foundry/Chrome、运行长时监测、复制/移动/删除任何 `.local` 数据，也没有
+  改变 `WORLD-ASSET-001` 或其他 hardening finding 状态。
+
 ## 当前停止点
 
-阶段 5A 已形成只读、可重跑的注册资产清单检查点。下一批进入阶段 5B：逐根核对尚未注册的 `.local`
-目录和顶层文件，修正 backup root owner/默认值，建立“已分类 / 隐私排除 / 待人工判断”的完整 scope
-coverage；随后才能提出外部 `FVTT_OPS_LAB_ROOT` 的复制与验证方案。没有用户单独确认，不复制、不移动、
-不删除任何 world、backup、evidence、archive、cache 或浏览器 profile；不要重新执行已完成的 4C 迁移。
+阶段 5B 已完成“当前所有顶层实物均有登记”的范围门禁，但所有权结论故意保持 3 个 pending。下一批进入
+阶段 5C：先写外部 `FVTT_OPS_LAB_ROOT` 的 copy-first、hash/count 对账、旧路径兼容窗口、回滚与恢复抽样
+方案，同时梳理 `.local/references` 的独立可配置 cache root；此阶段只能提出和机械验证迁移计划，不得把
+pending 三项塞进 Foundry root。没有用户对具体目标盘和复制批次的单独确认，不执行大规模复制、切换、移动
+或删除；四小时 Session Monitor 验收仍由用户在真实跑团中执行，不在架构治理阶段运行。

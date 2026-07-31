@@ -58,4 +58,15 @@ describe('Foundry Ops command catalog', () => {
     expect(route.entrypoint).toBe('tools/foundry-ops/src/assetInventory.ts');
     expect(route.forwardedArgs).toEqual(['--hash-concurrency=2']);
   });
+
+  it('routes local scope coverage to the privacy-aware report implementation', () => {
+    const route = resolveFoundryOpsRoute(['assets', 'scope']);
+    expect(route.command).toMatchObject({
+      id: 'assets.scope',
+      target: 'local',
+      effect: 'local-mutation',
+    });
+    expect(route.entrypoint).toBe('tools/foundry-ops/src/localScope.ts');
+    expect(route.forwardedArgs).toEqual([]);
+  });
 });

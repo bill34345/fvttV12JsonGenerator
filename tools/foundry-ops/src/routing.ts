@@ -9,6 +9,7 @@ export interface FoundryOpsRoute {
 const LAB_ENTRYPOINT = 'tools/foundry-ops/src/lab/cli.ts';
 const SPELL_RESOLVER_ENTRYPOINT = 'scripts/foundry-lab/spellResolverCli.ts';
 const ASSET_INVENTORY_ENTRYPOINT = 'tools/foundry-ops/src/assetInventory.ts';
+const LOCAL_SCOPE_ENTRYPOINT = 'tools/foundry-ops/src/localScope.ts';
 
 export function resolveFoundryOpsRoute(args: string[]): FoundryOpsRoute {
   const [area, action, ...rest] = args;
@@ -29,6 +30,9 @@ export function resolveFoundryOpsRoute(args: string[]): FoundryOpsRoute {
   }
   if (area === 'assets' && action === 'inventory') {
     return route('assets.inventory', ASSET_INVENTORY_ENTRYPOINT, rest);
+  }
+  if (area === 'assets' && action === 'scope') {
+    return route('assets.scope', LOCAL_SCOPE_ENTRYPOINT, rest);
   }
   if (area === 'lab' && action) {
     if (action === 'inventory') return route('production.inventory', LAB_ENTRYPOINT, [action, ...rest]);
