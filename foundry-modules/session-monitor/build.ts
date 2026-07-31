@@ -1,6 +1,11 @@
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { lstatSync } from 'node:fs';
+import { dirname, parse, relative, resolve, sep } from 'node:path';
 import { collectArchiveEntries, createStoredZip } from './companion/archive';
+import {
+  sessionMonitorFoundryPaths,
+  type SessionMonitorEnvironment,
+} from './foundryPaths';
 
 const MODULE_ID = 'fvtt-session-monitor';
 const SOURCE_FILES = [
@@ -45,18 +50,25 @@ export function sessionMonitorPaths(packageRoot = import.meta.dir) {
   };
 }
 
-export function sessionMonitorWorkspaceInstallPaths(workspaceRoot: string) {
-  const root = resolve(workspaceRoot);
+export function sessionMonitorWorkspaceInstallPaths(
+  workspaceRoot: string,
+  environment: SessionMonitorEnvironment = {},
+) {
+  const paths = sessionMonitorFoundryPaths(workspaceRoot, environment);
   return {
-    destination: resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/fvtt-session-monitor'),
-    backupRoot: resolve(root, '.local/foundry-v14/backups/fvtt-session-monitor'),
+    destination: paths.destination,
+    backupRoot: resolve(paths.backupRoot, 'fvtt-session-monitor'),
   };
 }
 
-export function assertSessionMonitorDestination(workspaceRoot: string, destination: string): string {
-  const expected = sessionMonitorWorkspaceInstallPaths(workspaceRoot).destination;
+export function assertSessionMonitorDestination(
+  workspaceRoot: string,
+  destination: string,
+  environment: SessionMonitorEnvironment = {},
+): string {
+  const expected = sessionMonitorWorkspaceInstallPaths(workspaceRoot, environment).destination;
   if (resolve(destination) !== expected) {
-    throw new Error(`Session Monitor installation destination must be the exact project-local path: ${expected}`);
+    throw new Error(`Session Monitor installation destination must be the exact configured Foundry lab path: ${expected}`);
   }
   return expected;
 }
@@ -125,9 +137,12 @@ export function normalizeBrowserBundleSourceLabels(bundle: string): string {
 export async function installSessionMonitorPackage(
   workspaceRoot: string,
   buildDirectory = sessionMonitorPaths().outputDir,
+  environment: SessionMonitorEnvironment = {},
 ): Promise<SessionMonitorInstallResult> {
-  const paths = sessionMonitorWorkspaceInstallPaths(workspaceRoot);
-  const destination = assertSessionMonitorDestination(workspaceRoot, paths.destination);
+  const paths = sessionMonitorWorkspaceInstallPaths(workspaceRoot, environment);
+  const destination = assertSessionMonitorDestination(workspaceRoot, paths.destination, environment);
+  assertNoReparsePath(destination, 'Session Monitor installation destination');
+  assertNoReparsePath(paths.backupRoot, 'Session Monitor backup root');
   await assertOwnedModule(buildDirectory);
 
   let backupPath: string | undefined;
@@ -176,6 +191,22 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+function assertNoReparsePath(target: string, label: string): void {
+  const absolute = resolve(target);
+  let current = parse(absolute).root;
+  for (const segment of relative(current, absolute).split(sep).filter(Boolean)) {
+    current = resolve(current, segment);
+    try {
+      if (lstatSync(current).isSymbolicLink()) {
+        throw new Error(`${label} contains an unsafe symlink, junction, or reparse point: ${current}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const workspaceRootFlag = process.argv.indexOf('--workspace-root');
   const workspaceRoot = workspaceRootFlag >= 0
@@ -185,7 +216,7 @@ async function main(): Promise<void> {
   console.log(`Built ${result.outputDir}`);
   console.log(`Archive ${result.zipPath}`);
   if (process.argv.includes('--install')) {
-    const installed = await installSessionMonitorPackage(workspaceRoot, result.outputDir);
+    const installed = await installSessionMonitorPackage(workspaceRoot, result.outputDir, process.env);
     console.log(`Installed ${installed.destination}`);
     if (installed.backupPath) console.log(`Backup ${installed.backupPath}`);
   }

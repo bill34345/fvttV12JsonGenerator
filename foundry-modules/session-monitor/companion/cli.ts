@@ -15,6 +15,7 @@ import {
   evaluate,
 } from './cdp';
 import { ChromeSupervisor } from './chromeSupervisor';
+import { sessionMonitorFoundryPaths, type SessionMonitorEnvironment } from '../foundryPaths';
 import { combineSession, readJsonLines, writeReportBundle } from './report';
 import { aggregateProcesses, WindowsProcessReader } from './windowsProcess';
 
@@ -365,7 +366,10 @@ async function runReport(options: CliOptions): Promise<string> {
   return options.out;
 }
 
-export function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(
+  argv: string[],
+  environment: SessionMonitorEnvironment = process.env,
+): CliOptions {
   const valueOptions = new Set([
     '--workspace-root',
     '--url',
@@ -394,10 +398,11 @@ export function parseArgs(argv: string[]): CliOptions {
     return index >= 0 ? argv[index + 1] : undefined;
   };
   const workspaceRoot = resolve(value('--workspace-root') ?? resolve(import.meta.dir, '..'));
+  const foundryPaths = sessionMonitorFoundryPaths(workspaceRoot, environment);
   return {
     command,
     url: value('--url') ?? 'http://127.0.0.1:30001/game',
-    outputRoot: resolve(value('--output-root') ?? resolve(workspaceRoot, '.local/foundry-v14/evidence/cor-cotn-performance/live-sessions')),
+    outputRoot: resolve(value('--output-root') ?? foundryPaths.sessionEvidenceRoot),
     profile: resolve(value('--profile') ?? resolve(workspaceRoot, '.local/fvtt-session-monitor/chrome-profile')),
     chrome: value('--chrome'),
     browserExport: value('--browser'),

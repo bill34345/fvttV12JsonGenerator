@@ -14,6 +14,7 @@ import type {
   V14IconFileEntry,
 } from '@fvtt-json-generator/assets-icons/icon-types';
 import { tokenize } from '@fvtt-json-generator/assets-icons/icon-resolver';
+import { resolveV14IconCatalogPaths } from './v14IconCatalogPaths';
 
 interface PublicCompendiumExport {
   schemaVersion: 1;
@@ -35,27 +36,7 @@ interface PublicCompendiumExport {
 }
 
 const ROOT = resolve(import.meta.dir, '..');
-const DEFAULT_INPUT = join(
-  ROOT,
-  '.local',
-  'foundry-v14',
-  'evidence',
-  'icon-catalog',
-  'compendium-index.json',
-);
-const DEFAULT_OUTPUT = join(ROOT, 'references', 'foundry-v14-icons', 'catalog.json');
-const CORE_ICON_ROOT = join(ROOT, '.local', 'foundry-v14', 'app', '14.364', 'public', 'icons');
-const DND5E_ROOT = join(
-  ROOT,
-  '.local',
-  'foundry-v14',
-  'data',
-  'server-mirror',
-  'Data',
-  'systems',
-  'dnd5e',
-);
-const DND5E_ICON_ROOT = join(DND5E_ROOT, 'icons');
+const DEFAULT_PATHS = resolveV14IconCatalogPaths(ROOT, process.env);
 const IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']);
 const PACK_ORDER = [
   'dnd5e.monsterfeatures24',
@@ -80,10 +61,12 @@ const TYPE_DEFAULTS: Record<string, string> = {
   weapon: 'systems/dnd5e/icons/svg/items/weapon.svg',
 };
 
-const inputPath = cliValue('--input') ?? DEFAULT_INPUT;
-const outputPath = cliValue('--output') ?? DEFAULT_OUTPUT;
+const inputPath = cliValue('--input') ?? DEFAULT_PATHS.inputPath;
+const outputPath = cliValue('--output') ?? DEFAULT_PATHS.outputPath;
+const coreIconRoot = DEFAULT_PATHS.coreIconRoot;
+const dnd5eIconRoot = DEFAULT_PATHS.dnd5eIconRoot;
 
-for (const required of [inputPath, CORE_ICON_ROOT, DND5E_ICON_ROOT]) {
+for (const required of [inputPath, coreIconRoot, dnd5eIconRoot]) {
   if (!existsSync(required)) throw new Error(`Required v14 icon-catalog source is missing: ${required}`);
 }
 
@@ -91,8 +74,8 @@ const rawText = readFileSync(inputPath, 'utf-8');
 const source = JSON.parse(rawText) as PublicCompendiumExport;
 validateExport(source);
 
-const coreFiles = scanIconFiles(CORE_ICON_ROOT, 'icons', 'core');
-const dnd5eFiles = scanIconFiles(DND5E_ICON_ROOT, 'systems/dnd5e/icons', 'dnd5e');
+const coreFiles = scanIconFiles(coreIconRoot, 'icons', 'core');
+const dnd5eFiles = scanIconFiles(dnd5eIconRoot, 'systems/dnd5e/icons', 'dnd5e');
 const files = [...coreFiles.entries, ...dnd5eFiles.entries]
   .sort((left, right) => left.path.localeCompare(right.path, 'en'));
 const filePaths = new Set(files.map((entry) => entry.path));

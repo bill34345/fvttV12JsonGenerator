@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import {
   assertSessionMonitorDestination,
+  installSessionMonitorPackage,
   sessionMonitorWorkspaceInstallPaths,
 } from '../build';
 import { MODULE_ID, PRODUCT_VERSION, SCHEMA_VERSION } from '../src/schema';
@@ -33,7 +35,103 @@ describe('session monitor release contract', () => {
     expect(() => assertSessionMonitorDestination(
       workspaceRoot,
       resolve(workspaceRoot, 'elsewhere/fvtt-session-monitor'),
-    )).toThrow('exact project-local path');
+    )).toThrow('exact configured Foundry lab path');
+  });
+
+  test('projects installation and evidence paths under configured external roots', () => {
+    const workspaceRoot = resolve(import.meta.dir, '../../../..');
+    const labRoot = resolve(workspaceRoot, '../external-foundry-lab');
+    const evidenceRoot = resolve(workspaceRoot, '../external-foundry-evidence');
+    const backupRoot = resolve(workspaceRoot, '../external-foundry-backups');
+    const environment = {
+      FVTT_OPS_LAB_ROOT: labRoot,
+      FVTT_OPS_EVIDENCE_ROOT: evidenceRoot,
+      FVTT_OPS_BACKUP_ROOT: backupRoot,
+    };
+    const paths = sessionMonitorWorkspaceInstallPaths(workspaceRoot, environment);
+
+    expect(paths.destination).toBe(resolve(labRoot, 'data/server-mirror/Data/modules/fvtt-session-monitor'));
+    expect(paths.backupRoot).toBe(resolve(backupRoot, 'fvtt-session-monitor'));
+    expect(assertSessionMonitorDestination(workspaceRoot, paths.destination, environment)).toBe(paths.destination);
+    expect(() => assertSessionMonitorDestination(workspaceRoot, paths.destination)).toThrow(/exact configured/i);
+
+    const parsed = parseArgs(['--workspace-root', workspaceRoot], environment);
+    expect(parsed.outputRoot).toBe(resolve(evidenceRoot, 'cor-cotn-performance/live-sessions'));
+    expect(parsed.profile).toBe(resolve(workspaceRoot, '.local/fvtt-session-monitor/chrome-profile'));
+  });
+
+  test('keeps explicit companion output above environment defaults and rejects broad roots', () => {
+    const workspaceRoot = resolve(import.meta.dir, '../../../..');
+    const explicitOutput = resolve(workspaceRoot, '../explicit-monitor-output');
+    const parsed = parseArgs([
+      '--workspace-root', workspaceRoot,
+      '--output-root', explicitOutput,
+    ], {
+      FVTT_OPS_LAB_ROOT: resolve(workspaceRoot, '../external-foundry-lab'),
+      FVTT_OPS_EVIDENCE_ROOT: resolve(workspaceRoot, '../external-foundry-evidence'),
+    });
+
+    expect(parsed.outputRoot).toBe(explicitOutput);
+    expect(() => sessionMonitorWorkspaceInstallPaths(workspaceRoot, {
+      FVTT_OPS_LAB_ROOT: workspaceRoot,
+    })).toThrow(/specific directory/i);
+  });
+
+  test('installs an owned build into the configured external lab destination', async () => {
+    const workspaceRoot = await mkdtemp(resolve(tmpdir(), 'session-monitor-external-'));
+    try {
+      const labRoot = resolve(workspaceRoot, 'external-foundry-lab');
+      const environment = { FVTT_OPS_LAB_ROOT: labRoot };
+      const buildDirectory = resolve(workspaceRoot, 'build');
+      await mkdir(buildDirectory, { recursive: true });
+      await writeFile(resolve(buildDirectory, 'module.json'), JSON.stringify({
+        id: 'fvtt-session-monitor',
+        version: '1.1.1',
+      }));
+
+      const installed = await installSessionMonitorPackage(
+        workspaceRoot,
+        buildDirectory,
+        environment,
+      );
+      expect(installed.destination).toBe(resolve(
+        labRoot,
+        'data/server-mirror/Data/modules/fvtt-session-monitor',
+      ));
+      expect(JSON.parse(
+        await readFile(resolve(installed.destination, 'module.json'), 'utf8'),
+      ).version).toBe('1.1.1');
+    } finally {
+      await rm(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects an external lab root routed through a junction before writing', async () => {
+    const workspaceRoot = await mkdtemp(resolve(tmpdir(), 'session-monitor-junction-'));
+    try {
+      const physicalRoot = resolve(workspaceRoot, 'physical-root');
+      const labRoot = resolve(workspaceRoot, 'lab-link');
+      const buildDirectory = resolve(workspaceRoot, 'build');
+      await mkdir(physicalRoot, { recursive: true });
+      await mkdir(buildDirectory, { recursive: true });
+      await symlink(physicalRoot, labRoot, 'junction');
+      await writeFile(resolve(buildDirectory, 'module.json'), JSON.stringify({
+        id: 'fvtt-session-monitor',
+        version: '1.1.1',
+      }));
+
+      await expect(installSessionMonitorPackage(
+        workspaceRoot,
+        buildDirectory,
+        { FVTT_OPS_LAB_ROOT: labRoot },
+      )).rejects.toThrow(/junction|reparse|symlink/i);
+      expect(await Bun.file(resolve(
+        physicalRoot,
+        'data/server-mirror/Data/modules/fvtt-session-monitor/module.json',
+      )).exists()).toBeFalse();
+    } finally {
+      await rm(workspaceRoot, { recursive: true, force: true });
+    }
   });
 
   test('parses a wrapper-prefixed subcommand without treating option values as commands', () => {

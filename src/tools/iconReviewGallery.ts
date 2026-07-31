@@ -4,21 +4,46 @@ import { pathToFileURL } from 'node:url';
 import type { IconReviewEntry, IconReviewReport } from '@fvtt-json-generator/assets-icons/icon-types';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const CORE_PUBLIC_ROOT = resolve(ROOT, '.local/foundry-v14/app/14.364/public');
-const DND5E_ROOT = resolve(ROOT, '.local/foundry-v14/data/server-mirror/Data/systems/dnd5e');
 
-export function resolveInstalledIconPath(iconPath: string): string {
+type IconReviewEnvironment = Readonly<Record<string, string | undefined>>;
+
+export interface InstalledIconRoots {
+  corePublicRoot: string;
+  dnd5eRoot: string;
+}
+
+export function resolveInstalledIconRoots(
+  workspaceRoot: string,
+  environment: IconReviewEnvironment = {},
+): InstalledIconRoots {
+  const root = resolve(workspaceRoot);
+  const labRoot = resolve(environment.FVTT_OPS_LAB_ROOT || resolve(root, '.local/foundry-v14'));
+  return {
+    corePublicRoot: resolve(labRoot, 'app/14.364/public'),
+    dnd5eRoot: resolve(labRoot, 'data/server-mirror/Data/systems/dnd5e'),
+  };
+}
+
+const DEFAULT_INSTALLED_ICON_ROOTS = resolveInstalledIconRoots(ROOT);
+
+export function resolveInstalledIconPath(
+  iconPath: string,
+  roots: InstalledIconRoots = DEFAULT_INSTALLED_ICON_ROOTS,
+): string {
   if (iconPath.startsWith('icons/')) {
-    return resolve(CORE_PUBLIC_ROOT, iconPath);
+    return resolve(roots.corePublicRoot, iconPath);
   }
   if (iconPath.startsWith('systems/dnd5e/')) {
-    return resolve(DND5E_ROOT, iconPath.slice('systems/dnd5e/'.length));
+    return resolve(roots.dnd5eRoot, iconPath.slice('systems/dnd5e/'.length));
   }
   throw new Error(`Unsupported icon path in v14 review report: ${iconPath}`);
 }
 
-export function renderIconReviewGallery(report: IconReviewReport): string {
-  const cards = report.entries.map(renderEntry).join('\n');
+export function renderIconReviewGallery(
+  report: IconReviewReport,
+  roots: InstalledIconRoots = DEFAULT_INSTALLED_ICON_ROOTS,
+): string {
+  const cards = report.entries.map((entry) => renderEntry(entry, roots)).join('\n');
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -54,18 +79,19 @@ export function renderIconReviewGallery(report: IconReviewReport): string {
 export function writeIconReviewGallery(
   reportPath: string,
   outputPath: string,
+  roots: InstalledIconRoots = DEFAULT_INSTALLED_ICON_ROOTS,
 ): { outputPath: string; missing: string[] } {
   const report = JSON.parse(readFileSync(reportPath, 'utf-8')) as IconReviewReport;
   const missing = report.entries
     .map((entry) => entry.selectedPath)
-    .filter((path) => !existsSync(resolveInstalledIconPath(path)));
+    .filter((path) => !existsSync(resolveInstalledIconPath(path, roots)));
   mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, renderIconReviewGallery(report), 'utf-8');
+  writeFileSync(outputPath, renderIconReviewGallery(report, roots), 'utf-8');
   return { outputPath, missing: [...new Set(missing)].sort() };
 }
 
-function renderEntry(entry: IconReviewEntry): string {
-  const installedPath = resolveInstalledIconPath(entry.selectedPath);
+function renderEntry(entry: IconReviewEntry, roots: InstalledIconRoots): string {
+  const installedPath = resolveInstalledIconPath(entry.selectedPath, roots);
   const exists = existsSync(installedPath);
   const title = entry.englishName
     ? `${entry.itemName} (${entry.englishName})`
@@ -99,7 +125,8 @@ if (import.meta.main) {
     throw new Error('Usage: bun run src/tools/iconReviewGallery.ts --report <icon-review.json> [--output <gallery.html>]');
   }
   const outputPath = cliValue('--output') ?? reportPath.replace(/\.json$/iu, '.html');
-  const result = writeIconReviewGallery(resolve(reportPath), resolve(outputPath));
+  const roots = resolveInstalledIconRoots(ROOT, process.env);
+  const result = writeIconReviewGallery(resolve(reportPath), resolve(outputPath), roots);
   if (result.missing.length > 0) {
     throw new Error(`Gallery contains unavailable installed icon paths:\n${result.missing.join('\n')}`);
   }

@@ -41,7 +41,7 @@ owner 和迁移约束。
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
 | 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B、4C 已验收；4D Monster Spell Resolver 按既定条件延后 |
-| 5. 数据、reference 与 runtime root | in_progress | 5A/5B 盘点与范围门禁、5C.1 只生成方案和独立 reference cache root 已完成；实际目标、复制、切换与全消费者适配尚未开始 |
+| 5. 数据、reference 与 runtime root | in_progress | 5A/5B 盘点与范围门禁、5C.1 只生成方案/reference cache、5C.2 第一批低风险消费者适配已完成；世界审计/职业包/法术解析器复核、实际目标、复制与切换仍未开始 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
 
@@ -1038,11 +1038,40 @@ owner 和迁移约束。
 - 因此阶段 5C.1 的当前-tip 机械验证现已补齐为通过。前一日失败记录保留作为测试环境诊断历史，但不再是
   当前阻塞；没有为此终止用户进程、放宽测试、修改爬虫实现或接触生产/Foundry/Chrome。
 
+### 2026-08-01：阶段 5C.2 第一批外置 root 消费者适配
+
+- Session Monitor 和 Chat Memory Guard 继续保持互不依赖的发布边界，但两个 installer 现在都在 CLI 边缘读取
+  `FVTT_OPS_LAB_ROOT` / `FVTT_OPS_BACKUP_ROOT`。默认值仍是仓库内 `.local/foundry-v14`；配置外置根后只把
+  destination 和 backup 投影到相同相对目录，安装目标仍必须精确等于该产品的配置后 module 目录；磁盘根或
+  仓库根继续被拒绝；
+- Session Monitor 产品内新增薄路径层，由 module installer 和 companion 共用。companion 的默认 evidence
+  现在跟随 `FVTT_OPS_EVIDENCE_ROOT`（未配置时跟随 lab root），显式 `--output-root` 仍优先；专用 Chrome
+  profile 刻意保留在 `.local/fvtt-session-monitor/chrome-profile`，因为它是隐私排除项而不是可迁移 Foundry
+  lab 资产；两个 installer 还会在写入前拒绝路径组成中的 symbolic link / junction / reparse point，避免
+  “词法目标正确、物理目标越界”；
+- v14 icon catalog 的 Compendium 输入、core icon 和 dnd5e icon 读取根会跟随 lab/evidence 配置；生成的
+  tracked `references/foundry-v14-icons/catalog.json` 仍留在仓库。icon review gallery 使用同一外置 lab 约定
+  解析逻辑路径，不复制 artwork；显式 report/output 参数保持不变；
+- 聚焦 fixture 通过 18 tests / 56 expectations，覆盖默认路径不变、外置路径保持相同相对资源、显式参数优先、
+  宽泛 root 拒绝、错误配置不会被默认配置接受，以及两个 owned module 真正在临时外置目录完成安装；模块完整
+  suite 另外通过 Session Monitor 23 / 83 和 Chat Memory Guard 28 / 80，图标聚焦套件 5 / 18；
+- dependency-cruiser 通过 3,705 modules / 3,925 dependencies、0 violations，Knip cycles、modules/tools
+  typecheck 和 diff check 通过。最终 `ci:verify` exit 0：Session Monitor build 1 / 1、CLI 12 / 57、
+  instrumented 1,629 / 7,719，合计 1,642 tests / 7,777 expectations、0 failures；production coverage
+  85.63% lines / 88.14% functions；anti-overfit 323 sources、hygiene 2,148 tracked paths、dnd5e 5.3.3
+  reference、Web build 与 offline Actor smoke 全部通过；
+- 完整 Session Monitor suite/CI 自带一个约 3 秒的临时专用 Chrome restart smoke；它使用临时目录和伪造
+  session，不连接真实 Foundry，不是持续监测。没有连接生产、启动真实 Foundry、选择或创建迁移目标、复制/
+  移动/切换/删除 runtime 数据，也没有执行任何超过 30 分钟或四小时验收；
+- 人工语义复核确认：旧默认命令仍解析到原资源；外置配置只改变 runtime/evidence/backup 物理根，不改变产品
+  发布边界、module ID、报告逻辑路径、tracked catalog 输出或 installer 的 owned-module/精确目标保护。
+  `MON-001` 和 `WORLD-ASSET-001` 状态不变，长期真实验收仍由用户运行。
+
 ## 当前停止点
 
-阶段 5C.1 已形成一个可安全暂停的检查点：真实迁移方案和 reference cache 外置配置均已完成并双验收，但
-没有目标盘，也没有任何复制授权；当前提交的完整 CI 已在 2026-08-01 刷新通过。下一批先做“外置 root 消费者适配”，从独立 module installer、companion
-和 icon 工具开始，再处理 world audit、classpack/Monster Spell Resolver 的精确路径安全约束；每个产品继续
-保持自己的独立边界和回归测试。只有所有当前工具在临时外置 fixture 下解析到相同资源后，才向用户询问具体
-目标盘和复制批次。之后仍必须 copy-first、逐批 hash/count 对账、恢复抽样、短时本地 Foundry 验收和旧路径
-兼容窗口；任何大规模复制、切换、移动、删除以及四小时监测都不在未授权范围内。
+阶段 5C.2 第一批低风险消费者已形成可安全暂停的检查点：两个独立 module installer、Session Monitor
+companion 和两条 v14 icon 工具链都已通过默认/外置 fixture 与完整 CI；没有真实迁移或数据写入。下一批先
+只读审计 world audit、classpack v14 和 Monster Spell Resolver 是否仍有仓库根/默认 lab 假设，再按产品逐个
+增加精确外置路径测试；不得为了统一而让独立 module 反向依赖 Foundry Ops。全部消费者通过后，才向用户索取
+具体目标盘和复制批次授权。实际迁移仍必须 copy-first、逐批 hash/count 对账、恢复抽样、短时本地 Foundry
+验收和旧路径兼容窗口；大规模复制、切换、移动、删除以及四小时监测均未授权。

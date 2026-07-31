@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { renderIconReviewGallery, resolveInstalledIconPath } from '../iconReviewGallery';
+import { resolve } from 'node:path';
+import {
+  renderIconReviewGallery,
+  resolveInstalledIconPath,
+  resolveInstalledIconRoots,
+} from '../iconReviewGallery';
 import type { IconReviewReport } from '../../core/icons/types';
 
 describe('v14 icon review gallery', () => {
@@ -9,6 +14,17 @@ describe('v14 icon review gallery', () => {
     expect(resolveInstalledIconPath('systems/dnd5e/icons/svg/items/feature.svg'))
       .toContain('.local\\foundry-v14\\data\\server-mirror\\Data\\systems\\dnd5e\\icons\\svg\\items');
     expect(() => resolveInstalledIconPath('modules/example/icon.webp')).toThrow('Unsupported icon path');
+  });
+
+  test('maps the same logical artwork beneath an external lab root', () => {
+    const workspaceRoot = resolve(import.meta.dir, '../../..');
+    const labRoot = resolve(workspaceRoot, '../external-foundry-lab');
+    const roots = resolveInstalledIconRoots(workspaceRoot, { FVTT_OPS_LAB_ROOT: labRoot });
+
+    expect(resolveInstalledIconPath('icons/creatures/abilities/wings-birdlike-blue.webp', roots))
+      .toBe(resolve(labRoot, 'app/14.364/public/icons/creatures/abilities/wings-birdlike-blue.webp'));
+    expect(resolveInstalledIconPath('systems/dnd5e/icons/svg/items/feature.svg', roots))
+      .toBe(resolve(labRoot, 'data/server-mirror/Data/systems/dnd5e/icons/svg/items/feature.svg'));
   });
 
   test('renders review provenance and escapes untrusted names', () => {

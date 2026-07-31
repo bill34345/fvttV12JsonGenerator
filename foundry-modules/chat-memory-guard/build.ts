@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve } from 'node:path';
+import { lstatSync } from 'node:fs';
+import { dirname, parse, relative, resolve, sep } from 'node:path';
 
 const MODULE_ID = 'chat-memory-guard';
 const SOURCE_FILES = [
@@ -27,6 +28,8 @@ export interface ChatMemoryGuardInstallOptions {
   backupRoot: string;
 }
 
+export type ChatMemoryGuardEnvironment = Readonly<Record<string, string | undefined>>;
+
 export function chatMemoryGuardPaths(packageRoot = import.meta.dir) {
   const root = resolve(packageRoot);
   return {
@@ -37,18 +40,29 @@ export function chatMemoryGuardPaths(packageRoot = import.meta.dir) {
   };
 }
 
-export function chatMemoryGuardWorkspaceInstallPaths(workspaceRoot: string) {
+export function chatMemoryGuardWorkspaceInstallPaths(
+  workspaceRoot: string,
+  environment: ChatMemoryGuardEnvironment = {},
+) {
   const root = resolve(workspaceRoot);
+  const labRoot = resolve(environment.FVTT_OPS_LAB_ROOT || resolve(root, '.local/foundry-v14'));
+  const backupRoot = resolve(environment.FVTT_OPS_BACKUP_ROOT || resolve(labRoot, 'backups'));
+  assertSpecificRoot(root, labRoot, 'FVTT_OPS_LAB_ROOT');
+  assertSpecificRoot(root, backupRoot, 'FVTT_OPS_BACKUP_ROOT');
   return {
-    destination: resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard'),
-    backupRoot: resolve(root, '.local/foundry-v14/backups/chat-memory-guard'),
+    destination: resolve(labRoot, 'data/server-mirror/Data/modules/chat-memory-guard'),
+    backupRoot: resolve(backupRoot, 'chat-memory-guard'),
   };
 }
 
-export function assertChatMemoryGuardDestination(workspaceRoot: string, destination: string): string {
-  const expected = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot).destination;
+export function assertChatMemoryGuardDestination(
+  workspaceRoot: string,
+  destination: string,
+  environment: ChatMemoryGuardEnvironment = {},
+): string {
+  const expected = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot, environment).destination;
   if (resolve(destination) !== expected) {
-    throw new Error(`Chat Memory Guard installation destination must be the exact project-local path: ${expected}`);
+    throw new Error(`Chat Memory Guard installation destination must be the exact configured Foundry lab path: ${expected}`);
   }
   return expected;
 }
@@ -94,9 +108,12 @@ export async function buildChatMemoryGuardPackage(
 export async function installChatMemoryGuardPackage(
   workspaceRoot: string,
   buildDirectory = chatMemoryGuardPaths().outputDir,
+  environment: ChatMemoryGuardEnvironment = {},
 ): Promise<ChatMemoryGuardInstallResult> {
-  const paths = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot);
-  const destination = assertChatMemoryGuardDestination(workspaceRoot, paths.destination);
+  const paths = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot, environment);
+  const destination = assertChatMemoryGuardDestination(workspaceRoot, paths.destination, environment);
+  assertNoReparsePath(destination, 'Chat Memory Guard installation destination');
+  assertNoReparsePath(paths.backupRoot, 'Chat Memory Guard backup root');
   return installChatMemoryGuardRelease({
     buildDirectory,
     destination,
@@ -157,6 +174,29 @@ async function exists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+function assertSpecificRoot(repoRoot: string, target: string, variable: string): void {
+  const volumeRoot = parse(target).root;
+  if (relative(volumeRoot, target) === '' || relative(repoRoot, target) === '') {
+    throw new Error(`${variable} must name a specific directory, not a volume or repository root: ${target}`);
+  }
+}
+
+function assertNoReparsePath(target: string, label: string): void {
+  const absolute = resolve(target);
+  let current = parse(absolute).root;
+  for (const segment of relative(current, absolute).split(sep).filter(Boolean)) {
+    current = resolve(current, segment);
+    try {
+      if (lstatSync(current).isSymbolicLink()) {
+        throw new Error(`${label} contains an unsafe symlink, junction, or reparse point: ${current}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
   }
 }
 
@@ -263,7 +303,7 @@ if (import.meta.main) {
     : resolve(import.meta.dir, '../..');
   const build = await buildChatMemoryGuardPackage();
   const install = process.argv.includes('--install')
-    ? await installChatMemoryGuardPackage(workspaceRoot, build.outputDir)
+    ? await installChatMemoryGuardPackage(workspaceRoot, build.outputDir, process.env)
     : undefined;
   console.log(JSON.stringify({ build, install }, null, 2));
 }
