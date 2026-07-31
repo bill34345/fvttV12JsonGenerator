@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
-import type { EffectProfile } from '../../core/generator/effectProfileApplier';
+import type { EffectProfile } from '../../core/application/conversion';
 import {
   DEFAULT_VAULT_PATH,
   convertMarkdownPathToOutput,
   type ConversionResult,
   type FvttTargetVersion,
-} from '../../core/workflow/singleFileConversion';
-import { buildActorVerificationSummaryFromValues } from '../../tools/actorVerification';
+} from '../../core/application/conversion';
+import { buildActorVerificationSummaryFromValues } from '../../core/verification/actorVerification';
 import { createZipBuffer } from './download/zip';
 import {
   cleanupExpiredJobs,

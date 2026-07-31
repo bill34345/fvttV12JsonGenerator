@@ -10,8 +10,8 @@ import {
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { EffectProfile } from '../core/generator/effectProfileApplier';
-import { convertMarkdownPathToOutput } from '../core/workflow/singleFileConversion';
+import type { EffectProfile } from '../core/application/conversion';
+import { convertMarkdownPathToOutput } from '../core/application/conversion';
 import { buildActorVerificationSummary, type ActorVerificationSummary } from './actorVerification';
 import { runGoddessFantasyPipeline } from './goddessFantasyPipeline';
 

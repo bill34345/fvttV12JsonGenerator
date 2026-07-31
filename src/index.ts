@@ -1,19 +1,22 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Command } from 'commander';
-import type { EffectProfile } from './core/generator/effectProfileApplier';
+import type { EffectProfile } from './core/application/conversion';
 import { PlainTextIngestionWorkflow } from './core/ingest/plaintext';
-import { ObsidianSyncWorkflow } from './core/workflow/obsidianSync';
-import { JsonTranslationSyncWorkflow } from './core/workflow/jsonTranslationSync';
-import { PlainTextActorWorkflow } from './core/workflow/plainTextActor';
-import { ItemTextWorkflow } from './core/workflow/itemTextWorkflow';
 import { ItemsIngestionWorkflow } from './core/ingest/items';
 import { buildImageAssetOptionsFromCli } from './core/assets/imageAssetOptions';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from './core/foundryTarget';
 import { loadMonsterIntakeConfig } from './core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from './core/intake/provider';
-import { resumeMonsterIntake, runMonsterIntake } from './core/intake/orchestrator';
-import { convertMarkdownContentToJson } from './core/workflow/singleFileConversion';
+import {
+  ItemTextWorkflow,
+  JsonTranslationSyncWorkflow,
+  ObsidianSyncWorkflow,
+  PlainTextActorWorkflow,
+  resumeMonsterIntake,
+  runMonsterIntake,
+} from './core/application/workflows';
+import { convertMarkdownContentToJson } from './core/application/conversion';
 import { parseIconMode } from './core/icons/workflow';
 
 const DEFAULT_VAULT = 'obsidian/dnd数据转fvttjson';

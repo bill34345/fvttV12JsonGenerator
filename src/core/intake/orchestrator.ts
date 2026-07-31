@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { convertMarkdownContentToJson } from '../workflow/singleFileConversion';
+import { convertMarkdownContentToJson } from '../application/conversion';
 import { renderMonsterIntakeMarkdown } from './renderer';
 import type {
   AiReviewResult,

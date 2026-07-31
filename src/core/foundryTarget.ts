@@ -1,26 +1,6 @@
-export type FvttTargetVersion = '12' | '13' | '14';
+import type { FvttTargetVersion, FoundryTarget } from './contracts/target';
 
-export interface FoundryTarget {
-  fvttVersion: FvttTargetVersion;
-  dnd5eVersion: string;
-  stats: {
-    coreVersion: string;
-    systemId: 'dnd5e';
-    systemVersion: string;
-  };
-  reference: {
-    dnd5eRepo: string;
-    localCache?: string;
-    requiredForGeneration?: boolean;
-  };
-  modules?: {
-    midiQol: string | null;
-    dae: string | null;
-    timesUp: string | null;
-    itemMacro: string | null;
-  };
-  effectProfiles: readonly string[];
-}
+export type { FvttTargetVersion, FoundryTarget } from './contracts/target';
 
 const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
   '12': {

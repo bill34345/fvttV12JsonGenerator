@@ -9,7 +9,7 @@ import {
   convertMarkdownContentToJson,
   type ConversionResult,
   type FvttTargetVersion,
-} from './singleFileConversion';
+} from '../application/conversion';
 
 export type CollectionKind = 'monster-collection' | 'item-collection';
 export type CollectionStatus = 'succeeded' | 'partial' | 'failed';

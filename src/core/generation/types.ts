@@ -2,7 +2,9 @@ import type { ParsedNPC } from '../../config/mapping';
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
-import type { CanonicalMonster, EvidenceRef } from '../intake/types';
+import type { CanonicalMonster } from '../intake/types';
+import type { EvidenceRef } from '../contracts/evidence';
+import type { GenerationDiagnostic } from '../contracts/diagnostics';
 import type { ParsedItem, ItemType } from '../models/item';
 import type { ParserRoute } from '../parser/types';
 import type { V14IconResolver } from '../icons/resolver';
@@ -11,7 +13,9 @@ import type {
   ActorBehaviorExpressionCoverage,
 } from '../models/behavior';
 
-export type { CanonicalFeature, CanonicalMonster, EvidenceRef } from '../intake/types';
+export type { CanonicalFeature, CanonicalMonster } from '../intake/types';
+export type { EvidenceRef } from '../contracts/evidence';
+export type { GenerationDiagnostic } from '../contracts/diagnostics';
 export type GenerationDocumentKind = 'actor' | 'item';
 export type GenerationMechanicKind =
   | 'activation'
@@ -77,15 +81,6 @@ export interface CanonicalItemDocument extends CanonicalGenerationBase {
 }
 
 export type CanonicalGenerationDocument = CanonicalActorDocument | CanonicalItemDocument;
-
-export interface GenerationDiagnostic {
-  code: string;
-  severity: 'error' | 'warning' | 'info';
-  stage: 'parse' | 'ir' | 'projection' | 'schema' | 'semantic';
-  path: string;
-  message: string;
-  evidence?: EvidenceRef[];
-}
 
 export interface MechanicsCoverageEntry {
   mechanicId: string;

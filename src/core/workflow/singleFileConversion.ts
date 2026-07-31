@@ -9,12 +9,16 @@ import { ParserFactory } from '../parser/router';
 import {
   buildActorVerificationSummaryFromValues,
   type ActorVerificationSummary,
-} from '../../tools/actorVerification';
+} from '../verification/actorVerification';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type {
   GenerationDiagnostic,
   GenerationVerification,
 } from '../generation/types';
+import type {
+  ConversionStatus,
+  GeneratedArtifactIdentity,
+} from '../contracts/artifacts';
 import { getFoundryTarget } from '../foundryTarget';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
@@ -26,7 +30,7 @@ import {
 } from '../icons/report';
 
 export type { FvttTargetVersion } from '../foundryTarget';
-export type GeneratedDocumentKind = 'actor' | 'item';
+export type { GeneratedDocumentKind } from '../contracts/artifacts';
 
 export interface ConvertMarkdownContentOptions {
   content: string;
@@ -50,15 +54,10 @@ export interface ConvertMarkdownPathOptions {
   writeIconReviewReport?: boolean;
 }
 
-export interface ConversionResult {
-  kind: GeneratedDocumentKind;
-  sourcePath?: string;
-  outputPath?: string;
+export interface ConversionResult extends GeneratedArtifactIdentity {
   fvttVersion: FvttTargetVersion;
   effectProfile: EffectProfile;
-  name: string;
-  itemCount: number;
-  status: 'accepted' | 'needs_review' | 'failed';
+  status: ConversionStatus;
   diagnostics: GenerationDiagnostic[];
   warnings: string[];
   verification: GenerationVerification;

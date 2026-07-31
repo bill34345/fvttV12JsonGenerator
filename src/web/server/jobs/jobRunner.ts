@@ -1,30 +1,31 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
-import type { EffectProfile } from '../../../core/generator/effectProfileApplier';
+import type { EffectProfile } from '../../../core/application/conversion';
 import { ItemsIngestionWorkflow } from '../../../core/ingest/items';
 import { PlainTextIngestionWorkflow } from '../../../core/ingest/plaintext';
 import { runGoddessFantasyBoardCrawl } from '../../../core/crawl/runGoddessFantasyBoardCrawl';
 import { runRecordsToPlaintext } from '../../../core/crawl/convert/recordsToPlaintext';
-import { JsonTranslationSyncWorkflow } from '../../../core/workflow/jsonTranslationSync';
-import { ObsidianSyncWorkflow } from '../../../core/workflow/obsidianSync';
-import { PlainTextActorWorkflow } from '../../../core/workflow/plainTextActor';
 import {
   DEFAULT_VAULT_PATH,
   convertMarkdownContentToJson,
   type ConversionResult,
   type FvttTargetVersion,
-} from '../../../core/workflow/singleFileConversion';
+} from '../../../core/application/conversion';
 import type { GoddessFantasyCrawlMode } from '../../../core/crawl/types';
 import {
+  JsonTranslationSyncWorkflow,
+  ObsidianSyncWorkflow,
+  PlainTextActorWorkflow,
   convertItemCollectionToJson,
   convertMonsterCollectionToJson,
-} from '../../../core/workflow/collectionConversion';
+  resumeMonsterIntake,
+  runMonsterIntake,
+} from '../../../core/application/workflows';
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
 import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
 import { assertEffectProfileForTarget, parseFvttTargetVersion } from '../../../core/foundryTarget';
 import { loadMonsterIntakeConfig } from '../../../core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from '../../../core/intake/provider';
-import { resumeMonsterIntake, runMonsterIntake } from '../../../core/intake/orchestrator';
 import type { IntakeDecision, MonsterIntakeAiProvider } from '../../../core/intake/types';
 import { parseIconMode } from '../../../core/icons/workflow';
 import {

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { convertMarkdownPathToOutput } from '../core/workflow/singleFileConversion';
+import { convertMarkdownPathToOutput } from '../core/application/conversion';
 
 const EXPECTED_WHITE_TUSK_ITEMS = [
   'Aggressive',

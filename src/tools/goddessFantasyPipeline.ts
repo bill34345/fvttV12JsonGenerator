@@ -6,8 +6,12 @@ import type { CrawlContentTypeFilter, GoddessFantasyCrawlMode, GoddessFantasyCra
 import { buildImageAssetOptionsFromCli } from '../core/assets/imageAssetOptions';
 import type { ImageAssetOptions } from '../core/assets/imageAssets';
 import { runTokenReview, type TokenReviewOptions, type TokenReviewResult } from '../core/assets/tokenReview';
-import type { EffectProfile } from '../core/generator/effectProfileApplier';
-import { PlainTextActorWorkflow, type PlainTextActorWorkflowOptions, type PlainTextActorWorkflowResult } from '../core/workflow/plainTextActor';
+import type { EffectProfile } from '../core/application/conversion';
+import {
+  PlainTextActorWorkflow,
+  type PlainTextActorWorkflowOptions,
+  type PlainTextActorWorkflowResult,
+} from '../core/application/workflows';
 import { assertEffectProfileForTarget, parseFvttTargetVersion, type FvttTargetVersion } from '../core/foundryTarget';
 
 export interface GoddessFantasyPipelineOptions extends GoddessFantasyCrawlOptions {

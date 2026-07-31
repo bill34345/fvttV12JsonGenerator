@@ -1,6 +1,7 @@
 import { statusIconPath } from './actor-effects';
+import type { EffectProfile } from '../contracts/target';
 
-export type EffectProfile = 'core' | 'modded-v12' | 'modded-v14';
+export type { EffectProfile } from '../contracts/target';
 
 export class EffectProfileApplier {
   public apply(actor: any, effectProfile: EffectProfile): void {
