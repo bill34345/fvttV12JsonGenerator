@@ -2,12 +2,14 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import {
   createSanitizedError,
+  MODULE_ID,
+  PRODUCT_VERSION,
   type CompanionLifecycleEvent,
   type CompanionSample,
   type SanitizedError,
   type SessionExport,
   type SessionStatus,
-} from '../../src/foundry/session-monitor/schema';
+} from '../src/schema';
 import {
   CdpConnection,
   evaluate,
@@ -16,8 +18,7 @@ import { ChromeSupervisor } from './chromeSupervisor';
 import { combineSession, readJsonLines, writeReportBundle } from './report';
 import { aggregateProcesses, WindowsProcessReader } from './windowsProcess';
 
-const MODULE_ID = 'fvtt-session-monitor';
-const COMPANION_VERSION = '1.1.1';
+const COMPANION_VERSION = PRODUCT_VERSION;
 const SAMPLE_MS = 10_000;
 const REGION_SCAN_EVERY = 6;
 
@@ -364,18 +365,40 @@ async function runReport(options: CliOptions): Promise<string> {
   return options.out;
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  const command = argv[0] === 'report' ? 'report' : 'record';
+export function parseArgs(argv: string[]): CliOptions {
+  const valueOptions = new Set([
+    '--workspace-root',
+    '--url',
+    '--output-root',
+    '--profile',
+    '--chrome',
+    '--browser',
+    '--companion',
+    '--events',
+    '--out',
+  ]);
+  let command: CliOptions['command'] = 'record';
+  for (let index = 0; index < argv.length; index++) {
+    const argument = argv[index];
+    if (valueOptions.has(argument ?? '')) {
+      index++;
+      continue;
+    }
+    if (argument === 'record' || argument === 'report') {
+      command = argument;
+      break;
+    }
+  }
   const value = (name: string) => {
     const index = argv.indexOf(name);
     return index >= 0 ? argv[index + 1] : undefined;
   };
-  const repoRoot = resolve(import.meta.dir, '../..');
+  const workspaceRoot = resolve(value('--workspace-root') ?? resolve(import.meta.dir, '..'));
   return {
     command,
     url: value('--url') ?? 'http://127.0.0.1:30001/game',
-    outputRoot: resolve(value('--output-root') ?? resolve(repoRoot, '.local/foundry-v14/evidence/cor-cotn-performance/live-sessions')),
-    profile: resolve(value('--profile') ?? resolve(repoRoot, '.local/fvtt-session-monitor/chrome-profile')),
+    outputRoot: resolve(value('--output-root') ?? resolve(workspaceRoot, '.local/foundry-v14/evidence/cor-cotn-performance/live-sessions')),
+    profile: resolve(value('--profile') ?? resolve(workspaceRoot, '.local/fvtt-session-monitor/chrome-profile')),
     chrome: value('--chrome'),
     browserExport: value('--browser'),
     companionJsonl: value('--companion'),

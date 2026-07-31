@@ -1,5 +1,5 @@
 import { dlopen, FFIType, ptr, read, type Library, type Pointer } from 'bun:ffi';
-import type { CompanionProcessAggregate } from '../../src/foundry/session-monitor/schema';
+import type { CompanionProcessAggregate } from '../src/schema';
 
 const PROCESS_QUERY_INFORMATION = 0x0400;
 const PROCESS_VM_READ = 0x0010;

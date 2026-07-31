@@ -1,0 +1,20 @@
+{
+  "name": "@fvtt-json-generator/session-monitor",
+  "version": "1.1.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "install:local": "bun run build.ts --workspace-root . --install",
+    "monitor": "bun run companion/cli.ts --workspace-root .",
+    "test": "bun test src companion --max-concurrency 4",
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

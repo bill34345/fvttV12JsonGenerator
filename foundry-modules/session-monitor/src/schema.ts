@@ -1,6 +1,7 @@
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 
 export const MODULE_ID = 'fvtt-session-monitor';
+export const PRODUCT_VERSION = '1.1.1';
 export const SCHEMA_VERSION = 1;
 export const SAMPLE_INTERVAL_MS = 10_000;
 export const MAX_SESSION_MS = 12 * 60 * 60 * 1_000;

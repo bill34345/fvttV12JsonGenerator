@@ -40,7 +40,7 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard workspace release 与本地独立历史候选均已验收；4B 待执行 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard 与 4B Session Monitor 已验收；4C Foundry Ops 待执行 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -771,12 +771,77 @@ owner 和迁移约束。
     尚未授权或执行，不能把本检查点称为已发布远端仓库；
   - 本地 Foundry server-mirror 验收后已安全停止，30001 端口释放。
 
+### 阶段 4B：`foundry-modules/session-monitor`
+
+- 结构：
+  - 将 Foundry browser module、schema v1、IndexedDB、GM UI、Windows/Chrome companion、
+    report generator、测试、build、installer 与 runbook 一起迁入
+    `foundry-modules/session-monitor`，没有把 module 与 companion 拆成两个发布物；
+  - 新增自包含 `package.json` 与 `tsconfig.json`；package、module 和 companion 产品版本统一锁定为
+    `1.1.1`，根 build/install/test/monitor 命令保留为兼容 wrapper；
+  - companion 与 module 共享本产品 schema；唯一上游运行时依赖收敛为
+    `@fvtt-json-generator/contracts/hash`，不再穿过 spell-resolution 私有实现；
+  - dependency-cruiser 新增独立 release 与 contract surface 门禁；Knip、Bun workspace 和根
+    typecheck 同步覆盖新边界；
+  - 中文 runbook 明确专用 Chrome、CDP/Windows 读取范围、本地 `.local/` profile/evidence、
+    可配置参数、GM 正常登录、项目 mirror 安装和生产单独授权边界。
+- 机械：
+  - package-local typecheck、19 tests / 71 expectations、build，以及根
+    `typecheck:foundry-modules`、focused suite、build 均通过；
+  - 提交前审计发现命令识别曾把任意值为 `report` 的 option 误当 report 子命令；parser 现先跳过
+    有值 options，再识别 wrapper 后的位置子命令，并由 root-wrapper/report-path 回归测试锁定；
+  - dependency-cruiser 最终为 3,536 modules / 3,829 dependencies / 0 violations；
+    Knip cycles 为 0；
+  - 完整 `ci:verify` 通过：独立 build subprocess 1 test / 1 expectation、CLI 子进程
+    12 tests / 57 expectations、coverage 主组 1,582 tests / 7,462 expectations，合计
+    1,595 tests / 0 failed / 7,520 expectations；
+    coverage 统计 264 个 production files：85.55% lines / 88.11% functions；anti-overfit
+    321 sources、hygiene 2,090 tracked paths、dnd5e 5.3.3 reference、Web production build
+    与 offline Actor smoke 均通过；
+  - 迁移前后 release file set 均为 5 项；4 个静态文件 byte-identical；browser bundle 仅有 6 条
+    Bun source-path 注释变化，移除这些注释后 executable text 均为 38,531 字符且逐字相等；
+    最终 builder 显式规范化并逐一计数这 6 条标签，因此根 wrapper 与 package-local build 现在
+    生成 byte-identical ZIP；
+  - 最终 build ZIP SHA-256 为
+    `044EEEE98566B7ABEFCF0B6E3B145C24D02AF6051BB9AFD1D26E86FC7DDE1B04`；
+    安装到项目本地 mirror 后 5 个文件及逐文件 hash 完全等于 build；旧 1.1.0 安装备份在
+    `.local/foundry-v14/backups/fvtt-session-monitor/1.1.0-1785498376448`，规范化前的 1.1.1
+    安装备份在 `.local/foundry-v14/backups/fvtt-session-monitor/1.1.1-1785499480257`；
+  - 第一次把双 Bun build 子进程放进 coverage 进程时，全部断言结束后 Bun 1.3.8 在 shutdown
+    阶段 internal assertion、exit 3；该轮没有记为通过。最终 CI 将跨入口制品测试作为独立门禁，
+    coverage 精确过滤同一 suite，随后整条命令稳定 exit 0。
+- 语义：
+  - 使用普通 Foundry UI 在本地 Foundry 14.364 / dnd5e 5.3.3 的 disposable
+    `fvtt-v14-module-matrix` 世界仅启用 Session Monitor；明确取消可选 MIDI-QOL 与
+    Sequencer，确认 module 1.1.1 active、8 个 API 方法和 GM panel；
+  - 完成“开始 → 刚才卡顿 → 停止并导出”UI 烟雾：同一 session 最终 4 个 browser samples，
+    事件包含 start、2 个 capability gaps、jank marker 和 stop，errors 为 0；API/IndexedDB
+    导出不含 `worldKey` 或 raw aliases。浏览器 download event listener 超时，故没有把下载事件
+    本身记为已观察；停止状态、最终导出对象与面板状态由独立路径确认；
+  - 真实 companion `runRecord` 启动自己的 dedicated headless Chrome，与本地 module 完成握手；
+    session `a9319c13-55ca-460f-a792-e8dd1f50f7c8` 产生 2 个 browser samples、2 个 companion
+    samples、100% coverage、独立 browser/GPU/renderer/network/storage 信号、0 gaps、0 errors；
+  - 人工阅读报告确认 JS heap `84.9 -> 86.3 MiB`、renderer private
+    `476.4 -> 477.0 MiB`、frame p95/max `7.0/7.1 ms`、Long Tasks 0；隐私复核没有发现
+    world key、raw Scene/Combat identity、GM 名称或用户 ID。`cookies`/`passwords` 仅存在于
+    `privacy.forbiddenContent` 声明，不是采样值；
+  - 验收后通过正常 module management 恢复原四个 active modules，仅保留已安装但 disabled 的
+    Session Monitor；默认世界恢复为 `cor-cotn`，本地 server 停止，30001 释放，companion
+    Chrome 全部退出。
+- 边界：
+  - 本次只访问项目本地 mirror，没有访问、修改或重启生产服务器；
+  - package 迁移没有关闭 `MON-001`，也没有替代生产 1.1.1 post-restart UI smoke、四小时真实
+    跑团与非 GM 设备证据；
+  - 阶段 4B 的 workspace release、协议/依赖/权限边界与本地端到端握手均已满足。计划没有要求
+    这一单元在本阶段做 fresh-history extraction，因此未创建本地候选仓库、远端或发布。
+
 ## 当前停止点
 
-阶段 0–3 均已形成可回滚稳定检查点。阶段 4 的真实发布边界 inventory 已完成；4A Chat Memory
-Guard 已成为主仓库内自包含 workspace release，通过本地 Foundry 运行时验收，并已从 fresh clone
-提取出可冻结安装、测试和构建的干净本地历史候选。当前适合稳定暂停；下一条执行路径是阶段 4B：
-先读取 Session Monitor module、companion、schema 与 build 的完整产品边界，再将二者作为一个
-release unit 迁入 `foundry-modules/session-monitor`，继续保持独立 typecheck/build/test、依赖门禁
-和本地 Foundry/companion 双重语义验收。Monster Spell Resolver 与 Foundry Ops 继续按 inventory
-裁决延后；不因目录移动关闭原 hardening finding，不创建或推送远端仓库，也不接触生产服务器。
+阶段 0–3 均已形成可回滚稳定检查点。阶段 4A Chat Memory Guard 与 4B Session Monitor 都已成为
+主仓库内自包含 workspace release，并通过各自的本地 Foundry 语义验收；Chat Memory Guard 另有
+fresh-history 本地候选，Session Monitor 已完成真实 module/companion 端到端握手。当前适合稳定暂停；
+下一条执行路径是阶段 4C：先对 Foundry Lab、world audit、production inventory/acquisition、
+classpack/homebrew/module diagnosis 与本地 mirror 管理做只读命令/权限/配置 inventory，再决定如何
+收敛到一个明确的 Foundry Ops CLI。必须继续区分 read-only、local mutation 与 production mutation，
+外部配置凭证/host/world/evidence roots，并为 open findings 保留 owner；不接触生产服务器，不因
+目录移动关闭 hardening finding，也不创建、推送或删除远端仓库。

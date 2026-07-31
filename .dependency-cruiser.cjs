@@ -283,6 +283,20 @@ module.exports = {
       to: { path: '^(src/|scripts/|apps/|packages/|foundry-modules/(?!chat-memory-guard/))' },
     },
     {
+      name: 'session-monitor-independent-release',
+      severity: 'error',
+      comment: 'Session Monitor owns its browser module and companion together; only the shared contracts package may cross into the release unit.',
+      from: { path: '^foundry-modules/session-monitor/', pathNot: '/node_modules/' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/)|foundry-modules/(?!session-monitor/))' },
+    },
+    {
+      name: 'session-monitor-contract-surface',
+      severity: 'error',
+      comment: 'Session Monitor may consume only the browser-safe hash port from shared contracts.',
+      from: { path: '^foundry-modules/session-monitor/', pathNot: '/node_modules/' },
+      to: { path: '^packages/contracts/(?!src/hash[.]ts$)' },
+    },
+    {
       name: 'no-crawl-to-main-cli',
       severity: 'error',
       comment: 'Crawl core stays decoupled from the actor conversion CLI.',

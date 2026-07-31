@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { collectArchiveEntries, createStoredZip } from './session-monitor/archive';
+import { collectArchiveEntries, createStoredZip } from './companion/archive';
 
 const MODULE_ID = 'fvtt-session-monitor';
 const SOURCE_FILES = [
@@ -13,6 +13,16 @@ const V1_1_1_DEPLOYED_TERMINAL_NEWLINES = new Map<string, number>([
   ['styles/session-monitor.css', 2],
   ['lang/en.json', 2],
 ]);
+const BROWSER_BUNDLE_SOURCE_LABELS = [
+  {
+    pattern: /^\/\/ (?:.*[\\/])?packages[\\/]contracts[\\/]src[\\/]hash[.]ts\r?$/gm,
+    canonical: '// @fvtt-json-generator/contracts/hash.ts',
+  },
+  ...['schema', 'metrics', 'storage', 'runtime', 'index'].map((source) => ({
+    pattern: new RegExp(`^// (?:.*[\\\\/])?src[\\\\/]${source}[.]ts\\r?$`, 'gm'),
+    canonical: `// src/${source}.ts`,
+  })),
+] as const;
 
 export interface SessionMonitorBuildResult {
   outputDir: string;
@@ -25,20 +35,26 @@ export interface SessionMonitorInstallResult {
   backupPath?: string;
 }
 
-export function sessionMonitorPaths(repoRoot: string) {
-  const root = resolve(repoRoot);
+export function sessionMonitorPaths(packageRoot = import.meta.dir) {
+  const root = resolve(packageRoot);
   return {
-    sourceRoot: resolve(root, 'src/foundry/session-monitor'),
-    outputRoot: resolve(root, 'dist/fvtt-session-monitor'),
-    outputDir: resolve(root, 'dist/fvtt-session-monitor/module'),
-    zipPath: resolve(root, 'dist/fvtt-session-monitor/fvtt-session-monitor.zip'),
+    sourceRoot: resolve(root, 'src'),
+    outputRoot: resolve(root, 'dist'),
+    outputDir: resolve(root, 'dist/module'),
+    zipPath: resolve(root, 'dist/fvtt-session-monitor.zip'),
+  };
+}
+
+export function sessionMonitorWorkspaceInstallPaths(workspaceRoot: string) {
+  const root = resolve(workspaceRoot);
+  return {
     destination: resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/fvtt-session-monitor'),
     backupRoot: resolve(root, '.local/foundry-v14/backups/fvtt-session-monitor'),
   };
 }
 
-export function assertSessionMonitorDestination(repoRoot: string, destination: string): string {
-  const expected = sessionMonitorPaths(repoRoot).destination;
+export function assertSessionMonitorDestination(workspaceRoot: string, destination: string): string {
+  const expected = sessionMonitorWorkspaceInstallPaths(workspaceRoot).destination;
   if (resolve(destination) !== expected) {
     throw new Error(`Session Monitor installation destination must be the exact project-local path: ${expected}`);
   }
@@ -46,14 +62,15 @@ export function assertSessionMonitorDestination(repoRoot: string, destination: s
 }
 
 export async function buildSessionMonitorPackage(
-  repoRoot = resolve(import.meta.dir, '..'),
+  packageRoot = import.meta.dir,
 ): Promise<SessionMonitorBuildResult> {
-  const paths = sessionMonitorPaths(repoRoot);
+  const paths = sessionMonitorPaths(packageRoot);
   await rm(paths.outputRoot, { recursive: true, force: true });
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
 
   const build = await Bun.build({
     entrypoints: [resolve(paths.sourceRoot, 'index.ts')],
+    root: paths.sourceRoot,
     outdir: resolve(paths.outputDir, 'scripts'),
     naming: 'index.js',
     target: 'browser',
@@ -65,6 +82,11 @@ export async function buildSessionMonitorPackage(
   if (!build.success) {
     throw new Error(`Session Monitor browser build failed:\n${build.logs.map(String).join('\n')}`);
   }
+  const browserBundlePath = resolve(paths.outputDir, 'scripts/index.js');
+  const browserBundle = normalizeBrowserBundleSourceLabels(
+    await readFile(browserBundlePath, 'utf8'),
+  );
+  await writeFile(browserBundlePath, browserBundle, 'utf8');
 
   for (const file of SOURCE_FILES) {
     const target = resolve(paths.outputDir, file);
@@ -86,12 +108,26 @@ export async function buildSessionMonitorPackage(
   };
 }
 
+export function normalizeBrowserBundleSourceLabels(bundle: string): string {
+  let normalized = bundle.replace(/\r\n/g, '\n');
+  for (const label of BROWSER_BUNDLE_SOURCE_LABELS) {
+    const matches = normalized.match(label.pattern);
+    if (matches?.length !== 1) {
+      throw new Error(
+        `Session Monitor bundle source label drift: expected one ${label.canonical}, got ${matches?.length ?? 0}`,
+      );
+    }
+    normalized = normalized.replace(label.pattern, label.canonical);
+  }
+  return normalized;
+}
+
 export async function installSessionMonitorPackage(
-  repoRoot: string,
-  buildDirectory = sessionMonitorPaths(repoRoot).outputDir,
+  workspaceRoot: string,
+  buildDirectory = sessionMonitorPaths().outputDir,
 ): Promise<SessionMonitorInstallResult> {
-  const paths = sessionMonitorPaths(repoRoot);
-  const destination = assertSessionMonitorDestination(repoRoot, paths.destination);
+  const paths = sessionMonitorWorkspaceInstallPaths(workspaceRoot);
+  const destination = assertSessionMonitorDestination(workspaceRoot, paths.destination);
   await assertOwnedModule(buildDirectory);
 
   let backupPath: string | undefined;
@@ -141,12 +177,15 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function main(): Promise<void> {
-  const repoRoot = resolve(import.meta.dir, '..');
-  const result = await buildSessionMonitorPackage(repoRoot);
+  const workspaceRootFlag = process.argv.indexOf('--workspace-root');
+  const workspaceRoot = workspaceRootFlag >= 0
+    ? resolve(process.argv[workspaceRootFlag + 1] ?? '')
+    : resolve(import.meta.dir);
+  const result = await buildSessionMonitorPackage();
   console.log(`Built ${result.outputDir}`);
   console.log(`Archive ${result.zipPath}`);
   if (process.argv.includes('--install')) {
-    const installed = await installSessionMonitorPackage(repoRoot, result.outputDir);
+    const installed = await installSessionMonitorPackage(workspaceRoot, result.outputDir);
     console.log(`Installed ${installed.destination}`);
     if (installed.backupPath) console.log(`Backup ${installed.backupPath}`);
   }

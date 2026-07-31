@@ -23,13 +23,15 @@ gameplay content.
   deletes documents, or performs an automatic optimization.
 
 ## Implementation
-1. Add the browser-safe module under `src/foundry/session-monitor` with a compact
-   GM panel, IndexedDB storage, sampled metric adapters, event/error capture,
-   privacy sanitization, export schema v1, and a bounded module API.
-2. Add the companion and report tooling under `scripts/session-monitor` with
-   dedicated Chrome launch/attach, browser-level CDP sampling, Windows process
-   memory attribution, reconnect/gap handling, JSONL evidence, merge, Markdown,
-   and SVG output.
+1. Maintain the browser-safe module under
+   `foundry-modules/session-monitor/src` with a compact GM panel, IndexedDB
+   storage, sampled metric adapters, event/error capture, privacy sanitization,
+   export schema v1, and a bounded module API.
+2. Maintain the companion and report tooling under
+   `foundry-modules/session-monitor/companion` with dedicated Chrome
+   launch/attach, browser-level CDP sampling, Windows process memory
+   attribution, reconnect/gap handling, JSONL evidence, merge, Markdown, and
+   SVG output.
 3. Add deterministic build and exact project-local install/backup/rollback
    tooling plus package scripts. Do not route this feature through `src/index.ts`
    or `scripts/foundry-lab`.
@@ -128,3 +130,49 @@ gameplay content.
   installation, and the historical normal module-management activation event
   are complete. Post-restart 1.1.1 start/mark/stop acceptance, the actual
   four-hour run, and non-GM device evidence remain open external acceptance.
+
+## Architecture relocation result (2026-07-31)
+
+- The Foundry module, versioned schema, Windows/Chrome companion, report
+  generator, tests, build, installer, and runbook now form one release unit at
+  `foundry-modules/session-monitor`; the root package scripts remain compatible
+  wrappers. Package, module, and companion product versions are locked to
+  `1.1.1`, and the shared protocol remains schema v1.
+- The release unit depends only on the browser-safe
+  `@fvtt-json-generator/contracts/hash` surface. Dependency-cruiser rejects
+  imports from generator, workflow, Web, operations, sibling modules, or other
+  contracts internals.
+- Focused verification passed 19 tests / 71 expectations, both package-local
+  and root typechecks/builds passed, dependency-cruiser reported 3,536 modules /
+  3,829 dependencies / 0 violations, and Knip reported no cycles. Four static
+  release files remained byte-identical; the browser bundle differed only in
+  six Bun source-path comments and was executable-text identical after those
+  comments were removed. The final builder normalizes and count-checks those six
+  labels, so root-wrapper and package-local builds are now byte-identical at ZIP
+  SHA-256 `044EEEE98566B7ABEFCF0B6E3B145C24D02AF6051BB9AFD1D26E86FC7DDE1B04`.
+  Final review also fixed and regression-locked command parsing so a normal
+  option value named `report` cannot select report mode.
+- The complete repository gate passed one isolated subprocess-build test / one
+  expectation, 12 CLI tests / 57 expectations, and 1,582 coverage tests / 7,462
+  expectations: 1,595 tests / 0 failed / 7,520 expectations total. Production
+  coverage was 85.55% lines / 88.11% functions across 264 files; anti-overfit,
+  hygiene, locked references, Web build, and offline Actor smoke also passed.
+  The build subprocess test is deliberately outside the coverage process after
+  the first combined run completed its assertions but triggered a Bun 1.3.8
+  shutdown assertion; the final isolated configuration exited 0.
+- The rebuilt 1.1.1 release was installed only in the project-local mirror and
+  all five installed files match the final build exactly; the prior local 1.1.1
+  install is recoverable at
+  `.local/foundry-v14/backups/fvtt-session-monitor/1.1.1-1785499480257`. A normal
+  Foundry 14.364 / dnd5e 5.3.3 GM UI smoke completed start, jank marker, stop,
+  and export-state review with MIDI-QOL and Sequencer absent. A real
+  companion-owned Chrome handshake then produced two browser and two companion
+  samples with 100% coverage, separate process signals, zero gaps/errors, and
+  no forbidden gameplay identity or content.
+- The disposable world's exact four-module baseline was restored, Session
+  Monitor was disabled again, the configured default world was restored to
+  `cor-cotn`, all acceptance Chrome processes were closed, the local server was
+  stopped, and port 30001 was released.
+- This relocation does not close `MON-001`: production post-restart UI smoke,
+  the real four-hour session, and non-GM device evidence remain open external
+  acceptance.

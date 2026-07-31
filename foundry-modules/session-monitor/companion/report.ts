@@ -8,7 +8,7 @@ import {
   type CompanionSample,
   type SanitizedError,
   type SessionExport,
-} from '../../src/foundry/session-monitor/schema';
+} from '../src/schema';
 
 export function combineSession(
   browser: SessionExport,

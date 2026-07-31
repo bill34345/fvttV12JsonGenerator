@@ -3,10 +3,11 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import type {
-  CompanionSample,
-  SessionExport,
-} from '../../src/foundry/session-monitor/schema';
+import {
+  PRODUCT_VERSION,
+  type CompanionSample,
+  type SessionExport,
+} from '../src/schema';
 import { aggregateProcesses, WindowsProcessReader } from './windowsProcess';
 import { combineSession, renderMarkdownReport, renderSvgChart } from './report';
 import { runRecord, type CliOptions } from './cli';
@@ -153,7 +154,7 @@ describe('full Chrome restart recovery', () => {
       });
       const combined = JSON.parse(await readFile(resolve(output, 'session-combined.json'), 'utf8'));
       const run = JSON.parse(await readFile(resolve(output, 'run.json'), 'utf8'));
-      expect(run.companionVersion).toBe('1.1.1');
+      expect(run.companionVersion).toBe(PRODUCT_VERSION);
       expect(combined.session.id).toBe('restart-smoke-session');
       expect(combined.companion.samples.map((sample: CompanionSample) => sample.browserGeneration)).toEqual([1, 2]);
       expect(combined.companion.samples.every((sample: CompanionSample) =>
