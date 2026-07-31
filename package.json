@@ -16,7 +16,7 @@
     "architecture:unused": "bun node_modules/knip/bin/knip-bun.js --no-exit-code --no-config-hints --reporter compact",
     "architecture:verify": "bun run architecture:deps && bun run architecture:cycles",
     "coverage:verify": "bun run src/tools/coverageGate.ts coverage/lcov.info",
-    "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage --max-concurrency 4 && bun run coverage:verify",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage --max-concurrency 2 && bun run coverage:verify",
     "smoke:actor:offline": "bun run src/tools/ciActorSmoke.ts",
     "hygiene:repository": "bun run src/tools/repositoryHygiene.ts",
     "ci:verify": "bun run typecheck:production && bun run typecheck:all && bun run typecheck:packages && bun run architecture:verify && bun run test:coverage && bun run audit:anti-overfit:all && bun run hygiene:repository && bun run references verify dnd5e-5.3.3 && bun run web:build && bun run smoke:actor:offline",
