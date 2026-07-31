@@ -86,3 +86,39 @@ export interface ImageAssetProcessorPort {
 export interface ItemAiNormalizerPort {
   normalizeItem(bodyText: string): Promise<string>;
 }
+
+export interface IngestedTextFile {
+  fileName: string;
+}
+
+export interface PlainTextIngestionResultPort {
+  sourcePath: string;
+  emitDir: string;
+  dryRun: boolean;
+  usedAi: boolean;
+  files: IngestedTextFile[];
+}
+
+export interface PlainTextIngestionPort {
+  ingest(options: {
+    sourcePath: string;
+    emitDir: string;
+    dryRun?: boolean;
+    enableAiNormalize?: boolean;
+  }): Promise<PlainTextIngestionResultPort>;
+}
+
+export interface ItemIngestionResultPort {
+  sourcePath: string;
+  emitDir: string;
+  dryRun: boolean;
+  files: Array<{ fileName: string; content: string }>;
+}
+
+export interface ItemIngestionPort {
+  ingest(options: {
+    sourcePath: string;
+    emitDir: string;
+    dryRun?: boolean;
+  }): Promise<ItemIngestionResultPort>;
+}

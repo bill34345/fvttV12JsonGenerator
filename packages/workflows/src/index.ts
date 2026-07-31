@@ -3,6 +3,8 @@ export * from './externalPorts';
 export * from './generationPipeline';
 export * from './iconPort';
 export * from './itemGenerationWorkflow';
+export * from './itemTextWorkflow';
 export * from './jsonTranslationSync';
 export * from './obsidianSync';
+export * from './plainTextActor';
 export * from './singleFileConversion';

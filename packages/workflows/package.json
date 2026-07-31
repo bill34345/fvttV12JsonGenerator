@@ -10,8 +10,10 @@
     "./generation-pipeline": "./src/generationPipeline.ts",
     "./icon-port": "./src/iconPort.ts",
     "./item-generation": "./src/itemGenerationWorkflow.ts",
+    "./item-text": "./src/itemTextWorkflow.ts",
     "./json-translation-sync": "./src/jsonTranslationSync.ts",
     "./obsidian-sync": "./src/obsidianSync.ts",
+    "./plain-text-actor": "./src/plainTextActor.ts",
     "./single-file-conversion": "./src/singleFileConversion.ts"
   },
   "scripts": {
