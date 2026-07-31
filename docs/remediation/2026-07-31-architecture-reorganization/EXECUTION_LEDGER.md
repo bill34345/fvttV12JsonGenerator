@@ -40,7 +40,7 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard workspace release 已验收；独立历史提取待执行 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard workspace release 与本地独立历史候选均已验收；4B 待执行 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -738,7 +738,18 @@ owner 和迁移约束。
     anti-overfit 333 sources、hygiene 2,081 tracked paths、dnd5e 5.3.3 reference、Web production
     build 与 offline Actor smoke 均通过；
   - 新 release 安装到项目本地 mirror 后逐文件与 build 目录相等；旧 v1.0.0 安装已备份到忽略的
-    `.local/foundry-v14/backups/chat-memory-guard/1.0.0-1785496805326`。
+    `.local/foundry-v14/backups/chat-memory-guard/1.0.0-1785496805326`；
+  - 使用官方 `git-filter-repo` 源码的本地固定提交
+    `d7b75aca907380f608892cc289e616f195427b99`，从 fresh clone 只保留 Chat Memory Guard
+    的历史路径并重写为独立仓库根；候选位于忽略的
+    `.local/architecture-reorganization/extractions/chat-memory-guard`；
+  - 独立候选保留 3 个原项目相关提交，另有 1 个仅属于候选仓库的 lockfile/ignore 提交
+    `ae0707e`；`git-filter-repo` 自动移除了 origin，未创建或推送任何远端；
+  - 独立候选拥有自己的 `bun.lock`，并重新通过 `bun install --frozen-lockfile`、package
+    typecheck、26 tests / 71 expectations 与 6 文件 release build；构建后 Git 工作区保持干净；
+  - 独立候选与主 workspace release 的文件集合一致，5 个静态文件 byte-identical；browser
+    bundle 仅有 `foundry-modules/chat-memory-guard/src/...` 与 `src/...` 源路径注释差异，去除
+    7 条注释后 executable text 长度均为 22,953 且逐字相等。
 - 语义：
   - 使用本地 Foundry 14.364、dnd5e 5.3.3、`cor-cotn` copied world 与无密码普通玩家 `SY`
     完成真实运行时验收；未访问生产服务器；
@@ -756,15 +767,16 @@ owner 和迁移约束。
     DOM 状态，没有创建聊天消息、修改世界设置或写入生产数据。
 - 边界：
   - 物理迁移没有升级历史长时间跑团或完整第三方聊天卡支持声明；
-  - 主仓库内的 workspace release 已形成；fresh clone + `git filter-repo` 历史提取、新 remote 与
-    对外发布尚未完成，不能把本检查点称为已拆出远端仓库；
+  - 主仓库内的 workspace release 与 fresh-clone 本地历史候选均已形成；新 remote 与对外发布
+    尚未授权或执行，不能把本检查点称为已发布远端仓库；
   - 本地 Foundry server-mirror 验收后已安全停止，30001 端口释放。
 
 ## 当前停止点
 
-阶段 0–3 均已形成可回滚稳定检查点。阶段 4 的真实发布边界 inventory 已完成，4A Chat Memory
-Guard 已成为主仓库内自包含 workspace release，并通过本地 Foundry 运行时验收。下一条执行路径是
-在当前提交通过完整 CI 后，以 fresh clone + `git filter-repo` 生成只读/本地独立历史候选并执行
-独立 install/build/test；不创建或推送远端仓库。该候选通过后再进入阶段 4B Session Monitor
-module + companion 产品迁移。Monster Spell Resolver 与 Foundry Ops 继续按 inventory 裁决延后，
-不因目录移动关闭原 hardening finding，也不接触生产服务器。
+阶段 0–3 均已形成可回滚稳定检查点。阶段 4 的真实发布边界 inventory 已完成；4A Chat Memory
+Guard 已成为主仓库内自包含 workspace release，通过本地 Foundry 运行时验收，并已从 fresh clone
+提取出可冻结安装、测试和构建的干净本地历史候选。当前适合稳定暂停；下一条执行路径是阶段 4B：
+先读取 Session Monitor module、companion、schema 与 build 的完整产品边界，再将二者作为一个
+release unit 迁入 `foundry-modules/session-monitor`，继续保持独立 typecheck/build/test、依赖门禁
+和本地 Foundry/companion 双重语义验收。Monster Spell Resolver 与 Foundry Ops 继续按 inventory
+裁决延后；不因目录移动关闭原 hardening finding，不创建或推送远端仓库，也不接触生产服务器。
