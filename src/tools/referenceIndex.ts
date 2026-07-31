@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
+import { resolveReferenceCacheRoot } from './referencePaths';
 
 export interface FoundryApiDocEntry {
   relativePath: string;
@@ -120,10 +121,13 @@ export function tokenizePath(relativePath: string): string[] {
   return Array.from(new Set(rawTokens.filter((token) => token.length >= 3))).sort();
 }
 
-export function buildReferenceIndexes(projectRoot = process.cwd()): ReferenceIndexSummary {
+export function buildReferenceIndexes(
+  projectRoot = process.cwd(),
+  referenceCacheRoot = resolveReferenceCacheRoot(projectRoot),
+): ReferenceIndexSummary {
   const root = resolve(projectRoot);
   const referencesDir = join(root, 'references');
-  const localReferencesDir = join(root, '.local', 'references');
+  const localReferencesDir = resolve(referenceCacheRoot);
   const indexesDir = join(localReferencesDir, 'indexes');
 
   mkdirSync(indexesDir, { recursive: true });
@@ -279,6 +283,9 @@ function toPosix(value: string): string {
 }
 
 if (import.meta.main) {
-  const summary = buildReferenceIndexes(process.cwd());
+  const summary = buildReferenceIndexes(
+    process.cwd(),
+    resolveReferenceCacheRoot(process.cwd(), process.env),
+  );
   console.log(JSON.stringify(summary, null, 2));
 }

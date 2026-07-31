@@ -41,7 +41,7 @@ owner 和迁移约束。
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
 | 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B、4C 已验收；4D Monster Spell Resolver 按既定条件延后 |
-| 5. 数据、reference 与 runtime root | in_progress | 5A Foundry Lab 注册资产清单已完成；外部 root 与迁移尚未开始 |
+| 5. 数据、reference 与 runtime root | in_progress | 5A/5B 盘点与范围门禁、5C.1 只生成方案和独立 reference cache root 已完成；实际目标、复制、切换与全消费者适配尚未开始 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
 
@@ -972,18 +972,64 @@ owner 和迁移约束。
   expectations；production/all/packages/apps/modules/tools 类型检查通过；dependency-cruiser 为 3,697
   modules / 3,910 dependencies、0 violations，Knip cycles 为 0；最终 `ci:verify` 的 Session Monitor build
   1 / 1、CLI 12 / 57、instrumented 1,610 / 7,651，合计 1,623 tests / 7,709 expectations；production
-  coverage 85.54% lines / 88.02% functions，anti-overfit 321 sources、hygiene 2,137 tracked paths、locked
-  dnd5e 5.3.3 reference、Web build 与 offline Actor smoke 全部通过；hygiene 覆盖 2,143 个已暂存/跟踪路径；
+  coverage 85.54% lines / 88.02% functions，anti-overfit 321 sources、hygiene 2,143 tracked paths、locked
+  dnd5e 5.3.3 reference、Web build 与 offline Actor smoke 全部通过；
 - 语义验收：人工阅读最终中文报告，确认“范围完整”和“所有权全部解决”被明确分开，三项未知来源没有被
   猜成 cache，world/recovery/evidence 仍保持高保护，隐私报告没有内部文件名或 token-pattern 命中；CI 中
   Session Monitor 等待文字仍来自隔离临时目录的 subprocess 测试，不是真实 Chrome/Foundry 长时运行；
 - 本阶段没有连接生产、启动 Foundry/Chrome、运行长时监测、复制/移动/删除任何 `.local` 数据，也没有
   改变 `WORLD-ASSET-001` 或其他 hardening finding 状态。
 
+### 2026-07-31：阶段 5C.1 外置迁移只读方案与独立 reference cache root
+
+- 新增 `bun run foundry:ops assets migration-plan`。该入口只读取最近一份 `complete: true` 的资产清单并
+  写 JSON/中文方案，代码中没有复制、移动、删除、切换或启动 Foundry 的执行路径；没有目标时状态固定为
+  `target-required`，提供目标也只可能到 `ready-for-copy-authorization`，`copyAuthorized` 和
+  `deletionAuthorized` 永远为 `false`；
+- 目标安全门禁拒绝磁盘根、仓库内部、当前 lab 内部/父目录、链接或 junction；已存在非空目录只生成
+  `target-not-empty` 报告，不改变其中内容。缺失的外部目标只做路径校验，不会被命令创建；
+- 方案按“世界与备份、证据与归档、程序/模组/系统、可重建缓存”四批组织。每个根都保留来源清单中的
+  file count、bytes 和 root SHA-256；明确规定将来只能按完整 category manifest 复制，并继续排除隐私、
+  链接、未登记内容和单独的 `cor-cotn.7z`；每批都必须重新盘点并精确对账；
+- 最新真实计划位于
+  `.local/foundry-v14/inventory/migration-plans/2026-07-31T15-01-39-258Z/`。它从 2026-07-31T14-04-11-949Z
+  已验收清单解析 20 个 lab 内注册根、180,753 files / 84,246,439,023 bytes；四批汇总与来源总数、字节数
+  完全相等，状态为 `target-required`。人工阅读确认中文报告没有残留英文批次说明，明确写有兼容窗口、
+  回滚、恢复抽样、无长时监测以及复制/删除均未授权；
+- 新增独立 `FVTT_REFERENCE_CACHE_ROOT`。tracked `references/reference-cache-manifest.json` 继续保留
+  `.local/references/...` 逻辑标识，reference verify/bootstrap/index 工具会把该前缀安全映射到配置根；
+  绝对、逃逸、磁盘/仓库根和链接路径被拒绝。生成目标 metadata 也可通过纯参数投影到外置根，不让核心
+  package 读取进程环境；v12/v13 tracked reference 路径保持不变；
+- 默认旧路径真实 `references verify` 仍返回 dnd5e 5.3.3 `ok`；外置 bootstrap dry-run 只报告
+  `Planned: dnd5e-5.3.3 / Installed: none`，确认没有创建外部目录；fixture 还覆盖外置 verify 和 index
+  输出不写回仓库 `.local/references`；
+- 机械验证：聚焦 31 tests / 200 expectations；Foundry Ops 310 / 2,314；production/all/packages/apps/
+  foundry-modules/tools typecheck、dependency-cruiser 3,702 modules / 3,920 dependencies、0 violations、
+  Knip cycles 与 diff check 通过。完整 `ci:verify` 通过：Session Monitor build 1 / 1、CLI 12 / 57、
+  instrumented 1,618 / 7,684，合计 1,631 tests / 7,742 expectations；production coverage 85.52% lines /
+  88.04% functions，anti-overfit 322 sources、hygiene 2,143 tracked paths、locked reference、Web build 与
+  offline Actor smoke 全部通过。随后只增加“显式 reference cache 必须位于仓库外”的安全检查和 1 个
+  聚焦测试；该最终代码的 typecheck、聚焦测试和 diff check 通过，dependency-cruiser 更新为 3,702 /
+  3,921、0 violations；但最终完整 CI 复跑不能记为通过：与本改动无调用关系的 2 个 crawl 测试和 2 个
+  Web crawl job 测试在机器高负载下超时，instrumented 为 1,615 pass / 4 fail / 7,672 expectations。
+  单独复跑两个 core crawl 测试分别通过 1 / 8 和 1 / 7；两个 Web 测试仍因内部约 1.5 秒 job 等待窗超时。
+  同时只读诊断发现一个早于本轮验证启动、来源不明的 `bun -` 进程持续占用约 2.3 GiB 和大量 CPU；未获
+  授权，未终止该用户进程，也没有修改无关测试来掩盖环境抖动。因此当前 tip 的“完整 CI 最终复跑”保持
+  未通过记录，前一轮通过只证明最后一条安全检查之前的完整状态；
+- 语义边界：本阶段只完成“如何安全迁移”的可审阅方案和 reference cache 配置，不宣称已经迁移 78.5 GiB，
+  也不宣称所有 Foundry 邻接消费者已经能从新 root 运行。审计仍发现 Session Monitor/Chat Memory Guard
+  installer、Session Monitor companion、icon catalog/review、world audit、classpack 与 Monster Spell Resolver
+  的旧布局约束；这些必须在下一小批逐个改成显式根并跑原有安全测试后，才能满足“所有当前工具可从新 root
+  解析相同资源”的阶段机械标准；
+- 3 个 scope pending（`8080`、`map`、`tools`）仍留在原处且不进入 Foundry root；没有连接生产、启动
+  Foundry/Chrome、运行长时监测或复制/移动/删除任何运行数据。`WORLD-ASSET-001` 保持 `in_progress`，
+  恢复抽样、实际迁移和旧路径退役仍未完成。
+
 ## 当前停止点
 
-阶段 5B 已完成“当前所有顶层实物均有登记”的范围门禁，但所有权结论故意保持 3 个 pending。下一批进入
-阶段 5C：先写外部 `FVTT_OPS_LAB_ROOT` 的 copy-first、hash/count 对账、旧路径兼容窗口、回滚与恢复抽样
-方案，同时梳理 `.local/references` 的独立可配置 cache root；此阶段只能提出和机械验证迁移计划，不得把
-pending 三项塞进 Foundry root。没有用户对具体目标盘和复制批次的单独确认，不执行大规模复制、切换、移动
-或删除；四小时 Session Monitor 验收仍由用户在真实跑团中执行，不在架构治理阶段运行。
+阶段 5C.1 已形成一个可安全暂停的检查点：真实迁移方案和 reference cache 外置配置均已完成并双验收，但
+没有目标盘，也没有任何复制授权。下一批先做“外置 root 消费者适配”，从独立 module installer、companion
+和 icon 工具开始，再处理 world audit、classpack/Monster Spell Resolver 的精确路径安全约束；每个产品继续
+保持自己的独立边界和回归测试。只有所有当前工具在临时外置 fixture 下解析到相同资源后，才向用户询问具体
+目标盘和复制批次。之后仍必须 copy-first、逐批 hash/count 对账、恢复抽样、短时本地 Foundry 验收和旧路径
+兼容窗口；任何大规模复制、切换、移动、删除以及四小时监测都不在未授权范围内。

@@ -31,6 +31,13 @@ describe('foundryTarget', () => {
     expect(target.reference.requiredForGeneration).toBe(false);
   });
 
+  it('can project v14 reference metadata onto an independently configured cache root', () => {
+    const target = getFoundryTarget('14', { referenceCacheRoot: 'J:\\fvtt-reference-cache' });
+    expect(target.reference.dnd5eRepo).toBe('J:/fvtt-reference-cache/dnd5e/5.3.3/repo');
+    expect(target.reference.localCache).toBe('J:/fvtt-reference-cache/dnd5e/5.3.3/repo');
+    expect(getFoundryTarget('12').reference.dnd5eRepo).toBe('references/dnd5e-4.3.9/repo');
+  });
+
   it('rejects unsupported target versions explicitly', () => {
     expect(() => parseFvttTargetVersion('15')).toThrow('Unsupported Foundry target');
   });

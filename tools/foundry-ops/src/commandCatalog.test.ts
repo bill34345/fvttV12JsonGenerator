@@ -69,4 +69,15 @@ describe('Foundry Ops command catalog', () => {
     expect(route.entrypoint).toBe('tools/foundry-ops/src/localScope.ts');
     expect(route.forwardedArgs).toEqual([]);
   });
+
+  it('routes the Foundry lab migration plan to a report-only implementation', () => {
+    const route = resolveFoundryOpsRoute(['assets', 'migration-plan', '--target-lab-root=J:/fvtt/lab']);
+    expect(route.command).toMatchObject({
+      id: 'assets.migration-plan',
+      target: 'local',
+      effect: 'local-mutation',
+    });
+    expect(route.entrypoint).toBe('tools/foundry-ops/src/labMigrationPlan.ts');
+    expect(route.forwardedArgs).toEqual(['--target-lab-root=J:/fvtt/lab']);
+  });
 });

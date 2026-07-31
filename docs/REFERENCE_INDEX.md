@@ -12,7 +12,9 @@ Large upstream source trees, generated indexes, API mirrors, fonts, icons, and t
 
 ## Local layout
 
-The ignored cache root is `.local/references/`:
+The ignored cache root defaults to `.local/references/`. Set
+`FVTT_REFERENCE_CACHE_ROOT` to move this rebuildable/reference-only tree to a
+dedicated directory without moving the Foundry Lab or tracked provenance.
 
 | Path | Purpose |
 | --- | --- |
@@ -39,6 +41,19 @@ bun run references verify
 # Rebuild generated indexes under .local/references
 bun run src/tools/referenceIndex.ts
 ```
+
+PowerShell example for an external cache:
+
+```powershell
+$env:FVTT_REFERENCE_CACHE_ROOT = 'J:\fvtt-reference-cache'
+bun run references verify
+bun run src/tools/referenceIndex.ts
+```
+
+The manifest continues to use the legacy `.local/references/...` logical path
+as a portable tracked identifier. The tools map that prefix under the configured
+cache root, reject absolute or escaping manifest targets, and keep dry-run
+bootstrap read-only.
 
 The bootstrap command never replaces a valid existing cache until the staged clone has checked out the exact revision. A failed clone, checkout, or revision check leaves the existing target untouched.
 

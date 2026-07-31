@@ -8,6 +8,7 @@ import {
   verifyReferenceCache,
   type ReferenceManifest,
 } from '../referenceCache';
+import { resolveReferenceCacheRoot } from '../referencePaths';
 
 const roots: string[] = [];
 
@@ -24,6 +25,57 @@ describe('reference cache', () => {
 
     expect(result.planned).toEqual(['dnd5e-5.3.3']);
     expect(existsSync(join(root, '.local'))).toBe(false);
+  });
+
+  it('resolves the tracked manifest into an independent external cache root', async () => {
+    const root = tempRoot();
+    const external = join(root, 'external-reference-cache');
+    const target = join(external, 'dnd5e', '5.3.3', 'repo');
+    await Bun.write(join(target, 'sentinel.txt'), 'keep');
+    const result = verifyReferenceCache(fixtureManifest('deadbeef'), join(root, 'repo'), {
+      referenceCacheRoot: external,
+      runGit: (args) => ({
+        ok: true,
+        command: `git ${args.join(' ')}`,
+        args: [...args],
+        status: 0,
+        stdout: 'deadbeef\n',
+        stderr: '',
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.components[0]?.target).toBe(target);
+    expect(await Bun.file(join(target, 'sentinel.txt')).text()).toBe('keep');
+  });
+
+  it('keeps an external bootstrap dry-run read-only', async () => {
+    const root = tempRoot();
+    const external = join(root, 'external-reference-cache');
+    const result = await bootstrapReferenceCache(fixtureManifest('deadbeef'), join(root, 'repo'), {
+      dryRun: true,
+      referenceCacheRoot: external,
+    });
+    expect(result.planned).toEqual(['dnd5e-5.3.3']);
+    expect(existsSync(external)).toBe(false);
+  });
+
+  it('keeps the legacy default but refuses an explicit cache inside the repository', () => {
+    const root = tempRoot();
+    expect(resolveReferenceCacheRoot(root, {})).toBe(join(root, '.local', 'references'));
+    expect(() => resolveReferenceCacheRoot(root, {
+      FVTT_REFERENCE_CACHE_ROOT: join(root, 'tracked-cache'),
+    })).toThrow(/outside the repository/i);
+  });
+
+  it('validates manifest targets even during a no-write bootstrap plan', async () => {
+    const root = tempRoot();
+    const manifest = fixtureManifest('deadbeef');
+    manifest.components[0]!.target = '../escape';
+    await expect(bootstrapReferenceCache(manifest, root, { dryRun: true })).rejects.toThrow(
+      /must stay under|unsafe/i,
+    );
+    expect(existsSync(join(root, 'escape'))).toBe(false);
   });
 
   it('reports missing and revision-mismatched caches without changing them', () => {

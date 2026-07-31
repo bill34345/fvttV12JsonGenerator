@@ -80,6 +80,22 @@ bun run foundry:ops assets scope
 
 报告默认写到 `.local/foundry-v14/inventory/scope-coverage/<timestamp>/`。其中“范围完整”只表示当前每个顶层条目都已登记；只要仍有“待人工判断”，所有权分类就仍然不是完整状态。无论两者为何值，报告都不构成迁移或删除授权。
 
+## 外置迁移方案（只生成报告）
+
+```powershell
+bun run foundry:ops assets migration-plan
+```
+
+该命令读取最近一份完整资产清单，按“世界与备份 → 证据与归档 → 程序/模组/系统 → 可重建缓存”生成逐批复制、精确对账、旧路径兼容窗口、回滚和恢复抽样方案。没有选定目标目录时，报告会明确停在“等待选择目标”；即使指定了专用空目录，也只会标记“可以申请复制授权”，不会创建目标、复制、切换、移动或删除任何资产。
+
+目标目录以后由用户单独决定：
+
+```powershell
+bun run foundry:ops assets migration-plan --target-lab-root=J:\fvtt-lab
+```
+
+报告默认写到 `FVTT_OPS_LAB_ROOT/inventory/migration-plans/<timestamp>/`。目标必须在仓库和当前实验环境之外，不能是磁盘根目录、链接/联接路径或混有其他内容的目录。选择目标不等于授权复制；实际复制、短时 Foundry 验收和旧目录退役分别需要后续授权。
+
 ## 生产只读盘点
 
 生产只读命令必须同时满足三件事：
@@ -110,6 +126,7 @@ bun run foundry:ops production inventory --apply --allow-production-read
 | `FVTT_OPS_BACKUP_ROOT` | 本地备份根目录；默认是 `FVTT_OPS_LAB_ROOT/backups` |
 | `FVTT_OPS_FOUNDRY_ZIP` | Foundry 安装包路径 |
 | `FVTT_OPS_WORLD_ID` | 默认世界标识；有精确安全限制的命令仍会校验自己的固定测试世界 |
+| `FVTT_REFERENCE_CACHE_ROOT` | 独立的大型参考资料缓存；默认仍为仓库内 `.local/references`，不会跟随 Foundry Lab 一起迁移 |
 
 所有可写根目录仍经过路径逃逸、符号链接和 Windows junction 检查。配置成磁盘根目录或仓库根目录会被拒绝。
 

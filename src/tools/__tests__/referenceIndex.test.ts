@@ -118,4 +118,19 @@ describe('referenceIndex', () => {
     ) as Record<string, string[]>;
     expect(dndV14TokenIndex.save).toContain('module/data/activity/save-data.mjs');
   });
+
+  it('writes rebuildable v14 indexes under an independent cache root', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reference-index-external-'));
+    roots.push(root);
+    const cacheRoot = join(root, 'external-cache');
+    const dndRepo = join(cacheRoot, 'dnd5e', '5.3.3', 'repo');
+    mkdirSync(dndRepo, { recursive: true });
+    writeFileSync(join(dndRepo, 'system.json'), '{"id":"dnd5e","version":"5.3.3"}');
+
+    const summary = buildReferenceIndexes(join(root, 'repo'), cacheRoot);
+
+    expect(summary.dndRepoFiles).toBe(1);
+    expect(existsSync(join(cacheRoot, 'indexes', 'dnd5e-5.3.3-file-index.json'))).toBe(true);
+    expect(existsSync(join(root, 'repo', '.local', 'references'))).toBe(false);
+  });
 });

@@ -6,6 +6,10 @@ import {
   type GitCommandFailure,
   type GitCommandResult,
 } from './gitCommand';
+import {
+  resolveReferenceCacheRoot,
+  resolveReferenceComponentTarget,
+} from './referencePaths';
 
 export interface ReferenceComponent {
   id: string;
@@ -33,6 +37,7 @@ export interface ReferenceCacheStatus {
 
 export interface VerifyReferenceCacheOptions {
   runGit?: (args: readonly string[]) => GitCommandResult;
+  referenceCacheRoot?: string;
 }
 
 export function loadReferenceManifest(path = resolve('references/reference-cache-manifest.json')): ReferenceManifest {
@@ -45,8 +50,9 @@ export function verifyReferenceCache(
   options: VerifyReferenceCacheOptions = {},
 ): { ok: boolean; components: ReferenceCacheStatus[] } {
   const executeGit = options.runGit ?? ((args: readonly string[]) => runGitCommand(args));
+  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot);
   const components = manifest.components.map((component): ReferenceCacheStatus => {
-    const target = resolve(repoRoot, component.target);
+    const target = resolveReferenceComponentTarget(cacheRoot, component.target);
     if (!existsSync(target)) {
       return { id: component.id, target, status: 'missing', expectedRevision: component.revision };
     }
@@ -83,14 +89,17 @@ export function formatReferenceCacheStatus(component: ReferenceCacheStatus): str
 export async function bootstrapReferenceCache(
   manifest: ReferenceManifest,
   repoRoot = process.cwd(),
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; referenceCacheRoot?: string } = {},
 ): Promise<{ planned: string[]; installed: string[] }> {
   const planned = manifest.components.map((component) => component.id);
+  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot);
+  const targets = manifest.components.map((component) =>
+    resolveReferenceComponentTarget(cacheRoot, component.target));
   if (options.dryRun) return { planned, installed: [] };
 
   const installed: string[] = [];
-  for (const component of manifest.components) {
-    const target = resolve(repoRoot, component.target);
+  for (const [index, component] of manifest.components.entries()) {
+    const target = targets[index]!;
     const staging = `${target}.staging-${process.pid}-${Date.now()}`;
     const backup = `${target}.backup-${process.pid}-${Date.now()}`;
     mkdirSync(dirname(target), { recursive: true });
@@ -140,14 +149,15 @@ async function main(): Promise<void> {
   const command = process.argv[2];
   const dryRun = process.argv.includes('--dry-run');
   const manifest = loadReferenceManifest();
+  const referenceCacheRoot = resolveReferenceCacheRoot(process.cwd(), process.env);
   if (command === 'verify') {
-    const result = verifyReferenceCache(manifest);
+    const result = verifyReferenceCache(manifest, process.cwd(), { referenceCacheRoot });
     for (const component of result.components) console.log(formatReferenceCacheStatus(component));
     process.exitCode = result.ok ? 0 : 1;
     return;
   }
   if (command === 'bootstrap') {
-    const result = await bootstrapReferenceCache(manifest, process.cwd(), { dryRun });
+    const result = await bootstrapReferenceCache(manifest, process.cwd(), { dryRun, referenceCacheRoot });
     console.log(`Planned: ${result.planned.join(', ') || 'none'}`);
     console.log(`Installed: ${result.installed.join(', ') || 'none'}`);
     return;

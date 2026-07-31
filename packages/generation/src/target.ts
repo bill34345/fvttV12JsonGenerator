@@ -61,8 +61,22 @@ export function parseFvttTargetVersion(value: unknown): FvttTargetVersion {
   throw new Error(`Unsupported Foundry target: ${version}. Use 12, 13, or 14.`);
 }
 
-export function getFoundryTarget(version: FvttTargetVersion): FoundryTarget {
-  return TARGETS[version];
+export function getFoundryTarget(
+  version: FvttTargetVersion,
+  options: { referenceCacheRoot?: string } = {},
+): FoundryTarget {
+  const target = TARGETS[version];
+  if (version !== '14' || !options.referenceCacheRoot) return target;
+  const cacheRoot = options.referenceCacheRoot.replaceAll('\\', '/').replace(/\/$/, '');
+  const dnd5eRepo = `${cacheRoot}/dnd5e/5.3.3/repo`;
+  return {
+    ...target,
+    reference: {
+      ...target.reference,
+      dnd5eRepo,
+      localCache: dnd5eRepo,
+    },
+  };
 }
 
 export function assertEffectProfileForTarget(version: FvttTargetVersion, profile: string): void {
