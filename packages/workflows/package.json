@@ -9,6 +9,7 @@
     "./generation-pipeline": "./src/generationPipeline.ts",
     "./icon-port": "./src/iconPort.ts",
     "./item-generation": "./src/itemGenerationWorkflow.ts",
+    "./json-translation-sync": "./src/jsonTranslationSync.ts",
     "./single-file-conversion": "./src/singleFileConversion.ts"
   },
   "scripts": {
