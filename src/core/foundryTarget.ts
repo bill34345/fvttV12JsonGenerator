@@ -53,7 +53,7 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
     fvttVersion: '14',
     dnd5eVersion: '5.3.3',
     stats: {
-      coreVersion: '14.361',
+      coreVersion: '14.364',
       systemId: 'dnd5e',
       systemVersion: '5.3.3',
     },

@@ -5,6 +5,7 @@ import { type EffectProfile } from '../generator/effectProfileApplier';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
 import type { ImageAssetOptions } from '../assets/imageAssets';
 import type { FvttTargetVersion } from '../foundryTarget';
+import type { IconWorkflowOptions } from '../icons/types';
 
 export interface PlainTextActorWorkflowOptions {
   sourcePath: string;
@@ -14,6 +15,7 @@ export interface PlainTextActorWorkflowOptions {
   effectProfile?: EffectProfile;
   fvttVersion?: FvttTargetVersion;
   imageAssets?: ImageAssetOptions;
+  iconOptions?: IconWorkflowOptions;
 }
 
 export interface PlainTextActorWorkflowResult {
@@ -48,6 +50,7 @@ export class PlainTextActorWorkflow {
           vaultPath,
           fvttVersion: options.fvttVersion ?? '12',
           effectProfile,
+          iconOptions: options.iconOptions,
           imageAssets: options.imageAssets,
           excludeInputPaths: this.isSourceInsideEmitDir(sourcePath, emitDir) ? [sourcePath] : [],
           forceInputPaths: promotedInputPaths,

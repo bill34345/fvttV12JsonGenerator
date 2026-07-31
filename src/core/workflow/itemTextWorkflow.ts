@@ -2,6 +2,7 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { FvttTargetVersion } from "../foundryTarget";
 import type { EffectProfile } from "../generator/effectProfileApplier";
+import type { IconWorkflowOptions } from "../icons/types";
 import { ItemsIngestionWorkflow, type ItemIngestionResult } from "../ingest/items";
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from "./obsidianSync";
 
@@ -11,6 +12,7 @@ export interface ItemTextWorkflowOptions {
   dryRun?: boolean;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  iconOptions?: IconWorkflowOptions;
 }
 
 export interface ItemTextWorkflowResult {
@@ -68,6 +70,7 @@ export class ItemTextWorkflow {
           vaultPath: options.vaultPath,
           fvttVersion: options.fvttVersion ?? "12",
           effectProfile: options.effectProfile ?? "core",
+          iconOptions: options.iconOptions,
           includeInputPaths: promotedInputPaths,
           forceInputPaths: promotedInputPaths,
         });

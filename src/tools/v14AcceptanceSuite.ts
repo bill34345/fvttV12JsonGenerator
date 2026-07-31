@@ -363,7 +363,7 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
   ];
 
   return [
-    check('actor core version', stats.coreVersion === '14.361', String(stats.coreVersion ?? 'missing')),
+    check('actor core version', stats.coreVersion === '14.364', String(stats.coreVersion ?? 'missing')),
     check('actor system version', stats.systemVersion === '5.3.3', String(stats.systemVersion ?? 'missing')),
     check('actor system id', stats.systemId === 'dnd5e', String(stats.systemId ?? 'missing')),
     check(
@@ -380,7 +380,7 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
       'embedded item target stats',
       items.every((item) => {
         const itemStats = getRecord(item._stats);
-        return itemStats.coreVersion === '14.361' && itemStats.systemVersion === '5.3.3';
+        return itemStats.coreVersion === '14.364' && itemStats.systemVersion === '5.3.3';
       }),
       `${items.length} embedded items checked`,
     ),
@@ -396,7 +396,7 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
       'effects target stats',
       effects.every((effect) => {
         const effectStats = getRecord(effect._stats);
-        return effectStats.coreVersion === '14.361' && effectStats.systemVersion === '5.3.3';
+        return effectStats.coreVersion === '14.364' && effectStats.systemVersion === '5.3.3';
       }),
       `${effects.length} effects checked`,
     ),

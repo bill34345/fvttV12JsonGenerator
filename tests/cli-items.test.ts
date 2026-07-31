@@ -59,7 +59,7 @@ describe("CLI item import", () => {
       };
       expect(item.name).toContain("骑士之盾");
       expect(item.type).toBe("equipment");
-      expect(item._stats?.coreVersion).toBe("14.361");
+      expect(item._stats?.coreVersion).toBe("14.364");
       expect(item._stats?.systemVersion).toBe("5.3.3");
     } finally {
       rmSync(root, { recursive: true, force: true });

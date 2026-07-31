@@ -1,4 +1,5 @@
 import type { EffectProfile } from '../generator/effectProfileApplier';
+import type { IconWorkflowOptions } from '../icons/types';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type { PortableSpellRef } from '../spell-resolution/types';
 
@@ -291,6 +292,7 @@ export interface MonsterIntakeOptions {
   fvttVersion?: Extract<FvttTargetVersion, '12' | '14'>;
   effectProfile?: EffectProfile;
   replaceConflicts?: Set<string>;
+  iconOptions?: IconWorkflowOptions;
 }
 
 export interface MonsterIntakeCreatureResult {

@@ -63,7 +63,7 @@ Unless the user explicitly changes the target, generated Foundry JSON must targe
 
 Foundry v14 is also a supported explicit target when `--fvtt-version 14` or the equivalent workflow/API option is used:
 
-- Foundry VTT: v14.361
+- Foundry VTT: v14.364
 - dnd5e system: 5.3.3
 - Effect profiles: core, modded-v14
 - MIDI-QOL: v14.0.11 (modded-v14)

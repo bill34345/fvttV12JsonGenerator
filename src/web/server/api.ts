@@ -30,6 +30,8 @@ import {
   isAuthorizedApiRequest,
   type WebSecurityConfig,
 } from './security/config';
+import { parseIconMode } from '../../core/icons/workflow';
+import type { IconMode } from '../../core/icons/types';
 
 export { TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 
@@ -42,6 +44,7 @@ interface ConvertBody {
   content?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  iconMode?: IconMode;
 }
 
 interface ConvertPathBody {
@@ -49,6 +52,7 @@ interface ConvertPathBody {
   outputPath?: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  iconMode?: IconMode;
 }
 
 interface VerifyBody {
@@ -153,6 +157,7 @@ export async function handleApiRequest(
         outputDir: pathModeEnabled ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'output')) : TEMP_WEB_DIR,
         effectProfile: 'core' satisfies EffectProfile,
         fvttVersion: '12' satisfies FvttTargetVersion,
+        iconMode: 'off' satisfies IconMode,
         sampleSourcePath: pathModeEnabled
           ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'input', 'alyxian-aboleth__底栖魔鱼“阿利克辛”.md'))
           : '',
@@ -184,6 +189,7 @@ export async function handleApiRequest(
         vaultPath: DEFAULT_VAULT_PATH,
         fvttVersion,
         effectProfile: normalizeEffectProfile(body.effectProfile, fvttVersion),
+        iconOptions: webIconOptions(body.iconMode),
       });
       return jsonSuccess(result);
     }
@@ -200,6 +206,7 @@ export async function handleApiRequest(
         options: {
           fvttVersion,
           effectProfile: normalizeEffectProfile(body.effectProfile, fvttVersion),
+          iconMode: parseIconMode(body.iconMode),
         },
       });
       const finished = getRequiredJob(job.id);
@@ -332,6 +339,8 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
     verification: summary.verification as ConversionResult['verification'],
     actorVerification: (summary.actorVerification ?? null) as ConversionResult['actorVerification'],
     rawJson: summary.rawJson,
+    iconReview: (summary.iconReview ?? null) as ConversionResult['iconReview'],
+    iconReviewPath: typeof summary.iconReviewPath === 'string' ? summary.iconReviewPath : undefined,
     outputPath: typeof summary.outputPath === 'string' ? summary.outputPath : undefined,
     fvttVersion: normalizeFvttVersion(typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined),
     effectProfile: summary.effectProfile === 'modded-v12' || summary.effectProfile === 'modded-v14'
@@ -339,6 +348,15 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
       : 'core',
     downloadUrl: job.files[0]?.downloadUrl ?? '',
     jobId: job.id,
+  };
+}
+
+function webIconOptions(value: unknown) {
+  const mode = parseIconMode(value);
+  const overridePath = Bun.env.FVTT_V14_ICON_OVERRIDES?.trim();
+  return {
+    mode,
+    ...(overridePath ? { overridePath } : {}),
   };
 }
 

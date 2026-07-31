@@ -11,10 +11,13 @@ import type {
   CanonicalItemDocument,
   GenerationVerification,
 } from '../generation/types';
+import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
+import { createIconResolutionSession } from '../icons/workflow';
 
 export interface ItemGenerationWorkflowOptions {
   fvttVersion: FvttTargetVersion;
   effectProfile: EffectProfile;
+  iconOptions?: IconWorkflowOptions;
 }
 
 export interface ItemGenerationArtifact {
@@ -24,6 +27,7 @@ export interface ItemGenerationArtifact {
   diagnostics: GenerationDiagnostic[];
   canonical: CanonicalItemDocument;
   verification: GenerationVerification;
+  iconReview: IconReviewReport | null;
 }
 
 export async function generateItemArtifacts(
@@ -32,12 +36,15 @@ export async function generateItemArtifacts(
 ): Promise<ItemGenerationArtifact[]> {
   const expanded = expandParsedItemStages(parsed);
   const projector = getGenerationProjector(options.fvttVersion);
+  const iconSession = createIconResolutionSession(options.fvttVersion, options.iconOptions);
   const artifacts: ItemGenerationArtifact[] = [];
   for (const entry of expanded) {
+    const reviewStart = iconSession.entries.length;
     const canonical = adaptParsedItemToCanonical(entry.parsed);
     const item = await projector.project(canonical, {
       ...options,
       targetVersion: options.fvttVersion,
+      iconResolver: iconSession.resolver,
     }) as ItemDocument;
     if (entry.stage) {
       const flags = (item.flags ??= {});
@@ -61,6 +68,8 @@ export async function generateItemArtifacts(
       && verification.status === 'accepted') {
       verification.status = 'needs_review';
     }
+    const stageIconEntries = iconSession.entries.slice(reviewStart);
+    const completeIconReview = iconSession.report();
     artifacts.push({
       stageIndex: entry.stageIndex,
       fileName: `${item.name}.json`,
@@ -68,9 +77,28 @@ export async function generateItemArtifacts(
       diagnostics: verification.diagnostics,
       canonical,
       verification,
+      iconReview: completeIconReview
+        ? {
+            ...completeIconReview,
+            entries: completeIconReview.entries.filter((reviewEntry) =>
+              stageIconEntries.includes(reviewEntry)),
+            summary: summarizeIconEntries(stageIconEntries),
+          }
+        : null,
     });
   }
   return artifacts;
+}
+
+function summarizeIconEntries(entries: NonNullable<ItemGenerationArtifact['iconReview']>['entries']) {
+  return {
+    total: entries.length,
+    override: entries.filter((entry) => entry.source === 'override').length,
+    existing: entries.filter((entry) => entry.source === 'existing').length,
+    exact: entries.filter((entry) => entry.source === 'compendium-exact').length,
+    semantic: entries.filter((entry) => entry.source === 'semantic').length,
+    fallback: entries.filter((entry) => entry.source === 'type-default').length,
+  };
 }
 
 interface ExpandedStage {

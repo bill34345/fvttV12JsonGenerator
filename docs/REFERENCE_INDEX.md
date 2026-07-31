@@ -46,7 +46,7 @@ The bootstrap command never replaces a valid existing cache until the staged clo
 
 ## Locked v14 evidence
 
-- Foundry generated metadata: `14.361`
+- Foundry generated metadata: `14.364`
 - Foundry runtime acceptance: `14.364`
 - dnd5e: `5.3.3`, revision `965ad2d0cf5d063dac675ba078b5bd3c3c0dd449`
 - MIDI-QOL: `14.0.11`（当前锁定；`14.0.9` 的旧验收记录保留为历史证据）

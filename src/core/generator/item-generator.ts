@@ -12,6 +12,7 @@ import {
 } from './effectProfileApplier';
 import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
 import { createStableDocumentId } from '../utils/stable-id';
+import type { V14IconResolver } from '../icons/resolver';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -37,6 +38,7 @@ export interface ItemDocument {
 export interface ItemGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  iconResolver?: V14IconResolver;
 }
 
 /**
@@ -97,6 +99,7 @@ export class ItemGenerator {
     // 6. Return the item document
     this.effectProfileApplier.apply({ items: [item] }, this.effectProfile);
     this.finalizeTargetFields(item);
+    this.options.iconResolver?.resolveStandaloneItem(item);
     return item;
   }
 

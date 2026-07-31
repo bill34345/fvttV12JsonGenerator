@@ -123,7 +123,7 @@ describe("ItemTextWorkflow", () => {
       };
 
       expect(item._stats).toMatchObject({
-        coreVersion: "14.361",
+        coreVersion: "14.364",
         systemId: "dnd5e",
         systemVersion: "5.3.3",
       });

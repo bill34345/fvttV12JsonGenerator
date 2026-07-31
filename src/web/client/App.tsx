@@ -26,6 +26,7 @@ import {
   type DefaultsResponse,
   type EffectProfile,
   type FvttVersion,
+  type IconMode,
   type JobStatus,
   type JobType,
   type WebJob,
@@ -176,6 +177,7 @@ export function App() {
   const [content, setContent] = useState('');
   const [fvttVersion, setFvttVersion] = useState<FvttVersion>('12');
   const [effectProfile, setEffectProfile] = useState<EffectProfile>('core');
+  const [iconMode, setIconMode] = useState<IconMode>('off');
   const [boardUrl, setBoardUrl] = useState(goddessFantasyBoardUrl);
   const [vaultPath, setVaultPath] = useState('');
   const [enableAiNormalize, setEnableAiNormalize] = useState(false);
@@ -204,6 +206,7 @@ export function App() {
         setDefaults(nextDefaults);
         setFvttVersion(nextDefaults.fvttVersion);
         setEffectProfile(nextDefaults.effectProfile);
+        setIconMode(nextDefaults.iconMode);
         setVaultPath(nextDefaults.vaultPath);
       })
       .catch((nextError: Error) => {
@@ -245,6 +248,10 @@ export function App() {
     if (activeTool === 'ai-monster-intake' && fvttVersion === '13') setFvttVersion('12');
   }, [activeTool, fvttVersion]);
 
+  useEffect(() => {
+    if (fvttVersion !== '14' && iconMode !== 'off') setIconMode('off');
+  }, [fvttVersion, iconMode]);
+
   const jsonPreview = useMemo(() => {
     if (singleResult) return JSON.stringify(singleResult.rawJson, null, 2);
     if (job?.summary) return JSON.stringify(job.summary, null, 2);
@@ -285,6 +292,7 @@ export function App() {
           content,
           fvttVersion,
           effectProfile,
+          iconMode,
         });
         setSingleResult(result);
         setStatus('success');
@@ -299,6 +307,7 @@ export function App() {
         options: {
           fvttVersion,
           effectProfile,
+          iconMode,
           boardUrl,
           crawlMode,
           vaultPath,
@@ -449,6 +458,19 @@ export function App() {
               </select>
             </label>
           </div>
+
+          {fvttVersion === '14' ? (
+            <div className="checkbox-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={iconMode === 'safe'}
+                  onChange={(event) => setIconMode(event.target.checked ? 'safe' : 'off')}
+                />
+                安全匹配特性图标
+              </label>
+            </div>
+          ) : null}
 
           {supportsAiNormalize || supportsClearBackup ? (
             <div className="checkbox-row">

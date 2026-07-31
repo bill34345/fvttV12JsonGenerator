@@ -73,6 +73,7 @@ describe('web API', () => {
     expect(body.ok).toBe(true);
     expect(body.data.fvttVersion).toBe('12');
     expect(body.data.effectProfile).toBe('core');
+    expect(body.data.iconMode).toBe('off');
     expect(body.data.outputDir).toContain('temp');
     expect(body.data.pathModeEnabled).toBe(false);
   });
@@ -157,6 +158,45 @@ describe('web API', () => {
     expect(body.ok).toBe(true);
     expect(body.data.kind).toBe('actor');
     expect(body.data.fvttVersion).toBe('14');
+  });
+
+  it('exposes v14 safe icon results as an audit artifact without warnings', async () => {
+    const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
+
+    const response = await post('/api/convert/upload', {
+      fileName: 'alyxian-v14-icons.md',
+      content: source,
+      fvttVersion: '14',
+      effectProfile: 'core',
+      iconMode: 'safe',
+    });
+    const body = await response.json();
+    const job = getJob(body.data.jobId);
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.iconReview?.mode).toBe('safe');
+    expect(body.data.iconReview?.summary.total).toBeGreaterThan(0);
+    expect(body.data.iconReviewPath).toEndWith('.icon-review.json');
+    expect(body.data.warnings).toEqual([]);
+    expect(job?.files.map((file) => file.fileName)).toContain('alyxian-v14-icons.icon-review.json');
+  });
+
+  it('fails closed when safe icon mode is requested for v12', async () => {
+    const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
+
+    const response = await post('/api/convert/upload', {
+      fileName: 'alyxian-v12-icons.md',
+      content: source,
+      fvttVersion: '12',
+      effectProfile: 'core',
+      iconMode: 'safe',
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe('JOB_FAILED');
   });
 
   it('accepts Foundry v14 modded profile for uploaded markdown conversion', async () => {

@@ -26,6 +26,9 @@ import { createTranslationConfigFromEnv } from '../translation/config';
 import type { FvttTargetVersion } from '../foundryTarget';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
+import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
+import { iconWorkflowFingerprint } from '../icons/resources';
+import { mergeIconReviewReports, writeIconReviewReport } from '../icons/report';
 
 export interface ObsidianSyncOptions {
   vaultPath: string;
@@ -36,6 +39,7 @@ export interface ObsidianSyncOptions {
   includeInputPaths?: string[];
   forceInputPaths?: string[];
   imageAssets?: ImageAssetOptions;
+  iconOptions?: IconWorkflowOptions;
 }
 
 interface TranslationServiceLike {
@@ -99,6 +103,7 @@ export class ObsidianSyncWorkflow {
   public async sync(options: ObsidianSyncOptions): Promise<ObsidianSyncResult> {
     const fvttVersion = options.fvttVersion ?? '12';
     const effectProfile = options.effectProfile ?? 'core';
+    const iconFingerprint = iconWorkflowFingerprint(options.iconOptions);
     const vaultDir = this.resolvePath(options.vaultPath);
     const inputDir = join(vaultDir, 'input');
     const examplesDir = join(vaultDir, 'examples');
@@ -166,7 +171,7 @@ export class ObsidianSyncWorkflow {
           continue;
         }
         const hash = this.hashContent(
-          `${content}\n#fvttVersion=${fvttVersion}\n#effectProfile=${effectProfile}`,
+          `${content}\n#fvttVersion=${fvttVersion}\n#effectProfile=${effectProfile}\n#icon=${iconFingerprint}`,
         );
         const prev = manifest[relInput];
         const forceProcess = forcedInputs.has(this.normalizeForComparison(inputPath));
@@ -190,7 +195,11 @@ export class ObsidianSyncWorkflow {
             normalizedBody = await this.itemAiNormalizer.normalizeItem(bodyText);
           }
           const parsedItem = this.itemParser.parse(content, normalizedBody);
-          const artifacts = await generateItemArtifacts(parsedItem, { fvttVersion, effectProfile });
+          const artifacts = await generateItemArtifacts(parsedItem, {
+            fvttVersion,
+            effectProfile,
+            iconOptions: options.iconOptions,
+          });
           const rejected = artifacts.find((artifact) => artifact.verification.status !== 'accepted');
           if (rejected) {
             throw new Error(
@@ -207,6 +216,15 @@ export class ObsidianSyncWorkflow {
               path: join(stageOutputDir, artifact.fileName),
               data: artifact.item,
             }));
+          }
+          const itemIconReview = mergeIconReviewReports(artifacts.map((artifact) => artifact.iconReview));
+          if (itemIconReview) {
+            outputArtifacts.push({
+              path: outputPath.toLowerCase().endsWith('.json')
+                ? outputPath.replace(/\.json$/iu, '.icon-review.json')
+                : join(outputPath, 'icon-review.json'),
+              data: itemIconReview,
+            });
           }
         } else {
           const route = this.parserFactory.detectRoute(content);
@@ -239,6 +257,7 @@ export class ObsidianSyncWorkflow {
             fvttVersion,
             effectProfile,
             translationService: this.options.translationService,
+            iconOptions: options.iconOptions,
           });
           if (generated.verification.status !== 'accepted') {
             throw new Error(
@@ -248,20 +267,38 @@ export class ObsidianSyncWorkflow {
             );
           }
           outputArtifacts = [{ path: outputPath, data: generated.actor }];
+          if (generated.iconReview) {
+            outputArtifacts.push({
+              path: outputPath.replace(/\.json$/iu, '.icon-review.json'),
+              data: generated.iconReview,
+            });
+          }
         }
 
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
         for (const artifact of outputArtifacts) {
           if (existsSync(artifact.path)) {
-            const relArtifact = relative(outputDir, artifact.path);
-            const backupRel = relArtifact.replace(/\.json$/i, `.${ts}.json`);
-            const backupPath = join(backupDir, backupRel);
-            this.ensureDir(dirname(backupPath));
-            renameSync(artifact.path, backupPath);
+            this.backupOutputArtifact(artifact.path, outputDir, backupDir, ts);
             result.backedUp++;
           }
           this.ensureDir(dirname(artifact.path));
           writeFileSync(artifact.path, JSON.stringify(artifact.data, null, 2));
+        }
+        const currentArtifactPaths = new Set(
+          outputArtifacts.map((artifact) => this.normalizeForComparison(artifact.path)),
+        );
+        for (const previousOutput of prev?.outputs ?? []) {
+          const previousPath = isAbsolute(previousOutput)
+            ? previousOutput
+            : resolve(vaultDir, previousOutput);
+          if (
+            existsSync(previousPath)
+            && !currentArtifactPaths.has(this.normalizeForComparison(previousPath))
+            && this.isWithinOutput(previousPath, outputDir)
+          ) {
+            this.backupOutputArtifact(previousPath, outputDir, backupDir, ts);
+            result.backedUp++;
+          }
         }
 
         manifest[relInput] = {
@@ -314,6 +351,23 @@ export class ObsidianSyncWorkflow {
     }
 
     this.saveManifest(manifestPath, manifest);
+    const iconReview = mergeIconReviewReports(
+      Object.values(manifest)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.outputs ?? [])
+        .filter((path) => path.endsWith('.icon-review.json'))
+        .map((path) => isAbsolute(path) ? path : resolve(vaultDir, path))
+        .filter((path) => existsSync(path))
+        .map((path) => JSON.parse(readFileSync(path, 'utf-8')) as IconReviewReport),
+    );
+    const aggregateIconReviewPath = join(outputDir, 'icon-review.json');
+    if (iconReview) {
+      writeIconReviewReport(aggregateIconReviewPath, iconReview);
+    } else if (existsSync(aggregateIconReviewPath)) {
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      this.backupOutputArtifact(aggregateIconReviewPath, outputDir, backupDir, ts);
+      result.backedUp++;
+    }
     return result;
   }
 
@@ -400,6 +454,27 @@ export class ObsidianSyncWorkflow {
 
   private normalizeForComparison(path: string): string {
     return resolve(path).replace(/\\/g, '/').toLowerCase();
+  }
+
+  private isWithinOutput(path: string, outputDir: string): boolean {
+    const rel = relative(outputDir, path);
+    return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+  }
+
+  private backupOutputArtifact(
+    artifactPath: string,
+    outputDir: string,
+    backupDir: string,
+    timestamp: string,
+  ): void {
+    const relArtifact = relative(outputDir, artifactPath);
+    if (relArtifact.startsWith('..') || isAbsolute(relArtifact)) {
+      throw new Error(`Refusing to back up an artifact outside the output directory: ${artifactPath}`);
+    }
+    const backupRel = relArtifact.replace(/\.json$/i, `.${timestamp}.json`);
+    const backupPath = join(backupDir, backupRel);
+    this.ensureDir(dirname(backupPath));
+    renameSync(artifactPath, backupPath);
   }
 
   private slugFromInput(relInput: string): string {

@@ -44,6 +44,8 @@ interface Manifest {
   sourceLength: number;
   fvttVersion: '12' | '14';
   effectProfile: string;
+  iconMode?: 'off' | 'safe';
+  iconOverridePath?: string;
   status: MonsterIntakeRunResult['status'];
   createdAt: string;
   completedAt?: string;
@@ -72,6 +74,8 @@ export async function runMonsterIntake(
   const manifest: Manifest = {
     schemaVersion: 1, runId, sourceName: options.sourceName, sourceSha256, sourceLength: options.source.length,
     fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core',
+    iconMode: options.iconOptions?.mode ?? 'off',
+    ...(options.iconOptions?.overridePath ? { iconOverridePath: options.iconOptions.overridePath } : {}),
     status: 'failed', createdAt: new Date().toISOString(), creatures: [],
   };
   writeJson(join(runPath, 'manifest.json'), manifest);
@@ -131,6 +135,10 @@ export async function resumeMonsterIntake(
   const options: MonsterIntakeOptions = {
     source, sourceName: manifest.sourceName, runRoot: dirname(runPath), vaultPath,
     fvttVersion: manifest.fvttVersion, effectProfile: manifest.effectProfile as MonsterIntakeOptions['effectProfile'], replaceConflicts,
+    iconOptions: {
+      mode: manifest.iconMode ?? 'off',
+      ...(manifest.iconOverridePath ? { overridePath: manifest.iconOverridePath } : {}),
+    },
   };
   const results: MonsterIntakeCreatureResult[] = [];
   for (const candidate of discovery.candidates) {
@@ -230,6 +238,7 @@ async function processIr(
     const generated = await convertMarkdownContentToJson({
       content: markdown, sourcePath: join(bundlePath, 'standard.md'), outputPath: candidateActorPath,
       fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null,
+      iconOptions: options.iconOptions,
     });
     const report = verifyMonsterIntake(options.source, ir, markdown, generated.rawJson, candidate);
     writeReports(bundlePath, report);
@@ -357,7 +366,7 @@ async function promoteAccepted(
     if (existsSync(actorPath)) copyFileSync(actorPath, join(backupDir, basename(actorPath)));
   }
   atomicWrite(markdownPath, markdown);
-  await convertMarkdownContentToJson({ content: markdown, sourcePath: markdownPath, outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null });
+  await convertMarkdownContentToJson({ content: markdown, sourcePath: markdownPath, outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null, iconOptions: options.iconOptions });
   return { markdownPath, actorPath, findings: [] };
 }
 

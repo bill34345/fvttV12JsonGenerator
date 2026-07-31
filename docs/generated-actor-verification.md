@@ -45,7 +45,7 @@ When generating for `--fvtt-version 12` or `13`, check:
 
 When generating for `--fvtt-version 14`, also check:
 
-- Actor, embedded Item, and ActiveEffect `_stats` use Foundry `14.361` and dnd5e `5.3.3`.
+- Actor, embedded Item, and ActiveEffect `_stats` use Foundry `14.364` and dnd5e `5.3.3`.
 - NPC resources use v14/dnd5e 5.x source fields such as `max` and `spent`, not legacy `value`.
 - Senses use `system.attributes.senses.ranges.<sense>` plus `special`, not direct legacy sense fields.
 - Item activities carry activation data; item-level `system.activation` is not used as the v14 source of truth.
@@ -53,6 +53,8 @@ When generating for `--fvtt-version 14`, also check:
 - Uses data omits legacy `value` and `per`; generated source should use `spent`, `max`, and `recovery`.
 - Spell fallback items use `method` and `prepared`, not legacy `preparation.mode`.
 - Active Effect changes target schema-backed v14 fields, for example AC flat/formula fields rather than legacy AC bonus fields.
+- If `--icon-mode safe` was used, every embedded/standalone Item has a catalogued Foundry core or dnd5e path, the adjacent `*.icon-review.json` records the chosen source/confidence/reasons, and fallback decisions remain explicit rather than being reported as semantic matches.
+- Review representative exact mappings and all semantic mappings visually. Confirm close negatives remain on a type default or an explicit reviewed override.
 - Runtime import/readback is a separate gate. State whether the exact project-local Foundry 14.364 runtime was available for this run.
 
 When generating for `--fvtt-version 14 --effect-profile modded-v14`, also check:

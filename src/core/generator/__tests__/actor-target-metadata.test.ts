@@ -68,12 +68,12 @@ describe('actor target metadata', () => {
 
     expect(actor._stats).toEqual(expect.objectContaining({
       old: 'actor',
-      coreVersion: '14.361',
+      coreVersion: '14.364',
       systemId: 'dnd5e',
       systemVersion: '5.3.3',
     }));
     expect(actor.effects[0]._stats.systemVersion).toBe('5.3.3');
-    expect(actor.items[0]._stats.coreVersion).toBe('14.361');
+    expect(actor.items[0]._stats.coreVersion).toBe('14.364');
     expect(actor.items[0].effects[0]._stats.systemVersion).toBe('5.3.3');
     expect(actor.items[0].system.activation).toBeUndefined();
     expect(actor.items[0].system.uses).toEqual({

@@ -14,6 +14,7 @@ import { loadMonsterIntakeConfig } from './core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from './core/intake/provider';
 import { resumeMonsterIntake, runMonsterIntake } from './core/intake/orchestrator';
 import { convertMarkdownContentToJson } from './core/workflow/singleFileConversion';
+import { parseIconMode } from './core/icons/workflow';
 
 const DEFAULT_VAULT = 'obsidian/dnd数据转fvttjson';
 const DEFAULT_EMIT_DIR = join(DEFAULT_VAULT, 'input');
@@ -43,6 +44,8 @@ program
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
   .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
+  .option('--icon-mode <mode>', 'v14 Item artwork mode: off or safe', 'off')
+  .option('--icon-overrides <path>', 'v14 icon override JSON path')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')
   .option('--image-remote-root <path>', 'Remote image root directory for SSH uploads')
@@ -57,6 +60,14 @@ program
   .action(async (input, options) => {
     try {
       const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
+      const iconMode = parseIconMode(options.iconMode);
+      if (iconMode === 'safe' && fvttVersion !== '14') {
+        throw new Error(`--icon-mode safe requires --fvtt-version 14, not ${fvttVersion}.`);
+      }
+      const iconOptions = {
+        mode: iconMode,
+        ...(options.iconOverrides ? { overridePath: resolve(options.iconOverrides) } : {}),
+      };
       const effectProfileOption = options.effectProfile as string | undefined;
       const effectProfile = (effectProfileOption ?? 'core') as EffectProfile;
       if (effectProfile !== 'core' && effectProfile !== 'modded-v12' && effectProfile !== 'modded-v14') {
@@ -79,6 +90,7 @@ program
           dryRun: Boolean(options.dryRun),
           fvttVersion: fvttVersion as '12' | '14',
           effectProfile,
+          iconOptions,
         }, provider);
         if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
         printIntakeResult(result);
@@ -132,6 +144,7 @@ program
           clearBackup: Boolean(options.clearBackup),
           fvttVersion,
           effectProfile,
+          iconOptions,
           imageAssets,
         });
 
@@ -201,6 +214,7 @@ program
           enableAiNormalize: Boolean(options.enableAiNormalize),
           effectProfile: effectProfileOption ? effectProfile : fvttVersion === '14' ? 'core' : 'modded-v12',
           fvttVersion,
+          iconOptions,
           imageAssets,
         });
 
@@ -249,6 +263,7 @@ program
           dryRun: Boolean(options.dryRun),
           fvttVersion,
           effectProfile,
+          iconOptions,
         });
 
         console.log(`Ingested items from: ${result.ingestion.sourcePath}`);
@@ -308,6 +323,7 @@ program
         outputPath: output,
         fvttVersion,
         effectProfile,
+        iconOptions,
       });
       for (const diagnostic of result.diagnostics) {
         const writer = diagnostic.severity === 'error' ? console.error : console.warn;

@@ -132,6 +132,34 @@ describe("ObsidianSyncWorkflow", () => {
 		expect(backupFiles.length).toBeGreaterThan(0);
 	});
 
+	it("removes stale icon review artifacts when v14 safe mode is turned off", async () => {
+		const safe = await workflow.sync({
+			vaultPath,
+			fvttVersion: "14",
+			iconOptions: { mode: "safe" },
+		});
+		const sidecarPath = join(vaultPath, "output", "test-npc.icon-review.json");
+		const aggregatePath = join(vaultPath, "output", "icon-review.json");
+
+		expect(safe.processed).toBe(1);
+		expect(existsSync(sidecarPath)).toBe(true);
+		expect(existsSync(aggregatePath)).toBe(true);
+
+		const off = await workflow.sync({
+			vaultPath,
+			fvttVersion: "14",
+			iconOptions: { mode: "off" },
+		});
+
+		expect(off.processed).toBe(1);
+		expect(existsSync(sidecarPath)).toBe(false);
+		expect(existsSync(aggregatePath)).toBe(false);
+		expect(
+			listFilesRecursive(join(vaultPath, "output_backup"))
+				.filter((path) => path.includes("icon-review")).length,
+		).toBeGreaterThanOrEqual(2);
+	});
+
 	it("clears backup folder when clearBackup is enabled", async () => {
 		await workflow.sync({ vaultPath });
 

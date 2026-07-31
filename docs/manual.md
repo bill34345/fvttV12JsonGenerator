@@ -458,6 +458,37 @@ bun run src/index.ts "path/to/bestiary.md" -o "output/dragon.json"
 | 近战武器攻击 | Melee Weapon Attack |
 | 远程武器攻击 | Ranged Weapon Attack |
 
+## Foundry v14 Item artwork
+
+Name-driven artwork is opt-in and restricted to the locked Foundry `14.364` /
+dnd5e `5.3.3` target:
+
+```bash
+bun run src/index.ts "obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md" \
+  --output "obsidian/dnd数据转fvttjson/output/nightgaunt__夜魇.json" \
+  --fvtt-version 14 \
+  --effect-profile core \
+  --icon-mode safe
+```
+
+The resolver uses only catalogued Foundry core and dnd5e artwork. It preserves
+known existing artwork, prefers exact Compendium names, requires both lexical
+and structured evidence for non-exact semantic matches, and otherwise uses the
+dnd5e type default. Its decision is written to `*.icon-review.json`; fallback
+entries are audit data and do not turn an otherwise accepted document into
+`needs_review`.
+
+Use `--icon-overrides <json-path>` for a version-locked external override file.
+The browser cannot submit a filesystem override path; Web deployment may set
+`FVTT_V14_ICON_OVERRIDES` on the server. `--icon-mode safe` fails closed for
+v12/v13.
+
+Render a local review gallery without copying Foundry artwork:
+
+```bash
+bun run review:icons:v14 --report "path/to/actor.icon-review.json" --output ".local/icon-review/gallery.html"
+```
+
 ## Item Text Workflows
 
 Item split only writes normalized item Markdown to `vault/middle/items`:

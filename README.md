@@ -57,6 +57,30 @@ bun run src/index.ts "templates/npc-example.md" `
 
 dnd5e 4.3.9 Item 不再输出 legacy `system.activation` 或 `uses.value/uses.per`。迁移细节见 [`docs/migrations/2026-07-30-dnd5e-4.3.9-generation-schema.md`](docs/migrations/2026-07-30-dnd5e-4.3.9-generation-schema.md)。
 
+## v14 名称驱动图标
+
+v14 可以显式启用安全的名称驱动 Item 图标解析：
+
+```powershell
+bun run src/index.ts "templates/npc-example.md" `
+  -o "obsidian/dnd数据转fvttjson/output/example-v14.json" `
+  --fvtt-version 14 `
+  --effect-profile core `
+  --icon-mode safe
+```
+
+`safe` 只使用锁定的 Foundry `14.364` 核心图标和 dnd5e `5.3.3` 图标。解析顺序为外部 override、已有有效图标、精确 Compendium 名称、带来源结构证据的高置信语义匹配、dnd5e 类型默认图标；低置信候选不会强行采用。生成结果旁会写入 `*.icon-review.json`，合集和 Vault Sync 会生成聚合 `icon-review.json`。
+
+可用 `--icon-overrides <path>` 指定独立 override 文件；Web 服务器只从 `FVTT_V14_ICON_OVERRIDES` 读取该服务器端路径。v12/v13 不接受 `safe`。
+
+本地人工审阅：
+
+```powershell
+bun run review:icons:v14 `
+  --report "obsidian/dnd数据转fvttjson/output/example-v14.icon-review.json" `
+  --output ".local/icon-review/example-v14.html"
+```
+
 ## Obsidian 工作流
 
 默认数据路径：

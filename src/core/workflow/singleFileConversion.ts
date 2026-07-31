@@ -18,6 +18,12 @@ import type {
 import { getFoundryTarget } from '../foundryTarget';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
+import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
+import {
+  iconReviewPathForOutput,
+  mergeIconReviewReports,
+  writeIconReviewReport,
+} from '../icons/report';
 
 export type { FvttTargetVersion } from '../foundryTarget';
 export type GeneratedDocumentKind = 'actor' | 'item';
@@ -29,6 +35,8 @@ export interface ConvertMarkdownContentOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   translationService?: ActorGeneratorOptions['translationService'];
+  iconOptions?: IconWorkflowOptions;
+  writeIconReviewReport?: boolean;
 }
 
 export interface ConvertMarkdownPathOptions {
@@ -38,6 +46,8 @@ export interface ConvertMarkdownPathOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   translationService?: ActorGeneratorOptions['translationService'];
+  iconOptions?: IconWorkflowOptions;
+  writeIconReviewReport?: boolean;
 }
 
 export interface ConversionResult {
@@ -54,6 +64,8 @@ export interface ConversionResult {
   verification: GenerationVerification;
   actorVerification: ActorVerificationSummary | null;
   rawJson: unknown;
+  iconReview?: IconReviewReport | null;
+  iconReviewPath?: string;
 }
 
 export const DEFAULT_VAULT_PATH = 'obsidian/dnd数据转fvttjson';
@@ -74,6 +86,8 @@ export async function convertMarkdownPathToOutput(
     fvttVersion: options.fvttVersion,
     effectProfile: options.effectProfile,
     translationService: options.translationService,
+    iconOptions: options.iconOptions,
+    writeIconReviewReport: options.writeIconReviewReport,
   });
 }
 
@@ -87,7 +101,11 @@ export async function convertMarkdownContentToJson(
   if (detectItemRoute(options.content)) {
     const parser = new ItemParser();
     const parsed = parser.parse(options.content);
-    const artifacts = await generateItemArtifacts(parsed, { fvttVersion, effectProfile });
+    const artifacts = await generateItemArtifacts(parsed, {
+      fvttVersion,
+      effectProfile,
+      iconOptions: options.iconOptions,
+    });
     const status = combineStatuses(artifacts.map((artifact) => artifact.verification.status));
     const diagnostics = artifacts.flatMap((artifact) => artifact.diagnostics);
     const verification: GenerationVerification = {
@@ -100,6 +118,10 @@ export async function convertMarkdownContentToJson(
     if (status === 'accepted') {
       writeItemArtifactsIfRequested(requestedOutputPath, artifacts);
     }
+    const iconReview = mergeIconReviewReports(artifacts.map((artifact) => artifact.iconReview));
+    const iconReviewPath = status === 'accepted'
+      ? writeReviewIfRequested(requestedOutputPath, iconReview, options.writeIconReviewReport)
+      : undefined;
     const rawJson = artifacts.length === 1 ? artifacts[0]!.item : artifacts.map((artifact) => artifact.item);
 
     return {
@@ -116,6 +138,8 @@ export async function convertMarkdownContentToJson(
       verification,
       actorVerification: null,
       rawJson,
+      iconReview,
+      ...(iconReviewPath ? { iconReviewPath } : {}),
     };
   }
 
@@ -130,6 +154,7 @@ export async function convertMarkdownContentToJson(
     fvttVersion,
     effectProfile,
     translationService: options.translationService,
+    iconOptions: options.iconOptions,
   });
   const actor = generated.actor;
   const legacyWarnings = new ActorValidator().validate(parsed, actor);
@@ -157,6 +182,9 @@ export async function convertMarkdownContentToJson(
   if (status === 'accepted' || reviewableBehaviorOutput) {
     writeJsonIfRequested(requestedOutputPath, actor);
   }
+  const iconReviewPath = status === 'accepted' || reviewableBehaviorOutput
+    ? writeReviewIfRequested(requestedOutputPath, generated.iconReview, options.writeIconReviewReport)
+    : undefined;
   const actorVerification = buildActorVerificationSummaryFromValues({
     source: options.content,
     actor,
@@ -178,6 +206,8 @@ export async function convertMarkdownContentToJson(
     verification,
     actorVerification,
     rawJson: actor,
+    iconReview: generated.iconReview,
+    ...(iconReviewPath ? { iconReviewPath } : {}),
   };
 }
 
@@ -224,6 +254,17 @@ function writeItemArtifactsIfRequested(
   for (const artifact of artifacts) {
     writeJsonIfRequested(join(outputPath, artifact.fileName), artifact.item);
   }
+}
+
+function writeReviewIfRequested(
+  outputPath: string | undefined,
+  report: IconReviewReport | null,
+  enabled: boolean | undefined,
+): string | undefined {
+  if (!outputPath || !report || enabled === false) return undefined;
+  const reportPath = iconReviewPathForOutput(outputPath);
+  writeIconReviewReport(reportPath, report);
+  return reportPath;
 }
 
 function combineStatuses(

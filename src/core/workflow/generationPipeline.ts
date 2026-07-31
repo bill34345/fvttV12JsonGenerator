@@ -11,6 +11,8 @@ import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type { ParserRoute } from '../parser/types';
+import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
+import { createIconResolutionSession } from '../icons/workflow';
 
 export interface ActorGenerationPipelineOptions {
   parsed: ParsedNPC;
@@ -20,6 +22,7 @@ export interface ActorGenerationPipelineOptions {
   fvttVersion: FvttTargetVersion;
   effectProfile: EffectProfile;
   translationService?: ActorGeneratorOptions['translationService'];
+  iconOptions?: IconWorkflowOptions;
 }
 
 export interface ActorGenerationArtifact {
@@ -27,6 +30,7 @@ export interface ActorGenerationArtifact {
   canonical: CanonicalActorDocument;
   verification: GenerationVerification;
   diagnostics: GenerationDiagnostic[];
+  iconReview: IconReviewReport | null;
 }
 
 export async function generateActorArtifact(
@@ -37,11 +41,13 @@ export async function generateActorArtifact(
     sourceText: options.sourceText,
   });
   const projector = getGenerationProjector(options.fvttVersion);
+  const iconSession = createIconResolutionSession(options.fvttVersion, options.iconOptions);
   const actor = await projector.project(canonical, {
     targetVersion: options.fvttVersion,
     effectProfile: options.effectProfile,
     route: options.route,
     translationService: options.translationService,
+    iconResolver: iconSession.resolver,
   });
   const verification = verifyGeneratedDocument({
     canonical,
@@ -54,5 +60,6 @@ export async function generateActorArtifact(
     canonical,
     verification,
     diagnostics: verification.diagnostics,
+    iconReview: iconSession.report(),
   };
 }

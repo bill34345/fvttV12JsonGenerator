@@ -182,7 +182,7 @@ describe('actorVerification', () => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
       actor: buildActorWithAcEffect({
-        coreVersion: '14.361',
+        coreVersion: '14.364',
         key: 'system.attributes.ac.formula',
         value: '4',
       }),
@@ -197,7 +197,7 @@ describe('actorVerification', () => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
       actor: buildActorWithAcEffect({
-        coreVersion: '14.361',
+        coreVersion: '14.364',
         key: 'system.attributes.ac.bonus',
         value: '2',
       }),
@@ -216,7 +216,7 @@ describe('actorVerification', () => {
 
   it.each([
     ['12.331', 'system.attributes.ac.bonus'],
-    ['14.361', 'system.attributes.ac.formula'],
+    ['14.364', 'system.attributes.ac.formula'],
   ])('accepts a matching source-derived bonus AC effect for Foundry %s', (coreVersion, key) => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',

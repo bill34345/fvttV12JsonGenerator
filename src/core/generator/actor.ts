@@ -108,6 +108,7 @@ import {
 import { createStableDocumentId } from '../utils/stable-id';
 import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
+import type { V14IconResolver } from '../icons/resolver';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -116,6 +117,7 @@ export interface ActorGeneratorOptions {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   resources?: GenerationResources;
+  iconResolver?: V14IconResolver;
 }
 
 interface GenerateOptions {
@@ -238,12 +240,14 @@ export class ActorGenerator {
   private effectProfile: EffectProfile;
   private route: ParserRoute = 'chinese';
   private effectProfileApplier = new EffectProfileApplier();
+  private iconResolver?: V14IconResolver;
 
   constructor(options: ActorGeneratorOptions = {}) {
     this.translationService = options.translationService ?? undefined;
     this.fvttVersion = options.fvttVersion ?? '12';
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
+    this.iconResolver = options.iconResolver;
     assertEffectProfileForTarget(this.fvttVersion, this.effectProfile);
     const resources = resolveGenerationResources(options.resources);
     this.goldenMaster = loadOptionalGoldenMaster(resources);
@@ -552,6 +556,7 @@ export class ActorGenerator {
 
     this.applyTokenSize(actor);
     applyActorTargetMetadata(actor, this.fvttVersion);
+    this.iconResolver?.resolveActor(actor);
     assertPortableActorHasNoTargetWorldIdentifiers(actor);
 
     return actor;

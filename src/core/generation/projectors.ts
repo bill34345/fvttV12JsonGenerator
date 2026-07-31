@@ -21,12 +21,17 @@ class Dnd5e439Projector implements GenerationProjector {
         fvttVersion: version,
         effectProfile: options.effectProfile,
         translationService: options.translationService,
+        iconResolver: options.iconResolver,
       });
       return options.route
         ? generator.generateForRoute(document.compatibilitySource, options.route)
         : generator.generate(document.compatibilitySource);
     }
-    return new ItemGenerator({ fvttVersion: version, effectProfile: options.effectProfile })
+    return new ItemGenerator({
+      fvttVersion: version,
+      effectProfile: options.effectProfile,
+      iconResolver: options.iconResolver,
+    })
       .generate(document.compatibilitySource);
   }
 
@@ -48,12 +53,17 @@ class Dnd5e533Projector implements GenerationProjector {
         fvttVersion: '14',
         effectProfile: options.effectProfile,
         translationService: options.translationService,
+        iconResolver: options.iconResolver,
       });
       return options.route
         ? generator.generateForRoute(document.compatibilitySource, options.route)
         : generator.generate(document.compatibilitySource);
     }
-    return new ItemGenerator({ fvttVersion: '14', effectProfile: options.effectProfile })
+    return new ItemGenerator({
+      fvttVersion: '14',
+      effectProfile: options.effectProfile,
+      iconResolver: options.iconResolver,
+    })
       .generate(document.compatibilitySource);
   }
 }

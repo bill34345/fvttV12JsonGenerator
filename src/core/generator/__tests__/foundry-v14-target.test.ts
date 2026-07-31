@@ -30,7 +30,7 @@ describe('Foundry v14 generator target', () => {
 
     const actor = new ActorGenerator({ fvttVersion: '14' }).generate(input);
 
-    expect(actor._stats.coreVersion).toBe('14.361');
+    expect(actor._stats.coreVersion).toBe('14.364');
     expect(actor._stats.systemVersion).toBe('5.3.3');
     expect(actor.system.resources.legact).toEqual(expect.objectContaining({ max: 3, spent: 1 }));
     expect(actor.system.resources.legact.value).toBeUndefined();
@@ -97,7 +97,7 @@ describe('Foundry v14 generator target', () => {
       description: 'Armor generated for v14.',
     });
 
-    expect(item._stats?.coreVersion).toBe('14.361');
+    expect(item._stats?.coreVersion).toBe('14.364');
     expect(item._stats?.systemVersion).toBe('5.3.3');
     expect(item.system.attunement).toBe('required');
     expect(item.system.attuned).toBeUndefined();
@@ -167,7 +167,7 @@ describe('Foundry v14 generator target', () => {
       flags: { fvttJsonGenerator: { effectHints: {} } },
       _stats: {
         duplicateSource: null,
-        coreVersion: '14.361',
+        coreVersion: '14.364',
         systemId: 'dnd5e',
         systemVersion: '5.3.3',
         createdTime: 0,
@@ -208,7 +208,7 @@ describe('Foundry v14 generator target', () => {
       key: 'system.attributes.ac.formula',
       value: '+2',
     }));
-    expect(effect?._stats.coreVersion).toBe('14.361');
+    expect(effect?._stats.coreVersion).toBe('14.364');
     expect(effect?._stats.systemVersion).toBe('5.3.3');
   });
 
@@ -251,7 +251,7 @@ describe('Foundry v14 generator target', () => {
     const activityId = item ? Object.keys(item.system.activities)[0] : undefined;
     const activity = activityId ? item?.system.activities[activityId] : undefined;
 
-    expect(item?._stats.coreVersion).toBe('14.361');
+    expect(item?._stats.coreVersion).toBe('14.364');
     expect(item?._stats.systemVersion).toBe('5.3.3');
     expect(item?.system.activation).toBeUndefined();
     expect(activity.activation).toEqual(expect.objectContaining({ type: 'action', value: null }));

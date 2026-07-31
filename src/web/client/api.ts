@@ -1,5 +1,6 @@
 export type EffectProfile = 'core' | 'modded-v12' | 'modded-v14';
 export type FvttVersion = '12' | '13' | '14';
+export type IconMode = 'off' | 'safe';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'needs_review' | 'partial' | 'failed';
 
 export type JobType =
@@ -49,6 +50,7 @@ export interface DefaultsResponse {
   outputDir: string;
   effectProfile: EffectProfile;
   fvttVersion: FvttVersion;
+  iconMode: IconMode;
   sampleSourcePath: string;
   pathModeEnabled: boolean;
 }
@@ -94,6 +96,8 @@ export interface ConversionResult {
   };
   actorVerification: VerificationSummary | null;
   rawJson: unknown;
+  iconReview?: unknown;
+  iconReviewPath?: string;
   downloadUrl: string;
   jobId: string;
 }
@@ -167,6 +171,7 @@ export async function convertSingle(input: {
   content: string;
   fvttVersion: FvttVersion;
   effectProfile: EffectProfile;
+  iconMode: IconMode;
 }): Promise<ConversionResult> {
   return request<ConversionResult>('/api/convert/single', input);
 }

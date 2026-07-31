@@ -5,6 +5,7 @@ import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
 import type { CanonicalMonster, EvidenceRef } from '../intake/types';
 import type { ParsedItem, ItemType } from '../models/item';
 import type { ParserRoute } from '../parser/types';
+import type { V14IconResolver } from '../icons/resolver';
 import type {
   ActorBehaviorExecutionMode,
   ActorBehaviorExpressionCoverage,
@@ -108,6 +109,7 @@ export interface GenerationProjectionOptions {
   targetVersion: FvttTargetVersion;
   route?: ParserRoute;
   translationService?: ActorGeneratorOptions['translationService'];
+  iconResolver?: V14IconResolver;
 }
 
 export interface GenerationProjector {

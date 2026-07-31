@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { EffectProfile } from '../generator/effectProfileApplier';
+import type { IconWorkflowOptions } from '../icons/types';
+import { mergeIconReviewReports, writeIconReviewReport } from '../icons/report';
 import { parseCreatureBlock, splitCollection } from '../ingest/plaintext';
 import { splitItemCollection, type ItemBlock } from '../ingest/items';
 import {
@@ -50,6 +52,7 @@ export interface CollectionConversionOptions {
   outputDir: string;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
+  iconOptions?: IconWorkflowOptions;
 }
 
 export async function convertMonsterCollectionToJson(
@@ -76,6 +79,8 @@ export async function convertMonsterCollectionToJson(
         outputPath: outputFile.path,
         fvttVersion: options.fvttVersion,
         effectProfile: options.effectProfile,
+        iconOptions: options.iconOptions,
+        writeIconReviewReport: false,
       });
       if (result.status !== 'accepted') {
         items.push({
@@ -107,7 +112,7 @@ export async function convertMonsterCollectionToJson(
     }
   }
 
-  return summarizeCollection('monster-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core');
+  return summarizeCollection('monster-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core', outputDir);
 }
 
 export async function convertItemCollectionToJson(
@@ -134,6 +139,8 @@ export async function convertItemCollectionToJson(
         outputPath: outputFile.path,
         fvttVersion: options.fvttVersion,
         effectProfile: options.effectProfile,
+        iconOptions: options.iconOptions,
+        writeIconReviewReport: false,
       });
       if (result.status !== 'accepted') {
         items.push({
@@ -165,7 +172,7 @@ export async function convertItemCollectionToJson(
     }
   }
 
-  return summarizeCollection('item-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core');
+  return summarizeCollection('item-collection', items, options.fvttVersion ?? '12', options.effectProfile ?? 'core', outputDir);
 }
 
 export function writeTextArtifact(
@@ -186,11 +193,26 @@ function summarizeCollection(
   items: CollectionItemResult[],
   fvttVersion: FvttTargetVersion,
   effectProfile: EffectProfile,
+  outputDir: string,
 ): CollectionConversionResult {
   const succeededItems = items.filter((item) => item.status === 'succeeded');
   const failedItems = items.filter((item) => item.status === 'failed');
   const warnings = items.flatMap((item) => item.warnings);
   const outputFiles = succeededItems.flatMap((item) => item.outputFile ? [item.outputFile] : []);
+  const iconReview = mergeIconReviewReports(
+    succeededItems.map((item) => item.result?.iconReview),
+  );
+  if (iconReview) {
+    const path = join(outputDir, 'icon-review.json');
+    writeIconReviewReport(path, iconReview);
+    outputFiles.push({
+      id: 'icon-review.json',
+      fileName: 'icon-review.json',
+      path,
+      contentType: 'application/json; charset=utf-8',
+      label: 'v14 图标审阅报告',
+    });
+  }
   return {
     kind,
     status: failedItems.length === 0 ? 'succeeded' : succeededItems.length > 0 ? 'partial' : 'failed',

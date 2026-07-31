@@ -32,6 +32,8 @@
     "build:chat-memory-guard": "bun run scripts/buildChatMemoryGuard.ts",
     "install:chat-memory-guard": "bun run scripts/buildChatMemoryGuard.ts --install",
     "test:chat-memory-guard": "bun test src/foundry/chat-memory-guard --max-concurrency 4",
+    "build:icon-catalog:v14": "bun run scripts/buildV14IconCatalog.ts",
+    "review:icons:v14": "bun run src/tools/iconReviewGallery.ts",
     "references": "bun run src/tools/referenceCache.ts"
   },
   "devDependencies": {

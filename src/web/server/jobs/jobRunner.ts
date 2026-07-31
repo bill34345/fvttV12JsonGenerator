@@ -26,6 +26,7 @@ import { loadMonsterIntakeConfig } from '../../../core/intake/config';
 import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from '../../../core/intake/provider';
 import { resumeMonsterIntake, runMonsterIntake } from '../../../core/intake/orchestrator';
 import type { IntakeDecision, MonsterIntakeAiProvider } from '../../../core/intake/types';
+import { parseIconMode } from '../../../core/icons/workflow';
 import {
   addJobFile,
   appendJobLog,
@@ -125,6 +126,7 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
     outputPath,
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
   });
 
   const file = result.status === 'accepted'
@@ -135,6 +137,14 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
         label: result.name || basename(outputPath),
       })
     : undefined;
+  if (result.status === 'accepted' && result.iconReviewPath) {
+    addJobFile(job.id, {
+      path: result.iconReviewPath,
+      fileName: basename(result.iconReviewPath),
+      contentType: 'application/json; charset=utf-8',
+      label: 'v14 图标审阅报告',
+    });
+  }
   finishJob(job.id, result.status === 'accepted' ? 'succeeded' : result.status, {
     ...summaryForConversion(result),
     downloadUrl: file?.downloadUrl ?? '',
@@ -155,6 +165,7 @@ async function runMonsterCollection(job: WebJob, body: WebJobRequest): Promise<v
     outputDir: jobOutputDir(job.id),
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
   });
   for (const file of result.outputFiles) {
     addJobFile(job.id, file);
@@ -174,6 +185,7 @@ async function runItemCollection(job: WebJob, body: WebJobRequest): Promise<void
     outputDir: jobOutputDir(job.id),
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
   });
   for (const file of result.outputFiles) {
     addJobFile(job.id, file);
@@ -213,6 +225,7 @@ async function runPlaintextActorIngest(job: WebJob, body: WebJobRequest): Promis
     enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
     imageAssets: imageSetup.imageAssets,
   });
   if (result.markdown.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
@@ -279,6 +292,7 @@ async function runVaultSync(job: WebJob, body: WebJobRequest): Promise<void> {
     clearBackup: optionBoolean(body.options, 'clearBackup'),
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
     imageAssets: imageSetup.imageAssets,
   });
   registerFilesUnder(job.id, result.outputDir, ['.json', '.webp', '.png', '.jpg', '.jpeg']);
@@ -388,6 +402,7 @@ async function runAiMonsterIntake(
     vaultPath: join(jobDir(job.id), 'vault'),
     fvttVersion,
     effectProfile: optionEffectProfile(body.options, fvttVersion),
+    iconOptions: optionIconOptions(body.options),
   }, provider);
   writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
   registerIntakeFiles(job.id, result);
@@ -553,6 +568,15 @@ function optionEffectProfile(
   return profile;
 }
 
+function optionIconOptions(options: Record<string, unknown> | undefined) {
+  const mode = parseIconMode(options?.iconMode);
+  const overridePath = Bun.env.FVTT_V14_ICON_OVERRIDES?.trim();
+  return {
+    mode,
+    ...(overridePath ? { overridePath } : {}),
+  };
+}
+
 function optionBoolean(options: Record<string, unknown> | undefined, key: string): boolean {
   return options?.[key] === true;
 }
@@ -599,6 +623,8 @@ function summaryForConversion(result: ConversionResult): Record<string, unknown>
     verification: result.verification,
     actorVerification: result.actorVerification,
     rawJson: result.rawJson,
+    iconReview: result.iconReview ?? null,
+    iconReviewPath: result.iconReviewPath,
   };
 }
 
