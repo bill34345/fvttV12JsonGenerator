@@ -1104,10 +1104,74 @@ owner 和迁移约束。
   `MON-001` 与 `WORLD-ASSET-001` 状态不变；本阶段完成的是“已识别消费者可从外置根解析同一资源”的代码和
   fixture 验收，不是 78.5 GiB 实际迁移或真实运行验收。
 
+### 2026-08-01：阶段 5C.4 真实 Foundry Lab 外置迁移与短时运行验收
+
+- 用户明确授权选择/创建外置目标、复制约 78.5 GiB 的真实 Foundry Lab、切换配置、移动或删除旧目录、短时
+  启动真实本地 Foundry，并允许严格只读的生产连接；用户此前规定的四小时或超过 30 分钟 Chrome/Foundry
+  持续监测仍禁止由代理执行。本轮因此没有启动任何长期监测；
+- 只读容量检查在 C–I 盘中选择 NTFS 的 `F:\FoundryLab\foundry-v14`，创建独立控制目录
+  `F:\FoundryLab\migration-control\2026-08-01-stage5c4`。F 盘迁移前约有 341.6 GiB 可用；目标不在仓库、
+  不是磁盘根、不是链接/联接路径，与 I 盘源目录不同卷；
+- 迁移前重新运行资产清单。源报告
+  `.local/foundry-v14/inventory/asset-inventory/2026-07-31T17-47-59-018Z/` 完整扫描 180,768 个文件、
+  85,895,304,914 bytes、21,258 个精确重复组和 0 个问题；相较上一快照只有 inventory provenance 因新增
+  报告增长，全部业务/运行数据根以及单独登记的 `cor-cotn.7z` 都未漂移。冻结计划
+  `.local/foundry-v14/inventory/migration-plans/2026-07-31T17-54-12-088Z/` 将 lab 内 19 个根、180,767 个
+  文件、84,246,761,939 bytes 分四批复制；仓库 `.local/cor-cotn.7z` 仍是单独根，不属于本次目录退役目标；
+- copy-first 执行按冻结 manifest 逐文件复制，拒绝链接并为每个根重算 file count、bytes 与 SHA-256。
+  第一次在 `foundry-evidence` 遇到父根清单刻意排除两个独立登记嵌套备份根而物理遍历多 200 个文件；执行
+  安全停止，未切换或删除源。验证器随后只排除已独立完成验证的嵌套根，并增加原子进度续跑；最终四批、19 根
+  全部完成。目标端独立全量报告位于
+  `F:\FoundryLab\foundry-v14\inventory\asset-inventory\2026-07-31T18-55-41-934Z\`：两端 19 个计划根的
+  file count、bytes、root SHA-256 全部逐项相同，complete 均为 true，0 个 root issue；
+- 恢复抽样使用真实生产世界备份
+  `backups/production/fvtt-production/8080/cor-cotn`，复制到控制目录而不接触 active worlds。Robocopy 曾对
+  临时占用文件重试，但最终返回成功；源与恢复样本均为 2,505 个文件、1,795,088,065 bytes，逐文件路径、
+  长度和 SHA-256 清单完全相同，manifest SHA-256 均为
+  `748614368b2286fe9bd366c4638e2ef563d9f969264ee6da3c70e51b4ef1a5d4`；报告为
+  `F:\FoundryLab\migration-control\2026-08-01-stage5c4\recovery-sample-report.json`，样本继续保留；
+- 常规资产清单为防泄密故意排除了两个 profile 的 `Config` 和 lab `credentials`。删除旧根前另行迁移
+  core-test 配置 2 文件 / 1,463 bytes、server-mirror 配置 2 文件 / 1,480 bytes 和 credentials 1 文件 /
+  13 bytes，内容逐文件 SHA-256 相同。跨卷无法保留从 I 盘父目录继承的 ACL 标记；逐项规则复核确认 owner
+  相同，F 盘目标没有新增任何访问规则，只少了源盘继承的额外 SID 规则，因此权限没有放宽；
+- Windows 用户级 `FVTT_OPS_LAB_ROOT`、`FVTT_OPS_EVIDENCE_ROOT`、`FVTT_OPS_BACKUP_ROOT` 已持久化为 F 盘
+  lab/evidence/backups。新进程解析到三个外置根，并确认应用入口和两个 profile Config 都存在；
+- 第一次真实短启由 F 盘 Node 24.17.0 运行 F 盘 Foundry Virtual Tabletop 14 Build 364 和 F 盘 core-test
+  data path；启动器与独立检查均确认 PID 所有权、仅 `127.0.0.1:30000` 监听和 `/license` HTTP 302，随后
+  正常停止并确认端口释放、PID 文件删除。旧根最初因 Explorer 持有
+  `evidence/cor-cotn-world-audit-20260724` 目录句柄而拒绝改名；通过 AnySearch 确认 Microsoft 官方
+  Sysinternals Handle v5.0，下载 ZIP SHA-256 为
+  `279AAF8ECCB6F79147F4DCC6BA091FB895C4CB8B199A0DD186A4C76BC519D2CD`，可执行文件 Authenticode 签名为
+  Microsoft Corporation。Handle 只读定位到 Explorer，重启 Explorer 释放句柄后，源根成功改名为
+  `.local/foundry-v14.retired-20260801-0349`，原 `.local/foundry-v14` 路径不存在；
+- 在旧路径不存在的状态下第二次真实短启再次通过：进程可执行文件、main.js、preload、dataPath 全部明确位于
+  `F:\FoundryLab\foundry-v14`，只监听 loopback，HTTP 302；随后再次正常停止，端口与 PID 文件清理完成。
+  这证明当前切换没有暗中依赖旧路径；
+- 严格只读生产盘点使用本机现有 `fvtt-production` SSH 别名、tracked 历史计划证明的
+  `E:/Bill/fvtt_v13/data` 和默认 SSH identity 建立连接，线上无写入。服务器返回 234 个模块，而工具固定的
+  验收基线是 249；CLI 因数量不符 fail-closed，没有把结果写成新的合格盘点。生产模块数量减少 15 是独立的
+  线上漂移/基线问题，不能在本地目录迁移中顺手改基线；
+- 永久删除没有伪装为完成：宿主安全策略在执行前拒绝递归 `Remove-Item`，没有发生部分删除，也没有改用其他
+  API 绕过。当前旧根已切换并移动到可恢复的
+  `.local/foundry-v14.retired-20260801-0349`，但仍占用 I 盘空间；F 盘完整目标和恢复样本均保留。只有永久删除
+  这一项待在重启后由允许受控删除的会话完成；删除前仍须精确核对该 retired 绝对路径和 F 盘验收报告；
+- 本次只迁移忽略的运行数据与追加文档台账，不改变 Actor/item 语义、support matrix、module ID 或 finding
+  状态。`WORLD-ASSET-001` 仍等待其原有 authenticated Chrome `ready` preflight，`MON-001` 的长时生产验收
+  仍只由用户真实跑团时执行；本轮 migration/runtime success 不能关闭二者。
+
 ## 当前停止点
 
-阶段 5C 的迁移方案、独立 reference cache，以及两批已识别消费者适配已形成可安全暂停的检查点。下一步不再是
-继续盲目改代码，而是需要用户选择具体外置目标盘/目录并授权第一批 copy-first 操作；在此之前不会创建目标或
-复制数据。获得授权后的执行顺序必须是：再次确认源清单未漂移，按计划批次复制，以 file count、bytes 和 root
-SHA-256 逐批对账，做恢复抽样，保留旧路径兼容窗口，再做短时本地 Foundry 验收。切换、移动、删除旧数据、
-生产访问和四小时/超过 30 分钟的长期监测仍是后续独立授权项；长期监测继续只登记给用户真实使用时执行。
+阶段 5C 的代码适配、真实 copy-first 迁移、19 根独立内容对账、敏感配置迁移、恢复抽样、Windows 用户级切换、
+旧路径隔离，以及“旧路径不存在”状态下的第二次真实 Foundry 14.364 短启均已完成。当前正式根为
+`F:\FoundryLab\foundry-v14`；旧数据仅保留在
+`I:\OpenCode\fvttV12JsonGenerator\.local\foundry-v14.retired-20260801-0349`，原默认路径不存在。
+
+下一次必须先处理两个明确而互不混淆的事项：
+
+1. 在宿主允许受控递归删除后，重新检查 retired 绝对路径、F 盘 complete 报告、恢复样本与 Foundry 停服状态，
+   再永久删除 retired 目录并确认 I 盘空间释放；当前会话不得绕过宿主安全策略；
+2. 单独调查生产只读盘点的 234 vs 249 模块基线差异，不能简单把 expected count 改成 234，也不能把本地迁移
+   成功当作生产清单验收。
+
+永久删除完成后，阶段 5 可继续进行 reference cache 的实际外置（若用户需要）或进入阶段 6 文档/历史工具/
+branch-worktree 治理。四小时或超过 30 分钟的 Chrome/Foundry/Session Monitor 监测仍只登记给用户真实使用时运行。
