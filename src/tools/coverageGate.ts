@@ -186,7 +186,11 @@ function coverageGroup(source: string): string {
     normalized.startsWith('packages/workflows/')
     || normalized.startsWith('src/core/workflow/')
   ) return 'workflow';
-  if (normalized.startsWith('src/core/parser/') || normalized.startsWith('src/core/ingest/')) {
+  if (
+    normalized.startsWith('src/core/parser/')
+    || normalized.startsWith('src/core/ingest/')
+    || normalized.startsWith('packages/ingest-plaintext/')
+  ) {
     return 'parser-ingest';
   }
   if (

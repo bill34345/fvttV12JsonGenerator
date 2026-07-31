@@ -7,6 +7,7 @@
       "dependencies": {
         "@fvtt-json-generator/contracts": "workspace:*",
         "@fvtt-json-generator/generation": "workspace:*",
+        "@fvtt-json-generator/ingest-plaintext": "workspace:*",
         "@fvtt-json-generator/intake-ai": "workspace:*",
         "@fvtt-json-generator/models": "workspace:*",
         "@fvtt-json-generator/parser": "workspace:*",
@@ -68,6 +69,14 @@
         "@fvtt-json-generator/models": "workspace:*",
         "@fvtt-json-generator/parser": "workspace:*",
         "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+      },
+    },
+    "packages/ingest-plaintext": {
+      "name": "@fvtt-json-generator/ingest-plaintext",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/parser": "workspace:*",
+        "js-yaml": "^4.1.1",
       },
     },
     "packages/intake-ai": {
@@ -188,6 +197,8 @@
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
 
     "@fvtt-json-generator/generation": ["@fvtt-json-generator/generation@workspace:packages/generation"],
+
+    "@fvtt-json-generator/ingest-plaintext": ["@fvtt-json-generator/ingest-plaintext@workspace:packages/ingest-plaintext"],
 
     "@fvtt-json-generator/intake-ai": ["@fvtt-json-generator/intake-ai@workspace:packages/intake-ai"],
 

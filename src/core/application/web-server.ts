@@ -35,7 +35,7 @@ export type { GoddessFantasyCrawlMode } from '../crawl/types';
 export { parseIconMode } from '../icons/workflow';
 export type { IconMode } from '../icons/types';
 export { ItemsIngestionWorkflow } from '../ingest/items';
-export { PlainTextIngestionWorkflow } from '../ingest/plaintext';
+export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 export {
   loadMonsterIntakeConfig,
   monsterIntakeConfigured,

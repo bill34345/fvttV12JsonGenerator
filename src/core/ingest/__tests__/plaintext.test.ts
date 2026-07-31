@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { ActorGenerator } from '../../generator/actor';
 import { ParserFactory } from '../../parser/router';
 import {
+  OpenAICompatibleIngestNormalizer,
   PlainTextIngestionWorkflow,
   parseCreatureBlock,
   splitCollection,
@@ -162,6 +163,47 @@ describe('PlainTextIngestionWorkflow', () => {
 
     expect(result.files).toHaveLength(7);
     expect(result.files[0]?.fileName).toBe('scuttling-serpentmaw__蛇口蛮蟹.md');
+  });
+
+  it('binds the package AI normalization port to the repository translation client', async () => {
+    let systemPrompt = '';
+    let userPrompt = '';
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const body = await request.json() as {
+          messages?: Array<{ role?: string; content?: string }>;
+        };
+        systemPrompt = body.messages?.[0]?.content ?? '';
+        userPrompt = body.messages?.[1]?.content ?? '';
+        return Response.json({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                frontmatter: '---\n名称: 测试生物 (Test Creature)\n类型: npc\n---',
+                slug: 'test-creature',
+              }),
+            },
+          }],
+        });
+      },
+    });
+
+    try {
+      const normalizer = new OpenAICompatibleIngestNormalizer({
+        apiKey: 'test-key',
+        baseUrl: server.url.toString(),
+        model: 'test-model',
+        timeoutMs: 5_000,
+      });
+      const normalized = await normalizer.normalizeBlock('# **测试生物 (Test Creature)**');
+
+      expect(normalized).toContain('名称: 测试生物 (Test Creature)');
+      expect(systemPrompt).toContain('D&D 5e monster statblock-to-YAML converter');
+      expect(userPrompt).toContain('# **测试生物 (Test Creature)**');
+    } finally {
+      server.stop(true);
+    }
   });
 
   it('bridges generated markdown into parsed actions and actor items', async () => {

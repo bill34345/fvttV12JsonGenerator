@@ -59,6 +59,15 @@ module.exports = {
       },
     },
     {
+      name: 'ingest-plaintext-package-is-independent',
+      severity: 'error',
+      comment: 'Legacy plaintext parsing and auditing depend only on parser normalization and injected AI ports, never repository adapters or delivery layers.',
+      from: { path: '^packages/ingest-plaintext/src/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!ingest-plaintext/|parser/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
@@ -169,6 +178,17 @@ module.exports = {
       },
       to: {
         path: '^src/core/intake/(config|orchestrator|provider|renderer|types|validator|verifier)[.]ts$',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-plaintext-adapters',
+      severity: 'error',
+      comment: 'Production code imports the plaintext package or its repository composition adapter; old source paths remain compatibility-only.',
+      from: {
+        pathNot: '(^src/core/ingest/(plaintext|plaintextAudit|plaintextAdapter)[.]ts$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/ingest/(plaintext|plaintextAudit)[.]ts$',
       },
     },
     {

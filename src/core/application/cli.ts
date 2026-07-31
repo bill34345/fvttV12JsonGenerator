@@ -17,7 +17,7 @@ export {
 export { buildImageAssetOptionsFromCli } from '../assets/imageAssetOptions';
 export { parseIconMode } from '../icons/workflow';
 export { ItemsIngestionWorkflow } from '../ingest/items';
-export { PlainTextIngestionWorkflow } from '../ingest/plaintext';
+export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 export { loadMonsterIntakeConfig } from '@fvtt-json-generator/intake-ai/config';
 export {
   OpenAICompatibleMonsterIntakeProvider,

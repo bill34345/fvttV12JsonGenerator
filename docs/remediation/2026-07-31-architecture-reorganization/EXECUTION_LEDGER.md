@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | `packages/intake-ai` 已独立验收；下一步迁移 `packages/ingest-plaintext` |
+| 3. Bun workspace 物理迁移 | in_progress | `packages/ingest-plaintext` 已独立验收；下一步迁移 `packages/crawl-goddessfantasy` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -569,10 +569,57 @@ owner 和迁移约束。
   - Intake 测试与 fixtures 暂留在旧 `src/core/intake/__tests__` 作为路径兼容资产；生产代码已受
     dependency gate 约束，不允许回到 legacy adapter。测试物理迁移留到兼容路径治理阶段。
 
+### 阶段 3H：`packages/ingest-plaintext`
+
+- 结构：
+  - 将 legacy plaintext 的 split、normalize、parse、Markdown emission 与 audit 迁入
+    `@fvtt-json-generator/ingest-plaintext`；Item ingest 未混入本次提交；
+  - package workflow 默认不读取 repository env，也不依赖 `src/core/translation`；AI normalizer
+    改为 translation factory port；
+  - `src/core/ingest/plaintextAdapter.ts` 作为 repository composition adapter，继续以原有
+    translation config/client 提供“有配置则启用、无配置则规则回退”的历史行为；
+  - collection ingestion adapter 直接使用 package 的纯 split/parse API；旧 plaintext/audit
+    路径只保留兼容入口；
+  - dependency-cruiser 新增 plaintext package 独立性与 legacy adapter 禁止规则；coverage gate
+    将新 package 继续归入 `parser-ingest`，没有通过搬路径规避覆盖率。
+- 机械：
+  - package-local、production、packages、apps 与全仓类型检查通过；frozen install 通过；
+  - dependency-cruiser：2,597 modules / 3,126 dependencies，0 violations；Knip cycles 为 0；
+  - plaintext split/parse/audit、PlainTextActor、Web 与 3 个 acceptance 样本专项：
+    85 tests / 0 failed / 449 expectations；另有 1 个真实本地 HTTP port 接线测试 /
+    3 expectations，确认 package prompt、repository translation client 与响应解析确实串通；
+  - CLI 子进程门禁最终为 12 tests / 0 failed / 57 expectations；第一次整组运行中 Rat Warlock
+    本地假 HTTP 子进程出现一次 20 秒超时，随后的单测、完整 CLI 组与正式全量 CI 均通过，
+    未复现且不在 plaintext 改动路径，因此记录为一次性进程抖动而非隐藏为首次通过；
+  - 完整默认 `ci:verify`：CLI 子进程 12 tests 与 coverage 主组 1,577 tests 均通过，
+    合计 1,589 tests / 0 failed / 7,504 expectations / 156 files；
+  - coverage 统计 251 个 production files：85.70% lines / 88.17% functions；
+    `parser-ingest` 为 95.09% lines / 94.83% functions；anti-overfit 317 sources、hygiene
+    2,048 tracked paths、dnd5e 5.3.3 reference、Web production build 与 offline Actor smoke
+    均通过。
+- 语义：
+  - 项目 CLI 从真实 `月蚀矿腐化生物数据.md` 运行 legacy plaintext actor workflow，
+    检出 7 个 creature，生成 7 份 middle/input Markdown 与 7 份 v14/core Actor JSON；
+  - 7/7 Actor 分别运行 canonical verifier，全部 0 warnings；CLI 报告 7 processed、0 skipped、
+    0 failed、0 warnings，AI normalize 在无配置路径明确为 disabled；
+  - 人工抽查 Slithering Bloodfin 仍为 aberration、AC 16、HP 143、CR 9、盲视 100 尺与
+    9 个来源 Item；Scuttling Serpentmaw 仍为 AC 17、HP 75、CR 5、盲视 60 尺；
+  - Bloodfin v14/core 排除随机 `_id`、时间戳与派生 `origin` 后，与 Stage 3E 已验收 CLI
+    检查点完整 JSON 语义投影相等；
+  - acceptance tests 继续逐项覆盖 Alyxian Aboleth、Scuttling Serpentmaw 与 Slithering
+    Bloodfin 的 actions、reactions、legendary resources、damage/save/effect 与 false-effect
+    边界；PlainTextActor 专项继续覆盖 repeated run、vault promotion 与 actor/token artwork。
+- 已知债：
+  - 该包明确是 legacy compatibility ingress，不升级为推荐的语义 Intake，也不扩大支持声明；
+  - OpenAI-compatible normalizer 的真实外部模型调用未在本阶段执行；只验证了端口接线、
+    配置关闭路径和注入/fallback 行为，外部 provider 质量仍受模型与凭据影响；
+  - plaintext tests/fixtures 暂留旧路径作为兼容资产；生产代码已受 dependency gate 约束。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows/Intake package、`apps/cli` 与 `apps/web` 已形成可回滚稳定检查点。AI Intake
-已通过完整机械与语义验收；下一条执行路径是阶段 3H：迁移 `packages/ingest-plaintext`，保持
-legacy 明示入口、split/parse/normalize、collection adapter、dry-run/fail-closed、图片 metadata
-与 Vault promotion 行为不变。在 plaintext ingest 独立验收前不移动 crawl 或 assets。
+generation/workflows/Intake/plaintext ingest package、`apps/cli` 与 `apps/web` 已形成可回滚稳定
+检查点。plaintext ingest 已通过完整机械与语义验收；下一条执行路径是阶段 3I：迁移
+`packages/crawl-goddessfantasy`，保持 crawl 与主 CLI 解耦、cookie/认证边界、board/topic/print
+抓取、records schema、失败重试、records-to-plaintext 和 crawl fixture 到 Actor 的语义不变。
+在 crawl 独立验收前不移动 assets/icons。

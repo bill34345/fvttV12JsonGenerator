@@ -40,7 +40,7 @@ import { imageAssetProcessorAdapter } from '../assets/adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
 import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
 import { ItemsIngestionWorkflow } from '../ingest/items';
-import { PlainTextIngestionWorkflow } from '../ingest/plaintext';
+import { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 import { iconWorkflowAdapter } from '../icons/adapter';
 import { createDefaultWorkflowTranslationService } from '../translation/defaultService';
 

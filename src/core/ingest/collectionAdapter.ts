@@ -2,7 +2,7 @@ import type { CollectionIngestionPort } from '@fvtt-json-generator/workflows/ext
 import {
   parseCreatureBlock,
   splitCollection,
-} from './plaintext';
+} from '@fvtt-json-generator/ingest-plaintext/plaintext';
 import { splitItemCollection } from './items';
 
 export const collectionIngestionAdapter: CollectionIngestionPort = {

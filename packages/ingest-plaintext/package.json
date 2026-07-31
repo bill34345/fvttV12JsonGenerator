@@ -1,0 +1,18 @@
+{
+  "name": "@fvtt-json-generator/ingest-plaintext",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plaintext": "./src/plaintext.ts",
+    "./audit": "./src/plaintextAudit.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/parser": "workspace:*",
+    "js-yaml": "^4.1.1"
+  }
+}
