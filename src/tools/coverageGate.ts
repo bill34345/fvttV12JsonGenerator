@@ -179,7 +179,10 @@ function isTestSource(source: string): boolean {
 
 function coverageGroup(source: string): string {
   const normalized = source.replaceAll('\\', '/').toLowerCase();
-  if (normalized.startsWith('scripts/foundry-lab/')) return 'foundry-lab';
+  if (
+    normalized.startsWith('scripts/foundry-lab/')
+    || normalized.startsWith('tools/foundry-ops/')
+  ) return 'foundry-lab';
   if (normalized.startsWith('src/web/') || normalized.startsWith('apps/web/')) return 'web';
   if (normalized.startsWith('src/tools/')) return 'tools-gates';
   if (

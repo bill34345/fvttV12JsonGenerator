@@ -6,10 +6,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog": "./src/commandCatalog.ts",
-    "./config": "./src/config.ts"
+    "./config": "./src/config.ts",
+    "./process": "./src/process.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "cli": "bun run src/cli.ts",
+    "lab-cli": "bun run src/lab/cli.ts",
     "test": "bun test src --max-concurrency 4",
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },

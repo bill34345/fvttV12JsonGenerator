@@ -37,7 +37,14 @@ describe('Foundry Ops command catalog', () => {
   it('keeps the old Foundry Lab inventory spelling as a classified compatibility route', () => {
     const route = resolveFoundryOpsRoute(['lab', 'inventory', '--apply']);
     expect(route.command.id).toBe('production.inventory');
-    expect(route.entrypoint).toBe('scripts/foundry-lab/cli.ts');
+    expect(route.entrypoint).toBe('tools/foundry-ops/src/lab/cli.ts');
     expect(route.forwardedArgs).toEqual(['inventory', '--apply']);
+  });
+
+  it('keeps the deferred spell resolver behind a dedicated compatibility entrypoint', () => {
+    const route = resolveFoundryOpsRoute(['lab', 'spell-resolver', 'verify-install']);
+    expect(route.command.id).toBe('lab.spell-resolver');
+    expect(route.entrypoint).toBe('scripts/foundry-lab/spellResolverCli.ts');
+    expect(route.forwardedArgs).toEqual(['verify-install']);
   });
 });

@@ -29,7 +29,7 @@ describe('Foundry Ops CLI authority boundary', () => {
     }, {});
 
     expect(code).toBe(0);
-    expect(calls).toEqual([{ entrypoint: 'scripts/foundry-lab/cli.ts', args: ['bootstrap'] }]);
+    expect(calls).toEqual([{ entrypoint: 'tools/foundry-ops/src/lab/cli.ts', args: ['bootstrap'] }]);
   });
 
   it('refuses an effective production read without a separate authorization flag', async () => {
@@ -63,7 +63,7 @@ describe('Foundry Ops CLI authority boundary', () => {
 
     expect(code).toBe(0);
     expect(calls).toEqual([{
-      entrypoint: 'scripts/foundry-lab/cli.ts',
+      entrypoint: 'tools/foundry-ops/src/lab/cli.ts',
       args: ['inventory', '--apply', '--allow-production-read'],
     }]);
   });

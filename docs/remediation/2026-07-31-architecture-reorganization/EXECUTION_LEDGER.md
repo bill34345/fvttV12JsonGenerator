@@ -40,7 +40,7 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B 已验收；4C.1 已建立 Foundry Ops 统一入口、权限清单和外部配置，旧实现物理迁移待下一批 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B、4C 已验收；4D Monster Spell Resolver 按既定条件延后 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -866,9 +866,38 @@ owner 和迁移约束。
   39 个直接调用点并被影响分析评为 critical，因此下一批必须小批移动、每批跑完整 Foundry Ops suite，
   不在当前稳定检查点继续扩大改动。
 
+### 阶段 4C.2：Foundry Ops 实现和测试物理迁移
+
+- 按公共基础、本地工具、生产只读、统一入口、world audit/离线 migration 五个小组完成物理迁移；
+  `config`、类型、子进程封装、Foundry Lab 实现、停止世界快照、隐私安全审计报告、三方世界比较和
+  离线候选构建现在都由 `tools/foundry-ops` 拥有；
+- `scripts/foundry-lab` 与 `src/tools/world-audit`、`src/tools/production-migration`、三个历史工具入口
+  只保留兼容 adapter；旧 `scripts/foundry-lab/cli.ts` 会先进入统一权限边界，再执行新实现；
+- Monster Spell Resolver 的本地 build/install/world-preparation 集成没有被错误搬入 Foundry Ops。
+  `spellResolver.ts` 和专用 CLI 暂留兼容目录，通过统一权限入口调用，物理迁移归阶段 4D；
+- classpack v14 runtime 资源与实现一起迁入产品目录，并由 `import.meta.url` 定位，不再依赖仓库根字符串；
+  Knip 明确忽略该 Foundry runtime-only `.mjs` 的 `/modules/dae/...` 绝对导入，专属 13 项测试继续验证其内容；
+- 每个小组迁移后都运行完整 Foundry Ops suite。最终为 292 tests / 2,231 expectations；其中新增
+  deferred spell-resolver 路由测试与旧/new world-audit、离线 migration 函数 identity 测试；
+- 第一次把生产只读小组紧接 dependency-cruiser 后运行完整 suite 时，`remoteInventory` 的无 SSH
+  子进程测试一次超过 5 秒；同一测试单独复跑为 12/12，随后完整 suite 两次通过，最终耗时约 22 秒，
+  未复现为权限或实现回归；
+- 机械验证：frozen install 无变化；production/all/packages/apps/foundry-modules/tools 类型检查通过；
+  dependency-cruiser 为 3,685 modules / 3,877 dependencies、0 violations；Knip cycles 为 0；
+  unused report 不再含本次 Foundry Ops 路径，保留原有 report-only 候选；`git diff --check` 通过；
+  完整 `ci:verify` 通过，Session Monitor build 1 test / 1 expectation、CLI 12 / 57、instrumented
+  1,596 / 7,590，合计 1,609 tests / 7,648 expectations。production coverage 为 85.53% lines /
+  88.04% functions；anti-overfit 321 sources、hygiene 2,101 tracked paths、dnd5e 5.3.3 reference、
+  Web production build 和 offline Actor smoke 均通过；
+- 语义验收：人工阅读中文 help/catalog/README；新旧 `bootstrap` 默认 dry-run 均返回同一 17 项
+  `planned` 计划且没有写入；生产 inventory 带 `--apply` 但缺少 `--allow-production-read` 时在联网前
+  exit 1；world audit 与 migration 命令继续明确为本地/离线修改；
+- 本阶段没有启动 Foundry、Chrome 或真实 Session Monitor，没有连接生产，没有运行超过 30 分钟的
+  监测，也没有改变任何 hardening finding、support matrix 或生产部署状态。
+
 ## 当前停止点
 
-阶段 4C.1 已形成可回滚检查点，适合用户修改本机配置后再无缝续接。下一批从“物理迁移旧实现”开始：
-先迁移纯只读 catalog/config/process 基础，再迁移 Foundry Lab 本地修改工具，最后迁移 world audit 与历史
-离线 migration wrapper；每批保留旧入口 adapter，并继续禁止生产修改、生产连接和超过 30 分钟的持续
-监测。不要重新盘点已经完成的 4C.1，也不要把本次目录/入口整理当成任何 hardening finding 的关闭证据。
+阶段 4C 已形成可回滚检查点。阶段 4D Monster Spell Resolver 仍按既定前置条件延后；下一批进入阶段 5，
+只读盘点 app binaries、modules/systems/worlds、backups、evidence、archives 与 cache 的路径、体积、hash、
+来源、可重建性和保留级别。第一批只生成 manifest 与重复项报告，不复制、移动或删除任何运行数据，
+不访问生产，不启动 Foundry/Chrome，也不关闭任何 hardening finding。不要重新执行已完成的 4C 物理迁移。

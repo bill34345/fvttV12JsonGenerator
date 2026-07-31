@@ -6,6 +6,12 @@
 > [`tools/foundry-ops/README.zh-CN.md`](../../tools/foundry-ops/README.zh-CN.md)
 > for the Chinese command classification and external configuration guide.
 
+The implementations and their tests now live under `tools/foundry-ops/src/lab`.
+Files in this directory are compatibility adapters, except for the deferred
+Monster Spell Resolver integration (`spellResolver.ts` and
+`spellResolverCli.ts`). That integration remains here until the resolver's own
+product-boundary stage because it still depends on the resolver build flow.
+
 Production reads now require `--allow-production-read` plus externally supplied
 `FVTT_OPS_PRODUCTION_*` settings. This repository exposes no production mutation
 command.

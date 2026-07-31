@@ -6,30 +6,32 @@ export interface FoundryOpsRoute {
   forwardedArgs: string[];
 }
 
-const LEGACY_LAB_ENTRYPOINT = 'scripts/foundry-lab/cli.ts';
+const LAB_ENTRYPOINT = 'tools/foundry-ops/src/lab/cli.ts';
+const SPELL_RESOLVER_ENTRYPOINT = 'scripts/foundry-lab/spellResolverCli.ts';
 
 export function resolveFoundryOpsRoute(args: string[]): FoundryOpsRoute {
   const [area, action, ...rest] = args;
   if (area === 'production' && action === 'inventory') {
-    return route('production.inventory', LEGACY_LAB_ENTRYPOINT, ['inventory', ...rest]);
+    return route('production.inventory', LAB_ENTRYPOINT, ['inventory', ...rest]);
   }
   if (area === 'production' && action === 'acquire') {
-    return route('production.acquire', LEGACY_LAB_ENTRYPOINT, ['acquire', ...rest]);
+    return route('production.acquire', LAB_ENTRYPOINT, ['acquire', ...rest]);
   }
   if (area === 'world' && action === 'audit') {
-    return route('world.audit', 'src/tools/worldFootprintAudit.ts', rest);
+    return route('world.audit', 'tools/foundry-ops/src/worldFootprintAudit.ts', rest);
   }
   if (area === 'migration' && action === 'build-candidate') {
-    return route('migration.build-candidate', 'src/tools/productionMigrationBuildCandidate.ts', rest);
+    return route('migration.build-candidate', 'tools/foundry-ops/src/productionMigrationBuildCandidate.ts', rest);
   }
   if (area === 'migration' && action === 'three-way-audit') {
-    return route('migration.three-way-audit', 'src/tools/productionMigrationThreeWayAudit.ts', rest);
+    return route('migration.three-way-audit', 'tools/foundry-ops/src/productionMigrationThreeWayAudit.ts', rest);
   }
   if (area === 'lab' && action) {
-    if (action === 'inventory') return route('production.inventory', LEGACY_LAB_ENTRYPOINT, [action, ...rest]);
-    if (action === 'acquire') return route('production.acquire', LEGACY_LAB_ENTRYPOINT, [action, ...rest]);
+    if (action === 'inventory') return route('production.inventory', LAB_ENTRYPOINT, [action, ...rest]);
+    if (action === 'acquire') return route('production.acquire', LAB_ENTRYPOINT, [action, ...rest]);
+    if (action === 'spell-resolver') return route('lab.spell-resolver', SPELL_RESOLVER_ENTRYPOINT, rest);
     const id = labCommandId(action);
-    return route(id, LEGACY_LAB_ENTRYPOINT, [action, ...rest]);
+    return route(id, LAB_ENTRYPOINT, [action, ...rest]);
   }
   throw new Error(`Unsupported Foundry Ops command: ${args.join(' ') || '<missing>'}`);
 }

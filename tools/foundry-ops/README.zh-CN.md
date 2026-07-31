@@ -2,9 +2,9 @@
 
 这个目录是项目内所有 Foundry 本地测试、离线世界检查和生产只读盘点的统一边界。它不是生成角色 JSON 的功能，也不是 Foundry 浏览器模块。
 
-## 这批整理解决了什么
+## 这个目录现在包含什么
 
-以前，相关工具散落在 `scripts/foundry-lab` 和 `src/tools`，仅看命令名很难判断它会不会写文件、会不会连接生产服务器。现在先建立统一入口：
+以前，相关工具散落在 `scripts/foundry-lab` 和 `src/tools`，仅看命令名很难判断它会不会写文件、会不会连接生产服务器。现在它们已经收进一个产品目录，并共用一个入口：
 
 ```powershell
 bun run foundry:ops --help
@@ -18,6 +18,19 @@ bun run foundry:ops catalog
 - `production-mutation`：会修改、启停或迁移生产环境。统一 CLI 故意不提供这种入口，只能走另行批准的操作手册。
 
 “生产迁移”相关的两个现有脚本只处理离线世界副本，因此被正确归类为“修改本地”；它们不会直接修改线上服务器。
+
+目录中的模块可以这样理解：
+
+| 模块 | 用途 |
+|---|---|
+| `src/cli.ts`、`src/routing.ts`、`src/commandCatalog.ts` | 统一命令入口、命令分类和权限检查 |
+| `src/config.ts` | 本地路径、生产连接配置和防止路径逃逸的安全检查 |
+| `src/process.ts` | 启动外部程序，并从命令、输出和错误中隐藏敏感值 |
+| `src/lab/` | 本地 Foundry 实验环境、模组获取、诊断、补丁、启动和停止工具 |
+| `src/world-audit/`、`src/worldFootprintAudit.ts` | 对停止状态的本地世界建立只读快照并生成隐私安全的审计报告 |
+| `src/production-migration/`、两个 `productionMigration*.ts` | 比较三个本地世界副本并构建离线迁移候选；不会连接或修改生产服务器 |
+
+`spell-resolver` 的本地安装生命周期暂时保留在兼容目录，因为它和 Monster Spell Resolver 的构建流程仍有直接依赖。它会经过同一权限入口，但其物理迁移属于后续的 Monster Spell Resolver 阶段，不能为了清空旧目录而错误归入 Foundry Ops。
 
 ## 生产只读盘点
 
@@ -54,9 +67,9 @@ bun run foundry:ops production inventory --apply --allow-production-read
 
 ## 旧命令兼容
 
-旧的 `bun run foundry:lab ...` 仍然可用，但现在先经过 Foundry Ops 的权限检查，再转给原实现。`scripts/foundry-lab/config.ts` 也只是指向本目录配置实现的兼容层。
+旧的 `bun run foundry:lab ...` 仍然可用，但 `scripts/foundry-lab/cli.ts` 现在只是一个兼容入口：它先进入 Foundry Ops 权限检查，再执行这里的正式实现。旧的实现文件也只保留简短转发层，避免已有导入路径突然失效。
 
-本批没有搬动 `scripts/foundry-lab`、world audit 或离线迁移的上万行实现。下一批才会在保持命令行为和测试不变的前提下，分组迁入这个产品目录。
+`src/tools/world-audit`、`src/tools/production-migration` 和三个历史工具入口同样只保留兼容转发。正式测试已经和实现一起迁入本目录。
 
 ## 长时间验证边界
 
