@@ -1,8 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Command } from 'commander';
-import type { MonsterIntakeIR } from '../core/intake/types';
-import { renderIntakeVerificationMarkdown, verifyMonsterIntake } from '../core/intake/verifier';
+import type { MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
+import {
+  renderIntakeVerificationMarkdown,
+  verifyMonsterIntake,
+} from '@fvtt-json-generator/intake-ai/verifier';
 
 export function verifyIntakeFiles(options: {
   sourcePath: string;

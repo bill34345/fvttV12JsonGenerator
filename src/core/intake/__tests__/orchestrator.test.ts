@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import {
+  convertMarkdownContentToJson as convertWithPackageWorkflow,
+} from '@fvtt-json-generator/workflows/single-file-conversion';
 import { adjudicateReview, anchorIrEvidence, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
 import type {
   AiReviewResult,
@@ -800,6 +803,27 @@ describe('AI monster intake orchestrator', () => {
     expect(result.creatures[0]!.markdownPath).toEndWith('lurker-in-the-dark.md');
     expect(result.creatures[0]!.actorPath).toEndWith('lurker-in-the-dark.json');
     expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
+  });
+
+  test('uses the injected conversion port for both candidate verification and final promotion', async () => {
+    const calls: Array<string | undefined> = [];
+    const result = await runMonsterIntake({
+      source: LURKER_SOURCE,
+      sourceName: 'lurker.txt',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, new FakeProvider(), {
+      async convertMarkdownContentToJson(options) {
+        calls.push(options.outputPath);
+        return convertWithPackageWorkflow(options);
+      },
+    });
+
+    expect(result.status).toBe('succeeded');
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEndWith('candidate-actor.json');
+    expect(calls[1]).toBe(result.creatures[0]!.actorPath);
   });
 
   test('keeps an accepted Rat Warlock portable while exposing spell resolution as pending', async () => {

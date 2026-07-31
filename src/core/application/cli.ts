@@ -18,11 +18,11 @@ export { buildImageAssetOptionsFromCli } from '../assets/imageAssetOptions';
 export { parseIconMode } from '../icons/workflow';
 export { ItemsIngestionWorkflow } from '../ingest/items';
 export { PlainTextIngestionWorkflow } from '../ingest/plaintext';
-export { loadMonsterIntakeConfig } from '../intake/config';
+export { loadMonsterIntakeConfig } from '@fvtt-json-generator/intake-ai/config';
 export {
   OpenAICompatibleMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
-} from '../intake/provider';
+} from '@fvtt-json-generator/intake-ai/provider';
 export {
   assertEffectProfileForTarget,
   parseFvttTargetVersion,

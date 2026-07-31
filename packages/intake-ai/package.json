@@ -1,0 +1,28 @@
+{
+  "name": "@fvtt-json-generator/intake-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./http": "./src/http.ts",
+    "./orchestrator": "./src/orchestrator.ts",
+    "./provider": "./src/provider.ts",
+    "./renderer": "./src/renderer.ts",
+    "./types": "./src/types.ts",
+    "./validator": "./src/validator.ts",
+    "./verifier": "./src/verifier.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/generation": "workspace:*",
+    "@fvtt-json-generator/models": "workspace:*",
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+    "@fvtt-json-generator/workflows": "workspace:*",
+    "js-yaml": "^4.1.1"
+  }
+}

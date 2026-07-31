@@ -22,10 +22,20 @@ import {
   convertItemCollectionToJson as convertPackageItemCollectionToJson,
   convertMonsterCollectionToJson as convertPackageMonsterCollectionToJson,
 } from '@fvtt-json-generator/workflows/collection-conversion';
+import {
+  resumeMonsterIntake as resumePackageMonsterIntake,
+  runMonsterIntake as runPackageMonsterIntake,
+} from '@fvtt-json-generator/intake-ai/orchestrator';
 import type {
   CollectionConversionOptions,
   CollectionConversionResult,
 } from '@fvtt-json-generator/workflows/collection-conversion';
+import type {
+  MonsterIntakeAiProvider,
+  MonsterIntakeOptions,
+  MonsterIntakeRunResult,
+} from '@fvtt-json-generator/intake-ai/types';
+import { conversionApplication } from './conversion';
 import { imageAssetProcessorAdapter } from '../assets/adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
 import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
@@ -125,7 +135,28 @@ export function convertItemCollectionToJson(
   return convertPackageItemCollectionToJson(options, collectionDependencies);
 }
 
-export {
-  resumeMonsterIntake,
-  runMonsterIntake,
-} from '../intake/orchestrator';
+const monsterIntakeDependencies = Object.freeze({
+  convertMarkdownContentToJson: conversionApplication.convertContent,
+});
+
+export function runMonsterIntake(
+  options: MonsterIntakeOptions,
+  provider?: MonsterIntakeAiProvider,
+): Promise<MonsterIntakeRunResult> {
+  return runPackageMonsterIntake(options, provider, monsterIntakeDependencies);
+}
+
+export function resumeMonsterIntake(
+  runPath: string,
+  decisionsPath: string,
+  provider: MonsterIntakeAiProvider,
+  vaultPath?: string,
+): Promise<MonsterIntakeRunResult> {
+  return resumePackageMonsterIntake(
+    runPath,
+    decisionsPath,
+    provider,
+    vaultPath,
+    monsterIntakeDependencies,
+  );
+}

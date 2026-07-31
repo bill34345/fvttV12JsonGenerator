@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | `apps/web` 已独立验收；下一步迁移 `packages/intake-ai` |
+| 3. Bun workspace 物理迁移 | in_progress | `packages/intake-ai` 已独立验收；下一步迁移 `packages/ingest-plaintext` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -63,7 +63,7 @@ owner 和迁移约束。
 |---|---|---|
 | 单文件 Actor/Item 转换 | `apps/cli/src/main.ts`；`src/index.ts` 为兼容入口 | 参数、默认路径、诊断、生成语义 |
 | collection / Vault Sync | `apps/cli/src/main.ts` + `@fvtt-json-generator/workflows` | canonical verifier 和正式输出 gate |
-| AI Intake | CLI/Web + `src/core/intake` | accepted/needs_review/failed 边界 |
+| AI Intake | CLI/Web + `@fvtt-json-generator/intake-ai` | accepted/needs_review/failed 边界 |
 | legacy plaintext ingest | CLI + `src/core/ingest` | 现有显式入口，不扩大支持声明 |
 | GoddessFantasy crawl | `src/tools/crawlSites.ts` | 与主转换 CLI 解耦 |
 | assets/token/icons | CLI/tools + `src/core/assets`/`icons` | 人工复核 gate 与 actor/token artwork 语义 |
@@ -530,10 +530,49 @@ owner 和迁移约束。
   - gstack `browse` 的本机 Windows 分发缺失运行时 source，浏览器验收由 in-app Browser 完成；
     这是外部技能安装问题，不影响 Web 产物或应用行为。
 
+### 阶段 3G：`packages/intake-ai`
+
+- 结构：
+  - 将 AI Intake 的 config、provider、orchestrator、IR types、renderer、validator 与 verifier
+    迁入 `@fvtt-json-generator/intake-ai`；旧 `src/core/intake/*` 只保留兼容 re-export；
+  - provider 改用包内最小 HTTP transport contract，不再借用 translation 私有类型；
+  - verifier 直接依赖 portable spell manifest contracts，不再绕经 resolver runtime；
+  - orchestrator 通过显式 conversion port 调用 generation workflow；repository application
+    composition root 注入现有 conversion application，因此 CLI/Web 的 safe icon adapter 与正式
+    Actor 生成路径未被包内默认实现替换；
+  - dependency-cruiser 新增 Intake package 独立性与 legacy adapter 禁止规则。
+- 机械：
+  - package-local、production、packages、apps 与全仓类型检查通过；frozen install 通过；
+  - dependency-cruiser：2,432 modules / 3,002 dependencies，0 violations；Knip cycles 为 0；
+  - Intake/verify/Web job 专项：213 tests / 0 failed / 699 expectations；CLI 子进程门禁：
+    12 tests / 0 failed / 57 expectations；
+  - 新增 conversion port 回归测试，确认 candidate verifier 与 final promotion 均经注入端口，
+    没有只迁移类型而继续反向调用 `src/core/application`；
+  - 完整默认 `ci:verify`：CLI 子进程 12 tests 与 coverage 主组 1,576 tests 均通过，
+    合计 1,588 tests / 0 failed / 7,501 expectations / 156 files；
+  - coverage 统计 248 个 production files：85.32% lines / 88.09% functions；anti-overfit
+    313 sources、hygiene 2,037 tracked paths、dnd5e 5.3.3 reference、Web production build 与
+    offline Actor smoke 均通过。
+- 语义：
+  - 实际 v14/core Lurker promotion 仍为 `暗影潜妖 (Lurker in the Dark)`、npc、AC 14、
+    HP 65、CR 4、6 个来源 Item；deterministic report 为 accepted 且 0 findings；
+  - CLI 实际生成的 Rat Warlock 仍携带 1 个 portable spellcasting group / 10 个 source-backed
+    spell refs，resolution 为 `pending`，0 embedded Spell、0 Cast Activity，未伪称 hydrated；
+  - 实际 `needs_review` 样本保留 `REVIEW_REVISE`、不写入 promoted Actor；实际 provider
+    failure 样本为 `failed` / `PROVIDER_FAILURE`、spell resolution failed，同样不推广 Actor；
+  - 专项测试继续覆盖 immutable source/evidence、独立 review/repair budget、conflict backup、
+    decisions resume、accepted/needs_review/failed aggregation、provider dedicated env、严格 JSON、
+    portable caster pending、Web 下载 gate 与 verification bundle。
+- 已知债：
+  - `packages/intake-ai` 是 monorepo-internal package；真实模型调用、图标适配、vault promotion
+    与生成实现仍由 repository composition root 提供，不宣称仓库外独立发布；
+  - Intake 测试与 fixtures 暂留在旧 `src/core/intake/__tests__` 作为路径兼容资产；生产代码已受
+    dependency gate 约束，不允许回到 legacy adapter。测试物理迁移留到兼容路径治理阶段。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows package、`apps/cli` 与 `apps/web` 已形成可回滚稳定检查点。Web 已通过完整
-机械与真实浏览器语义验收；下一条执行路径是阶段 3G：迁移 `packages/intake-ai`，保持
-accepted / needs_review / failed、portable caster pending、evidence/review bundle、provider 配置和
-Web/CLI resume 行为不变。在 Intake 独立验收前不移动 ingest、crawl 或 assets。
+generation/workflows/Intake package、`apps/cli` 与 `apps/web` 已形成可回滚稳定检查点。AI Intake
+已通过完整机械与语义验收；下一条执行路径是阶段 3H：迁移 `packages/ingest-plaintext`，保持
+legacy 明示入口、split/parse/normalize、collection adapter、dry-run/fail-closed、图片 metadata
+与 Vault promotion 行为不变。在 plaintext ingest 独立验收前不移动 crawl 或 assets。

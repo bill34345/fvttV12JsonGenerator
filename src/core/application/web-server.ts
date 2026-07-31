@@ -39,15 +39,15 @@ export { PlainTextIngestionWorkflow } from '../ingest/plaintext';
 export {
   loadMonsterIntakeConfig,
   monsterIntakeConfigured,
-} from '../intake/config';
+} from '@fvtt-json-generator/intake-ai/config';
 export {
   OpenAICompatibleMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
-} from '../intake/provider';
+} from '@fvtt-json-generator/intake-ai/provider';
 export type {
   IntakeDecision,
   MonsterIntakeAiProvider,
-} from '../intake/types';
+} from '@fvtt-json-generator/intake-ai/types';
 export { buildActorVerificationSummaryFromValues } from '../verification/actorVerification';
 export {
   assertEffectProfileForTarget,

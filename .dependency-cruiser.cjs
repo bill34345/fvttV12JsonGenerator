@@ -50,11 +50,20 @@ module.exports = {
       },
     },
     {
+      name: 'intake-ai-package-is-independent',
+      severity: 'error',
+      comment: 'AI Intake owns evidence orchestration and depends on stable packages plus injected workflow ports, never source-tree adapters or delivery layers.',
+      from: { path: '^packages/intake-ai/src/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|generation/|intake-ai/|models/|spell-manifest-contracts/|workflows/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
       from: { path: '^(src/core/(generation|generator)/|packages/generation/)' },
-      to: { path: '^src/core/intake/types[.]ts$' },
+      to: { path: '(^src/core/intake/types[.]ts$|^packages/intake-ai/)' },
     },
     {
       name: 'spell-manifest-contracts-package-is-independent',
@@ -149,6 +158,17 @@ module.exports = {
       },
       to: {
         path: '^src/core/workflow/',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-intake-adapters',
+      severity: 'error',
+      comment: 'Production code imports the Intake package or application composition root; old source paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/intake/(config|orchestrator|provider|renderer|types|validator|verifier)[.]ts$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/intake/(config|orchestrator|provider|renderer|types|validator|verifier)[.]ts$',
       },
     },
     {
