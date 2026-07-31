@@ -67,6 +67,15 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 
 最后两项维持 report-only。它们包含公共 API、动态入口和未来 package contract 候选，未因静态报告批量删除。
 
+### Stage 3A：contracts workspace package
+
+- `@fvtt-json-generator/contracts` 成为第一个物理 workspace package；
+- package 自身只包含类型契约，不依赖 `src/`、`scripts/`、`apps/` 或其他实现 package；
+- 生产代码直接导入 package exports，旧 `src/core/contracts/*` 仅作为兼容 adapter；
+- dependency-cruiser 扫描范围增加 `packages/`，并阻止 package 反向依赖和旧路径回流；
+- Knip 覆盖 workspace package entry/project，unused files/dependencies/devDependencies/unlisted/unresolved 均为 0；
+- workspace install、冻结 lockfile、package-local typecheck 与根级类型检查均通过。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -95,3 +104,12 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - Web upload → registered download JSON。
 
 这些检查没有升级 Foundry 真实运行时、生产环境、在线 hydration 或当前 support matrix 的声明。
+
+Stage 3A 另用项目 CLI 重新生成 Slithering Bloodfin v14/core Actor：
+
+- canonical verifier：0 warnings；
+- 姓名、类型、AC、HP、CR、感官、9 个 Item 及其 activities/effects 保持；
+- 与 Stage 2 产物仅有 Effect `_id` 和生成时间差异；去除这些运行时身份后完整语义投影相等。
+
+因此，本阶段证明 contracts 物理迁移没有改变该真实 Actor 的生成语义；它不证明后续 parser、
+generation、application package 已迁移，也不构成 Foundry runtime 或生产验收。

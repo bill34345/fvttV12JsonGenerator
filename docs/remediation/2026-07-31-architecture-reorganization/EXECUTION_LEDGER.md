@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | pending | facade 稳定后开始 |
+| 3. Bun workspace 物理迁移 | in_progress | `packages/contracts` 已独立验收；parser/generation/workflows 尚未迁移 |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -105,6 +105,17 @@ owner 和迁移约束。
 - 生成证据保存在默认 vault 的 `output/architecture-reorganization-stage2/` 与
   `crawls/architecture-reorganization-stage2/`。
 
+### 2026-07-31：阶段 3A `packages/contracts` 完成
+
+- 根仓库启用 Bun workspaces，并建立 `@fvtt-json-generator/contracts`；
+- Evidence、target/profile、diagnostics、artifact identity 的权威定义迁入该 package；
+- `src/core/contracts/*` 保留为带弃用说明的薄兼容转发，不再拥有重复定义；
+- 生产调用方全部改为 package subpath 导入；
+- dependency-cruiser 新增两条强制边界：contracts 不得依赖实现/交付/运维层，生产代码不得回流旧适配层；
+- Knip 扫描范围扩展到 `packages/`，兼容入口由契约测试显式覆盖；
+- `bun install --frozen-lockfile` 已证明当前 workspace lockfile 可重复解析；
+- 本迁移只移动类型契约，没有修改 parser、generator 或 Foundry mechanics。
+
 ## 验证证据
 
 ### 阶段 0
@@ -141,7 +152,27 @@ owner 和迁移约束。
     与注册 artifact 一致。
 - 未宣称：真实 Foundry runtime、在线 resolver hydration、生产部署或 support matrix 升级。
 
+### 阶段 3A：`packages/contracts`
+
+- 机械：
+  - workspace 软链接实际指向 `packages/contracts`；
+  - package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：372 modules / 867 dependencies，0 violations；
+  - Knip cycles：0；unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - 完整 `ci:verify`：1,580 tests / 0 failed / 7,466 expectations / 151 files；
+  - coverage：85.42% lines / 88.14% functions；
+  - anti-overfit 213 sources、hygiene 1,923 paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 从 `slithering-bloodfin__滑行血鳍.md` 重新生成 v14/core Actor；
+  - canonical Actor verifier 返回 0 warnings；
+  - 人工核对姓名、aberration、AC 16、HP 143、CR 9、盲视 100 尺、9 个来源 Item，
+    以及攻击、伤害、状态和活动结构；
+  - 与阶段 2 产物的差异仅为重新生成的 Effect `_id` 与时间戳；排除这些运行时身份后，
+    完整 JSON 语义投影相等。
+- 未宣称：parser/generation/workflows package 已迁移、Foundry runtime 验收、在线 hydration、
+  生产部署或 support matrix 升级。
+
 ## 当前停止点
 
-阶段 0–2 已形成可回滚稳定检查点。下一条执行路径是阶段 3：先建立 `packages/contracts`，
-再按依赖方向迁移 parser/generation/application；在 package 独立验收前不移动 CLI/Web/module/ops。
+阶段 0–2 与阶段 3A 已形成可回滚稳定检查点。下一条执行路径是阶段 3B：
+分析并迁移 `packages/parser`；在 parser package 独立验收前不移动 generation、CLI、Web、module 或 ops。

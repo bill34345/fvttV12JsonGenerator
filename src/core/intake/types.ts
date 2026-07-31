@@ -2,9 +2,9 @@ import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { IconWorkflowOptions } from '../icons/types';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type { PortableSpellRef } from '../spell-resolution/types';
-import type { EvidenceRef } from '../contracts/evidence';
+import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 
-export type { EvidenceRef } from '../contracts/evidence';
+export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 
 export type MonsterIntakeStatus = 'accepted' | 'needs_review' | 'failed';
 

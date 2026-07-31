@@ -3,8 +3,8 @@ import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
 import type { CanonicalMonster } from '../intake/types';
-import type { EvidenceRef } from '../contracts/evidence';
-import type { GenerationDiagnostic } from '../contracts/diagnostics';
+import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
+import type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 import type { ParsedItem, ItemType } from '../models/item';
 import type { ParserRoute } from '../parser/types';
 import type { V14IconResolver } from '../icons/resolver';
@@ -14,8 +14,8 @@ import type {
 } from '../models/behavior';
 
 export type { CanonicalFeature, CanonicalMonster } from '../intake/types';
-export type { EvidenceRef } from '../contracts/evidence';
-export type { GenerationDiagnostic } from '../contracts/diagnostics';
+export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
+export type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 export type GenerationDocumentKind = 'actor' | 'item';
 export type GenerationMechanicKind =
   | 'activation'

@@ -11,17 +11,17 @@ import type {
 } from '../workflow/singleFileConversion';
 
 export { DEFAULT_VAULT_PATH } from '../workflow/singleFileConversion';
-export type { EffectProfile } from '../contracts/target';
+export type { EffectProfile } from '@fvtt-json-generator/contracts/target';
 export type {
   ConversionStatus,
   GeneratedArtifactIdentity,
   GeneratedDocumentKind,
-} from '../contracts/artifacts';
+} from '@fvtt-json-generator/contracts/artifacts';
 export type {
   DiagnosticSeverity,
   DiagnosticStage,
   GenerationDiagnostic,
-} from '../contracts/diagnostics';
+} from '@fvtt-json-generator/contracts/diagnostics';
 export type {
   ConversionResult,
   ConvertMarkdownContentOptions,

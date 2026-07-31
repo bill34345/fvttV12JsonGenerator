@@ -1,7 +1,7 @@
 import { statusIconPath } from './actor-effects';
-import type { EffectProfile } from '../contracts/target';
+import type { EffectProfile } from '@fvtt-json-generator/contracts/target';
 
-export type { EffectProfile } from '../contracts/target';
+export type { EffectProfile } from '@fvtt-json-generator/contracts/target';
 
 export class EffectProfileApplier {
   public apply(actor: any, effectProfile: EffectProfile): void {

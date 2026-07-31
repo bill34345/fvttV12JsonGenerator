@@ -9,6 +9,22 @@ module.exports = {
       to: { circular: true },
     },
     {
+      name: 'contracts-package-is-independent',
+      severity: 'error',
+      comment: 'Shared contracts must not depend on implementations, delivery layers, or operator tooling.',
+      from: { path: '^packages/contracts/' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/))' },
+    },
+    {
+      name: 'no-production-to-legacy-contract-adapters',
+      severity: 'error',
+      comment: 'Production code imports the contracts package; legacy paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/contracts/|/__tests__/|[.](test|spec)[.])',
+      },
+      to: { path: '^src/core/contracts/' },
+    },
+    {
       name: 'no-core-to-outer-layers',
       severity: 'error',
       comment: 'Core code must not depend on delivery, runtime, tooling, or operator layers.',
@@ -87,7 +103,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: '^node_modules/' },
-    includeOnly: ['^(src|scripts|tests)/'],
+    includeOnly: ['^(src|packages|apps|scripts|tests)/'],
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
@@ -99,7 +115,7 @@ module.exports = {
     reporterOptions: {
       text: { highlightFocused: true },
       archi: {
-        collapsePattern: '^(src|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
+        collapsePattern: '^(src|packages|apps|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
       },
     },
   },

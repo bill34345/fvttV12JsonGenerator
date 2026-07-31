@@ -1,10 +1,4 @@
 /**
- * Stable source span used by intake, generation, verification, and portable
- * runtime contracts. This type deliberately has no dependency on any workflow.
+ * @deprecated Import from `@fvtt-json-generator/contracts/evidence`.
  */
-export interface EvidenceRef {
-  start: number;
-  end: number;
-  quote: string;
-}
-
+export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';

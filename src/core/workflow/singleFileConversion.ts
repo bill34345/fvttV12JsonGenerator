@@ -18,7 +18,7 @@ import type {
 import type {
   ConversionStatus,
   GeneratedArtifactIdentity,
-} from '../contracts/artifacts';
+} from '@fvtt-json-generator/contracts/artifacts';
 import { getFoundryTarget } from '../foundryTarget';
 import { generateActorArtifact } from './generationPipeline';
 import { generateItemArtifacts } from './itemGenerationWorkflow';
@@ -30,7 +30,7 @@ import {
 } from '../icons/report';
 
 export type { FvttTargetVersion } from '../foundryTarget';
-export type { GeneratedDocumentKind } from '../contracts/artifacts';
+export type { GeneratedDocumentKind } from '@fvtt-json-generator/contracts/artifacts';
 
 export interface ConvertMarkdownContentOptions {
   content: string;

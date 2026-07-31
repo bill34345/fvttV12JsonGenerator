@@ -1,6 +1,6 @@
-import type { FvttTargetVersion, FoundryTarget } from './contracts/target';
+import type { FvttTargetVersion, FoundryTarget } from '@fvtt-json-generator/contracts/target';
 
-export type { FvttTargetVersion, FoundryTarget } from './contracts/target';
+export type { FvttTargetVersion, FoundryTarget } from '@fvtt-json-generator/contracts/target';
 
 const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
   '12': {
