@@ -133,7 +133,7 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function collectFiles(directory: string): Promise<string[]> {
+export async function collectFiles(directory: string): Promise<string[]> {
   const glob = new Bun.Glob('**/*');
   const files: string[] = [];
   for await (const path of glob.scan({ cwd: directory, onlyFiles: true })) files.push(resolve(directory, path));
@@ -145,7 +145,7 @@ interface ZipEntry {
   bytes: Uint8Array;
 }
 
-function createStoredZip(entries: ZipEntry[]): Uint8Array {
+export function createStoredZip(entries: ZipEntry[]): Uint8Array {
   const encoder = new TextEncoder();
   const localParts: Uint8Array[] = [];
   const centralParts: Uint8Array[] = [];

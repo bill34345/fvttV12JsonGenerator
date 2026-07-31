@@ -156,6 +156,7 @@ This table is authoritative. A child plan may add detail but may not silently ch
 | BH-ACT-001 | P1 | closed | The user-owned Blood Hunter 2024 homebrew source provided class/subclass prose but no feature Activity side data; Callum therefore had actionful Blood Hunter features with zero Activities while passive choice features correctly remained display-only. | Closed at the user-authorized artifact boundary by a deterministic local homebrew build containing 4 class, 11 requested-subclass, 42 optional side-data entries and 59 structurally valid Activities; semantic review preserves passive close negatives and states every unautomated boundary. Full import/combat acceptance remains explicitly user-owned and unclaimed. |
 | BH-ACT-002 | P1 | closed | The first enrichment modeled Crimson Rite and Blood Maledict as generic damage/single curse Activities, so it did not provide weapon enchantment, per-curse normal/amplified flows, or reliable amplification loss boundaries. | Closed at the authorized code/artifact boundary: deterministic Enchant/normal/amplified/direct-loss structures pass locked-source review, final tests, and a 7-rite/14-optional-curse/3-subclass-curse semantic matrix. Authenticated drag/drop and combat acceptance remains explicitly user-owned and unclaimed. |
 | BH-ACT-003 | P1 | in_progress | User runtime acceptance overturned the BH-ACT-002 static closure: save Activities lose their Effect links, Blood Curses do not resolve shared Blood Maledict uses, Crimson Rite enchantments append an empty damage part, direct-loss macros do not reliably reduce HP, legacy DAE expiries remain, mutagens are empty buttons, and the Lycan subclass is omitted. | Implement `docs/superpowers/plans/2026-07-26-blood-hunter-complete-runtime-repair.md`; require exact dnd5e/MIDI/DAE contracts, complete source coverage, post-import DataModel checks, source-semantic review, and representative local runtime evidence before closure. Historical BH-ACT-001/002 evidence remains visible but is not current acceptance. |
+| MON-001 | P1 | partial | The v1.1.1 GM module and Windows/Chrome companion auto-relaunch the same dedicated profile after a full Chrome exit, resume only the same active session ID, record browser/renderer generations, and report cold-restart memory deltas. Real Foundry 14.364 / dnd5e 5.3.3 joined-world evidence proved session `f8090595-9e2d-449f-9f23-07d2e61fe93c` across generations 1 and 2 with `refreshCount=1`; production 8080 separately received the public-HTTP SHA-256 fix, and a 2026-07-31 read-only recheck proved the complete 1.1.1 module remains installed and served. | Local implementation, companion-controlled cold-restart acceptance, production installation, and the historical normal module-management activation event are complete. Keep the finding `partial` only for the post-restart 1.1.1 start/mark/stop smoke, the actual four-hour GM/player run, and non-GM device evidence. See `milestones/15-fvtt-session-monitor.md`. |
 | SEQ-MEM-001 | P1 | blocked_external | Sequencer 4.2.3 creates seven eager spritesheet WASM Workers on this 16-thread client, accounting for seven fixed 299,958,272-byte private committed regions before queued conversion buffers and other renderer memory. The exact local cap-2 patch is installed and served, but both available browsers currently require a fresh authenticated world login. | Code/disk/HTTP evidence is recorded in `docs/reviews/2026-07-26-sequencer-spritesheet-worker-memory-cap-report.md`: 13 focused and 185 Foundry Lab tests pass, hashes/backup/restore close, and the loopback mirror serves the sentinel. Resume after the user signs into local `/game`; require Canvas/Sequencer readiness, a safe existing WebM trigger, exactly two matching WASM regions, and no new fatal error before advancing. User visual, complex-scene, and long-session acceptance remains separate and unclaimed. |
 | WORLD-ASSET-001 | P1 | in_progress | The first unused-scene-image archive used an incomplete runtime dependency model. It missed both (1) Map Image Optimizer outputs loaded by `verifyOutputImages(plan)` on world `ready`, and (2) package-manifest assets such as `world.json.background`, which Foundry loads on `/join` before authentication. Both omissions caused real browser 404s. | The complete move was first rolled back to a known-good baseline, then selectively reapplied. All 351 latest-plan outputs remain in the world, including 93 original candidates; `world.json.background` restored one further original candidate; the other 986 files remain externally archived. Mechanical verification covers current map paths, latest-plan outputs, and the manifest background. Unauthenticated `/join` now renders with zero browser errors after refresh. Close only after an authenticated Chrome world reload runs the real Bridge `ready` preflight with no new archive-caused 404. |
 
@@ -235,6 +236,67 @@ This table is authoritative. A child plan may add detail but may not silently ch
 **Exact next action:** If fresh runtime evidence is desired, restore the project-local Foundry 14.364 application/server mirror and rerun the 14 external-dependent tests plus representative Oregg/Shield import, DataModel preparation, use, and export readback. This is a follow-up evidence task; the correctness-foundation code milestone is closed.
 
 ### 2026-07-29 Remaining Branch Integration
+### 2026-07-29 FVTT Session Monitor
+
+- [x] Confirmed the product decisions: GM-only v1, compact floating controls,
+  IndexedDB continuation, a Windows/Chrome companion in the same delivery, and
+  no player-to-GM socket aggregation.
+- [x] Re-read the locked Foundry 14.364, dnd5e 5.3.3, MIDI-QOL 14.0.11,
+  Sequencer 4.2.3, Chat Memory Guard build/install, prior controlled sampling,
+  and current four-hour acceptance boundaries.
+- [x] Created focused implementation plan
+  `milestones/15-fvtt-session-monitor.md` and moved `MON-001` to
+  `in_progress` before changing production code.
+  - [x] Implemented and documented the GM module, IndexedDB continuation,
+    privacy-safe schema, dedicated Chrome/CDP companion, Windows process/native
+    allocation sampler, JSONL merge, Markdown/SVG report, deterministic build,
+    exact local install, and backup path.
+  - [x] Focused tests passed `12 / 12` with `53` assertions; both typechecks
+    passed; two builds
+    produced the same ZIP SHA-256
+    `7263ed2066b546f8a4d40fa68ad1c568e25ee6e772cfb9cb739791b4920af57d`;
+    reinstall created
+    `.local/foundry-v14/backups/fvtt-session-monitor/1.1.0-1785321428266`.
+  - [x] Full `bun run ci:verify` passed `1476 / 1476` tests and `6,881`
+    expectations plus coverage,
+    anti-overfit, hygiene, locked reference verification, Web build, and
+    offline Actor smoke. A preceding run timed out only the existing crawl CLI
+    test at 60 seconds; its isolated `5 / 5` rerun and the clean full rerun
+    passed.
+  - [x] Real local Foundry 14.364 / dnd5e 5.3.3 GM smoke passed:
+    eight samples, manual jank marker, same session across one refresh,
+    sanitized planted error, stopped export, `refreshCount=1`, and no planted
+    value, world key, or raw alias maps in the export.
+  - [x] Real dedicated headless Chrome companion probe captured heap,
+    36 Performance metrics, separate Chrome process groups, renderer private
+    bytes, and a completed Windows native allocation scan. The disposable
+    world's module selection and all launched processes were restored/stopped.
+  - [x] Added Chrome ownership/relaunch supervision, browser and renderer
+    generations, lifecycle JSONL, same-session enforcement, login waiting, and
+    cold-restart deltas in Markdown/SVG. A real Chrome process-exit integration
+    test covers the complete generation-1 to generation-2 path.
+  - [x] Real joined-world acceptance first rejected the implementation because
+    the module API was attached before IndexedDB recovery and could expose a
+    transient idle state. API attachment now occurs only after recovery.
+  - [x] Captured and inspected the companion-controlled joined session
+    `f8090595-9e2d-449f-9f23-07d2e61fe93c`: same ID across browser generations
+    `1,2`, `refreshCount=1`, two browser and two companion samples, all four
+    expected Chrome lifecycle events, 100% companion coverage, and an
+    intelligible cold-restart delta in JSON/Markdown/SVG.
+  - [x] Restored the disposable world to exactly four enabled modules
+    (`dnd5e_classpack`, DAE, libWrapper, socketlib); monitor, MIDI-QOL, and
+    Sequencer are disabled. Stopped all acceptance Chrome processes and local
+    Foundry, and confirmed port 30001 is closed.
+  - [x] Production 8080 installation and normal module-management activation
+    were separately authorized and completed. The first public-HTTP start
+    rejected 1.1.0 because `crypto.subtle` was unavailable; 1.1.1 uses the
+    browser-safe pure SHA-256 and passes `13 / 13` focused tests with `56`
+    assertions. A 2026-07-31 read-only recheck proved the five-file 1.1.1
+    module remains installed and served by 8080 without touching 51020.
+  - [ ] Post-restart 1.1.1 start/mark/stop, the real four-hour session, and
+    non-GM device evidence remain open. Current deployment/HTTP evidence does
+    not substitute for those runtime layers.
+
 
 - [x] Refreshed `origin/master` and audited every local/remote branch plus every attached worktree before integration. The clean branch tips not already reachable from `master` were `codex/item-generation-workflow-repair`, `codex/actor-refactor`, and `codex/crawlee-goddessfantasy`; `codex/goddessfantasy-image-assets-workbench` was an alias of the crawl tip.
 - [x] Preserved the dirty detached worktree and the dirty `codex/npc-monster-workflow-repair` worktree byte-for-byte. Their uncommitted user-owned changes were not staged, copied, reset, or represented as branch content.
@@ -1000,6 +1062,12 @@ Semantic acceptance proves the user's actual goal:
   Evidence: running `antiOverfitAudit.ts --all` from a non-repository directory exits 1 with Git exit 128 and `not a git repository`; running it from an initialized but empty temporary repository exits 1 with `zero auditable production sources`. The real repository still passes with 99 sources.
 - Observation: Bun 1.3.8 on Windows does not honor the documented test-source coverage exclusion safely for this full suite: enabling `coverageSkipTestFiles=true` caused the instrumented run to hang, while per-file coverage worked.
   Evidence: repeated bounded probes isolated the hang to the full-suite option. The accepted gate collects LCOV with `coverageSkipTestFiles=false`, filters 83 test-source records fail closed, reports 88 production files, and passes at concurrency 2 with 86.92% line and 88.09% function coverage.
+- Decision: Expose the session-monitor API only after IndexedDB recovery has completed.
+  Rationale: real Foundry cold-restart acceptance proved that attaching the API first exposed a transient idle state; a fast companion could create a second active session and then fail same-session recovery. Delaying API attachment removes that race without weakening the companion's strict session-ID check.
+  Date/Author: 2026-07-29, Codex.
+- Decision: Treat a full companion-owned Chrome exit as a recoverable browser-generation boundary, while keeping `Ctrl+C` and the panel Stop action as explicit session termination.
+  Rationale: browser refresh alone does not reset all Chrome process memory. Relaunching the same dedicated profile gives a meaningful cold-restart A/B boundary, preserves ordinary login behavior, and lets the report compare memory before and after without pretending caches were cleared.
+  Date/Author: 2026-07-29, Codex with user direction.
 - Observation: A mechanical browser success was insufficient and exposed DET-001; the post-repair semantic rerun changed the acceptance outcome.
   Evidence: the first unchecked-AI download contained provider `<think>` text in two item names. The repaired browser download contains the exact six source item names, zero `<think>` occurrences, and zero verifier warnings, and port 5174 was released afterward.
 - Observation: Milestone 6's path inventory found 178 policy violations rather than the smaller initial rough count, including tracked ignored outputs/backups, scratch scripts, two orphan Gitlinks, local workspace/manifest state, and one obsolete fixed-path verifier.
@@ -1282,6 +1350,9 @@ Program initialization outcome on 2026-07-15:
 2026-07-15: Completed Milestone 1's implementation and mechanical verification. SEM-001 and VER-001 remain short of closure until the full affected v14 acceptance batches are regenerated and semantically reviewed in Milestone 2. Recorded the newly reproduced `.env`-driven network attempt under DET-001.
 
 2026-07-15: Regenerated both v14 acceptance batches and confirmed the AC contamination is gone mechanically. During mandatory source review, discovered and validated SEM-002 in White Tusk Shaman; kept Milestone 2 open and moved to a separate fixture-backed parser/generator repair instead of preserving the prior false `Pass` claim.
+
+2026-07-31: Prepared the standalone Session Monitor for a scope-separated `master` commit. Code review found and corrected the companion's stale `1.1.0` report/heartbeat version after the browser module had advanced to `1.1.1`; the real Chrome cold-restart test now asserts the recorded companion version. Release review also found that copying CRLF static resources produced a same-machine-stable but checkout-dependent archive; the builder now writes normalized LF resources, and two fresh Windows builds reproduce the deployed five-file ZIP SHA-256 `31098AD6EB861D641DC67BED9B51BA889058EA382CDDABC2BBC6D1C18C492CC4` plus every deployed file hash. The same read-only production check used for release truth proved that PID 6480 still binds port 8080 to `E:\Bill\fvtt_v13\data`, the complete five-file 1.1.1 module remains under that DataPath, all five module resources return HTTP 200 through loopback 8080, and the public 8080 manifest returns 1.1.1. No GM login or live LevelDB read was used, so current activation remains unclaimed; the historical normal module-management activation event, incomplete post-restart UI smoke, four-hour run, and non-GM evidence remain separately labeled.
+Final Session Monitor repository verification passed `1575 / 1575` tests with `7,444` assertions, 85.41% production-line / 88.13% production-function coverage, 203-source anti-overfit, 1,901-path hygiene, both typechecks, locked dnd5e 5.3.3 references, Web build, offline Actor smoke, and staged diff checking.
 
 2026-07-15: Mechanically repaired SEM-002 with generalized wrapped-emphasis handling and fixture-backed structural verification. The corrected item boundary exposed SEM-003: the bare condition scanner still invents `Unconscious` from a transformation termination clause, so Milestone 2 remains open pending a separate condition-semantics TDD cycle.
 

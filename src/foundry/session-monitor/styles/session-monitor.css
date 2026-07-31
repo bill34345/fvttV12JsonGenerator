@@ -1,0 +1,90 @@
+#fvtt-session-monitor-panel {
+  --fsm-accent: #7eb8da;
+  position: fixed;
+  z-index: 101;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  width: 18rem;
+  overflow: hidden;
+  color: #eee;
+  background: rgb(22 24 29 / 94%);
+  border: 1px solid rgb(126 184 218 / 62%);
+  border-radius: 0.45rem;
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 45%);
+  font-size: 0.78rem;
+}
+
+#fvtt-session-monitor-panel header {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.45rem;
+  color: #fff;
+  background: rgb(47 53 64 / 96%);
+}
+
+#fvtt-session-monitor-panel header [data-role="title"] {
+  flex: 1;
+  font-weight: 600;
+}
+
+#fvtt-session-monitor-panel header button {
+  width: 1.6rem;
+  min-width: 1.6rem;
+  height: 1.4rem;
+  padding: 0;
+  line-height: 1;
+}
+
+#fvtt-session-monitor-panel .fsm-body {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem;
+}
+
+#fvtt-session-monitor-panel.collapsed .fsm-body {
+  display: none;
+}
+
+#fvtt-session-monitor-panel .fsm-status,
+#fvtt-session-monitor-panel .fsm-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#fvtt-session-monitor-panel .fsm-detail {
+  overflow: hidden;
+  color: #cbd2da;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fvtt-session-monitor-panel .fsm-actions button {
+  flex: 1;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+}
+
+#fvtt-session-monitor-panel[data-state="active"] {
+  --fsm-accent: #7fd09a;
+  border-color: var(--fsm-accent);
+}
+
+#fvtt-session-monitor-panel[data-flash="marker"] {
+  animation: fsm-marker 0.8s ease-out;
+}
+
+@keyframes fsm-marker {
+  0% { box-shadow: 0 0 0.1rem 0.35rem rgb(242 183 5 / 85%); }
+  100% { box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 45%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #fvtt-session-monitor-panel[data-flash="marker"] {
+    animation: none;
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "FSM.Title": "Session Monitor",
+  "FSM.State.idle": "Idle",
+  "FSM.State.active": "Recording",
+  "FSM.State.stopped": "Stopped",
+  "FSM.State.interrupted": "Interrupted",
+  "FSM.Companion.connected": "Companion connected",
+  "FSM.Companion.missing": "Companion missing",
+  "FSM.Action.start": "Start",
+  "FSM.Action.mark": "Jank now",
+  "FSM.Action.stop": "Stop & export"
+}

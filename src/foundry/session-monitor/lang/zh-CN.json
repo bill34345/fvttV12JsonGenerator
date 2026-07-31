@@ -1,0 +1,12 @@
+{
+  "FSM.Title": "跑团会话监测器",
+  "FSM.State.idle": "待机",
+  "FSM.State.active": "记录中",
+  "FSM.State.stopped": "已停止",
+  "FSM.State.interrupted": "已中断",
+  "FSM.Companion.connected": "伴随采样器已连接",
+  "FSM.Companion.missing": "伴随采样器未连接",
+  "FSM.Action.start": "开始",
+  "FSM.Action.mark": "刚才卡顿",
+  "FSM.Action.stop": "停止并导出"
+}

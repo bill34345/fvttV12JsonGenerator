@@ -271,6 +271,24 @@ Foundry 曾提示 `14.365` 可用，但本文所有模块和世界验收基于 `
 - `E:` 最终可用空间 8,327,684,096 bytes
 - 完整哈希与验收边界见生产迁移报告第 12 节
 
+### 2026-07-30 跑团监控器部署状态
+
+- `fvtt-session-monitor` 已安装并启用；首次线上点击“开始”暴露公网 HTTP
+  没有 `crypto.subtle`，本地工具因此由 `1.1.0` 修正为 `1.1.1`
+- 监控器 `1.1.1` 使用项目既有的浏览器安全纯 JavaScript SHA-256；
+  13/13 聚焦测试、生产类型检查、远端五文件清单和 SHA-256
+  `31098AD6EB861D641DC67BED9B51BA889058EA382CDDABC2BBC6D1C18C492CC4`
+  均通过
+- 当前 8080 为 PID `6480`，命令仍是 v14 代码、特殊 Data 路径和
+  `--world=cor-cotn`；启动日志已到 `Launching World | Complete`
+- 最后一次 `1.1.1` 的“开始 → 刚才卡顿 → 停止并导出”短烟雾测试，
+  仍需用户手动刷新内置浏览器并重新以 GM 加入后完成；四小时真实跑团和
+  非 GM 设备证据仍然不包含在短烟雾测试中
+- 2026-07-31 只读复核确认当前 PID 6480 仍绑定相同 8080/DataPath，完整
+  1.1.1 五文件制品仍在模块目录，五个资源经 8080 回环均为 HTTP 200，
+  公网 manifest 也返回 1.1.1。本次没有 GM 登录态，也没有读取 live
+  LevelDB；因此当前部署/服务状态为 Pass，当前世界 `active` 状态未重验。
+
 最新 resident 归因依据：
 
 - [`2026-07-28-fvtt-resident-memory-attribution.md`](../reviews/2026-07-28-fvtt-resident-memory-attribution.md)
