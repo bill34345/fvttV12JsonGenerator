@@ -1,6 +1,6 @@
 import { RESOLVER_MODULE_ID } from '../../core/spell-resolution/types';
 import type { SpellResolutionConfiguration } from '../../core/spell-resolution';
-import { projectResolverRuntimeDiagnostics, type ResolverRuntimeApi } from './foundry-adapter';
+import { projectResolverRuntimeDiagnostics, type ResolverRuntimeApi } from './runtime-api';
 
 export interface ResolverSettingsContextInput {
   sourcePriority: SpellResolutionConfiguration['sourcePriority'];

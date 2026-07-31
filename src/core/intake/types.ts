@@ -2,6 +2,9 @@ import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { IconWorkflowOptions } from '../icons/types';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type { PortableSpellRef } from '../spell-resolution/types';
+import type { EvidenceRef } from '../contracts/evidence';
+
+export type { EvidenceRef } from '../contracts/evidence';
 
 export type MonsterIntakeStatus = 'accepted' | 'needs_review' | 'failed';
 
@@ -17,12 +20,6 @@ export type IntakeConfidence = 'high' | 'medium' | 'low';
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CreatureSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
 export type IntakeSection = 'trait' | 'action' | 'bonus' | 'reaction' | 'legendary';
-
-export interface EvidenceRef {
-  start: number;
-  end: number;
-  quote: string;
-}
 
 export interface IntakeClaim {
   path: string;

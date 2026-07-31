@@ -18,7 +18,7 @@ import {
   type SpellResolutionConfiguration,
 } from '../../core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash } from './cast-activity';
-import type { ResolverRuntimeApi } from './foundry-adapter';
+import type { ResolverRuntimeApi } from './runtime-api';
 import {
   HydrationTransactionError,
   executeHydrationTransaction,
@@ -27,7 +27,8 @@ import {
   projectResolverManagedDocuments,
 } from './transaction';
 import { fetchSelectedSpellDocument } from './source-index';
-import { createFoundryAdapter, projectResolverRuntimeDiagnostics } from './foundry-adapter';
+import { createFoundryAdapter } from './foundry-adapter';
+import { projectResolverRuntimeDiagnostics } from './runtime-api';
 import { assertAdoptableNativeCache, assertResolverDocumentOwnership, documentId } from './ownership';
 import {
   openResolverReviewDialog,

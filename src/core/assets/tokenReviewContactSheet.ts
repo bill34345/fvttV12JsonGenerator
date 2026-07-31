@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import sharp from 'sharp';
-import type { TokenReviewItem } from './tokenReview';
+import type { TokenReviewItem } from './tokenReviewTypes';
 
 export interface TokenReviewContactSheetOptions {
   items: TokenReviewItem[];

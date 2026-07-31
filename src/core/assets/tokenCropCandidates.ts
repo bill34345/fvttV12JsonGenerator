@@ -1,5 +1,5 @@
 import type { ImageTokenCrop } from './imageAssets';
-import type { TokenReviewItem } from './tokenReview';
+import type { TokenReviewItem } from './tokenReviewTypes';
 
 export interface TokenCropCandidate {
   crop: ImageTokenCrop;

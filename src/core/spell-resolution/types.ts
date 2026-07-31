@@ -1,6 +1,6 @@
-import type { EvidenceRef } from '../intake/types';
+import type { EvidenceRef } from '../contracts/evidence';
 
-export type { EvidenceRef } from '../intake/types';
+export type { EvidenceRef } from '../contracts/evidence';
 
 export const RESOLVER_MODULE_ID = 'fvtt-json-generator-spell-resolver' as const;
 
