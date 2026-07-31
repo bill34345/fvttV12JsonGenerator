@@ -35,6 +35,8 @@ interface AntiOverfitSource {
   text: string;
 }
 
+export const ANTI_OVERFIT_SOURCE_ROOTS = ['src', 'packages', 'scripts'] as const;
+
 export interface AntiOverfitAuditExecutionResult {
   exitCode: 0 | 1;
   stdout: string[];
@@ -219,7 +221,7 @@ function isProductionAuditableFile(filePath: string): boolean {
 function collectDefaultSources(): AntiOverfitSource[] {
   const tracked = collectAddedLineSources();
   const trackedPaths = new Set(tracked.map((source) => source.filePath));
-  const untracked = runGitLines(['ls-files', '--others', '--exclude-standard', '--', 'src', 'scripts'])
+  const untracked = runGitLines(['ls-files', '--others', '--exclude-standard', '--', ...ANTI_OVERFIT_SOURCE_ROOTS])
     .filter(isProductionAuditableFile)
     .filter((filePath) => !trackedPaths.has(filePath))
     .filter((filePath) => existsSync(filePath))
@@ -228,14 +230,25 @@ function collectDefaultSources(): AntiOverfitSource[] {
 }
 
 function collectAllProductionSources(): AntiOverfitSource[] {
-  return runGitLines(['ls-files', '--', 'src', 'scripts'])
+  const paths = new Set([
+    ...runGitLines(['ls-files', '--', ...ANTI_OVERFIT_SOURCE_ROOTS]),
+    ...runGitLines(['ls-files', '--others', '--exclude-standard', '--', ...ANTI_OVERFIT_SOURCE_ROOTS]),
+  ]);
+  return [...paths]
     .filter(isProductionAuditableFile)
     .filter((filePath) => existsSync(filePath))
     .map((filePath) => ({ filePath, text: readFileSync(filePath, 'utf-8') }));
 }
 
 function collectAddedLineSources(): AntiOverfitSource[] {
-  const diff = runGitText(['diff', '--unified=0', '--diff-filter=ACMRT', 'HEAD', '--', 'src', 'scripts']);
+  const diff = runGitText([
+    'diff',
+    '--unified=0',
+    '--diff-filter=ACMRT',
+    'HEAD',
+    '--',
+    ...ANTI_OVERFIT_SOURCE_ROOTS,
+  ]);
   const sources = new Map<string, string[]>();
   let currentPath = '';
   let newLineNumber = 0;

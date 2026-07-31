@@ -1,4 +1,4 @@
-import type { StructuredActionData, ActionData } from "./action";
+import type { StructuredActionData, ActionData } from "@fvtt-json-generator/parser/models/action";
 
 /**
  * Item type values in dnd5e system

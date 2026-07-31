@@ -1,5 +1,4 @@
-import type { ActionData } from '../parser/action';
-import type { StructuredActionData } from '../models/action';
+import type { ActionData, StructuredActionData } from '@fvtt-json-generator/parser/models/action';
 import { ActivityGenerator } from './activity';
 import { statusIconPath } from './actor-effects';
 import { createStableDocumentId } from '../utils/stable-id';

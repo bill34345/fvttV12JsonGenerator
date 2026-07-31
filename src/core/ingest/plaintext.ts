@@ -6,7 +6,7 @@ import {
   OpenAICompatibleTranslator,
   createTranslationConfigFromEnv,
 } from '../translation';
-import { normalizeChineseText } from '../parser/utils/normalize';
+import { normalizeChineseText } from '@fvtt-json-generator/parser/normalize';
 
 const SECTION_ORDER = ['特性', '动作', '附赠动作', '反应', '传奇动作'] as const;
 type SectionName = (typeof SECTION_ORDER)[number];

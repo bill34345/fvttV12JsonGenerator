@@ -1,4 +1,4 @@
-import type { StructuredActionData } from "../core/models/action";
+import type { StructuredActionData } from "@fvtt-json-generator/parser/models/action";
 import type { ActorBehaviorSemantics } from "../core/models/behavior";
 import type { ActorResourceSemantics } from "../core/models/resource";
 import type { PortableSpellManifest } from "../core/spell-resolution";

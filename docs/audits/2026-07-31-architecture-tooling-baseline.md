@@ -76,6 +76,18 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - Knip 覆盖 workspace package entry/project，unused files/dependencies/devDependencies/unlisted/unresolved 均为 0；
 - workspace install、冻结 lockfile、package-local typecheck 与根级类型检查均通过。
 
+### Stage 3B1：parser kernel workspace package
+
+- `@fvtt-json-generator/parser` 首批包含 action/English action/structured action、normalize、i18n 与 action IR；
+- 高层 YAML/router/item parser 保留原位，避免同一提交混入 spell-manifest、mapping 与 item model 迁移；
+- package 不依赖 `src/`、`scripts/`、`apps/` 或其他实现 package；
+- 生产代码直接导入 package exports，旧路径由测试覆盖的 compatibility adapter 提供；
+- `opencc-js` 由实际消费它的 parser package 声明，根 package 不再伪装成直接消费者；
+- i18n 为保持现有行为仍从仓库 `data/cn.json` 读取定义；这属于 Stage 5 data-root 债务，
+  所以当前 package 只宣称代码依赖独立，不宣称可脱离仓库发布；
+- 迁移检查暴露并修复 anti-overfit 的 workspace 漏扫：`src`、`packages`、`scripts` 的 tracked、
+  untracked 与 diff sources 现在都进入审计。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -113,3 +125,7 @@ Stage 3A 另用项目 CLI 重新生成 Slithering Bloodfin v14/core Actor：
 
 因此，本阶段证明 contracts 物理迁移没有改变该真实 Actor 的生成语义；它不证明后续 parser、
 generation、application package 已迁移，也不构成 Foundry runtime 或生产验收。
+
+Stage 3B1 再次生成同一 Slithering Bloodfin v14/core Actor；verifier 0 warnings，且排除重新生成的
+Effect `_id` 和时间戳后与 Stage 3A 完整语义相等。专项 parser/acceptance 测试 86/86 通过。
+这一证据只接受 parser kernel 迁移；高层 parser 仍待后续独立迁移和验收。

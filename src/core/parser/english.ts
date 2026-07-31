@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import type { ParsedNPC } from '../../config/mapping';
-import { i18n } from '../mapper/i18n';
-import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
+import { i18n } from '@fvtt-json-generator/parser/i18n';
+import { CHINESE_ACTION_REGEX } from '@fvtt-json-generator/parser/chinese-action-regex';
 import type { ParserStrategy } from './types';
 
 const require = createRequire(import.meta.url);

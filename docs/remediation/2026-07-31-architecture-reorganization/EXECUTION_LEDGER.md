@@ -116,6 +116,20 @@ owner 和迁移约束。
 - `bun install --frozen-lockfile` 已证明当前 workspace lockfile 可重复解析；
 - 本迁移只移动类型契约，没有修改 parser、generator 或 Foundry mechanics。
 
+### 2026-07-31：阶段 3B1 parser kernel 完成
+
+- 建立 `@fvtt-json-generator/parser` 的首个独立内核边界；
+- 迁入中英文 action parser、structured action parser、中文文本正规化、parser i18n 与 action IR；
+- 高层 YAML/English bestiary/router/item parser 尚留在 `src/core/parser`，避免把 mapping、item model 与
+  spell-manifest validator 在同一提交中强行搬迁；
+- 生产调用方改经 package exports；原 parser/model/mapper 路径只保留薄兼容转发；
+- `opencc-js` 改由 parser package 自己声明，精确 ambient type 也随 package 迁移；
+- 为保持当前 CLI/vault 行为，i18n 运行时仍读取仓库 `data/cn.json`；这是阶段 5 的 data-root
+  迁移约束，不伪称 parser 已具备仓库外独立发布能力；
+- dependency-cruiser 阻止 parser package 穿透 `src/` 或其他实现 package，并阻止生产代码回流旧适配层；
+- 发现原 anti-overfit `--all` 只枚举已跟踪的 `src/`/`scripts/`，会漏掉新 workspace 和未提交 package；
+  已把 `packages/` 纳入 tracked、untracked、diff 三种发现路径，并增加回归测试。
+
 ## 验证证据
 
 ### 阶段 0
@@ -172,7 +186,28 @@ owner 和迁移约束。
 - 未宣称：parser/generation/workflows package 已迁移、Foundry runtime 验收、在线 hydration、
   生产部署或 support matrix 升级。
 
+### 阶段 3B1：parser kernel
+
+- 机械：
+  - package-local、production、全仓类型检查与冻结安装通过；
+  - dependency-cruiser：425 modules / 880 dependencies，0 violations；
+  - Knip cycles：0；unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - parser kernel 专项：86 tests / 0 failed / 326 expectations；
+  - anti-overfit 修正后覆盖 226 个 tracked/untracked production sources，0 findings；
+  - 修正 anti-overfit 扫描后的完整 `ci:verify`：1,581 tests / 0 failed /
+    7,467 expectations / 151 files；
+  - coverage：85.40% lines / 88.16% functions；
+  - hygiene 1,931 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 再次生成 Slithering Bloodfin v14/core，canonical verifier 0 warnings；
+  - 与阶段 3A 产物排除 Effect `_id` 和时间戳后完整语义投影相等；
+  - Slithering Bloodfin 的 28 条真实 acceptance assertions 全部通过；
+  - action parser、English action、structured action、normalize 与 i18n 专项行为均通过。
+- 未宣称：高层 YAML/router/item parser 已进入 package，或完整 Stage 3 已完成。
+- 已知边界债：parser i18n 的 `data/cn.json` runtime asset 尚未封装进 package。
+
 ## 当前停止点
 
-阶段 0–2 与阶段 3A 已形成可回滚稳定检查点。下一条执行路径是阶段 3B：
-分析并迁移 `packages/parser`；在 parser package 独立验收前不移动 generation、CLI、Web、module 或 ops。
+阶段 0–2、阶段 3A 与 parser kernel 已形成可回滚稳定检查点。下一条执行路径是阶段 3B2：
+先提取 spell-manifest contract 边界，再迁移高层 YAML/router parser；在其独立验收前不移动
+generation、CLI、Web、module 或 ops。

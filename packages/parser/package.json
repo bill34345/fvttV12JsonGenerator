@@ -1,0 +1,22 @@
+{
+  "name": "@fvtt-json-generator/parser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./action": "./src/action.ts",
+    "./chinese-action-regex": "./src/chineseActionRegex.ts",
+    "./english-action": "./src/englishAction.ts",
+    "./i18n": "./src/i18n.ts",
+    "./models/action": "./src/models/action.ts",
+    "./normalize": "./src/normalize.ts",
+    "./structured-action": "./src/structuredAction.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "opencc-js": "^1.0.5"
+  }
+}

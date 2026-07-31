@@ -1,9 +1,9 @@
 import * as yaml from 'js-yaml';
 import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../config/mapping';
-import { i18n } from '../mapper/i18n';
-import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
-import { StructuredActionParser } from './structuredAction';
-import type { StructuredActionData } from '../models/action';
+import { i18n } from '@fvtt-json-generator/parser/i18n';
+import { CHINESE_ACTION_REGEX } from '@fvtt-json-generator/parser/chinese-action-regex';
+import { StructuredActionParser } from '@fvtt-json-generator/parser/structured-action';
+import type { StructuredActionData } from '@fvtt-json-generator/parser/models/action';
 import { validatePortableSpellManifestStructure } from '../spell-resolution';
 import { parseActorResourceSemantics } from './resourceSemantics';
 import { parseActorBehaviorSemantics } from './behaviorSemantics';

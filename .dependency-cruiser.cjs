@@ -16,6 +16,13 @@ module.exports = {
       to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/))' },
     },
     {
+      name: 'parser-package-is-independent',
+      severity: 'error',
+      comment: 'Parser package code depends only on contracts and declared third-party packages.',
+      from: { path: '^packages/parser/' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|parser/))' },
+    },
+    {
       name: 'no-production-to-legacy-contract-adapters',
       severity: 'error',
       comment: 'Production code imports the contracts package; legacy paths are compatibility adapters only.',
@@ -23,6 +30,17 @@ module.exports = {
         pathNot: '(^src/core/contracts/|/__tests__/|[.](test|spec)[.])',
       },
       to: { path: '^src/core/contracts/' },
+    },
+    {
+      name: 'no-production-to-legacy-parser-kernel-adapters',
+      severity: 'error',
+      comment: 'Production code imports parser workspace exports; old source paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|models/action[.]ts|mapper/i18n[.]ts)$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|models/action[.]ts|mapper/i18n[.]ts)$',
+      },
     },
     {
       name: 'no-core-to-outer-layers',

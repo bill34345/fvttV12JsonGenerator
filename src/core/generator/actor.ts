@@ -1,13 +1,12 @@
-import { ActionParser } from '../parser/action';
-import type { ActionData, Damage } from '../parser/action';
-import { EnglishActionParser } from '../parser/englishAction';
+import { ActionParser } from '@fvtt-json-generator/parser/action';
+import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/parser/models/action';
+import { EnglishActionParser } from '@fvtt-json-generator/parser/english-action';
 import type { ParserRoute } from '../parser/types';
 import { ActivityGenerator, type ActivityGenerationContext } from './activity';
 import type { AttackAbility } from './attack-ability';
 import type { ParsedNPC } from '../../config/mapping';
-import type { StructuredActionData } from '../models/action';
 import { spellsMapper } from '../mapper/spells';
-import { i18n } from '../mapper/i18n';
+import { i18n } from '@fvtt-json-generator/parser/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';
 import {
   ActorSpellManifestError,

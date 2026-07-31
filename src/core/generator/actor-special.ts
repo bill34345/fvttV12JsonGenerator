@@ -1,4 +1,4 @@
-import type { ActionData } from '../parser/action';
+import type { ActionData } from '@fvtt-json-generator/parser/models/action';
 import { extractSavingThrowsWithInheritedDcFromText } from './actor-text';
 
 type GeneratedActionData = ActionData & {

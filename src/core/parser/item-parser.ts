@@ -2,8 +2,8 @@ import * as yaml from 'js-yaml';
 import { detectItemRoute } from './item-router';
 import type { ItemParserStrategy } from './item-strategy';
 import type { ParsedItem, ItemRarity, AttunementType, ItemType, UsesData, ItemStage } from '../models/item';
-import type { ActionData, Damage } from './action';
-import { i18n } from '../mapper/i18n';
+import type { ActionData, Damage } from '@fvtt-json-generator/parser/models/action';
+import { i18n } from '@fvtt-json-generator/parser/i18n';
 
 /**
  * Item parser - handles layout: item frontmatter content

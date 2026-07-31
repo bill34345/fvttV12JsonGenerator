@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'bun:test';
-import { auditAntiOverfitText, executeAntiOverfitAudit } from '../antiOverfitAudit';
+import {
+  ANTI_OVERFIT_SOURCE_ROOTS,
+  auditAntiOverfitText,
+  executeAntiOverfitAudit,
+} from '../antiOverfitAudit';
 
 describe('anti-overfit audit', () => {
+  it('keeps workspace packages inside the production audit roots', () => {
+    expect(ANTI_OVERFIT_SOURCE_ROOTS).toEqual(['src', 'packages', 'scripts']);
+  });
+
   it('fails an all-source audit when Git yields zero production sources', () => {
     const result = executeAntiOverfitAudit(['--all'], {
       collectAllProductionSources: () => [],
