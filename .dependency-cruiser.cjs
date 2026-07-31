@@ -27,9 +27,16 @@ module.exports = {
     {
       name: 'models-package-is-independent',
       severity: 'error',
-      comment: 'Shared source-derived models must not depend on parser, generation, delivery, runtime, or operator implementations.',
+      comment: 'Shared source-derived models depend only on contracts and portable spell contracts, never implementations or delivery layers.',
       from: { path: '^packages/models/' },
-      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|models/))' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|models/|spell-manifest-contracts/))' },
+    },
+    {
+      name: 'no-generation-to-intake-canonical-model-adapter',
+      severity: 'error',
+      comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
+      from: { path: '^src/core/(generation|generator)/' },
+      to: { path: '^src/core/intake/types[.]ts$' },
     },
     {
       name: 'spell-manifest-contracts-package-is-independent',

@@ -41,6 +41,10 @@
     "packages/models": {
       "name": "@fvtt-json-generator/models",
       "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+      },
     },
     "packages/parser": {
       "name": "@fvtt-json-generator/parser",

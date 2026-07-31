@@ -123,6 +123,13 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - 一次完整 CI 中 Knip 子进程发生未稳定复现的高 CPU；standalone 与第二次完整 CI 均通过，
   因此记录为工具进程偶发而非静默忽略。
 
+### Stage 3C1：canonical source models
+
+- CanonicalMonster/Feature/Spellcasting source IR 从 AI Intake 私有类型迁入 models package；
+- Intake 继续通过兼容 re-export 服务现有调用方，generation 改为直接依赖 models；
+- dependency-cruiser 明确禁止 generation/generator 重新依赖 Intake canonical model adapter；
+- models 只新增 contracts 与 spell-manifest contracts 依赖，不依赖 parser、generation 或交付层。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -180,3 +187,6 @@ White Tusk Shaman v14/core Actor；两个 verifier 均为 0 warnings，人工核
 Stage 3B3c 通过项目 CLI 从 `input/items/骑士之盾.md` 重生成 v14/core Item。人工核对名称、类型、
 稀有度、同调、AC、Forceful Bash、Protective Field 与 prone effect；新旧唯一原始差异是 Effect
 `origin` 内嵌随机 Item `_id`，排除随机身份及派生 origin 后与 Stage 2 完整语义相等。
+
+Stage 3C1 通过项目 CLI 重生成 Warlock of the Rat God v14/core Actor，verifier 0 warnings；
+排除随机身份后与 spell-manifest contracts 检查点完整语义相等，且仍为 portable、0 embedded Spell。

@@ -7,10 +7,15 @@
     ".": "./src/index.ts",
     "./action": "./src/action.ts",
     "./behavior": "./src/behavior.ts",
+    "./canonical-monster": "./src/canonicalMonster.ts",
     "./item": "./src/item.ts",
     "./resource": "./src/resource.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*"
   }
 }

@@ -173,6 +173,15 @@ owner 和迁移约束。
 - 首次完整 CI 的 Knip cycles 子进程出现一次持续高 CPU；核对并只终止该次 CI 进程树后，
   standalone Knip 1.09 秒通过，第二次完整 CI 通过，未形成稳定复现的依赖图回归。
 
+### 2026-07-31：阶段 3C1 canonical source models 完成
+
+- generation 仍从 AI Intake 私有 `types.ts` 获取 CanonicalMonster，形成错误依赖方向；
+- CanonicalMonster、CanonicalFeature、damage/condition 与 spellcasting source IR 迁入
+  `@fvtt-json-generator/models/canonical-monster`；
+- Intake 保留兼容 re-export，generation 直接依赖 models package；
+- dependency-cruiser 阻止 generation/generator 回流 Intake canonical type adapter；
+- 这是 generation package 迁移前置边界，不改 Intake 或 generator 算法。
+
 ## 验证证据
 
 ### 阶段 0
@@ -320,8 +329,26 @@ owner 和迁移约束。
   - 排除 `_id`、时间戳及其派生 `origin` 后，与 Stage 2 Item 完整语义相等。
 - 未宣称：parser 的 `data/cn.json` 仓库外发布债已关闭，或 generation package 已迁移。
 
+### 阶段 3C1：canonical source models
+
+- 机械：
+  - 冻结安装、package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：541 modules / 1,045 dependencies，0 violations；
+  - Knip cycles、unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - Intake/generation/models 专项：265 tests / 0 failed / 1,077 expectations；
+  - 完整 `ci:verify`：1,586 tests / 0 failed / 7,493 expectations / 155 files；
+  - coverage：85.38% lines / 88.20% functions；
+  - anti-overfit 249 sources、hygiene 1,971 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 重生成 Warlock of the Rat God v14/core Actor；
+  - canonical verifier 返回 0 warnings；
+  - 排除随机身份与时间戳后，与 spell-manifest contracts 检查点完整语义相等；
+  - 仍无 embedded Spell，未伪称 target-world hydration。
+- 未宣称：generation/generator 已物理迁入 package。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts、models 与 high-level actor parser
-及 item parser 已形成可回滚稳定检查点。`packages/parser` 的代码迁移已完成；下一条执行路径是
-阶段 3C：迁移 generation package，在其独立验收前不移动 CLI、Web、module 或 ops。
+及 item parser 已形成可回滚稳定检查点。`packages/parser` 的代码迁移已完成，canonical source
+model 已脱离 Intake；下一条执行路径是阶段 3C2：收敛 generation 的 target/stable-id/translation/icon
+ports 与 spell hash 依赖，再迁移 generation package。在其独立验收前不移动 CLI、Web、module 或 ops。

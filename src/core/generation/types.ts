@@ -2,7 +2,7 @@ import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
-import type { CanonicalMonster } from '../intake/types';
+import type { CanonicalMonster } from '@fvtt-json-generator/models/canonical-monster';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 import type { ParsedItem, ItemType } from '@fvtt-json-generator/models/item';
@@ -13,7 +13,7 @@ import type {
   ActorBehaviorExpressionCoverage,
 } from '@fvtt-json-generator/models/behavior';
 
-export type { CanonicalFeature, CanonicalMonster } from '../intake/types';
+export type { CanonicalFeature, CanonicalMonster } from '@fvtt-json-generator/models/canonical-monster';
 export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 export type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 export type GenerationDocumentKind = 'actor' | 'item';
