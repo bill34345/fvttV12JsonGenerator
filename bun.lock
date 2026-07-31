@@ -36,6 +36,16 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/cli": {
+      "name": "@fvtt-json-generator/cli",
+      "version": "1.0.0",
+      "bin": {
+        "fvtt-import": "./src/main.ts",
+      },
+      "dependencies": {
+        "commander": "^14.0.2",
+      },
+    },
     "packages/contracts": {
       "name": "@fvtt-json-generator/contracts",
       "version": "0.1.0",
@@ -150,6 +160,8 @@
     "@emnapi/runtime": ["@emnapi/runtime@1.11.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-kyOl3X0DuTiT1h2ft8r2fYO8JYtU9a9Xis/zBSiGArNaagCOWx90N1k2wxp18czFDH+OgcWGb5ZP/XMt3dcyPA=="],
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
+
+    "@fvtt-json-generator/cli": ["@fvtt-json-generator/cli@workspace:apps/cli"],
 
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
 

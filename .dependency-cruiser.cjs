@@ -156,7 +156,17 @@ module.exports = {
       severity: 'error',
       comment: 'Core code must not depend on delivery, runtime, tooling, or operator layers.',
       from: { path: '^src/core/' },
-      to: { path: '^(src/(web|foundry|tools)/|scripts/)' },
+      to: { path: '^(apps/|src/(web|foundry|tools)/|scripts/)' },
+    },
+    {
+      name: 'cli-through-application-composition',
+      severity: 'error',
+      comment: 'The CLI delivery app depends on its public application composition surface, not scattered core implementation directories.',
+      from: { path: '^apps/cli/' },
+      to: {
+        path: '^src/core/',
+        pathNot: '^src/core/application/cli[.]ts$',
+      },
     },
     {
       name: 'no-web-to-foundry-or-operator-tools',
@@ -177,7 +187,7 @@ module.exports = {
       severity: 'error',
       comment: 'Crawl core stays decoupled from the actor conversion CLI.',
       from: { path: '^src/core/crawl/' },
-      to: { path: '^src/index[.]ts$' },
+      to: { path: '^(src/index[.]ts$|apps/cli/src/main[.]ts$)' },
     },
     {
       name: 'single-conversion-through-application-facade',
@@ -193,7 +203,7 @@ module.exports = {
       severity: 'error',
       comment: 'CLI, Web, Foundry, and operator tools use public application ports instead of workflow orchestration internals.',
       from: {
-        path: '^(src/index[.]ts$|src/(web|foundry|tools)/)',
+        path: '^(apps/cli/|src/index[.]ts$|src/(web|foundry|tools)/)',
         pathNot: '(/__tests__/|[.](test|spec)[.])',
       },
       to: {
@@ -205,7 +215,7 @@ module.exports = {
       severity: 'error',
       comment: 'Delivery and operator layers depend on application contracts, never generator implementation files.',
       from: {
-        path: '^(src/index[.]ts$|src/(web|foundry|tools)/)',
+        path: '^(apps/cli/|src/index[.]ts$|src/(web|foundry|tools)/)',
         pathNot: '(/__tests__/|[.](test|spec)[.])',
       },
       to: { path: '^src/core/generator/' },
