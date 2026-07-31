@@ -36,12 +36,12 @@ import type {
   MonsterIntakeRunResult,
 } from '@fvtt-json-generator/intake-ai/types';
 import { conversionApplication } from './conversion';
-import { imageAssetProcessorAdapter } from '../assets/adapter';
+import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
 import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
 import { ItemsIngestionWorkflow } from '../ingest/items';
 import { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
-import { iconWorkflowAdapter } from '../icons/adapter';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { createDefaultWorkflowTranslationService } from '../translation/defaultService';
 
 export type {

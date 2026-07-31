@@ -12,8 +12,8 @@ import type {
   V14IconCatalog,
   V14IconCatalogEntry,
   V14IconFileEntry,
-} from '../src/core/icons/types';
-import { tokenize } from '../src/core/icons/resolver';
+} from '@fvtt-json-generator/assets-icons/icon-types';
+import { tokenize } from '@fvtt-json-generator/assets-icons/icon-resolver';
 
 interface PublicCompendiumExport {
   schemaVersion: 1;

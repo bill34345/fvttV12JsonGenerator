@@ -9,7 +9,7 @@ import type {
   ConvertMarkdownContentOptions,
   ConvertMarkdownPathOptions,
 } from '@fvtt-json-generator/workflows/single-file-conversion';
-import { iconWorkflowAdapter } from '../icons/adapter';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 
 export { DEFAULT_VAULT_PATH } from '@fvtt-json-generator/workflows/single-file-conversion';
 export type { EffectProfile } from '@fvtt-json-generator/contracts/target';

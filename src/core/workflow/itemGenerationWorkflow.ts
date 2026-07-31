@@ -1,4 +1,4 @@
-import { iconWorkflowAdapter } from '../icons/adapter';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import {
   expandParsedItemStages,
   generateItemArtifacts as generatePackageItemArtifacts,

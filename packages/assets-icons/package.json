@@ -1,0 +1,33 @@
+{
+  "name": "@fvtt-json-generator/assets-icons",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./image-adapter": "./src/assets/adapter.ts",
+    "./image-options": "./src/assets/imageAssetOptions.ts",
+    "./image-assets": "./src/assets/imageAssets.ts",
+    "./token-crop": "./src/assets/tokenCrop.ts",
+    "./token-crop-candidates": "./src/assets/tokenCropCandidates.ts",
+    "./token-review": "./src/assets/tokenReview.ts",
+    "./token-review-contact-sheet": "./src/assets/tokenReviewContactSheet.ts",
+    "./token-review-types": "./src/assets/tokenReviewTypes.ts",
+    "./visual-hints": "./src/assets/visualHints.ts",
+    "./icon-adapter": "./src/icons/adapter.ts",
+    "./icon-report": "./src/icons/report.ts",
+    "./icon-resolver": "./src/icons/resolver.ts",
+    "./icon-resources": "./src/icons/resources.ts",
+    "./icon-types": "./src/icons/types.ts",
+    "./icon-workflow": "./src/icons/workflow.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/parser": "workspace:*",
+    "@fvtt-json-generator/workflows": "workspace:*",
+    "sharp": "^0.35.2"
+  }
+}

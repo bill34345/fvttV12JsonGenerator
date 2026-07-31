@@ -1,6 +1,6 @@
-import { imageAssetProcessorAdapter } from '../assets/adapter';
+import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
-import { iconWorkflowAdapter } from '../icons/adapter';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import {
   ObsidianSyncWorkflow as PackageObsidianSyncWorkflow,
   type ObsidianSyncOptions,

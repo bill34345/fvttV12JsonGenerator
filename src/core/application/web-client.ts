@@ -7,4 +7,4 @@
 export {
   hasCompleteNormalizedCropRect,
   type ImageTokenCrop,
-} from '../assets/tokenCrop';
+} from '@fvtt-json-generator/assets-icons/token-crop';

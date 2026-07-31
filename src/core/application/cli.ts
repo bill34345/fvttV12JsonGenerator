@@ -14,8 +14,8 @@ export {
   resumeMonsterIntake,
   runMonsterIntake,
 } from './workflows';
-export { buildImageAssetOptionsFromCli } from '../assets/imageAssetOptions';
-export { parseIconMode } from '../icons/workflow';
+export { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
+export { parseIconMode } from '@fvtt-json-generator/assets-icons/icon-workflow';
 export { ItemsIngestionWorkflow } from '../ingest/items';
 export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 export { loadMonsterIntakeConfig } from '@fvtt-json-generator/intake-ai/config';

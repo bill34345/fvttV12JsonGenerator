@@ -27,13 +27,13 @@ export {
 export {
   type ImageAssetOptions,
   type ImageTokenCrop,
-} from '../assets/imageAssets';
-export { hasCompleteNormalizedCropRect } from '../assets/tokenCrop';
+} from '@fvtt-json-generator/assets-icons/image-assets';
+export { hasCompleteNormalizedCropRect } from '@fvtt-json-generator/assets-icons/token-crop';
 export { runGoddessFantasyBoardCrawl } from '@fvtt-json-generator/crawl-goddessfantasy/crawl';
 export { runRecordsToPlaintext } from '@fvtt-json-generator/crawl-goddessfantasy/records-to-plaintext';
 export type { GoddessFantasyCrawlMode } from '@fvtt-json-generator/crawl-goddessfantasy/types';
-export { parseIconMode } from '../icons/workflow';
-export type { IconMode } from '../icons/types';
+export { parseIconMode } from '@fvtt-json-generator/assets-icons/icon-workflow';
+export type { IconMode } from '@fvtt-json-generator/assets-icons/icon-types';
 export { ItemsIngestionWorkflow } from '../ingest/items';
 export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 export {

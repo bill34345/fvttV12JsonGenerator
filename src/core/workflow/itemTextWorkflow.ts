@@ -1,6 +1,6 @@
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import type { IconWorkflowOptions } from '../icons/types';
+import type { IconWorkflowOptions } from '@fvtt-json-generator/assets-icons/icon-types';
 import {
   ItemsIngestionWorkflow,
   type ItemIngestionResult,

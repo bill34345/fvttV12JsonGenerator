@@ -1,11 +1,11 @@
-import type { ImageAssetOptions } from '../assets/imageAssets';
+import type { ImageAssetOptions } from '@fvtt-json-generator/assets-icons/image-assets';
 import {
   PlainTextIngestionWorkflow,
   type PlainTextIngestionResult,
 } from '../ingest/plaintextAdapter';
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import type { IconWorkflowOptions } from '../icons/types';
+import type { IconWorkflowOptions } from '@fvtt-json-generator/assets-icons/icon-types';
 import {
   PlainTextActorWorkflow as PackagePlainTextActorWorkflow,
   type PlainTextActorWorkflowResult as PackagePlainTextActorWorkflowResult,

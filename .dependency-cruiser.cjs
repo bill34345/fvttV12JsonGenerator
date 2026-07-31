@@ -77,6 +77,15 @@ module.exports = {
       },
     },
     {
+      name: 'assets-icons-package-is-independent',
+      severity: 'error',
+      comment: 'Image, token, and safe-icon implementations depend on stable contracts and injected workflow ports, never source-tree or delivery code.',
+      from: { path: '^packages/assets-icons/src/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!assets-icons/|contracts/|parser/|workflows/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
@@ -209,6 +218,17 @@ module.exports = {
       },
       to: {
         path: '^src/core/crawl/(types|runGoddessFantasyBoardCrawl|convert/(goddessfantasyPlaintext|recordsToPlaintext)|sites/(goddessfantasy|goddessfantasyAuth))[.]ts$',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-assets-icons-adapters',
+      severity: 'error',
+      comment: 'Production code imports the assets-icons package; old assets and icons paths remain compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/(assets|icons)/|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/(assets|icons)/(adapter|imageAssetOptions|imageAssets|tokenCrop|tokenCropCandidates|tokenReview|tokenReviewContactSheet|tokenReviewTypes|visualHints|report|resolver|resources|types|workflow)[.]ts$',
       },
     },
     {

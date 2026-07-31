@@ -39,8 +39,8 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | `packages/crawl-goddessfantasy` 已独立验收；下一步迁移 `packages/assets-icons` |
-| 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
+| 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 先做 module/ops inventory 与发布边界核对 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -655,10 +655,55 @@ owner 和迁移约束。
     继续禁止提交，package 也不升级这些文件为正式 Actor 产物；
   - tests/fixtures 暂留旧 `src/core/crawl/__tests__` 兼容路径，生产代码已受 dependency gate 约束。
 
+### 阶段 3J：`packages/assets-icons`
+
+- 结构：
+  - 将 image asset、SSH uploader、token crop/candidates、visual hints、token review/contact sheet
+    与 v14 safe icon catalog/resources/resolver/report 迁入 `@fvtt-json-generator/assets-icons`；
+  - browser-safe Web composition 只导入纯 `token-crop` 子路径；Node-only sharp/child_process/SSH
+    实现没有进入浏览器 bundle；
+  - application/workflow、CLI/Web、crawl pipeline、operator tools 与 icon catalog builder 全部改用
+    package exports；旧 `src/core/assets/*`、`src/core/icons/*` 只保留兼容 re-export；
+  - icon catalog 与 override 默认路径按 package 新深度指向同一 tracked
+    `references/foundry-v14-icons/catalog.json` 和 `config/icon-overrides.v14.json`；
+  - dependency-cruiser 新增 package 独立性与 legacy adapter 禁止规则。
+- 机械：
+  - package-local、production、packages、apps 与全仓类型检查通过；frozen install 通过；
+  - dependency-cruiser：3,301 modules / 3,819 dependencies，0 violations；Knip cycles 为 0；
+  - image/SSH mock、crop、candidate、visual hints、token review/contact sheet、icon catalog/resolver、
+    CLI/Web artifact gate 与 pipeline 专项：87 tests / 0 failed / 401 expectations；
+  - CLI 子进程最终 12 tests / 0 failed / 57 expectations；第一次全量 CI 中 safe-icon 子进程
+    一次触发 5 秒测试超时，随后的精确单测、完整 CLI 组与完整 CI 均通过。复跑时另一个 Item
+    子进程曾耗时约 10 秒但成功，证据指向 Windows 子进程偶发调度抖动，不把首次失败隐藏为通过；
+  - 最终完整 `ci:verify`：CLI 子进程 12 tests 与 coverage 主组 1,577 tests 均通过，
+    合计 1,589 tests / 0 failed / 7,504 expectations / 156 files；
+  - coverage 统计 262 个 production files：85.69% lines / 88.20% functions；anti-overfit
+    340 sources、hygiene 2,063 tracked paths、dnd5e 5.3.3 reference、Web production build 与
+    offline Actor smoke 均通过。
+- 语义：
+  - 项目 CLI 对真实 Slithering Bloodfin v14/core 运行 `--icon-mode safe`，Actor verifier
+    0 warnings；9 个 Item 均产生 review entry，5 exact、4 type-default fallback，0 invalid path、
+    0 missing reason；
+  - 全部 selected path 属于 tracked `icons/` 或 `systems/dnd5e/`；fallback 保持显式 review，
+    没有被夸大为 semantic match；
+  - 排除随机 `_id`、时间戳、派生 `origin` 与预期变化的 `img` 后，safe-icon Actor 与 Stage 3H
+    无图标 Actor 的完整 JSON 语义投影相等；
+  - 本地合成竖幅角色图经正式 image workflow 生成 actor PNG 与 512×512 framed WebP token，
+    mock uploader/public verifier 返回 0 warnings；实际查看两张图确认上半身居中、圆框完整、
+    透明外缘正常，没有裁掉主体头部；
+  - 专项继续覆盖下载失败、上传失败、SSH PowerShell 编码、slug/source-hash crop 优先级、
+    crop re-upload、共享图片风险、确认 gate、contact sheet 可读性与 Web server preset 禁用边界。
+- 已知债：
+  - 未执行真实 SSH 上传或远端公开 URL 读回；这些外部写入需要单独授权/目标与网络状态，
+    mock 验收不能替代生产资产发布；
+  - token crop candidate 仍只提出候选，人工确认 gate 未被自动化绕过；safe icon fallback 也仍需
+    review，不因 package 迁移升级为已人工接受；
+  - assets/icons tests 暂留旧路径作为兼容资产，生产代码已受 dependency gate 约束。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows/Intake/plaintext/crawl packages、`apps/cli` 与 `apps/web` 已形成可回滚稳定
-检查点。GoddessFantasy crawl 已通过完整机械与 fixture 语义验收；下一条执行路径是阶段 3J：
-迁移 `packages/assets-icons`，保持 actor/token artwork 分工、token crop、safe icon catalog/review、
-本地与 SSH adapter、人工复核 gate、Web/CLI 参数以及 dry-run 不触发远端写入的边界不变。
+generation/workflows/Intake/plaintext/crawl/assets-icons packages、`apps/cli` 与 `apps/web` 已形成
+可回滚稳定检查点，阶段 3 完成。下一条执行路径是阶段 4：先只读核对三个 Foundry module、
+companion、build/install 脚本与 Foundry Ops 的实际发布边界，再按 ADR 逐个形成独立 release unit。
+不因目录移动关闭原 hardening finding，不接触生产服务器，也不自动执行 module install。

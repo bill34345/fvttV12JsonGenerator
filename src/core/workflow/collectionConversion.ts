@@ -7,7 +7,7 @@ import type {
   CollectionConversionResult,
 } from '@fvtt-json-generator/workflows/collection-conversion';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
-import { iconWorkflowAdapter } from '../icons/adapter';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 
 export {
   writeTextArtifact,

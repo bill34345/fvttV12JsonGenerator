@@ -3,9 +3,9 @@ import { dirname, join, resolve } from 'node:path';
 import { runRecordsToPlaintext, type RecordsToPlaintextOptions, type RecordsToPlaintextResult } from '@fvtt-json-generator/crawl-goddessfantasy/records-to-plaintext';
 import { runGoddessFantasyBoardCrawl } from '@fvtt-json-generator/crawl-goddessfantasy/crawl';
 import type { CrawlContentTypeFilter, GoddessFantasyCrawlMode, GoddessFantasyCrawlOptions, GoddessFantasyCrawlResult } from '@fvtt-json-generator/crawl-goddessfantasy/types';
-import { buildImageAssetOptionsFromCli } from '../core/assets/imageAssetOptions';
-import type { ImageAssetOptions } from '../core/assets/imageAssets';
-import { runTokenReview, type TokenReviewOptions, type TokenReviewResult } from '../core/assets/tokenReview';
+import { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
+import type { ImageAssetOptions } from '@fvtt-json-generator/assets-icons/image-assets';
+import { runTokenReview, type TokenReviewOptions, type TokenReviewResult } from '@fvtt-json-generator/assets-icons/token-review';
 import type { EffectProfile } from '../core/application/conversion';
 import {
   PlainTextActorWorkflow,

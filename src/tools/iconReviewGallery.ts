@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { IconReviewEntry, IconReviewReport } from '../core/icons/types';
+import type { IconReviewEntry, IconReviewReport } from '@fvtt-json-generator/assets-icons/icon-types';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CORE_PUBLIC_ROOT = resolve(ROOT, '.local/foundry-v14/app/14.364/public');
