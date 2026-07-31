@@ -19,9 +19,49 @@ import {
 import { patchPlutoniumQuickInsertInstall } from './patchPlutoniumQuickInsert';
 import { buildBloodHunterHomebrew } from './bloodHunterHomebrew';
 import { patchSequencerSpritesheetWorkerInstall } from './patchSequencerSpritesheetWorkers';
+import {
+  markClasspackV14MigrationComplete,
+  prepareClasspackV14,
+  setClasspackMatrixActivation,
+} from './classpackV14';
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
+if (command === 'classpack-v14') {
+  if (args.includes('--mark-migrated')) {
+    const result = await markClasspackV14MigrationComplete(createLabConfig(), { apply });
+    console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+    process.exit(0);
+  }
+  const activation = args.includes('--enable-matrix')
+    ? true
+    : args.includes('--disable-matrix')
+      ? false
+      : undefined;
+  const midiActivation = args.includes('--enable-midi-matrix')
+    ? true
+    : args.includes('--disable-midi-matrix')
+      ? false
+      : undefined;
+  if (activation !== undefined || midiActivation !== undefined) {
+    if (args.includes('--enable-matrix') && args.includes('--disable-matrix')) {
+      throw new Error('classpack-v14 accepts only one of --enable-matrix or --disable-matrix');
+    }
+    if (args.includes('--enable-midi-matrix') && args.includes('--disable-midi-matrix')) {
+      throw new Error('classpack-v14 accepts only one of --enable-midi-matrix or --disable-midi-matrix');
+    }
+    const result = await setClasspackMatrixActivation(createLabConfig(), {
+      apply,
+      enabled: activation,
+      midiEnabled: midiActivation,
+    });
+    console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+    process.exit(0);
+  }
+  const result = await prepareClasspackV14(createLabConfig(), { apply });
+  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  process.exit(0);
+}
 if (command === 'patch-sequencer-spritesheet-workers') {
   const result = await patchSequencerSpritesheetWorkerInstall(createLabConfig(), {
     apply,

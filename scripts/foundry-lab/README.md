@@ -6,6 +6,49 @@ read-only: inventory uses SSH and server-only package acquisition uses SCP.
 The workflow never creates production archives or removes or changes production
 files. SSH transport compression may be enabled in memory with `scp -C`.
 
+## Local dnd5e classpack v14 fork
+
+The current local `dnd5e_classpack` fork is `4.3.4-v14.2`. It is restricted to
+the server-mirror module and the disposable `fvtt-v14-module-matrix` world.
+Inspect or apply the guarded manifest, runtime, exact 21-pack identity surface,
+and 12-Macro compatibility patch with:
+
+```powershell
+bun run foundry:lab classpack-v14
+bun run foundry:lab classpack-v14 --apply
+```
+
+After the active GM has run `globalThis.dnd5eClasspackV14.migrate()` in
+Foundry 14.364 with dnd5e 5.3.3 and reviewed its report, persist the
+idempotency marker while Foundry is stopped:
+
+```powershell
+bun run foundry:lab classpack-v14 --mark-migrated --apply
+```
+
+The marker makes later default migration calls verify the 21 packs without
+rewriting them; `{ force: true }` is an explicit diagnostic override. Matrix
+activation and the optional MIDI-QOL 14.0.11 smoke state are controlled
+independently:
+
+```powershell
+bun run foundry:lab classpack-v14 --enable-matrix --apply
+bun run foundry:lab classpack-v14 --disable-matrix --apply
+bun run foundry:lab classpack-v14 --enable-midi-matrix --apply
+bun run foundry:lab classpack-v14 --disable-midi-matrix --apply
+```
+
+No backup is created for this workflow. Disabling prevents the module from
+loading but does not undo compendium migration; full recovery is disabling the
+module and reinstalling upstream 4.3.4.
+
+The v14.2 manifest pins Foundry 14.364 and dnd5e 5.3.3 and recommends only the
+reviewed MIDI-QOL 14.0.11 / DAE 14.0.12 versions. Runtime migration also refuses
+another Foundry, dnd5e, or active DAE version. Static runtime resources are
+normalized to LF so a Windows checkout does not produce a false-positive
+`changed: true` dry-run. Production 8080 still runs the separately deployed
+v14.1 artifact; this local workflow never upgrades it automatically.
+
 ## Target-world spell resolver lifecycle
 
 The companion resolver has a separate fail-closed lifecycle. Its only install
