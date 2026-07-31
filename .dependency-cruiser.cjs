@@ -236,7 +236,7 @@ module.exports = {
       severity: 'error',
       comment: 'Core code must not depend on delivery, runtime, tooling, or operator layers.',
       from: { path: '^src/core/' },
-      to: { path: '^(apps/|src/(web|foundry|tools)/|scripts/)' },
+      to: { path: '^(apps/|foundry-modules/|src/(web|foundry|tools)/|scripts/)' },
     },
     {
       name: 'cli-through-application-composition',
@@ -272,8 +272,15 @@ module.exports = {
       name: 'no-foundry-to-web-or-operator-tools',
       severity: 'error',
       comment: 'Foundry modules are independent runtime adapters.',
-      from: { path: '^src/foundry/', pathNot: '(/__tests__/|[.](test|spec)[.])' },
+      from: { path: '^(src/foundry/|foundry-modules/)', pathNot: '(/__tests__/|[.](test|spec)[.])' },
       to: { path: '^(apps/web/|src/tools/|scripts/)' },
+    },
+    {
+      name: 'chat-memory-guard-independent-release',
+      severity: 'error',
+      comment: 'Chat Memory Guard is a self-contained release unit and cannot import generator, delivery, operator, or sibling-module internals.',
+      from: { path: '^foundry-modules/chat-memory-guard/' },
+      to: { path: '^(src/|scripts/|apps/|packages/|foundry-modules/(?!chat-memory-guard/))' },
     },
     {
       name: 'no-crawl-to-main-cli',
@@ -333,7 +340,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: '^node_modules/' },
-    includeOnly: ['^(src|packages|apps|scripts|tests)/'],
+    includeOnly: ['^(src|packages|apps|foundry-modules|scripts|tests)/'],
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
@@ -345,7 +352,7 @@ module.exports = {
     reporterOptions: {
       text: { highlightFocused: true },
       archi: {
-        collapsePattern: '^(src|packages|apps|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
+        collapsePattern: '^(src|packages|apps|foundry-modules|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
       },
     },
   },

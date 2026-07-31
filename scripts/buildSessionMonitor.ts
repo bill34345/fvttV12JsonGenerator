@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve } from 'node:path';
-import { collectFiles, createStoredZip } from './buildChatMemoryGuard';
+import { dirname, resolve } from 'node:path';
+import { collectArchiveEntries, createStoredZip } from './session-monitor/archive';
 
 const MODULE_ID = 'fvtt-session-monitor';
 const SOURCE_FILES = [
@@ -77,11 +77,7 @@ export async function buildSessionMonitorPackage(
   }
   await assertOwnedModule(paths.outputDir);
 
-  const files = await collectFiles(paths.outputDir);
-  const entries = await Promise.all(files.map(async (path) => ({
-    name: relative(paths.outputDir, path).replace(/\\/g, '/'),
-    bytes: new Uint8Array(await readFile(path)),
-  })));
+  const entries = await collectArchiveEntries(paths.outputDir);
   await writeFile(paths.zipPath, createStoredZip(entries));
   return {
     outputDir: paths.outputDir,

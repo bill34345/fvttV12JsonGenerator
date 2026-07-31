@@ -21,20 +21,32 @@ export interface ChatMemoryGuardInstallResult {
   backupPath?: string;
 }
 
-export function chatMemoryGuardPaths(repoRoot: string) {
-  const root = resolve(repoRoot);
+export interface ChatMemoryGuardInstallOptions {
+  buildDirectory: string;
+  destination: string;
+  backupRoot: string;
+}
+
+export function chatMemoryGuardPaths(packageRoot = import.meta.dir) {
+  const root = resolve(packageRoot);
   return {
-    sourceRoot: resolve(root, 'src/foundry/chat-memory-guard'),
-    outputRoot: resolve(root, 'dist/chat-memory-guard'),
-    outputDir: resolve(root, 'dist/chat-memory-guard/module'),
-    zipPath: resolve(root, 'dist/chat-memory-guard/chat-memory-guard.zip'),
+    sourceRoot: resolve(root, 'src'),
+    outputRoot: resolve(root, 'dist'),
+    outputDir: resolve(root, 'dist/module'),
+    zipPath: resolve(root, 'dist/chat-memory-guard.zip'),
+  };
+}
+
+export function chatMemoryGuardWorkspaceInstallPaths(workspaceRoot: string) {
+  const root = resolve(workspaceRoot);
+  return {
     destination: resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard'),
     backupRoot: resolve(root, '.local/foundry-v14/backups/chat-memory-guard'),
   };
 }
 
-export function assertChatMemoryGuardDestination(repoRoot: string, destination: string): string {
-  const expected = chatMemoryGuardPaths(repoRoot).destination;
+export function assertChatMemoryGuardDestination(workspaceRoot: string, destination: string): string {
+  const expected = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot).destination;
   if (resolve(destination) !== expected) {
     throw new Error(`Chat Memory Guard installation destination must be the exact project-local path: ${expected}`);
   }
@@ -42,9 +54,9 @@ export function assertChatMemoryGuardDestination(repoRoot: string, destination: 
 }
 
 export async function buildChatMemoryGuardPackage(
-  repoRoot = resolve(import.meta.dir, '..'),
+  packageRoot = import.meta.dir,
 ): Promise<ChatMemoryGuardBuildResult> {
-  const paths = chatMemoryGuardPaths(repoRoot);
+  const paths = chatMemoryGuardPaths(packageRoot);
   await rm(paths.outputRoot, { recursive: true, force: true });
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
 
@@ -80,11 +92,26 @@ export async function buildChatMemoryGuardPackage(
 }
 
 export async function installChatMemoryGuardPackage(
-  repoRoot: string,
-  buildDirectory = chatMemoryGuardPaths(repoRoot).outputDir,
+  workspaceRoot: string,
+  buildDirectory = chatMemoryGuardPaths().outputDir,
 ): Promise<ChatMemoryGuardInstallResult> {
-  const paths = chatMemoryGuardPaths(repoRoot);
-  const destination = assertChatMemoryGuardDestination(repoRoot, paths.destination);
+  const paths = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot);
+  const destination = assertChatMemoryGuardDestination(workspaceRoot, paths.destination);
+  return installChatMemoryGuardRelease({
+    buildDirectory,
+    destination,
+    backupRoot: paths.backupRoot,
+  });
+}
+
+export async function installChatMemoryGuardRelease({
+  buildDirectory,
+  destination,
+  backupRoot,
+}: ChatMemoryGuardInstallOptions): Promise<ChatMemoryGuardInstallResult> {
+  if (resolve(destination).split(/[\\/]/).at(-1) !== MODULE_ID) {
+    throw new Error(`Chat Memory Guard installation destination must end in ${MODULE_ID}.`);
+  }
   await assertOwnedModule(buildDirectory);
 
   let backupPath: string | undefined;
@@ -92,7 +119,7 @@ export async function installChatMemoryGuardPackage(
     await assertOwnedModule(destination, true);
     const manifest = JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')) as { version?: string };
     const suffix = String(manifest.version ?? 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
-    backupPath = resolve(paths.backupRoot, `${suffix}-${Date.now()}`);
+    backupPath = resolve(backupRoot, `${suffix}-${Date.now()}`);
     await mkdir(dirname(backupPath), { recursive: true });
     await rename(destination, backupPath);
   }
@@ -230,10 +257,13 @@ function createCrcTable(): Uint32Array {
 const CRC_TABLE = createCrcTable();
 
 if (import.meta.main) {
-  const repoRoot = resolve(import.meta.dir, '..');
-  const build = await buildChatMemoryGuardPackage(repoRoot);
+  const workspaceRootFlag = process.argv.indexOf('--workspace-root');
+  const workspaceRoot = workspaceRootFlag >= 0
+    ? resolve(process.argv[workspaceRootFlag + 1] ?? '')
+    : resolve(import.meta.dir, '../..');
+  const build = await buildChatMemoryGuardPackage();
   const install = process.argv.includes('--install')
-    ? await installChatMemoryGuardPackage(repoRoot, build.outputDir)
+    ? await installChatMemoryGuardPackage(workspaceRoot, build.outputDir)
     : undefined;
   console.log(JSON.stringify({ build, install }, null, 2));
 }

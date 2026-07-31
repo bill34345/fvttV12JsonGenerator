@@ -40,7 +40,7 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 先做 module/ops inventory 与发布边界核对 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard workspace release 已验收；独立历史提取待执行 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -69,7 +69,7 @@ owner 和迁移约束。
 | assets/token/icons | CLI/tools + `src/core/assets`/`icons` | 人工复核 gate 与 actor/token artwork 语义 |
 | Web jobs | `apps/web/src/server` | API/job schema 和正式 artifact gate |
 | spell manifest/resolver | generator + Foundry module | contract、all-or-nothing、rollback、manual edit policy |
-| chat memory guard | build script + module | 独立 module 行为 |
+| chat memory guard | `foundry-modules/chat-memory-guard` | 独立 manifest/version/build/test/install/acceptance |
 | session monitor | module + companion | 协议、版本、冷重启与权限边界 |
 | Foundry Lab / world audit | package scripts/tools | read-only/local/production 权限边界 |
 
@@ -700,10 +700,71 @@ owner 和迁移约束。
     review，不因 package 迁移升级为已人工接受；
   - assets/icons tests 暂留旧路径作为兼容资产，生产代码已受 dependency gate 约束。
 
+### 阶段 4 inventory：module、companion 与 Ops 发布边界
+
+| 单元 | 只读核对结果 | 当前裁决 |
+|---|---|---|
+| Chat Memory Guard | 运行时只导入包内文件；原根 build script 同时被 Session Monitor 借用 ZIP helper | 第一拆分对象；先消除反向 build 耦合 |
+| Session Monitor | Foundry module 与 Windows/Chrome companion 共享 schema；companion 直接读取 module schema；module 的 hash 只依赖 `contracts/hash` | module + companion 保持一个产品，阶段 4B 一起迁移 |
+| Monster Spell Resolver | production 仍多处直接导入 `src/core/spell-resolution`；测试还使用 Intake/parser fixtures | 按 ADR 延后，不伪称可独立拆仓 |
+| Foundry Ops | Foundry Lab、world audit、production migration 与本地 mirror 管理仍分散；config 仍含仓库路径、SSH target 与远端 data path | 阶段 4C 先收敛权限分级 CLI 和外部配置，不直接复制成新仓库 |
+
+### 阶段 4A：`foundry-modules/chat-memory-guard`
+
+- 结构：
+  - 将完整 module source、manifest、双语资源、样式、模板、测试和 build 入口迁入
+    `foundry-modules/chat-memory-guard`；
+  - 新增自包含 `package.json`、`tsconfig.json` 与 release README；package version 与
+    `module.json` version 由测试锁定；
+  - 根 `build:*`、`install:*`、`test:*` 命令保留为兼容入口，但直接路由到新 release unit；
+  - Bun workspaces、TypeScript、Knip 与 dependency-cruiser 均纳入 `foundry-modules/*`；
+  - 新 dependency rule 禁止 Chat Memory Guard 导入 generator、delivery、operator 或兄弟 module
+    内部实现；
+  - 全仓检查发现 Session Monitor build 曾从旧 Chat Memory Guard builder 借用 ZIP helper；
+    已将 archive 能力放回 Session Monitor 产品边界，并增加稳定顺序、确定性与 traversal 拒绝测试。
+- 机械：
+  - package typecheck、26 个 module tests / 71 expectations、release build 与 frozen workspace
+    install 均通过；
+  - build 输出固定为 6 个条目：双语资源、manifest、browser bundle、CSS 与设置模板；
+  - 迁移前后 5 个静态文件 byte-identical；browser bundle 只因 Bun 保留的源码路径注释从
+    `src/foundry/...` 变为 `foundry-modules/...` 而字节不同，去除这些注释后完整 executable
+    text 相等；不把 ZIP hash 不同隐藏为 byte-identical；
+  - Session Monitor archive 解耦专项 7 tests / 24 expectations 通过，旧/新 build 的 runtime
+    bundle 同样只存在构建根路径注释差异；
+  - dependency-cruiser 最终：3,416 modules / 3,820 dependencies，0 violations；Knip cycles 为 0；
+  - 完整 `ci:verify` 通过：CLI 子进程 12 tests / 57 expectations，coverage 主组
+    1,579 tests / 7,452 expectations，合计 1,591 tests / 0 failed / 7,509 expectations；
+  - coverage 统计 263 个 production files：85.73% lines / 88.21% functions；
+    anti-overfit 333 sources、hygiene 2,081 tracked paths、dnd5e 5.3.3 reference、Web production
+    build 与 offline Actor smoke 均通过；
+  - 新 release 安装到项目本地 mirror 后逐文件与 build 目录相等；旧 v1.0.0 安装已备份到忽略的
+    `.local/foundry-v14/backups/chat-memory-guard/1.0.0-1785496805326`。
+- 语义：
+  - 使用本地 Foundry 14.364、dnd5e 5.3.3、`cor-cotn` copied world 与无密码普通玩家 `SY`
+    完成真实运行时验收；未访问生产服务器；
+  - module `1.0.0` 在首次加载和页面重载后均 active，`getStats()` API 可用，listener count 为 1，
+    browser console 无 warning/error，服务端启动/加载日志无本模块错误；
+  - Foundry 14.364 本地源码
+    `.local/foundry-v14/app/14.364/common/packages/base-package.mjs` 证明 v14 `styles` 是
+    `{src, layer?}` schema；运行时确认 module CSS 已进入 Foundry 聚合 `@import`；
+  - 向上阅读历史时渲染聊天卡由 25 增至 49，`atBottom=false`、`trimmedMessages=0`；
+    回到底部后收敛到 40，`trimmedMessages=9`、pending 为 0；
+  - 整个 A/B 前后 `game.messages.size` 均为 552，证明本次裁剪未删除 ChatMessage 文档；
+  - 当前 `SY` 有效设置为 hidden avatar；收敛后的 40/40 卡片均保留 sender，头像 media 节点为 0，
+    模块 thumbnail cache 为 0；
+  - 重载后 module、API、CSS、默认上限与 552 条 ChatMessage 均保持；测试只改变当前客户端滚动/
+    DOM 状态，没有创建聊天消息、修改世界设置或写入生产数据。
+- 边界：
+  - 物理迁移没有升级历史长时间跑团或完整第三方聊天卡支持声明；
+  - 主仓库内的 workspace release 已形成；fresh clone + `git filter-repo` 历史提取、新 remote 与
+    对外发布尚未完成，不能把本检查点称为已拆出远端仓库；
+  - 本地 Foundry server-mirror 验收后已安全停止，30001 端口释放。
+
 ## 当前停止点
 
-阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows/Intake/plaintext/crawl/assets-icons packages、`apps/cli` 与 `apps/web` 已形成
-可回滚稳定检查点，阶段 3 完成。下一条执行路径是阶段 4：先只读核对三个 Foundry module、
-companion、build/install 脚本与 Foundry Ops 的实际发布边界，再按 ADR 逐个形成独立 release unit。
-不因目录移动关闭原 hardening finding，不接触生产服务器，也不自动执行 module install。
+阶段 0–3 均已形成可回滚稳定检查点。阶段 4 的真实发布边界 inventory 已完成，4A Chat Memory
+Guard 已成为主仓库内自包含 workspace release，并通过本地 Foundry 运行时验收。下一条执行路径是
+在当前提交通过完整 CI 后，以 fresh clone + `git filter-repo` 生成只读/本地独立历史候选并执行
+独立 install/build/test；不创建或推送远端仓库。该候选通过后再进入阶段 4B Session Monitor
+module + companion 产品迁移。Monster Spell Resolver 与 Foundry Ops 继续按 inventory 裁决延后，
+不因目录移动关闭原 hardening finding，也不接触生产服务器。

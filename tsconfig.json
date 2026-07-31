@@ -33,6 +33,8 @@
     "packages/**/*.tsx",
     "apps/**/*.ts",
     "apps/**/*.tsx",
+    "foundry-modules/**/*.ts",
+    "foundry-modules/**/*.tsx",
     "tests/**/*.ts",
     "tests/**/*.tsx",
     "scripts/**/*.ts"

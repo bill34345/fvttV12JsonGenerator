@@ -6,7 +6,9 @@
     "packages/**/*.ts",
     "packages/**/*.tsx",
     "apps/**/*.ts",
-    "apps/**/*.tsx"
+    "apps/**/*.tsx",
+    "foundry-modules/**/*.ts",
+    "foundry-modules/**/*.tsx"
   ],
   "exclude": [
     "src/**/__tests__/**",
@@ -24,6 +26,11 @@
     "apps/**/*.test.tsx",
     "apps/**/*.spec.ts",
     "apps/**/*.spec.tsx",
+    "foundry-modules/**/__tests__/**",
+    "foundry-modules/**/*.test.ts",
+    "foundry-modules/**/*.test.tsx",
+    "foundry-modules/**/*.spec.ts",
+    "foundry-modules/**/*.spec.tsx",
     "src/temp/**"
   ]
 }

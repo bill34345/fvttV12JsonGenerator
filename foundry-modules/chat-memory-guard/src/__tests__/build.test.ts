@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import {
   assertChatMemoryGuardDestination,
   installChatMemoryGuardPackage,
-} from '../../../../scripts/buildChatMemoryGuard';
+} from '../../build';
 
 const temporary: string[] = [];
 afterEach(async () => {
