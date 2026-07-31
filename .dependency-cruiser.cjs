@@ -18,11 +18,18 @@ module.exports = {
     {
       name: 'parser-package-is-independent',
       severity: 'error',
-      comment: 'Parser package code depends only on contracts and declared third-party packages.',
+      comment: 'Parser package code depends only on contracts, models, spell contracts, and declared third-party packages.',
       from: { path: '^packages/parser/' },
       to: {
-        path: '^(src/|scripts/|apps/|packages/(?!contracts/|parser/|spell-manifest-contracts/))',
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|models/|parser/|spell-manifest-contracts/))',
       },
+    },
+    {
+      name: 'models-package-is-independent',
+      severity: 'error',
+      comment: 'Shared source-derived models must not depend on parser, generation, delivery, runtime, or operator implementations.',
+      from: { path: '^packages/models/' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|models/))' },
     },
     {
       name: 'spell-manifest-contracts-package-is-independent',
@@ -47,10 +54,21 @@ module.exports = {
       severity: 'error',
       comment: 'Production code imports parser workspace exports; old source paths are compatibility adapters only.',
       from: {
-        pathNot: '(^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|models/action[.]ts|mapper/i18n[.]ts)$|/__tests__/|[.](test|spec)[.])',
+        pathNot: '(^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|mapper/i18n[.]ts)$|^packages/parser/src/models/action[.]ts$|/__tests__/|[.](test|spec)[.])',
       },
       to: {
-        path: '^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|models/action[.]ts|mapper/i18n[.]ts)$',
+        path: '^src/core/(parser/(action|englishAction|structuredAction|chineseActionRegex)[.]ts|parser/utils/normalize[.]ts|mapper/i18n[.]ts)$',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-model-adapters',
+      severity: 'error',
+      comment: 'Production code imports the models package; old source and parser-owned model paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/models/(action|item|resource|behavior)[.]ts$|^packages/parser/src/models/action[.]ts$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '(^src/core/models/(action|item|resource|behavior)[.]ts$|^packages/parser/src/models/action[.]ts$)',
       },
     },
     {

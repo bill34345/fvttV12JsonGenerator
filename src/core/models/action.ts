@@ -1,2 +1,2 @@
-/** @deprecated Import from `@fvtt-json-generator/parser/models/action`. */
-export * from '@fvtt-json-generator/parser/models/action';
+/** @deprecated Import action IR types from `@fvtt-json-generator/models/action`. */
+export * from '@fvtt-json-generator/models/action';

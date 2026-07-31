@@ -1,4 +1,4 @@
-import type { ParsedItem, ItemType, ActivityData } from '../models/item';
+import type { ParsedItem, ItemType, ActivityData } from '@fvtt-json-generator/models/item';
 import { ActivityGenerator } from './activity';
 import { generateEnhancedConditionEffects } from './actor-effects';
 import {

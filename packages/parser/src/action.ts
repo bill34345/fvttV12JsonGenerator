@@ -1,5 +1,5 @@
 import { i18n } from './i18n';
-import type { ActionData, Damage } from './models/action';
+import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 import { normalizeChineseText } from './normalize';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 

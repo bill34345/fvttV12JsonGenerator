@@ -17,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
+    "@fvtt-json-generator/models": "workspace:*",
     "opencc-js": "^1.0.5"
   }
 }

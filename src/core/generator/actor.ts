@@ -1,5 +1,5 @@
 import { ActionParser } from '@fvtt-json-generator/parser/action';
-import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/parser/models/action';
+import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { EnglishActionParser } from '@fvtt-json-generator/parser/english-action';
 import type { ParserRoute } from '../parser/types';
 import { ActivityGenerator, type ActivityGenerationContext } from './activity';

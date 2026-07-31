@@ -144,6 +144,17 @@ owner 和迁移约束。
   `Unexpected reading file`；正式独立构建本身正常。构建器现将 browser bundle 隔离到
   单独 Bun 子进程，同时保留仓库根、输出 mutation boundary、内容扫描与 byte-identical ZIP 断言。
 
+### 2026-07-31：阶段 3B3a models package 完成
+
+- 高层 parser 的真实依赖闭包先指向 action/item/resource/behavior 中间模型，因此先建立计划内的
+  `@fvtt-json-generator/models`，避免 models 反向依赖 parser；
+- action IR 从 parser package 移入 models，parser 保留已发布 subpath 的兼容转发；
+- item、actor resource 与 actor behavior 模型从 `src/core/models` 移入 workspace package；
+- 全部生产调用方直接使用 models package，旧 `src/core/models/*` 只保留测试覆盖的兼容 adapter；
+- dependency-cruiser 新增强制规则：models 不得依赖 parser、generation、delivery、Foundry runtime
+  或 operator 实现，生产代码不得回流旧 model adapter；
+- 本提交只移动类型与接口所有权，不改 parser 或 generator 算法。
+
 ## 验证证据
 
 ### 阶段 0
@@ -239,8 +250,25 @@ owner 和迁移约束。
   - 排除重新生成的 Effect `_id` 和时间戳后，与阶段 2 Actor 完整语义相等。
 - 未宣称：Foundry 内 hydration、native cast 或 runtime acceptance 已完成。
 
+### 阶段 3B3a：models package
+
+- 机械：
+  - 冻结安装、models/parser package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：450 modules / 927 dependencies，0 violations；
+  - Knip cycles、unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - models/parser 专项：116 tests / 0 failed / 390 expectations；
+  - 完整 `ci:verify`：1,585 tests / 0 failed / 7,480 expectations / 154 files；
+  - coverage：85.36% lines / 88.18% functions；
+  - anti-overfit 237 sources、hygiene 1,951 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 从 `slithering-bloodfin__滑行血鳍.md` 重新生成 v14/core Actor；
+  - canonical verifier 返回 0 warnings；
+  - 人工核对 aberration、AC 16、HP 143、CR 9、盲视 100 尺、9 个来源 Item 及名称；
+  - 排除运行时 `_id` 与时间戳后，与 parser-kernel 检查点 Actor 完整语义相等。
+- 未宣称：高层 YAML/English/router/item parser 已物理迁入 package，或 Stage 3 已完成。
+
 ## 当前停止点
 
-阶段 0–2、阶段 3A、parser kernel 与 spell-manifest contracts 已形成可回滚稳定检查点。
-下一条执行路径是阶段 3B3：迁移高层 YAML/English/router parser；在其独立验收前不移动
+阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts 与 models package 已形成可回滚稳定检查点。
+下一条执行路径是阶段 3B3b：迁移高层 YAML/English/router parser；在其独立验收前不移动
 generation、CLI、Web、module 或 ops。

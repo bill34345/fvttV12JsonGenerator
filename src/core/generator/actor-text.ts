@@ -1,5 +1,5 @@
 import { i18n } from '@fvtt-json-generator/parser/i18n';
-import type { ActionData, Damage } from '@fvtt-json-generator/parser/models/action';
+import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 
 /**
  * Extract damage parts from text by parsing dice formulas and damage types.

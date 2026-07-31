@@ -1,4 +1,4 @@
-import type { ParsedItem } from '../models/item';
+import type { ParsedItem } from '@fvtt-json-generator/models/item';
 import type { ItemDocument } from '../generator/item-generator';
 import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
 

@@ -14,12 +14,12 @@ import type {
   ActorBehaviorSemantics,
   ActorBehaviorState,
   ActorBehaviorTrigger,
-} from '../models/behavior';
+} from '@fvtt-json-generator/models/behavior';
 import type {
   ActorResourceActivation,
   ActorResourceItemRef,
   ActorResourceSection,
-} from '../models/resource';
+} from '@fvtt-json-generator/models/resource';
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]*$/;
 const SAFE_CHANGE_KEY = /^system\.[A-Za-z0-9_.]+$/;

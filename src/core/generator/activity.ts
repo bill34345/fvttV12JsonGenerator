@@ -1,4 +1,4 @@
-import type { ActionData, Damage } from '@fvtt-json-generator/parser/models/action';
+import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 import { spellsMapper } from '../mapper/spells';
 import { inferAttackAbility, type AttackAbility } from './attack-ability';
 import { deriveSaveDc, type DcSourceKind } from './activity-derivation';

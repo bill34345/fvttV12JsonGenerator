@@ -99,6 +99,14 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
   `Unexpected reading file` 类问题，resolver browser bundle 在受控子进程执行；
   输出目录、静态文件、禁入文本扫描与确定性 ZIP 验收保持不变。
 
+### Stage 3B3a：models workspace package
+
+- `@fvtt-json-generator/models` 取得 action/item/resource/behavior 中间模型所有权；
+- parser 依赖 models，models 不反向依赖 parser、generation 或任何交付/runtime/operator 层；
+- 原 `src/core/models/*` 与 parser action-model subpath 保留兼容 adapter，并有类型契约测试；
+- 生产代码直接导入 models package，dependency-cruiser 阻止回流兼容路径；
+- 这一步先关闭高层 parser 的真实依赖闭包，只迁移类型所有权，不改解析或生成算法。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -144,3 +152,7 @@ Effect `_id` 和时间戳后与 Stage 3A 完整语义相等。专项 parser/acce
 Stage 3B2 重新生成 Warlock of the Rat God v14/core Actor；verifier 0 warnings，manifest 保留
 1 group / 10 refs / 原 source SHA-256，状态仍为 `pending`，且没有 embedded Spell 或 Cast Activity。
 排除运行时生成身份后与 Stage 2 产物完整语义相等；这仍不构成 target-world hydration 验收。
+
+Stage 3B3a 再次生成 Slithering Bloodfin v14/core Actor；verifier 0 warnings，人工核对核心身份、数值、
+感官与 9 个来源 Item。排除 `_id` 和时间戳后与 parser-kernel 检查点完整语义相等；该证据只接受
+models 所有权迁移，高层 parser 尚待独立迁移。

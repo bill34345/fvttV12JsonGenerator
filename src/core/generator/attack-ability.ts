@@ -1,4 +1,4 @@
-import type { ActionData } from '@fvtt-json-generator/parser/models/action';
+import type { ActionData } from '@fvtt-json-generator/models/action';
 
 export type AttackAbility = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 

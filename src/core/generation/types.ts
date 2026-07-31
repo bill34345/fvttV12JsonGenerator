@@ -5,13 +5,13 @@ import type { FvttTargetVersion, FoundryTarget } from '../foundryTarget';
 import type { CanonicalMonster } from '../intake/types';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
-import type { ParsedItem, ItemType } from '../models/item';
+import type { ParsedItem, ItemType } from '@fvtt-json-generator/models/item';
 import type { ParserRoute } from '../parser/types';
 import type { V14IconResolver } from '../icons/resolver';
 import type {
   ActorBehaviorExecutionMode,
   ActorBehaviorExpressionCoverage,
-} from '../models/behavior';
+} from '@fvtt-json-generator/models/behavior';
 
 export type { CanonicalFeature, CanonicalMonster } from '../intake/types';
 export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';

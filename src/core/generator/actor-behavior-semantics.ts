@@ -3,8 +3,8 @@ import type {
   ActorBehaviorOperation,
   ActorBehaviorSemantics,
   ActorBehaviorState,
-} from '../models/behavior';
-import type { ActorResourceItemRef } from '../models/resource';
+} from '@fvtt-json-generator/models/behavior';
+import type { ActorResourceItemRef } from '@fvtt-json-generator/models/resource';
 import type { FvttTargetVersion } from '../foundryTarget';
 import { createStableDocumentId } from '../utils/stable-id';
 

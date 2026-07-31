@@ -1,4 +1,4 @@
-import type { ItemType } from '../models/item';
+import type { ItemType } from '@fvtt-json-generator/models/item';
 
 export function mapSourceItemTypeToFoundry(type: ItemType): string {
   if (type === 'ammunition' || type === 'consumable') return 'consumable';

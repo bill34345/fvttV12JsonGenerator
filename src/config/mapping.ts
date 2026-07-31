@@ -1,6 +1,6 @@
-import type { StructuredActionData } from "@fvtt-json-generator/parser/models/action";
-import type { ActorBehaviorSemantics } from "../core/models/behavior";
-import type { ActorResourceSemantics } from "../core/models/resource";
+import type { StructuredActionData } from '@fvtt-json-generator/models/action';
+import type { ActorBehaviorSemantics } from '@fvtt-json-generator/models/behavior';
+import type { ActorResourceSemantics } from '@fvtt-json-generator/models/resource';
 import type { PortableSpellManifest } from "@fvtt-json-generator/spell-manifest-contracts";
 
 export interface FieldDefinition {

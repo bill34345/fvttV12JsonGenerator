@@ -10,7 +10,7 @@ import type {
   ActivityActivationType,
   SaveAbility,
   TriggerType,
-} from './models/action';
+} from '@fvtt-json-generator/models/action';
 
 const ABILITY_MAP: Record<string, string> = {
   '力量': 'str',

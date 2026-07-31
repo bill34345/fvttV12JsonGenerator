@@ -5,7 +5,7 @@ import type {
   ActorResourceOperation,
   ActorResourceSemantics,
   ActorResourceTransition,
-} from '../models/resource';
+} from '@fvtt-json-generator/models/resource';
 import type { FvttTargetVersion } from '../foundryTarget';
 import { createStableDocumentId } from '../utils/stable-id';
 

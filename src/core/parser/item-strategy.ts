@@ -1,4 +1,4 @@
-import type { ParsedItem } from '../models/item';
+import type { ParsedItem } from '@fvtt-json-generator/models/item';
 
 /**
  * Strategy interface for parsing item content into ParsedItem structure.

@@ -1,6 +1,6 @@
 import type { ParsedNPC } from '../../config/mapping';
-import type { StructuredActionData } from '@fvtt-json-generator/parser/models/action';
-import type { ParsedItem } from '../models/item';
+import type { StructuredActionData } from '@fvtt-json-generator/models/action';
+import type { ParsedItem } from '@fvtt-json-generator/models/item';
 import { createStableDocumentId } from '../utils/stable-id';
 import { mapSourceItemTypeToFoundry } from './item-type-mapping';
 import type {

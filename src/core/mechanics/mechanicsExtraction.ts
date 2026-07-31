@@ -1,4 +1,4 @@
-import type { Damage } from '@fvtt-json-generator/parser/models/action';
+import type { Damage } from '@fvtt-json-generator/models/action';
 
 export type EvidenceKind = 'direct' | 'inherited' | 'schema-derived' | 'ai-suggested';
 

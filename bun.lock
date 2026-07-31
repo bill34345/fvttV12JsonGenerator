@@ -6,6 +6,7 @@
       "name": "fvttv12jsongenerator",
       "dependencies": {
         "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/models": "workspace:*",
         "@fvtt-json-generator/parser": "workspace:*",
         "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
         "@radix-ui/react-icons": "^1.3.2",
@@ -37,10 +38,15 @@
       "name": "@fvtt-json-generator/contracts",
       "version": "0.1.0",
     },
+    "packages/models": {
+      "name": "@fvtt-json-generator/models",
+      "version": "0.1.0",
+    },
     "packages/parser": {
       "name": "@fvtt-json-generator/parser",
       "version": "0.1.0",
       "dependencies": {
+        "@fvtt-json-generator/models": "workspace:*",
         "opencc-js": "^1.0.5",
       },
     },
@@ -118,6 +124,8 @@
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
 
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
+
+    "@fvtt-json-generator/models": ["@fvtt-json-generator/models@workspace:packages/models"],
 
     "@fvtt-json-generator/parser": ["@fvtt-json-generator/parser@workspace:packages/parser"],
 

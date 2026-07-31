@@ -1,4 +1,4 @@
-import type { Damage, ActionData } from '@fvtt-json-generator/parser/models/action';
+import type { Damage, ActionData } from '@fvtt-json-generator/models/action';
 import {
   createCustomEffect as createCustomEffectFromText,
   createRandomId as createRandomIdFromText,

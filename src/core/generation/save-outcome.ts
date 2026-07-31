@@ -1,4 +1,4 @@
-import type { SaveOutcome } from '@fvtt-json-generator/parser/models/action';
+import type { SaveOutcome } from '@fvtt-json-generator/models/action';
 
 export function deriveExplicitSaveOutcome(action: Record<string, any>): SaveOutcome {
   const explicit = action.save?.outcome;

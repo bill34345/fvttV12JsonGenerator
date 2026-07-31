@@ -1,7 +1,7 @@
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { ItemDocument } from '../generator/item-generator';
-import type { ActionData } from '@fvtt-json-generator/parser/models/action';
-import type { ItemStage, ParsedItem, UsesData } from '../models/item';
+import type { ActionData } from '@fvtt-json-generator/models/action';
+import type { ItemStage, ParsedItem, UsesData } from '@fvtt-json-generator/models/item';
 import type { FvttTargetVersion } from '../foundryTarget';
 import type { GenerationDiagnostic } from '../generation/types';
 import { adaptParsedItemToCanonical } from '../generation/adapters';

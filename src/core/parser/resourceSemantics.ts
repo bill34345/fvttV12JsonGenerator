@@ -10,7 +10,7 @@ import type {
   ActorResourceSection,
   ActorResourceSemantics,
   ActorResourceTransition,
-} from '../models/resource';
+} from '@fvtt-json-generator/models/resource';
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]*$/;
 const SAFE_FORMULA = /^(?:\d+|\d+d\d+(?:\s*[+-]\s*\d+)?)$/i;

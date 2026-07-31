@@ -3,7 +3,7 @@ import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from '../../confi
 import { i18n } from '@fvtt-json-generator/parser/i18n';
 import { CHINESE_ACTION_REGEX } from '@fvtt-json-generator/parser/chinese-action-regex';
 import { StructuredActionParser } from '@fvtt-json-generator/parser/structured-action';
-import type { StructuredActionData } from '@fvtt-json-generator/parser/models/action';
+import type { StructuredActionData } from '@fvtt-json-generator/models/action';
 import { validatePortableSpellManifestStructure } from '@fvtt-json-generator/spell-manifest-contracts/validator';
 import { parseActorResourceSemantics } from './resourceSemantics';
 import { parseActorBehaviorSemantics } from './behaviorSemantics';
