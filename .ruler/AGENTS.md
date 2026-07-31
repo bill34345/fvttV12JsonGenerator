@@ -34,6 +34,13 @@
 - At every stopping point, update the ExecPlan's progress, discoveries, decisions, finding states, verification evidence, and exact remaining work.
 - Do not close a finding until both mechanical verification and semantic acceptance are recorded. Continue to the next authorized milestone without asking for a generic next step; pause only for a material product choice, new authority, irreversible action, credentials, or an external-state dependency.
 
+## Long-Duration Runtime Acceptance
+
+- Do not autonomously start, sustain, babysit, or poll any continuous Chrome, Foundry, Session Monitor, soak, memory, or performance run longer than 30 minutes.
+- Record every longer run as pending user-operated real-session acceptance. The four-hour `MON-001` run is explicitly user-owned and must be performed during the user's real game session, not simulated or awaited by an agent.
+- The agent may prepare the command, checklist, privacy/storage preflight, and post-run analysis; it may also perform a separately justified bounded smoke test of at most 30 minutes. Do not chain short runs to imitate the prohibited long run.
+- After the user completes a long run, analyze the exported evidence without claiming acceptance beyond the duration, clients, and scenarios actually captured.
+
 ## Workflow Layers
 
 - Root instructions cover project-wide gates and route work to the right workflow.

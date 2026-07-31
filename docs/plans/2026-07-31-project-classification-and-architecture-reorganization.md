@@ -897,6 +897,8 @@ flowchart LR
 - hash 等小能力不依赖 spell-resolution；
 - Windows/Chrome 权限和配置边界文档完整；
 - module 与 companion 有端到端握手验收。
+- 超过 30 分钟的 Chrome/Foundry/Session Monitor 持续监测不由代理启动、等待或代跑；
+  四小时真实跑团属于用户在实际游戏期间执行的外部验收，代理只准备流程并在事后分析导出证据。
 
 动作：
 

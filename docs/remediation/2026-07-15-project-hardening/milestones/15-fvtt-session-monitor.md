@@ -21,6 +21,10 @@ gameplay content.
   may enter evidence.
 - Monitoring is observation-only. It never clears caches, changes settings,
   deletes documents, or performs an automatic optimization.
+- Any continuous Chrome/Foundry/monitoring acceptance longer than 30 minutes is
+  user-operated. The agent must not start, babysit, poll, or simulate the
+  four-hour run; it may prepare the preflight and analyze the user's export
+  afterward.
 
 ## Implementation
 1. Maintain the browser-safe module under
@@ -54,6 +58,9 @@ gameplay content.
 - Production installation and the actual four-hour GM/player session remain
   separately authorized external acceptance. GM-only monitoring cannot close
   the non-GM device-performance gate.
+- The four-hour run is not an agent execution task. It is accepted only from a
+  real user-operated game session; bounded smoke tests and concatenated short
+  runs cannot substitute for it.
 
 ## Result (2026-07-29)
 
@@ -176,3 +183,7 @@ gameplay content.
 - This relocation does not close `MON-001`: production post-restart UI smoke,
   the real four-hour session, and non-GM device evidence remain open external
   acceptance.
+- Per the user's explicit 2026-07-31 direction, the four-hour run and every
+  continuous monitoring run over 30 minutes stay listed but must never be
+  initiated or awaited by an agent. Resume only for preflight preparation or
+  post-run evidence analysis around a user-operated real session.

@@ -832,6 +832,9 @@ owner 和迁移约束。
   - 本次只访问项目本地 mirror，没有访问、修改或重启生产服务器；
   - package 迁移没有关闭 `MON-001`，也没有替代生产 1.1.1 post-restart UI smoke、四小时真实
     跑团与非 GM 设备证据；
+  - 用户明确规定：任何超过 30 分钟的 Chrome/Foundry/Session Monitor 持续监测均不得由代理
+    启动、等待、轮询或用多个短测试拼接代替；四小时验收只在用户真实跑团时由用户亲自运行，
+    代理只做事前检查和事后证据分析；
   - 阶段 4B 的 workspace release、协议/依赖/权限边界与本地端到端握手均已满足。计划没有要求
     这一单元在本阶段做 fresh-history extraction，因此未创建本地候选仓库、远端或发布。
 
