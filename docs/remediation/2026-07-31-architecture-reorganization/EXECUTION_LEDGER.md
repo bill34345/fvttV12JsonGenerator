@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | `packages/ingest-plaintext` 已独立验收；下一步迁移 `packages/crawl-goddessfantasy` |
+| 3. Bun workspace 物理迁移 | in_progress | `packages/crawl-goddessfantasy` 已独立验收；下一步迁移 `packages/assets-icons` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -615,11 +615,50 @@ owner 和迁移约束。
     配置关闭路径和注入/fallback 行为，外部 provider 质量仍受模型与凭据影响；
   - plaintext tests/fixtures 暂留旧路径作为兼容资产；生产代码已受 dependency gate 约束。
 
+### 阶段 3I：`packages/crawl-goddessfantasy`
+
+- 结构与规则：
+  - 将 board/topic/print parser、认证与 cookie file adapter、Crawlee orchestration、records schema、
+    GoddessFantasy plaintext renderer 和 records-to-plaintext workflow 迁入
+    `@fvtt-json-generator/crawl-goddessfantasy`；
+  - `src/tools/crawlSites.ts` 与 `goddessFantasyPipeline.ts` 直接使用 package exports，主 Actor CLI
+    仍不导入 crawl；Web 只经 server application composition surface 使用；
+  - 旧 `src/core/crawl/*` 仅保留兼容 re-export；专属 `AGENTS.md` 与 root/Ruler 路由更新到 package，
+    并修正先前 Web AGENTS 的陈旧路径；
+  - package 独立性、legacy adapter 禁止与 crawl-to-main-CLI 解耦均写入 dependency-cruiser。
+- 机械：
+  - package-local、production、packages、apps 与全仓类型检查通过；frozen install 通过；
+  - dependency-cruiser：2,733 modules / 3,138 dependencies，0 violations；Knip cycles 为 0；
+  - board/topic/auth/print、incremental/full/dry-run/failure、records-to-plaintext、工具 CLI、
+    pipeline stop states 与 v14 fixture acceptance 专项：50 tests / 0 failed / 250 expectations；
+  - 完整默认 `ci:verify`：CLI 子进程 12 tests 与 coverage 主组 1,577 tests 均通过，
+    合计 1,589 tests / 0 failed / 7,504 expectations / 156 files；
+  - coverage 统计 254 个 production files：85.70% lines / 88.18% functions；anti-overfit
+    324 sources、hygiene 2,054 tracked paths、dnd5e 5.3.3 reference、Web production build 与
+    offline Actor smoke 均通过。
+- 语义：
+  - 未访问真实 GoddessFantasy；所有 crawl/parser 验收均使用仓库 fixture 或测试内 loopback
+    server，没有读取或写入真实 cookie、账号、密码；
+  - 项目 crawl CLI 从 2 条真实格式 fixture records 中匹配 1 条 monster、按分类跳过 1 条，
+    输出 1 个 Yithian plaintext，0 needs_review / 0 failed / 0 warnings；
+  - 该 plaintext 经项目 CLI 的既有 ingest/generator workflow 生成 v14/core Yithian Actor，
+    1 processed / 0 skipped / 0 failed / 0 warnings；canonical verifier 为 0 warnings；
+  - 人工核对最终 Actor 仍为 `伊斯人 (Yithian)`、aberration、AC 14、HP 180 / `19d10+76`、
+    CR 15、真实视觉 60 尺与 5 个来源 Item；Mind Swap 仍为 DC 18 Intelligence save；
+  - 当前 fixture-to-v14 acceptance test 在迁移前后的完整 CI 均通过。历史
+    `.local/final-verification` Yithian 来自 Foundry 14.361 与旧生成器，包含旧 Activity IDs、
+    无 chatFlavor 及 save-on-success 差异；它被明确视为历史证据，不冒充当前 14.364 等值基线。
+- 已知债：
+  - 真实站点认证、登录态、限流与远端 HTML 变化未在本阶段验证；需要凭据和外部状态时仍是独立
+    运行验收，不能由 fixture 测试代替；
+  - crawl artifacts 仍是 source artifacts；`.crawlee-storage`、cookie header 与本地凭据文件
+    继续禁止提交，package 也不升级这些文件为正式 Actor 产物；
+  - tests/fixtures 暂留旧 `src/core/crawl/__tests__` 兼容路径，生产代码已受 dependency gate 约束。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows/Intake/plaintext ingest package、`apps/cli` 与 `apps/web` 已形成可回滚稳定
-检查点。plaintext ingest 已通过完整机械与语义验收；下一条执行路径是阶段 3I：迁移
-`packages/crawl-goddessfantasy`，保持 crawl 与主 CLI 解耦、cookie/认证边界、board/topic/print
-抓取、records schema、失败重试、records-to-plaintext 和 crawl fixture 到 Actor 的语义不变。
-在 crawl 独立验收前不移动 assets/icons。
+generation/workflows/Intake/plaintext/crawl packages、`apps/cli` 与 `apps/web` 已形成可回滚稳定
+检查点。GoddessFantasy crawl 已通过完整机械与 fixture 语义验收；下一条执行路径是阶段 3J：
+迁移 `packages/assets-icons`，保持 actor/token artwork 分工、token crop、safe icon catalog/review、
+本地与 SSH adapter、人工复核 gate、Web/CLI 参数以及 dry-run 不触发远端写入的边界不变。

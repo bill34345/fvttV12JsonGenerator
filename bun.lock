@@ -6,6 +6,7 @@
       "name": "fvttv12jsongenerator",
       "dependencies": {
         "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/crawl-goddessfantasy": "workspace:*",
         "@fvtt-json-generator/generation": "workspace:*",
         "@fvtt-json-generator/ingest-plaintext": "workspace:*",
         "@fvtt-json-generator/intake-ai": "workspace:*",
@@ -60,6 +61,15 @@
     "packages/contracts": {
       "name": "@fvtt-json-generator/contracts",
       "version": "0.1.0",
+    },
+    "packages/crawl-goddessfantasy": {
+      "name": "@fvtt-json-generator/crawl-goddessfantasy",
+      "version": "0.1.0",
+      "dependencies": {
+        "cheerio": "^1.2.0",
+        "crawlee": "^3.17.0",
+        "domhandler": "^6.0.1",
+      },
     },
     "packages/generation": {
       "name": "@fvtt-json-generator/generation",
@@ -195,6 +205,8 @@
     "@fvtt-json-generator/cli": ["@fvtt-json-generator/cli@workspace:apps/cli"],
 
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
+
+    "@fvtt-json-generator/crawl-goddessfantasy": ["@fvtt-json-generator/crawl-goddessfantasy@workspace:packages/crawl-goddessfantasy"],
 
     "@fvtt-json-generator/generation": ["@fvtt-json-generator/generation@workspace:packages/generation"],
 

@@ -10,7 +10,7 @@
     "test": "bun test --max-concurrency 4",
     "typecheck:production": "tsc -p tsconfig.production.json --pretty false",
     "typecheck:all": "tsc -p tsconfig.json --pretty false",
-    "typecheck:packages": "tsc -p packages/contracts/tsconfig.json --pretty false && tsc -p packages/models/tsconfig.json --pretty false && tsc -p packages/spell-manifest-contracts/tsconfig.json --pretty false && tsc -p packages/parser/tsconfig.json --pretty false && tsc -p packages/generation/tsconfig.json --pretty false && tsc -p packages/workflows/tsconfig.json --pretty false && tsc -p packages/intake-ai/tsconfig.json --pretty false && tsc -p packages/ingest-plaintext/tsconfig.json --pretty false",
+    "typecheck:packages": "tsc -p packages/contracts/tsconfig.json --pretty false && tsc -p packages/models/tsconfig.json --pretty false && tsc -p packages/spell-manifest-contracts/tsconfig.json --pretty false && tsc -p packages/parser/tsconfig.json --pretty false && tsc -p packages/generation/tsconfig.json --pretty false && tsc -p packages/workflows/tsconfig.json --pretty false && tsc -p packages/intake-ai/tsconfig.json --pretty false && tsc -p packages/ingest-plaintext/tsconfig.json --pretty false && tsc -p packages/crawl-goddessfantasy/tsconfig.json --pretty false",
     "typecheck:apps": "tsc -p apps/cli/tsconfig.json --pretty false && tsc -p apps/web/tsconfig.json --pretty false",
     "architecture:deps": "bunx --bun depcruise --config .dependency-cruiser.cjs -- src packages apps scripts tests",
     "architecture:cycles": "bun node_modules/knip/bin/knip-bun.js --cycles --no-config-hints",
@@ -67,6 +67,7 @@
   },
   "dependencies": {
     "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/crawl-goddessfantasy": "workspace:*",
     "@fvtt-json-generator/generation": "workspace:*",
     "@fvtt-json-generator/intake-ai": "workspace:*",
     "@fvtt-json-generator/ingest-plaintext": "workspace:*",

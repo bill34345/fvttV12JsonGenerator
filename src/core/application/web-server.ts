@@ -29,9 +29,9 @@ export {
   type ImageTokenCrop,
 } from '../assets/imageAssets';
 export { hasCompleteNormalizedCropRect } from '../assets/tokenCrop';
-export { runGoddessFantasyBoardCrawl } from '../crawl/runGoddessFantasyBoardCrawl';
-export { runRecordsToPlaintext } from '../crawl/convert/recordsToPlaintext';
-export type { GoddessFantasyCrawlMode } from '../crawl/types';
+export { runGoddessFantasyBoardCrawl } from '@fvtt-json-generator/crawl-goddessfantasy/crawl';
+export { runRecordsToPlaintext } from '@fvtt-json-generator/crawl-goddessfantasy/records-to-plaintext';
+export type { GoddessFantasyCrawlMode } from '@fvtt-json-generator/crawl-goddessfantasy/types';
 export { parseIconMode } from '../icons/workflow';
 export type { IconMode } from '../icons/types';
 export { ItemsIngestionWorkflow } from '../ingest/items';

@@ -38,9 +38,9 @@
 
 - Root instructions cover project-wide gates and route work to the right workflow.
 - Actor JSON generation workflow: source markdown in `obsidian/dnd数据转fvttjson/input` -> project CLI -> generated JSON in `obsidian/dnd数据转fvttjson/output`; follow `docs/generated-actor-verification.md`.
-- Site crawl workflow: `src/tools/crawlSites.ts` and `src/core/crawl/*` collect source-site artifacts under `obsidian/dnd数据转fvttjson/crawls/...`, then convert `records.json` to plaintext before entering existing ingest/generator flows.
+- Site crawl workflow: `src/tools/crawlSites.ts` and `packages/crawl-goddessfantasy/*` collect source-site artifacts under `obsidian/dnd数据转fvttjson/crawls/...`, then convert `records.json` to plaintext before entering existing ingest/generator flows.
 - Keep site-crawl logic decoupled from `src/index.ts` unless the user explicitly asks to join the flows.
-- Use directory-specific AGENTS files for specialized rules: `src/core/generator/AGENTS.md` for generator anti-overfit, `src/core/crawl/AGENTS.md` for crawler and crawl-to-plaintext rules, and `src/web/AGENTS.md` for Web/API/VPS deployment rules.
+- Use directory-specific AGENTS files for specialized rules: `src/core/generator/AGENTS.md` for generator anti-overfit, `packages/crawl-goddessfantasy/AGENTS.md` for crawler and crawl-to-plaintext rules, and `apps/web/AGENTS.md` for Web/API/VPS deployment rules.
 
 ## Project Understanding Index
 
@@ -141,7 +141,7 @@ For module-integrated JSON, "tests pass", "JSON parses", and "generated successf
 - Default crawl artifacts: `obsidian/dnd数据转fvttjson/crawls`
 - Main CLI entry: `src/index.ts`
 - Site crawl tool: `src/tools/crawlSites.ts`
-- Crawl core: `src/core/crawl`
+- Crawl core: `packages/crawl-goddessfantasy`
 - Plaintext ingest: `src/core/ingest/plaintext.ts`
 - Actor generator: `src/core/generator/actor.ts`
 - Chinese action parser: `src/core/parser/action.ts`

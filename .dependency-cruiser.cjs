@@ -68,6 +68,15 @@ module.exports = {
       },
     },
     {
+      name: 'crawl-goddessfantasy-package-is-independent',
+      severity: 'error',
+      comment: 'Site crawl, authentication, record schemas, and plaintext conversion remain a standalone source adapter package.',
+      from: { path: '^packages/crawl-goddessfantasy/src/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!crawl-goddessfantasy/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
@@ -192,6 +201,17 @@ module.exports = {
       },
     },
     {
+      name: 'no-production-to-legacy-crawl-adapters',
+      severity: 'error',
+      comment: 'Production code imports the crawl package; old source paths remain compatibility adapters for tests and callers.',
+      from: {
+        pathNot: '(^src/core/crawl/(types|runGoddessFantasyBoardCrawl|convert/(goddessfantasyPlaintext|recordsToPlaintext)|sites/(goddessfantasy|goddessfantasyAuth))[.]ts$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/crawl/(types|runGoddessFantasyBoardCrawl|convert/(goddessfantasyPlaintext|recordsToPlaintext)|sites/(goddessfantasy|goddessfantasyAuth))[.]ts$',
+      },
+    },
+    {
       name: 'no-core-to-outer-layers',
       severity: 'error',
       comment: 'Core code must not depend on delivery, runtime, tooling, or operator layers.',
@@ -239,7 +259,7 @@ module.exports = {
       name: 'no-crawl-to-main-cli',
       severity: 'error',
       comment: 'Crawl core stays decoupled from the actor conversion CLI.',
-      from: { path: '^src/core/crawl/' },
+      from: { path: '(^src/core/crawl/|^packages/crawl-goddessfantasy/)' },
       to: { path: '^(src/index[.]ts$|apps/cli/src/main[.]ts$)' },
     },
     {

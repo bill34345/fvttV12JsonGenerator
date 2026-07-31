@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { runRecordsToPlaintext, type RecordsToPlaintextOptions, type RecordsToPlaintextResult } from '../core/crawl/convert/recordsToPlaintext';
-import { runGoddessFantasyBoardCrawl } from '../core/crawl/runGoddessFantasyBoardCrawl';
-import type { CrawlContentTypeFilter, GoddessFantasyCrawlMode, GoddessFantasyCrawlOptions, GoddessFantasyCrawlResult } from '../core/crawl/types';
+import { runRecordsToPlaintext, type RecordsToPlaintextOptions, type RecordsToPlaintextResult } from '@fvtt-json-generator/crawl-goddessfantasy/records-to-plaintext';
+import { runGoddessFantasyBoardCrawl } from '@fvtt-json-generator/crawl-goddessfantasy/crawl';
+import type { CrawlContentTypeFilter, GoddessFantasyCrawlMode, GoddessFantasyCrawlOptions, GoddessFantasyCrawlResult } from '@fvtt-json-generator/crawl-goddessfantasy/types';
 import { buildImageAssetOptionsFromCli } from '../core/assets/imageAssetOptions';
 import type { ImageAssetOptions } from '../core/assets/imageAssets';
 import { runTokenReview, type TokenReviewOptions, type TokenReviewResult } from '../core/assets/tokenReview';

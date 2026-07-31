@@ -1,0 +1,23 @@
+{
+  "name": "@fvtt-json-generator/crawl-goddessfantasy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/sites/goddessfantasyAuth.ts",
+    "./crawl": "./src/runGoddessFantasyBoardCrawl.ts",
+    "./plaintext": "./src/convert/goddessfantasyPlaintext.ts",
+    "./records-to-plaintext": "./src/convert/recordsToPlaintext.ts",
+    "./site": "./src/sites/goddessfantasy.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "crawlee": "^3.17.0",
+    "domhandler": "^6.0.1"
+  }
+}

@@ -2,8 +2,8 @@
 
 ## Scope
 
-- Applies to `src/core/crawl/**` and tests under this directory.
-- Keep crawl/site-harvest code decoupled from the main actor conversion CLI (`src/index.ts`). `src/tools/crawlSites.ts` is the command entrypoint; core crawl logic belongs here.
+- Applies to `packages/crawl-goddessfantasy/**` and the compatibility tests under `src/core/crawl/__tests__`.
+- Keep crawl/site-harvest code decoupled from the main actor conversion CLI (`src/index.ts`). `src/tools/crawlSites.ts` is the command entrypoint; package crawl logic belongs here.
 
 ## Data And Credentials
 
@@ -13,7 +13,7 @@
 
 ## Site Rules
 
-- Keep site-specific parsing in `src/core/crawl/sites/`.
+- Keep site-specific parsing in `packages/crawl-goddessfantasy/src/sites/`.
 - For Goddess Fantasy/SMF, use print-page URLs for full-topic extraction and ignore non-canonical board-row actions such as `#new`, `action=post`, `action=markasread`, and `action=reporttm`.
 - Do not add network-dependent unit tests; use fixtures for parser/converter coverage.
 

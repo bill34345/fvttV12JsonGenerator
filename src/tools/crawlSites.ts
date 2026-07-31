@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { runRecordsToPlaintext } from '../core/crawl/convert/recordsToPlaintext';
-import { runGoddessFantasyBoardCrawl } from '../core/crawl/runGoddessFantasyBoardCrawl';
-import type { GoddessFantasyCrawlMode } from '../core/crawl/types';
+import { runRecordsToPlaintext } from '@fvtt-json-generator/crawl-goddessfantasy/records-to-plaintext';
+import { runGoddessFantasyBoardCrawl } from '@fvtt-json-generator/crawl-goddessfantasy/crawl';
+import type { GoddessFantasyCrawlMode } from '@fvtt-json-generator/crawl-goddessfantasy/types';
 import { runTokenReview } from '../core/assets/tokenReview';
 import {
   buildPipelineImageAssetOptions,
