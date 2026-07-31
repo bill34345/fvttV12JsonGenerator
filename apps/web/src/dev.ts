@@ -1,5 +1,5 @@
 const api = Bun.spawn({
-  cmd: ['bun', 'run', 'src/web/server/index.ts'],
+  cmd: ['bun', 'run', 'apps/web/src/server/index.ts'],
   stdout: 'inherit',
   stderr: 'inherit',
 });

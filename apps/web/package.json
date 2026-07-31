@@ -1,0 +1,17 @@
+{
+  "name": "@fvtt-json-generator/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false",
+    "build": "vite build",
+    "start": "bun run src/server/index.ts",
+    "dev": "bun run src/dev.ts"
+  },
+  "dependencies": {
+    "@radix-ui/react-icons": "^1.3.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

@@ -1,33 +1,34 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
-import type { EffectProfile } from '../../../core/application/conversion';
-import { ItemsIngestionWorkflow } from '../../../core/ingest/items';
-import { PlainTextIngestionWorkflow } from '../../../core/ingest/plaintext';
-import { runGoddessFantasyBoardCrawl } from '../../../core/crawl/runGoddessFantasyBoardCrawl';
-import { runRecordsToPlaintext } from '../../../core/crawl/convert/recordsToPlaintext';
 import {
+  assertEffectProfileForTarget,
   DEFAULT_VAULT_PATH,
   convertMarkdownContentToJson,
   type ConversionResult,
+  type EffectProfile,
   type FvttTargetVersion,
-} from '../../../core/application/conversion';
-import type { GoddessFantasyCrawlMode } from '../../../core/crawl/types';
-import {
+  type GoddessFantasyCrawlMode,
+  type IntakeDecision,
+  type IntakeProviderAuditEvent,
+  ItemsIngestionWorkflow,
   JsonTranslationSyncWorkflow,
+  loadMonsterIntakeConfig,
+  type MonsterIntakeAiProvider,
   ObsidianSyncWorkflow,
+  OpenAICompatibleMonsterIntakeProvider,
   PlainTextActorWorkflow,
+  PlainTextIngestionWorkflow,
   convertItemCollectionToJson,
   convertMonsterCollectionToJson,
+  parseFvttTargetVersion,
+  parseIconMode,
   resumeMonsterIntake,
+  runGoddessFantasyBoardCrawl,
   runMonsterIntake,
-} from '../../../core/application/workflows';
+  runRecordsToPlaintext,
+} from '../../../../../src/core/application/web-server';
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
 import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
-import { assertEffectProfileForTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import { loadMonsterIntakeConfig } from '../../../core/intake/config';
-import { OpenAICompatibleMonsterIntakeProvider, type IntakeProviderAuditEvent } from '../../../core/intake/provider';
-import type { IntakeDecision, MonsterIntakeAiProvider } from '../../../core/intake/types';
-import { parseIconMode } from '../../../core/icons/workflow';
 import {
   addJobFile,
   appendJobLog,

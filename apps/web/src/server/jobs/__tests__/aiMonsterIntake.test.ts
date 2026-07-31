@@ -8,9 +8,9 @@ import type {
   MonsterIntakeIR,
   RepairRequest,
   ReviewRequest,
-} from '../../../../core/intake/types';
-import { buildValidLurkerIr, LURKER_SOURCE } from '../../../../core/intake/__tests__/fixtures/lurker';
-import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../../../../core/intake/__tests__/fixtures/rat-warlock';
+} from '../../../../../../src/core/intake/types';
+import { buildValidLurkerIr, LURKER_SOURCE } from '../../../../../../src/core/intake/__tests__/fixtures/lurker';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../../../../../../src/core/intake/__tests__/fixtures/rat-warlock';
 import { createJob, getJob, resetJobsForTests } from '../jobStore';
 import { runJob } from '../jobRunner';
 

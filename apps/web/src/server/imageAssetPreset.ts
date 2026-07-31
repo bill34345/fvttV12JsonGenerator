@@ -1,7 +1,10 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { ImageAssetOptions, ImageTokenCrop } from '../../core/assets/imageAssets';
-import { hasCompleteNormalizedCropRect } from '../../core/assets/tokenCrop';
+import {
+  hasCompleteNormalizedCropRect,
+  type ImageAssetOptions,
+  type ImageTokenCrop,
+} from '../../../../src/core/application/web-server';
 
 export interface WebImageAssetPreset {
   imageAssetsConfigured: boolean;

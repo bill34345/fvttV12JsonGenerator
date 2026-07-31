@@ -1,13 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
-import type { EffectProfile } from '../../core/application/conversion';
 import {
+  assertEffectProfileForTarget,
+  buildActorVerificationSummaryFromValues,
   DEFAULT_VAULT_PATH,
   convertMarkdownPathToOutput,
   type ConversionResult,
+  type EffectProfile,
   type FvttTargetVersion,
-} from '../../core/application/conversion';
-import { buildActorVerificationSummaryFromValues } from '../../core/verification/actorVerification';
+  type IconMode,
+  type IntakeDecision,
+  monsterIntakeConfigured,
+  parseFvttTargetVersion,
+  parseIconMode,
+} from '../../../../src/core/application/web-server';
 import { createZipBuffer } from './download/zip';
 import {
   cleanupExpiredJobs,
@@ -19,19 +25,14 @@ import {
   type WebJobType,
 } from './jobs/jobStore';
 import { resumeAiMonsterIntakeJob, runJob, startJob, type WebJobRequest } from './jobs/jobRunner';
-import { monsterIntakeConfigured } from '../../core/intake/config';
-import type { IntakeDecision } from '../../core/intake/types';
 import { getWebImageAssetPreset } from './imageAssetPreset';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
-import { assertEffectProfileForTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import {
   getWebSecurityConfig,
   isAuthorizedApiRequest,
   type WebSecurityConfig,
 } from './security/config';
-import { parseIconMode } from '../../core/icons/workflow';
-import type { IconMode } from '../../core/icons/types';
 
 export { TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 

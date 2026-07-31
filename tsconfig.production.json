@@ -19,6 +19,11 @@
     "packages/**/*.test.tsx",
     "packages/**/*.spec.ts",
     "packages/**/*.spec.tsx",
+    "apps/**/__tests__/**",
+    "apps/**/*.test.ts",
+    "apps/**/*.test.tsx",
+    "apps/**/*.spec.ts",
+    "apps/**/*.spec.tsx",
     "src/temp/**"
   ]
 }

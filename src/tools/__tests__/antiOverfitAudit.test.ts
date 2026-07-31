@@ -6,8 +6,8 @@ import {
 } from '../antiOverfitAudit';
 
 describe('anti-overfit audit', () => {
-  it('keeps workspace packages inside the production audit roots', () => {
-    expect(ANTI_OVERFIT_SOURCE_ROOTS).toEqual(['src', 'packages', 'scripts']);
+  it('keeps workspace packages and apps inside the production audit roots', () => {
+    expect(ANTI_OVERFIT_SOURCE_ROOTS).toEqual(['src', 'packages', 'apps', 'scripts']);
   });
 
   it('fails an all-source audit when Git yields zero production sources', () => {

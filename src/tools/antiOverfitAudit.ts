@@ -35,7 +35,7 @@ interface AntiOverfitSource {
   text: string;
 }
 
-export const ANTI_OVERFIT_SOURCE_ROOTS = ['src', 'packages', 'scripts'] as const;
+export const ANTI_OVERFIT_SOURCE_ROOTS = ['src', 'packages', 'apps', 'scripts'] as const;
 
 export interface AntiOverfitAuditExecutionResult {
   exitCode: 0 | 1;

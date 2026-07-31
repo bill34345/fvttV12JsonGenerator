@@ -169,10 +169,23 @@ module.exports = {
       },
     },
     {
+      name: 'web-through-application-composition',
+      severity: 'error',
+      comment: 'The Web delivery app depends on browser-safe or server-only application composition surfaces, not scattered core implementation directories.',
+      from: {
+        path: '^apps/web/',
+        pathNot: '(/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/',
+        pathNot: '^src/core/application/web-(client|server)[.]ts$',
+      },
+    },
+    {
       name: 'no-web-to-foundry-or-operator-tools',
       severity: 'error',
       comment: 'The Web app may use application/core APIs, not Foundry runtime or operator internals.',
-      from: { path: '^src/web/', pathNot: '(/__tests__/|[.](test|spec)[.])' },
+      from: { path: '^apps/web/', pathNot: '(/__tests__/|[.](test|spec)[.])' },
       to: { path: '^(src/(foundry|tools)/|scripts/)' },
     },
     {
@@ -180,7 +193,7 @@ module.exports = {
       severity: 'error',
       comment: 'Foundry modules are independent runtime adapters.',
       from: { path: '^src/foundry/', pathNot: '(/__tests__/|[.](test|spec)[.])' },
-      to: { path: '^(src/(web|tools)/|scripts/)' },
+      to: { path: '^(apps/web/|src/tools/|scripts/)' },
     },
     {
       name: 'no-crawl-to-main-cli',
@@ -203,7 +216,7 @@ module.exports = {
       severity: 'error',
       comment: 'CLI, Web, Foundry, and operator tools use public application ports instead of workflow orchestration internals.',
       from: {
-        path: '^(apps/cli/|src/index[.]ts$|src/(web|foundry|tools)/)',
+        path: '^(apps/(cli|web)/|src/index[.]ts$|src/(foundry|tools)/)',
         pathNot: '(/__tests__/|[.](test|spec)[.])',
       },
       to: {
@@ -215,7 +228,7 @@ module.exports = {
       severity: 'error',
       comment: 'Delivery and operator layers depend on application contracts, never generator implementation files.',
       from: {
-        path: '^(apps/cli/|src/index[.]ts$|src/(web|foundry|tools)/)',
+        path: '^(apps/(cli|web)/|src/index[.]ts$|src/(foundry|tools)/)',
         pathNot: '(/__tests__/|[.](test|spec)[.])',
       },
       to: { path: '^src/core/generator/' },

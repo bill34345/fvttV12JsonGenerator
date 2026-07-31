@@ -2,13 +2,13 @@
 
 ## Scope
 
-- Applies to `src/web/**`, Web API tests, Vite/React entrypoints, and Web deployment docs.
+- Applies to `apps/web/**`, Web API tests, Vite/React entrypoints, and Web deployment docs.
 - Treat the Web app as a deployable personal VPS tool, not a local-only wrapper around the CLI.
 - The primary user flow is browser upload -> server workflow -> progress/results -> JSON/Markdown/ZIP download.
 
 ## Architecture
 
-- Keep `src/index.ts` CLI behavior stable unless the user explicitly asks to change the CLI.
+- Keep `src/index.ts` and `apps/cli/src/main.ts` CLI behavior stable unless the user explicitly asks to change the CLI.
 - Web API code must call shared workflow services or core modules directly. Do not shell out to the CLI as the main implementation path.
 - When a CLI branch needs Web support, extract a reusable service layer first, then make both CLI and Web call that layer.
 - Keep long-running Web work behind the job system. Jobs should report status, progress, logs, warnings, failures, and registered output files.
@@ -41,6 +41,6 @@
 ## Verification
 
 - For Web/API changes, run `bun run web:build`.
-- For API or job runner changes, run `bun test src/web/server/__tests__/api.test.ts`.
+- For API or job runner changes, run `bun test apps/web/src/server/__tests__/api.test.ts`.
 - For upload/download changes, run a browser smoke test that uploads a real markdown file and downloads the generated JSON or ZIP.
 - If Web changes affect generated actor JSON semantics, also regenerate a real actor through the project workflow and run `bun run verify:actor <source.md> <output.json>`.

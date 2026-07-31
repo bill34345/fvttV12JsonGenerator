@@ -13,7 +13,10 @@ import {
 } from '@radix-ui/react-icons';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { hasCompleteNormalizedCropRect, type ImageTokenCrop as TokenCrop } from '../../core/assets/tokenCrop';
+import {
+  hasCompleteNormalizedCropRect,
+  type ImageTokenCrop as TokenCrop,
+} from '../../../../src/core/application/web-client';
 import {
   convertSingle,
   createJob,

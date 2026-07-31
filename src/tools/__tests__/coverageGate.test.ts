@@ -20,7 +20,7 @@ const SAMPLE_LCOV = [
   'LH:200',
   'end_of_record',
   'TN:',
-  'SF:src\\web\\server\\api.ts',
+  'SF:apps\\web\\src\\server\\api.ts',
   'FNF:10',
   'FNH:8',
   'LF:100',

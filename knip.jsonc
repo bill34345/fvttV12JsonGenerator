@@ -3,9 +3,9 @@
   "entry": [
     "src/index.ts",
     "packages/*/src/index.ts",
-    "src/web/dev.ts",
-    "src/web/server/index.ts",
-    "src/web/client/main.tsx",
+    "apps/web/src/dev.ts",
+    "apps/web/src/server/index.ts",
+    "apps/web/src/client/main.tsx",
     "src/foundry/monster-spell-resolver/index.ts",
     "src/foundry/session-monitor/index.ts",
     "src/tools/actorVerification.ts",
