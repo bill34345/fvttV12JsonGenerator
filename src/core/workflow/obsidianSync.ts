@@ -18,8 +18,8 @@ import {
 } from '../assets/imageAssets';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
-import { ItemParser } from '../parser/item-parser';
-import { detectItemRoute } from '../parser/item-router';
+import { ItemParser } from '@fvtt-json-generator/parser/item-parser';
+import { detectItemRoute } from '@fvtt-json-generator/parser/item-router';
 import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';

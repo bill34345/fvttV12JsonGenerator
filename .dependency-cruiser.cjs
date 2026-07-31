@@ -65,10 +65,10 @@ module.exports = {
       severity: 'error',
       comment: 'Production code imports high-level parser workspace exports; old source paths remain compatibility adapters only.',
       from: {
-        pathNot: '(^src/config/mapping[.]ts$|^src/core/parser/(types|yaml|chinese|english|router|resourceSemantics|behaviorSemantics)[.]ts$|/__tests__/|[.](test|spec)[.])',
+        pathNot: '(^src/config/mapping[.]ts$|^src/core/parser/(types|yaml|chinese|english|router|resourceSemantics|behaviorSemantics|item-parser|item-router|item-strategy)[.]ts$|/__tests__/|[.](test|spec)[.])',
       },
       to: {
-        path: '(^src/config/mapping[.]ts$|^src/core/parser/(types|yaml|chinese|english|router|resourceSemantics|behaviorSemantics)[.]ts$)',
+        path: '(^src/config/mapping[.]ts$|^src/core/parser/(types|yaml|chinese|english|router|resourceSemantics|behaviorSemantics|item-parser|item-router|item-strategy)[.]ts$)',
       },
     },
     {

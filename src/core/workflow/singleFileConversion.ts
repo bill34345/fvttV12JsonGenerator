@@ -3,8 +3,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:pat
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ActorValidator } from '../generator/validator';
-import { ItemParser } from '../parser/item-parser';
-import { detectItemRoute } from '../parser/item-router';
+import { ItemParser } from '@fvtt-json-generator/parser/item-parser';
+import { detectItemRoute } from '@fvtt-json-generator/parser/item-router';
 import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import {
   buildActorVerificationSummaryFromValues,

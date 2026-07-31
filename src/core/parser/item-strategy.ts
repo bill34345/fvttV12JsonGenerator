@@ -1,11 +1,2 @@
-import type { ParsedItem } from '@fvtt-json-generator/models/item';
-
-/**
- * Strategy interface for parsing item content into ParsedItem structure.
- * Used by the parser system to handle different item types and formats.
- */
-export interface ItemParserStrategy {
-  readonly type: 'item';
-  parse(content: string, normalizedBody?: string): ParsedItem;
-  canParse(content: string): boolean;
-}
+/** @deprecated Import `ItemParserStrategy` from `@fvtt-json-generator/parser/item-strategy`. */
+export type { ItemParserStrategy } from '@fvtt-json-generator/parser/item-strategy';

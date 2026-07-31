@@ -115,6 +115,14 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - item parser 仍留在原位，作为下一个独立迁移和语义验收单元；
 - `data/cn.json` 仍是 Stage 5 data-root 债务，因此尚不宣称 parser 可脱离仓库发布。
 
+### Stage 3B3c：item parser
+
+- ItemParser、item route 与 strategy 已进入 parser package；
+- workflow 通过 package exports 调用，旧路径仅保留兼容；
+- 迁移后 Knip 保持 0 cycles 与 0 unused files/dependencies；
+- 一次完整 CI 中 Knip 子进程发生未稳定复现的高 CPU；standalone 与第二次完整 CI 均通过，
+  因此记录为工具进程偶发而非静默忽略。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -168,3 +176,7 @@ models 所有权迁移，高层 parser 尚待独立迁移。
 Stage 3B3b 分别通过项目 CLI 重生成中文 YAML 的 Slithering Bloodfin 与英文 bestiary 的
 White Tusk Shaman v14/core Actor；两个 verifier 均为 0 warnings，人工核对核心数值、感官和
 9/6 个来源 Item。排除运行时身份后均与各自基线完整语义相等；该证据不覆盖 item parser。
+
+Stage 3B3c 通过项目 CLI 从 `input/items/骑士之盾.md` 重生成 v14/core Item。人工核对名称、类型、
+稀有度、同调、AC、Forceful Bash、Protective Field 与 prone effect；新旧唯一原始差异是 Effect
+`origin` 内嵌随机 Item `_id`，排除随机身份及派生 origin 后与 Stage 2 完整语义相等。

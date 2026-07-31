@@ -165,6 +165,14 @@ owner 和迁移约束。
 - dependency-cruiser 阻止生产代码回流高层 parser adapter；
 - item parser 留待独立检查点，避免把 1,500 行 item 解析器混入 actor parser 迁移。
 
+### 2026-07-31：阶段 3B3c item parser 完成
+
+- ItemParser、item route detection 与 parser strategy 迁入 `@fvtt-json-generator/parser`；
+- workflow 生产调用方改用 package exports，旧 item parser 路径保留兼容 adapter；
+- 兼容测试锁定 class/function identity 与 strategy contract；
+- 首次完整 CI 的 Knip cycles 子进程出现一次持续高 CPU；核对并只终止该次 CI 进程树后，
+  standalone Knip 1.09 秒通过，第二次完整 CI 通过，未形成稳定复现的依赖图回归。
+
 ## 验证证据
 
 ### 阶段 0
@@ -294,8 +302,26 @@ owner 和迁移约束。
   - 排除运行时 `_id` 与时间戳后，两者分别与上一检查点/Stage 2 基线完整语义相等。
 - 未宣称：item parser 已迁入 package，或 parser 的 `data/cn.json` 仓库外发布债已关闭。
 
+### 阶段 3B3c：item parser
+
+- 机械：
+  - package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：503 modules / 989 dependencies，0 violations；
+  - Knip cycles、unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - item parser/router/compatibility 专项：48 tests / 0 failed / 175 expectations；
+  - 完整 `ci:verify` 复验：1,586 tests / 0 failed / 7,492 expectations / 155 files；
+  - coverage：85.36% lines / 88.20% functions；
+  - anti-overfit 248 sources、hygiene 1,968 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 从真实 `input/items/骑士之盾.md` 重生成 v14/core Item；
+  - 人工核对名称、equipment、very rare、required attunement、AC +2、Forceful Bash、
+    Protective Field 与 prone effect；
+  - 新旧整树唯一原始差异是 Effect `origin` 内嵌本次随机 Item `_id`；
+  - 排除 `_id`、时间戳及其派生 `origin` 后，与 Stage 2 Item 完整语义相等。
+- 未宣称：parser 的 `data/cn.json` 仓库外发布债已关闭，或 generation package 已迁移。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts、models 与 high-level actor parser
-已形成可回滚稳定检查点。下一条执行路径是阶段 3B3c：迁移 item parser；在其独立验收前不移动
-generation、CLI、Web、module 或 ops。
+及 item parser 已形成可回滚稳定检查点。`packages/parser` 的代码迁移已完成；下一条执行路径是
+阶段 3C：迁移 generation package，在其独立验收前不移动 CLI、Web、module 或 ops。
