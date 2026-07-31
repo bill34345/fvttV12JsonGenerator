@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | contracts/parser/models/spell contracts/generation/workflows 已独立验收；下一步迁移 `apps/cli` |
+| 3. Bun workspace 物理迁移 | in_progress | contracts/parser/models/spell contracts/generation/workflows 与 `apps/cli` 已独立验收；下一步迁移 `apps/web` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -61,8 +61,8 @@ owner 和迁移约束。
 
 | 工作流 | 当前入口 | 重构期间必须保持 |
 |---|---|---|
-| 单文件 Actor/Item 转换 | `src/index.ts` | 参数、默认路径、诊断、生成语义 |
-| collection / Vault Sync | `src/index.ts` + `src/core/workflow` | canonical verifier 和正式输出 gate |
+| 单文件 Actor/Item 转换 | `apps/cli/src/main.ts`；`src/index.ts` 为兼容入口 | 参数、默认路径、诊断、生成语义 |
+| collection / Vault Sync | `apps/cli/src/main.ts` + `@fvtt-json-generator/workflows` | canonical verifier 和正式输出 gate |
 | AI Intake | CLI/Web + `src/core/intake` | accepted/needs_review/failed 边界 |
 | legacy plaintext ingest | CLI + `src/core/ingest` | 现有显式入口，不扩大支持声明 |
 | GoddessFantasy crawl | `src/tools/crawlSites.ts` | 与主转换 CLI 解耦 |
@@ -213,7 +213,23 @@ owner 和迁移约束。
   single-file conversion；
 - plaintext ingest port 根据真实 CLI 用法补齐 `sections` 与 `rawNotes`，没有用类型断言掩盖契约缺口；
 - Bun 1.3.8 Windows 覆盖率在并发 4 下两次于 1,587 个测试执行完后稳定触发同一内部 assertion；
-  并发 2 两次完整通过，因此仅将 coverage runner 调整为 2，普通测试并发规则不变。
+  workflows 检查点曾以并发 2 通过，但 CLI 物理迁移后再次触发同类 runner crash，因此“并发 2 已稳定”
+  不再作为最终结论；最终处理记录在阶段 3E。
+
+### 2026-07-31：阶段 3E `apps/cli` 完成
+
+- 建立 `apps/cli` workspace，原 390 行命令入口迁入 `apps/cli/src/main.ts`；
+- `src/index.ts` 缩减为薄兼容入口，原命令、参数、默认 vault 路径、诊断与退出码继续可用；
+- 新增 `src/core/application/cli.ts` 作为 CLI 唯一 composition surface；应用入口不再穿透
+  parser、generation、workflow 或 operator 私有文件；
+- dependency-cruiser 将 `apps/` 纳入正式扫描，禁止 core 反向依赖 app，并限制 CLI 只能导入
+  `src/core/application/cli.ts`；
+- 根 CI 新增 apps 类型检查，workspace lockfile 与 frozen install 均覆盖 CLI package；
+- Bun 覆盖率不采集 CLI 启动的子进程代码，且把这些子进程测试置于 coverage runner 内会触发
+  Windows/Bun 1.3.8 内部 assertion；因此 CI 将 12 个 CLI 子进程行为测试串行独立执行，
+  其余 1,575 个测试由 coverage runner 执行，二者仍由同一 `test:coverage` 门禁汇总；
+- CLI 子进程测试并发 4 曾出现一次 15 秒启动超时，随后连续 5 轮均通过；为消除无收益的
+  Windows/Bun 子进程启动争用，正式 CLI 门禁固定为串行，普通测试并发规则不变。
 
 ## 验证证据
 
@@ -439,9 +455,39 @@ owner 和迁移约束。
     路径仍由 repository composition root 注入，不宣称仓库外独立发布；
   - 旧 `src/core/workflow/*` 尚保留测试兼容适配，后续只在确认无外部消费者后治理，不在本阶段删除。
 
+### 阶段 3E：`apps/cli`
+
+- 机械：
+  - frozen install、app-local、production、packages 与全仓类型检查通过；
+  - dependency-cruiser：1,366 modules / 2,101 dependencies，0 violations；Knip cycles 为 0；
+  - CLI 子进程门禁：12 tests / 0 failed / 57 expectations；连续 5 轮复验共 60 tests 均通过；
+  - coverage 主组：1,575 tests / 0 failed / 7,440 expectations / 156 files；12 个 CLI 子进程测试
+    被显式分离而非删除，合计仍为 1,587 tests / 7,497 expectations；
+  - coverage：85.32% lines / 88.04% functions；generator 93.60% / 92.67%，workflow
+    87.90% / 81.82%，Web 59.38% / 75.86%；
+  - 完整默认 `ci:verify` 从根脚本通过；anti-overfit 301 sources、hygiene 2,033 tracked paths、
+    dnd5e 5.3.3 reference、Web production build 与 offline Actor smoke 均通过。
+- 语义：
+  - 分别从兼容入口 `src/index.ts` 和新应用入口 `apps/cli/src/main.ts` 生成 Slithering
+    Bloodfin v14/core；排除随机身份与时间戳后，两份 Actor 完整语义投影相等；
+  - 新应用入口生成的 Bloodfin v14/core 与 Stage 3D 检查点相等，v12/core 与 Stage 3C2
+    检查点相等，canonical verifier 均为 0 warnings；
+  - 新应用入口生成 Shield of the Cavalier v14/core，与 Stage 3D Item 检查点语义相等；
+  - Bloodfin v14/modded-v14 仍保留 9 个来源 Item，canonical verifier 0 warnings；该样本没有
+    产生 MIDI-QOL/DAE flags，因此只证明 CLI/profile 路由与核心 Actor 语义未漂移，不将此样本
+    夸大为全部 module-integrated behavior 的运行时验收；
+  - CLI AI Intake、safe icon、Item import、plaintext actor dry-run 的参数、诊断、输出路径与
+    fail-closed 行为由真实子进程测试覆盖。
+- 已知债：
+  - `apps/cli` 当前仍通过 monorepo 的 `src/core/application/cli.ts` 组合尚未迁移的
+    intake、ingest、assets 与 operator adapter；它是独立 workspace 应用边界，但尚不宣称
+    可脱离本仓库发布；
+  - `src/index.ts` 为现有脚本和外部调用者保留兼容入口；只有确认消费者完成迁移后才可删除。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows package 已形成可回滚稳定检查点。`packages/workflows` 已通过独立机械与
-语义验收；下一条执行路径是阶段 3E：迁移 `apps/cli`，保持 CLI 参数、默认 vault 路径、输出、
-诊断与退出码不变。在 CLI 独立验收前不移动 Web、Intake、ingest、crawl 或 assets。
+generation/workflows package 及 `apps/cli` 已形成可回滚稳定检查点。CLI 新入口和兼容入口均已
+通过独立机械与语义验收；下一条执行路径是阶段 3F：迁移 `apps/web`，保持 API/job schema、
+本地与 public-mode 安全边界、下载 artifact、前端状态语义和现有部署入口不变。在 Web 独立验收前
+不移动 Intake、ingest、crawl 或 assets。
