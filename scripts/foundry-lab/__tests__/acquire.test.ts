@@ -19,8 +19,15 @@ import {
   verifyStorageTrees,
   copyPersistentStorageFromRemote,
 } from '../acquire';
-import { createLabConfig } from '../config';
+import { createLabConfig as createBaseLabConfig } from '../config';
 import type { ClassifiedPackage, PackageClass } from '../types';
+
+const REMOTE_TEST_ENV = {
+  FVTT_OPS_PRODUCTION_SSH_TARGET: 'test-production',
+  FVTT_OPS_PRODUCTION_DATA_PATH: 'E:/test/foundry-data',
+  FVTT_OPS_PRODUCTION_SSH_IDENTITY: 'C:/test/id_ed25519',
+};
+const createLabConfig = (repoRoot?: string) => createBaseLabConfig(repoRoot, REMOTE_TEST_ENV);
 
 const classified = (
   packageClass: PackageClass,

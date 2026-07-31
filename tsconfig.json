@@ -35,6 +35,8 @@
     "apps/**/*.tsx",
     "foundry-modules/**/*.ts",
     "foundry-modules/**/*.tsx",
+    "tools/**/*.ts",
+    "tools/**/*.tsx",
     "tests/**/*.ts",
     "tests/**/*.tsx",
     "scripts/**/*.ts"

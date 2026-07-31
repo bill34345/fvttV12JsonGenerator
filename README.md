@@ -274,5 +274,6 @@ bun run test:foundry-lab
 - [`docs/manual.md`](docs/manual.md)：以 v12 为主的旧版详细使用手册；涉及版本时以本 README 和 `AGENTS.md` 为准。
 - [`docs/superpowers/specs/2026-07-16-ai-monster-intake-design.md`](docs/superpowers/specs/2026-07-16-ai-monster-intake-design.md)：AI Intake 的 IR、证据、审查和失败边界。
 - [`docs/generated-actor-verification.md`](docs/generated-actor-verification.md)：生成 Actor 的强制语义验收清单。
-- [`scripts/foundry-lab/README.md`](scripts/foundry-lab/README.md)：隔离 Foundry v14 实验环境的安全边界与操作手册。
+- [`tools/foundry-ops/README.zh-CN.md`](tools/foundry-ops/README.zh-CN.md)：Foundry 本地测试、离线审计、生产只读盘点的统一入口、权限分类与外部配置说明。
+- [`scripts/foundry-lab/README.md`](scripts/foundry-lab/README.md)：旧 Foundry Lab 命令的兼容说明和详细操作手册。
 - [`docs/acceptance/foundry-v14-module-compatibility.md`](docs/acceptance/foundry-v14-module-compatibility.md)：模组矩阵、已知冲突和生产世界抽样证据。

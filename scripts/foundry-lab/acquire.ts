@@ -11,11 +11,10 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { assertInsideLabRoot, type FoundryLabConfig } from './config';
+import { assertInsideLabRoot, requireProductionConnection, type FoundryLabConfig } from './config';
 import { runCommand } from './process';
 import type { ClassifiedPackage, CommandResult } from './types';
 
@@ -309,7 +308,7 @@ async function readRemoteTreeInventory(
   config: FoundryLabConfig,
   remoteRoot: string,
 ): Promise<StorageEntry[]> {
-  const identity = resolve(homedir(), '.ssh/id_ed25519');
+  const production = requireProductionConnection(config);
   const inventoryScript = [
     "$ErrorActionPreference='Stop'",
     '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)',
@@ -322,8 +321,8 @@ async function readRemoteTreeInventory(
   ].join('; ');
   const encoded = Buffer.from(inventoryScript, 'utf16le').toString('base64');
   const result = await runCommand('ssh', [
-    '-i', identity, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-    '-o', 'StrictHostKeyChecking=yes', config.sshTarget,
+    '-i', production.sshIdentityPath, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+    '-o', 'StrictHostKeyChecking=yes', production.sshTarget,
     'powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded,
   ], { cwd: config.repoRoot, timeoutMs: 4 * 60 * 60_000 });
   if (result.exitCode !== 0) {
@@ -485,20 +484,20 @@ async function defaultCopyRemoteDirectory(
   safeSegment(remoteFolder, 'Remote module folder');
   assertInsideLabRoot(config, stagingRoot);
   await rm(stagingRoot, { recursive: true, force: true });
-  const identity = resolve(homedir(), '.ssh/id_ed25519');
-  const remoteRoot = `${config.remoteDataPath}/Data/modules/${remoteFolder}`;
+  const production = requireProductionConnection(config);
+  const remoteRoot = `${production.remoteDataPath}/Data/modules/${remoteFolder}`;
   const remoteInventory = await readRemoteTreeInventory(config, remoteRoot);
   const excludedRuntimeLocks = remoteInventory
     .filter((entry) => isRuntimeLockPath(entry.relativePath))
     .map((entry) => entry.relativePath);
   const remotePath = buildScpRemoteSpec(
-    config.sshTarget,
+    production.sshTarget,
     remoteRoot,
   );
   const legacy = excludedRuntimeLocks.length === 0;
   const result = await runCommand(
     'scp',
-    buildScpCommandArgs(identity, remotePath, stagingRoot, { legacy }),
+    buildScpCommandArgs(production.sshIdentityPath, remotePath, stagingRoot, { legacy }),
     { cwd: config.repoRoot, timeoutMs: 4 * 60 * 60_000 },
   );
   if (result.exitCode !== 0
@@ -518,10 +517,10 @@ async function defaultCopyRemoteDirectory(
     assertInsideLabRoot(config, destination);
     await mkdir(dirname(destination), { recursive: true });
     await rm(destination, { force: true });
-    const source = buildScpRemoteSpec(config.sshTarget, `${remoteRoot}/${entry.relativePath}`);
+    const source = buildScpRemoteSpec(production.sshTarget, `${remoteRoot}/${entry.relativePath}`);
     const repairResult = await runCommand(
       'scp',
-      buildScpCommandArgs(identity, source, destination, { legacy: false }),
+      buildScpCommandArgs(production.sshIdentityPath, source, destination, { legacy: false }),
       { cwd: config.repoRoot, timeoutMs: 4 * 60 * 60_000 },
     );
     if (repairResult.exitCode !== 0) {
@@ -610,8 +609,8 @@ export async function copyPersistentStorageFromRemote(
   const staging = `${destination}.staging`;
   assertInsideLabRoot(config, staging);
   await rm(staging, { recursive: true, force: true });
-  const identity = resolve(homedir(), '.ssh/id_ed25519');
-  const remoteStorage = `${config.remoteDataPath}/Data/modules/${remoteFolder}/storage`;
+  const production = requireProductionConnection(config);
+  const remoteStorage = `${production.remoteDataPath}/Data/modules/${remoteFolder}/storage`;
   const inventoryScript = [
     "$ErrorActionPreference='Stop'",
     '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)',
@@ -625,8 +624,8 @@ export async function copyPersistentStorageFromRemote(
   ].join('; ');
   const encoded = Buffer.from(inventoryScript, 'utf16le').toString('base64');
   const inventoryResult = await commandRunner('ssh', [
-    '-i', identity, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-    '-o', 'StrictHostKeyChecking=yes', config.sshTarget,
+    '-i', production.sshIdentityPath, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+    '-o', 'StrictHostKeyChecking=yes', production.sshTarget,
     'powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded,
   ], { cwd: config.repoRoot, timeoutMs: 30 * 60_000 });
   if (inventoryResult.exitCode !== 0) {
@@ -640,10 +639,10 @@ export async function copyPersistentStorageFromRemote(
   }
 
   await mkdir(dirname(staging), { recursive: true });
-  const remotePath = buildScpRemoteSpec(config.sshTarget, remoteStorage);
+  const remotePath = buildScpRemoteSpec(production.sshTarget, remoteStorage);
   const copyResult = await commandRunner(
     'scp',
-    buildScpCommandArgs(identity, remotePath, staging),
+    buildScpCommandArgs(production.sshIdentityPath, remotePath, staging),
     { cwd: config.repoRoot, timeoutMs: 4 * 60 * 60_000 },
   );
   if (copyResult.exitCode !== 0) throw new Error(copyResult.stderr.trim() || `Storage SCP failed for ${remoteFolder}`);

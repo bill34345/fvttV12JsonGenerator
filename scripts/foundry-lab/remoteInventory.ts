@@ -1,7 +1,6 @@
-import { homedir } from 'node:os';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { assertInsideLabRoot, type FoundryLabConfig } from './config';
+import { join } from 'node:path';
+import { assertInsideLabRoot, requireProductionConnection, type FoundryLabConfig } from './config';
 import { runCommand } from './process';
 import type { ModuleInventoryEntry } from './types';
 
@@ -152,18 +151,18 @@ export async function captureRemoteInventory(
   config: FoundryLabConfig,
   dependencies: Partial<RemoteInventoryDependencies> = {},
 ): Promise<ModuleInventoryEntry[]> {
-  const command = buildRemoteInventoryCommand(config.remoteDataPath);
+  const production = requireProductionConnection(config);
+  const command = buildRemoteInventoryCommand(production.remoteDataPath);
   const encodedCommand = Buffer.from(command, 'utf16le').toString('base64');
-  const identityPath = resolve(homedir(), '.ssh/id_ed25519');
   const executeCommand = dependencies.runCommand ?? runCommand;
   const result = await executeCommand(
     'ssh',
     [
-      '-i', identityPath,
+      '-i', production.sshIdentityPath,
       '-o', 'BatchMode=yes',
       '-o', 'ConnectTimeout=10',
       '-o', 'StrictHostKeyChecking=yes',
-      config.sshTarget,
+      production.sshTarget,
       'powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand,
     ],
     { cwd: config.repoRoot, timeoutMs: 120_000 },

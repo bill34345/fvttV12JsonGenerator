@@ -27,6 +27,9 @@
     "scripts/buildV14IconCatalog.ts",
     "scripts/**/cli.ts",
     "foundry-modules/*/companion/cli.ts",
+    "tools/*/src/cli.ts",
+    "tools/*/src/index.ts",
+    "tools/**/__tests__/**/*.{test,spec}.{ts,tsx}",
     "src/**/__tests__/**/*.{test,spec}.{ts,tsx}",
     "scripts/**/__tests__/**/*.{test,spec}.{ts,tsx}",
     "tests/**/*.{test,spec}.{ts,tsx}",
@@ -37,6 +40,7 @@
     "packages/**/*.{ts,tsx}",
     "apps/**/*.{ts,tsx}",
     "foundry-modules/**/*.{ts,tsx}",
+    "tools/**/*.{ts,tsx}",
     "scripts/**/*.{ts,tsx}",
     "tests/**/*.{ts,tsx}",
     "*.{config,setup}.{ts,tsx,js,mjs,cjs}"

@@ -27,6 +27,9 @@ import {
 
 const [command, ...args] = process.argv.slice(2);
 const apply = args.includes('--apply');
+if (apply && (command === 'inventory' || command === 'acquire') && !args.includes('--allow-production-read')) {
+  throw new Error('Production read requires the explicit --allow-production-read flag. Use bun run foundry:ops for the supported permission-checked entrypoint.');
+}
 if (command === 'classpack-v14') {
   if (args.includes('--mark-migrated')) {
     const result = await markClasspackV14MigrationComplete(createLabConfig(), { apply });

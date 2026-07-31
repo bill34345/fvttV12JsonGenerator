@@ -8,7 +8,9 @@
     "apps/**/*.ts",
     "apps/**/*.tsx",
     "foundry-modules/**/*.ts",
-    "foundry-modules/**/*.tsx"
+    "foundry-modules/**/*.tsx",
+    "tools/**/*.ts",
+    "tools/**/*.tsx"
   ],
   "exclude": [
     "src/**/__tests__/**",
@@ -31,6 +33,11 @@
     "foundry-modules/**/*.test.tsx",
     "foundry-modules/**/*.spec.ts",
     "foundry-modules/**/*.spec.tsx",
+    "tools/**/__tests__/**",
+    "tools/**/*.test.ts",
+    "tools/**/*.test.tsx",
+    "tools/**/*.spec.ts",
+    "tools/**/*.spec.tsx",
     "src/temp/**"
   ]
 }

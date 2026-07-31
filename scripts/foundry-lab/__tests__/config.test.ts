@@ -2,7 +2,11 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { assertInsideLabRoot, createLabConfig } from '../config';
+import {
+  assertInsideLabRoot,
+  createLabConfig,
+  requireProductionConnection,
+} from '../config';
 
 describe('Foundry lab configuration', () => {
   it('pins the approved project-local layout and versions', () => {
@@ -14,11 +18,41 @@ describe('Foundry lab configuration', () => {
     expect(config.profiles.coreTest.port).toBe(30000);
     expect(config.profiles.serverMirror.port).toBe(30001);
     expect(config.profiles.coreTest.host).toBe('127.0.0.1');
-    expect(config.sshTarget).toBe('Administrator@49.232.12.153');
+    expect(config.sshTarget).toBe('');
+    expect(config.remoteDataPath).toBe('');
     expect(config.spellResolver).toEqual({
       moduleId: 'fvtt-json-generator-spell-resolver',
       disposableWorldId: 'fvtt-v14-module-matrix',
     });
+  });
+
+  it('loads machine and production values only from explicit external configuration', () => {
+    const repo = resolve('I:/OpenCode/fvttV12JsonGenerator');
+    const config = createLabConfig(repo, {
+      FVTT_OPS_LAB_ROOT: 'J:/fvtt-ops/lab',
+      FVTT_OPS_EVIDENCE_ROOT: 'J:/fvtt-ops/evidence',
+      FVTT_OPS_BACKUP_ROOT: 'J:/fvtt-ops/backups',
+      FVTT_OPS_FOUNDRY_ZIP: 'J:/installers/FoundryVTT-Node-14.364.zip',
+      FVTT_OPS_WORLD_ID: 'fixture-world',
+      FVTT_OPS_PRODUCTION_SSH_TARGET: 'fixture-production',
+      FVTT_OPS_PRODUCTION_DATA_PATH: 'E:/fixture/data',
+      FVTT_OPS_PRODUCTION_SSH_IDENTITY: 'J:/keys/fvtt',
+    });
+
+    expect(config.labRoot).toBe(resolve('J:/fvtt-ops/lab'));
+    expect(config.evidenceRoot).toBe(resolve('J:/fvtt-ops/evidence'));
+    expect(config.backupRoot).toBe(resolve('J:/fvtt-ops/backups'));
+    expect(config.defaultWorldId).toBe('fixture-world');
+    expect(requireProductionConnection(config)).toEqual({
+      sshTarget: 'fixture-production',
+      sshIdentityPath: resolve('J:/keys/fvtt'),
+      remoteDataPath: 'E:/fixture/data',
+    });
+  });
+
+  it('fails closed when production host or data path is not externally configured', () => {
+    expect(() => requireProductionConnection(createLabConfig('I:/OpenCode/fvttV12JsonGenerator', {})))
+      .toThrow('FVTT_OPS_PRODUCTION_SSH_TARGET, FVTT_OPS_PRODUCTION_DATA_PATH');
   });
 
   it('rejects destructive targets outside the ignored lab root', () => {

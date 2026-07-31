@@ -40,7 +40,7 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 4A Chat Memory Guard 与 4B Session Monitor 已验收；4C Foundry Ops 待执行 |
+| 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B 已验收；4C.1 已建立 Foundry Ops 统一入口、权限清单和外部配置，旧实现物理迁移待下一批 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
@@ -838,13 +838,37 @@ owner 和迁移约束。
   - 阶段 4B 的 workspace release、协议/依赖/权限边界与本地端到端握手均已满足。计划没有要求
     这一单元在本阶段做 fresh-history extraction，因此未创建本地候选仓库、远端或发布。
 
+### 阶段 4C.1：Foundry Ops 权限和配置边界
+
+- 新建 `tools/foundry-ops` 私有 Bun workspace，提供 `bun run foundry:ops` 中文统一入口和
+  `catalog` 权限清单；旧 `bun run foundry:lab ...` 继续可用，但先经过同一权限检查再转给旧实现；
+- 命令同时记录目标（本地或生产）、影响（只读、本地修改、生产修改）、owner 和是否可执行；
+  生产修改只作为 `runbook-only` 分类存在，统一 CLI 故意不提供执行路由；
+- 生产 `inventory` 和可能读取 server-only 包的 `acquire` 被明确归为 production read；实际执行必须
+  同时带 `--apply`、`--allow-production-read`，并从 `FVTT_OPS_PRODUCTION_*` 外部配置读取 SSH
+  target、data path 和 identity。仓库中的具体 SSH target、IP 和生产 data path 已移除；
+- world audit 与两个历史 production migration 脚本都只处理本地/离线副本，因此归为 local mutation，
+  不再因名称被误解为会修改线上服务器；
+- `scripts/foundry-lab/config.ts` 变成兼容 adapter；权威配置、路径安全和生产连接 fail-closed 检查位于
+  `tools/foundry-ops/src/config.ts`。lab/evidence/backup/Foundry ZIP/default world root 均可由外部变量配置；
+- dependency-cruiser 禁止 Foundry Ops 直接导入 generator、Web、Foundry module 或旧 operator 私有实现；
+  当前统一 CLI 只通过明确的 CLI entrypoint contract 路由旧实现；
+- open finding owner 保持不变：`BH-ACT-003`、`SEQ-MEM-001`、`WORLD-ASSET-001` 属于 Foundry Ops，
+  `MON-001` 属于 Session Monitor，`SPELL-002/003` 属于 Monster Spell Resolver；目录整理不关闭任何 finding；
+- 机械验证：新权限/路由/config tests 与全部 Foundry Lab、world audit、离线 migration tests 合计
+  290 tests / 2,225 expectations；production/all/tools typecheck、dependency-cruiser、Knip cycles 与
+  `git diff --check` 通过；完整 `ci:verify` 也通过，三组测试合计 1,607 tests / 7,642 expectations，
+  production coverage 为 85.54% lines / 88.09% functions；
+- 语义复核：中文帮助和 README 清楚解释每类工具实际做什么；生产只读缺少单独授权或外部配置时在
+  建立连接前失败；离线迁移明确不宣称线上修改。整个阶段没有启动 Foundry/Chrome、没有连接生产、
+  没有运行任何长时间监测；
+- 下一批才物理迁移 `scripts/foundry-lab`、world audit 和离线 migration 的实现及测试。路径安全函数有
+  39 个直接调用点并被影响分析评为 critical，因此下一批必须小批移动、每批跑完整 Foundry Ops suite，
+  不在当前稳定检查点继续扩大改动。
+
 ## 当前停止点
 
-阶段 0–3 均已形成可回滚稳定检查点。阶段 4A Chat Memory Guard 与 4B Session Monitor 都已成为
-主仓库内自包含 workspace release，并通过各自的本地 Foundry 语义验收；Chat Memory Guard 另有
-fresh-history 本地候选，Session Monitor 已完成真实 module/companion 端到端握手。当前适合稳定暂停；
-下一条执行路径是阶段 4C：先对 Foundry Lab、world audit、production inventory/acquisition、
-classpack/homebrew/module diagnosis 与本地 mirror 管理做只读命令/权限/配置 inventory，再决定如何
-收敛到一个明确的 Foundry Ops CLI。必须继续区分 read-only、local mutation 与 production mutation，
-外部配置凭证/host/world/evidence roots，并为 open findings 保留 owner；不接触生产服务器，不因
-目录移动关闭 hardening finding，也不创建、推送或删除远端仓库。
+阶段 4C.1 已形成可回滚检查点，适合用户修改本机配置后再无缝续接。下一批从“物理迁移旧实现”开始：
+先迁移纯只读 catalog/config/process 基础，再迁移 Foundry Lab 本地修改工具，最后迁移 world audit 与历史
+离线 migration wrapper；每批保留旧入口 adapter，并继续禁止生产修改、生产连接和超过 30 分钟的持续
+监测。不要重新盘点已经完成的 4C.1，也不要把本次目录/入口整理当成任何 hardening finding 的关闭证据。

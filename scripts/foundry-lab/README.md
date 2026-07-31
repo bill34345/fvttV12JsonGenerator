@@ -1,5 +1,15 @@
 # Foundry v14 local mirror tooling
 
+> Compatibility note: the supported entry is now `bun run foundry:ops`; the
+> existing `bun run foundry:lab ...` spelling remains as a compatibility route
+> and passes through the same permission checks. See
+> [`tools/foundry-ops/README.zh-CN.md`](../../tools/foundry-ops/README.zh-CN.md)
+> for the Chinese command classification and external configuration guide.
+
+Production reads now require `--allow-production-read` plus externally supplied
+`FVTT_OPS_PRODUCTION_*` settings. This repository exposes no production mutation
+command.
+
 This tooling builds a loopback-only Foundry v14.364 laboratory under
 `.local/foundry-v14`. The directory is ignored by Git. Production access is
 read-only: inventory uses SSH and server-only package acquisition uses SCP.

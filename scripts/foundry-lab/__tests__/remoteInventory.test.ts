@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createLabConfig } from '../config';
+import { createLabConfig as createBaseLabConfig } from '../config';
 import { runCommand } from '../process';
 import {
   buildRemoteInventoryCommand,
@@ -12,6 +12,13 @@ import {
   type RemoteInventoryDependencies,
 } from '../remoteInventory';
 import type { ModuleInventoryEntry } from '../types';
+
+const REMOTE_TEST_ENV = {
+  FVTT_OPS_PRODUCTION_SSH_TARGET: 'test-production',
+  FVTT_OPS_PRODUCTION_DATA_PATH: 'E:/test/foundry-data',
+  FVTT_OPS_PRODUCTION_SSH_IDENTITY: 'C:/test/id_ed25519',
+};
+const createLabConfig = (repoRoot?: string) => createBaseLabConfig(repoRoot, REMOTE_TEST_ENV);
 
 function inventoryEntry(index: number): ModuleInventoryEntry {
   return {
@@ -217,5 +224,23 @@ describe('remote Foundry inventory', () => {
     expect(JSON.parse(result.stdout)).toMatchObject({ ok: true, apply: false, expectedCount: 249 });
     const after = existsSync(inventoryPath) ? await readFile(inventoryPath, 'utf8') : null;
     expect(after).toBe(before);
+  });
+
+  it('rejects direct effective inventory access without the production-read guard', async () => {
+    const result = Bun.spawnSync([
+      process.execPath,
+      'run',
+      'scripts/foundry-lab/cli.ts',
+      'inventory',
+      '--apply',
+    ], {
+      cwd: process.cwd(),
+      env: REMOTE_TEST_ENV,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain('--allow-production-read');
   });
 });

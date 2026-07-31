@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "foundry-modules/*"
+    "foundry-modules/*",
+    "tools/*"
   ],
   "scripts": {
     "test": "bun test --max-concurrency 4",
@@ -14,7 +15,8 @@
     "typecheck:packages": "tsc -p packages/contracts/tsconfig.json --pretty false && tsc -p packages/models/tsconfig.json --pretty false && tsc -p packages/spell-manifest-contracts/tsconfig.json --pretty false && tsc -p packages/parser/tsconfig.json --pretty false && tsc -p packages/generation/tsconfig.json --pretty false && tsc -p packages/workflows/tsconfig.json --pretty false && tsc -p packages/intake-ai/tsconfig.json --pretty false && tsc -p packages/ingest-plaintext/tsconfig.json --pretty false && tsc -p packages/crawl-goddessfantasy/tsconfig.json --pretty false && tsc -p packages/assets-icons/tsconfig.json --pretty false",
     "typecheck:apps": "tsc -p apps/cli/tsconfig.json --pretty false && tsc -p apps/web/tsconfig.json --pretty false",
     "typecheck:foundry-modules": "tsc -p foundry-modules/chat-memory-guard/tsconfig.json --pretty false && tsc -p foundry-modules/session-monitor/tsconfig.json --pretty false",
-    "architecture:deps": "bunx --bun depcruise --config .dependency-cruiser.cjs -- src packages apps foundry-modules scripts tests",
+    "typecheck:tools": "tsc -p tools/foundry-ops/tsconfig.json --pretty false",
+    "architecture:deps": "bunx --bun depcruise --config .dependency-cruiser.cjs -- src packages apps foundry-modules tools scripts tests",
     "architecture:cycles": "bun node_modules/knip/bin/knip-bun.js --cycles --no-config-hints",
     "architecture:unused": "bun node_modules/knip/bin/knip-bun.js --no-exit-code --no-config-hints --reporter compact",
     "architecture:verify": "bun run architecture:deps && bun run architecture:cycles",
@@ -24,7 +26,7 @@
     "test:coverage": "bun run test:cli && bun run test:coverage:instrumented && bun run coverage:verify",
     "smoke:actor:offline": "bun run src/tools/ciActorSmoke.ts",
     "hygiene:repository": "bun run src/tools/repositoryHygiene.ts",
-    "ci:verify": "bun run typecheck:production && bun run typecheck:all && bun run typecheck:packages && bun run typecheck:apps && bun run typecheck:foundry-modules && bun run architecture:verify && bun run test:session-monitor:build && bun run test:coverage && bun run audit:anti-overfit:all && bun run hygiene:repository && bun run references verify dnd5e-5.3.3 && bun run web:build && bun run smoke:actor:offline",
+    "ci:verify": "bun run typecheck:production && bun run typecheck:all && bun run typecheck:packages && bun run typecheck:apps && bun run typecheck:foundry-modules && bun run typecheck:tools && bun run architecture:verify && bun run test:session-monitor:build && bun run test:coverage && bun run audit:anti-overfit:all && bun run hygiene:repository && bun run references verify dnd5e-5.3.3 && bun run web:build && bun run smoke:actor:offline",
     "test:npc": "bun test tests/acceptance/alyxian-aboleth.acceptance.test.ts tests/acceptance/scuttling-serpentmaw.acceptance.test.ts tests/acceptance/slithering-bloodfin.acceptance.test.ts tests/e2e.test.ts src/core/generator/__tests__/phase1-validation.test.ts",
     "sync:vault": "bun run src/index.ts --sync --vault \"obsidian/dnd数据转fvttjson\"",
     "translate:pending": "bun run src/index.ts --translate-json --translate-dir \"data/need_tran\"",
@@ -36,9 +38,11 @@
     "verify:actor": "bun run src/tools/actorVerification.ts",
     "verify:intake": "bun run src/tools/intakeVerification.ts",
     "audit:anti-overfit": "bun run src/tools/antiOverfitAudit.ts",
-    "audit:world-footprint": "bun run src/tools/worldFootprintAudit.ts --world-root \".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn\" --app-root \".local/foundry-v14/app/14.364\" --output-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724\" --snapshot-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724/snapshot\"",
+    "audit:world-footprint": "bun run tools/foundry-ops/src/cli.ts world audit --world-root \".local/foundry-v14/data/server-mirror/Data/worlds/cor-cotn\" --app-root \".local/foundry-v14/app/14.364\" --output-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724\" --snapshot-dir \".local/foundry-v14/evidence/cor-cotn-world-audit-20260724/snapshot\"",
     "audit:anti-overfit:all": "bun run src/tools/antiOverfitAudit.ts --all",
-    "foundry:lab": "bun run scripts/foundry-lab/cli.ts",
+    "foundry:ops": "bun run tools/foundry-ops/src/cli.ts",
+    "foundry:lab": "bun run tools/foundry-ops/src/cli.ts lab",
+    "test:foundry-ops": "bun test tools/foundry-ops/src scripts/foundry-lab/__tests__ src/tools/__tests__/worldAuditAnalysis.test.ts src/tools/__tests__/worldAuditSnapshot.test.ts src/tools/__tests__/worldFootprintAuditCli.test.ts src/tools/__tests__/productionMigrationBuildCandidate.test.ts src/tools/__tests__/productionMigrationWorldDiff.test.ts --max-concurrency 4",
     "test:foundry-lab": "bun test scripts/foundry-lab/__tests__",
     "build:spell-resolver": "bun run scripts/buildSpellResolver.ts",
     "test:spell-resolver": "bun test src/core/spell-resolution src/foundry/monster-spell-resolver",

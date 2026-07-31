@@ -297,6 +297,13 @@ module.exports = {
       to: { path: '^packages/contracts/(?!src/hash[.]ts$)' },
     },
     {
+      name: 'foundry-ops-product-boundary',
+      severity: 'error',
+      comment: 'Foundry Ops uses explicit CLI or package contracts and cannot import generator, application, Web, or Foundry-module internals.',
+      from: { path: '^tools/foundry-ops/' },
+      to: { path: '^(src/|scripts/|apps/|foundry-modules/|packages/)' },
+    },
+    {
       name: 'no-crawl-to-main-cli',
       severity: 'error',
       comment: 'Crawl core stays decoupled from the actor conversion CLI.',
@@ -354,7 +361,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: '^node_modules/' },
-    includeOnly: ['^(src|packages|apps|foundry-modules|scripts|tests)/'],
+    includeOnly: ['^(src|packages|apps|foundry-modules|tools|scripts|tests)/'],
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
@@ -366,7 +373,7 @@ module.exports = {
     reporterOptions: {
       text: { highlightFocused: true },
       archi: {
-        collapsePattern: '^(src|packages|apps|foundry-modules|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
+        collapsePattern: '^(src|packages|apps|foundry-modules|tools|scripts|tests)/[^/]+|node_modules/(?:@[^/]+/[^/]+|[^/]+)',
       },
     },
   },
