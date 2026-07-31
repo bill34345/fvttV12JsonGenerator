@@ -1,5 +1,5 @@
-import { listUnknownManifestProperties } from './schema';
-import { sha256 } from './sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import { listUnknownManifestProperties } from '@fvtt-json-generator/spell-manifest-contracts/schema';
 import { RESOLVER_MODULE_ID, type PortableSpellManifest } from './types';
 
 const MANAGED_TOP_LEVEL_KEYS = [

@@ -1,4 +1,4 @@
-import { sha256 } from '../../core/spell-resolution/sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
 
 export const MODULE_ID = 'fvtt-session-monitor';
 export const SCHEMA_VERSION = 1;

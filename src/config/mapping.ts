@@ -1,7 +1,7 @@
 import type { StructuredActionData } from "@fvtt-json-generator/parser/models/action";
 import type { ActorBehaviorSemantics } from "../core/models/behavior";
 import type { ActorResourceSemantics } from "../core/models/resource";
-import type { PortableSpellManifest } from "../core/spell-resolution";
+import type { PortableSpellManifest } from "@fvtt-json-generator/spell-manifest-contracts";
 
 export interface FieldDefinition {
   key: string;       // Internal simplified key (e.g., "str", "hp")

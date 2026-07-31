@@ -8,6 +8,7 @@
     "./artifacts": "./src/artifacts.ts",
     "./diagnostics": "./src/diagnostics.ts",
     "./evidence": "./src/evidence.ts",
+    "./hash": "./src/hash.ts",
     "./target": "./src/target.ts"
   },
   "scripts": {

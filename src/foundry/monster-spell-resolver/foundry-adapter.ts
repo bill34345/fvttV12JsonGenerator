@@ -1,5 +1,5 @@
 import { RESOLVER_MODULE_ID } from '../../core/spell-resolution/types';
-import { sha256 } from '../../core/spell-resolution/sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { registerResolverSettings, type ResolverSettingDefinition, type ResolverSettingsMenuDefinition } from './settings';
 import { createResolverSettingsApplicationClass } from './settings-app';
 import {

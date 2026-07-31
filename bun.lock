@@ -7,6 +7,7 @@
       "dependencies": {
         "@fvtt-json-generator/contracts": "workspace:*",
         "@fvtt-json-generator/parser": "workspace:*",
+        "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
         "@radix-ui/react-icons": "^1.3.2",
         "cheerio": "^1.2.0",
         "commander": "^14.0.2",
@@ -41,6 +42,13 @@
       "version": "0.1.0",
       "dependencies": {
         "opencc-js": "^1.0.5",
+      },
+    },
+    "packages/spell-manifest-contracts": {
+      "name": "@fvtt-json-generator/spell-manifest-contracts",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/contracts": "workspace:*",
       },
     },
   },
@@ -112,6 +120,8 @@
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
 
     "@fvtt-json-generator/parser": ["@fvtt-json-generator/parser@workspace:packages/parser"],
+
+    "@fvtt-json-generator/spell-manifest-contracts": ["@fvtt-json-generator/spell-manifest-contracts@workspace:packages/spell-manifest-contracts"],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 

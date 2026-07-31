@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { validatePortableSpellManifest } from '../spell-resolution/validator';
+import { validatePortableSpellManifest } from '@fvtt-json-generator/spell-manifest-contracts/validator';
 import type {
   AbilityKey,
   CanonicalSpellUsageGroup,

@@ -130,6 +130,20 @@ owner 和迁移约束。
 - 发现原 anti-overfit `--all` 只枚举已跟踪的 `src/`/`scripts/`，会漏掉新 workspace 和未提交 package；
   已把 `packages/` 纳入 tracked、untracked、diff 三种发现路径，并增加回归测试。
 
+### 2026-07-31：阶段 3B2 spell-manifest contracts 完成
+
+- 根据 parser 的真实依赖顺序，提前建立计划内的
+  `@fvtt-json-generator/spell-manifest-contracts`；
+- 迁入 portable manifest schema、类型、结构/来源验证及目标世界标识符禁入检查；
+- 新 package 只依赖 `@fvtt-json-generator/contracts`，不依赖 resolver、intake、parser 或 Foundry runtime；
+- 通用 browser-safe SHA-256 迁入 `@fvtt-json-generator/contracts/hash`；
+- Session Monitor 和 resolver runtime 的 hash 调用不再穿过 spell-resolution 私有路径；
+- YAML parser、Intake 与 Actor spell-manifest generator 直接使用 contract package；
+- 原 schema/validator/types/hash 路径保留兼容转发并由行为测试覆盖。
+- Bun 1.3.8 test runner 内嵌 `Bun.build` 在读取同一进程已加载的 workspace 源时触发
+  `Unexpected reading file`；正式独立构建本身正常。构建器现将 browser bundle 隔离到
+  单独 Bun 子进程，同时保留仓库根、输出 mutation boundary、内容扫描与 byte-identical ZIP 断言。
+
 ## 验证证据
 
 ### 阶段 0
@@ -206,8 +220,27 @@ owner 和迁移约束。
 - 未宣称：高层 YAML/router/item parser 已进入 package，或完整 Stage 3 已完成。
 - 已知边界债：parser i18n 的 `data/cn.json` runtime asset 尚未封装进 package。
 
+### 阶段 3B2：spell-manifest contracts
+
+- 机械：
+  - package-local、production、全仓类型检查与冻结安装通过；
+  - dependency-cruiser：439 modules / 906 dependencies，0 violations；
+  - Knip cycles：0；unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - contract/YAML/generator 专项：75 tests / 0 failed / 183 expectations；
+  - spell resolver deterministic build 专项：18 tests / 0 failed / 99 expectations；
+  - 完整 `ci:verify`：1,584 tests / 0 failed / 7,476 expectations / 153 files；
+  - coverage：85.36% lines / 88.18% functions；
+  - anti-overfit 232 sources、hygiene 1,941 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 项目 CLI 重新生成 Warlock of the Rat God v14/core Actor；
+  - canonical verifier 返回 0 warnings；
+  - 仍为 `pending`，1 个 manifest group、10 个 refs、原 source SHA-256；
+  - 仍为 0 embedded Spells、0 Cast Activities，没有伪称 target-world hydration；
+  - 排除重新生成的 Effect `_id` 和时间戳后，与阶段 2 Actor 完整语义相等。
+- 未宣称：Foundry 内 hydration、native cast 或 runtime acceptance 已完成。
+
 ## 当前停止点
 
-阶段 0–2、阶段 3A 与 parser kernel 已形成可回滚稳定检查点。下一条执行路径是阶段 3B2：
-先提取 spell-manifest contract 边界，再迁移高层 YAML/router parser；在其独立验收前不移动
+阶段 0–2、阶段 3A、parser kernel 与 spell-manifest contracts 已形成可回滚稳定检查点。
+下一条执行路径是阶段 3B3：迁移高层 YAML/English/router parser；在其独立验收前不移动
 generation、CLI、Web、module 或 ops。

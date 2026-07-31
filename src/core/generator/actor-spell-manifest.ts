@@ -1,11 +1,11 @@
 import type { FvttTargetVersion } from '../foundryTarget';
+import { hashManifest } from '../spell-resolution';
 import {
-  hashManifest,
   findForbiddenTargetWorldIdentifiers,
   RESOLVER_MODULE_ID,
   validatePortableSpellManifestStructure,
   type PortableSpellManifest,
-} from '../spell-resolution';
+} from '@fvtt-json-generator/spell-manifest-contracts';
 
 const featureKeys = new WeakMap<object, string>();
 

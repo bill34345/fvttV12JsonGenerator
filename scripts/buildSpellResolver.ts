@@ -42,19 +42,7 @@ export async function buildSpellResolverPackageForRepo(repoRoot: string): Promis
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
   assertSpellResolverBuildMutationBoundary(repoRoot);
 
-  const build = await Bun.build({
-    entrypoints: [resolve(paths.sourceRoot, 'index.ts')],
-    outdir: resolve(paths.outputDir, 'scripts'),
-    naming: 'index.js',
-    target: 'browser',
-    format: 'esm',
-    splitting: false,
-    minify: false,
-    sourcemap: 'none',
-  });
-  if (!build.success) {
-    throw new Error(`Spell resolver browser build failed:\n${build.logs.map((log) => String(log)).join('\n')}`);
-  }
+  await buildBrowserBundleInSubprocess(paths);
 
   for (const path of STATIC_FILES) {
     assertSpellResolverBuildMutationBoundary(repoRoot);
@@ -84,6 +72,44 @@ export async function buildSpellResolverPackageForRepo(repoRoot: string): Promis
     zipPath: paths.zipPath,
     archiveEntries,
   };
+}
+
+async function buildBrowserBundleInSubprocess(paths: SpellResolverBuildPaths): Promise<void> {
+  const child = Bun.spawn(
+    [process.execPath, resolve(paths.repoRoot, 'scripts/buildSpellResolver.ts'), '--bundle-only', paths.repoRoot],
+    {
+      cwd: paths.repoRoot,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  );
+  const [exitCode, stdout, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ]);
+  if (exitCode !== 0) {
+    throw new Error(
+      `Spell resolver browser build subprocess failed (${exitCode}).\n${stderr || stdout}`,
+    );
+  }
+}
+
+async function buildBrowserBundle(paths: SpellResolverBuildPaths): Promise<void> {
+  const build = await Bun.build({
+    entrypoints: [resolve(paths.sourceRoot, 'index.ts')],
+    outdir: resolve(paths.outputDir, 'scripts'),
+    root: paths.repoRoot,
+    naming: 'index.js',
+    target: 'browser',
+    format: 'esm',
+    splitting: false,
+    minify: false,
+    sourcemap: 'none',
+  });
+  if (!build.success) {
+    throw new Error(`Spell resolver browser build failed:\n${build.logs.map((log) => String(log)).join('\n')}`);
+  }
 }
 
 async function validateBuiltManifest(outputDir: string): Promise<void> {
@@ -341,6 +367,15 @@ function createCrcTable(): Uint32Array {
 const CRC_TABLE = createCrcTable();
 
 if (import.meta.main) {
-  const result = await buildSpellResolverPackage();
-  console.log(JSON.stringify(result, null, 2));
+  const bundleOnlyIndex = process.argv.indexOf('--bundle-only');
+  if (bundleOnlyIndex >= 0) {
+    const repoRoot = process.argv[bundleOnlyIndex + 1];
+    if (!repoRoot) throw new Error('Missing repository root for --bundle-only.');
+    const paths = assertSpellResolverBuildMutationBoundary(repoRoot);
+    await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
+    await buildBrowserBundle(paths);
+  } else {
+    const result = await buildSpellResolverPackage();
+    console.log(JSON.stringify(result, null, 2));
+  }
 }

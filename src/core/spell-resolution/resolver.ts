@@ -1,5 +1,5 @@
 import { normalizeSpellIdentity } from './normalize';
-import { sha256 } from './sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import type {
   PortableSpellRef,
   SavedSpellMapping,

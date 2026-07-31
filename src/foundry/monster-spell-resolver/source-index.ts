@@ -1,5 +1,5 @@
 import { hashSourceInventoryMetadata } from '../../core/spell-resolution/resolver';
-import { sha256 } from '../../core/spell-resolution/sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import type { SpellCandidateMetadata } from '../../core/spell-resolution/types';
 
 export const ITEM_INDEX_FIELDS = [

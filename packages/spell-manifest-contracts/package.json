@@ -1,0 +1,19 @@
+{
+  "name": "@fvtt-json-generator/spell-manifest-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./forbidden-target-identifier": "./src/forbiddenTargetIdentifier.ts",
+    "./schema": "./src/schema.ts",
+    "./types": "./src/types.ts",
+    "./validator": "./src/validator.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
+  }
+}

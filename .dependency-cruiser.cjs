@@ -20,7 +20,18 @@ module.exports = {
       severity: 'error',
       comment: 'Parser package code depends only on contracts and declared third-party packages.',
       from: { path: '^packages/parser/' },
-      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|parser/))' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|parser/|spell-manifest-contracts/))',
+      },
+    },
+    {
+      name: 'spell-manifest-contracts-package-is-independent',
+      severity: 'error',
+      comment: 'Portable spell contracts depend only on shared contracts and no resolver runtime implementation.',
+      from: { path: '^packages/spell-manifest-contracts/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|spell-manifest-contracts/))',
+      },
     },
     {
       name: 'no-production-to-legacy-contract-adapters',

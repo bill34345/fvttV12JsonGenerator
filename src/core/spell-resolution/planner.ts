@@ -1,5 +1,5 @@
 import { hashManifest } from './hash';
-import { sha256 } from './sha256';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { DEFAULT_SPELL_RESOLUTION_CONFIGURATION, hashResolutionConfiguration, hashSourceInventoryMetadata, isSpellResolutionConfiguration, logicalSpellRefKey, resolveSpellRef } from './resolver';
 import type {
   HydrationPreflight,

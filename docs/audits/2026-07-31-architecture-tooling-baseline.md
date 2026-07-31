@@ -88,6 +88,17 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - 迁移检查暴露并修复 anti-overfit 的 workspace 漏扫：`src`、`packages`、`scripts` 的 tracked、
   untracked 与 diff sources 现在都进入审计。
 
+### Stage 3B2：spell-manifest contracts workspace package
+
+- portable manifest schema/types/validation/forbidden-target-identifier 从 resolver runtime 中分离；
+- package 只依赖共享 contracts，不依赖 parser、Intake、generator 或 Foundry runtime；
+- 通用 SHA-256 下沉到 contracts，Session Monitor 不再借道 spell-resolution；
+- YAML parser、Intake 和 generator 使用 package contract，旧路径只做兼容；
+- 迁移顺序从计划末尾提前，是由高层 parser 的真实依赖方向决定，不改变产品支持声明。
+- 为规避 Bun 1.3.8 在 test runner 内嵌 bundler 读取共享 workspace 源时的已知
+  `Unexpected reading file` 类问题，resolver browser bundle 在受控子进程执行；
+  输出目录、静态文件、禁入文本扫描与确定性 ZIP 验收保持不变。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -129,3 +140,7 @@ generation、application package 已迁移，也不构成 Foundry runtime 或生
 Stage 3B1 再次生成同一 Slithering Bloodfin v14/core Actor；verifier 0 warnings，且排除重新生成的
 Effect `_id` 和时间戳后与 Stage 3A 完整语义相等。专项 parser/acceptance 测试 86/86 通过。
 这一证据只接受 parser kernel 迁移；高层 parser 仍待后续独立迁移和验收。
+
+Stage 3B2 重新生成 Warlock of the Rat God v14/core Actor；verifier 0 warnings，manifest 保留
+1 group / 10 refs / 原 source SHA-256，状态仍为 `pending`，且没有 embedded Spell 或 Cast Activity。
+排除运行时生成身份后与 Stage 2 产物完整语义相等；这仍不构成 target-world hydration 验收。

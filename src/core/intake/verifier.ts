@@ -1,11 +1,11 @@
 import yaml from 'js-yaml';
+import { hashManifest } from '../spell-resolution';
 import {
   findForbiddenTargetWorldIdentifiers,
-  hashManifest,
   RESOLVER_MODULE_ID,
   validatePortableSpellManifest,
   type PortableSpellManifest,
-} from '../spell-resolution';
+} from '@fvtt-json-generator/spell-manifest-contracts';
 import type {
   AbilityKey,
   CanonicalFeature,
