@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | contracts/parser/models/spell contracts/generation/workflows 与 `apps/cli` 已独立验收；下一步迁移 `apps/web` |
+| 3. Bun workspace 物理迁移 | in_progress | `apps/web` 已独立验收；下一步迁移 `packages/intake-ai` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -67,7 +67,7 @@ owner 和迁移约束。
 | legacy plaintext ingest | CLI + `src/core/ingest` | 现有显式入口，不扩大支持声明 |
 | GoddessFantasy crawl | `src/tools/crawlSites.ts` | 与主转换 CLI 解耦 |
 | assets/token/icons | CLI/tools + `src/core/assets`/`icons` | 人工复核 gate 与 actor/token artwork 语义 |
-| Web jobs | `src/web/server` | API/job schema 和正式 artifact gate |
+| Web jobs | `apps/web/src/server` | API/job schema 和正式 artifact gate |
 | spell manifest/resolver | generator + Foundry module | contract、all-or-nothing、rollback、manual edit policy |
 | chat memory guard | build script + module | 独立 module 行为 |
 | session monitor | module + companion | 协议、版本、冷重启与权限边界 |
@@ -230,6 +230,21 @@ owner 和迁移约束。
   其余 1,575 个测试由 coverage runner 执行，二者仍由同一 `test:coverage` 门禁汇总；
 - CLI 子进程测试并发 4 曾出现一次 15 秒启动超时，随后连续 5 轮均通过；为消除无收益的
   Windows/Bun 子进程启动争用，正式 CLI 门禁固定为串行，普通测试并发规则不变。
+
+### 2026-07-31：阶段 3F `apps/web` 启动
+
+- 完整读取并沿用原 `src/web/AGENTS.md`，其应用范围随代码迁至 `apps/web/AGENTS.md`；
+- client、server、job、安全与测试代码物理迁入 `apps/web/src`，根入口、Vite、Knip、覆盖率分组、
+  apps 类型检查与 workspace lockfile 已同步；
+- 建立 browser-safe `web-client` 与 server-only `web-server` composition surface；生产 Web 代码
+  不再穿透散落的 core 私有目录，dependency-cruiser 新增强制门禁；
+- 首轮 apps/production 类型检查、Web production build、dependency-cruiser 及 55 个
+  Web/API/job/security/client/coverage 专项测试通过；
+- gstack `browse` 的 Windows 缓存虽含 `browse.exe`，但缺少其运行所需 `src/server.ts`，且该分发
+  没有文档所述 `setup`；因此没有修改项目代码绕过工具缺口，改用已安装的 in-app Browser 完成
+  同一真实浏览器验收；
+- 迁移后发现 anti-overfit source discovery 未包含 `apps/`，会使移出 `src/` 的生产代码逃逸审计；
+  已将 `apps/` 纳入 tracked、untracked 与 diff 发现根并增加回归测试，最终覆盖 304 个生产源。
 
 ## 验证证据
 
@@ -484,10 +499,41 @@ owner 和迁移约束。
     可脱离本仓库发布；
   - `src/index.ts` 为现有脚本和外部调用者保留兼容入口；只有确认消费者完成迁移后才可删除。
 
+### 阶段 3F：`apps/web`
+
+- 机械：
+  - frozen install、Web app-local、production、packages、apps 与全仓类型检查通过；
+  - dependency-cruiser：1,757 modules / 2,099 dependencies，0 violations；Knip cycles 为 0；
+  - Web/API/job/security/client/coverage 专项：55 tests / 0 failed / 234 expectations；
+  - 完整默认 `ci:verify`：CLI 子进程 12 tests 与 coverage 主组 1,575 tests 均通过，
+    合计 1,587 tests / 0 failed / 7,497 expectations / 156 files；
+  - coverage 统计 242 个 production files：85.32% lines / 88.04% functions；Web group
+    59.23% lines / 75.86% functions；
+  - anti-overfit 304 sources、hygiene 2,033 tracked paths、dnd5e 5.3.3 reference、
+    Web production build 与 offline Actor smoke 均通过；
+  - Vite 产物大小与迁移前一致：CSS 13.79 kB、JS 232.35 kB，未把 server-only composition
+    surface 或 Node adapter 带入浏览器 bundle。
+- 语义：
+  - in-app Browser 从迁移后的页面上传真实
+    `slithering-bloodfin__滑行血鳍.md`，选择 v14/core，页面进入“已完成”；
+  - 页面只暴露 job 注册的唯一 JSON 下载链接，真实浏览器 download event 成功；
+  - 对该 Web job 的实际输出运行 canonical verifier，返回 0 warnings；
+  - 输出仍为 aberration、AC 16、HP 143、CR 9、盲视 100 尺与 9 个来源 Item；人工查看结果区、
+    JSON 预览、warning 区和下载按钮均可读，无控件重叠，浏览器 console 无 warning/error；
+  - 排除随机 `_id`、时间戳及派生 `origin` 后，Web 输出与 Stage 3E CLI v14/core 检查点完整
+    JSON 语义投影相等；
+  - API 专项继续覆盖 loopback 默认、显式 authenticated public/proxied mode、可信代理、
+    请求体上限、rate/job caps、注册文件下载与 crawl/intake job 边界。
+- 已知债：
+  - `apps/web` 仍通过 monorepo 的 `src/core/application/web-server.ts` 与 browser-safe
+    `web-client.ts` 组合尚未迁移的 intake、ingest、crawl 与 assets adapter；不宣称仓库外独立发布；
+  - gstack `browse` 的本机 Windows 分发缺失运行时 source，浏览器验收由 in-app Browser 完成；
+    这是外部技能安装问题，不影响 Web 产物或应用行为。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation/workflows package 及 `apps/cli` 已形成可回滚稳定检查点。CLI 新入口和兼容入口均已
-通过独立机械与语义验收；下一条执行路径是阶段 3F：迁移 `apps/web`，保持 API/job schema、
-本地与 public-mode 安全边界、下载 artifact、前端状态语义和现有部署入口不变。在 Web 独立验收前
-不移动 Intake、ingest、crawl 或 assets。
+generation/workflows package、`apps/cli` 与 `apps/web` 已形成可回滚稳定检查点。Web 已通过完整
+机械与真实浏览器语义验收；下一条执行路径是阶段 3G：迁移 `packages/intake-ai`，保持
+accepted / needs_review / failed、portable caster pending、evidence/review bundle、provider 配置和
+Web/CLI resume 行为不变。在 Intake 独立验收前不移动 ingest、crawl 或 assets。
