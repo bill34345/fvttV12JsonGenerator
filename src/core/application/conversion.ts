@@ -1,16 +1,17 @@
 import {
-  assertPathExists as assertLegacyPathExists,
-  convertMarkdownContentToJson as convertLegacyMarkdownContentToJson,
-  convertMarkdownPathToOutput as convertLegacyMarkdownPathToOutput,
-  inferDefaultOutputPath as inferLegacyDefaultOutputPath,
-} from '../workflow/singleFileConversion';
+  assertPathExists as assertPackagePathExists,
+  convertMarkdownContentToJson as convertPackageMarkdownContentToJson,
+  convertMarkdownPathToOutput as convertPackageMarkdownPathToOutput,
+  inferDefaultOutputPath as inferPackageDefaultOutputPath,
+} from '@fvtt-json-generator/workflows/single-file-conversion';
 import type {
   ConversionResult,
   ConvertMarkdownContentOptions,
   ConvertMarkdownPathOptions,
-} from '../workflow/singleFileConversion';
+} from '@fvtt-json-generator/workflows/single-file-conversion';
+import { iconWorkflowAdapter } from '../icons/adapter';
 
-export { DEFAULT_VAULT_PATH } from '../workflow/singleFileConversion';
+export { DEFAULT_VAULT_PATH } from '@fvtt-json-generator/workflows/single-file-conversion';
 export type { EffectProfile } from '@fvtt-json-generator/contracts/target';
 export type {
   ConversionStatus,
@@ -27,7 +28,7 @@ export type {
   ConvertMarkdownContentOptions,
   ConvertMarkdownPathOptions,
   FvttTargetVersion,
-} from '../workflow/singleFileConversion';
+} from '@fvtt-json-generator/workflows/single-file-conversion';
 
 /**
  * Stable application boundary for single-document conversion.
@@ -44,10 +45,16 @@ export interface ConversionApplication {
 }
 
 export const conversionApplication: Readonly<ConversionApplication> = Object.freeze({
-  convertContent: convertLegacyMarkdownContentToJson,
-  convertPath: convertLegacyMarkdownPathToOutput,
-  inferDefaultOutputPath: inferLegacyDefaultOutputPath,
-  assertPathExists: assertLegacyPathExists,
+  convertContent: (options: ConvertMarkdownContentOptions) => convertPackageMarkdownContentToJson({
+    ...options,
+    iconWorkflow: options.iconWorkflow ?? iconWorkflowAdapter,
+  }),
+  convertPath: (options: ConvertMarkdownPathOptions) => convertPackageMarkdownPathToOutput({
+    ...options,
+    iconWorkflow: options.iconWorkflow ?? iconWorkflowAdapter,
+  }),
+  inferDefaultOutputPath: inferPackageDefaultOutputPath,
+  assertPathExists: assertPackagePathExists,
 });
 
 export function convertMarkdownContentToJson(

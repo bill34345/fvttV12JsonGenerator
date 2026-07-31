@@ -147,5 +147,31 @@ export function createDisabledIconResolutionSession(
   }
   return { mode: 'off', entries: [], report: () => null };
 }
+
+export const disabledIconWorkflowPort: Readonly<IconWorkflowPort> = Object.freeze({
+  createResolutionSession: (
+    _targetVersion: FvttTargetVersion,
+    options?: IconWorkflowOptions,
+  ) =>
+    createDisabledIconResolutionSession(options),
+  fingerprint: (options: IconWorkflowOptions = {}) => {
+    createDisabledIconResolutionSession(options);
+    return 'off';
+  },
+  mergeReviewReports: (
+    reports: Array<IconReviewReport | null | undefined>,
+  ) => {
+    if (reports.some(Boolean)) {
+      throw new Error('Icon workflow adapter is required to merge review reports.');
+    }
+    return null;
+  },
+  reviewPathForOutput: () => {
+    throw new Error('Icon workflow adapter is required to resolve review output paths.');
+  },
+  writeReviewReport: () => {
+    throw new Error('Icon workflow adapter is required to write review reports.');
+  },
+});
 import type { GenerationIconResolver } from '@fvtt-json-generator/generation/ports';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';

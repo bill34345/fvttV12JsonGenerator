@@ -5,9 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./actor-verification": "./src/actorVerification.ts",
     "./generation-pipeline": "./src/generationPipeline.ts",
     "./icon-port": "./src/iconPort.ts",
-    "./item-generation": "./src/itemGenerationWorkflow.ts"
+    "./item-generation": "./src/itemGenerationWorkflow.ts",
+    "./single-file-conversion": "./src/singleFileConversion.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"
