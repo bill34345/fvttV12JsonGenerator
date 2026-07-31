@@ -89,6 +89,8 @@ export interface ItemAiNormalizerPort {
 
 export interface IngestedTextFile {
   fileName: string;
+  sections: object;
+  rawNotes: string[];
 }
 
 export interface PlainTextIngestionResultPort {

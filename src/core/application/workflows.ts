@@ -1,42 +1,130 @@
 /**
- * Public application use-case surface.
+ * Public application use-case surface and composition root.
  *
- * These exports are compatibility adapters over the current workflow
- * implementations. Delivery layers import this module instead of binding to
- * workflow or Intake orchestration internals while physical package migration
- * is still pending.
+ * Delivery layers depend on this module. Package workflows receive concrete
+ * adapters here; the legacy src/core/workflow paths remain compatibility-only.
  */
+import {
+  JsonTranslationSyncWorkflow as PackageJsonTranslationSyncWorkflow,
+  type WorkflowTranslationService,
+} from '@fvtt-json-generator/workflows/json-translation-sync';
+import {
+  ObsidianSyncWorkflow as PackageObsidianSyncWorkflow,
+  type ObsidianTranslationService,
+} from '@fvtt-json-generator/workflows/obsidian-sync';
+import {
+  PlainTextActorWorkflow as PackagePlainTextActorWorkflow,
+} from '@fvtt-json-generator/workflows/plain-text-actor';
+import {
+  ItemTextWorkflow as PackageItemTextWorkflow,
+} from '@fvtt-json-generator/workflows/item-text';
+import {
+  convertItemCollectionToJson as convertPackageItemCollectionToJson,
+  convertMonsterCollectionToJson as convertPackageMonsterCollectionToJson,
+} from '@fvtt-json-generator/workflows/collection-conversion';
+import type {
+  CollectionConversionOptions,
+  CollectionConversionResult,
+} from '@fvtt-json-generator/workflows/collection-conversion';
+import { imageAssetProcessorAdapter } from '../assets/adapter';
+import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
+import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
+import { ItemsIngestionWorkflow } from '../ingest/items';
+import { PlainTextIngestionWorkflow } from '../ingest/plaintext';
+import { iconWorkflowAdapter } from '../icons/adapter';
+import { createDefaultWorkflowTranslationService } from '../translation/defaultService';
+
+export type {
+  JsonTranslationSyncOptions,
+  JsonTranslationSyncResult,
+  WorkflowTranslationService,
+} from '@fvtt-json-generator/workflows/json-translation-sync';
+export type {
+  ObsidianSyncOptions,
+  ObsidianSyncResult,
+  ObsidianTranslationService,
+} from '@fvtt-json-generator/workflows/obsidian-sync';
+export type {
+  PlainTextActorWorkflowOptions,
+  PlainTextActorWorkflowResult,
+} from '@fvtt-json-generator/workflows/plain-text-actor';
+export type {
+  ItemTextWorkflowOptions,
+  ItemTextWorkflowResult,
+} from '@fvtt-json-generator/workflows/item-text';
+export type {
+  CollectionConversionOptions,
+  CollectionConversionResult,
+  CollectionItemResult,
+  CollectionKind,
+  CollectionOutputFile,
+  CollectionStatus,
+} from '@fvtt-json-generator/workflows/collection-conversion';
 export {
-  JsonTranslationSyncWorkflow,
-  type JsonTranslationSyncOptions,
-  type JsonTranslationSyncResult,
-} from '../workflow/jsonTranslationSync';
-export {
-  ObsidianSyncWorkflow,
-  type ObsidianSyncOptions,
-  type ObsidianSyncResult,
-} from '../workflow/obsidianSync';
-export {
-  PlainTextActorWorkflow,
-  type PlainTextActorWorkflowOptions,
-  type PlainTextActorWorkflowResult,
-} from '../workflow/plainTextActor';
-export {
-  ItemTextWorkflow,
-  type ItemTextWorkflowOptions,
-  type ItemTextWorkflowResult,
-} from '../workflow/itemTextWorkflow';
-export {
-  convertItemCollectionToJson,
-  convertMonsterCollectionToJson,
   writeTextArtifact,
-  type CollectionConversionOptions,
-  type CollectionConversionResult,
-  type CollectionItemResult,
-  type CollectionKind,
-  type CollectionOutputFile,
-  type CollectionStatus,
-} from '../workflow/collectionConversion';
+} from '@fvtt-json-generator/workflows/collection-conversion';
+
+export class JsonTranslationSyncWorkflow extends PackageJsonTranslationSyncWorkflow {
+  constructor(options: { translationService?: WorkflowTranslationService | null } = {}) {
+    super({
+      translationService: options.translationService === undefined
+        ? createDefaultWorkflowTranslationService()
+        : options.translationService,
+    });
+  }
+}
+
+export class ObsidianSyncWorkflow extends PackageObsidianSyncWorkflow {
+  constructor(options: {
+    translationService?: ObsidianTranslationService | null;
+    enableAiNormalize?: boolean;
+  } = {}) {
+    super({
+      ...options,
+      itemAiNormalizer: options.enableAiNormalize
+        ? createDefaultItemAiNormalizer()
+        : null,
+      imageAssetProcessor: imageAssetProcessorAdapter,
+      iconWorkflow: iconWorkflowAdapter,
+    });
+  }
+}
+
+export class PlainTextActorWorkflow extends PackagePlainTextActorWorkflow {
+  constructor() {
+    super({
+      ingestion: new PlainTextIngestionWorkflow(),
+      syncWorkflow: new ObsidianSyncWorkflow({ translationService: null }),
+    });
+  }
+}
+
+export class ItemTextWorkflow extends PackageItemTextWorkflow {
+  constructor() {
+    super({
+      ingestion: new ItemsIngestionWorkflow(),
+      syncWorkflow: new ObsidianSyncWorkflow(),
+    });
+  }
+}
+
+const collectionDependencies = {
+  ingestion: collectionIngestionAdapter,
+  iconWorkflow: iconWorkflowAdapter,
+};
+
+export function convertMonsterCollectionToJson(
+  options: CollectionConversionOptions,
+): Promise<CollectionConversionResult> {
+  return convertPackageMonsterCollectionToJson(options, collectionDependencies);
+}
+
+export function convertItemCollectionToJson(
+  options: CollectionConversionOptions,
+): Promise<CollectionConversionResult> {
+  return convertPackageItemCollectionToJson(options, collectionDependencies);
+}
+
 export {
   resumeMonsterIntake,
   runMonsterIntake,

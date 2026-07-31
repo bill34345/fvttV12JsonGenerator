@@ -141,6 +141,17 @@ module.exports = {
       },
     },
     {
+      name: 'no-production-to-legacy-workflow-adapters',
+      severity: 'error',
+      comment: 'Production delivery and application code use package workflows through the application composition root; old workflow paths are compatibility-only.',
+      from: {
+        pathNot: '(^src/core/workflow/|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/workflow/',
+      },
+    },
+    {
       name: 'no-core-to-outer-layers',
       severity: 'error',
       comment: 'Core code must not depend on delivery, runtime, tooling, or operator layers.',
