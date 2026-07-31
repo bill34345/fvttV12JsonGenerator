@@ -279,6 +279,8 @@ bun run src/index.ts `
 
 流水线会依次做怪物边界发现、evidence-backed IR、确定性校验、标准 Markdown 渲染、现有 parser/generator 生成、IR/Markdown/Actor 核对和独立 AI review。AI 不直接生成或修补最终 JSON。
 
+涉及共享资源、可变消费、下一次命中、阶段变化、容量、选择池、复合状态机、区域生命周期或跨 Actor 结算时，请参阅[《非常规怪物机制：TXT → Markdown → Foundry JSON 示例手册》](monster-mechanics-txt-to-json-examples.zh-CN.md)。当前 Intake IR 尚未自动生成手册中的高级 `资源机制`／`行为机制`契约，因此这些能力必须在标准 Markdown 审阅阶段补齐，不能仅凭候选 JSON 通过就视为完成。
+
 - `accepted`：标准 Markdown 进入 `input/`，正式 Actor JSON 进入 `output/`；CLI 退出 `0`。
 - `needs_review`：保留 source、IR、候选 Markdown/Actor 和报告，但不把候选 Actor 当正式 Web 下载；CLI 退出 `2`。
 - `failed`：存在 provider/执行失败；CLI 退出 `1`。
