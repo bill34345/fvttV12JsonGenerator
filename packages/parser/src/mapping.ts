@@ -1,0 +1,156 @@
+import type { StructuredActionData } from '@fvtt-json-generator/models/action';
+import type { ActorBehaviorSemantics } from '@fvtt-json-generator/models/behavior';
+import type { ActorResourceSemantics } from '@fvtt-json-generator/models/resource';
+import type { PortableSpellManifest } from "@fvtt-json-generator/spell-manifest-contracts";
+
+export interface FieldDefinition {
+  key: string;       // Internal simplified key (e.g., "str", "hp")
+  path: string;      // Foundry VTT target path (e.g., "system.abilities.str.value")
+  type: "string" | "number" | "object" | "array" | "html";
+  required?: boolean;
+}
+
+export const FIELD_MAPPING: Record<string, FieldDefinition> = {
+  "image": { key: "img", path: "img", type: "string" },
+  "img": { key: "img", path: "img", type: "string" },
+  // Basic Info
+  "名称": { key: "name", path: "name", type: "string", required: true },
+  "类型": { key: "type", path: "type", type: "string", required: true },
+  "体型": { key: "size", path: "system.traits.size", type: "string" },
+  "生物类型": { key: "creatureType", path: "system.details.type.value", type: "string" },
+  "生物类型备注": { key: "creatureTypeCustom", path: "system.details.type.custom", type: "string" },
+  "阵营": { key: "alignment", path: "system.details.alignment", type: "string" },
+
+  // Abilities
+  "力量": { key: "str", path: "system.abilities.str.value", type: "number" },
+  "敏捷": { key: "dex", path: "system.abilities.dex.value", type: "number" },
+  "体质": { key: "con", path: "system.abilities.con.value", type: "number" },
+  "智力": { key: "int", path: "system.abilities.int.value", type: "number" },
+  "感知": { key: "wis", path: "system.abilities.wis.value", type: "number" },
+  "魅力": { key: "cha", path: "system.abilities.cha.value", type: "number" },
+
+  // Attributes
+  "生命值": { key: "hp", path: "system.attributes.hp.value", type: "object" }, // { value, max, formula }
+  "护甲等级": { key: "ac", path: "system.attributes.ac.flat", type: "object" }, // { value, calc: "flat" }
+  "速度": { key: "movement", path: "system.attributes.movement", type: "object" }, // { walk, fly, ... }
+  "先攻": { key: "init", path: "system.attributes.init.bonus", type: "number" },
+  "熟练加值": { key: "prof", path: "system.attributes.prof", type: "number" },
+
+  // Details
+  "挑战等级": { key: "cr", path: "system.details.cr", type: "number" },
+  "经验值": { key: "xp", path: "system.details.xp.value", type: "number" },
+  "传记": { key: "biography", path: "system.details.biography.value", type: "html" },
+  "背景": { key: "biography", path: "system.details.biography.value", type: "html" }, // Alias
+
+  // Items / Actions
+  "特性": { key: "特性", path: "items", type: "array" },
+  "动作": { key: "动作", path: "items", type: "array" },
+  "反应": { key: "反应", path: "items", type: "array" },
+  "附赠动作": { key: "附赠动作", path: "items", type: "array" },
+  "传奇动作": { key: "传奇动作", path: "items", type: "array" },
+  "巢穴动作": { key: "lair_actions", path: "items", type: "array" },
+  "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
+  "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
+  "法术清单": { key: "spellManifest", path: "spellManifest", type: "object" },
+  "资源机制": { key: "resourceSemantics", path: "resourceSemantics", type: "object" },
+  "行为机制": { key: "behaviorSemantics", path: "behaviorSemantics", type: "object" },
+  "施法属性": { key: "spellcasting", path: "system.attributes.spellcasting", type: "string" },
+  "施法者等级": { key: "spellLevel", path: "system.details.spellLevel", type: "number" },
+  "法术位": { key: "spellSlots", path: "system.spells", type: "object" },
+  "传奇动作次数": { key: "legact", path: "system.attributes.legact", type: "number" },
+
+  // Lists / Traits
+  "豁免熟练": { key: "saves", path: "system.abilities", type: "array" }, // Special handling in parser
+  "技能": { key: "skills", path: "system.skills", type: "object" }, // { "ste": 1, ... }
+  "伤害抗性": { key: "dr", path: "system.traits.dr", type: "array" },
+  "伤害易伤": { key: "dv", path: "system.traits.dv", type: "array" },
+  "伤害免疫": { key: "di", path: "system.traits.di", type: "array" },
+  "伤害调整": { key: "dm", path: "system.traits.dm", type: "object" },
+  "状态免疫": { key: "ci", path: "system.traits.ci", type: "array" },
+  "感官": { key: "senses", path: "system.traits.senses", type: "object" },
+  "语言": { key: "languages", path: "system.traits.languages", type: "array" },
+  "语言备注": { key: "languagesCustom", path: "system.traits.languages.custom", type: "string" },
+};
+
+// Intermediate Parsed Structure
+export type LegacyActionEntry = string | Record<string, unknown>;
+
+export interface ParsedNPC {
+  name: string;
+  type: "npc";
+  img?: string;
+  tokenImg?: string;
+
+  abilities: {
+    str?: number;
+    dex?: number;
+    con?: number;
+    int?: number;
+    wis?: number;
+    cha?: number;
+  };
+
+  attributes: {
+    hp?: { value: number; max: number; formula?: string };
+    ac?: { value: number; calc: "flat" | "natural" | "default" };
+    movement?: Record<string, number>;
+    init?: number;
+    prof?: number;
+    legact?: { value: number; max: number };
+    spellcasting?: keyof ParsedNPC['abilities'];
+  };
+
+  details: {
+    cr?: number;
+    xp?: number;
+    biography?: string;
+    alignment?: string;
+    creatureType?: string;
+    creatureTypeCustom?: string;
+    spellLevel?: number;
+  };
+
+  traits: {
+    size?: string;
+    dr?: string[];
+    dv?: string[];
+    di?: string[];
+    dm?: any;
+    ci?: string[];
+    languages?: string[];
+    languagesCustom?: string;
+    senses?: Record<string, number | string>;
+    bypasses?: string[];
+  };
+
+  skills?: Record<string, number>; // key (e.g. 'ste') -> value (1 or 2)
+  skillBonuses?: Record<string, number>; // key (e.g. 'ste') -> extra check bonus beyond inferred proficiency
+  skillPassives?: Record<string, number>; // key (e.g. 'prc') -> target passive score from source text
+  saves?: string[]; // list of ability keys (e.g. 'str')
+  saveBonuses?: Record<string, number>; // key (e.g. 'con') -> extra save bonus beyond base + proficiency
+  lairInitiative?: number;
+
+  actions?: LegacyActionEntry[];
+  bonus_actions?: any;
+  reactions?: any;
+  legendary_actions?: any; // complex
+  lair_actions?: any;
+  regional_effects?: any;
+  spellcasting?: any;
+  spellManifest?: PortableSpellManifest;
+  resourceSemantics?: ActorResourceSemantics;
+  behaviorSemantics?: ActorBehaviorSemantics;
+  spellSlots?: Partial<Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
+
+  structuredActions?: {
+    特性?: StructuredActionData[];
+    动作?: StructuredActionData[];
+    附赠动作?: StructuredActionData[];
+    反应?: StructuredActionData[];
+    传奇动作?: StructuredActionData[];
+  };
+
+  items: any[]; // Placeholders for actions/spells
+}
+
+export const COMPENDIUM_PACK = "Compendium.dnd5e.spells.Item";

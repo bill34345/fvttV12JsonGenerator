@@ -1,8 +1,2 @@
-import type { ParsedNPC } from '../../config/mapping';
-
-export type ParserRoute = 'chinese' | 'english';
-
-export interface ParserStrategy {
-  readonly type: ParserRoute;
-  parse(content: string): ParsedNPC;
-}
+/** @deprecated Import parser strategy contracts from `@fvtt-json-generator/parser/types`. */
+export * from '@fvtt-json-generator/parser/types';

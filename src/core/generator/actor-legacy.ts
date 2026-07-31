@@ -1,4 +1,4 @@
-import type { ParsedNPC } from '../../config/mapping';
+import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import { spellsMapper } from '../mapper/spells';
 import { ActivityGenerator } from './activity';
 import type { FvttTargetVersion } from '../foundryTarget';

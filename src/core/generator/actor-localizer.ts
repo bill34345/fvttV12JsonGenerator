@@ -1,4 +1,4 @@
-import type { ParserRoute } from '../parser/types';
+import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import type { TranslationContext } from '../translation';
 
 export interface TranslationServiceLike {

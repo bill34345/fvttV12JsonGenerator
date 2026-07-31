@@ -155,6 +155,16 @@ owner 和迁移约束。
   或 operator 实现，生产代码不得回流旧 model adapter；
 - 本提交只移动类型与接口所有权，不改 parser 或 generator 算法。
 
+### 2026-07-31：阶段 3B3b high-level actor parser 完成
+
+- YAML、English bestiary、Chinese strategy、route factory、field mapping、resource semantics 与
+  behavior semantics 迁入 `@fvtt-json-generator/parser`；
+- parser package 显式声明 models、spell-manifest contracts 与 `js-yaml` 依赖；
+- production 直接使用 parser package 的 mapping/types/router exports，旧 `src/config/mapping.ts`
+  与 `src/core/parser/*` 路径保留为测试覆盖的兼容 adapter；
+- dependency-cruiser 阻止生产代码回流高层 parser adapter；
+- item parser 留待独立检查点，避免把 1,500 行 item 解析器混入 actor parser 迁移。
+
 ## 验证证据
 
 ### 阶段 0
@@ -267,8 +277,25 @@ owner 和迁移约束。
   - 排除运行时 `_id` 与时间戳后，与 parser-kernel 检查点 Actor 完整语义相等。
 - 未宣称：高层 YAML/English/router/item parser 已物理迁入 package，或 Stage 3 已完成。
 
+### 阶段 3B3b：high-level actor parser
+
+- 机械：
+  - 冻结安装、package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：500 modules / 977 dependencies，0 violations；
+  - Knip cycles、unused files/dependencies/devDependencies/unlisted/unresolved：0；
+  - parser 专项：116 tests / 0 failed / 393 expectations；
+  - 完整 `ci:verify`：1,586 tests / 0 failed / 7,488 expectations / 155 files；
+  - coverage：85.38% lines / 88.20% functions；
+  - anti-overfit 245 sources、hygiene 1,959 tracked paths、reference/Web build/offline smoke 均通过。
+- 语义：
+  - 中文 YAML：项目 CLI 重生成 Slithering Bloodfin v14/core，verifier 0 warnings；
+  - 英文 bestiary：项目 CLI 重生成 White Tusk Shaman v14/core，verifier 0 warnings；
+  - 人工核对两者身份、HP、AC、CR、感官及 9/6 个来源 Item；
+  - 排除运行时 `_id` 与时间戳后，两者分别与上一检查点/Stage 2 基线完整语义相等。
+- 未宣称：item parser 已迁入 package，或 parser 的 `data/cn.json` 仓库外发布债已关闭。
+
 ## 当前停止点
 
-阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts 与 models package 已形成可回滚稳定检查点。
-下一条执行路径是阶段 3B3b：迁移高层 YAML/English/router parser；在其独立验收前不移动
+阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts、models 与 high-level actor parser
+已形成可回滚稳定检查点。下一条执行路径是阶段 3B3c：迁移 item parser；在其独立验收前不移动
 generation、CLI、Web、module 或 ops。

@@ -107,6 +107,14 @@ monster spell resolver 对 intake/parser 私有实现的既有依赖仍保留为
 - 生产代码直接导入 models package，dependency-cruiser 阻止回流兼容路径；
 - 这一步先关闭高层 parser 的真实依赖闭包，只迁移类型所有权，不改解析或生成算法。
 
+### Stage 3B3b：high-level actor parser
+
+- YAML、English bestiary、route factory、field mapping 与 resource/behavior semantics 已进入 parser package；
+- package 显式拥有 `js-yaml`、models 与 spell-manifest contracts 依赖；
+- production 只通过 package exports 使用 actor parser，旧源路径由兼容测试锁定；
+- item parser 仍留在原位，作为下一个独立迁移和语义验收单元；
+- `data/cn.json` 仍是 Stage 5 data-root 债务，因此尚不宣称 parser 可脱离仓库发布。
+
 ## 正式机械验证
 
 `bun run ci:verify` 在 Stage 2 当前树上通过：
@@ -156,3 +164,7 @@ Stage 3B2 重新生成 Warlock of the Rat God v14/core Actor；verifier 0 warnin
 Stage 3B3a 再次生成 Slithering Bloodfin v14/core Actor；verifier 0 warnings，人工核对核心身份、数值、
 感官与 9 个来源 Item。排除 `_id` 和时间戳后与 parser-kernel 检查点完整语义相等；该证据只接受
 models 所有权迁移，高层 parser 尚待独立迁移。
+
+Stage 3B3b 分别通过项目 CLI 重生成中文 YAML 的 Slithering Bloodfin 与英文 bestiary 的
+White Tusk Shaman v14/core Actor；两个 verifier 均为 0 warnings，人工核对核心数值、感官和
+9/6 个来源 Item。排除运行时身份后均与各自基线完整语义相等；该证据不覆盖 item parser。

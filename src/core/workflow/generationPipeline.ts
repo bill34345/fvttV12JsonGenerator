@@ -1,4 +1,4 @@
-import type { ParsedNPC } from '../../config/mapping';
+import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import { adaptParsedActorToCanonical } from '../generation/adapters';
 import { getGenerationProjector } from '../generation/projectors';
 import type {
@@ -10,7 +10,7 @@ import { verifyGeneratedDocument } from '../generation/verification';
 import type { ActorGeneratorOptions } from '../generator/actor';
 import type { EffectProfile } from '../generator/effectProfileApplier';
 import type { FvttTargetVersion } from '../foundryTarget';
-import type { ParserRoute } from '../parser/types';
+import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
 import { createIconResolutionSession } from '../icons/workflow';
 

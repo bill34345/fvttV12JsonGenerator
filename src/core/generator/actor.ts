@@ -1,10 +1,10 @@
 import { ActionParser } from '@fvtt-json-generator/parser/action';
 import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { EnglishActionParser } from '@fvtt-json-generator/parser/english-action';
-import type { ParserRoute } from '../parser/types';
+import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import { ActivityGenerator, type ActivityGenerationContext } from './activity';
 import type { AttackAbility } from './attack-ability';
-import type { ParsedNPC } from '../../config/mapping';
+import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import { spellsMapper } from '../mapper/spells';
 import { i18n } from '@fvtt-json-generator/parser/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';

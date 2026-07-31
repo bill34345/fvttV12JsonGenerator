@@ -5,7 +5,7 @@ import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ActorValidator } from '../generator/validator';
 import { ItemParser } from '../parser/item-parser';
 import { detectItemRoute } from '../parser/item-router';
-import { ParserFactory } from '../parser/router';
+import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import {
   buildActorVerificationSummaryFromValues,
   type ActorVerificationSummary,

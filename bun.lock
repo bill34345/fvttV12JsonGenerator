@@ -47,6 +47,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@fvtt-json-generator/models": "workspace:*",
+        "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+        "js-yaml": "^4.1.1",
         "opencc-js": "^1.0.5",
       },
     },

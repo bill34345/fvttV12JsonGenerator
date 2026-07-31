@@ -1,4 +1,4 @@
-import type { ParsedNPC } from '../../config/mapping';
+import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 
 export class ActorValidator {
   public validate(parsed: ParsedNPC, actor: any): string[] {

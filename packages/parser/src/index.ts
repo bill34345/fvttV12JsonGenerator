@@ -1,7 +1,15 @@
 export { ActionParser } from './action';
+export { parseActorBehaviorSemantics } from './behaviorSemantics';
 export { CHINESE_ACTION_REGEX } from './chineseActionRegex';
+export { ChineseTemplateParser } from './chinese';
+export { EnglishBestiaryParser } from './english';
 export { EnglishActionParser } from './englishAction';
 export { I18nMapper, i18n } from './i18n';
+export * from './mapping';
 export * from '@fvtt-json-generator/models/action';
 export { normalizeChineseText } from './normalize';
+export { parseActorResourceSemantics } from './resourceSemantics';
+export { ParserFactory } from './router';
 export { StructuredActionParser } from './structuredAction';
+export * from './types';
+export { YamlParser } from './yaml';

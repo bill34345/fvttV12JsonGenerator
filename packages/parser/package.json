@@ -6,18 +6,28 @@
   "exports": {
     ".": "./src/index.ts",
     "./action": "./src/action.ts",
+    "./behavior-semantics": "./src/behaviorSemantics.ts",
     "./chinese-action-regex": "./src/chineseActionRegex.ts",
+    "./chinese": "./src/chinese.ts",
+    "./english": "./src/english.ts",
     "./english-action": "./src/englishAction.ts",
     "./i18n": "./src/i18n.ts",
+    "./mapping": "./src/mapping.ts",
     "./models/action": "./src/models/action.ts",
     "./normalize": "./src/normalize.ts",
-    "./structured-action": "./src/structuredAction.ts"
+    "./resource-semantics": "./src/resourceSemantics.ts",
+    "./router": "./src/router.ts",
+    "./structured-action": "./src/structuredAction.ts",
+    "./types": "./src/types.ts",
+    "./yaml": "./src/yaml.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
     "@fvtt-json-generator/models": "workspace:*",
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+    "js-yaml": "^4.1.1",
     "opencc-js": "^1.0.5"
   }
 }

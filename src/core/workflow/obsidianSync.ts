@@ -20,7 +20,7 @@ import type { EffectProfile } from '../generator/effectProfileApplier';
 import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
 import { ItemParser } from '../parser/item-parser';
 import { detectItemRoute } from '../parser/item-router';
-import { ParserFactory } from '../parser/router';
+import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';
 import type { FvttTargetVersion } from '../foundryTarget';

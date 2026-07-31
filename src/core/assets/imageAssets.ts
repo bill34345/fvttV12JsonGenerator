@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
-import type { ParsedNPC } from '../../config/mapping';
+import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import type { ImageTokenCrop } from './tokenCrop';
 
 export type { ImageTokenCrop } from './tokenCrop';
