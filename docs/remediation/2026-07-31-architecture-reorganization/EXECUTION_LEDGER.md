@@ -182,6 +182,24 @@ owner 和迁移约束。
 - dependency-cruiser 阻止 generation/generator 回流 Intake canonical type adapter；
 - 这是 generation package 迁移前置边界，不改 Intake 或 generator 算法。
 
+### 2026-07-31：阶段 3C2 generation package 完成
+
+- 建立 `@fvtt-json-generator/generation`，先收敛 Foundry target registry、stable document ID、
+  translation service 与 icon resolver 窄端口；
+- portable `hashManifest` 下沉到 spell-manifest contracts，resolver runtime 只保留 managed
+  document projection hash；
+- actor/item projectors、generation verification、generator、source-derived mechanics 与 legacy
+  spell mapper 物理迁入 generation package；
+- workflow、verification 与 validator 生产调用方改用 package subpath exports；
+- 旧 `src/core/generation`、`src/core/generator`、相关 mapper/mechanics 路径只保留兼容转发，
+  并由 class/function identity 测试锁定；
+- generation package 不依赖 `src`、delivery、Intake 私有类型、Foundry runtime 或 operator
+  implementation；dependency-cruiser 阻止生产代码回流旧 adapter；
+- parser 的 `opencc-js` ambient declaration 通过入口 reference 显式纳入，使 parser 作为
+  generation 的独立 package dependency 编译时不依赖根 tsconfig 的隐式文件集合；
+- generation 专属 anti-overfit 规则复制到 package 根；本阶段是结构迁移，没有新增 mechanics
+  或推断规则。
+
 ## 验证证据
 
 ### 阶段 0
@@ -346,9 +364,39 @@ owner 和迁移约束。
   - 仍无 embedded Spell，未伪称 target-world hydration。
 - 未宣称：generation/generator 已物理迁入 package。
 
+### 阶段 3C2：generation package
+
+- 机械：
+  - 冻结安装、package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：756 modules / 1,287 dependencies，0 violations；
+  - generation/workflow/mechanics/validator 专项：325 tests / 0 failed / 1,411 expectations；
+  - legacy adapter identity：1 test / 0 failed / 4 expectations；
+  - 完整 `ci:verify`：1,587 tests / 0 failed / 7,497 expectations / 156 files；
+  - coverage：85.39% lines / 88.25% functions，其中 generator group 为 93.60% lines /
+    92.67% functions；
+  - anti-overfit 283 sources、hygiene 2,010 tracked paths、reference/Web build/offline smoke
+    均通过。
+- 语义：
+  - 项目 CLI 分别重生成 Slithering Bloodfin v12/core 与 v14/core，均为 9 个来源 Item，
+    canonical verifier 均为 0 warnings；
+  - 人工核对 aberration、AC 16、HP 143、CR 9、盲视 100 尺，以及 Death Burst、Bite、
+    Tail Crash、Swallow、Slippery、Pelagic Screech 的攻击/伤害/状态/射程结构；
+  - 项目 CLI 分别重生成 Shield of the Cavalier v12/core 与 v14/core；人工核对
+    equipment、veryRare、required attunement、AC +2、Forceful Bash、Protective Field、
+    reaction、dawn recovery、1 minute concentration、5-foot radius 与 prone effect；
+  - 项目 CLI 重生成 Warlock of the Rat God v14/core；verifier 0 warnings，portable manifest
+    保留 10 个 source-backed spell refs、状态 `pending`、0 embedded Spell，未伪称 target-world
+    hydration；
+  - 项目 CLI 重生成 White Tusk Shaman v14/core；verifier 0 warnings，6 个来源 Item；
+  - Bloodfin、Shield、Rat 与 White Tusk 的 v14 输出，排除随机 document ID 与时间戳后，
+    分别与上一已验收检查点完整 JSON 语义投影相等。
+- 已知债：
+  - `spellsMapper` 仍从 repository cwd 的 `data/spells.ldb` 读取，generation package 当前是
+    monorepo-internal workspace package，不宣称可在仓库外独立发布；runtime/data root 归阶段 5。
+
 ## 当前停止点
 
-阶段 0–2、阶段 3A、parser kernel、spell-manifest contracts、models 与 high-level actor parser
-及 item parser 已形成可回滚稳定检查点。`packages/parser` 的代码迁移已完成，canonical source
-model 已脱离 Intake；下一条执行路径是阶段 3C2：收敛 generation 的 target/stable-id/translation/icon
-ports 与 spell hash 依赖，再迁移 generation package。在其独立验收前不移动 CLI、Web、module 或 ops。
+阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
+generation package 已形成可回滚稳定检查点。`packages/generation` 已通过独立机械与语义验收；
+下一条执行路径是阶段 3D：迁移 `packages/workflows`，保持 application facade、CLI、Web、module
+与 ops 的现有入口不变。在 workflows 独立验收前不移动 apps、Intake、ingest、crawl 或 assets。
