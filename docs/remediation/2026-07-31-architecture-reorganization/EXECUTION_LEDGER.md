@@ -39,7 +39,7 @@ owner 和迁移约束。
 | 0. 决策、基线与 finding 映射 | completed | ADR、迁移 ledger 和当前行为清单已建立 |
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
-| 3. Bun workspace 物理迁移 | in_progress | `packages/contracts` 已独立验收；parser/generation/workflows 尚未迁移 |
+| 3. Bun workspace 物理迁移 | in_progress | contracts/parser/models/spell contracts/generation/workflows 已独立验收；下一步迁移 `apps/cli` |
 | 4. 独立 module/ops 产品拆分 | pending | workspace 边界验收后开始 |
 | 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
@@ -199,6 +199,21 @@ owner 和迁移约束。
   generation 的独立 package dependency 编译时不依赖根 tsconfig 的隐式文件集合；
 - generation 专属 anti-overfit 规则复制到 package 根；本阶段是结构迁移，没有新增 mechanics
   或推断规则。
+
+### 2026-07-31：阶段 3D workflows package 完成
+
+- 建立 `@fvtt-json-generator/workflows`，迁入 Actor/Item generation orchestration、single-file
+  conversion、Vault Sync、JSON translation sync、plaintext actor、item text 与 collection conversion；
+- 图标、图片资产、AI normalizer、翻译服务与 ingest 具体实现留在 `src/core` 外围，通过窄 port
+  注入 package，不把适配器反向搬入业务用例；
+- `src/core/application/workflows.ts` 成为实际 composition root，CLI/Web 直接依赖该应用入口；
+  `src/core/workflow/*` 仅保留兼容适配与原测试入口；
+- dependency-cruiser 新增 package 独立性与 production 禁止回流 legacy workflow adapter 的门禁；
+- collection conversion 不再通过 application facade 反向调用自身，而是直接组合 package 内
+  single-file conversion；
+- plaintext ingest port 根据真实 CLI 用法补齐 `sections` 与 `rawNotes`，没有用类型断言掩盖契约缺口；
+- Bun 1.3.8 Windows 覆盖率在并发 4 下两次于 1,587 个测试执行完后稳定触发同一内部 assertion；
+  并发 2 两次完整通过，因此仅将 coverage runner 调整为 2，普通测试并发规则不变。
 
 ## 验证证据
 
@@ -394,9 +409,39 @@ owner 和迁移约束。
   - `spellsMapper` 仍从 repository cwd 的 `data/spells.ldb` 读取，generation package 当前是
     monorepo-internal workspace package，不宣称可在仓库外独立发布；runtime/data root 归阶段 5。
 
+### 阶段 3D：workflows package
+
+- 机械：
+  - package-local、production 与全仓类型检查通过；
+  - dependency-cruiser：1,145 modules / 1,806 dependencies，0 violations；Knip cycles 为 0；
+  - 完整默认 `ci:verify`：1,587 tests / 0 failed / 7,497 expectations / 156 files；
+  - coverage：85.32% lines / 88.04% functions，其中 workflow group 为 87.90% lines /
+    81.82% functions；
+  - anti-overfit 300 sources、hygiene 2,029 tracked paths、dnd5e 5.3.3 reference、Web build 与
+    offline Actor smoke 均通过；
+  - CLI plaintext/item、Vault Sync、JSON translation、Web API/collection ZIP 等针对性入口测试
+    均通过。
+- 语义：
+  - 项目 CLI 通过新 application composition root 重生成 Slithering Bloodfin、Shield of the
+    Cavalier 与 Warlock of the Rat God 的 v14/core 正式输出；
+  - Bloodfin 与 Rat 的 canonical verifier 均为 0 warnings；
+  - 三个输出排除随机 `_id`、时间戳及派生 `origin` 后，分别与 Stage 3C2 已验收产物完整 JSON
+    语义投影相等；
+  - 人工核对 Shield 仍为 equipment / veryRare / required，armor value 与 magical bonus 均为 2；
+    Forceful Bash 为 5-foot attack 并链接 prone，Protective Field 仍是 reaction、dawn recovery、
+    1 minute concentration 与 5-foot radius；
+  - Rat 仍为 1 个 spellcasting group / 10 refs / `pending`，0 embedded Spells、0 Cast Activities，
+    未伪称 target-world hydration；
+  - Web 真实 monster-collection job 仍生成可下载 ZIP；plaintext actor 与 item-text workflow 的
+    真实 vault promotion/output 行为由专项测试覆盖。
+- 已知债：
+  - workflows package 是 monorepo-internal orchestration 包；图片、图标、翻译、ingest 与 vault
+    路径仍由 repository composition root 注入，不宣称仓库外独立发布；
+  - 旧 `src/core/workflow/*` 尚保留测试兼容适配，后续只在确认无外部消费者后治理，不在本阶段删除。
+
 ## 当前停止点
 
 阶段 0–2、阶段 3A、parser、spell-manifest contracts、models、canonical source models 与
-generation package 已形成可回滚稳定检查点。`packages/generation` 已通过独立机械与语义验收；
-下一条执行路径是阶段 3D：迁移 `packages/workflows`，保持 application facade、CLI、Web、module
-与 ops 的现有入口不变。在 workflows 独立验收前不移动 apps、Intake、ingest、crawl 或 assets。
+generation/workflows package 已形成可回滚稳定检查点。`packages/workflows` 已通过独立机械与
+语义验收；下一条执行路径是阶段 3E：迁移 `apps/cli`，保持 CLI 参数、默认 vault 路径、输出、
+诊断与退出码不变。在 CLI 独立验收前不移动 Web、Intake、ingest、crawl 或 assets。
