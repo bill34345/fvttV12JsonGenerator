@@ -20,8 +20,9 @@ import type {
   GeneratedArtifactIdentity,
 } from '@fvtt-json-generator/contracts/artifacts';
 import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
-import { generateActorArtifact } from './generationPipeline';
-import { generateItemArtifacts } from './itemGenerationWorkflow';
+import { generateActorArtifact } from '@fvtt-json-generator/workflows/generation-pipeline';
+import { generateItemArtifacts } from '@fvtt-json-generator/workflows/item-generation';
+import { iconWorkflowAdapter } from '../icons/adapter';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
 import {
   iconReviewPathForOutput,
@@ -104,6 +105,7 @@ export async function convertMarkdownContentToJson(
       fvttVersion,
       effectProfile,
       iconOptions: options.iconOptions,
+      iconWorkflow: iconWorkflowAdapter,
     });
     const status = combineStatuses(artifacts.map((artifact) => artifact.verification.status));
     const diagnostics = artifacts.flatMap((artifact) => artifact.diagnostics);
@@ -154,6 +156,7 @@ export async function convertMarkdownContentToJson(
     effectProfile,
     translationService: options.translationService,
     iconOptions: options.iconOptions,
+    iconWorkflow: iconWorkflowAdapter,
   });
   const actor = generated.actor;
   const legacyWarnings = new ActorValidator().validate(parsed, actor);

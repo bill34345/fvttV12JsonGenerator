@@ -182,7 +182,10 @@ function coverageGroup(source: string): string {
   if (normalized.startsWith('scripts/foundry-lab/')) return 'foundry-lab';
   if (normalized.startsWith('src/web/')) return 'web';
   if (normalized.startsWith('src/tools/')) return 'tools-gates';
-  if (normalized.startsWith('src/core/workflow/')) return 'workflow';
+  if (
+    normalized.startsWith('packages/workflows/')
+    || normalized.startsWith('src/core/workflow/')
+  ) return 'workflow';
   if (normalized.startsWith('src/core/parser/') || normalized.startsWith('src/core/ingest/')) {
     return 'parser-ingest';
   }

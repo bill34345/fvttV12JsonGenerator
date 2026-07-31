@@ -24,8 +24,9 @@ import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import type { TranslationContext } from '../translation';
 import { createTranslationConfigFromEnv } from '../translation/config';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import { generateActorArtifact } from './generationPipeline';
-import { generateItemArtifacts } from './itemGenerationWorkflow';
+import { generateActorArtifact } from '@fvtt-json-generator/workflows/generation-pipeline';
+import { generateItemArtifacts } from '@fvtt-json-generator/workflows/item-generation';
+import { iconWorkflowAdapter } from '../icons/adapter';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
 import { iconWorkflowFingerprint } from '../icons/resources';
 import { mergeIconReviewReports, writeIconReviewReport } from '../icons/report';
@@ -199,6 +200,7 @@ export class ObsidianSyncWorkflow {
             fvttVersion,
             effectProfile,
             iconOptions: options.iconOptions,
+            iconWorkflow: iconWorkflowAdapter,
           });
           const rejected = artifacts.find((artifact) => artifact.verification.status !== 'accepted');
           if (rejected) {
@@ -258,6 +260,7 @@ export class ObsidianSyncWorkflow {
             effectProfile,
             translationService: this.options.translationService,
             iconOptions: options.iconOptions,
+            iconWorkflow: iconWorkflowAdapter,
           });
           if (generated.verification.status !== 'accepted') {
             throw new Error(

@@ -1,0 +1,21 @@
+{
+  "name": "@fvtt-json-generator/workflows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generation-pipeline": "./src/generationPipeline.ts",
+    "./icon-port": "./src/iconPort.ts",
+    "./item-generation": "./src/itemGenerationWorkflow.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "@fvtt-json-generator/generation": "workspace:*",
+    "@fvtt-json-generator/models": "workspace:*",
+    "@fvtt-json-generator/parser": "workspace:*"
+  }
+}

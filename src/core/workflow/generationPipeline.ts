@@ -1,65 +1,20 @@
-import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
-import { adaptParsedActorToCanonical } from '@fvtt-json-generator/generation/adapters';
-import { getGenerationProjector } from '@fvtt-json-generator/generation/projectors';
-import type {
-  CanonicalActorDocument,
-  GenerationDiagnostic,
-  GenerationVerification,
-} from '@fvtt-json-generator/generation/types';
-import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
-import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/actor';
-import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
-import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import type { ParserRoute } from '@fvtt-json-generator/parser/types';
-import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
-import { createIconResolutionSession } from '../icons/workflow';
+import { iconWorkflowAdapter } from '../icons/adapter';
+import {
+  generateActorArtifact as generatePackageActorArtifact,
+  type ActorGenerationArtifact,
+  type ActorGenerationPipelineOptions,
+} from '@fvtt-json-generator/workflows/generation-pipeline';
 
-export interface ActorGenerationPipelineOptions {
-  parsed: ParsedNPC;
-  sourceText: string;
-  sourcePath?: string;
-  route: ParserRoute;
-  fvttVersion: FvttTargetVersion;
-  effectProfile: EffectProfile;
-  translationService?: ActorGeneratorOptions['translationService'];
-  iconOptions?: IconWorkflowOptions;
-}
+export type {
+  ActorGenerationArtifact,
+  ActorGenerationPipelineOptions,
+} from '@fvtt-json-generator/workflows/generation-pipeline';
 
-export interface ActorGenerationArtifact {
-  actor: any;
-  canonical: CanonicalActorDocument;
-  verification: GenerationVerification;
-  diagnostics: GenerationDiagnostic[];
-  iconReview: IconReviewReport | null;
-}
-
-export async function generateActorArtifact(
+export function generateActorArtifact(
   options: ActorGenerationPipelineOptions,
 ): Promise<ActorGenerationArtifact> {
-  const canonical = adaptParsedActorToCanonical(options.parsed, {
-    sourcePath: options.sourcePath,
-    sourceText: options.sourceText,
+  return generatePackageActorArtifact({
+    ...options,
+    iconWorkflow: options.iconWorkflow ?? iconWorkflowAdapter,
   });
-  const projector = getGenerationProjector(options.fvttVersion);
-  const iconSession = createIconResolutionSession(options.fvttVersion, options.iconOptions);
-  const actor = await projector.project(canonical, {
-    targetVersion: options.fvttVersion,
-    effectProfile: options.effectProfile,
-    route: options.route,
-    translationService: options.translationService,
-    iconResolver: iconSession.resolver,
-  });
-  const verification = verifyGeneratedDocument({
-    canonical,
-    output: actor,
-    target: options.fvttVersion,
-    effectProfile: options.effectProfile,
-  });
-  return {
-    actor,
-    canonical,
-    verification,
-    diagnostics: verification.diagnostics,
-    iconReview: iconSession.report(),
-  };
 }

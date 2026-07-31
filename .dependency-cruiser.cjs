@@ -41,6 +41,15 @@ module.exports = {
       },
     },
     {
+      name: 'workflows-package-is-independent',
+      severity: 'error',
+      comment: 'Workflow orchestration depends on package contracts and injected ports, never concrete source-tree adapters or delivery layers.',
+      from: { path: '^packages/workflows/' },
+      to: {
+        path: '^(src/|scripts/|apps/|packages/(?!contracts/|generation/|models/|parser/|spell-manifest-contracts/|workflows/))',
+      },
+    },
+    {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
@@ -118,6 +127,17 @@ module.exports = {
       },
       to: {
         path: '^src/core/(generation/|generator/|mapper/spells[.]ts$|mechanics/(acEffectExtraction|mechanicsExtraction)[.]ts$)',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-generation-workflow-adapters',
+      severity: 'error',
+      comment: 'Production orchestration imports generation pipeline exports from the workflows package; old paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/workflow/(generationPipeline|itemGenerationWorkflow)[.]ts$|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/workflow/(generationPipeline|itemGenerationWorkflow)[.]ts$',
       },
     },
     {
