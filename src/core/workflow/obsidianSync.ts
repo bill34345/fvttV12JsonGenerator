@@ -16,7 +16,7 @@ import {
   type ImageAssetOptions,
   type ImageAssetWarning,
 } from '../assets/imageAssets';
-import type { EffectProfile } from '../generator/effectProfileApplier';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import { ItemAiNormalizer } from '../ingest/item-ai-normalizer';
 import { ItemParser } from '@fvtt-json-generator/parser/item-parser';
 import { detectItemRoute } from '@fvtt-json-generator/parser/item-router';

@@ -1,14 +1,14 @@
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
-import { adaptParsedActorToCanonical } from '../generation/adapters';
-import { getGenerationProjector } from '../generation/projectors';
+import { adaptParsedActorToCanonical } from '@fvtt-json-generator/generation/adapters';
+import { getGenerationProjector } from '@fvtt-json-generator/generation/projectors';
 import type {
   CanonicalActorDocument,
   GenerationDiagnostic,
   GenerationVerification,
-} from '../generation/types';
-import { verifyGeneratedDocument } from '../generation/verification';
-import type { ActorGeneratorOptions } from '../generator/actor';
-import type { EffectProfile } from '../generator/effectProfileApplier';
+} from '@fvtt-json-generator/generation/types';
+import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
+import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/actor';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';

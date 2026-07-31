@@ -1,6 +1,6 @@
 import type { ParsedItem } from '@fvtt-json-generator/models/item';
-import type { ItemDocument } from '../generator/item-generator';
-import { mapSourceItemTypeToFoundry } from '../generation/item-type-mapping';
+import type { ItemDocument } from '@fvtt-json-generator/generation/item-generator';
+import { mapSourceItemTypeToFoundry } from '@fvtt-json-generator/generation/item-type-mapping';
 
 export class ItemValidator {
   public validate(parsed: ParsedItem, item: ItemDocument): string[] {

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { extractSourceDerivedAcEffect } from '../mechanics/acEffectExtraction';
+import { extractSourceDerivedAcEffect } from '@fvtt-json-generator/generation/ac-effect-extraction';
 
 interface BuildActorVerificationSummaryOptions {
   sourcePath: string;

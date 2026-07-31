@@ -44,7 +44,7 @@ module.exports = {
       name: 'no-generation-to-intake-canonical-model-adapter',
       severity: 'error',
       comment: 'Generation consumes canonical source models from the models package, not AI Intake private types.',
-      from: { path: '^src/core/(generation|generator)/' },
+      from: { path: '^(src/core/(generation|generator)/|packages/generation/)' },
       to: { path: '^src/core/intake/types[.]ts$' },
     },
     {
@@ -107,6 +107,17 @@ module.exports = {
       },
       to: {
         path: '^src/core/(foundryTarget[.]ts|utils/stable-id[.]ts)$',
+      },
+    },
+    {
+      name: 'no-production-to-legacy-generation-adapters',
+      severity: 'error',
+      comment: 'Production code imports the generation workspace package; old generator, generation, mapper, and mechanics paths are compatibility adapters only.',
+      from: {
+        pathNot: '(^src/core/(generation/|generator/|mapper/spells[.]ts$|mechanics/(acEffectExtraction|mechanicsExtraction)[.]ts$)|/__tests__/|[.](test|spec)[.])',
+      },
+      to: {
+        path: '^src/core/(generation/|generator/|mapper/spells[.]ts$|mechanics/(acEffectExtraction|mechanicsExtraction)[.]ts$)',
       },
     },
     {

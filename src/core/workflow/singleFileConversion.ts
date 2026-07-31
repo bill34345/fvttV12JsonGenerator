@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { ActorGeneratorOptions } from '../generator/actor';
-import type { EffectProfile } from '../generator/effectProfileApplier';
-import { ActorValidator } from '../generator/validator';
+import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/actor';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
+import { ActorValidator } from '@fvtt-json-generator/generation/validator';
 import { ItemParser } from '@fvtt-json-generator/parser/item-parser';
 import { detectItemRoute } from '@fvtt-json-generator/parser/item-router';
 import { ParserFactory } from '@fvtt-json-generator/parser/router';
@@ -14,7 +14,7 @@ import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type {
   GenerationDiagnostic,
   GenerationVerification,
-} from '../generation/types';
+} from '@fvtt-json-generator/generation/types';
 import type {
   ConversionStatus,
   GeneratedArtifactIdentity,

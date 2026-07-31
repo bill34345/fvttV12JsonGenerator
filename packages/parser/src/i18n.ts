@@ -1,3 +1,5 @@
+/// <reference path="./opencc-js.d.ts" />
+
 import { Converter } from 'opencc-js';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';

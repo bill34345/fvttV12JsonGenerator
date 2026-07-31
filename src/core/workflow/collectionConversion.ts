@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { EffectProfile } from '../generator/effectProfileApplier';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { IconWorkflowOptions } from '../icons/types';
 import { mergeIconReviewReports, writeIconReviewReport } from '../icons/report';
 import { parseCreatureBlock, splitCollection } from '../ingest/plaintext';

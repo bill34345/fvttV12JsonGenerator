@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import type { EffectProfile } from "../generator/effectProfileApplier";
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { IconWorkflowOptions } from "../icons/types";
 import { ItemsIngestionWorkflow, type ItemIngestionResult } from "../ingest/items";
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from "./obsidianSync";

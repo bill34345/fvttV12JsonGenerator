@@ -1,4 +1,4 @@
-import type { EffectProfile } from '../generator/effectProfileApplier';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { IconWorkflowOptions } from '../icons/types';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';

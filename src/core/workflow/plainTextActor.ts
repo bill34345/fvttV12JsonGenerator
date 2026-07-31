@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { PlainTextIngestionWorkflow, type PlainTextIngestionResult } from '../ingest/plaintext';
-import { type EffectProfile } from '../generator/effectProfileApplier';
+import { type EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import { ObsidianSyncWorkflow, type ObsidianSyncResult } from './obsidianSync';
 import type { ImageAssetOptions } from '../assets/imageAssets';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';

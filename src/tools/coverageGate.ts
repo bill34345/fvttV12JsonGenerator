@@ -187,6 +187,7 @@ function coverageGroup(source: string): string {
     return 'parser-ingest';
   }
   if (
+    normalized.startsWith('packages/generation/') ||
     normalized.startsWith('src/core/generator/') ||
     normalized.startsWith('src/core/mechanics/') ||
     normalized.startsWith('src/core/models/') ||

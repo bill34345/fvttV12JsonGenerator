@@ -1,16 +1,16 @@
-import type { EffectProfile } from '../generator/effectProfileApplier';
-import type { ItemDocument } from '../generator/item-generator';
+import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
+import type { ItemDocument } from '@fvtt-json-generator/generation/item-generator';
 import type { ActionData } from '@fvtt-json-generator/models/action';
 import type { ItemStage, ParsedItem, UsesData } from '@fvtt-json-generator/models/item';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
-import type { GenerationDiagnostic } from '../generation/types';
-import { adaptParsedItemToCanonical } from '../generation/adapters';
-import { getGenerationProjector } from '../generation/projectors';
-import { verifyGeneratedDocument } from '../generation/verification';
+import type { GenerationDiagnostic } from '@fvtt-json-generator/generation/types';
+import { adaptParsedItemToCanonical } from '@fvtt-json-generator/generation/adapters';
+import { getGenerationProjector } from '@fvtt-json-generator/generation/projectors';
+import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
 import type {
   CanonicalItemDocument,
   GenerationVerification,
-} from '../generation/types';
+} from '@fvtt-json-generator/generation/types';
 import type { IconReviewReport, IconWorkflowOptions } from '../icons/types';
 import { createIconResolutionSession } from '../icons/workflow';
 
