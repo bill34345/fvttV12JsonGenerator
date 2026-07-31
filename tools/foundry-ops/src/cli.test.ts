@@ -32,6 +32,22 @@ describe('Foundry Ops CLI authority boundary', () => {
     expect(calls).toEqual([{ entrypoint: 'tools/foundry-ops/src/lab/cli.ts', args: ['bootstrap'] }]);
   });
 
+  it('routes local asset inventory without production authorization', async () => {
+    const calls: Array<{ entrypoint: string; args: string[] }> = [];
+    const code = await runFoundryOpsCli(['assets', 'inventory', '--hash-concurrency=2'], {
+      runEntrypoint: async (entrypoint, args) => {
+        calls.push({ entrypoint, args });
+        return 0;
+      },
+    }, {});
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([{
+      entrypoint: 'tools/foundry-ops/src/assetInventory.ts',
+      args: ['--hash-concurrency=2'],
+    }]);
+  });
+
   it('refuses an effective production read without a separate authorization flag', async () => {
     await expect(runFoundryOpsCli(['production', 'inventory', '--apply'], {
       runEntrypoint: async () => 0,

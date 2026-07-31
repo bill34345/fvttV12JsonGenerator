@@ -47,4 +47,15 @@ describe('Foundry Ops command catalog', () => {
     expect(route.entrypoint).toBe('scripts/foundry-lab/spellResolverCli.ts');
     expect(route.forwardedArgs).toEqual(['verify-install']);
   });
+
+  it('routes local asset inventory to the report-only implementation', () => {
+    const route = resolveFoundryOpsRoute(['assets', 'inventory', '--hash-concurrency=2']);
+    expect(route.command).toMatchObject({
+      id: 'assets.inventory',
+      target: 'local',
+      effect: 'local-mutation',
+    });
+    expect(route.entrypoint).toBe('tools/foundry-ops/src/assetInventory.ts');
+    expect(route.forwardedArgs).toEqual(['--hash-concurrency=2']);
+  });
 });

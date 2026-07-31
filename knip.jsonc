@@ -18,6 +18,7 @@
     "src/tools/intakeVerification.ts",
     "tools/foundry-ops/src/productionMigrationBuildCandidate.ts",
     "tools/foundry-ops/src/productionMigrationThreeWayAudit.ts",
+    "tools/foundry-ops/src/assetInventory.ts",
     "src/tools/productionMigrationBuildCandidate.ts",
     "src/tools/productionMigrationThreeWayAudit.ts",
     "src/tools/production-migration/*.ts",

@@ -14,6 +14,7 @@ export interface FoundryOpsCommand {
 
 const COMMANDS: readonly FoundryOpsCommand[] = [
   { id: 'catalog', syntax: 'catalog', target: 'local', effect: 'read-only', summary: '列出全部命令及其权限，不执行项目操作。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'assets.inventory', syntax: 'assets inventory [--output-root=...] [--hash-concurrency=4]', target: 'local', effect: 'local-mutation', summary: '只读扫描本地 Foundry 资产并写入 manifest 与精确重复项报告；不复制、移动或删除资产。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.bootstrap', syntax: 'lab bootstrap [--apply]', target: 'local', effect: 'local-mutation', applyMakesEffective: true, summary: '准备隔离的本地 Foundry 测试环境。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.classpack-v14', syntax: 'lab classpack-v14 [选项] [--apply]', target: 'local', effect: 'local-mutation', applyMakesEffective: true, summary: '准备或切换本地 classpack 测试矩阵。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.patch-sequencer-spritesheet-workers', syntax: 'lab patch-sequencer-spritesheet-workers [--restore] [--apply]', target: 'local', effect: 'local-mutation', applyMakesEffective: true, summary: '检查或修改本地镜像中的 Sequencer 补丁。', owner: 'foundry-ops', availability: 'available' },

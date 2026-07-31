@@ -41,7 +41,7 @@ owner 和迁移约束。
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
 | 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B、4C 已验收；4D Monster Spell Resolver 按既定条件延后 |
-| 5. 数据、reference 与 runtime root | pending | 只读 inventory 先行 |
+| 5. 数据、reference 与 runtime root | in_progress | 5A Foundry Lab 注册资产清单已完成；外部 root 与迁移尚未开始 |
 | 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
 | 7. 最终架构验收 | pending | 机械与语义双验收 |
 
@@ -895,9 +895,55 @@ owner 和迁移约束。
 - 本阶段没有启动 Foundry、Chrome 或真实 Session Monitor，没有连接生产，没有运行超过 30 分钟的
   监测，也没有改变任何 hardening finding、support matrix 或生产部署状态。
 
+### 2026-07-31：阶段 5A Foundry Lab 注册资产只读清单
+
+- 在 Foundry Ops 内新增独立的资产分类核心、文件系统扫描适配器和报告输出层；统一入口为
+  `bun run foundry:ops assets inventory --hash-concurrency=4`；
+- 分类固定为 app binaries、modules、systems、worlds、backups、evidence、archives 与
+  scratch/cache。world 和 backup 一律标记为 critical / not-assumed-rebuildable；evidence 与 archive
+  默认 preserve；cache 即使可重建也只标记 review-before-removal，不生成自动删除决定；
+- 每个普通文件记录相对路径、字节数、SHA-256、mtime 和 filesystem atime；根 digest 由排序后的
+  `path + bytes + hash` 计算。模块、系统和世界读取顶层 package manifest 的 ID、版本及公开 HTTP(S)
+  来源，本地 file URL 不写入报告；
+- 输出使用新 timestamp 目录和 exclusive create，不覆盖旧报告；不跟随 symlink/junction；凭据、认证
+  cookie 和 profile `Config` 显式排除；默认输出位于忽略的
+  `.local/foundry-v14/inventory/asset-inventory/<timestamp>/`；
+- 第一次真实扫描读取 180,754 files / 85,894,981,998 bytes，因
+  `evidence/cor-cotn-world-audit-20260724/node_modules` 是指向 Codex 共享依赖缓存的 Windows junction，
+  正确返回 `complete: false` / exit 1。只读核实 target 后，将这一个非证据依赖 junction 写入显式
+  policy exclusion，没有放宽链接安全规则；
+- 第二次真实扫描位于
+  `.local/foundry-v14/inventory/asset-inventory/2026-07-31T14-04-11-949Z`，返回 exit 0、
+  `complete: true`、180,754 files、85,894,981,998 bytes、0 issues；两次所有注册根的 file count、
+  bytes 与 root SHA-256 完全一致；
+- 八类实物为：app binaries 21,153 files / 339.6 MiB；modules 56,297 / 22.7 GiB；systems
+  2,874 / 258.0 MiB；worlds 1,928 / 640.2 MiB；backups 12,334 / 3.00 GiB；evidence
+  70,649 / 47.2 GiB；archives 1,109 / 3.13 GiB；scratch/cache 14,410 / 2.75 GiB；所有
+  module/system/world 顶层 manifest 均可解析；
+- 精确重复报告为 21,258 groups / 125,706 file locations / 50.7 GiB theoretical duplicate bytes，
+  其中 18,739 组跨类别。最大组包含 13 份相同的 `MapImageOptimizer.exe`，约 1.94 GiB 理论重复量；
+  其余大组大量横跨 world snapshot、backup、evidence 和 archive。这里只证明字节相同，不能据此删除；
+- 内部一致性复核重新计算八个 category manifest 的所有 root digest，检查 180,754 个文件 hash 格式，
+  并确认 21,258 个重复组的每个 location 均能回指 manifest，全部通过；
+- Foundry Ops 完整 suite 为 298 tests / 2,262 expectations；production/all/packages/apps/modules/tools
+  类型检查通过；dependency-cruiser 为 3,691 modules / 3,893 dependencies、0 violations，Knip cycles
+  为 0，新增 inventory 路径没有进入 unused report；
+- 最终 `ci:verify` 通过：Session Monitor build 1 test / 1 expectation、CLI 12 / 57、instrumented
+  1,602 / 7,621，合计 1,615 tests / 7,679 expectations；production coverage 为 85.50% lines /
+  88.03% functions，anti-overfit 321 sources、hygiene 2,131 tracked paths、dnd5e 5.3.3 reference、
+  Web production build 与 offline Actor smoke 均通过；CI 输出中的 Session Monitor 等待文字来自隔离的
+  临时目录 build subprocess 测试，不是真实 Chrome/Foundry 长时运行；
+- 发现但未在本批修复：`FVTT_OPS_BACKUP_ROOT` 默认解析到不存在的 `evidence/backups`，而实际约 3 GiB
+  备份由 module build 等流程写在 `.local/foundry-v14/backups`；需在下一批核对配置 owner 后统一；
+- 本批注册范围覆盖 Foundry Lab 和 legacy world archive，尚未把 `.local/8080`、`rr-*`、
+  `gstack-source`、`.local/references`、多个浏览器 profile/工具源码缓存等剩余约 8 GiB 从名称直接猜成
+  cache 或 evidence；下一批必须逐根确认 producer/consumer/敏感性后再纳入；
+- 全程没有连接生产、启动 Foundry/Chrome、执行长时间监测、复制/移动/删除运行数据，也没有关闭
+  `WORLD-ASSET-001` 或其他 hardening finding。
+
 ## 当前停止点
 
-阶段 4C 已形成可回滚检查点。阶段 4D Monster Spell Resolver 仍按既定前置条件延后；下一批进入阶段 5，
-只读盘点 app binaries、modules/systems/worlds、backups、evidence、archives 与 cache 的路径、体积、hash、
-来源、可重建性和保留级别。第一批只生成 manifest 与重复项报告，不复制、移动或删除任何运行数据，
-不访问生产，不启动 Foundry/Chrome，也不关闭任何 hardening finding。不要重新执行已完成的 4C 物理迁移。
+阶段 5A 已形成只读、可重跑的注册资产清单检查点。下一批进入阶段 5B：逐根核对尚未注册的 `.local`
+目录和顶层文件，修正 backup root owner/默认值，建立“已分类 / 隐私排除 / 待人工判断”的完整 scope
+coverage；随后才能提出外部 `FVTT_OPS_LAB_ROOT` 的复制与验证方案。没有用户单独确认，不复制、不移动、
+不删除任何 world、backup、evidence、archive、cache 或浏览器 profile；不要重新执行已完成的 4C 迁移。

@@ -26,11 +26,43 @@ bun run foundry:ops catalog
 | `src/cli.ts`、`src/routing.ts`、`src/commandCatalog.ts` | 统一命令入口、命令分类和权限检查 |
 | `src/config.ts` | 本地路径、生产连接配置和防止路径逃逸的安全检查 |
 | `src/process.ts` | 启动外部程序，并从命令、输出和错误中隐藏敏感值 |
+| `src/asset-inventory/`、`src/assetInventory.ts` | 只读扫描本地 Foundry 资产，按类别写入 hash manifest 和精确重复项报告 |
 | `src/lab/` | 本地 Foundry 实验环境、模组获取、诊断、补丁、启动和停止工具 |
 | `src/world-audit/`、`src/worldFootprintAudit.ts` | 对停止状态的本地世界建立只读快照并生成隐私安全的审计报告 |
 | `src/production-migration/`、两个 `productionMigration*.ts` | 比较三个本地世界副本并构建离线迁移候选；不会连接或修改生产服务器 |
 
 `spell-resolver` 的本地安装生命周期暂时保留在兼容目录，因为它和 Monster Spell Resolver 的构建流程仍有直接依赖。它会经过同一权限入口，但其物理迁移属于后续的 Monster Spell Resolver 阶段，不能为了清空旧目录而错误归入 Foundry Ops。
+
+## 本地资产只读盘点
+
+运行：
+
+```powershell
+bun run foundry:ops assets inventory --hash-concurrency=4
+```
+
+它会读取已经注册的本地 Foundry Lab 资产，分别生成以下八类 manifest：
+
+- Foundry 程序和 Node 运行时；
+- 模块；
+- 游戏系统；
+- 世界；
+- 备份；
+- 验收、诊断和审计证据；
+- 历史归档；
+- 临时工作区和可重建缓存。
+
+每个普通文件都会记录相对路径、体积、SHA-256、修改时间和文件系统访问时间。访问时间只是 Windows 文件系统提供的尽力信息，可能被延迟或关闭，不能单独证明“最后一次实际使用”。模块、系统和世界还会读取顶层 manifest 中的 ID、版本和公开来源 URL；本地文件 URL 不会写入报告。
+
+报告默认写入忽略目录：
+
+```text
+.local/foundry-v14/inventory/asset-inventory/<timestamp>/
+```
+
+其中 `summary.md` 是短摘要，`manifest.<category>.json` 是分类型实物清单，`duplicates.json` 和 `duplicates.md` 是完整的字节级重复项报告。“理论重复体积”不是删除建议；同一文件出现在 world、backup、evidence 和 archive 中，可能分别承担运行、恢复和审计职责。
+
+扫描器不会跟随符号链接或 Windows junction，也不会扫描凭据目录、认证 cookie 或 Foundry profile 的 `Config`。遇到未授权链接、扫描期间变化或读取失败时，报告会标记为不完整并返回非零退出码。生成报告本身是唯一写入行为；命令不会复制、移动、删除资产，也不会访问生产环境。
 
 ## 生产只读盘点
 
