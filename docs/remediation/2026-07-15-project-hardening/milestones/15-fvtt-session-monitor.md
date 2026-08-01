@@ -129,7 +129,7 @@ gameplay content.
   Windows builds reproduce that exact deployed archive and all five deployed
   file hashes instead of varying with checkout line endings.
 - A 2026-07-31 read-only 8080 recheck proved the live process still uses
-  `E:\Bill\fvtt_v13\data`, the complete 1.1.1 module is present there, every
+  `X:\FoundryData`, the complete 1.1.1 module is present there, every
   module resource returns HTTP 200 through 8080, and the public manifest reports
   1.1.1. The recheck did not log in as GM or read live LevelDB, so it proves
   current deployment/serving rather than current world activation.

@@ -169,7 +169,7 @@ bun run build:session-monitor
 浏览器安全纯 JavaScript SHA-256，并通过 13/13 聚焦测试与远端制品校验。
 
 2026-07-31 的 8080 只读复核再次确认：当前监听进程仍使用
-`E:\Bill\fvtt_v13\data`，该 DataPath 下存在完整 1.1.1 五文件制品，五个
+`X:\FoundryData`，该 DataPath 下存在完整 1.1.1 五文件制品，五个
 模块资源经 8080 回环均返回 HTTP 200，公网 8080 的 manifest 也返回
 `fvtt-session-monitor` 1.1.1。本次没有登录 GM 客户端或读取运行中的世界
 LevelDB，因此只重新证明“当前已部署并由 8080 提供”，没有把历史启用事件

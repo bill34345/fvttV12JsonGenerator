@@ -75,11 +75,11 @@ async function expectInvalidInventoryPreservesSnapshot(
 
 describe('remote Foundry inventory', () => {
   it('reads module manifests as UTF-8 without mutating production', () => {
-    const command = buildRemoteInventoryCommand('E:/Bill/fvtt_v13/data');
+    const command = buildRemoteInventoryCommand('X:/FoundryData');
 
     expect(command).toContain('[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)');
     expect(command).toContain('$OutputEncoding = [Console]::OutputEncoding');
-    expect(command).toContain("Join-Path 'E:/Bill/fvtt_v13/data' 'Data/modules'");
+    expect(command).toContain("Join-Path 'X:/FoundryData' 'Data/modules'");
     expect(command).toContain('[IO.File]::ReadAllText($manifestPath, [Text.UTF8Encoding]::new($false))');
     expect(command).toContain('Get-FileHash -Algorithm SHA256');
     expect(command).toContain('ConvertTo-Json -Depth 12 -Compress');
@@ -93,7 +93,7 @@ describe('remote Foundry inventory', () => {
   });
 
   it('filters missing relationship objects instead of serializing null dependencies', () => {
-    const command = buildRemoteInventoryCommand('E:/Bill/fvtt_v13/data');
+    const command = buildRemoteInventoryCommand('X:/FoundryData');
 
     expect(command).toContain("Where-Object { $null -ne $_ -and $null -ne $_.id }");
   });

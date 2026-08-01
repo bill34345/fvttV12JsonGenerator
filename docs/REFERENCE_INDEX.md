@@ -23,8 +23,13 @@ dedicated directory without moving the Foundry Lab or tracked provenance.
 | `.local/references/foundry/14.361/api-core-text` | Text extracts retained from the previous local snapshot |
 | `.local/references/indexes` | Rebuildable file and token indexes |
 | `.local/references/generated-text` | Rebuildable API text extracts |
+| `references/foundry-v12-api*` | Legacy local-only v12 API mirror compatibility paths |
 
-The older v12/dnd5e 4.3.9 tracked references remain available until they receive a separate migration. Removing the v14 inputs must not change v12 or v13 output.
+The small dnd5e 4.3.9 locks/templates remain tracked. The older v12 Foundry API
+HTML/text mirrors remain available in the existing local
+`references/foundry-v12-api*` compatibility paths, but those large upstream
+copies are ignored and are no longer repository content. Removing or rebuilding
+local reference inputs must not change v12 or v13 output.
 
 ## Commands
 

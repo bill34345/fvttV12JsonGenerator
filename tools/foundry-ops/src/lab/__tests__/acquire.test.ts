@@ -261,9 +261,9 @@ describe('archive and install safety', () => {
 
   it('uses a quote-free Windows OpenSSH source and tar.exe ZIP extraction', () => {
     expect(buildScpRemoteSpec(
-      'Administrator@49.232.12.153',
-      'E:/Bill/fvtt_v13/data/Data/modules/simple-quest',
-    )).toBe('Administrator@49.232.12.153:E:/Bill/fvtt_v13/data/Data/modules/simple-quest');
+      'operator@foundry.example.invalid',
+      'X:/FoundryData/Data/modules/simple-quest',
+    )).toBe('operator@foundry.example.invalid:X:/FoundryData/Data/modules/simple-quest');
     expect(buildArchiveExtractionCommand('archive.zip', 'staging')).toEqual({
       command: 'tar.exe', args: ['-xf', 'archive.zip', '-C', 'staging'],
     });

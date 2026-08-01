@@ -36,7 +36,7 @@ These changes existed before this pass and were left as-is:
 
 - Modified Obsidian vault state files.
 - Untracked Obsidian item input markdown files.
-- Existing untracked item workflow plan under `docs/superpowers/plans/`.
+- Existing local-only item workflow agent plan.
 
 ## Verification Expectation
 

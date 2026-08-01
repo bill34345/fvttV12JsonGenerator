@@ -311,12 +311,12 @@ Scene.view#monks-common-display -> Canvas.draw
 尚未完成：生产端同步、`tokenmagic` 单变量 A/B、`vision-5e` 的独立归因，以及旧楼梯、电梯或 Tile 特殊行为的逐场景人工检查。
 ## 生产环境执行记录（2026-07-12）
 
-目标世界为 `cor-cotn`，运行时为 Foundry VTT 14.364、dnd5e 5.3.3。实际进程从 v14 code 启动，但 User Data 位于 `E:\Bill\fvtt_v13\data`；模块部署目标因此是该 Data 根下的 `Data\modules`，而不是目录名称所暗示的 v13 code。
+目标世界为 `cor-cotn`，运行时为 Foundry VTT 14.364、dnd5e 5.3.3。实际进程从 v14 code 启动，但 User Data 位于 `X:\FoundryData`；模块部署目标因此是该 Data 根下的 `Data\modules`，而不是目录名称所暗示的 v13 code。
 
 ### 已应用配置与回滚点
 
-- Foundry 世界备份：`E:\Bill\fvtt_v13\data\Backups\worlds\cor-cotn\world.cor-cotn.2026-07-12.1783842679709.bak`，大小 1,624,389,972 bytes。
-- 文件级回滚目录：`E:\Bill\fvtt_v13\data\Backups\codex-v14-production-20260712-155358`。
+- Foundry 世界备份：`X:\FoundryData\Backups\worlds\cor-cotn\world.cor-cotn.2026-07-12.1783842679709.bak`，大小 1,624,389,972 bytes。
+- 文件级回滚目录：`X:\FoundryData\Backups\codex-v14-production-20260712-155358`。
 - `translate-all` 已关闭；`monks-common-display`、`levels`、`tokenmagic` 等此前已关闭的模块保持关闭。
 - Automated Animations 7.0.15 保持启用。Swipe 性能档位选择 `Balanced`，没有选择会禁用 Automated Animations 的 `Extreme`。
 - MIDI-QOL：Debug=`关闭`、Save to Chat Card=`true`、Use Weak References for Workflows=`true`；保存、重载并重新打开设置后值仍然存在。
@@ -488,9 +488,7 @@ docs/acceptance/cor-cotn-performance-optimization-checklist.zh-CN.md
 引用位于 `Data/worlds/cor-cotn`。正式上线前仍需生产停服、完整备份、源/目标版本与
 模块清单复核；本日志不授权直接覆盖线上 LevelDB。
 
-最终迁移的当前执行入口为
-[`2026-07-27-cor-cotn-production-migration.md`](../plans/2026-07-27-cor-cotn-production-migration.md)。
-该文件仍要求开始时做新鲜的生产只读盘点，并不因文档存在而授权停服、复制或覆盖。
+最终迁移的机器专属执行入口保存在本机私有运维记录中，不进入公开仓库。任何执行仍要求开始时做新鲜的生产只读盘点，并不因本日志存在而授权停服、复制或覆盖。
 
 ## Simple Cover 5e Actor 级并发修复（2026-07-26，本地）
 
@@ -1190,9 +1188,4 @@ retaining path；不以禁用自动动画作为默认方案。
 - `5e-dlc-monster` `1.2.0` 已安装并在 `cor-cotn` 启用，两个 Actor 合集索引均能
   通过 Foundry API 读取。
 
-本节不改变性能优化验收状态；它只记录另外授权的功能部署。机械证据、容量、日志和
-验收边界见
-[`2026-07-28-cor-cotn-production-migration-report.md`](../runbooks/2026-07-28-cor-cotn-production-migration-report.md#12-2026-07-29-可选功能补充部署)。
-
-完整结果和回滚点见
-[`2026-07-28-cor-cotn-production-migration-report.md`](../runbooks/2026-07-28-cor-cotn-production-migration-report.md)。
+本节不改变性能优化验收状态；它只记录另外授权的功能部署。机器专属的机械证据、容量、日志、完整结果和回滚点保存在本机私有运维记录中；公开仓库不再保存可直接定位真实服务器的报告。

@@ -11,7 +11,7 @@ describe('hermetic Foundry package-script environment', () => {
       FVTT_OPS_EVIDENCE_ROOT: 'F:/FoundryLab/foundry-v14/evidence',
       FVTT_OPS_BACKUP_ROOT: 'F:/FoundryLab/foundry-v14/backups',
       FVTT_OPS_PRODUCTION_SSH_TARGET: 'fvtt-production',
-      FVTT_OPS_PRODUCTION_DATA_PATH: 'E:/Bill/fvtt_v13/data',
+      FVTT_OPS_PRODUCTION_DATA_PATH: 'X:/FoundryData',
       fvtt_ops_production_identity_path: 'C:/fixture/id_ed25519',
       fvtt_ops_lab_root: 'F:/case-insensitive-shadow',
     }, sandbox, entry);

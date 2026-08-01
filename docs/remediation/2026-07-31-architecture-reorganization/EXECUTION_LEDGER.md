@@ -1148,7 +1148,7 @@ owner 和迁移约束。
   `F:\FoundryLab\foundry-v14`，只监听 loopback，HTTP 302；随后再次正常停止，端口与 PID 文件清理完成。
   这证明当前切换没有暗中依赖旧路径；
 - 严格只读生产盘点使用本机现有 `fvtt-production` SSH 别名、tracked 历史计划证明的
-  `E:/Bill/fvtt_v13/data` 和默认 SSH identity 建立连接，线上无写入。服务器返回 234 个模块，而工具固定的
+  `X:/FoundryData` 和默认 SSH identity 建立连接，线上无写入。服务器返回 234 个模块，而工具固定的
   验收基线是 249；CLI 因数量不符 fail-closed，没有把结果写成新的合格盘点。生产模块数量减少 15 是独立的
   线上漂移/基线问题，不能在本地目录迁移中顺手改基线；
 - 重启后的受控删除会话重新核对了精确 retired 绝对路径、目录类型、F 盘目标、独立资产报告、恢复样本、三项
@@ -1468,3 +1468,14 @@ root 治理因此完成；仓库 `.local/references` 只作为兼容窗口副本
 - 本次架构重整的代码、目录、文档和本地 Git 治理目标均已满足，执行总账状态正式改为 `completed`。
   `MON-001` 四小时真实跑团监测等明确交给用户在真实使用时完成的外部验收，继续留在支持矩阵中单独跟踪，
   不属于本次目录和架构重整的未完成工作。
+
+### 2026-08-01：阶段 6G 公开仓库提交边界清理
+
+- 用户明确推翻阶段 6F 对代理历史资料“原位跟踪”的暂时裁决：代理/编辑器状态、机器专属生产运维资料、生成候选和大型上游镜像不应继续发布到 GitHub。本阶段直接在 `master` 执行，没有创建新分支；
+- 从当前 Git 索引移除 1,277 个路径，但全部保留在本机并由 `.gitignore` 接管：38 个 `.sisyphus` 文件、Gemini/Qwen 设置、22 份 Superpowers 代理计划、23 个 Obsidian 配置/插件文件、1,168 个 v12 API 镜像文件、9 份机器专属生产计划/报告/脚本、14 个待翻译 JSON 和 1 份无正式消费者的 DOCX。10 张 `images/generated-monsters` 图片和原本未跟踪的 `.superpowers` 状态也已加入忽略规则；
+- `repositoryHygiene` 新增可执行门禁，拒绝重新跟踪代理工具状态、私有运维资料、完整 `.obsidian`、大型 v12 API 镜像、生成图片候选、待翻译队列和 `data/*.docx`。清理后当前索引从 2,179 个路径降至 902 个路径；抽查所有移除目录均仍存在且被 Git 忽略，没有物理删除用户资料；
+- Web 图片上传不再内置真实 SSH 目标、远端目录或公开 URL；三个目标值都必须由服务器环境变量显式提供，明文 HTTP 也由默认允许改为仅在 `FVTT_WEB_IMAGE_ALLOW_HTTP=1` 时允许。机器专属生产 runbook 继续留在操作者本机，公开索引只说明权限边界；源码、测试和保留历史中的真实主机/账号形式/个人磁盘根已替换为示例值；
+- 公开树的高置信扫描得到 0 个真实机器目标匹配、0 个私钥头/GitHub token/AWS access key/OpenAI 风格 key 匹配。此结果是当前树扫描，不清除既有公开 Git 历史；本阶段没有重写历史、强制推送或推送远端；
+- 第一次专项测试为 86 pass / 1 fail，唯一失败是 plaintext 图片 URL 正则仍写旧测试地址；修正为精确 `assets.example.invalid` HTTPS 断言后，同一批 87 tests / 386 expectations 全部通过。最终 `bun run ci:verify` exit 0、耗时约 114 秒：1,645 tests / 7,776 expectations / 13 filtered / 0 fail，85.57% production lines / 88.16% functions，3,845 modules / 3,962 dependencies / 0 violations，309-source anti-overfit、902-path hygiene、AGENTS、所有类型检查、Web build、锁定 dnd5e reference 和 White Tusk Shaman 离线 smoke 全部通过；
+- 人工语义复核确认：被清理内容没有生产代码消费者；Web 默认状态显示图片能力未配置，只有测试显式注入示例目标时才启用；v12 必需的 `data/cn.json`、`data/spells.ldb`、`data/golden-master.json`、小型 dnd5e 4.3.9 证据、v14 图标 catalog 和正式 Markdown 输入仍保留。后者是否允许公开取决于用户拥有的内容许可，不能由路径扫描代替版权判断，继续作为单独的发布决定而不是本次自动删除项；
+- 本阶段没有访问远程 8080、启动真实 Foundry/Chrome、执行长时监测或改变既有功能支持声明。架构重整仍为 `completed`；本次仅收紧公开提交边界。

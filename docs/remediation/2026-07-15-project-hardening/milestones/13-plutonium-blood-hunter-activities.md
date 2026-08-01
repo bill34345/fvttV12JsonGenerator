@@ -59,7 +59,7 @@
 
 ## 2026-07-26 semantic expansion
 
-The original milestone remains historically closed for adding baseline Activities. The user subsequently rejected the generic Crimson Rite damage button and single-Activity Blood Curse model. Follow-up finding `BH-ACT-002` is tracked in the authoritative ExecPlan and implemented under `docs/superpowers/plans/2026-07-25-blood-hunter-enchantment-and-amplification.md`; this section must not be read as evidence that enchantment or amplification semantics were already accepted.
+The original milestone remains historically closed for adding baseline Activities. The user subsequently rejected the generic Crimson Rite damage button and single-Activity Blood Curse model. Follow-up finding `BH-ACT-002` is tracked in the authoritative ExecPlan and reviewed in `docs/reviews/2026-07-26-blood-hunter-enchantment-amplification-report.md`; this section must not be read as evidence that enchantment or amplification semantics were already accepted.
 
 `BH-ACT-002` closed on 2026-07-26 at the approved code/artifact boundary. The final generated artifact has 97 Activities, deterministic SHA-256 `33EAF23EB37C531342AF3E6DAF99BB24B057B7A42CD3F2AF3AFBC8EB8E064B50`, and a zero-error semantic matrix across seven rites, fourteen optional Blood Curses, and three same-name subclass Blood Curses. See `docs/reviews/2026-07-26-blood-hunter-enchantment-amplification-report.md`. Authenticated drag/drop and combat acceptance remains user-owned.
 
@@ -67,7 +67,7 @@ The original milestone remains historically closed for adding baseline Activitie
 
 Subsequent user runtime testing invalidated BH-ACT-002 as current functional acceptance. The generated structures were mechanically stable but not compatible with the imported dnd5e/MIDI/DAE runtime contract: save Activity effects were cleared, shared-use targets were unresolved, rite damage parts were malformed after enchantment, direct-loss macros were ineffective, and several larger feature families were omitted or represented by empty buttons.
 
-The historical record above remains intact. Current repair and closure evidence is owned by `BH-ACT-003` and `docs/superpowers/plans/2026-07-26-blood-hunter-complete-runtime-repair.md`; this milestone must not be cited as proof that Blood Hunter runtime behavior is accepted.
+The historical record above remains intact. Current repair and closure evidence is owned by `BH-ACT-003` and `docs/reviews/2026-07-26-blood-hunter-complete-runtime-repair-report.md`; this milestone must not be cited as proof that Blood Hunter runtime behavior is accepted.
 
 ## 2026-07-26 BH-ACT-003 implementation evidence
 

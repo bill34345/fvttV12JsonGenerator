@@ -23,10 +23,10 @@ export interface WebImageAssetPreset {
 
 export function getWebImageAssetPreset(): WebImageAssetPreset {
   const imageTokenFrame = resolve(Bun.env.FVTT_WEB_IMAGE_TOKEN_FRAME ?? 'references/fifthed_border_medium.png');
-  const imageSshTarget = Bun.env.FVTT_WEB_IMAGE_SSH_TARGET ?? 'Administrator@49.232.12.153';
-  const imageRemoteRoot = Bun.env.FVTT_WEB_IMAGE_REMOTE_ROOT ?? 'E:/Bill/imgSource';
-  const imagePublicBaseUrl = Bun.env.FVTT_WEB_IMAGE_PUBLIC_BASE_URL ?? 'http://49.232.12.153/imgSource';
-  const imageAllowHttp = Bun.env.FVTT_WEB_IMAGE_ALLOW_HTTP === '0' ? false : true;
+  const imageSshTarget = Bun.env.FVTT_WEB_IMAGE_SSH_TARGET ?? '';
+  const imageRemoteRoot = Bun.env.FVTT_WEB_IMAGE_REMOTE_ROOT ?? '';
+  const imagePublicBaseUrl = Bun.env.FVTT_WEB_IMAGE_PUBLIC_BASE_URL ?? '';
+  const imageAllowHttp = Bun.env.FVTT_WEB_IMAGE_ALLOW_HTTP === '1';
   const imageTokenSize = parsePositiveInt(Bun.env.FVTT_WEB_IMAGE_TOKEN_SIZE, 1024);
   const imageTokenFrameConfigured = existsSync(imageTokenFrame);
 

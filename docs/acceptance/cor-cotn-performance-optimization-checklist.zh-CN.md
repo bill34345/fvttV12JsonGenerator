@@ -274,8 +274,7 @@ Map Image Optimizer 2.1 全量应用时曾达到：
   和 `docs/reviews/2026-07-26-sequencer-spritesheet-worker-memory-cap-report.md`
 - 未使用场景图归档：
   `.local/foundry-v14/archives/cor-cotn-unused-scene-images-20260727/`
-- 最终生产迁移入口：
-  `docs/plans/2026-07-27-cor-cotn-production-migration.md`
+- 最终生产迁移入口：本机私有生产运维记录（不在公开仓库中保存真实目标和执行步骤）
 - 地图优化项目：
   `I:\OpenCode\map-image-optimizer`
 
@@ -593,5 +592,4 @@ Chat Memory Guard 和世界图片归档纳入同一次新基线。旧的“先�
 - [ ] 77 条迁移前已存在的媒体 404 和 embedded-record warning 仍需独立内容清理，
   不归入本次迁移回归。
 
-完整报告：
-[`2026-07-28-cor-cotn-production-migration-report.md`](../runbooks/2026-07-28-cor-cotn-production-migration-report.md)。
+完整的机器专属报告保存在本机私有运维记录中；公开仓库只保留本清单中的验收结论和边界。

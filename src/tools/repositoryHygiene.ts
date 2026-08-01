@@ -3,6 +3,11 @@ export type RepositoryHygieneRule =
   | 'generated-backup'
   | 'runtime-manifest'
   | 'local-workspace-state'
+  | 'agent-tool-state'
+  | 'private-operations-state'
+  | 'upstream-reference-cache'
+  | 'generated-local-media'
+  | 'local-content-workspace'
   | 'credential-or-session-path'
   | 'local-runtime-state'
   | 'unclassified-root-scratch';
@@ -28,7 +33,12 @@ const RULE_MESSAGES: Record<RepositoryHygieneRule, string> = {
   'disposable-generated-output': 'Generated vault output belongs in the ignored output tree, not Git history.',
   'generated-backup': 'Workflow backup generations are local recovery state and must not be tracked.',
   'runtime-manifest': 'The sync manifest is machine-local workflow state and must be regenerated locally.',
-  'local-workspace-state': 'Obsidian workspace layout is user-local state and must not be tracked.',
+  'local-workspace-state': 'Obsidian application, plugin, and workspace state is local tooling and must not be tracked.',
+  'agent-tool-state': 'Agent-specific settings, plans, logs, and scratch state do not belong in the project repository.',
+  'private-operations-state': 'Machine-specific production targets, handoffs, and maintenance scripts must stay in ignored operator storage.',
+  'upstream-reference-cache': 'Large upstream/API mirrors are local reference caches; track only their small provenance and version locks.',
+  'generated-local-media': 'Generated image candidates are local review artifacts until explicitly promoted with provenance.',
+  'local-content-workspace': 'Operator translation queues and unsupported source-document workspaces are local content, not repository source.',
   'credential-or-session-path': 'Credential, cookie, or session material must never be tracked.',
   'local-runtime-state': 'Project-local Foundry/runtime state is machine-local and must not be tracked.',
   'unclassified-root-scratch': 'Root scratch/output paths must be promoted to a named source, fixture, tool, or documentation path.',
@@ -102,7 +112,12 @@ function classifyProhibitedPath(path: string): RepositoryHygieneRule | null {
   if (TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS.has(path)) return null;
   if (/^obsidian\/[^/]+\/output\//i.test(path)) return 'disposable-generated-output';
   if (/(?:^|\/)\.fvtt-sync-manifest\.json$/i.test(path)) return 'runtime-manifest';
-  if (/(?:^|\/)\.obsidian\/workspace(?:-mobile)?\.json$/i.test(path)) return 'local-workspace-state';
+  if (/(?:^|\/)\.obsidian(?:\/|$)/i.test(path)) return 'local-workspace-state';
+  if (/^(?:\.sisyphus|\.gemini|\.qwen|\.superpowers|docs\/superpowers)(?:\/|$)/i.test(path)) return 'agent-tool-state';
+  if (isPrivateOperationsPath(path)) return 'private-operations-state';
+  if (/^references\/foundry-v12-api(?:-core(?:-text)?)?(?:\/|$)/i.test(path)) return 'upstream-reference-cache';
+  if (/^obsidian\/[^/]+\/images\/generated-monsters(?:\/|$)/i.test(path)) return 'generated-local-media';
+  if (/^data\/need_tran(?:\/|$)/i.test(path) || /^data\/[^/]+\.docx$/i.test(path)) return 'local-content-workspace';
   if (/^\.local(?:\/|$)/i.test(path)) return 'local-runtime-state';
   if (isCredentialOrSessionPath(path)) return 'credential-or-session-path';
   if (isUnclassifiedRootScratch(path)) return 'unclassified-root-scratch';
@@ -116,6 +131,13 @@ function isCredentialOrSessionPath(path: string): boolean {
   if (/^(?:id_rsa|id_ed25519)$/i.test(basename)) return true;
   return /(?:^|\/)(?:secrets?|credentials?)(?:\/|$)/i.test(path)
     || /(?:^|\/)[^/]*cookie-header[^/]*$/i.test(path);
+}
+
+function isPrivateOperationsPath(path: string): boolean {
+  return /^docs\/private(?:\/|$)/i.test(path)
+    || /^docs\/plans\/2026-07-27-cor-cotn-production-migration\.md$/i.test(path)
+    || /^docs\/runbooks\/(?:2026-07-22-fvtt-8080-maintenance-(?:plan|report)|2026-07-28-cor-cotn-production-migration-report|FVTT-REMOTE-OPERATIONS-HANDOFF\.zh-CN)\.md$/i.test(path)
+    || /^docs\/runbooks\/scripts\/fvtt-8080-[^/]+$/i.test(path);
 }
 
 function isUnclassifiedRootScratch(path: string): boolean {

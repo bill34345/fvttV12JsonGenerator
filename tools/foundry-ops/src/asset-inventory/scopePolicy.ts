@@ -92,8 +92,8 @@ export function buildLocalScopePolicy(config: FoundryLabConfig): LocalScopePolic
     rebuildability: 'not-assumed-rebuildable',
     retention: 'critical',
     measurement: 'top-level-metadata',
-    evidence: ['docs/runbooks/2026-07-28-cor-cotn-production-migration-report.md#local-snapshot-restore-rehearsal'],
-    rationale: 'The runbook names this exact path as the only successful restore rehearsal and explicitly distinguishes it from failed copies. Its linked runtime layout is not recursively traversed by scope coverage.',
+    evidence: ['docs/remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md'],
+    rationale: 'The public architecture ledger records this exact path as the only successful restore rehearsal; machine-specific runbook details remain in ignored operator storage. Its linked runtime layout is not recursively traversed by scope coverage.',
   });
   add(['references'], {
     status: 'classified',

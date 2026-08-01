@@ -31,9 +31,10 @@ authoritative—evidence.
 
 `AGENTS.md` is the one intentional tracked path also matched by a generated
 Ruler ignore rule. It is project instruction/configuration, not an artifact,
-and is explicitly allowed by the hygiene gate. Other stable Obsidian settings
-and vendored plugins are also project tooling/configuration; only
-`.obsidian/workspace*.json` is classified as user-local state here.
+and is explicitly allowed by the hygiene gate. A later public-repository review
+superseded the earlier Obsidian exception: the complete vault-local
+`.obsidian/` tree is now local-only, including downloaded plugin bundles and
+application configuration.
 
 ## Exact vault output manifest (28)
 
@@ -278,4 +279,3 @@ automated tests preserve the useful assertions.
 - The two legacy aggregate Chuul output files lack a current exact-basename
   source, but the individual Chuul sources are tracked and the legacy files
   remain recoverable from Git history. They are not sole-source evidence.
-

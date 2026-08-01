@@ -21,12 +21,12 @@ class RecordingUploader implements ImageAssetUploader {
 
 describe('buildWindowsPowerShellEncodedArgs', () => {
   it('keeps remote PowerShell syntax encoded so ssh remote shell cannot split pipes or paths', () => {
-    const command = "[void](New-Item -ItemType Directory -Force -Path 'E:/Bill/imgSource/actors')";
+    const command = "[void](New-Item -ItemType Directory -Force -Path 'X:/FoundryAssets/actors')";
     const args = buildWindowsPowerShellEncodedArgs(command);
 
     expect(args.slice(0, 4)).toEqual(['powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand']);
     expect(args.join(' ')).not.toContain('|');
-    expect(args.join(' ')).not.toContain('E:/Bill/imgSource/actors');
+    expect(args.join(' ')).not.toContain('X:/FoundryAssets/actors');
     expect(Buffer.from(args[4]!, 'base64').toString('utf16le')).toBe(command);
   });
 });
@@ -68,8 +68,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -89,17 +89,17 @@ describe('processParsedNpcImage', () => {
       });
 
       expect(result.warnings).toEqual([]);
-      expect(result.actorUrl).toBe(`http://49.232.12.153/imgSource/actors/nightgaunt__${expectedHash}.png`);
-      expect(result.tokenUrl).toBe(`http://49.232.12.153/imgSource/tokens/nightgaunt__${expectedHash}.webp`);
+      expect(result.actorUrl).toBe(`https://assets.example.invalid/imgSource/actors/nightgaunt__${expectedHash}.png`);
+      expect(result.tokenUrl).toBe(`https://assets.example.invalid/imgSource/tokens/nightgaunt__${expectedHash}.webp`);
       expect(existsSync(result.localActorPath!)).toBe(true);
       expect(existsSync(result.localTokenPath!)).toBe(true);
       expect(uploader.ensured).toEqual([
-        'E:/Bill/imgSource/actors',
-        'E:/Bill/imgSource/tokens',
+        'X:/FoundryAssets/actors',
+        'X:/FoundryAssets/tokens',
       ]);
       expect(uploader.uploaded.map((entry) => entry.remotePath)).toEqual([
-        `E:/Bill/imgSource/actors/nightgaunt__${expectedHash}.png`,
-        `E:/Bill/imgSource/tokens/nightgaunt__${expectedHash}.webp`,
+        `X:/FoundryAssets/actors/nightgaunt__${expectedHash}.png`,
+        `X:/FoundryAssets/tokens/nightgaunt__${expectedHash}.webp`,
       ]);
 
       const tokenMeta = await sharp(readFileSync(result.localTokenPath!)).metadata();
@@ -120,8 +120,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -169,8 +169,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -229,8 +229,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -280,8 +280,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -338,8 +338,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -398,8 +398,8 @@ describe('processParsedNpcImage', () => {
       mode: 'ssh' as const,
       localRoot,
       sshTarget: 'example-host',
-      remoteRoot: 'E:/Bill/imgSource',
-      publicBaseUrl: 'http://49.232.12.153/imgSource',
+      remoteRoot: 'X:/FoundryAssets',
+      publicBaseUrl: 'https://assets.example.invalid/imgSource',
       allowHttp: true,
       actorDir: 'actors',
       tokenDir: 'tokens',
@@ -464,8 +464,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -485,7 +485,7 @@ describe('processParsedNpcImage', () => {
 
       expect(result.warnings).toEqual([]);
       expect(uploader.uploaded.map((entry) => entry.remotePath)).toEqual([
-        `E:/Bill/imgSource/tokens/reupload-crop__${sourceHash}.webp`,
+        `X:/FoundryAssets/tokens/reupload-crop__${sourceHash}.webp`,
       ]);
     } finally {
       try {
@@ -514,8 +514,8 @@ describe('processParsedNpcImage', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',

@@ -191,7 +191,7 @@ version before the existing installation is atomically replaced. An invalid
 package fails independently and leaves an existing verified directory intact.
 
 Packages classified `server-only` are copied serially from
-`Administrator@49.232.12.153:E:/Bill/fvtt_v13/data/Data/modules/<folder>` using
+`operator@foundry.example.invalid:X:/FoundryData/Data/modules/<folder>` using
 the existing SSH identity. Progress is reported per package, including copied
 bytes. No transfers run in parallel. Packages classified `account-protected`
 remain unresolved until installed through the user's authenticated Foundry

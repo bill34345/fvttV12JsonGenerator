@@ -38,13 +38,13 @@
   - `README.md`
   - `docs/manual.md`
   - `AGENTS.md`
-  - `docs/superpowers/plans/2026-04-27-npc-monster-parser-stabilization.md`
+  - corresponding internal agent plan (kept local-only after the public-repository cleanup)
 - Commit 2: item AI normalizer test isolation and timer cleanup
   - `src/core/ingest/item-ai-normalizer.ts`
   - `tests/core/ingest/item-ai-normalizer.test.ts`
-  - `docs/superpowers/plans/2026-04-27-item-ai-normalizer-network-isolation.md`
+  - corresponding internal network-isolation plan (kept local-only)
 - Review artifacts:
-  - `docs/superpowers/plans/2026-04-27-precommit-review-handoff.md`
+  - internal pre-commit handoff (kept local-only)
   - `docs/reviews/2026-04-27-precommit-review-report.md`
   - 建议作为单独 docs/review commit，或在用户明确要保留审查过程时并入第一组 docs 提交。
 - Generated Actor JSON:

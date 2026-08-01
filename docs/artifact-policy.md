@@ -33,6 +33,8 @@ or intermediate processing rather than stable source control evidence.
 - Root/local output and scratch: `output/`, `output.json`, `temp/`,
   `outputs/`, `temp-items/`, `temp-*`, coverage, build output, and Web job
   output.
+- Generated image candidates below
+  `obsidian/dnd数据转fvttjson/images/generated-monsters/`.
 
 These paths are ignored and must not be tracked. Final Actor JSON must still be
 produced in the default vault output by the project CLI/workflow; “disposable”
@@ -89,7 +91,13 @@ sessions, and local runtime data. It is never tracked.
   `obsidian/dnd数据转fvttjson/crawls/`.
 - remote attachment staging below `.codex-remote-attachments/`.
 - `obsidian/dnd数据转fvttjson/.fvtt-sync-manifest.json`.
-- `.obsidian/workspace.json` and `workspace-mobile.json`.
+- the vault-local `.obsidian/` application, plugin, and workspace tree;
+- agent/tool state such as `.sisyphus/`, `.gemini/`, `.qwen/`,
+  `.superpowers/`, and `docs/superpowers/`;
+- generated tool caches such as `.ruff_cache/` and `.pui/`;
+- large upstream/API mirrors such as `references/foundry-v12-api*`.
+- the operator translation queue under `data/need_tran/` and unsupported local
+  source-document scratch such as `data/*.docx`.
 - local sync backups and Web job state.
 
 The hygiene gate checks path boundaries; it does not make committing a secret
@@ -98,12 +106,12 @@ separate pre-stage obligation.
 
 ## Normal source and configuration
 
-Application code, tests, documentation, package metadata, stable vault
-configuration, and versioned reference provenance are normal repository
-content rather than generated artifacts. `AGENTS.md` is intentionally tracked
-even though Ruler's generated ignore block also matches it; the hygiene gate
-therefore allows it explicitly. Obsidian plugin/config files may remain tracked
-when they are shared project tooling, but workspace layout state may not.
+Application code, tests, project-facing documentation, package metadata, and
+small versioned reference provenance are normal repository content rather than
+generated artifacts. `AGENTS.md` is intentionally tracked even though Ruler's
+generated ignore block also matches it; the hygiene gate therefore allows it
+explicitly. Obsidian plugins and their application configuration are installed
+and updated by Obsidian, not vendored as part of this project.
 
 ## Retention and migration rules
 
@@ -147,7 +155,9 @@ Run:
 The gate enumerates the real Git index and fails closed on:
 
 - tracked vault output or output backup;
-- tracked sync manifest or Obsidian workspace state;
+- tracked sync manifest or Obsidian application/plugin/workspace state;
+- tracked agent-tool state, generated image candidates, or large upstream/API
+  reference mirrors;
 - tracked `.local`, credential, cookie, session, or private-key paths;
 - unclassified root `debug-*`, `temp*`, `output*`, `test_*.js`, or
   `verify.ts` scratch paths;

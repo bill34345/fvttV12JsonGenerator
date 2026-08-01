@@ -239,8 +239,8 @@ describe('PlainTextActorWorkflow', () => {
         mode: 'ssh',
         localRoot,
         sshTarget: 'example-host',
-        remoteRoot: 'E:/Bill/imgSource',
-        publicBaseUrl: 'http://49.232.12.153/imgSource',
+        remoteRoot: 'X:/FoundryAssets',
+        publicBaseUrl: 'https://assets.example.invalid/imgSource',
         allowHttp: true,
         actorDir: 'actors',
         tokenDir: 'tokens',
@@ -267,9 +267,9 @@ describe('PlainTextActorWorkflow', () => {
     expect(uploaded).toHaveLength(2);
 
     const actor = JSON.parse(readFileSync(join(vaultPath, 'output', 'nightgaunt.json'), 'utf-8'));
-    expect(actor.img).toMatch(/^http:\/\/49\.232\.12\.153\/imgSource\/actors\/nightgaunt__[a-f0-9]{8}\.png$/);
+    expect(actor.img).toMatch(/^https:\/\/assets\.example\.invalid\/imgSource\/actors\/nightgaunt__[a-f0-9]{8}\.png$/);
     expect(actor.prototypeToken.texture.src).toMatch(
-      /^http:\/\/49\.232\.12\.153\/imgSource\/tokens\/nightgaunt__[a-f0-9]{8}\.webp$/,
+      /^https:\/\/assets\.example\.invalid\/imgSource\/tokens\/nightgaunt__[a-f0-9]{8}\.webp$/,
     );
   });
 });

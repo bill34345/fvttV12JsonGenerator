@@ -1,12 +1,14 @@
 # fvttV12JsonGenerator 项目分类与架构重整计划
 
 - 日期：2026-07-31
-- 状态：已批准，正在 `codex/architecture-reorganization-20260731` 分支执行
+- 状态：已完成并合并到 `master`
 - 仓库：`I:\OpenCode\fvttV12JsonGenerator`
 - 审计基线：`master` @ `64ad9b79c71fdc38d1113e5983dc2394680c4ab9`
 - 远端关系：本地 `master` 比 `origin/master` 领先 6 个提交
 - 既有治理账本：`docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - 当前支持边界：`docs/acceptance/current-support-matrix.md`
+
+> 2026-08-01 公开仓库复核补充：用户在架构完成后明确决定，`.sisyphus/`、其他代理工具状态、机器专属生产运维资料和大型上游 API 镜像只在本机保留，不再作为项目历史提交。此决定取代本计划执行期“原位跟踪 `.sisyphus/`”的暂时裁决。
 
 ## 1. 结论摘要
 

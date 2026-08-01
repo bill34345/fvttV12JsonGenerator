@@ -71,6 +71,17 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 - `GODDESSFANTASY_USERNAME` / `GODDESSFANTASY_PASSWORD`：服务器端爬站登录凭据。
 - `FVTT_WEB_EXPOSE_ERRORS=1`：返回内部错误详情，仅限本机调试；公开部署不要开启。
 
+可选图片上传默认完全关闭，不再内置任何真实服务器地址。启用时必须在服务端同时配置：
+
+- `FVTT_WEB_IMAGE_SSH_TARGET`：SSH 目标，例如 `operator@assets.example.invalid`；
+- `FVTT_WEB_IMAGE_REMOTE_ROOT`：远端图片根目录；
+- `FVTT_WEB_IMAGE_PUBLIC_BASE_URL`：生成 JSON 使用的公开图片 URL 前缀；
+- `FVTT_WEB_IMAGE_TOKEN_FRAME`：可选 Token 边框文件，默认使用仓库内的小型边框资源；
+- `FVTT_WEB_IMAGE_ALLOW_HTTP=1`：仅在明确接受明文 HTTP 风险时设置；默认只接受 HTTPS；
+- `FVTT_WEB_IMAGE_ACTOR_DIR`、`FVTT_WEB_IMAGE_TOKEN_DIR`、`FVTT_WEB_IMAGE_TOKEN_SIZE`：可选目录名和尺寸调整。
+
+缺少 SSH 目标、远端根、公开 URL 或 Token 边框中的任一项时，图片能力保持“未配置”，Actor JSON 仍可生成，但不会把本机默认值或真实生产目标偷偷带入任务。
+
 浏览器只能看到“某项能力是否已配置”，不能取得上述凭据值。
 
 AI 怪物资料整理只读取五个 `MONSTER_INTAKE_*` 变量，不会回退到翻译或通用 OpenAI 变量。粘贴或上传的 TXT/MD 原文会发送给该 provider，因此公开部署必须在用户提交前明确告知这一点，并按 provider 的数据政策处理。服务端审计只记录 provider、model、prompt version、耗时、调用计数和错误码，不记录 key、请求头或隐藏推理。

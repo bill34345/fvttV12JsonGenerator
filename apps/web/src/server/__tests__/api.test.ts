@@ -292,8 +292,10 @@ describe('web API', () => {
     expect(body.data.limits.globalLongJobs).toBe(4);
     expect(body.data.limits.maxRetainedJobs).toBe(100);
     expect(body.data.imageMode).toBe('ssh');
-    expect(body.data.imagePublicBaseUrl).toBe('http://49.232.12.153/imgSource');
-    expect(body.data.imageAllowHttp).toBe(true);
+    expect(body.data.imageAssetsConfigured).toBe(false);
+    expect(body.data.imageSshTarget).toBe('');
+    expect(body.data.imagePublicBaseUrl).toBe('');
+    expect(body.data.imageAllowHttp).toBe(false);
     expect(body.data.imageTokenSize).toBe(1024);
     expect(body.data.imageTokenFormat).toBe('webp');
     expect(body.data.imageTokenFrameConfigured).toBe(true);
@@ -562,6 +564,7 @@ describe('web API', () => {
   });
 
   it('passes server-preset image assets to plaintext actor jobs only when enabled', async () => {
+    configureImageAssetTestPreset();
     const source = [
       '# **No Image Test Creature**',
       '',
@@ -595,13 +598,14 @@ describe('web API', () => {
     const job = await waitForJob(created.data.id);
     expect(job.status).toBe('succeeded');
     expect(job.summary.imageMode).toBe('ssh');
-    expect(job.summary.imagePublicBaseUrl).toBe('http://49.232.12.153/imgSource');
+    expect(job.summary.imagePublicBaseUrl).toBe('https://assets.example.invalid/imgSource');
     expect(job.summary.imageWarnings).toBe(0);
     expect(job.warnings).toEqual([]);
     expect(job.files.some((file: any) => file.fileName.endsWith('.json'))).toBe(true);
   });
 
   it('passes server-preset image assets to vault sync jobs only when enabled', async () => {
+    configureImageAssetTestPreset();
     const vaultPath = join(TEMP_TEST_DIR, 'vault');
     const inputDir = join(vaultPath, 'input');
     mkdirSync(inputDir, { recursive: true });
@@ -627,7 +631,7 @@ describe('web API', () => {
     const job = await waitForJob(created.data.id);
     expect(job.status).toBe('succeeded');
     expect(job.summary.imageMode).toBe('ssh');
-    expect(job.summary.imagePublicBaseUrl).toBe('http://49.232.12.153/imgSource');
+    expect(job.summary.imagePublicBaseUrl).toBe('https://assets.example.invalid/imgSource');
     expect(job.summary.imageWarnings).toBe(0);
     expect(job.files.some((file: any) => file.fileName.endsWith('.json'))).toBe(true);
   });
@@ -743,6 +747,13 @@ describe('web API', () => {
     expect(job.error.message).toContain('TRANSLATION_API_KEY');
   });
 });
+
+function configureImageAssetTestPreset(): void {
+  Bun.env.FVTT_WEB_IMAGE_SSH_TARGET = 'test-user@example.invalid';
+  Bun.env.FVTT_WEB_IMAGE_REMOTE_ROOT = 'X:/FoundryAssets';
+  Bun.env.FVTT_WEB_IMAGE_PUBLIC_BASE_URL = 'https://assets.example.invalid/imgSource';
+  Bun.env.FVTT_WEB_IMAGE_ALLOW_HTTP = '0';
+}
 
 function post(path: string, body: unknown): Promise<Response> {
   return handleApiRequest(
