@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { analyzeCumulativePerformance, appendCumulativeSample, classifyPerformance, diagnoseInventory, mergeRuntimeEvidence, readCumulativeSamples, renderCumulativeReport, renderDiagnosticReport, runCumulativeReport, runDiagnosticReport, runInventoryDiagnosis, runPerformanceBaseline } from '../diagnose';
-import { createLabConfig } from '../../config';
+import { createHermeticLabConfig as createLabConfig } from '../../config';
 import type { ModuleInventoryEntry } from '../../types';
 
 const disk = (overrides: Partial<ModuleInventoryEntry> = {}): ModuleInventoryEntry => ({
@@ -94,7 +94,17 @@ describe('Foundry module diagnostics', () => {
     await writeFile(join(config.inventoryRoot, 'production-active.json'), JSON.stringify({ modules: [{ id: 'healthy', title: 'Healthy', version: '1.0.0' }] }));
     await writeFile(join(config.inventoryRoot, 'production-disk.json'), JSON.stringify([disk()]));
     const cli = join(process.cwd(), 'scripts/foundry-lab/cli.ts');
-    const child = Bun.spawn(['bun', 'run', cli, 'diagnose', 'inventory'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
+    const child = Bun.spawn(['bun', 'run', cli, 'diagnose', 'inventory'], {
+      cwd: root,
+      env: {
+        ...process.env,
+        FVTT_OPS_LAB_ROOT: config.labRoot,
+        FVTT_OPS_EVIDENCE_ROOT: config.evidenceRoot,
+        FVTT_OPS_BACKUP_ROOT: config.backupRoot,
+      },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
     const stdout = await new Response(child.stdout).text();
     expect(await child.exited).toBe(0);
     expect(JSON.parse(stdout).count).toBe(1);

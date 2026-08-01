@@ -6,6 +6,7 @@ export const FOUNDRY_OPS_ENVIRONMENT = {
   labRoot: 'FVTT_OPS_LAB_ROOT',
   evidenceRoot: 'FVTT_OPS_EVIDENCE_ROOT',
   backupRoot: 'FVTT_OPS_BACKUP_ROOT',
+  testClassicLevelEntry: 'FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY',
   foundryZip: 'FVTT_OPS_FOUNDRY_ZIP',
   defaultWorldId: 'FVTT_OPS_WORLD_ID',
   productionSshTarget: 'FVTT_OPS_PRODUCTION_SSH_TARGET',
@@ -83,6 +84,51 @@ export function createLabConfig(repoRoot = process.cwd(), environment: Environme
       },
     },
   };
+}
+
+export function createHermeticLabConfig(
+  repoRoot = process.cwd(),
+  environment: Environment = {},
+): FoundryLabConfig {
+  return createLabConfig(repoRoot, environment);
+}
+
+export function resolveConfiguredClassicLevelEntry(
+  repoRoot = process.cwd(),
+  environment: Environment = process.env,
+): string {
+  const explicitEntry = environment[FOUNDRY_OPS_ENVIRONMENT.testClassicLevelEntry]?.trim();
+  if (explicitEntry) {
+    if (!isAbsolute(explicitEntry)) {
+      throw new Error(`${FOUNDRY_OPS_ENVIRONMENT.testClassicLevelEntry} must be an absolute file path`);
+    }
+    const entry = resolve(explicitEntry);
+    const expectedSuffix = resolve(
+      parse(entry).root,
+      'app',
+      '14.364',
+      'node_modules',
+      'classic-level',
+      'index.js',
+    ).slice(parse(entry).root.length).toLocaleLowerCase();
+    if (!entry.slice(parse(entry).root.length).toLocaleLowerCase().endsWith(expectedSuffix)) {
+      throw new Error(
+        `${FOUNDRY_OPS_ENVIRONMENT.testClassicLevelEntry} must name the Foundry 14.364 classic-level entry`,
+      );
+    }
+    assertNoReparsePathComponents(parse(entry).root, entry, 'Foundry classic-level read-only test dependency');
+    return entry;
+  }
+  const config = createLabConfig(repoRoot, environment);
+  const entry = resolve(config.appRoot, 'node_modules/classic-level/index.js');
+  assertExactLabPath(config, entry, [
+    'app',
+    config.versions.foundry,
+    'node_modules',
+    'classic-level',
+    'index.js',
+  ], 'Foundry classic-level read-only runtime entry');
+  return entry;
 }
 
 export function requireProductionConnection(config: FoundryLabConfig): {

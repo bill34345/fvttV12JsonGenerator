@@ -123,7 +123,9 @@ export function tokenizePath(relativePath: string): string[] {
 
 export function buildReferenceIndexes(
   projectRoot = process.cwd(),
-  referenceCacheRoot = resolveReferenceCacheRoot(projectRoot),
+  // Keep library/test calls independent from ambient machine configuration.
+  // The CLI below is the only boundary that projects process.env.
+  referenceCacheRoot = resolveReferenceCacheRoot(projectRoot, {}),
 ): ReferenceIndexSummary {
   const root = resolve(projectRoot);
   const referencesDir = join(root, 'references');

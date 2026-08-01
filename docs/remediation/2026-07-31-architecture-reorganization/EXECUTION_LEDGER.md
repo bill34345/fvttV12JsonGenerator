@@ -40,18 +40,18 @@ owner 和迁移约束。
 | 1. 入口、依赖与架构护栏 | completed | 无业务目录搬迁，正式 CI 已通过 |
 | 2. 稳定 conversion facade/contracts | completed | 7 个生产调用方和 use-case 入口已迁移 |
 | 3. Bun workspace 物理迁移 | completed | 目标 apps/packages 均已物理迁移并独立双验收 |
-| 4. 独立 module/ops 产品拆分 | in_progress | 4A、4B、4C 已验收；4D Monster Spell Resolver 按既定条件延后 |
-| 5. 数据、reference 与 runtime root | in_progress | 5A/5B 盘点与范围门禁、5C.1 只生成方案/reference cache、5C.2 第一批低风险消费者适配已完成；世界审计/职业包/法术解析器复核、实际目标、复制与切换仍未开始 |
-| 6. 文档、分支与 worktree 治理 | pending | 不自动删除 |
-| 7. 最终架构验收 | pending | 机械与语义双验收 |
+| 4. 独立 module/ops 产品拆分 | completed | 4A、4B、4C、4D 均已验收；Monster Spell Resolver 已物理归入 `foundry-modules/` |
+| 5. 数据、reference 与 runtime root | completed | Foundry Lab 与完整 reference cache 均已 copy-first 外置、切换并通过旧路径隐藏验收；旧 reference 副本保留兼容窗口，删除属于独立授权清理 |
+| 6. 文档、分支与 worktree 治理 | completed | 六类文档总索引已齐；全部附加 worktree 和已合并本地分支已清理；历史资料已审计并决定原位保留 |
+| 7. 最终架构验收 | completed | 完整机械门禁和代表性语义验收均已完成；外部长时验收继续按支持矩阵单独管理 |
 
 ## 原 finding 迁移矩阵
 
 | Finding | 当前状态 | 当前权威 owner | 架构迁移约束 | 未来产品边界 |
 |---|---|---|---|---|
 | `MOD-I18N-001` | deferred | 原 ExecPlan | 不因 module 拆分关闭；所有 module 继续受双语 gate 约束 | 各 Foundry module |
-| `SPELL-002` | in_progress | 原 ExecPlan | 保留失败 Actor/recovery 证据和 exact-online acceptance | spell resolver |
-| `SPELL-003` | in_progress | 原 ExecPlan | recovery-required 状态优先级不能因 facade/拆包回归 | spell resolver |
+| `SPELL-002` | closed | 原 ExecPlan | 在线失败 Actor 已由用户完成恢复、清理和重导入验收 | spell resolver |
+| `SPELL-003` | closed | 原 ExecPlan | 用户确认恢复后错误状态消失且修复行为正确 | spell resolver |
 | `BH-ACT-003` | in_progress | 原 ExecPlan | 不把运维工具搬迁当成 runtime repair | Foundry Ops |
 | `MON-001` | partial | 原 ExecPlan | module + companion 必须作为一个产品迁移 | session monitor |
 | `SEQ-MEM-001` | blocked_external | 原 ExecPlan | 保留现有外部登录阻塞和精确运行时验收条件 | Foundry Ops |
@@ -1164,19 +1164,307 @@ owner 和迁移约束。
   状态。`WORLD-ASSET-001` 仍等待其原有 authenticated Chrome `ready` preflight，`MON-001` 的长时生产验收
   仍只由用户真实跑团时执行；本轮 migration/runtime success 不能关闭二者。
 
-## 当前停止点
+### 2026-08-01：AGENTS.md 分层治理与真实 Lab 测试环境安全门禁
+
+- 用户批准按“根级总说明 + 稳定功能边界局部说明”重写 Agent 工作说明。本阶段把 `.ruler/AGENTS.md`
+  设为根说明唯一编辑来源，根 `AGENTS.md` 保持规范生成头和逐内容一致；根文件现在只承担项目目标、权威恢复
+  入口、中文功能地图、全局安全门禁、目标版本、公共验证和完成标准，不再重复生成器、Web、爬虫、Foundry
+  module、Monster Spell Resolver 或 Foundry Ops 的完整局部规则；
+- 新增 `packages/AGENTS.md`、`apps/AGENTS.md`、`foundry-modules/AGENTS.md`、`tools/AGENTS.md` 四个分类层，
+  并为 parser、generation、workflows、AI Intake、plaintext ingest、GoddessFantasy crawl、assets/icons、spell
+  manifest contracts、CLI、Web、Chat Memory Guard、Session Monitor、Foundry Ops 和 Monster Spell Resolver 建立或
+  重写中文局部说明。纯类型/模型包继续由 `packages/AGENTS.md` 管理，没有为了追求文件数量机械增加说明；旧
+  `src/core/generator/AGENTS.md` 已退役，generation 规则的唯一功能 owner 是 `packages/generation/AGENTS.md`；
+- 新增 `bun run agents:check`：验证 `.ruler` 到根文件的规范生成结果、19 个必需运行时 AGENTS 文件、根导航、
+  真实 scope 目录、局部功能说明/完成标准、旧 generator 文件不存在，以及每条根到功能目录的组合指令链不
+  超过 Codex 默认 32 KiB。当前检查通过；19 个运行时文件最长局部文件约 2.8 KiB，没有发现 70 字符以上
+  完全重复的局部规则条目。该检查已接入 `ci:verify`；
+- 聚焦机械验证通过：所有 package/app/module/tool TypeScript 检查，parser 116 tests / 400 expectations，
+  Monster Spell Resolver 260 / 1,276，新增 CI 环境预检 3 / 6，dependency-cruiser 3,708 modules / 3,929
+  dependencies、0 violations，325-source anti-overfit，2,151-path repository hygiene，dnd5e 5.3.3 locked
+  reference、Web production build 和 White Tusk Shaman 离线 Actor smoke（6 个 source items、0 warnings、
+  0 network calls）均通过；
+- 第一次完整 `ci:verify` 暴露了一个严重的既有测试隔离缺陷：Windows 用户级 `FVTT_OPS_LAB_ROOT`、
+  `FVTT_OPS_EVIDENCE_ROOT`、`FVTT_OPS_BACKUP_ROOT` 被旧 Foundry Ops fixture 继承，临时 app/system/junction
+  操作被投射到真实 `F:\FoundryLab\foundry-v14`。该轮 instrumented suite 为 1,597 pass / 37 fail；其中
+  `spellResolver.test.ts` 的 junction 用例在真实 `config.appRoot` 上先递归删除再建立测试链接，导致正式
+  `F:\FoundryLab\foundry-v14\app\14.364` 被意外删除。这是本阶段执行测试造成的真实损坏，未被隐藏；
+- 立即停止其他工作并做只读损害盘点。迁移后接受清单逐文件证明 server-mirror dnd5e 1,436 / 1,436、
+  spell resolver module 8 / 8、一次性 module-matrix world 117 / 117 的路径、长度和 SHA-256 全部相同，受损
+  范围收敛为 Foundry app root。原始 `D:\Download\FoundryVTT-Node-14.364.zip` SHA-256 为
+  `51939B0FAB81D605C9E45188C768C8A34EF8BDB852D753C9E7245D4AE35CFBF3`；新版 7-Zip 因 13 个 `.bin`
+  相对链接安全拒绝而没有形成可提升结果，随后严格复用项目 bootstrap 的 PowerShell `Expand-Archive` 语义，
+  并补执行既有 `license.html` 投影。在独立 staging 中对接受的 foundry-app manifest 完成 19,211 文件、
+  251,059,095 bytes 逐文件 SHA-256 核对，0 missing、0 extra、0 byte/hash mismatch 后，同盘提升到正式
+  `app\14.364`；提升后版本 `14.364.0`、`main.js`、`classic-level/index.js`、文件数、字节数和 0 reparse
+  points 再次通过。没有启动 Foundry；这是内容恢复，不是新的 runtime 验收；
+- 失败的 7-Zip staging 清理被宿主安全策略拒绝且未绕过，当前保留在
+  `F:\FoundryLab\foundry-v14\tmp\codex-recovery-20260801-app-14.364`，共 19,210 files /
+  251,051,208 bytes、0 reparse points。它不是正式 app 或备份，后续需单独安全删除；
+- 新增 `bun run test-env:check` 并置于 `ci:verify` 第一项。只要当前进程继承任一真实 `FVTT_OPS_*` 运行根，
+  门禁就在进入测试前用中文拒绝，不要求或建议删除持久 Windows 配置。预检的 live-env 拒绝和清空的纯子进程
+  接受均已验证；当前机器运行 `ci:verify` 会在约 0.2 秒安全停止，不能再重演真实 Lab fixture 写入；
+- 完整 CI 仍诚实记录为未通过。只在测试子进程清除三个变量后，23 个环境投射失败消失，但剩余 14 个真实
+  LevelDB 测试仍直接硬编码已退役的仓库路径
+  `.local/foundry-v14/app/14.364/node_modules/classic-level/index.js`，instrumented suite 为
+  1,620 pass / 14 fail。不得重建旧目录或制作 junction 让它们假通过；后续必须把 fixture 隔离和
+  classic-level runtime source 一起改为显式安全依赖，再刷新完整 CI。本阶段没有连接生产、启动真实 Foundry、
+  运行 Chrome 或执行任何超过 30 分钟的监测，finding 状态和 support matrix 均未改变。
+
+### 2026-08-01：本地 v14 测试环境定义与 14 个 LevelDB 测试修复
+
+- 用户确认环境身份：`F:\FoundryLab\foundry-v14` 是持久保留的本地 Foundry v14 集成测试环境；唯一生产环境
+  是远程服务器 8080 Foundry。根、Foundry module、Foundry Ops 和 Monster Spell Resolver 的分层
+  `AGENTS.md` 已同步这一边界，并进一步区分“持久本地集成 Lab”和“每次测试创建、允许故意破坏的临时沙箱”；
+- 新增 `resolveConfiguredClassicLevelEntry()`：从配置后的 F 盘 Lab 精确解析 Foundry 14.364 自带
+  `classic-level/index.js`，保留 exact-lab-path 与 reparse/junction 防护。两个 LevelDB 测试套件不再硬编码已删除
+  的仓库 `.local` 路径；它们只读加载该运行组件，而数据库、世界、锁、备份、快照、链接和失败恢复目标继续
+  位于 `mkdtemp()` 创建的随机 Windows 临时目录，没有复制整套 Foundry；
+- 首轮聚焦运行中，原 14 项已经通过，但 `config.test.ts` 的 3 个旧调用仍隐式继承用户级 F 盘根，其中两个
+  junction fixture 尝试清理该根时被 Windows 以 `EPERM` 拒绝。操作没有成功；事后 F 盘 app 仍为 19,211 files /
+  251,059,095 bytes，`main.js` 与 `classic-level` 存在，后者 SHA-256 仍为
+  `6958A1D105BE7ECA861E18D244A42B3A6E7FC28C3CF9DBE6DD24720C529A171C`。随后把该配置测试文件所有默认布局调用
+  改成显式空环境，使其只能投影到各自 fixture 路径；
+- 最终聚焦验证为 76 tests / 253 expectations、0 fail，真实覆盖原 9 个 Spell Resolver LevelDB 安全测试、5 个
+  World Audit snapshot/lock 测试和 11 个配置边界测试。14 个旧路径失败已关闭；这证明了临时数据库上的锁、备份、
+  漂移、链接和关闭语义。World Audit suite 也新增统一 `afterEach` 清理，只允许删除由 `mkdtemp()` 返回且父目录
+  精确等于 Windows temp 的本轮根；最终运行后只读扫描没有发现本轮新建的测试根残留。这不等于启动 F 盘
+  Foundry 或接受远程 8080 生产行为；
+- 完整 `ci:verify` 本阶段仍未运行：安全预检会继续拒绝尚未全部隔离的其他 fixture 继承持久 F 盘根。下一步应
+  系统性把剩余测试的隐式 `createLabConfig(..., process.env)` 投影改为显式临时环境，验证后再决定是否收窄或移除
+  该临时总门禁。本轮没有连接远程 8080、启动 Foundry/Chrome 或运行长时监测。
+
+### 2026-08-01：其余 Foundry 测试隔离与完整仓库门禁恢复
+
+- 对最初按函数名得到的“12 个文件、66 次 `createLabConfig()` 调用”做了 import-aware 复核：其中
+  `acquire.test.ts` 和 `remoteInventory.test.ts` 已通过各自包装器注入空的远程测试环境，实际需要迁移的是其余
+  10 个文件、51 次直接调用。新增 `createHermeticLabConfig()` 作为测试专用配置入口，默认环境为 `{}`，没有改变
+  生产 `createLabConfig()` 继续读取显式参数或真实进程环境的行为；
+- 10 个真实未隔离文件全部改用 hermetic helper。新增 TypeScript AST 静态门禁 `bun run test-isolation:check`：
+  Foundry 测试若直接导入生产配置工厂，则每次调用都必须显式提供环境；使用 hermetic helper 的测试也被明确识别。
+  该门禁已接入完整 CI，防止以后又悄悄继承 Windows 用户级 F 盘根；
+- 新增通用安全测试包装器。`bun run test`、`bun run test:foundry-ops`、`bun run test:foundry-lab` 和
+  `bun run ci:verify` 现在都会在 Windows temp 下创建名称以 `fvtt-ci-sandbox-` 开头的直接子目录，把可写
+  Lab/evidence/backup/ZIP/world 全部投影到该沙箱；它会先按 Windows 大小写不敏感语义清除所有继承的
+  `FVTT_OPS_*`，再只写入受控测试值，因此生产连接变量不会进入子进程；只读依赖则用独立的
+  `FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY` 把 F 盘 Foundry 14.364 的 `classic-level` 作为只读依赖传入。结束清理前会
+  再次验证目标是 temp 的普通直接子目录、名称前缀正确且不是 reparse point，验证失败就拒绝递归删除；
+- CI 环境预检现在只在所有可写根都是声明的 `FVTT_OPS_CI_SANDBOX_ROOT` 严格后代时接受；持久 F 盘 Lab 作为
+  可写根仍会被拒绝。内部 `*:raw` 脚本只由包装器调用，AGENTS 公共命令改为安全包装入口；
+- 第一轮完整 Foundry Ops 聚焦测试为 317 pass / 1 fail。失败不是 F 盘写入：`diagnose.test.ts` 的 CLI 子进程
+  继承了外层 CI 沙箱，而父测试数据位于它自己的临时根，二者因此看不到同一个 fixture。修复为给该子进程显式
+  传入父测试的临时 Lab/evidence/backup 根后，单文件为 14 / 0，完整 Foundry Ops 为 318 tests /
+  2,345 expectations / 0 fail；
+- 最终完整 `bun run ci:verify` 退出码为 0、耗时约 103 秒：环境预检、测试隔离、AGENTS、全部类型检查通过；
+  dependency-cruiser 为 3,712 modules / 3,934 dependencies / 0 violations；Session Monitor build 1 / 1、
+  CLI 12 / 57、instrumented 1,645 / 7,774（另有 13 项按既有分组过滤）全部通过；production coverage 为
+  85.60% lines / 88.15% functions；327-source anti-overfit、2,151-path hygiene、锁定 dnd5e reference、Web
+  build 和 White Tusk Shaman 离线 Actor smoke（6 items、0 warnings、0 network）均通过；
+- 语义验收确认：测试可以正常执行临时世界、数据库、链接、锁、备份和恢复行为，但没有可写路径指向持久
+  `F:\FoundryLab\foundry-v14`；F 盘只读 `classic-level` 的 SHA-256 在前后均为
+  `6958A1D105BE7ECA861E18D244A42B3A6E7FC28C3CF9DBE6DD24720C529A171C`。生产变量在测试子进程内被删除，
+  因而不会连接远程 8080。CI 输出中的短暂 Session Monitor 等待来自既有临时 companion smoke，不是真实
+  Chrome/Foundry，也没有运行四小时或任何超过 30 分钟的监测。
+
+### 2026-08-01：阶段 5C.5 reference cache 实际外置与旧路径隐藏验收
+
+- 用户同意继续实际外置。只读预检确认仓库 `.local/references` 是可重建的版本参考缓存，不是世界、生产数据或
+  tracked provenance：共 12,774 files / 669,810,859 bytes、0 reparse points；dnd5e checkout revision 为
+  `965ad2d0cf5d063dac675ba078b5bd3c3c0dd449`，按排序后的相对路径、字节数和逐文件 SHA-256 生成的整根
+  digest 为 `18a0c9c1edbe26089762938f3a47c7c1a69f57db76ba3dd3d81c5924b6733b3c`；
+- 在确认 `F:\FoundryLab` 是普通目录、目标与 staging 均不存在、F 盘空间充足后，先复制到
+  `F:\FoundryLab\reference-cache.staging-20260801`。F 盘 staging 重新得到完全相同的 12,774 files、
+  669,810,859 bytes 和 root digest，0 reparse points；随后同盘原子改名为
+  `F:\FoundryLab\reference-cache`。用户级 `FVTT_REFERENCE_CACHE_ROOT` 从未设置变为该精确路径，CLI
+  `references verify` 返回 `dnd5e-5.3.3: ok`。仓库旧缓存没有删除，继续作为兼容窗口副本；
+- 外置配置第一次进入聚焦测试时暴露两个 ambient-environment 缺陷：`verifyReferenceCache()`、
+  `bootstrapReferenceCache()` 和 `buildReferenceIndexes()` 的库级默认值会读取 `process.env`，使临时 fixture
+  误用真实 F 盘缓存。现在库函数默认始终使用调用方 project root 下的确定性布局，只有 CLI 边缘显式投影
+  `process.env`；20 项 reference/target 聚焦测试随后通过；
+- 第一次把仓库旧缓存临时改名后运行完整 CI，reference-index fixture 因上述真实 F 盘扫描超过 5 秒而失败；旧
+  目录按 `finally` 恢复。修复后第二次完整运行没有出现 reference 错误，但一个通常约 0.2 秒的同步 CLI 图标
+  子进程偶发卡死，五分钟外层上限终止了 PowerShell，留下本轮 CI Bun 进程树、兼容目录名和两个空 temp
+  目录。只终止了精确追踪到本轮 `ci:verify` 根 PID 的 7 个 Bun 进程，没有终止既有 Foundry MCP bridge；旧
+  缓存目录名已恢复。两个已证明为 Windows temp 直接普通子目录且内容为空的
+  `fvtt-ci-sandbox-qIvK2C`、`fvtt-cli-icons-0KrlXn` 因宿主策略拒绝删除而保留；未绕过策略；
+- 为防同步 `spawnSync` 再次无限阻塞测试调度，CLI icon 两个子进程现各有 4 秒硬上限并显式断言无子进程错误；
+  外置环境下最终聚焦结果为 22 tests / 68 expectations、0 fail；
+- 第三次完整验收再次临时把仓库 `.local/references` 改名，确保旧默认路径真实不存在，然后用 F 盘配置运行
+  `bun run ci:verify`。最终 exit 0、约 103 秒：Session Monitor build 1 / 1、CLI 12 / 59、instrumented
+  1,645 / 7,774、13 filtered / 0 fail；dependency-cruiser 3,712 modules / 3,934 dependencies / 0
+  violations；production coverage 85.59% lines / 88.15% functions；327-source anti-overfit、2,151-path
+  hygiene、外置 dnd5e verify、Web build 和 White Tusk Shaman 离线 Actor smoke 均通过。运行中没有工具重新
+  创建旧路径，结束后兼容副本恢复原名；这证明项目可以只从外置 root 解析同一参考资料；
+- 第三次验收后按完成标准重新计算整根指纹，主动推翻了“F 盘主缓存仍与原件完全一致”的暂时结论：第一次
+  ambient reference-index fixture 曾在修复前向真实 F 盘写入 11 个 `generated-text` 文件并覆盖 5 个
+  `indexes` 文件，使目标变为 12,785 files / 668,289,665 bytes；0 个源文件缺失，差异精确限定为这 16 个
+  rebuildable 产物。没有用 dnd5e revision 正确来掩盖整根漂移；
+- 为避免宿主删除策略下的半截修补，从仓库兼容副本重新建立完整 repair staging；它再次匹配 12,774 files /
+  669,810,859 bytes、0 reparse 和原 root digest。当前漂移目标原子改名为
+  `F:\FoundryLab\reference-cache.drifted-20260801` 保留回滚/调查证据，干净 staging 提升为正式
+  `F:\FoundryLab\reference-cache`。第四次完整验收继续隐藏仓库旧路径并 exit 0、约 105.5 秒：测试数字、
+  dependency、coverage（85.60% lines / 88.15% functions）、anti-overfit、hygiene、外置 verify、Web build 与
+  Actor smoke 均通过。验收后再算 F 盘主缓存仍为 12,774 files / 669,810,859 bytes，root digest 仍为
+  `18a0c9c1edbe26089762938f3a47c7c1a69f57db76ba3dd3d81c5924b6733b3c`，证明修复后的测试不再写入主缓存；
+- 本阶段没有启动真实 Foundry/Chrome、连接远程 8080、修改生产、执行长时监测或删除旧参考缓存。阶段 5 的
+  runtime/reference 外置目标已完成；仓库旧 reference 兼容副本、F 盘 drifted 隔离副本、恢复事故 staging 和
+  两个空 temp 目录的删除都是后续独立清理，不应与外置验收混称。
+
+## 2026-08-01：阶段 5 历史停止点（已由后续阶段取代）
 
 阶段 5C 的代码适配、真实 copy-first 迁移、19 个计划根独立内容对账、敏感配置迁移、恢复抽样、Windows 用户级
 切换、旧路径隔离、“旧路径不存在”状态下的第二次真实 Foundry 14.364 短启，以及旧 I 盘 retired 副本的永久
 删除均已完成。当前唯一正式 Foundry Lab 根为 `F:\FoundryLab\foundry-v14`；原默认路径和 retired 路径均不存在，
-I 盘已净释放 79.46 GiB。F 盘资产报告、恢复样本与停服状态在删除后再次核对通过。
+I 盘已净释放 79.46 GiB。AGENTS 分层治理也已完成，19 份运行时说明由根中文地图和分类/功能规则导航，并有
+自动漂移检查。环境身份现明确为“F 盘是本地 v14 集成测试 Lab、远程 8080 才是唯一生产”；原 14 个旧路径
+LevelDB 测试已改为只读使用 F 盘 `classic-level`、只破坏随机临时数据根，并以 76 / 0 聚焦结果关闭。其余
+Foundry 测试也已完成隔离，所有公开整仓/Foundry 测试命令现自动使用临时沙箱，静态回归门禁与完整
+`ci:verify` 均已通过。测试事故
+删除的 F 盘 Foundry app 已从原始锁定 ZIP 经 19,211 文件逐哈希恢复；data、system、module、world、backup 和
+evidence 未发现接受清单漂移，Foundry 保持未启动。
+完整 reference cache 也已 copy-first 外置到 `F:\FoundryLab\reference-cache`；用户级配置已切换，12,774 个
+文件逐哈希对账一致，并在仓库旧缓存路径临时不存在时通过完整 `ci:verify`。阶段 5 的数据、reference 与 runtime
+root 治理因此完成；仓库 `.local/references` 只作为兼容窗口副本保留，不再是当前主缓存。
 
 下一次可从以下互不混淆的工作继续：
 
-1. 单独调查生产只读盘点的 234 vs 249 模块基线差异；不能简单把 expected count 改成 234，也不能把本地迁移
+1. 决定是否在兼容窗口后单独删除仓库 `.local/references` 旧参考缓存副本（约 638.78 MiB）；当前主缓存已经是
+   F 盘，删除仍需独立明确授权和删除前复核；
+2. 单独删除已明确隔离、不再作为主缓存的 `F:\FoundryLab\reference-cache.drifted-20260801`（约
+   637.33 MiB）；它保留的是第一次错误索引写入后的回滚/调查副本，当前未经删除授权；
+3. 单独安全删除本阶段失败的 7-Zip staging
+   `F:\FoundryLab\foundry-v14\tmp\codex-recovery-20260801-app-14.364`（约 239.42 MiB）；宿主本轮拒绝了递归
+   清理，目录仍存在且不应被当作正式副本；
+4. 若宿主策略允许，清理由第二次外置 CI 超时留下的两个已确认空目录
+   `C:\Users\Administrator\AppData\Local\Temp\fvtt-ci-sandbox-qIvK2C` 和
+   `C:\Users\Administrator\AppData\Local\Temp\fvtt-cli-icons-0KrlXn`；它们没有内容，不影响功能；
+5. 单独调查生产只读盘点的 234 vs 249 模块基线差异；不能简单把 expected count 改成 234，也不能把本地迁移
    成功当作生产清单验收；
-2. 若用户仍需要，继续阶段 5 的 reference cache 实际外置；否则进入阶段 6 文档、历史工具与 branch-worktree
-   治理。用户已明确暂不修改 `AGENTS.md`，后续将按“根级总说明 + 每个功能目录各自说明”单独设计和执行。
+6. 进入阶段 6 文档、历史工具与 branch-worktree 治理；任何删除继续单独盘点和授权。
 
 `WORLD-ASSET-001` 的 authenticated Chrome `ready` preflight 与 `MON-001` 的长时真实会话验收仍未完成；四小时或
 任何超过 30 分钟的 Chrome/Foundry/Session Monitor 监测仍只登记给用户在真实使用时运行，代理不得代跑。
+
+### 2026-08-01：阶段 6A 文档总索引与 worktree 只读分类
+
+- 按计划建立 `docs/architecture/README.md`、`docs/runbooks/README.md`、`docs/acceptance/README.md`、
+  `docs/remediation/README.md` 和 `docs/archive/README.md`；连同既有 `docs/decisions/README.md`，六类文档入口
+  已齐。索引分别说明当前功能地图、操作步骤、真实支持边界、未完成事项、架构决定和历史归档规则，没有把
+  计划、测试或历史报告误写成当前完成状态；
+- 对六份索引中的 55 个本地 Markdown 链接逐一按相对路径解析，0 个断链；UTF-8 复核没有替换字符；
+- 只读核对 7 个附加 worktree。Bloodfin、GoddessFantasy、Item、Tailcrash 和 Actor Refactor 五个 worktree
+  都是 clean，分支 tip 已同时被本地 `master`、`origin/master` 和当前架构分支包含，没有仅存在于这些分支的
+  提交；它们不需要再次合并，但物理 worktree 和已合并本地分支尚未移除；
+- Codex 临时 worktree 有 21 条未提交状态，NPC/Monster worktree 有 8 条未提交状态。两者的已提交 tip 也已进入
+  `master`，但未提交文件内容不能由“分支已合并”推定为可丢弃；本阶段未覆盖、移动、暂存、提交或删除其中任何
+  文件；
+- 本阶段没有归档旧文档、删除 `.sisyphus/`、移除 worktree、删除本地或远程分支。下一步必须先对两个 dirty
+  worktree 的未提交内容做逐项保留/已替代判断，再提议可执行的清理清单。
+
+### 2026-08-01：阶段 6B 两个 dirty worktree 内容判定与 Spell Resolver 状态纠正
+
+- 用户明确纠正：原在线环境中的修复模块安装、失败 Rat Warlock 恢复/清理、重新导入、残留内容和错误状态清除
+  均已由用户执行并确认正确。原整改总账此前仍记为 open，属于过期状态；现以“用户执行的外部语义验收”关闭
+  `SPELL-002`、`SPELL-003`，同时明确本轮代理没有重复在线写入或独立取得新的服务器工件；
+- Codex 临时 worktree 的全部 dirty 文件内容时间为 2026-03-21；正式 plaintext Actor workflow 于 2026-03-22
+  进入仓库，之后持续演进并在 2026-07-31 迁入 `packages/ingest-plaintext` 和 `packages/workflows`。其 8 份怪物
+  输入在当前仓库都有后续正式输入或 fixture；当前工作流、parser、generator、CLI 和验收实现均更新；
+- NPC/Monster worktree 的 8 个 dirty 文件最后写于 2026-04-27。其三项实质内容——plaintext 先写 `middle`
+  再推广到 `input`、旧式 object action 不生成空 structured action、Bloodfin 双产物说明/验收——均已存在于当前
+  package 实现、正式文档和后续验收结果中；当前实现还增加依赖注入、强制重处理、v14/图片/图标参数和更多
+  来源语义门禁；
+- 对当前正式路径运行 plaintext ingest、plaintext Actor workflow、YAML parser 和 Slithering Bloodfin acceptance
+  四组测试，结果 68 tests / 329 expectations、0 fail。结合时间线、正式提交历史、当前代码和语义测试，两个
+  dirty worktree 都是被当前实现取代的旧开发现场，不是比当前 `master` 更新的待合并实现；
+- 本阶段仍未删除这两个 worktree。清理动作必须在用户明确授权后进行，并遵守全局 `Remove-Item` 不使用
+  `-Force` 的规则。
+
+### 2026-08-01：阶段 6C 两个被替代 worktree 移除
+
+- 用户明确授权删除 Codex 临时 worktree
+  `C:\Users\Administrator\.codex\worktrees\abc2\fvttV12JsonGenerator` 和 NPC/Monster worktree
+  `C:\Users\Administrator\.config\superpowers\worktrees\fvttV12JsonGenerator\npc-monster-workflow-repair`；
+- 删除前再次确认两者都是普通目录、不是 reparse point、均登记为本仓库附加 worktree、都不是当前工作目录，
+  且各自 HEAD 已进入 `master`。前一阶段已证明其未提交功能被当前正式实现取代；
+- 使用 `git worktree remove --force <exact-path>` 移除 dirty worktree；没有使用 PowerShell
+  `Remove-Item -Force`，没有删除任何分支。NPC 本地分支 `codex/npc-monster-workflow-repair` 仍保留在
+  `aa87a0a2192343f6a87e5280378601704e24de7e`；Codex 临时 worktree 原为 detached HEAD；
+- 删除后两个精确目录均不存在，`git worktree list --porcelain` 中也无对应登记；当前架构工作树仍为
+  `codex/architecture-reorganization-20260731` / `8aa1c092af9d7b7f7e378813df7b7c12ec39db58`，既有用户修改未被触碰；
+- 当前还剩五个 clean worktree：Bloodfin、GoddessFantasy、Item、Tailcrash 和 Actor Refactor。它们的代码均已
+  进入 `master`，但本阶段没有扩大授权去移除这些目录或删除对应本地分支。
+
+### 2026-08-01：阶段 6D 五个 clean worktree 移除
+
+- 用户明确授权继续移除 Bloodfin、GoddessFantasy、Item、Tailcrash 和 Actor Refactor 五个 clean worktree；
+- 删除前逐个确认：精确目标是普通目录而不是 reparse point，均为本仓库已登记附加 worktree，`git status`
+  为 0 条，HEAD 同时被本地 `master` 和 `origin/master` 包含，并且都不是当前工作目录；
+- 使用不带强制参数的 `git worktree remove <exact-path>` 逐个移除。删除后五个目录均不存在，Git worktree
+  登记只剩当前主工作树 `I:\OpenCode\fvttV12JsonGenerator`；当前架构分支和 HEAD 保持为
+  `codex/architecture-reorganization-20260731` / `8aa1c092af9d7b7f7e378813df7b7c12ec39db58`；
+- 本次没有删除对应本地分支。`bloodfin-acceptance-gate`、`codex/goddessfantasy-clean-merge`、
+  `codex/item-generation-workflow-repair`、`codex/tailcrash-heavy-hit`、`codex/actor-refactor` 均继续保留；
+  前一阶段保留的 `codex/npc-monster-workflow-repair` 也未删除；
+- 仓库内 `.worktrees` 容器目录当前为空，但本次授权对象是五个 worktree，不扩大为删除父目录或本地分支。
+
+### 2026-08-01：阶段 6E 已合并本地分支清理
+
+- 用户明确授权清理已经合并但仍保留的本地分支；删除前确认 worktree 登记只剩当前主工作树，当前分支为
+  `codex/architecture-reorganization-20260731`，该分支尚未进入 `master`，因此明确保留；
+- 逐个用 `git merge-base --is-ancestor <branch> master` 证明候选 tip 已完整进入本地 `master`，并再次确认没有
+  worktree 占用；随后只使用非强制的 `git branch -d` 删除 15 个本地分支：
+  `bloodfin-acceptance-gate` (`65c46f3`)、`codex/actor-refactor` (`54e5109`)、
+  `codex/actor-refactor-v2` (`aa87a0a`)、`codex/cor-cotn-world-footprint-audit` (`2d7cef4`)、
+  `codex/crawlee-goddessfantasy` (`7bb8021`)、`codex/foundry-v14-stable-support` (`d6e8c16`)、
+  `codex/general-rider-v12` (`265a55d`)、`codex/goddessfantasy-clean-merge` (`4d7dfb6`)、
+  `codex/goddessfantasy-image-assets-workbench` (`7bb8021`)、
+  `codex/item-generation-workflow-repair` (`31d99b7`)、
+  `codex/merge-remaining-branches-20260729` (`014fb16`)、
+  `codex/netherdeep-mechanics-semantics` (`709eac4`)、
+  `codex/npc-monster-workflow-repair` (`aa87a0a`)、`codex/tailcrash-heavy-hit` (`65c46f3`) 和
+  `codex/tailcrash-heavy-hit-live` (`cb969f3`)；
+- 本次没有删除、修改或推送任何远程分支。清理后本地只保留 `master` 和当前未合并的架构重构分支；既有工作区
+  修改、未跟踪图片和提交内容均未被触碰。
+
+### 2026-08-01：阶段 4D 怪物法术解析器物理归位
+
+- 怪物法术解析器的源码、manifest、样式、模板、语言文件、单元测试、Foundry Lab 生命周期测试、构建入口、
+  本地安装入口和模块说明已经统一迁入 `foundry-modules/monster-spell-resolver/`。原
+  `src/foundry/monster-spell-resolver/`、根级 `scripts/buildSpellResolver.ts`、旧 Foundry Lab 实现、旧专用 CLI
+  和旧测试文件均已消失，没有保留旧入口转发或第二份实现；
+- 新模块拥有自己的 `package.json`、`tsconfig.json`、`build.ts`、`lab.ts`、`labCli.ts` 和 `labConfig.ts`。
+  构建产物现在落在模块自己的 `dist/`；Foundry Ops 只保存带权限分类的字符串路由，不再拥有解析器实现；
+- 搬迁前先保存旧构建基线并运行旧路径测试。搬迁后发布包仍是完全相同的 8 个文件；7 个静态文件逐字节相同，
+  JavaScript bundle 只有 Bun 生成的源码路径注释从旧目录变为新目录，去掉该注释差异后逐字符相同。这证明本次
+  目录调整没有偷偷改变运行代码；
+- 聚焦机械验证通过：`typecheck:foundry-modules`；怪物法术解析器 296 tests / 1,429 expectations；AGENTS 分层
+  19 个必需文件；dependency-cruiser 3,845 modules / 3,962 dependencies / 0 violations；全部根 TypeScript
+  检查；Foundry Lab 157 tests / 1,000 expectations；Foundry Ops 命令目录 8 tests / 131 expectations；
+- 使用正式路由在本地测试环境 `F:\FoundryLab\foundry-v14` 完成 build、install 和 verify-install。安装目标是
+  `data/server-mirror/Data/modules/fvtt-json-generator-spell-resolver`，构建与安装目录的 SHA-256 均为
+  `a63410ed1bc122ae752d15454df5fb5193b9923ce8e7433e7a47741040e25d7f`；目标环境为 Foundry 14.364、
+  dnd5e 5.3.3，并保留了安装前备份；
+- 本轮没有启动 Foundry、连接远程 8080、修改生产数据或进行长时间监测。此前 Rat Warlock 在线恢复与重新导入
+  已由用户亲自验证正确；本轮只验证物理归位没有改变发布内容和本地安装行为，不把旧的外部验收冒充成本轮新跑。
+- 最终 `bun run ci:verify` 退出码为 0、耗时约 121 秒：1,645 tests / 7,774 expectations / 0 fail，
+  production coverage 为 85.57% lines / 88.16% functions；309-source anti-overfit、2,151-path repository
+  hygiene、锁定 dnd5e reference、Web production build 和 White Tusk Shaman 离线 Actor smoke 均通过。
+
+### 2026-08-01：阶段 6F 历史资料审计与最终架构验收
+
+- 对 `.sisyphus/` 完成消费者审计：目录内有 38 个已跟踪的旧计划、notepad 和验收日志；目录外只有归档索引、
+  本架构计划和本执行总账提到它，没有生产代码、构建入口、当前 runbook 或测试依赖它。裁决为“作为已跟踪历史
+  证据原位保留”，不再把是否移动或删除它视为架构完成条件，也不为了目录整齐破坏旧证据中的相对链接；
+- 文档治理完成：六类总索引已经建立，历史与当前状态分开；7 个附加 worktree 已安全移除；15 个已经进入
+  `master` 的本地分支已用非强制方式删除；远程分支未修改；
+- 最终人工架构检查确认：CLI、Web、公共 packages、三个 Foundry modules 和 Foundry Ops 都有唯一归属、明确
+  入口、局部 `AGENTS.md` 和验证命令；怪物法术解析器旧实现路径为 0，根命令直接路由新模块，不需要旧入口转发；
+- 代表性语义证据没有因搬目录被替换：中文/英文 Actor、Item、Intake、crawl、图片/图标、Web 和离线 Actor smoke
+  都由完整门禁覆盖；怪物法术解析器搬迁前后发布内容等价，并在本地 v14 Lab 完成安装校验；在线 Rat Warlock
+  恢复由用户亲自验收。v12/v14 支持矩阵、生产权限边界和长时 Session Monitor 外部验收边界均未被虚假升级；
+- 最终机械门禁为 `bun run ci:verify` exit 0：1,645 tests / 7,774 expectations / 0 fail，全部类型检查、
+  workspace/module/tool 检查、0 dependency violations、0 cycle、coverage、anti-overfit、repository hygiene、
+  锁定 reference、Web build 和离线 Actor smoke 均通过；`git diff --check` 也通过；
+- 本次架构重整的代码、目录、文档和本地 Git 治理目标均已满足，执行总账状态正式改为 `completed`。
+  `MON-001` 四小时真实跑团监测等明确交给用户在真实使用时完成的外部验收，继续留在支持矩阵中单独跟踪，
+  不属于本次目录和架构重整的未完成工作。

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createLabConfig } from './config';
+import { createHermeticLabConfig as createLabConfig } from './config';
 import { runLocalAssetInventory } from './assetInventory';
 import { buildAssetInventoryPolicy, type AssetInventoryPolicy } from './asset-inventory/policy';
 

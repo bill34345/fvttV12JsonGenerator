@@ -353,7 +353,7 @@ module.exports = {
       severity: 'warn',
       comment: 'Known migration debt: the resolver must eventually depend on spell contracts, not intake/parser internals.',
       from: {
-        path: '^src/foundry/monster-spell-resolver/',
+        path: '^foundry-modules/monster-spell-resolver/src/',
         pathNot: '(/__tests__/|[.](test|spec)[.])',
       },
       to: { path: '^src/core/(intake|parser)/' },

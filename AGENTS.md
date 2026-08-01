@@ -5,160 +5,112 @@
 
 # Agent Notes
 
-## Hard Gates
+## 项目目标
 
-- `AGENTS.md` is mandatory for the entire turn.
-- In the first working update, explicitly say:
-  - `AGENTS.md` is in effect,
-  - which project path will be used (`CLI`, workflow fix, parser fix, test update, etc.),
-  - what will count as valid completion.
-- Default working input and output locations are inside the Obsidian vault, not the repository root.
-- Read source markdown from `obsidian/dnd数据转fvttjson/input`.
-- Treat generated deliverables inside `obsidian/dnd数据转fvttjson/output` as the default output location unless the user explicitly requests another path.
-- Final deliverables must be produced by the project CLI or project workflows.
-- Do not hand-author, hand-repair, or manually construct final actor JSON.
-- Do not present temporary manual artifacts as results.
-- Do not switch from "fix the project flow" to "produce something usable however possible".
-- Do not claim completion or correctness until the target JSON has been regenerated through the project flow and checked against the source markdown using `docs/generated-actor-verification.md`.
-- If you drift from the required workflow, stop immediately, say so plainly, and return to the project-path solution.
-- If the working tree has uncommitted changes, treat the current workspace as the source of truth. Do not create a worktree from `HEAD` for plan execution unless the user confirms or the relevant dirty changes are migrated into the worktree first.
-## Project Goal
+- 本项目把 Obsidian 中的中文 YAML/Markdown、英文 bestiary Markdown，以及经正式 Intake 接受的文本资料，转换为 Foundry Virtual Tabletop（Foundry VTT）dnd5e Actor/Item JSON。
+- 默认输入位于 `obsidian/dnd数据转fvttjson/input`，默认正式输出位于 `obsidian/dnd数据转fvttjson/output`。
+- 最终交付物必须由项目 CLI 或正式 workflow 生成；不得手写、手工修补或把临时 JSON 冒充正式结果。
 
-- Convert Obsidian NPC/monster markdown into Foundry VTT dnd5e Actor JSON.
-- Supported sources currently include Chinese YAML/Markdown and English bestiary-style markdown.
+## 每次任务开始的硬门禁
 
-## Long-Running Project Hardening Program
+- `AGENTS.md` 在整个任务中生效。第一次工作更新必须明确说明：
+  - `AGENTS.md` 已生效；
+  - 本次使用的项目路径（CLI、workflow、parser、Web、Foundry module、Foundry Ops 等）；
+  - 什么才算有效完成。
+- 修改任一目录前，读取该目录路径上最近的局部 `AGENTS.md`。根文件提供全局规则，局部文件只补充该功能的差异规则；明确的用户要求优先。
+- 工作区有未提交修改时，以当前工作区为事实来源。不得从 `HEAD` 创建一个丢失脏改动的 worktree，也不得覆盖、丢弃、暂存或提交无关用户改动。
+- 对非微小任务，开始前从用户目标提炼机械验证和语义验收标准。命令退出码、测试通过、文件存在或 JSON 可解析都不能单独证明任务完成。
 
-- For the remediation program started on 2026-07-15, read and maintain `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md` before changing code.
-- Treat that ExecPlan as the authoritative finding ledger, progress record, decision log, evidence index, and cross-session recovery document. Chat summaries, Goal text, memories, and checkpoints are supporting context only.
-- At every stopping point, update the ExecPlan's progress, discoveries, decisions, finding states, verification evidence, and exact remaining work.
-- Do not close a finding until both mechanical verification and semantic acceptance are recorded. Continue to the next authorized milestone without asking for a generic next step; pause only for a material product choice, new authority, irreversible action, credentials, or an external-state dependency.
+## 权威状态与恢复入口
 
-## Long-Duration Runtime Acceptance
+- 长期整改总账：`docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`。
+- 架构重整计划：`docs/plans/2026-07-31-project-classification-and-architecture-reorganization.md`。
+- 架构执行记录：`docs/remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md`。
+- 当前支持边界：`docs/acceptance/current-support-matrix.md`。
+- Actor JSON 验收方法：`docs/generated-actor-verification.md`。
+- 整改或架构任务改动代码前必须读取对应权威计划；每个停止点同步记录进度、发现、决定、验证证据和精确剩余工作。
+- 不得因为目录迁移、测试通过或工具返回成功而关闭 finding；只有机械验证和真实语义验收都有记录时才能关闭。
 
-- Do not autonomously start, sustain, babysit, or poll any continuous Chrome, Foundry, Session Monitor, soak, memory, or performance run longer than 30 minutes.
-- Record every longer run as pending user-operated real-session acceptance. The four-hour `MON-001` run is explicitly user-owned and must be performed during the user's real game session, not simulated or awaited by an agent.
-- The agent may prepare the command, checklist, privacy/storage preflight, and post-run analysis; it may also perform a separately justified bounded smoke test of at most 30 minutes. Do not chain short runs to imitate the prohibited long run.
-- After the user completes a long run, analyze the exported evidence without claiming acceptance beyond the duration, clients, and scenarios actually captured.
+## 功能地图
 
-## Workflow Layers
+| 功能 | 人话说明 | 当前目录 | 局部说明 |
+|---|---|---|---|
+| 公共领域包 | 数据契约、解析、生成、工作流、Intake、纯文本导入、爬虫和图片资产 | `packages/` | `packages/AGENTS.md`，并读取对应功能目录的 `AGENTS.md` |
+| 命令行应用 | 用户从终端运行的转换入口；`src/index.ts` 是兼容入口 | `apps/cli/` | `apps/AGENTS.md`、`apps/cli/AGENTS.md` |
+| 网页应用 | 上传、后台任务、预览和下载 JSON/ZIP 的中文 Web 工具 | `apps/web/` | `apps/AGENTS.md`、`apps/web/AGENTS.md` |
+| Foundry 模块 | 安装进 Foundry 浏览器运行时的独立发布物 | `foundry-modules/` | `foundry-modules/AGENTS.md` 和模块自己的 `AGENTS.md` |
+| Foundry 运维工具 | 本地实验环境、资产盘点、离线世界检查和经授权的生产只读盘点 | `tools/foundry-ops/` | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
+| 怪物法术解析器 | 在目标世界中把可移植法术清单解析为世界已有法术 | `foundry-modules/monster-spell-resolver/` | `foundry-modules/AGENTS.md`、`foundry-modules/monster-spell-resolver/AGENTS.md` |
+| 兼容层 | 为旧导入路径和旧命令保留的薄适配器，不是新实现归属地 | `src/`、`scripts/` 的标注路径 | 修改前先找到上表中的真实 owner |
 
-- Root instructions cover project-wide gates and route work to the right workflow.
-- Actor JSON generation workflow: source markdown in `obsidian/dnd数据转fvttjson/input` -> project CLI -> generated JSON in `obsidian/dnd数据转fvttjson/output`; follow `docs/generated-actor-verification.md`.
-- Site crawl workflow: `src/tools/crawlSites.ts` and `packages/crawl-goddessfantasy/*` collect source-site artifacts under `obsidian/dnd数据转fvttjson/crawls/...`, then convert `records.json` to plaintext before entering existing ingest/generator flows.
-- Keep site-crawl logic decoupled from `src/index.ts` unless the user explicitly asks to join the flows.
-- Use directory-specific AGENTS files for specialized rules: `src/core/generator/AGENTS.md` for generator anti-overfit, `packages/crawl-goddessfantasy/AGENTS.md` for crawler and crawl-to-plaintext rules, and `apps/web/AGENTS.md` for Web/API/VPS deployment rules.
+## 正式转换路径
 
-## Project Understanding Index
+- Actor JSON 默认路径：源 Markdown → `apps/cli` 或 Web → `@fvtt-json-generator/workflows` → parser/generation → 正式 JSON。
+- 站点抓取路径：`src/tools/crawlSites.ts` → `packages/crawl-goddessfantasy` → crawl artifacts → plaintext → 既有 Intake/generator 流程。爬虫不得与主 Actor CLI 偷偷耦合。
+- 默认从 `obsidian/dnd数据转fvttjson/input` 读取，从 `obsidian/dnd数据转fvttjson/output` 交付；用户明确指定其他位置时除外。
+- 若偏离正式项目流程去“先手工做出一个能用的结果”，立即停止、明确说明并回到项目路径。
+- 生成 Actor JSON 后必须按照 `docs/generated-actor-verification.md` 对照源 Markdown；结构正确、测试通过和成功生成都不足以证明语义正确。
 
-- When the user asks for project understanding, architecture review, impact analysis, or codebase orientation, `project-understanding` may create or update `.pui/` under the workspace root without separate edit authorization.
-- `.pui/` is local tooling cache, not source code or a generated deliverable.
-- Do not modify source files while running project-understanding unless the latest user message explicitly authorizes code changes.
+## Foundry 环境分层与安全边界
 
-## Target Runtime Versions
+- 远程服务器的 8080 Foundry 实例是本项目唯一生产环境。本地 Foundry、fixture、mirror、临时世界和短时 smoke 都不是生产；任何生产读取或修改仍需当前任务中的单独授权。
+- 不得自主启动、维持、看守、轮询或拼接任何超过 30 分钟的 Chrome、Foundry、Session Monitor、性能、内存或 soak 运行。
+- 四小时 Session Monitor 验收只由用户在真实跑团中运行。代理可以准备命令、存储/隐私预检，并在结束后分析用户导出的证据。
+- `F:\FoundryLab\foundry-v14` 是持久保留的本地 Foundry v14 集成测试环境，使用配置后的 `FVTT_OPS_LAB_ROOT`；它可以提供真实版本运行组件、短时启动和一次性测试世界，但不得被普通 fixture 当成可递归删除或任意损坏的临时根。
+- 完整上游参考缓存当前通过用户级 `FVTT_REFERENCE_CACHE_ROOT` 外置到 `F:\FoundryLab\reference-cache`；Git 只跟踪 `references/` 中的 manifest、版本锁和小型 provenance。仓库 `.local/references` 暂时保留为兼容副本，`F:\FoundryLab\reference-cache.drifted-20260801` 是隔离的旧漂移副本；两者未经单独授权都不得删除或重新当作主缓存。
+- 会故意删除、损坏、锁定、替换路径、制造链接或测试失败恢复的自动测试，必须把所有可变 app/data/world/backup/evidence 目标放进本次测试创建的随机临时目录。允许只读加载 F 盘 Foundry 14.364 的 `classic-level`，不得复制整套 Foundry，也不得把其 app/data 目录传给破坏性测试。
+- 不要重新假定仓库 `.local/foundry-v14` 仍存在，也不要重建旧路径或扫描整机猜测路径。
+- `C:\Users\Administrator\AppData\Local\FoundryVTT` 是桌面默认数据壳，不是本项目已验证的测试镜像。
+- 凭据、Cookie、浏览器 profile、私钥和生产目标不得写入仓库、日志、测试 fixture 或最终报告。
+- 删除、移动、覆盖真实数据前，必须精确解析绝对目标、证明目标身份、确认备份/恢复路径，并取得覆盖该动作的明确授权。
 
-Unless the user explicitly changes the target, generated Foundry JSON must target:
+## 目标版本与证据
 
-- Foundry VTT: v12
-- dnd5e system: 4.3.9
-- Default effect profile: core
-- Modded effect profile: modded-v12
-- MIDI-QOL: v12.4.27.1
-- DAE: v12.0.18
-- Times Up: v11.3.20
-- Item Macro: v2.2.0
+- 默认目标：Foundry VTT v12、dnd5e 4.3.9、effect profile `core`；可选 `modded-v12` 使用 MIDI-QOL 12.4.27.1、DAE 12.0.18、Times Up 11.3.20、Item Macro 2.2.0。
+- 显式 v14 目标：Foundry VTT 14.364、dnd5e 5.3.3、effect profile `core` 或 `modded-v14`；`modded-v14` 锁定 MIDI-QOL 14.0.11、DAE 14.0.12，不使用 Times Up，Item Macro 不是已证明的必需依赖。
+- 不得用 `modded-v12` 语义证明 v14 正确，也不得默认使用“最新版”文档。
+- 模块相关行为优先查 `references/` 中的 tracked provenance 和配置后的完整 reference cache；缺失时才使用精确版本的 Context7 或官方包/源码。
+- 不得凭记忆推断 module flags、hook 名、macro pass、Active Effect 字段或兼容行为。最终验证记录必须注明查过的版本化来源。
 
-Foundry v14 is also a supported explicit target when `--fvtt-version 14` or the equivalent workflow/API option is used:
+## 代码与测试公共规则
 
-- Foundry VTT: v14.364
-- dnd5e system: 5.3.3
-- Effect profiles: core, modded-v14
-- MIDI-QOL: v14.0.11 (modded-v14)
-- DAE: v14.0.12 (modded-v14)
-- Times Up: not used for v14; v14 duration handling is core/DAE-based
-- Item Macro: not a required v14 dependency unless separately verified
-- Reference roots: tracked provenance under `references/`, optional full sources under `.local/references/`, and Foundry v14 release notes under `references/foundry-v14-api-notes`
+- 除非任务明确要求重构，不扩大行为范围，不在同一修改中混入无关 bug fix、新功能和结构调整。
+- parser bug 必须增加或更新 fixture-backed 测试。
+- 结构输出变化必须使用 `assertEqualStructure()` 或更严格的等价检查。
+- 测试默认不依赖网络，除非测试对象本身就是翻译、抓取或经授权的外部集成。
+- 全仓和 Foundry 自动测试必须通过 `package.json` 中的安全包装命令运行；包装器会创建随机临时沙箱、把所有可写 Foundry 根重定向进去并清除生产变量。内部 `*:raw` 脚本不得作为人工入口。
+- parser/generation/inference 变更必须遵守局部 anti-overfit 规则，并运行 `bun run audit:anti-overfit` 或 `bun run audit:anti-overfit:all`。
+- 修改最终 Actor 语义时，至少检查两个应命中的真实例子、一个接近但不应命中的反例和一个不相关对象，并对照真实输入/生成 JSON 做人工语义检查。
 
-Do not use `modded-v12` semantics as evidence for v14 correctness unless v14-compatible module versions have been separately verified.
-Do not use Times Up or Item Macro behavior as evidence for `modded-v14` correctness unless a v14-compatible version has been separately verified.
+## 公共命令
 
-When implementing or reviewing behavior that depends on Foundry, dnd5e, MIDI-QOL, DAE, Times Up, Item Macro, or any other module API:
+- 安装锁定依赖：`bun install --frozen-lockfile`
+- 全部测试（临时沙箱、有界并发）：`bun run test`
+- 根 TypeScript 配置检查：`bun run typecheck:all`；完整仓库还需 package/app/module/tool 分类检查，统一由 `ci:verify` 执行。
+- 完整仓库门禁：`bun run ci:verify`。它会自动创建 Windows 临时沙箱，把 Lab/evidence/backup 等可写根限制在沙箱内，清除远程生产变量，只把 F 盘 Foundry 14.364 的 `classic-level` 作为只读测试依赖传入，并在结束时校验后删除沙箱。
+- 架构依赖与循环：`bun run architecture:verify`
+- Actor 离线 smoke：`bun run smoke:actor:offline`
+- 单文件转换：`bun run src/index.ts "obsidian/dnd数据转fvttjson/input/example.md" -o "obsidian/dnd数据转fvttjson/output/example.json"`
+- Vault 同步：`bun run sync:vault`
+- Actor 验证：`bun run verify:actor <source.md> <output.json>`
+- AGENTS 分层检查：`bun run agents:check`
 
-- Do not use latest documentation by default.
-- Prefer tracked provenance plus verified locked caches under `.local/references/` for the exact target version.
-- If local references are missing, use Context7 with a version-specific library ID when available.
-- If Context7 cannot confirm the exact version, consult the official package page or source repository for the target version before coding.
-- Do not infer module flags, hook names, macro pass names, Active Effect fields, or compatibility behavior from memory.
-- Final verification notes must state which versioned source was checked for module-dependent behavior.
+## 完成与汇报标准
 
-For module-integrated JSON, "tests pass", "JSON parses", and "generated successfully" are not enough. The generated JSON must be checked against the target module version's documented flags, effects, hooks, or workflow behavior.
+- 机械层：记录执行过的检查、命令和结果；没有运行的检查必须明确写出。
+- 语义层：阅读或运行最终结果，说明它为何满足用户目标；数据转换要抽样对照输入输出，文档要阅读最终文字，运行时功能要区分本地 smoke 与真实生产/长时验收。
+- 后续发现不符合用户目标时，主动推翻先前结论，说明失败点和最小修复范围；不得用“测试绿了”掩盖语义失败。
+- 最终答复必须分别说明已通过的机械验证、人工/语义验收和仍存在的风险或未完成外部验收。
 
-## Core Rules
+## AGENTS.md 维护规则
 
-- Preserve the current architecture unless the task explicitly calls for a redesign.
-- Any parser bug fix must add or update a fixture-backed test.
-- Any structural output change must be validated with `assertEqualStructure()` or a stricter equivalent.
-- Keep tasks narrow. Do not combine bug fixes, refactors, and new features in one pass unless tests force it.
-- Avoid network dependence in tests unless the test is specifically about translation.
-- Do not expand the user's requested behavior.
-- For generated actor JSON, follow `docs/generated-actor-verification.md`; "generated successfully", "tests pass", and "JSON parses" are never sufficient by themselves for correctness claims.
+- `.ruler/AGENTS.md` 是根说明唯一编辑来源；根 `AGENTS.md` 是生成副本，不得只修改其中一份。
+- 根文件只保存全局规则和功能导航；局部文件只写所属功能的用途、范围、特殊禁令、修改入口、验证和完成标准，不复制整段根规则。
+- 架构、入口、权限、支持版本或验证命令变化时，在同一修改中更新对应 `AGENTS.md`。
+- 详细用户教程放 README，逐步生产/恢复操作放 runbook，长期进度与证据放 ExecPlan/Ledger，可重复自动流程才放 Skill；不要把历史日志堆进 `AGENTS.md`。
+- 提交前运行 `bun run agents:check`，确认根生成副本、路由、必需文件和退役路径没有漂移。
 
-## Anti-Overfit Gate
+## 项目理解缓存
 
-- Before implementing parser, generator, or inference logic, classify each new rule as one of:
-  - `schema-derived`: required by the target Foundry/dnd5e/module schema or versioned reference.
-  - `source-derived`: directly parsed from source markdown, YAML, structured action data, or explicit item/actor input.
-  - `corpus-derived`: generalized from multiple source examples with positive and negative coverage.
-  - `explicit-exception`: a narrow exception explicitly authorized by the user and documented at the call site.
-- Do not add creature-, action-, or item-name mechanics branches unless they are `explicit-exception`.
-- Do not bind mechanics from action-name semantics alone. Save DC source abilities, damage, AC, uses, recovery, and effects must come from source data, schema rules, generalized corpus rules, or explicit exceptions.
-- If multiple mechanical candidates match, use a documented stable order or keep the literal value. Do not add ad hoc semantic filters that only make the current actor pass.
-- Before finishing parser/generator work, run a generalization check: identify at least two examples the rule should handle, one close negative it should not handle, and one unrelated actor or item that should remain unchanged.
-- Final responses for parser/generator changes must state which real inputs or generated JSON outputs were checked. Do not report only that tests passed.
-- Run `bun run audit:anti-overfit` for parser/generator changes. If it reports a finding, either remove the pattern or document a valid `anti-overfit: allow <source-kind> - <reason>` exception.
-
-## Baseline Commands
-
-- Run all tests with bounded concurrency: `bun test --max-concurrency 4`
-- Run coverage: `bun test --coverage`
-- Run one file: `bun test src/core/generator/__tests__/phase1-validation.test.ts`
-- Convert one markdown file: `bun run src/index.ts "obsidian/dnd数据转fvttjson/input/example.md" -o "obsidian/dnd数据转fvttjson/output/example.json"`
-- Sync the Obsidian vault: `bun run src/index.ts --sync --vault "obsidian/dnd数据转fvttjson"`
-- Translate pending JSON in place: `bun run src/index.ts --translate-json --translate-dir "data/need_tran"`
-- Crawl Goddess Fantasy board: `bun run src/tools/crawlSites.ts goddessfantasy-board --board-url "<url>" --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>"`
-- Convert crawl records to plaintext: `bun run src/tools/crawlSites.ts records-to-plaintext --records "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>/records.json" --out-dir "obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-<id>/plaintext/monsters"`
-- Run crawl tests: `bun test src/core/crawl/__tests__/goddessfantasy.test.ts src/core/crawl/__tests__/recordsToPlaintext.test.ts`
-
-## Paths
-
-- Workspace root: the directory containing this `AGENTS.md`.
-- All project-relative paths below are relative to the workspace root.
-- Local Foundry v14 application root: `.local/foundry-v14/app/14.364`.
-- Local Foundry v14 server entry: `.local/foundry-v14/app/14.364/main.js`.
-- Local Foundry v14 test data path: `.local/foundry-v14/data/server-mirror`.
-- Local Foundry v14 test modules: `.local/foundry-v14/data/server-mirror/Data/modules`.
-- Local Foundry v14 test systems: `.local/foundry-v14/data/server-mirror/Data/systems`.
-- Local Foundry v14 test worlds: `.local/foundry-v14/data/server-mirror/Data/worlds`.
-- For local Foundry runtime or module work, use the project-local `server-mirror` paths above first; do not rediscover them by scanning the machine unless a listed path is missing or the user asks for a fresh inventory.
-- `C:\Users\Administrator\AppData\Local\FoundryVTT` is the desktop-default data shell on this machine, not the populated project test mirror; as last verified on 2026-07-14, its `Data/modules` contained no installed modules.
-- The project-local mirror is not the production server. Do not inspect or modify production merely because a task refers to "local Foundry", "FVTT", or "mods".
-- Obsidian vault: `obsidian/dnd数据转fvttjson`
-- Default input dir: `obsidian/dnd数据转fvttjson/input`
-- Default output dir: `obsidian/dnd数据转fvttjson/output`
-- Default crawl artifacts: `obsidian/dnd数据转fvttjson/crawls`
-- Main CLI entry: `src/index.ts`
-- Site crawl tool: `src/tools/crawlSites.ts`
-- Crawl core: `packages/crawl-goddessfantasy`
-- Plaintext ingest: `src/core/ingest/plaintext.ts`
-- Actor generator: `src/core/generator/actor.ts`
-- Chinese action parser: `src/core/parser/action.ts`
-- English action parser: `src/core/parser/englishAction.ts`
-
-## Target-World Spell Resolver Hard Gate
-
-- Only Actors carrying a valid resolver manifest are eligible.
-- Only module-owned embedded Spells and module-owned Cast Activities in an explicitly linked generated feature may be changed.
-- Never mutate compendiums, patch Foundry/dnd5e prototypes, delete by name, or run an automatic world-wide migration.
-- Hydration is Actor-level all-or-nothing with compensating rollback.
-- Manual edits require Keep, Overwrite, or Cancel; closing the review is Cancel.
-- Runtime acceptance uses the project-local Foundry mirror first. Production requires separate authorization.
+- 用户要求项目理解、架构审查、影响分析或代码库导航时，`project-understanding` 可以在根目录创建或更新 `.pui/`，无需额外编辑授权。
+- `.pui/` 是本地工具缓存，不是源码或交付物；除非用户明确授权代码修改，不得借项目理解任务修改源码。

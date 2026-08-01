@@ -50,7 +50,8 @@ export function verifyReferenceCache(
   options: VerifyReferenceCacheOptions = {},
 ): { ok: boolean; components: ReferenceCacheStatus[] } {
   const executeGit = options.runGit ?? ((args: readonly string[]) => runGitCommand(args));
-  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot);
+  // Library calls stay deterministic; only the CLI edge projects process.env.
+  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot, {});
   const components = manifest.components.map((component): ReferenceCacheStatus => {
     const target = resolveReferenceComponentTarget(cacheRoot, component.target);
     if (!existsSync(target)) {
@@ -92,7 +93,8 @@ export async function bootstrapReferenceCache(
   options: { dryRun?: boolean; referenceCacheRoot?: string } = {},
 ): Promise<{ planned: string[]; installed: string[] }> {
   const planned = manifest.components.map((component) => component.id);
-  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot);
+  // Library calls stay deterministic; only the CLI edge projects process.env.
+  const cacheRoot = options.referenceCacheRoot ?? resolveReferenceCacheRoot(repoRoot, {});
   const targets = manifest.components.map((component) =>
     resolveReferenceComponentTarget(cacheRoot, component.target));
   if (options.dryRun) return { planned, installed: [] };

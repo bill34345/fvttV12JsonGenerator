@@ -114,6 +114,12 @@ Cleanup was inspected offline after the final Chrome run:
 - port 30001 is stopped;
 - production Foundry was not inspected or changed.
 
+## Exact-online recovery follow-up
+
+On 2026-08-01, the user explicitly confirmed that the repaired module had already been installed in the original online Foundry environment, the previously failed Rat Warlock had been recovered/cleaned and reimported, the final result was correct, and the residual content plus recovery error state had disappeared.
+
+This is user-operated external semantic acceptance. The agent did not repeat the online write or independently capture a new server-side artifact during that confirmation turn. It closes the specific recovery/retry gap without claiming bulk migration or support for arbitrary future Foundry/dnd5e/module versions.
+
 ## Remaining support boundary
 
 Accepted support is intentionally narrow: portable AI Intake plus target-world resolution in Foundry `14.364` / dnd5e `5.3.3`. OCR/PDF ingestion, a v12 resolver, production deployment, bulk/world-wide migration, arbitrary later Foundry/dnd5e versions, and full automation of literal source-specific restrictions remain unsupported until separately implemented and accepted.

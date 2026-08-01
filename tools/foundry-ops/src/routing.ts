@@ -7,7 +7,7 @@ export interface FoundryOpsRoute {
 }
 
 const LAB_ENTRYPOINT = 'tools/foundry-ops/src/lab/cli.ts';
-const SPELL_RESOLVER_ENTRYPOINT = 'scripts/foundry-lab/spellResolverCli.ts';
+const SPELL_RESOLVER_ENTRYPOINT = 'foundry-modules/monster-spell-resolver/labCli.ts';
 const ASSET_INVENTORY_ENTRYPOINT = 'tools/foundry-ops/src/assetInventory.ts';
 const LOCAL_SCOPE_ENTRYPOINT = 'tools/foundry-ops/src/localScope.ts';
 const LAB_MIGRATION_PLAN_ENTRYPOINT = 'tools/foundry-ops/src/labMigrationPlan.ts';

@@ -44,7 +44,7 @@ describe('Foundry Ops command catalog', () => {
   it('keeps the deferred spell resolver behind a dedicated compatibility entrypoint', () => {
     const route = resolveFoundryOpsRoute(['lab', 'spell-resolver', 'verify-install']);
     expect(route.command.id).toBe('lab.spell-resolver');
-    expect(route.entrypoint).toBe('scripts/foundry-lab/spellResolverCli.ts');
+    expect(route.entrypoint).toBe('foundry-modules/monster-spell-resolver/labCli.ts');
     expect(route.forwardedArgs).toEqual(['verify-install']);
   });
 

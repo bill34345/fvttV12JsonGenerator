@@ -28,3 +28,6 @@
 - 每次拆分都需要目标 Foundry/dnd5e 版本的真实运行时验收；
 - `SPELL-002`、`SPELL-003` 和 `MON-001` 的现有状态保持不变。
 
+## 2026-08-01 实施补充
+
+`spell-manifest-contracts` 已建立稳定契约，resolver 生产代码不再导入 Intake 或 parser 私有实现；原在线恢复事项也已由用户完成并确认正确。因此 Monster Spell Resolver 已物理迁入 `foundry-modules/monster-spell-resolver/`，并在主仓库内作为独立构建和发布单元维护。此次移动没有把它拆成独立 Git 仓库，也没有扩大生产部署或版本支持声明。

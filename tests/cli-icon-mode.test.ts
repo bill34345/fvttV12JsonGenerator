@@ -33,9 +33,10 @@ describe('CLI v14 safe icon mode', () => {
           '--icon-mode',
           'safe',
         ],
-        { cwd: process.cwd(), encoding: 'utf-8' },
+        { cwd: process.cwd(), encoding: 'utf-8', timeout: 4_000 },
       );
 
+      expect(result.error).toBeUndefined();
       expect(result.status).toBe(0);
       expect(existsSync(outputPath)).toBe(true);
       expect(existsSync(reportPath)).toBe(true);
@@ -88,9 +89,10 @@ describe('CLI v14 safe icon mode', () => {
           '--icon-mode',
           'safe',
         ],
-        { cwd: process.cwd(), encoding: 'utf-8' },
+        { cwd: process.cwd(), encoding: 'utf-8', timeout: 4_000 },
       );
 
+      expect(result.error).toBeUndefined();
       expect(result.status).not.toBe(0);
       expect(`${result.stdout}\n${result.stderr}`).toContain(
         '--icon-mode safe requires --fvtt-version 14',

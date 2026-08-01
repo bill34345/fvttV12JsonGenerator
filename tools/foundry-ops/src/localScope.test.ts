@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createLabConfig } from './config';
+import { createHermeticLabConfig as createLabConfig } from './config';
 import { buildLocalScopePolicy } from './asset-inventory/scopePolicy';
 import type { LocalScopePolicy } from './asset-inventory/scopeModel';
 import { scanLocalScopeCoverage } from './asset-inventory/scopeScanner';

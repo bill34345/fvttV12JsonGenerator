@@ -31,7 +31,7 @@ bun run foundry:ops catalog
 | `src/world-audit/`、`src/worldFootprintAudit.ts` | 对停止状态的本地世界建立只读快照并生成隐私安全的审计报告 |
 | `src/production-migration/`、两个 `productionMigration*.ts` | 比较三个本地世界副本并构建离线迁移候选；不会连接或修改生产服务器 |
 
-`spell-resolver` 的本地安装生命周期暂时保留在兼容目录，因为它和 Monster Spell Resolver 的构建流程仍有直接依赖。它会经过同一权限入口，但其物理迁移属于后续的 Monster Spell Resolver 阶段，不能为了清空旧目录而错误归入 Foundry Ops。
+`spell-resolver` 命令仍经过 Foundry Ops 的统一权限入口，但浏览器源码、构建、本地安装生命周期和测试均由 `foundry-modules/monster-spell-resolver/` 自己维护；Foundry Ops 只负责把命令路由给该模块，不拥有解析器实现。
 
 ## 本地资产只读盘点
 

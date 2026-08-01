@@ -67,6 +67,18 @@
         "typescript": "^5.9.3",
       },
     },
+    "foundry-modules/monster-spell-resolver": {
+      "name": "@fvtt-json-generator/monster-spell-resolver",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.9.3",
+      },
+    },
     "foundry-modules/session-monitor": {
       "name": "@fvtt-json-generator/session-monitor",
       "version": "1.1.1",
@@ -259,6 +271,8 @@
     "@fvtt-json-generator/intake-ai": ["@fvtt-json-generator/intake-ai@workspace:packages/intake-ai"],
 
     "@fvtt-json-generator/models": ["@fvtt-json-generator/models@workspace:packages/models"],
+
+    "@fvtt-json-generator/monster-spell-resolver": ["@fvtt-json-generator/monster-spell-resolver@workspace:foundry-modules/monster-spell-resolver"],
 
     "@fvtt-json-generator/parser": ["@fvtt-json-generator/parser@workspace:packages/parser"],
 
@@ -1084,6 +1098,8 @@
 
     "@fvtt-json-generator/foundry-ops/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
+    "@fvtt-json-generator/monster-spell-resolver/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
     "@fvtt-json-generator/session-monitor/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@img/sharp-wasm32/@emnapi/runtime": ["@emnapi/runtime@1.11.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw=="],
@@ -1185,6 +1201,8 @@
     "@fvtt-json-generator/chat-memory-guard/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@fvtt-json-generator/foundry-ops/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+
+    "@fvtt-json-generator/monster-spell-resolver/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@fvtt-json-generator/session-monitor/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

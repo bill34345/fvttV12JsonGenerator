@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { classifyActivePackages, writePackagePlan } from '../classify';
-import { createLabConfig } from '../../config';
+import { createHermeticLabConfig as createLabConfig } from '../../config';
 import type { ActiveModuleEntry, ModuleInventoryEntry } from '../../types';
 
 const active = (id: string, version = '1.0.0'): ActiveModuleEntry => ({

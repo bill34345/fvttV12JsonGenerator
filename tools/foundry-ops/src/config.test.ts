@@ -6,13 +6,15 @@ import {
   assertExactLabPath,
   assertInsideLabRoot,
   createLabConfig,
+  createHermeticLabConfig,
   requireProductionConnection,
+  resolveConfiguredClassicLevelEntry,
 } from './config';
 
 describe('Foundry lab configuration', () => {
-  it('pins the approved project-local layout and versions', () => {
+  it('pins the repository fallback layout when no machine configuration is supplied', () => {
     const repo = resolve('I:/OpenCode/fvttV12JsonGenerator');
-    const config = createLabConfig(repo);
+    const config = createLabConfig(repo, {});
 
     expect(config.versions).toEqual({ foundry: '14.364', node: '24.17.0', dnd5e: '5.3.3' });
     expect(config.labRoot).toBe(resolve(repo, '.local/foundry-v14'));
@@ -52,13 +54,47 @@ describe('Foundry lab configuration', () => {
     });
   });
 
+  it('resolves classic-level only from the configured local Foundry test installation', () => {
+    const repo = resolve('I:/OpenCode/fvttV12JsonGenerator');
+    const entry = resolveConfiguredClassicLevelEntry(repo, {
+      FVTT_OPS_LAB_ROOT: 'F:/FoundryLab/foundry-v14',
+    });
+
+    expect(entry).toBe(resolve(
+      'F:/FoundryLab/foundry-v14/app/14.364/node_modules/classic-level/index.js',
+    ));
+  });
+
+  it('separates a read-only classic-level test dependency from mutable sandbox roots', () => {
+    const entry = resolveConfiguredClassicLevelEntry('I:/fixture/repo', {
+      FVTT_OPS_LAB_ROOT: 'C:/Temp/fvtt-ci/lab',
+      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY:
+        'F:/FoundryLab/foundry-v14/app/14.364/node_modules/classic-level/index.js',
+    });
+
+    expect(entry).toBe(resolve(
+      'F:/FoundryLab/foundry-v14/app/14.364/node_modules/classic-level/index.js',
+    ));
+    expect(() => resolveConfiguredClassicLevelEntry('I:/fixture/repo', {
+      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: 'F:/FoundryLab/foundry-v14/app/14.364/main.js',
+    })).toThrow(/classic-level entry/i);
+  });
+
+  it('keeps test configuration hermetic even when the process has a persistent local Lab', () => {
+    const repo = resolve('I:/OpenCode/fvttV12JsonGenerator');
+    const config = createHermeticLabConfig(repo);
+
+    expect(config.labRoot).toBe(resolve(repo, '.local/foundry-v14'));
+    expect(config.labRoot).not.toBe(resolve(process.env.FVTT_OPS_LAB_ROOT || 'F:/FoundryLab/foundry-v14'));
+  });
+
   it('fails closed when production host or data path is not externally configured', () => {
     expect(() => requireProductionConnection(createLabConfig('I:/OpenCode/fvttV12JsonGenerator', {})))
       .toThrow('FVTT_OPS_PRODUCTION_SSH_TARGET, FVTT_OPS_PRODUCTION_DATA_PATH');
   });
 
   it('rejects destructive targets outside the ignored lab root', () => {
-    const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
+    const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator', {});
     expect(() => assertInsideLabRoot(config, config.labRoot)).not.toThrow();
     expect(() => assertInsideLabRoot(config, 'I:/OpenCode/fvttV12JsonGenerator/src')).toThrow(
       'Target escapes Foundry lab root',
@@ -69,7 +105,7 @@ describe('Foundry lab configuration', () => {
   it('accepts the configured lab root before it exists', async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-missing-'));
     try {
-      const config = createLabConfig(join(tempRoot, 'repo'));
+      const config = createLabConfig(join(tempRoot, 'repo'), {});
       expect(() => assertInsideLabRoot(config, config.labRoot)).not.toThrow();
       expect(() => assertInsideLabRoot(config, join(config.labRoot, 'future', 'artifact'))).not.toThrow();
     } finally {
@@ -81,7 +117,7 @@ describe('Foundry lab configuration', () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-junction-'));
     const repoRoot = join(tempRoot, 'repo');
     const outsideRoot = join(tempRoot, 'outside');
-    const config = createLabConfig(repoRoot);
+    const config = createLabConfig(repoRoot, {});
     const junction = join(config.labRoot, 'escape');
 
     try {
@@ -135,7 +171,7 @@ describe('Foundry lab configuration', () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-dangling-junction-'));
     const repoRoot = join(tempRoot, 'repo');
     const outsideRoot = join(tempRoot, 'outside-not-created');
-    const config = createLabConfig(repoRoot);
+    const config = createLabConfig(repoRoot, {});
     const junction = join(config.labRoot, 'escape');
 
     try {
@@ -159,7 +195,7 @@ describe('Foundry lab configuration', () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-root-junction-'));
     const repoRoot = join(tempRoot, 'repo');
     const outsideRoot = join(tempRoot, 'outside');
-    const config = createLabConfig(repoRoot);
+    const config = createLabConfig(repoRoot, {});
 
     try {
       await mkdir(join(outsideRoot, 'existing'), { recursive: true });
@@ -186,7 +222,7 @@ describe('Foundry lab configuration', () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'foundry-lab-root-internal-junction-'));
     const repoRoot = join(tempRoot, 'repo');
     const redirectedRoot = join(repoRoot, 'redirected-lab');
-    const config = createLabConfig(repoRoot);
+    const config = createLabConfig(repoRoot, {});
 
     try {
       await mkdir(join(redirectedRoot, 'existing'), { recursive: true });

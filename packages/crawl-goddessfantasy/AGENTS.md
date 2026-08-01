@@ -1,24 +1,33 @@
-# Crawl Workflow Rules
+# GoddessFantasy 站点抓取规则
 
-## Scope
+## 这个功能是做什么的
 
-- Applies to `packages/crawl-goddessfantasy/**` and the compatibility tests under `src/core/crawl/__tests__`.
-- Keep crawl/site-harvest code decoupled from the main actor conversion CLI (`src/index.ts`). `src/tools/crawlSites.ts` is the command entrypoint; package crawl logic belongs here.
+本目录从 GoddessFantasy/SMF 版面收集主题和打印页，保存可追踪的原始 crawl artifacts，并把 `records.json` 转成 plaintext；它不直接生成或修补最终 Actor JSON。
 
-## Data And Credentials
+## 范围与解耦
 
-- Never commit cookie headers, saved login cookies, passwords, or `.crawlee-storage/`.
-- Prefer env vars (`GODDESSFANTASY_COOKIE`, `GODDESSFANTASY_USERNAME`, `GODDESSFANTASY_PASSWORD`) or explicitly provided local files for credentials.
-- Raw crawl artifacts may include `records.json`, `topics.jsonl`, `failures.jsonl`, `manifest.json`, and print-page HTML; treat them as source artifacts, not final actor JSON.
+- package owner：`packages/crawl-goddessfantasy/**`。
+- 命令入口：`src/tools/crawlSites.ts`。
+- `src/core/crawl` 只保留兼容入口和兼容测试；新站点逻辑属于本 package。
+- 与主 Actor CLI 保持解耦。crawl-to-plaintext 完成后再进入既有 Intake/generator 流程。
 
-## Site Rules
+## 数据和凭据
 
-- Keep site-specific parsing in `packages/crawl-goddessfantasy/src/sites/`.
-- For Goddess Fantasy/SMF, use print-page URLs for full-topic extraction and ignore non-canonical board-row actions such as `#new`, `action=post`, `action=markasread`, and `action=reporttm`.
-- Do not add network-dependent unit tests; use fixtures for parser/converter coverage.
+- 不得提交 cookie header、保存的登录 Cookie、用户名、密码或 `.crawlee-storage/`。
+- 凭据只来自环境变量 `GODDESSFANTASY_COOKIE`、`GODDESSFANTASY_USERNAME`、`GODDESSFANTASY_PASSWORD`，或用户明确提供的本地文件。
+- `records.json`、`topics.jsonl`、`failures.jsonl`、`manifest.json` 和 print HTML 是来源证据，不是最终 Actor JSON。
+- 使用 print-page URL 抓取完整主题；忽略 `#new`、`action=post`、`action=markasread`、`action=reporttm` 等非规范操作链接。
+- 单元测试使用 fixture，不依赖真实网站；真实登录抓取必须有当前授权和可用凭据。
 
-## Verification
+## 验证
 
-- For crawl/parser changes, run focused crawl tests: `bun test src/core/crawl/__tests__/goddessfantasy.test.ts src/core/crawl/__tests__/recordsToPlaintext.test.ts`.
-- When changing crawl-to-plaintext output, verify the plaintext still enters the existing ingestion path, either through `recordsToPlaintext` coverage or a dry-run/fixture path.
-- If a crawl change affects parser/generator behavior or final actor JSON, also follow root `docs/generated-actor-verification.md` and run `bun run audit:anti-overfit`.
+- `bun run typecheck:packages`
+- `bun test src/core/crawl/__tests__/goddessfantasy.test.ts src/core/crawl/__tests__/recordsToPlaintext.test.ts --max-concurrency 4`
+- crawl-to-plaintext 变化时，确认 plaintext 仍能进入现有 ingest 流程。
+- 若变化影响最终 Actor，继续执行 anti-overfit、正式生成和源语义验证。
+
+## 完成标准
+
+- 原始来源、失败项和转换结果可追踪，凭据没有进入产物。
+- fixture 证明解析规则，真实抓取只在明确授权下验收。
+- 抓取成功不能代替最终 Actor 语义验收。

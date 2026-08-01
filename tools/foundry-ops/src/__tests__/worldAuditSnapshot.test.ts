@@ -1,11 +1,12 @@
 // Foundry Ops owns the stopped-world snapshot tests.
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp as createFsTemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { resolveConfiguredClassicLevelEntry } from "../config";
 import {
   acquireStoppedWorldLocks,
   assertWindowsReparsePointFree,
@@ -14,6 +15,28 @@ import {
   parseFoundryLevelKey,
   promoteSnapshotWithRetry,
 } from "../world-audit/snapshot";
+
+const ownedTemporaryRoots = new Set<string>();
+
+async function mkdtemp(prefix: string): Promise<string> {
+  const root = resolve(await createFsTemp(prefix));
+  if (dirname(root) !== resolve(tmpdir())) {
+    throw new Error(`World-audit fixture root must be a direct child of the Windows temp directory: ${root}`);
+  }
+  ownedTemporaryRoots.add(root);
+  return root;
+}
+
+afterEach(async () => {
+  const roots = [...ownedTemporaryRoots];
+  ownedTemporaryRoots.clear();
+  for (const root of roots) {
+    if (dirname(resolve(root)) !== resolve(tmpdir())) {
+      throw new Error(`Refusing to clean a non-temporary world-audit fixture root: ${root}`);
+    }
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 class FakePowerShellProcess extends EventEmitter {
   readonly stdout = new EventEmitter();
@@ -59,9 +82,7 @@ function createManualTimeoutScheduler() {
   };
 }
 
-const classicLevelEntry = resolve(
-  ".local/foundry-v14/app/14.364/node_modules/classic-level/index.js",
-);
+const classicLevelEntry = resolveConfiguredClassicLevelEntry(process.cwd(), process.env);
 
 interface TestClassicLevel {
   open(): Promise<void>;
@@ -78,7 +99,7 @@ interface TestClassicLevelModule {
 
 async function loadClassicLevel(): Promise<TestClassicLevelModule> {
   if (!existsSync(classicLevelEntry)) {
-    throw new Error(`Exact project-local classic-level entry is unavailable: ${classicLevelEntry}`);
+    throw new Error(`Configured local-test classic-level entry is unavailable: ${classicLevelEntry}`);
   }
   return await import(pathToFileURL(classicLevelEntry).href) as TestClassicLevelModule;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { join, resolve } from 'node:path';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { createLabConfig } from '../../config';
+import { createHermeticLabConfig as createLabConfig } from '../../config';
 import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOptionsLock, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
 
 describe('Foundry profile launcher', () => {

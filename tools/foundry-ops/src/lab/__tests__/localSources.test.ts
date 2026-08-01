@@ -21,7 +21,7 @@ import {
   validateLocalArchiveEntries,
   type LocalPackageSource,
 } from '../localSources';
-import { createLabConfig } from '../../config';
+import { createHermeticLabConfig as createLabConfig } from '../../config';
 import type { CommandResult } from '../../types';
 
 const mapping = (sourcePath: string, overrides: Partial<LocalPackageSource> = {}): LocalPackageSource => ({

@@ -169,7 +169,7 @@ bun run foundry:lab spell-resolver verify-install
 bun run foundry:lab spell-resolver prepare-world --world=fvtt-v14-module-matrix --apply
 ```
 
-普通使用、升级、卸载、诊断和安全边界见 [`docs/foundry-spell-resolver-install.zh-CN.md`](docs/foundry-spell-resolver-install.zh-CN.md)。模块不支持 Foundry v12、生产世界自动安装或全世界批量迁移。
+模块源码、构建和本地安装工具统一位于 [`foundry-modules/monster-spell-resolver/`](foundry-modules/monster-spell-resolver/README.zh-CN.md)。普通使用、升级、卸载、诊断和安全边界见 [`docs/foundry-spell-resolver-install.zh-CN.md`](docs/foundry-spell-resolver-install.zh-CN.md)。模块不支持 Foundry v12、生产世界自动安装或全世界批量迁移。
 
 ## Legacy 纯文本转换器
 

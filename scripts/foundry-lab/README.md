@@ -6,18 +6,18 @@
 > [`tools/foundry-ops/README.zh-CN.md`](../../tools/foundry-ops/README.zh-CN.md)
 > for the Chinese command classification and external configuration guide.
 
-The implementations and their tests now live under `tools/foundry-ops/src/lab`.
-Files in this directory are compatibility adapters, except for the deferred
-Monster Spell Resolver integration (`spellResolver.ts` and
-`spellResolverCli.ts`). That integration remains here until the resolver's own
-product-boundary stage because it still depends on the resolver build flow.
+The Foundry Ops implementations and their tests now live under
+`tools/foundry-ops/src/lab`. Files in this directory are compatibility adapters.
+The Monster Spell Resolver browser source, build, local install lifecycle, and
+tests are owned by `foundry-modules/monster-spell-resolver`.
 
 Production reads now require `--allow-production-read` plus externally supplied
 `FVTT_OPS_PRODUCTION_*` settings. This repository exposes no production mutation
 command.
 
-This tooling builds a loopback-only Foundry v14.364 laboratory under
-`.local/foundry-v14`. The directory is ignored by Git. Production access is
+This tooling uses the loopback-only Foundry v14.364 laboratory configured by
+`FVTT_OPS_LAB_ROOT`; on the current machine it is `F:\FoundryLab\foundry-v14`.
+The runtime directory is outside Git. Production access is
 read-only: inventory uses SSH and server-only package acquisition uses SCP.
 The workflow never creates production archives or removes or changes production
 files. SSH transport compression may be enabled in memory with `scp -C`.
@@ -67,15 +67,16 @@ v14.1 artifact; this local workflow never upgrades it automatically.
 
 ## Target-world spell resolver lifecycle
 
-The companion resolver has a separate fail-closed lifecycle. Its only install
-destination is:
+The companion resolver has a separate fail-closed lifecycle owned by
+`foundry-modules/monster-spell-resolver`. Its only local install destination is
+derived from `FVTT_OPS_LAB_ROOT` as:
 
 ```text
-.local/foundry-v14/data/server-mirror/Data/modules/fvtt-json-generator-spell-resolver
+<FVTT_OPS_LAB_ROOT>/data/server-mirror/Data/modules/fvtt-json-generator-spell-resolver
 ```
 
 Build and inspect the deterministic package, then install it into that exact
-project-local mirror:
+configured local mirror:
 
 ```powershell
 bun run foundry:lab spell-resolver build
@@ -83,7 +84,9 @@ bun run foundry:lab spell-resolver install --apply
 bun run foundry:lab spell-resolver verify-install
 ```
 
-`build` validates the physical `dist` directory, module output, and ZIP path
+`build` writes beneath
+`foundry-modules/monster-spell-resolver/dist/` and validates that physical
+`dist` directory, module output, and ZIP path
 before its builder runs and again immediately before destructive or writing
 boundaries. Existing and dangling symlinks, junctions, and reparse points are
 rejected. `install`, including its dry-run, revalidates the module ID, locked

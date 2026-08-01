@@ -10,7 +10,7 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { createLabConfig } from "../../config";
+import { createHermeticLabConfig as createLabConfig } from "../../config";
 import {
   patchSequencerSpritesheetWorkerFile,
   patchSequencerSpritesheetWorkerInstall,
