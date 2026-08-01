@@ -1151,27 +1151,32 @@ owner 和迁移约束。
   `E:/Bill/fvtt_v13/data` 和默认 SSH identity 建立连接，线上无写入。服务器返回 234 个模块，而工具固定的
   验收基线是 249；CLI 因数量不符 fail-closed，没有把结果写成新的合格盘点。生产模块数量减少 15 是独立的
   线上漂移/基线问题，不能在本地目录迁移中顺手改基线；
-- 永久删除没有伪装为完成：宿主安全策略在执行前拒绝递归 `Remove-Item`，没有发生部分删除，也没有改用其他
-  API 绕过。当前旧根已切换并移动到可恢复的
-  `.local/foundry-v14.retired-20260801-0349`，但仍占用 I 盘空间；F 盘完整目标和恢复样本均保留。只有永久删除
-  这一项待在重启后由允许受控删除的会话完成；删除前仍须精确核对该 retired 绝对路径和 F 盘验收报告；
+- 重启后的受控删除会话重新核对了精确 retired 绝对路径、目录类型、F 盘目标、独立资产报告、恢复样本、三项
+  Windows 用户级根配置和 Foundry 停服状态；确认没有链接/联接点歧义后，经用户在动作发生时再次确认，通过
+  Windows 资源管理器对 `.local/foundry-v14.retired-20260801-0349` 执行永久删除。资源管理器实际处理
+  205,017 个项目；末尾仅遇到一个清单中已有、物理上已不存在的 `node_modules` 联接点并选择跳过，随后删除流程
+  正常结束。retired 绝对路径与原 `.local/foundry-v14` 均已不存在；I 盘可用空间从
+  68,360,339,456 bytes 增至 153,678,999,552 bytes，净释放 85,318,660,096 bytes（79.46 GiB）。删除后
+  `F:\FoundryLab\foundry-v14`、14.364 `main.js`、complete 资产报告（20 个已登记根、0 个缺失根、0 个问题根）
+  和 2,505 文件 / 1,795,088,065 bytes 的精确恢复样本仍存在；Foundry 进程为 0，30000/30001 监听均为 0。
+  这完成了旧 I 盘副本退役，而没有触碰 F 盘正式根或生产服务器；
 - 本次只迁移忽略的运行数据与追加文档台账，不改变 Actor/item 语义、support matrix、module ID 或 finding
   状态。`WORLD-ASSET-001` 仍等待其原有 authenticated Chrome `ready` preflight，`MON-001` 的长时生产验收
   仍只由用户真实跑团时执行；本轮 migration/runtime success 不能关闭二者。
 
 ## 当前停止点
 
-阶段 5C 的代码适配、真实 copy-first 迁移、19 根独立内容对账、敏感配置迁移、恢复抽样、Windows 用户级切换、
-旧路径隔离，以及“旧路径不存在”状态下的第二次真实 Foundry 14.364 短启均已完成。当前正式根为
-`F:\FoundryLab\foundry-v14`；旧数据仅保留在
-`I:\OpenCode\fvttV12JsonGenerator\.local\foundry-v14.retired-20260801-0349`，原默认路径不存在。
+阶段 5C 的代码适配、真实 copy-first 迁移、19 个计划根独立内容对账、敏感配置迁移、恢复抽样、Windows 用户级
+切换、旧路径隔离、“旧路径不存在”状态下的第二次真实 Foundry 14.364 短启，以及旧 I 盘 retired 副本的永久
+删除均已完成。当前唯一正式 Foundry Lab 根为 `F:\FoundryLab\foundry-v14`；原默认路径和 retired 路径均不存在，
+I 盘已净释放 79.46 GiB。F 盘资产报告、恢复样本与停服状态在删除后再次核对通过。
 
-下一次必须先处理两个明确而互不混淆的事项：
+下一次可从以下互不混淆的工作继续：
 
-1. 在宿主允许受控递归删除后，重新检查 retired 绝对路径、F 盘 complete 报告、恢复样本与 Foundry 停服状态，
-   再永久删除 retired 目录并确认 I 盘空间释放；当前会话不得绕过宿主安全策略；
-2. 单独调查生产只读盘点的 234 vs 249 模块基线差异，不能简单把 expected count 改成 234，也不能把本地迁移
-   成功当作生产清单验收。
+1. 单独调查生产只读盘点的 234 vs 249 模块基线差异；不能简单把 expected count 改成 234，也不能把本地迁移
+   成功当作生产清单验收；
+2. 若用户仍需要，继续阶段 5 的 reference cache 实际外置；否则进入阶段 6 文档、历史工具与 branch-worktree
+   治理。用户已明确暂不修改 `AGENTS.md`，后续将按“根级总说明 + 每个功能目录各自说明”单独设计和执行。
 
-永久删除完成后，阶段 5 可继续进行 reference cache 的实际外置（若用户需要）或进入阶段 6 文档/历史工具/
-branch-worktree 治理。四小时或超过 30 分钟的 Chrome/Foundry/Session Monitor 监测仍只登记给用户真实使用时运行。
+`WORLD-ASSET-001` 的 authenticated Chrome `ready` preflight 与 `MON-001` 的长时真实会话验收仍未完成；四小时或
+任何超过 30 分钟的 Chrome/Foundry/Session Monitor 监测仍只登记给用户在真实使用时运行，代理不得代跑。
