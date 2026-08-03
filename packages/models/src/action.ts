@@ -5,13 +5,18 @@ export interface Damage {
   types?: string[];
 }
 
+export interface HealingPart {
+  formula: string;
+  type: 'healing' | 'temphp';
+}
+
 export type SaveOutcome = 'none' | 'half' | 'full' | 'literal';
 
 export interface ActionData {
   name: string;
   logicalPath?: string;
   englishName?: string;
-  type: "attack" | "save" | "utility" | "effect" | "use" | "spell";
+  type: "attack" | "save" | "damage" | "heal" | "utility" | "effect" | "use" | "spell";
   desc?: string;
 
   attack?: {
@@ -35,6 +40,8 @@ export interface ActionData {
     onSave?: string;
     onFail?: string;
   };
+
+  healing?: HealingPart;
 
   recharge?: {
     value: number;
@@ -105,7 +112,7 @@ export interface ActionData {
 }
 
 export type ActivityActivationType = 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
-export type ActivityType = 'attack' | 'save' | 'damage' | 'utility';
+export type ActivityType = 'attack' | 'save' | 'damage' | 'heal' | 'utility';
 export type AoeShape = '球形' | '锥形' | '线形' | '立方体' | '圆柱形' | '矩形';
 export type TriggerType = '命中后' | '失败' | '成功' | '低值' | '降至0' | '濒血' | 'special';
 export type SaveAbility = '力量' | '敏捷' | '体质' | '智力' | '感知' | '魅力' | 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -148,6 +155,7 @@ export interface SubAction {
   aoe?: AoeTemplate;
   target?: ActionTarget;
   damage?: DamagePart[];
+  healing?: HealingPart;
   embeddedEffects?: EmbeddedEffect[];
   describe?: string;
 }
@@ -181,6 +189,7 @@ export interface StructuredActionData {
   toHit?: number;
   range?: string;
   damage?: DamagePart[];
+  healing?: HealingPart;
   DC?: number;
   ability?: SaveAbility;
   dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';

@@ -128,12 +128,26 @@ Item 专用运行只处理本次推广的 Item 文件，不会顺带重生成或
 配置专用环境变量，不会读取 `TRANSLATION_*` 或通用 `OPENAI_*`：
 
 ```text
+# Repository/GitHub-safe default: use API key mode in committed configuration.
+MONSTER_INTAKE_AUTH_MODE=api-key
 MONSTER_INTAKE_API_KEY=<provider key>
 MONSTER_INTAKE_BASE_URL=https://api.openai.com/v1
 MONSTER_INTAKE_MODEL=<extraction model>
 MONSTER_INTAKE_REVIEW_MODEL=<optional reviewer model; defaults to extraction model>
 MONSTER_INTAKE_TIMEOUT_MS=60000
 ```
+
+For this machine only, put the following override in the ignored local `.env`; do not commit it. The bridge owns the OAuth token.
+
+```text
+MONSTER_INTAKE_AUTH_MODE=codex-oauth
+MONSTER_INTAKE_CODEX_OAUTH_BASE_URL=http://127.0.0.1:8787/v1
+MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN=codex-oauth-local
+MONSTER_INTAKE_MODEL=gpt-5.6-luna
+MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
+```
+
+这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`。
 
 运行单只或合集：
 
@@ -146,6 +160,14 @@ bun run src/index.ts `
 ```
 
 `--dry-run` 只检查配置、输入限制并估算怪物数和最大调用数，不调用 AI、不推广文件。accepted Markdown 写入 vault `input/`，Actor JSON 由现有 workflow 写入 `output/`。若结果需要确认，审查包保存在 `.local/intake-runs/<run-id>/`，可提交 decisions 后完整重跑：
+
+可以用下面的命令检查 Intake。API Key 模式只检查配置；Codex OAuth 模式还会检查本机桥接服务的 `/health`：
+
+```powershell
+bun run src/index.ts --intake-doctor
+```
+
+Codex OAuth 这里指“本机 OpenAI-compatible 兼容桥接服务”，不是把 Codex OAuth token 直接当成 OpenAI Platform API key。项目默认只允许连接 `127.0.0.1`、`localhost` 或 `::1`，桥接服务没有启动时会明确失败。模型列表没有列出 `gpt-5.6-luna` 时 doctor 会给出提示，但不会武断阻止首次 Intake 请求，因为部分桥会接受模型别名但不把它列在 `/v1/models` 中。该兼容层不是本项目内置的官方 OpenAI API 认证方式。
 
 ```powershell
 bun run src/index.ts `

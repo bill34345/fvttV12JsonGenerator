@@ -15,7 +15,7 @@ export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v1',
   extract: 'monster-intake-extract-v15',
   review: 'monster-intake-review-v20',
-  repair: 'monster-intake-repair-v14',
+  repair: 'monster-intake-repair-v15',
 } as const;
 
 export type MonsterIntakeProviderErrorCode =
@@ -86,7 +86,10 @@ languages.custom is an optional JSON string, never an array or object; omit it w
 For required empty container defaults, saves and skills use {}, defenses use all four empty arrays, and languages.values uses [].
 Do not emit an evidence claim or uncertainty solely because the source omits that optional list section. Empty containers mean
 there are no source-listed entries; they are not an inferred immunity, resistance, skill, or language.
-Supply exact source proof or retain a precise source ambiguity.`;
+Supply exact source proof or retain a precise source ambiguity.
+When the source contains an explicit feature section or named feature, the corresponding IR collection must not be empty.
+Represent every named source feature exactly once with its complete description and exact evidence; never return a stat-only IR
+that silently drops actions, traits, legendary actions, or explicitly granted spells.`;
 
 const PROMPTS = {
   discover: `${SYSTEM_PREFIX}
@@ -102,11 +105,11 @@ and add a blocking uncertainty instead of inventing a value.
 Required top-level shape:
 {"schemaVersion":1,"source":{"sha256":"request sourceSha256","length":123},"creature":CREATURE,"claims":[],"coverage":[],"uncertainties":[]}.
 CREATURE keys are exactly identity, abilities, attributes, saves, skills, defenses, senses, languages,
-  biography, legendary, spellcasting, traits, actions, bonusActions, reactions, legendaryActions. biography is optional string prose, never an array or object. legendary is optional and uses exactly {max,preamble,evidence}; use it only when the source explicitly states the total legendary-action resource or a conditional-availability preamble, preserve that complete preamble literally, and never invent conditional automation. identity uses name, englishName,
+  biography, legendary, spellcasting, traits, actions, bonusActions, reactions, legendaryActions, mythicActions. biography is optional string prose, never an array or object. legendary is optional and uses exactly {max,preamble,evidence}; use it only when the source explicitly states the total legendary-action resource or a conditional-availability preamble, preserve that complete preamble literally, and never invent conditional automation. mythicActions is optional and must contain every feature under an explicit Mythic Actions/神话动作 section, kept separate from legendaryActions. identity uses name, englishName,
 size(tiny|small|medium|large|huge|gargantuan), creatureType, creatureTypeCustom, alignment. abilities uses
 str,dex,con,int,wis,cha numeric scores. attributes uses ac, acKind(flat|natural|default), acNote for literal
 conditional AC text, initiative, hp{value,formula},
-movement{walk,climb,fly,swim,burrow}, cr, xp, proficiencyBonus. saves and skills store TOTAL modifiers.
+movement{walk,climb,fly,swim,burrow,hover}, where hover is an optional JSON boolean set true only when the source explicitly says hover or hovering; cr, xp, proficiencyBonus. saves and skills store TOTAL modifiers.
 All numeric mechanics, including ac, initiative, hp.value, movement, cr, xp, proficiencyBonus, saves,
 skills, attack values, damage dice constants, and save dc, must be JSON numbers; cr must be a JSON number,
 never a quoted string.
@@ -165,6 +168,9 @@ N环（M法位） or Nth level (M slots) grants as prepared-slots with numeric l
 Attach exact evidence to every spell, saveDc, attackBonus, component waiver, and restriction, and also to the
 spellcasting ability and usage label.
 Do not also emit structured spellcasting as an ordinary trait; the deterministic renderer creates its visible trait.
+Before returning, audit every explicit source section against the corresponding IR collection. If the source contains
+Actions/动作, Bonus Actions/附赠动作, Reactions/反应, Legendary Actions/传奇动作, Mythic Actions/神话动作, Traits/特性, or a spellcasting block,
+the matching collection must contain every named source feature exactly once with exact evidence.
 For Intake spell refs, never invent expectedLevel, expectedSchool, sourceBookHint, UUID, rules text, damage, or effects.
 Never infer a spell from a feature name. If granting or shared-use semantics are ambiguous, omit the group and add a
 blocking uncertainty. ${SOURCE_EVIDENCE_SEMANTICS}
@@ -177,10 +183,14 @@ Return {"schemaVersion":1,"verdict":"accepted|revise|needs_review","findings":[]
 Each finding must use exactly {id,code,path,message,blocking,evidence?}; id, code, path, and message are non-empty strings,
 blocking is a JSON boolean, and evidence when present is an EvidenceRef array. Revise or needs_review requires at least one
 actual finding; accepted must not contain a blocking finding.
+Evidence quotes must be copied verbatim from the supplied source, including punctuation, spaces, and line breaks; do not
+normalize or translate them. Before returning, verify source.slice(start,end) equals quote. If an exact source slice cannot be
+proved, omit that finding rather than inventing or paraphrasing evidence.
 Any lost explicit mechanic, default replacing a source value, merged entry, or invented automation is blocking.
 Canonical IR normalizes language and damage enums to English Foundry identifiers, so common/通用语 and
 piercing/穿刺 are equivalent rather than replacement. Standard localized skill aliases such as 说服 and 游说
 both map to persuasion; if the numeric persuasion total survives in actorProjection, that label normalization is not drift.
+This project intentionally maps \u6df1\u6e0a\u8bed/Deep Speech to the existing Foundry language value deep; treat those labels as equivalent.
 Derived Foundry saves and initiative are intentionally
 omitted from actorProjection unless explicit in source. Literal conditional mechanics that cannot be automated,
 such as alternate AC under mage armor, may be preserved in Markdown and Actor biography; do not call that
@@ -207,18 +217,26 @@ request destination UUIDs or fabricated spell mechanics. The deterministic rende
 each structured spellcasting group. Its appearance in rendered Markdown and actorProjection is two views of the same generated feature,
 not duplication. Report duplication only if creature.traits independently contains an additional spellcasting feature besides the
 structured group; do not report the single generated visible feat itself. 法术清单 metadata plus that one generated feat is not two traits.
+Foundry/dnd5e has no native mythic activation type. This workflow intentionally projects a mythic action as activation legendary
+while preserving actorProjection.items[].section as Mythic Actions or \u795e\u8bdd\u52a8\u4f5c. That pair is the supported mythic representation,
+not action-economy drift; report a defect only if the mythic section marker or the action itself is lost.
 findings must contain only actual unresolved defects. Do not echo a dismissed candidate finding, a deterministic finding
 that these rules establish as equivalent, or an explanation that a reported defect is invalid. If no actual defect remains, return
 verdict accepted with an empty findings array.`,
   repair: `${SYSTEM_PREFIX}
 Repair the MonsterIntakeIR only. Use the original source evidence and supplied findings.
-Do not edit Markdown or Actor JSON. Return a complete MonsterIntakeIR schemaVersion 1.
-Start from the supplied IR and change only paths implicated by the supplied findings.
-Preserve every unrelated valid field and EvidenceRef exactly, including field values, array ordering, and evidence objects.
+Do not edit Markdown or Actor JSON. Return a compact JSON Patch envelope only:
+{"schemaVersion":1,"operations":[{"op":"add|replace|remove","path":"/creature/...","value":{}}]}.
+Use RFC 6901 JSON Pointer paths rooted only at /creature, /claims, /coverage, or /uncertainties.
+Omit value only for remove. Return at most 64 operations and no copy, move, or test operations.
+Start from the supplied IR and patch only paths implicated by the supplied findings.
+Do not repeat the complete MonsterIntakeIR. Unchanged fields and evidence are preserved by the caller.
 Every EvidenceRef must use exact keys {start,end,quote}; quote must be non-empty and exactly equal source.slice(start,end),
 using absolute JavaScript UTF-16 offsets. Never drop quote or fabricate quote text from offsets.
 If an exact source-backed repair is impossible, keep a blocking uncertainty instead of claiming the IR is repaired.
 ${SOURCE_EVIDENCE_SEMANTICS}
+When supplied findings identify an empty feature collection or invalid spellcasting groups, re-read the source and populate
+that collection from every explicit named feature before returning. Do not preserve an empty array merely because the supplied IR omitted it.
 Remove or resolve finding-related process uncertainties once exact evidence is established.
 Preserve unrelated real source uncertainties exactly.
 The deterministic-validation stage may run before Markdown or Actor projection exists; in that stage,
@@ -278,12 +296,20 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
     model: string,
     payload: unknown,
   ): Promise<unknown> {
+    const timeoutMs = stage === 'repair' ? this.options.repairTimeoutMs : this.options.timeoutMs;
     let attempt = 0;
+    const deadline = this.now() + timeoutMs;
     while (attempt < 2) {
+      const remainingMs = deadline - this.now();
+      if (remainingMs <= 0) {
+        throw new MonsterIntakeProviderError('timeout', 'AI monster intake stage exhausted its total time budget.', {
+          retryable: true,
+        });
+      }
       attempt += 1;
       const startedAt = this.now();
       try {
-        const value = await this.callOnce(stage, model, payload);
+        const value = await this.callOnce(stage, model, payload, remainingMs, attempt);
         this.options.audit?.({
           provider: this.providerName,
           model,
@@ -291,7 +317,10 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
           durationMs: Math.max(0, this.now() - startedAt),
           attempt,
         });
-        return validateStageResponse(stage, normalizeStageEvidence(stage, value, payload));
+        const normalizedValue = stage === 'repair'
+          ? applyRepairPatchResponse(value, payload)
+          : normalizeStageEvidence(stage, value, payload);
+        return validateStageResponse(stage, normalizedValue);
       } catch (error) {
         const normalized = normalizeProviderError(error);
         this.options.audit?.({
@@ -302,7 +331,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
           attempt,
           errorCode: normalized.code,
         });
-        if (!normalized.retryable || attempt >= 2) throw normalized;
+        if (!normalized.retryable || attempt >= 2 || this.now() >= deadline) throw normalized;
       }
     }
     throw new MonsterIntakeProviderError('network', 'AI monster intake request failed.');
@@ -312,9 +341,11 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
     stage: keyof typeof PROMPTS,
     model: string,
     payload: unknown,
+    timeoutMs: number,
+    attempt: number,
   ): Promise<unknown> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await this.httpClient(`${this.options.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
         method: 'POST',
@@ -325,9 +356,13 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
         body: JSON.stringify({
           model,
           temperature: 0,
+          ...(this.options.reasoningEffort ? { reasoning_effort: this.options.reasoningEffort } : {}),
           response_format: { type: 'json_object' },
           messages: [
-            { role: 'system', content: PROMPTS[stage] },
+            {
+              role: 'system',
+              content: `${PROMPTS[stage]}${attempt > 1 ? '\nThis is a bounded retry after the previous response failed validation. Return the complete requested object again; do not omit fields, evidence quotes, or JSON punctuation.' : ''}`,
+            },
             { role: 'user', content: JSON.stringify(payload) },
           ],
         }),
@@ -351,7 +386,13 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
       };
       const content = envelope.choices?.[0]?.message?.content;
       if (typeof content !== 'string' || !content.trim()) {
-        throw new MonsterIntakeProviderError('invalid_response', 'AI monster intake provider returned no content.');
+        // A local OAuth bridge can occasionally return a completed HTTP response
+        // before the model text is present. Treat that as a bounded transient
+        // response so the provider gets one retry instead of failing the whole
+        // Intake run without ever seeing a schema payload.
+        throw new MonsterIntakeProviderError('invalid_response', 'AI monster intake provider returned no content.', {
+          retryable: true,
+        });
       }
       return parseStrictJson(content);
     } catch (error) {
@@ -386,7 +427,22 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
         && source.slice(ref.start as number, ref.end as number) === ref.quote) continue;
       const offsets: number[] = [];
       for (let offset = source.indexOf(ref.quote); offset >= 0; offset = source.indexOf(ref.quote, offset + 1)) offsets.push(offset);
-      if (offsets.length === 0) continue;
+      if (offsets.length === 0) {
+        const whitespaceEquivalent = findWhitespaceEquivalentOccurrences(source, ref.quote);
+        if (whitespaceEquivalent.length === 1) {
+          const start = whitespaceEquivalent[0]!.start;
+          ref.start = start;
+          ref.end = start + whitespaceEquivalent[0]!.quote.length;
+          ref.quote = whitespaceEquivalent[0]!.quote;
+          continue;
+        }
+        const closeReportedRange = findCloseReportedSourceRange(source, ref);
+        if (closeReportedRange) {
+          ref.quote = closeReportedRange;
+          continue;
+        }
+        continue;
+      }
       const reported = Number.isInteger(ref.start) ? ref.start as number : undefined;
       const ranked = offsets.map((offset) => ({ offset, distance: reported === undefined ? Number.POSITIVE_INFINITY : Math.abs(offset - reported) }))
         .sort((left, right) => left.distance - right.distance || left.offset - right.offset);
@@ -399,6 +455,169 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   return next;
 }
 
+type RepairPatchOperation = {
+  op: 'add' | 'replace' | 'remove';
+  path: string;
+  value?: unknown;
+};
+
+function applyRepairPatchResponse(value: unknown, payload: unknown): unknown {
+  const record = asObject(value);
+  // Preserve compatibility with fake/custom providers that already return a
+  // complete IR. The built-in provider prompt now requests compact patches.
+  if (record?.creature && Array.isArray(record.claims) && Array.isArray(record.coverage) && Array.isArray(record.uncertainties)) {
+    return value;
+  }
+  if (record?.schemaVersion !== 1 || !Array.isArray(record.operations) || record.operations.length > 64) {
+    throw new MonsterIntakeProviderError('invalid_response', 'Repair response must contain at most 64 JSON Patch operations.', {
+      retryable: true,
+    });
+  }
+  const request = asObject(payload);
+  const inputIr = request?.ir;
+  if (!asObject(inputIr)) {
+    throw new MonsterIntakeProviderError('invalid_response', 'Repair request is missing the input MonsterIntakeIR.');
+  }
+  const next = structuredClone(inputIr) as Record<string, unknown>;
+  for (const operationValue of record.operations) {
+    const operation = validateRepairOperation(operationValue);
+    applyRepairOperation(next, operation);
+  }
+  return next;
+}
+
+function validateRepairOperation(value: unknown): RepairPatchOperation {
+  const operation = asObject(value);
+  const op = operation?.op;
+  const path = operation?.path;
+  if ((op !== 'add' && op !== 'replace' && op !== 'remove') || typeof path !== 'string') {
+    throw new MonsterIntakeProviderError('invalid_response', 'Repair operation requires add, replace, or remove and a JSON Pointer path.', {
+      retryable: true,
+    });
+  }
+  const allowedRoot = /^(?:\/creature|\/claims|\/coverage|\/uncertainties)(?:\/|$)/u.test(path);
+  if (!allowedRoot || path === '/creature' || path === '/claims' || path === '/coverage' || path === '/uncertainties') {
+    throw new MonsterIntakeProviderError('invalid_response', `Repair operation path is outside the allowed IR fields: ${path}.`, {
+      retryable: true,
+    });
+  }
+  if (op !== 'remove' && !Object.prototype.hasOwnProperty.call(operation, 'value')) {
+    throw new MonsterIntakeProviderError('invalid_response', `Repair ${op} operation requires value.`, { retryable: true });
+  }
+  if (op === 'remove' && Object.prototype.hasOwnProperty.call(operation, 'value')) {
+    throw new MonsterIntakeProviderError('invalid_response', 'Repair remove operation must omit value.', { retryable: true });
+  }
+  return { op, path, ...(op === 'remove' ? {} : { value: operation!.value }) };
+}
+
+function applyRepairOperation(target: Record<string, unknown>, operation: RepairPatchOperation): void {
+  const parts = operation.path.split('/').slice(1).map(decodeJsonPointerPart);
+  let cursor: unknown = target;
+  for (const part of parts.slice(0, -1)) {
+    if (Array.isArray(cursor)) {
+      const index = parseArrayIndex(part, cursor.length, false);
+      cursor = cursor[index];
+    } else {
+      const record = asObject(cursor);
+      if (!record || !Object.prototype.hasOwnProperty.call(record, part)) {
+        throw invalidPatchPath(operation.path);
+      }
+      cursor = record[part];
+    }
+  }
+  const key = parts.at(-1)!;
+  if (Array.isArray(cursor)) {
+    if (operation.op === 'add') {
+      const index = key === '-' ? cursor.length : parseArrayIndex(key, cursor.length, true);
+      cursor.splice(index, 0, structuredClone(operation.value));
+      return;
+    }
+    const index = parseArrayIndex(key, cursor.length, false);
+    if (operation.op === 'remove') cursor.splice(index, 1);
+    else cursor[index] = structuredClone(operation.value);
+    return;
+  }
+  const record = asObject(cursor);
+  if (!record) throw invalidPatchPath(operation.path);
+  const exists = Object.prototype.hasOwnProperty.call(record, key);
+  if ((operation.op === 'replace' || operation.op === 'remove') && !exists) throw invalidPatchPath(operation.path);
+  if (operation.op === 'remove') delete record[key];
+  else record[key] = structuredClone(operation.value);
+}
+
+function decodeJsonPointerPart(value: string): string {
+  if (/~(?:[^01]|$)/u.test(value)) throw new MonsterIntakeProviderError('invalid_response', 'Repair path has invalid JSON Pointer escaping.', { retryable: true });
+  const decoded = value.replace(/~1/gu, '/').replace(/~0/gu, '~');
+  if (decoded === '__proto__' || decoded === 'prototype' || decoded === 'constructor') {
+    throw new MonsterIntakeProviderError('invalid_response', 'Repair path contains a forbidden object key.');
+  }
+  return decoded;
+}
+
+function parseArrayIndex(value: string, length: number, allowEnd: boolean): number {
+  if (!/^(?:0|[1-9]\d*)$/u.test(value)) throw invalidPatchPath(value);
+  const index = Number(value);
+  if (!Number.isSafeInteger(index) || index < 0 || index > length || (!allowEnd && index === length)) {
+    throw invalidPatchPath(value);
+  }
+  return index;
+}
+
+function invalidPatchPath(path: string): MonsterIntakeProviderError {
+  return new MonsterIntakeProviderError('invalid_response', `Repair JSON Pointer does not exist: ${path}.`, { retryable: true });
+}
+
+function asObject(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function findWhitespaceEquivalentOccurrences(source: string, quote: string): Array<{ start: number; quote: string }> {
+  const parts = quote.split(/(\s+)/u).filter((part) => part.length > 0);
+  const pattern = parts
+    .map((part) => /\s/u.test(part) ? '\\s+' : escapeRegExp(part))
+    .join('');
+  if (!pattern) return [];
+  const matches = [...source.matchAll(new RegExp(pattern, 'gu'))];
+  return matches.map((match) => {
+    const start = match.index ?? -1;
+    const exactQuote = start >= 0 ? source.slice(start, start + match[0].length) : '';
+    return { start, quote: exactQuote };
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+function findCloseReportedSourceRange(source: string, ref: Record<string, unknown>): string | undefined {
+  if (!Number.isInteger(ref.start) || !Number.isInteger(ref.end) || typeof ref.quote !== 'string') return undefined;
+  const start = ref.start as number;
+  const end = ref.end as number;
+  if (start < 0 || end <= start || end > source.length || Math.abs(source.slice(start, end).length - ref.quote.length) > 2) return undefined;
+  const actual = source.slice(start, end);
+  return boundedEditDistance(actual, ref.quote) <= 2 ? actual : undefined;
+}
+
+function boundedEditDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let current = leftIndex;
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const next = Math.min(
+        previous[rightIndex]! + 1,
+        current + 1,
+        previous[rightIndex - 1]! + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+      previous[rightIndex - 1] = current;
+      current = next;
+    }
+    previous[right.length] = current;
+  }
+  return previous[right.length]!;
+}
+
 export function parseStrictJson(content: string): unknown {
   let cleaned = content.trim();
   const reasoning = /^<(?:think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/(?:think|analysis|reasoning)>\s*/i;
@@ -409,12 +628,27 @@ export function parseStrictJson(content: string): unknown {
   if (/<\/?(?:think|analysis|reasoning)\b/i.test(cleaned)) {
     throw new MonsterIntakeProviderError('invalid_response', 'AI response contains unresolved reasoning markup.');
   }
-  try {
-    const parsed = JSON.parse(cleaned) as unknown;
+  const parseObject = (candidate: string): unknown => {
+    const parsed = JSON.parse(candidate) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object');
     return parsed;
+  };
+  try {
+    return parseObject(cleaned);
   } catch {
-    throw new MonsterIntakeProviderError('invalid_response', 'AI response is not one strict JSON object.');
+    // Some OAuth model responses contain one or two duplicated closing braces
+    // after an otherwise complete JSON object. Recover only that exact shape;
+    // arbitrary trailing prose and incomplete objects must still fail closed.
+    let candidate = cleaned;
+    for (let removed = 0; removed < 2 && candidate.endsWith('}'); removed += 1) {
+      candidate = candidate.slice(0, -1).trimEnd();
+      try {
+        return parseObject(candidate);
+      } catch {
+        // Continue only within the bounded duplicated-brace recovery window.
+      }
+    }
+    throw new MonsterIntakeProviderError('invalid_response', 'AI response is not one strict JSON object.', { retryable: true });
   }
 }
 
@@ -432,13 +666,13 @@ function isAbortError(error: unknown): boolean {
 function validateStageResponse(stage: keyof typeof PROMPTS, value: unknown): unknown {
   const record = value as Record<string, unknown>;
   if (record.schemaVersion !== 1) {
-    throw new MonsterIntakeProviderError('invalid_response', `${stage} response schemaVersion must be 1.`);
+    throw new MonsterIntakeProviderError('invalid_response', `${stage} response schemaVersion must be 1.`, { retryable: true });
   }
   if (stage === 'discover' && !Array.isArray(record.candidates)) {
     throw new MonsterIntakeProviderError('invalid_response', 'Discovery response candidates must be an array.');
   }
   if ((stage === 'extract' || stage === 'repair') && (!record.creature || !Array.isArray(record.claims) || !Array.isArray(record.coverage) || !Array.isArray(record.uncertainties))) {
-    throw new MonsterIntakeProviderError('invalid_response', `${stage} response is not a complete MonsterIntakeIR.`);
+    throw new MonsterIntakeProviderError('invalid_response', `${stage} response is not a complete MonsterIntakeIR.`, { retryable: true });
   }
   if (stage === 'review') {
     const verdict = String(record.verdict);
@@ -447,7 +681,16 @@ function validateStageResponse(stage: keyof typeof PROMPTS, value: unknown): unk
     }
     if (!record.findings.every(isReviewFinding)) {
       const shapes = record.findings.map((finding) => reviewFindingShape(finding)).join('; ');
-      throw new MonsterIntakeProviderError('invalid_response', `Review response contains a malformed finding (${shapes}).`);
+      const retryableEvidence = record.findings.some((finding) => {
+        if (!finding || typeof finding !== 'object' || Array.isArray(finding)) return false;
+        const evidence = (finding as Record<string, unknown>).evidence;
+        return evidence !== undefined && (!Array.isArray(evidence) || !evidence.every(isReviewEvidenceRef));
+      });
+      throw new MonsterIntakeProviderError(
+        'invalid_response',
+        `Review response contains a malformed finding (${shapes}).`,
+        { retryable: retryableEvidence },
+      );
     }
     if ((verdict === 'revise' || verdict === 'needs_review') && record.findings.length === 0) {
       throw new MonsterIntakeProviderError('invalid_response', 'Non-accepted review response requires at least one finding.');

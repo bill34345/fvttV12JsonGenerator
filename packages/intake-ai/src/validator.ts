@@ -194,8 +194,10 @@ function validateCreature(
     ['bonusActions', creature.bonusActions],
     ['reactions', creature.reactions],
     ['legendaryActions', creature.legendaryActions],
+    ['mythicActions', creature.mythicActions],
   ] as const) {
     if (!Array.isArray(features)) {
+      if (section === 'mythicActions' && features === undefined) continue;
       finding('INVALID_FEATURE_SECTION', `/creature/${section}`, `${section} must be an array.`, 'schema');
       continue;
     }
@@ -226,6 +228,47 @@ function validateCreature(
       }
     });
   }
+  validateSourceFeaturePresence(source, creature, finding);
+}
+
+function validateSourceFeaturePresence(
+  source: string,
+  creature: MonsterIntakeIR['creature'],
+  finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+): void {
+  const checks: Array<{ section: 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'legendaryActions' | 'mythicActions'; label: string; pattern: RegExp }> = [
+    { section: 'actions', label: 'Actions/动作', pattern: /(?:^|\n)\s*(?:Actions|动作)(?=\s|$)/imu },
+    { section: 'bonusActions', label: 'Bonus Actions/附赠动作', pattern: /(?:^|\n)\s*(?:Bonus Actions|附赠动作)(?=\s|$)/imu },
+    { section: 'reactions', label: 'Reactions/反应', pattern: /(?:^|\n)\s*(?:Reactions?|反应)(?=\s|$)/imu },
+    { section: 'legendaryActions', label: 'Legendary Actions/传奇动作', pattern: /(?:^|\n)\s*(?:Legendary Actions|传奇动作)(?=\s|$)/imu },
+    { section: 'mythicActions', label: 'Mythic Actions/神话动作', pattern: /(?:^|\n)\s*(?:Mythic Actions|神话动作)(?=\s|$)/imu },
+    { section: 'traits', label: 'Traits/特性', pattern: /(?:^|\n)\s*(?:Traits?|特性)(?=\s|$)/imu },
+  ];
+  for (const check of checks) {
+    const features = creature?.[check.section];
+    const hasExplicitSection = check.pattern.test(source);
+    const hasInlineTrait = check.section === 'traits' && sourceHasInlineTrait(source);
+    if ((hasExplicitSection || hasInlineTrait) && Array.isArray(features) && features.length === 0) {
+      finding(
+        'MISSING_SOURCE_FEATURES',
+        `/creature/${check.section}`,
+        `Source contains ${check.label}, but the corresponding IR collection is empty; every named source feature must be reconstructed with exact evidence.`,
+        'evidence',
+      );
+    }
+  }
+}
+
+function sourceHasInlineTrait(source: string): boolean {
+  const actionMarker = /(?:^|\n)\s*(?:Actions|动作)(?=\s|$)/imu;
+  const actionIndex = source.search(actionMarker);
+  if (actionIndex < 0) return false;
+  const prefix = source.slice(0, actionIndex);
+  return prefix.split(/\r?\n/).some((line) => {
+    const value = line.replace(/<!--.*?-->/g, '').trim();
+    if (!value || /^#|^(?:AC|HP|Speed|Type|Size|Initiative|STR|DEX|CON|INT|WIS|CHA|护甲等级|生命值|速度|类型|体型|先攻|力量|敏捷|体质|智力|感知|魅力|感官|语言|挑战等级|熟练加值)/iu.test(value)) return false;
+    return /^[^.!?。！？]{2,80}[.!?。！？]/u.test(value);
+  });
 }
 
 function validateClaim(
@@ -371,7 +414,7 @@ function claimCovers(claim: IntakeClaim, requiredPath: string): boolean {
     || claim.path === '/creature/defenses'
     || claim.path === '/creature/senses'
     || claim.path === '/creature/languages'
-    || /^\/creature\/(?:traits|actions|bonusActions|reactions|legendaryActions)\/\d+$/.test(claim.path);
+    || /^\/creature\/(?:traits|actions|bonusActions|reactions|legendaryActions|mythicActions)\/\d+$/.test(claim.path);
 }
 
 function collectMechanicalClaimPaths(ir: MonsterIntakeIR): string[] {
@@ -394,7 +437,7 @@ function collectMechanicalClaimPaths(ir: MonsterIntakeIR): string[] {
   if (Array.isArray(creature.spellcasting)) {
     creature.spellcasting.forEach((_group, index) => paths.push(`/creature/spellcasting/${index}`));
   }
-  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
+  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions', 'mythicActions'] as const) {
     const features = creature[section];
     if (Array.isArray(features)) {
       features.forEach((_feature, index) => paths.push(`/creature/${section}/${index}`));

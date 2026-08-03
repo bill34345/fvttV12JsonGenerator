@@ -34,10 +34,11 @@ export function verifyMonsterIntake(
   const findings = [...validateMonsterIntakeIR(source, ir, { coverageRange }).findings];
   const expected = ir.creature;
   const projection = projectActor(actor, {
-    skillKeys: Object.keys(expected.skills),
+    skillKeys: Object.keys(expected.skills).map(normalizeSkillKey),
     saveKeys: Object.keys(expected.saves),
     includeInitiative: expected.attributes.initiative != null,
   });
+  const expectedSkillKeys = new Set(Object.keys(expected.skills).map(normalizeSkillKey));
   const add = (code: string, path: string, message: string) => findings.push({
     id: `${code.toLowerCase()}:${path}`.replace(/[^a-z0-9:/_-]+/g, '-'),
     code, path, message, blocking: true, origin: 'semantic',
@@ -54,7 +55,7 @@ export function verifyMonsterIntake(
   compare(add, 'ACTOR_PB_DRIFT', '/creature/attributes/proficiencyBonus', expected.attributes.proficiencyBonus, projection.proficiencyBonus);
   compare(add, 'ACTOR_INITIATIVE_DRIFT', '/creature/attributes/initiative', expected.attributes.initiative, projection.initiative);
   compare(add, 'ACTOR_SIZE_DRIFT', '/creature/identity/size', expected.identity.size, projection.size);
-  compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureType(expected.identity.creatureType), normalizeCreatureType(projection.creatureType));
+  compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureTypeFixed(expected.identity.creatureType), normalizeCreatureTypeFixed(projection.creatureType));
   compare(add, 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT', '/creature/identity/creatureTypeCustom', compact(expected.identity.creatureTypeCustom), compact(projection.creatureTypeCustom));
   for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as AbilityKey[]) {
     compare(add, 'ACTOR_ABILITY_DRIFT', `/creature/abilities/${ability}`, expected.abilities[ability], (projection.abilities as Record<string, unknown>)?.[ability]);
@@ -63,22 +64,26 @@ export function verifyMonsterIntake(
     compare(add, 'ACTOR_MOVEMENT_DRIFT', `/creature/attributes/movement/${kind}`, value, (projection.movement as Record<string, unknown>)?.[kind]);
   }
   for (const [ability, value] of Object.entries(expected.saves)) compare(add, 'ACTOR_SAVE_DRIFT', `/creature/saves/${ability}`, value, (projection.saves as Record<string, unknown>)?.[ability]);
-  for (const [skill, value] of Object.entries(expected.skills)) compare(add, 'ACTOR_SKILL_DRIFT', `/creature/skills/${skill}`, value, (projection.skills as Record<string, unknown>)?.[skill]);
+  for (const [skill, value] of Object.entries(expected.skills)) {
+    const canonicalSkill = normalizeSkillKey(skill);
+    compare(add, 'ACTOR_SKILL_DRIFT', `/creature/skills/${skill}`, value, (projection.skills as Record<string, unknown>)?.[canonicalSkill]);
+  }
   for (const skill of Object.keys(projection.skills as Record<string, unknown>)) {
-    if (!(skill in expected.skills)) add('ACTOR_UNSOURCED_SKILL', `/actorProjection/skills/${skill}`, `Actor configures an unlisted skill: ${skill}.`);
+    if (!expectedSkillKeys.has(skill)) add('ACTOR_UNSOURCED_SKILL', `/actorProjection/skills/${skill}`, `Actor configures an unlisted skill: ${skill}.`);
   }
   compareSet(add, 'ACTOR_RESISTANCE_DRIFT', '/creature/defenses/resistances', expected.defenses.resistances, projection.resistances);
   compareSet(add, 'ACTOR_IMMUNITY_DRIFT', '/creature/defenses/immunities', expected.defenses.immunities, projection.immunities);
   compareSet(add, 'ACTOR_VULNERABILITY_DRIFT', '/creature/defenses/vulnerabilities', expected.defenses.vulnerabilities, projection.vulnerabilities);
-  compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities);
+  compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities, normalizeCondition);
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
-  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguage);
+  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguageFixed);
   compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', expected.languages.custom, projection.languageCustom);
   compareFeatureSections(add, expected.traits, projection.items, 'traits');
   compareFeatureSections(add, expected.actions, projection.items, 'actions');
   compareFeatureSections(add, expected.bonusActions, projection.items, 'bonusActions');
   compareFeatureSections(add, expected.reactions, projection.items, 'reactions');
   compareFeatureSections(add, expected.legendaryActions, projection.items, 'legendaryActions');
+  compareFeatureSections(add, expected.mythicActions ?? [], projection.items, 'mythicActions');
 
   const spellResolution = verifyPortableSpellResolution(source, ir, markdown, actor, add, () => findings.length);
 
@@ -425,7 +430,10 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
     abilities: projectedAbilities,
     saves,
     skills,
-    movement: Object.fromEntries(['walk', 'climb', 'fly', 'swim', 'burrow'].map((key) => [key, movement[key]])),
+    movement: {
+      ...Object.fromEntries(['walk', 'climb', 'fly', 'swim', 'burrow'].map((key) => [key, movement[key]])),
+      hover: movement.hover,
+    },
     resistances: arrayValues(asRecord(traits.dr).value),
     immunities: arrayValues(asRecord(traits.di).value),
     vulnerabilities: arrayValues(asRecord(traits.dv).value),
@@ -447,11 +455,14 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
 
 function projectItem(value: unknown, abilities: Record<string, number>, prof: number): Record<string, unknown> {
   const item = asRecord(value);
+  const itemFlags = asRecord(item.flags);
+  const tidyFlags = asRecord(itemFlags['tidy5e-sheet']);
   const system = asRecord(item.system);
   const activation = asRecord(system.activation);
   const description = asRecord(system.description);
   const activities = asRecord(system.activities);
-  const firstActivity = asRecord(Object.values(activities)[0]);
+  const projectedActivities = Object.values(activities).map(asRecord);
+  const firstActivity = asRecord(projectedActivities[0]);
   const activityActivation = asRecord(firstActivity.activation);
   const activityDescription = asRecord(firstActivity.description);
   const attack = asRecord(firstActivity.attack);
@@ -470,16 +481,57 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
   const damageFormula = projectedDamage.number && projectedDamage.denomination
     ? `${projectedDamage.number}d${projectedDamage.denomination}${projectedDamageBonus ? /^[+-]/.test(projectedDamageBonus) ? projectedDamageBonus : `+${projectedDamageBonus}` : ''}`
     : undefined;
+  const additionalDamageFormulas = activityDamageParts.slice(1)
+    .map((part) => asRecord(part))
+    .filter((part) => Boolean(part?.number && part?.denomination))
+    .map((part) => {
+      const bonus = String(part?.bonus ?? '').trim();
+      return `${part!.number}d${part!.denomination}${bonus ? /^[+-]/.test(bonus) ? bonus : `+${bonus}` : ''}`;
+    });
+  const supplementalDamageParts = projectedActivities.slice(1)
+    .flatMap((activity) => {
+      const damage = asRecord(activity.damage);
+      return Array.isArray(damage.parts) ? damage.parts.map(asRecord) : [];
+    });
+  const supplementalDamageFormulas = supplementalDamageParts
+    .filter((part) => Boolean(part.number && part.denomination))
+    .map((part) => {
+      const bonus = String(part.bonus ?? '').trim();
+      return `${part.number}d${part.denomination}${bonus ? /^[+-]/.test(bonus) ? bonus : `+${bonus}` : ''}`;
+    });
   const hasAttack = Object.keys(attack).length > 0;
   const toHit = !hasAttack ? undefined
     : attack.flat === true ? numericOrUndefined(attack.bonus)
       : attackAbility ? abilityMod(abilities[attackAbility]) + prof + numeric(attack.bonus)
         : numericOrUndefined(attack.bonus);
-  const damageTypes = arrayValues(projectedDamage.types);
+  const damageTypes = [...new Set([
+    ...arrayValues(projectedDamage.types),
+    ...activityDamageParts.slice(1).flatMap((part) => arrayValues(asRecord(part)?.types)),
+    ...supplementalDamageParts.flatMap((part) => arrayValues(part.types)),
+  ])];
+  const activityDetails = projectedActivities.map((activity) => {
+    const activityDamage = asRecord(activity.damage);
+    const parts = Array.isArray(activityDamage.parts) ? activityDamage.parts.map(asRecord) : [];
+    return {
+      name: activity.name,
+      type: activity.type,
+      activation: asRecord(activity.activation).type,
+      condition: asRecord(activity.activation).condition,
+      description: stripHtml(String(asRecord(activity.description).chatFlavor ?? '')),
+      damageFormulas: parts
+        .filter((part) => Boolean(part.number && part.denomination))
+        .map((part) => {
+          const bonus = String(part.bonus ?? '').trim();
+          return `${part.number}d${part.denomination}${bonus ? /^[+-]/.test(bonus) ? bonus : `+${bonus}` : ''}`;
+        }),
+      damageTypes: [...new Set(parts.flatMap((part) => arrayValues(part.types)))],
+    };
+  });
   const effects = Array.isArray(item.effects) ? item.effects.flatMap((effect) => arrayValues(asRecord(effect).statuses)) : [];
   return {
     name: item.name,
     type: item.type,
+    section: tidyFlags.section ?? tidyFlags.actionSection,
     activation: activation.type ?? activityActivation.type,
     activationValue: activation.value ?? activityActivation.value,
     description: stripHtml(String(activityDescription.chatFlavor ?? description.value ?? '')),
@@ -489,7 +541,11 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     range: range.value,
     longRange: range.long,
     damageFormula,
+    ...(damageFormula || additionalDamageFormulas.length > 0 || supplementalDamageFormulas.length > 0
+      ? { damageFormulas: [damageFormula, ...additionalDamageFormulas, ...supplementalDamageFormulas].filter((value): value is string => Boolean(value)) }
+      : {}),
     damageTypes,
+    activities: activityDetails,
     saveDc: numericOrUndefined(saveDc.value ?? saveDc.formula),
     saveAbilities: arrayValues(save.ability),
     statuses: effects,
@@ -507,14 +563,16 @@ function compareFeatureSections(
     : section === 'bonusActions' ? 'bonus'
       : section === 'reactions' ? 'reaction'
         : section === 'legendaryActions' ? 'legendary'
+          : section === 'mythicActions' ? 'legendary'
           : undefined;
   for (const [index, feature] of expected.entries()) {
-    const found = items.find((item) => String(item.name ?? '').includes(feature.name));
+    const expectedActivation = feature.activationType ?? sectionActivation;
+    const named = items.filter((item) => featureNamesMatch(String(item.name ?? ''), feature.name));
+    const found = named.find((item) => !expectedActivation || item.activation === expectedActivation) ?? named[0];
     if (!found) {
       add('ACTOR_FEATURE_MISSING', `/creature/${section}/${index}`, `Actor is missing separate feature: ${feature.name}`);
       continue;
     }
-    const expectedActivation = feature.activationType ?? sectionActivation;
     if (expectedActivation && found.activation !== expectedActivation) {
       const path = feature.activationType
         ? `/creature/${section}/${index}/activationType`
@@ -537,26 +595,36 @@ function compareFeatureSections(
       compare(add, 'ACTOR_LEGENDARY_COST_DRIFT', `/creature/${section}/${index}/legendaryCost`, feature.legendaryCost, found.activationValue);
     }
     for (const [damageIndex, damage] of (feature.damage ?? []).entries()) {
-      if (damage.relationship !== 'base') continue;
-      compare(add, 'ACTOR_DAMAGE_FORMULA_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/formula`, compact(damage.formula), compact(found.damageFormula));
-      if (!arrayValues(found.damageTypes).map(normalizeDamageType).includes(normalizeDamageType(damage.type))) add('ACTOR_DAMAGE_TYPE_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/type`, `${feature.name} lost damage type ${damage.type}.`);
+      if (damage.relationship === 'replacement') continue;
+      const projectedFormulas = arrayValues(found.damageFormulas);
+      const actualFormulas = projectedFormulas.length > 0 ? projectedFormulas : [String(found.damageFormula ?? '')];
+      if (!actualFormulas.map(compact).includes(compact(damage.formula))) {
+        add('ACTOR_DAMAGE_FORMULA_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/formula`, `${feature.name} lost damage formula ${damage.formula}.`);
+      }
+      if (!arrayValues(found.damageTypes).map(normalizeDamageTypeFixed).includes(normalizeDamageTypeFixed(damage.type))) add('ACTOR_DAMAGE_TYPE_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/type`, `${feature.name} lost damage type ${damage.type}.`);
     }
     if (feature.save) {
       compare(add, 'ACTOR_SAVE_DC_DRIFT', `/creature/${section}/${index}/save/dc`, feature.save.dc, found.saveDc);
       if (!arrayValues(found.saveAbilities).includes(feature.save.ability)) add('ACTOR_SAVE_ABILITY_DRIFT', `/creature/${section}/${index}/save/ability`, `${feature.name} lost save ability ${feature.save.ability}.`);
     }
     for (const [conditionIndex, applied] of (feature.appliedConditions ?? []).entries()) {
-      const actualStatuses = arrayValues(found.statuses);
-      for (const status of applied.statuses) if (!actualStatuses.includes(status)) add('ACTOR_CONDITION_DRIFT', `/creature/${section}/${index}/appliedConditions/${conditionIndex}`, `${feature.name} lost condition ${status}.`);
-      if (applied.staged && applied.statuses.filter((status) => actualStatuses.includes(status)).length > 1) add('STAGED_CONDITIONS_SIMULTANEOUS', `/creature/${section}/${index}/appliedConditions/${conditionIndex}`, `${feature.name} applies staged conditions simultaneously.`);
+      const actualStatuses = arrayValues(found.statuses).map(normalizeCondition);
+      const expectedStatuses = applied.statuses.map(normalizeCondition);
+      for (const status of expectedStatuses) if (!actualStatuses.includes(status)) add('ACTOR_CONDITION_DRIFT', `/creature/${section}/${index}/appliedConditions/${conditionIndex}`, `${feature.name} lost condition ${status}.`);
+      if (applied.staged && expectedStatuses.filter((status) => actualStatuses.includes(status)).length > 1) add('STAGED_CONDITIONS_SIMULTANEOUS', `/creature/${section}/${index}/appliedConditions/${conditionIndex}`, `${feature.name} applies staged conditions simultaneously.`);
     }
   }
-  const matched = expected.filter((feature) => items.some((item) => String(item.name ?? '').includes(feature.name))).length;
+  const matched = expected.filter((feature) => items.some((item) => featureNamesMatch(String(item.name ?? ''), feature.name))).length;
   if (matched < expected.length) add('ACTOR_FEATURE_COUNT_DRIFT', `/creature/${section}`, `${section} expected ${expected.length} separate entries but matched ${matched}.`);
 }
 
 function featureDescriptions(ir: MonsterIntakeIR['creature']): string[] {
-  return [...ir.traits, ...ir.actions, ...ir.bonusActions, ...ir.reactions, ...ir.legendaryActions].map((feature) => feature.description);
+  return [...ir.traits, ...ir.actions, ...ir.bonusActions, ...ir.reactions, ...ir.legendaryActions, ...(ir.mythicActions ?? [])].map((feature) => feature.description);
+}
+
+function featureNamesMatch(projected: string, expected: string): boolean {
+  const compactName = (value: string): string => value.normalize('NFKC').replace(/\s+/gu, '').toLocaleLowerCase('en-US');
+  return compactName(projected).includes(compactName(expected));
 }
 
 function compare(
@@ -633,6 +701,114 @@ function normalizeLanguage(value: string): string {
 function normalizeDamageType(value: string): string {
   return ({ 强酸: 'acid', 钝击: 'bludgeoning', 冷冻: 'cold', 火焰: 'fire', 力场: 'force', 闪电: 'lightning', 黯蚀: 'necrotic', 穿刺: 'piercing', 毒素: 'poison', 心灵: 'psychic', 光耀: 'radiant', 挥砍: 'slashing', 雷鸣: 'thunder' } as Record<string, string>)[value]
     ?? value.toLowerCase();
+}
+
+function normalizeCreatureTypeFixed(value: unknown): string {
+  const normalized = String(value).trim();
+  const direct = ({
+    '\u5996\u7cbe': 'fey',
+    '\u5f02\u602a': 'aberration',
+    '\u91ce\u517d': 'beast',
+    '\u5929\u754c\u751f\u7269': 'celestial',
+    '\u6784\u88c5\u751f\u7269': 'construct',
+    '\u9f99': 'dragon',
+    '\u5143\u7d20\u751f\u7269': 'elemental',
+    '\u90aa\u9b54': 'fiend',
+    '\u5de8\u4eba': 'giant',
+    '\u7c7b\u4eba\u751f\u7269': 'humanoid',
+    '\u602a\u517d': 'monstrosity',
+    '\u53f8\u6ce5\u602a': 'ooze',
+    '\u690d\u7269': 'plant',
+    '\u4ea1\u7075': 'undead',
+  } as Record<string, string>)[normalized];
+  return direct ?? normalizeCreatureType(normalized);
+}
+
+function normalizeLanguageFixed(value: string): string {
+  const normalized = value.trim();
+  const direct = ({
+    '\u901a\u7528\u8bed': 'common',
+    '\u77ee\u4eba\u8bed': 'dwarvish',
+    '\u7cbe\u7075\u8bed': 'elvish',
+    '\u5de8\u4eba\u8bed': 'giant',
+    '\u5730\u7cbe\u8bed': 'goblin',
+    '\u6df1\u6e0a\u8bed': 'deep',
+    '\u6df1\u6e0a': 'deep',
+  } as Record<string, string>)[normalized];
+  return direct ?? normalizeLanguage(normalized);
+}
+
+function normalizeDamageTypeFixed(value: string): string {
+  const normalized = value.trim();
+  const direct = ({
+    '\u9178': 'acid',
+    '\u949d\u51fb': 'bludgeoning',
+    '\u51b0\u51bb': 'cold',
+    '\u706b\u7130': 'fire',
+    '\u529b\u573a': 'force',
+    '\u95ea\u7535': 'lightning',
+    '\u6b7b\u7075': 'necrotic',
+    '\u7a7f\u523a': 'piercing',
+    '\u6bd2\u7d20': 'poison',
+    '\u5fc3\u7075': 'psychic',
+    '\u5149\u8000': 'radiant',
+    '\u6325\u780d': 'slashing',
+    '\u96f7\u9e23': 'thunder',
+  } as Record<string, string>)[normalized];
+  return direct ?? normalizeDamageType(normalized);
+}
+
+function normalizeCondition(value: string): string {
+  const normalized = value.trim();
+  const direct = ({
+    '\u76ee\u76f2': 'blinded',
+    '\u9b45\u60d1': 'charmed',
+    '\u8033\u804b': 'deafened',
+    '\u6050\u60e7': 'frightened',
+    '\u6050\u614c': 'frightened',
+    '\u53d7\u64d2': 'grappled',
+    '\u5931\u80fd': 'incapacitated',
+    '\u9690\u5f62': 'invisible',
+    '\u9ebb\u75f9': 'paralyzed',
+    '\u77f3\u5316': 'petrified',
+    '\u4e2d\u6bd2': 'poisoned',
+    '\u5012\u5730': 'prone',
+    '\u675f\u7f1a': 'restrained',
+    '\u9707\u6151': 'stunned',
+    '\u660f\u8ff7': 'unconscious',
+  } as Record<string, string>)[normalized];
+  return direct ?? normalized.toLowerCase();
+}
+
+function normalizeSkillKey(value: string): string {
+  const normalized = value.trim();
+  const direct = ({
+    '\u6b3a\u77d2': 'deception',
+    '\u5a01\u5413': 'intimidation',
+    '\u5bdf\u89c9': 'perception',
+    '\u9690\u533f': 'stealth',
+    '\u8fd0\u52a8': 'athletics',
+    '\u6742\u6280': 'acrobatics',
+    '\u6d1e\u5bdf': 'insight',
+    '\u8c03\u67e5': 'investigation',
+    '\u5965\u79d8': 'arcana',
+    '\u5386\u53f2': 'history',
+    '\u81ea\u7136': 'nature',
+    '\u5b97\u6559': 'religion',
+    '\u751f\u5b58': 'survival',
+    '\u533b\u7597': 'medicine',
+    '\u8bf4\u670d': 'persuasion',
+    '\u8868\u6f14': 'performance',
+    '\u5de7\u624b': 'sleight-of-hand',
+    '\u9a6f\u517d': 'animalHandling',
+  } as Record<string, string>)[normalized];
+  if (direct) return direct;
+  return ({
+    'animalhandling': 'animalHandling',
+    'animal-handling': 'animalHandling',
+    'sleightofhand': 'sleight-of-hand',
+    'sleight-of-hand': 'sleight-of-hand',
+  } as Record<string, string>)[normalized.toLowerCase()] ?? normalized.toLowerCase();
 }
 
 function stripHtml(value: string): string {

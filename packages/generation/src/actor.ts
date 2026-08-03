@@ -842,15 +842,20 @@ export class ActorGenerator {
   ): void {
     if (!structured) return;
 
-    const sectionMap: Array<{ key: keyof NonNullable<ParsedNPC['structuredActions']>; activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive' }> = [
+    const sectionMap: Array<{
+      key: keyof NonNullable<ParsedNPC['structuredActions']>;
+      activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive';
+      sectionOverride?: string;
+    }> = [
       { key: '特性', activationType: 'passive' },
       { key: '动作', activationType: 'action' },
       { key: '附赠动作', activationType: 'bonus' },
       { key: '反应', activationType: 'reaction' },
       { key: '传奇动作', activationType: 'legendary' },
+      { key: '神话动作', activationType: 'legendary', sectionOverride: '神话动作' },
     ];
 
-    for (const { key, activationType } of sectionMap) {
+    for (const { key, activationType, sectionOverride } of sectionMap) {
       const actions = structured[key];
       if (!actions || !Array.isArray(actions)) continue;
 
@@ -861,6 +866,7 @@ export class ActorGenerator {
           activationType,
           activityContext,
           `structuredActions/${key}/${index}/${action.name}`,
+          sectionOverride,
         );
       }
     }
@@ -872,6 +878,7 @@ export class ActorGenerator {
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'passive',
     activityContext: ActivityGenerationContext,
     logicalPath: string,
+    sectionOverride?: string,
   ): void {
     if (action.spellcastingFeatureKey && activationType !== 'passive') {
       throw new ActorSpellManifestError(
@@ -895,6 +902,7 @@ export class ActorGenerator {
       { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe } as any,
       activities,
       effectiveActivationType === 'passive' ? '' : effectiveActivationType,
+      sectionOverride,
     );
 
     const activationCost = effectiveActivationType === 'legendary'
@@ -1031,6 +1039,7 @@ export class ActorGenerator {
     action: GeneratedActionData,
     activities: any,
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | 'special' | '' = 'action',
+    sectionOverride?: string,
   ): any {
     const resolvedActivationType =
       activationType === ''
@@ -1086,7 +1095,7 @@ export class ActorGenerator {
         })
       },
       effects: [] as any[],
-      flags: this.buildItemSectionFlags(activationType === 'legendary' ? 'legendary' : resolvedActivationType, isPassive),
+      flags: this.buildItemSectionFlags(activationType === 'legendary' ? 'legendary' : resolvedActivationType, isPassive, sectionOverride),
     };
 
     this.removeNativeBaseDamageFlags(item.system.activities);
@@ -1216,8 +1225,9 @@ export class ActorGenerator {
   private buildItemSectionFlags(
     activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' | 'special',
     isPassive: boolean,
+    sectionOverride?: string,
   ): Record<string, any> {
-    return buildItemSectionFlagsExt(activationType, isPassive, this.route);
+    return buildItemSectionFlagsExt(activationType, isPassive, this.route, sectionOverride);
   }
 
   private resolveDisplaySection(

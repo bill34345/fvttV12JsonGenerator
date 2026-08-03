@@ -15,14 +15,32 @@ export {
   runMonsterIntake,
 } from './workflows';
 export { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
+export {
+  createDocumentConversionWorkflow,
+  documentDoctor,
+  runDocumentConversion,
+} from './document';
+export { isDocumentInputPath } from '@fvtt-json-generator/ingest-documents/extractor';
+export type {
+  DocumentConversionOptions,
+  DocumentConversionResult,
+  DocumentDoctorReport,
+} from './document';
 export { parseIconMode } from '@fvtt-json-generator/assets-icons/icon-workflow';
 export { ItemsIngestionWorkflow } from '../ingest/items';
 export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
-export { loadMonsterIntakeConfig } from '@fvtt-json-generator/intake-ai/config';
 export {
-  OpenAICompatibleMonsterIntakeProvider,
+  loadMonsterIntakeConfig,
+  monsterIntakeAuthMode,
+} from '@fvtt-json-generator/intake-ai/config';
+export {
+  runMonsterIntakeDoctor,
+  type MonsterIntakeDoctorReport,
+} from '@fvtt-json-generator/intake-ai/doctor';
+export {
+  createMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
-} from '@fvtt-json-generator/intake-ai/provider';
+} from '@fvtt-json-generator/intake-ai';
 export {
   assertEffectProfileForTarget,
   parseFvttTargetVersion,

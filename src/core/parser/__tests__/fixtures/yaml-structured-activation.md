@@ -19,4 +19,12 @@
     伤害:
       - 公式: 1d4 + 2
         类型: piercing
+  - 名称: Radiant Burst
+    类型: save
+    描述: A save action with structured damage.
+    DC: 21
+    属性: dex
+    伤害:
+      - 公式: 4d10
+        类型: psychic
 ---

@@ -80,6 +80,33 @@ describe('TranslationService', () => {
     expect(readFileSync(cachePath, 'utf-8')).toContain('成年红龙');
   });
 
+  it('gives document Markdown translations an exact mechanical placeholder contract', async () => {
+    let requestBody = '';
+    const translator = new OpenAICompatibleTranslator({
+      apiKey: 'sk-test',
+      baseUrl: 'https://middleman.example.com/v1',
+      model: 'gpt-4o-mini',
+      httpClient: async (_url, init) => {
+        requestBody = String(init.body ?? '');
+        return createResponse(200, {
+          choices: [{ message: { content: '# translated' } }],
+        });
+      },
+    });
+
+    await translator.translate('# Beholder __FVTT_MECHANICAL_A__', {
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-CN',
+      namespace: 'document.markdown',
+      metadata: { protectedTokenCount: 1 },
+    });
+
+    const body = JSON.parse(requestBody) as { messages: Array<{ content: string }> };
+    expect(body.messages[0]!.content).toContain('Copy every token matching __FVTT_MECHANICAL_<letters>__ exactly as it appears');
+    expect(body.messages[0]!.content).toContain('exactly 1 protected placeholders');
+    expect(body.messages[0]!.content).toContain('Never translate, rewrite, split, delete, duplicate, or move them');
+  });
+
   it('removes provider reasoning wrappers before translated text reaches the cache', async () => {
     const translator = new OpenAICompatibleTranslator({
       apiKey: 'sk-test',

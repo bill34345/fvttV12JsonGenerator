@@ -5,19 +5,22 @@ import {
   assertEffectProfileForTarget,
   buildImageAssetOptionsFromCli,
   convertMarkdownContentToJson,
+  documentDoctor,
   type EffectProfile,
   ItemTextWorkflow,
   ItemsIngestionWorkflow,
   JsonTranslationSyncWorkflow,
-  loadMonsterIntakeConfig,
+  runMonsterIntakeDoctor,
   ObsidianSyncWorkflow,
-  OpenAICompatibleMonsterIntakeProvider,
+  createMonsterIntakeProvider,
   PlainTextActorWorkflow,
   PlainTextIngestionWorkflow,
   parseFvttTargetVersion,
   parseIconMode,
   resumeMonsterIntake,
+  runDocumentConversion,
   runMonsterIntake,
+  isDocumentInputPath,
   type IntakeProviderAuditEvent,
 } from '../../../src/core/application/cli';
 
@@ -62,8 +65,27 @@ program
   .option('--image-token-size <size>', 'Token output size in pixels', '1024')
   .option('--image-token-format <format>', 'Token output format', 'webp')
   .option('--image-token-crops <path>', 'JSON map of source-url hash to normalized token crop rectangles')
+  .option('--document-engine <engine>', 'Document engine: auto, native, or paddleocr', 'auto')
+  .option('--document-language <language>', 'Document language: auto, en, zh-CN, or mixed', 'auto')
+  .option('--document-candidate <id>', 'Only process one document candidate ID (repeatable)', collectOption, [])
+  .option('--extract-only', 'Only extract/filter document input; do not translate or generate JSON')
+  .option('--document-target-language <language>', 'Document Markdown target language', 'zh-CN')
+  .option('--document-doctor', 'Report local PDF/OCR document dependencies')
+  .option('--intake-doctor', 'Report AI Intake configuration and Codex OAuth bridge status')
   .action(async (input, options) => {
     try {
+      if (options.documentDoctor) {
+        console.log(JSON.stringify(documentDoctor(), null, 2));
+        return;
+      }
+      if (options.intakeDoctor) {
+        const report = await runMonsterIntakeDoctor();
+        console.log(JSON.stringify(report, null, 2));
+        if (!report.configured || (report.authMode === 'codex-oauth' && !report.bridge?.reachable)) {
+          process.exitCode = 1;
+        }
+        return;
+      }
       const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
       const iconMode = parseIconMode(options.iconMode);
       if (iconMode === 'safe' && fvttVersion !== '14') {
@@ -84,8 +106,7 @@ program
       if (options.intakeMonsters) {
         const source = readFileSync(resolve(options.intakeMonsters), 'utf-8');
         const audit: IntakeProviderAuditEvent[] = [];
-        const provider = options.dryRun ? undefined : new OpenAICompatibleMonsterIntakeProvider({
-          ...loadMonsterIntakeConfig(),
+        const provider = options.dryRun ? undefined : createMonsterIntakeProvider({
           audit: (event) => audit.push(event),
         });
         const result = await runMonsterIntake({
@@ -106,8 +127,7 @@ program
       if (options.resumeIntake) {
         if (!options.decisions) throw new Error('--resume-intake requires --decisions <path>.');
         const audit: IntakeProviderAuditEvent[] = [];
-        const provider = new OpenAICompatibleMonsterIntakeProvider({
-          ...loadMonsterIntakeConfig(),
+        const provider = createMonsterIntakeProvider({
           audit: (event) => audit.push(event),
         });
         const result = await resumeMonsterIntake(options.resumeIntake, options.decisions, provider, options.vault);
@@ -319,6 +339,31 @@ program
         throw new Error('Input file is required unless --sync is used');
       }
 
+      if (isDocumentInputPath(input)) {
+        const candidateIds = Array.isArray(options.documentCandidate)
+          ? options.documentCandidate as string[]
+          : [];
+        const result = await runDocumentConversion({
+          inputPath: input,
+          outputPath: options.output,
+          engine: normalizeDocumentEngine(options.documentEngine),
+          language: normalizeDocumentLanguage(options.documentLanguage),
+          targetLanguage: String(options.documentTargetLanguage ?? 'zh-CN'),
+          candidateIds,
+          extractOnly: Boolean(options.extractOnly),
+          fvttVersion,
+          effectProfile,
+          iconOptions,
+        });
+        printDocumentResult(result);
+        process.exitCode = result.status === 'succeeded' || result.status === 'extracted'
+          ? 0
+          : result.status === 'needs_review' || result.status === 'partial'
+            ? 2
+            : 1;
+        return;
+      }
+
       console.log(`Processing ${input}...`);
       const content = readFileSync(input, 'utf-8');
       const output = options.output || input.replace(/\.md$/, '.json');
@@ -382,4 +427,40 @@ function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>)
     if (creature.markdownPath) console.log(`  Markdown: ${creature.markdownPath}`);
     if (creature.actorPath) console.log(`  Actor JSON: ${creature.actorPath}`);
   }
+}
+
+function collectOption(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
+}
+
+function normalizeDocumentEngine(value: unknown): 'auto' | 'native' | 'paddleocr' {
+  if (value === 'auto' || value === 'native' || value === 'paddleocr') return value;
+  throw new Error(`Unsupported --document-engine: ${String(value)}. Use auto, native, or paddleocr.`);
+}
+
+function normalizeDocumentLanguage(value: unknown): 'auto' | 'en' | 'zh-CN' | 'mixed' {
+  if (value === 'auto' || value === 'en' || value === 'zh-CN' || value === 'mixed') return value;
+  throw new Error(`Unsupported --document-language: ${String(value)}. Use auto, en, zh-CN, or mixed.`);
+}
+
+function printDocumentResult(result: Awaited<ReturnType<typeof runDocumentConversion>>): void {
+  console.log(`Document run: ${result.runId}`);
+  console.log(`Status: ${result.status}`);
+  console.log(`Stage: ${result.stage}`);
+  console.log(`Pages: ${result.pageCount}`);
+  console.log(`Candidates: ${result.candidates.length}`);
+  console.log(`Selected: ${result.selectedCandidateIds.join(', ') || '(none)'}`);
+  console.log(`Run directory: ${result.runPath}`);
+  console.log(`Raw Markdown: ${result.rawMarkdownPath}`);
+  console.log(`Candidates JSON: ${result.candidatesPath}`);
+  console.log(`Report: ${result.reportPath}`);
+  if (result.translatedMarkdownPath) console.log(`Translated Markdown: ${result.translatedMarkdownPath}`);
+  for (const candidate of result.candidates) {
+    console.log(`- ${candidate.id} | ${candidate.status} | page=${candidate.pageNumber} | ${candidate.label}`);
+  }
+  for (const failure of result.failures) {
+    console.error(`Failed${failure.candidateId ? ` [${failure.candidateId}]` : ''}: ${failure.error}`);
+  }
+  for (const warning of result.warnings) console.error(`Warning: ${warning}`);
+  for (const file of result.outputFiles) console.log(`Artifact: ${file.path}`);
 }

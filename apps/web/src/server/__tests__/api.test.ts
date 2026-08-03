@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { handleApiRequest, TEMP_WEB_DIR } from '../api';
@@ -7,6 +7,7 @@ import {
   createJob,
   getJob,
   jobDir,
+  jobInputDir,
   resetJobsForTests,
   runningJobsTotal,
   updateJob,
@@ -18,6 +19,8 @@ const SAMPLE_SOURCE = resolve(
   'obsidian/dnd数据转fvttjson/input/alyxian-aboleth__底栖魔鱼“阿利克辛”.md',
 );
 const TEMP_TEST_DIR = resolve(process.cwd(), 'temp/web-tests');
+
+setDefaultTimeout(30_000);
 
 beforeEach(() => {
   delete Bun.env.FVTT_WEB_PUBLIC_MODE;
@@ -33,6 +36,10 @@ beforeEach(() => {
   delete Bun.env.FVTT_WEB_ENABLE_PATH_MODE;
   delete Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
   delete Bun.env.GODDESSFANTASY_COOKIE;
+  delete Bun.env.MONSTER_INTAKE_AUTH_MODE;
+  delete Bun.env.MONSTER_INTAKE_API_KEY;
+  delete Bun.env.MONSTER_INTAKE_BASE_URL;
+  delete Bun.env.MONSTER_INTAKE_CODEX_OAUTH_BASE_URL;
   resetJobsForTests();
   resetRateLimitForTests();
 });
@@ -58,6 +65,10 @@ afterEach(() => {
   delete Bun.env.FVTT_WEB_IMAGE_TOKEN_FRAME;
   delete Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
   delete Bun.env.GODDESSFANTASY_COOKIE;
+  delete Bun.env.MONSTER_INTAKE_AUTH_MODE;
+  delete Bun.env.MONSTER_INTAKE_API_KEY;
+  delete Bun.env.MONSTER_INTAKE_BASE_URL;
+  delete Bun.env.MONSTER_INTAKE_CODEX_OAUTH_BASE_URL;
   resetJobsForTests();
   resetRateLimitForTests();
   rmSync(TEMP_TEST_DIR, { recursive: true, force: true });
@@ -277,6 +288,61 @@ describe('web API', () => {
     expect(body.error.code).toBe('INVALID_UPLOAD_TYPE');
   });
 
+  it('accepts binary document uploads, validates the signature, and keeps the source in the job sandbox', async () => {
+    const form = new FormData();
+    form.append('file', new File([minimalPdfBytes()], '../../tiny.pdf', {
+      type: 'application/pdf',
+    }));
+    form.append('extractOnly', 'true');
+    form.append('engine', 'native');
+
+    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
+      method: 'POST',
+      body: form,
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.type).toBe('document-convert');
+    expect(body.data.files.every((file: { path: string }) => file.path === '')).toBe(true);
+
+    const job = await waitForJob(body.data.id);
+    expect(job.type).toBe('document-convert');
+    expect(job.summary?.pageCount).toBe(1);
+    expect(existsSync(join(jobInputDir(job.id), 'tiny.pdf'))).toBe(true);
+  });
+
+  it('rejects a PDF upload whose binary signature is not PDF', async () => {
+    const form = new FormData();
+    form.append('file', new File(['not a pdf'], 'bad.pdf', { type: 'application/pdf' }));
+
+    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
+      method: 'POST',
+      body: form,
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe('INVALID_DOCUMENT_SIGNATURE');
+  });
+
+  it('rejects a PNG upload whose binary signature is actually PDF', async () => {
+    const form = new FormData();
+    form.append('file', new File([minimalPdfBytes()], 'wrong.png', { type: 'image/png' }));
+
+    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
+      method: 'POST',
+      body: form,
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe('INVALID_DOCUMENT_SIGNATURE');
+  });
+
   it('returns deploy-facing capabilities', async () => {
     const response = await handleApiRequest(new Request('http://localhost/api/capabilities'));
     const body = await response.json();
@@ -286,6 +352,7 @@ describe('web API', () => {
     expect(body.data.publicAccess).toBe(false);
     expect(body.data.authenticationRequired).toBe(false);
     expect(body.data.deploymentMode).toBe('local');
+    expect(body.data.monsterIntakeAuthMode).toBe(null);
     expect(body.data.limits.collectionUploadMb).toBe(20);
     expect(body.data.limits.requestBodyMb).toBe(25);
     expect(body.data.limits.globalShortRequestsPerMinute).toBe(100);
@@ -845,4 +912,26 @@ function crawlRecordFixture(topicId: string): Record<string, unknown> {
       },
     ],
   };
+}
+
+function minimalPdfBytes(): ArrayBuffer {
+  const content = 'BT /F1 12 Tf 10 80 Td (Fixture document text for native extraction validation. This page intentionally contains enough text to avoid OCR fallback. The document input route is being tested.) Tj ET';
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Root 1 0 R /Size ${objects.length + 1} >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return new TextEncoder().encode(pdf).buffer as ArrayBuffer;
 }

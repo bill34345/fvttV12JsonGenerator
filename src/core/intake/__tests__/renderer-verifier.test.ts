@@ -63,6 +63,101 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect((projection.items as Array<Record<string, unknown>>)[0]!.description).toBe('**Spellcasting**. exact source');
   });
 
+  test('projects the explicit mythic display section separately from Foundry legendary activation', () => {
+    const projection = projectActor({
+      system: { abilities: {}, attributes: {}, traits: {}, details: {} },
+      items: [{
+        name: 'Dream of Creation', type: 'feat',
+        system: { activation: { type: 'legendary' }, activities: {} },
+        flags: { 'tidy5e-sheet': { section: '\u795e\u8bdd\u52a8\u4f5c', actionSection: '\u795e\u8bdd\u52a8\u4f5c' } },
+      }],
+    });
+
+    expect((projection.items as Array<Record<string, unknown>>)[0]).toMatchObject({
+      activation: 'legendary', section: '\u795e\u8bdd\u52a8\u4f5c',
+    });
+  });
+
+  test('renders explicit hover through standard Markdown into the v14 Actor movement object', async () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.attributes.movement = { fly: 40, hover: true };
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+
+    expect(markdown).toContain('(hover)');
+    expect((generated.rawJson as any).system.attributes.movement).toMatchObject({ fly: 40, hover: true });
+    expect((projectActor(generated.rawJson).movement as Record<string, unknown>).hover).toBe(true);
+  });
+
+  test('keeps swallowed ongoing damage separate from the initial attack damage', async () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.actions = [{
+      name: '虚空虹膜',
+      englishName: 'Void-Iris',
+      description: '近战武器攻击：命中+13，触及5尺。命中：39（6d10 + 6）点穿刺伤害。被吞噬的生物在其每个回合结束时受到21（6d6）点力场伤害。',
+      activityType: 'attack',
+      activationType: 'action',
+      attack: { type: 'mwak', toHit: 13, reach: 5 },
+      damage: [
+        { formula: '6d10+6', type: 'piercing', relationship: 'base' },
+        { formula: '6d6', type: 'force', relationship: 'conditional', condition: '被吞噬时，在其每个回合结束时' },
+      ],
+    }];
+
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+    const actor = generated.rawJson as any;
+    const item = actor.items.find((candidate: any) => candidate.name.includes('Void-Iris'));
+    const activities = Object.values(item.system.activities) as any[];
+    const attackActivity = activities.find((activity) => activity.type === 'attack');
+    const damageActivity = activities.find((activity) => activity.type === 'damage');
+
+    expect(markdown).toContain('关系: conditional');
+    expect(markdown).toContain('条件: 被吞噬时，在其每个回合结束时');
+    expect(attackActivity.damage.parts).toHaveLength(1);
+    expect(attackActivity.damage.parts[0]).toMatchObject({ number: 6, denomination: 10, bonus: '6' });
+    expect(damageActivity.damage.parts[0]).toMatchObject({ number: 6, denomination: 6, types: ['force'] });
+    expect(damageActivity.description.chatFlavor).toContain('被吞噬');
+
+    const projected = (projectActor(actor).items as Array<Record<string, unknown>>)
+      .find((candidate) => String(candidate.name).includes('Void-Iris'))!;
+    expect(projected.damageFormulas).toEqual(expect.arrayContaining(['6d10+6', '6d6']));
+    expect(projected.damageTypes).toEqual(expect.arrayContaining(['piercing', 'force']));
+    expect(projected.activities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'damage', damageFormulas: ['6d6'], damageTypes: ['force'] }),
+    ]));
+  });
+
+  test('does not create a supplemental activity for ordinary on-hit additional damage', async () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.actions = [{
+      name: '虹膜打击',
+      englishName: 'Iris Strike',
+      description: '近战武器攻击：命中+13，触及5尺。命中：39（6d10 + 6）点穿刺伤害，外加21（6d6）点力场伤害。',
+      activityType: 'attack',
+      activationType: 'action',
+      attack: { type: 'mwak', toHit: 13, reach: 5 },
+      damage: [
+        { formula: '6d10+6', type: 'piercing', relationship: 'base' },
+        { formula: '6d6', type: 'force', relationship: 'additional' },
+      ],
+    }];
+
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({
+      content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null,
+    });
+    const item = (generated.rawJson as any).items.find((candidate: any) => candidate.name.includes('Iris Strike'));
+    const activities = Object.values(item.system.activities) as any[];
+
+    expect(activities.map((activity) => activity.type)).toEqual(['attack']);
+    expect(activities[0].damage.parts).toHaveLength(2);
+  });
+
   test('preserves a conditional legendary-action preamble literally while setting the explicit resource maximum', async () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.legendary = {
@@ -285,6 +380,39 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(scoped.saves).toEqual({});
     expect(scoped.initiative).toBeUndefined();
     expect((scoped.senses as Record<string, unknown>).special).toBeUndefined();
+  });
+
+  test('projects every activity damage part for multi-type effects', () => {
+    const projection = projectActor({
+      system: {
+        attributes: { prof: 2, ac: {}, hp: {}, movement: {}, senses: {}, init: {} },
+        details: { xp: {} },
+        abilities: {},
+        traits: { languages: {} },
+        skills: {},
+      },
+      items: [{
+        name: 'Far Sojourn Ray',
+        type: 'feat',
+        system: {
+          activities: {
+            ray: {
+              type: 'damage',
+              damage: {
+                parts: [
+                  { number: 4, denomination: 12, bonus: '', types: ['slashing'] },
+                  { number: 4, denomination: 12, bonus: '', types: ['psychic'] },
+                ],
+              },
+            },
+          },
+        },
+      }],
+    });
+    const item = (projection.items as Array<Record<string, unknown>>)[0]!;
+    expect(item.damageFormula).toBe('4d12');
+    expect(item.damageFormulas).toEqual(['4d12', '4d12']);
+    expect(item.damageTypes).toEqual(['slashing', 'psychic']);
   });
 
   test('renders a source-explicit hybrid weapon with both melee reach and thrown range', async () => {

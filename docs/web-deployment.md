@@ -61,11 +61,16 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 工作流能力：
 
 - `FVTT_WEB_ENABLE_PATH_MODE=1`：允许读取服务器 workspace 路径和运行 `vault-sync`。公开部署通常不要开启。
-- `MONSTER_INTAKE_API_KEY`：AI 怪物资料整理专用 provider key；只保留在服务端。
-- `MONSTER_INTAKE_BASE_URL`：OpenAI-compatible API 根地址，例如 `https://api.openai.com/v1`。
-- `MONSTER_INTAKE_MODEL`：discovery、extraction 和 repair 使用的模型。
+- `MONSTER_INTAKE_AUTH_MODE`：`api-key` 或 `codex-oauth`，默认 `api-key`。
+- `MONSTER_INTAKE_API_KEY`：API Key 模式的 AI 怪物资料整理专用 provider key；只保留在服务端。
+- `MONSTER_INTAKE_BASE_URL`：API Key 模式的 OpenAI-compatible API 根地址，例如 `https://api.openai.com/v1`。
+- `MONSTER_INTAKE_CODEX_OAUTH_BASE_URL`：Codex OAuth 本机兼容桥地址，默认 `http://127.0.0.1:8787/v1`；必须是 loopback 地址。
+- `MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN`：可选的本机桥 bearer token；默认是非秘密占位值，OAuth 凭据不放在这里。
+- `MONSTER_INTAKE_MODEL`：discovery、extraction 和 repair 使用的模型；Codex OAuth 模式未填写时默认 `gpt-5.6-luna`。
+- `MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT`：Codex OAuth 推理强度；默认 `xhigh`，对应 Codex 界面里的 `ultra`，也接受填写 `ultra` 并自动归一化。
 - `MONSTER_INTAKE_REVIEW_MODEL`：独立 review 模型；未设置时使用 `MONSTER_INTAKE_MODEL`。
-- `MONSTER_INTAKE_TIMEOUT_MS`：每阶段超时，默认 `60000` 毫秒。
+- `MONSTER_INTAKE_TIMEOUT_MS`：普通 Intake 阶段超时；API Key 模式默认 `60000` 毫秒，Codex OAuth 模式默认 `300000` 毫秒。
+- `MONSTER_INTAKE_REPAIR_TIMEOUT_MS`：Intake 证据修复阶段的单独超时，默认至少 `180000` 毫秒；可设为 `1000` 到 `600000` 之间的整数。
 - `TRANSLATION_API_KEY` 或 `OPENAI_API_KEY`：服务器端翻译/AI normalize 凭据。
 - `GODDESSFANTASY_COOKIE`：服务器端 Goddess Fantasy crawl cookie。
 - `GODDESSFANTASY_USERNAME` / `GODDESSFANTASY_PASSWORD`：服务器端爬站登录凭据。
@@ -84,7 +89,7 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 
 浏览器只能看到“某项能力是否已配置”，不能取得上述凭据值。
 
-AI 怪物资料整理只读取五个 `MONSTER_INTAKE_*` 变量，不会回退到翻译或通用 OpenAI 变量。粘贴或上传的 TXT/MD 原文会发送给该 provider，因此公开部署必须在用户提交前明确告知这一点，并按 provider 的数据政策处理。服务端审计只记录 provider、model、prompt version、耗时、调用计数和错误码，不记录 key、请求头或隐藏推理。
+AI 怪物资料整理只读取专用的 `MONSTER_INTAKE_*` 变量，不会回退到翻译或通用 OpenAI 变量。`codex-oauth` 只适用于本机或受信任的 loopback 兼容桥，不应把它作为公开 Web 服务的远程认证方式。粘贴或上传的 TXT/MD 原文会发送给该 provider，因此公开部署必须在用户提交前明确告知这一点，并按 provider 的数据政策处理。服务端审计只记录 provider、model、prompt version、耗时、调用计数和错误码，不记录 key、请求头或隐藏推理。
 
 单次 Intake 最多 200,000 个 JavaScript UTF-16 字符、50 只怪物；长文本按 24,000 字符分块并保留 1,000 字符重叠，逐怪物 extraction 并发为 2。每只怪物最多 1 次 extraction、1 次独立 review 和 1 次 semantic repair；各阶段可对 timeout、429 或网络错误重试一次。模型不能自行增加循环或调用工具。`needs_review` 任务可下载 source、IR、候选 Markdown 和报告，但 Web 不会把候选 Actor JSON 注册为正式下载；只有 accepted 才注册 Actor JSON/ZIP。
 

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 import {
   assertEffectProfileForTarget,
@@ -10,6 +10,7 @@ import {
   type FvttTargetVersion,
   type IconMode,
   type IntakeDecision,
+  monsterIntakeAuthMode,
   monsterIntakeConfigured,
   parseFvttTargetVersion,
   parseIconMode,
@@ -26,6 +27,7 @@ import {
 } from './jobs/jobStore';
 import { resumeAiMonsterIntakeJob, runJob, startJob, type WebJobRequest } from './jobs/jobRunner';
 import { getWebImageAssetPreset } from './imageAssetPreset';
+import { jobInputDir } from './jobs/jobStore';
 import { resolveWorkspacePath, TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 import { checkShortRateLimit, getClientIp } from './security/rateLimit';
 import {
@@ -69,6 +71,7 @@ interface ReadFileBody {
 
 const singleUploadLimitBytes = 5 * 1024 * 1024;
 const collectionUploadLimitBytes = 20 * 1024 * 1024;
+const documentUploadLimitBytes = 20 * 1024 * 1024;
 const publicJobTypes = new Set<WebJobType>([
   'monster-collection',
   'item-collection',
@@ -119,6 +122,7 @@ export async function handleApiRequest(
         pathModeEnabled,
         translationConfigured: Boolean(Bun.env.TRANSLATION_API_KEY || Bun.env.OPENAI_API_KEY),
         monsterIntakeConfigured: monsterIntakeConfigured(Bun.env),
+        monsterIntakeAuthMode: monsterIntakeAuthMode(Bun.env) ?? null,
         goddessFantasyCookieConfigured: Boolean(Bun.env.GODDESSFANTASY_COOKIE),
         goddessFantasyLoginConfigured: Boolean(Bun.env.GODDESSFANTASY_USERNAME && Bun.env.GODDESSFANTASY_PASSWORD),
         imageAssetsConfigured: imagePreset.imageAssetsConfigured,
@@ -215,6 +219,44 @@ export async function handleApiRequest(
         throw userError(finished.error?.code ?? 'CONVERT_FAILED', finished.error?.message ?? '转换失败。');
       }
       return jsonSuccess(toSingleConversionPayload(finished));
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/documents/convert') {
+      validateDeclaredContentLength(request, securityConfig.maxRequestBodyBytes);
+      const documentUpload = await readDocumentMultipart(request, documentUploadLimitBytes);
+      cleanupExpiredJobs(securityConfig.retentionMs, securityConfig.maxRetainedJobs);
+      if (runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient) {
+        throw userError('JOB_CONCURRENCY_LIMIT', `同一客户端只能同时运行 ${securityConfig.longJobsPerClient} 个长任务。`, 429);
+      }
+      if (runningJobsTotal() >= securityConfig.globalLongJobs) {
+        throw userError('GLOBAL_JOB_CONCURRENCY_LIMIT', 'Server long-job capacity is currently full.', 429);
+      }
+      const job = createJob('document-convert', clientIp);
+      const inputDir = jobInputDir(job.id);
+      mkdirSync(inputDir, { recursive: true });
+      const inputPath = join(inputDir, safeUploadName(documentUpload.file.name));
+      writeFileSync(inputPath, Buffer.from(await documentUpload.file.arrayBuffer()));
+      startJob(job, {
+        type: 'document-convert',
+        fileName: documentUpload.file.name,
+        inputPath,
+        options: {
+          engine: documentUpload.fields.engine ?? 'auto',
+          language: documentUpload.fields.language ?? 'auto',
+          targetLanguage: documentUpload.fields.targetLanguage ?? 'zh-CN',
+          candidateIds: documentUpload.fields.candidateIds
+            ? parseCandidateIds(documentUpload.fields.candidateIds)
+            : undefined,
+          extractOnly: documentUpload.fields.extractOnly === 'true',
+          fvttVersion: normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '12'),
+          effectProfile: normalizeEffectProfile(
+            documentUpload.fields.effectProfile as EffectProfile | undefined,
+            normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '12'),
+          ),
+          iconMode: documentUpload.fields.iconMode ?? 'off',
+        },
+      });
+      return jsonSuccess(publicJob(getRequiredJob(job.id)));
     }
 
     if (request.method === 'POST' && url.pathname === '/api/jobs') {
@@ -380,6 +422,7 @@ function getRequiredJob(id: string): WebJob {
 
 function validateJobInput(body: WebJobRequest): void {
   const type = body.type;
+  if (type === 'document-convert') return;
   const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type === 'ai-monster-intake' || type.startsWith('ingest-');
   const needsJson = type === 'translate-json' || type === 'records-to-plaintext';
 
@@ -399,6 +442,66 @@ function validateJobInput(body: WebJobRequest): void {
       throw userError('INVALID_CRAWL_MODE', 'crawlMode 必须是 full 或 incremental。');
     }
   }
+}
+
+async function readDocumentMultipart(
+  request: Request,
+  maxBytes: number,
+): Promise<{ file: File; fields: Record<string, string> }> {
+  const form = await request.formData();
+  const value = form.get('file');
+  if (!(value instanceof File)) throw userError('MISSING_DOCUMENT', 'multipart field file is required.');
+  if (value.size <= 0) throw userError('EMPTY_DOCUMENT', 'uploaded document is empty.');
+  if (value.size > maxBytes) throw userError('UPLOAD_TOO_LARGE', `文档上传不能超过 ${Math.floor(maxBytes / 1024 / 1024)} MB。`);
+  const extension = extname(value.name).toLowerCase();
+  if (!['.pdf', '.png', '.jpg', '.jpeg', '.webp'].includes(extension)) {
+    throw userError('INVALID_UPLOAD_TYPE', '文档上传只接受 PDF、PNG、JPG、JPEG 或 WebP。');
+  }
+  const expectedMime = extension === '.pdf'
+    ? 'application/pdf'
+    : extension === '.png'
+      ? 'image/png'
+      : extension === '.webp'
+        ? 'image/webp'
+        : 'image/jpeg';
+  if (value.type && value.type.toLowerCase() !== expectedMime) {
+    throw userError('INVALID_DOCUMENT_MIME', '文件 MIME 类型与扩展名不匹配。');
+  }
+  const signature = new Uint8Array(await value.slice(0, 12).arrayBuffer());
+  if (!validDocumentSignature(extension, signature)) {
+    throw userError('INVALID_DOCUMENT_SIGNATURE', '文件扩展名与实际文件签名不匹配。');
+  }
+  const fields: Record<string, string> = {};
+  for (const [key, entry] of form.entries()) {
+    if (typeof entry === 'string') fields[key] = entry;
+  }
+  return { file: value, fields };
+}
+
+function validDocumentSignature(extension: string, bytes: Uint8Array): boolean {
+  if (extension === '.pdf') return ascii(bytes, 0, 4) === '%PDF';
+  if (extension === '.png') return bytes.length >= 8 && bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG';
+  if (extension === '.jpg' || extension === '.jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (extension === '.webp') return ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP';
+  return false;
+}
+
+function ascii(bytes: Uint8Array, offset: number, length: number): string {
+  return String.fromCharCode(...bytes.slice(offset, offset + length));
+}
+
+function safeUploadName(value: string): string {
+  return basename(value).replace(/[<>:"/\\|?*\x00-\x1F]/g, '_') || 'document.bin';
+}
+
+function parseCandidateIds(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string');
+  } catch {
+    // Accept a simple comma-separated form for curl/manual clients.
+  }
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
 function readWorkspaceText(path: string): string {
@@ -481,22 +584,25 @@ function json(value: ApiResponse<unknown>, init?: ResponseInit): Response {
 }
 
 async function readJsonBody<T>(request: Request, maxBytes: number): Promise<T> {
-  const declaredLength = request.headers.get('content-length');
-  if (declaredLength !== null) {
-    if (!/^\d+$/.test(declaredLength.trim())) {
-      throw userError('INVALID_CONTENT_LENGTH', 'Content-Length must be a non-negative integer.');
-    }
-    const parsedLength = Number(declaredLength);
-    if (!Number.isSafeInteger(parsedLength)) {
-      throw userError('INVALID_CONTENT_LENGTH', 'Content-Length is outside the supported range.');
-    }
-    if (parsedLength > maxBytes) {
-      throw userError('REQUEST_BODY_TOO_LARGE', 'Request body exceeds the 25 MiB server limit.', 413);
-    }
-  }
+  validateDeclaredContentLength(request, maxBytes);
   const text = await request.text();
   if (!text.trim()) return {} as T;
   return JSON.parse(text) as T;
+}
+
+function validateDeclaredContentLength(request: Request, maxBytes: number): void {
+  const declaredLength = request.headers.get('content-length');
+  if (declaredLength === null) return;
+  if (!/^\d+$/.test(declaredLength.trim())) {
+    throw userError('INVALID_CONTENT_LENGTH', 'Content-Length must be a non-negative integer.');
+  }
+  const parsedLength = Number(declaredLength);
+  if (!Number.isSafeInteger(parsedLength)) {
+    throw userError('INVALID_CONTENT_LENGTH', 'Content-Length is outside the supported range.');
+  }
+  if (parsedLength > maxBytes) {
+    throw userError('REQUEST_BODY_TOO_LARGE', 'Request body exceeds the 25 MiB server limit.', 413);
+  }
 }
 
 export function isPathModeEnabled(): boolean {

@@ -29,7 +29,7 @@ export interface PortableSpellResolutionStatus {
 }
 export type ClaimKind = 'explicit' | 'derived' | 'preserved-literal' | 'user-confirmed';
 export type IntakeConfidence = 'high' | 'medium' | 'low';
-export type IntakeSection = 'trait' | 'action' | 'bonus' | 'reaction' | 'legendary';
+export type IntakeSection = 'trait' | 'action' | 'bonus' | 'reaction' | 'legendary' | 'mythic';
 
 export interface IntakeClaim {
   path: string;

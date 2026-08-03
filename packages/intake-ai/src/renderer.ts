@@ -34,6 +34,9 @@ const CONDITION_ZH: Record<string, string> = {
   incapacitated: '失能', invisible: '隐形', paralyzed: '麻痹', petrified: '石化', poisoned: '中毒',
   prone: '倒地', restrained: '束缚', stunned: '震慑', unconscious: '昏迷', exhausted: '力竭',
 };
+const AOE_ZH: Record<NonNullable<CanonicalFeature['aoe']>['shape'], string> = {
+  sphere: '球形', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形',
+};
 
 export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
   const creature = ir.creature;
@@ -78,6 +81,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     附赠动作: creature.bonusActions.map((feature) => renderFeature(feature, 'bonus')),
     反应: creature.reactions.map((feature) => renderFeature(feature, 'reaction')),
     传奇动作: creature.legendaryActions.map((feature) => renderFeature(feature, 'legendary')),
+    神话动作: (creature.mythicActions ?? []).map((feature) => renderFeature(feature, 'mythic')),
   };
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (isRecord(value) && Object.keys(value).length === 0)) {
@@ -183,8 +187,10 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
 }
 
 function renderFeature(feature: CanonicalFeature, section: string): Record<string, unknown> {
+  const baseName = displayName(feature.name, feature.englishName);
+  const qualifier = feature.sourceQualifier?.trim();
   const result: Record<string, unknown> = {
-    名称: displayName(feature.name, feature.englishName),
+    名称: qualifier && !baseName.includes(`(${qualifier})`) ? `${baseName} (${qualifier})` : baseName,
     类型: feature.attack ? 'attack' : feature.save ? 'save' : feature.activityType ?? 'utility',
     激活: feature.activationType,
     描述: feature.description,
@@ -199,21 +205,44 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
       : undefined;
     result.范围 = reach && range ? `${reach}或射程 ${range}` : reach ?? range;
   }
-  const structuredDamage = feature.damage?.filter((damage) => damage.relationship === 'base' || damage.relationship === 'additional');
+  const structuredDamage = feature.damage;
   if (structuredDamage?.length) {
     result.伤害 = structuredDamage.map((damage) => ({
       公式: normalizeDice(damage.formula),
       类型: canonicalDamageType(damage.type),
+      关系: damage.relationship,
+      条件: damage.condition,
     }));
+  }
+  if (feature.healing) {
+    result['\u6cbb\u7597'] = {
+      '\u516c\u5f0f': normalizeDice(feature.healing.formula),
+      '\u7c7b\u578b': feature.healing.type,
+    };
   }
   if (feature.save) {
     result.DC = feature.save.dc;
     result.属性 = ABILITY_ZH[feature.save.ability];
-    result.dcSourceKind = 'literal';
+    result.dcSourceKind = feature.save.dcSourceKind ?? 'literal';
+  }
+  if (feature.aoe) result.AoE = { 形状: AOE_ZH[feature.aoe.shape], 范围: feature.aoe.radius };
+  if (feature.appliedConditions?.length) {
+    result.内嵌效果 = feature.appliedConditions.flatMap((applied) => {
+      const types = applied.statuses.length > 0 ? applied.statuses : [applied.condition ?? 'Effect'];
+      return types.map((type) => ({
+        类型: type,
+        描述: feature.description,
+        持续: applied.duration,
+      }));
+    });
+    result.失败效果 = feature.appliedConditions.map((applied) => ({
+      描述: applied.condition ?? (applied.statuses.join(', ') || feature.description),
+    }));
   }
   if (feature.recharge) result.充能 = `${feature.recharge[0]}-${feature.recharge[1]}`;
   if (feature.uses) result.每日 = feature.uses.max;
-  if (section === 'legendary' && feature.legendaryCost) result.传奇动作消耗 = feature.legendaryCost;
+  if (feature.activationCondition && /concentration|专注/iu.test(feature.activationCondition)) result['\u9700\u4e13\u6ce8'] = true;
+  if ((section === 'legendary' || section === 'mythic') && feature.legendaryCost) result.传奇动作消耗 = feature.legendaryCost;
   return result;
 }
 
@@ -239,7 +268,7 @@ function renderMovement(movement: CanonicalMonster['attributes']['movement']): s
   return Object.entries(movement)
     .filter((entry): entry is [keyof typeof MOVEMENT_ZH, number] => typeof entry[1] === 'number')
     .map(([kind, value]) => `${MOVEMENT_ZH[kind]} ${value} 尺`)
-    .join(', ');
+    .join(', ') + (movement.hover && typeof movement.fly === 'number' ? ' (hover)' : '');
 }
 
 function renderSenses(creature: CanonicalMonster): Record<string, unknown> {
