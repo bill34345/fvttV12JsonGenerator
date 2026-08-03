@@ -54,6 +54,8 @@ export class StructuredActionParser {
     const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
     const record = entry as Record<string, unknown>;
+    const rawDamage = record['\u4f24\u5bb3'] ?? record['damage'];
+    const rawHealing = record['\u6cbb\u7597'] ?? record['healing'];
     const activation = record['activation'];
     const activationRecord = activation && typeof activation === 'object' && !Array.isArray(activation)
       ? activation as Record<string, unknown>
@@ -88,7 +90,7 @@ export class StructuredActionParser {
       action.attackType = this.normalizeAttackType(String(attackType));
       action.toHit = this.parseNumber((entry as Record<string, unknown>)['命中'] ?? (entry as Record<string, unknown>)['toHit']);
       action.range = String((entry as Record<string, unknown>)['范围'] ?? (entry as Record<string, unknown>)['range'] ?? '');
-      action.damage = this.parseDamageParts((entry as Record<string, unknown>)['伤害']);
+      action.damage = this.parseDamageParts(rawDamage);
     }
 
     if (action.type === 'save' || (entry as Record<string, unknown>)['DC']) {
@@ -99,6 +101,16 @@ export class StructuredActionParser {
         action.dcSourceKind = dcSourceKind;
       }
       action.aoe = this.parseAoe((entry as Record<string, unknown>)['AoE'] ?? (entry as Record<string, unknown>)['aoe']);
+      if (rawDamage !== undefined) action.damage = this.parseDamageParts(rawDamage);
+    }
+
+    if (action.type === 'heal' && rawHealing && typeof rawHealing === 'object' && !Array.isArray(rawHealing)) {
+      const healing = rawHealing as Record<string, unknown>;
+      const formula = String(healing['\u516c\u5f0f'] ?? healing['formula'] ?? '').trim();
+      const rawType = String(healing['\u7c7b\u578b'] ?? healing['type'] ?? '').trim().toLowerCase();
+      if (formula && (rawType === 'healing' || rawType === 'temphp')) {
+        action.healing = { formula, type: rawType };
+      }
     }
 
     if ((entry as Record<string, unknown>)['目标'] || (entry as Record<string, unknown>)['target']) {
@@ -158,6 +170,7 @@ export class StructuredActionParser {
     if (sectionName === '附赠动作') return 'bonus';
     if (sectionName === '反应') return 'reaction';
     if (sectionName === '传奇动作') return 'legendary';
+    if (sectionName === '神话动作') return 'legendary';
     return null;
   }
 
@@ -185,6 +198,7 @@ export class StructuredActionParser {
     if (m === 'attack') return 'attack';
     if (m === 'save') return 'save';
     if (m === 'damage') return 'damage';
+    if (m === 'heal') return 'heal';
     return 'utility';
   }
 
@@ -210,10 +224,19 @@ export class StructuredActionParser {
 
   private parseDamageParts(parts: unknown): DamagePart[] | undefined {
     if (!parts || !Array.isArray(parts)) return undefined;
-    return parts.map((p: unknown) => ({
-      formula: typeof p === 'string' ? p : String((p as Record<string, unknown>)['公式'] ?? (p as Record<string, unknown>)['formula'] ?? ''),
-      type: typeof p === 'string' ? '' : String((p as Record<string, unknown>)['类型'] ?? (p as Record<string, unknown>)['type'] ?? ''),
-    }));
+    const damage = parts.flatMap((p: unknown) => {
+      if (typeof p === 'string') return [{ formula: p, type: '' }];
+      const record = p as Record<string, unknown>;
+      const relationship = String(record['关系'] ?? record['relationship'] ?? '').trim().toLowerCase();
+      // Conditional and replacement damage remain explicit in Intake Markdown,
+      // but must not be flattened into the primary on-hit/save damage activity.
+      if (relationship === 'conditional' || relationship === 'replacement') return [];
+      return [{
+        formula: String(record['公式'] ?? record['formula'] ?? ''),
+        type: String(record['类型'] ?? record['type'] ?? ''),
+      }];
+    });
+    return damage.length > 0 ? damage : undefined;
   }
 
   private parseAoe(aoe: unknown): AoeTemplate | undefined {

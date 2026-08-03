@@ -19,6 +19,7 @@ import {
 } from '../../../../src/core/application/web-client';
 import {
   convertSingle,
+  createDocumentJob,
   createJob,
   getCapabilities,
   getDefaults,
@@ -59,6 +60,15 @@ interface ToolConfig {
 }
 
 const tools: ToolConfig[] = [
+  {
+    id: 'document-convert',
+    group: 'json',
+    title: '图片 / PDF 转 Actor',
+    short: '图片 / PDF',
+    description: '先提取原文和版面，再筛选 NPC/怪物，最后翻译候选并生成 Actor JSON。',
+    accepts: '.pdf,.png,.jpg,.jpeg,.webp',
+    needsFile: true,
+  },
   {
     id: 'ai-monster-intake',
     group: 'intake',
@@ -177,7 +187,10 @@ export function App() {
   const [defaults, setDefaults] = useState<DefaultsResponse | null>(null);
   const [activeTool, setActiveTool] = useState<ToolId>('single');
   const [fileName, setFileName] = useState('uploaded.md');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [content, setContent] = useState('');
+  const [documentCandidateText, setDocumentCandidateText] = useState('');
+  const [documentExtractOnly, setDocumentExtractOnly] = useState(false);
   const [fvttVersion, setFvttVersion] = useState<FvttVersion>('12');
   const [effectProfile, setEffectProfile] = useState<EffectProfile>('core');
   const [iconMode, setIconMode] = useState<IconMode>('off');
@@ -275,7 +288,9 @@ export function App() {
       return;
     }
     setFileName(file.name);
-    setContent(await file.text());
+    setSelectedFile(file);
+    setContent(activeTool === 'document-convert' ? '' : await file.text());
+    if (activeTool === 'document-convert') setDocumentCandidateText('');
     setSingleResult(null);
     setJob(null);
     setError('');
@@ -299,6 +314,21 @@ export function App() {
         });
         setSingleResult(result);
         setStatus('success');
+        setMobileTab('result');
+        return;
+      }
+
+      if (activeTool === 'document-convert') {
+        if (!selectedFile) throw new Error('请先选择 PDF 或图片文件。');
+        const nextJob = await createDocumentJob({
+          file: selectedFile,
+          fvttVersion,
+          effectProfile,
+          iconMode,
+          candidateIds: documentCandidateText.split(',').map((item) => item.trim()).filter(Boolean),
+          extractOnly: documentExtractOnly,
+        });
+        setJob(nextJob);
         setMobileTab('result');
         return;
       }
@@ -335,11 +365,13 @@ export function App() {
     await navigator.clipboard.writeText(jsonPreview);
   }
 
-  const canRun = activeTool === 'goddessfantasy-board-crawl'
-    ? Boolean(boardUrl.trim())
-    : activeTool === 'vault-sync'
-      ? Boolean(vaultPath.trim())
-      : Boolean(content.trim());
+  const canRun = activeTool === 'document-convert'
+    ? Boolean(selectedFile)
+    : activeTool === 'goddessfantasy-board-crawl'
+      ? Boolean(boardUrl.trim())
+      : activeTool === 'vault-sync'
+        ? Boolean(vaultPath.trim())
+        : Boolean(content.trim());
 
   return (
     <main className="app-shell">
@@ -354,7 +386,7 @@ export function App() {
       <section className="capability-strip">
         <Capability label="访问" value={capabilities?.publicAccess ? '公网开放' : '本地'} tone="warning" />
         <Capability label="翻译" value={capabilities?.translationConfigured ? '已配置' : '未配置'} />
-        <Capability label="AI Intake" value={capabilities?.monsterIntakeConfigured ? '已配置' : '未配置'} tone={capabilities?.monsterIntakeConfigured ? undefined : 'warning'} />
+        <Capability label="AI Intake" value={capabilities?.monsterIntakeConfigured ? (capabilities.monsterIntakeAuthMode === 'codex-oauth' ? 'Codex OAuth' : 'API Key') : '未配置'} tone={capabilities?.monsterIntakeConfigured ? undefined : 'warning'} />
         <Capability label="爬站凭据" value={capabilities?.goddessFantasyCookieConfigured || capabilities?.goddessFantasyLoginConfigured ? '已配置' : '未配置'} />
         <Capability label="图片资产" value={capabilities?.imageAssetsConfigured ? '已配置' : '未配置'} tone={capabilities?.imageAllowHttp ? 'warning' : undefined} />
         <Capability label="上传限制" value={`${uploadLimitMb} MB`} />
@@ -418,7 +450,22 @@ export function App() {
             </label>
           ) : null}
 
-          {tool.needsFile ? (
+          {activeTool === 'document-convert' ? (
+            <>
+              <label className="field">
+                <span>候选 ID（可选，逗号分隔；也可以在结果区勾选）</span>
+                <input value={documentCandidateText} onChange={(event) => setDocumentCandidateText(event.target.value)} placeholder="例如 p20-beholder-hivemother-p20-block1" />
+              </label>
+              <div className="checkbox-row">
+                <label>
+                  <input type="checkbox" checked={documentExtractOnly} onChange={(event) => setDocumentExtractOnly(event.target.checked)} />
+                  只提取和筛选，不翻译、不生成 JSON
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          {tool.needsFile && activeTool !== 'document-convert' ? (
             <label className="field">
               <span>内容</span>
               <textarea
@@ -560,6 +607,14 @@ export function App() {
             }}
           />
 
+          <DocumentCandidatesPanel
+            job={job}
+            selectedIds={documentCandidateText.split(',').map((item) => item.trim()).filter(Boolean)}
+            onSelectionChange={(ids) => setDocumentCandidateText(ids.join(','))}
+          />
+
+          <DocumentPreviewPanel job={job} />
+
           <DownloadPanel singleResult={singleResult} job={job} />
 
           <pre className="json-preview">{jsonPreview}</pre>
@@ -592,6 +647,86 @@ interface IntakeReviewCreature {
   status: string;
   findings: IntakeReviewFinding[];
   spellResolution?: PortableSpellResolutionLike;
+}
+
+function DocumentCandidatesPanel(props: {
+  job: WebJob | null;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+}) {
+  if (props.job?.type !== 'document-convert') return null;
+  const candidates = Array.isArray(props.job.summary?.candidates)
+    ? props.job.summary.candidates as Array<{ id: string; label: string; pageNumber: number; status: string; confidence: number; reason?: string }>
+    : [];
+  const pageCount = typeof props.job.summary?.pageCount === 'number' ? props.job.summary.pageCount : undefined;
+  return (
+    <section className="intake-review">
+      <h3>文档候选{pageCount !== undefined ? ` · ${pageCount} 页` : ''}</h3>
+      {candidates.length === 0 ? <p>候选清单将在提取阶段后显示。</p> : null}
+      {candidates.map((candidate) => (
+        <article key={candidate.id}>
+          <header>
+            <label>
+              <input
+                type="checkbox"
+                disabled={candidate.status !== 'high'}
+                checked={props.selectedIds.length === 0 ? candidate.status === 'high' : props.selectedIds.includes(candidate.id)}
+                onChange={(event) => {
+                  const base = props.selectedIds.length === 0
+                    ? candidates.filter((item) => item.status === 'high').map((item) => item.id)
+                    : props.selectedIds;
+                  const next = event.target.checked
+                    ? [...new Set([...base, candidate.id])]
+                    : base.filter((id) => id !== candidate.id);
+                  props.onSelectionChange(next);
+                }}
+              />
+              <strong>{candidate.label}</strong>
+            </label>
+            <span>第 {candidate.pageNumber} 页 · {candidate.status}</span>
+          </header>
+          <p><code>{candidate.id}</code> · 置信度 {(candidate.confidence * 100).toFixed(0)}%</p>
+          {candidate.reason ? <p>{candidate.reason}</p> : null}
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function DocumentPreviewPanel(props: { job: WebJob | null }) {
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (props.job?.type !== 'document-convert' || !terminalStatuses.includes(props.job.status)) {
+      setPreviews({});
+      return;
+    }
+    const markdownFiles = props.job.files.filter((file) => file.fileName.endsWith('.md'));
+    let cancelled = false;
+    Promise.all(markdownFiles.map(async (file) => [file.fileName, await fetch(file.downloadUrl).then((response) => response.text())] as const))
+      .then((entries) => {
+        if (!cancelled) setPreviews(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (!cancelled) setPreviews({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [props.job?.id, props.job?.status, props.job?.files]);
+
+  if (props.job?.type !== 'document-convert' || Object.keys(previews).length === 0) return null;
+  return (
+    <section className="document-preview-panel">
+      <h3>Markdown 预览</h3>
+      {Object.entries(previews).map(([fileName, content]) => (
+        <details key={fileName} open={fileName === 'raw-extracted.md' || fileName === 'translated.md'}>
+          <summary>{fileName}</summary>
+          <pre className="document-preview">{content.slice(0, 30_000)}</pre>
+        </details>
+      ))}
+    </section>
+  );
 }
 
 function IntakeReviewPanel(props: {

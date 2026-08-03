@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { loadMonsterIntakeConfig, MonsterIntakeConfigurationError } from '../config';
+import {
+  DEFAULT_CODEX_OAUTH_BASE_URL,
+  DEFAULT_CODEX_OAUTH_BRIDGE_TOKEN,
+  DEFAULT_CODEX_OAUTH_MODEL,
+  DEFAULT_CODEX_OAUTH_REPAIR_TIMEOUT_MS,
+  DEFAULT_CODEX_OAUTH_REASONING_EFFORT,
+  DEFAULT_CODEX_OAUTH_TIMEOUT_MS,
+  loadMonsterIntakeConfig,
+  MonsterIntakeConfigurationError,
+} from '../config';
+import { runMonsterIntakeDoctor } from '@fvtt-json-generator/intake-ai/doctor';
+import { createMonsterIntakeProvider } from '@fvtt-json-generator/intake-ai/factory';
 import {
   INTAKE_PROMPT_VERSIONS,
   MonsterIntakeProviderError,
@@ -29,11 +40,13 @@ describe('monster intake configuration', () => {
       TRANSLATION_API_KEY: 'must-not-be-used',
     });
     expect(config).toEqual({
+      authMode: 'api-key',
       apiKey: 'intake-key',
       baseUrl: 'https://example.test/v1',
       model: 'extractor',
       reviewModel: 'extractor',
       timeoutMs: 60_000,
+      repairTimeoutMs: 180_000,
     });
   });
 
@@ -42,9 +55,98 @@ describe('monster intake configuration', () => {
       MonsterIntakeConfigurationError,
     );
   });
+
+  test('loads Codex OAuth mode without requiring an OAuth token in the app', () => {
+    const config = loadMonsterIntakeConfig({
+      MONSTER_INTAKE_AUTH_MODE: 'codex-oauth',
+    });
+
+    expect(config).toEqual({
+      authMode: 'codex-oauth',
+      apiKey: DEFAULT_CODEX_OAUTH_BRIDGE_TOKEN,
+      baseUrl: DEFAULT_CODEX_OAUTH_BASE_URL,
+      model: DEFAULT_CODEX_OAUTH_MODEL,
+      reviewModel: DEFAULT_CODEX_OAUTH_MODEL,
+      timeoutMs: DEFAULT_CODEX_OAUTH_TIMEOUT_MS,
+      repairTimeoutMs: DEFAULT_CODEX_OAUTH_REPAIR_TIMEOUT_MS,
+      reasoningEffort: DEFAULT_CODEX_OAUTH_REASONING_EFFORT,
+    });
+  });
+
+  test('maps the UI ultra label to the API xhigh reasoning effort', () => {
+    expect(loadMonsterIntakeConfig({
+      MONSTER_INTAKE_AUTH_MODE: 'codex-oauth',
+      MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT: 'ultra',
+    }).reasoningEffort).toBe('xhigh');
+  });
+
+  test('rejects a non-loopback Codex OAuth bridge URL', () => {
+    expect(() => loadMonsterIntakeConfig({
+      MONSTER_INTAKE_AUTH_MODE: 'codex-oauth',
+      MONSTER_INTAKE_CODEX_OAUTH_BASE_URL: 'https://example.test/v1',
+      MONSTER_INTAKE_MODEL: 'gpt-5.4',
+    })).toThrow(/loopback/i);
+  });
+
+  test('doctor checks the local bridge health endpoint and configured model', async () => {
+    const requests: Array<{ url: string; method: string | undefined }> = [];
+    const report = await runMonsterIntakeDoctor({
+      MONSTER_INTAKE_AUTH_MODE: 'codex-oauth',
+      MONSTER_INTAKE_CODEX_OAUTH_BASE_URL: 'http://127.0.0.1:9001/v1',
+      MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN: 'must-not-be-logged',
+    }, async (input, init) => {
+      requests.push({ url: String(input), method: init?.method });
+      return requests.at(-1)?.url.endsWith('/v1/models')
+        ? Response.json({ data: [{ id: DEFAULT_CODEX_OAUTH_MODEL }] })
+        : new Response('{"ok":true}', { status: 200 });
+    });
+
+    expect(report).toEqual({
+      configured: true,
+      authMode: 'codex-oauth',
+      model: DEFAULT_CODEX_OAUTH_MODEL,
+      baseUrl: 'http://127.0.0.1:9001/v1',
+      bridge: {
+        healthUrl: 'http://127.0.0.1:9001/health',
+        modelsUrl: 'http://127.0.0.1:9001/v1/models',
+        reachable: true,
+        modelAdvertised: true,
+        status: 200,
+        message: 'Codex OAuth bridge is reachable and exposes the configured model.',
+      },
+    });
+    expect(requests).toEqual([
+      { url: 'http://127.0.0.1:9001/health', method: 'GET' },
+      { url: 'http://127.0.0.1:9001/v1/models', method: 'GET' },
+    ]);
+    expect(JSON.stringify(report)).not.toContain('must-not-be-logged');
+  });
 });
 
 describe('OpenAI-compatible monster intake provider', () => {
+  test('routes Codex OAuth mode through the local OpenAI-compatible bridge contract', async () => {
+    const requests: Array<{ url: string; init: HttpRequest }> = [];
+    const provider = createMonsterIntakeProvider({
+      env: {
+        MONSTER_INTAKE_AUTH_MODE: 'codex-oauth',
+        MONSTER_INTAKE_CODEX_OAUTH_BASE_URL: 'http://127.0.0.1:8787/v1',
+        MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT: 'ultra',
+      },
+      httpClient: async (url, init) => {
+        requests.push({ url, init });
+        return response(200, '{"schemaVersion":1,"candidates":[]}');
+      },
+    });
+
+    await provider.discover({ source: 'text', sourceSha256: 'hash', chunkStart: 0, chunkEnd: 4 });
+
+    expect(requests[0]?.url).toBe('http://127.0.0.1:8787/v1/chat/completions');
+    expect(requests[0]?.init.headers.Authorization).toBe(`Bearer ${DEFAULT_CODEX_OAUTH_BRIDGE_TOKEN}`);
+    const body = JSON.parse(requests[0]!.init.body) as Record<string, unknown>;
+    expect(body.model).toBe(DEFAULT_CODEX_OAUTH_MODEL);
+    expect(body.reasoning_effort).toBe('xhigh');
+  });
+
   test('uses versioned independent stage prompts and strict JSON mode', async () => {
     const requests: Array<{ url: string; init: HttpRequest }> = [];
     const client: HttpClient = async (url, init) => {
@@ -120,6 +222,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('must be disjoint');
     expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
     expect(prompt).toContain('never encode absence as numeric 0');
+    expect(prompt).toContain('hover is an optional JSON boolean');
     expect(prompt).toContain('Biography, when present, must remain one JSON string');
     expect(prompt).toContain('languages.custom is an optional JSON string, never an array or object');
     expect(prompt).toContain('defenses use all four empty arrays');
@@ -196,7 +299,10 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v14');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v15');
+    expect(prompt).toContain('Return a compact JSON Patch envelope only');
+    expect(prompt).toContain('Do not repeat the complete MonsterIntakeIR');
+    expect(prompt).toContain('at most 64 operations');
     expect(prompt).toContain('same structured spellcasting contract');
     expect(prompt).toContain('prepared-cantrip');
     expect(prompt).toContain('prepared-slots');
@@ -210,8 +316,8 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('Every EvidenceRef must use exact keys {start,end,quote}');
     expect(prompt).toContain('quote must be non-empty and exactly equal source.slice(start,end)');
     expect(prompt).toContain('absolute JavaScript UTF-16 offsets');
-    expect(prompt).toContain('Start from the supplied IR and change only paths implicated by the supplied findings');
-    expect(prompt).toContain('Preserve every unrelated valid field and EvidenceRef exactly');
+    expect(prompt).toContain('Start from the supplied IR and patch only paths implicated by the supplied findings');
+    expect(prompt).toContain('Unchanged fields and evidence are preserved by the caller');
     expect(prompt).toContain('Never drop quote or fabricate quote text from offsets');
     expect(prompt).toContain('keep a blocking uncertainty instead of claiming the IR is repaired');
     expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
@@ -250,15 +356,82 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(JSON.stringify(audit)).not.toContain('secret');
   });
 
-  test('does not retry invalid JSON', async () => {
+  test('retries malformed JSON once, then fails closed', async () => {
     let calls = 0;
     const provider = makeProvider(async () => {
       calls += 1;
       return response(200, 'not json');
     });
     await expect(provider.discover({ source: 'x', sourceSha256: 'h', chunkStart: 0, chunkEnd: 1 }))
-      .rejects.toMatchObject({ code: 'invalid_response', retryable: false });
-    expect(calls).toBe(1);
+      .rejects.toMatchObject({ code: 'invalid_response', retryable: true });
+    expect(calls).toBe(2);
+  });
+
+  test('retries an empty OAuth bridge response once', async () => {
+    let calls = 0;
+    const provider = makeProvider(async () => {
+      calls += 1;
+      return calls === 1
+        ? response(200, '')
+        : response(200, '{"schemaVersion":1,"candidates":[]}');
+    });
+
+    await expect(provider.discover({ source: 'x', sourceSha256: 'h', chunkStart: 0, chunkEnd: 1 }))
+      .resolves.toEqual({ schemaVersion: 1, candidates: [] });
+    expect(calls).toBe(2);
+  });
+
+  test('retries an incomplete extraction or repair IR once', async () => {
+    let calls = 0;
+    const provider = makeProvider(async () => {
+      calls += 1;
+      return calls === 1
+        ? response(200, '{"schemaVersion":1,"creature":{}}')
+        : response(200, '{"schemaVersion":1,"source":{"sha256":"hash","length":0},"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
+    });
+
+    await expect(provider.repair({} as never)).resolves.toMatchObject({ schemaVersion: 1, claims: [] });
+    expect(calls).toBe(2);
+  });
+
+  test('applies a compact repair patch to the supplied IR without requiring a complete rewritten IR', async () => {
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      operations: [
+        { op: 'replace', path: '/creature/attributes/ac', value: 20 },
+        { op: 'remove', path: '/uncertainties/0' },
+        { op: 'add', path: '/creature/actions/-', value: { name: 'Eye Ray', description: 'Source-backed ray.', evidence: [] } },
+      ],
+    })));
+    const ir = {
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: 0 },
+      creature: { attributes: { ac: 19 }, actions: [] },
+      claims: [],
+      coverage: [],
+      uncertainties: [{ id: 'old' }],
+    };
+
+    await expect(provider.repair({ stage: 'deterministic-validation', source: '', ir, deterministicFindings: [] } as never))
+      .resolves.toMatchObject({
+        creature: { attributes: { ac: 20 }, actions: [{ name: 'Eye Ray' }] },
+        uncertainties: [],
+      });
+    expect(ir.creature.attributes.ac).toBe(19);
+    expect(ir.creature.actions).toEqual([]);
+  });
+
+  test('rejects compact repair patches outside the governed IR roots', async () => {
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      operations: [{ op: 'replace', path: '/schemaVersion', value: 2 }],
+    })));
+    const ir = {
+      schemaVersion: 1, source: { sha256: 'hash', length: 0 }, creature: {}, claims: [], coverage: [], uncertainties: [],
+    };
+
+    await expect(provider.repair({ stage: 'deterministic-validation', source: '', ir, deterministicFindings: [] } as never))
+      .rejects.toMatchObject({ code: 'invalid_response', retryable: true });
   });
 
   test('rejects a review finding that omits the required schema fields', async () => {
@@ -306,6 +479,34 @@ describe('OpenAI-compatible monster intake provider', () => {
     await expect(provider.review({} as never)).rejects.toMatchObject({ code: 'invalid_response' });
   });
 
+  test('retries a review response with malformed evidence once', async () => {
+    let calls = 0;
+    const provider = makeProvider(async () => {
+      calls += 1;
+      return calls === 1
+        ? response(200, JSON.stringify({
+          schemaVersion: 1,
+          verdict: 'revise',
+          findings: [{
+            id: 'bad-evidence', code: 'BAD_EVIDENCE', path: '/', message: 'Retry this finding.', blocking: true,
+            evidence: [{ start: 0, end: 2, quote: 'x' }],
+          }],
+        }))
+        : response(200, JSON.stringify({
+          schemaVersion: 1,
+          verdict: 'accepted',
+          findings: [],
+        }));
+    });
+
+    await expect(provider.review({} as never)).resolves.toEqual({
+      schemaVersion: 1,
+      verdict: 'accepted',
+      findings: [],
+    });
+    expect(calls).toBe(2);
+  });
+
   test('re-anchors a unique review evidence quote before enforcing the strict UTF-16 range contract', async () => {
     const source = 'prefix exact review quote suffix';
     const provider = makeProvider(async () => response(200, JSON.stringify({
@@ -321,6 +522,45 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(review.findings[0]!.evidence).toEqual([{
       start: source.indexOf('exact review quote'),
       end: source.indexOf('exact review quote') + 'exact review quote'.length,
+      quote: 'exact review quote',
+    }]);
+  });
+
+  test('rebinds a unique review evidence quote when only source whitespace was compressed', async () => {
+    const source = 'prefix exact\nreview quote suffix';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'whitespace', code: 'WHITESPACE', path: '/', message: 'Whitespace drift.', blocking: true,
+        evidence: [{ start: 0, end: 2, quote: 'exact review quote' }],
+      }],
+    })));
+
+    const review = await provider.review({ source } as never);
+    const start = source.indexOf('exact\nreview quote');
+    expect(review.findings[0]!.evidence).toEqual([{
+      start,
+      end: start + 'exact\nreview quote'.length,
+      quote: 'exact\nreview quote',
+    }]);
+  });
+
+  test('rebinds a close reported review range when the model changes at most two characters', async () => {
+    const source = 'prefix exact review quote suffix';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'close-range', code: 'CLOSE_RANGE', path: '/', message: 'One copied character drifted.', blocking: true,
+        evidence: [{ start: 7, end: 25, quote: 'exact reView quote' }],
+      }],
+    })));
+
+    const review = await provider.review({ source } as never);
+    expect(review.findings[0]!.evidence).toEqual([{
+      start: 7,
+      end: 25,
       quote: 'exact review quote',
     }]);
   });
@@ -365,7 +605,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     await expect(provider.review({} as never)).resolves.toEqual(payload as any);
   });
 
-  test('bounds timeout retries to two attempts', async () => {
+  test('bounds all timeout attempts to one total stage budget', async () => {
     let calls = 0;
     const provider = makeProvider(async (_url, init) => {
       calls += 1;
@@ -376,7 +616,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     }, [], 5);
     await expect(provider.discover({ source: 'x', sourceSha256: 'h', chunkStart: 0, chunkEnd: 1 }))
       .rejects.toMatchObject({ code: 'timeout', retryable: true });
-    expect(calls).toBe(2);
+    expect(calls).toBe(1);
   });
 });
 
@@ -384,6 +624,11 @@ describe('strict provider JSON parsing', () => {
   test('allows a removable leading reasoning wrapper and JSON fence', () => {
     expect(parseStrictJson('<think>private</think>```json\n{"schemaVersion":1}\n```'))
       .toEqual({ schemaVersion: 1 });
+  });
+
+  test('recovers a bounded duplicated closing brace from the OAuth bridge', () => {
+    expect(parseStrictJson('{"schemaVersion":1,"creature":{}}}'))
+      .toEqual({ schemaVersion: 1, creature: {} });
   });
 
   test('rejects trailing text and unresolved reasoning', () => {
@@ -396,13 +641,16 @@ function makeProvider(
   httpClient: HttpClient,
   audit: IntakeProviderAuditEvent[] = [],
   timeoutMs = 60_000,
+  repairTimeoutMs = Math.max(timeoutMs, 180_000),
 ): OpenAICompatibleMonsterIntakeProvider {
   return new OpenAICompatibleMonsterIntakeProvider({
+    authMode: 'api-key',
     apiKey: 'secret',
     baseUrl: 'https://example.test/v1',
     model: 'extractor',
     reviewModel: 'reviewer',
     timeoutMs,
+    repairTimeoutMs,
     httpClient,
     audit: (event) => audit.push(event),
   });

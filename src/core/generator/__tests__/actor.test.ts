@@ -37,6 +37,40 @@ describe('ActorGenerator', () => {
     expect(activities[id].attack.bonus).toBe('10');
   });
 
+  it('preserves structured save damage in the v14 activity schema', () => {
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate({
+      name: 'Structured Save Damage',
+      type: 'npc',
+      abilities: { dex: 10 },
+      attributes: {},
+      details: {},
+      traits: {},
+      skills: {},
+      saves: [],
+      items: [],
+      structuredActions: {
+        ['\u52a8\u4f5c']: [{
+          name: 'Radiant Burst',
+          type: 'save',
+          describe: 'A save action with structured damage.',
+          DC: 21,
+          ability: 'dex',
+          damage: [{ formula: '4d10', type: 'psychic' }],
+        }],
+      },
+    });
+
+    const item = actor.items.find((entry: any) => entry.name === 'Radiant Burst');
+    const activity = Object.values(item?.system.activities ?? {})[0] as any;
+    expect(activity.type).toBe('save');
+    expect(activity.save.dc.formula).toBe('21');
+    expect(activity.damage.parts[0]).toEqual(expect.objectContaining({
+      number: 4,
+      denomination: 10,
+      types: ['psychic'],
+    }));
+  });
+
   it('preserves compact YAML object saves when generating actor activities', () => {
     const input: ParsedNPC = {
       name: '成年红龙',

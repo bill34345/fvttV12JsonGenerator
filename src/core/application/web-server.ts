@@ -16,6 +16,16 @@ export {
   convertMarkdownPathToOutput,
 } from './conversion';
 export {
+  createDocumentConversionWorkflow,
+  documentDoctor,
+  runDocumentConversion,
+} from './document';
+export type {
+  DocumentConversionOptions,
+  DocumentConversionResult,
+  DocumentDoctorReport,
+} from './document';
+export {
   JsonTranslationSyncWorkflow,
   ObsidianSyncWorkflow,
   PlainTextActorWorkflow,
@@ -38,12 +48,13 @@ export { ItemsIngestionWorkflow } from '../ingest/items';
 export { PlainTextIngestionWorkflow } from '../ingest/plaintextAdapter';
 export {
   loadMonsterIntakeConfig,
+  monsterIntakeAuthMode,
   monsterIntakeConfigured,
 } from '@fvtt-json-generator/intake-ai/config';
 export {
-  OpenAICompatibleMonsterIntakeProvider,
+  createMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
-} from '@fvtt-json-generator/intake-ai/provider';
+} from '@fvtt-json-generator/intake-ai';
 export type {
   IntakeDecision,
   MonsterIntakeAiProvider,

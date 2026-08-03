@@ -158,6 +158,13 @@ ${keyFor('cr')}: 1/2
     expect(traits?.[1]?.activation?.explicit).toBeUndefined();
     expect(actions?.[0]?.activation?.type).toBe('action');
     expect(actions?.[0]?.activation?.explicit).toBeUndefined();
+    expect(actions?.[1]).toEqual(expect.objectContaining({
+      name: 'Radiant Burst',
+      type: 'save',
+      DC: 21,
+      ability: 'dex',
+      damage: [{ formula: '4d10', type: 'psychic' }],
+    }));
   });
 
   it('maps and preserves only a strictly validated portable spell manifest', () => {

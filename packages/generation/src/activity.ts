@@ -97,6 +97,18 @@ export class ActivityGenerator {
           },
         } : {}),
       };
+    } else if (action.type === 'heal' && action.healing) {
+      activities[id] = {
+        _id: id,
+        type: 'heal',
+        healing: this.formatHealing(action.healing),
+        target: {
+          override: false,
+          prompt: false,
+          template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: 'ft' },
+          affects: { count: '1', type: 'self', choice: false, special: '' },
+        },
+      };
     } else if (action.damage && action.damage.length > 0) {
       activities[id] = {
         _id: id,
@@ -393,6 +405,28 @@ export class ActivityGenerator {
         types: this.normalizeDamageTypes(damage),
         custom: { enabled: true, formula: damage.formula },
         scaling: { mode: 'whole', number: 1, ...(this.isV14() ? { formula: '' } : {}) }
+    };
+  }
+
+  private formatHealing(healing: NonNullable<ActionData['healing']>): Record<string, unknown> {
+    const match = healing.formula.match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/u);
+    if (match?.[1] && match[2]) {
+      return {
+        number: Number.parseInt(match[1], 10),
+        denomination: Number.parseInt(match[2], 10),
+        bonus: match[3] ?? '',
+        types: [healing.type],
+        custom: { enabled: false, formula: '' },
+        scaling: { mode: 'whole', number: 1, formula: '' },
+      };
+    }
+    return {
+      number: null,
+      denomination: null,
+      bonus: '',
+      types: [healing.type],
+      custom: { enabled: true, formula: healing.formula },
+      scaling: { mode: 'whole', number: null, formula: '' },
     };
   }
 

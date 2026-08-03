@@ -1,4 +1,6 @@
 export * from './config';
+export * from './doctor';
+export * from './factory';
 export * from './http';
 export * from './orchestrator';
 export * from './provider';

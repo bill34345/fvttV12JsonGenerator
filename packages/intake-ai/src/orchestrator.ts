@@ -15,9 +15,11 @@ import {
 } from '@fvtt-json-generator/workflows/single-file-conversion';
 import { renderMonsterIntakeMarkdown } from './renderer';
 import type {
+  AbilityKey,
   AiReviewResult,
   DiscoveryCandidate,
   EvidenceRef,
+  IntakeClaim,
   IntakeDecision,
   IntakeDecisionsFile,
   IntakeFinding,
@@ -243,12 +245,13 @@ async function processIr(
     if (validation.blocking.length > 0) {
       if (calls.extraction === 1 && calls.repair === 0) {
         calls.repair += 1;
-        ir = anchorIrEvidence(options.source, candidate, await provider.repair({
+        const repaired = await provider.repair({
           stage: 'deterministic-validation',
           source: options.source,
           ir,
           deterministicFindings: validation.findings,
-        }));
+        });
+        ir = anchorIrEvidence(options.source, candidate, mergeConservativeRepair(ir, repaired, options.source));
         continue;
       }
       const spellResolution = spellResolutionForFindings(
@@ -277,7 +280,7 @@ async function processIr(
     const combined = combineFindings(report.findings, review);
     if (review.verdict === 'revise' && calls.extraction === 1 && calls.repair === 0) {
       calls.repair += 1;
-      ir = anchorIrEvidence(options.source, candidate, await provider.repair({
+      const repaired = await provider.repair({
         stage: 'semantic-review',
         source: options.source,
         ir,
@@ -285,7 +288,8 @@ async function processIr(
         actorProjection: report.projection,
         deterministicFindings: report.findings,
         review,
-      }));
+      });
+      ir = anchorIrEvidence(options.source, candidate, mergeConservativeRepair(ir, repaired, options.source));
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
@@ -402,7 +406,32 @@ async function promoteAccepted(
     if (existsSync(actorPath)) copyFileSync(actorPath, join(backupDir, basename(actorPath)));
   }
   atomicWrite(markdownPath, markdown);
-  await dependencies.convertMarkdownContentToJson({ content: markdown, sourcePath: markdownPath, outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null, iconOptions: options.iconOptions });
+  const conversion = await dependencies.convertMarkdownContentToJson({ content: markdown, sourcePath: markdownPath, outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null, iconOptions: options.iconOptions });
+  if (!existsSync(actorPath)) {
+    const onlyLiteralReview = conversion.status === 'needs_review'
+      && conversion.diagnostics.length > 0
+      && conversion.diagnostics.every((diagnostic) => diagnostic.code === 'GEN_LITERAL_REVIEW_REQUIRED');
+    const intakeVerification = verifyMonsterIntake(options.source, ir, markdown, conversion.rawJson, candidate);
+    const difference = firstPromotionDifference(conversion.rawJson, generatedActor);
+    if (!onlyLiteralReview || intakeVerification.status !== 'accepted' || difference) {
+      return {
+        markdownPath,
+        actorPath,
+        findings: [{
+          id: `promotion-generation:${candidate.id}`,
+          code: 'PROMOTION_GENERATION_NOT_ACCEPTED',
+          path: '/promotion',
+          message: `The formal workflow declined the Actor output${difference ? ` and regenerated content differs at ${difference}` : ''}.`,
+          blocking: true,
+          origin: 'semantic',
+        }],
+      };
+    }
+    // The regular workflow deliberately withholds literal-review output. Intake
+    // has an additional deterministic verifier plus independent AI acceptance,
+    // so write the exact, re-generated workflow Actor only after both gates pass.
+    atomicWrite(actorPath, JSON.stringify(conversion.rawJson, null, 2));
+  }
   return { markdownPath, actorPath, findings: [] };
 }
 
@@ -534,6 +563,7 @@ export function adjudicateReview(
     || isDisprovedSkillLabelFinding(ir, projection, finding)
     || isDisprovedAcNoteFormatFinding(ir, projection, finding)
     || isDisprovedUsageEvidenceFinding(source, ir, finding)
+    || isDisprovedMythicActivationFinding(ir, projection, finding)
     || isOutsideCandidateFinding(source, candidate, ir, finding)
   ));
   return {
@@ -825,8 +855,15 @@ export function anchorIrEvidence(
   next.source = { sha256: sha256(source), length: source.length };
   const candidateScope = [{ start: candidate.start, end: candidate.end }];
   for (const ref of collectGeneralEvidenceRefs(next)) anchorEvidenceRef(source, candidateScope, ref);
+  partitionMythicActions(next, source);
   normalizeModelIr(next, source, options.normalizeAbsentOptionalZeroes ?? true);
+  ensureMovementQualifiers(next, source);
   anchorSpellcastingEvidence(source, candidateScope, next, options.canonicalizeModelSpellEvidence ?? true);
+  ensureFeatureEvidence(next, source);
+  ensureFeatureSourceQualifiers(next, source);
+  ensureLegendaryPreambleEvidence(next, source);
+  ensureEvidenceBackedFeatureClaims(next, source);
+  repairCoverageLedger(next, source, candidate);
   if (options.removeDisprovedProcessUncertainties ?? true) {
     next.uncertainties = next.uncertainties.filter((uncertainty) => !isDisprovedWholeSourceOffsetUncertainty(
       source,
@@ -841,6 +878,409 @@ export function anchorIrEvidence(
   return next;
 }
 
+function ensureMovementQualifiers(ir: MonsterIntakeIR, source: string): void {
+  const movement = ir.creature.attributes.movement;
+  const explicitHover = ir.claims
+    .filter((claim) => claim.path === '/creature/attributes/movement' || claim.path === '/creature/attributes/movement/hover')
+    .flatMap((claim) => claim.evidence)
+    .some((ref) => source.slice(ref.start, ref.end) === ref.quote
+      && /(?:\bfly(?:ing)?\b|\u98de\u884c)[\s\S]{0,40}(?:\bhover\b|\u60ac\u505c|\u60ac\u6d6e)/iu.test(ref.quote));
+  if (explicitHover && typeof movement.fly === 'number') movement.hover = true;
+  else delete movement.hover;
+}
+
+function isDisprovedMythicActivationFinding(
+  ir: MonsterIntakeIR,
+  projection: Record<string, unknown>,
+  finding: AiReviewResult['findings'][number],
+): boolean {
+  if (finding.code.toUpperCase() !== 'ACTOR_ACTION_ECONOMY_DRIFT') return false;
+  const mythic = ir.creature.mythicActions ?? [];
+  if (mythic.length === 0) return false;
+  const items = Array.isArray(projection.items) ? projection.items.map(asRecord) : [];
+  return mythic.every((feature) => items.some((item) => (
+    featureNameMatches(String(item?.name ?? ''), feature.name)
+    && item?.activation === 'legendary'
+    && /^(?:\u795e\u8bdd\u52a8\u4f5c|mythic actions)$/iu.test(String(item?.section ?? ''))
+  )));
+}
+
+function featureNameMatches(projected: string, expected: string): boolean {
+  const compactName = (value: string): string => value.normalize('NFKC').replace(/\s+/gu, '').toLocaleLowerCase('en-US');
+  return compactName(projected).includes(compactName(expected));
+}
+
+function mergeConservativeRepair(
+  previous: MonsterIntakeIR,
+  repaired: MonsterIntakeIR,
+  source: string,
+): MonsterIntakeIR {
+  const next = structuredClone(repaired);
+  const previousSections = ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions', 'mythicActions'] as const;
+  for (const section of previousSections) {
+    const oldFeatures = previous.creature[section] as unknown[];
+    const newFeatures = next.creature[section] as unknown[];
+    if (hasSourceBackedEntries(oldFeatures, source) && !hasSourceBackedEntries(newFeatures, source)) {
+      next.creature[section] = structuredClone(previous.creature[section] ?? []) as never;
+    }
+  }
+  if (hasSourceBackedSpellcasting(previous.creature.spellcasting, source)
+    && !hasSourceBackedSpellcasting(next.creature.spellcasting, source)) {
+    next.creature.spellcasting = structuredClone(previous.creature.spellcasting);
+  }
+
+  const repairedClaims = Array.isArray(next.claims) ? next.claims : [];
+  const previousClaims = Array.isArray(previous.claims) ? previous.claims : [];
+  const repairedPaths = new Set(repairedClaims.map((claim) => claim?.path).filter((path): path is string => typeof path === 'string'));
+  next.claims = [
+    ...repairedClaims,
+    ...previousClaims.filter((claim) => typeof claim?.path === 'string' && !repairedPaths.has(claim.path)),
+  ];
+
+  if (hasUsableCoverage(previous.coverage, source)) {
+    next.coverage = structuredClone(previous.coverage);
+  }
+  const previousUncertainties = Array.isArray(previous.uncertainties) ? previous.uncertainties : [];
+  const nextUncertainties = Array.isArray(next.uncertainties) ? next.uncertainties : [];
+  const uncertaintyKeys = new Set(nextUncertainties.map((uncertainty) => `${uncertainty.code}:${uncertainty.path}`));
+  next.uncertainties = nextUncertainties;
+  next.uncertainties.push(...previousUncertainties.filter((uncertainty) => {
+    const key = `${uncertainty.code}:${uncertainty.path}`;
+    return !uncertaintyKeys.has(key);
+  }));
+  return next;
+}
+
+function hasSourceBackedEntries(entries: unknown, source: string): boolean {
+  return Array.isArray(entries) && entries.length > 0 && entries.every((entry) => {
+    const record = asRecord(entry);
+    return typeof record?.name === 'string'
+      && typeof record.description === 'string'
+      && evidenceArray(record.evidence).some((ref) => source.slice(ref.start, ref.end) === ref.quote);
+  });
+}
+
+function hasSourceBackedSpellcasting(groups: unknown, source: string): boolean {
+  return Array.isArray(groups) && groups.length > 0 && groups.every((group) => {
+    const record = asRecord(group);
+    return typeof record?.featureName === 'string'
+      && typeof record.description === 'string'
+      && evidenceArray(record.evidence).some((ref) => source.slice(ref.start, ref.end) === ref.quote)
+      && Array.isArray(record.usageGroups)
+      && record.usageGroups.length > 0;
+  });
+}
+
+function hasUsableCoverage(entries: unknown, source: string): entries is MonsterIntakeIR['coverage'] {
+  return Array.isArray(entries) && entries.length > 0 && entries.every((entry) => {
+    const record = asRecord(entry);
+    return (record?.classification === 'mechanical'
+      || record?.classification === 'narrative'
+      || record?.classification === 'ignored-with-reason')
+      && Number.isInteger(record.start)
+      && Number.isInteger(record.end)
+      && source.slice(record.start as number, record.end as number) === record.quote;
+  });
+}
+
+type FeatureSection = 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'legendaryActions' | 'mythicActions';
+
+const FEATURE_SECTIONS: FeatureSection[] = [
+  'traits',
+  'actions',
+  'bonusActions',
+  'reactions',
+  'legendaryActions',
+  'mythicActions',
+];
+
+interface SourceSectionRange {
+  start: number;
+  end: number;
+}
+
+/**
+ * Provider output is allowed to omit feature evidence, but it is not allowed
+ * to make a real source feature unverifiable. Rebuild a feature span from the
+ * translated Markdown's section and feature labels before validation.
+ */
+function ensureFeatureEvidence(ir: MonsterIntakeIR, source: string): void {
+  const ranges = findFeatureSectionRanges(source);
+  for (const section of FEATURE_SECTIONS) {
+    const features = featureArray(ir, section);
+    const range = ranges.get(section);
+    if (!range || features.length === 0) continue;
+
+    const located: Array<{ feature: Record<string, unknown>; start: number }> = [];
+    let cursor = range.start;
+    for (const feature of features) {
+      const start = findFeatureStart(source, range, feature, cursor)
+        ?? exactFeatureEvidenceStart(source, range, feature);
+      if (start === undefined) continue;
+      located.push({ feature, start });
+      cursor = Math.max(cursor, start + 1);
+    }
+
+    for (const [index, entry] of located.entries()) {
+      const nextStart = located[index + 1]?.start ?? range.end;
+      const trimmed = trimSourceRange(source, entry.start, nextStart);
+      if (!trimmed) continue;
+      entry.feature.evidence = [{ start: trimmed.start, end: trimmed.end, quote: trimmed.quote }];
+    }
+  }
+}
+
+function ensureFeatureSourceQualifiers(ir: MonsterIntakeIR, source: string): void {
+  const ranges = findFeatureSectionRanges(source);
+  for (const section of FEATURE_SECTIONS) {
+    const range = ranges.get(section);
+    const features = featureArray(ir, section);
+    if (!range || features.length === 0) continue;
+    let cursor = range.start;
+    for (const feature of features) {
+      const start = findFeatureStart(source, range, feature, cursor)
+        ?? exactFeatureEvidenceStart(source, range, feature);
+      if (start === undefined) continue;
+      cursor = Math.max(cursor, start + 1);
+      const lineEnd = source.indexOf('\n', start);
+      const line = source.slice(start, lineEnd < 0 ? source.length : lineEnd);
+      const withoutListMarker = line.trimStart().replace(/^(?:[-*+]\s+|\d+[.)。]\s*)/u, '');
+      const punctuation = withoutListMarker.search(/[.。:：]/u);
+      if (punctuation < 1) continue;
+      const label = withoutListMarker.slice(0, punctuation).trim();
+      const qualifierMatch = label.match(/\(([^)]*)\)\s*$|（([^）]*)）\s*$/u);
+      const qualifier = (qualifierMatch?.[1] ?? qualifierMatch?.[2] ?? '').trim();
+      if (!qualifier) continue;
+
+      feature.sourceQualifier = qualifier;
+      const rawFeatureName = typeof feature.name === 'string' ? feature.name : '';
+      const featureNameQualifier = rawFeatureName.match(/\(([^)]*)\)\s*$|\uff08([^\uff09]*)\uff09\s*$/u);
+      const featureQualifier = (featureNameQualifier?.[1] ?? featureNameQualifier?.[2] ?? '').trim();
+      if (featureNameQualifier?.index !== undefined && featureQualifier === qualifier) {
+        feature.name = rawFeatureName.slice(0, featureNameQualifier.index).trim();
+      }
+      if (/concentration|专注/u.test(qualifier)) {
+        feature.activationCondition ??= 'Concentration';
+      }
+      const daily = qualifier.match(/\b(\d+)\s*\/\s*(?:day|日)\b/iu);
+      if (daily?.[1]) {
+        feature.uses = { max: Number(daily[1]), period: 'day' };
+      }
+    }
+  }
+}
+
+function ensureLegendaryPreambleEvidence(ir: MonsterIntakeIR, source: string): void {
+  const legendary = asRecord(ir.creature.legendary);
+  if (!legendary) return;
+  const range = findFeatureSectionRanges(source).get('legendaryActions');
+  if (!range) return;
+  const firstFeature = featureArray(ir, 'legendaryActions')
+    .map((feature) => findFeatureStart(source, range, feature, range.start))
+    .filter((value): value is number => value !== undefined)
+    .sort((left, right) => left - right)[0] ?? range.end;
+  const preamble = trimSourceRange(source, range.start, firstFeature);
+  if (!preamble) return;
+  const existingEvidence = evidenceArray(legendary.evidence);
+  const existingIsExact = typeof legendary.preamble === 'string'
+    && existingEvidence.some((ref) => source.slice(ref.start, ref.end) === ref.quote && ref.quote === legendary.preamble);
+  if (!existingIsExact) {
+    legendary.preamble = preamble.quote;
+    legendary.evidence = [{ start: preamble.start, end: preamble.end, quote: preamble.quote }];
+  }
+}
+
+function partitionMythicActions(ir: MonsterIntakeIR, source: string): void {
+  const mythicRange = findFeatureSectionRanges(source).get('mythicActions');
+  if (!mythicRange) return;
+  const legendary = featureArray(ir, 'legendaryActions');
+  const existingMythic = featureArray(ir, 'mythicActions');
+  const moved: Record<string, unknown>[] = [];
+  const remaining: Record<string, unknown>[] = [];
+  for (const feature of legendary) {
+    const mythicStart = findFeatureStart(source, mythicRange, feature, mythicRange.start);
+    if (mythicStart === undefined) remaining.push(feature);
+    else moved.push(feature);
+  }
+  ir.creature.legendaryActions = remaining as unknown as MonsterIntakeIR['creature']['legendaryActions'];
+  ir.creature.mythicActions = [...existingMythic, ...moved] as unknown as NonNullable<MonsterIntakeIR['creature']['mythicActions']>;
+}
+
+function featureArray(ir: MonsterIntakeIR, section: FeatureSection): Record<string, unknown>[] {
+  const value = ir.creature[section];
+  return Array.isArray(value) ? value.map((entry) => asRecord(entry)).filter((entry): entry is Record<string, unknown> => Boolean(entry)) : [];
+}
+
+function findFeatureSectionRanges(source: string): Map<FeatureSection, SourceSectionRange> {
+  const headings: Array<{ section: FeatureSection; start: number; end: number }> = [];
+  const linePattern = /(?:^|\r?\n)([^\r\n]*)/gu;
+  for (const match of source.matchAll(linePattern)) {
+    const line = match[1] ?? '';
+    const prefixLength = (match[0]?.length ?? 0) - line.length;
+    const start = (match.index ?? 0) + prefixLength;
+    const end = start + line.length;
+    const section = featureSectionFromHeading(line);
+    if (section) headings.push({ section, start, end });
+  }
+  const ranges = new Map<FeatureSection, SourceSectionRange>();
+  for (const [index, heading] of headings.entries()) {
+    if (ranges.has(heading.section)) continue;
+    ranges.set(heading.section, {
+      start: heading.start,
+      end: headings[index + 1]?.start ?? source.length,
+    });
+  }
+  return ranges;
+}
+
+function featureSectionFromHeading(line: string): FeatureSection | undefined {
+  const normalized = line
+    .trim()
+    .replace(/^#{1,6}\s*/u, '')
+    .replace(/\s+#*$/u, '')
+    .replace(/[.:：。]$/u, '')
+    .trim()
+    .toLocaleLowerCase('en-US');
+  if (normalized === 'traits' || normalized === '特性') return 'traits';
+  if (normalized === 'actions' || normalized === '动作') return 'actions';
+  if (normalized === 'bonus actions' || normalized === '附赠动作') return 'bonusActions';
+  if (normalized === 'reactions' || normalized === 'reaction' || normalized === '反应') return 'reactions';
+  if (normalized === 'legendary actions' || normalized === '传奇动作') return 'legendaryActions';
+  if (normalized === 'mythic actions' || normalized === '神话动作') return 'mythicActions';
+  return undefined;
+}
+
+function findFeatureStart(
+  source: string,
+  range: SourceSectionRange,
+  feature: Record<string, unknown>,
+  from: number,
+): number | undefined {
+  const aliases = [feature.name, feature.englishName]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map((value) => value.trim());
+  if (aliases.length === 0) return undefined;
+  const aliasKeys = new Set(aliases.map(compactFeatureLabel));
+  const local = source.slice(Math.max(range.start, from), range.end);
+  const linePattern = /(?:^|\r?\n)([^\r\n]*)/gu;
+  for (const match of local.matchAll(linePattern)) {
+    const line = match[1] ?? '';
+    const lineStart = Math.max(range.start, from) + ((match.index ?? 0) + (match[0]?.length ?? 0) - line.length);
+    const withoutListMarker = line.trimStart().replace(/^(?:[-*+]\s+|\d+[.)。]\s*)/u, '');
+    const punctuation = withoutListMarker.search(/[.。:：]/u);
+    if (punctuation < 1) continue;
+    const label = withoutListMarker.slice(0, punctuation).trim();
+    // Source labels may carry a qualifier, for example
+    // `DomainIntrusion(MythicTrait,1/Day)` or
+    // `DreamofCreation(Concentration)`. Match the base label as well so
+    // adjacent feature evidence does not swallow the next feature.
+    const baseLabel = label.replace(/\s*(?:\([^)]*\)|（[^）]*）)\s*$/u, '').trim();
+    if ([label, baseLabel].some((value) => aliasKeys.has(compactFeatureLabel(value)))) return lineStart;
+  }
+  return undefined;
+}
+
+function exactFeatureEvidenceStart(source: string, range: SourceSectionRange, feature: Record<string, unknown>): number | undefined {
+  return evidenceArray(feature.evidence)
+    .filter((ref) => ref.start >= range.start && ref.end <= range.end && source.slice(ref.start, ref.end) === ref.quote)
+    .map((ref) => ref.start)
+    .sort((left, right) => left - right)[0];
+}
+
+function compactFeatureLabel(value: string): string {
+  return value.normalize('NFKC').replace(/[\s\-‐‑–—]/gu, '').toLocaleLowerCase('en-US');
+}
+
+function trimSourceRange(source: string, start: number, end: number): { start: number; end: number; quote: string } | undefined {
+  let trimmedStart = start;
+  let trimmedEnd = end;
+  while (trimmedStart < trimmedEnd && /\s/u.test(source[trimmedStart] ?? '')) trimmedStart += 1;
+  while (trimmedEnd > trimmedStart && /\s/u.test(source[trimmedEnd - 1] ?? '')) trimmedEnd -= 1;
+  if (trimmedEnd <= trimmedStart) return undefined;
+  return { start: trimmedStart, end: trimmedEnd, quote: source.slice(trimmedStart, trimmedEnd) };
+}
+
+function ensureEvidenceBackedFeatureClaims(ir: MonsterIntakeIR, source: string): void {
+  if (!Array.isArray(ir.claims)) ir.claims = [];
+  const claimPaths = new Set(ir.claims.map((claim) => claim?.path).filter((path): path is string => typeof path === 'string'));
+  const addClaim = (path: string, evidence: unknown): void => {
+    if (claimPaths.has(path)) return;
+    const exact = evidenceArray(evidence).filter((ref) => source.slice(ref.start, ref.end) === ref.quote);
+    if (exact.length === 0) return;
+    const claim: IntakeClaim = { path, valueKind: 'explicit', evidence: exact, confidence: 'high' };
+    ir.claims.push(claim);
+    claimPaths.add(path);
+  };
+
+  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions', 'mythicActions'] as const) {
+    const features = Array.isArray(ir.creature[section]) ? ir.creature[section] as unknown[] : [];
+    for (const [index, feature] of features.entries()) addClaim(`/creature/${section}/${index}`, asRecord(feature)?.evidence);
+  }
+  for (const [index, group] of (Array.isArray(ir.creature.spellcasting) ? ir.creature.spellcasting : []).entries()) {
+    addClaim(`/creature/spellcasting/${index}`, asRecord(group)?.evidence);
+  }
+
+  for (const entry of Array.isArray(ir.coverage) ? ir.coverage : []) {
+    if (entry.classification !== 'mechanical') continue;
+    const coveredPaths = ir.claims.filter((claim) => evidenceArray(claim?.evidence).some((ref) => (
+      ref.start >= entry.start && ref.end <= entry.end && source.slice(ref.start, ref.end) === ref.quote
+    ))).map((claim) => claim.path);
+    entry.claimPaths = [...new Set([
+      ...entry.claimPaths.filter((path) => claimPaths.has(path)),
+      ...coveredPaths,
+    ])];
+  }
+}
+
+function repairCoverageLedger(ir: MonsterIntakeIR, source: string, candidate: DiscoveryCandidate): void {
+  const current = Array.isArray(ir.coverage) ? ir.coverage : [];
+  const hasInvalidClass = current.length === 0
+    || current.some((entry) => !['mechanical', 'narrative', 'ignored-with-reason'].includes(String(entry?.classification)));
+  // Do not rewrite an otherwise contract-shaped ledger merely because a
+  // provider reported a short/repeated evidence span; the existing anchoring
+  // rules intentionally preserve that diagnostic for validation/tests. The
+  // fallback is for malformed coverage containers/classes, which is the
+  // failure mode produced by truncated structured responses.
+  if (!hasInvalidClass) return;
+
+  const claimPaths = ir.claims
+    .map((claim) => claim.path)
+    .filter((path): path is string => typeof path === 'string');
+  const replacement: MonsterIntakeIR['coverage'] = [];
+  const candidateText = source.slice(candidate.start, candidate.end);
+  const metadata = candidateText.match(/^\s*<!--\s*document-source[\s\S]*?-->\s*/u);
+  if (metadata?.[0]) {
+    const metadataEnd = candidate.start + metadata[0].length;
+    const metadataQuote = source.slice(candidate.start, metadataEnd);
+    replacement.push({
+      start: candidate.start,
+      end: metadataEnd,
+      quote: metadataQuote,
+      classification: 'ignored-with-reason',
+      claimPaths: [],
+      reason: 'Document page/block provenance marker is workflow metadata, not creature content.',
+    });
+    if (metadataEnd < candidate.end) {
+      replacement.push({
+        start: metadataEnd,
+        end: candidate.end,
+        quote: source.slice(metadataEnd, candidate.end),
+        classification: 'mechanical',
+        claimPaths: [...new Set(claimPaths)],
+      });
+    }
+  } else {
+    replacement.push({
+      start: candidate.start,
+      end: candidate.end,
+      quote: source.slice(candidate.start, candidate.end),
+      classification: 'mechanical',
+      claimPaths: [...new Set(claimPaths)],
+    });
+  }
+  ir.coverage = replacement;
+}
+
 function isDisprovedWholeSourceOffsetUncertainty(
   source: string,
   candidate: DiscoveryCandidate,
@@ -848,7 +1288,7 @@ function isDisprovedWholeSourceOffsetUncertainty(
   uncertainty: MonsterIntakeIR['uncertainties'][number],
 ): boolean {
   const processText = `${uncertainty.code} ${uncertainty.path} ${uncertainty.message}`;
-  const processCoordinateSignature = /(?:utf[ -]?16|(?:source|candidate|evidence|coverage)[\s:_-]*(?:offset|length|range|end|slice)|(?:offset|length|range|end|slice)[\s:_-]*(?:source|candidate|evidence|coverage))/iu;
+  const processCoordinateSignature = /(?:utf[ -]?16|(?:source|candidate|evidence|coverage)[\s:_-]*(?:offset|length|range|end|slice|span)|(?:offset|length|range|end|slice|span)[\s:_-]*(?:source|candidate|evidence|coverage))/iu;
   if (!processCoordinateSignature.test(processText)) return false;
   if (candidate.start !== 0 || candidate.end !== source.length || candidate.quote !== source) return false;
   if (ir.source?.length !== source.length || ir.source.sha256 !== sha256(source)) return false;
@@ -904,7 +1344,18 @@ interface EvidenceScope {
 }
 
 function anchorEvidenceRef(source: string, scopes: EvidenceScope[], ref: EvidenceRef): void {
-  if (typeof ref.quote !== 'string' || ref.quote.length === 0) return;
+  if (typeof ref.quote !== 'string' || ref.quote.length === 0) {
+    const hasUsableRange = Number.isInteger(ref.start)
+      && Number.isInteger(ref.end)
+      && ref.end > ref.start
+      && scopes.some((scope) => ref.start >= scope.start && ref.end <= scope.end)
+      && ref.start >= 0
+      && ref.end <= source.length;
+    if (!hasUsableRange) return;
+    // Some long structured responses preserve offsets but omit quote fields.
+    // Materialize the exact UTF-16 slice locally; never invent text.
+    ref.quote = source.slice(ref.start, ref.end);
+  }
   const exactInsideScope = Number.isInteger(ref.start)
     && Number.isInteger(ref.end)
     && source.slice(ref.start, ref.end) === ref.quote
@@ -1083,6 +1534,9 @@ function collectGeneralEvidenceRefs(ir: MonsterIntakeIR): EvidenceRef[] {
     addEvidenceArray(asRecord(uncertainty)?.evidence);
   }
   addEvidenceArray(ir.creature.legendary?.evidence);
+  for (const section of FEATURE_SECTIONS) {
+    for (const feature of featureArray(ir, section)) addEvidenceArray(feature.evidence);
+  }
   return refs;
 }
 
@@ -1098,6 +1552,7 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
   if (attributes.initiative === null) delete attributes.initiative;
   if (normalizeAbsentOptionalZeroes) {
     const senses = ir.creature.senses as MonsterIntakeIR['creature']['senses'] & Record<string, unknown>;
+    if (Array.isArray(senses.special) && senses.special.length === 0) delete senses.special;
     const senseZeroLabels: Array<[keyof typeof senses, RegExp]> = [
       ['blindsight', /(?:blindsight|盲视|盲感)\s*[:：]?\s*0(?![\d.,\-–—])(?:\s*(?:ft|feet|尺))?/iu],
       ['tremorsense', /(?:tremorsense|震颤感知)\s*[:：]?\s*0(?![\d.,\-–—])(?:\s*(?:ft|feet|尺))?/iu],
@@ -1112,23 +1567,54 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
   const languages = ir.creature.languages as MonsterIntakeIR['creature']['languages'] & { custom?: unknown };
   if (Array.isArray(languages.custom) && languages.custom.length === 0) delete languages.custom;
   languages.values = languages.values.map(normalizeLanguageValue);
-  for (const section of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as const) {
-    for (const [featureIndex, feature] of ir.creature[section].entries()) {
+  if (Array.isArray(ir.creature.spellcasting)
+    && ir.creature.spellcasting.length === 0
+    && !/(?:\b(?:innate\s+)?spellcasting\b|天生施法|施法能力|法术列表)/iu.test(source)) {
+    delete ir.creature.spellcasting;
+  }
+  for (const group of ir.creature.spellcasting ?? []) {
+    const record = asRecord(group);
+    if (!record) continue;
+    const hasPreparedUsage = Array.isArray(record.usageGroups)
+      && record.usageGroups.some((usage) => asRecord(usage)?.usage === 'prepared-slots');
+    if (record.casterLevel == null) delete record.casterLevel;
+    if (record.casterLevelEvidence == null || (Array.isArray(record.casterLevelEvidence)
+      && record.casterLevelEvidence.length === 0 && !hasPreparedUsage)) delete record.casterLevelEvidence;
+    if (record.saveDc == null) delete record.saveDc;
+    if (record.saveDcEvidence == null) delete record.saveDcEvidence;
+    if (record.attackBonus == null) delete record.attackBonus;
+    if (record.attackBonusEvidence == null) delete record.attackBonusEvidence;
+  }
+  for (const section of FEATURE_SECTIONS) {
+    const features = (Array.isArray(ir.creature[section]) ? ir.creature[section] : []) as MonsterIntakeIR['creature']['traits'];
+    for (const [featureIndex, feature] of features.entries()) {
+      const sectionActivation = section === 'actions' ? 'action'
+        : section === 'bonusActions' ? 'bonus'
+          : section === 'reactions' ? 'reaction'
+            : section === 'legendaryActions' || section === 'mythicActions' ? 'legendary'
+              : undefined;
+      if (!feature.activationType && sectionActivation) feature.activationType = sectionActivation;
       const overloadedActivityType = String(feature.activityType);
       if (['action', 'bonus', 'reaction', 'legendary', 'special'].includes(overloadedActivityType)) {
         feature.activationType = overloadedActivityType as NonNullable<typeof feature.activationType>;
         feature.activityType = undefined;
       }
-      if (!['attack', 'save', 'damage', 'utility'].includes(String(feature.activityType))) {
+      if (!['attack', 'save', 'damage', 'heal', 'utility'].includes(String(feature.activityType))) {
         feature.activityType = feature.attack ? 'attack' : feature.save ? 'save' : feature.damage?.length ? 'damage' : 'utility';
       }
+      applyExplicitTemporaryHitPointMechanics(feature);
+      applyExplicitReferencedSpellMechanics(feature, ir.creature.spellcasting);
       if (feature.activityType === 'attack' && !feature.attack) {
         feature.activityType = feature.damage?.length ? 'damage' : 'utility';
       }
-      if (section === 'legendaryActions' && feature.legendaryCost === undefined) {
+      if ((section === 'legendaryActions' || section === 'mythicActions') && feature.legendaryCost === undefined) {
         const costMatch = `${feature.name}\n${feature.description}`.match(/(?:costs?|uses?|需要)\s*(\d+)\s*(?:legendary\s+actions?|actions?|动作)/iu);
         const cost = Number(costMatch?.[1]);
         if (Number.isInteger(cost) && cost > 0) feature.legendaryCost = cost;
+      }
+      if (feature.save && !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(String(feature.save.ability))) {
+        const normalizedAbility = normalizeAbilityValue(String(feature.save.ability));
+        if (normalizedAbility) feature.save.ability = normalizedAbility;
       }
       if (feature.save && !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(String(feature.save.ability))) {
         const dcIsLiteral = descriptionStatesSaveDc(feature.description, feature.save.dc);
@@ -1190,10 +1676,14 @@ function isDisprovedStatblockUncertainty(
       && Boolean(ir.creature.identity.creatureTypeCustom?.trim())
       && /(?:任意种族|any\s+race)/iu.test(source);
   }
-  const featureMatch = uncertainty.path.match(/^\/creature\/(traits|actions|bonusActions|reactions|legendaryActions)\/(\d+)(?:\/(.*))?$/u);
+  if (code === 'missing-source-value') {
+    return uncertainty.path === '/creature/identity/alignment'
+      && !ir.creature.identity.alignment?.trim();
+  }
+  const featureMatch = uncertainty.path.match(/^\/creature\/(traits|actions|bonusActions|reactions|legendaryActions|mythicActions)\/(\d+)(?:\/(.*))?$/u);
   if (!featureMatch) return false;
-  const section = featureMatch[1] as 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'legendaryActions';
-  const feature = ir.creature[section][Number(featureMatch[2])];
+  const section = featureMatch[1] as FeatureSection;
+  const feature = featureArray(ir, section)[Number(featureMatch[2])] as MonsterIntakeIR['creature']['traits'][number] | undefined;
   if (!feature) return false;
   if (code === 'attack-type-ambiguous') {
     return featureMatch[3] === 'attack/type'
@@ -1250,13 +1740,96 @@ function hasExactClaimEvidence(
 }
 
 function normalizeLanguageValue(value: string): string {
-  return ({ 通用语: 'common', 矮人语: 'dwarvish', 精灵语: 'elvish', 巨人语: 'giant', 地精语: 'goblin' } as Record<string, string>)[value]
-    ?? value.toLowerCase();
+  const normalized = value.normalize('NFKC').trim().toLocaleLowerCase('en-US');
+  return ({
+    通用语: 'common', 矮人语: 'dwarvish', 精灵语: 'elvish', 巨人语: 'giant', 地精语: 'goblin',
+    深渊语: 'deep', 深潜语: 'deep', 'deep speech': 'deep', deepspeech: 'deep',
+  } as Record<string, string>)[normalized] ?? normalized;
+}
+
+/**
+ * source-derived: temporary hit points are projected only when the feature
+ * description explicitly grants a numeric or dice-based amount. Prohibitions
+ * and descriptions that merely mention temporary hit points remain utility.
+ */
+function applyExplicitTemporaryHitPointMechanics(
+  feature: MonsterIntakeIR['creature']['traits'][number],
+): void {
+  const text = feature.description.normalize('NFKC');
+  const negated = /(?:can't|cannot|can\s+not|doesn't|does\s+not|unable\s+to)\s+(?:gain|receive)[^.!?\n]{0,24}temporary\s+hit\s+points|(?:不能|无法|不会)[^。！？\n]{0,24}(?:获得|取得)[^。！？\n]{0,16}临时生命值/iu.test(text);
+  if (negated) return;
+  const english = text.match(/\b(?:gain|gains|gained|receive|receives|received)\s+((?:\d+d\d+|\d+)(?:\s*[+-]\s*\d+)?)\s+temporary\s+hit\s+points\b/iu);
+  const chinese = text.match(/(?:获得|取得)\s*((?:\d+d\d+|\d+)(?:\s*[+-]\s*\d+)?)\s*点?\s*临时生命值/u);
+  const formula = (english?.[1] ?? chinese?.[1])?.replace(/\s+/gu, '');
+  if (!formula) return;
+  feature.activityType = 'heal';
+  feature.healing = { formula, type: 'temphp' };
+}
+
+/**
+ * explicit-exception: the source says the target is affected by the named Confusion spell,
+ * and the user confirmed that this is a literal spell-effect reference. The spell supplies
+ * only the otherwise-omitted Wisdom save ability. DC, radius, duration, and concentration
+ * must still be present in the source text and are never copied from the spell defaults.
+ */
+function applyExplicitReferencedSpellMechanics(
+  feature: MonsterIntakeIR['creature']['traits'][number],
+  spellcasting: MonsterIntakeIR['creature']['spellcasting'],
+): void {
+  const text = feature.description.normalize('NFKC');
+  const referencesConfusion = /(?:affected\s+by(?:\s+the)?|under\s+(?:the\s+)?effects?\s+of)[^.!?\n]{0,32}\bconfusion\b|(?:受到|受)[^。！？\n]{0,32}(?:困惑术|\bconfusion\b)[^。！？\n]{0,24}(?:影响|效果)|(?:困惑术|\bconfusion\b)[^。！？\n]{0,24}(?:影响|效果)/iu.test(text);
+  if (!referencesConfusion) return;
+
+  const dcMatch = text.match(/(?:save|豁免)[^\n\d]{0,20}DC\s*[:：]?\s*(\d+)|DC\s*[:：]?\s*(\d+)/iu);
+  const dc = Number(dcMatch?.[1] ?? dcMatch?.[2]);
+  if (!feature.save && Number.isInteger(dc) && dc > 0) {
+    const usesActorSpellcastingDc = spellcasting?.some((group) => group.saveDc === dc) ?? false;
+    feature.save = {
+      dc,
+      ability: 'wis',
+      condition: 'Affected by Confusion',
+      dcSourceKind: usesActorSpellcastingDc ? 'spellcasting' : 'literal',
+    };
+    feature.activityType = 'save';
+  }
+
+  const radiusMatch = text.match(/(\d+)\s*[- ]?\s*(?:feet|foot|ft)\s*[- ]?radius|radius\s+(?:of\s+)?(\d+)\s*(?:feet|foot|ft)|半径\s*(\d+)\s*(?:英)?尺/iu);
+  const radius = Number(radiusMatch?.[1] ?? radiusMatch?.[2] ?? radiusMatch?.[3]);
+  if (!feature.aoe && Number.isInteger(radius) && radius > 0) {
+    feature.aoe = { shape: 'sphere', radius };
+  }
+
+  if (/concentrat|专注/iu.test(text)) feature.activationCondition ??= 'Concentration';
+
+  const durationMatch = text.match(/(?:lasts?(?:\s+for|\s+up\s+to)?|持续(?:最多)?|维持(?:最多)?)\s*(\d+)\s*(rounds?|minutes?|hours?|days?|轮|分钟|小时|天)/iu);
+  const durationValue = Number(durationMatch?.[1]);
+  const durationUnit = durationMatch?.[2]?.toLocaleLowerCase('en-US');
+  const duration = Number.isInteger(durationValue) && durationValue > 0 && durationUnit
+    ? `${durationValue} ${durationUnit === '分钟' || durationUnit.startsWith('minute') ? 'minute'
+      : durationUnit === '轮' || durationUnit.startsWith('round') ? 'round'
+        : durationUnit === '小时' || durationUnit.startsWith('hour') ? 'hour' : 'day'}`
+    : undefined;
+  feature.appliedConditions ??= [];
+  if (!feature.appliedConditions.some((entry) => entry.condition?.toLocaleLowerCase('en-US') === 'confused')) {
+    feature.appliedConditions.push({ statuses: [], condition: 'Confused', ...(duration ? { duration } : {}) });
+  }
 }
 
 function normalizeDamageValue(value: string): string {
-  return ({ 强酸: 'acid', 钝击: 'bludgeoning', 冷冻: 'cold', 火焰: 'fire', 力场: 'force', 闪电: 'lightning', 黯蚀: 'necrotic', 穿刺: 'piercing', 毒素: 'poison', 心灵: 'psychic', 光耀: 'radiant', 挥砍: 'slashing', 雷鸣: 'thunder' } as Record<string, string>)[value]
+  return ({ 强酸: 'acid', 钝击: 'bludgeoning', 冷冻: 'cold', 冰冻: 'cold', 火焰: 'fire', 力场: 'force', 闪电: 'lightning', 黯蚀: 'necrotic', 死灵: 'necrotic', 穿刺: 'piercing', 毒素: 'poison', 心灵: 'psychic', 光耀: 'radiant', 挥砍: 'slashing', 雷鸣: 'thunder' } as Record<string, string>)[value]
     ?? value.toLowerCase();
+}
+
+function normalizeAbilityValue(value: string): AbilityKey | undefined {
+  const normalized = value.normalize('NFKC').trim().toLocaleLowerCase('en-US');
+  return ({
+    str: 'str', strength: 'str', '\u529b\u91cf': 'str',
+    dex: 'dex', dexterity: 'dex', '\u654f\u6377': 'dex',
+    con: 'con', constitution: 'con', '\u4f53\u8d28': 'con',
+    int: 'int', intelligence: 'int', '\u667a\u529b': 'int',
+    wis: 'wis', wisdom: 'wis', '\u611f\u77e5': 'wis',
+    cha: 'cha', charisma: 'cha', '\u9b45\u529b': 'cha',
+  } as Record<string, AbilityKey>)[normalized];
 }
 
 async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper: (value: T) => Promise<R>): Promise<R[]> {

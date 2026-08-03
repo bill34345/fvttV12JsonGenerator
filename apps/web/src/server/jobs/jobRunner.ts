@@ -12,10 +12,9 @@ import {
   type IntakeProviderAuditEvent,
   ItemsIngestionWorkflow,
   JsonTranslationSyncWorkflow,
-  loadMonsterIntakeConfig,
+  createMonsterIntakeProvider,
   type MonsterIntakeAiProvider,
   ObsidianSyncWorkflow,
-  OpenAICompatibleMonsterIntakeProvider,
   PlainTextActorWorkflow,
   PlainTextIngestionWorkflow,
   convertItemCollectionToJson,
@@ -25,6 +24,7 @@ import {
   resumeMonsterIntake,
   runGoddessFantasyBoardCrawl,
   runMonsterIntake,
+  runDocumentConversion,
   runRecordsToPlaintext,
 } from '../../../../../src/core/application/web-server';
 import { buildWebImageAssetOptions, imageAssetWarningsForResult } from '../imageAssetPreset';
@@ -46,6 +46,7 @@ export interface WebJobRequest {
   type: WebJobType;
   fileName?: string;
   content?: string;
+  inputPath?: string;
   options?: Record<string, unknown>;
 }
 
@@ -66,6 +67,9 @@ export async function runJob(job: WebJob, body: WebJobRequest, dependencies: Web
     switch (job.type) {
       case 'single-convert':
         await runSingleConvert(job, body);
+        break;
+      case 'document-convert':
+        await runDocumentConvert(job, body);
         break;
       case 'monster-collection':
         await runMonsterCollection(job, body);
@@ -153,6 +157,60 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
   }, result.warnings, result.status === 'failed'
     ? [{ error: result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; ') }]
     : []);
+}
+
+async function runDocumentConvert(job: WebJob, body: WebJobRequest): Promise<void> {
+  if (!body.inputPath) throw new Error('document input path is required.');
+  setJobProgress(job.id, 1, 5, '提取 PDF/图片文字');
+  const result = await runDocumentConversion({
+    inputPath: body.inputPath,
+    runRoot: jobOutputDir(job.id),
+    outputPath: join(jobOutputDir(job.id), 'actors'),
+    engine: documentEngine(body.options),
+    language: documentLanguage(body.options),
+    targetLanguage: optionString(body.options, 'targetLanguage') ?? 'zh-CN',
+    candidateIds: optionCandidateIds(body.options),
+    extractOnly: optionBoolean(body.options, 'extractOnly'),
+    fvttVersion: String(optionFvttVersion(body.options)),
+    effectProfile: optionEffectProfile(body.options, optionFvttVersion(body.options)),
+    iconOptions: optionIconOptions(body.options),
+  });
+  setJobProgress(job.id, 4, 5, result.stage === 'generated' ? '生成 Actor JSON' : '整理文档产物');
+  for (const file of result.outputFiles) {
+    if (!existsSync(file.path)) continue;
+    addJobFile(job.id, {
+      path: file.path,
+      fileName: file.fileName,
+      contentType: file.contentType,
+      label: file.label,
+    });
+  }
+  const status: WebJobStatus = result.status === 'succeeded' || result.status === 'extracted'
+    ? 'succeeded'
+    : result.status;
+  finishJob(job.id, status, {
+    documentStatus: result.status,
+    stage: result.stage,
+    runId: result.runId,
+    pageCount: result.pageCount,
+    candidates: result.candidates.map((candidate) => ({
+      id: candidate.id,
+      label: candidate.label,
+      pageNumber: candidate.pageNumber,
+      status: candidate.status,
+      confidence: candidate.confidence,
+      reason: candidate.reason,
+    })),
+    selectedCandidateIds: result.selectedCandidateIds,
+    translatedCandidates: result.translatedCandidates.map((candidate) => ({
+      candidateId: candidate.candidateId,
+      status: candidate.status,
+      warnings: candidate.warnings,
+    })),
+    rawMarkdownPath: basename(result.rawMarkdownPath),
+    translatedMarkdownPath: result.translatedMarkdownPath ? basename(result.translatedMarkdownPath) : undefined,
+    failures: result.failures,
+  }, result.warnings, result.failures.map((failure) => ({ error: failure.error, file: failure.candidateId })));
 }
 
 async function runMonsterCollection(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -389,8 +447,7 @@ async function runAiMonsterIntake(
   const inputPath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'monster-intake.txt'), source);
   setJobProgress(job.id, 1, 4, 'AI 发现与结构化提取');
   const audit: IntakeProviderAuditEvent[] = [];
-  const provider = injectedProvider ?? new OpenAICompatibleMonsterIntakeProvider({
-    ...loadMonsterIntakeConfig(),
+  const provider = injectedProvider ?? createMonsterIntakeProvider({
     audit: (event) => audit.push(event),
   });
   const fvttVersion = optionFvttVersion(body.options);
@@ -426,8 +483,7 @@ export async function resumeAiMonsterIntakeJob(
   updateJob(job.id, { status: 'running', files: [], error: undefined });
   setJobProgress(job.id, 1, 4, '应用人工确认并重新完整验收');
   const audit: IntakeProviderAuditEvent[] = [];
-  const provider = injectedProvider ?? new OpenAICompatibleMonsterIntakeProvider({
-    ...loadMonsterIntakeConfig(),
+  const provider = injectedProvider ?? createMonsterIntakeProvider({
     audit: (event) => audit.push(event),
   });
   const result = await resumeMonsterIntake(runPath, decisionsPath, provider, join(jobDir(job.id), 'vault'));
@@ -596,6 +652,27 @@ function optionNumber(options: Record<string, unknown> | undefined, key: string)
 function optionString(options: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = options?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function optionCandidateIds(options: Record<string, unknown> | undefined): string[] | undefined {
+  const value = options?.candidateIds;
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  if (typeof value === 'string' && value.trim()) return value.split(',').map((item) => item.trim()).filter(Boolean);
+  return undefined;
+}
+
+function documentEngine(options: Record<string, unknown> | undefined): 'auto' | 'native' | 'paddleocr' {
+  const value = options?.engine;
+  if (value === undefined || value === 'auto') return 'auto';
+  if (value === 'native' || value === 'paddleocr') return value;
+  throw new Error(`Invalid document engine: ${String(value)}`);
+}
+
+function documentLanguage(options: Record<string, unknown> | undefined): 'auto' | 'en' | 'zh-CN' | 'mixed' {
+  const value = options?.language;
+  if (value === undefined || value === 'auto') return 'auto';
+  if (value === 'en' || value === 'zh-CN' || value === 'mixed') return value;
+  throw new Error(`Invalid document language: ${String(value)}`);
 }
 
 function optionContentType(options: Record<string, unknown> | undefined): 'all' | 'monster' | 'unknown' | undefined {

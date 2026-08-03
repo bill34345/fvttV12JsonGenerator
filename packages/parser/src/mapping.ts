@@ -48,6 +48,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "反应": { key: "反应", path: "items", type: "array" },
   "附赠动作": { key: "附赠动作", path: "items", type: "array" },
   "传奇动作": { key: "传奇动作", path: "items", type: "array" },
+  "神话动作": { key: "神话动作", path: "items", type: "array" },
   "巢穴动作": { key: "lair_actions", path: "items", type: "array" },
   "巢穴效应": { key: "regional_effects", path: "items", type: "array" },
   "施法": { key: "spellcasting", path: "items", type: "object" }, // Complex object
@@ -93,7 +94,7 @@ export interface ParsedNPC {
   attributes: {
     hp?: { value: number; max: number; formula?: string };
     ac?: { value: number; calc: "flat" | "natural" | "default" };
-    movement?: Record<string, number>;
+    movement?: Record<string, number | boolean | string>;
     init?: number;
     prof?: number;
     legact?: { value: number; max: number };
@@ -134,6 +135,7 @@ export interface ParsedNPC {
   bonus_actions?: any;
   reactions?: any;
   legendary_actions?: any; // complex
+  mythic_actions?: any;
   lair_actions?: any;
   regional_effects?: any;
   spellcasting?: any;
@@ -148,6 +150,7 @@ export interface ParsedNPC {
     附赠动作?: StructuredActionData[];
     反应?: StructuredActionData[];
     传奇动作?: StructuredActionData[];
+    神话动作?: StructuredActionData[];
   };
 
   items: any[]; // Placeholders for actions/spells

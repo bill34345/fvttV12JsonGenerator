@@ -48,6 +48,7 @@
 - Actor JSON 默认路径：源 Markdown → `apps/cli` 或 Web → `@fvtt-json-generator/workflows` → parser/generation → 正式 JSON。
 - 站点抓取路径：`src/tools/crawlSites.ts` → `packages/crawl-goddessfantasy` → crawl artifacts → plaintext → 既有 Intake/generator 流程。爬虫不得与主 Actor CLI 偷偷耦合。
 - 默认从 `obsidian/dnd数据转fvttjson/input` 读取，从 `obsidian/dnd数据转fvttjson/output` 交付；用户明确指定其他位置时除外。
+- 代理替用户生成需要图标的 JSON 时，默认不得启用 `--icon-mode safe`；保持程序默认的 `off`，或使用用户指定、人工确认的 icon override。只有用户明确要求 safe 模式时才启用。
 - 若偏离正式项目流程去“先手工做出一个能用的结果”，立即停止、明确说明并回到项目路径。
 - 生成 Actor JSON 后必须按照 `docs/generated-actor-verification.md` 对照源 Markdown；结构正确、测试通过和成功生成都不足以证明语义正确。
 

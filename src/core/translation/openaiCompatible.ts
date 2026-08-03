@@ -47,6 +47,29 @@ function cleanTranslatedContent(value: string): string {
   return cleaned;
 }
 
+function buildSystemPrompt(context: TranslationContext): string {
+  const sourceLanguage = context.sourceLanguage ?? 'en';
+  const targetLanguage = context.targetLanguage ?? 'zh-CN';
+  const namespace = context.namespace ? `\nDomain: ${context.namespace}` : '';
+  const isDocumentMarkdown = context.namespace?.startsWith('document.markdown') ?? false;
+  if (!isDocumentMarkdown) {
+    return `Translate text from ${sourceLanguage} to ${targetLanguage}. Return only translated text.${namespace}`;
+  }
+
+  const protectedTokenCount = context.metadata?.protectedTokenCount;
+  const countHint = typeof protectedTokenCount === 'number'
+    ? ` The input contains exactly ${protectedTokenCount} protected placeholders.`
+    : '';
+  const retryHint = context.metadata?.mechanicalRetry === true
+    ? ' This is a strict retry after a previous output failed placeholder validation; check the complete placeholder set before returning.'
+    : '';
+  return `Translate Markdown from ${sourceLanguage} to ${targetLanguage}. Return only the translated Markdown.${namespace}
+This is a protected Markdown translation task.${countHint}${retryHint}
+Copy every token matching __FVTT_MECHANICAL_<letters>__ exactly as it appears in the input, exactly once, and in the same order.
+These are opaque mechanical placeholders, not translatable text. Never translate, rewrite, split, delete, duplicate, or move them.
+Preserve Markdown structure and all non-placeholder mechanics. Verify the placeholder set before returning the translation.`;
+}
+
 export class OpenAICompatibleTranslator implements Translator {
   private readonly httpClient: HttpClient;
   private readonly timeoutMs: number;
@@ -65,10 +88,6 @@ export class OpenAICompatibleTranslator implements Translator {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const sourceLanguage = context.sourceLanguage ?? 'en';
-      const targetLanguage = context.targetLanguage ?? 'zh-CN';
-      const namespace = context.namespace ? `\nDomain: ${context.namespace}` : '';
-
       const response = await this.httpClient(
         `${normalizeBaseUrl(this.options.baseUrl)}/chat/completions`,
         {
@@ -81,9 +100,9 @@ export class OpenAICompatibleTranslator implements Translator {
             model: this.options.model,
             temperature: 0,
             messages: [
-              {
-                role: 'system',
-                content: `Translate text from ${sourceLanguage} to ${targetLanguage}. Return only translated text.${namespace}`,
+            {
+              role: 'system',
+                content: buildSystemPrompt(context),
               },
               {
                 role: 'user',

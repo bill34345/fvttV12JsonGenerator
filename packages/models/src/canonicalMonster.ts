@@ -22,8 +22,12 @@ export interface CanonicalAppliedCondition {
 export interface CanonicalFeature {
   name: string;
   englishName?: string;
+  /** Literal qualifier attached to the source feature label, such as (Concentration) or (1/Day). */
+  sourceQualifier?: string;
   description: string;
-  activityType?: 'attack' | 'save' | 'damage' | 'utility';
+  /** Exact source span used by Intake evidence and semantic verification. */
+  evidence?: EvidenceRef[];
+  activityType?: 'attack' | 'save' | 'damage' | 'heal' | 'utility';
   activationType?: 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
   activationCondition?: string;
   attack?: {
@@ -34,10 +38,20 @@ export interface CanonicalFeature {
     longRange?: number;
   };
   damage?: CanonicalDamagePart[];
+  healing?: {
+    formula: string;
+    type: 'healing' | 'temphp';
+  };
   save?: {
     dc: number;
     ability: AbilityKey;
     condition?: string;
+    dcSourceKind?: 'spellcasting' | 'literal';
+  };
+  /** Source-explicit area template. The placement range remains in the literal description unless separately structured. */
+  aoe?: {
+    shape: 'sphere' | 'cone' | 'line' | 'cube' | 'cylinder' | 'rectangle';
+    radius: number;
   };
   appliedConditions?: CanonicalAppliedCondition[];
   recharge?: [number, number];
@@ -116,7 +130,7 @@ export interface CanonicalMonster {
     acNote?: string;
     initiative?: number;
     hp: { value: number; formula?: string };
-    movement: Partial<Record<'walk' | 'climb' | 'fly' | 'swim' | 'burrow', number>>;
+    movement: Partial<Record<'walk' | 'climb' | 'fly' | 'swim' | 'burrow', number>> & { hover?: boolean };
     cr: number;
     xp?: number;
     proficiencyBonus?: number;
@@ -146,4 +160,6 @@ export interface CanonicalMonster {
   bonusActions: CanonicalFeature[];
   reactions: CanonicalFeature[];
   legendaryActions: CanonicalFeature[];
+  /** Foundry has no separate Mythic activation, so generation maps these to legendary activation with a distinct display section. */
+  mythicActions?: CanonicalFeature[];
 }

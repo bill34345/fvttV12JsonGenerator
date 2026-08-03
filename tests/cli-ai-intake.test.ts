@@ -9,7 +9,7 @@ const SOURCE = resolve('src/core/intake/__tests__/fixtures/lurker-in-the-dark.ra
 describe('AI monster intake CLI', () => {
   test('dry-run does not require AI configuration or write a run bundle', () => {
     const proc = Bun.spawnSync({
-      cmd: ['bun', 'run', 'src/index.ts', '--intake-monsters', SOURCE, '--dry-run', '--fvtt-version', '14', '--effect-profile', 'core'],
+      cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-monsters', SOURCE, '--dry-run', '--fvtt-version', '14', '--effect-profile', 'core'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
       env: withoutIntakeEnv(),
     });
@@ -21,7 +21,7 @@ describe('AI monster intake CLI', () => {
 
   test('fails closed without dedicated provider configuration outside dry-run', () => {
     const proc = Bun.spawnSync({
-      cmd: ['bun', 'run', 'src/index.ts', '--intake-monsters', SOURCE],
+      cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-monsters', SOURCE],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
       env: withoutIntakeEnv(),
     });
@@ -29,6 +29,41 @@ describe('AI monster intake CLI', () => {
     expect(proc.stderr.toString()).toContain('MONSTER_INTAKE_API_KEY');
     expect(proc.stderr.toString()).not.toContain('OPENAI_API_KEY');
   });
+
+  test('CLI intake doctor reports a reachable Codex OAuth bridge without exposing bridge credentials', async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const pathname = new URL(request.url).pathname;
+        if (pathname === '/health') return Response.json({ ok: true });
+        if (pathname === '/v1/models') return Response.json({ data: [{ id: 'gpt-5.6-luna' }] });
+        return new Response('not found', { status: 404 });
+      },
+    });
+    try {
+      const env = withoutIntakeEnv();
+      env.MONSTER_INTAKE_AUTH_MODE = 'codex-oauth';
+      env.MONSTER_INTAKE_CODEX_OAUTH_BASE_URL = `${server.url}v1`;
+      env.MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN = 'secret-bridge-token';
+      const proc = Bun.spawn({
+        cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-doctor'],
+        cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', env,
+      });
+      const [exitCode, stdout, stderr] = await Promise.all([
+        proc.exited,
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe('');
+      expect(stdout).toContain('"authMode": "codex-oauth"');
+      expect(stdout).toContain('"reachable": true');
+      expect(stdout).not.toContain('secret-bridge-token');
+    } finally {
+      server.stop(true);
+    }
+  }, 20_000);
 
   test('reports accepted portable caster spells separately as pending target-world resolution', async () => {
     const server = Bun.serve({
@@ -52,7 +87,7 @@ describe('AI monster intake CLI', () => {
     try {
       const proc = Bun.spawn({
         cmd: [
-          'bun', 'run', resolve('src/index.ts'),
+          'bun', '--no-env-file', 'run', resolve('src/index.ts'),
           '--intake-monsters', resolve('src/core/intake/__tests__/fixtures/rat-warlock.raw.txt'),
           '--vault', join(root, 'vault'),
           '--fvtt-version', '14',
@@ -62,7 +97,8 @@ describe('AI monster intake CLI', () => {
         stdout: 'pipe',
         stderr: 'pipe',
         env: {
-          ...process.env,
+          ...withoutIntakeEnv(),
+          MONSTER_INTAKE_AUTH_MODE: 'api-key',
           MONSTER_INTAKE_API_KEY: 'test-key',
           MONSTER_INTAKE_BASE_URL: server.url.toString(),
           MONSTER_INTAKE_MODEL: 'test-model',
@@ -94,7 +130,7 @@ describe('AI monster intake CLI', () => {
 
   test('legacy raw ingestion fails when the rule-based splitter finds zero monsters', () => {
     const proc = Bun.spawnSync({
-      cmd: ['bun', 'run', 'src/index.ts', '--ingest-plaintext', SOURCE, '--dry-run'],
+      cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--ingest-plaintext', SOURCE, '--dry-run'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
     });
     expect(proc.exitCode).toBe(1);
@@ -110,5 +146,8 @@ function withoutIntakeEnv(): Record<string, string> {
   delete env.MONSTER_INTAKE_BASE_URL;
   delete env.MONSTER_INTAKE_MODEL;
   delete env.MONSTER_INTAKE_REVIEW_MODEL;
+  delete env.MONSTER_INTAKE_AUTH_MODE;
+  delete env.MONSTER_INTAKE_CODEX_OAUTH_BASE_URL;
+  delete env.MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN;
   return env;
 }

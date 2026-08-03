@@ -139,8 +139,9 @@ export function buildItemSectionFlags(
   activationType: 'action' | 'bonus' | 'reaction' | 'legendary' | 'lair' | '' | 'special',
   isPassive: boolean,
   route: 'chinese' | 'english' = 'chinese',
+  sectionOverride?: string,
 ): Record<string, any> {
-  const section = resolveDisplaySectionFixed(activationType, isPassive, route);
+  const section = sectionOverride ?? resolveDisplaySectionFixed(activationType, isPassive, route);
   return {
     'tidy5e-sheet': {
       section,
@@ -173,6 +174,15 @@ export function structuredActionToActivityData(action: StructuredActionData): an
       base.attack.toHit = action.toHit;
     }
     if (action.range) base.attack.range = action.range;
+  }
+
+  // Save and damage-only actions carry their damage on the activity root.
+  // Attack damage remains under base.attack for the native weapon path above.
+  if (action.type !== 'attack' && action.damage && action.damage.length > 0) {
+    base.damage = action.damage.map(d => ({ formula: d.formula, type: d.type, types: d.types }));
+  }
+  if (action.type === 'heal' && action.healing) {
+    base.healing = { ...action.healing };
   }
 
   if ((action.type === 'save' || action.DC) && action.DC) {
@@ -278,15 +288,7 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         system: {},
         changes: [],
         disabled: false,
-        duration: {
-          startTime: null,
-          seconds: null,
-          combat: null,
-          rounds: null,
-          turns: null,
-          startRound: null,
-          startTurn: null,
-        },
+        duration: embeddedEffectDuration(embedded.duration),
         description: embedded.describe,
         origin: null,
         tint: '#ffffff',
@@ -307,10 +309,32 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
     for (const activity of Object.values(activities ?? {}) as any[]) {
       if (!Array.isArray(activity.effects)) activity.effects = [];
       if (!activity.effects.some((entry: any) => entry?._id === effect._id)) {
-        activity.effects.push({ _id: effect._id });
+        activity.effects.push({ _id: effect._id, onSave: false });
       }
     }
   }
+}
+
+function embeddedEffectDuration(source: string | undefined): Record<string, number | null> {
+  const duration: Record<string, number | null> = {
+    startTime: null,
+    seconds: null,
+    combat: null,
+    rounds: null,
+    turns: null,
+    startRound: null,
+    startTurn: null,
+  };
+  if (!source) return duration;
+  const match = source.normalize('NFKC').match(/(\d+)\s*(rounds?|minutes?|hours?|days?|轮|分钟|小时|天)/iu);
+  const value = Number(match?.[1]);
+  const unit = match?.[2]?.toLocaleLowerCase('en-US');
+  if (!Number.isInteger(value) || value <= 0 || !unit) return duration;
+  if (unit === '轮' || unit.startsWith('round')) duration.rounds = value;
+  else if (unit === '分钟' || unit.startsWith('minute')) duration.seconds = value * 60;
+  else if (unit === '小时' || unit.startsWith('hour')) duration.seconds = value * 3600;
+  else duration.seconds = value * 86400;
+  return duration;
 }
 
 function normalizeEmbeddedEffectStatus(type: string): string | undefined {

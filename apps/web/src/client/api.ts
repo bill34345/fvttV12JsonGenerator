@@ -4,6 +4,7 @@ export type IconMode = 'off' | 'safe';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'needs_review' | 'partial' | 'failed';
 
 export type JobType =
+  | 'document-convert'
   | 'monster-collection'
   | 'item-collection'
   | 'vault-sync'
@@ -19,6 +20,7 @@ export interface CapabilitiesResponse {
   pathModeEnabled: boolean;
   translationConfigured: boolean;
   monsterIntakeConfigured: boolean;
+  monsterIntakeAuthMode: 'api-key' | 'codex-oauth' | null;
   goddessFantasyCookieConfigured: boolean;
   goddessFantasyLoginConfigured: boolean;
   imageAssetsConfigured: boolean;
@@ -183,6 +185,33 @@ export async function createJob(input: {
   options?: Record<string, unknown>;
 }): Promise<WebJob> {
   return request<WebJob>('/api/jobs', input);
+}
+
+export async function createDocumentJob(input: {
+  file: File;
+  fvttVersion: FvttVersion;
+  effectProfile: EffectProfile;
+  iconMode: IconMode;
+  engine?: 'auto' | 'native' | 'paddleocr';
+  language?: 'auto' | 'en' | 'zh-CN' | 'mixed';
+  targetLanguage?: string;
+  candidateIds?: string[];
+  extractOnly?: boolean;
+}): Promise<WebJob> {
+  const form = new FormData();
+  form.set('file', input.file);
+  form.set('fvttVersion', input.fvttVersion);
+  form.set('effectProfile', input.effectProfile);
+  form.set('iconMode', input.iconMode);
+  form.set('engine', input.engine ?? 'auto');
+  form.set('language', input.language ?? 'auto');
+  form.set('targetLanguage', input.targetLanguage ?? 'zh-CN');
+  form.set('candidateIds', JSON.stringify(input.candidateIds ?? []));
+  form.set('extractOnly', input.extractOnly ? 'true' : 'false');
+  const response = await fetch('/api/documents/convert', { method: 'POST', body: form });
+  const payload = (await response.json()) as ApiResponse<WebJob>;
+  if (!payload.ok) throw new Error(`${payload.error.code}: ${payload.error.message}`);
+  return payload.data;
 }
 
 export async function getJob(id: string): Promise<WebJob> {

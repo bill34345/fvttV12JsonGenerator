@@ -15,6 +15,7 @@ export type WebJobStatus = 'queued' | 'running' | 'succeeded' | 'needs_review' |
 
 export type WebJobType =
   | 'single-convert'
+  | 'document-convert'
   | 'monster-collection'
   | 'item-collection'
   | 'vault-sync'

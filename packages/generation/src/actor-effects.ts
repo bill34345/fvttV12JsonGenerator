@@ -157,7 +157,10 @@ export function extractSwallowDamage(action: GeneratedActionData): Damage | unde
   }
 
   const extracted = extractDamagePartsFromText(desc);
-  return extracted.find((damage: Damage) => damage.type === 'necrotic') ?? extracted[0];
+  const attackFormulas = new Set(attackDamages.map((damage: Damage) => damage.formula.replace(/\s+/gu, '')));
+  return extracted.find((damage: Damage) => !attackFormulas.has(damage.formula.replace(/\s+/gu, '')))
+    ?? extracted.find((damage: Damage) => damage.type === 'necrotic')
+    ?? extracted[0];
 }
 
 export function createRandomId(): string {

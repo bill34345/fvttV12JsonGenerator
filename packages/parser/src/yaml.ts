@@ -14,6 +14,7 @@ type YamlBodySectionKey =
   | 'bonus_actions'
   | 'reactions'
   | 'legendary_actions'
+  | 'mythic_actions'
   | 'raw_notes';
 
 type YamlBodyExtractionResult = {
@@ -23,6 +24,7 @@ type YamlBodyExtractionResult = {
   bonus_actions: string[];
   reactions: string[];
   legendary_actions: string[];
+  mythic_actions: string[];
 };
 
 export class YamlParser {
@@ -74,6 +76,9 @@ export class YamlParser {
             }
           }
         }
+      }
+      if (extracted.mythic_actions.length > 0) {
+        result.mythic_actions = extracted.mythic_actions;
       }
     }
 
@@ -247,6 +252,7 @@ export class YamlParser {
           }
         }
       }
+      if (internalKey === 'mythic_actions' || internalKey === '神话动作') result.mythic_actions = processedValue;
       if (internalKey === 'lair_actions' || internalKey === '巢穴动作') {
         result.lair_actions = processedValue;
         result.lairInitiative = this.extractLairInitiative(processedValue);
@@ -254,7 +260,7 @@ export class YamlParser {
       if (internalKey === 'regional_effects' || internalKey === '巢穴效应') result.regional_effects = processedValue;
       if (internalKey === 'spellcasting' || internalKey === '施法') result.spellcasting = processedValue;
       if (
-        ['特性', '动作', '附赠动作', '反应', '传奇动作'].includes(internalKey) &&
+        ['特性', '动作', '附赠动作', '反应', '传奇动作', '神话动作'].includes(internalKey) &&
         this.isStructuredActionSection(processedValue)
       ) {
         const structuredParser = new StructuredActionParser();
@@ -264,6 +270,7 @@ export class YamlParser {
           '附赠动作': '附赠动作',
           '反应': '反应',
           '传奇动作': '传奇动作',
+          '神话动作': '神话动作',
         };
         const mapped = sectionMap[internalKey];
         if (mapped) {
@@ -397,6 +404,7 @@ export class YamlParser {
       bonus_actions: [],
       reactions: [],
       legendary_actions: [],
+      mythic_actions: [],
       raw_notes: [],
     };
     const biographyLines: string[] = [];
@@ -438,6 +446,7 @@ export class YamlParser {
       bonus_actions: this.normalizeBodySectionLines(sectionLines.bonus_actions),
       reactions: this.normalizeBodySectionLines(sectionLines.reactions),
       legendary_actions: this.normalizeBodySectionLines(sectionLines.legendary_actions),
+      mythic_actions: this.normalizeBodySectionLines(sectionLines.mythic_actions),
     };
   }
 
@@ -457,6 +466,10 @@ export class YamlParser {
     const normalized = title.trim().toLowerCase();
     if (!normalized) {
       return undefined;
+    }
+
+    if (normalized.includes('神话动作') || normalized.includes('mythic actions')) {
+      return 'mythic_actions';
     }
 
     if (normalized.includes('传奇动作') || normalized.includes('legendary actions')) {
@@ -666,6 +679,7 @@ export class YamlParser {
                 }
             }
         }
+        if (/(?:hover|\u60ac\u505c|\u60ac\u6d6e)/iu.test(p)) result['hover'] = true;
       }
     }
     return result;

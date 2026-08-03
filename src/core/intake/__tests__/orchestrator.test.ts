@@ -6,6 +6,7 @@ import {
   convertMarkdownContentToJson as convertWithPackageWorkflow,
 } from '@fvtt-json-generator/workflows/single-file-conversion';
 import { adjudicateReview, anchorIrEvidence, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
+import { renderMonsterIntakeMarkdown } from '../renderer';
 import type {
   AiReviewResult,
   DiscoveryRequest,
@@ -121,6 +122,89 @@ describe('AI monster intake orchestrator', () => {
     }, ir);
 
     expect(anchored.source).toEqual(expectedSource);
+  });
+
+  test('rebuilds feature evidence and keeps mythic actions separate from legendary actions', () => {
+    const source = [
+      'Traits',
+      'Trait One. A source-backed trait.',
+      'Actions',
+      'Action One. A source-backed action.',
+      'Legendary Actions',
+      'The creature can take 2 legendary actions.',
+      'Legendary One. A source-backed legendary action.',
+      'Mythic Actions',
+      'Mythic One. A source-backed mythic action.',
+    ].join('\n');
+    const ir = buildValidLurkerIr();
+    ir.creature.traits = [{ name: 'Trait One', description: 'A source-backed trait.' }];
+    ir.creature.actions = [{ name: 'Action One', description: 'A source-backed action.' }];
+    ir.creature.legendaryActions = [
+      { name: 'Legendary One', description: 'A source-backed legendary action.' },
+      { name: 'Mythic One', description: 'A source-backed mythic action.' },
+    ];
+    ir.creature.mythicActions = undefined;
+    ir.creature.legendary = { max: 2, preamble: 'provider typo', evidence: [] };
+    ir.claims = [];
+    ir.coverage = [{ start: 0, end: source.length, quote: source, classification: 'mechanical', claimPaths: [] }];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'test', label: 'test', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.legendaryActions.map((feature) => feature.name)).toEqual(['Legendary One']);
+    expect(anchored.creature.mythicActions?.map((feature) => feature.name)).toEqual(['Mythic One']);
+    expect(anchored.creature.legendary?.preamble).toBe('Legendary Actions\nThe creature can take 2 legendary actions.');
+    expect(anchored.creature.traits[0]?.evidence?.[0]?.quote).toBe('Trait One. A source-backed trait.');
+    expect(anchored.creature.mythicActions?.[0]?.evidence?.[0]?.quote).toBe('Mythic One. A source-backed mythic action.');
+    expect(anchored.claims.map((claim) => claim.path)).toEqual(expect.arrayContaining([
+      '/creature/traits/0',
+      '/creature/actions/0',
+      '/creature/legendaryActions/0',
+      '/creature/mythicActions/0',
+    ]));
+  });
+
+  test('anchors qualified feature labels without merging adjacent source spans', () => {
+    const source = [
+      'Traits',
+      'Implacable. The creature may turn a failed save into a success.',
+      'DomainIntrusion(MythicTrait,1/Day). The creature resets its hit points.',
+      'Mythic Actions',
+      'DreamofCreation(Concentration). The creature summons an ally.',
+      'DreamofPerfection(1/Round). The creature regains hit points.',
+    ].join('\n');
+    const ir = buildValidLurkerIr();
+    ir.creature.traits = [
+      { name: 'Implacable', description: 'The creature may turn a failed save into a success.' },
+      { name: 'DomainIntrusion(MythicTrait,1/Day)', description: 'The creature resets its hit points.' },
+    ];
+    ir.creature.actions = [];
+    ir.creature.legendaryActions = [];
+    ir.creature.mythicActions = [
+      { name: 'DreamofCreation(Concentration)', description: 'The creature summons an ally.' },
+      { name: 'DreamofPerfection(1/Round)', description: 'The creature regains hit points.' },
+    ];
+    ir.claims = [];
+    ir.coverage = [{ start: 0, end: source.length, quote: source, classification: 'mechanical', claimPaths: [] }];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'qualified', label: 'qualified', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.traits.map((feature) => feature.evidence?.[0]?.quote)).toEqual([
+      'Implacable. The creature may turn a failed save into a success.',
+      'DomainIntrusion(MythicTrait,1/Day). The creature resets its hit points.',
+    ]);
+    expect(anchored.creature.mythicActions?.map((feature) => feature.evidence?.[0]?.quote)).toEqual([
+      'DreamofCreation(Concentration). The creature summons an ally.',
+      'DreamofPerfection(1/Round). The creature regains hit points.',
+    ]);
+    expect(anchored.creature.traits[1]).toMatchObject({ name: 'DomainIntrusion', sourceQualifier: 'MythicTrait,1/Day' });
+    expect(anchored.creature.mythicActions?.map((feature) => ({ name: feature.name, qualifier: feature.sourceQualifier }))).toEqual([
+      { name: 'DreamofCreation', qualifier: 'Concentration' },
+      { name: 'DreamofPerfection', qualifier: '1/Round' },
+    ]);
   });
 
   test('chunks long UTF-16 source with the fixed overlap and deduplicates overlapping boundary discoveries', () => {
@@ -419,12 +503,13 @@ describe('AI monster intake orchestrator', () => {
     (ir.creature.attributes as unknown as { acKind: string }).acKind = '（有法师护甲时15）';
     (ir.creature.actions[1] as unknown as { activityType: string }).activityType = 'action';
     (ir.creature.traits[2] as unknown as { activityType: string }).activityType = 'bonus';
-    ir.creature.languages.values = ['通用语'];
+    ir.creature.languages.values = ['通用语', '深渊语'];
     (ir.creature.languages as any).custom = [];
     ir.creature.actions[1]!.damage![0]!.type = '穿刺';
     ir.creature.senses.blindsight = 0;
     ir.creature.senses.tremorsense = 0;
     ir.creature.senses.truesight = 0;
+    (ir.creature.senses as any).special = [];
     ir.creature.actions[1]!.attack!.range = 0;
     ir.creature.actions[1]!.attack!.longRange = 0;
 
@@ -441,12 +526,13 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.creature.actions[1]!.activityType).toBe('attack');
     expect(anchored.creature.traits[2]!.activityType).toBe('utility');
     expect(anchored.creature.traits[2]!.activationType).toBe('bonus');
-    expect(anchored.creature.languages.values).toEqual(['common']);
+    expect(anchored.creature.languages.values).toEqual(['common', 'deep']);
     expect(anchored.creature.languages.custom).toBeUndefined();
     expect(anchored.creature.actions[1]!.damage![0]!.type).toBe('piercing');
     expect(anchored.creature.senses.blindsight).toBeUndefined();
     expect(anchored.creature.senses.tremorsense).toBeUndefined();
     expect(anchored.creature.senses.truesight).toBeUndefined();
+    expect(anchored.creature.senses.special).toBeUndefined();
     expect(anchored.creature.actions[1]!.attack!.range).toBeUndefined();
     expect(anchored.creature.actions[1]!.attack!.longRange).toBeUndefined();
   });
@@ -461,6 +547,62 @@ describe('AI monster intake orchestrator', () => {
 
     expect(anchored.creature.actions[0]!.attack).toBeUndefined();
     expect(anchored.creature.actions[0]!.activityType).toBe('utility');
+  });
+
+  test('drops absent optional spellcasting and alignment bookkeeping without spending an AI repair call', () => {
+    const ir = buildValidLurkerIr();
+    delete ir.creature.identity.alignment;
+    ir.creature.spellcasting = [];
+    ir.uncertainties.push({
+      id: 'alignment-missing', code: 'missing-source-value', path: '/creature/identity/alignment',
+      message: 'Source does not state an alignment.', blocking: true, evidence: [],
+    });
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE.replace('中立邪恶', ''), {
+      id: 'optional-omissions', label: 'Optional Omissions', start: 0, end: LURKER_SOURCE.length - 4,
+      quote: LURKER_SOURCE.replace('中立邪恶', ''),
+    }, ir);
+
+    expect(anchored.creature.spellcasting).toBeUndefined();
+    expect(anchored.uncertainties).toEqual([]);
+  });
+
+  test('keeps an empty spellcasting collection for review when the source explicitly contains a spellcasting block', () => {
+    const source = `${LURKER_SOURCE}\nInnate Spellcasting. The creature casts detect magic at will.`;
+    const ir = buildValidLurkerIr();
+    ir.creature.spellcasting = [];
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'missing-spellcasting', label: 'Missing Spellcasting', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.spellcasting).toEqual([]);
+  });
+
+  test('retains hover only when the exact movement claim explicitly states it', () => {
+    const hoverLine = 'Speed fly 40 ft. (hover).';
+    const source = `${LURKER_SOURCE}\n${hoverLine}`;
+    const makeIr = () => {
+      const ir = buildValidLurkerIr();
+      ir.creature.attributes.movement = { fly: 40, hover: true };
+      const movementClaim = ir.claims.find((claim) => claim.path === '/creature/attributes/movement')!;
+      const start = source.indexOf(hoverLine);
+      movementClaim.evidence = [{ start, end: start + hoverLine.length, quote: hoverLine }];
+      return ir;
+    };
+    const candidate = { id: 'hover', label: 'Hover', start: 0, end: source.length, quote: source };
+
+    expect(anchorIrEvidence(source, candidate, makeIr()).creature.attributes.movement.hover).toBe(true);
+
+    const withoutHover = source.replace(' (hover)', '');
+    const unsupported = makeIr();
+    const claim = unsupported.claims.find((value) => value.path === '/creature/attributes/movement')!;
+    const plainLine = 'Speed fly 40 ft..';
+    const plainStart = withoutHover.indexOf(plainLine);
+    claim.evidence = [{ start: plainStart, end: plainStart + plainLine.length, quote: plainLine }];
+    expect(anchorIrEvidence(withoutHover, {
+      ...candidate, end: withoutHover.length, quote: withoutHover,
+    }, unsupported).creature.attributes.movement.hover).toBeUndefined();
   });
 
   test('drops a provider-invented empty-container claim whose evidence is not an exact source slice', () => {
@@ -499,8 +641,8 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.creature.legendary!.preamble).toBe(preamble);
   });
 
-  test('keeps a literal save DC but drops unsupported structured save automation when the source omits the ability', () => {
-    const description = 'Creatures in the sphere are affected by confusion (save DC 12).';
+  test('keeps a literal save DC but drops unsupported structured save automation for an unknown effect when the source omits the ability', () => {
+    const description = 'Creatures in the sphere are affected by an unknown magical effect (save DC 12).';
     const source = `${LURKER_SOURCE}\n${description}`;
     const ir = buildValidLurkerIr() as any;
     ir.creature.legendaryActions.push({
@@ -525,6 +667,161 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.uncertainties).toHaveLength(0);
   });
 
+  test.each([
+    {
+      label: 'English',
+      description: 'A magical sphere with a 15-foot radius appears at a point within 60 feet. Each creature that starts its turn there is affected by the confusion spell (save DC 13). The sphere lasts for 1 minute while the creature concentrates.',
+    },
+    {
+      label: 'Chinese',
+      description: '一个半径15英尺的魔法球体出现在60尺内。每个在该区域内开始其回合的生物都受到困惑术 confusion 的影响（豁免 DC 13）。只要保持专注，球体持续1分钟。',
+    },
+  ])('projects a source-explicit $label confusion reference as a usable save, template, and linked effect', async ({ description }) => {
+    const source = `${LURKER_SOURCE}\n${description}`;
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.legendaryActions.push({
+      name: 'Zone of Calamity',
+      description,
+      activityType: 'utility',
+      activationType: 'legendary',
+      legendaryCost: 2,
+    });
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'confusion-zone', label: 'Confusion Zone', start: 0, end: source.length, quote: source,
+    }, ir);
+    const feature = anchored.creature.legendaryActions[0]!;
+    const markdown = renderMonsterIntakeMarkdown(anchored);
+    const generated = await convertWithPackageWorkflow({
+      content: markdown,
+      fvttVersion: '14',
+      effectProfile: 'core',
+      translationService: null,
+    });
+    const actor = generated.rawJson as any;
+    const item = actor.items.find((entry: any) => entry.name.includes('Zone of Calamity'));
+    const activity = Object.values(item.system.activities)[0] as any;
+
+    expect(feature).toMatchObject({
+      activityType: 'save',
+      save: { dc: 13, ability: 'wis' },
+      aoe: { shape: 'sphere', radius: 15 },
+      activationCondition: 'Concentration',
+      appliedConditions: [{ statuses: [], condition: 'Confused', duration: '1 minute' }],
+    });
+    expect(generated.status).toBe('accepted');
+    expect(markdown).toContain('类型: save');
+    expect(markdown).toContain('形状: 球形');
+    expect(markdown).toContain('范围: 15');
+    expect(activity).toMatchObject({
+      type: 'save',
+      activation: { type: 'legendary', value: 2 },
+      save: { ability: ['wis'], dc: { calculation: '', formula: '13' } },
+      range: { value: 60, units: 'ft' },
+      target: { template: { type: 'sphere', size: 15, units: 'ft' } },
+    });
+    expect(item.system.concentration).toBe(true);
+    expect(item.effects).toHaveLength(1);
+    expect(item.effects[0]).toMatchObject({ name: 'Confused', duration: { seconds: 60 }, statuses: [] });
+    expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+  });
+
+  test.each([
+    {
+      label: 'English fixed temporary hit points',
+      name: 'Dark Boon',
+      description: 'Dark Boon. When the creature reduces a hostile creature to 0 hit points, it gains 6 temporary hit points.',
+      formula: '6',
+    },
+    {
+      label: 'Chinese fixed temporary hit points',
+      name: '黑暗赐福',
+      description: '黑暗赐福.当该生物将一个敌对生物的生命值归零时，它将获得6点临时生命值。',
+      formula: '6',
+    },
+    {
+      label: 'dice-based temporary hit points',
+      name: 'Shadow Reward',
+      description: 'Shadow Reward. When the trigger occurs, the creature gains 1d6 temporary hit points.',
+      formula: '1d6',
+    },
+  ])('projects $label as a special heal activity that grants temphp', async ({ name, description, formula }) => {
+    const source = `${LURKER_SOURCE}\n${description}`;
+    const ir = buildValidLurkerIr();
+    ir.creature.traits[0] = {
+      name,
+      description,
+      activityType: 'utility',
+      activationType: 'special',
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'temporary-hit-points', label: name, start: 0, end: source.length, quote: source,
+    }, ir);
+    const markdown = renderMonsterIntakeMarkdown(anchored);
+    const generated = await convertWithPackageWorkflow({
+      content: markdown,
+      fvttVersion: '14',
+      effectProfile: 'core',
+      translationService: null,
+    });
+    const actor = generated.rawJson as any;
+    const item = actor.items.find((entry: any) => entry.name.includes(name));
+    const activity = Object.values(item.system.activities)[0] as any;
+
+    expect(anchored.creature.traits[0]).toMatchObject({
+      activityType: 'heal',
+      healing: { formula, type: 'temphp' },
+    });
+    expect(generated.status).toBe('accepted');
+    expect(activity).toMatchObject({
+      type: 'heal',
+      activation: { type: 'special' },
+      target: { affects: { type: 'self' } },
+    });
+    expect(activity.healing).toEqual(formula.includes('d') ? {
+      number: 1,
+      denomination: 6,
+      bonus: '',
+      types: ['temphp'],
+      custom: { enabled: false, formula: '' },
+      scaling: { mode: 'whole', number: 1, formula: '' },
+    } : {
+      number: null,
+      denomination: null,
+      bonus: '',
+      types: ['temphp'],
+      custom: { enabled: true, formula },
+      scaling: { mode: 'whole', number: null, formula: '' },
+    });
+    expect(activity.target).toEqual({
+      override: false,
+      prompt: false,
+      template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: 'ft' },
+      affects: { count: '1', type: 'self', choice: false, special: '' },
+    });
+    const renderedFormula = activity.healing.custom?.enabled
+      ? activity.healing.custom.formula
+      : `${activity.healing.number}d${activity.healing.denomination}`;
+    expect(renderedFormula).toBe(formula);
+  });
+
+  test('does not turn a temporary-hit-point prohibition into a heal activity', () => {
+    const description = "Null Ward. The creature can't gain temporary hit points.";
+    const source = `${LURKER_SOURCE}\n${description}`;
+    const ir = buildValidLurkerIr();
+    ir.creature.traits[0] = {
+      name: 'Null Ward', description, activityType: 'utility', activationType: 'special',
+    };
+
+    const anchored = anchorIrEvidence(source, {
+      id: 'no-temporary-hit-points', label: 'Null Ward', start: 0, end: source.length, quote: source,
+    }, ir);
+
+    expect(anchored.creature.traits[0]).toMatchObject({ activityType: 'utility' });
+    expect((anchored.creature.traits[0] as any).healing).toBeUndefined();
+  });
+
   test('does not discard a valid explicit save ability or an unrelated uncertainty', () => {
     const ir = buildValidLurkerIr();
     const anchored = anchorIrEvidence(LURKER_SOURCE, {
@@ -533,6 +830,25 @@ describe('AI monster intake orchestrator', () => {
 
     expect(anchored.creature.bonusActions.find((feature) => feature.save)?.save?.ability).toBe('cha');
     expect(anchored.uncertainties).toEqual(ir.uncertainties);
+  });
+
+  test('normalizes localized and full-English save abilities but does not guess an unknown ability', () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.bonusActions[0].save.ability = '\u611f\u77e5';
+    ir.creature.actions[1].save = { dc: 12, ability: 'Strength', condition: 'failure' };
+    ir.creature.actions[1].description += ' Strength saving throw DC 12.';
+    ir.creature.reactions.push({
+      name: 'Unknown Save', description: 'The target makes a Luck saving throw DC 12.',
+      activityType: 'save', save: { dc: 12, ability: 'Luck', condition: 'failure' },
+    });
+
+    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+      id: 'ability-aliases', label: 'Ability Aliases', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    }, ir);
+
+    expect(anchored.creature.bonusActions[0]!.save!.ability).toBe('wis');
+    expect(anchored.creature.actions[1]!.save!.ability).toBe('str');
+    expect(anchored.creature.reactions[0]!.save).toBeUndefined();
   });
 
   test('normalizes source-proven statblock conventions instead of retaining false AI ambiguities', () => {
@@ -709,6 +1025,21 @@ describe('AI monster intake orchestrator', () => {
     expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, uncoveredText).uncertainties).toHaveLength(1);
   });
 
+  test('removes a whole-source span uncertainty after deterministic feature evidence is exact', () => {
+    const ir = buildRatWarlockIr();
+    ir.uncertainties = [{
+      id: 'incomplete-span', code: 'incomplete_source_span', path: '/creature',
+      message: 'The candidate source span lacks token-level evidence boundaries.', blocking: true,
+      evidence: [{ start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
+    }];
+
+    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+      id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
+    }, ir);
+
+    expect(anchored.uncertainties).toEqual([]);
+  });
+
   test('keeps genuine semantic uncertainty even when whole-source evidence is exact', () => {
     const ir = buildRatWarlockIr();
     ir.uncertainties = [{
@@ -826,6 +1157,35 @@ describe('AI monster intake orchestrator', () => {
     expect(calls[1]).toBe(result.creatures[0]!.actorPath);
   });
 
+  test('promotes the exact workflow Actor after Intake accepts literal-review-only diagnostics', async () => {
+    const calls: Array<string | undefined> = [];
+    const result = await runMonsterIntake({
+      source: LURKER_SOURCE,
+      sourceName: 'lurker-literal-review.md',
+      fvttVersion: '14',
+      effectProfile: 'core',
+      ...roots(),
+    }, new FakeProvider(), {
+      async convertMarkdownContentToJson(options) {
+        calls.push(options.outputPath);
+        const conversion = await convertWithPackageWorkflow({ ...options, outputPath: undefined });
+        return {
+          ...conversion,
+          status: 'needs_review',
+          diagnostics: [{
+            code: 'GEN_LITERAL_REVIEW_REQUIRED', severity: 'warning', stage: 'semantic',
+            path: 'actor/test', message: 'Literal source mechanic needs Intake review.', evidence: [],
+          }],
+        };
+      },
+    });
+
+    expect(result.status).toBe('succeeded');
+    expect(calls).toHaveLength(2);
+    expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
+    expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8')).name).toContain('Lurker');
+  });
+
   test('keeps an accepted Rat Warlock portable while exposing spell resolution as pending', async () => {
     const result = await runMonsterIntake({
       source: RAT_WARLOCK_SOURCE,
@@ -900,6 +1260,28 @@ describe('AI monster intake orchestrator', () => {
 
     expect(adjudicated.verdict).toBe('revise');
     expect(adjudicated.findings).toContainEqual(expect.objectContaining({ id: 'lost-waiver', blocking: true }));
+  });
+
+  test('adjudicates Foundry legendary activation as the supported mythic representation only when the mythic section survives', () => {
+    const ir = buildValidLurkerIr();
+    ir.creature.mythicActions = [{ name: 'Dream of Creation', description: 'The creature summons an ally.' }];
+    const review: AiReviewResult = {
+      schemaVersion: 1,
+      verdict: 'revise',
+      findings: [{
+        id: 'mythic-activation', code: 'ACTOR_ACTION_ECONOMY_DRIFT', path: '/actorProjection/items/0/activation',
+        message: 'Mythic action uses legendary activation.', blocking: true, origin: 'ai-review',
+      }],
+    };
+    const candidate = { id: 'lurker', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE };
+
+    expect(adjudicateReview(LURKER_SOURCE, candidate, ir, {
+      items: [{ name: 'Dream of Creation', activation: 'legendary', section: '\u795e\u8bdd\u52a8\u4f5c' }],
+    }, review)).toMatchObject({ verdict: 'accepted', findings: [] });
+
+    expect(adjudicateReview(LURKER_SOURCE, candidate, ir, {
+      items: [{ name: 'Dream of Creation', activation: 'legendary', section: 'Legendary Actions' }],
+    }, review)).toMatchObject({ verdict: 'revise', findings: [{ id: 'mythic-activation' }] });
   });
 
   test('keeps deterministic spell resolution pending when an unrelated AI biography finding needs review', async () => {

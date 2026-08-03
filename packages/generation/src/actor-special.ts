@@ -15,6 +15,7 @@ type GeneratedActionData = ActionData & {
  */
 export function hasSwallowLikeText(action: GeneratedActionData): boolean {
   const text = `${action.name} ${action.englishName ?? ''} ${action.desc ?? ''}`;
+  if (/(?:\bswallow(?:ed|ing)?\b|\u541e\u566c|\u541e\u54bd|\u88ab\u541e\u566c|\u88ab\u541e\u4e0b)/iu.test(text)) return true;
   return /(?:Swallow|吞咽|吞下|被吞下)/i.test(text);
 }
 

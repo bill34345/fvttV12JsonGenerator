@@ -254,11 +254,20 @@ bun run src/index.ts "path/to/npc.md" -o "path/to/output.json"
 先配置独立的 Intake provider：
 
 ```bash
+MONSTER_INTAKE_AUTH_MODE=api-key
 MONSTER_INTAKE_API_KEY=<provider key>
 MONSTER_INTAKE_BASE_URL=https://api.openai.com/v1
 MONSTER_INTAKE_MODEL=<extraction model>
 MONSTER_INTAKE_REVIEW_MODEL=<optional reviewer model>
 MONSTER_INTAKE_TIMEOUT_MS=60000
+MONSTER_INTAKE_REPAIR_TIMEOUT_MS=180000
+
+# 可选：本机 Codex OAuth 兼容桥
+MONSTER_INTAKE_AUTH_MODE=codex-oauth
+MONSTER_INTAKE_CODEX_OAUTH_BASE_URL=http://127.0.0.1:8787/v1
+MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN=codex-oauth-local
+MONSTER_INTAKE_MODEL=gpt-5.6-luna
+MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
 ```
 
 这些变量不会回退到翻译服务的 `TRANSLATION_*` 或通用 `OPENAI_*`。运行前可做零网络预检：
@@ -266,6 +275,14 @@ MONSTER_INTAKE_TIMEOUT_MS=60000
 ```powershell
 bun run src/index.ts --intake-monsters "path/to/raw.txt" --vault "obsidian/dnd数据转fvttjson" --dry-run
 ```
+
+连接检查：
+
+```powershell
+bun run src/index.ts --intake-doctor
+```
+
+`codex-oauth` 模式默认使用 `gpt-5.6-luna`。这里的 `xhigh` 对应 Codex 界面里的 `ultra`。模式只连接本机 OpenAI-compatible 兼容桥，OAuth 凭据由桥接服务自己保管；本项目不会读取、记录或把 OAuth token 当作普通 API key 发送。桥接服务没有运行时 doctor 会失败；如果 `/v1/models` 没列出这个模型，doctor 会提示，但仍允许首次 Intake 请求验证模型别名。
 
 正式运行：
 
