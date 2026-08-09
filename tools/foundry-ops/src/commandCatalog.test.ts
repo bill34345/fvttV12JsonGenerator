@@ -48,6 +48,17 @@ describe('Foundry Ops command catalog', () => {
     expect(route.forwardedArgs).toEqual(['verify-install']);
   });
 
+  it('routes Blood Hunter v14 evidence verification through the read-only Lab adapter', () => {
+    const route = resolveFoundryOpsRoute(['lab', 'blood-hunter-v14', 'verify-actor', '--input=C:/evidence/actor.json']);
+    expect(route.command).toMatchObject({
+      id: 'lab.blood-hunter-v14',
+      target: 'local',
+      effect: 'read-only',
+    });
+    expect(route.entrypoint).toBe('tools/foundry-ops/src/lab/cli.ts');
+    expect(route.forwardedArgs).toEqual(['blood-hunter-v14', 'verify-actor', '--input=C:/evidence/actor.json']);
+  });
+
   it('routes local asset inventory to the report-only implementation', () => {
     const route = resolveFoundryOpsRoute(['assets', 'inventory', '--hash-concurrency=2']);
     expect(route.command).toMatchObject({

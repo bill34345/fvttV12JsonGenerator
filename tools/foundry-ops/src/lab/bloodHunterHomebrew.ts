@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { assertInsideLabRoot, type FoundryLabConfig } from "../config";
 
 const SOURCE = "BloodHunter2024";
+export const BLOOD_HUNTER_HOMEBREW_ARTIFACT_KIND = "plutonium-side-data" as const;
 const CLASS_NAME = "血猎手";
 export const BLOOD_HUNTER_HOMEBREW_URL =
   "https://homebrew.kiwee.top/class/SnowWolf;%20%E8%A1%80%E7%8C%8E%E6%89%8B%20(2024).json";
@@ -1594,6 +1595,9 @@ export function enrichBloodHunterHomebrew(
   );
   enriched._meta ??= {};
   enriched._meta.fvttJsonGenerator = {
+    artifactKind: BLOOD_HUNTER_HOMEBREW_ARTIFACT_KIND,
+    authority: "legacy-side-data-not-native-compendium",
+    nativeModuleId: "fvtt-blood-hunter-2024",
     activityProfile: "foundry-14.364-dnd5e-5.3.3",
     moduleVersions: {
       midiQol: "14.0.11",
@@ -1832,6 +1836,7 @@ export async function buildBloodHunterHomebrew(
   options: { apply: boolean; sourceFile?: string },
 ): Promise<{
   apply: boolean;
+  artifactKind: typeof BLOOD_HUNTER_HOMEBREW_ARTIFACT_KIND;
   output: string;
   source: string;
   summary: ReturnType<typeof summarizeBloodHunterActivities>;
@@ -1869,6 +1874,7 @@ export async function buildBloodHunterHomebrew(
 
   return {
     apply: options.apply,
+    artifactKind: BLOOD_HUNTER_HOMEBREW_ARTIFACT_KIND,
     output,
     source: sourceLabel,
     summary: summarizeBloodHunterActivities(enriched),

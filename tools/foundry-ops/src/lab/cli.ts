@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { isAbsolute, resolve } from 'node:path';
 import { bootstrapLab } from './bootstrap';
 import { acquirePackages, readClassifiedPlan } from './acquire';
 import { acquireLocalSources, readLocalSourceMappings } from './localSources';
@@ -10,6 +12,13 @@ import { launchProfile, stopProfile, type ProfileId } from './launch';
 import { runCumulativeReport, runDiagnosticReport, runInventoryDiagnosis, runPerformanceBaseline } from './diagnose';
 import { patchPlutoniumQuickInsertInstall } from './patchPlutoniumQuickInsert';
 import { buildBloodHunterHomebrew } from './bloodHunterHomebrew';
+import {
+  createBloodHunterV14E2EManifest,
+  inspectBloodHunterV14Lab,
+  planBloodHunterV14MatrixWorld,
+  verifyBloodHunterV14ActorSnapshot,
+  verifyCallumMigrationSnapshots,
+} from './bloodHunterV14Lab';
 import { patchSequencerSpritesheetWorkerInstall } from './patchSequencerSpritesheetWorkers';
 import {
   markClasspackV14MigrationComplete,
@@ -75,6 +84,30 @@ if (command === 'build-blood-hunter-homebrew') {
   const result = await buildBloodHunterHomebrew(createLabConfig(), { apply, sourceFile });
   console.log(JSON.stringify({ ok: true, ...result }, null, 2));
   process.exit(0);
+}
+if (command === 'blood-hunter-v14') {
+  if (apply) throw new Error('blood-hunter-v14 evidence commands are read-only and do not accept --apply.');
+  const [action] = args.filter((arg) => !arg.startsWith('--'));
+  const inputPath = args.find((arg) => arg.startsWith('--input='))?.slice('--input='.length);
+  if (!action || !inputPath || !isAbsolute(inputPath)) {
+    throw new Error('blood-hunter-v14 requires an action and --input=<absolute-json>.');
+  }
+  const input = JSON.parse(await readFile(resolve(inputPath), 'utf8')) as Record<string, unknown>;
+  const result = action === 'inspect'
+    ? inspectBloodHunterV14Lab(input as any)
+    : action === 'plan'
+      ? planBloodHunterV14MatrixWorld(input as any)
+      : action === 'verify-actor'
+        ? verifyBloodHunterV14ActorSnapshot(input.snapshot, input.expectation as any)
+        : action === 'verify-migration'
+          ? verifyCallumMigrationSnapshots(input as any)
+          : action === 'evidence-manifest'
+            ? createBloodHunterV14E2EManifest(input as any)
+            : undefined;
+  if (!result) throw new Error(`Unsupported blood-hunter-v14 action: ${action}`);
+  const ok = 'ok' in result ? result.ok : result.e2ePassEligible;
+  console.log(JSON.stringify({ ok, action, result }, null, 2));
+  process.exit(ok ? 0 : 2);
 }
 if (command === 'diagnose') {
   const [action, ...diagnoseArgs] = args;

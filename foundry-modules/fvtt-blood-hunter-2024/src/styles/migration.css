@@ -1,0 +1,22 @@
+.fvtt-blood-hunter-2024-migration {
+  min-width: 42rem;
+}
+
+.fvtt-blood-hunter-2024-migration .bh-status {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 0.25rem;
+}
+
+.fvtt-blood-hunter-2024-migration .bh-conflict {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border-left: 0.25rem solid var(--color-level-error);
+}
+
+.fvtt-blood-hunter-2024-migration .bh-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

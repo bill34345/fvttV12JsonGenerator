@@ -1,0 +1,13 @@
+{
+  "name": "@fvtt-json-generator/blood-hunter-v14",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test tests",
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  }
+}

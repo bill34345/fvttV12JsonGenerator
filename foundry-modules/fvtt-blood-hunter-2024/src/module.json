@@ -1,0 +1,70 @@
+{
+  "id": "fvtt-blood-hunter-2024",
+  "title": "血猎手 2024",
+  "description": "Blood Hunter 2024 native class, subclass and feature compendia for Foundry VTT v14.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "14.364",
+    "verified": "14.364",
+    "maximum": "14.364"
+  },
+  "esmodules": ["scripts/index.js"],
+  "styles": ["styles/migration.css"],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.3.3",
+          "verified": "5.3.3",
+          "maximum": "5.3.3"
+        }
+      }
+    ],
+    "recommends": [
+      {
+        "id": "midi-qol",
+        "type": "module",
+        "compatibility": {
+          "minimum": "14.0.11",
+          "verified": "14.0.11",
+          "maximum": "14.0.11"
+        }
+      },
+      {
+        "id": "dae",
+        "type": "module",
+        "compatibility": {
+          "minimum": "14.0.12",
+          "verified": "14.0.12",
+          "maximum": "14.0.12"
+        }
+      }
+    ]
+  },
+  "packs": [
+    {
+      "name": "classes",
+      "label": "血猎手 2024：职业",
+      "path": "packs/classes",
+      "type": "Item",
+      "system": "dnd5e"
+    },
+    {
+      "name": "subclasses",
+      "label": "血猎手 2024：子职",
+      "path": "packs/subclasses",
+      "type": "Item",
+      "system": "dnd5e"
+    },
+    {
+      "name": "features",
+      "label": "血猎手 2024：特性",
+      "path": "packs/features",
+      "type": "Item",
+      "system": "dnd5e"
+    }
+  ],
+  "socket": false
+}

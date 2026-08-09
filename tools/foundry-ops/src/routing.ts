@@ -55,6 +55,7 @@ function labCommandId(action: string): string {
     'patch-sequencer-spritesheet-workers',
     'patch-plutonium-quick-insert',
     'build-blood-hunter-homebrew',
+    'blood-hunter-v14',
     'spell-resolver',
     'diagnose',
     'classify',

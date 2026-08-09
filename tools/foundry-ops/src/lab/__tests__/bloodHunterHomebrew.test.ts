@@ -505,6 +505,9 @@ describe("Blood Hunter 2024 homebrew Activity enrichment", () => {
   test("records the exact module contract and honest automation boundary", () => {
     const enriched = enrichBloodHunterHomebrew(sourceFixture, { strict: false });
     expect(enriched._meta.fvttJsonGenerator).toMatchObject({
+      artifactKind: "plutonium-side-data",
+      authority: "legacy-side-data-not-native-compendium",
+      nativeModuleId: "fvtt-blood-hunter-2024",
       activityProfile: "foundry-14.364-dnd5e-5.3.3",
       moduleVersions: {
         midiQol: "14.0.11",
