@@ -1,0 +1,52 @@
+{
+  "FVTT_HOUSE_RULES": {
+    "FirstRun": "本团村规已安装。所有会修改数据的功能均为关闭；GM 可在配置设置中逐项启用。",
+    "UnsupportedRuntime": "本团村规已失败关闭：仅支持 Foundry 14.364 与 dnd5e 5.3.3。",
+    "LowAbility": "当前选中的角色有属性值不高于提醒阈值；本提示不会修改角色。",
+    "Dismiss": "忽略",
+    "Nat1": {
+      "Title": "自然 1：GM 后果",
+      "Pending": "必须由 GM 确认；尚未造成伤害、反击、掷表或武器损坏。",
+      "Confirm": "确认并应用",
+      "Result": {
+        "counter": "随机结果：被攻击的敌人进行一次不耗反应的纯伤害近战反击",
+        "ally": "随机结果：误伤一名符合条件的队友",
+        "weapon": "随机结果：武器损坏 1 级",
+        "self": "随机结果：法术在施法者面前爆开并伤害自己",
+        "other": "随机结果：使用 GM 配置的其他后果表"
+      },
+      "Weapon": "施加武器损坏",
+      "Target": "选择近战反击来源",
+      "Counter": "仅伤害反击",
+      "Other": "掷其他表",
+      "InvalidTarget": "自然 1 来源没有可用的武器。",
+      "TargetRequired": "请先选择一个目标近战 Activity。",
+      "NotApplied": "请求的后果被拒绝或因失败关闭而未执行。"
+    },
+    "Nat20": {
+      "Title": "自然 20：首颗伤害骰按满值结算",
+      "Pending": "本次仍会投出全部重击伤害骰；第一伤害部分的第一颗骰无论原始点数多少都按满值结算。"
+    },
+    "Potion": {
+      "Quick": "快速饮用（附赠动作）",
+      "Max": "谨慎饮用（动作，治疗骰最大）",
+      "Feed": "喂服药水（动作）"
+    },
+    "Ammo": { "RecoveryReady": "弹药可由 GM 确认找回；模块没有自动恢复任何弹药。" },
+    "Midi": { "PendingValidation": "已发现并启用 MIDI-QOL 14.0.11 的精确版本适配；其他版本会失败关闭。" },
+    "Stealth": { "SpeedWarning": "隐匿移动超过限制；模块只警告，不会回滚移动。" },
+    "Settings": {
+      "featurePotion": { "Name": "启用治疗药水配置器", "Hint": "仅 GM、显式标签，支持预览与恢复快照。" },
+      "featureHpGamble": { "Name": "启用生命骰赌博", "Hint": "仅 GM 的原生生命值 Advancement 辅助；第一级不介入。" },
+      "featureLowAbility": { "Name": "启用低属性提醒", "Hint": "仅上下文提醒，绝不修改 Actor 数据。" },
+      "featureAmmo": { "Name": "启用弹药阶位账本", "Hint": "原生消费后记录显式标签弹药；找回仍需 GM 确认。" },
+      "featureStealth": { "Name": "启用显式隐匿助手", "Hint": "只提示/建议，从不回滚 Token 移动。" },
+      "featureNaturalOne": { "Name": "启用自然 1：GM 后果卡", "Hint": "攻击骰最终为自然 1 时，生成仅 GM 可见的确认卡；确认前不执行伤害、反击或武器损坏。" },
+      "featureNaturalTwenty": { "Name": "启用自然 20：首颗伤害骰按满值结算", "Hint": "适用于武器攻击和进行攻击检定的法术；仍投出全部重击骰，第一伤害部分的第一颗骰按满值结算，其他伤害部分保持原生重击。" },
+      "lowAbilityThreshold": { "Name": "低属性提醒阈值", "Hint": "仅当选中角色属性值不高于此值时提醒。" },
+      "consequenceMultiplier": { "Name": "自然 1 后果伤害倍率", "Hint": "0.5 或 1；通过 dnd5e 原生伤害应用保留抗性与免疫。" },
+      "consequenceOtherTable": { "Name": "自然 1 的其他 RollTable UUID", "Hint": "可选精确 RollTable UUID，仅在 GM 确认后使用。" },
+      "stealthRogueLevel": { "Name": "隐匿全速的游荡者等级", "Hint": "达到该游荡者总等级时显式隐匿不减速。" }
+    }
+  }
+}

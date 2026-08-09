@@ -1,0 +1,52 @@
+{
+  "FVTT_HOUSE_RULES": {
+    "FirstRun": "House Rules is installed. All modifying features are OFF. A GM can enable only the desired rules in Configure Settings.",
+    "UnsupportedRuntime": "House Rules is fail-closed: Foundry 14.364 and dnd5e 5.3.3 are required.",
+    "LowAbility": "Selected character has one or more ability scores at or below the configured reminder threshold.",
+    "Dismiss": "Dismiss",
+    "Nat1": {
+      "Title": "Natural 1: GM consequence",
+      "Pending": "GM confirmation is required. No damage, counterattack, table roll, or weapon penalty has been applied.",
+      "Confirm": "Confirm and apply",
+      "Result": {
+        "counter": "Random result: the attacked enemy makes a damage-only melee counter without spending a reaction",
+        "ally": "Random result: hit an eligible ally",
+        "weapon": "Random result: the weapon gains one damage level",
+        "self": "Random result: the spell bursts at the caster and damages them",
+        "other": "Random result: draw from the GM-configured consequence table"
+      },
+      "Weapon": "Apply weapon penalty",
+      "Target": "Choose melee counterattack",
+      "Counter": "Damage-only counter",
+      "Other": "Roll other table",
+      "InvalidTarget": "The natural-1 source does not have an eligible weapon.",
+      "TargetRequired": "Choose one target melee Activity first.",
+      "NotApplied": "The requested consequence was rejected or failed closed."
+    },
+    "Nat20": {
+      "Title": "Natural 20: first damage die counts as maximum",
+      "Pending": "All critical damage dice are still rolled; the first die of the primary damage part counts as its maximum regardless of its raw face."
+    },
+    "Potion": {
+      "Quick": "Quick Drink (Bonus Action)",
+      "Max": "Careful Drink (Action, Max Dice)",
+      "Feed": "Administer Potion (Action)"
+    },
+    "Ammo": { "RecoveryReady": "Ammunition recovery is available for GM confirmation; no ammunition was restored automatically." },
+    "Midi": { "PendingValidation": "The exact-version MIDI-QOL 14.0.11 adapter is active; other versions fail closed." },
+    "Stealth": { "SpeedWarning": "Stealth movement exceeded the configured limit; movement was not rolled back." },
+    "Settings": {
+      "featurePotion": { "Name": "Enable healing potion configurator", "Hint": "GM-only explicit-tag configurator with preview and restore." },
+      "featureHpGamble": { "Name": "Enable hit-point gamble", "Hint": "GM-only native Hit Points Advancement helper; level 1 is untouched." },
+      "featureLowAbility": { "Name": "Enable low-ability reminders", "Hint": "Contextual warning only; never changes Actor data." },
+      "featureAmmo": { "Name": "Enable ammunition tier ledger", "Hint": "Records explicit tagged ammunition after native consumption; recovery remains GM-confirmed." },
+      "featureStealth": { "Name": "Enable explicit stealth helper", "Hint": "Warning/suggestion helper; never rolls back token movement." },
+      "featureNaturalOne": { "Name": "Natural 1: create GM consequence cards", "Hint": "When an attack retains a natural 1, create a GM-only confirmation card; no damage, counterattack, or weapon penalty occurs before confirmation." },
+      "featureNaturalTwenty": { "Name": "Natural 20: count the first damage die as maximum", "Hint": "Applies to weapon and spell attacks; all critical dice are still rolled, the first die of the primary damage part counts as maximum, and other damage parts retain native critical handling." },
+      "lowAbilityThreshold": { "Name": "Low ability reminder threshold", "Hint": "Warn only when a selected character is at or below this score." },
+      "consequenceMultiplier": { "Name": "Natural-1 consequence damage multiplier", "Hint": "Choose 0.5 or 1; native dnd5e damage application retains resistance and immunity." },
+      "consequenceOtherTable": { "Name": "Natural-1 other RollTable UUID", "Hint": "Optional exact RollTable UUID, used only after GM confirmation." },
+      "stealthRogueLevel": { "Name": "Stealth full-speed rogue level", "Hint": "Rogue total level at which explicit stealth is unrestricted." }
+    }
+  }
+}

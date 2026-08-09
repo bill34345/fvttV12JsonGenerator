@@ -1,0 +1,19 @@
+{
+  "name": "@fvtt-json-generator/fvtt-house-rules",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "test": "bun test tests --max-concurrency 4",
+    "typecheck": "tsc -p tsconfig.json --pretty false",
+    "verify:artifact": "bun run scripts/verify-artifact.ts",
+    "install:local-lab": "bun run scripts/install-local-lab.ts",
+    "verify:local-lab": "bun run scripts/verify-local-lab.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
+  }
+}

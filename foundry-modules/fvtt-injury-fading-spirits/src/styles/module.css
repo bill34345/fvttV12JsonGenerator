@@ -1,0 +1,5 @@
+.ifs-dashboard p { margin: 0.35rem 0; }
+.ifs-form fieldset { margin: 0.5rem 0; padding: 0.5rem; }
+.ifs-contributor { display: grid; grid-template-columns: 2fr 0.8fr 0.8fr 0.55fr 1fr; gap: 0.35rem; margin: 0.35rem 0; }
+.ifs-contribution { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 0.5rem; align-items: center; border-bottom: 1px solid var(--color-border-light-2); padding: 0.4rem 0; }
+.ifs-card button { margin-top: 0.4rem; }
