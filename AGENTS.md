@@ -35,7 +35,7 @@
 
 | 功能 | 人话说明 | 当前目录 | 局部说明 |
 |---|---|---|---|
-| 公共领域包 | 数据契约、解析、生成、工作流、Intake、纯文本导入、爬虫和图片资产 | `packages/` | `packages/AGENTS.md`，并读取对应功能目录的 `AGENTS.md` |
+| 公共领域包 | 数据契约、解析、生成、工作流、AI Monster/Item Intake、纯文本导入、爬虫和图片资产 | `packages/` | `packages/AGENTS.md`，并读取对应功能目录的 `AGENTS.md` |
 | 命令行应用 | 用户从终端运行的转换入口；`src/index.ts` 是兼容入口 | `apps/cli/` | `apps/AGENTS.md`、`apps/cli/AGENTS.md` |
 | 网页应用 | 上传、后台任务、预览和下载 JSON/ZIP 的中文 Web 工具 | `apps/web/` | `apps/AGENTS.md`、`apps/web/AGENTS.md` |
 | Foundry 模块 | 安装进 Foundry 浏览器运行时的独立发布物 | `foundry-modules/` | `foundry-modules/AGENTS.md` 和模块自己的 `AGENTS.md` |
@@ -46,6 +46,7 @@
 ## 正式转换路径
 
 - Actor JSON 默认路径：源 Markdown → `apps/cli` 或 Web → `@fvtt-json-generator/workflows` → parser/generation → 正式 JSON。
+- AI Item Intake 路径：原始 TXT/不规则 Markdown → `packages/intake-ai` 的 Item evidence IR → `item-mechanics` Markdown → 既有 Item parser/generation/verifier → 仅 `accepted` 时推广正式 JSON；该入口当前仅锁定 Foundry `14.364` / dnd5e `5.3.3` / `core`。
 - 站点抓取路径：`src/tools/crawlSites.ts` → `packages/crawl-goddessfantasy` → crawl artifacts → plaintext → 既有 Intake/generator 流程。爬虫不得与主 Actor CLI 偷偷耦合。
 - 默认从 `obsidian/dnd数据转fvttjson/input` 读取，从 `obsidian/dnd数据转fvttjson/output` 交付；用户明确指定其他位置时除外。
 - 代理替用户生成需要图标的 JSON 时，默认不得启用 `--icon-mode safe`；保持程序默认的 `off`，或使用用户指定、人工确认的 icon override。只有用户明确要求 safe 模式时才启用。
@@ -115,3 +116,10 @@
 
 - 用户要求项目理解、架构审查、影响分析或代码库导航时，`project-understanding` 可以在根目录创建或更新 `.pui/`，无需额外编辑授权。
 - `.pui/` 是本地工具缓存，不是源码或交付物；除非用户明确授权代码修改，不得借项目理解任务修改源码。
+
+## Foundry v14 本地集成测试复用约定
+
+- `F:\\FoundryLab\\foundry-v14` 是跨功能复用的真实 Foundry v14 集成测试 Lab，不应为每个功能复制一套新的 Foundry app、system 或 data 根目录。
+- 其中 `F:\\FoundryLab\\foundry-v14\\data\\server-mirror` 是默认可复用的、已授权的 v14 测试数据目录；`fvtt-v14-module-matrix` 是默认矩阵世界。`core-test` 只是通用基线，不是 Blood Hunter E2E 的替代环境。
+- 新模块的真实 E2E 应先确认 `server-mirror` 的 PID 与目录归属，停机后在精确目标上安装/替换模块，并在矩阵世界中使用本轮记录的临时 Actor、Token、Message 和 Template；不得因为模块尚未存在就创建新的完整 Foundry 实例。
+- 如果 `server-mirror` 正被其他参与者使用，默认停止并请求协调或等待释放；不得自行停止/复用/修改它，也不得自动复制整套 Foundry 来绕过占用。只有用户明确授权新的隔离 Lab 入口时，才可创建额外数据目录。

@@ -121,6 +121,27 @@ bun run src/index.ts --ingest-items-json "path/to/items.md" `
 
 Item 专用运行只处理本次推广的 Item 文件，不会顺带重生成或清理 vault 中其他 Actor 输出。
 
+## AI Item Intake（Foundry V14/core）
+
+原始 TXT 或格式不规则的 Item Markdown 使用正式 `--intake-items`，而不是旧的 `--ingest-items` / `--ingest-items-json`。它先由 AI 提取带原文位置的 Item IR，再由确定性规则验证证据、渲染项目 Markdown 的 `item-mechanics` 契约、走既有 Item generator，并逐项验证生成 JSON。AI 从不直接写最终 JSON；任一证据、法术唯一性或机制投影不成立都会停在 `needs_review` / `failed`，不会以空能力或 Utility Activity 退化。正式法术必须由 identifier 与英文名共同唯一命中锁定 dnd5e `5.3.3` 目录，且不使用角色法术位。
+
+```powershell
+bun run src/index.ts --intake-items "path/to/raw-item.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
+```
+
+此入口只接受 Foundry `14.364` / dnd5e `5.3.3` / `core`。单次最多 50 个物品、200,000 个 UTF-16 字符。accepted 的 Markdown 和 JSON 分别推广到 vault `input/items/` 与 `output/items/`；完整来源、IR、诊断、审查与 provider 审计保留在 `.local/item-intake-runs/<run-id>/`。恢复审查使用：
+
+```powershell
+bun run src/index.ts --resume-item-intake ".local/item-intake-runs/<run-id>" `
+  --decisions ".local/item-intake-runs/<run-id>/decisions.json" `
+  --vault "obsidian/dnd数据转fvttjson"
+```
+
+Item Intake 与 Monster Intake 共用 `MONSTER_INTAKE_*` 的 provider/doctor 配置、凭据隔离和本机 OAuth bridge 边界；变量名是历史兼容名称，不表示 Item 会走旧的 Monster IR。完整机械契约、已验证范围和仍待运行时验收的边界见 [`docs/item-ai-intake-v14.md`](docs/item-ai-intake-v14.md)。
+
 ## AI 怪物资料整理（推荐）
 
 第一次拿到 TXT 或格式混乱的 Markdown 时，推荐让 AI 负责发现怪物边界与提取来源证据，再由项目确定性生成标准 Markdown 和 Actor JSON。AI 不直接写最终 JSON，任一证据、覆盖、投影或独立 review 门失败都会进入 `needs_review` 或 `failed`，不会静默回退旧转换器。
@@ -176,7 +197,22 @@ bun run src/index.ts `
   --vault "obsidian/dnd数据转fvttjson"
 ```
 
-退出码：`0` 表示全部 accepted，`2` 表示至少一只 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。首版只支持怪物/NPC，单次最多 50 只、200,000 个 JavaScript UTF-16 字符，不支持图片/PDF OCR 或 Item，也不承诺任意模型、任意文本都能自动通过。
+退出码：`0` 表示全部 accepted，`2` 表示至少一只 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。Monster Intake 最多 50 只、200,000 个 JavaScript UTF-16 字符；Item Intake 的相同上限和 V14/core-only 边界见上节。两者都不支持图片/PDF OCR，也不承诺任意模型、任意文本都能自动通过。
+
+## 血猎手 2024 原生合集模块（Foundry v14）
+
+`fvtt-blood-hunter-2024` 锁定 Foundry `14.364` / dnd5e `5.3.3`，提供 `classes`、`subclasses`、`features` 三个原生 Item 合集。它不依赖 Plutonium 或旧 classpack；旧 `build-blood-hunter-homebrew` 仍只生成标记为 `plutonium-side-data` 的历史 side-data，不是该模块的权威内容。
+
+```powershell
+bun run build:blood-hunter-v14 --source="C:\absolute\path\blood-hunter-2024.activities.json"
+bun run test:blood-hunter-v14
+bun run install:blood-hunter-v14 --apply
+bun run verify:blood-hunter-v14-install
+```
+
+构建严格校验锁定源 SHA-256、94 条 coverage ledger、117 个 Activities、稳定 UUID、Advancement 引用、三个 LevelDB packs、确定性 ZIP 以及 dnd5e `5.3.3` 的 12 个官方内容 UUID。安装只允许配置后的本地 Lab，拒绝生产路径、外来同名模块、链接路径和被占用的 Pack，并在替换既有自有模块前建立恢复备份。`verify-install` 只证明安装字节和 pack 内容一致，不代表真实 Foundry 运行时或线上生产验收。
+
+玩家从模块 `classes` 合集把“血猎手”拖入角色卡，再通过 dnd5e 原生 Advancement 升级和选择结社；已经复制到 Actor 的 Item 是快照，不会随模块更新实时同步。旧角色应使用模块中的 GM-only“血猎手 2024：角色迁移”执行 Preview、迁移副本验证，再决定是否应用原角色。完整构建、安装、迁移和自动化边界见 [`foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md`](foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md)。
 
 ## Foundry 目标世界法术解析（v14）
 

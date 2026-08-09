@@ -16,6 +16,7 @@
 - 配置入口是 `tools/foundry-ops/src/config.ts`；使用 `FVTT_OPS_LAB_ROOT`、`FVTT_OPS_EVIDENCE_ROOT`、`FVTT_OPS_BACKUP_ROOT`，不得重新写死仓库旧 `.local/foundry-v14`。
 - 当前持久本地测试 Lab 是 `F:\FoundryLab\foundry-v14`；原 I 盘副本已退役并删除，不得尝试回退、重建旧路径或制作 junction 伪装旧布局。
 - F 盘 Lab 用于真实 Foundry 14.364/dnd5e 5.3.3 集成、短时启动和明确的一次性测试世界。它不是生产，但也是跨测试保留的共享基线；普通自动测试不得删除、损坏或替换其 app/data/world 目录。
+- `F:\\FoundryLab\\foundry-v14\\data\\server-mirror` 是默认可复用、已授权的 Foundry v14 测试数据目录；真实模块 E2E 默认复用它和 `fvtt-v14-module-matrix`，不为每个功能复制一套新的 Foundry。若它被其他参与者使用，先等待或协调释放；只有用户明确授权新的隔离入口时才创建额外数据目录。
 - 破坏性 fixture 的可变 app、data、world、backup 和 evidence 必须全部位于该测试创建的随机临时根。测试可以通过 `resolveConfiguredClassicLevelEntry()` 只读加载 F 盘 Foundry 的 `classic-level`，但数据库位置必须留在临时根；不得复制整套 Foundry 充当 fixture。
 - 拒绝磁盘根、仓库根、链接/junction/reparse point、路径逃逸和身份不明的非空目标。
 - inventory、scope 和 migration-plan 报告不构成复制、移动、切换或删除授权；理论重复体积也不是删除建议。
