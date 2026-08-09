@@ -1,0 +1,52 @@
+---
+layout: item
+名称: 三祷之坠
+类型: 饰物
+稀有度: 传说
+require-attunement: true
+item-mechanics:
+  schemaVersion: 1
+  uses:
+    max: 3
+    recovery:
+      - period: dawn
+        type: recoverAll
+  abilities:
+    - id: ac-plus-one
+      kind: passive-ac
+      value: 1
+    - id: light
+      kind: light
+      activation: action
+      consumption: 0
+      bright: 15
+      dim: 30
+      extinguish: disable-effect
+    - id: invisibility
+      kind: spell
+      activation: action
+      consumption: 1
+      spell:
+        identifier: invisibility
+        name: Invisibility
+---
+
+## 原始资料（Intake 保留）
+
+奇物，传说（需同调）
+
+三祷之坠是一件诀别遗物。
+
+一面闪闪发光的黄金圆盘，系在一条精致的金链上。链条可以魔法般调整大小，变成适合佩戴者的项链尺寸。
+
+在休眠态Dormant状态下，这件坠饰有着以下属性：
+
+佩戴者的 AC +1。
+
+当佩戴或手握这件坠饰时，你可以以一个动作令它发出 15 尺半径的明亮光照和在此之外 15 尺的微光光照。光照会持续到你将其熄灭（无需动作）。
+
+这件饰物具有 **3** 发充能，并且在每天黎明恢复所有被消耗的充能。
+
+坠饰额外获得以下属性，当你手持或佩戴它时，你可以：
+
+消耗 1 发充能施展 隐形术 invisibility。
