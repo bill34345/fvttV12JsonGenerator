@@ -72,10 +72,31 @@ function collectActionMechanics(
     ));
   }
   if (raw.activation) result.push(mechanic('activation', `${path}/activation`, raw.activation));
+  if (raw.light) {
+    result.push(mechanic('light', `${path}/light`, raw.light));
+    result.push(mechanic('activation', `${path}/light/activation`, raw.light.activation));
+    result.push(mechanic('resource-consumption', `${path}/light/consumption`, {
+      consumption: raw.light.consumption,
+      resource: 'itemUses',
+    }));
+  }
+  if (raw.type === 'spell' && raw.spellName) {
+    result.push(mechanic('spell', `${path}/spell`, {
+      identifier: raw.spellIdentifier,
+      name: raw.englishName ?? raw.spellName,
+      consumption: raw.useAction?.consumption ?? 0,
+      activation: raw.useAction?.activation ?? 'action',
+    }));
+    result.push(mechanic('resource-consumption', `${path}/spell/consumption`, {
+      consumption: raw.useAction?.consumption ?? 0,
+      resource: 'itemUses',
+    }));
+  }
   if (raw.useAction?.limitedUses || raw.perLongRest || raw.recharge) {
     result.push(mechanic('uses', `${path}/uses`, raw.useAction?.limitedUses ?? raw.perLongRest ?? raw.recharge));
   }
   if (raw.range || attack?.range) result.push(mechanic('range', `${path}/range`, raw.range ?? attack.range));
+  if (raw.passiveEffect) result.push(mechanic('effect', `${path}/passiveEffect`, raw));
   for (const [index, effect] of (raw.embeddedEffects ?? []).entries()) {
     result.push(mechanic('effect', `${path}/effects/${index}`, effect));
   }
@@ -148,6 +169,9 @@ export function adaptParsedItemToCanonical(
   options: AdapterSource = {},
 ): CanonicalItemDocument {
   const mechanics: CanonicalGenerationMechanic[] = [];
+  if (parsed.uses) {
+    mechanics.push(mechanic('uses', 'item/uses', parsed.uses));
+  }
   for (const [group, actions] of Object.entries(parsed.structuredActions ?? {})) {
     if (!Array.isArray(actions)) continue;
     for (const [index, action] of actions.entries()) {

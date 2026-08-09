@@ -5,6 +5,12 @@ import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
 import { mapDamageType } from './actor-text';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { createStableDocumentId } from './stableId';
+import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
+
+/** Compatibility-only fixed UUID lookup used by pre-Intake Item Markdown. */
+const LEGACY_SPELL_UUIDS: Record<string, string> = {
+  invisibility: 'Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B',
+};
 
 export interface ActivityGenerationContext {
   abilities?: Partial<Record<AttackAbility, number>>;
@@ -12,6 +18,8 @@ export interface ActivityGenerationContext {
   spellcastingAbility?: AttackAbility;
   dcSourceKind?: DcSourceKind;
   preferNativeWeaponRolls?: boolean;
+  /** Source Item Effect to be applied by an Activity (for example, token light). */
+  appliedEffectId?: string;
 }
 
 export class ActivityGenerator {
@@ -29,7 +37,39 @@ export class ActivityGenerator {
       action,
     });
 
-    if (action.attack) {
+    if (action.light) {
+      if (!context.appliedEffectId) {
+        throw new Error(`Light action "${action.name}" is missing its Item Effect reference.`);
+      }
+      activities[id] = {
+        _id: id,
+        type: 'utility',
+        activation: {
+          type: action.light.activation,
+          value: action.light.activation === 'free' ? 0 : 1,
+          override: false,
+        },
+        consumption: {
+          targets: [],
+          scaling: { allowed: false, max: '' },
+          spellSlot: false,
+        },
+        effects: [{ _id: context.appliedEffectId }],
+        duration: {
+          units: 'inst',
+          concentration: false,
+          override: false,
+        },
+        range: { units: 'self', special: '', override: false },
+        target: {
+          template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: '' },
+          affects: { count: '', type: 'self', choice: false, special: '' },
+          prompt: false,
+          override: false,
+        },
+        uses: { spent: 0, recovery: [], max: '' },
+      };
+    } else if (action.attack) {
       const nativeRoll = this.inferNativeWeaponRoll(action, context);
       const explicitAbility = action.attack.ability;
       const primaryDamage = nativeRoll ? action.attack.damage[0] : undefined;
@@ -118,18 +158,24 @@ export class ActivityGenerator {
         }
       };
     } else if (action.type === 'spell' && action.spellName) {
-      let spellInfo = spellsMapper.get(action.spellName);
-      if (!spellInfo && action.englishName) {
+      // item-mechanics is the formal V14 Item Intake contract.  It carries a
+      // canonical identifier, so an unresolved spell must fail the formal
+      // promotion rather than becoming a misleading Utility Activity.  The
+      // older strict Markdown routes intentionally keep their established
+      // best-effort fallback below; they have no evidence-gated identifier.
+      const isFormalItemIntakeSpell = Boolean(action.spellIdentifier);
+      const lockedSpell = action.spellIdentifier
+        ? resolveLockedDnd5eV14Spell(action.spellIdentifier, action.englishName ?? action.spellName)
+        : undefined;
+      let spellInfo = isFormalItemIntakeSpell ? undefined : spellsMapper.get(action.spellName);
+      if (!isFormalItemIntakeSpell && !spellInfo && action.englishName) {
         spellInfo = spellsMapper.get(action.englishName);
       }
       
-      const FOUNDRY_SPELL_UUIDS: Record<string, string> = {
-        'Invisibility': 'Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B',
-      };
-      
       if (!spellInfo) {
-        const englishName = action.englishName || action.spellName;
-        const foundaryUuid = FOUNDRY_SPELL_UUIDS[englishName];
+        const lookupName = action.spellIdentifier || action.englishName || action.spellName;
+        const foundaryUuid = lockedSpell?.uuid
+          ?? (!isFormalItemIntakeSpell ? LEGACY_SPELL_UUIDS[lookupName.toLowerCase()] : undefined);
         
         if (foundaryUuid) {
           activities[id] = {
@@ -144,14 +190,11 @@ export class ActivityGenerator {
               override: false,
             },
             consumption: {
-              targets: [{
-                type: 'itemUses',
-                target: '',
-                value: (action.useAction?.consumption || 1).toString(),
-                scaling: { mode: '', formula: '' }
-              }],
+              targets: this.itemUseTargets(
+                isFormalItemIntakeSpell ? (action.useAction?.consumption ?? 0) : (action.useAction?.consumption || 1),
+              ),
               scaling: { allowed: false, max: '' },
-              spellSlot: true
+              spellSlot: !isFormalItemIntakeSpell,
             },
             duration: {
               units: 'inst',
@@ -162,7 +205,7 @@ export class ActivityGenerator {
             target: { template: { contiguous: false, units: 'ft' }, affects: { choice: false }, override: false, prompt: true },
             uses: { spent: 0, recovery: [], max: '' },
           };
-        } else {
+        } else if (!isFormalItemIntakeSpell) {
           activities[id] = {
             _id: id,
             type: 'utility',
@@ -172,24 +215,21 @@ export class ActivityGenerator {
               override: false,
             },
             consumption: {
-              targets: [{
-                type: 'itemUses',
-                target: '',
-                value: (action.useAction?.consumption || 1).toString(),
-                scaling: { mode: '', formula: '' }
-              }],
+              targets: this.itemUseTargets(action.useAction?.consumption || 1),
               scaling: { allowed: false, max: '' },
-              spellSlot: false
+              spellSlot: false,
             },
             duration: {
               units: 'inst',
               concentration: false,
-              override: false
+              override: false,
             },
             range: { override: false },
             target: { template: { contiguous: false, units: 'ft' }, affects: { choice: false }, override: false, prompt: true },
             uses: { spent: 0, recovery: [], max: '' },
           };
+        } else {
+          throw new Error(`Unable to uniquely resolve dnd5e spell "${lookupName}" for Item Activity.`);
         }
       } else {
         activities[id] = {
@@ -204,14 +244,11 @@ export class ActivityGenerator {
             override: false,
           },
           consumption: {
-            targets: [{
-              type: 'itemUses',
-              target: '',
-              value: (action.useAction?.consumption || 1).toString(),
-              scaling: { mode: '', formula: '' }
-            }],
+            targets: this.itemUseTargets(
+              isFormalItemIntakeSpell ? (action.useAction?.consumption ?? 0) : (action.useAction?.consumption || 1),
+            ),
             scaling: { allowed: false, max: '' },
-            spellSlot: true
+            spellSlot: !isFormalItemIntakeSpell,
           },
           duration: {
             units: 'inst',
@@ -584,17 +621,26 @@ export class ActivityGenerator {
         name: action.name,
         passiveEffect: action.passiveEffect,
       });
+      const change = this.isV14()
+        ? {
+            key: 'system.attributes.ac.formula',
+            type: 'add',
+            value: `+${action.passiveEffect.value}`,
+            phase: 'initial',
+            priority: null,
+          }
+        : {
+            key: 'system.attributes.ac.bonus',
+            mode: 2,
+            value: `+${action.passiveEffect.value}`,
+            priority: null,
+          };
       return {
         _id: id,
         name: action.name || `AC +${action.passiveEffect.value} 加值`,
-        type: 'passive',
+        type: this.isV14() ? 'base' : 'passive',
         origin: '',
-        changes: [{
-          key: this.isV14() ? 'system.attributes.ac.formula' : 'system.attributes.ac.bonus',
-          mode: 2,
-          value: `+${action.passiveEffect.value}`,
-          priority: null
-        }],
+        ...(this.isV14() ? { system: { changes: [change] } } : { changes: [change] }),
         disabled: false,
         duration: {
           startTime: null,
@@ -624,6 +670,62 @@ export class ActivityGenerator {
     }
 
     return undefined;
+  }
+
+  /** Create a V14-native, non-transfer Token light Effect for an Item Activity. */
+  public generateLightEffect(action: ActionData): Record<string, any> | undefined {
+    if (!action.light) return undefined;
+    if (!this.isV14()) {
+      throw new Error('item-mechanics light is supported only for Foundry V14 targets.');
+    }
+    const id = this.generateId({ type: 'item-light', name: action.name, light: action.light });
+    return {
+      _id: id,
+      name: action.name || '点亮',
+      type: 'base',
+      origin: '',
+      system: {
+        changes: [
+          { key: 'token.light.bright', type: 'override', value: action.light.bright, phase: 'initial', priority: null },
+          { key: 'token.light.dim', type: 'override', value: action.light.dim, phase: 'initial', priority: null },
+        ],
+      },
+      disabled: false,
+      duration: {
+        startTime: null,
+        seconds: null,
+        combat: null,
+        rounds: null,
+        turns: null,
+        startRound: null,
+        startTurn: null,
+      },
+      transfer: false,
+      flags: {},
+      tint: '#ffffff',
+      description: '通过 Activity 应用到角色；禁用或删除角色上的此效果即可熄灭。',
+      statuses: [],
+      _stats: {
+        compendiumSource: null,
+        duplicateSource: null,
+        coreVersion: getFoundryTarget(this.fvttVersion).stats.coreVersion,
+        systemId: 'dnd5e',
+        systemVersion: getFoundryTarget(this.fvttVersion).stats.systemVersion,
+        createdTime: null,
+        modifiedTime: null,
+        lastModifiedBy: 'dnd5ebuilder0000',
+      },
+    };
+  }
+
+  private itemUseTargets(consumption: number): Array<Record<string, unknown>> {
+    if (consumption <= 0) return [];
+    return [{
+      type: 'itemUses',
+      target: '',
+      value: consumption.toString(),
+      scaling: { mode: '', formula: '' },
+    }];
   }
 
   private buildSaveDc(dc: number, calculation: AttackAbility | undefined): Record<string, unknown> {

@@ -34,6 +34,7 @@
     "./spells-mapper": "./src/spellsMapper.ts",
     "./stable-id": "./src/stableId.ts",
     "./target": "./src/target.ts",
+    "./v14-spell-catalog": "./src/v14SpellCatalog.ts",
     "./types": "./src/types.ts",
     "./validator": "./src/validator.ts",
     "./verification": "./src/verification.ts"
@@ -45,6 +46,7 @@
     "@fvtt-json-generator/contracts": "workspace:*",
     "@fvtt-json-generator/models": "workspace:*",
     "@fvtt-json-generator/parser": "workspace:*",
-    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*"
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+    "js-yaml": "^4.1.0"
   }
 }

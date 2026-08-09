@@ -40,7 +40,7 @@ describe('ItemAiNormalizer', () => {
   });
 
   describe('normalizeItem', () => {
-    it('returns abilities: [] when no API key configured and does not call httpClient', async () => {
+    it('returns undefined when no API key configured and does not call httpClient', async () => {
       let called = false;
       const httpClient: ItemAiNormalizerHttpClient = async () => {
         called = true;
@@ -50,7 +50,7 @@ describe('ItemAiNormalizer', () => {
       const normalizer = new ItemAiNormalizer({ httpClient });
       const result = await normalizer.normalizeItem('Some item description');
 
-      expect(result).toBe('abilities: []');
+      expect(result).toBeUndefined();
       expect(called).toBe(false);
     });
 
@@ -118,7 +118,7 @@ describe('ItemAiNormalizer', () => {
       expect(result).toBe(expectedYaml);
     });
 
-    it('returns abilities: [] when the HTTP request throws', async () => {
+    it('returns undefined when the HTTP request throws', async () => {
       const httpClient: ItemAiNormalizerHttpClient = async () => {
         throw new Error('Network error');
       };
@@ -129,7 +129,7 @@ describe('ItemAiNormalizer', () => {
       });
 
       const result = await normalizer.normalizeItem('Some item description');
-      expect(result).toBe('abilities: []');
+      expect(result).toBeUndefined();
     });
 
     it('clears the abort timer when the HTTP request throws', async () => {
@@ -153,14 +153,14 @@ describe('ItemAiNormalizer', () => {
         });
 
         const result = await normalizer.normalizeItem('Some item description');
-        expect(result).toBe('abilities: []');
+        expect(result).toBeUndefined();
         expect(clearTimeoutCalls).toBe(1);
       } finally {
         globalThis.clearTimeout = originalClearTimeout;
       }
     });
 
-    it('returns abilities: [] when the HTTP response is not successful', async () => {
+    it('returns undefined when the HTTP response is not successful', async () => {
       const httpClient: ItemAiNormalizerHttpClient = async () => createChatResponse('ignored', 401);
 
       const normalizer = new ItemAiNormalizer({
@@ -169,7 +169,7 @@ describe('ItemAiNormalizer', () => {
       });
 
       const result = await normalizer.normalizeItem('Some item description');
-      expect(result).toBe('abilities: []');
+      expect(result).toBeUndefined();
     });
   });
 });

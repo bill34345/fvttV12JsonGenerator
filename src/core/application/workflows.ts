@@ -26,6 +26,10 @@ import {
   resumeMonsterIntake as resumePackageMonsterIntake,
   runMonsterIntake as runPackageMonsterIntake,
 } from '@fvtt-json-generator/intake-ai/orchestrator';
+import {
+  resumeItemIntake as resumePackageItemIntake,
+  runItemIntake as runPackageItemIntake,
+} from '@fvtt-json-generator/intake-ai/item-orchestrator';
 import type {
   CollectionConversionOptions,
   CollectionConversionResult,
@@ -35,6 +39,11 @@ import type {
   MonsterIntakeOptions,
   MonsterIntakeRunResult,
 } from '@fvtt-json-generator/intake-ai/types';
+import type {
+  ItemIntakeAiProvider,
+  ItemIntakeOptions,
+  ItemIntakeRunResult,
+} from '@fvtt-json-generator/intake-ai/item-types';
 import { conversionApplication } from './conversion';
 import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
@@ -138,6 +147,9 @@ export function convertItemCollectionToJson(
 const monsterIntakeDependencies = Object.freeze({
   convertMarkdownContentToJson: conversionApplication.convertContent,
 });
+const itemIntakeDependencies = Object.freeze({
+  convertMarkdownContentToJson: conversionApplication.convertContent,
+});
 
 export function runMonsterIntake(
   options: MonsterIntakeOptions,
@@ -159,4 +171,20 @@ export function resumeMonsterIntake(
     vaultPath,
     monsterIntakeDependencies,
   );
+}
+
+export function runItemIntake(
+  options: ItemIntakeOptions,
+  provider?: ItemIntakeAiProvider,
+): Promise<ItemIntakeRunResult> {
+  return runPackageItemIntake(options, provider, itemIntakeDependencies);
+}
+
+export function resumeItemIntake(
+  runPath: string,
+  decisionsPath: string,
+  provider: ItemIntakeAiProvider,
+  vaultPath?: string,
+): Promise<ItemIntakeRunResult> {
+  return resumePackageItemIntake(runPath, decisionsPath, provider, vaultPath, itemIntakeDependencies);
 }

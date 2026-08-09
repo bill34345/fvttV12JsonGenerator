@@ -11,8 +11,10 @@ import {
   type IntakeDecision,
   type IntakeProviderAuditEvent,
   ItemsIngestionWorkflow,
+  createItemIntakeProvider,
   JsonTranslationSyncWorkflow,
   createMonsterIntakeProvider,
+  type ItemIntakeAiProvider,
   type MonsterIntakeAiProvider,
   ObsidianSyncWorkflow,
   PlainTextActorWorkflow,
@@ -22,6 +24,7 @@ import {
   parseFvttTargetVersion,
   parseIconMode,
   resumeMonsterIntake,
+  runItemIntake,
   runGoddessFantasyBoardCrawl,
   runMonsterIntake,
   runDocumentConversion,
@@ -51,6 +54,7 @@ export interface WebJobRequest {
 }
 
 export interface WebJobRunnerDependencies {
+  itemIntakeProvider?: ItemIntakeAiProvider;
   monsterIntakeProvider?: MonsterIntakeAiProvider;
 }
 
@@ -100,6 +104,9 @@ export async function runJob(job: WebJob, body: WebJobRequest, dependencies: Web
         break;
       case 'ai-monster-intake':
         await runAiMonsterIntake(job, body, dependencies.monsterIntakeProvider);
+        break;
+      case 'ai-item-intake':
+        await runAiItemIntake(job, body, dependencies.itemIntakeProvider);
         break;
       default:
         throw new Error(`Unsupported job type: ${job.type}`);
@@ -468,6 +475,35 @@ async function runAiMonsterIntake(
   finishIntakeJob(job.id, result);
 }
 
+async function runAiItemIntake(
+  job: WebJob,
+  body: WebJobRequest,
+  injectedProvider?: ItemIntakeAiProvider,
+): Promise<void> {
+  const source = requireContent(body);
+  const inputPath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'item-intake.txt'), source);
+  const fvttVersion = optionFvttVersion(body.options);
+  const effectProfile = optionEffectProfile(body.options, fvttVersion);
+  if (fvttVersion !== '14' || effectProfile !== 'core') {
+    throw new Error('AI Item Intake only supports Foundry V14 / dnd5e 5.3.3 / core profile.');
+  }
+  setJobProgress(job.id, 1, 4, 'AI 发现、证据提取与 Item 终审');
+  const audit: IntakeProviderAuditEvent[] = [];
+  const provider = injectedProvider ?? createItemIntakeProvider({ audit: (event) => audit.push(event) });
+  const result = await runItemIntake({
+    source,
+    sourceName: basename(inputPath),
+    runRoot: join(jobDir(job.id), 'item-intake-runs'),
+    vaultPath: join(jobDir(job.id), 'vault'),
+    fvttVersion: '14',
+    effectProfile: 'core',
+    iconOptions: optionIconOptions(body.options),
+  }, provider);
+  writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+  registerItemIntakeFiles(job.id, result);
+  finishItemIntakeJob(job.id, result);
+}
+
 export async function resumeAiMonsterIntakeJob(
   job: WebJob,
   decisions: IntakeDecision[],
@@ -541,6 +577,51 @@ function registerIntakeFiles(id: string, result: Awaited<ReturnType<typeof runMo
     if (creature.status === 'accepted' && creature.actorPath && creature.markdownPath) {
       addJobFile(id, { path: creature.actorPath, fileName: `${creature.id}-actor.json`, contentType: 'application/json; charset=utf-8', label: `${creature.label} · Actor JSON` });
       addJobFile(id, { path: creature.markdownPath, fileName: `${creature.id}.md`, contentType: 'text/markdown; charset=utf-8', label: `${creature.label} · 标准 Markdown` });
+    }
+  }
+}
+
+function finishItemIntakeJob(id: string, result: Awaited<ReturnType<typeof runItemIntake>>): void {
+  const status: WebJobStatus = result.status === 'dry_run' ? 'failed' : result.status;
+  finishJob(id, status, {
+    runId: result.runId,
+    sourceSha256: result.sourceSha256,
+    discoveryCount: result.discoveryCount,
+    items: result.items.map((item) => ({
+      id: item.id,
+      label: item.label,
+      status: item.status,
+      calls: item.calls,
+      findings: item.findings,
+    })),
+  }, result.items.flatMap((item) => item.findings.filter((finding) => !finding.blocking).map((finding) => finding.message)),
+  result.items.filter((item) => item.status === 'failed').map((item) => ({
+    sourceName: item.label,
+    error: item.findings.map((finding) => finding.message).join('; '),
+  })));
+}
+
+function registerItemIntakeFiles(id: string, result: Awaited<ReturnType<typeof runItemIntake>>): void {
+  for (const [path, fileName, contentType, label] of [
+    [join(result.runPath, 'source.txt'), 'source.txt', 'text/plain; charset=utf-8', '原始文本'],
+    [join(result.runPath, 'discovery.json'), 'discovery.json', 'application/json; charset=utf-8', '物品边界'],
+    [join(result.runPath, 'decisions.template.json'), 'decisions.template.json', 'application/json; charset=utf-8', '确认模板'],
+  ] as const) {
+    if (existsSync(path)) addJobFile(id, { path, fileName, contentType, label });
+  }
+  for (const item of result.items) {
+    for (const [name, label, contentType] of [
+      ['intake-ir.json', `${item.label} · IR`, 'application/json; charset=utf-8'],
+      ['standard.md', `${item.label} · 候选 Markdown`, 'text/markdown; charset=utf-8'],
+      ['deterministic-report.json', `${item.label} · 确定性报告`, 'application/json; charset=utf-8'],
+      ['ai-review.json', `${item.label} · AI 终审`, 'application/json; charset=utf-8'],
+    ] as const) {
+      const path = join(item.bundlePath, name);
+      if (existsSync(path)) addJobFile(id, { path, fileName: `${item.id}-${name}`, contentType, label });
+    }
+    if (item.status === 'accepted' && item.itemPath && item.markdownPath) {
+      addJobFile(id, { path: item.itemPath, fileName: `${item.id}-item.json`, contentType: 'application/json; charset=utf-8', label: `${item.label} · Item JSON` });
+      addJobFile(id, { path: item.markdownPath, fileName: `${item.id}.md`, contentType: 'text/markdown; charset=utf-8', label: `${item.label} · 标准 Markdown` });
     }
   }
 }

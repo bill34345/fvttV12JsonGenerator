@@ -371,7 +371,22 @@ export class ItemGenerator {
           ...sourceAction,
           logicalPath: `item/${item.name}/structuredActions/${group}/${index}/${sourceAction.name}`,
         };
-      const passiveEffect = this.activityGenerator.generatePassiveEffect(action);
+        const lightEffect = this.activityGenerator.generateLightEffect(action);
+        if (lightEffect) {
+          lightEffect.origin = `Item.${item._id}`;
+          item.effects.push(lightEffect);
+          const activities = this.activityGenerator.generate(action, { appliedEffectId: lightEffect._id });
+          for (const [id, activity] of Object.entries(activities)) {
+            ActivityGenerator.mergeUnique(item.system.activities, { [id]: {
+              ...activity,
+              name: (activity as ActivityData).name || action.name,
+              sort: sortOrder,
+            } });
+            sortOrder += 100000;
+          }
+          continue;
+        }
+        const passiveEffect = this.activityGenerator.generatePassiveEffect(action);
         if (passiveEffect) {
           passiveEffect.origin = `Item.${item._id}`;
           item.effects.push(passiveEffect);

@@ -11,7 +11,9 @@ export {
   JsonTranslationSyncWorkflow,
   ObsidianSyncWorkflow,
   PlainTextActorWorkflow,
+  resumeItemIntake,
   resumeMonsterIntake,
+  runItemIntake,
   runMonsterIntake,
 } from './workflows';
 export { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
@@ -38,6 +40,7 @@ export {
   type MonsterIntakeDoctorReport,
 } from '@fvtt-json-generator/intake-ai/doctor';
 export {
+  createItemIntakeProvider,
   createMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
 } from '@fvtt-json-generator/intake-ai';

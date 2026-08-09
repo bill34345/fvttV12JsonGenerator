@@ -84,9 +84,16 @@ export class ItemAiNormalizer {
     this.httpClient = options.httpClient ?? fetch.bind(globalThis);
   }
 
-  public async normalizeItem(bodyText: string): Promise<string> {
+  /**
+   * Compatibility-only normalizer for the old strict Item Markdown workflow.
+   * Raw TXT and irregular Markdown must use `--intake-items`, whose evidence
+   * gate can return needs_review.  Do not turn an unavailable/failed response
+   * into `abilities: []`: that used to silently erase source mechanics.
+   */
+  public async normalizeItem(bodyText: string): Promise<string | undefined> {
     if (!this.apiKey) {
-      return 'abilities: []';
+      console.error('Legacy item AI normalization is unavailable: no API key configured');
+      return undefined;
     }
 
     try {
@@ -126,7 +133,7 @@ export class ItemAiNormalizer {
 
       if (!response.ok) {
         console.error(`AI normalization failed: HTTP ${response.status}`);
-        return 'abilities: []';
+        return undefined;
       }
 
       const payload = (await response.json()) as {
@@ -136,7 +143,7 @@ export class ItemAiNormalizer {
       const rawContent = payload.choices?.[0]?.message?.content;
       if (typeof rawContent !== 'string' || rawContent.trim().length === 0) {
         console.error('AI normalization returned empty content');
-        return 'abilities: []';
+        return undefined;
       }
 
       const cleaned = rawContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -153,7 +160,7 @@ export class ItemAiNormalizer {
       if (error instanceof Error) {
         console.error(`AI normalization error: ${error.message}`);
       }
-      return 'abilities: []';
+      return undefined;
     }
   }
 }

@@ -35,7 +35,8 @@ export class ItemParser implements ItemParserStrategy {
     const finalType = this.classifyItemType(type || headerInfo.type || 'loot');
 
     const description = this.extractDescription(body);
-    const uses = this.parseUses(body);
+    const itemMechanics = this.parseItemMechanics(rawData['item-mechanics']);
+    const uses = itemMechanics?.uses ?? this.parseUses(body);
     const armor = this.parseArmor(body, type, headerInfo.type);
     const properties = armor?.magicalBonus ? ['mgc'] : undefined;
     const weight = armor?.baseItem === 'shield'
@@ -47,7 +48,10 @@ export class ItemParser implements ItemParserStrategy {
     let stages: ItemStage[];
     let structuredActions: ParsedItem['structuredActions'];
 
-    if (normalizedBody) {
+    if (itemMechanics) {
+      stages = this.parseStages(body);
+      structuredActions = itemMechanics.structuredActions;
+    } else if (normalizedBody) {
       // Parse YAML when normalizedBody is provided
       const yamlData = yaml.load(normalizedBody) as Record<string, unknown>;
       stages = this.parseYamlStages(yamlData);
@@ -84,6 +88,145 @@ export class ItemParser implements ItemParserStrategy {
       uses,
       stages,
       structuredActions,
+    };
+  }
+
+  /**
+   * Parse the formal Item Intake contract.  It deliberately lives in
+   * frontmatter so the original prose can remain intact below it; this makes
+   * a generated Markdown file both reviewable by a GM and repeatable by the
+   * deterministic Item parser.
+   */
+  private parseItemMechanics(value: unknown): {
+    uses?: UsesData;
+    structuredActions?: ParsedItem['structuredActions'];
+  } | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('item-mechanics must be a mapping.');
+    }
+    const contract = value as Record<string, unknown>;
+    if (contract.schemaVersion !== 1) {
+      throw new Error('item-mechanics.schemaVersion must be 1.');
+    }
+
+    let uses: UsesData | undefined;
+    if (contract.uses !== undefined) {
+      if (typeof contract.uses !== 'object' || contract.uses === null || Array.isArray(contract.uses)) {
+        throw new Error('item-mechanics.uses must be a mapping.');
+      }
+      const rawUses = contract.uses as Record<string, unknown>;
+      const max = rawUses.max;
+      if ((typeof max !== 'number' && typeof max !== 'string') || String(max).trim() === '') {
+        throw new Error('item-mechanics.uses.max is required.');
+      }
+      const recovery = Array.isArray(rawUses.recovery) ? rawUses.recovery.map((entry, index) => {
+        if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+          throw new Error(`item-mechanics.uses.recovery[${index}] must be a mapping.`);
+        }
+        const record = entry as Record<string, unknown>;
+        if (typeof record.period !== 'string' || typeof record.type !== 'string') {
+          throw new Error(`item-mechanics.uses.recovery[${index}] requires period and type.`);
+        }
+        return {
+          period: record.period,
+          type: record.type as UsesData['recovery'][number]['type'],
+          ...(typeof record.formula === 'string' ? { formula: record.formula } : {}),
+        };
+      }) : [];
+      uses = { max: String(max), spent: 0, recovery };
+    }
+
+    if (!Array.isArray(contract.abilities)) {
+      throw new Error('item-mechanics.abilities must be an array.');
+    }
+    const effects: ActionData[] = [];
+    const usesActions: ActionData[] = [];
+    const spells: ActionData[] = [];
+    for (const [index, entry] of contract.abilities.entries()) {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw new Error(`item-mechanics.abilities[${index}] must be a mapping.`);
+      }
+      const ability = entry as Record<string, unknown>;
+      const id = typeof ability.id === 'string' && ability.id.trim()
+        ? ability.id.trim()
+        : `ability-${index + 1}`;
+      const kind = ability.kind;
+      if (kind === 'passive-ac') {
+        if (typeof ability.value !== 'number' || !Number.isFinite(ability.value)) {
+          throw new Error(`item-mechanics.abilities[${index}].value must be a numeric AC bonus.`);
+        }
+        effects.push({
+          name: `AC +${ability.value} 加值`,
+          logicalPath: `item-mechanics/${id}`,
+          type: 'effect',
+          passiveEffect: { type: 'acBonus', value: ability.value },
+        });
+        continue;
+      }
+      if (kind === 'light') {
+        const activation = this.mapActivation(String(ability.activation ?? ''));
+        const consumption = ability.consumption;
+        const bright = ability.bright;
+        const dim = ability.dim;
+        if (typeof consumption !== 'number' || typeof bright !== 'number' || typeof dim !== 'number') {
+          throw new Error(`item-mechanics.abilities[${index}] light requires numeric consumption, bright, and dim.`);
+        }
+        if (dim < bright || consumption !== 0) {
+          throw new Error(`item-mechanics.abilities[${index}] light must have dim >= bright and zero consumption.`);
+        }
+        usesActions.push({
+          name: '点亮',
+          logicalPath: `item-mechanics/${id}`,
+          type: 'use',
+          light: {
+            bright,
+            dim,
+            activation,
+            consumption,
+            ...(ability.extinguish === 'disable-effect' ? { extinguish: 'disable-effect' as const } : {}),
+          },
+          useAction: { consumption, activation },
+        });
+        continue;
+      }
+      if (kind === 'spell') {
+        const spell = ability.spell;
+        if (typeof spell !== 'object' || spell === null || Array.isArray(spell)) {
+          throw new Error(`item-mechanics.abilities[${index}].spell must be a mapping.`);
+        }
+        const spellData = spell as Record<string, unknown>;
+        if (typeof spellData.identifier !== 'string' || typeof spellData.name !== 'string') {
+          throw new Error(`item-mechanics.abilities[${index}].spell requires identifier and name.`);
+        }
+        if (typeof ability.consumption !== 'number' || ability.consumption < 0) {
+          throw new Error(`item-mechanics.abilities[${index}].consumption must be a non-negative number.`);
+        }
+        spells.push({
+          name: `施展 ${spellData.name}`,
+          logicalPath: `item-mechanics/${id}`,
+          type: 'spell',
+          spellName: spellData.name,
+          englishName: spellData.name,
+          spellIdentifier: spellData.identifier,
+          useAction: {
+            consumption: ability.consumption,
+            activation: this.mapActivation(String(ability.activation ?? 'action')),
+          },
+        });
+        continue;
+      }
+      throw new Error(`item-mechanics.abilities[${index}].kind is unsupported.`);
+    }
+
+    const structuredActions: ParsedItem['structuredActions'] = {
+      ...(effects.length > 0 ? { effects } : {}),
+      ...(usesActions.length > 0 ? { uses: usesActions } : {}),
+      ...(spells.length > 0 ? { spells } : {}),
+    };
+    return {
+      uses,
+      structuredActions: Object.keys(structuredActions).length > 0 ? structuredActions : undefined,
     };
   }
 
@@ -624,8 +767,9 @@ export class ItemParser implements ItemParserStrategy {
   }
 
   private parseUses(body: string): UsesData | undefined {
-    const chargeMatch = body.match(/(?:具有|拥有)\s*(\d+)\s*发?充能/);
-    const increaseMatch = body.match(/充能数?增加到?\s*(\d+)/);
+    const normalized = body.replace(/\*\*|__/g, '');
+    const chargeMatch = normalized.match(/(?:具有|拥有)\s*(\d+)\s*发?充能/);
+    const increaseMatch = normalized.match(/充能数?增加到?\s*(\d+)/);
 
     if (!chargeMatch && !increaseMatch) {
       return undefined;
@@ -634,16 +778,16 @@ export class ItemParser implements ItemParserStrategy {
     const max = chargeMatch?.[1] ?? increaseMatch?.[1] ?? '3';
     const recovery: UsesData['recovery'] = [];
 
-    if (/每天黎明恢复所有被消耗的充能/.test(body)) {
+    if (/每天黎明恢复所有被消耗的充能/.test(normalized)) {
       recovery.push({ period: 'dawn', type: 'recoverAll' });
     } else {
-      const formulaMatch = body.match(/每天黎明恢复(\d+)/);
+      const formulaMatch = normalized.match(/每天黎明恢复(\d+)/);
       if (formulaMatch) {
         recovery.push({ period: 'dawn', type: 'formula', formula: formulaMatch[1] });
       }
     }
 
-    const diceFormulaMatch = body.match(/(?:恢复|每[天日]黎明)\s*(\d+)d(\d+)([+-]\d+)?/);
+    const diceFormulaMatch = normalized.match(/(?:恢复|每[天日]黎明)\s*(\d+)d(\d+)([+-]\d+)?/);
     if (diceFormulaMatch && recovery.length === 0) {
       const [, num, denom, bonus] = diceFormulaMatch;
       const formula = bonus ? `${num}d${denom}${bonus}` : `${num}d${denom}`;

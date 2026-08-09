@@ -194,6 +194,12 @@ export class ObsidianSyncWorkflow {
             const bodyMatch = content.match(/^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
             const bodyText = bodyMatch?.[1] ?? '';
             normalizedBody = await this.itemAiNormalizer.normalizeItem(bodyText);
+            if (!normalizedBody) {
+              console.warn(
+                'Legacy item AI normalization produced no verified result; parsing the original strict Markdown instead. '
+                + 'Use --intake-items for evidence-gated raw TXT or irregular Markdown.',
+              );
+            }
           }
           const parsedItem = this.itemParser.parse(content, normalizedBody);
           const artifacts = await generateItemArtifacts(parsedItem, {

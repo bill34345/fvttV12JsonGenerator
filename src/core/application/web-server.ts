@@ -31,7 +31,9 @@ export {
   PlainTextActorWorkflow,
   convertItemCollectionToJson,
   convertMonsterCollectionToJson,
+  resumeItemIntake,
   resumeMonsterIntake,
+  runItemIntake,
   runMonsterIntake,
 } from './workflows';
 export {
@@ -52,6 +54,7 @@ export {
   monsterIntakeConfigured,
 } from '@fvtt-json-generator/intake-ai/config';
 export {
+  createItemIntakeProvider,
   createMonsterIntakeProvider,
   type IntakeProviderAuditEvent,
 } from '@fvtt-json-generator/intake-ai';
@@ -59,6 +62,7 @@ export type {
   IntakeDecision,
   MonsterIntakeAiProvider,
 } from '@fvtt-json-generator/intake-ai/types';
+export type { ItemIntakeAiProvider } from '@fvtt-json-generator/intake-ai/item-types';
 export { buildActorVerificationSummaryFromValues } from '../verification/actorVerification';
 export {
   assertEffectProfileForTarget,

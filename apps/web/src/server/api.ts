@@ -82,6 +82,7 @@ const publicJobTypes = new Set<WebJobType>([
   'ingest-items',
   'goddessfantasy-board-crawl',
   'records-to-plaintext',
+  'ai-item-intake',
   'ai-monster-intake',
 ]);
 
@@ -423,7 +424,7 @@ function getRequiredJob(id: string): WebJob {
 function validateJobInput(body: WebJobRequest): void {
   const type = body.type;
   if (type === 'document-convert') return;
-  const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type === 'ai-monster-intake' || type.startsWith('ingest-');
+  const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type === 'ai-monster-intake' || type === 'ai-item-intake' || type.startsWith('ingest-');
   const needsJson = type === 'translate-json' || type === 'records-to-plaintext';
 
   if (needsMarkdown) {

@@ -25,6 +25,8 @@ export type GenerationMechanicKind =
   | 'uses'
   | 'range'
   | 'effect'
+  | 'light'
+  | 'spell'
   | 'stage'
   | 'resource'
   | 'resource-consumption'

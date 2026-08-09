@@ -79,6 +79,15 @@ const tools: ToolConfig[] = [
     needsFile: true,
   },
   {
+    id: 'ai-item-intake',
+    group: 'intake',
+    title: 'AI 物品资料整理（V14）',
+    short: 'AI Item',
+    description: '上传或粘贴 TXT / 乱 Markdown，先做带证据的 Item 提取，再生成 Foundry 14.364 / dnd5e 5.3.3 core JSON。光照、充能、AC 和物品施法必须逐项通过终审；不确定内容只会进入待确认，不会下载候选 JSON。文本会发送到服务器配置的 AI provider。',
+    accepts: '.md,.markdown,.txt',
+    needsFile: true,
+  },
+  {
     id: 'single',
     group: 'json',
     title: '单文件转换',
@@ -261,8 +270,13 @@ export function App() {
   }, [imageAssetsEnabled, supportsImageAssets]);
 
   useEffect(() => {
+    if (activeTool === 'ai-item-intake') {
+      if (fvttVersion !== '14') setFvttVersion('14');
+      if (effectProfile !== 'core') setEffectProfile('core');
+      return;
+    }
     if (activeTool === 'ai-monster-intake' && fvttVersion === '13') setFvttVersion('12');
-  }, [activeTool, fvttVersion]);
+  }, [activeTool, effectProfile, fvttVersion]);
 
   useEffect(() => {
     if (fvttVersion !== '14' && iconMode !== 'off') setIconMode('off');
@@ -493,15 +507,15 @@ export function App() {
           <div className="options-grid">
             <label>
               <span>Foundry</span>
-              <select value={fvttVersion} onChange={(event) => setFvttVersion(event.target.value as FvttVersion)}>
-                <option value="12">v12</option>
-                {activeTool !== 'ai-monster-intake' ? <option value="13">v13</option> : null}
+              <select value={fvttVersion} disabled={activeTool === 'ai-item-intake'} onChange={(event) => setFvttVersion(event.target.value as FvttVersion)}>
+                {activeTool !== 'ai-item-intake' ? <option value="12">v12</option> : null}
+                {activeTool !== 'ai-monster-intake' && activeTool !== 'ai-item-intake' ? <option value="13">v13</option> : null}
                 <option value="14">v14</option>
               </select>
             </label>
             <label>
               <span>Effect Profile</span>
-              <select value={effectProfile} onChange={(event) => setEffectProfile(event.target.value as EffectProfile)}>
+              <select value={effectProfile} disabled={activeTool === 'ai-item-intake'} onChange={(event) => setEffectProfile(event.target.value as EffectProfile)}>
                 <option value="core">core</option>
                 <option value="modded-v12">modded-v12</option>
                 <option value="modded-v14">modded-v14</option>

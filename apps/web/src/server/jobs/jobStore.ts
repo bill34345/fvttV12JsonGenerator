@@ -23,6 +23,7 @@ export type WebJobType =
   | 'ingest-plaintext'
   | 'ingest-plaintext-actors'
   | 'ingest-items'
+  | 'ai-item-intake'
   | 'ai-monster-intake'
   | 'goddessfantasy-board-crawl'
   | 'records-to-plaintext';

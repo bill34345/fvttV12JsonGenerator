@@ -84,7 +84,13 @@ export interface ImageAssetProcessorPort {
 }
 
 export interface ItemAiNormalizerPort {
-  normalizeItem(bodyText: string): Promise<string>;
+  /**
+   * Legacy strict-Markdown compatibility hook.  A missing result means the
+   * normalizer could not establish mechanics and callers must continue with
+   * the source Markdown only; it must never be represented as an empty
+   * ability list.
+   */
+  normalizeItem(bodyText: string): Promise<string | undefined>;
 }
 
 export interface IngestedTextFile {

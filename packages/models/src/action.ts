@@ -85,7 +85,24 @@ export interface ActionData {
 
   // Cast activity fields (for spellcasting items like wands, staffs, rods)
   spellName?: string;
+  /** Stable dnd5e spell identifier supplied by the Item mechanics contract. */
+  spellIdentifier?: string;
   usesPerDay?: number;
+
+  /**
+   * A source-explicit token-light operation.  This is intentionally separate
+   * from generic utility text: the generator must create a non-transfer Item
+   * effect and the Activity must apply that exact effect without consuming the
+   * Item's uses.
+   */
+  light?: {
+    bright: number;
+    /** Outer edge of dim light, not "additional dim distance". */
+    dim: number;
+    activation: 'action' | 'bonus' | 'reaction' | 'free';
+    consumption: number;
+    extinguish?: 'disable-effect';
+  };
 
   // Effect activity fields (for passive abilities like AC bonus, water breathing)
   passiveEffect?: {

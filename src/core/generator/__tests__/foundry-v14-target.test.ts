@@ -204,8 +204,12 @@ describe('Foundry v14 generator target', () => {
       },
     });
 
-    expect(effect?.changes[0]).toEqual(expect.objectContaining({
+    expect(effect?.changes).toBeUndefined();
+    expect(effect?.type).toBe('base');
+    expect(effect?.system.changes[0]).toEqual(expect.objectContaining({
       key: 'system.attributes.ac.formula',
+      type: 'add',
+      phase: 'initial',
       value: '+2',
     }));
     expect(effect?._stats.coreVersion).toBe('14.364');

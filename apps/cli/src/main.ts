@@ -12,13 +12,16 @@ import {
   JsonTranslationSyncWorkflow,
   runMonsterIntakeDoctor,
   ObsidianSyncWorkflow,
+  createItemIntakeProvider,
   createMonsterIntakeProvider,
   PlainTextActorWorkflow,
   PlainTextIngestionWorkflow,
   parseFvttTargetVersion,
   parseIconMode,
+  resumeItemIntake,
   resumeMonsterIntake,
   runDocumentConversion,
+  runItemIntake,
   runMonsterIntake,
   isDocumentInputPath,
   type IntakeProviderAuditEvent,
@@ -42,13 +45,15 @@ program
   .option('--translate-dir <path>', 'Directory for --translate-json', 'data/need_tran')
   .option('--intake-monsters <source>', 'AI-first monster/NPC intake from TXT or irregular Markdown (recommended)')
   .option('--resume-intake <run-dir>', 'Resume an AI monster intake review bundle')
+  .option('--intake-items <source>', 'AI-first Item intake from TXT or irregular Markdown (Foundry V14/core)')
+  .option('--resume-item-intake <run-dir>', 'Resume an AI Item Intake review bundle')
   .option('--decisions <path>', 'Decision JSON file for --resume-intake')
   .option('--ingest-plaintext <source>', '[legacy rule-based] Split a plain-text creature collection into project markdown files')
   .option('--ingest-plaintext-actors <source>', '[legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
-  .option('--ingest-items <source>', 'Split a plain-text item collection into project markdown files')
-  .option('--ingest-items-json <source>', 'Generate project item markdown and Item JSON from a plain-text item collection')
+  .option('--ingest-items <source>', '[legacy strict format] Split a plain-text item collection into project markdown files')
+  .option('--ingest-items-json <source>', '[legacy strict format] Generate project item markdown and Item JSON from a plain-text item collection')
   .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', DEFAULT_EMIT_DIR)
-  .option('--enable-ai-normalize', 'Enable optional AI normalization during --ingest-plaintext')
+  .option('--enable-ai-normalize', '[legacy strict Item Markdown only] Enable optional compatibility normalization; failures preserve source parsing')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
   .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
@@ -133,6 +138,40 @@ program
         const result = await resumeMonsterIntake(options.resumeIntake, options.decisions, provider, options.vault);
         writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
         printIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
+
+      if (options.intakeItems) {
+        const source = readFileSync(resolve(options.intakeItems), 'utf-8');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = options.dryRun ? undefined : createItemIntakeProvider({
+          audit: (event) => audit.push(event),
+        });
+        const result = await runItemIntake({
+          source,
+          sourceName: options.intakeItems,
+          vaultPath: options.vault,
+          dryRun: Boolean(options.dryRun),
+          fvttVersion: fvttVersion as '14',
+          effectProfile: effectProfile as 'core',
+          iconOptions,
+        }, provider);
+        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+        printItemIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
+
+      if (options.resumeItemIntake) {
+        if (!options.decisions) throw new Error('--resume-item-intake requires --decisions <path>.');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = createItemIntakeProvider({
+          audit: (event) => audit.push(event),
+        });
+        const result = await resumeItemIntake(options.resumeItemIntake, options.decisions, provider, options.vault);
+        writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
+        printItemIntakeResult(result);
         process.exitCode = intakeExitCode(result.status);
         return;
       }
@@ -426,6 +465,20 @@ function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>)
     for (const finding of creature.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
     if (creature.markdownPath) console.log(`  Markdown: ${creature.markdownPath}`);
     if (creature.actorPath) console.log(`  Actor JSON: ${creature.actorPath}`);
+  }
+}
+
+function printItemIntakeResult(result: Awaited<ReturnType<typeof runItemIntake>>): void {
+  console.log(`AI Item Intake run: ${result.runId}`);
+  console.log(`Status: ${result.status}`);
+  console.log(`Discovered items: ${result.discoveryCount}`);
+  if (result.estimatedMaxCalls !== undefined) console.log(`Estimated worst-case provider calls: ${result.estimatedMaxCalls}`);
+  if (result.runPath) console.log(`Review bundle: ${result.runPath}`);
+  for (const item of result.items) {
+    console.log(`- ${item.label}: ${item.status} | calls extract=${item.calls.extraction} review=${item.calls.review} repair=${item.calls.repair}`);
+    for (const finding of item.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
+    if (item.markdownPath) console.log(`  Markdown: ${item.markdownPath}`);
+    if (item.itemPath) console.log(`  Item JSON: ${item.itemPath}`);
   }
 }
 

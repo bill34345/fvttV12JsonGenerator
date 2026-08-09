@@ -1,4 +1,5 @@
 import type { EffectProfile } from './effectProfileApplier';
+import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import type {
   CanonicalGenerationDocument,
@@ -54,7 +55,7 @@ export function verifyGeneratedDocument(
   }
 
   const mechanicsCoverage = options.canonical.mechanics.map((mechanic) =>
-    verifyMechanicCoverage(mechanic, documents, diagnostics));
+    verifyMechanicCoverage(mechanic, documents, diagnostics, options.target));
 
   verifyTargetMetadata(options.output, options.target, diagnostics);
 
@@ -316,6 +317,7 @@ function verifyMechanicCoverage(
   mechanic: CanonicalGenerationMechanic,
   documents: any[],
   diagnostics: GenerationDiagnostic[],
+  target: FvttTargetVersion,
 ): MechanicsCoverageEntry {
   const behavior = mechanic.kind.startsWith('behavior-')
     ? mechanic.value as {
@@ -347,6 +349,34 @@ function verifyMechanicCoverage(
         expressionCoverage: behavior.coverage,
         executionMode: behavior.executionMode,
       } : {}),
+    };
+  }
+
+  const itemSpecificPaths = documents.length === 1 && mechanic.path.startsWith('item/')
+    ? verifyItemSpecificMechanic(mechanic, documents[0], diagnostics, target)
+    : undefined;
+  if (itemSpecificPaths !== undefined) {
+    if (itemSpecificPaths.length === 0) {
+      diagnostics.push(error(
+        'GEN_MECHANIC_NOT_PROJECTED',
+        'semantic',
+        mechanic.path,
+        `Source ${mechanic.kind} mechanic was not projected or explicitly preserved.`,
+      ));
+      return {
+        mechanicId: mechanic.id,
+        kind: mechanic.kind,
+        sourcePath: mechanic.path,
+        status: 'missing',
+        outputPaths: [],
+      };
+    }
+    return {
+      mechanicId: mechanic.id,
+      kind: mechanic.kind,
+      sourcePath: mechanic.path,
+      status: 'projected',
+      outputPaths: itemSpecificPaths,
     };
   }
 
@@ -462,6 +492,197 @@ function verifyMechanicCoverage(
       executionMode: behavior.executionMode,
     } : {}),
   };
+}
+
+/**
+ * Item mechanics that are easy to make structurally plausible but wrong at
+ * runtime get value-level checks here.  These checks deliberately inspect the
+ * V14 native active-effect layout instead of accepting any Activity/Effect.
+ */
+function verifyItemSpecificMechanic(
+  mechanic: CanonicalGenerationMechanic,
+  document: any,
+  diagnostics: GenerationDiagnostic[],
+  target: FvttTargetVersion,
+): string[] | undefined {
+  const activities = Object.entries(document?.system?.activities ?? {}) as Array<[string, any]>;
+  const scopedActivities = activitiesForMechanic(mechanic, activities.map(([, activity]) => activity));
+  const scopedEntries = scopedActivities.length === activities.length
+    ? activities
+    : activities.filter(([, activity]) => scopedActivities.includes(activity));
+
+  if (mechanic.kind === 'uses' && mechanic.path === 'item/uses') {
+    const expected = mechanic.value as { max?: string | number; spent?: number; recovery?: any[] };
+    const actual = document?.system?.uses;
+    if (!actual) return [];
+    if (
+      String(actual.max) !== String(expected.max)
+      || actual.spent !== expected.spent
+      || JSON.stringify(actual.recovery ?? []) !== JSON.stringify(expected.recovery ?? [])
+    ) {
+      diagnostics.push(error(
+        'GEN_ITEM_USES_MISMATCH',
+        'semantic',
+        mechanic.path,
+        'Item uses max, spent, or recovery does not match the source mechanics contract.',
+      ));
+    }
+    return ['documents/0/system/uses'];
+  }
+
+  if (mechanic.kind === 'effect') {
+    const expected = mechanic.value as { passiveEffect?: { type?: string; value?: unknown } };
+    if (expected.passiveEffect?.type !== 'acBonus') return undefined;
+    // `system.changes` is the V14 native Effect shape.  Existing strict Item
+    // Markdown still supports V12, whose effect contract is verified by the
+    // generic projection check below.
+    if (target !== '14') return undefined;
+    const expectedValue = `+${String(expected.passiveEffect.value)}`;
+    const effectIndex = (document?.effects ?? []).findIndex((effect: any) =>
+      effect?.transfer === true
+      && effect?.type === 'base'
+      && effect?.changes === undefined
+      && Array.isArray(effect?.system?.changes)
+      && effect.system.changes.some((change: any) =>
+        change?.key === 'system.attributes.ac.formula'
+        && change?.type === 'add'
+        && change?.phase === 'initial'
+        && String(change?.value) === expectedValue));
+    if (effectIndex < 0) {
+      diagnostics.push(error(
+        'GEN_ITEM_AC_EFFECT_MISMATCH',
+        'semantic',
+        mechanic.path,
+        `Expected a transfer V14 Active Effect setting system.attributes.ac.formula to ${expectedValue}.`,
+      ));
+      return [];
+    }
+    return [`documents/0/effects/${effectIndex}`];
+  }
+
+  if (mechanic.kind === 'light') {
+    if (target !== '14') return undefined;
+    const expected = mechanic.value as { bright: number; dim: number; activation: string; consumption: number };
+    for (const [activityId, activity] of scopedEntries) {
+      if (
+        activity?.type !== 'utility'
+        || activity?.activation?.type !== expected.activation
+        || (activity?.consumption?.targets ?? []).length !== 0
+      ) continue;
+      const referencedEffectId = activity?.effects?.[0]?._id;
+      const effectIndex = (document?.effects ?? []).findIndex((effect: any) => effect?._id === referencedEffectId);
+      const effect = effectIndex >= 0 ? document.effects[effectIndex] : undefined;
+      const changes = effect?.system?.changes;
+      const hasBright = Array.isArray(changes) && changes.some((change: any) =>
+        change?.key === 'token.light.bright' && change?.type === 'override'
+        && change?.phase === 'initial' && Number(change?.value) === expected.bright);
+      const hasDim = Array.isArray(changes) && changes.some((change: any) =>
+        change?.key === 'token.light.dim' && change?.type === 'override'
+        && change?.phase === 'initial' && Number(change?.value) === expected.dim);
+      if (effect?.transfer !== false || effect?.changes !== undefined || !hasBright || !hasDim) {
+        diagnostics.push(error(
+          'GEN_ITEM_LIGHT_EFFECT_MISMATCH',
+          'semantic',
+          mechanic.path,
+          'Light Activity must reference a non-transfer V14 Effect with exact bright/dim Override changes.',
+        ));
+      }
+      return [
+        `documents/0/system/activities/${activityId}`,
+        `documents/0/effects/${effectIndex}`,
+      ];
+    }
+    diagnostics.push(error(
+      'GEN_ITEM_LIGHT_ACTIVITY_MISMATCH',
+      'semantic',
+      mechanic.path,
+      'Light must be an action Utility Activity with zero Item-use consumption.',
+    ));
+    return [];
+  }
+
+  if (mechanic.kind === 'spell') {
+    const expected = mechanic.value as { identifier?: string; name?: string; consumption?: number; activation?: string };
+    const hasFormalIdentifier = typeof expected.identifier === 'string' && expected.identifier.trim().length > 0;
+    // Only AI Item Intake gives the canonical identifier that activates the
+    // V14 fail-closed UUID contract.  Old strict Markdown has no such proof
+    // and therefore keeps its pre-existing cast/utility compatibility path.
+    if (!hasFormalIdentifier) {
+      for (const [activityId, activity] of scopedEntries) {
+        const targetUse = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
+        if (
+          (activity?.type === 'cast' || activity?.type === 'utility')
+          && activity?.activation?.type === expected.activation
+          && String(targetUse?.value) === String(expected.consumption)
+        ) {
+          return [`documents/0/system/activities/${activityId}`];
+        }
+      }
+      diagnostics.push(error(
+        'GEN_ITEM_LEGACY_SPELL_ACTIVITY_MISMATCH',
+        'semantic',
+        mechanic.path,
+        'Legacy Item spell text did not project to a compatible cast or utility Activity with the stated Item-use consumption.',
+      ));
+      return [];
+    }
+    if (target !== '14') return undefined;
+    const resolved = resolveLockedDnd5eV14Spell(
+      String(expected.identifier ?? ''),
+      String(expected.name ?? ''),
+    );
+    if (!resolved) {
+      diagnostics.push(error(
+        'GEN_ITEM_SPELL_UNRESOLVED',
+        'semantic',
+        mechanic.path,
+        `No unique locked dnd5e V14 spell UUID exists for "${String(expected.identifier ?? expected.name ?? '')}".`,
+      ));
+      return [];
+    }
+    const expectedUuid = resolved.uuid;
+    for (const [activityId, activity] of scopedEntries) {
+      const target = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
+      if (
+        activity?.type === 'cast'
+        && activity?.spell?.uuid === expectedUuid
+        && activity?.activation?.type === expected.activation
+        && activity?.consumption?.spellSlot === false
+        && String(target?.value) === String(expected.consumption)
+      ) {
+        return [`documents/0/system/activities/${activityId}`];
+      }
+    }
+    diagnostics.push(error(
+      'GEN_ITEM_SPELL_ACTIVITY_MISMATCH',
+      'semantic',
+      mechanic.path,
+      'Spell Activity must be cast, use the locked UUID, consume the required Item uses, and not consume spell slots.',
+    ));
+    return [];
+  }
+
+  if (mechanic.kind === 'resource-consumption') {
+    const expected = mechanic.value as { consumption?: number; resource?: string };
+    for (const [activityId, activity] of scopedEntries) {
+      const targets = activity?.consumption?.targets ?? [];
+      if (expected.consumption === 0 && targets.length === 0) {
+        return [`documents/0/system/activities/${activityId}/consumption/targets`];
+      }
+      if (targets.some((target: any) => target?.type === 'itemUses' && String(target?.value) === String(expected.consumption))) {
+        return [`documents/0/system/activities/${activityId}/consumption/targets`];
+      }
+    }
+    diagnostics.push(error(
+      'GEN_ITEM_RESOURCE_CONSUMPTION_MISMATCH',
+      'semantic',
+      mechanic.path,
+      'Activity Item-use consumption does not match the source mechanics contract.',
+    ));
+    return [];
+  }
+
+  return undefined;
 }
 
 function activitiesForMechanic(mechanic: CanonicalGenerationMechanic, activities: any[]): any[] {
