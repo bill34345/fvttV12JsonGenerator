@@ -1,0 +1,3 @@
+[submodule "references/dnd5e-4.3.9/repo"]
+	path = references/dnd5e-4.3.9/repo
+	url = https://github.com/foundryvtt/dnd5e.git
