@@ -2,11 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { resolveReferenceCacheRoot } from '../src/tools/referencePaths';
 import {
   buildJewelOfThreePrayersIr,
   jewelCandidate,
   JEWEL_OF_THREE_PRAYERS_SOURCE,
 } from '../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
+
+const REFERENCE_CACHE_ROOT = resolveReferenceCacheRoot(process.cwd(), process.env);
 
 describe('AI Item Intake CLI', () => {
   test('converts raw TXT through formal Markdown and accepted V14 Item JSON with a configured provider', async () => {
@@ -46,6 +49,7 @@ describe('AI Item Intake CLI', () => {
           MONSTER_INTAKE_API_KEY: 'test-key',
           MONSTER_INTAKE_BASE_URL: server.url.toString(),
           MONSTER_INTAKE_MODEL: 'test-model',
+          FVTT_REFERENCE_CACHE_ROOT: REFERENCE_CACHE_ROOT,
         },
       });
       const [exitCode, stdout, stderr] = await Promise.all([
