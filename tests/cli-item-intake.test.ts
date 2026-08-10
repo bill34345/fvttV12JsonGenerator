@@ -53,7 +53,11 @@ describe('AI Item Intake CLI', () => {
         new Response(proc.stdout).text(),
         new Response(proc.stderr).text(),
       ]);
-      expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: '' });
+      expect({ exitCode, stdout, stderr }).toEqual({
+        exitCode: 0,
+        stdout: expect.any(String),
+        stderr: '',
+      });
       expect(stdout).toContain('三祷之坠: accepted');
       const markdownPath = stdout.match(/Markdown:\s*(.+\.md)\s*$/mu)?.[1]?.trim();
       const itemPath = stdout.match(/Item JSON:\s*(.+\.json)\s*$/mu)?.[1]?.trim();
