@@ -13,9 +13,9 @@ bun run foundry:ops catalog
 
 `catalog` 会用中文列出每条命令的目标和最大权限：
 
-- `read-only`：只读取目标；如果目标是生产服务器，仍需单独授权；
+- `read-only`：只读取目标；生产读取无需逐次对话授权，但仍须通过目标核对、外部配置、`--apply` 和 `--allow-production-read`；
 - `local-mutation`：会在本机生成报告、缓存、快照，或修改明确的本地测试镜像；
-- `production-mutation`：会修改、启停或迁移生产环境。统一 CLI 故意不提供这种入口，只能走另行批准的操作手册。
+- `production-mutation`：会安装、重启、hydrate、迁移或以其他方式写入生产环境。统一 CLI 故意不提供这种入口，只能走另行批准的操作手册，并在写入前再次取得明确授权。
 
 “生产迁移”相关的两个现有脚本只处理离线世界副本，因此被正确归类为“修改本地”；它们不会直接修改线上服务器。
 
@@ -98,6 +98,8 @@ bun run foundry:ops assets migration-plan --target-lab-root=J:\fvtt-lab
 
 ## 生产只读盘点
 
+按照 [ADR-0005](../../docs/decisions/0005-production-read-autonomy-and-write-authorization.md)，代理可以自主执行生产 inventory/acquire 等只读操作，不必先进行一轮对话确认。以下三道机械保险和目标身份核对仍然全部保留；它们用于防止误连或把计划误当执行许可，不能被命令别名或私有 handoff 绕过。
+
 生产只读命令必须同时满足三件事：
 
 1. 命令带 `--apply`，表示不再只是查看计划；
@@ -115,9 +117,19 @@ bun run foundry:ops production inventory --apply --allow-production-read
 
 仓库不再保存具体生产主机或生产数据路径。缺少配置时，命令会在建立连接前失败。
 
+如果下一步会安装模块、重启服务、hydrate 世界内容、迁移数据、写 LevelDB 或产生任何其他生产写入，必须在第一项写入发生前停止并向用户取得明确授权。只读盘点的许可不会自动延伸为写入许可。
+
+## 共享 Server Mirror
+
+当前配置的本地 v14 Lab 是 `F:\FoundryLab\foundry-v14`，默认复用的数据目录是 `F:\FoundryLab\foundry-v14\data\server-mirror`。使用前核对 PID、端口、路径和运行者；若其他参与者正在使用，等待或协调释放，不擅自停止，也不复制另一整套 Lab。
+
+- 需要现成角色、场景、物品或合集的人工/玩法语义验收，默认使用持久世界 `cor-cotn`。修改既有文档前记录原值，结束后恢复；临时对象必须可识别并清理。
+- 干净隔离、模块组合、迁移/恢复、故障注入或可能污染世界的测试，使用 `fvtt-v14-module-matrix` 或测试创建的随机临时沙箱。
+- 身份预检、本地模块安装、启停和短时测试无需再次询问；这些本地权限不代表生产授权。
+
 ## 本地路径配置
 
-这些变量都是可选的；未设置时继续使用现有 `.local/foundry-v14` 结构：
+这些变量都是可选的；当前机器通过用户级配置指向 F 盘 Lab。未配置的其他环境仍使用代码定义的兼容默认值，不得据此重建已退役的仓库 `.local/foundry-v14`：
 
 | 环境变量 | 用途 |
 |---|---|

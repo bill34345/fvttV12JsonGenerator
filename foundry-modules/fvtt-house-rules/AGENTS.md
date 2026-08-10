@@ -11,7 +11,7 @@
 - 只读取明确的 `flags.fvtt-house-rules` 标签；不得根据中文或英文名称猜测药水、弹药、武器或特性。
 - 未验证的版本、模糊的来源、多目标不唯一或未知 schema 必须失败关闭。
 - 不得复制 blind roll 原始骰值到模块 flags、聊天卡或审计摘要。
-- 安装器只允许配置的本地 Lab mirror；它默认拒绝覆盖已有模块目录。不得在本任务运行安装器或操作 `F:\FoundryLab`。
+- 安装器只允许配置的本地 Lab mirror，并默认拒绝覆盖已有模块目录。完成 PID、端口、路径和运行者预检后可自主安装和短时 E2E；若 `server-mirror` 被其他参与者占用则等待，不擅自停止或复制 Lab。
 
 ## 验证
 
@@ -24,4 +24,4 @@ bun run build
 bun run verify:artifact
 ```
 
-测试是规则语义和构建层验证；真实 Foundry 行为仍须由获授权的 Lab E2E 单独验证。
+测试是规则语义和构建层验证；真实 Foundry 行为仍须由 Lab E2E 单独验证并与生产接受分开报告。

@@ -21,6 +21,7 @@
     "architecture:cycles": "bun node_modules/knip/bin/knip-bun.js --cycles --no-config-hints",
     "architecture:unused": "bun node_modules/knip/bin/knip-bun.js --no-exit-code --no-config-hints --reporter compact",
     "architecture:verify": "bun run architecture:deps && bun run architecture:cycles",
+    "agents:generate": "ruler apply --agents agentsmd --local-only --no-nested --no-skills --no-subagents --no-mcp --no-gitignore --no-backup",
     "agents:check": "bun run src/tools/agentsInstructionsCheck.ts",
     "test-isolation:check": "bun run src/tools/foundryTestIsolationCheck.ts",
     "test-env:check": "bun run src/tools/ciEnvironmentCheck.ts",
@@ -85,6 +86,7 @@
     "document:doctor": "bun run src/index.ts --document-doctor"
   },
   "devDependencies": {
+    "@intellectronica/ruler": "0.3.44",
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.0.10",

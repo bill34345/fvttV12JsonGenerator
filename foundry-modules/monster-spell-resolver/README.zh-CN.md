@@ -28,6 +28,6 @@ bun run foundry:lab spell-resolver verify-install
 ## 支持与安全边界
 
 - 锁定 Foundry VTT `14.364` 与 dnd5e `5.3.3`。
-- 本地安装和短时验证只针对配置后的 F 盘测试环境。
-- 唯一生产环境是远程服务器 8080 Foundry；任何生产读取、安装或 Actor 解析都需要当前任务中的单独授权。
+- 本地安装和短时验证只针对配置后的 F 盘测试环境；完成 server-mirror 的 PID、端口、路径和运行者预检后可自主执行，被其他参与者占用时等待。
+- 唯一生产环境是远程服务器 8080 Foundry；只读 inventory/acquire 可在保留 CLI guard 和目标核对的前提下自主执行，生产安装或 Actor hydration 等写入必须再次取得明确授权。
 - 构建、单元测试和安装 hash 一致只能证明机械正确；目标世界中的实际解析行为仍需单独做运行时语义验收。

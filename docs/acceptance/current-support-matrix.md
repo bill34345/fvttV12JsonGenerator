@@ -1,9 +1,11 @@
 # Current Support Matrix
 
-**Current as of:** 2026-07-31
+**Current as of:** 2026-08-10
 **Canonical role:** this file is the current support summary. Dated reports remain immutable evidence snapshots; later amendments clarify their present interpretation without erasing earlier failures or narrower passes.
 
 **Current v14 module lock:** MIDI-QOL `14.0.11` + DAE `14.0.12`. Rows below that name MIDI-QOL `14.0.9` describe preserved historical runtime evidence; they have not been silently promoted to `14.0.11` acceptance.
+
+**Default selection boundary:** the historical CLI/Web product default remains v12. When a user does not specify a target, Codex now explicitly requests Foundry `14.364` / dnd5e `5.3.3` / `core`; this agent-side choice does not change product behavior or retroactively upgrade v14 acceptance.
 
 ## Status vocabulary
 

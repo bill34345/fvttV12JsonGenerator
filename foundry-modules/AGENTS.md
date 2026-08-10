@@ -9,7 +9,7 @@
 - 模块之间不得导入彼此的私有实现；共享内容必须是明确、最小、browser-safe 的契约。
 - Foundry browser runtime 不得导入 Node、Bun、Windows、SSH、CLI server 或 generator 私有实现。
 - `src/module.json`、构建后的 manifest、package version 和发布 ZIP 必须一致。
-- 构建和安装到 `F:\FoundryLab\foundry-v14` 只属于本地 v14 集成测试，不是生产部署。唯一生产环境是远程服务器 8080 Foundry；安装器只允许精确的、配置后的本地测试 mirror，并保留 owned-module 与链接/根目录防护。
+- 构建、安装、启停和短时测试配置后的 `F:\FoundryLab\foundry-v14` 可自主进行，但只属于本地 v14 集成测试，不是生产部署。先核对 server-mirror 的 PID、端口、路径和运行者；被其他参与者占用时等待，不停止、不复制另一套 Lab。唯一生产环境是远程服务器 8080 Foundry；安装器只允许精确本地 mirror，并保留 owned-module 与链接/根目录防护。
 - Foundry/dnd5e/module API 行为必须对照锁定版本资料和目标 runtime 验证，不得凭记忆或最新版文档推断。
 - 不得通过直接编辑世界 LevelDB、修改 compendium 或 patch Foundry/dnd5e prototype 来绕过正式模块行为。
 
@@ -17,7 +17,7 @@
 
 - `bun run typecheck:foundry-modules`
 - 运行模块自己的 test、build 和 manifest/archive 一致性检查。
-- 对 UI、Hook、设置和运行时行为做项目本地 Foundry smoke；生产和长时验收按根安全边界单独授权。
+- 对 UI、Hook、设置和运行时行为做项目本地 Foundry smoke；生产只读按机械门禁执行，生产写入再次授权，长时验收按根安全边界处理。
 
 ## 完成标准
 

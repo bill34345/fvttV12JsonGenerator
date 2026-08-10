@@ -34,7 +34,7 @@ bun run foundry:lab spell-resolver prepare-world --world=fvtt-v14-module-matrix 
 bun run foundry:lab launch server-mirror
 ```
 
-不要把这组命令改指向生产数据目录。生产安装、生产世界迁移和生产内容包读取需要另行授权与独立验收。
+不要把这组命令改指向生产数据目录。生产内容包 inventory/acquire 等只读操作可按 Foundry Ops 的目标核对、`--apply`、`--allow-production-read` 和外部配置门禁自主执行；生产安装、世界迁移、Actor hydration 或其他写入必须再次取得明确授权并独立验收。
 
 ## 普通 GM 使用流程
 

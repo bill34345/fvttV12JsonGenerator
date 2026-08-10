@@ -4,6 +4,8 @@
 - 日期：2026-07-31
 - 决策人：项目用户
 
+> 2026-08-10 修订：本 ADR 的产品边界继续有效；其中“生产单独授权”的读取部分由 [ADR-0005](0005-production-read-autonomy-and-write-authorization.md) 修订为“生产只读无需逐次对话授权但保留机械门禁”。任何生产写入仍须再次明确授权。历史文字保留为当时决策证据。
+
 ## 背景
 
 `scripts/foundry-lab`、world audit、生产 inventory/acquisition/migration、本地 mirror 管理以及 Blood

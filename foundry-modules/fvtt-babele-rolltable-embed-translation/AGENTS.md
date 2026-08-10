@@ -17,7 +17,7 @@
 - `bun run test:fvtt-babele-rolltable-embed-translation`
 - `bun run build:fvtt-babele-rolltable-embed-translation`
 - `bun run typecheck:foundry-modules`
-- `bun run install:local`（仅在明确授权的本地 Lab 上）
+- `bun run install:local`（完成共享 Lab 身份/占用预检后可自主运行）
 - `bun run verify-install`
 
 机械检查通过后，仍需在 Server Mirror 的实际 Foundry UI 中验收 Wild Magic Surge 的 25 行、Confusion Behavior 的 5 个结果，以及文档型结果的中文 anchor 和原 UUID。

@@ -1,0 +1,20 @@
+default_agents = ["agentsmd"]
+nested = false
+
+[mcp]
+enabled = false
+
+[gitignore]
+enabled = false
+
+[backup]
+enabled = false
+
+[skills]
+enabled = false
+
+[agents]
+enabled = false
+
+[agents.agentsmd]
+enabled = true
