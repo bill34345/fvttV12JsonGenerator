@@ -23,6 +23,13 @@ jobs:
       - name: Install latest stable Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Install Python for document tests
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+
       - name: Report runtime versions
         run: |
           bun --version
@@ -30,6 +37,30 @@ jobs:
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+
+      - name: Install locked Python test dependencies
+        run: python -m pip install --disable-pip-version-check --requirement .github/requirements-ci.txt
+
+      - name: Prepare pinned Foundry LevelDB test dependency
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:GITHUB_WORKSPACE '.github/foundry-leveldb'
+          $appRoot = Join-Path $env:GITHUB_WORKSPACE '.local/foundry-v14/app/14.364'
+          New-Item -ItemType Directory -Path $appRoot | Out-Null
+          Copy-Item -LiteralPath (Join-Path $fixture 'package.json') -Destination $appRoot
+          Copy-Item -LiteralPath (Join-Path $fixture 'package-lock.json') -Destination $appRoot
+          npm ci --prefix $appRoot --no-audit --no-fund
+
+          $package = Get-Content -LiteralPath (Join-Path $appRoot 'node_modules/classic-level/package.json') -Raw | ConvertFrom-Json
+          if ($package.version -ne '3.0.0') {
+            throw "Expected classic-level 3.0.0, received $($package.version)"
+          }
+
+          $entry = Join-Path $appRoot 'node_modules/classic-level/index.js'
+          if (-not (Test-Path -LiteralPath $entry -PathType Leaf)) {
+            throw "Prepared classic-level entry is missing: $entry"
+          }
+          "FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY=$entry" >> $env:GITHUB_ENV
 
       - name: Acquire immutable reference cache
         run: bun run references bootstrap

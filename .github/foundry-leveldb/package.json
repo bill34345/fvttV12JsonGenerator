@@ -1,0 +1,9 @@
+{
+  "name": "fvtt-foundry-leveldb-ci-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned Foundry 14.364 LevelDB dependency for hermetic Windows CI tests.",
+  "dependencies": {
+    "classic-level": "3.0.0"
+  }
+}
