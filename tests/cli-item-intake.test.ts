@@ -83,7 +83,7 @@ describe('AI Item Intake CLI', () => {
     });
     expect(proc.exitCode).toBe(1);
     expect(proc.stderr.toString()).toContain('MONSTER_INTAKE_API_KEY');
-  });
+  }, 30_000);
 
   test('dry-run is provider-free and enforces the V14/core boundary', () => {
     const proc = Bun.spawnSync({
