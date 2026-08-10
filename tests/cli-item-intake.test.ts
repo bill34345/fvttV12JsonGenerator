@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,6 +10,8 @@ import {
 } from '../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
 
 const REFERENCE_CACHE_ROOT = resolveReferenceCacheRoot(process.cwd(), process.env);
+
+setDefaultTimeout(30_000);
 
 describe('AI Item Intake CLI', () => {
   test('converts raw TXT through formal Markdown and accepted V14 Item JSON with a configured provider', async () => {

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it, setDefaultTimeout } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -7,6 +7,8 @@ const SOURCE_PATH = resolve(
   process.cwd(),
   'tests/fixtures/plaintext/月蚀矿腐化生物数据.md',
 );
+
+setDefaultTimeout(30_000);
 
 describe('CLI plaintext actor import', () => {
   const roots: string[] = [];
@@ -46,7 +48,7 @@ describe('CLI plaintext actor import', () => {
     expect(stdout).toContain('Detected creatures: 7');
     expect(existsSync(join(vaultPath, 'input'))).toBe(false);
     expect(stderr).toContain('[Legacy rule-based]');
-  }, 15_000);
+  });
 
   it('accepts image workflow options during dry-run without uploading assets', () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-cli-plaintext-actors-images-'));

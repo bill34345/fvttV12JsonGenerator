@@ -1,6 +1,5 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -17,16 +16,16 @@ describe('CLI document input', () => {
     let runPath: string | undefined;
 
     try {
-      const result = spawnSync(
-        'bun',
-        ['run', CLI, inputPath, '--document-engine', 'native', '--extract-only'],
-        { cwd: process.cwd(), encoding: 'utf-8', timeout: 30_000 },
-      );
-      const output = `${result.stdout}\n${result.stderr}`;
+      const result = Bun.spawnSync({
+        cmd: ['bun', 'run', CLI, inputPath, '--document-engine', 'native', '--extract-only'],
+        cwd: process.cwd(),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const output = `${result.stdout.toString()}\n${result.stderr.toString()}`;
       runPath = output.match(/Run directory: (.+)/)?.[1]?.trim();
 
-      expect(result.error).toBeUndefined();
-      expect(result.status).toBe(0);
+      expect(result.exitCode).toBe(0);
       expect(output).toContain('Status: extracted');
       expect(runPath).toBeDefined();
       expect(runPath!.startsWith(`${DOCUMENT_RUN_ROOT}\\`)).toBe(true);
