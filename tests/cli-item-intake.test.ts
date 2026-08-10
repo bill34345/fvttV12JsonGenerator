@@ -16,6 +16,7 @@ setDefaultTimeout(30_000);
 describe('AI Item Intake CLI', () => {
   test('converts raw TXT through formal Markdown and accepted V14 Item JSON with a configured provider', async () => {
     const server = Bun.serve({
+      hostname: '127.0.0.1',
       port: 0,
       async fetch(request) {
         const body = await request.json() as any;
@@ -54,11 +55,7 @@ describe('AI Item Intake CLI', () => {
           FVTT_REFERENCE_CACHE_ROOT: REFERENCE_CACHE_ROOT,
         },
       });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        proc.exited,
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
+      const { exitCode, stdout, stderr } = await collectSubprocess(proc, 20_000);
       expect({ exitCode, stdout, stderr }).toEqual({
         exitCode: 0,
         stdout: expect.any(String),
@@ -112,4 +109,25 @@ function withoutIntakeEnv(): Record<string, string> {
     'MONSTER_INTAKE_AUTH_MODE', 'MONSTER_INTAKE_CODEX_OAUTH_BASE_URL', 'MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN',
   ]) delete env[key];
   return env;
+}
+
+async function collectSubprocess(
+  proc: Bun.Subprocess<'ignore', 'pipe', 'pipe'>,
+  timeoutMs: number,
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const timeout = setTimeout(() => proc.kill(), timeoutMs);
+  try {
+    const [exitCode, stdout, stderr] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+    return { exitCode, stdout, stderr };
+  } finally {
+    clearTimeout(timeout);
+    if (proc.exitCode === null) {
+      proc.kill();
+      await proc.exited;
+    }
+  }
 }
