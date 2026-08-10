@@ -72,7 +72,7 @@ export class CdpConnection {
   }
 }
 
-export async function readDevToolsPort(profileDirectory: string, timeoutMs = 20_000): Promise<{
+export async function readDevToolsPort(profileDirectory: string, timeoutMs = 60_000): Promise<{
   port: number;
   browserWebSocketUrl: string;
 }> {

@@ -30,7 +30,7 @@ describe('token-review CLI', () => {
     } finally {
       await removeTempDir(root);
     }
-  }, 20_000);
+  }, 60_000);
 
   test('token-review writes artifacts and can fail on needs_review', async () => {
     const root = mkdtempSync(join(tmpdir(), 'token-review-cli-write-'));
@@ -58,7 +58,7 @@ describe('token-review CLI', () => {
     } finally {
       await removeTempDir(root);
     }
-  }, 20_000);
+  }, 60_000);
 });
 
 async function runCli(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {

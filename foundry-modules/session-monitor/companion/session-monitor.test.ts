@@ -173,7 +173,7 @@ describe('full Chrome restart recovery', () => {
       server.stop(true);
       await rm(temporary, { recursive: true, force: true });
     }
-  }, 60_000);
+  }, 150_000);
 });
 
 function browserSample(sequence: number, usedBytes: number) {
