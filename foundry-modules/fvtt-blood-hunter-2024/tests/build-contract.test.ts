@@ -26,6 +26,8 @@ import { makeBloodHunter2024Fixture } from '../../../packages/blood-hunter-v14/t
 import { createLabConfig } from '../labConfig.ts';
 
 const temporaryRoots: string[] = [];
+const CLASSIC_LEVEL_ENTRY = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim()
+  || 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js';
 
 afterEach(async () => {
   for (const root of temporaryRoots.splice(0)) await rm(root, { recursive: true, force: true });
@@ -109,7 +111,7 @@ describe('module release contract', () => {
     await mkdir(labRoot, { recursive: true });
     const config = createLabConfig(resolve(import.meta.dir, '../../..'), {
       FVTT_OPS_LAB_ROOT: labRoot,
-      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js',
+      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: CLASSIC_LEVEL_ENTRY,
       FVTT_REFERENCE_CACHE_ROOT: root,
     });
     await expect(buildBloodHunterModule({ sourcePath, config, publish: false })).rejects.toThrow(/SHA-256|source/);
@@ -131,7 +133,7 @@ describe('module release contract', () => {
     await mkdir(labRoot, { recursive: true });
     const config = createLabConfig(resolve(import.meta.dir, '../../..'), {
       FVTT_OPS_LAB_ROOT: labRoot,
-      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js',
+      FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: CLASSIC_LEVEL_ENTRY,
       FVTT_REFERENCE_CACHE_ROOT: root,
     });
     const packPath = join(root, 'pack');

@@ -18,7 +18,8 @@ import {
 } from '../labConfig.ts';
 import { EXPECTED_DND5E_EXTERNAL_UUIDS } from '../build.ts';
 
-const CLASSIC_LEVEL_ENTRY = 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js';
+const CLASSIC_LEVEL_ENTRY = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim()
+  || 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js';
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {
