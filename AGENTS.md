@@ -10,7 +10,8 @@
 - 本项目把 Obsidian 中文 YAML/Markdown、英文 bestiary Markdown 和正式 Intake 接受的文本，转换为 Foundry Virtual Tabletop（Foundry VTT）dnd5e Actor/Item JSON。默认输入、输出分别位于 `obsidian/dnd数据转fvttjson/input` 与 `obsidian/dnd数据转fvttjson/output`。
 - 最终交付物必须由项目 CLI 或正式 workflow 生成；不得手写、手工修补或把临时 JSON 冒充正式结果。
 - 用户未指定目标时，代理必须显式使用 `--fvtt-version 14 --effect-profile core`，并按 Foundry `14.364` / dnd5e `5.3.3` 验证。这是代理操作默认，不改变 CLI/Web 的历史产品默认；用户明确要求 v12、`modded-v14` 或其他已支持目标时按请求执行。
-- 版本相关行为优先查 `references/` 的 tracked provenance 和配置的完整 reference cache；缺失时才查精确版本官方源码/文档。不得凭记忆或“最新版”推断 flags、hooks、schema 或模块行为。
+- 版本相关开发按 [`docs/runbooks/foundry-v14-development-source-routing.md`](docs/runbooks/foundry-v14-development-source-routing.md) 选择最小且足够的资料组合；Context7、官方 API/Wiki、上游源码、官方 CLI、模板与本机 MCP 都是可选入口，不要求每次全部调用。
+- Context7 主要用于发现、速查和定位候选 API；最终版本相关结论仍优先核对 `references/` 的 tracked provenance、配置的完整 reference cache 或精确版本官方源码。不得凭记忆、未锁版本的搜索结果或“最新版”推断 flags、hooks、schema 或模块行为。
 
 ## 每次任务开始的硬门禁
 
@@ -32,6 +33,7 @@
 
 - 当前支持边界：`docs/acceptance/current-support-matrix.md`。
 - Actor/Item 来源语义验收：`docs/generated-actor-verification.md`。
+- Foundry v14/dnd5e 开发资料与工具选择：`docs/runbooks/foundry-v14-development-source-routing.md`。
 - 长期整改与架构记录：`docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`、`docs/plans/2026-07-31-project-classification-and-architecture-reorganization.md`、`docs/remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md`。
 - 整改或架构任务改代码前必须读取对应权威计划，并在停止点同步证据、决定和精确剩余工作。
 
