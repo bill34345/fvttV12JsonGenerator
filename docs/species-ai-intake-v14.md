@@ -91,4 +91,14 @@ bun run verify:homebrew-species
 
 本地 `fvtt-v14-module-matrix` disposable world 已在 Foundry `14.364` / dnd5e `5.3.3` 中安装并启用该模块。原生 Add Species 流程确认 giant/Ogre、Large、40尺、60尺黑暗视觉和 AC 10→8；1级 Barbarian 的最大生命值为 12+3=15，5级为 40+15=55；5级附赠动作脱困连续消耗至 0/2，第三次没有生成聊天卡，Long Rest 恢复为 2/2。聊天卡明确要求手动执行原受擒检定，不选择属性/技能、不自动解除状态，并保留身强力壮优势。巨武器与“体型不超过你二级”始终是 DM 现场判断，未生成系统体型测试、武器写入、推击或 Token 移动。
 
-这仍不是无边界的 runtime Pass：本次没有完成精确 2×2 Token 放置、现有武器应用种族前后的字节级比较或 Actor 导出/读回。远程生产 8080 未接触，长期跑团也未验收；本地安装不等于发布或生产部署。
+这仍不是无边界的 runtime Pass：本次没有完成精确 2×2 Token 放置、现有武器应用种族前后的字节级比较或 Actor 导出/读回。长期跑团也未验收。
+
+## 2026-08-13 线上 8080 部署记录
+
+- 用户明确授权把该模块安装到线上 `8080` 并重启；本次只操作 `fvtt-production` 的 `8080`，`51020` 的 v14 进程保持运行且未写入。
+- 用户同时明确要求本地和线上不创建备份，也不以在线人数为执行门槛。本次没有创建模块或世界备份；只使用唯一的 ZIP 暂存与构建验证目录，不保留旧模块副本。
+- 远端模块目录 `E:\Bill\fvtt_v13\data\Data\modules\fvtt-homebrew-species` 已落盘 10 个文件、31,577 bytes；manifest 为 `fvtt-homebrew-species` / `1.0.0`，包含 `species` 与 `features` 两个 Item pack。线上 HTTP 可读 `module.json` 与 `data/identity-manifest.json`，logical hash 为 `d9bd6759dc378333f314431e7839d2d3beadd6eb0e6faf9b9a440168f07258fd`，1 race / 5 features。
+- 重启后的精确命令为 `E:\Bill\v14\code\main.js --port=8080 --dataPath="E:\Bill\fvtt_v13\data" --world=cor-cotn`；最终 `/api/status` 为 active、Foundry `14.364`、dnd5e `5.3.3`、world `cor-cotn`，监听 PID 为 9852。日志记录 `Server started and listening on port 8080`，没有新增该模块错误。
+- 为清除无进程占用的启动锁，删除了 `E:\Bill\fvtt_v13\data\Config\options.json.lock`；没有直接编辑世界 LevelDB。
+- 生产模块文件已安装并可由 Foundry 服务提供，但未取得 `Gamemaster` 密码，不能通过 UI 证明 `cor-cotn` 已启用该模块；因此“已安装/服务已恢复”为 Pass，“世界已启用/食人魔已在生产界面可用”保持未验收，不把文件落盘冒充启用。
+- 线上部署使用的 ZIP SHA-256 是 `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`。master 集成前的 Markdown revision review 只更新 accepted Markdown hash/run 证据，Foundry documents 与 module logical hash 未变；当前本地重建 ZIP SHA-256 为 `77281eac8e0c5e3f7bd6f2ec3d44603da53b9d2eb0845b450bf4721cd9466e11`，本轮合并没有重新部署线上模块。

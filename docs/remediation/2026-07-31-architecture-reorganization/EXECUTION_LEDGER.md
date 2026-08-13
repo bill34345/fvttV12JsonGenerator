@@ -1526,3 +1526,12 @@ root 治理因此完成；仓库 `.local/references` 只作为兼容窗口副本
   0 violations，345-source anti-overfit、1,059-path hygiene、25 个 AGENTS、全部类型检查、dnd5e 5.3.3 reference、
   Web build 与 White Tusk Shaman 离线 Actor smoke 均通过；artifact verifier 随后再次通过；
 - 尚未完成精确 2×2 Token 放置、现有武器前后字节比较或 Actor 导出/读回；远程生产 8080 未接触，长期跑团未验收。
+
+### 2026-08-13：食人魔模块线上 8080 安装与重启
+
+- 用户明确授权把构建产物安装到 `fvtt-production` 的 8080，并要求本地/线上不创建备份、不以在线人数为门槛；本次未创建备份，未触碰 51020，未直接编辑世界 LevelDB。
+- 部署 ZIP SHA-256 为 `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`。远端 `Data\modules\fvtt-homebrew-species` 为 10 文件、31,577 bytes；manifest id/version 为 `fvtt-homebrew-species` / `1.0.0`，`species` / `features` 两个 pack 存在；identity logical hash 为 `d9bd6759dc378333f314431e7839d2d3beadd6eb0e6faf9b9a440168f07258fd`。
+- 线上精确 v14/8080 进程以 `--world=cor-cotn` 恢复，最终 PID 9852，`/api/status` 为 Foundry 14.364、dnd5e 5.3.3、active、world `cor-cotn`；stdout 记录 `Server started and listening on port 8080`，未见新增该模块错误。启动时清理了无进程占用的 `Config\options.json.lock`。
+- 生产文件安装与服务恢复为机械 Pass；因没有 Gamemaster 密码，未能在 Manage Modules UI 证明世界已启用该模块，生产食人魔界面/角色行为仍待 GM 登录后的语义验收。
+- 该生产门禁已交回同一只读 `sol_reviewer` 复核并得到 `PASS`；复核结论同样要求把“已安装/服务恢复”与“世界已启用/玩法可用”分开报告。
+- master 集成前的正式 Markdown revision review 更新了 accepted run/hash，因此当前本地 ZIP SHA-256 为 `77281eac8e0c5e3f7bd6f2ec3d44603da53b9d2eb0845b450bf4721cd9466e11`；Foundry documents 与 module logical hash 没有变化，本轮只合并代码和证据，没有重新写入生产。
