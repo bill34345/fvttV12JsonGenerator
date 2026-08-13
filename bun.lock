@@ -93,6 +93,18 @@
         "typescript": "^5.9.3",
       },
     },
+    "foundry-modules/fvtt-homebrew-species": {
+      "name": "@fvtt-json-generator/fvtt-homebrew-species",
+      "version": "1.0.0",
+      "dependencies": {
+        "@fvtt-json-generator/generation": "workspace:*",
+      },
+      "devDependencies": {
+        "@fvtt-json-generator/intake-ai": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "^5.9.3",
+      },
+    },
     "foundry-modules/fvtt-house-rules": {
       "name": "@fvtt-json-generator/fvtt-house-rules",
       "version": "0.1.0",
@@ -323,6 +335,8 @@
     "@fvtt-json-generator/fvtt-battlefield-painter": ["@fvtt-json-generator/fvtt-battlefield-painter@workspace:foundry-modules/fvtt-battlefield-painter"],
 
     "@fvtt-json-generator/fvtt-blood-hunter-2024": ["@fvtt-json-generator/fvtt-blood-hunter-2024@workspace:foundry-modules/fvtt-blood-hunter-2024"],
+
+    "@fvtt-json-generator/fvtt-homebrew-species": ["@fvtt-json-generator/fvtt-homebrew-species@workspace:foundry-modules/fvtt-homebrew-species"],
 
     "@fvtt-json-generator/fvtt-house-rules": ["@fvtt-json-generator/fvtt-house-rules@workspace:foundry-modules/fvtt-house-rules"],
 
@@ -1180,13 +1194,21 @@
 
     "@fvtt-json-generator/fvtt-blood-hunter-2024/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
+    "@fvtt-json-generator/fvtt-homebrew-species/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
     "@fvtt-json-generator/fvtt-house-rules/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@fvtt-json-generator/fvtt-house-rules/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@fvtt-json-generator/fvtt-injury-fading-spirits/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
+    "@fvtt-json-generator/generation/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
+
+    "@fvtt-json-generator/intake-ai/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
+
     "@fvtt-json-generator/monster-spell-resolver/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
+    "@fvtt-json-generator/parser/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
 
     "@fvtt-json-generator/session-monitor/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
@@ -1327,6 +1349,8 @@
     "@fvtt-json-generator/fvtt-battlefield-painter/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@fvtt-json-generator/fvtt-blood-hunter-2024/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+
+    "@fvtt-json-generator/fvtt-homebrew-species/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@fvtt-json-generator/fvtt-house-rules/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

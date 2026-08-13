@@ -1,0 +1,19 @@
+{
+  "name": "@fvtt-json-generator/fvtt-homebrew-species",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false",
+    "build": "bun run build.ts",
+    "test": "bun test tests --max-concurrency 1"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/generation": "workspace:*"
+  },
+  "devDependencies": {
+    "@fvtt-json-generator/intake-ai": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

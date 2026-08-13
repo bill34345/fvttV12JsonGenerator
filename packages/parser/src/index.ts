@@ -14,5 +14,7 @@ export { normalizeChineseText } from './normalize';
 export { parseActorResourceSemantics } from './resourceSemantics';
 export { ParserFactory } from './router';
 export { StructuredActionParser } from './structuredAction';
+export { parseSpeciesMarkdown, SpeciesMarkdownError } from './speciesParser';
+export { detectSpeciesRoute } from './speciesRouter';
 export * from './types';
 export { YamlParser } from './yaml';

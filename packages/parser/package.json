@@ -19,6 +19,8 @@
     "./models/action": "./src/models/action.ts",
     "./normalize": "./src/normalize.ts",
     "./resource-semantics": "./src/resourceSemantics.ts",
+    "./species-parser": "./src/speciesParser.ts",
+    "./species-router": "./src/speciesRouter.ts",
     "./router": "./src/router.ts",
     "./structured-action": "./src/structuredAction.ts",
     "./types": "./src/types.ts",

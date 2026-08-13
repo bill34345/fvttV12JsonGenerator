@@ -80,6 +80,10 @@ tmp-test-*/
 output/
 outputs/
 output.json
+!obsidian/dnd数据转fvttjson/output/
+obsidian/dnd数据转fvttjson/output/*
+!obsidian/dnd数据转fvttjson/output/species/
+!obsidian/dnd数据转fvttjson/output/species/*.json
 temp/
 temp-items/
 temp-*/

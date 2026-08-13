@@ -9,7 +9,7 @@ import { assertInsideLabRoot } from '../config';
 export type ProfileId = 'core-test' | 'server-mirror';
 export function buildLaunchCommand(config: FoundryLabConfig, profileId: ProfileId) {
   const profile = profileId === 'core-test' ? config.profiles.coreTest : config.profiles.serverMirror;
-  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--noupnp'] };
+  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp'] };
 }
 // Foundry 14.364's parseArgs/getEnvDataPath read only --key=value tokens even
 // though buildLaunchCommand preserves the project-facing command contract.
@@ -19,7 +19,7 @@ export function buildRuntimeArgs(args: string[]): string[] {
   for (let i = 1; i < args.length; i++) {
     const value = args[i];
     if (!value) throw new Error('Foundry launch arguments must not be empty');
-    if (['--dataPath', '--hostname', '--port'].includes(value)) {
+    if (['--dataPath', '--hostname', '--port', '--world'].includes(value)) {
       const next = args[++i]; if (!next) throw new Error(`Missing value for ${value}`); result.push(`${value}=${next}`);
     } else result.push(value);
   }
@@ -67,10 +67,12 @@ export function isExpectedFoundryProcess(config: FoundryLabConfig, id: ProfileId
   const expectedMain = normalizedPath(resolve(config.appRoot, 'main.js'));
   const dataToken = tokens.find((token) => token.toLowerCase().startsWith('--datapath='));
   const portToken = tokens.find((token) => token.toLowerCase().startsWith('--port='));
+  const worldToken = tokens.find((token) => token.toLowerCase().startsWith('--world='));
   return normalizedPath(executable) === normalizedPath(resolve(config.nodeRoot, 'node.exe'))
     && tokens.some((token) => normalizedPath(token) === expectedMain)
     && !!dataToken && normalizedPath(dataToken.slice(dataToken.indexOf('=') + 1)) === normalizedPath(profile.dataPath)
-    && portToken === `--port=${profile.port}`;
+    && portToken === `--port=${profile.port}`
+    && worldToken === `--world=${config.defaultWorldId}`;
 }
 function queryProcess(pid: number): { executable: string; commandLine: string } | null {
   const query = Bun.spawnSync(['powershell', '-NoProfile', '-NonInteractive', '-Command', `$p=Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}' -ErrorAction SilentlyContinue;if($p){$p|Select-Object ExecutablePath,CommandLine|ConvertTo-Json -Compress}`], { stdout: 'pipe', stderr: 'pipe' });

@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "moduleId": "fvtt-homebrew-species",
+  "target": {
+    "foundry": "14.364",
+    "dnd5e": "5.3.3",
+    "effectProfile": "core",
+    "rules": "2024"
+  },
+  "sourceSha256": "6b2374257353ee7d013d826c31ef57b9aca6c5a15677356a228ed12b1bd76d94",
+  "species": {
+    "name": "食人魔（Ogre）",
+    "type": "race",
+    "_id": "bad38efc548858f8",
+    "img": "icons/svg/mystery-man.svg",
+    "system": {
+      "description": {
+        "value": "<p><strong>生物类型：</strong>giant</p><p><strong>体型：</strong>大型（约10-12尺）</p><p><strong>速度：</strong>40尺</p><h3>巨武器使用</h3><p>你可以使用比重型还大的巨型武器：<br>1. 巨型武器可以造成比原本武器大一面骰子的伤害。若武器原本是1d12的骰子伤害，则伤害变成2d8。<br>2. 你可以投掷任意不带重型或巨型词条的武器，在投掷时从原本的一个骰子拆分成两个更小面的骰子，最终最大值保持一致（eg：战锤1d8 → 投掷战锤2d4），投掷范围20/60。<br>3. 你的武器或徒手攻击可以让体型不超过你二级的生物进行一次力量豁免，DC=8+你的攻击检定时使用的调整值+熟练加值，失败的生物会被你推离5尺（已记在武器内）。<br>4. 若你武器或徒手攻击的目标是物件或建筑物，则你可以对其造成双倍伤害。</p><h3>身强力壮</h3><p>你为让自己结束受擒状态所进行的属性检定具有优势。</p><h3>身强力壮：附赠动作脱困</h3><p>从第5级开始，若原本解除受擒状态所需要进行的属性检定要求消耗你的动作，取而代之你可以消耗一个附赠动作进行尝试，你可以这么做2次，长休后恢复所有使用次数。</p><h3>食人魔刚毅</h3><p>你的生命值上限加3，且此后每次升级时再加3。</p><h3>食人魔笨拙</h3><p>你的AC-2，若你倒地，则你需要花费全部速度站起来。</p>",
+        "chat": ""
+      },
+      "source": {
+        "custom": "Private homebrew",
+        "rules": "2024",
+        "revision": 1,
+        "book": "",
+        "license": ""
+      },
+      "advancement": [
+        {
+          "_id": "6331368a90eed415",
+          "type": "Size",
+          "configuration": {
+            "sizes": [
+              "lg"
+            ]
+          },
+          "level": 0,
+          "title": "",
+          "hint": "大型（约10-12尺）",
+          "value": {}
+        },
+        {
+          "_id": "293e47371ae69d9b",
+          "type": "ItemGrant",
+          "configuration": {
+            "items": [
+              {
+                "uuid": "Compendium.fvtt-homebrew-species.features.Item.8d4fbf067e76433b",
+                "optional": false
+              },
+              {
+                "uuid": "Compendium.fvtt-homebrew-species.features.Item.02e9c193074d181a",
+                "optional": false
+              },
+              {
+                "uuid": "Compendium.fvtt-homebrew-species.features.Item.510c857bd5ff02bd",
+                "optional": false
+              },
+              {
+                "uuid": "Compendium.fvtt-homebrew-species.features.Item.c93a20c1d5acdedf",
+                "optional": false
+              }
+            ],
+            "optional": false,
+            "spell": null
+          },
+          "value": {},
+          "level": 0,
+          "title": "食人魔（Ogre）特性",
+          "hint": ""
+        },
+        {
+          "_id": "490241c2c644dfce",
+          "type": "ItemGrant",
+          "configuration": {
+            "items": [
+              {
+                "uuid": "Compendium.fvtt-homebrew-species.features.Item.d5b8d48cbbf3aafd",
+                "optional": false
+              }
+            ],
+            "optional": false,
+            "spell": null
+          },
+          "value": {},
+          "level": 5,
+          "title": "食人魔（Ogre）特性",
+          "hint": ""
+        }
+      ],
+      "movement": {
+        "burrow": null,
+        "climb": null,
+        "fly": null,
+        "swim": null,
+        "walk": 40,
+        "units": "ft",
+        "hover": false
+      },
+      "senses": {
+        "darkvision": 60,
+        "blindsight": null,
+        "tremorsense": null,
+        "truesight": null,
+        "units": "ft",
+        "special": ""
+      },
+      "type": {
+        "value": "giant",
+        "custom": "",
+        "subtype": "Ogre"
+      },
+      "identifier": "ogre"
+    },
+    "effects": [],
+    "folder": null,
+    "sort": 0,
+    "ownership": {
+      "default": 0
+    },
+    "flags": {}
+  },
+  "features": [
+    {
+      "name": "巨武器使用",
+      "type": "feat",
+      "_id": "8d4fbf067e76433b",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "activities": {},
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "description": {
+          "value": "<p>你可以使用比重型还大的巨型武器：<br>1. 巨型武器可以造成比原本武器大一面骰子的伤害。若武器原本是1d12的骰子伤害，则伤害变成2d8。<br>2. 你可以投掷任意不带重型或巨型词条的武器，在投掷时从原本的一个骰子拆分成两个更小面的骰子，最终最大值保持一致（eg：战锤1d8 → 投掷战锤2d4），投掷范围20/60。<br>3. 你的武器或徒手攻击可以让体型不超过你二级的生物进行一次力量豁免，DC=8+你的攻击检定时使用的调整值+熟练加值，失败的生物会被你推离5尺（已记在武器内）。<br>4. 若你武器或徒手攻击的目标是物件或建筑物，则你可以对其造成双倍伤害。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Private homebrew",
+          "rules": "2024",
+          "revision": 1,
+          "book": "",
+          "license": ""
+        },
+        "enchant": {},
+        "type": {
+          "value": "race",
+          "subtype": ""
+        },
+        "prerequisites": {
+          "level": 0,
+          "repeatable": false
+        },
+        "properties": [],
+        "requirements": "食人魔（Ogre）",
+        "identifier": "giant-weapon-use"
+      },
+      "effects": [],
+      "folder": null,
+      "flags": {
+        "dnd5e": {
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        }
+      },
+      "sort": 0,
+      "ownership": {
+        "default": 0
+      }
+    },
+    {
+      "name": "身强力壮（Powerful Build）",
+      "type": "feat",
+      "_id": "02e9c193074d181a",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "activities": {},
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "description": {
+          "value": "<p>你为让自己结束受擒状态所进行的属性检定具有优势。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Private homebrew",
+          "rules": "2024",
+          "revision": 1,
+          "book": "",
+          "license": ""
+        },
+        "enchant": {},
+        "type": {
+          "value": "race",
+          "subtype": ""
+        },
+        "prerequisites": {
+          "level": 0,
+          "repeatable": false
+        },
+        "properties": [],
+        "requirements": "食人魔（Ogre）",
+        "identifier": "powerful-build"
+      },
+      "effects": [],
+      "folder": null,
+      "flags": {
+        "dnd5e": {
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        }
+      },
+      "sort": 0,
+      "ownership": {
+        "default": 0
+      }
+    },
+    {
+      "name": "身强力壮：附赠动作脱困",
+      "type": "feat",
+      "_id": "d5b8d48cbbf3aafd",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "activities": {
+          "d487bfed2e98de40": {
+            "type": "utility",
+            "name": "身强力壮：附赠动作脱困",
+            "_id": "d487bfed2e98de40",
+            "sort": 0,
+            "activation": {
+              "type": "bonus",
+              "value": null,
+              "override": false,
+              "condition": ""
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false
+              },
+              "spellSlot": false,
+              "targets": [
+                {
+                  "type": "itemUses",
+                  "value": "1",
+                  "target": "",
+                  "scaling": {}
+                }
+              ]
+            },
+            "description": {
+              "chatFlavor": "若原本解除受擒状态所需要进行的属性检定要求消耗你的动作，你可以消耗一个附赠动作进行尝试。请手动进行原本要求的属性检定；此功能不选择属性或技能，也不自动移除受擒状态。来源中“身强力壮”赋予的该检定优势仍然适用。"
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false,
+              "value": ""
+            },
+            "effects": [],
+            "range": {
+              "override": false,
+              "units": "self",
+              "special": ""
+            },
+            "target": {
+              "template": {
+                "contiguous": false,
+                "units": "ft",
+                "type": ""
+              },
+              "affects": {
+                "choice": false,
+                "count": "",
+                "type": "self",
+                "special": ""
+              },
+              "override": false,
+              "prompt": false
+            },
+            "uses": {
+              "spent": 0,
+              "recovery": [],
+              "max": ""
+            },
+            "roll": {
+              "prompt": false,
+              "visible": false,
+              "name": "",
+              "formula": ""
+            },
+            "img": "icons/svg/mystery-man.svg",
+            "appliedEffects": []
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [
+            {
+              "period": "lr",
+              "type": "recoverAll"
+            }
+          ],
+          "max": "2"
+        },
+        "description": {
+          "value": "<p>从第5级开始，若原本解除受擒状态所需要进行的属性检定要求消耗你的动作，取而代之你可以消耗一个附赠动作进行尝试，你可以这么做2次，长休后恢复所有使用次数。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Private homebrew",
+          "rules": "2024",
+          "revision": 1,
+          "book": "",
+          "license": ""
+        },
+        "enchant": {},
+        "type": {
+          "value": "race",
+          "subtype": ""
+        },
+        "prerequisites": {
+          "level": 5,
+          "repeatable": false
+        },
+        "properties": [],
+        "requirements": "食人魔（Ogre）",
+        "identifier": "powerful-build-bonus-action-escape"
+      },
+      "effects": [],
+      "folder": null,
+      "flags": {
+        "dnd5e": {
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        }
+      },
+      "sort": 0,
+      "ownership": {
+        "default": 0
+      }
+    },
+    {
+      "name": "食人魔刚毅（Ogre Toughness）",
+      "type": "feat",
+      "_id": "510c857bd5ff02bd",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "activities": {},
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "description": {
+          "value": "<p>你的生命值上限加3，且此后每次升级时再加3。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Private homebrew",
+          "rules": "2024",
+          "revision": 1,
+          "book": "",
+          "license": ""
+        },
+        "enchant": {},
+        "type": {
+          "value": "race",
+          "subtype": ""
+        },
+        "prerequisites": {
+          "level": 0,
+          "repeatable": false
+        },
+        "properties": [],
+        "requirements": "食人魔（Ogre）",
+        "identifier": "ogre-toughness"
+      },
+      "effects": [
+        {
+          "name": "食人魔刚毅",
+          "img": "icons/svg/mystery-man.svg",
+          "_id": "800a772041327ffc",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.hp.bonuses.level",
+              "mode": 2,
+              "value": "3",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": "Compendium.fvtt-homebrew-species.features.Item.510c857bd5ff02bd",
+          "tint": "#ffffff",
+          "transfer": true,
+          "statuses": [],
+          "sort": 0,
+          "flags": {}
+        }
+      ],
+      "folder": null,
+      "flags": {
+        "dnd5e": {
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        }
+      },
+      "sort": 0,
+      "ownership": {
+        "default": 0
+      }
+    },
+    {
+      "name": "食人魔笨拙",
+      "type": "feat",
+      "_id": "c93a20c1d5acdedf",
+      "img": "icons/svg/mystery-man.svg",
+      "system": {
+        "activities": {},
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "description": {
+          "value": "<p>你的AC-2，若你倒地，则你需要花费全部速度站起来。</p>",
+          "chat": ""
+        },
+        "source": {
+          "custom": "Private homebrew",
+          "rules": "2024",
+          "revision": 1,
+          "book": "",
+          "license": ""
+        },
+        "enchant": {},
+        "type": {
+          "value": "race",
+          "subtype": ""
+        },
+        "prerequisites": {
+          "level": 0,
+          "repeatable": false
+        },
+        "properties": [],
+        "requirements": "食人魔（Ogre）",
+        "identifier": "ogre-clumsiness"
+      },
+      "effects": [
+        {
+          "name": "食人魔笨拙",
+          "img": "icons/svg/mystery-man.svg",
+          "_id": "44e35f2f5c1b9bf7",
+          "type": "base",
+          "system": {},
+          "changes": [
+            {
+              "key": "system.attributes.ac.bonus",
+              "mode": 2,
+              "value": "-2",
+              "priority": null
+            }
+          ],
+          "disabled": false,
+          "duration": {
+            "startTime": null,
+            "seconds": null,
+            "combat": null,
+            "rounds": null,
+            "turns": null,
+            "startRound": null,
+            "startTurn": null
+          },
+          "description": "",
+          "origin": "Compendium.fvtt-homebrew-species.features.Item.c93a20c1d5acdedf",
+          "tint": "#ffffff",
+          "transfer": true,
+          "statuses": [],
+          "sort": 0,
+          "flags": {}
+        }
+      ],
+      "folder": null,
+      "flags": {
+        "dnd5e": {
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        }
+      },
+      "sort": 0,
+      "ownership": {
+        "default": 0
+      }
+    }
+  ],
+  "coverageLedger": [
+    {
+      "featureId": "giant-weapon-use",
+      "partId": "giant-weapon-use-main",
+      "level": 0,
+      "automation": "gm-assisted",
+      "mechanicKinds": [
+        "gm-assisted"
+      ]
+    },
+    {
+      "featureId": "powerful-build",
+      "partId": "powerful-build-main",
+      "level": 0,
+      "automation": "descriptive",
+      "mechanicKinds": [
+        "descriptive-passive"
+      ]
+    },
+    {
+      "featureId": "powerful-build-bonus-action-escape",
+      "partId": "powerful-build-bonus-action-escape-main",
+      "level": 5,
+      "automation": "native",
+      "mechanicKinds": [
+        "limited-utility"
+      ]
+    },
+    {
+      "featureId": "ogre-toughness",
+      "partId": "ogre-toughness-main",
+      "level": 0,
+      "automation": "native",
+      "mechanicKinds": [
+        "hp-per-level"
+      ]
+    },
+    {
+      "featureId": "ogre-clumsiness",
+      "partId": "ogre-clumsiness-ac",
+      "level": 0,
+      "automation": "native",
+      "mechanicKinds": [
+        "ac-bonus"
+      ]
+    },
+    {
+      "featureId": "ogre-clumsiness",
+      "partId": "ogre-clumsiness-standing",
+      "level": 0,
+      "automation": "gm-assisted",
+      "mechanicKinds": [
+        "gm-assisted"
+      ]
+    }
+  ],
+  "markdownSha256": "7243c8e4470efa2830d40c1e0e29b64155f6e8f7066d0121c387891f9871dfb7",
+  "logicalHash": "78496f642fdde960bc590947ebd0d4b3dde0c79ff149ebc4ef1faadb74788e0e"
+}

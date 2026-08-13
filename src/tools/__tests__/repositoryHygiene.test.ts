@@ -97,6 +97,22 @@ describe('repository hygiene gate', () => {
     ]);
   });
 
+  it('allows only stable Species acceptance JSONs inside the vault output tree', () => {
+    const findings = inspectTrackedArtifactPaths([
+      'obsidian/dnd数据转fvttjson/output/species/accepted-ledger.json',
+      'obsidian/dnd数据转fvttjson/output/species/ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/Ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/ogre/review.json',
+      'obsidian/dnd数据转fvttjson/output/items/ogre.json',
+    ]);
+
+    expect(findings.map((finding) => [finding.path, finding.rule])).toEqual([
+      ['obsidian/dnd数据转fvttjson/output/species/Ogre.json', 'disposable-generated-output'],
+      ['obsidian/dnd数据转fvttjson/output/species/ogre/review.json', 'disposable-generated-output'],
+      ['obsidian/dnd数据转fvttjson/output/items/ogre.json', 'disposable-generated-output'],
+    ]);
+  });
+
   it('fails closed for prohibited paths, zero tracked paths, and Git collection errors', () => {
     const prohibited = executeRepositoryHygiene({
       collectTrackedPaths: () => ['src/index.ts', 'output/actor.json'],

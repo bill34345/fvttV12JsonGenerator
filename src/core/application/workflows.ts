@@ -30,6 +30,10 @@ import {
   resumeItemIntake as resumePackageItemIntake,
   runItemIntake as runPackageItemIntake,
 } from '@fvtt-json-generator/intake-ai/item-orchestrator';
+import {
+  resumeSpeciesIntake as resumePackageSpeciesIntake,
+  runSpeciesIntake as runPackageSpeciesIntake,
+} from '@fvtt-json-generator/intake-ai/species-orchestrator';
 import type {
   CollectionConversionOptions,
   CollectionConversionResult,
@@ -44,6 +48,11 @@ import type {
   ItemIntakeOptions,
   ItemIntakeRunResult,
 } from '@fvtt-json-generator/intake-ai/item-types';
+import type {
+  SpeciesIntakeAiProvider,
+  SpeciesIntakeOptions,
+  SpeciesIntakeRunResult,
+} from '@fvtt-json-generator/intake-ai/species-types';
 import { conversionApplication } from './conversion';
 import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
@@ -187,4 +196,20 @@ export function resumeItemIntake(
   vaultPath?: string,
 ): Promise<ItemIntakeRunResult> {
   return resumePackageItemIntake(runPath, decisionsPath, provider, vaultPath, itemIntakeDependencies);
+}
+
+export function runSpeciesIntake(
+  options: SpeciesIntakeOptions,
+  provider?: SpeciesIntakeAiProvider,
+): Promise<SpeciesIntakeRunResult> {
+  return runPackageSpeciesIntake(options, provider);
+}
+
+export function resumeSpeciesIntake(
+  runPath: string,
+  decisionsPath: string,
+  provider: SpeciesIntakeAiProvider,
+  vaultPath?: string,
+): Promise<SpeciesIntakeRunResult> {
+  return resumePackageSpeciesIntake(runPath, decisionsPath, provider, vaultPath);
 }

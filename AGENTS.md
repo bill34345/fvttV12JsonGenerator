@@ -10,7 +10,8 @@
 - 本项目把 Obsidian 中文 YAML/Markdown、英文 bestiary Markdown 和正式 Intake 接受的文本，转换为 Foundry Virtual Tabletop（Foundry VTT）dnd5e Actor/Item JSON。默认输入、输出分别位于 `obsidian/dnd数据转fvttjson/input` 与 `obsidian/dnd数据转fvttjson/output`。
 - 最终交付物必须由项目 CLI 或正式 workflow 生成；不得手写、手工修补或把临时 JSON 冒充正式结果。
 - 用户未指定目标时，代理必须显式使用 `--fvtt-version 14 --effect-profile core`，并按 Foundry `14.364` / dnd5e `5.3.3` 验证。这是代理操作默认，不改变 CLI/Web 的历史产品默认；用户明确要求 v12、`modded-v14` 或其他已支持目标时按请求执行。
-- 版本相关行为优先查 `references/` 的 tracked provenance 和配置的完整 reference cache；缺失时才查精确版本官方源码/文档。不得凭记忆或“最新版”推断 flags、hooks、schema 或模块行为。
+- 版本相关开发按 [`docs/runbooks/foundry-v14-development-source-routing.md`](docs/runbooks/foundry-v14-development-source-routing.md) 选择最小且足够的资料组合；Context7、官方 API/Wiki、上游源码、官方 CLI、模板与本机 MCP 都是可选入口，不要求每次全部调用。
+- Context7 主要用于发现、速查和定位候选 API；最终版本相关结论仍优先核对 `references/` 的 tracked provenance、配置的完整 reference cache 或精确版本官方源码。不得凭记忆、未锁版本的搜索结果或“最新版”推断 flags、hooks、schema 或模块行为。
 
 ## 每次任务开始的硬门禁
 
@@ -32,6 +33,7 @@
 
 - 当前支持边界：`docs/acceptance/current-support-matrix.md`。
 - Actor/Item 来源语义验收：`docs/generated-actor-verification.md`。
+- Foundry v14/dnd5e 开发资料与工具选择：`docs/runbooks/foundry-v14-development-source-routing.md`。
 - 长期整改与架构记录：`docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`、`docs/plans/2026-07-31-project-classification-and-architecture-reorganization.md`、`docs/remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md`。
 - 整改或架构任务改代码前必须读取对应权威计划，并在停止点同步证据、决定和精确剩余工作。
 
@@ -80,3 +82,9 @@
 - `.ruler/AGENTS.md` 是根说明唯一编辑源；根 `AGENTS.md` 只能由项目锁定的 Ruler 生成，禁止手工同步。局部 `AGENTS.md` 直接维护，但不得复制根规则。
 - 详细教程放 README，逐步操作/恢复放 runbook，长期进度放 ExecPlan/Ledger，可重复且按需加载的流程才放 Skill。
 - 提交前运行 `bun run agents:generate`、`bun run agents:check`，并阅读最终根/局部文档确认作用域、链接和表达正确。
+
+## 用户明确授权的无备份运维规则（2026-08-13）
+
+- 用户已明确要求：以后本地和线上任何任务都不创建备份；不要把“在线人数必须为零”作为已授权生产操作的执行门槛。执行仍须记录实际目标、前后文件清单、SHA-256、进程、端口和日志结果。
+- 该规则不扩大任务授权：生产写入仍须有当次明确授权、精确目标核对；不得直接编辑运行中的世界 LevelDB，不得升级 Foundry/dnd5e，不得触碰未授权实例。生产线上只允许操作授权的 `8080`；`51020` 仍保持只读。
+- 不保留旧副本，不使用临时复制、隐藏目录或“回滚目录”变相创建备份；失败时停止、报告，并等待新的明确修复授权。
