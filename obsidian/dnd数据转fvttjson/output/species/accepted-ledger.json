@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "moduleId": "fvtt-homebrew-species",
+  "entries": [
+    {
+      "identifier": "ogre",
+      "markdownPath": "input/species/ogre.md",
+      "packagePath": "output/species/ogre.json",
+      "markdownSha256": "872e098556ac59daa0ccee1ebbffb523744c5b132014f1044b6cae2de1f1cc63",
+      "sourceSha256": "6b2374257353ee7d013d826c31ef57b9aca6c5a15677356a228ed12b1bd76d94",
+      "irRevision": 1,
+      "logicalHash": "78496f642fdde960bc590947ebd0d4b3dde0c79ff149ebc4ef1faadb74788e0e",
+      "acceptedRunId": "species-20260811022558-9a41c4a1"
+    }
+  ]
+}

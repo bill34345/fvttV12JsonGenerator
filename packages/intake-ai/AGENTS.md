@@ -8,6 +8,7 @@
 
 - Item Intake is a parallel evidence IR, not a Monster compatibility mode. Its formal entry is `--intake-items`; raw TXT/irregular Item Markdown must never be routed through the legacy item AI normalizer.
 - The current Item contract is exactly Foundry `14.364` / dnd5e `5.3.3` / `core`. AC, light, shared uses and spell consumption need field-specific verifier coverage, and any unresolved spell or weak source evidence must remain `needs_review`/`failed` rather than become an empty ability or Utility fallback.
+- Species Intake is another independent evidence IR with formal entry `--intake-species`, fixed Foundry `14.364` / dnd5e `5.3.3` / `core` / 2024 scope, and a separate accepted ledger. It may accept fully preserved `gm-assisted`/`external-rule` mechanics, but arbitrary Foundry paths, arbitrary Effect changes, empty Utility fallbacks, stale Markdown and unreviewed module entries must fail closed.
 
 - 结果必须保持 `accepted`、`needs_review`、`failed` 等真实状态；不得把 provider 返回、schema 通过或文件写出自动提升为 accepted。
 - provider 原始输出必须经过本 package 的 validator/verifier；确定性 renderer 只能渲染已支持的契约。

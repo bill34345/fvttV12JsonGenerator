@@ -10,6 +10,7 @@
     "./canonical-monster": "./src/canonicalMonster.ts",
     "./item": "./src/item.ts",
     "./resource": "./src/resource.ts"
+    ,"./species": "./src/species.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

@@ -13,8 +13,10 @@ export {
   PlainTextActorWorkflow,
   resumeItemIntake,
   resumeMonsterIntake,
+  resumeSpeciesIntake,
   runItemIntake,
   runMonsterIntake,
+  runSpeciesIntake,
 } from './workflows';
 export { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
 export {
@@ -42,6 +44,7 @@ export {
 export {
   createItemIntakeProvider,
   createMonsterIntakeProvider,
+  createSpeciesIntakeProvider,
   type IntakeProviderAuditEvent,
 } from '@fvtt-json-generator/intake-ai';
 export {

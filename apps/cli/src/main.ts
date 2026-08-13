@@ -14,15 +14,18 @@ import {
   ObsidianSyncWorkflow,
   createItemIntakeProvider,
   createMonsterIntakeProvider,
+  createSpeciesIntakeProvider,
   PlainTextActorWorkflow,
   PlainTextIngestionWorkflow,
   parseFvttTargetVersion,
   parseIconMode,
   resumeItemIntake,
   resumeMonsterIntake,
+  resumeSpeciesIntake,
   runDocumentConversion,
   runItemIntake,
   runMonsterIntake,
+  runSpeciesIntake,
   isDocumentInputPath,
   type IntakeProviderAuditEvent,
 } from '../../../src/core/application/cli';
@@ -47,6 +50,8 @@ program
   .option('--resume-intake <run-dir>', 'Resume an AI monster intake review bundle')
   .option('--intake-items <source>', 'AI-first Item intake from TXT or irregular Markdown (Foundry V14/core)')
   .option('--resume-item-intake <run-dir>', 'Resume an AI Item Intake review bundle')
+  .option('--intake-species <source>', 'AI-first Species intake from TXT or canonical Species Markdown (Foundry V14/core)')
+  .option('--resume-species-intake <run-dir>', 'Resume a Species Intake review bundle')
   .option('--decisions <path>', 'Decision JSON file for --resume-intake')
   .option('--ingest-plaintext <source>', '[legacy rule-based] Split a plain-text creature collection into project markdown files')
   .option('--ingest-plaintext-actors <source>', '[legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
@@ -172,6 +177,41 @@ program
         const result = await resumeItemIntake(options.resumeItemIntake, options.decisions, provider, options.vault);
         writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
         printItemIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
+
+      if (options.intakeSpecies) {
+        if (fvttVersion !== '14' || effectProfile !== 'core') {
+          throw new Error('Species Intake only supports --fvtt-version 14 --effect-profile core.');
+        }
+        const source = readFileSync(resolve(options.intakeSpecies), 'utf-8');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = options.dryRun ? undefined : createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
+        const result = await runSpeciesIntake({
+          source,
+          sourceName: options.intakeSpecies,
+          vaultPath: options.vault,
+          dryRun: Boolean(options.dryRun),
+          fvttVersion: fvttVersion as '14',
+          effectProfile: effectProfile as 'core',
+        }, provider);
+        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+        printSpeciesIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
+        return;
+      }
+
+      if (options.resumeSpeciesIntake) {
+        if (fvttVersion !== '14' || effectProfile !== 'core') {
+          throw new Error('Species Intake only supports --fvtt-version 14 --effect-profile core.');
+        }
+        if (!options.decisions) throw new Error('--resume-species-intake requires --decisions <path>.');
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
+        const result = await resumeSpeciesIntake(options.resumeSpeciesIntake, options.decisions, provider, options.vault);
+        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
+        printSpeciesIntakeResult(result);
         process.exitCode = intakeExitCode(result.status);
         return;
       }
@@ -479,6 +519,20 @@ function printItemIntakeResult(result: Awaited<ReturnType<typeof runItemIntake>>
     for (const finding of item.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
     if (item.markdownPath) console.log(`  Markdown: ${item.markdownPath}`);
     if (item.itemPath) console.log(`  Item JSON: ${item.itemPath}`);
+  }
+}
+
+function printSpeciesIntakeResult(result: Awaited<ReturnType<typeof runSpeciesIntake>>): void {
+  console.log(`AI Species Intake run: ${result.runId}`);
+  console.log(`Status: ${result.status}`);
+  console.log(`Discovered species: ${result.discoveryCount}`);
+  if (result.estimatedMaxCalls !== undefined) console.log(`Estimated worst-case provider calls: ${result.estimatedMaxCalls}`);
+  if (result.runPath) console.log(`Review bundle: ${result.runPath}`);
+  for (const species of result.species) {
+    console.log(`- ${species.label}: ${species.status} | calls extract=${species.calls.extraction} review=${species.calls.review} repair=${species.calls.repair}`);
+    for (const finding of species.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
+    if (species.markdownPath) console.log(`  Markdown: ${species.markdownPath}`);
+    if (species.packagePath) console.log(`  Species package: ${species.packagePath}`);
   }
 }
 
