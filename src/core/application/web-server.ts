@@ -29,12 +29,30 @@ export {
   JsonTranslationSyncWorkflow,
   ObsidianSyncWorkflow,
   PlainTextActorWorkflow,
+  canonicalSourcesFromMarkdown,
+  convertCanonicalActorCollection,
   convertItemCollectionToJson,
   convertMonsterCollectionToJson,
+  detectAutomaticConversionRoute,
   resumeItemIntake,
   resumeMonsterIntake,
   runItemIntake,
   runMonsterIntake,
+} from './workflows';
+export type {
+  AutomaticConversionDetection,
+  AutomaticConversionRoute,
+} from './workflows';
+export type {
+  CanonicalActorSource,
+  CanonicalActorSourceMetadata,
+  CanonicalActorSourceStatus,
+  CanonicalActorSourceWarning,
+  CanonicalActorCollectionItemResult,
+  CanonicalActorCollectionOptions,
+  CanonicalActorCollectionOutputFile,
+  CanonicalActorCollectionResult,
+  CanonicalActorCollectionStatus,
 } from './workflows';
 export {
   type ImageAssetOptions,

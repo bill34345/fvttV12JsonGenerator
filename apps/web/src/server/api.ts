@@ -5,6 +5,7 @@ import {
   buildActorVerificationSummaryFromValues,
   DEFAULT_VAULT_PATH,
   convertMarkdownPathToOutput,
+  detectAutomaticConversionRoute,
   type ConversionResult,
   type EffectProfile,
   type FvttTargetVersion,
@@ -39,7 +40,10 @@ import {
 export { TEMP_WEB_DIR, WORKSPACE_ROOT } from './paths';
 
 type ApiSuccess<T> = { ok: true; data: T };
-type ApiFailure = { ok: false; error: { code: string; message: string; detail?: string } };
+type ApiFailure = {
+  ok: false;
+  error: { code: string; message: string; detail?: string };
+};
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 interface ConvertBody {
@@ -48,6 +52,11 @@ interface ConvertBody {
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
   iconMode?: IconMode;
+}
+
+interface DetectConversionBody {
+  fileName?: string;
+  content?: string;
 }
 
 interface ConvertPathBody {
@@ -77,8 +86,6 @@ const publicJobTypes = new Set<WebJobType>([
   'item-collection',
   'vault-sync',
   'translate-json',
-  'ingest-plaintext',
-  'ingest-plaintext-actors',
   'ingest-items',
   'goddessfantasy-board-crawl',
   'records-to-plaintext',
@@ -110,10 +117,13 @@ export async function handleApiRequest(
       trustedProxies: securityConfig.trustedProxies,
     });
 
-    if (request.method !== 'GET' && !checkShortRateLimit(clientIp, {
-      clientLimit: securityConfig.shortRequestsPerMinute,
-      globalLimit: securityConfig.globalShortRequestsPerMinute,
-    })) {
+    if (
+      request.method !== 'GET' &&
+      !checkShortRateLimit(clientIp, {
+        clientLimit: securityConfig.shortRequestsPerMinute,
+        globalLimit: securityConfig.globalShortRequestsPerMinute,
+      })
+    ) {
       throw userError('RATE_LIMITED', '请求过于频繁，请稍后再试。', 429);
     }
 
@@ -125,7 +135,9 @@ export async function handleApiRequest(
         monsterIntakeConfigured: monsterIntakeConfigured(Bun.env),
         monsterIntakeAuthMode: monsterIntakeAuthMode(Bun.env) ?? null,
         goddessFantasyCookieConfigured: Boolean(Bun.env.GODDESSFANTASY_COOKIE),
-        goddessFantasyLoginConfigured: Boolean(Bun.env.GODDESSFANTASY_USERNAME && Bun.env.GODDESSFANTASY_PASSWORD),
+        goddessFantasyLoginConfigured: Boolean(
+          Bun.env.GODDESSFANTASY_USERNAME && Bun.env.GODDESSFANTASY_PASSWORD,
+        ),
         imageAssetsConfigured: imagePreset.imageAssetsConfigured,
         imageMode: imagePreset.imageMode,
         imageSshTarget: imagePreset.imageSshTarget,
@@ -160,12 +172,16 @@ export async function handleApiRequest(
         workspaceRoot: pathModeEnabled ? WORKSPACE_ROOT : '',
         vaultPath: pathModeEnabled ? resolveWorkspacePath(DEFAULT_VAULT_PATH) : '',
         inputDir: pathModeEnabled ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'input')) : '',
-        outputDir: pathModeEnabled ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'output')) : TEMP_WEB_DIR,
+        outputDir: pathModeEnabled
+          ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'output'))
+          : TEMP_WEB_DIR,
         effectProfile: 'core' satisfies EffectProfile,
-        fvttVersion: '12' satisfies FvttTargetVersion,
+        fvttVersion: '14' satisfies FvttTargetVersion,
         iconMode: 'off' satisfies IconMode,
         sampleSourcePath: pathModeEnabled
-          ? resolveWorkspacePath(join(DEFAULT_VAULT_PATH, 'input', 'alyxian-aboleth__底栖魔鱼“阿利克辛”.md'))
+          ? resolveWorkspacePath(
+              join(DEFAULT_VAULT_PATH, 'input', 'alyxian-aboleth__底栖魔鱼“阿利克辛”.md'),
+            )
           : '',
         pathModeEnabled,
       });
@@ -200,9 +216,34 @@ export async function handleApiRequest(
       return jsonSuccess(result);
     }
 
-    if (request.method === 'POST' && (url.pathname === '/api/convert/single' || url.pathname === '/api/convert/upload')) {
+    if (request.method === 'POST' && url.pathname === '/api/conversions/detect') {
+      const body = await readJsonBody<DetectConversionBody>(
+        request,
+        securityConfig.maxRequestBodyBytes,
+      );
+      validateUpload(body.fileName, body.content, collectionUploadLimitBytes, [
+        '.md',
+        '.markdown',
+        '.txt',
+      ]);
+      return jsonSuccess(
+        detectAutomaticConversionRoute({
+          fileName: body.fileName,
+          content: body.content ?? '',
+        }),
+      );
+    }
+
+    if (
+      request.method === 'POST' &&
+      (url.pathname === '/api/convert/single' || url.pathname === '/api/convert/upload')
+    ) {
       const body = await readJsonBody<ConvertBody>(request, securityConfig.maxRequestBodyBytes);
-      validateUpload(body.fileName, body.content, singleUploadLimitBytes, ['.md', '.markdown', '.txt']);
+      validateUpload(body.fileName, body.content, singleUploadLimitBytes, [
+        '.md',
+        '.markdown',
+        '.txt',
+      ]);
       const fvttVersion = normalizeFvttVersion(body.fvttVersion);
       const job = createJob('single-convert', clientIp);
       await runJob(job, {
@@ -217,7 +258,10 @@ export async function handleApiRequest(
       });
       const finished = getRequiredJob(job.id);
       if (finished.status === 'failed') {
-        throw userError(finished.error?.code ?? 'CONVERT_FAILED', finished.error?.message ?? '转换失败。');
+        throw userError(
+          finished.error?.code ?? 'CONVERT_FAILED',
+          finished.error?.message ?? '转换失败。',
+        );
       }
       return jsonSuccess(toSingleConversionPayload(finished));
     }
@@ -227,10 +271,18 @@ export async function handleApiRequest(
       const documentUpload = await readDocumentMultipart(request, documentUploadLimitBytes);
       cleanupExpiredJobs(securityConfig.retentionMs, securityConfig.maxRetainedJobs);
       if (runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient) {
-        throw userError('JOB_CONCURRENCY_LIMIT', `同一客户端只能同时运行 ${securityConfig.longJobsPerClient} 个长任务。`, 429);
+        throw userError(
+          'JOB_CONCURRENCY_LIMIT',
+          `同一客户端只能同时运行 ${securityConfig.longJobsPerClient} 个长任务。`,
+          429,
+        );
       }
       if (runningJobsTotal() >= securityConfig.globalLongJobs) {
-        throw userError('GLOBAL_JOB_CONCURRENCY_LIMIT', 'Server long-job capacity is currently full.', 429);
+        throw userError(
+          'GLOBAL_JOB_CONCURRENCY_LIMIT',
+          'Server long-job capacity is currently full.',
+          429,
+        );
       }
       const job = createJob('document-convert', clientIp);
       const inputDir = jobInputDir(job.id);
@@ -249,10 +301,10 @@ export async function handleApiRequest(
             ? parseCandidateIds(documentUpload.fields.candidateIds)
             : undefined,
           extractOnly: documentUpload.fields.extractOnly === 'true',
-          fvttVersion: normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '12'),
+          fvttVersion: normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '14'),
           effectProfile: normalizeEffectProfile(
             documentUpload.fields.effectProfile as EffectProfile | undefined,
-            normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '12'),
+            normalizeFvttVersion(documentUpload.fields.fvttVersion ?? '14'),
           ),
           iconMode: documentUpload.fields.iconMode ?? 'off',
         },
@@ -274,7 +326,11 @@ export async function handleApiRequest(
         );
       }
       if (runningJobsTotal() >= securityConfig.globalLongJobs) {
-        throw userError('GLOBAL_JOB_CONCURRENCY_LIMIT', 'Server long-job capacity is currently full.', 429);
+        throw userError(
+          'GLOBAL_JOB_CONCURRENCY_LIMIT',
+          'Server long-job capacity is currently full.',
+          429,
+        );
       }
       validateJobInput(body);
       const job = createJob(body.type, clientIp);
@@ -290,15 +346,23 @@ export async function handleApiRequest(
     const decisionsMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/decisions$/i);
     if (request.method === 'POST' && decisionsMatch?.[1]) {
       const job = getRequiredJob(decisionsMatch[1]);
-      if (job.type !== 'ai-monster-intake') throw userError('NOT_RESUMABLE', '只有 AI 怪物资料整理任务可以提交确认。');
+      if (job.type !== 'ai-monster-intake')
+        throw userError('NOT_RESUMABLE', '只有 AI 怪物资料整理任务可以提交确认。');
       if (job.status !== 'needs_review' && job.status !== 'failed' && job.status !== 'partial') {
         throw userError('JOB_NOT_REVIEWABLE', `当前任务状态 ${job.status} 不可恢复。`);
       }
-      if (runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient || runningJobsTotal() >= securityConfig.globalLongJobs) {
+      if (
+        runningJobsForIp(clientIp) >= securityConfig.longJobsPerClient ||
+        runningJobsTotal() >= securityConfig.globalLongJobs
+      ) {
         throw userError('JOB_CONCURRENCY_LIMIT', '当前长任务并发已满，请稍后重试。', 429);
       }
-      const body = await readJsonBody<{ decisions?: IntakeDecision[] }>(request, securityConfig.maxRequestBodyBytes);
-      if (!Array.isArray(body.decisions)) throw userError('INVALID_DECISIONS', 'decisions 必须是数组。');
+      const body = await readJsonBody<{ decisions?: IntakeDecision[] }>(
+        request,
+        securityConfig.maxRequestBodyBytes,
+      );
+      if (!Array.isArray(body.decisions))
+        throw userError('INVALID_DECISIONS', 'decisions 必须是数组。');
       void resumeAiMonsterIntakeJob(job, body.decisions).catch(() => undefined);
       return jsonSuccess(publicJob(getRequiredJob(job.id)));
     }
@@ -326,7 +390,9 @@ export async function handleApiRequest(
       if (files.length === 0) {
         throw userError('NO_DOWNLOADABLE_FILES', '这个任务没有可下载产物。', 404);
       }
-      const zip = createZipBuffer(files.map((file) => ({ path: file.path, fileName: file.fileName })));
+      const zip = createZipBuffer(
+        files.map((file) => ({ path: file.path, fileName: file.fileName })),
+      );
       return new Response(new Uint8Array(zip), {
         headers: {
           'content-type': 'application/zip',
@@ -337,8 +403,11 @@ export async function handleApiRequest(
 
     if (request.method === 'POST' && url.pathname === '/api/verify') {
       const body = await readJsonBody<VerifyBody>(request, securityConfig.maxRequestBodyBytes);
-      const source = body.sourceContent ?? (body.sourcePath ? readWorkspaceText(body.sourcePath) : undefined);
-      const actor = body.actorJson ?? (body.actorPath ? JSON.parse(readWorkspaceText(body.actorPath)) : undefined);
+      const source =
+        body.sourceContent ?? (body.sourcePath ? readWorkspaceText(body.sourcePath) : undefined);
+      const actor =
+        body.actorJson ??
+        (body.actorPath ? JSON.parse(readWorkspaceText(body.actorPath)) : undefined);
       if (!source) throw userError('MISSING_SOURCE', 'sourcePath or sourceContent is required.');
       if (!actor) throw userError('MISSING_ACTOR', 'actorPath or actorJson is required.');
       if (body.sourcePath) assertApiWorkspacePath(body.sourcePath);
@@ -360,24 +429,28 @@ export async function handleApiRequest(
       return jsonFailure(error.status, error.code, error.message);
     }
 
-    const message = Bun.env.FVTT_WEB_EXPOSE_ERRORS === '1' && error instanceof Error
-      ? error.message
-      : 'Internal server error.';
+    const message =
+      Bun.env.FVTT_WEB_EXPOSE_ERRORS === '1' && error instanceof Error
+        ? error.message
+        : 'Internal server error.';
     return jsonFailure(500, 'INTERNAL_ERROR', message);
   }
 }
 
-function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUrl: string; jobId: string } {
+function toSingleConversionPayload(
+  job: WebJob,
+): ConversionResult & { downloadUrl: string; jobId: string } {
   const summary = job.summary ?? {};
   return {
     kind: summary.kind as ConversionResult['kind'],
     name: String(summary.name ?? ''),
     itemCount: Number(summary.itemCount ?? 0),
-    status: summary.status === 'needs_review' || summary.status === 'failed'
-      ? summary.status
-      : 'accepted',
+    status:
+      summary.status === 'needs_review' || summary.status === 'failed'
+        ? summary.status
+        : 'accepted',
     diagnostics: Array.isArray(summary.diagnostics)
-      ? summary.diagnostics as ConversionResult['diagnostics']
+      ? (summary.diagnostics as ConversionResult['diagnostics'])
       : [],
     warnings: job.warnings,
     verification: summary.verification as ConversionResult['verification'],
@@ -386,10 +459,13 @@ function toSingleConversionPayload(job: WebJob): ConversionResult & { downloadUr
     iconReview: (summary.iconReview ?? null) as ConversionResult['iconReview'],
     iconReviewPath: typeof summary.iconReviewPath === 'string' ? summary.iconReviewPath : undefined,
     outputPath: typeof summary.outputPath === 'string' ? summary.outputPath : undefined,
-    fvttVersion: normalizeFvttVersion(typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined),
-    effectProfile: summary.effectProfile === 'modded-v12' || summary.effectProfile === 'modded-v14'
-      ? summary.effectProfile
-      : 'core',
+    fvttVersion: normalizeFvttVersion(
+      typeof summary.fvttVersion === 'string' ? summary.fvttVersion : undefined,
+    ),
+    effectProfile:
+      summary.effectProfile === 'modded-v12' || summary.effectProfile === 'modded-v14'
+        ? summary.effectProfile
+        : 'core',
     downloadUrl: job.files[0]?.downloadUrl ?? '',
     jobId: job.id,
   };
@@ -424,11 +500,20 @@ function getRequiredJob(id: string): WebJob {
 function validateJobInput(body: WebJobRequest): void {
   const type = body.type;
   if (type === 'document-convert') return;
-  const needsMarkdown = type === 'monster-collection' || type === 'item-collection' || type === 'ai-monster-intake' || type === 'ai-item-intake' || type.startsWith('ingest-');
+  const needsMarkdown =
+    type === 'monster-collection' ||
+    type === 'item-collection' ||
+    type === 'ai-monster-intake' ||
+    type === 'ai-item-intake' ||
+    type === 'ingest-items';
   const needsJson = type === 'translate-json' || type === 'records-to-plaintext';
 
   if (needsMarkdown) {
-    validateUpload(body.fileName, body.content, collectionUploadLimitBytes, ['.md', '.markdown', '.txt']);
+    validateUpload(body.fileName, body.content, collectionUploadLimitBytes, [
+      '.md',
+      '.markdown',
+      '.txt',
+    ]);
   }
   if (needsJson) {
     validateUpload(body.fileName, body.content, collectionUploadLimitBytes, ['.json']);
@@ -451,20 +536,26 @@ async function readDocumentMultipart(
 ): Promise<{ file: File; fields: Record<string, string> }> {
   const form = await request.formData();
   const value = form.get('file');
-  if (!(value instanceof File)) throw userError('MISSING_DOCUMENT', 'multipart field file is required.');
+  if (!(value instanceof File))
+    throw userError('MISSING_DOCUMENT', 'multipart field file is required.');
   if (value.size <= 0) throw userError('EMPTY_DOCUMENT', 'uploaded document is empty.');
-  if (value.size > maxBytes) throw userError('UPLOAD_TOO_LARGE', `文档上传不能超过 ${Math.floor(maxBytes / 1024 / 1024)} MB。`);
+  if (value.size > maxBytes)
+    throw userError(
+      'UPLOAD_TOO_LARGE',
+      `文档上传不能超过 ${Math.floor(maxBytes / 1024 / 1024)} MB。`,
+    );
   const extension = extname(value.name).toLowerCase();
   if (!['.pdf', '.png', '.jpg', '.jpeg', '.webp'].includes(extension)) {
     throw userError('INVALID_UPLOAD_TYPE', '文档上传只接受 PDF、PNG、JPG、JPEG 或 WebP。');
   }
-  const expectedMime = extension === '.pdf'
-    ? 'application/pdf'
-    : extension === '.png'
-      ? 'image/png'
-      : extension === '.webp'
-        ? 'image/webp'
-        : 'image/jpeg';
+  const expectedMime =
+    extension === '.pdf'
+      ? 'application/pdf'
+      : extension === '.png'
+        ? 'image/png'
+        : extension === '.webp'
+          ? 'image/webp'
+          : 'image/jpeg';
   if (value.type && value.type.toLowerCase() !== expectedMime) {
     throw userError('INVALID_DOCUMENT_MIME', '文件 MIME 类型与扩展名不匹配。');
   }
@@ -481,8 +572,10 @@ async function readDocumentMultipart(
 
 function validDocumentSignature(extension: string, bytes: Uint8Array): boolean {
   if (extension === '.pdf') return ascii(bytes, 0, 4) === '%PDF';
-  if (extension === '.png') return bytes.length >= 8 && bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG';
-  if (extension === '.jpg' || extension === '.jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (extension === '.png')
+    return bytes.length >= 8 && bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG';
+  if (extension === '.jpg' || extension === '.jpeg')
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (extension === '.webp') return ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP';
   return false;
 }
@@ -498,11 +591,15 @@ function safeUploadName(value: string): string {
 function parseCandidateIds(value: string): string[] {
   try {
     const parsed = JSON.parse(value) as unknown;
-    if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string');
+    if (Array.isArray(parsed))
+      return parsed.filter((item): item is string => typeof item === 'string');
   } catch {
     // Accept a simple comma-separated form for curl/manual clients.
   }
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function readWorkspaceText(path: string): string {
@@ -524,13 +621,16 @@ function isAbsolutePath(path: string): boolean {
 
 function normalizeFvttVersion(value: unknown): FvttTargetVersion {
   try {
-    return parseFvttTargetVersion(value ?? '12');
+    return parseFvttTargetVersion(value ?? '14');
   } catch {
     throw userError('INVALID_FVTT_VERSION', `Unsupported fvttVersion: ${String(value)}`);
   }
 }
 
-function normalizeEffectProfile(value: EffectProfile | undefined, fvttVersion: FvttTargetVersion = '12'): EffectProfile {
+function normalizeEffectProfile(
+  value: EffectProfile | undefined,
+  fvttVersion: FvttTargetVersion = '14',
+): EffectProfile {
   if (value === undefined) return 'core';
   if (value !== 'core' && value !== 'modded-v12' && value !== 'modded-v14') {
     throw userError('INVALID_EFFECT_PROFILE', `Unsupported effectProfile: ${value}`);
@@ -538,7 +638,10 @@ function normalizeEffectProfile(value: EffectProfile | undefined, fvttVersion: F
   try {
     assertEffectProfileForTarget(fvttVersion, value);
   } catch (error) {
-    throw userError('INVALID_EFFECT_PROFILE', error instanceof Error ? error.message : String(error));
+    throw userError(
+      'INVALID_EFFECT_PROFILE',
+      error instanceof Error ? error.message : String(error),
+    );
   }
   return value;
 }
@@ -557,7 +660,10 @@ function validateUpload(
 
   const byteLength = new TextEncoder().encode(content).byteLength;
   if (byteLength > maxBytes) {
-    throw userError('UPLOAD_TOO_LARGE', `上传文件超过 ${Math.floor(maxBytes / 1024 / 1024)} MB 限制。`);
+    throw userError(
+      'UPLOAD_TOO_LARGE',
+      `上传文件超过 ${Math.floor(maxBytes / 1024 / 1024)} MB 限制。`,
+    );
   }
 }
 

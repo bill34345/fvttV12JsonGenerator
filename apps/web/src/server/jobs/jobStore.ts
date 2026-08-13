@@ -20,8 +20,6 @@ export type WebJobType =
   | 'item-collection'
   | 'vault-sync'
   | 'translate-json'
-  | 'ingest-plaintext'
-  | 'ingest-plaintext-actors'
   | 'ingest-items'
   | 'ai-item-intake'
   | 'ai-monster-intake'

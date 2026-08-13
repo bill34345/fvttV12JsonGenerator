@@ -9,8 +9,6 @@ export type JobType =
   | 'item-collection'
   | 'vault-sync'
   | 'translate-json'
-  | 'ingest-plaintext'
-  | 'ingest-plaintext-actors'
   | 'ingest-items'
   | 'ai-item-intake'
   | 'ai-monster-intake'
@@ -105,6 +103,23 @@ export interface ConversionResult {
   jobId: string;
 }
 
+export interface AutomaticConversionDetection {
+  route:
+    | 'single'
+    | 'monster-collection'
+    | 'item-collection'
+    | 'ai-monster-intake'
+    | 'ai-item-intake'
+    | 'needs-review';
+  contentKind: 'actor' | 'item' | 'unknown';
+  cardinality: 'single' | 'collection' | 'unknown';
+  confidence: 'high' | 'medium' | 'low';
+  label: string;
+  reasons: string[];
+  usesAi: boolean;
+  itemCount?: number;
+}
+
 export interface WebJobFile {
   id: string;
   fileName: string;
@@ -177,6 +192,13 @@ export async function convertSingle(input: {
   iconMode: IconMode;
 }): Promise<ConversionResult> {
   return request<ConversionResult>('/api/convert/single', input);
+}
+
+export async function detectConversion(input: {
+  fileName: string;
+  content: string;
+}): Promise<AutomaticConversionDetection> {
+  return request<AutomaticConversionDetection>('/api/conversions/detect', input);
 }
 
 export async function createJob(input: {

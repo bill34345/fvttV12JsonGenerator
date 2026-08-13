@@ -45,6 +45,7 @@ export class OpenAICompatibleIngestNormalizer extends PromptedIngestNormalizer {
  * Application-facing workflow that preserves the historical environment-based
  * default while the package remains deterministic and adapter-free by default.
  */
+/** @deprecated Compatibility-only parser for the legacy CLI aliases. */
 export class PlainTextIngestionWorkflow extends PackagePlainTextIngestionWorkflow {
   constructor(options: { aiNormalizer?: PlainTextAiNormalizer | null } = {}) {
     super({

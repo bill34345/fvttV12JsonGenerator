@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./artifacts": "./src/artifacts.ts",
+    "./canonical-actor": "./src/canonicalActor.ts",
     "./diagnostics": "./src/diagnostics.ts",
     "./evidence": "./src/evidence.ts",
     "./hash": "./src/hash.ts",

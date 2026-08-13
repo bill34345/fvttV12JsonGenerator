@@ -70,10 +70,10 @@ module.exports = {
     {
       name: 'crawl-goddessfantasy-package-is-independent',
       severity: 'error',
-      comment: 'Site crawl, authentication, record schemas, and plaintext conversion remain a standalone source adapter package.',
+      comment: 'Site crawl, authentication, record schemas, and plaintext conversion remain a standalone source adapter package; shared source contracts are allowed.',
       from: { path: '^packages/crawl-goddessfantasy/src/' },
       to: {
-        path: '^(src/|scripts/|apps/|packages/(?!crawl-goddessfantasy/))',
+        path: '^(src/|scripts/|apps/|packages/(?!crawl-goddessfantasy/|contracts/))',
       },
     },
     {
