@@ -1511,11 +1511,12 @@ root 治理因此完成；仓库 `.local/references` 只作为兼容窗口副本
   functions，5,743 modules / 5,503 dependencies / 0 violations，
   345-source anti-overfit、1,059-path hygiene、25 个 AGENTS、全部类型检查、dnd5e 5.3.3 reference、Web build 和
   White Tusk Shaman 离线 Actor smoke 均通过；
-- 本机 `codex login status` 为 ChatGPT OAuth 已登录，Intake doctor 确认 loopback `codex-oauth` bridge 可达。真实运行
-  `species-20260811022558-9a41c4a1` 无 repair accepted；accepted ledger 记录 Markdown SHA-256
-  `872e098b…cc63`、来源 SHA-256 `6b237425…6d94` 与 package logical hash `78496f64…8e0e`。模块重新 build/verify
-  得到 1 race / 5 features，module logical hash `d9bd6759…258fd`，ZIP SHA-256
-  `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`；
+- 本机 `codex login status` 为 ChatGPT OAuth 已登录，Intake doctor 确认 loopback `codex-oauth` bridge 可达。首次真实运行
+  `species-20260811022558-9a41c4a1` 无 repair accepted；master 集成前又按正式 Markdown revision 流程运行
+  `species-20260813002011-221e40df`，同样以一次 review、零 repair accepted。当前 accepted ledger 记录 Markdown
+  SHA-256 `7243c8e4…dfb7`、来源 SHA-256 `6b237425…6d94` 与 package logical hash `78496f64…8e0e`。模块重新
+  build/verify 得到 1 race / 5 features，module logical hash `d9bd6759…258fd`，ZIP SHA-256
+  `77281eac8e0c5e3f7bd6f2ec3d44603da53b9d2eb0845b450bf4721cd9466e11`；
 - 本地 Foundry `14.364` / dnd5e `5.3.3` 的 `fvtt-v14-module-matrix` world 已安装并启用模块。原生 Add Species 应用后
   角色为 giant/Ogre、Large、40 ft、darkvision 60、AC 10→8；1级 HP 为 12+3=15，5级最大 HP 为 40+15=55；
   5级附赠动作脱困 2/2 消耗、0/2 第三次无聊天卡、Long Rest 恢复 2/2。两张聊天卡均要求手动进行原受擒检定，
