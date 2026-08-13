@@ -9,6 +9,19 @@ import {
   type SessionMeta,
 } from './schema';
 import { SessionMonitorRuntime } from './runtime';
+import {
+  AUTO_COLLAPSE_DELAY_MS,
+  PANEL_EDGE_SNAP_DISTANCE,
+  PANEL_POSITION_STORAGE_KEY,
+  avoidPanelPosition,
+  clampPanelPosition,
+  panelPositionsOverlap,
+  panelSizeForState,
+  parsePanelPositionPreference,
+  serializePanelPositionPreference,
+  snapPanelPosition,
+} from './runtime';
+import { registerMarkJankKeybinding } from './index';
 import { MemorySessionStore } from './storage';
 
 const environment: MonitorEnvironment = {
@@ -181,6 +194,65 @@ describe('browser metrics', () => {
     expect(first.frames.over50Ms).toBe(2);
     expect(stalls.take().frames.count).toBe(0);
     stalls.stop();
+  });
+});
+
+describe('compact GM panel layout', () => {
+  test('uses a materially smaller collapsed capsule and keeps the auto-collapse window bounded', () => {
+    const expanded = panelSizeForState('expanded');
+    const collapsed = panelSizeForState('collapsed');
+    expect(collapsed.width).toBeLessThan(expanded.width);
+    expect(collapsed.height).toBeLessThan(expanded.height);
+    expect(AUTO_COLLAPSE_DELAY_MS).toBeGreaterThanOrEqual(1_500);
+    expect(AUTO_COLLAPSE_DELAY_MS).toBeLessThanOrEqual(3_000);
+  });
+
+  test('clamps and edge-snaps dragged positions while avoiding the visible right sidebar', () => {
+    const viewport = { width: 1_280, height: 720 };
+    const size = panelSizeForState('expanded');
+    const sidebar = { left: 980, top: 0, right: 1_280, bottom: 720 };
+    const clamped = clampPanelPosition({ left: -50, top: 999 }, viewport, size);
+    expect(clamped).toEqual({ left: 12, top: 576 });
+    const avoided = avoidPanelPosition({ left: 1_000, top: 500 }, viewport, size, [sidebar]);
+    expect(panelPositionsOverlap(avoided, size, sidebar, 8)).toBeFalse();
+    const snapped = snapPanelPosition({ left: 20, top: 680 }, viewport, size, PANEL_EDGE_SNAP_DISTANCE);
+    expect(snapped.left).toBe(12);
+    expect(snapped.top).toBe(576);
+  });
+
+  test('persists only bounded browser-local coordinates and rejects invalid preferences', () => {
+    const position = { left: 240, top: 320 };
+    const raw = serializePanelPositionPreference(position);
+    expect(parsePanelPositionPreference(raw)).toEqual(position);
+    expect(parsePanelPositionPreference('{"version":1,"left":1e9,"top":2}')).toBeNull();
+    expect(parsePanelPositionPreference('{"version":2,"left":1,"top":2}')).toBeNull();
+    expect(PANEL_POSITION_STORAGE_KEY).toContain('fvtt-session-monitor');
+  });
+
+  test('registers an unbound GM-only mark keybinding that ignores idle and non-GM sessions', async () => {
+    let config: any;
+    let marked = 0;
+    registerMarkJankKeybinding({
+      game: { keybindings: { register: (_module: string, _action: string, value: any) => { config = value; } } },
+    }, () => ({
+      getStatus: () => ({ enabled: true, state: 'active' } as any),
+      markJank: async () => { marked++; },
+    }));
+    expect(config.editable).toEqual([]);
+    expect(config.uneditable).toEqual([]);
+    expect(config.restricted).toBeTrue();
+    expect(config.onDown()).toBeTrue();
+    await Promise.resolve();
+    expect(marked).toBe(1);
+    expect(registerMarkJankKeybinding).toBeDefined();
+    expect((() => {
+      let localConfig: any;
+      registerMarkJankKeybinding({ game: { keybindings: { register: (_m: string, _a: string, value: any) => { localConfig = value; } } } }, () => ({
+        getStatus: () => ({ enabled: false, state: 'active' } as any),
+        markJank: async () => {},
+      }));
+      return localConfig.onDown();
+    })()).toBeFalse();
   });
 });
 

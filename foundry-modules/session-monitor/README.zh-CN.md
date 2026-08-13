@@ -14,7 +14,7 @@ v1 只在 GM 客户端运行。
 - `build.ts`：确定性 module 构建及项目本地 mirror 安装保护；
 - `package.json`：产品版本、独立 typecheck/build/test/monitor 入口。
 
-module 与 companion 共同维护 schema v1 和产品版本 1.1.1。它们可以共享本产品的 schema，
+module 与 companion 共同维护 schema v1 和产品版本 1.1.2。它们可以共享本产品的 schema，
 但不得分别成为两个漂移的发布物。唯一的上游运行时依赖是
 `@fvtt-json-generator/contracts/hash` 提供的 browser-safe SHA-256；Foundry runtime 不导入
 companion，companion 也不导入 generator、workflow、Web 或运维实现。
@@ -126,6 +126,10 @@ bun run monitor:session -- report `
 - “刚才卡顿”：写入无自由文本的时间标记；
 - “停止并导出”：停止采样并下载 JSON；
 - 刷新页面：自动续接同一 world 中最后一个 active session。
+- 空闲时面板保持展开并显示“开始”；开始成功约 2 秒后自动收起为显示状态和 elapsed 的紧凑胶囊。
+- 点击胶囊或按 Enter/Space 可临时展开完整控制；拖动标题栏可移动，位置会夹紧到视口并避让可见的 Foundry 右侧 Sidebar/Combat Tracker。
+- 视口或 Sidebar 改变后会重新夹紧/避让；位置只保存到浏览器 localStorage，不调用 `game.settings`，也不写世界或 LevelDB。
+- `markJank` 注册为 Foundry 原生 GM-only 快捷键，默认没有绑定；只有活动 GM 会话接受该快捷键。
 
 单次会话最多 12 小时、4,320 个浏览器采样、10,000 个事件和 1,000 个
 错误。达到上限会标记 `truncated` 并安全停止。

@@ -2,7 +2,7 @@
   "id": "fvtt-session-monitor",
   "title": "FVTT Session Monitor / 跑团会话监测器",
   "description": "GM-only lightweight monitoring for browser memory, stalls, Foundry lifecycle events, and privacy-filtered errors during real sessions.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
