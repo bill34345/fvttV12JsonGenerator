@@ -1,6 +1,6 @@
 <section class="battlefield-painter" aria-label="战场地形画笔">
   <header class="battlefield-painter__header">
-    <p class="battlefield-painter__eyebrow">TACTICAL TERRAIN / P0</p>
+    <p class="battlefield-painter__eyebrow">TACTICAL TERRAIN / P1 ALPHA</p>
     <h2>把战场画活</h2>
     <p>选择地形与阶段，然后在方格或六角格地图上按住拖动。</p>
   </header>
@@ -51,6 +51,39 @@
     </button>
   </div>
 
+  {{#if state.p1Enabled}}
+    <section class="battlefield-painter__brush" aria-label="笔刷几何">
+      <div class="battlefield-painter__section-title">
+        <span>笔刷几何</span>
+        <small>半径 {{state.brushRadius}}</small>
+      </div>
+      <div class="battlefield-painter__shapes">
+        <button type="button" class="shape-button {{#if isFree}}is-selected{{/if}}" data-action="selectBrushShape" data-shape="free" aria-pressed="{{isFree}}">
+          <i class="fa-solid fa-paintbrush"></i><span>自由</span>
+        </button>
+        <button type="button" class="shape-button {{#if isLine}}is-selected{{/if}}" data-action="selectBrushShape" data-shape="line" aria-pressed="{{isLine}}">
+          <i class="fa-solid fa-slash"></i><span>直线</span>
+        </button>
+        <button type="button" class="shape-button {{#if isFill}}is-selected{{/if}}" data-action="selectBrushShape" data-shape="fill" aria-pressed="{{isFill}}" title="拖拽填充起点与终点之间的格位区域">
+          <i class="fa-solid fa-vector-square"></i><span>填充</span>
+        </button>
+      </div>
+      <div class="battlefield-painter__radius" aria-label="笔刷半径">
+        {{#each radii}}
+          <button type="button" class="radius-button {{#if selected}}is-selected{{/if}}" data-action="setBrushRadius" data-radius="{{value}}" aria-label="半径 {{value}}" aria-pressed="{{selected}}">{{value}}</button>
+        {{/each}}
+      </div>
+      <div class="battlefield-painter__history" aria-label="操作历史">
+        <button type="button" data-action="undo" {{#unless state.canUndo}}disabled{{/unless}}>
+          <i class="fa-solid fa-rotate-left"></i><span>撤销</span>
+        </button>
+        <button type="button" data-action="redo" {{#unless state.canRedo}}disabled{{/unless}}>
+          <i class="fa-solid fa-rotate-right"></i><span>重做</span>
+        </button>
+      </div>
+    </section>
+  {{/if}}
+
   <footer class="battlefield-painter__footer">
     <p class="battlefield-painter__status" aria-live="polite">{{state.status}}</p>
     <button type="button" class="activate-button {{#if state.active}}is-active{{/if}}" data-action="togglePainter">
@@ -59,4 +92,3 @@
     </button>
   </footer>
 </section>
-

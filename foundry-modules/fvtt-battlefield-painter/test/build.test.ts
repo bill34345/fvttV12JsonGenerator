@@ -19,7 +19,7 @@ describe("module manifest", () => {
     expect(() => validateManifest(manifest)).not.toThrow();
     expect(manifest.id).toBe(MODULE_ID);
     expect(manifest.version).toBe(MODULE_VERSION);
-    expect(manifest.version).toBe("0.1.0-alpha.1");
+    expect(manifest.version).toBe("0.2.0-alpha.1");
     expect(manifest.description).toContain("runtime acceptance pending");
   });
 

@@ -13,6 +13,7 @@ Source: [Tile Arsenal storefront](https://www.foundryvtt.store/products/tile-ars
 - `getSceneControlButtons` supports adding a custom tool to a control group's `tools` record.
 - `Canvas#canvasCoordinatesFromClient` converts browser client coordinates into canvas coordinates.
 - `BaseGrid#getOffset`, `getCenterPoint`, and `getVertices` expose the active square/hex grid geometry.
+- P1 uses `BaseGrid#getAdjacentOffsets` for radius rings and `getDirectPath` for line cells instead of implementing grid-specific adjacency or line math.
 - Scene embedded documents can be created and deleted in batches with `createEmbeddedDocuments` and `deleteEmbeddedDocuments`.
 - v14 Region documents own `shapes` and `behaviors`; Region behavior sources use `type` and `system`.
 - Core exposes Region behavior data models through `CONFIG.RegionBehavior.dataModels`; the `modifyMovementCost` system model includes `difficulties`.
@@ -25,6 +26,7 @@ Primary documentation reviewed:
 - [Foundry VTT v14 Scene Controls](https://foundryvtt.com/api/v14/modules/hookEvents.html#getSceneControlButtons)
 - [Foundry VTT v14 Canvas](https://foundryvtt.com/api/v14/classes/foundry.canvas.Canvas.html)
 - [Foundry VTT v14 BaseGrid](https://foundryvtt.com/api/v14/classes/foundry.grid.BaseGrid.html)
+- [Foundry VTT v14 Canvas Interface Canvas Group](https://foundryvtt.com/api/v14/classes/foundry.canvas.groups.InterfaceCanvasGroup.html)
 - [Foundry VTT v14 Scene](https://foundryvtt.com/api/v14/classes/foundry.documents.Scene.html)
 - [Foundry VTT v14 RegionData](https://foundryvtt.com/api/v14/classes/foundry.data.RegionData.html)
 - [Foundry VTT v14 RegionBehaviorData](https://foundryvtt.com/api/v14/classes/foundry.data.RegionBehaviorData.html)

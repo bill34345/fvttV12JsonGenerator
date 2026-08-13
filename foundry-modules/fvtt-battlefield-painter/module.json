@@ -1,8 +1,8 @@
 {
   "id": "fvtt-battlefield-painter",
   "title": "Battlefield Painter",
-  "description": "Alpha: paint reversible fire, frost, and bramble terrain onto square or hex battle maps; real Foundry runtime acceptance pending.",
-  "version": "0.1.0-alpha.1",
+  "description": "P1 alpha: paint reversible fire, frost, and bramble terrain with radius, line, fill, preview, and history tools; real Foundry runtime acceptance pending.",
+  "version": "0.2.0-alpha.1",
   "authors": [
     {
       "name": "Zheng-Kaizhong"

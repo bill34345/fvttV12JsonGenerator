@@ -68,10 +68,37 @@ describe('AGENTS/Ruler governance checker', () => {
     expect(check(root).ok).toBeTrue();
   });
 
+  test('registers the Battlefield Painter leaf instructions', () => {
+    expect(requiredAgentsFiles).toContain(
+      'foundry-modules/fvtt-battlefield-painter/AGENTS.md',
+    );
+  });
+
+  test('accepts explicit English Scope and Acceptance sections', () => {
+    const root = createFixture();
+    const leaf = 'feature/AGENTS.md';
+    mkdirSync(join(root, 'feature'), { recursive: true });
+    writeFileSync(
+      join(root, leaf),
+      '# Feature rules\n\n## Scope\n\nOwns the feature.\n\n## Acceptance\n\nRun tests.\n',
+    );
+    const result = runAgentsInstructionsCheck({
+      workspaceRoot: root,
+      requiredFiles: [leaf],
+      requiredLeafFiles: [],
+      routedFiles: [],
+      verifyTracked: false,
+      applyRuler: stableApply,
+    });
+
+    expect(result.ok).toBeTrue();
+  });
+
   test.each([
     'packages/ingest-documents/AGENTS.md',
     'packages/blood-hunter-v14/AGENTS.md',
     'foundry-modules/fvtt-blood-hunter-2024/AGENTS.md',
+    'foundry-modules/fvtt-battlefield-painter/AGENTS.md',
     'foundry-modules/fvtt-babele-rolltable-embed-translation/AGENTS.md',
     'foundry-modules/fvtt-injury-fading-spirits/AGENTS.md',
     'foundry-modules/fvtt-house-rules/AGENTS.md',

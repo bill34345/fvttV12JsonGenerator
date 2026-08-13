@@ -1,4 +1,4 @@
-# `0.1.0-alpha.1` Release Notes
+# `0.2.0-alpha.1` Release Notes
 
 Status: packaged for personal evaluation; real Foundry runtime acceptance pending.
 
@@ -11,6 +11,12 @@ Status: packaged for personal evaluation; real Foundry runtime acceptance pendin
 - Runtime-derived `modifyMovementCost` behavior, fire lighting, and stage-II bramble walls.
 - Transaction rollback and recovery-oriented bundle replacement.
 - Exact runtime gate for Foundry `14.364` and dnd5e `5.3.3`.
+- Brush radius 0–4 using core grid adjacency.
+- Free, direct-path line, and inclusive offset-area fill tools.
+- Cell-polygon cursor preview bound to the active canvas interface layer.
+- Per-Scene, module-owned undo/redo history bounded to 20 entries.
+- Internal P0/P1 diagnostic phase controls, with an immutable release path.
+- Empty-target-only local Lab installation with no replacement or old-copy creation.
 
 ## Static runtime evidence
 
@@ -23,7 +29,7 @@ Status: packaged for personal evaluation; real Foundry runtime acceptance pendin
 
 These checks establish packaging and bootstrap confidence only. They do not prove actual canvas placement, movement measurement, PIXI interaction, lighting appearance, wall collision, persistence, or Foundry document validation.
 
-## Required before calling P0 runtime-accepted
+## Required before calling P1 runtime-accepted
 
 Run `acceptance-checklist.md` in Foundry `14.364` with dnd5e `5.3.3`. Until that happens:
 
@@ -35,4 +41,3 @@ Run `acceptance-checklist.md` in Foundry `14.364` with dnd5e `5.3.3`. Until that
 
 - Installable artifact: `dist/fvtt-battlefield-painter.zip`.
 - No commit, merge, remote push, marketplace publication, or production installation is part of alpha preparation.
-

@@ -1,13 +1,17 @@
-# Roadmap After P0
+# Roadmap After P1 Core
 
-## P1 candidates
+## Implemented in the current P1 development worktree
 
 - Cursor/brush preview rendered through the current PIXI canvas API.
 - Brush radius and fill/line tools.
+- Stroke history and undo/redo beyond failure rollback.
+- Internal P0/P1 development phase gate, with a mandatory immutable release setting.
+
+## Remaining candidates
+
 - Transparent WebM loops for fire, arcane frost, and creeping vines.
 - Per-bundle environmental audio with explicit volume and wall attenuation.
 - Clustered light placement for long fire strokes.
-- Stroke history and undo/redo beyond failure rollback.
 - Safe batch deletion UI with a dry-run document count.
 
 ## P2 candidates
@@ -20,4 +24,3 @@
 - Import/export of configuration metadata without bundling third-party copyrighted assets.
 
 Promotion from P0 should follow evidence from the exact-version acceptance checklist, especially Region movement semantics, square/hex Tile placement, and document-count performance.
-

@@ -52,6 +52,7 @@ export const requiredAgentsFiles = [
   'foundry-modules/session-monitor/AGENTS.md',
   'foundry-modules/monster-spell-resolver/AGENTS.md',
   'foundry-modules/fvtt-babele-rolltable-embed-translation/AGENTS.md',
+  'foundry-modules/fvtt-battlefield-painter/AGENTS.md',
   'foundry-modules/fvtt-blood-hunter-2024/AGENTS.md',
   'foundry-modules/fvtt-house-rules/AGENTS.md',
   'foundry-modules/fvtt-injury-fading-spirits/AGENTS.md',
@@ -210,10 +211,10 @@ function validateRequiredFiles(
       if (!/^#\s+\S/m.test(content)) {
         errors.push(`${path} 缺少可识别的文档标题。`);
       }
-      if (!/(用途|范围|负责|做什么)/.test(content)) {
+      if (!/(用途|范围|负责|做什么|\bScope\b)/i.test(content)) {
         errors.push(`${path} 缺少用途或作用范围说明。`);
       }
-      if (!/(验证|测试|验收)/.test(content)) {
+      if (!/(验证|测试|验收|\bAcceptance\b|\bVerification\b|\bTesting\b)/i.test(content)) {
         errors.push(`${path} 缺少验证或验收说明。`);
       }
 

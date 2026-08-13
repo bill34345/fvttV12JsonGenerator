@@ -10,7 +10,7 @@ import {
 import { relative, resolve } from "node:path";
 
 export const MODULE_ID = "fvtt-battlefield-painter" as const;
-export const MODULE_VERSION = "0.1.0-alpha.1" as const;
+export const MODULE_VERSION = "0.2.0-alpha.1" as const;
 
 const root = resolve(import.meta.dir, "..");
 const dist = resolve(root, "dist");
@@ -49,7 +49,7 @@ export const validateManifest = (manifest: Record<string, any>): void => {
     throw new Error("Manifest stylesheet entry drifted");
   }
   if (manifest.relationships?.requires) {
-    throw new Error("P0 must not have hard module dependencies");
+    throw new Error("Battlefield Painter must not have hard module dependencies");
   }
 };
 

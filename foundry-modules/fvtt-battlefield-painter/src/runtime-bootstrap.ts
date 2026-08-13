@@ -1,4 +1,9 @@
 import { MODULE_ID } from "./constants";
+import {
+  DEVELOPMENT_PHASE_CONTROLS_MUTABLE,
+  type DevelopmentPhase,
+  type DevelopmentPhaseSnapshot,
+} from "./development-phases";
 import { createPainterApplicationClass } from "./painter-app";
 import { PainterController } from "./painter-controller";
 import { addPainterSceneControl } from "./scene-controls";
@@ -28,6 +33,11 @@ interface RuntimeController {
   deactivate(): void;
   readonly state: unknown;
   auditScene(): Record<string, number>;
+  developmentPhases(): DevelopmentPhaseSnapshot;
+  setDevelopmentPhase(
+    phase: DevelopmentPhase,
+    enabled: boolean,
+  ): DevelopmentPhaseSnapshot;
 }
 
 interface FoundryHooksLike {
@@ -43,6 +53,7 @@ interface RuntimeRoot {
 
 export interface RegisterRuntimeOptions {
   root?: RuntimeRoot;
+  developmentPhaseControlsMutable?: boolean;
   createController?: () => RuntimeController;
   createApplicationClass?: (controller: RuntimeController) => new () => {
     render(options?: Record<string, unknown>): unknown;
@@ -92,6 +103,7 @@ export const evaluateRuntimeCompatibility = ({
 
 export const registerBattlefieldPainterRuntime = ({
   root = globalThis as RuntimeRoot,
+  developmentPhaseControlsMutable = DEVELOPMENT_PHASE_CONTROLS_MUTABLE,
   createController = () => new PainterController(),
   createApplicationClass = (controller) =>
     createPainterApplicationClass(controller as PainterController),
@@ -152,6 +164,7 @@ export const registerBattlefieldPainterRuntime = ({
       canMutate: evaluated.supported && root.game?.user?.isGM === true,
       getState: () => ({ ...(controller.state as Record<string, unknown>) }),
       auditScene: () => controller.auditScene(),
+      developmentPhases: () => controller.developmentPhases(),
     };
     module.api = diagnosticApi.canMutate
       ? {
@@ -159,6 +172,14 @@ export const registerBattlefieldPainterRuntime = ({
           open: openPainter,
           activate: () => controller.activate(),
           deactivate: () => controller.deactivate(),
+          ...(developmentPhaseControlsMutable
+            ? {
+                setDevelopmentPhase: (
+                  phase: DevelopmentPhase,
+                  enabled: boolean,
+                ) => controller.setDevelopmentPhase(phase, enabled),
+              }
+            : {}),
         }
       : diagnosticApi;
   });
@@ -166,4 +187,3 @@ export const registerBattlefieldPainterRuntime = ({
   hooks.on("canvasTearDown", () => controller.deactivate());
   return true;
 };
-

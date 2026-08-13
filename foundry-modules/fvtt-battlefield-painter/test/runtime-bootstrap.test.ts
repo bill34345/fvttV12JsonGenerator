@@ -102,6 +102,8 @@ describe("Foundry lifecycle bootstrap", () => {
           return { active: false };
         },
         auditScene: () => ({ bundles: 0 }),
+        developmentPhases: () => ({ p0: true, p1: true }),
+        setDevelopmentPhase: () => ({ p0: true, p1: false }),
       }),
       createApplicationClass: () =>
         class FakeApplication {
@@ -128,6 +130,11 @@ describe("Foundry lifecycle bootstrap", () => {
     const api = module.api as Record<string, any>;
     expect(api.compatibility).toEqual({ supported: true, diagnostics: [] });
     expect(api.canMutate).toBe(true);
+    expect(api.developmentPhases()).toEqual({ p0: true, p1: true });
+    expect(api.setDevelopmentPhase("p1", false)).toEqual({
+      p0: true,
+      p1: false,
+    });
     controls.tiles.tools["fvtt-battlefield-painter"].onChange();
     expect(opened).toContain("render");
   });
@@ -165,6 +172,42 @@ describe("Foundry lifecycle bootstrap", () => {
       },
     });
     expect((module.api as Record<string, unknown>).activate).toBeUndefined();
+  });
+
+  test("omits the internal phase setter when release controls are immutable", () => {
+    const once = new Map<string, () => void>();
+    const module: Record<string, unknown> = {};
+    const root = {
+      Hooks: {
+        once: (event: string, callback: () => void) => once.set(event, callback),
+        on: () => undefined,
+      },
+      game: {
+        version: "14.364",
+        system: { id: "dnd5e", version: "5.3.3" },
+        user: { isGM: true },
+        modules: { get: () => module },
+      },
+    };
+
+    registerBattlefieldPainterRuntime({
+      root,
+      developmentPhaseControlsMutable: false,
+      createController: () => ({
+        activate() {},
+        deactivate() {},
+        state: { active: false },
+        auditScene: () => ({ bundles: 0 }),
+        developmentPhases: () => ({ p0: true, p1: true }),
+        setDevelopmentPhase: () => ({ p0: true, p1: false }),
+      }),
+    });
+    once.get("ready")?.();
+
+    expect((module.api as Record<string, unknown>).developmentPhases).toEqual(
+      expect.any(Function),
+    );
+    expect((module.api as Record<string, unknown>).setDevelopmentPhase).toBeUndefined();
   });
 
   test("keeps the diagnostic API read-only for a supported non-GM user", () => {

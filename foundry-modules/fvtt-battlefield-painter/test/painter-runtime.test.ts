@@ -57,6 +57,10 @@ describe("ApplicationV2 painter", () => {
         selectTerrain: expect.any(Function),
         selectStage: expect.any(Function),
         selectMode: expect.any(Function),
+        selectBrushShape: expect.any(Function),
+        setBrushRadius: expect.any(Function),
+        undo: expect.any(Function),
+        redo: expect.any(Function),
         togglePainter: expect.any(Function),
       },
     });
@@ -75,17 +79,49 @@ describe("ApplicationV2 painter", () => {
     await PainterApplication.selectMode.call(app, undefined, {
       dataset: { mode: "erase" },
     });
+    await PainterApplication.selectBrushShape.call(app, undefined, {
+      dataset: { shape: "line" },
+    });
+    await PainterApplication.setBrushRadius.call(app, undefined, {
+      dataset: { radius: "2" },
+    });
     expect(controller.state).toMatchObject({
       configurationId: "frost",
       stageIndex: 1,
       mode: "erase",
+      brushShape: "line",
+      brushRadius: 2,
     });
-    expect(app.renderCalls).toBe(6);
+    expect(app.renderCalls).toBe(10);
     await app.close();
   });
 });
 
 describe("canvas pointer lifecycle", () => {
+  test("keeps P1 controls internal and can fall back to P0 behavior", () => {
+    const controller = new PainterController();
+    controller.selectBrushShape("fill");
+    controller.setBrushRadius(3);
+    expect(controller.state).toMatchObject({
+      p0Enabled: true,
+      p1Enabled: true,
+      brushShape: "fill",
+      brushRadius: 3,
+    });
+
+    controller.setDevelopmentPhase("p1", false);
+    expect(controller.state).toMatchObject({
+      p1Enabled: false,
+      brushShape: "free",
+      brushRadius: 0,
+      canUndo: false,
+      canRedo: false,
+    });
+
+    controller.setDevelopmentPhase("p0", false);
+    expect(controller.state.p0Enabled).toBe(false);
+  });
+
   test("attaches pointer listeners only while the supported GM activates the painter", () => {
     class FakeCanvasElement {
       readonly added: string[] = [];
@@ -114,6 +150,7 @@ describe("canvas pointer lifecycle", () => {
     expect(element.added).toEqual([
       "pointerdown",
       "pointermove",
+      "pointerleave",
       "pointerup",
       "pointercancel",
     ]);
@@ -121,6 +158,65 @@ describe("canvas pointer lifecycle", () => {
     controller.deactivate();
     expect(controller.state).toMatchObject({ active: false });
     expect(element.removed).toEqual(element.added);
+  });
+
+  test("binds cursor preview to the active canvas instead of module init time", () => {
+    const listeners = new Map<string, (event: any) => void>();
+    class FakeCanvasElement {
+      addEventListener(type: string, listener: (event: any) => void) {
+        listeners.set(type, listener);
+      }
+      removeEventListener() {}
+    }
+    const drawingCalls: unknown[] = [];
+    class Graphics {
+      clear() {
+        drawingCalls.push("clear");
+        return this;
+      }
+      poly(points: number[]) {
+        drawingCalls.push(points);
+        return this;
+      }
+      fill(style: unknown) {
+        drawingCalls.push(style);
+        return this;
+      }
+      stroke(style: unknown) {
+        drawingCalls.push(style);
+        return this;
+      }
+      destroy() {}
+    }
+    installGlobal("HTMLCanvasElement", FakeCanvasElement);
+    installGlobal("PIXI", { Graphics });
+    installGlobal("game", { user: { isGM: true } });
+    const element = new FakeCanvasElement();
+    installGlobal("canvas", {
+      ready: true,
+      scene: {},
+      interface: { addChild() {}, removeChild() {} },
+      app: { canvas: element },
+      canvasCoordinatesFromClient: () => ({ x: 10, y: 10 }),
+      grid: {
+        getOffset: () => ({ i: 0, j: 0 }),
+        getCenterPoint: () => ({ x: 50, y: 50 }),
+        getVertices: () => [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: 0, y: 100 },
+        ],
+        getAdjacentOffsets: () => [],
+        getDirectPath: (offsets: unknown[]) => offsets,
+      },
+    });
+
+    const controller = new PainterController();
+    controller.activate();
+    listeners.get("pointermove")?.({ pointerId: 7, clientX: 10, clientY: 10 });
+
+    expect(drawingCalls).toContainEqual([0, 0, 100, 0, 100, 100, 0, 100]);
   });
 
   test("fails closed for a non-GM without attaching canvas listeners", () => {
@@ -138,4 +234,3 @@ describe("canvas pointer lifecycle", () => {
     expect(notifications).toEqual(["只有 GM 可以修改战场地形。"]);
   });
 });
-

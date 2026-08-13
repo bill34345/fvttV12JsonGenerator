@@ -1,5 +1,6 @@
 import { TERRAIN_CONFIGURATIONS, type TerrainConfigurationId } from "./catalog";
 import { MODULE_ID } from "./constants";
+import type { BrushShape } from "./brush-engine";
 import { PainterController, type PainterMode } from "./painter-controller";
 
 export const createPainterApplicationClass = (
@@ -29,6 +30,10 @@ export const createPainterApplicationClass = (
         selectTerrain: this.selectTerrain,
         selectStage: this.selectStage,
         selectMode: this.selectMode,
+        selectBrushShape: this.selectBrushShape,
+        setBrushRadius: this.setBrushRadius,
+        undo: this.undo,
+        redo: this.redo,
         togglePainter: this.togglePainter,
       },
     };
@@ -59,6 +64,13 @@ export const createPainterApplicationClass = (
         isPaint: state.mode === "paint",
         isErase: state.mode === "erase",
         isAdvance: state.mode === "advance",
+        isFree: state.brushShape === "free",
+        isLine: state.brushShape === "line",
+        isFill: state.brushShape === "fill",
+        radii: Array.from({ length: 5 }, (_, value) => ({
+          value,
+          selected: value === state.brushRadius,
+        })),
         terrains: Object.values(TERRAIN_CONFIGURATIONS).map((configuration) => ({
           ...configuration,
           selected: configuration.id === state.configurationId,
@@ -87,10 +99,33 @@ export const createPainterApplicationClass = (
       await this.render({ force: true });
     }
 
+    static async selectBrushShape(
+      this: any,
+      _event: unknown,
+      target: HTMLElement,
+    ) {
+      controller.selectBrushShape(target.dataset.shape as BrushShape);
+      await this.render({ force: true });
+    }
+
+    static async setBrushRadius(this: any, _event: unknown, target: HTMLElement) {
+      controller.setBrushRadius(Number(target.dataset.radius));
+      await this.render({ force: true });
+    }
+
+    static async undo(this: any) {
+      await controller.undo();
+      await this.render({ force: true });
+    }
+
+    static async redo(this: any) {
+      await controller.redo();
+      await this.render({ force: true });
+    }
+
     static async togglePainter(this: any) {
       controller.toggle();
       await this.render({ force: true });
     }
   };
 };
-

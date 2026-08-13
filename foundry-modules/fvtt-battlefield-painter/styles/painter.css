@@ -111,6 +111,74 @@
   border-radius: 3px;
 }
 
+.battlefield-painter__brush {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--bp-line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.battlefield-painter__section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: #ffd59c;
+  font: 700 11px/1.2 ui-monospace, monospace;
+  letter-spacing: 0.08em;
+}
+
+.battlefield-painter__section-title small {
+  color: var(--bp-muted);
+  font-size: 10px;
+}
+
+.battlefield-painter__shapes,
+.battlefield-painter__history {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.battlefield-painter__history {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.shape-button,
+.battlefield-painter__history button {
+  display: inline-flex;
+  min-height: 34px;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.shape-button.is-selected,
+.radius-button.is-selected {
+  border-color: #d6843f;
+  color: #ffd59c;
+  background: rgba(214, 132, 63, 0.16);
+}
+
+.battlefield-painter__radius {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.radius-button {
+  min-height: 28px;
+  border-radius: 999px;
+  font: 700 11px/1 ui-monospace, monospace;
+}
+
+.battlefield-painter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .stage-button {
   display: grid;
   padding: 7px 10px;
@@ -171,4 +239,3 @@
     transition: none !important;
   }
 }
-

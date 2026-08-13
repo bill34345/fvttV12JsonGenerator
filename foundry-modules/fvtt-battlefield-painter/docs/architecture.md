@@ -1,4 +1,4 @@
-# P0 Architecture and Decisions
+# P0/P1 Architecture and Decisions
 
 ## Document bundle
 
@@ -28,6 +28,18 @@ This is deliberately conservative: a missing Region contract prevents the stroke
 The tool panel is a Foundry v14 `ApplicationV2` using `HandlebarsApplicationMixin`. The visual direction is a compact tactical material tray rather than a generic settings form: three illustrated terrain cards, two stage selectors, three explicit modes, and one activation control. Reduced-motion preferences disable any future transition.
 
 Pointer events are attached only while the GM activates the painter and are removed when deactivated or when the canvas tears down. A stroke is committed only on pointer release, limiting document churn during drag.
+
+## P1 brush geometry and preview
+
+`src/brush-engine.ts` keeps geometry independent from document mutation. Free brush samples the current cell, line delegates rasterization to core `getDirectPath`, and fill covers the inclusive offset rectangle between the drag endpoints. Radius 0–4 expands seed cells through core `getAdjacentOffsets`, so square and hex adjacency remain a Foundry responsibility.
+
+`src/preview-renderer.ts` draws normalized cell polygons with the v14-shaped PIXI Graphics API. The renderer is created only after an active canvas is available, destroyed on deactivation/canvas teardown, and fails closed when the required graphics or interface layer is absent.
+
+## P1 history and development phases
+
+`src/scene-history.ts` snapshots only documents carrying valid Battlefield Painter ownership flags. Each successful mutation records before/after sources; undo and redo delete only current owned bundles and recreate the selected snapshot, preserving foreign Scene documents. History is per active Scene, bounded to 20 entries, and clears redo after a new mutation.
+
+The internal P0/P1 phase gate defaults to mutable only for this alpha. Disabling P1 forces free shape/radius 0 and hides P1 UI; disabling P0 requires P1 to be off and prevents activation. A release must set `DEVELOPMENT_PHASE_CONTROLS_MUTABLE` to `false`, which also removes the mutation switch from the module API.
 
 ## Known P0 trade-offs
 

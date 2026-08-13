@@ -5,6 +5,8 @@ import {
   type Point,
 } from "./geometry";
 
+export type { GridCell, GridOffset, Point } from "./geometry";
+
 export interface FoundryGridLike {
   getOffset(point: Point): GridOffset;
   getCenterPoint(offset: GridOffset): Point;
@@ -26,4 +28,3 @@ export const gridCellAtPoint = (
   grid: FoundryGridLike,
   point: Point,
 ): GridCell => gridCellAtOffset(grid, grid.getOffset(point));
-

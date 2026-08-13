@@ -35,7 +35,6 @@ const modulePaths = (configuration: FoundryLabConfig) => ({
     "Data/modules",
     `.${MODULE_ID}.installing`,
   ),
-  backupRoot: resolve(configuration.backupRoot, MODULE_ID),
   buildRoot: resolve(
     configuration.repoRoot,
     "foundry-modules",
@@ -68,11 +67,11 @@ export const installLocal = async (
     "Battlefield Painter destination",
   );
   assertInsideLabRoot(configuration, paths.staging);
-  assertInsideLabRoot(configuration, paths.backupRoot);
   await buildModule();
   if (await exists(paths.staging)) {
     throw new Error(`Stale staging directory exists: ${paths.staging}`);
   }
+  await assertEmptyInstallDestination(paths.destination);
 
   const preview = {
     apply,
@@ -82,19 +81,10 @@ export const installLocal = async (
   };
   if (!apply) return preview;
 
-  let backup: string | null = null;
   let installedNew = false;
   try {
     await mkdir(resolve(paths.destination, ".."), { recursive: true });
-    await mkdir(paths.backupRoot, { recursive: true });
-    if (await exists(paths.destination)) {
-      await assertOwned(paths.destination, false);
-      backup = resolve(
-        paths.backupRoot,
-        `${new Date().toISOString().replace(/[:.]/g, "-")}-${MODULE_ID}`,
-      );
-      await rename(paths.destination, backup);
-    }
+    await assertEmptyInstallDestination(paths.destination);
     await cp(paths.buildRoot, paths.staging, {
       recursive: true,
       errorOnExist: true,
@@ -102,19 +92,18 @@ export const installLocal = async (
     });
     await rename(paths.staging, paths.destination);
     installedNew = true;
-    await assertOwned(paths.destination, true);
+    await assertOwned(paths.destination);
     const expected = await hashTree(paths.buildRoot);
     const actual = await hashTree(paths.destination);
     if (JSON.stringify(expected) !== JSON.stringify(actual)) {
       throw new Error("Installed module bytes differ from the built artifact");
     }
-    return { ...preview, changed: true, backup, hash: treeHash(actual) };
+    return { ...preview, changed: true, hash: treeHash(actual) };
   } catch (error) {
     if (await exists(paths.staging)) await rm(paths.staging, { recursive: true });
     if (installedNew && (await exists(paths.destination))) {
       await rm(paths.destination, { recursive: true });
     }
-    if (backup && (await exists(backup))) await rename(backup, paths.destination);
     throw error;
   }
 };
@@ -130,7 +119,7 @@ export const verifyInstall = async (
     ["data", "server-mirror", "Data", "modules", MODULE_ID],
     "Battlefield Painter destination",
   );
-  await assertOwned(paths.destination, true);
+  await assertOwned(paths.destination);
   const manifest = JSON.parse(
     await readFile(resolve(paths.destination, "module.json"), "utf8"),
   ) as Record<string, unknown>;
@@ -147,7 +136,17 @@ export const verifyInstall = async (
   };
 };
 
-const assertOwned = async (path: string, exactVersion: boolean): Promise<void> => {
+export const assertEmptyInstallDestination = async (
+  destination: string,
+): Promise<void> => {
+  if (await exists(destination)) {
+    throw new Error(
+      `Refusing installation because destination already exists: ${destination}`,
+    );
+  }
+};
+
+const assertOwned = async (path: string): Promise<void> => {
   const stats = await lstat(path);
   if (!stats.isDirectory() || stats.isSymbolicLink()) {
     throw new Error(`Unsafe module path: ${path}`);
@@ -157,7 +156,7 @@ const assertOwned = async (path: string, exactVersion: boolean): Promise<void> =
   ) as Record<string, unknown>;
   if (
     manifest.id !== MODULE_ID ||
-    (exactVersion && manifest.version !== MODULE_VERSION)
+    manifest.version !== MODULE_VERSION
   ) {
     throw new Error(`Refusing to replace or accept a foreign module at ${path}`);
   }
@@ -196,4 +195,3 @@ const treeHash = (entries: Array<{ path: string; sha256: string }>): string =>
 
 const exists = async (path: string): Promise<boolean> =>
   Boolean(await lstat(path).catch(() => undefined));
-
