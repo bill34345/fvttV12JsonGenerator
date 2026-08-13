@@ -36,4 +36,3 @@ All six terrain overlays in `assets/terrain/` were generated specifically for th
 ### `brambles-thicket.webp`
 
 > Create one original top-down hand-painted VTT terrain overlay asset for a single grid cell: DENSE THORN THICKET, stage 2. A thick tangled ring and crisscross mass of dark brown thorn branches with clustered deep-green leaves and sharp pale thorns, formidable wall-like density, strong irregular silhouette viewed directly overhead, painterly fantasy tabletop style, detailed but not photorealistic, centered with comfortable empty margin, no border, no grid, no tile frame, no text, no symbols, no watermark, no haze. The subject must be fully isolated on a perfectly flat uniform chroma-key magenta background #FF00FF with no gradient, no shadows on the background, and no magenta or purple anywhere in the bramble artwork. Square 1:1 composition.
-

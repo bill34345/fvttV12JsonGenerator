@@ -21,4 +21,3 @@
 - Static checks do not establish Foundry runtime compatibility.
 - Runtime acceptance must use exact Foundry `14.364`; the repository default system target is dnd5e `5.3.3`.
 - Square-grid and hex-grid painting, stage changes, erase/rollback, movement-cost Regions, fire light, and bramble walls require real-canvas verification before being reported as accepted.
-

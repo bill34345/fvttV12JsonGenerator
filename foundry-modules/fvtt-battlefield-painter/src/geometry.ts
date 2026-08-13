@@ -128,4 +128,3 @@ export const boundarySegments = (
     .filter(({ count }) => count === 1)
     .map(({ segment }) => segment);
 };
-

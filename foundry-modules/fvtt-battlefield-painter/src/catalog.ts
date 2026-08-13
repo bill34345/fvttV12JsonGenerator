@@ -135,4 +135,3 @@ export const TERRAIN_CONFIGURATIONS: Record<
 export const getTerrainConfiguration = (
   id: TerrainConfigurationId,
 ): TerrainConfiguration => TERRAIN_CONFIGURATIONS[id];
-

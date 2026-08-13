@@ -16,4 +16,3 @@ if (action === "install") {
 } else {
   throw new Error(`Unsupported action: ${action}`);
 }
-

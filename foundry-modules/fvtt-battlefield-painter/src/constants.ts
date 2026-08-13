@@ -9,4 +9,3 @@ export const DOCUMENT_ORDER = [
 ] as const;
 
 export type PlannedDocumentName = (typeof DOCUMENT_ORDER)[number];
-
