@@ -142,6 +142,23 @@ bun run src/index.ts --resume-item-intake ".local/item-intake-runs/<run-id>" `
 
 Item Intake 与 Monster Intake 共用 `MONSTER_INTAKE_*` 的 provider/doctor 配置、凭据隔离和本机 OAuth bridge 边界；变量名是历史兼容名称，不表示 Item 会走旧的 Monster IR。完整机械契约、已验证范围和仍待运行时验收的边界见 [`docs/item-ai-intake-v14.md`](docs/item-ai-intake-v14.md)。
 
+## Species Intake 与累计种族模块（Foundry V14/core）
+
+不规则种族 TXT 或人工编辑后的规范 Species Markdown 使用 `--intake-species`。它建立独立的来源证据 IR、确定性 Species Markdown、原生 race/feat package 和 accepted ledger；复杂规则可以诚实保留为 `gm-assisted` / `external-rule`，但不能伪装成空 Utility 或任意 Effect。单个 TXT 最多包含 50 个候选。
+
+```powershell
+bun run src/index.ts --intake-species "path/to/species.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 14 `
+  --effect-profile core
+
+bun run build:homebrew-species
+bun run test:homebrew-species
+bun run verify:homebrew-species
+```
+
+Intake 成功不会自动重建模块；`build:homebrew-species` 是独立显式步骤。任何 accepted Markdown 编辑都会使 ledger hash stale，必须再次经 `--intake-species` 审查，未更新前模块 build 会拒绝。模块只有 `species` 与 `features` 两个 Item Compendium，无 runtime JavaScript 或世界扫描。完整契约、食人魔自动化边界与验收层级见 [`docs/species-ai-intake-v14.md`](docs/species-ai-intake-v14.md)。
+
 ## AI 怪物资料整理（推荐）
 
 第一次拿到 TXT 或格式混乱的 Markdown 时，推荐让 AI 负责发现怪物边界与提取来源证据，再由项目确定性生成标准 Markdown 和 Actor JSON。AI 不直接写最终 JSON，任一证据、覆盖、投影或独立 review 门失败都会进入 `needs_review` 或 `failed`，不会静默回退旧转换器。
@@ -197,7 +214,7 @@ bun run src/index.ts `
   --vault "obsidian/dnd数据转fvttjson"
 ```
 
-退出码：`0` 表示全部 accepted，`2` 表示至少一只 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。Monster Intake 最多 50 只、200,000 个 JavaScript UTF-16 字符；Item Intake 的相同上限和 V14/core-only 边界见上节。两者都不支持图片/PDF OCR，也不承诺任意模型、任意文本都能自动通过。
+退出码：`0` 表示全部 accepted 或仅执行预览，`2` 表示至少一个候选 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。Monster、Item 与 Species Intake 均最多处理 50 个候选、200,000 个 JavaScript UTF-16 字符；Item 与 Species 固定为 V14/core，精确边界见各自章节。三者都不支持图片/PDF OCR，也不承诺任意模型、任意文本都能自动通过。
 
 ## 血猎手 2024 原生合集模块（Foundry v14）
 

@@ -1479,3 +1479,49 @@ root 治理因此完成；仓库 `.local/references` 只作为兼容窗口副本
 - 第一次专项测试为 86 pass / 1 fail，唯一失败是 plaintext 图片 URL 正则仍写旧测试地址；修正为精确 `assets.example.invalid` HTTPS 断言后，同一批 87 tests / 386 expectations 全部通过。最终 `bun run ci:verify` exit 0、耗时约 114 秒：1,645 tests / 7,776 expectations / 13 filtered / 0 fail，85.57% production lines / 88.16% functions，3,845 modules / 3,962 dependencies / 0 violations，309-source anti-overfit、902-path hygiene、AGENTS、所有类型检查、Web build、锁定 dnd5e reference 和 White Tusk Shaman 离线 smoke 全部通过；
 - 人工语义复核确认：被清理内容没有生产代码消费者；Web 默认状态显示图片能力未配置，只有测试显式注入示例目标时才启用；v12 必需的 `data/cn.json`、`data/spells.ldb`、`data/golden-master.json`、小型 dnd5e 4.3.9 证据、v14 图标 catalog 和正式 Markdown 输入仍保留。后者是否允许公开取决于用户拥有的内容许可，不能由路径扫描代替版权判断，继续作为单独的发布决定而不是本次自动删除项；
 - 本阶段没有访问远程 8080、启动真实 Foundry/Chrome、执行长时监测或改变既有功能支持声明。架构重整仍为 `completed`；本次仅收紧公开提交边界。
+
+### 2026-08-11：Species TXT Intake 与食人魔纵向切片
+
+- 在 clean `master` (`890af88ae407f06851e5c2077204de06a76770c2`) 的 sibling worktree
+  `I:\OpenCode\fvttV12JsonGenerator-worktrees\20260811-011304-species-intake-ogre` 和分支
+  `codex/20260811-011304-species-intake-ogre` 实现；没有提交、合并、推送或生产写入。后续仅把构建产物安装到受保护的本地
+  `fvtt-v14-module-matrix` disposable world；
+- 新增独立的 Species canonical model、Markdown parser/router、Foundry 14.364 / dnd5e 5.3.3 / Core
+  projector/validator、Evidence IR/provider/orchestrator、CLI intake/resume 入口、accepted ledger 及 content-only
+  `fvtt-homebrew-species` 两包模块。Markdown 原始资料区使用来源哈希与 UTF-16 长度精确保留候选，人工编辑会使
+  ledger stale，模块构建 fail-closed；复杂规则只能以明确的 `gm-assisted` / `external-rule` 边界进入 accepted；
+- 食人魔 fixture 的人工语义复核确认：正式显示 `食人魔（Ogre）`，原始 `Orge` 拼写保留；race 为 giant/Ogre、
+  Large、40 ft、darkvision 60；0级授予四项特性，5级授予附赠动作脱困；巨武器四条无 Activity/Effect/武器写入，
+  身强力壮未扩大为全局优势，脱困为 Bonus、2/LR、消费1且不消费 spell slot，刚毅为每级 HP +3，笨拙为 AC -2，
+  起身/推击/建筑伤害保持 assisted，未增加 ASI、语言、触及、负重、熟练、徒手伤害或抗性；
+- 专项 hermetic 门禁为 14 tests / 84 expectations / 0 fail；CLI Species 为 2 tests / 6 expectations / 0 fail。
+  首次全仓 CI 在 1,882 tests 通过后发现 Species artifact test 错把 hermetic 临时 Lab 当作 `classic-level` 来源；
+  修正为优先使用 runner 注入的只读 `FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY` 后，原失败测试在 hermetic 环境通过；
+- 只读 Sol reviewer 首轮给出 `REVISE`：package validator 未双向验证 coverage/Effect/Activity/grant，Evidence IR
+  允许笼统 `/species` claim，resume 缺少旧 run/decision hash 追溯，installer 没有把 artifact verifier 用作安装门禁。
+  修正后新增字段级 claims↔coverage、mechanics↔Effect/Activity↔grant 闭合和重算 logical hash mutation tests；
+  resume manifest/ledger 写入 `resumedFromRunId` 与 `decisionsSha256`；installer 在 source artifact、staging 和最终
+  module 三层验证 manifest、content-only 文件面、LevelDB 与 UUID，并对 missing/foreign/escape fail-closed；
+- 修正证据按要求交回同一 reviewer；第一次复核回合未在等待窗口内返回，因此当时没有记录虚假的 `PASS`。真实 OAuth、
+  模块和 Lab 证据就绪后的同一 reviewer 复核确认代码与运行语义无阻断，只要求把三份仍停留在 fake-provider-only 状态的
+  文档同步为当前事实；本段与支持矩阵/Species 指南即为该最小修正；
+- reviewer 修正后的第一次全仓 CI 在 coverage Item CLI 子进程持续高 CPU 数分钟而不推进，按精确 PID/命令行终止并
+  清理本次孤儿进程；精确 Item 单元 6/6 与 CLI 3/3 随后通过。再次完整运行 `bun run ci:verify` exit 0、耗时约
+  116 秒：1,885 tests / 9,230 expectations / 14 filtered / 0 fail，production coverage 84.14% lines / 86.57%
+  functions，5,743 modules / 5,503 dependencies / 0 violations，
+  345-source anti-overfit、1,059-path hygiene、25 个 AGENTS、全部类型检查、dnd5e 5.3.3 reference、Web build 和
+  White Tusk Shaman 离线 Actor smoke 均通过；
+- 本机 `codex login status` 为 ChatGPT OAuth 已登录，Intake doctor 确认 loopback `codex-oauth` bridge 可达。真实运行
+  `species-20260811022558-9a41c4a1` 无 repair accepted；accepted ledger 记录 Markdown SHA-256
+  `872e098b…cc63`、来源 SHA-256 `6b237425…6d94` 与 package logical hash `78496f64…8e0e`。模块重新 build/verify
+  得到 1 race / 5 features，module logical hash `d9bd6759…258fd`，ZIP SHA-256
+  `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`；
+- 本地 Foundry `14.364` / dnd5e `5.3.3` 的 `fvtt-v14-module-matrix` world 已安装并启用模块。原生 Add Species 应用后
+  角色为 giant/Ogre、Large、40 ft、darkvision 60、AC 10→8；1级 HP 为 12+3=15，5级最大 HP 为 40+15=55；
+  5级附赠动作脱困 2/2 消耗、0/2 第三次无聊天卡、Long Rest 恢复 2/2。两张聊天卡均要求手动进行原受擒检定，
+  不选择属性/技能、不自动解除状态；“体型不超过你二级”没有系统判断、推击、移动或武器写入；
+- 文档同步后的完整 `bun run ci:verify` exit 0、耗时 123.2 秒：1,891 tests / 9,256 expectations /
+  14 filtered / 0 fail，production coverage 84.23% lines / 86.66% functions，5,744 modules / 5,506 dependencies /
+  0 violations，345-source anti-overfit、1,059-path hygiene、25 个 AGENTS、全部类型检查、dnd5e 5.3.3 reference、
+  Web build 与 White Tusk Shaman 离线 Actor smoke 均通过；artifact verifier 随后再次通过；
+- 尚未完成精确 2×2 Token 放置、现有武器前后字节比较或 Actor 导出/读回；远程生产 8080 未接触，长期跑团未验收。

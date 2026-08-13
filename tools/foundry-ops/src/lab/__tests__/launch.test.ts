@@ -8,7 +8,7 @@ import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOpt
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
   it('builds a loopback-only core command', () => {
-    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--noupnp'] });
+    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--world', 'cor-cotn', '--noupnp'] });
   });
   it('uses an independent server mirror port and path', () => {
     const command = buildLaunchCommand(config, 'server-mirror');
@@ -18,7 +18,7 @@ describe('Foundry profile launcher', () => {
   it('adapts the public command shape to Foundry 14.364 equals-style parsing', () => {
     expect(buildRuntimeArgs(buildLaunchCommand(config, 'core-test').args)).toEqual([
       resolve(config.appRoot, 'main.js'), `--dataPath=${config.profiles.coreTest.dataPath}`,
-      '--hostname=127.0.0.1', '--port=30000', '--noupnp',
+      '--hostname=127.0.0.1', '--port=30000', '--world=cor-cotn', '--noupnp',
     ]);
   });
   it('rejects wildcard or non-loopback listeners', () => {
@@ -43,12 +43,13 @@ describe('Foundry profile launcher', () => {
   });
   it('will only stop the pinned lab Node process running the pinned Foundry app', () => {
     const node = resolve(config.nodeRoot, 'node.exe'), main = resolve(config.appRoot, 'main.js');
-    const core = `"${node}" --require hook "${main}" --dataPath=${config.profiles.coreTest.dataPath} --port=30000`;
-    const mirror = `"${node}" --require hook "${main}" --dataPath=${config.profiles.serverMirror.dataPath} --port=30001`;
+    const core = `"${node}" --require hook "${main}" --dataPath=${config.profiles.coreTest.dataPath} --port=30000 --world=cor-cotn`;
+    const mirror = `"${node}" --require hook "${main}" --dataPath=${config.profiles.serverMirror.dataPath} --port=30001 --world=cor-cotn`;
     expect(isExpectedFoundryProcess(config, 'core-test', node, core)).toBe(true);
     expect(isExpectedFoundryProcess(config, 'core-test', node, mirror)).toBe(false);
     expect(isExpectedFoundryProcess(config, 'server-mirror', node, core)).toBe(false);
     expect(isExpectedFoundryProcess(config, 'core-test', node, core.replace('--port=30000', '--port=300000'))).toBe(false);
+    expect(isExpectedFoundryProcess(config, 'core-test', node, core.replace('--world=cor-cotn', '--world=fvtt-v14-module-matrix'))).toBe(false);
     expect(isExpectedFoundryProcess(config, 'core-test', 'C:/other/node.exe', core)).toBe(false);
   });
   it('maps each profile to the mutually exclusive peer', () => {
@@ -60,7 +61,7 @@ describe('Foundry profile launcher', () => {
     const isolated = createLabConfig(root); await mkdir(join(isolated.evidenceRoot, 'core-test'), { recursive: true });
     await writeFile(join(isolated.evidenceRoot, 'core-test/server.pid'), '{"foundry":42}');
     const node = resolve(isolated.nodeRoot, 'node.exe'), main = resolve(isolated.appRoot, 'main.js'); let kills = 0;
-    const mirror = `"${node}" "${main}" --dataPath=${isolated.profiles.serverMirror.dataPath} --port=30001`;
+    const mirror = `"${node}" "${main}" --dataPath=${isolated.profiles.serverMirror.dataPath} --port=30001 --world=cor-cotn`;
     try {
       await expect(stopProfile(isolated, 'core-test', { queryProcess: () => ({ executable: node, commandLine: mirror }), kill: () => { kills += 1; } })).rejects.toThrow('not the pinned');
       expect(kills).toBe(0);

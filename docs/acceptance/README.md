@@ -7,6 +7,7 @@
 - [Current Support Matrix](current-support-matrix.md)：当前版本、环境和功能支持边界；
 - [Current Acceptance Corpus Matrix](current-corpus-matrix.md)：已经人工核对过的代表性输入；
 - [Generated Actor / Item Verification](../generated-actor-verification.md)：Actor/Item JSON 应怎样对照源资料验收。
+- [Species TXT Intake 与累计模块](../species-ai-intake-v14.md)：Species Evidence IR、规范 Markdown、V14 race/feat package、accepted ledger 与模块构建边界。
 
 ## Actor 和转换结果
 
