@@ -6,7 +6,7 @@
 
 ## 产品边界
 
-- module、companion、schema v1 和版本 1.1.1 是一个发布单元，不能拆成两个漂移产品。
+- module、companion、schema v1 和版本 1.1.2 是一个发布单元，不能拆成两个漂移产品。
 - 它只观察：不清缓存、不改游戏设置、不删除 Foundry 文档、不写世界 LevelDB。
 - companion 只管理自己创建的专用 Chrome profile，不接管用户日常 Chrome，不读取 Cookie、密码或浏览器凭据。
 - GM 必须通过正常界面登录；companion 不得猜测、提取或绕过密码。

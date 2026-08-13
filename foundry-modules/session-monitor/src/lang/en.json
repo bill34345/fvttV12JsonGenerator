@@ -8,5 +8,7 @@
   "FSM.Companion.missing": "Companion missing",
   "FSM.Action.start": "Start",
   "FSM.Action.mark": "Jank now",
-  "FSM.Action.stop": "Stop & export"
+  "FSM.Action.stop": "Stop & export",
+  "FSM.Keybinding.markJank": "Mark Session Monitor jank",
+  "FSM.Keybinding.markJankHint": "Add a jank marker to the active GM session"
 }

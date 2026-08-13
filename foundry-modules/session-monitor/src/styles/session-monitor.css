@@ -1,10 +1,13 @@
 #fvtt-session-monitor-panel {
   --fsm-accent: #7eb8da;
   position: fixed;
-  z-index: 101;
+  z-index: 1000;
+  left: auto;
+  top: auto;
   right: 0.75rem;
   bottom: 0.75rem;
-  width: 18rem;
+  width: min(18rem, calc(100vw - 1.5rem));
+  min-width: 13rem;
   overflow: hidden;
   color: #eee;
   background: rgb(22 24 29 / 94%);
@@ -12,6 +15,7 @@
   border-radius: 0.45rem;
   box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 45%);
   font-size: 0.78rem;
+  touch-action: none;
 }
 
 #fvtt-session-monitor-panel header {
@@ -22,11 +26,38 @@
   padding: 0.3rem 0.45rem;
   color: #fff;
   background: rgb(47 53 64 / 96%);
+  cursor: grab;
+  user-select: none;
+}
+
+#fvtt-session-monitor-panel.dragging,
+#fvtt-session-monitor-panel.dragging header {
+  cursor: grabbing;
 }
 
 #fvtt-session-monitor-panel header [data-role="title"] {
-  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fvtt-session-monitor-panel .fsm-capsule-status {
+  flex: 0 0 auto;
+  max-width: 7rem;
+  overflow: hidden;
+  color: var(--fsm-accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fvtt-session-monitor-panel .fsm-capsule-elapsed {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 #fvtt-session-monitor-panel header button {
@@ -62,6 +93,13 @@
   white-space: nowrap;
 }
 
+#fvtt-session-monitor-panel .fsm-status {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
 #fvtt-session-monitor-panel .fsm-actions button {
   flex: 1;
   min-height: 1.7rem;
@@ -72,6 +110,19 @@
 #fvtt-session-monitor-panel[data-state="active"] {
   --fsm-accent: #7fd09a;
   border-color: var(--fsm-accent);
+}
+
+#fvtt-session-monitor-panel.collapsed {
+  width: min(14rem, calc(100vw - 1.5rem));
+  min-width: 0;
+}
+
+#fvtt-session-monitor-panel.collapsed .fsm-body {
+  display: none;
+}
+
+#fvtt-session-monitor-panel.collapsed header [data-role="title"] {
+  flex: 1 1 auto;
 }
 
 #fvtt-session-monitor-panel[data-flash="marker"] {
