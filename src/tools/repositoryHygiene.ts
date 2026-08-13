@@ -49,6 +49,11 @@ const TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS = new Set([
   'obsidian/dnd数据转fvttjson/output/warlock-of-the-rat-god.json',
 ]);
 
+// Species packages and their accepted ledger are cumulative, validator-gated
+// module build inputs rather than disposable CLI output. Keep this exception
+// constrained to stable lowercase identifiers and the one ledger filename.
+const TRACKED_SPECIES_ACCEPTANCE_ARTIFACT = /^obsidian\/[^/]+\/output\/species\/(?:accepted-ledger|[a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
+
 export function inspectTrackedArtifactPaths(paths: string[]): RepositoryHygieneFinding[] {
   const findings: RepositoryHygieneFinding[] = [];
   for (const rawPath of paths) {
@@ -110,6 +115,7 @@ export function executeRepositoryHygiene(
 function classifyProhibitedPath(path: string): RepositoryHygieneRule | null {
   if (/^obsidian\/[^/]+\/output_backup\//i.test(path)) return 'generated-backup';
   if (TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS.has(path)) return null;
+  if (TRACKED_SPECIES_ACCEPTANCE_ARTIFACT.test(path)) return null;
   if (/^obsidian\/[^/]+\/output\//i.test(path)) return 'disposable-generated-output';
   if (/(?:^|\/)\.fvtt-sync-manifest\.json$/i.test(path)) return 'runtime-manifest';
   if (/(?:^|\/)\.obsidian(?:\/|$)/i.test(path)) return 'local-workspace-state';
