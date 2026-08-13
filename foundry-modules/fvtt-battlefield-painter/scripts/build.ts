@@ -10,7 +10,7 @@ import {
 import { relative, resolve } from "node:path";
 
 export const MODULE_ID = "fvtt-battlefield-painter" as const;
-export const MODULE_VERSION = "0.2.0-alpha.1" as const;
+export const MODULE_VERSION = "0.3.0-alpha.1" as const;
 
 const root = resolve(import.meta.dir, "..");
 const dist = resolve(root, "dist");
@@ -53,6 +53,34 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   }
 };
 
+const mediaFiles = [
+  "assets/terrain/fire-embers.webm",
+  "assets/terrain/fire-blaze.webm",
+  "assets/terrain/frost-rime.webm",
+  "assets/terrain/frost-deep.webm",
+  "assets/terrain/brambles-creeping.webm",
+  "assets/terrain/brambles-thicket.webm",
+  "assets/audio/fire.ogg",
+  "assets/audio/frost.ogg",
+  "assets/audio/brambles.ogg",
+] as const;
+
+const hasPrefix = (bytes: Uint8Array, prefix: readonly number[]): boolean =>
+  prefix.every((value, index) => bytes[index] === value);
+
+export const validateMediaAssets = async (moduleRoot: string): Promise<void> => {
+  for (const relativePath of mediaFiles) {
+    const path = resolve(moduleRoot, relativePath);
+    const bytes = new Uint8Array(await readFile(path));
+    if (bytes.length < 1024) throw new Error(`Media asset is unexpectedly small: ${relativePath}`);
+    const valid = relativePath.endsWith(".webm")
+      ? hasPrefix(bytes, [0x1a, 0x45, 0xdf, 0xa3]) &&
+        new TextDecoder().decode(bytes).toLowerCase().includes("alpha_mode")
+      : hasPrefix(bytes, [0x4f, 0x67, 0x67, 0x53]);
+    if (!valid) throw new Error(`Media asset has an invalid container signature: ${relativePath}`);
+  }
+};
+
 export const buildModule = async (): Promise<{
   moduleRoot: string;
   zipPath: string;
@@ -85,6 +113,7 @@ export const buildModule = async (): Promise<{
   await cp(resolve(root, "assets"), resolve(moduleRoot, "assets"), {
     recursive: true,
   });
+  await validateMediaAssets(moduleRoot);
   await cp(resolve(root, "README.zh-CN.md"), resolve(moduleRoot, "README.zh-CN.md"));
 
   const manifest = JSON.parse(

@@ -34,6 +34,7 @@ export const createPainterApplicationClass = (
         setBrushRadius: this.setBrushRadius,
         undo: this.undo,
         redo: this.redo,
+        clearScene: this.clearScene,
         togglePainter: this.togglePainter,
       },
     };
@@ -120,6 +121,21 @@ export const createPainterApplicationClass = (
 
     static async redo(this: any) {
       await controller.redo();
+      await this.render({ force: true });
+    }
+
+    static async clearScene(this: any) {
+      await controller.clearAll((preview) => {
+        const confirm = (globalThis as any).confirm;
+        if (typeof confirm !== "function") return false;
+        const counts = preview.counts;
+        return confirm(
+          [
+            `Clear ${counts.totalDocuments} Battlefield Painter documents from this Scene?`,
+            `Bundles: ${counts.bundles}; Tiles: ${counts.tiles}; Regions: ${counts.regions}; Lights: ${counts.lights}; Sounds: ${counts.sounds}; Walls: ${counts.walls}.`,
+          ].join("\n"),
+        );
+      });
       await this.render({ force: true });
     }
 

@@ -7,7 +7,7 @@ import {
 
 const flag = (
   bundleId: string,
-  role: "terrain-tile" | "movement-region",
+  role: "terrain-tile" | "movement-region" | "terrain-sound",
   cellKey?: string,
 ) => ({
   bundleId,
@@ -33,7 +33,23 @@ describe("scene ownership", () => {
           flags: { "fvtt-battlefield-painter": flag("bundle-1", "movement-region") },
         },
       ],
-      lights: [],
+      lights: [
+        {
+          id: "invalid-role",
+          flags: {
+            "fvtt-battlefield-painter": {
+              ...flag("foreign-bundle", "terrain-tile"),
+              role: "not-a-terrain-role",
+            },
+          },
+        },
+        {
+          id: "wrong-document-role",
+          flags: {
+            "fvtt-battlefield-painter": flag("foreign-bundle", "terrain-tile"),
+          },
+        },
+      ],
       walls: [],
     };
 
@@ -60,6 +76,14 @@ describe("scene ownership", () => {
           flags: { "fvtt-battlefield-painter": flag("bundle-1", "movement-region") },
         },
       ],
+      sounds: [
+        {
+          id: "sound-1",
+          flags: {
+            "fvtt-battlefield-painter": flag("bundle-1", "terrain-sound"),
+          },
+        },
+      ],
       lights: [],
       walls: [],
       async deleteEmbeddedDocuments(type: string, ids: string[]) {
@@ -69,6 +93,10 @@ describe("scene ownership", () => {
     };
 
     await deleteOwnedBundles(scene, new Set(["bundle-1"]));
-    expect(calls).toEqual(["Region:region-1", "Tile:tile-1"]);
+    expect(calls).toEqual([
+      "AmbientSound:sound-1",
+      "Region:region-1",
+      "Tile:tile-1",
+    ]);
   });
 });

@@ -8,6 +8,7 @@ import {
   MODULE_ID,
   MODULE_VERSION,
   validateManifest,
+  validateMediaAssets,
 } from "../scripts/build";
 
 describe("module manifest", () => {
@@ -19,7 +20,7 @@ describe("module manifest", () => {
     expect(() => validateManifest(manifest)).not.toThrow();
     expect(manifest.id).toBe(MODULE_ID);
     expect(manifest.version).toBe(MODULE_VERSION);
-    expect(manifest.version).toBe("0.2.0-alpha.1");
+    expect(manifest.version).toBe("0.3.0-alpha.1");
     expect(manifest.description).toContain("runtime acceptance pending");
   });
 
@@ -39,7 +40,14 @@ describe("module manifest", () => {
     expect(result.files).toContain("templates/painter.hbs");
     expect(result.files).toContain("styles/painter.css");
     expect(result.files.filter((name) => name.endsWith(".webp"))).toHaveLength(6);
+    expect(result.files.filter((name) => name.endsWith(".webm"))).toHaveLength(6);
+    expect(result.files.filter((name) => name.endsWith(".ogg"))).toHaveLength(3);
     expect(result.zipPath).toEndWith("fvtt-battlefield-painter.zip");
+  });
+
+  test("validates the generated WebM alpha and OGG container signatures", async () => {
+    const result = await buildModule();
+    await expect(validateMediaAssets(result.moduleRoot)).resolves.toBeUndefined();
   });
 
   test("produces byte-identical ZIPs and a browser-only entry bundle", async () => {
@@ -53,7 +61,8 @@ describe("module manifest", () => {
     expect(digest(secondBytes)).toBe(digest(firstBytes));
     const bundle = await readFile(resolve(second.moduleRoot, "scripts/main.js"), "utf8");
     expect(bundle).not.toMatch(
-      /node:|process\.env|OPENAI_API_KEY|[A-Z]:\\|sourceMappingURL/i,
+      /node:|process\.env|OPENAI_API_KEY|ffmpeg|generate-media|[A-Z]:\\|sourceMappingURL/i,
     );
+    expect(second.files.some((name) => name.includes("generate-media"))).toBe(false);
   });
 });

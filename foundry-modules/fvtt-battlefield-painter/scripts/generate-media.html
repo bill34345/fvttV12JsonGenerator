@@ -1,0 +1,152 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Battlefield Painter media generator</title>
+<canvas id="canvas" width="512" height="512"></canvas>
+<pre id="status">starting</pre>
+<pre id="payload"></pre>
+<script>
+(() => {
+  const canvas = document.querySelector("#canvas");
+  const context = canvas.getContext("2d");
+  const TAU = Math.PI * 2;
+  const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const hash = (value) => {
+    let result = 2166136261;
+    for (const character of value) {
+      result ^= character.charCodeAt(0);
+      result = Math.imul(result, 16777619);
+    }
+    return result >>> 0;
+  };
+  const random = (seed) => {
+    let state = seed >>> 0;
+    return () => {
+      state = Math.imul(state ^ (state >>> 15), 2246822519);
+      state = Math.imul(state ^ (state >>> 13), 3266489917);
+      return ((state ^ (state >>> 16)) >>> 0) / 4294967296;
+    };
+  };
+  const sources = new Map();
+  const loadSource = async (kind, stage) => {
+    const source = new Image();
+    source.src = `../assets/terrain/${kind}-${stage}.webp`;
+    await new Promise((resolve, reject) => {
+      source.onload = resolve;
+      source.onerror = () => reject(new Error(`Unable to load ${source.src}`));
+    });
+    sources.set(`${kind}:${stage}`, source);
+  };
+  const drawFrame = (kind, stage, progress) => {
+    context.clearRect(0, 0, 512, 512);
+    const source = sources.get(`${kind}:${stage}`);
+    context.globalAlpha = 0.52;
+    context.drawImage(source, 0, 0, 512, 512);
+    context.globalAlpha = 1;
+    const seed = random(hash(`${kind}:${stage}`));
+    const phase = progress * TAU;
+    for (let index = 0; index < 44; index += 1) {
+      const x = seed() * 512;
+      const y = seed() * 512;
+      const size = 4 + seed() * 18;
+      const drift = Math.sin(phase + index * 0.73) * (kind === "fire" ? 18 : 8);
+      if (kind === "fire") {
+        const gradient = context.createRadialGradient(x + drift, y - drift, 0, x + drift, y - drift, size * 2.8);
+        gradient.addColorStop(0, stage === "embers" ? "rgba(255,220,120,.9)" : "rgba(255,244,190,.95)");
+        gradient.addColorStop(0.45, stage === "embers" ? "rgba(255,104,24,.62)" : "rgba(255,76,20,.78)");
+        gradient.addColorStop(1, "rgba(255,20,0,0)");
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(x + drift, y - drift, size * 2.8, 0, TAU);
+        context.fill();
+      } else if (kind === "frost") {
+        context.strokeStyle = stage === "rime" ? "rgba(176,245,255,.72)" : "rgba(112,206,255,.8)";
+        context.lineWidth = 2 + seed() * 3;
+        context.beginPath();
+        for (let branch = 0; branch < 6; branch += 1) {
+          const angle = branch * TAU / 6 + phase * 0.1;
+          context.moveTo(x, y);
+          context.lineTo(x + Math.cos(angle) * size, y + Math.sin(angle) * size);
+        }
+        context.stroke();
+      } else {
+        context.strokeStyle = stage === "creeping" ? "rgba(150,220,82,.72)" : "rgba(93,159,56,.88)";
+        context.lineWidth = 3 + seed() * 4;
+        context.beginPath();
+        context.moveTo(x, y);
+        context.bezierCurveTo(x + size, y - size * 2, x - size, y + size * 2, x + Math.sin(phase + index) * size * 2, y + size);
+        context.stroke();
+      }
+    }
+  };
+  const recordVideo = async (kind, stage) => {
+    const stream = canvas.captureStream(24);
+    const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: 1200000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const stopped = new Promise((resolve, reject) => { recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType })); recorder.onerror = () => reject(recorder.error); });
+    recorder.start(250);
+    const frameCount = 96;
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      drawFrame(kind, stage, frame / (frameCount - 1));
+      await wait(1000 / 24);
+    }
+    recorder.stop();
+    const blob = await stopped;
+    return await blob.arrayBuffer();
+  };
+  const recordAudio = async (kind) => {
+    const sampleRate = 48000;
+    const length = sampleRate * 20;
+    const audio = new AudioContext({ sampleRate });
+    await audio.resume();
+    const buffer = audio.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    const seed = random(hash(`audio:${kind}`));
+    const base = kind === "fire" ? 92 : kind === "frost" ? 330 : 145;
+    for (let index = 0; index < length; index += 1) {
+      const time = index / sampleRate;
+      const noise = seed() * 2 - 1;
+      const shimmer = Math.sin(time * base * TAU) * 0.18 + Math.sin(time * base * 1.7 * TAU) * 0.08;
+      data[index] = (noise * (kind === "frost" ? 0.045 : 0.07) + shimmer) * Math.min(1, time * 8, (20 - time) * 8);
+    }
+    const destination = audio.createMediaStreamDestination();
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    const recorder = new MediaRecorder(destination.stream, { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 64000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const stopped = new Promise((resolve, reject) => { recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType })); recorder.onerror = () => reject(recorder.error); });
+    recorder.start(500);
+    source.start();
+    await wait(20500);
+    recorder.stop();
+    const blob = await stopped;
+    await audio.close();
+    return await blob.arrayBuffer();
+  };
+  const encode = (bytes) => {
+    const value = new Uint8Array(bytes);
+    let binary = "";
+    const block = 0x8000;
+    for (let index = 0; index < value.length; index += block) {
+      binary += String.fromCharCode(...value.subarray(index, Math.min(index + block, value.length)));
+    }
+    return btoa(binary);
+  };
+  const run = async () => {
+    if (!MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) throw new Error("Chrome VP9 WebM recording is unavailable");
+    if (!MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) throw new Error("Chrome Opus WebM recording is unavailable");
+    const payload = {};
+    for (const [kind, stages] of Object.entries({ fire: ["embers", "blaze"], frost: ["rime", "deep"], brambles: ["creeping", "thicket"] })) {
+      for (const stage of stages) await loadSource(kind, stage);
+      for (const stage of stages) payload[`${kind}-${stage}.webm`] = encode(await recordVideo(kind, stage));
+      payload[`audio-${kind}.webm`] = encode(await recordAudio(kind));
+      document.querySelector("#status").textContent = `generated ${kind}`;
+    }
+    document.querySelector("#payload").textContent = JSON.stringify(payload);
+    document.title = "MEDIA_READY";
+  };
+  run().catch((error) => { document.querySelector("#status").textContent = `ERROR:${error?.stack || error}`; document.title = "MEDIA_ERROR"; });
+})();
+</script>

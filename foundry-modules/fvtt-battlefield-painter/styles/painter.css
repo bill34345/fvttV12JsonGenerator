@@ -141,6 +141,31 @@
   gap: 6px;
 }
 
+.battlefield-painter__p2 {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--terrain-accent, #ff6a2a) 35%, transparent);
+}
+
+.clear-scene-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 166, 104, 0.6);
+  background: rgba(52, 23, 15, 0.88);
+  color: #ffe0c6;
+  cursor: pointer;
+}
+
+.clear-scene-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .battlefield-painter__history {
   grid-template-columns: repeat(2, 1fr);
 }

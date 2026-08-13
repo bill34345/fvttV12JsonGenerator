@@ -1,6 +1,6 @@
 <section class="battlefield-painter" aria-label="战场地形画笔">
   <header class="battlefield-painter__header">
-    <p class="battlefield-painter__eyebrow">TACTICAL TERRAIN / P1 ALPHA</p>
+    <p class="battlefield-painter__eyebrow">TACTICAL TERRAIN / P2 ALPHA</p>
     <h2>把战场画活</h2>
     <p>选择地形与阶段，然后在方格或六角格地图上按住拖动。</p>
   </header>
@@ -81,6 +81,23 @@
           <i class="fa-solid fa-rotate-right"></i><span>重做</span>
         </button>
       </div>
+    </section>
+  {{/if}}
+
+  {{#if state.p2Enabled}}
+    <section class="battlefield-painter__p2" aria-label="P2 battlefield management">
+      <div class="battlefield-painter__section-title">
+        <span>Dynamic battlefield</span>
+        <small>Animation, ambience, clustered lights</small>
+      </div>
+      <button
+        type="button"
+        class="clear-scene-button"
+        data-action="clearScene"
+        {{#unless state.p1Enabled}}disabled{{/unless}}
+      >
+        <i class="fa-solid fa-broom"></i><span>Clear module terrain</span>
+      </button>
     </section>
   {{/if}}
 

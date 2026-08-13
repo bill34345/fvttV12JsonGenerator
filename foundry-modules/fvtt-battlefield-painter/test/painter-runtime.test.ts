@@ -118,6 +118,7 @@ describe("canvas pointer lifecycle", () => {
       canRedo: false,
     });
 
+    controller.setDevelopmentPhase("p2", false);
     controller.setDevelopmentPhase("p0", false);
     expect(controller.state.p0Enabled).toBe(false);
   });

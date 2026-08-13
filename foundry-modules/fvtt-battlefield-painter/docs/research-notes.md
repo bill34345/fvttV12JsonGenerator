@@ -19,6 +19,7 @@ Source: [Tile Arsenal storefront](https://www.foundryvtt.store/products/tile-ars
 - Core exposes Region behavior data models through `CONFIG.RegionBehavior.dataModels`; the `modifyMovementCost` system model includes `difficulties`.
 - Terrain difficulty applies to configurable Token movement actions, while derived actions must not be overridden.
 - AmbientLight and Wall are native Scene embedded documents.
+- v14 `AmbientSoundData` exposes `easing` for distance-based volume adjustment, `repeat` for looping, and `walls` for wall-constrained playback; P2 sets all three explicitly. See the [AmbientSoundData API](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.AmbientSoundData.html).
 - Foundry v14's migration guide documents the Tile origin change: `x/y` are the Tile center, and the historical top-left coordinates are offset by half the Tile width/height. P0 therefore supplies grid-cell centers from `getCenterPoint`.
 
 Primary documentation reviewed:
@@ -35,6 +36,8 @@ Primary documentation reviewed:
 - [Foundry VTT v14 Migration Guide](https://foundryvtt.com/article/v14-migration-guide/)
 - [Foundry VTT Regions Knowledge Base](https://foundryvtt.com/article/scene-regions/)
 - [Foundry VTT Media Optimization Guide](https://foundryvtt.com/article/media/)
+- [Foundry VTT Ambient Sounds](https://foundryvtt.com/article/ambient-sound)
+- [Foundry VTT Lighting](https://foundryvtt.com/article/lighting/)
 
 ## Version caveat
 
@@ -46,3 +49,13 @@ The current public v14 API site may serve a later v14 patch than the exact targe
 - Verify whether region polygons should be unioned for performance or event semantics.
 - Compare static WebP plus native lighting against transparent WebM loops at Foundry's recommended codecs and frame rates.
 - Decide whether audio should use per-bundle AmbientSound, scene-wide mixing, or a client-local soundscape.
+
+## P2 implementation evidence
+
+- Six generated WebM files report VP9 with `ALPHA_MODE=1`, 512x512, 24 FPS, and four-second duration after FFmpeg finalization; explicit `libvpx-vp9` alpha extraction reports both transparent and opaque pixels in every file.
+- Three generated OGG files report Opus, 48 kHz, mono, and approximately 20 seconds.
+- Cluster light and sound radii convert the pixel-space cluster bounding-box half-diagonal through the live grid `size` and Scene grid `distance`, then add one grid distance; Foundry documents both light radii and AmbientSound radius in Scene/grid distance units. Static tests use a one-unit fallback and exact runtime attenuation remains part of the final Lab pass.
+- `ffmpeg-static@5.2.0` is a development-only dependency used by the generator; it is not imported by browser code and is not copied into the module ZIP.
+- P2 real-canvas behavior remains deliberately unverified until the final multi-phase acceptance pass.
+
+The earlier open audio decision is now resolved for P2: use one module-owned AmbientSound per deterministic cluster, with stage-specific volume and wall attenuation. Exact `14.364` source validation remains a final runtime acceptance item.

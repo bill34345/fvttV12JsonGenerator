@@ -11,7 +11,7 @@ One drag stroke is one logical bundle. `src/scene-plan.ts` converts the sampled 
 
 Each source is tagged under `flags.fvtt-battlefield-painter` with a `bundleId`, terrain ID, stage, role, and—on Tiles—the grid cell key and `{i,j}` offset. The offset is intentionally stored instead of pixel geometry so a bundle can be reconstructed through Foundry's current grid API.
 
-Creation order is Tile → Region → AmbientLight → Wall. If a later document fails validation, already-created documents are deleted in reverse order. Erase and stage-switch operations snapshot the owned Tile offsets, delete the full bundle, recreate the replacement, and restore the original if replacement fails.
+P0 creation order is Tile → Region → AmbientLight → Wall; P2 inserts AmbientSound before Wall. If a later document fails validation, already-created documents are deleted in reverse order. Erase and stage-switch operations snapshot the owned Tile offsets, delete the full bundle, recreate the replacement, and restore the original if replacement fails.
 
 ## Grid handling
 
@@ -39,12 +39,20 @@ Pointer events are attached only while the GM activates the painter and are remo
 
 `src/scene-history.ts` snapshots only documents carrying valid Battlefield Painter ownership flags. Each successful mutation records before/after sources; undo and redo delete only current owned bundles and recreate the selected snapshot, preserving foreign Scene documents. History is per active Scene, bounded to 20 entries, and clears redo after a new mutation.
 
-The internal P0/P1 phase gate defaults to mutable only for this alpha. Disabling P1 forces free shape/radius 0 and hides P1 UI; disabling P0 requires P1 to be off and prevents activation. A release must set `DEVELOPMENT_PHASE_CONTROLS_MUTABLE` to `false`, which also removes the mutation switch from the module API.
+The internal P0/P1/P2 phase gate defaults to mutable only for this alpha. Disabling P1 forces free shape/radius 0 and hides P1 UI; disabling P2 selects static media and hides clear UI; disabling P0 requires both P1 and P2 to be off and prevents activation. A release must set `DEVELOPMENT_PHASE_CONTROLS_MUTABLE` to `false`, which also removes the mutation switch from the module API.
 
 ## Known P0 trade-offs
 
 - Stage change acts on a complete original stroke bundle even if only one cell is targeted.
 - Overlap with another Battlefield Painter Tile is skipped; foreign Tiles are ignored.
 - One Region polygon per painted cell is simple and robust but may need batching/union optimization for very large maps.
-- One fire light covers the stroke bounding center; later phases may use clustered lights for long irregular strokes.
-- Static raster art plus core light animation is the P0 visual baseline; transparent WebM loops are deferred.
+- P0 fallback uses one fire light for the stroke bounding center; P2 uses deterministic clusters for long irregular strokes.
+- Static WebP remains the P0/P2-off fallback; P2 adds transparent WebM loops without changing the thumbnail path.
+
+## P2 addendum
+
+P2 extends the same bundle contract with `AmbientSound`. When P2 is enabled, cells are sorted and grouped by Foundry adjacency into deterministic clusters of at most 16 cells. Fire receives one light per cluster and every terrain receives one wall-attenuated ambience source per cluster. P2 selects the generated transparent WebM texture; disabling P2 selects the original WebP and creates no sound documents.
+
+The scene document order is now Tile, Region, AmbientLight, AmbientSound, Wall. Ownership flags, transaction rollback, history snapshots, audit counts, erase, stage changes, clear, undo, and redo all include AmbientSound. The clear preview counts only valid module-owned documents and rejects a stale document-ID fingerprint before mutation. A controller mutation queue serializes paint, clear, undo, and redo.
+
+The P0/P1/P2 gate is alpha-only. P1 and P2 can be disabled independently, while P0 remains required by either. A release sets `DEVELOPMENT_PHASE_CONTROLS_MUTABLE` to `false` and removes the phase setter from the public API.

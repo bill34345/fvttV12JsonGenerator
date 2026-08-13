@@ -6,6 +6,7 @@ class FakeScene implements HistorySceneLike {
   tiles: Record<string, unknown>[] = [];
   regions: Record<string, unknown>[] = [];
   lights: Record<string, unknown>[] = [];
+  sounds: Record<string, unknown>[] = [];
   walls: Record<string, unknown>[] = [];
   #nextId = 1;
 
@@ -28,6 +29,7 @@ class FakeScene implements HistorySceneLike {
     if (name === "Tile") return this.tiles;
     if (name === "Region") return this.regions;
     if (name === "AmbientLight") return this.lights;
+    if (name === "AmbientSound") return this.sounds;
     if (name === "Wall") return this.walls;
     throw new Error(`Unknown collection ${name}`);
   }
@@ -42,7 +44,21 @@ function ownedTile(cellKey: string) {
         cellKey,
         configurationId: "fire",
         stageIndex: 0,
-        role: "tile",
+        role: "terrain-tile",
+      },
+    },
+  };
+}
+
+function ownedSound() {
+  return {
+    path: "modules/fvtt-battlefield-painter/assets/audio/fire.ogg",
+    flags: {
+      "fvtt-battlefield-painter": {
+        bundleId: "bundle-sound",
+        configurationId: "fire",
+        stageIndex: 0,
+        role: "terrain-sound",
       },
     },
   };
@@ -87,5 +103,18 @@ describe("SceneHistory", () => {
       await scene.createEmbeddedDocuments("Tile", [ownedTile("1:1")]);
     });
     expect(history.state).toEqual({ canUndo: true, canRedo: false });
+  });
+
+  test("snapshots AmbientSound documents with the rest of a bundle", async () => {
+    const scene = new FakeScene();
+    const history = new SceneHistory(scene);
+    await history.execute("sound", async () => {
+      await scene.createEmbeddedDocuments("AmbientSound", [ownedSound()]);
+    });
+    expect(scene.sounds).toHaveLength(1);
+    await history.undo();
+    expect(scene.sounds).toHaveLength(0);
+    await history.redo();
+    expect(scene.sounds).toHaveLength(1);
   });
 });

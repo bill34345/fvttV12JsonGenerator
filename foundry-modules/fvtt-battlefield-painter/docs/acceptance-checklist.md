@@ -7,7 +7,7 @@ Static checks and build output do not satisfy this checklist. Run these in the a
 - [ ] Confirm executable/build reports Foundry `14.364`.
 - [ ] Confirm world reports dnd5e `5.3.3`.
 - [ ] Confirm destination is under `F:\FoundryLab\foundry-v14\data\server-mirror\Data\modules\fvtt-battlefield-painter`.
-- [ ] Confirm module `0.2.0-alpha.1` appears and enables without manifest warning.
+- [ ] Confirm module `0.3.0-alpha.1` appears and enables without manifest warning.
 - [ ] Confirm no browser console error during `init`, `ready`, Scene load, or canvas teardown.
 
 ## Square grid
@@ -51,10 +51,27 @@ Static checks and build output do not satisfy this checklist. Run these in the a
 - [ ] Re-enable P1 and confirm the controls return; then verify release packaging with phase controls immutable before formal release.
 - [ ] Remove all P0 test documents before ending acceptance.
 
-## Not yet accepted by P0
+## Deferred until final unified runtime acceptance
 
 - audio;
 - transparent WebM animation;
 - very large battlefields and long-session memory/performance;
 - production environment installation;
 - four-hour real-session soak.
+
+## P2 final-pass additions
+
+Run these only in the final unified environment pass after all development phases are complete. Clear module-owned documents between phase combinations; do not treat static tests as runtime acceptance.
+
+- [ ] Confirm the module reports `0.3.0-alpha.1` and the nine generated media files load without console errors.
+- [ ] Run with `P0` only; confirm static WebP tiles, the P0 fire light, and no AmbientSound documents.
+- [ ] Run with `P0+P1`; repeat radius, line, fill, preview, erase, stage, undo, and redo behavior.
+- [ ] Run with `P0+P2`; confirm transparent WebM loops, looping OGG ambience, clustered fire lights, and no P1 brush/history controls.
+- [ ] Run with `P0+P1+P2`; confirm complete interaction, at most 16 cells per sound cluster, and at most 16 cells per fire-light cluster.
+- [ ] Confirm fire, frost, and bramble ambience uses stage-specific volume and wall attenuation.
+- [ ] Paint 25, 100, and 300 connected cells; record Tile, Region, Light, Sound, and Wall document counts and visible performance.
+- [ ] Open scene clear preview; confirm only module-owned documents are counted and foreign documents are excluded.
+- [ ] Change the Scene after opening the clear preview; confirm the stale fingerprint blocks deletion and asks for a new preview.
+- [ ] Confirm clear is one undoable history operation and foreign documents survive clear, undo, redo, and reload.
+- [ ] Repeat P2 media, sound, clustering, and clear checks on square, hex-row, and hex-column Scenes.
+- [ ] After runtime acceptance, set release phase controls immutable and verify the phase setter is absent from the public API.

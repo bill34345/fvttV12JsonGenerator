@@ -6,7 +6,7 @@ Recorded on 2026-08-13 so later work does not need to repeat the design and envi
 
 - Topic branch: `codex/20260813-095900-battlefield-painter-p0`.
 - P0 alpha checkpoint: commit `8037de9` (`feat(foundry): add battlefield painter P0 alpha`).
-- P1 is intentionally left uncommitted until separately authorized.
+- P1 and the continuing P2 implementation remain uncommitted until separately authorized.
 - No push and no merge are part of this checkpoint.
 - P1 scope is limited to brush radius, line/fill geometry, cursor preview, undo/redo, and internal development phase switches.
 
@@ -28,12 +28,12 @@ Recorded on 2026-08-13 so later work does not need to repeat the design and envi
 
 ## Remote test sequence after a later authorized push
 
-1. On this computer, finish P1 verification, obtain explicit commit/push authorization, then push the topic branch without merging it.
+1. After all development phases are complete, obtain explicit commit/push authorization, then push the topic branch without merging it.
 2. On the Foundry computer, fetch and check out that exact branch; record `git rev-parse HEAD`.
 3. Build the module ZIP from the checked-out source and record its SHA-256.
 4. Confirm Foundry `14.364`, dnd5e `5.3.3`, target data path, process, port, and world before installation.
 5. Install only into an empty test-module destination under the authorized local Lab. `install:local` now refuses any existing destination and does not replace, move, or preserve an old module tree.
-6. Run every item in `acceptance-checklist.md`, preserving screenshots, console errors, module API output, and document counts as test evidence rather than backups.
+6. Run every phase combination and grid orientation in `acceptance-checklist.md`, preserving screenshots, console errors, module API output, and document counts as test evidence rather than backups.
 7. Report square, hex-row, and hex-column results separately. Do not call static checks or a successful module load real semantic acceptance.
 
 ## Known risks to target first
@@ -43,3 +43,7 @@ Recorded on 2026-08-13 so later work does not need to repeat the design and envi
 - Confirm fill's offset-rectangle semantics are intuitive on hex-row and hex-column grids.
 - Stress undo/redo after mixed paint, erase, and stage changes; verify IDs may change while ownership and visible semantics remain stable.
 - Measure preview and history behavior at radius 4 and at 25, 100, and 300 owned cells.
+
+## Continuation policy
+
+P2 continues in this same worktree and topic branch. The earlier P1 checkpoint is a historical commit boundary, not a request to create another worktree or branch. P0/P1/P2 switches are internal diagnostic controls for one final unified Foundry acceptance pass; no partial runtime test is required during P2 implementation.

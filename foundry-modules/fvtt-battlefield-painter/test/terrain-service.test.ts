@@ -31,6 +31,7 @@ const cells: GridCell[] = [
 ];
 
 const grid: FoundryGridLike = {
+  size: 100,
   getOffset: (point) => ({ i: Math.floor(point.y / 100), j: Math.floor(point.x / 100) }),
   getCenterPoint: ({ i, j }) => ({ x: j * 100 + 50, y: i * 100 + 50 }),
   getVertices: ({ i, j }) => [
@@ -50,6 +51,7 @@ class FakeScene {
   tiles: Array<Record<string, any>> = [];
   regions: Array<Record<string, any>> = [];
   lights: Array<Record<string, any>> = [];
+  sounds: Array<Record<string, any>> = [];
   walls: Array<Record<string, any>> = [];
   #nextId = 1;
 
@@ -73,15 +75,17 @@ class FakeScene {
     if (type === "Tile") return this.tiles;
     if (type === "Region") return this.regions;
     if (type === "AmbientLight") return this.lights;
+    if (type === "AmbientSound") return this.sounds;
     return this.walls;
   }
 }
 
-const serviceFor = (scene: FakeScene) =>
+const serviceFor = (scene: FakeScene, p2Enabled = false) =>
   new TerrainService({
     scene,
     grid,
     movementBehavior,
+    p2Enabled,
     createBundleId: (() => {
       let id = 0;
       return () => `bundle-${++id}`;
@@ -137,5 +141,29 @@ describe("terrain service", () => {
 
     expect(result).toEqual({ createdCells: 1, skippedCells: 1 });
     expect(scene.tiles).toHaveLength(2);
+  });
+
+  test("rebuilds, advances, and clears P2 sound documents with their bundle", async () => {
+    const scene = new FakeScene();
+    const service = serviceFor(scene, true);
+
+    await service.paintCells("fire", 0, cells);
+    expect(scene.sounds).toHaveLength(1);
+    expect(scene.sounds[0]?.repeat).toBe(true);
+
+    await service.advanceCellKeys(new Set(["0:0"]));
+    expect(scene.sounds).toHaveLength(1);
+    expect(scene.sounds[0]?.flags["fvtt-battlefield-painter"].stageIndex).toBe(1);
+
+    await service.eraseCellKeys(new Set(["0:0"]));
+    expect(scene.tiles).toHaveLength(1);
+    expect(scene.sounds).toHaveLength(1);
+
+    await service.clearAll();
+    expect(scene.tiles).toHaveLength(0);
+    expect(scene.regions).toHaveLength(0);
+    expect(scene.lights).toHaveLength(0);
+    expect(scene.sounds).toHaveLength(0);
+    expect(scene.walls).toHaveLength(0);
   });
 });

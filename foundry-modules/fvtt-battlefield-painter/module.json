@@ -1,8 +1,8 @@
 {
   "id": "fvtt-battlefield-painter",
   "title": "Battlefield Painter",
-  "description": "P1 alpha: paint reversible fire, frost, and bramble terrain with radius, line, fill, preview, and history tools; real Foundry runtime acceptance pending.",
-  "version": "0.2.0-alpha.1",
+  "description": "P2 alpha: paint reversible dynamic fire, frost, and bramble terrain with clustered lights, ambience, and safe scene clearing; real Foundry runtime acceptance pending.",
+  "version": "0.3.0-alpha.1",
   "authors": [
     {
       "name": "Zheng-Kaizhong"

@@ -1,4 +1,4 @@
-# `0.2.0-alpha.1` Release Notes
+# `0.3.0-alpha.1` Release Notes
 
 Status: packaged for personal evaluation; real Foundry runtime acceptance pending.
 
@@ -15,7 +15,10 @@ Status: packaged for personal evaluation; real Foundry runtime acceptance pendin
 - Free, direct-path line, and inclusive offset-area fill tools.
 - Cell-polygon cursor preview bound to the active canvas interface layer.
 - Per-Scene, module-owned undo/redo history bounded to 20 entries.
-- Internal P0/P1 diagnostic phase controls, with an immutable release path.
+- Internal P0/P1/P2 diagnostic phase controls, with independent P1/P2 switches and an immutable release path.
+- Six original transparent VP9 WebM loops and three original OGG/Opus ambience loops.
+- Deterministic clustered fire lights, wall-attenuated AmbientSound sources, and ownership-only scene clear preview.
+- Serialized paint/clear/undo/redo mutations to prevent overlapping Scene writes.
 - Empty-target-only local Lab installation with no replacement or old-copy creation.
 
 ## Static runtime evidence
@@ -29,12 +32,11 @@ Status: packaged for personal evaluation; real Foundry runtime acceptance pendin
 
 These checks establish packaging and bootstrap confidence only. They do not prove actual canvas placement, movement measurement, PIXI interaction, lighting appearance, wall collision, persistence, or Foundry document validation.
 
-## Required before calling P1 runtime-accepted
+## Required before calling P2 runtime-accepted
 
 Run `acceptance-checklist.md` in Foundry `14.364` with dnd5e `5.3.3`. Until that happens:
 
 - do not describe this build as production-ready;
-- do not expand into P1 dynamic media/audio work on the assumption that P0 canvas semantics are correct;
 - preserve any failure evidence and update `research-notes.md` with exact runtime differences.
 
 ## Distribution

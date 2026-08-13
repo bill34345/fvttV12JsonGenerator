@@ -5,6 +5,7 @@ export const DOCUMENT_ORDER = [
   "Tile",
   "Region",
   "AmbientLight",
+  "AmbientSound",
   "Wall",
 ] as const;
 

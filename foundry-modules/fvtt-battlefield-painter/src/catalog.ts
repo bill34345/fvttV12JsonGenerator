@@ -12,10 +12,20 @@ export interface TerrainLight {
   };
 }
 
+export interface TerrainStageMedia {
+  staticTexture: string;
+  animatedTexture: string;
+  ambience: {
+    src: string;
+    volume: number;
+  };
+}
+
 export interface TerrainStage {
   label: string;
   description: string;
   texture: string;
+  media: TerrainStageMedia;
   tint: string;
   alpha: number;
   light?: TerrainLight;
@@ -33,6 +43,7 @@ export interface TerrainConfiguration {
 }
 
 const ASSET_ROOT = "modules/fvtt-battlefield-painter/assets/terrain";
+const AUDIO_ROOT = "modules/fvtt-battlefield-painter/assets/audio";
 
 export const TERRAIN_CONFIGURATIONS: Record<
   TerrainConfigurationId,
@@ -50,6 +61,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "余烬",
         description: "散落的炭火开始蔓延。",
         texture: `${ASSET_ROOT}/fire-embers.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/fire-embers.webp`,
+          animatedTexture: `${ASSET_ROOT}/fire-embers.webm`,
+          ambience: { src: `${AUDIO_ROOT}/fire.ogg`, volume: 0.28 },
+        },
         tint: "#ffb04c",
         alpha: 0.88,
         createsWalls: false,
@@ -65,6 +81,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "炽燃",
         description: "火焰完全吞没这一片地面。",
         texture: `${ASSET_ROOT}/fire-blaze.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/fire-blaze.webp`,
+          animatedTexture: `${ASSET_ROOT}/fire-blaze.webm`,
+          ambience: { src: `${AUDIO_ROOT}/fire.ogg`, volume: 0.42 },
+        },
         tint: "#ff6a1a",
         alpha: 0.94,
         createsWalls: false,
@@ -90,6 +111,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "薄霜",
         description: "冰纹沿地面迅速扩散。",
         texture: `${ASSET_ROOT}/frost-rime.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/frost-rime.webp`,
+          animatedTexture: `${ASSET_ROOT}/frost-rime.webm`,
+          ambience: { src: `${AUDIO_ROOT}/frost.ogg`, volume: 0.24 },
+        },
         tint: "#8ce8ff",
         alpha: 0.82,
         createsWalls: false,
@@ -98,6 +124,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "寒封",
         description: "厚重的冰晶覆盖整个区域。",
         texture: `${ASSET_ROOT}/frost-deep.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/frost-deep.webp`,
+          animatedTexture: `${ASSET_ROOT}/frost-deep.webm`,
+          ambience: { src: `${AUDIO_ROOT}/frost.ogg`, volume: 0.34 },
+        },
         tint: "#4fbfff",
         alpha: 0.9,
         createsWalls: false,
@@ -116,6 +147,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "蔓生",
         description: "带刺藤蔓贴地扩张。",
         texture: `${ASSET_ROOT}/brambles-creeping.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/brambles-creeping.webp`,
+          animatedTexture: `${ASSET_ROOT}/brambles-creeping.webm`,
+          ambience: { src: `${AUDIO_ROOT}/brambles.ogg`, volume: 0.2 },
+        },
         tint: "#86b95c",
         alpha: 0.9,
         createsWalls: false,
@@ -124,6 +160,11 @@ export const TERRAIN_CONFIGURATIONS: Record<
         label: "棘墙",
         description: "密实枝条竖起不可穿越的边界。",
         texture: `${ASSET_ROOT}/brambles-thicket.webp`,
+        media: {
+          staticTexture: `${ASSET_ROOT}/brambles-thicket.webp`,
+          animatedTexture: `${ASSET_ROOT}/brambles-thicket.webm`,
+          ambience: { src: `${AUDIO_ROOT}/brambles.ogg`, volume: 0.3 },
+        },
         tint: "#56843a",
         alpha: 0.96,
         createsWalls: true,

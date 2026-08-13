@@ -19,12 +19,22 @@ import {
   type SceneMutationLike,
 } from "./scene-transaction";
 
-type TerrainScene = OwnedSceneLike & SceneMutationLike;
+interface SceneGridMetadata {
+  size?: number;
+  distance?: number;
+  data?: { size?: number; distance?: number };
+}
+
+type TerrainScene = OwnedSceneLike &
+  SceneMutationLike & {
+    grid?: SceneGridMetadata;
+  };
 
 export interface TerrainServiceOptions {
   scene: TerrainScene;
   grid: FoundryGridLike;
   movementBehavior: MovementBehaviorFactory;
+  p2Enabled?: boolean;
   createBundleId?: () => string;
 }
 
@@ -46,17 +56,20 @@ export class TerrainService {
   readonly #scene: TerrainScene;
   readonly #grid: FoundryGridLike;
   readonly #movementBehavior: MovementBehaviorFactory;
+  readonly #p2Enabled: boolean;
   readonly #createBundleId: () => string;
 
   constructor({
     scene,
     grid,
     movementBehavior,
+    p2Enabled = false,
     createBundleId = defaultBundleId,
   }: TerrainServiceOptions) {
     this.#scene = scene;
     this.#grid = grid;
     this.#movementBehavior = movementBehavior;
+    this.#p2Enabled = p2Enabled;
     this.#createBundleId = createBundleId;
   }
 
@@ -121,9 +134,15 @@ export class TerrainService {
   }
 
   #buildPlan(snapshot: BundleSnapshot): ScenePlan {
+    const sceneGrid = this.#scene.grid;
     return buildScenePlan({
       ...snapshot,
       movementBehavior: this.#movementBehavior,
+      p2Enabled: this.#p2Enabled,
+      getAdjacentOffsets: this.#grid.getAdjacentOffsets?.bind(this.#grid),
+      gridSize:
+        this.#grid.size ?? sceneGrid?.size ?? sceneGrid?.data?.size,
+      gridDistance: sceneGrid?.distance ?? sceneGrid?.data?.distance,
     });
   }
 

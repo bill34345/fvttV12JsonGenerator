@@ -15,7 +15,12 @@ import {
   createFoundryCursorPreviewRenderer,
   type CursorPreviewRenderer,
 } from "./preview-renderer";
-import { collectOwnedBundles } from "./scene-ownership";
+import { ownedDocumentCounts } from "./scene-ownership";
+import {
+  createClearPreview,
+  isClearPreviewCurrent,
+  type ClearPreview,
+} from "./scene-clear";
 import { SceneHistory, type HistorySceneLike } from "./scene-history";
 import { TerrainService } from "./terrain-service";
 
@@ -30,6 +35,7 @@ export interface PainterState {
   brushRadius: number;
   p0Enabled: boolean;
   p1Enabled: boolean;
+  p2Enabled: boolean;
   canUndo: boolean;
   canRedo: boolean;
   status: string;
@@ -53,6 +59,7 @@ export class PainterController {
     brushRadius: 0,
     p0Enabled: true,
     p1Enabled: true,
+    p2Enabled: true,
     canUndo: false,
     canRedo: false,
     status: "选择地形后启用画笔。",
@@ -64,6 +71,7 @@ export class PainterController {
   #startCell: GridCell | undefined;
   #history: SceneHistory | undefined;
   #historyScene: HistorySceneLike | undefined;
+  #mutationTail: Promise<void> = Promise.resolve();
 
   constructor({
     phases = new DevelopmentPhaseGate(),
@@ -78,6 +86,7 @@ export class PainterController {
       ...this.#state,
       p0Enabled: phases.isEnabled("p0"),
       p1Enabled: phases.isEnabled("p1"),
+      p2Enabled: phases.isEnabled("p2"),
     };
   }
 
@@ -128,11 +137,13 @@ export class PainterController {
     const phases = this.#phases.set(phase, enabled);
     const p0Enabled = phases.p0;
     const p1Enabled = phases.p1;
+    const p2Enabled = phases.p2;
     if (!p0Enabled && this.#state.active) this.deactivate();
     if (!p1Enabled) this.#preview?.hide();
     this.#update({
       p0Enabled,
       p1Enabled,
+      p2Enabled,
       brushShape: p1Enabled ? this.#state.brushShape : "free",
       brushRadius: p1Enabled ? this.#state.brushRadius : 0,
       canUndo: p1Enabled ? (this.#history?.state.canUndo ?? false) : false,
@@ -207,21 +218,18 @@ export class PainterController {
 
   auditScene(): Record<string, number> {
     const scene = getFoundryCanvas()?.scene;
-    if (!scene) return { bundles: 0, tiles: 0, regions: 0, lights: 0, walls: 0 };
-    const bundles = collectOwnedBundles(scene);
-    return {
-      bundles: bundles.size,
-      tiles: [...bundles.values()].reduce((sum, bundle) => sum + bundle.Tile.length, 0),
-      regions: [...bundles.values()].reduce(
-        (sum, bundle) => sum + bundle.Region.length,
-        0,
-      ),
-      lights: [...bundles.values()].reduce(
-        (sum, bundle) => sum + bundle.AmbientLight.length,
-        0,
-      ),
-      walls: [...bundles.values()].reduce((sum, bundle) => sum + bundle.Wall.length, 0),
-    };
+    if (!scene) {
+      return {
+        bundles: 0,
+        tiles: 0,
+        regions: 0,
+        lights: 0,
+        sounds: 0,
+        walls: 0,
+        totalDocuments: 0,
+      };
+    }
+    return ownedDocumentCounts(scene);
   }
 
   readonly #onPointerDown = (event: PointerEvent): void => {
@@ -318,6 +326,10 @@ export class PainterController {
   }
 
   async #commitStroke(): Promise<void> {
+    await this.#enqueueMutation(() => this.#commitStrokeNow());
+  }
+
+  async #commitStrokeNow(): Promise<void> {
     const foundryCanvas = getFoundryCanvas();
     const cells = [...this.#stroke.values()];
     this.#stroke.clear();
@@ -330,6 +342,7 @@ export class PainterController {
         scene: foundryCanvas.scene,
         grid: foundryCanvas.grid,
         movementBehavior: createMovementBehaviorFactory((globalThis as any).CONFIG),
+        p2Enabled: this.#state.p2Enabled,
       });
       this.#historyFor(foundryCanvas.scene);
 
@@ -364,7 +377,54 @@ export class PainterController {
     this.#syncHistoryState();
   }
 
+  clearPreview(): ClearPreview | undefined {
+    if (!this.#state.p1Enabled || !this.#state.p2Enabled) return undefined;
+    const scene = getFoundryCanvas()?.scene;
+    return scene ? createClearPreview(scene) : undefined;
+  }
+
+  async clearAll(
+    confirm: (preview: ClearPreview) => boolean | Promise<boolean>,
+  ): Promise<boolean> {
+    if (!this.#state.p1Enabled || !this.#state.p2Enabled) return false;
+    const scene = getFoundryCanvas()?.scene as HistorySceneLike | undefined;
+    const grid = getFoundryCanvas()?.grid;
+    if (!scene || !grid) return false;
+    const preview = createClearPreview(scene);
+    if (!preview.counts.totalDocuments) return false;
+    if (!(await confirm(preview))) return false;
+    return this.#enqueueMutation(async () => {
+      if (
+        !this.#state.p1Enabled ||
+        !this.#state.p2Enabled ||
+        !isClearPreviewCurrent(scene, preview)
+      ) {
+        this.#notify("warn", "场景在确认期间发生变化，请重新预览清除范围。");
+        return false;
+      }
+      const service = new TerrainService({
+        scene,
+        grid,
+        movementBehavior: createMovementBehaviorFactory((globalThis as any).CONFIG),
+        p2Enabled: this.#state.p2Enabled,
+      });
+      try {
+        await this.#withHistory("清除本场景地形", () => service.clearAll());
+        this.#update({ status: "已清除本模块在当前场景中的地形。" });
+        this.#syncHistoryState();
+        return true;
+      } catch (error) {
+        this.#reportHistoryError("清除", error);
+        return false;
+      }
+    });
+  }
+
   async undo(): Promise<void> {
+    await this.#enqueueMutation(() => this.#undoNow());
+  }
+
+  async #undoNow(): Promise<void> {
     if (!this.#state.p1Enabled) return;
     const scene = getFoundryCanvas()?.scene as HistorySceneLike | undefined;
     if (!scene) return;
@@ -378,6 +438,10 @@ export class PainterController {
   }
 
   async redo(): Promise<void> {
+    await this.#enqueueMutation(() => this.#redoNow());
+  }
+
+  async #redoNow(): Promise<void> {
     if (!this.#state.p1Enabled) return;
     const scene = getFoundryCanvas()?.scene as HistorySceneLike | undefined;
     if (!scene) return;
@@ -415,6 +479,15 @@ export class PainterController {
     const message = error instanceof Error ? error.message : String(error);
     this.#update({ status: `${action}失败：${message}` });
     this.#notify("error", `Battlefield Painter：${action}失败：${message}`);
+  }
+
+  #enqueueMutation<T>(mutation: () => Promise<T>): Promise<T> {
+    const run = this.#mutationTail.then(mutation, mutation);
+    this.#mutationTail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   #update(update: Partial<PainterState>): void {

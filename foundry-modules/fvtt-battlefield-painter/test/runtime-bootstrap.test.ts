@@ -102,8 +102,8 @@ describe("Foundry lifecycle bootstrap", () => {
           return { active: false };
         },
         auditScene: () => ({ bundles: 0 }),
-        developmentPhases: () => ({ p0: true, p1: true }),
-        setDevelopmentPhase: () => ({ p0: true, p1: false }),
+        developmentPhases: () => ({ p0: true, p1: true, p2: true }),
+        setDevelopmentPhase: () => ({ p0: true, p1: false, p2: true }),
       }),
       createApplicationClass: () =>
         class FakeApplication {
@@ -130,10 +130,11 @@ describe("Foundry lifecycle bootstrap", () => {
     const api = module.api as Record<string, any>;
     expect(api.compatibility).toEqual({ supported: true, diagnostics: [] });
     expect(api.canMutate).toBe(true);
-    expect(api.developmentPhases()).toEqual({ p0: true, p1: true });
+    expect(api.developmentPhases()).toEqual({ p0: true, p1: true, p2: true });
     expect(api.setDevelopmentPhase("p1", false)).toEqual({
       p0: true,
       p1: false,
+      p2: true,
     });
     controls.tiles.tools["fvtt-battlefield-painter"].onChange();
     expect(opened).toContain("render");
@@ -198,8 +199,8 @@ describe("Foundry lifecycle bootstrap", () => {
         deactivate() {},
         state: { active: false },
         auditScene: () => ({ bundles: 0 }),
-        developmentPhases: () => ({ p0: true, p1: true }),
-        setDevelopmentPhase: () => ({ p0: true, p1: false }),
+        developmentPhases: () => ({ p0: true, p1: true, p2: true }),
+        setDevelopmentPhase: () => ({ p0: true, p1: false, p2: true }),
       }),
     });
     once.get("ready")?.();

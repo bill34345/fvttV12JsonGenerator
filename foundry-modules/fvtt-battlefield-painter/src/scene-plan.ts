@@ -8,7 +8,9 @@ import {
   boundsForVertices,
   regionShapesForCells,
   type GridCell,
+  type GridOffset,
 } from "./geometry";
+import { clusterCells } from "./terrain-clusters";
 
 export interface MovementBehaviorSource {
   type: "modifyMovementCost";
@@ -26,9 +28,14 @@ export interface TerrainDocumentFlag {
   bundleId: string;
   configurationId: TerrainConfigurationId;
   stageIndex: number;
-  role: "terrain-tile" | "movement-region" | "terrain-light" | "terrain-wall";
+  role:
+    | "terrain-tile"
+    | "movement-region"
+    | "terrain-light"
+    | "terrain-sound"
+    | "terrain-wall";
   cellKey?: string;
-  offset?: { i: number; j: number };
+  offset?: GridOffset;
 }
 
 type ModuleFlags = Record<typeof MODULE_ID, TerrainDocumentFlag>;
@@ -66,6 +73,19 @@ export interface AmbientLightSource {
   flags: ModuleFlags;
 }
 
+export interface AmbientSoundSource {
+  name: string;
+  x: number;
+  y: number;
+  path: string;
+  radius: number;
+  volume: number;
+  easing: boolean;
+  repeat: boolean;
+  walls: boolean;
+  flags: ModuleFlags;
+}
+
 export interface WallSource {
   c: [number, number, number, number];
   move: number;
@@ -79,6 +99,7 @@ export interface ScenePlan {
   Tile: TileSource[];
   Region: RegionSource[];
   AmbientLight: AmbientLightSource[];
+  AmbientSound: AmbientSoundSource[];
   Wall: WallSource[];
 }
 
@@ -88,18 +109,62 @@ export interface BuildScenePlanInput {
   stageIndex: number;
   cells: readonly GridCell[];
   movementBehavior: MovementBehaviorFactory;
+  p2Enabled?: boolean;
+  getAdjacentOffsets?: (offset: GridOffset) => readonly GridOffset[];
+  /** Scene distance represented by one grid square; defaults to one for geometry tests. */
+  gridDistance?: number;
+  /** Pixel size of one grid square; inferred from the cells when omitted. */
+  gridSize?: number;
 }
 
-const makeFlags = (
-  flag: TerrainDocumentFlag,
-): ModuleFlags => ({ [MODULE_ID]: flag });
+const makeFlags = (flag: TerrainDocumentFlag): ModuleFlags => ({
+  [MODULE_ID]: flag,
+});
 
 const emptyPlan = (): ScenePlan => ({
   Tile: [],
   Region: [],
   AmbientLight: [],
+  AmbientSound: [],
   Wall: [],
 });
+
+const positiveMetric = (value: number | undefined, fallback: number): number =>
+  Number.isFinite(value) && value! > 0 ? value! : fallback;
+
+const inferredGridSize = (cells: readonly GridCell[]): number =>
+  Math.max(
+    1,
+    Math.min(...cells.map(({ width, height }) => Math.max(width, height))),
+  );
+
+const clusterCoverageDistance = (
+  cells: readonly GridCell[],
+  gridSize: number,
+  gridDistance: number,
+): number => {
+  const bounds = boundsForVertices(cells);
+  const halfDiagonalInSceneDistance =
+    (Math.hypot(bounds.width, bounds.height) / 2 / gridSize) * gridDistance;
+  return Math.ceil(halfDiagonalInSceneDistance) + gridDistance;
+};
+
+const soundRadius = (
+  cells: readonly GridCell[],
+  gridSize: number,
+  gridDistance: number,
+): number => {
+  const coverageDistance = clusterCoverageDistance(
+    cells,
+    gridSize,
+    gridDistance,
+  );
+  const gridRadius = Math.min(
+    12,
+    Math.max(2, Math.ceil(coverageDistance / gridDistance)),
+  );
+  return gridRadius * gridDistance;
+};
 
 export const buildScenePlan = ({
   bundleId,
@@ -107,6 +172,10 @@ export const buildScenePlan = ({
   stageIndex,
   cells,
   movementBehavior,
+  p2Enabled = false,
+  getAdjacentOffsets,
+  gridDistance: requestedGridDistance,
+  gridSize: requestedGridSize,
 }: BuildScenePlanInput): ScenePlan => {
   if (!cells.length) throw new Error("Cannot build terrain without cells");
 
@@ -124,6 +193,9 @@ export const buildScenePlan = ({
     );
   }
 
+  const gridDistance = positiveMetric(requestedGridDistance, 1);
+  const gridSize = positiveMetric(requestedGridSize, inferredGridSize(cells));
+
   const plan = emptyPlan();
   plan.Tile = cells.map((cell) => ({
     name: `${configuration.label} · ${stage.label}`,
@@ -132,7 +204,10 @@ export const buildScenePlan = ({
     width: cell.width,
     height: cell.height,
     alpha: stage.alpha,
-    texture: { src: stage.texture, tint: stage.tint },
+    texture: {
+      src: p2Enabled ? stage.media.animatedTexture : stage.media.staticTexture,
+      tint: stage.tint,
+    },
     flags: makeFlags({
       bundleId,
       configurationId,
@@ -157,23 +232,61 @@ export const buildScenePlan = ({
     },
   ];
 
-  if (stage.light) {
-    const bounds = boundsForVertices(cells);
-    plan.AmbientLight = [
-      {
-        name: `${configuration.label} · ${stage.label}光源`,
+  const clusters = p2Enabled
+    ? clusterCells(cells, { maxCells: 16, getAdjacentOffsets })
+    : [ [...cells] ];
+
+  const light = stage.light;
+  if (light) {
+    plan.AmbientLight = clusters.map((cluster, index) => {
+      const dim = Math.max(
+        light.dim,
+        clusterCoverageDistance(cluster, gridSize, gridDistance),
+      );
+      const bounds = boundsForVertices(cluster);
+      return {
+        name: `${configuration.label} · ${stage.label}光源${
+          p2Enabled ? index + 1 : ""
+        }`,
         x: bounds.centerX,
         y: bounds.centerY,
         walls: false,
-        config: stage.light,
+        config: {
+          ...light,
+          dim: p2Enabled ? dim : light.dim,
+          bright: Math.min(light.bright, p2Enabled ? dim : light.dim),
+        },
         flags: makeFlags({
           bundleId,
           configurationId,
           stageIndex,
           role: "terrain-light",
         }),
-      },
-    ];
+      };
+    });
+  }
+
+  if (p2Enabled) {
+    plan.AmbientSound = clusters.map((cluster, index) => {
+      const bounds = boundsForVertices(cluster);
+      return {
+        name: `${configuration.label} · ${stage.label}环境音${index + 1}`,
+        x: bounds.centerX,
+        y: bounds.centerY,
+        path: stage.media.ambience.src,
+        radius: soundRadius(cluster, gridSize, gridDistance),
+        volume: stage.media.ambience.volume,
+        easing: true,
+        repeat: true,
+        walls: true,
+        flags: makeFlags({
+          bundleId,
+          configurationId,
+          stageIndex,
+          role: "terrain-sound",
+        }),
+      };
+    });
   }
 
   if (stage.createsWalls) {
@@ -203,6 +316,10 @@ export const scenePlanEntries = (
   [
     "AmbientLight",
     plan.AmbientLight as unknown as Array<Record<string, unknown>>,
+  ],
+  [
+    "AmbientSound",
+    plan.AmbientSound as unknown as Array<Record<string, unknown>>,
   ],
   ["Wall", plan.Wall as unknown as Array<Record<string, unknown>>],
 ];

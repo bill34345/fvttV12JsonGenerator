@@ -1,20 +1,17 @@
-# Roadmap After P1 Core
+# Battlefield Painter Roadmap
 
-## Implemented in the current P1 development worktree
+## Implemented in the continuous development worktree
 
-- Cursor/brush preview rendered through the current PIXI canvas API.
-- Brush radius and fill/line tools.
-- Stroke history and undo/redo beyond failure rollback.
-- Internal P0/P1 development phase gate, with a mandatory immutable release setting.
+- P0 fire, frost, and bramble terrain with original static art.
+- Square and hex grid geometry through Foundry core adapters.
+- GM-only painting, erase, stage changes, movement Regions, fire light, and mature bramble Walls.
+- P1 brush radius, line/fill tools, cursor preview, bounded SceneHistory, and undo/redo.
+- P0/P1/P2 internal phase switches with an immutable release path.
+- P2 original transparent WebM loops and OGG/Opus ambience assets.
+- P2 deterministic clustered fire lights and AmbientSound sources.
+- P2 ownership-only scene clear preview, fingerprint re-check, and serialized mutations.
 
-## Remaining candidates
-
-- Transparent WebM loops for fire, arcane frost, and creeping vines.
-- Per-bundle environmental audio with explicit volume and wall attenuation.
-- Clustered light placement for long fire strokes.
-- Safe batch deletion UI with a dry-run document count.
-
-## P2 candidates
+## Later candidates
 
 - Color variants and user-authored catalog entries.
 - Scene objective markers and non-terrain tactical effects.
@@ -23,4 +20,6 @@
 - Socket-backed collaborative locking if non-GM painting is ever allowed.
 - Import/export of configuration metadata without bundling third-party copyrighted assets.
 
-Promotion from P0 should follow evidence from the exact-version acceptance checklist, especially Region movement semantics, square/hex Tile placement, and document-count performance.
+## Acceptance policy
+
+P2 development does not start Foundry or perform partial runtime acceptance. After all development phases are complete, the exact Foundry `14.364` / dnd5e `5.3.3` checklist is run once across P0, P0+P1, P0+P2, and P0+P1+P2 on square, hex-row, and hex-column Scenes. Runtime findings are fixed on this same branch before release controls are locked.

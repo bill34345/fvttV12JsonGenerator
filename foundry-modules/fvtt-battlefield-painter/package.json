@@ -1,10 +1,11 @@
 {
   "name": "@fvtt-json-generator/fvtt-battlefield-painter",
-  "version": "0.2.0-alpha.1",
+  "version": "0.3.0-alpha.1",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "bun run scripts/build.ts",
+    "generate:media": "bun scripts/generate-media.mjs",
     "install:local": "bun run scripts/lab-cli.ts install",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
@@ -13,6 +14,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.2.19",
+    "ffmpeg-static": "5.2.0",
     "typescript": "^5.8.3"
   }
 }

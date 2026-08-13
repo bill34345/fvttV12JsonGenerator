@@ -8,9 +8,12 @@ import {
 export type { GridCell, GridOffset, Point } from "./geometry";
 
 export interface FoundryGridLike {
+  /** Pixels occupied by one grid square. Foundry exposes this on the live grid. */
+  size?: number;
   getOffset(point: Point): GridOffset;
   getCenterPoint(offset: GridOffset): Point;
   getVertices(offset: GridOffset): Point[];
+  getAdjacentOffsets?(offset: GridOffset): GridOffset[];
 }
 
 export const gridCellAtOffset = (

@@ -23,6 +23,7 @@ const emptyCreatedIds = (): CreatedDocumentIds => ({
   Tile: [],
   Region: [],
   AmbientLight: [],
+  AmbientSound: [],
   Wall: [],
 });
 

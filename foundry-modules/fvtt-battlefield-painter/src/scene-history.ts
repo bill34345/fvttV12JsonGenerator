@@ -32,11 +32,12 @@ interface HistoryEntry {
 
 const collectionForDocumentName: Record<
   PlannedDocumentName,
-  keyof Pick<HistorySceneLike, "tiles" | "regions" | "lights" | "walls">
+  keyof Pick<HistorySceneLike, "tiles" | "regions" | "lights" | "sounds" | "walls">
 > = {
   Tile: "tiles",
   Region: "regions",
   AmbientLight: "lights",
+  AmbientSound: "sounds",
   Wall: "walls",
 };
 
@@ -55,7 +56,7 @@ const capture = (scene: HistorySceneLike): SceneSnapshot => {
     const collection = scene[collectionForDocumentName[documentName]] ?? [];
     snapshot[documentName] = [...collection]
       .filter((document) => Boolean(terrainDocumentFlag(document)))
-      .map(cloneSource);
+      .map((document) => cloneSource(document as SnapshotDocument));
   }
   return snapshot;
 };
