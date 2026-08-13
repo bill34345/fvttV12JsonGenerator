@@ -16,6 +16,8 @@ import {
   parseFvttTargetVersion,
   parseIconMode,
 } from '../../../../src/core/application/web-server';
+import { createAiConnectionsRuntime, type AiConnectionsRuntime } from './ai-connections/runtime';
+import { AiConnectionError } from './ai-connections/types';
 import { createZipBuffer } from './download/zip';
 import {
   cleanupExpiredJobs,
@@ -23,6 +25,7 @@ import {
   getJob,
   runningJobsForIp,
   runningJobsTotal,
+  updateJob,
   type WebJob,
   type WebJobType,
 } from './jobs/jobStore';
@@ -98,7 +101,11 @@ cleanupExpiredJobs();
 export interface ApiRequestContext {
   remoteAddress?: string | null;
   securityConfig?: WebSecurityConfig;
+  aiRuntime?: AiConnectionsRuntime;
 }
+
+let defaultAiRuntime: AiConnectionsRuntime | undefined;
+let defaultAiRuntimeKey = '';
 
 export async function handleApiRequest(
   request: Request,
@@ -126,6 +133,17 @@ export async function handleApiRequest(
     ) {
       throw userError('RATE_LIMITED', '请求过于频繁，请稍后再试。', 429);
     }
+
+    const runtimeKey = JSON.stringify(securityConfig.aiConnections);
+    const aiRuntime = context.aiRuntime ?? (() => {
+      if (!defaultAiRuntime || defaultAiRuntimeKey !== runtimeKey) {
+        defaultAiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections);
+        defaultAiRuntimeKey = runtimeKey;
+      }
+      return defaultAiRuntime;
+    })();
+    const aiResponse = await aiRuntime.handleApiRequest(request, clientIp, securityConfig.maxRequestBodyBytes);
+    if (aiResponse) return aiResponse;
 
     if (request.method === 'GET' && url.pathname === '/api/capabilities') {
       const imagePreset = getWebImageAssetPreset();
@@ -333,6 +351,27 @@ export async function handleApiRequest(
         );
       }
       validateJobInput(body);
+      const isAiJob = body.type === 'ai-monster-intake' || body.type === 'ai-item-intake';
+      if (isAiJob && !body.aiConnectionId) {
+        throw userError('AI_CONNECTION_REQUIRED', '运行 AI Intake 前必须选择可用的 AI 连接。');
+      }
+      if (isAiJob) {
+        let quotaLease: { release(): void } | undefined;
+        try {
+          const authorized = aiRuntime.authorize(request, body.aiConnectionId!, clientIp);
+          quotaLease = authorized.quotaLease;
+          const providers = aiRuntime.createProviders(authorized.connection);
+          const job = createJob(body.type, clientIp, {
+            connectionId: authorized.connection.id,
+            sessionBinding: authorized.sessionBinding,
+          });
+          startJob(job, body, providers, () => quotaLease?.release());
+          return jsonSuccess(publicJob(getRequiredJob(job.id)));
+        } catch (error) {
+          quotaLease?.release();
+          throw aiConnectionUserError(error);
+        }
+      }
       const job = createJob(body.type, clientIp);
       startJob(job, body);
       return jsonSuccess(publicJob(getRequiredJob(job.id)));
@@ -340,12 +379,15 @@ export async function handleApiRequest(
 
     const jobMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})$/i);
     if (request.method === 'GET' && jobMatch?.[1]) {
-      return jsonSuccess(publicJob(getRequiredJob(jobMatch[1])));
+      const job = getRequiredJob(jobMatch[1]);
+      assertAiJobOwner(job, request, aiRuntime);
+      return jsonSuccess(publicJob(job));
     }
 
     const decisionsMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/decisions$/i);
     if (request.method === 'POST' && decisionsMatch?.[1]) {
       const job = getRequiredJob(decisionsMatch[1]);
+      assertAiJobOwner(job, request, aiRuntime);
       if (job.type !== 'ai-monster-intake')
         throw userError('NOT_RESUMABLE', '只有 AI 怪物资料整理任务可以提交确认。');
       if (job.status !== 'needs_review' && job.status !== 'failed' && job.status !== 'partial') {
@@ -363,13 +405,32 @@ export async function handleApiRequest(
       );
       if (!Array.isArray(body.decisions))
         throw userError('INVALID_DECISIONS', 'decisions 必须是数组。');
-      void resumeAiMonsterIntakeJob(job, body.decisions).catch(() => undefined);
+      if (!job.aiConnectionId) {
+        throw userError('AI_CONNECTION_REQUIRED', '原 AI 连接信息缺失，不能静默切换 Provider。', 409);
+      }
+      let quotaLease: { release(): void } | undefined;
+      try {
+        const authorized = aiRuntime.authorize(request, job.aiConnectionId, clientIp);
+        quotaLease = authorized.quotaLease;
+        const providers = aiRuntime.createProviders(authorized.connection);
+        void resumeAiMonsterIntakeJob(job, body.decisions, providers.monsterIntakeProvider)
+          .catch(() => undefined)
+          .finally(() => quotaLease?.release());
+      } catch (error) {
+        quotaLease?.release();
+        updateJob(job.id, {
+          status: job.status === 'failed' ? 'failed' : 'needs_review',
+          error: { code: 'AI_CONNECTION_UNAVAILABLE', message: '原 AI 连接已失效，请重新连接后再恢复。' },
+        });
+        throw aiConnectionUserError(error);
+      }
       return jsonSuccess(publicJob(getRequiredJob(job.id)));
     }
 
     const downloadMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/download\/([^/]+)$/i);
     if (request.method === 'GET' && downloadMatch?.[1] && downloadMatch[2]) {
       const job = getRequiredJob(downloadMatch[1]);
+      assertAiJobOwner(job, request, aiRuntime);
       const fileId = decodeURIComponent(downloadMatch[2]);
       const file = job.files.find((item) => item.id === fileId);
       if (!file || !existsSync(file.path)) {
@@ -386,6 +447,7 @@ export async function handleApiRequest(
     const zipMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})\/download\.zip$/i);
     if (request.method === 'GET' && zipMatch?.[1]) {
       const job = getRequiredJob(zipMatch[1]);
+      assertAiJobOwner(job, request, aiRuntime);
       const files = job.files.filter((file) => existsSync(file.path));
       if (files.length === 0) {
         throw userError('NO_DOWNLOADABLE_FILES', '这个任务没有可下载产物。', 404);
@@ -480,8 +542,8 @@ function webIconOptions(value: unknown) {
   };
 }
 
-function publicJob(job: WebJob): Omit<WebJob, 'clientIp'> {
-  const { clientIp: _clientIp, ...rest } = job;
+function publicJob(job: WebJob): Omit<WebJob, 'clientIp' | 'aiSessionBinding'> {
+  const { clientIp: _clientIp, aiSessionBinding: _aiSessionBinding, ...rest } = job;
   return {
     ...rest,
     files: job.files.map((file) => ({
@@ -495,6 +557,25 @@ function getRequiredJob(id: string): WebJob {
   const job = getJob(id);
   if (!job) throw userError('JOB_NOT_FOUND', '任务不存在。', 404);
   return job;
+}
+
+function assertAiJobOwner(job: WebJob, request: Request, aiRuntime: AiConnectionsRuntime): void {
+  if (!job.aiSessionBinding) return;
+  if (!aiRuntime.matchesSession(request, job.aiSessionBinding)) {
+    throw userError('JOB_NOT_FOUND', '任务不存在。', 404);
+  }
+}
+
+function aiConnectionUserError(error: unknown): ApiUserError {
+  if (error instanceof ApiUserError) return error;
+  if (error instanceof AiConnectionError) {
+    const status = error.code === 'AI_CONNECTION_NOT_FOUND' ? 404 : 409;
+    return userError(error.code, error.message, status);
+  }
+  const message = error instanceof Error ? error.message : 'AI connection is unavailable.';
+  if (/Origin|CSRF/.test(message)) return userError('REQUEST_FORBIDDEN', message, 403);
+  if (/quota/i.test(message)) return userError('SITE_AI_QUOTA_EXCEEDED', message, 429);
+  return userError('AI_CONNECTION_UNAVAILABLE', message, 409);
 }
 
 function validateJobInput(body: WebJobRequest): void {

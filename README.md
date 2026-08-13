@@ -286,7 +286,7 @@ bun run web:api
 bun run web:build
 ```
 
-`web:api` / `web:start` 默认只监听 `127.0.0.1:5174`。非回环或反向代理公开模式必须显式启用并配置服务器端 bearer token；浏览器不能提交 VPS 凭据。Web/API 支持上传 Markdown、单文件转换、批量怪物 job、下载 ZIP、来源核对及受限的 workspace path 模式。完整部署、鉴权、可信代理与资源上限见 [`docs/web-deployment.md`](docs/web-deployment.md)。
+`web:api` / `web:start` 默认只监听 `127.0.0.1:5174`。非回环或反向代理公开模式必须显式启用并配置服务器端 bearer token；浏览器不能提交 VPS 凭据。Web/API 支持上传 Markdown、单文件转换、批量怪物 job、下载 ZIP、来源核对及受限的 workspace path 模式。完整部署、鉴权、可信代理与资源上限见 [`docs/web-deployment.md`](docs/web-deployment.md)；三种 AI 连接方式和 Windows Companion 见 [`docs/web-ai-connections.md`](docs/web-ai-connections.md)。
 
 ## 参考缓存
 

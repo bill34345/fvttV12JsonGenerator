@@ -40,6 +40,7 @@
     "web:api": "bun run apps/web/src/server/index.ts",
     "web:dev": "bun run apps/web/src/dev.ts",
     "web:build": "vite build",
+    "web:companion:build": "bun build --compile apps/web/src/companion/cli.ts --outfile dist/web/fvtt-ai-companion.exe",
     "web:start": "bun run apps/web/src/server/index.ts",
     "verify:actor": "bun run src/tools/actorVerification.ts",
     "verify:intake": "bun run src/tools/intakeVerification.ts",

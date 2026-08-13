@@ -1,23 +1,50 @@
 import { handleApiRequest } from './api';
+import { createAiConnectionsRuntime } from './ai-connections/runtime';
 import { extname, join, relative, resolve } from 'node:path';
 import { getWebSecurityConfig } from './security/config';
 
 const securityConfig = getWebSecurityConfig();
+const aiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections);
 const webRoot = resolve(process.cwd(), 'dist/web');
 
-Bun.serve({
+Bun.serve<{ connectionId: string; pairingId: string }>({
   hostname: securityConfig.hostname,
   port: securityConfig.port,
   maxRequestBodySize: securityConfig.maxRequestBodyBytes,
   fetch(request, server) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/ai-companion/connect' && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+      const pairing = aiRuntime.companion.accept(request);
+      if (!pairing) return new Response('Companion pairing rejected.', { status: 403 });
+      const upgraded = server.upgrade(request, { data: pairing });
+      if (!upgraded) {
+        aiRuntime.companion.abort(pairing.connectionId);
+        return new Response('WebSocket upgrade failed.', { status: 400 });
+      }
+      return undefined;
+    }
     if (url.pathname.startsWith('/api/')) {
       return handleApiRequest(request, {
         remoteAddress: server.requestIP(request)?.address ?? null,
         securityConfig,
+        aiRuntime,
       });
     }
     return serveStatic(url.pathname);
+  },
+  websocket: {
+    open(socket) {
+      const data = (socket as unknown as { data: { connectionId: string } }).data;
+      aiRuntime.companion.open(data.connectionId, socket);
+    },
+    message(socket, message) {
+      const data = (socket as unknown as { data: { connectionId: string } }).data;
+      aiRuntime.companion.message(data.connectionId, message);
+    },
+    close(socket) {
+      const data = (socket as unknown as { data: { connectionId: string } }).data;
+      aiRuntime.companion.close(data.connectionId);
+    },
   },
 });
 

@@ -49,6 +49,7 @@ export interface WebJobRequest {
   content?: string;
   inputPath?: string;
   options?: Record<string, unknown>;
+  aiConnectionId?: string;
 }
 
 export interface WebJobRunnerDependencies {
@@ -56,8 +57,13 @@ export interface WebJobRunnerDependencies {
   monsterIntakeProvider?: MonsterIntakeAiProvider;
 }
 
-export function startJob(job: WebJob, body: WebJobRequest): void {
-  void runJob(job, body);
+export function startJob(
+  job: WebJob,
+  body: WebJobRequest,
+  dependencies: WebJobRunnerDependencies = {},
+  onSettled?: () => void,
+): void {
+  void runJob(job, body, dependencies).finally(onSettled);
 }
 
 export async function runJob(

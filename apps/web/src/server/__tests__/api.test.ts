@@ -26,6 +26,7 @@ beforeEach(() => {
   delete Bun.env.FVTT_WEB_PUBLIC_MODE;
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_SESSION_SECRET;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
@@ -48,6 +49,7 @@ afterEach(() => {
   delete Bun.env.FVTT_WEB_PUBLIC_MODE;
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_SESSION_SECRET;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
@@ -466,6 +468,7 @@ describe('web API', () => {
   it('requires the configured bearer token before public-mode API work', async () => {
     Bun.env.FVTT_WEB_PUBLIC_MODE = '1';
     Bun.env.FVTT_WEB_AUTH_TOKEN = '0123456789abcdef0123456789abcdef';
+    Bun.env.FVTT_WEB_SESSION_SECRET = 'abcdef0123456789abcdef0123456789';
 
     const missing = await handleApiRequest(new Request('http://localhost/api/capabilities'));
     const missingBody = await missing.json();
