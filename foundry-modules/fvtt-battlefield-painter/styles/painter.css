@@ -1,0 +1,174 @@
+.battlefield-painter-window {
+  --bp-ink: #f4ead6;
+  --bp-muted: #b7aa93;
+  --bp-panel: #191713;
+  --bp-line: rgba(255, 235, 198, 0.14);
+  padding: 0;
+  color: var(--bp-ink);
+  background:
+    radial-gradient(circle at 85% 0%, rgba(255, 118, 42, 0.16), transparent 32%),
+    linear-gradient(155deg, #221e18, #100f0d 70%);
+}
+
+.battlefield-painter {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+
+.battlefield-painter button {
+  color: inherit;
+  border: 1px solid var(--bp-line);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+.battlefield-painter button:hover,
+.battlefield-painter button:focus-visible {
+  border-color: rgba(255, 210, 143, 0.52);
+  box-shadow: 0 0 0 2px rgba(255, 146, 61, 0.14);
+}
+
+.battlefield-painter__header h2 {
+  margin: 2px 0 4px;
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+}
+
+.battlefield-painter__header p {
+  margin: 0;
+  color: var(--bp-muted);
+  line-height: 1.5;
+}
+
+.battlefield-painter__eyebrow {
+  color: #ec863d !important;
+  font: 700 10px/1.2 ui-monospace, monospace;
+  letter-spacing: 0.19em;
+}
+
+.battlefield-painter__terrains {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.terrain-card {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.terrain-card.is-selected {
+  border-color: var(--terrain-accent);
+  box-shadow: inset 0 -3px 0 var(--terrain-accent);
+}
+
+.terrain-card__art {
+  display: block;
+  aspect-ratio: 1.65;
+  background-color: #29251f;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.terrain-card__copy {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+}
+
+.terrain-card__copy small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--bp-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.battlefield-painter__stages,
+.battlefield-painter__modes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.battlefield-painter__modes {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stage-button,
+.mode-button {
+  min-height: 48px;
+  border-radius: 3px;
+}
+
+.stage-button {
+  display: grid;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.stage-button span {
+  color: var(--bp-muted);
+  font: 700 9px/1.2 ui-monospace, monospace;
+  letter-spacing: 0.12em;
+}
+
+.stage-button.is-selected,
+.mode-button.is-selected {
+  border-color: #d6843f;
+  color: #ffd59c;
+  background: rgba(214, 132, 63, 0.16);
+}
+
+.mode-button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+}
+
+.battlefield-painter__footer {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bp-line);
+}
+
+.battlefield-painter__status {
+  min-height: 20px;
+  margin: 0;
+  color: var(--bp-muted);
+  font-size: 12px;
+}
+
+.activate-button {
+  min-height: 42px;
+  border-color: #e47e35 !important;
+  background: linear-gradient(180deg, #b84f22, #7d2f18) !important;
+  font-weight: 800;
+}
+
+.activate-button.is-active {
+  border-color: #72c9df !important;
+  background: linear-gradient(180deg, #28677a, #194353) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battlefield-painter *,
+  .battlefield-painter *::before,
+  .battlefield-painter *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
