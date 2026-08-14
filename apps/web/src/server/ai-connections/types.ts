@@ -40,6 +40,7 @@ export interface ResolvedAiConnection extends AiProviderSettings {
   providerLabel: string;
   diagnostic?: string;
   companionId?: string;
+  pairingId?: string;
 }
 
 export class AiConnectionError extends Error {

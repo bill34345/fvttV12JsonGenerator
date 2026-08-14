@@ -203,6 +203,7 @@ export async function detectConversion(input: {
 
 export async function createJob(input: {
   type: JobType;
+  aiConnectionId?: string;
   fileName?: string;
   content?: string;
   options?: Record<string, unknown>;

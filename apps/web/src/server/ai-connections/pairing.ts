@@ -2,7 +2,8 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import type { AiProviderSettings } from './types';
 
-export type CodexPairingStatus = 'pending' | 'connected' | 'disconnected' | 'expired' | 'consumed';
+export type CodexPairingStatus = 'pending' | 'verifying' | 'connected' | 'blocked' | 'disconnected' | 'expired';
+type CodexPairingRecordStatus = CodexPairingStatus | 'consumed';
 
 export interface CodexPairingPublic {
   id: string;
@@ -13,13 +14,15 @@ export interface CodexPairingPublic {
   status: CodexPairingStatus;
   expiresAt: string;
   connectionId?: string;
+  diagnostic?: string;
 }
 
 export interface CodexPairingCreated extends CodexPairingPublic {
   token: string;
 }
 
-export interface CodexPairingRecord extends CodexPairingPublic {
+export interface CodexPairingRecord extends Omit<CodexPairingPublic, 'status'> {
+  status: CodexPairingRecordStatus;
   sessionId: string;
   tokenHash: string;
   createdAt: number;
@@ -65,6 +68,15 @@ export class CodexPairingRegistry {
     return this.publicRecord(record);
   }
 
+  cancel(sessionId: string, id: string): boolean {
+    const record = this.records.get(id);
+    if (!record || record.sessionId !== sessionId) return false;
+    this.expire(record);
+    if (record.status !== 'pending') return false;
+    this.records.delete(id);
+    return true;
+  }
+
   consume(id: string, token: string, origin: string): CodexPairingRecord | undefined {
     const record = this.records.get(id);
     if (!record) return undefined;
@@ -85,11 +97,25 @@ export class CodexPairingRegistry {
     return this.publicRecord(record);
   }
 
-  markDisconnected(id: string): CodexPairingPublic | undefined {
+  markBlocked(id: string, diagnostic: string): CodexPairingPublic | undefined {
     const record = this.records.get(id);
     if (!record) return undefined;
     this.expire(record);
-    if (record.status === 'connected' || record.status === 'consumed') record.status = 'disconnected';
+    if (record.status !== 'consumed' && record.status !== 'verifying') return this.publicRecord(record);
+    record.status = 'blocked';
+    record.diagnostic = diagnostic;
+    return this.publicRecord(record);
+  }
+
+  markDisconnected(id: string, diagnostic?: string): CodexPairingPublic | undefined {
+    const record = this.records.get(id);
+    if (!record) return undefined;
+    this.expire(record);
+    const wasActive = record.status === 'connected' || record.status === 'consumed' || record.status === 'verifying';
+    if (wasActive) {
+      record.status = 'disconnected';
+      if (diagnostic) record.diagnostic = diagnostic;
+    }
     return this.publicRecord(record);
   }
 
@@ -118,9 +144,10 @@ export class CodexPairingRegistry {
       model: record.model,
       reviewModel: record.reviewModel,
       reasoningEffort: record.reasoningEffort,
-      status: record.status,
+      status: record.status === 'consumed' ? 'verifying' : record.status,
       expiresAt: record.expiresAt,
       ...(record.connectionId ? { connectionId: record.connectionId } : {}),
+      ...(record.diagnostic ? { diagnostic: record.diagnostic } : {}),
     };
   }
 }

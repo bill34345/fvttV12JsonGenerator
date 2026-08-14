@@ -12,7 +12,15 @@ describe('CompanionHub', () => {
       },
       close() {},
     };
-    hub.open('companion-1', socket);
+    hub.open('companion-1', socket, [{ model: 'gpt-5.6-luna', reasoningEffort: 'xhigh' }]);
+    const gate = JSON.parse(messages[0]!) as Record<string, unknown>;
+    expect(gate.type).toBe('gate');
+    hub.message('companion-1', JSON.stringify({
+      type: 'gate-result',
+      protocolVersion: 1,
+      connectionId: 'companion-1',
+      ok: true,
+    }));
     const client = hub.request('companion-1');
     const responsePromise = client('https://companion.invalid/v1/chat/completions', {
       method: 'POST',
@@ -24,7 +32,8 @@ describe('CompanionHub', () => {
     expect(request.url).toBe('/chat/completions');
     expect(JSON.stringify(request)).not.toContain('Bearer secret');
     hub.message('companion-1', JSON.stringify({
-      type: 'response', requestId: request.requestId, status: 200, body: { choices: [{ message: { content: '{"ok":true}' } }] },
+      type: 'response', protocolVersion: 1, requestId: request.requestId, status: 200,
+      body: { choices: [{ message: { content: '{"ok":true}' } }] },
     }));
     const response = await responsePromise;
     expect(response.ok).toBe(true);

@@ -1,5 +1,15 @@
 import type { HttpClient, HttpRequest, HttpResponse } from '../../../../../packages/intake-ai/src/http';
 
+import {
+  COMPANION_PROTOCOL_VERSION,
+  decodeCompanionMessage,
+  isCompanionGateResult,
+  isCompanionResponse,
+  type CompanionGateModel,
+  type CompanionGateResultMessage,
+  type CompanionRequestMessage,
+} from './protocol';
+
 export interface CompanionSocket {
   send(data: string): void;
   close(code?: number, reason?: string): void;
@@ -9,22 +19,6 @@ interface PendingRequest {
   resolve: (response: HttpResponse) => void;
   reject: (error: Error) => void;
   timer: ReturnType<typeof setTimeout>;
-}
-
-interface CompanionRequestMessage {
-  type: 'request';
-  requestId: string;
-  url: string;
-  method: 'POST';
-  headers: Record<string, string>;
-  body: string;
-}
-
-interface CompanionResponseMessage {
-  type: 'response';
-  requestId: string;
-  status: number;
-  body: unknown;
 }
 
 export interface CompanionHubOptions {
@@ -38,6 +32,8 @@ export interface CompanionHubOptions {
  */
 export class CompanionHub {
   private readonly sockets = new Map<string, CompanionSocket>();
+  private readonly awaitingGate = new Set<string>();
+  private readonly gated = new Set<string>();
   private readonly pending = new Map<string, PendingRequest>();
   private readonly requestTimeoutMs: number;
   private readonly now: () => number;
@@ -48,13 +44,22 @@ export class CompanionHub {
     this.now = options.now ?? Date.now;
   }
 
-  open(connectionId: string, socket: CompanionSocket): void {
+  open(connectionId: string, socket: CompanionSocket, models: CompanionGateModel[]): void {
+    this.gated.delete(connectionId);
+    this.awaitingGate.add(connectionId);
     this.sockets.set(connectionId, socket);
-    socket.send(JSON.stringify({ type: 'ready', connectionId, at: new Date(this.now()).toISOString() }));
+    socket.send(JSON.stringify({
+      type: 'gate',
+      protocolVersion: COMPANION_PROTOCOL_VERSION,
+      connectionId,
+      models,
+    }));
   }
 
   close(connectionId: string): void {
     this.sockets.delete(connectionId);
+    this.awaitingGate.delete(connectionId);
+    this.gated.delete(connectionId);
     const prefix = `${connectionId}:`;
     for (const [key, pending] of this.pending) {
       if (!key.startsWith(prefix)) continue;
@@ -68,18 +73,38 @@ export class CompanionHub {
     return this.sockets.has(connectionId);
   }
 
-  message(connectionId: string, raw: string | ArrayBuffer | Uint8Array): void {
+  message(connectionId: string, raw: string | ArrayBuffer | Uint8Array): CompanionGateResultMessage | undefined {
     const text = typeof raw === 'string'
       ? raw
       : raw instanceof ArrayBuffer ? new TextDecoder().decode(raw) : new TextDecoder().decode(raw);
     let value: unknown;
     try {
-      value = JSON.parse(text);
+      value = decodeCompanionMessage(text);
     } catch {
       this.sockets.get(connectionId)?.close(1003, 'Invalid JSON message.');
-      return;
+      return undefined;
     }
-    if (!isResponseMessage(value)) return;
+    if (isCompanionGateResult(value)) {
+      if (value.connectionId !== connectionId) {
+        this.sockets.get(connectionId)?.close(1008, 'Companion connection mismatch.');
+        return undefined;
+      }
+      if (!this.awaitingGate.has(connectionId) || this.gated.has(connectionId)) {
+        this.sockets.get(connectionId)?.close(1008, 'Companion gate was already completed.');
+        return undefined;
+      }
+      this.awaitingGate.delete(connectionId);
+      if (value.ok) this.gated.add(connectionId);
+      return value;
+    }
+    if (!isCompanionResponse(value)) {
+      this.sockets.get(connectionId)?.close(1003, 'Unknown Companion protocol message.');
+      return undefined;
+    }
+    if (!this.gated.has(connectionId)) {
+      this.sockets.get(connectionId)?.close(1008, 'Companion security gate has not completed.');
+      return undefined;
+    }
     const pendingKey = `${connectionId}:${value.requestId}`;
     const pending = this.pending.get(pendingKey);
     if (!pending) return;
@@ -90,15 +115,18 @@ export class CompanionHub {
       status: value.status,
       json: async () => value.body,
     });
+    return undefined;
   }
 
   request(connectionId: string): HttpClient {
     return async (_url: string, init: HttpRequest) => {
       const socket = this.sockets.get(connectionId);
       if (!socket) throw new Error('Companion is offline.');
+      if (!this.gated.has(connectionId)) throw new Error('Companion security gate has not completed.');
       const requestId = `${this.sequence++}-${Math.random().toString(36).slice(2)}`;
       const message: CompanionRequestMessage = {
         type: 'request',
+        protocolVersion: COMPANION_PROTOCOL_VERSION,
         requestId,
         url: '/chat/completions',
         method: init.method,
@@ -137,13 +165,4 @@ export class CompanionHub {
     this.sockets.get(connectionId)?.close(1000, 'Companion connection revoked.');
     this.close(connectionId);
   }
-}
-
-function isResponseMessage(value: unknown): value is CompanionResponseMessage {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  return record.type === 'response'
-    && typeof record.requestId === 'string'
-    && typeof record.status === 'number'
-    && Object.prototype.hasOwnProperty.call(record, 'body');
 }

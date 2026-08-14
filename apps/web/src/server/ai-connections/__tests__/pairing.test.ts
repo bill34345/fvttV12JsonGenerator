@@ -4,6 +4,23 @@ import { getWebSecurityConfig } from '../../security/config';
 import { createAiConnectionsRuntime } from '../runtime';
 
 describe('Codex Companion pairing', () => {
+  it('cancels an unconsumed pairing without exposing its token again', async () => {
+    const runtime = createAiConnectionsRuntime(getWebSecurityConfig({ FVTT_WEB_CODEX_COMPANION_ENABLED: '1' }).aiConnections);
+    const bootstrap = await session(runtime);
+    const created = await runtime.handleApiRequest(request('/api/ai-connections/codex/pairings', bootstrap, {}), '127.0.0.1', 64_000);
+    const payload = await created!.json();
+    const cancelled = await runtime.handleApiRequest(new Request(`http://localhost/api/ai-connections/codex/pairings/${payload.data.id}`, {
+      method: 'DELETE',
+      headers: { cookie: bootstrap.cookie, origin: 'http://localhost', 'x-fvtt-csrf': bootstrap.csrf },
+    }), '127.0.0.1', 64_000);
+    expect(cancelled!.status).toBe(200);
+    expect((await cancelled!.json()).data).toEqual({ cancelled: true });
+    const status = await runtime.handleApiRequest(new Request(`http://localhost/api/ai-connections/codex/pairings/${payload.data.id}`, {
+      headers: { cookie: bootstrap.cookie },
+    }), '127.0.0.1', 64_000);
+    expect(status!.status).toBe(404);
+  });
+
   it('creates a five-minute one-time pairing bound to the anonymous session', async () => {
     let now = 1_000;
     const runtime = createAiConnectionsRuntime(getWebSecurityConfig({ FVTT_WEB_CODEX_COMPANION_ENABLED: '1' }).aiConnections, { now: () => now });
@@ -22,20 +39,33 @@ describe('Codex Companion pairing', () => {
     }), '127.0.0.1', 64_000);
     expect((await status!.json()).data.status).toBe('pending');
 
-    const accepted = runtime.companion.accept(new Request(`http://localhost/api/ai-companion/connect?pairingId=${payload.data.id}&token=${payload.data.token}&origin=http%3A%2F%2Flocalhost`, {
+    const pending = runtime.companion.createPending(new Request('http://localhost/api/ai-companion/connect', {
       headers: { origin: 'http://localhost' },
     }));
+    const accepted = runtime.companion.acceptPending(pending!.pendingId, JSON.stringify({
+      type: 'pair', protocolVersion: 1, pairingId: payload.data.id, token: payload.data.token, origin: 'http://localhost',
+    }));
     expect(accepted).toBeDefined();
-    expect(runtime.companion.accept(new Request(`http://localhost/api/ai-companion/connect?pairingId=${payload.data.id}&token=${payload.data.token}&origin=http%3A%2F%2Flocalhost`))).toBeUndefined();
+    expect(runtime.companion.acceptPending(pending!.pendingId, JSON.stringify({
+      type: 'pair', protocolVersion: 1, pairingId: payload.data.id, token: payload.data.token, origin: 'http://localhost',
+    }))).toBeUndefined();
 
     const sent: string[] = [];
     runtime.companion.open(accepted!.connectionId, {
       send(value) {
         sent.push(value);
-        const message = JSON.parse(value) as { type?: string; requestId?: string };
+        const message = JSON.parse(value) as { type?: string; requestId?: string; connectionId?: string };
+        if (message.type === 'gate' && message.connectionId) {
+          runtime.companion.message(accepted!.connectionId, JSON.stringify({
+            type: 'gate-result',
+            protocolVersion: 1,
+            connectionId: message.connectionId,
+            ok: true,
+          }));
+        }
         if (message.type === 'request' && message.requestId) {
           runtime.companion.message(accepted!.connectionId, JSON.stringify({
-            type: 'response',
+            type: 'response', protocolVersion: 1,
             requestId: message.requestId,
             status: 200,
             body: { choices: [{ message: { content: '{"ok":true}' } }] },
@@ -44,7 +74,7 @@ describe('Codex Companion pairing', () => {
       },
       close() {},
     });
-    expect(sent[0]).toContain('"type":"ready"');
+    expect(sent[0]).toContain('"type":"gate"');
     const listed = await runtime.handleApiRequest(new Request('http://localhost/api/ai-connections', {
       headers: { cookie: bootstrap.cookie },
     }), '127.0.0.1', 64_000);
@@ -59,6 +89,48 @@ describe('Codex Companion pairing', () => {
       headers: { cookie: bootstrap.cookie },
     }), '127.0.0.1', 64_000);
     expect((await expired!.json()).data.status).toBe('expired');
+  });
+
+  it('blocks a pairing when the Companion gate fails and preserves a safe diagnostic', async () => {
+    const runtime = createAiConnectionsRuntime(getWebSecurityConfig({ FVTT_WEB_CODEX_COMPANION_ENABLED: '1' }).aiConnections);
+    const bootstrap = await session(runtime);
+    const created = await runtime.handleApiRequest(request('/api/ai-connections/codex/pairings', bootstrap, {}), '127.0.0.1', 64_000);
+    const payload = await created!.json();
+    const pending = runtime.companion.createPending(new Request('http://localhost/api/ai-companion/connect', {
+      headers: { origin: 'http://localhost' },
+    }));
+    const accepted = runtime.companion.acceptPending(pending!.pendingId, JSON.stringify({
+      type: 'pair', protocolVersion: 1, pairingId: payload.data.id, token: payload.data.token, origin: 'http://localhost',
+    }));
+    expect(accepted).toBeDefined();
+
+    runtime.companion.open(accepted!.connectionId, {
+      send(value) {
+        const message = JSON.parse(value) as { type?: string; connectionId?: string };
+        if (message.type === 'gate' && message.connectionId) {
+          runtime.companion.message(accepted!.connectionId, JSON.stringify({
+            type: 'gate-result',
+            protocolVersion: 1,
+            connectionId: message.connectionId,
+            ok: false,
+            diagnostic: 'The official Codex CLI is not logged in.',
+          }));
+        }
+      },
+      close() {},
+    });
+
+    const pairing = await runtime.handleApiRequest(new Request(`http://localhost/api/ai-connections/codex/pairings/${payload.data.id}`, {
+      headers: { cookie: bootstrap.cookie },
+    }), '127.0.0.1', 64_000);
+    expect((await pairing!.json()).data).toEqual(expect.objectContaining({
+      status: 'blocked',
+      diagnostic: 'The official Codex CLI is not logged in.',
+    }));
+    const listed = await runtime.handleApiRequest(new Request('http://localhost/api/ai-connections', {
+      headers: { cookie: bootstrap.cookie },
+    }), '127.0.0.1', 64_000);
+    expect((await listed!.json()).data.connections[0].status).toBe('blocked');
   });
 });
 

@@ -52,4 +52,21 @@
 
 - P3: exact automatic source-range-to-JSON-field highlighting still requires a backend provenance mapping contract. The current linked line is user-selected and visual, not yet semantic field-level provenance.
 
+## AI connection entry pass (2026-08-14)
+
+- source visual truth path: `design-qa-assets/source-target.png` and the existing workbench direction shown in the prior comparison.
+- implementation screenshot path: `design-qa-assets/ai-connections-entry.png`.
+- combined comparison path: `design-qa-assets/comparison-ai-connections.png`.
+- viewport: 1280 x 720 CSS pixels, devicePixelRatio 1; implementation screenshot is 1280 x 720 pixels. The source is 1487 x 1058 pixels, so the combined comparison uses native-size stacked panels and evaluates hierarchy/tokens rather than pixel-identical placement.
+- state: desktop pre-run empty input with the AI connection drawer open; site provider and Codex Companion are visibly disabled by server capability, while the user API Key entry is available.
+- full-view comparison evidence: the existing navy topbar, warm-neutral workbench rails, blue selected/interactive accents, compact serif work-area heading, and right-side operational panel remain consistent with the selected workbench direction.
+- focused region comparison evidence: the drawer header, three connection cards, disabled capability states, refresh affordance, and security footer were inspected in the combined comparison. No raster product imagery was implied by the source; Radix icons were retained.
+- primary interactions tested: opened the topbar AI connection button; verified the dialog label and close/backdrop controls; expanded and collapsed the user API Key form; verified required API Key disables submit; confirmed the three provider states and explicit “Foundry 14 / core” boundary copy; verified `/api/ai-connections` returns the current session overview.
+- browser console: no warnings or errors observed during the checked state.
+
+### Findings
+
+- No actionable P0, P1, or P2 visual differences remain for the AI connection entry.
+- P3: when site AI or Companion is enabled in deployment, the same cards will show live quota/connection diagnostics; this state was not available in the local capability configuration and is intentionally represented as disabled rather than mocked as ready.
+
 final result: passed

@@ -1,3 +1,5 @@
+import type { LocalCompanionHealth } from '../companion/controlProtocol';
+
 export type AiConnectionKind = 'site' | 'user-api-key' | 'local-codex';
 export type AiConnectionStatus = 'ready' | 'pairing' | 'offline' | 'blocked' | 'expired';
 export type AiReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -25,6 +27,14 @@ export interface AiConnectionsOverview {
     defaultModel: string;
     defaultReasoningEffort: 'xhigh';
     diagnostic?: string;
+    artifact: {
+      available: boolean;
+      fileName: string;
+      downloadUrl: string | null;
+      sha256: string | null;
+    };
+    controlUrl: string;
+    controlProtocolVersion: 1;
   };
   sessionExpiresAt: string;
 }
@@ -36,10 +46,13 @@ export interface CodexPairing {
   model: string;
   reviewModel: string;
   reasoningEffort: AiReasoningEffort;
-  status: 'pending' | 'connected' | 'disconnected' | 'expired' | 'consumed';
+  status: 'pending' | 'verifying' | 'connected' | 'blocked' | 'disconnected' | 'expired';
   expiresAt: string;
   connectionId?: string;
+  diagnostic?: string;
 }
+
+export type { LocalCompanionHealth };
 
 interface ApiSuccess<T> { ok: true; data: T }
 interface ApiFailure { ok: false; error: { code: string; message: string } }
@@ -94,6 +107,10 @@ export class AiConnectionsClient {
 
   async getCodexPairing(id: string): Promise<CodexPairing> {
     return this.request<CodexPairing>(`/api/ai-connections/codex/pairings/${encodeURIComponent(id)}`);
+  }
+
+  async cancelCodexPairing(id: string): Promise<{ cancelled: true }> {
+    return this.stateChanging(`/api/ai-connections/codex/pairings/${encodeURIComponent(id)}`, {}, 'DELETE');
   }
 
   async createAiIntakeJob(input: {

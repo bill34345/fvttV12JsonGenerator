@@ -1,10 +1,16 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import { loadMonsterIntakeConfig } from '@fvtt-json-generator/intake-ai';
 
+import {
+  COMPANION_CONTROL_PROTOCOL_VERSION,
+  COMPANION_CONTROL_URL,
+} from '../../companion/controlProtocol';
 import type { WebJobRunnerDependencies } from '../jobs/jobRunner';
 import type { WebAiConnectionsConfig } from '../security/config';
+import { getCompanionArtifactInfo } from './artifact';
 import { CompanionHub, type CompanionSocket } from './companionHub';
 import { CodexPairingRegistry, type CodexPairingCreated, type CodexPairingPublic } from './pairing';
+import { decodeCompanionMessage, isCompanionPair, type CompanionGateResultMessage } from './protocol';
 import { createIntakeProvidersForConnection } from './providers';
 import { AiConnectionRegistry } from './registry';
 import { SiteAiQuota, type SiteAiQuotaLease } from './quota';
@@ -18,6 +24,7 @@ export interface AiConnectionsRuntimeOptions {
   now?: () => number;
   companionHub?: CompanionHub;
   pairings?: CodexPairingRegistry;
+  artifact?: AiConnectionsOverview['companion']['artifact'];
 }
 
 export interface AiConnectionsOverview {
@@ -30,6 +37,14 @@ export interface AiConnectionsOverview {
     defaultModel: 'gpt-5.6-luna';
     defaultReasoningEffort: 'xhigh';
     diagnostic?: string;
+    artifact: {
+      available: boolean;
+      fileName: string;
+      downloadUrl: string | null;
+      sha256: string | null;
+    };
+    controlUrl: string;
+    controlProtocolVersion: 1;
   };
   sessionExpiresAt: string;
 }
@@ -51,7 +66,10 @@ export interface AiConnectionsRuntime {
   companion: {
     createPairing(request: Request, sessionId: string, settings: { model: string; reviewModel: string; reasoningEffort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' }): CodexPairingCreated;
     getPairing(sessionId: string, pairingId: string): CodexPairingPublic | undefined;
-    accept(request: Request): { connectionId: string; pairingId: string } | undefined;
+    cancelPairing(sessionId: string, pairingId: string): boolean;
+    createPending(request: Request): { pendingId: string } | undefined;
+    acceptPending(pendingId: string, raw: string | ArrayBuffer | Uint8Array): { connectionId: string; pairingId: string } | undefined;
+    cancelPending(pendingId: string): void;
     open(connectionId: string, socket: CompanionSocket): void;
     message(connectionId: string, raw: string | ArrayBuffer | Uint8Array): void;
     close(connectionId: string): void;
@@ -83,7 +101,9 @@ export function createAiConnectionsRuntime(
   const quota = new SiteAiQuota(config.site, now);
   const companionHub = options.companionHub ?? new CompanionHub({ now });
   const pairings = options.pairings ?? new CodexPairingRegistry({ now });
+  const artifact = options.artifact ?? getCompanionArtifactInfo();
   const activeSessionIds = new Set<string>();
+  const pendingCompanions = new Map<string, { expectedOrigin: string }>();
 
   return {
     registry,
@@ -95,48 +115,66 @@ export function createAiConnectionsRuntime(
       getPairing(sessionId, pairingId) {
         return pairings.get(sessionId, pairingId);
       },
-      accept(request) {
+      cancelPairing(sessionId, pairingId) {
+        return pairings.cancel(sessionId, pairingId);
+      },
+      createPending(request) {
         if (!config.companionEnabled) return undefined;
         const url = new URL(request.url);
         if (url.pathname !== '/api/ai-companion/connect') return undefined;
-        const pairingId = url.searchParams.get('pairingId');
-        const token = url.searchParams.get('token');
-        const origin = url.searchParams.get('origin');
         const expectedOrigin = requestOrigin(request, config.secureCookies);
-        if (!pairingId || !token || !origin || origin !== expectedOrigin) return undefined;
         const websocketOrigin = request.headers.get('origin');
-        if (websocketOrigin && websocketOrigin !== 'null' && websocketOrigin !== origin) return undefined;
-        const pairing = pairings.consume(pairingId, token, origin);
-        if (!pairing) return undefined;
-        const connection = registry.createLocalCodex(pairing.sessionId, {
-          model: pairing.model,
-          reviewModel: pairing.reviewModel,
-          reasoningEffort: pairing.reasoningEffort,
-        }, { status: 'pairing' });
-        activeSessionIds.add(pairing.sessionId);
-        return { connectionId: connection.id, pairingId: pairing.id };
+        if (websocketOrigin && websocketOrigin !== 'null' && websocketOrigin !== expectedOrigin) return undefined;
+        const pendingId = randomBytes(18).toString('base64url');
+        pendingCompanions.set(pendingId, { expectedOrigin });
+        return { pendingId };
+      },
+      acceptPending(pendingId, raw) {
+        const pending = pendingCompanions.get(pendingId);
+        if (!pending) return undefined;
+        pendingCompanions.delete(pendingId);
+        let value: unknown;
+        try {
+          value = decodeCompanionMessage(raw);
+        } catch {
+          return undefined;
+        }
+        if (!isCompanionPair(value) || value.origin !== pending.expectedOrigin) return undefined;
+        return acceptPairing(value.pairingId, value.token, value.origin, pending.expectedOrigin);
+      },
+      cancelPending(pendingId) {
+        pendingCompanions.delete(pendingId);
       },
       open(connectionId, socket) {
-        companionHub.open(connectionId, socket);
         const connection = findConnection(connectionId);
-        if (!connection) return;
-        registry.updateStatus(connection.sessionId, connection.id, 'ready');
-        if (connection.companionId) {
-          const pairing = pairings.get(connection.sessionId, connection.companionId);
-          if (pairing) pairings.markConnected(pairing.id, connection.id);
+        if (!connection) {
+          socket.close(1008, 'Companion connection is not registered.');
+          return;
         }
+        const models = [
+          { model: connection.model, reasoningEffort: connection.reasoningEffort },
+          ...(connection.reviewModel === connection.model
+            ? []
+            : [{ model: connection.reviewModel, reasoningEffort: connection.reasoningEffort }]),
+        ];
+        companionHub.open(connectionId, socket, models);
       },
       message(connectionId, raw) {
-        companionHub.message(connectionId, raw);
+        const gateResult = companionHub.message(connectionId, raw);
+        if (gateResult) completeGate(connectionId, gateResult);
       },
       close(connectionId) {
         companionHub.close(connectionId);
         const connection = findConnection(connectionId);
         if (!connection) return;
-        registry.updateStatus(connection.sessionId, connection.id, 'offline', 'Companion disconnected.');
+        if (connection.status !== 'blocked') {
+          registry.updateStatus(connection.sessionId, connection.id, 'offline', 'Companion WebSocket 已断开；请确认 Companion 仍在运行，并检查 origin 与反向代理 WebSocket 配置。');
+        }
         if (connection.companionId) {
-          const pairing = pairings.get(connection.sessionId, connection.companionId);
-          if (pairing) pairings.markDisconnected(pairing.id);
+          const pairing = connection.pairingId
+            ? pairings.get(connection.sessionId, connection.pairingId)
+            : undefined;
+          if (pairing) pairings.markDisconnected(pairing.id, 'Companion WebSocket 已断开；请确认 Companion 仍在运行，并检查 origin 与反向代理 WebSocket 配置。');
         }
       },
       abort(connectionId) {
@@ -144,7 +182,9 @@ export function createAiConnectionsRuntime(
         const connection = findConnection(connectionId);
         if (connection) {
           if (connection.companionId) {
-            const pairing = pairings.get(connection.sessionId, connection.companionId);
+            const pairing = connection.pairingId
+              ? pairings.get(connection.sessionId, connection.pairingId)
+              : undefined;
             if (pairing) pairings.markDisconnected(pairing.id);
           }
           registry.delete(connection.sessionId, connection.id);
@@ -170,7 +210,7 @@ export function createAiConnectionsRuntime(
       activeSessionIds.add(resolved.session.id);
       assertStateChangingRequest(request, resolved.session.csrfToken, requestOrigin(request, config.secureCookies));
       const connection = registry.resolveForProvider(resolved.session.id, connectionId);
-      if (connection.kind === 'local-codex' && (!connection.companionId || !companionHub.isOnline(connection.companionId))) {
+      if (connection.kind === 'local-codex' && (connection.status !== 'ready' || !connection.companionId || !companionHub.isOnline(connection.companionId))) {
         registry.updateStatus(resolved.session.id, connection.id, 'offline', 'Companion is offline.');
         throw new AiConnectionError('AI_CONNECTION_NOT_READY', 'Local Codex Companion is offline.');
       }
@@ -242,6 +282,13 @@ export function createAiConnectionsRuntime(
         }
 
         const pairingMatch = url.pathname.match(/^\/api\/ai-connections\/codex\/pairings\/([A-Za-z0-9_-]{24,})$/);
+        if (request.method === 'DELETE' && pairingMatch?.[1]) {
+          assertStateChangingRequest(request, resolved.session.csrfToken, requestOrigin(request, config.secureCookies));
+          if (!pairings.cancel(resolved.session.id, pairingMatch[1])) {
+            throw apiError(409, 'CODEX_PAIRING_NOT_CANCELLABLE', 'Codex pairing is no longer pending.');
+          }
+          return withCookie(jsonSuccess({ cancelled: true }), resolved.setCookie);
+        }
         if (request.method === 'GET' && pairingMatch?.[1]) {
           const pairing = pairings.get(resolved.session.id, pairingMatch[1]);
           if (!pairing) throw apiError(404, 'CODEX_PAIRING_NOT_FOUND', 'Codex pairing was not found for this session.');
@@ -267,7 +314,9 @@ export function createAiConnectionsRuntime(
           }
           if (connection.kind === 'local-codex' && connection.companionId) {
             companionHub.abort(connection.companionId);
-            const pairing = pairings.get(resolved.session.id, connection.companionId);
+            const pairing = connection.pairingId
+              ? pairings.get(resolved.session.id, connection.pairingId)
+              : undefined;
             if (pairing) pairings.markDisconnected(pairing.id);
             registry.delete(resolved.session.id, connection.id);
           } else {
@@ -292,8 +341,11 @@ export function createAiConnectionsRuntime(
             defaultModel: 'gpt-5.6-luna',
             defaultReasoningEffort: 'xhigh',
             diagnostic: config.companionEnabled
-              ? 'Companion 仅会在客户端通过官方 CLI 零工具门禁后提供服务；不会回退到非官方 OAuth 桥。'
-              : '当前官方 Codex CLI 的零工具发布门禁未启用，Companion 端点保持关闭。',
+              ? '请下载并运行本机 Companion；它会使用已登录的官方 Codex CLI，并先通过零工具安全门禁。'
+              : 'Companion 端点未启用；本地开发可由 web:dev 默认开启，生产环境需要操作者显式配置。',
+            artifact,
+            controlUrl: COMPANION_CONTROL_URL,
+            controlProtocolVersion: COMPANION_CONTROL_PROTOCOL_VERSION,
           },
           sessionExpiresAt: new Date(session.absoluteExpiresAt).toISOString(),
         };
@@ -387,6 +439,57 @@ export function createAiConnectionsRuntime(
   function sessionBindingFor(sessionId: string): string {
     return createHmac('sha256', config.sessionSecret).update(`job:${sessionId}`).digest('base64url');
   }
+
+  function acceptPairing(
+    pairingId: string,
+    token: string,
+    origin: string,
+    expectedOrigin: string,
+  ): { connectionId: string; pairingId: string } | undefined {
+    if (origin !== expectedOrigin) return undefined;
+    const pairing = pairings.consume(pairingId, token, origin);
+    if (!pairing) return undefined;
+    const connection = registry.createLocalCodex(pairing.sessionId, {
+      model: pairing.model,
+      reviewModel: pairing.reviewModel,
+      reasoningEffort: pairing.reasoningEffort,
+    }, { status: 'pairing', pairingId: pairing.id });
+    activeSessionIds.add(pairing.sessionId);
+    return { connectionId: connection.id, pairingId: pairing.id };
+  }
+
+  function completeGate(connectionId: string, result: CompanionGateResultMessage): void {
+    const connection = findConnection(connectionId);
+    if (!connection || connection.status !== 'pairing') return;
+    if (!result.ok) {
+      const diagnostic = sanitizeCompanionDiagnostic(result.diagnostic) ?? 'Companion 零工具安全门禁未通过。';
+      registry.updateStatus(connection.sessionId, connection.id, 'blocked', diagnostic);
+      if (connection.companionId) {
+        const pairing = connection.pairingId
+          ? pairings.get(connection.sessionId, connection.pairingId)
+          : undefined;
+        if (pairing) pairings.markBlocked(pairing.id, diagnostic);
+      }
+      companionHub.abort(connectionId);
+      return;
+    }
+    registry.updateStatus(connection.sessionId, connection.id, 'ready');
+    if (connection.companionId) {
+      const pairing = connection.pairingId
+        ? pairings.get(connection.sessionId, connection.pairingId)
+        : undefined;
+      if (pairing) pairings.markConnected(pairing.id, connection.id);
+    }
+  }
+}
+
+function sanitizeCompanionDiagnostic(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const message = value.trim().slice(0, 500);
+  if (!message) return undefined;
+  return message
+    .replace(/Bearer\s+[A-Za-z0-9._~-]+/giu, 'Bearer [redacted]')
+    .replace(/(?:api[_-]?key|token|secret)\s*[:=]\s*[^\s,;]+/giu, '$1=[redacted]');
 }
 
 class AiApiError extends Error {

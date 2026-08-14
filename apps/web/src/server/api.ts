@@ -17,6 +17,10 @@ import {
   parseIconMode,
 } from '../../../../src/core/application/web-server';
 import { createAiConnectionsRuntime, type AiConnectionsRuntime } from './ai-connections/runtime';
+import {
+  COMPANION_ARTIFACT_FILE_NAME,
+  companionArtifactPath,
+} from './ai-connections/artifact';
 import { AiConnectionError } from './ai-connections/types';
 import { createZipBuffer } from './download/zip';
 import {
@@ -102,6 +106,8 @@ export interface ApiRequestContext {
   remoteAddress?: string | null;
   securityConfig?: WebSecurityConfig;
   aiRuntime?: AiConnectionsRuntime;
+  /** Internal test seam; production requests always use the fixed build path. */
+  companionArtifactPath?: string;
 }
 
 let defaultAiRuntime: AiConnectionsRuntime | undefined;
@@ -144,6 +150,31 @@ export async function handleApiRequest(
     })();
     const aiResponse = await aiRuntime.handleApiRequest(request, clientIp, securityConfig.maxRequestBodyBytes);
     if (aiResponse) return aiResponse;
+
+    if (request.method === 'GET' && url.pathname === '/api/ai-companion/download') {
+      if (!securityConfig.aiConnections.companionEnabled) {
+        return jsonFailure(
+          503,
+          'COMPANION_DISABLED',
+          '本机 Codex Companion 未启用；请在本地开发服务中启用后再下载。',
+        );
+      }
+      const artifactPath = context.companionArtifactPath ?? companionArtifactPath();
+      if (!existsSync(artifactPath)) {
+        return jsonFailure(
+          404,
+          'COMPANION_ARTIFACT_UNAVAILABLE',
+          'Codex Companion 编译产物不存在，请先运行 web:companion:build。',
+        );
+      }
+      return new Response(Bun.file(artifactPath), {
+        headers: {
+          'content-type': 'application/octet-stream',
+          'content-disposition': contentDisposition(COMPANION_ARTIFACT_FILE_NAME),
+          'cache-control': 'no-store',
+        },
+      });
+    }
 
     if (request.method === 'GET' && url.pathname === '/api/capabilities') {
       const imagePreset = getWebImageAssetPreset();

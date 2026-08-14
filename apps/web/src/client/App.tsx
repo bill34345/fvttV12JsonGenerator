@@ -62,6 +62,16 @@ import {
   type IntakeDecisionDraft,
   type PortableSpellResolutionLike,
 } from "./intakeReview";
+import { AiConnectionsPanel } from "./AiConnectionsPanel";
+import { companionControlClient, CompanionControlError } from "./companionControl";
+import {
+  aiConnectionsClient,
+  type AiConnection,
+  type AiConnectionsOverview,
+  type AiReasoningEffort,
+  type CodexPairing,
+  type LocalCompanionHealth,
+} from "./aiConnections";
 
 type ToolId = "single" | JobType;
 type ToolGroupId = "main" | "utilities";
@@ -222,6 +232,17 @@ export function App() {
   const [manualRoute, setManualRoute] = useState<
     "ai-monster-intake" | "ai-item-intake" | null
   >(null);
+  const [aiOverview, setAiOverview] = useState<AiConnectionsOverview | null>(
+    null,
+  );
+  const [aiSelectedConnectionId, setAiSelectedConnectionId] = useState("");
+  const [aiPairing, setAiPairing] = useState<CodexPairing | null>(null);
+  const [companionHealth, setCompanionHealth] = useState<LocalCompanionHealth | null>(null);
+  const [companionControlError, setCompanionControlError] = useState("");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiPanelBusy, setAiPanelBusy] = useState(false);
+  const [aiPanelError, setAiPanelError] = useState("");
+  const [aiPanelMessage, setAiPanelMessage] = useState("");
   const pollRef = useRef<number | null>(null);
   const splitWorkbenchRef = useRef<HTMLDivElement | null>(null);
 
@@ -238,6 +259,306 @@ export function App() {
     activeTool === "single" && !documentSourceSelected
       ? (capabilities?.limits.singleUploadMb ?? 5)
       : (capabilities?.limits.collectionUploadMb ?? 20);
+
+  async function loadAiConnections(preserveSelection = false): Promise<AiConnectionsOverview | null> {
+    try {
+      const nextOverview = await aiConnectionsClient.list();
+      setAiOverview(nextOverview);
+      setAiPanelError("");
+      setAiSelectedConnectionId((currentId) => {
+        const current = nextOverview.connections.find(
+          (connection) => connection.id === currentId,
+        );
+        if (current?.status === "ready") return current.id;
+        if (preserveSelection && currentId) return currentId;
+        return (
+          nextOverview.connections.find(
+            (connection) => connection.status === "ready",
+          )?.id ?? ""
+        );
+      });
+      return nextOverview;
+    } catch (nextError) {
+      setAiOverview(null);
+      setAiSelectedConnectionId("");
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+      return null;
+    }
+  }
+
+  async function refreshAiConnections() {
+    setAiPanelBusy(true);
+    setAiPanelMessage("");
+    await loadAiConnections();
+    setAiPanelBusy(false);
+  }
+
+  async function selectSiteAiConnection() {
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    setCompanionControlError("");
+    try {
+      const connection = await aiConnectionsClient.selectSite();
+      setAiSelectedConnectionId(connection.id);
+      await loadAiConnections();
+      setAiSelectedConnectionId(connection.id);
+      setAiPanelMessage("站点 Provider 已连接，并设为当前任务连接。");
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function connectByokAiConnection(input: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    reviewModel: string;
+    reasoningEffort: AiReasoningEffort;
+  }) {
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    try {
+      const connection = await aiConnectionsClient.connectByok(input);
+      setAiSelectedConnectionId(connection.id);
+      await loadAiConnections();
+      setAiSelectedConnectionId(connection.id);
+      setAiPanelMessage("用户 API Key 已连接，并设为当前任务连接。");
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+      throw nextError;
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function testAiConnection(connectionId: string) {
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    try {
+      const result = await aiConnectionsClient.test(connectionId);
+      await loadAiConnections();
+      setAiPanelMessage(`连接测试通过：${result.model}`);
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function disconnectAiConnection(connectionId: string) {
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    try {
+      await aiConnectionsClient.disconnect(connectionId);
+      if (aiSelectedConnectionId === connectionId) {
+        setAiSelectedConnectionId("");
+      }
+      await loadAiConnections();
+      setAiPanelMessage("连接已断开；不会删除任务或已生成的审计产物。");
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function connectCodexCompanion(input: {
+    model: string;
+    reviewModel: string;
+    reasoningEffort: AiReasoningEffort;
+  }) {
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    setCompanionControlError("");
+    try {
+      const overview = aiOverview ?? await aiConnectionsClient.list();
+      setAiOverview(overview);
+      const controlUrl = overview.companion.controlUrl;
+      const health = companionHealth ?? await companionControlClient.health(controlUrl);
+      setCompanionHealth(health);
+      const pairing = await aiConnectionsClient.createCodexPairing(input);
+      const { token, ...publicPairing } = pairing;
+      setAiPairing(publicPairing);
+      try {
+        await companionControlClient.pair(controlUrl, {
+          instanceId: health.instanceId,
+          pairingId: pairing.id,
+          pairingToken: token,
+        });
+        setAiPanelMessage("已将一次性配对交给本机 Companion，页面会自动等待安全门禁完成。");
+      } catch (controlError) {
+        await aiConnectionsClient.cancelCodexPairing(pairing.id).catch(() => undefined);
+        setAiPairing(null);
+        throw controlError;
+      }
+      await loadAiConnections();
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function shutdownCompanion() {
+    if (!aiOverview?.companion.controlUrl || !companionHealth) return;
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    try {
+      await companionControlClient.shutdown(aiOverview.companion.controlUrl, companionHealth.instanceId);
+      setCompanionHealth(null);
+      setAiPanelMessage("本机 Companion 已退出；下次使用时重新双击下载的 EXE 即可。");
+    } catch (nextError) {
+      setAiPanelError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function disconnectCompanion() {
+    if (!aiOverview?.companion.controlUrl || !companionHealth) return;
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    setAiPanelMessage("");
+    try {
+      await companionControlClient.disconnect(aiOverview.companion.controlUrl, companionHealth.instanceId);
+      setCompanionHealth({ ...companionHealth, status: "idle", diagnostic: undefined });
+      setAiPanelMessage("本机 Companion 已断开；页面不会自动切换到其他 AI 连接。继续使用时可重新点击连接。");
+    } catch (nextError) {
+      setAiPanelError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  async function refreshCodexPairing() {
+    if (!aiPairing) return;
+    setAiPanelBusy(true);
+    setAiPanelError("");
+    try {
+      const nextPairing = await aiConnectionsClient.getCodexPairing(aiPairing.id);
+      setAiPairing(nextPairing);
+      await loadAiConnections(nextPairing.status === "disconnected");
+      if (nextPairing.status === "connected" && nextPairing.connectionId) {
+        setAiSelectedConnectionId(nextPairing.connectionId);
+        setAiPanelMessage("Companion 已连接，并已自动设为当前任务连接。");
+      } else if (nextPairing.status === "blocked") {
+        setAiPanelError(nextPairing.diagnostic ?? "Companion 安全门禁未通过，请按提示修复后重试。");
+      } else if (nextPairing.status === "expired") {
+        setAiPanelMessage("配对已过期，请重新生成一次性配对。");
+      } else if (nextPairing.status === "disconnected") {
+        setAiPanelMessage("Companion 已离线；页面不会自动切换到其他 AI 连接。");
+      } else {
+        setAiPanelMessage(`配对状态：${nextPairing.status}`);
+      }
+    } catch (nextError) {
+      setAiPanelError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
+    } finally {
+      setAiPanelBusy(false);
+    }
+  }
+
+  function selectAiConnection(connection: AiConnection) {
+    if (connection.status !== "ready") return;
+    setAiSelectedConnectionId(connection.id);
+    setAiPanelError("");
+    setAiPanelMessage(`${connection.providerLabel || "AI 连接"} 已设为当前任务连接。`);
+  }
+
+  useEffect(() => {
+    void refreshAiConnections();
+  }, []);
+
+  useEffect(() => {
+    if (!aiPairing || (aiPairing.status !== "pending" && aiPairing.status !== "verifying" && aiPairing.status !== "connected")) {
+      return undefined;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const nextPairing = await aiConnectionsClient.getCodexPairing(aiPairing.id);
+        if (cancelled) return;
+        setAiPairing(nextPairing);
+        if (nextPairing.status === "connected" && nextPairing.connectionId) {
+          setAiSelectedConnectionId(nextPairing.connectionId);
+          if (aiPairing.status !== "connected") {
+            setAiPanelMessage("Companion 已连接，并已自动设为当前任务连接。");
+            await loadAiConnections();
+            if (!cancelled) setAiSelectedConnectionId(nextPairing.connectionId);
+          }
+        } else if (nextPairing.status === "blocked") {
+          setAiPanelError(nextPairing.diagnostic ?? "Companion 安全门禁未通过，请按提示修复后重试。");
+        } else if (nextPairing.status === "expired") {
+          setAiPanelMessage("配对已过期，请重新生成一次性配对。");
+        } else if (nextPairing.status === "disconnected") {
+          setAiPanelMessage("Companion 已离线；页面不会自动切换到其他 AI 连接。");
+          await loadAiConnections(true);
+        }
+      } catch (nextError) {
+        if (!cancelled) {
+          setAiPanelError(nextError instanceof Error ? nextError.message : String(nextError));
+        }
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [aiPairing?.id, aiPairing?.status]);
+
+  useEffect(() => {
+    if (aiPairing?.id) setAiPanelMessage("已将一次性配对交给本机 Companion，页面会自动等待安全门禁完成。");
+  }, [aiPairing?.id]);
+
+  useEffect(() => {
+    if (!aiPanelOpen || !aiOverview?.companion.available) {
+      setCompanionHealth(null);
+      setCompanionControlError("");
+      return undefined;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const health = await companionControlClient.health(aiOverview.companion.controlUrl);
+        if (cancelled) return;
+        setCompanionHealth(health);
+        setCompanionControlError("");
+      } catch (nextError) {
+        if (cancelled) return;
+        setCompanionHealth(null);
+        setCompanionControlError(nextError instanceof Error ? nextError.message : String(nextError));
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [aiPanelOpen, aiOverview?.companion.available, aiOverview?.companion.controlUrl]);
 
   useEffect(() => {
     Promise.all([getCapabilities(), getDefaults()])
@@ -509,6 +830,12 @@ export function App() {
         if (detection.usesAi && !allowAiIntake) {
           throw new Error("系统判断这份资料需要 AI 整理。请先确认允许发送到服务器配置的 AI provider。 ");
         }
+        const aiConnectionId = detection.usesAi
+          ? aiSelectedConnectionId
+          : undefined;
+        if (detection.usesAi && (!aiOverview || !aiConnectionId)) {
+          throw new Error("请先打开顶部“AI 连接”，选择一个可用的 provider 后再运行 Intake。");
+        }
         if (
           detection.route === "ai-item-intake" &&
           (fvttVersion !== "14" || effectProfile !== "core")
@@ -533,6 +860,7 @@ export function App() {
           type: detection.route,
           fileName,
           content,
+          ...(aiConnectionId ? { aiConnectionId } : {}),
           options: {
             fvttVersion,
             effectProfile,
@@ -547,10 +875,16 @@ export function App() {
         return;
       }
 
+      const activeAiRoute =
+        activeTool === "ai-monster-intake" || activeTool === "ai-item-intake";
+      if (activeAiRoute && (!aiOverview || !aiSelectedConnectionId)) {
+        throw new Error("请先打开顶部“AI 连接”，选择一个可用的 provider 后再运行 Intake。");
+      }
       const nextJob = await createJob({
         type: activeTool,
         fileName,
         content: tool.needsFile ? content : undefined,
+        ...(activeAiRoute ? { aiConnectionId: aiSelectedConnectionId } : {}),
         options: {
           fvttVersion,
           effectProfile,
@@ -613,6 +947,19 @@ export function App() {
     }
   }
 
+  const providerRequired =
+    conversionDetection?.usesAi ||
+    activeTool === "ai-monster-intake" ||
+    activeTool === "ai-item-intake";
+  const selectedAiConnection = aiOverview?.connections.find(
+    (connection) => connection.id === aiSelectedConnectionId,
+  );
+  const providerReady = providerRequired
+    ? aiOverview
+      ? selectedAiConnection?.status === "ready"
+      : Boolean(capabilities?.monsterIntakeConfigured)
+    : true;
+
   const canRun =
     activeTool === "single"
       ? documentSourceSelected
@@ -622,15 +969,14 @@ export function App() {
           conversionDetection?.route !== "needs-review" &&
           (!aiItemRouteSelected ||
             (fvttVersion === "14" && effectProfile === "core")) &&
-          (!conversionDetection?.usesAi ||
-            (allowAiIntake && Boolean(capabilities?.monsterIntakeConfigured)))
+          (!conversionDetection?.usesAi || (allowAiIntake && providerReady))
       : activeTool === "document-convert"
       ? Boolean(selectedFile)
       : activeTool === "goddessfantasy-board-crawl"
         ? Boolean(boardUrl.trim())
         : activeTool === "vault-sync"
           ? Boolean(vaultPath.trim())
-          : Boolean(content.trim());
+          : Boolean(content.trim()) && (!providerRequired || providerReady);
   const hasStartedTask =
     Boolean(job) || Boolean(singleResult) || status === "loading";
 
@@ -655,13 +1001,6 @@ export function App() {
         : formalArtifactReady || job?.status === "partial"
           ? "deliver"
           : "input";
-  const providerRequired =
-    conversionDetection?.usesAi ||
-    activeTool === "ai-monster-intake" ||
-    activeTool === "ai-item-intake";
-  const providerReady = providerRequired
-      ? Boolean(capabilities?.monsterIntakeConfigured)
-      : true;
   const targetLabel = "Foundry " + fvttVersion + " · " + effectProfile;
   const stages = [
     {
@@ -772,18 +1111,28 @@ export function App() {
 
         <div className="topbar-actions">
           <span className="target-chip">{targetLabel}</span>
-          <span
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={aiPanelOpen}
+            aria-label="打开 AI 连接设置"
+            onClick={() => {
+              setAiPanelOpen(true);
+              void refreshAiConnections();
+            }}
             className={
               "provider-chip " + (providerReady ? "is-ready" : "is-warning")
             }
           >
             <span />
-            {providerRequired
-              ? providerReady
-                ? "AI 提供方就绪"
-                : "AI 提供方未配置"
-              : "无需 AI"}
-          </span>
+            {selectedAiConnection
+              ? selectedAiConnection.providerLabel || "AI 连接已选择"
+              : providerRequired
+                ? providerReady
+                  ? "AI 提供方就绪"
+                  : "连接 AI 提供方"
+                : "AI 连接"}
+          </button>
           <button
             className="topbar-button"
             onClick={() => setWorkspaceView("log")}
@@ -1089,7 +1438,7 @@ export function App() {
                   <ConversionDetectionPanel
                     detection={conversionDetection}
                     status={detectionStatus}
-                    providerReady={Boolean(capabilities?.monsterIntakeConfigured)}
+                    providerReady={providerReady}
                     allowAi={allowAiIntake}
                     onAllowAiChange={setAllowAiIntake}
                     onChooseKind={(kind) => {
@@ -1463,7 +1812,7 @@ export function App() {
               <span>
                 <strong>AI 审查记录</strong>
                 <small>
-                  {capabilities?.monsterIntakeConfigured
+                  {selectedAiConnection?.status === "ready" || capabilities?.monsterIntakeConfigured
                     ? "提供方可用"
                     : "提供方未配置"}
                 </small>
@@ -1585,6 +1934,28 @@ export function App() {
           )}
         </div>
       </footer>
+      <AiConnectionsPanel
+        open={aiPanelOpen}
+        overview={aiOverview}
+        selectedConnectionId={aiSelectedConnectionId}
+        pairing={aiPairing}
+        companionHealth={companionHealth}
+        companionControlError={companionControlError}
+        busy={aiPanelBusy}
+        error={aiPanelError}
+        message={aiPanelMessage}
+        onClose={() => setAiPanelOpen(false)}
+        onRefresh={refreshAiConnections}
+        onSelect={selectAiConnection}
+        onSelectSite={selectSiteAiConnection}
+        onConnectByok={connectByokAiConnection}
+        onTest={testAiConnection}
+        onDisconnect={disconnectAiConnection}
+        onConnectCompanion={connectCodexCompanion}
+        onDisconnectCompanion={disconnectCompanion}
+        onShutdownCompanion={shutdownCompanion}
+        onRefreshPairing={refreshCodexPairing}
+      />
     </main>
   );
 }

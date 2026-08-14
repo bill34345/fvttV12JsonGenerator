@@ -55,13 +55,28 @@ redirects, private hosts, and arbitrary URLs are rejected.
 
 ## Companion gate and pairing
 
-The Companion is intentionally disabled until the official Codex CLI adapter
-passes the zero-tool gate. Enable the endpoint only after a Windows package
-has been tested with:
+`web:dev` is loopback-only and enables the Companion endpoint by default. It
+also builds `dist/web/fvtt-ai-companion.exe` before starting the single Bun
+server on `http://127.0.0.1:5173`. Set
+`FVTT_WEB_CODEX_COMPANION_ENABLED=0` to turn it off explicitly. Production and
+VPS starts remain disabled unless the operator sets:
 
 ```text
 FVTT_WEB_CODEX_COMPANION_ENABLED=1
 ```
+
+The AI connections panel guides the local flow: download and double-click the
+fixed Windows artifact, wait for the page to detect the local Companion, choose
+the main/review models and reasoning, then click `Connect`. No PowerShell
+window, command line, or visible pairing token is required. The page polls the
+Companion control endpoint and the Web pairing every two seconds, then
+automatically selects the connection after `connected`. `blocked`, `expired`
+and `disconnected` remain visible with an actionable diagnostic; the page does
+not silently switch to site AI or a BYOK connection when the EXE exits.
+
+The authenticated download endpoint is `GET /api/ai-companion/download`. It
+serves only the fixed build artifact and never accepts a user path. If the
+artifact is missing, build it with `bun run web:companion:build`.
 
 The adapter always uses an ephemeral temporary directory, ignores user and
 project rules, uses the read-only sandbox, disables the current Codex tool
@@ -74,28 +89,34 @@ blocked; it must not fall back to a local OAuth bridge or a different model
 silently.
 
 The browser creates a five-minute, one-time pairing bound to its anonymous
-session. The Companion command must display the origin and require an exact
-`--confirm-origin` match. A pairing token is never returned by the status
-endpoint and is invalid after first use, expiry, disconnect, or session loss.
+session, then hands it directly to the Companion through its loopback-only
+control service at `http://127.0.0.1:43173`. The control service only accepts
+the exact Web origin `http://127.0.0.1:5173`, protocol v1, the current instance
+ID, and a strict JSON shape. A pairing token is never returned by the status
+endpoint, URL, command line, or logs, and is invalid after first use, expiry,
+disconnect, cancellation, or session loss.
+The versioned protocol starts with a `gate` message; the Companion runs a
+real zero-tool gate for each de-duplicated selected model and returns a
+`gate-result`. Only an `ok` result changes the connection to `ready`.
+The pairing material is sent in the first WebSocket `pair` frame after the
+loopback handoff; the WebSocket URL itself contains no pairing token.
 
 The server operator builds the Windows artifact once; end users receive only
 the resulting executable and do not receive the project checkout or server
-secrets. Example build and invocation:
+secrets. The compiled artifact hides the Windows console. A user double-click
+starts a single local Companion process; the Web page provides disconnect and
+shutdown controls. The artifact is an unsigned development build, so Windows
+SmartScreen may still require an explicit user confirmation.
 
 ```text
 # Build on Windows from the project checkout:
 bun run web:companion:build
 
-# Then run dist/web/fvtt-ai-companion.exe:
-fvtt-ai-companion.exe `
-  --origin https://example.com `
-  --pairing-id <id> `
-  --pairing-token <one-time-token> `
-  --confirm-origin https://example.com
 ```
 
-The packaged Windows launcher should use the same arguments and the user's
-official `codex.exe`; it must not receive project source or OAuth files.
+The packaged Windows Companion uses the user's official `codex.exe`; it must
+not receive project source or OAuth files. The old explicit command-line flags
+remain only as a diagnostic compatibility path for one release cycle.
 
 ## Job pinning and resume
 

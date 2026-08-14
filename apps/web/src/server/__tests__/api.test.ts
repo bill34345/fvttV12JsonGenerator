@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from '
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { handleApiRequest, TEMP_WEB_DIR } from '../api';
+import { getWebSecurityConfig } from '../security/config';
 import {
   cleanupExpiredJobs,
   createJob,
@@ -78,6 +79,52 @@ afterEach(() => {
 });
 
 describe('web API', () => {
+  it('downloads the fixed Companion artifact only when enabled and available', async () => {
+    mkdirSync(TEMP_TEST_DIR, { recursive: true });
+    const artifactPath = join(TEMP_TEST_DIR, 'fvtt-ai-companion.exe');
+    writeFileSync(artifactPath, Buffer.from('companion-fixture'));
+    const securityConfig = getWebSecurityConfig({ FVTT_WEB_CODEX_COMPANION_ENABLED: '1' });
+
+    const response = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: artifactPath,
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toContain('fvtt-ai-companion.exe');
+    expect(await response.text()).toBe('companion-fixture');
+
+    const missing = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: join(TEMP_TEST_DIR, 'missing.exe'),
+    });
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).error.code).toBe('COMPANION_ARTIFACT_UNAVAILABLE');
+
+    const disabled = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig: getWebSecurityConfig({}),
+      companionArtifactPath: artifactPath,
+    });
+    expect(disabled.status).toBe(503);
+    expect((await disabled.json()).error.code).toBe('COMPANION_DISABLED');
+  });
+
+  it('protects Companion artifact download with the existing public authentication', async () => {
+    const securityConfig = getWebSecurityConfig({
+      FVTT_WEB_PUBLIC_MODE: '1',
+      FVTT_WEB_HOST: '127.0.0.1',
+      FVTT_WEB_AUTH_TOKEN: '0123456789abcdef0123456789abcdef',
+      FVTT_WEB_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+      FVTT_WEB_CODEX_COMPANION_ENABLED: '1',
+    });
+    const missing = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: join(TEMP_TEST_DIR, 'missing.exe'),
+    });
+    expect(missing.status).toBe(401);
+    expect((await missing.json()).error.code).toBe('AUTH_REQUIRED');
+  });
+
   it('returns local defaults', async () => {
     const response = await handleApiRequest(new Request('http://localhost/api/files/defaults'));
     const body = await response.json();

@@ -19,7 +19,25 @@ bun run web:start
 - 忽略 `X-Forwarded-For` 和 `X-Real-IP`；
 - 如果把 `FVTT_WEB_HOST` 改为非回环地址却没有设置 `FVTT_WEB_PUBLIC_MODE=1`，进程会拒绝启动。
 
-开发环境可运行 `bun run web:dev`。Vite 和 API 都只监听回环地址。
+开发环境可运行 `bun run web:dev`。命令会先构建前端，再由同一个 Bun 服务在
+`http://127.0.0.1:5173` 同时提供页面和 API；开发者只需要打开这一个地址。
+它还会在启动服务前编译 `fvtt-ai-companion.exe`，并在 loopback、本机模式下
+默认启用页面引导的 Codex Companion。显式设置
+`FVTT_WEB_CODEX_COMPANION_ENABLED=0` 可以关闭它；构建失败时不会启动旧页面
+或残缺服务。它不是热更新服务器，修改前端后重新运行命令即可生成新的页面资源。
+
+#### 无命令式 Companion 配对
+
+打开 `http://127.0.0.1:5173` 的“AI 连接”面板后，下载并双击
+`fvtt-ai-companion.exe`，页面会每两秒检测一次本机 Companion。检测到兼容版本后，
+在页面选择模型并点击“连接本机 Companion”即可完成一次性配对；用户不需要打开
+PowerShell、复制启动命令或查看配对 Token。
+
+Companion 的 `127.0.0.1:43173` 只用于本机控制（health、pair、disconnect、shutdown），
+不是第二个 Web 地址，也不接受局域网连接。控制端点只允许精确的
+`http://127.0.0.1:5173` Origin、control protocol v1 和当前实例 ID；页面关闭后会停止
+轮询。开发 EXE 使用隐藏控制台编译，未签名且可能触发 Windows SmartScreen；页面会显示
+构建产物 SHA-256，便于本机核对。生产 `web:start` 默认不启用 Companion。
 
 ### 公开/反向代理模式（显式开启）
 
@@ -45,6 +63,8 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 
 - `FVTT_WEB_HOST`：监听地址，默认 `127.0.0.1`。
 - `FVTT_WEB_API_PORT`：端口，默认 `5174`。
+- `FVTT_WEB_CODEX_COMPANION_ENABLED=1`：显式启用本机 Codex Companion；`web:dev`
+  在非公开 loopback 模式下默认设置为 `1`，生产/VPS 启动默认关闭。
 - `FVTT_WEB_PUBLIC_MODE=1`：启用公开/代理模式；没有它时非回环绑定会失败。
 - `FVTT_WEB_AUTH_TOKEN`：公开模式必填，至少 32 个字符；不要提交到 Git、浏览器或日志。
 - `FVTT_WEB_TRUSTED_PROXIES`：允许提供客户端转发链的代理字面 IP，逗号分隔，例如 `127.0.0.1,10.0.0.2`。不支持主机名或隐式“信任全部”。

@@ -62,7 +62,12 @@ export class AiConnectionRegistry {
   createLocalCodex(
     sessionId: string,
     settings: AiProviderSettings,
-    input: { status: 'pairing' | 'ready' | 'blocked'; companionId?: string; diagnostic?: string },
+    input: {
+      status: 'pairing' | 'ready' | 'blocked';
+      companionId?: string;
+      pairingId?: string;
+      diagnostic?: string;
+    },
   ): AiConnection {
     const id = opaqueId();
     return this.add({
@@ -76,6 +81,7 @@ export class AiConnectionRegistry {
       lastUsedAt: this.now(),
       providerLabel: '本机 Codex',
       companionId: input.companionId ?? id,
+      pairingId: input.pairingId,
       diagnostic: input.diagnostic,
     });
   }
