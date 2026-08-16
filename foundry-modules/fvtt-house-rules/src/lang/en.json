@@ -42,7 +42,7 @@
       "featureAmmo": { "Name": "Enable ammunition tier ledger", "Hint": "Records explicit tagged ammunition after native consumption; recovery remains GM-confirmed." },
       "featureStealth": { "Name": "Enable explicit stealth helper", "Hint": "Warning/suggestion helper; never rolls back token movement." },
       "featureNaturalOne": { "Name": "Natural 1: create GM consequence cards", "Hint": "When an attack retains a natural 1, create a GM-only confirmation card; no damage, counterattack, or weapon penalty occurs before confirmation." },
-      "featureNaturalTwenty": { "Name": "Natural 20: count the first damage die as maximum", "Hint": "Applies to weapon and spell attacks; all critical dice are still rolled, the first die of the primary damage part counts as maximum, and other damage parts retain native critical handling." },
+      "featureNaturalTwenty": { "Name": "Critical hits: count the first damage die as maximum", "Hint": "Applies whenever dnd5e marks the attack damage Roll as critical, including manually choosing critical; a natural 20 is not required. All critical dice are still rolled, the first die of the primary damage part counts as maximum, and other damage parts retain native critical handling. Natural 20s still create the existing GM prompt card." },
       "lowAbilityThreshold": { "Name": "Low ability reminder threshold", "Hint": "Warn only when a selected character is at or below this score." },
       "consequenceMultiplier": { "Name": "Natural-1 consequence damage multiplier", "Hint": "Choose 0.5 or 1; native dnd5e damage application retains resistance and immunity." },
       "consequenceOtherTable": { "Name": "Natural-1 other RollTable UUID", "Hint": "Optional exact RollTable UUID, used only after GM confirmation." },

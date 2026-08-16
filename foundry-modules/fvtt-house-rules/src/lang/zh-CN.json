@@ -42,7 +42,7 @@
       "featureAmmo": { "Name": "启用弹药阶位账本", "Hint": "原生消费后记录显式标签弹药；找回仍需 GM 确认。" },
       "featureStealth": { "Name": "启用显式隐匿助手", "Hint": "只提示/建议，从不回滚 Token 移动。" },
       "featureNaturalOne": { "Name": "启用自然 1：GM 后果卡", "Hint": "攻击骰最终为自然 1 时，生成仅 GM 可见的确认卡；确认前不执行伤害、反击或武器损坏。" },
-      "featureNaturalTwenty": { "Name": "启用自然 20：首颗伤害骰按满值结算", "Hint": "适用于武器攻击和进行攻击检定的法术；仍投出全部重击骰，第一伤害部分的第一颗骰按满值结算，其他伤害部分保持原生重击。" },
+      "featureNaturalTwenty": { "Name": "启用重击：首颗伤害骰按满值结算", "Hint": "只要本次攻击的伤害 Roll 被 dnd5e 标记为重击（包括手动点重击），不要求自然 20；仍投出全部重击骰，第一伤害部分的第一颗骰按满值结算，其他伤害部分保持原生重击。自然 20 仍会生成原有 GM 提示卡。" },
       "lowAbilityThreshold": { "Name": "低属性提醒阈值", "Hint": "仅当选中角色属性值不高于此值时提醒。" },
       "consequenceMultiplier": { "Name": "自然 1 后果伤害倍率", "Hint": "0.5 或 1；通过 dnd5e 原生伤害应用保留抗性与免疫。" },
       "consequenceOtherTable": { "Name": "自然 1 的其他 RollTable UUID", "Hint": "可选精确 RollTable UUID，仅在 GM 确认后使用。" },

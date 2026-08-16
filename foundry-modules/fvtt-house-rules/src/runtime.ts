@@ -471,23 +471,7 @@ function d20Terms(roll: AnyRecord): Array<{ faces: number; results: Array<{ resu
     })) }));
 }
 
-function attackMessageFromDamageConfig(config: AnyRecord): AnyRecord | null {
-  const messageId = config?.event?.target?.closest?.("[data-message-id]")?.dataset?.messageId;
-  if (typeof messageId === "string" && messageId) return game()?.messages?.get?.(messageId) ?? null;
-  return null;
-}
-
-function isNaturalTwentyDamage(config: AnyRecord): boolean {
-  const attackMessage = attackMessageFromDamageConfig(config);
-  const messageRoll = attackMessage?.flags?.dnd5e?.roll?.type === "attack" ? attackMessage.rolls?.[0] : null;
-  if (messageRoll && retainedNatural(d20Terms(messageRoll), 20)) return true;
-  const midi = inspectMidiAdapter(game()?.modules);
-  if (!midi.enabled) return false;
-  const workflowRoll = config?.workflow?.attackRoll ?? config?.midiOptions?.workflow?.attackRoll;
-  return Boolean(workflowRoll && retainedNatural(d20Terms(workflowRoll), 20));
-}
-
-function naturalTwentyTargetRollIndex(config: AnyRecord, rolls: AnyRecord[]): number | null {
+function criticalTargetRollIndex(config: AnyRecord, rolls: AnyRecord[]): number | null {
   if (!Array.isArray(config?.rolls) || config.rolls.length !== rolls.length || rolls.length === 0) return null;
   const activity = config.subject;
   if (activity?.type !== "attack") return null;
@@ -513,14 +497,13 @@ function naturalTwentyTargetRollIndex(config: AnyRecord, rolls: AnyRecord[]): nu
  * damage roll gains Foundry's minX modifier so its raw face is still visible
  * while the value counted in the total is the die maximum.
  */
-export function applyNaturalTwentyConfiguredRolls(
+export function applyCriticalConfiguredRolls(
   rolls: AnyRecord[],
   config: AnyRecord,
   message: AnyRecord = {}
 ): boolean {
   if (!enabled(SETTING.naturalTwenty) || !Array.isArray(rolls) || !config?.subject) return false;
-  if (!isNaturalTwentyDamage(config)) return false;
-  const targetIndex = naturalTwentyTargetRollIndex(config, rolls);
+  const targetIndex = criticalTargetRollIndex(config, rolls);
   if (targetIndex === null) return false;
   const roll = rolls[targetIndex];
   if (!roll || roll._evaluated === true || roll.isCritical !== true || !Array.isArray(roll.terms)
@@ -571,7 +554,7 @@ export function applyNaturalTwentyConfiguredRolls(
   message.data ??= {};
   message.data.flags ??= {};
   message.data.flags[MODULE_ID] ??= {};
-  message.data.flags[MODULE_ID].naturalTwentyApplied = true;
+  message.data.flags[MODULE_ID].criticalFirstDieApplied = true;
   return true;
 }
 
@@ -1054,7 +1037,7 @@ function installCoreHooks(): void {
     else game()?.socket?.emit?.(`module.${MODULE_ID}`, commit);
   });
   hooks.on("dnd5e.postDamageRollConfiguration", (rolls: AnyRecord[], config: AnyRecord, _dialog: AnyRecord, message: AnyRecord) => {
-    applyNaturalTwentyConfiguredRolls(rolls, config, message);
+    applyCriticalConfiguredRolls(rolls, config, message);
   });
   hooks.on("createChatMessage", (message: AnyRecord) => {
     captureNativeAmmoMessage(message);

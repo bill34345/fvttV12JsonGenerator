@@ -321,6 +321,17 @@
 - 风险/未运行：本轮没有重跑完整双 GM、玩家客户端或长期跑团矩阵；根 `bun run test`/`ci:verify` 的既有超时仍未关闭。
 - 精确剩余工作：本次两项缺陷无实现剩余；用户可在当前运行的 `server-mirror/cor-cotn` 手动查看。生产部署与长期跑团仍是外部验收。
 
+### 2026-08-16 — 重击首骰最大化改为任意重击触发
+
+- Status：`done`
+- Owner / Task ID：Sol / `2026-08-16-critical-first-die-any-crit`
+- 用户锁定语义：不要求攻击骰为自然 20；只要 dnd5e 将武器攻击或攻击检定法术的伤害 Roll 标记为重击（包括手动点重击），仍保留完整原生重击骰池，并将第一伤害部分的首颗真实骰按 `minX` 计为满值。普通非暴击、豁免类法术、非唯一基础伤害和未知骰结构继续失败关闭。
+- 修改文件：`foundry-modules/fvtt-house-rules/src/runtime.ts`、模块测试、模块语言包与 README、`docs/fvtt-v14-house-rules-automation-analysis.zh-CN.md`。
+- 机械验证：模块 `37 pass / 0 fail / 207 expect`；模块 typecheck、根 `typecheck:foundry-modules`、build、artifact verify、`agents:check` 和 `git diff --check` 通过。
+- 人工/语义验收：已在本地 `server-mirror/cor-cotn`（Foundry `14.364` / dnd5e `5.3.3`）通过真实运行时 Hook E2E 验收。模拟攻击骰为 `19`、伤害 Roll 明确为 critical 时，实际公式为 `1d6min6 + 1d6`，并设置 `criticalFirstDieApplied=true`；同样模拟攻击骰为 `19` 但非暴击时，公式保持 `1d6` 且无该标记。测试创建的临时宏、7 条标记聊天消息和活动场景均已清理，`server-mirror` 已停止。
+- 风险/未运行：现有设置键仍保留为 `featureNaturalTwenty` 以兼容已有世界，但界面语义已改为“重击首颗伤害骰按满值结算”；自然 20 GM 提示卡仍只由自然 20 生成。上述验收覆盖真实模块加载和 dnd5e Hook/骰子行为，不等同于完整角色卡按钮、双 GM、玩家客户端、生产安装或长期跑团验收；这些仍未执行。生产安装和生产写入未执行。
+- 精确剩余工作：本代码变更及本地 Hook E2E 没有待实现项；若要扩大验收范围，剩余是完整角色卡交互、双客户端/长期跑团和生产接受。
+
 ## 任务停止/交接模板
 
 ```markdown

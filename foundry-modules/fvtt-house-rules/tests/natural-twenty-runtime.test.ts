@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { applyNaturalTwentyConfiguredRolls } from "../src/runtime";
+import { applyCriticalConfiguredRolls } from "../src/runtime";
 
 type AnyRecord = Record<string, any>;
 
@@ -84,7 +84,7 @@ afterEach(() => {
   globals.foundry = previousFoundry;
 });
 
-describe("natural-20 configured damage integration", () => {
+describe("critical configured damage integration", () => {
   test("keeps every weapon critical die and maximizes only the first die of the unique base roll", () => {
     const untouchedRoll = damageRoll([new MockDie({ number: 2, faces: 4 })]);
     const rider = new MockDie({ number: 2, faces: 6, options: { flavor: "fire" } });
@@ -95,7 +95,7 @@ describe("natural-20 configured damage integration", () => {
     ]);
     const message: AnyRecord = {};
 
-    expect(applyNaturalTwentyConfiguredRolls(
+    expect(applyCriticalConfiguredRolls(
       [untouchedRoll, baseRoll],
       damageConfig("mwak", [{ base: false }, { base: true }], "weapon"),
       message
@@ -108,7 +108,19 @@ describe("natural-20 configured damage integration", () => {
     expect(baseRoll.terms[2]).toMatchObject({ number: 1, faces: 8, modifiers: [] });
     expect(baseRoll.terms[4]).toBe(rider);
     expect(baseRoll.isCritical).toBeTrue();
-    expect(message.data.flags["fvtt-house-rules"].naturalTwentyApplied).toBeTrue();
+    expect(message.data.flags["fvtt-house-rules"].criticalFirstDieApplied).toBeTrue();
+  });
+
+  test("applies to an explicitly critical roll even when the attack die is not natural 20", () => {
+    globals.game.messages.set("attack-message", attackMessage(19));
+    const baseRoll = damageRoll([new MockDie({ number: 2, faces: 8 })]);
+
+    expect(applyCriticalConfiguredRolls(
+      [baseRoll],
+      damageConfig("mwak", [{ base: true }], "weapon")
+    )).toBeTrue();
+    expect(baseRoll.terms[0]).toMatchObject({ number: 1, faces: 8, modifiers: ["min8"] });
+    expect(baseRoll.terms[2]).toMatchObject({ number: 1, faces: 8, modifiers: [] });
   });
 
   test("applies to the first damage roll of melee and ranged spell attacks", () => {
@@ -121,7 +133,7 @@ describe("natural-20 configured damage integration", () => {
         options: { baseNumber: 2, critical: true, flavor: "force" }
       })]);
 
-      expect(applyNaturalTwentyConfiguredRolls(
+      expect(applyCriticalConfiguredRolls(
         [spellRoll, riderRoll],
         damageConfig(actionType, [{}, {}])
       )).toBeTrue();
@@ -133,7 +145,7 @@ describe("natural-20 configured damage integration", () => {
     }
   });
 
-  test("fails closed for save activities, non-critical damage, non-20 attacks, and evaluated rolls", () => {
+  test("fails closed for save activities, non-critical damage, and evaluated rolls", () => {
     const cases: Array<{ config: AnyRecord; roll: AnyRecord; setup?: () => void }> = [
       {
         config: damageConfig("save", [{}]),
@@ -145,11 +157,6 @@ describe("natural-20 configured damage integration", () => {
       },
       {
         config: damageConfig("rsak", [{}]),
-        roll: damageRoll([new MockDie({ number: 2, faces: 8 })]),
-        setup: () => { globals.game.messages.set("attack-message", attackMessage(19)); }
-      },
-      {
-        config: damageConfig("rsak", [{}]),
         roll: Object.assign(damageRoll([new MockDie({ number: 2, faces: 8 })]), { _evaluated: true })
       }
     ];
@@ -158,7 +165,7 @@ describe("natural-20 configured damage integration", () => {
       globals.game.messages.set("attack-message", attackMessage());
       entry.setup?.();
       const originalTerms = [...entry.roll.terms];
-      expect(applyNaturalTwentyConfiguredRolls([entry.roll], entry.config)).toBeFalse();
+      expect(applyCriticalConfiguredRolls([entry.roll], entry.config)).toBeFalse();
       expect(entry.roll.terms).toEqual(originalTerms);
       expect(entry.roll.resetCount).toBe(0);
     }
@@ -169,7 +176,7 @@ describe("natural-20 configured damage integration", () => {
     const roll = damageRoll([original]);
     roll.resetFormula = () => { throw new Error("fixture reset failure"); };
 
-    expect(applyNaturalTwentyConfiguredRolls(
+    expect(applyCriticalConfiguredRolls(
       [roll],
       damageConfig("rsak", [{}])
     )).toBeFalse();
