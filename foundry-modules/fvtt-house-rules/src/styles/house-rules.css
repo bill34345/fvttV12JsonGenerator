@@ -13,3 +13,180 @@
   gap: 0.25rem;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
+
+/* The outer Foundry <li> is only a container for this display. The one inner
+   element owns both visual layers through pseudo-elements, so neither layer
+   can be interpreted as another RollTerm. */
+.dice-tooltip .dice-rolls > li.roll.fvtt-house-rules-critmax-primary {
+  background: transparent;
+  background-image: none;
+  border: 0;
+  box-shadow: none;
+  display: inline-block;
+  float: none;
+  height: 24px;
+  line-height: 24px;
+  margin-right: 5px;
+  min-width: 29px;
+  overflow: visible;
+  padding: 0;
+  position: relative;
+  vertical-align: middle;
+  width: 34px;
+}
+
+.fvtt-house-rules-critmax-stack {
+  --fvtt-house-rules-critmax-die-size: 24px;
+  --fvtt-house-rules-critmax-offset: 10px;
+  cursor: help;
+  display: inline-block;
+  height: var(--fvtt-house-rules-critmax-die-size);
+  isolation: isolate;
+  line-height: 24px;
+  position: relative;
+  vertical-align: middle;
+  width: calc(var(--fvtt-house-rules-critmax-die-size) + var(--fvtt-house-rules-critmax-offset));
+}
+
+.fvtt-house-rules-critmax-stack::before,
+.fvtt-house-rules-critmax-stack::after {
+  background-repeat: no-repeat;
+  background-size: var(--fvtt-house-rules-critmax-die-size) var(--fvtt-house-rules-critmax-die-size);
+  box-sizing: border-box;
+  display: block;
+  font-size: var(--font-size-16, 16px);
+  font-weight: bold;
+  height: var(--fvtt-house-rules-critmax-die-size);
+  line-height: var(--fvtt-house-rules-critmax-die-size);
+  min-width: var(--fvtt-house-rules-critmax-die-size);
+  padding: 0;
+  position: absolute;
+  text-align: center;
+  top: 0;
+  width: var(--fvtt-house-rules-critmax-die-size);
+}
+
+.fvtt-house-rules-critmax-stack::before {
+  color: transparent;
+  content: "";
+  filter: grayscale(0.55) contrast(0.8) opacity(0.62);
+  left: var(--fvtt-house-rules-critmax-offset);
+  /* The raw face stays behind the critical face. Its number is intentionally
+     omitted; the hover tooltip and aria-label retain the original result. */
+  z-index: 1;
+}
+
+.fvtt-house-rules-critmax-stack::after {
+  color: #2f241b;
+  content: attr(data-effective);
+  /* The critical face is an orange copy of Foundry's native SVG. Its
+     transparent facet gaps remain the original light separator lines. */
+  left: 0;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 72%);
+  z-index: 2;
+}
+
+.fvtt-house-rules-critmax-stack.d4::before {
+  background-image: url("/icons/svg/d4-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d6::before {
+  background-image: url("/icons/svg/d6-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d8::before {
+  background-image: url("/icons/svg/d8-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d10::before {
+  background-image: url("/icons/svg/d10-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d12::before {
+  background-image: url("/icons/svg/d12-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d20::before {
+  background-image: url("/icons/svg/d20-grey.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d4::after {
+  background-image: url("assets/dice/d4-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d6::after {
+  background-image: url("assets/dice/d6-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d8::after {
+  background-image: url("assets/dice/d8-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d10::after {
+  background-image: url("assets/dice/d10-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d12::after {
+  background-image: url("assets/dice/d12-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack.d20::after {
+  background-image: url("assets/dice/d20-critical.svg");
+}
+
+.fvtt-house-rules-critmax-stack:not(.d4):not(.d6):not(.d8):not(.d10):not(.d12):not(.d20)::before {
+  background: rgb(170 170 170 / 45%);
+  border: 1px solid rgb(125 125 125 / 70%);
+  border-radius: 0.25rem;
+}
+
+.fvtt-house-rules-critmax-stack:not(.d4):not(.d6):not(.d8):not(.d10):not(.d12):not(.d20)::after {
+  background: #e5892b;
+  border: 1px solid rgb(255 245 228 / 92%);
+  border-radius: 0.25rem;
+}
+
+/* Do not let the old nested-face selectors or dnd5e term styling resize the
+   pseudo-elements. The native Foundry face is always 24px by 24px. */
+.fvtt-house-rules-critmax-stack::before,
+.fvtt-house-rules-critmax-stack::after {
+  float: none !important;
+  margin: 0 !important;
+}
+
+.fvtt-house-rules-critmax-stack[aria-label] {
+  white-space: nowrap;
+}
+
+/* Retained only for old chat messages that may still contain the previous
+   nested markup. New messages use the single-node pseudo-element structure. */
+.fvtt-house-rules-critmax-face {
+  display: block;
+  float: none !important;
+  height: 24px;
+  line-height: 24px;
+  margin: 0 !important;
+  min-width: 24px !important;
+  padding: 0;
+  position: absolute;
+  text-align: center;
+  top: 0;
+  width: 24px;
+}
+
+.fvtt-house-rules-critmax-face:not(.d4):not(.d6):not(.d8):not(.d10):not(.d12):not(.d20) {
+  background-image: none;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+}
+
+.fvtt-house-rules-critmax-original {
+  left: 4px;
+  z-index: 1;
+}
+
+.fvtt-house-rules-critmax-effective {
+  left: 0;
+  z-index: 2;
+}

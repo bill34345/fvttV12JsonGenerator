@@ -1,6 +1,7 @@
 import { DND5E_VERSION, FLAG, FOUNDRY_VERSION, MAX_LEDGER_ENTRIES, MODULE_ID, SETTING } from "./constants";
 import { isAuthority, type ActiveUser } from "./core/authority";
 import { createAmmoShot, confirmAmmoRecovery, extractAmmoSnapshotFromChatFlags, parseAmmoTier, recordAmmoShot, type AmmoLedger, type AmmoSnapshot } from "./core/ammo";
+import { installCriticalMaxDieIntegration, installCriticalMaxModifier } from "./core/critical-die";
 import { hpGambleLockId, lowAbilityReminder, resolveHitPointGamble } from "./core/hp-gamble";
 import { isTransactionProcessed, recordTransaction, transactionId, type TransactionLedger } from "./core/ledger";
 import {
@@ -113,6 +114,15 @@ function enabled(key: string): boolean {
 function notification(key: string, level: "warn" | "error" | "info" = "warn"): void {
   const ui = runtime().ui;
   ui?.notifications?.[level]?.(game()?.i18n?.localize?.(`FVTT_HOUSE_RULES.${key}`) ?? key);
+}
+
+function criticalMaxLocalize(key: string, fallback: string): string {
+  const value = game()?.i18n?.localize?.(key);
+  return typeof value === "string" ? value : fallback;
+}
+
+function criticalMaxDependenciesSupported(): boolean {
+  return inspectMidiAdapter(game()?.modules).supported;
 }
 
 function explicitFlag(document: AnyRecord, key: string): AnyRecord | null {
@@ -494,15 +504,15 @@ function criticalTargetRollIndex(config: AnyRecord, rolls: AnyRecord[]): number 
 /**
  * Mutates one unevaluated dnd5e DamageRoll after native critical expansion.
  * All critical dice remain real dice; only the first die of the selected base
- * damage roll gains Foundry's minX modifier so its raw face is still visible
- * while the value counted in the total is the die maximum.
+ * damage roll gains the module's critmaxN modifier so its raw face is still
+ * visible to animation while the value counted in the total is the die maximum.
  */
 export function applyCriticalConfiguredRolls(
   rolls: AnyRecord[],
   config: AnyRecord,
   message: AnyRecord = {}
 ): boolean {
-  if (!enabled(SETTING.naturalTwenty) || !Array.isArray(rolls) || !config?.subject) return false;
+  if (!enabled(SETTING.naturalTwenty) || !criticalMaxDependenciesSupported() || !Array.isArray(rolls) || !config?.subject) return false;
   const targetIndex = criticalTargetRollIndex(config, rolls);
   if (targetIndex === null) return false;
   const roll = rolls[targetIndex];
@@ -511,8 +521,8 @@ export function applyCriticalConfiguredRolls(
 
   const terms = runtime().foundry?.dice?.terms;
   const DieClass = terms?.Die;
-  const OperatorTermClass = terms?.OperatorTerm;
-  if (typeof DieClass !== "function" || typeof OperatorTermClass !== "function") return false;
+  if (typeof DieClass !== "function") return false;
+  if (!installCriticalMaxModifier(DieClass) || !installCriticalMaxDieIntegration(DieClass, criticalMaxLocalize)) return false;
   const firstDieIndex = roll.terms.findIndex((term: AnyRecord) => term instanceof DieClass);
   if (firstDieIndex < 0) return false;
   const original = roll.terms[firstDieIndex];
@@ -520,34 +530,29 @@ export function applyCriticalConfiguredRolls(
   const split = splitConfiguredCriticalFirstDiceTerm(original);
   if (!split) return false;
 
-  let first: AnyRecord;
-  let remaining: AnyRecord;
-  let operator: AnyRecord;
+  let configured: AnyRecord;
   try {
-    first = new DieClass({
-      number: split.first.number,
-      faces: split.first.faces,
+    // Preserve the native critical DiceTerm and all of its modifiers. The
+    // critmax handler will target results[0] after the native roll has been
+    // evaluated, so special modifiers such as explode/repeat still inspect
+    // each raw result independently instead of being duplicated across a
+    // synthetic "first" and "remaining" term.
+    configured = new DieClass({
+      number: original.number,
+      faces: original.faces,
       method: original.method,
       modifiers: [...split.first.modifiers],
       options: { ...(split.first.options ?? {}) }
     });
-    remaining = new DieClass({
-      number: split.remaining.number,
-      faces: split.remaining.faces,
-      method: original.method,
-      modifiers: [...split.remaining.modifiers],
-      options: { ...(split.remaining.options ?? {}) }
-    });
-    operator = new OperatorTermClass({ operator: "+" });
   } catch {
     return false;
   }
 
-  roll.terms.splice(firstDieIndex, 1, first, operator, remaining);
+  roll.terms.splice(firstDieIndex, 1, configured);
   try {
     roll.resetFormula();
   } catch {
-    roll.terms.splice(firstDieIndex, 3, original);
+    roll.terms.splice(firstDieIndex, 1, original);
     try { roll.resetFormula(); } catch { /* The original roll remains authoritative. */ }
     return false;
   }
@@ -1075,10 +1080,15 @@ export function installHouseRulesRuntime(): void {
     return;
   }
   installSocket();
+  const terms = runtime().foundry?.dice?.terms;
+  const criticalMaxReady = typeof terms?.Die === "function"
+    && installCriticalMaxDieIntegration(terms.Die, criticalMaxLocalize);
+  const midi = inspectMidiAdapter(game()?.modules);
+  if (!criticalMaxReady) notification("CriticalMax.Unavailable", "error");
+  else if (!midi.supported) notification("Midi.Unsupported", "warn");
+  else if (midi.enabled) notification("Midi.ExactVersionActive", "info");
   installCoreHooks();
   installNaturalCardListeners();
-  const midi = inspectMidiAdapter(game()?.modules);
-  if (midi.enabled) notification("Midi.PendingValidation", "info");
 }
 
 export function installHouseRulesApi(): void {

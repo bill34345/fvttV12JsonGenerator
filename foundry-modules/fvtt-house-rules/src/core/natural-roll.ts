@@ -1,6 +1,8 @@
 export type AttackClass = "melee" | "ranged" | "spell";
 export type NaturalOneConsequence = "counter" | "ally" | "weapon" | "self" | "other";
 
+import { criticalMaxModifier } from "./critical-die";
+
 export function classifyAttack(actionType: unknown): AttackClass | null {
   switch (actionType) {
     case "mwak": return "melee";
@@ -152,8 +154,10 @@ export function splitConfiguredCriticalFirstDiceTerm(
     || typeof term.faces !== "number" || !Number.isInteger(term.faces) || term.faces < 2) return null;
   const modifiers = configuredDiceModifiers(term.modifiers);
   const options = configuredDiceOptions(term.options);
-  if (!modifiers || options === null || modifiers.some((modifier) => /^(?:min|max)/iu.test(modifier))) return null;
-  const firstModifiers = [...modifiers, `min${term.faces}`];
+  if (!modifiers || options === null || modifiers.some((modifier) => /^(?:min|max|critmax)/iu.test(modifier))) return null;
+  const maxModifier = criticalMaxModifier(term.faces);
+  if (!maxModifier) return null;
+  const firstModifiers = [...modifiers, maxModifier];
   const remaining = term.number - 1;
   const first: NaturalTwentyDiceTermSplit["first"] = { number: 1, faces: term.faces, modifiers: firstModifiers };
   const remainder: NaturalTwentyDiceTermSplit["remaining"] = { number: remaining, faces: term.faces, modifiers: [...modifiers] };
@@ -170,9 +174,10 @@ export function splitConfiguredCriticalFirstDiceTerm(
 
 /**
  * Converts only the first structured base-damage die in an unevaluated
- * formula. The converted formula carries the complete critical dice pool, but
- * the first die uses Foundry's `minX` modifier so it still rolls while its
- * final value is its maximum: 1d8 -> 1d8min8 + 1d8; 2d6 -> 1d6min6 + 3d6.
+ * formula. The converted formula carries the complete critical dice pool in
+ * one DiceTerm. The `critmaxN` modifier is applied to results[0], so it still
+ * rolls while its effective value is its maximum and its raw face remains
+ * available to animation and tooltip rendering: 1d8 -> 2d8critmax8.
  *
  * The formula must begin with the exact, plain base `NdX` term. This rejects
  * custom, previously transformed, or otherwise ambiguous formula structures
@@ -191,7 +196,9 @@ export function transformNaturalTwentyBaseDamageFormula(
   // accounted for by the replacement formula.
   if (/(?:\d*)d\d+/iu.test(untouchedSuffix)) return null;
   const remainingDice = (source.number * 2) - 1;
-  return `${firstDie[1]}1d${source.denomination}min${source.denomination} + ${remainingDice}d${source.denomination}${untouchedSuffix}`;
+  const maxModifier = criticalMaxModifier(source.denomination);
+  if (!maxModifier) return null;
+  return `${firstDie[1]}${remainingDice + 1}d${source.denomination}${maxModifier}${untouchedSuffix}`;
 }
 
 /** Compatibility adapter for the existing weapon preview/runtime callers. */

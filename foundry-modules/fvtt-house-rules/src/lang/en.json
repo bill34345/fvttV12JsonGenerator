@@ -33,7 +33,16 @@
       "Feed": "Administer Potion (Action)"
     },
     "Ammo": { "RecoveryReady": "Ammunition recovery is available for GM confirmation; no ammunition was restored automatically." },
-    "Midi": { "PendingValidation": "The exact-version MIDI-QOL 14.0.11 adapter is active; other versions fail closed." },
+    "Midi": {
+      "ExactVersionActive": "The locally validated MIDI-QOL 14.0.11 / DAE 14.0.12 / Dice So Nice 6.2.9 integration is active; other versions fail closed.",
+      "Unsupported": "The critical first-die override is disabled because MIDI-QOL, DAE, or Dice So Nice is outside the validated version range."
+    },
+    "CriticalMax": {
+      "Effective": "Critical effective value: {value}",
+      "Original": "Original die result: {value}",
+      "Combined": "Original die result: {original}; critical damage counts this die as {effective}",
+      "Unavailable": "Critical first-die maximum handling could not be installed; this roll keeps native behavior."
+    },
     "Stealth": { "SpeedWarning": "Stealth movement exceeded the configured limit; movement was not rolled back." },
     "Settings": {
       "featurePotion": { "Name": "Enable healing potion configurator", "Hint": "GM-only explicit-tag configurator with preview and restore." },

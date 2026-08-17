@@ -175,7 +175,7 @@ describe("house-rules runtime and settings integration", () => {
     });
     expect(globals.game.fvttHouseRules.lowAbility.reminder({ system: { abilities: { str: { value: 3 }, dex: { value: 10 } } } })).toEqual(["str"]);
     expect(await globals.game.fvttHouseRules.stealth.dash(actor)).toMatchObject({ enabled: false });
-    expect(previewNaturalTwenty({ type: "weapon", system: { damage: { base: { number: 2, denomination: 6, bonus: "1" } } } })).toBe("1d6min6 + 3d6 + 1");
+    expect(previewNaturalTwenty({ type: "weapon", system: { damage: { base: { number: 2, denomination: 6, bonus: "1" } } } })).toBe("4d6critmax6 + 1");
 
     globals.game.user = globals.game.users[1];
     expect(await globals.game.fvttHouseRules.setup.setFeature(SETTING.stealth, true)).toBeFalse();

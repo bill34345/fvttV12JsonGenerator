@@ -33,7 +33,16 @@
       "Feed": "喂服药水（动作）"
     },
     "Ammo": { "RecoveryReady": "弹药可由 GM 确认找回；模块没有自动恢复任何弹药。" },
-    "Midi": { "PendingValidation": "已发现并启用 MIDI-QOL 14.0.11 的精确版本适配；其他版本会失败关闭。" },
+    "Midi": {
+      "ExactVersionActive": "已启用经过本地验证的 MIDI-QOL 14.0.11 / DAE 14.0.12 / Die So Nice 6.2.9 适配；其他版本会失败关闭。",
+      "Unsupported": "本次重击首骰覆盖已失败关闭：MIDI-QOL、DAE 或 Die So Nice 版本不在已验证范围内。"
+    },
+    "CriticalMax": {
+      "Effective": "重击结算值：{value}",
+      "Original": "实际掷出：{value}",
+      "Combined": "实际投出：{original}；重击按 {effective} 结算",
+      "Unavailable": "重击首骰最大值功能未安装成功，本次保持原生结算。"
+    },
     "Stealth": { "SpeedWarning": "隐匿移动超过限制；模块只警告，不会回滚移动。" },
     "Settings": {
       "featurePotion": { "Name": "启用治疗药水配置器", "Hint": "仅 GM、显式标签，支持预览与恢复快照。" },

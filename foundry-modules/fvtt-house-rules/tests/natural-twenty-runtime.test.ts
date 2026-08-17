@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { installCriticalMaxModifier } from "../src/core/critical-die";
 import { applyCriticalConfiguredRolls } from "../src/runtime";
 
 type AnyRecord = Record<string, any>;
 
 class MockDie {
+  static MODIFIERS: Record<string, unknown> = {};
   number: number;
   faces: number;
   method: string;
@@ -18,6 +20,12 @@ class MockDie {
     this.method = method;
     this.modifiers = modifiers;
     this.options = options;
+  }
+
+  getTooltipData(): AnyRecord {
+    return {
+      rolls: this.results.map((result) => ({ result: String(result.result), classes: `die d${this.faces}` }))
+    };
   }
 }
 
@@ -69,6 +77,7 @@ let previousFoundry: unknown;
 beforeEach(() => {
   previousGame = globals.game;
   previousFoundry = globals.foundry;
+  MockDie.MODIFIERS = {};
   globals.foundry = { dice: { terms: { Die: MockDie, OperatorTerm: MockOperatorTerm } } };
   globals.game = {
     version: "14.364",
@@ -102,11 +111,10 @@ describe("critical configured damage integration", () => {
     )).toBeTrue();
 
     expect(untouchedRoll.resetCount).toBe(0);
-    expect(baseRoll.terms).toHaveLength(5);
-    expect(baseRoll.terms[0]).toMatchObject({ number: 1, faces: 8, modifiers: ["min8"] });
+    expect(baseRoll.terms).toHaveLength(3);
+    expect(baseRoll.terms[0]).toMatchObject({ number: 2, faces: 8, modifiers: ["critmax8"] });
     expect(baseRoll.terms[1]).toMatchObject({ operator: "+" });
-    expect(baseRoll.terms[2]).toMatchObject({ number: 1, faces: 8, modifiers: [] });
-    expect(baseRoll.terms[4]).toBe(rider);
+    expect(baseRoll.terms[2]).toBe(rider);
     expect(baseRoll.isCritical).toBeTrue();
     expect(message.data.flags["fvtt-house-rules"].criticalFirstDieApplied).toBeTrue();
   });
@@ -119,8 +127,7 @@ describe("critical configured damage integration", () => {
       [baseRoll],
       damageConfig("mwak", [{ base: true }], "weapon")
     )).toBeTrue();
-    expect(baseRoll.terms[0]).toMatchObject({ number: 1, faces: 8, modifiers: ["min8"] });
-    expect(baseRoll.terms[2]).toMatchObject({ number: 1, faces: 8, modifiers: [] });
+    expect(baseRoll.terms[0]).toMatchObject({ number: 2, faces: 8, modifiers: ["critmax8"] });
   });
 
   test("applies to the first damage roll of melee and ranged spell attacks", () => {
@@ -137,8 +144,7 @@ describe("critical configured damage integration", () => {
         [spellRoll, riderRoll],
         damageConfig(actionType, [{}, {}])
       )).toBeTrue();
-      expect(spellRoll.terms[0]).toMatchObject({ number: 1, faces: 6, modifiers: ["cs>=5", "min6"] });
-      expect(spellRoll.terms[2]).toMatchObject({ number: 3, faces: 6, modifiers: ["cs>=5"] });
+      expect(spellRoll.terms[0]).toMatchObject({ number: 4, faces: 6, modifiers: ["cs>=5", "critmax6"] });
       expect(spellRoll.terms[0].options).toMatchObject({ critical: true, flavor: "force" });
       expect(riderRoll.terms).toHaveLength(1);
       expect(riderRoll.terms[0]).toMatchObject({ number: 2, faces: 4, modifiers: [] });
@@ -181,5 +187,15 @@ describe("critical configured damage integration", () => {
       damageConfig("rsak", [{}])
     )).toBeFalse();
     expect(roll.terms).toEqual([original]);
+  });
+
+  test("the modifier changes only results[0] and leaves later raw results native", () => {
+    expect(installCriticalMaxModifier(MockDie as any)).toBeTrue();
+    const modifier = MockDie.MODIFIERS.critmax as ((this: AnyRecord, value: string) => unknown);
+    const term = new MockDie({ number: 2, faces: 8, modifiers: ["critmax8"] });
+    term.results = [{ result: 3 }, { result: 8 }];
+
+    expect(modifier.call(term, "critmax8")).toBeUndefined();
+    expect(term.results).toEqual([{ result: 3, count: 8 }, { result: 8 }]);
   });
 });

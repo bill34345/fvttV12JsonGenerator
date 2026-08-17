@@ -4,6 +4,7 @@ export const FOUNDRY_VERSION = "14.364" as const;
 export const DND5E_VERSION = "5.3.3" as const;
 export const MIDI_QOL_VERSION = "14.0.11" as const;
 export const DAE_VERSION = "14.0.12" as const;
+export const DICE_SO_NICE_VERSION = "6.2.9" as const;
 
 export const FLAG = {
   ledger: "ledger",

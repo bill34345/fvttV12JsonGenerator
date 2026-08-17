@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { isAuthority, selectAuthority } from "../src/core/authority";
 import { MODULE_ID } from "../src/constants";
 import { confirmAmmoRecovery, createAmmoShot, extractAmmoSnapshotFromChatFlags, recordAmmoShot, recoveredTier } from "../src/core/ammo";
+import { applyCriticalMaxResult, criticalMaxTooltipMarkup, decorateCriticalMaxTooltipData, installCriticalMaxModifier, parseCriticalMaxModifier } from "../src/core/critical-die";
 import { hpGambleLockId, lowAbilityReminder, resolveHitPointGamble } from "../src/core/hp-gamble";
 import { emptyLedger, isTransactionProcessed, ledgerStorageKey, recordTransaction, transactionId } from "../src/core/ledger";
 import {
@@ -175,14 +176,14 @@ describe("HR-04 retained natural rolls", () => {
     expect(retainedNatural([{ faces: 20, results: [{ result: 1, active: true }] }, { faces: 20, results: [{ result: 1, active: true }] }], 1)).toBe(false);
   });
 
-  test("uses Foundry minX for the first base die while retaining every critical die", () => {
+  test("uses critmaxN for the first base die while retaining every critical die", () => {
     const oneD8 = { number: 1, denomination: 8, isBaseDamage: true };
     const twoD6 = { number: 2, denomination: 6, isBaseDamage: true };
-    expect(transformNaturalTwentyBaseDamageFormula(oneD8, "1d8")).toBe("1d8min8 + 1d8");
-    expect(transformNaturalTwentyBaseDamageFormula(twoD6, "2d6")).toBe("1d6min6 + 3d6");
-    expect(transformNaturalTwentyBaseDamageFormula(twoD6, "2d6 + @mod")).toBe("1d6min6 + 3d6 + @mod");
-    expect(transformNaturalTwentyBaseWeaponDamage({ number: 1, denomination: 8, isBaseWeaponDamage: true })).toBe("1d8min8 + 1d8");
-    expect(transformNaturalTwentyBaseWeaponDamage({ number: 2, denomination: 6, bonus: "2", isBaseWeaponDamage: true })).toBe("1d6min6 + 3d6 + 2");
+    expect(transformNaturalTwentyBaseDamageFormula(oneD8, "1d8")).toBe("2d8critmax8");
+    expect(transformNaturalTwentyBaseDamageFormula(twoD6, "2d6")).toBe("4d6critmax6");
+    expect(transformNaturalTwentyBaseDamageFormula(twoD6, "2d6 + @mod")).toBe("4d6critmax6 + @mod");
+    expect(transformNaturalTwentyBaseWeaponDamage({ number: 1, denomination: 8, isBaseWeaponDamage: true })).toBe("2d8critmax8");
+    expect(transformNaturalTwentyBaseWeaponDamage({ number: 2, denomination: 6, bonus: "2", isBaseWeaponDamage: true })).toBe("4d6critmax6 + 2");
     expect(transformNaturalTwentyBaseWeaponDamage({ number: 1, denomination: 8, isBaseWeaponDamage: false })).toBeNull();
     expect(transformNaturalTwentyBaseWeaponDamage({ number: 1, denomination: 8, isBaseWeaponDamage: true, hasAmbiguousSource: true })).toBeNull();
 
@@ -193,7 +194,7 @@ describe("HR-04 retained natural rolls", () => {
         { parts: ["1d6"], options: { isCritical: true, type: "fire" } }
       ]
     )).toEqual([
-      { base: true, parts: ["1d6min6 + 3d6 + @mod"], options: { isCritical: false, type: "slashing" } },
+      { base: true, parts: ["4d6critmax6 + @mod"], options: { isCritical: false, type: "slashing" } },
       { parts: ["1d6"], options: { isCritical: true, type: "fire" } }
     ]);
 
@@ -226,21 +227,21 @@ describe("HR-04 retained natural rolls", () => {
       { number: 1, denomination: 8, isBaseWeaponDamage: true },
       liveConfig
     );
-    expect(transformedLiveConfig?.[0]?.parts).toEqual(["1d8min8 + 1d8", "@mod"]);
+    expect(transformedLiveConfig?.[0]?.parts).toEqual(["2d8critmax8", "@mod"]);
     expect(liveConfig[0]?.parts).toEqual(["1d8", "@mod"]);
   });
 
   test("splits the already-critical first DiceTerm while preserving modifier order and term options", () => {
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: [] })).toEqual({
-      first: { number: 1, faces: 8, modifiers: ["min8"] },
+      first: { number: 1, faces: 8, modifiers: ["critmax8"] },
       remaining: { number: 1, faces: 8, modifiers: [] },
-      formula: "1d8min8 + 1d8"
+      formula: "1d8critmax8 + 1d8"
     });
     const configuredTerm = { number: 4, faces: 6, modifiers: new Set(["cs>=19", "ro<2"]), options: { flavor: "fire" } };
     expect(splitConfiguredCriticalFirstDiceTerm(configuredTerm)).toEqual({
-      first: { number: 1, faces: 6, modifiers: ["cs>=19", "ro<2", "min6"], options: { flavor: "fire" } },
+      first: { number: 1, faces: 6, modifiers: ["cs>=19", "ro<2", "critmax6"], options: { flavor: "fire" } },
       remaining: { number: 3, faces: 6, modifiers: ["cs>=19", "ro<2"], options: { flavor: "fire" } },
-      formula: "1d6cs>=19ro<2min6 + 3d6cs>=19ro<2"
+      formula: "1d6cs>=19ro<2critmax6 + 3d6cs>=19ro<2"
     });
     const splitWithOptions = splitConfiguredCriticalFirstDiceTerm(configuredTerm)!;
     expect(splitWithOptions.first.options).toEqual({ flavor: "fire" });
@@ -250,7 +251,7 @@ describe("HR-04 retained natural rolls", () => {
     expect(configuredTerm).toEqual({ number: 4, faces: 6, modifiers: new Set(["cs>=19", "ro<2"]), options: { flavor: "fire" } });
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 1, faces: 8, modifiers: [] })).toBeNull();
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 1, modifiers: [] })).toBeNull();
-    expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: ["min8"] })).toBeNull();
+    expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: ["critmax8"] })).toBeNull();
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: ["max8"] })).toBeNull();
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: "kh" })).toBeNull();
     expect(splitConfiguredCriticalFirstDiceTerm({ number: 2, faces: 8, modifiers: [], options: [] })).toBeNull();
@@ -266,15 +267,87 @@ describe("HR-04 retained natural rolls", () => {
 });
 
 test("MIDI adapter is isolated to exactly 14.0.11 and tolerates matching DAE only", () => {
-  expect(inspectMidiAdapter(new Map())).toEqual({ enabled: false, reason: "absent" });
+  expect(inspectMidiAdapter(new Map())).toEqual({ enabled: false, supported: true, reason: "absent" });
   expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.0.12" }]]))).toEqual({
     enabled: false,
+    supported: false,
     reason: "unsupported-midi-version"
   });
   expect(inspectMidiAdapter(new Map([
     ["midi-qol", { active: true, version: "14.0.11" }],
     ["dae", { active: true, version: "14.0.12" }]
-  ]))).toEqual({ enabled: true, reason: "ready-for-runtime-validation" });
+  ]))).toEqual({ enabled: true, supported: true, reason: "ready-for-runtime-validation" });
+  expect(inspectMidiAdapter(new Map([
+    ["dice-so-nice", { active: true, version: "6.2.8" }]
+  ]))).toEqual({ enabled: false, supported: false, reason: "unsupported-dice-so-nice-version" });
+});
+
+describe("critical first-die display contract", () => {
+  test("changes only the effective count and retains the raw face", () => {
+    const result: Record<string, unknown> = { result: 3 };
+    expect(applyCriticalMaxResult(result, 8)).toBeTrue();
+    expect(result).toEqual({ result: 3, count: 8 });
+    expect(result.rerolled).toBeUndefined();
+  });
+
+  test("accepts d10 and d12 critical-max modifiers", () => {
+    expect(parseCriticalMaxModifier("critmax10", 10)).toBe(10);
+    expect(parseCriticalMaxModifier("critmax12", 12)).toBe(12);
+    expect(parseCriticalMaxModifier("critmax8", 10)).toBeNull();
+    expect(parseCriticalMaxModifier("critmax10", 12)).toBeNull();
+  });
+
+  test("registers a namespaced modifier and rejects collisions", () => {
+    class Die {}
+    (Die as any).MODIFIERS = {};
+    expect(installCriticalMaxModifier(Die as any)).toBeTrue();
+    expect(typeof (Die as any).MODIFIERS.critmax).toBe("function");
+    expect(installCriticalMaxModifier(Die as any)).toBeTrue();
+    (Die as any).MODIFIERS.critmax = () => undefined;
+    expect(installCriticalMaxModifier(Die as any)).toBeFalse();
+  });
+
+  test("renders native stacked faces without creating another RollTerm", () => {
+    const data = {
+      rolls: [
+        { result: "3", classes: "die d8 min" },
+        { result: "7", classes: "die d8" }
+      ]
+    };
+    const term = {
+      faces: 8,
+      modifiers: ["critmax8"],
+      results: [{ result: 3, count: 8 }, { result: 7 }]
+    };
+    const localized = (_key: string, fallback: string) => fallback;
+    decorateCriticalMaxTooltipData(term, data, localized);
+    expect(data.rolls[0]?.classes).toBe("fvtt-house-rules-critmax-primary");
+    expect(data.rolls[0]?.classes?.split(/\s+/u)).not.toContain("max");
+    expect(data.rolls[0]?.result).toContain('class="fvtt-house-rules-critmax-stack d8"');
+    expect(data.rolls[0]?.result).toContain('data-original="3"');
+    expect(data.rolls[0]?.result).toContain('data-effective="8"');
+    expect(data.rolls[0]?.result).not.toContain("roll die");
+    expect(data.rolls[0]?.result).toContain("Original die result: 3; critical damage counts this die as 8");
+    expect((data.rolls[0]?.result?.match(/<span/gu) ?? [])).toHaveLength(1);
+    expect(data.rolls[1]).toEqual({ result: "7", classes: "die d8" });
+    expect(criticalMaxTooltipMarkup(8, 3, localized)).toContain("3");
+  });
+
+  test("uses the corresponding native face class for standard dice", () => {
+    for (const faces of [4, 6, 8, 10, 12, 20]) {
+      const markup = criticalMaxTooltipMarkup(faces, Math.max(1, faces - 1), (_key, fallback) => fallback);
+      expect(markup).toContain(`class="fvtt-house-rules-critmax-stack d${faces}"`);
+      expect((markup.match(/<span/gu) ?? [])).toHaveLength(1);
+    }
+  });
+
+  test("falls back to text for unsupported native face artwork", () => {
+    const markup = criticalMaxTooltipMarkup(2, 1, (_key, fallback) => fallback);
+    expect(markup).not.toContain("roll die d2");
+    expect(markup).toContain('data-original="1"');
+    expect(markup).toContain('data-effective="2"');
+    expect((markup.match(/<span/gu) ?? [])).toHaveLength(1);
+  });
 });
 
 function ammoRuntimeFixture({ destroy = false } = {}): { actor: any; item: any; activity: any; message: any; packet: any; restore: () => void } {
