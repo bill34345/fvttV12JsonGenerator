@@ -7,6 +7,8 @@
 export type { EffectProfile } from './conversion';
 export { convertMarkdownContentToJson } from './conversion';
 export {
+  canonicalSourcesFromMarkdown,
+  convertCanonicalActorCollection,
   ItemTextWorkflow,
   JsonTranslationSyncWorkflow,
   ObsidianSyncWorkflow,
@@ -17,6 +19,18 @@ export {
   runItemIntake,
   runMonsterIntake,
   runSpeciesIntake,
+} from './workflows';
+export type {
+  CanonicalActorSource,
+  CanonicalActorSourceMetadata,
+  CanonicalActorSourceStatus,
+  CanonicalActorSourceWarning,
+  CanonicalActorCollectionItemResult,
+  CanonicalActorCollectionOptions,
+  CanonicalActorCollectionOutputFile,
+  CanonicalActorCollectionPromotion,
+  CanonicalActorCollectionResult,
+  CanonicalActorCollectionStatus,
 } from './workflows';
 export { buildImageAssetOptionsFromCli } from '@fvtt-json-generator/assets-icons/image-options';
 export {

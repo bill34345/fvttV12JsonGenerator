@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('GoddessFantasy pipeline', () => {
-  test('runs crawl, plaintext conversion, and actor ingest in order', async () => {
+  test('runs crawl, canonical source conversion, optional audit export, and Actor collection in order', async () => {
     const root = mkdtempSync(join(tmpdir(), 'gf-pipeline-order-'));
     const outDir = join(root, 'crawl');
     const plaintextOutDir = join(outDir, 'plaintext', 'monsters');
@@ -27,8 +27,12 @@ describe('GoddessFantasy pipeline', () => {
         expect(options.force).toBe(false);
         return crawlResult({ outDir, newTopicIds: ['170008'] });
       },
+      recordsToCanonical: (options) => {
+        calls.push(`canonical:${options.recordsPath}`);
+        return canonicalResult({ recordsPath: options.recordsPath });
+      },
       recordsToPlaintext: (options) => {
-        calls.push(`plaintext:${options.recordsPath}`);
+        calls.push(`audit:${options.recordsPath}`);
         expect(options.force).toBe(true);
         expect(options.outDir).toBe(plaintextOutDir);
         return plaintextResult({
@@ -37,12 +41,12 @@ describe('GoddessFantasy pipeline', () => {
           outFile: join(outDir, 'plaintext', 'monsters.md'),
         });
       },
-      ingestActors: async (options) => {
-        calls.push(`actor:${options.sourcePath}`);
+      convertCanonicalActors: async (options) => {
+        calls.push(`actor:${options.sources[0]?.sourceId ?? 'none'}`);
         expect(options.vaultPath).toBe(vaultPath);
-        expect(options.effectProfile).toBe('modded-v12');
-        expect(options.fvttVersion).toBe('12');
-        return actorResult();
+        expect(options.effectProfile).toBe('core');
+        expect(options.fvttVersion).toBe('14');
+        return canonicalActorResult();
       },
     };
 
@@ -55,13 +59,15 @@ describe('GoddessFantasy pipeline', () => {
         crawlMode: 'incremental',
         force: false,
         contentType: 'monster',
+        emitPlaintextAudit: true,
       }, deps);
 
-      expect(calls.slice(0, 2)).toEqual([
+      expect(calls.slice(0, 3)).toEqual([
         'crawl:incremental',
-        `plaintext:${join(outDir, 'records.json')}`,
+        `canonical:${join(outDir, 'records.json')}`,
+        `audit:${join(outDir, 'records.json')}`,
       ]);
-      expect(calls[2]?.startsWith('actor:')).toBe(true);
+      expect(calls[3]?.startsWith('actor:')).toBe(true);
       expect(result.stoppedAfter).toBe('complete');
       expect(pipelineExitCode(result)).toBe(0);
     } finally {
@@ -79,11 +85,11 @@ describe('GoddessFantasy pipeline', () => {
         calls.push('crawl');
         return crawlResult({ dryRun: true, recordsAfter: 23, newTopicIds: ['170013'] });
       },
-      recordsToPlaintext: () => {
-        calls.push('plaintext');
+      recordsToCanonical: () => {
+        calls.push('canonical');
         throw new Error('should not run');
       },
-      ingestActors: async () => {
+      convertCanonicalActors: async () => {
         calls.push('actor');
         throw new Error('should not run');
       },
@@ -94,7 +100,32 @@ describe('GoddessFantasy pipeline', () => {
     expect(pipelineExitCode(result)).toBe(0);
   });
 
-  test('stops before actor generation when plaintext has warnings in strict mode', async () => {
+  test('changing the optional plaintext audit flag does not change canonical Actor inputs or status', async () => {
+    const actorInputs: string[][] = [];
+    const auditCalls: boolean[] = [];
+    const dependencies: GoddessFantasyPipelineDependencies = {
+      crawl: async () => crawlResult({}),
+      recordsToCanonical: () => canonicalResult(),
+      recordsToPlaintext: () => {
+        auditCalls.push(true);
+        return plaintextResult({});
+      },
+      convertCanonicalActors: async (options) => {
+        actorInputs.push(options.sources.map((source) => source.markdown));
+        return canonicalActorResult();
+      },
+    };
+
+    const withoutAudit = await runGoddessFantasyPipeline({ boardUrl: 'https://example.test/board' }, dependencies);
+    const withAudit = await runGoddessFantasyPipeline({ boardUrl: 'https://example.test/board', emitPlaintextAudit: true }, dependencies);
+
+    expect(auditCalls).toHaveLength(1);
+    expect(actorInputs[0]).toEqual(actorInputs[1]);
+    expect(withoutAudit.actorCollection?.status).toBe(withAudit.actorCollection?.status);
+    expect(withoutAudit.stoppedAfter).toBe(withAudit.stoppedAfter);
+  });
+
+  test('stops before Actor generation when canonical source conversion has warnings in strict mode', async () => {
     const calls: string[] = [];
     const result = await runGoddessFantasyPipeline({
       boardUrl: 'https://example.test/board',
@@ -104,65 +135,38 @@ describe('GoddessFantasy pipeline', () => {
         calls.push('crawl');
         return crawlResult({});
       },
-      recordsToPlaintext: () => {
-        calls.push('plaintext');
-        return plaintextResult({ warnings: [{ topicId: '1', code: 'needs-review', message: 'review' }] });
+      recordsToCanonical: () => {
+        calls.push('canonical');
+        return canonicalResult({ warnings: [{ sourceId: 'source-1', code: 'needs-review', message: 'review' }] });
       },
-      ingestActors: async () => {
+      convertCanonicalActors: async () => {
         calls.push('actor');
         throw new Error('should not run');
       },
     });
 
-    expect(calls).toEqual(['crawl', 'plaintext']);
-    expect(result.stoppedAfter).toBe('plaintext-warning');
+    expect(calls).toEqual(['crawl', 'canonical']);
+    expect(result.stoppedAfter).toBe('source-warning');
     expect(result.warnings).toBe(1);
     expect(pipelineExitCode(result)).toBe(1);
   });
 
-  test('uses a generated ingest collection when warning-tolerant plaintext export omits the aggregate file', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'gf-pipeline-warning-source-'));
-    const outDir = join(root, 'crawl');
-    const plaintextOutDir = join(outDir, 'plaintext', 'monsters');
-    const aggregatePath = join(outDir, 'plaintext', 'monsters.md');
+  test('does not promote warning-bearing canonical sources even in warning-tolerant mode', async () => {
+    const result = await runGoddessFantasyPipeline({
+      boardUrl: 'https://example.test/board',
+      failOnWarning: false,
+    }, {
+      crawl: async () => crawlResult({}),
+      recordsToCanonical: () => canonicalResult({
+        sources: [canonicalSource({ status: 'needs_review', warnings: [{ sourceId: 'source-1', code: 'needs-review', message: 'review' }] })],
+        warnings: [{ sourceId: 'source-1', code: 'needs-review', message: 'review' }],
+      }),
+    });
 
-    try {
-      let actorSourcePath = '';
-      const result = await runGoddessFantasyPipeline({
-        boardUrl: 'https://example.test/board',
-        outDir,
-        plaintextOutDir,
-        failOnWarning: false,
-      }, {
-        crawl: async () => crawlResult({ outDir }),
-        recordsToPlaintext: () => plaintextResult({
-          outDir: plaintextOutDir,
-          outFile: aggregatePath,
-          warnings: [{ topicId: '1', code: 'needs-review', message: 'review' }],
-          items: [{
-            topicId: '1',
-            title: 'Needs Review',
-            status: 'needs_review',
-            fileName: '1__needs-review.md',
-            outputPath: join(plaintextOutDir, '1__needs-review.md'),
-            heading: 'Needs Review',
-            markdown: '# **Needs Review**\n\nplaceholder\n',
-            warnings: [{ topicId: '1', code: 'needs-review', message: 'review' }],
-          }],
-        }),
-        ingestActors: async (options) => {
-          actorSourcePath = options.sourcePath;
-          expect(existsSync(options.sourcePath)).toBe(true);
-          expect(readFileSync(options.sourcePath, 'utf-8')).toContain('# **Needs Review**');
-          return actorResult();
-        },
-      });
-
-      expect(result.stoppedAfter).toBe('complete');
-      expect(actorSourcePath.endsWith('monsters.pipeline-ingest.md')).toBe(true);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    expect(result.actorCollection?.status).toBe('needs_review');
+    expect(result.actorCollection?.succeeded).toBe(0);
+    expect(result.stoppedAfter).toBe('complete');
+    expect(pipelineExitCode(result)).toBe(0);
   });
 
   test('reports actor image warnings as a pipeline warning failure by default', async () => {
@@ -170,8 +174,8 @@ describe('GoddessFantasy pipeline', () => {
       boardUrl: 'https://example.test/board',
     }, {
       crawl: async () => crawlResult({}),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async () => actorResult({ warnings: [{ stage: 'upload', message: 'upload failed' }] }),
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async () => canonicalActorResult({ warnings: [{ code: 'image-upload', message: 'upload failed' }] }),
     });
 
     expect(result.stoppedAfter).toBe('actor-warning');
@@ -187,8 +191,8 @@ describe('GoddessFantasy pipeline', () => {
       vaultPath: 'vault',
     }, {
       crawl: async () => crawlResult({ outDir: 'crawl-out' }),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async () => actorResult(),
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async () => canonicalActorResult(),
       tokenReview: async () => {
         calls.push('token-review');
         return tokenReviewResult();
@@ -200,7 +204,7 @@ describe('GoddessFantasy pipeline', () => {
     expect(result.stoppedAfter).toBe('complete');
   });
 
-  test('runs token review after actor ingest when requested', async () => {
+  test('runs token review after canonical Actor collection when requested', async () => {
     const calls: string[] = [];
     const result = await runGoddessFantasyPipeline({
       boardUrl: 'https://example.test/board',
@@ -210,8 +214,8 @@ describe('GoddessFantasy pipeline', () => {
       tokenReviewOutDir: 'review-out',
     }, {
       crawl: async () => crawlResult({ outDir: 'crawl-out' }),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async () => actorResult(),
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async () => canonicalActorResult(),
       tokenReview: async (options) => {
         calls.push(`token-review:${options.vaultPath}:${options.crawlDir}:${options.outDir}`);
         expect(options.tokenCropsPath).toBeUndefined();
@@ -235,12 +239,12 @@ describe('GoddessFantasy pipeline', () => {
       failOnTokenReview: true,
     }, {
       crawl: async () => crawlResult({ outDir: 'crawl-out' }),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async () => actorResult(),
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async () => canonicalActorResult(),
       tokenReview: async () => tokenReviewResult({ needsReview: 1, failed: 1 }),
     });
 
-    expect(result.actor).toBeDefined();
+    expect(result.actorCollection).toBeDefined();
     expect(result.tokenReview).toBeDefined();
     expect(result.stoppedAfter).toBe('token-review');
     expect(result.warnings).toBe(1);
@@ -248,14 +252,14 @@ describe('GoddessFantasy pipeline', () => {
     expect(pipelineExitCode(result)).toBe(1);
   });
 
-  test('accepts Foundry v14 and passes it to actor ingest', async () => {
+  test('accepts Foundry v14 and passes it to canonical Actor collection', async () => {
     const deps: GoddessFantasyPipelineDependencies = {
       crawl: async () => crawlResult({}),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async (options) => {
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async (options) => {
         expect(options.fvttVersion).toBe('14');
         expect(options.effectProfile).toBe('core');
-        return actorResult();
+        return canonicalActorResult();
       },
     };
 
@@ -267,14 +271,14 @@ describe('GoddessFantasy pipeline', () => {
     expect(result.stoppedAfter).toBe('complete');
   });
 
-  test('accepts explicit modded-v14 profile for Foundry v14 actor ingest', async () => {
+  test('accepts explicit modded-v14 profile for Foundry v14 canonical Actor collection', async () => {
     const deps: GoddessFantasyPipelineDependencies = {
       crawl: async () => crawlResult({}),
-      recordsToPlaintext: () => plaintextResult({}),
-      ingestActors: async (options) => {
+      recordsToCanonical: () => canonicalResult({}),
+      convertCanonicalActors: async (options) => {
         expect(options.fvttVersion).toBe('14');
         expect(options.effectProfile).toBe('modded-v14');
-        return actorResult({ effectProfile: 'modded-v14' });
+        return canonicalActorResult({ effectProfile: 'modded-v14' });
       },
     };
 
@@ -336,17 +340,62 @@ function plaintextResult(overrides: Partial<any>): any {
   };
 }
 
-function actorResult(overrides: Partial<any> = {}): any {
+function canonicalSource(overrides: Partial<any> = {}): any {
   return {
-    sourcePath: join('crawl-out', 'plaintext', 'monsters.md'),
+    sourceId: 'source-1',
+    sourceUrl: 'https://example.test/source-1',
+    fileName: 'source-1.md',
+    markdown: [
+      '---',
+      'layout: creature',
+      'type: npc',
+      'name: "Source One"',
+      'armor_class: "12"',
+      'hit_points: "10"',
+      '---',
+      '',
+      '## Actions',
+      '',
+      '- **Claw**: Hit.',
+    ].join('\n'),
+    imageUrls: [],
+    status: 'ok',
+    warnings: [],
+    ...overrides,
+  };
+}
+
+function canonicalResult(overrides: Partial<any> = {}): any {
+  const sources = overrides.sources ?? [canonicalSource()];
+  return {
+    recordsPath: 'crawl-out/records.json',
+    recordsRead: sources.length,
+    recordsMatched: sources.length,
+    blocksEmitted: sources.length,
+    skipped: 0,
+    sources,
+    warnings: [],
+    failures: [],
+    ...overrides,
+  };
+}
+
+function canonicalActorResult(overrides: Partial<any> = {}): any {
+  const warnings = overrides.warnings ?? [];
+  return {
+    kind: 'canonical-actor-collection',
+    status: warnings.length > 0 ? 'needs_review' : 'succeeded',
     vaultPath: 'vault',
-    effectProfile: 'modded-v12',
-    markdown: {
-      files: [{ fileName: 'monster.md', sections: {}, rawNotes: [] }],
-      emitDir: join('vault', 'middle'),
-      dryRun: false,
-      usedAi: false,
-    },
+    outputDir: join('vault', 'output'),
+    fvttVersion: '14',
+    effectProfile: 'core',
+    itemCount: 1,
+    succeeded: warnings.length > 0 ? 0 : 1,
+    failed: 0,
+    warnings,
+    failures: [],
+    items: [],
+    outputFiles: [],
     sync: {
       outputDir: join('vault', 'output'),
       processed: 1,
@@ -357,6 +406,7 @@ function actorResult(overrides: Partial<any> = {}): any {
       warnings: [],
       ...overrides,
     },
+    ...overrides,
   };
 }
 

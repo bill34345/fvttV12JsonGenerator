@@ -19,7 +19,32 @@ bun run web:start
 - 忽略 `X-Forwarded-For` 和 `X-Real-IP`；
 - 如果把 `FVTT_WEB_HOST` 改为非回环地址却没有设置 `FVTT_WEB_PUBLIC_MODE=1`，进程会拒绝启动。
 
-开发环境可运行 `bun run web:dev`。Vite 和 API 都只监听回环地址。
+开发环境可运行 `bun run web:dev`。命令会先构建前端，再由同一个 Bun 服务在
+`http://127.0.0.1:5173` 同时提供页面和 API；开发者只需要打开这一个地址。
+它还会在启动服务前编译 `fvtt-ai-companion.exe`，并在 loopback、本机模式下
+默认启用页面引导的 Codex Companion。显式设置
+`FVTT_WEB_CODEX_COMPANION_ENABLED=0` 可以关闭它；构建失败时不会启动旧页面
+或残缺服务。它不是热更新服务器，修改前端后重新运行命令即可生成新的页面资源。
+
+#### 无命令式 Companion 配对
+
+打开 `http://127.0.0.1:5173` 的“AI 连接”面板后，下载并双击
+`fvtt-ai-companion.exe`，选择模型并点击“连接本机 Companion”即可完成配对；用户不需要
+打开 PowerShell、复制启动命令或查看配对 Token。留空模型时使用这台电脑当前 Codex CLI
+默认模型；填写模型时，主模型和审查模型都会在连接前各自经过“不允许调用工具”的实际检查。
+
+Companion 的 `127.0.0.1:43173` 只用于本机控制（health、pair、disconnect、shutdown），
+不是第二个 Web 地址，也不接受局域网连接。它只绑定 `127.0.0.1`，使用 control protocol
+v2。本机开发页只能来自精确的 `http://127.0.0.1:5173`。公开网页必须是 HTTPS：用户点击
+连接后会打开本机确认页，确认页显示精确的网站地址；只有用户点允许后，该网站才会在五分钟
+内拿到一次性配对授权。授权只保留在内存，不能写入 URL、命令行、日志或下载文件；配对、
+断开和关闭也都需要各自的一次性控制凭据。浏览器拒绝本地网络访问、弹窗被拦截、用户拒绝、
+授权过期或 Companion 退出时，页面会显示下一步处理方法。
+
+仅支持最新版 Windows Chrome 和 Edge；Firefox 不在本次支持范围。开发 EXE 使用隐藏控制台
+编译，未签名且可能触发 Windows SmartScreen；页面会显示构建产物 SHA-256，便于本机核对。
+生产 `web:start` 默认不启用 Companion；服务器管理员明确设置
+`FVTT_WEB_CODEX_COMPANION_ENABLED=1` 后，公开网页才会显示并允许使用它。
 
 ### 公开/反向代理模式（显式开启）
 
@@ -45,6 +70,8 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 
 - `FVTT_WEB_HOST`：监听地址，默认 `127.0.0.1`。
 - `FVTT_WEB_API_PORT`：端口，默认 `5174`。
+- `FVTT_WEB_CODEX_COMPANION_ENABLED=1`：显式启用本机 Codex Companion；`web:dev`
+  在非公开 loopback 模式下默认设置为 `1`，生产/VPS 启动默认关闭。
 - `FVTT_WEB_PUBLIC_MODE=1`：启用公开/代理模式；没有它时非回环绑定会失败。
 - `FVTT_WEB_AUTH_TOKEN`：公开模式必填，至少 32 个字符；不要提交到 Git、浏览器或日志。
 - `FVTT_WEB_TRUSTED_PROXIES`：允许提供客户端转发链的代理字面 IP，逗号分隔，例如 `127.0.0.1,10.0.0.2`。不支持主机名或隐式“信任全部”。
@@ -66,7 +93,7 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 - `MONSTER_INTAKE_BASE_URL`：API Key 模式的 OpenAI-compatible API 根地址，例如 `https://api.openai.com/v1`。
 - `MONSTER_INTAKE_CODEX_OAUTH_BASE_URL`：Codex OAuth 本机兼容桥地址，默认 `http://127.0.0.1:8787/v1`；必须是 loopback 地址。
 - `MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN`：可选的本机桥 bearer token；默认是非秘密占位值，OAuth 凭据不放在这里。
-- `MONSTER_INTAKE_MODEL`：discovery、extraction 和 repair 使用的模型；Codex OAuth 模式未填写时默认 `gpt-5.6-luna`。
+- `MONSTER_INTAKE_MODEL`：discovery、extraction 和 repair 使用的模型；Codex OAuth 兼容桥模式未填写时默认 `gpt-5.6-luna`。这不是 Companion 的模型设置：Companion 留空时使用用户本机 Codex CLI 当前默认模型。
 - `MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT`：Codex OAuth 推理强度；默认 `xhigh`，对应 Codex 界面里的 `ultra`，也接受填写 `ultra` 并自动归一化。
 - `MONSTER_INTAKE_REVIEW_MODEL`：独立 review 模型；未设置时使用 `MONSTER_INTAKE_MODEL`。
 - `MONSTER_INTAKE_TIMEOUT_MS`：普通 Intake 阶段超时；API Key 模式默认 `60000` 毫秒，Codex OAuth 模式默认 `300000` 毫秒。

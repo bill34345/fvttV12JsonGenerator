@@ -23,6 +23,16 @@ import {
   convertMonsterCollectionToJson as convertPackageMonsterCollectionToJson,
 } from '@fvtt-json-generator/workflows/collection-conversion';
 import {
+  convertCanonicalActorCollection as convertPackageCanonicalActorCollection,
+  type CanonicalActorCollectionOptions,
+  type CanonicalActorCollectionResult,
+} from '@fvtt-json-generator/workflows/canonical-actor-collection';
+import {
+  detectAutomaticConversionRoute as detectPackageAutomaticConversionRoute,
+  type AutomaticConversionDetection,
+  type AutomaticConversionDetectionOptions,
+} from '@fvtt-json-generator/workflows/conversion-routing';
+import {
   resumeMonsterIntake as resumePackageMonsterIntake,
   runMonsterIntake as runPackageMonsterIntake,
 } from '@fvtt-json-generator/intake-ai/orchestrator';
@@ -53,6 +63,13 @@ import type {
   SpeciesIntakeOptions,
   SpeciesIntakeRunResult,
 } from '@fvtt-json-generator/intake-ai/species-types';
+
+export type {
+  CanonicalActorSource,
+  CanonicalActorSourceMetadata,
+  CanonicalActorSourceStatus,
+  CanonicalActorSourceWarning,
+} from '@fvtt-json-generator/contracts/canonical-actor';
 import { conversionApplication } from './conversion';
 import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
@@ -88,9 +105,27 @@ export type {
   CollectionOutputFile,
   CollectionStatus,
 } from '@fvtt-json-generator/workflows/collection-conversion';
+export type {
+  CanonicalActorCollectionDependencies,
+  CanonicalActorCollectionItemResult,
+  CanonicalActorCollectionOptions,
+  CanonicalActorCollectionOutputFile,
+  CanonicalActorCollectionPromotion,
+  CanonicalActorCollectionResult,
+  CanonicalActorCollectionStatus,
+  CanonicalActorMarkdownInput,
+} from '@fvtt-json-generator/workflows/canonical-actor-collection';
+export { canonicalSourcesFromMarkdown } from '@fvtt-json-generator/workflows/canonical-actor-collection';
 export {
   writeTextArtifact,
 } from '@fvtt-json-generator/workflows/collection-conversion';
+export type {
+  AutomaticContentCardinality,
+  AutomaticContentKind,
+  AutomaticConversionDetection,
+  AutomaticConversionRoute,
+  AutomaticDetectionConfidence,
+} from '@fvtt-json-generator/workflows/conversion-routing';
 
 export class JsonTranslationSyncWorkflow extends PackageJsonTranslationSyncWorkflow {
   constructor(options: { translationService?: WorkflowTranslationService | null } = {}) {
@@ -118,6 +153,7 @@ export class ObsidianSyncWorkflow extends PackageObsidianSyncWorkflow {
   }
 }
 
+/** @deprecated Compatibility facade for the pre-canonical plaintext Actor path. */
 export class PlainTextActorWorkflow extends PackagePlainTextActorWorkflow {
   constructor() {
     super({
@@ -141,6 +177,12 @@ const collectionDependencies = {
   iconWorkflow: iconWorkflowAdapter,
 };
 
+export function detectAutomaticConversionRoute(
+  options: AutomaticConversionDetectionOptions,
+): AutomaticConversionDetection {
+  return detectPackageAutomaticConversionRoute(options, collectionIngestionAdapter);
+}
+
 export function convertMonsterCollectionToJson(
   options: CollectionConversionOptions,
 ): Promise<CollectionConversionResult> {
@@ -151,6 +193,14 @@ export function convertItemCollectionToJson(
   options: CollectionConversionOptions,
 ): Promise<CollectionConversionResult> {
   return convertPackageItemCollectionToJson(options, collectionDependencies);
+}
+
+export function convertCanonicalActorCollection(
+  options: CanonicalActorCollectionOptions,
+): Promise<CanonicalActorCollectionResult> {
+  return convertPackageCanonicalActorCollection(options, {
+    syncWorkflow: new ObsidianSyncWorkflow({ translationService: null }),
+  });
 }
 
 const monsterIntakeDependencies = Object.freeze({

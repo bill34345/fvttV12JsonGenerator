@@ -131,10 +131,4 @@ describe('Web AI monster intake job', () => {
     expect(finished.logs.at(-1)?.message).toContain('需要人工确认');
   });
 
-  test('legacy Web plaintext job fails on zero discovered monsters', async () => {
-    const job = createJob('ingest-plaintext', 'test');
-    await runJob(job, { type: 'ingest-plaintext', fileName: 'lurker.txt', content: LURKER_SOURCE });
-    expect(getJob(job.id)?.status).toBe('failed');
-    expect(getJob(job.id)?.error?.message).toContain('detected 0 monsters');
-  });
 });

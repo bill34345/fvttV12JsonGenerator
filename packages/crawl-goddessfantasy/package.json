@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/sites/goddessfantasyAuth.ts",
+    "./canonical-sources": "./src/convert/canonicalSources.ts",
     "./crawl": "./src/runGoddessFantasyBoardCrawl.ts",
     "./plaintext": "./src/convert/goddessfantasyPlaintext.ts",
     "./records-to-plaintext": "./src/convert/recordsToPlaintext.ts",
@@ -16,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
     "cheerio": "^1.2.0",
     "crawlee": "^3.17.0",
     "domhandler": "^6.0.1"

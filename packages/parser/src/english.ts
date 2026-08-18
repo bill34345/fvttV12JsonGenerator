@@ -766,7 +766,9 @@ export class EnglishBestiaryParser implements ParserStrategy {
 
     if (typeof value !== 'string') return result;
 
-    const crMatch = value.trim().match(/^([0-9]+(?:\.[0-9]+)?|[0-9]+\/[0-9]+)/);
+    // Check fractions first. Otherwise the integer alternative would consume
+    // the leading "1" in a standard value such as "1/4 (50 XP)".
+    const crMatch = value.trim().match(/^([0-9]+\/[0-9]+|[0-9]+(?:\.[0-9]+)?)/);
     if (crMatch?.[1]) {
       const cr = this.parseCrValue(crMatch[1]);
       if (cr !== undefined) result.cr = cr;
