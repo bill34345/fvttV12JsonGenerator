@@ -29,6 +29,11 @@ export interface PlainTextActorWorkflowResult {
   sync: ObsidianSyncResult;
 }
 
+/**
+ * @deprecated Compatibility-only plaintext-to-Actor adapter. New formal
+ * consumers must provide CanonicalActorSource[] to
+ * convertCanonicalActorCollection().
+ */
 export class PlainTextActorWorkflow {
   constructor(private readonly dependencies: {
     ingestion: PlainTextIngestionPort;

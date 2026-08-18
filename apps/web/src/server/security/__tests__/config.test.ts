@@ -39,6 +39,7 @@ describe('Web security configuration', () => {
       FVTT_WEB_PUBLIC_MODE: '1',
       FVTT_WEB_HOST: '0.0.0.0',
       FVTT_WEB_AUTH_TOKEN: '0123456789abcdef0123456789abcdef',
+      FVTT_WEB_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
       FVTT_WEB_TRUSTED_PROXIES: '127.0.0.1, 10.0.0.2,127.0.0.1',
     });
 

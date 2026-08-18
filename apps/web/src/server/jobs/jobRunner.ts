@@ -17,8 +17,6 @@ import {
   type ItemIntakeAiProvider,
   type MonsterIntakeAiProvider,
   ObsidianSyncWorkflow,
-  PlainTextActorWorkflow,
-  PlainTextIngestionWorkflow,
   convertItemCollectionToJson,
   convertMonsterCollectionToJson,
   parseFvttTargetVersion,
@@ -51,6 +49,7 @@ export interface WebJobRequest {
   content?: string;
   inputPath?: string;
   options?: Record<string, unknown>;
+  aiConnectionId?: string;
 }
 
 export interface WebJobRunnerDependencies {
@@ -58,11 +57,20 @@ export interface WebJobRunnerDependencies {
   monsterIntakeProvider?: MonsterIntakeAiProvider;
 }
 
-export function startJob(job: WebJob, body: WebJobRequest): void {
-  void runJob(job, body);
+export function startJob(
+  job: WebJob,
+  body: WebJobRequest,
+  dependencies: WebJobRunnerDependencies = {},
+  onSettled?: () => void,
+): void {
+  void runJob(job, body, dependencies).finally(onSettled);
 }
 
-export async function runJob(job: WebJob, body: WebJobRequest, dependencies: WebJobRunnerDependencies = {}): Promise<void> {
+export async function runJob(
+  job: WebJob,
+  body: WebJobRequest,
+  dependencies: WebJobRunnerDependencies = {},
+): Promise<void> {
   try {
     updateJob(job.id, { status: 'running' });
     appendJobLog(job.id, 'info', `开始任务：${job.type}`);
@@ -80,12 +88,6 @@ export async function runJob(job: WebJob, body: WebJobRequest, dependencies: Web
         break;
       case 'item-collection':
         await runItemCollection(job, body);
-        break;
-      case 'ingest-plaintext':
-        await runPlaintextIngest(job, body);
-        break;
-      case 'ingest-plaintext-actors':
-        await runPlaintextActorIngest(job, body);
         break;
       case 'ingest-items':
         await runItemIngest(job, body);
@@ -142,14 +144,15 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
     iconOptions: optionIconOptions(body.options),
   });
 
-  const file = result.status === 'accepted'
-    ? addJobFile(job.id, {
-        path: outputPath,
-        fileName: basename(outputPath),
-        contentType: 'application/json; charset=utf-8',
-        label: result.name || basename(outputPath),
-      })
-    : undefined;
+  const file =
+    result.status === 'accepted'
+      ? addJobFile(job.id, {
+          path: outputPath,
+          fileName: basename(outputPath),
+          contentType: 'application/json; charset=utf-8',
+          label: result.name || basename(outputPath),
+        })
+      : undefined;
   if (result.status === 'accepted' && result.iconReviewPath) {
     addJobFile(job.id, {
       path: result.iconReviewPath,
@@ -158,12 +161,22 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
       label: 'v14 图标审阅报告',
     });
   }
-  finishJob(job.id, result.status === 'accepted' ? 'succeeded' : result.status, {
-    ...summaryForConversion(result),
-    downloadUrl: file?.downloadUrl ?? '',
-  }, result.warnings, result.status === 'failed'
-    ? [{ error: result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; ') }]
-    : []);
+  finishJob(
+    job.id,
+    result.status === 'accepted' ? 'succeeded' : result.status,
+    {
+      ...summaryForConversion(result),
+      downloadUrl: file?.downloadUrl ?? '',
+    },
+    result.warnings,
+    result.status === 'failed'
+      ? [
+          {
+            error: result.diagnostics.map((entry) => `[${entry.code}] ${entry.message}`).join('; '),
+          },
+        ]
+      : [],
+  );
 }
 
 async function runDocumentConvert(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -192,32 +205,42 @@ async function runDocumentConvert(job: WebJob, body: WebJobRequest): Promise<voi
       label: file.label,
     });
   }
-  const status: WebJobStatus = result.status === 'succeeded' || result.status === 'extracted'
-    ? 'succeeded'
-    : result.status;
-  finishJob(job.id, status, {
-    documentStatus: result.status,
-    stage: result.stage,
-    runId: result.runId,
-    pageCount: result.pageCount,
-    candidates: result.candidates.map((candidate) => ({
-      id: candidate.id,
-      label: candidate.label,
-      pageNumber: candidate.pageNumber,
-      status: candidate.status,
-      confidence: candidate.confidence,
-      reason: candidate.reason,
+  const status: WebJobStatus =
+    result.status === 'succeeded' || result.status === 'extracted' ? 'succeeded' : result.status;
+  finishJob(
+    job.id,
+    status,
+    {
+      documentStatus: result.status,
+      stage: result.stage,
+      runId: result.runId,
+      pageCount: result.pageCount,
+      candidates: result.candidates.map((candidate) => ({
+        id: candidate.id,
+        label: candidate.label,
+        pageNumber: candidate.pageNumber,
+        status: candidate.status,
+        confidence: candidate.confidence,
+        reason: candidate.reason,
+      })),
+      selectedCandidateIds: result.selectedCandidateIds,
+      translatedCandidates: result.translatedCandidates.map((candidate) => ({
+        candidateId: candidate.candidateId,
+        status: candidate.status,
+        warnings: candidate.warnings,
+      })),
+      rawMarkdownPath: basename(result.rawMarkdownPath),
+      translatedMarkdownPath: result.translatedMarkdownPath
+        ? basename(result.translatedMarkdownPath)
+        : undefined,
+      failures: result.failures,
+    },
+    result.warnings,
+    result.failures.map((failure) => ({
+      error: failure.error,
+      file: failure.candidateId,
     })),
-    selectedCandidateIds: result.selectedCandidateIds,
-    translatedCandidates: result.translatedCandidates.map((candidate) => ({
-      candidateId: candidate.candidateId,
-      status: candidate.status,
-      warnings: candidate.warnings,
-    })),
-    rawMarkdownPath: basename(result.rawMarkdownPath),
-    translatedMarkdownPath: result.translatedMarkdownPath ? basename(result.translatedMarkdownPath) : undefined,
-    failures: result.failures,
-  }, result.warnings, result.failures.map((failure) => ({ error: failure.error, file: failure.candidateId })));
+  );
 }
 
 async function runMonsterCollection(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -260,60 +283,12 @@ async function runItemCollection(job: WebJob, body: WebJobRequest): Promise<void
   finishJob(job.id, result.status, result, result.warnings, result.failures);
 }
 
-async function runPlaintextIngest(job: WebJob, body: WebJobRequest): Promise<void> {
-  const sourcePath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'plaintext.md'), requireContent(body));
-  setJobProgress(job.id, 1, 2, '拆分 plaintext 到项目 Markdown');
-  const result = await new PlainTextIngestionWorkflow().ingest({
-    sourcePath,
-    emitDir: join(jobOutputDir(job.id), 'emit'),
-    dryRun: false,
-    enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
-  });
-  if (result.files.length === 0) throw new Error('Legacy plaintext ingestion detected 0 monsters.');
-  registerFilesUnder(job.id, jobOutputDir(job.id), ['.md', '.json', '.jsonl']);
-  finishJob(job.id, 'succeeded', {
-    sourcePath: result.sourcePath,
-    emitDir: result.emitDir,
-    fileCount: result.files.length,
-    usedAi: result.usedAi,
-  }, [], []);
-}
-
-async function runPlaintextActorIngest(job: WebJob, body: WebJobRequest): Promise<void> {
-  const sourcePath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'plaintext.md'), requireContent(body));
-  const vaultPath = join(jobDir(job.id), 'vault');
-  const imageSetup = imageAssetsForJob(job.id, body.options);
-  setJobProgress(job.id, 1, 2, '拆分 plaintext 并同步生成 Actor JSON');
-  const fvttVersion = optionFvttVersion(body.options);
-  const result = await new PlainTextActorWorkflow().ingestActors({
-    sourcePath,
-    vaultPath,
-    dryRun: false,
-    enableAiNormalize: optionBoolean(body.options, 'enableAiNormalize'),
-    fvttVersion,
-    effectProfile: optionEffectProfile(body.options, fvttVersion),
-    iconOptions: optionIconOptions(body.options),
-    imageAssets: imageSetup.imageAssets,
-  });
-  if (result.markdown.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
-  registerFilesUnder(job.id, vaultPath, ['.md', '.json', '.jsonl', '.webp', '.png', '.jpg', '.jpeg']);
-  const imageWarnings = [
-    ...imageSetup.warnings,
-    ...imageAssetWarningsForResult(body.options, result.sync.warnings),
-  ];
-  finishJob(job.id, result.sync.failed > 0 ? 'partial' : 'succeeded', {
-    markdownFiles: result.markdown.files.length,
-    processed: result.sync.processed,
-    skipped: result.sync.skipped,
-    failed: result.sync.failed,
-    imageMode: imageSetup.imageAssets?.mode ?? 'none',
-    imagePublicBaseUrl: imageSetup.imageAssets?.publicBaseUrl,
-    imageWarnings: imageWarnings.length,
-  }, imageWarnings, result.sync.failures.map((failure) => ({ file: failure.input, error: failure.error })));
-}
-
 async function runItemIngest(job: WebJob, body: WebJobRequest): Promise<void> {
-  const sourcePath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'items.md'), requireContent(body));
+  const sourcePath = writeJobInput(
+    job.id,
+    markdownFileName(body.fileName ?? 'items.md'),
+    requireContent(body),
+  );
   setJobProgress(job.id, 1, 2, '拆分物品合集到项目 Markdown');
   const result = await new ItemsIngestionWorkflow().ingest({
     sourcePath,
@@ -321,17 +296,27 @@ async function runItemIngest(job: WebJob, body: WebJobRequest): Promise<void> {
     dryRun: false,
   });
   registerFilesUnder(job.id, jobOutputDir(job.id), ['.md']);
-  finishJob(job.id, 'succeeded', {
-    fileCount: result.files.length,
-    emitDir: result.emitDir,
-  }, [], []);
+  finishJob(
+    job.id,
+    'succeeded',
+    {
+      fileCount: result.files.length,
+      emitDir: result.emitDir,
+    },
+    [],
+    [],
+  );
 }
 
 async function runTranslateJson(job: WebJob, body: WebJobRequest): Promise<void> {
   if (!hasTranslationConfig()) {
     throw new Error('VPS 未配置 TRANSLATION_API_KEY 或 OPENAI_API_KEY，无法运行翻译任务。');
   }
-  const sourcePath = writeJobInput(job.id, jsonFileName(body.fileName ?? 'input.json'), requireContent(body));
+  const sourcePath = writeJobInput(
+    job.id,
+    jsonFileName(body.fileName ?? 'input.json'),
+    requireContent(body),
+  );
   setJobProgress(job.id, 1, 2, '翻译 JSON');
   const result = await new JsonTranslationSyncWorkflow().sync({
     dirPath: jobInputDir(job.id),
@@ -342,7 +327,13 @@ async function runTranslateJson(job: WebJob, body: WebJobRequest): Promise<void>
     contentType: 'application/json; charset=utf-8',
     label: '翻译后的 JSON',
   });
-  finishJob(job.id, result.failures.length > 0 ? 'partial' : 'succeeded', result, [], result.failures);
+  finishJob(
+    job.id,
+    result.failures.length > 0 ? 'partial' : 'succeeded',
+    result,
+    [],
+    result.failures,
+  );
 }
 
 async function runVaultSync(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -367,15 +358,21 @@ async function runVaultSync(job: WebJob, body: WebJobRequest): Promise<void> {
     ...imageSetup.warnings,
     ...imageAssetWarningsForResult(body.options, result.warnings),
   ];
-  finishJob(job.id, result.failed > 0 ? 'partial' : 'succeeded', {
-    ...result,
-    imageMode: imageSetup.imageAssets?.mode ?? 'none',
-    imagePublicBaseUrl: imageSetup.imageAssets?.publicBaseUrl,
-    imageWarnings: imageWarnings.length,
-  }, imageWarnings, result.failures.map((failure) => ({
-    file: failure.input,
-    error: failure.error,
-  })));
+  finishJob(
+    job.id,
+    result.failed > 0 ? 'partial' : 'succeeded',
+    {
+      ...result,
+      imageMode: imageSetup.imageAssets?.mode ?? 'none',
+      imagePublicBaseUrl: imageSetup.imageAssets?.publicBaseUrl,
+      imageWarnings: imageWarnings.length,
+    },
+    imageWarnings,
+    result.failures.map((failure) => ({
+      file: failure.input,
+      error: failure.error,
+    })),
+  );
 }
 
 async function runGoddessFantasyCrawl(job: WebJob, body: WebJobRequest): Promise<void> {
@@ -384,7 +381,12 @@ async function runGoddessFantasyCrawl(job: WebJob, body: WebJobRequest): Promise
   const crawlMode = optionCrawlMode(body.options);
   const crawlOutDir = Bun.env.FVTT_WEB_CRAWL_OUT_DIR;
 
-  setJobProgress(job.id, 1, 2, crawlMode === 'full' ? '完全重爬 Goddess Fantasy 版块' : '增量爬取 Goddess Fantasy 版块');
+  setJobProgress(
+    job.id,
+    1,
+    2,
+    crawlMode === 'full' ? '完全重爬 Goddess Fantasy 版块' : '增量爬取 Goddess Fantasy 版块',
+  );
   const result = await runGoddessFantasyBoardCrawl({
     boardUrl,
     outDir: crawlOutDir,
@@ -406,7 +408,11 @@ async function runGoddessFantasyCrawl(job: WebJob, body: WebJobRequest): Promise
 }
 
 async function runRecordsToPlaintextJob(job: WebJob, body: WebJobRequest): Promise<void> {
-  const recordsPath = writeJobInput(job.id, jsonFileName(body.fileName ?? 'records.json'), requireContent(body));
+  const recordsPath = writeJobInput(
+    job.id,
+    jsonFileName(body.fileName ?? 'records.json'),
+    requireContent(body),
+  );
   setJobProgress(job.id, 1, 2, 'records.json 转 plaintext');
   const result = runRecordsToPlaintext({
     recordsPath,
@@ -417,15 +423,23 @@ async function runRecordsToPlaintextJob(job: WebJob, body: WebJobRequest): Promi
     dryRun: optionBoolean(body.options, 'dryRun'),
   });
   registerFilesUnder(job.id, jobOutputDir(job.id), ['.md', '.json', '.jsonl']);
-  finishJob(job.id, result.failures.length > 0 ? 'partial' : 'succeeded', {
-    recordsRead: result.recordsRead,
-    recordsMatched: result.recordsMatched,
-    blocksEmitted: result.blocksEmitted,
-    filesWritten: result.filesWritten,
-    skipped: result.skipped,
-    warnings: result.warnings.length,
-    failures: result.failures.length,
-  }, result.warnings.map((warning) => warning.message), result.failures);
+  finishJob(
+    job.id,
+    result.failures.length > 0 ? 'partial' : 'succeeded',
+    {
+      artifactRole: 'audit-only',
+      feedsJsonGeneration: false,
+      recordsRead: result.recordsRead,
+      recordsMatched: result.recordsMatched,
+      blocksEmitted: result.blocksEmitted,
+      filesWritten: result.filesWritten,
+      skipped: result.skipped,
+      warnings: result.warnings.length,
+      failures: result.failures.length,
+    },
+    result.warnings.map((warning) => warning.message),
+    result.failures,
+  );
 }
 
 function finishJob(
@@ -433,7 +447,12 @@ function finishJob(
   status: WebJobStatus,
   summary: object,
   warnings: string[],
-  failures: Array<{ index?: number; sourceName?: string; file?: string; error: string }>,
+  failures: Array<{
+    index?: number;
+    sourceName?: string;
+    file?: string;
+    error: string;
+  }>,
 ): void {
   setJobProgress(id, 1, 1, status === 'failed' ? '失败' : '完成');
   appendJobLog(id, status === 'failed' ? 'error' : 'success', statusText(status));
@@ -451,25 +470,34 @@ async function runAiMonsterIntake(
   injectedProvider?: MonsterIntakeAiProvider,
 ): Promise<void> {
   const source = requireContent(body);
-  const inputPath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'monster-intake.txt'), source);
+  const inputPath = writeJobInput(
+    job.id,
+    markdownFileName(body.fileName ?? 'monster-intake.txt'),
+    source,
+  );
   setJobProgress(job.id, 1, 4, 'AI 发现与结构化提取');
   const audit: IntakeProviderAuditEvent[] = [];
-  const provider = injectedProvider ?? createMonsterIntakeProvider({
-    audit: (event) => audit.push(event),
-  });
+  const provider =
+    injectedProvider ??
+    createMonsterIntakeProvider({
+      audit: (event) => audit.push(event),
+    });
   const fvttVersion = optionFvttVersion(body.options);
   if (fvttVersion !== '12' && fvttVersion !== '14') {
     throw new Error('AI monster intake only supports Foundry v12 or v14.');
   }
-  const result = await runMonsterIntake({
-    source,
-    sourceName: basename(inputPath),
-    runRoot: join(jobDir(job.id), 'intake-runs'),
-    vaultPath: join(jobDir(job.id), 'vault'),
-    fvttVersion,
-    effectProfile: optionEffectProfile(body.options, fvttVersion),
-    iconOptions: optionIconOptions(body.options),
-  }, provider);
+  const result = await runMonsterIntake(
+    {
+      source,
+      sourceName: basename(inputPath),
+      runRoot: join(jobDir(job.id), 'intake-runs'),
+      vaultPath: join(jobDir(job.id), 'vault'),
+      fvttVersion,
+      effectProfile: optionEffectProfile(body.options, fvttVersion),
+      iconOptions: optionIconOptions(body.options),
+    },
+    provider,
+  );
   writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
   registerIntakeFiles(job.id, result);
   finishIntakeJob(job.id, result);
@@ -481,7 +509,11 @@ async function runAiItemIntake(
   injectedProvider?: ItemIntakeAiProvider,
 ): Promise<void> {
   const source = requireContent(body);
-  const inputPath = writeJobInput(job.id, markdownFileName(body.fileName ?? 'item-intake.txt'), source);
+  const inputPath = writeJobInput(
+    job.id,
+    markdownFileName(body.fileName ?? 'item-intake.txt'),
+    source,
+  );
   const fvttVersion = optionFvttVersion(body.options);
   const effectProfile = optionEffectProfile(body.options, fvttVersion);
   if (fvttVersion !== '14' || effectProfile !== 'core') {
@@ -489,16 +521,20 @@ async function runAiItemIntake(
   }
   setJobProgress(job.id, 1, 4, 'AI 发现、证据提取与 Item 终审');
   const audit: IntakeProviderAuditEvent[] = [];
-  const provider = injectedProvider ?? createItemIntakeProvider({ audit: (event) => audit.push(event) });
-  const result = await runItemIntake({
-    source,
-    sourceName: basename(inputPath),
-    runRoot: join(jobDir(job.id), 'item-intake-runs'),
-    vaultPath: join(jobDir(job.id), 'vault'),
-    fvttVersion: '14',
-    effectProfile: 'core',
-    iconOptions: optionIconOptions(body.options),
-  }, provider);
+  const provider =
+    injectedProvider ?? createItemIntakeProvider({ audit: (event) => audit.push(event) });
+  const result = await runItemIntake(
+    {
+      source,
+      sourceName: basename(inputPath),
+      runRoot: join(jobDir(job.id), 'item-intake-runs'),
+      vaultPath: join(jobDir(job.id), 'vault'),
+      fvttVersion: '14',
+      effectProfile: 'core',
+      iconOptions: optionIconOptions(body.options),
+    },
+    provider,
+  );
   writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
   registerItemIntakeFiles(job.id, result);
   finishItemIntakeJob(job.id, result);
@@ -509,7 +545,8 @@ export async function resumeAiMonsterIntakeJob(
   decisions: IntakeDecision[],
   injectedProvider?: MonsterIntakeAiProvider,
 ): Promise<void> {
-  if (job.type !== 'ai-monster-intake') throw new Error('Only ai-monster-intake jobs can be resumed.');
+  if (job.type !== 'ai-monster-intake')
+    throw new Error('Only ai-monster-intake jobs can be resumed.');
   const runId = String(job.summary?.runId ?? '');
   const sourceSha256 = String(job.summary?.sourceSha256 ?? '');
   if (!runId || !sourceSha256) throw new Error('AI monster intake job has no resumable bundle.');
@@ -519,10 +556,17 @@ export async function resumeAiMonsterIntakeJob(
   updateJob(job.id, { status: 'running', files: [], error: undefined });
   setJobProgress(job.id, 1, 4, '应用人工确认并重新完整验收');
   const audit: IntakeProviderAuditEvent[] = [];
-  const provider = injectedProvider ?? createMonsterIntakeProvider({
-    audit: (event) => audit.push(event),
-  });
-  const result = await resumeMonsterIntake(runPath, decisionsPath, provider, join(jobDir(job.id), 'vault'));
+  const provider =
+    injectedProvider ??
+    createMonsterIntakeProvider({
+      audit: (event) => audit.push(event),
+    });
+  const result = await resumeMonsterIntake(
+    runPath,
+    decisionsPath,
+    provider,
+    join(jobDir(job.id), 'vault'),
+  );
   writeFileSync(join(runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
   registerIntakeFiles(job.id, result);
   finishIntakeJob(job.id, result);
@@ -530,35 +574,59 @@ export async function resumeAiMonsterIntakeJob(
 
 function finishIntakeJob(id: string, result: Awaited<ReturnType<typeof runMonsterIntake>>): void {
   const status: WebJobStatus = result.status === 'dry_run' ? 'failed' : result.status;
-  finishJob(id, status, {
-    runId: result.runId,
-    sourceSha256: result.sourceSha256,
-    discoveryCount: result.discoveryCount,
-    creatures: result.creatures.map((creature) => ({
-      id: creature.id,
-      label: creature.label,
-      status: creature.status,
-      calls: creature.calls,
-      findings: creature.findings,
-      spellResolution: {
-        required: creature.spellResolution.required,
-        status: creature.spellResolution.status,
-        spellCount: creature.spellResolution.spellCount,
-        ...(creature.spellResolution.manifestId ? { manifestId: creature.spellResolution.manifestId } : {}),
-      },
-    })),
-  }, result.creatures.flatMap((creature) => creature.findings.filter((finding) => !finding.blocking).map((finding) => finding.message)),
-  result.creatures.filter((creature) => creature.status === 'failed').map((creature) => ({
-    sourceName: creature.label,
-    error: creature.findings.map((finding) => finding.message).join('; '),
-  })));
+  finishJob(
+    id,
+    status,
+    {
+      runId: result.runId,
+      sourceSha256: result.sourceSha256,
+      discoveryCount: result.discoveryCount,
+      creatures: result.creatures.map((creature) => ({
+        id: creature.id,
+        label: creature.label,
+        status: creature.status,
+        calls: creature.calls,
+        findings: creature.findings,
+        spellResolution: {
+          required: creature.spellResolution.required,
+          status: creature.spellResolution.status,
+          spellCount: creature.spellResolution.spellCount,
+          ...(creature.spellResolution.manifestId
+            ? { manifestId: creature.spellResolution.manifestId }
+            : {}),
+        },
+      })),
+    },
+    result.creatures.flatMap((creature) =>
+      creature.findings.filter((finding) => !finding.blocking).map((finding) => finding.message),
+    ),
+    result.creatures
+      .filter((creature) => creature.status === 'failed')
+      .map((creature) => ({
+        sourceName: creature.label,
+        error: creature.findings.map((finding) => finding.message).join('; '),
+      })),
+  );
 }
 
-function registerIntakeFiles(id: string, result: Awaited<ReturnType<typeof runMonsterIntake>>): void {
+function registerIntakeFiles(
+  id: string,
+  result: Awaited<ReturnType<typeof runMonsterIntake>>,
+): void {
   const common = [
     [join(result.runPath, 'source.txt'), 'source.txt', 'text/plain; charset=utf-8', '原始文本'],
-    [join(result.runPath, 'discovery.json'), 'discovery.json', 'application/json; charset=utf-8', '怪物边界'],
-    [join(result.runPath, 'decisions.template.json'), 'decisions.template.json', 'application/json; charset=utf-8', '确认模板'],
+    [
+      join(result.runPath, 'discovery.json'),
+      'discovery.json',
+      'application/json; charset=utf-8',
+      '怪物边界',
+    ],
+    [
+      join(result.runPath, 'decisions.template.json'),
+      'decisions.template.json',
+      'application/json; charset=utf-8',
+      '确认模板',
+    ],
   ] as const;
   for (const [path, fileName, contentType, label] of common) {
     if (existsSync(path)) addJobFile(id, { path, fileName, contentType, label });
@@ -567,45 +635,87 @@ function registerIntakeFiles(id: string, result: Awaited<ReturnType<typeof runMo
     for (const [name, label, contentType] of [
       ['intake-ir.json', `${creature.label} · IR`, 'application/json; charset=utf-8'],
       ['standard.md', `${creature.label} · 候选 Markdown`, 'text/markdown; charset=utf-8'],
-      ['deterministic-report.json', `${creature.label} · 确定性报告`, 'application/json; charset=utf-8'],
+      [
+        'deterministic-report.json',
+        `${creature.label} · 确定性报告`,
+        'application/json; charset=utf-8',
+      ],
       ['deterministic-report.md', `${creature.label} · 核对报告`, 'text/markdown; charset=utf-8'],
       ['ai-review.json', `${creature.label} · AI 终审`, 'application/json; charset=utf-8'],
     ] as const) {
       const path = join(creature.bundlePath, name);
-      if (existsSync(path)) addJobFile(id, { path, fileName: `${creature.id}-${name}`, contentType, label });
+      if (existsSync(path))
+        addJobFile(id, {
+          path,
+          fileName: `${creature.id}-${name}`,
+          contentType,
+          label,
+        });
     }
     if (creature.status === 'accepted' && creature.actorPath && creature.markdownPath) {
-      addJobFile(id, { path: creature.actorPath, fileName: `${creature.id}-actor.json`, contentType: 'application/json; charset=utf-8', label: `${creature.label} · Actor JSON` });
-      addJobFile(id, { path: creature.markdownPath, fileName: `${creature.id}.md`, contentType: 'text/markdown; charset=utf-8', label: `${creature.label} · 标准 Markdown` });
+      addJobFile(id, {
+        path: creature.actorPath,
+        fileName: `${creature.id}-actor.json`,
+        contentType: 'application/json; charset=utf-8',
+        label: `${creature.label} · Actor JSON`,
+      });
+      addJobFile(id, {
+        path: creature.markdownPath,
+        fileName: `${creature.id}.md`,
+        contentType: 'text/markdown; charset=utf-8',
+        label: `${creature.label} · 标准 Markdown`,
+      });
     }
   }
 }
 
 function finishItemIntakeJob(id: string, result: Awaited<ReturnType<typeof runItemIntake>>): void {
   const status: WebJobStatus = result.status === 'dry_run' ? 'failed' : result.status;
-  finishJob(id, status, {
-    runId: result.runId,
-    sourceSha256: result.sourceSha256,
-    discoveryCount: result.discoveryCount,
-    items: result.items.map((item) => ({
-      id: item.id,
-      label: item.label,
-      status: item.status,
-      calls: item.calls,
-      findings: item.findings,
-    })),
-  }, result.items.flatMap((item) => item.findings.filter((finding) => !finding.blocking).map((finding) => finding.message)),
-  result.items.filter((item) => item.status === 'failed').map((item) => ({
-    sourceName: item.label,
-    error: item.findings.map((finding) => finding.message).join('; '),
-  })));
+  finishJob(
+    id,
+    status,
+    {
+      runId: result.runId,
+      sourceSha256: result.sourceSha256,
+      discoveryCount: result.discoveryCount,
+      items: result.items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        status: item.status,
+        calls: item.calls,
+        findings: item.findings,
+      })),
+    },
+    result.items.flatMap((item) =>
+      item.findings.filter((finding) => !finding.blocking).map((finding) => finding.message),
+    ),
+    result.items
+      .filter((item) => item.status === 'failed')
+      .map((item) => ({
+        sourceName: item.label,
+        error: item.findings.map((finding) => finding.message).join('; '),
+      })),
+  );
 }
 
-function registerItemIntakeFiles(id: string, result: Awaited<ReturnType<typeof runItemIntake>>): void {
+function registerItemIntakeFiles(
+  id: string,
+  result: Awaited<ReturnType<typeof runItemIntake>>,
+): void {
   for (const [path, fileName, contentType, label] of [
     [join(result.runPath, 'source.txt'), 'source.txt', 'text/plain; charset=utf-8', '原始文本'],
-    [join(result.runPath, 'discovery.json'), 'discovery.json', 'application/json; charset=utf-8', '物品边界'],
-    [join(result.runPath, 'decisions.template.json'), 'decisions.template.json', 'application/json; charset=utf-8', '确认模板'],
+    [
+      join(result.runPath, 'discovery.json'),
+      'discovery.json',
+      'application/json; charset=utf-8',
+      '物品边界',
+    ],
+    [
+      join(result.runPath, 'decisions.template.json'),
+      'decisions.template.json',
+      'application/json; charset=utf-8',
+      '确认模板',
+    ],
   ] as const) {
     if (existsSync(path)) addJobFile(id, { path, fileName, contentType, label });
   }
@@ -613,15 +723,35 @@ function registerItemIntakeFiles(id: string, result: Awaited<ReturnType<typeof r
     for (const [name, label, contentType] of [
       ['intake-ir.json', `${item.label} · IR`, 'application/json; charset=utf-8'],
       ['standard.md', `${item.label} · 候选 Markdown`, 'text/markdown; charset=utf-8'],
-      ['deterministic-report.json', `${item.label} · 确定性报告`, 'application/json; charset=utf-8'],
+      [
+        'deterministic-report.json',
+        `${item.label} · 确定性报告`,
+        'application/json; charset=utf-8',
+      ],
       ['ai-review.json', `${item.label} · AI 终审`, 'application/json; charset=utf-8'],
     ] as const) {
       const path = join(item.bundlePath, name);
-      if (existsSync(path)) addJobFile(id, { path, fileName: `${item.id}-${name}`, contentType, label });
+      if (existsSync(path))
+        addJobFile(id, {
+          path,
+          fileName: `${item.id}-${name}`,
+          contentType,
+          label,
+        });
     }
     if (item.status === 'accepted' && item.itemPath && item.markdownPath) {
-      addJobFile(id, { path: item.itemPath, fileName: `${item.id}-item.json`, contentType: 'application/json; charset=utf-8', label: `${item.label} · Item JSON` });
-      addJobFile(id, { path: item.markdownPath, fileName: `${item.id}.md`, contentType: 'text/markdown; charset=utf-8', label: `${item.label} · 标准 Markdown` });
+      addJobFile(id, {
+        path: item.itemPath,
+        fileName: `${item.id}-item.json`,
+        contentType: 'application/json; charset=utf-8',
+        label: `${item.label} · Item JSON`,
+      });
+      addJobFile(id, {
+        path: item.markdownPath,
+        fileName: `${item.id}.md`,
+        contentType: 'text/markdown; charset=utf-8',
+        label: `${item.label} · 标准 Markdown`,
+      });
     }
   }
 }
@@ -641,7 +771,10 @@ function registerFilesUnder(id: string, root: string, allowedExts: string[]): vo
 function imageAssetsForJob(
   jobId: string,
   options: Record<string, unknown> | undefined,
-): { imageAssets: ReturnType<typeof buildWebImageAssetOptions>; warnings: string[] } {
+): {
+  imageAssets: ReturnType<typeof buildWebImageAssetOptions>;
+  warnings: string[];
+} {
   if (options?.imageAssetsEnabled !== true) {
     return { imageAssets: undefined, warnings: [] };
   }
@@ -693,16 +826,17 @@ function requireContent(body: WebJobRequest): string {
 }
 
 function optionFvttVersion(options: Record<string, unknown> | undefined): FvttTargetVersion {
-  return parseFvttTargetVersion(options?.fvttVersion ?? '12');
+  return parseFvttTargetVersion(options?.fvttVersion ?? '14');
 }
 
 function optionEffectProfile(
   options: Record<string, unknown> | undefined,
-  fvttVersion: FvttTargetVersion = '12',
+  fvttVersion: FvttTargetVersion = '14',
 ): EffectProfile {
-  const profile = options?.effectProfile === 'modded-v12' || options?.effectProfile === 'modded-v14'
-    ? options.effectProfile
-    : 'core';
+  const profile =
+    options?.effectProfile === 'modded-v12' || options?.effectProfile === 'modded-v14'
+      ? options.effectProfile
+      : 'core';
   assertEffectProfileForTarget(fvttVersion, profile);
   return profile;
 }
@@ -720,7 +854,10 @@ function optionBoolean(options: Record<string, unknown> | undefined, key: string
   return options?.[key] === true;
 }
 
-function optionNumber(options: Record<string, unknown> | undefined, key: string): number | undefined {
+function optionNumber(
+  options: Record<string, unknown> | undefined,
+  key: string,
+): number | undefined {
   const value = options?.[key];
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
   if (typeof value === 'string' && value.trim()) {
@@ -730,33 +867,49 @@ function optionNumber(options: Record<string, unknown> | undefined, key: string)
   return undefined;
 }
 
-function optionString(options: Record<string, unknown> | undefined, key: string): string | undefined {
+function optionString(
+  options: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
   const value = options?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function optionCandidateIds(options: Record<string, unknown> | undefined): string[] | undefined {
   const value = options?.candidateIds;
-  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
-  if (typeof value === 'string' && value.trim()) return value.split(',').map((item) => item.trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value.filter(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0,
+    );
+  if (typeof value === 'string' && value.trim())
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
   return undefined;
 }
 
-function documentEngine(options: Record<string, unknown> | undefined): 'auto' | 'native' | 'paddleocr' {
+function documentEngine(
+  options: Record<string, unknown> | undefined,
+): 'auto' | 'native' | 'paddleocr' {
   const value = options?.engine;
   if (value === undefined || value === 'auto') return 'auto';
   if (value === 'native' || value === 'paddleocr') return value;
   throw new Error(`Invalid document engine: ${String(value)}`);
 }
 
-function documentLanguage(options: Record<string, unknown> | undefined): 'auto' | 'en' | 'zh-CN' | 'mixed' {
+function documentLanguage(
+  options: Record<string, unknown> | undefined,
+): 'auto' | 'en' | 'zh-CN' | 'mixed' {
   const value = options?.language;
   if (value === undefined || value === 'auto') return 'auto';
   if (value === 'en' || value === 'zh-CN' || value === 'mixed') return value;
   throw new Error(`Invalid document language: ${String(value)}`);
 }
 
-function optionContentType(options: Record<string, unknown> | undefined): 'all' | 'monster' | 'unknown' | undefined {
+function optionContentType(
+  options: Record<string, unknown> | undefined,
+): 'all' | 'monster' | 'unknown' | undefined {
   const value = options?.contentType;
   if (value === 'all' || value === 'monster' || value === 'unknown') return value;
   return undefined;

@@ -336,7 +336,10 @@ export class YamlParser {
 
   private parseChallengeRating(value: unknown): number {
     const normalized = String(value ?? '').trim();
-    const fraction = normalized.match(/^(\d+)\s*\/\s*(\d+)$/);
+    // Standard source Markdown commonly writes CR as "1/4 (50 XP)".
+    // Read the fraction before the optional XP note so it is not silently
+    // coerced to 1 by parseFloat.
+    const fraction = normalized.match(/^(\d+)\s*\/\s*(\d+)(?:\s*\(|\s*$)/);
     if (fraction?.[1] && fraction[2]) {
       const numerator = Number.parseInt(fraction[1], 10);
       const denominator = Number.parseInt(fraction[2], 10);

@@ -490,27 +490,15 @@ export class ItemParser implements ItemParserStrategy {
   }
 
   private parseName(rawData: Record<string, unknown>): string {
-    const name = rawData['名称'];
-    if (typeof name === 'string' && name.trim()) {
-      return name.trim();
-    }
-    return 'Unknown Item';
+    return this.readString(rawData, ['名称', 'name']) ?? 'Unknown Item';
   }
 
   private parseEnglishName(rawData: Record<string, unknown>): string | undefined {
-    const englishName = rawData['英文名'];
-    if (typeof englishName === 'string' && englishName.trim()) {
-      return englishName.trim();
-    }
-    return undefined;
+    return this.readString(rawData, ['英文名', 'englishName', 'english_name']);
   }
 
   private parseType(rawData: Record<string, unknown>): string | undefined {
-    const type = rawData['类型'];
-    if (typeof type === 'string' && type.trim()) {
-      return type.trim();
-    }
-    return undefined;
+    return this.readString(rawData, ['类型', 'type', 'itemType', 'item_type']);
   }
 
   private parseImage(rawData: Record<string, unknown>): string | undefined {
@@ -607,14 +595,19 @@ export class ItemParser implements ItemParserStrategy {
   }
 
   private parseRarity(rawData: Record<string, unknown>): ItemRarity | undefined {
-    const rarity = rawData['稀有度'];
-    if (typeof rarity !== 'string') {
-      return undefined;
-    }
-    return this.normalizeRarity(rarity);
+    const rarity = this.readString(rawData, ['稀有度', 'rarity']);
+    return rarity ? this.normalizeRarity(rarity) : undefined;
   }
 
   private parseAttunement(rawData: Record<string, unknown>): AttunementType | undefined {
+    const explicitAttunement = this.readString(rawData, ['attunement']);
+    if (explicitAttunement) {
+      const normalized = explicitAttunement.toLowerCase();
+      if (normalized === 'required' || normalized === 'optional' || normalized === 'none') {
+        return normalized;
+      }
+    }
+
     // Check require-attunement field
     const requireAttunement = rawData['require-attunement'];
     if (requireAttunement === true || requireAttunement === 'true' || requireAttunement === 'yes') {
@@ -627,6 +620,16 @@ export class ItemParser implements ItemParserStrategy {
       return 'required';
     }
 
+    return undefined;
+  }
+
+  private readString(rawData: Record<string, unknown>, keys: string[]): string | undefined {
+    for (const key of keys) {
+      const value = rawData[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
     return undefined;
   }
 
@@ -770,7 +773,15 @@ export class ItemParser implements ItemParserStrategy {
     }
 
     if (descriptionLines.length === 0) {
-      return undefined;
+      // The Web workbench also accepts concise, frontmatter-first Item
+      // Markdown. If it has ordinary prose but omits the optional display
+      // header and italic metadata line, preserving that prose is safer than
+      // silently emitting an empty description.
+      const plainBody = lines
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join('\n');
+      return plainBody || undefined;
     }
 
     return descriptionLines.join('\n');

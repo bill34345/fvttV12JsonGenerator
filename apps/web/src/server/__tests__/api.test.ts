@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from '
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { handleApiRequest, TEMP_WEB_DIR } from '../api';
+import { getWebSecurityConfig } from '../security/config';
 import {
   cleanupExpiredJobs,
   createJob,
@@ -26,6 +27,7 @@ beforeEach(() => {
   delete Bun.env.FVTT_WEB_PUBLIC_MODE;
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_SESSION_SECRET;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
@@ -48,6 +50,7 @@ afterEach(() => {
   delete Bun.env.FVTT_WEB_PUBLIC_MODE;
   delete Bun.env.FVTT_WEB_HOST;
   delete Bun.env.FVTT_WEB_AUTH_TOKEN;
+  delete Bun.env.FVTT_WEB_SESSION_SECRET;
   delete Bun.env.FVTT_WEB_TRUSTED_PROXIES;
   delete Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT;
   delete Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT;
@@ -76,13 +79,59 @@ afterEach(() => {
 });
 
 describe('web API', () => {
+  it('downloads the fixed Companion artifact only when enabled and available', async () => {
+    mkdirSync(TEMP_TEST_DIR, { recursive: true });
+    const artifactPath = join(TEMP_TEST_DIR, 'fvtt-ai-companion.exe');
+    writeFileSync(artifactPath, Buffer.from('companion-fixture'));
+    const securityConfig = getWebSecurityConfig({ FVTT_WEB_CODEX_COMPANION_ENABLED: '1' });
+
+    const response = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: artifactPath,
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toContain('fvtt-ai-companion.exe');
+    expect(await response.text()).toBe('companion-fixture');
+
+    const missing = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: join(TEMP_TEST_DIR, 'missing.exe'),
+    });
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).error.code).toBe('COMPANION_ARTIFACT_UNAVAILABLE');
+
+    const disabled = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig: getWebSecurityConfig({}),
+      companionArtifactPath: artifactPath,
+    });
+    expect(disabled.status).toBe(503);
+    expect((await disabled.json()).error.code).toBe('COMPANION_DISABLED');
+  });
+
+  it('protects Companion artifact download with the existing public authentication', async () => {
+    const securityConfig = getWebSecurityConfig({
+      FVTT_WEB_PUBLIC_MODE: '1',
+      FVTT_WEB_HOST: '127.0.0.1',
+      FVTT_WEB_AUTH_TOKEN: '0123456789abcdef0123456789abcdef',
+      FVTT_WEB_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+      FVTT_WEB_CODEX_COMPANION_ENABLED: '1',
+    });
+    const missing = await handleApiRequest(new Request('http://localhost/api/ai-companion/download'), {
+      securityConfig,
+      companionArtifactPath: join(TEMP_TEST_DIR, 'missing.exe'),
+    });
+    expect(missing.status).toBe(401);
+    expect((await missing.json()).error.code).toBe('AUTH_REQUIRED');
+  });
+
   it('returns local defaults', async () => {
     const response = await handleApiRequest(new Request('http://localhost/api/files/defaults'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.data.fvttVersion).toBe('12');
+    expect(body.data.fvttVersion).toBe('14');
     expect(body.data.effectProfile).toBe('core');
     expect(body.data.iconMode).toBe('off');
     expect(body.data.outputDir).toContain('temp');
@@ -133,7 +182,10 @@ describe('web API', () => {
   });
 
   it('converts uploaded markdown without writing the vault manifest', async () => {
-    const manifestPath = resolve(process.cwd(), 'obsidian/dnd数据转fvttjson/.fvtt-sync-manifest.json');
+    const manifestPath = resolve(
+      process.cwd(),
+      'obsidian/dnd数据转fvttjson/.fvtt-sync-manifest.json',
+    );
     const before = existsSync(manifestPath) ? readFileSync(manifestPath, 'utf-8') : null;
     const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
 
@@ -228,10 +280,14 @@ describe('web API', () => {
     expect(body.data.effectProfile).toBe('modded-v14');
   });
 
-
   it('verifies source and actor JSON supplied inline', async () => {
     const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
-    const conversion = await (await post('/api/convert/upload', { fileName: 'inline.md', content: source })).json();
+    const conversion = await (
+      await post('/api/convert/upload', {
+        fileName: 'inline.md',
+        content: source,
+      })
+    ).json();
 
     const response = await post('/api/verify', {
       sourceContent: source,
@@ -288,18 +344,102 @@ describe('web API', () => {
     expect(body.error.code).toBe('INVALID_UPLOAD_TYPE');
   });
 
+  it('detects standard Actor and Item Markdown without starting a job', async () => {
+    const actorResponse = await post('/api/conversions/detect', {
+      fileName: 'actor.md',
+      content: readFileSync(
+        resolve(process.cwd(), 'obsidian/dnd数据转fvttjson/input/bonebreaker-dorokor.md'),
+        'utf-8',
+      ),
+    });
+    const actorBody = await actorResponse.json();
+    const itemResponse = await post('/api/conversions/detect', {
+      fileName: 'item.md',
+      content: readFileSync(
+        resolve(process.cwd(), 'obsidian/dnd数据转fvttjson/input/items/骑士之盾.md'),
+        'utf-8',
+      ),
+    });
+    const itemBody = await itemResponse.json();
+
+    expect(actorBody.data).toMatchObject({
+      route: 'single',
+      contentKind: 'actor',
+      confidence: 'high',
+      usesAi: false,
+    });
+    expect(itemBody.data).toMatchObject({
+      route: 'single',
+      contentKind: 'item',
+      confidence: 'high',
+      usesAi: false,
+    });
+    expect(runningJobsTotal()).toBe(0);
+  });
+
+  it('detects collections and keeps AI-only input as an explicit recommendation', async () => {
+    const collectionResponse = await post('/api/conversions/detect', {
+      fileName: 'monsters.md',
+      content: readFileSync(resolve(process.cwd(), 'tests/fixtures/collection-input.md'), 'utf-8'),
+    });
+    const collectionBody = await collectionResponse.json();
+    const rawResponse = await post('/api/conversions/detect', {
+      fileName: 'raw.txt',
+      content: [
+        'Ash Drake',
+        'Armor Class 17',
+        'Hit Points 120',
+        'Challenge 8',
+        'STR: 20 DEX: 12 CON: 18 INT: 6 WIS: 13 CHA: 9',
+        '## Actions',
+      ].join('\n'),
+    });
+    const rawBody = await rawResponse.json();
+
+    expect(collectionBody.data.route).toBe('monster-collection');
+    expect(collectionBody.data.itemCount).toBeGreaterThan(1);
+    expect(rawBody.data).toMatchObject({
+      route: 'ai-monster-intake',
+      contentKind: 'actor',
+      usesAi: true,
+    });
+    expect(runningJobsTotal()).toBe(0);
+  });
+
+  it('returns needs-review instead of guessing an ambiguous text route', async () => {
+    const response = await post('/api/conversions/detect', {
+      fileName: 'notes.txt',
+      content: '这是一段还没有整理完成的资料。',
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({
+      route: 'needs-review',
+      contentKind: 'unknown',
+      confidence: 'low',
+      usesAi: false,
+    });
+    expect(runningJobsTotal()).toBe(0);
+  });
+
   it('accepts binary document uploads, validates the signature, and keeps the source in the job sandbox', async () => {
     const form = new FormData();
-    form.append('file', new File([minimalPdfBytes()], '../../tiny.pdf', {
-      type: 'application/pdf',
-    }));
+    form.append(
+      'file',
+      new File([minimalPdfBytes()], '../../tiny.pdf', {
+        type: 'application/pdf',
+      }),
+    );
     form.append('extractOnly', 'true');
     form.append('engine', 'native');
 
-    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
-      method: 'POST',
-      body: form,
-    }));
+    const response = await handleApiRequest(
+      new Request('http://localhost/api/documents/convert', {
+        method: 'POST',
+        body: form,
+      }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -317,10 +457,12 @@ describe('web API', () => {
     const form = new FormData();
     form.append('file', new File(['not a pdf'], 'bad.pdf', { type: 'application/pdf' }));
 
-    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
-      method: 'POST',
-      body: form,
-    }));
+    const response = await handleApiRequest(
+      new Request('http://localhost/api/documents/convert', {
+        method: 'POST',
+        body: form,
+      }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -332,10 +474,12 @@ describe('web API', () => {
     const form = new FormData();
     form.append('file', new File([minimalPdfBytes()], 'wrong.png', { type: 'image/png' }));
 
-    const response = await handleApiRequest(new Request('http://localhost/api/documents/convert', {
-      method: 'POST',
-      body: form,
-    }));
+    const response = await handleApiRequest(
+      new Request('http://localhost/api/documents/convert', {
+        method: 'POST',
+        body: form,
+      }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -371,20 +515,25 @@ describe('web API', () => {
   it('requires the configured bearer token before public-mode API work', async () => {
     Bun.env.FVTT_WEB_PUBLIC_MODE = '1';
     Bun.env.FVTT_WEB_AUTH_TOKEN = '0123456789abcdef0123456789abcdef';
+    Bun.env.FVTT_WEB_SESSION_SECRET = 'abcdef0123456789abcdef0123456789';
 
     const missing = await handleApiRequest(new Request('http://localhost/api/capabilities'));
     const missingBody = await missing.json();
     expect(missing.status).toBe(401);
     expect(missingBody.error.code).toBe('AUTH_REQUIRED');
 
-    const wrong = await handleApiRequest(new Request('http://localhost/api/capabilities', {
-      headers: { authorization: 'Bearer wrong-token' },
-    }));
+    const wrong = await handleApiRequest(
+      new Request('http://localhost/api/capabilities', {
+        headers: { authorization: 'Bearer wrong-token' },
+      }),
+    );
     expect(wrong.status).toBe(401);
 
-    const accepted = await handleApiRequest(new Request('http://localhost/api/capabilities', {
-      headers: { authorization: 'Bearer 0123456789abcdef0123456789abcdef' },
-    }));
+    const accepted = await handleApiRequest(
+      new Request('http://localhost/api/capabilities', {
+        headers: { authorization: 'Bearer 0123456789abcdef0123456789abcdef' },
+      }),
+    );
     const acceptedBody = await accepted.json();
     expect(accepted.status).toBe(200);
     expect(acceptedBody.data.publicAccess).toBe(true);
@@ -396,14 +545,20 @@ describe('web API', () => {
     Bun.env.FVTT_WEB_SHORT_REQUEST_LIMIT = '1';
     Bun.env.FVTT_WEB_GLOBAL_SHORT_REQUEST_LIMIT = '10';
 
-    const first = await handleApiRequest(new Request('http://localhost/api/not-a-route', {
-      method: 'POST',
-      headers: { 'x-forwarded-for': '198.51.100.10' },
-    }), { remoteAddress: '203.0.113.8' });
-    const second = await handleApiRequest(new Request('http://localhost/api/not-a-route', {
-      method: 'POST',
-      headers: { 'x-forwarded-for': '198.51.100.11' },
-    }), { remoteAddress: '203.0.113.8' });
+    const first = await handleApiRequest(
+      new Request('http://localhost/api/not-a-route', {
+        method: 'POST',
+        headers: { 'x-forwarded-for': '198.51.100.10' },
+      }),
+      { remoteAddress: '203.0.113.8' },
+    );
+    const second = await handleApiRequest(
+      new Request('http://localhost/api/not-a-route', {
+        method: 'POST',
+        headers: { 'x-forwarded-for': '198.51.100.11' },
+      }),
+      { remoteAddress: '203.0.113.8' },
+    );
     const secondBody = await second.json();
 
     expect(first.status).toBe(404);
@@ -426,7 +581,9 @@ describe('web API', () => {
       },
     } as Request;
 
-    const response = await handleApiRequest(request, { remoteAddress: '127.0.0.1' });
+    const response = await handleApiRequest(request, {
+      remoteAddress: '127.0.0.1',
+    });
     const body = await response.json();
 
     expect(response.status).toBe(413);
@@ -449,7 +606,9 @@ describe('web API', () => {
       },
     } as Request;
 
-    const response = await handleApiRequest(request, { remoteAddress: '127.0.0.1' });
+    const response = await handleApiRequest(request, {
+      remoteAddress: '127.0.0.1',
+    });
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -462,15 +621,18 @@ describe('web API', () => {
     const blocker = createJob('monster-collection', '198.51.100.1');
     updateJob(blocker.id, { status: 'running' });
 
-    const response = await handleApiRequest(new Request('http://localhost/api/jobs', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        type: 'monster-collection',
-        fileName: 'second.md',
-        content: '# **Second Creature**',
+    const response = await handleApiRequest(
+      new Request('http://localhost/api/jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'monster-collection',
+          fileName: 'second.md',
+          content: '# **Second Creature**',
+        }),
       }),
-    }), { remoteAddress: '198.51.100.2' });
+      { remoteAddress: '198.51.100.2' },
+    );
     const body = await response.json();
 
     expect(response.status).toBe(429);
@@ -511,23 +673,63 @@ describe('web API', () => {
     expect(runningJobsTotal()).toBe(0);
   });
 
-  it('converts a single upload with a server download URL', async () => {
+  it('defaults a single upload to Foundry v14/core and returns a server download URL', async () => {
     const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
     const response = await post('/api/convert/single', {
       fileName: 'single.md',
       content: source,
-      fvttVersion: '12',
-      effectProfile: 'core',
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
+    expect(body.data.fvttVersion).toBe('14');
+    expect(body.data.effectProfile).toBe('core');
     expect(body.data.downloadUrl).toContain('/api/jobs/');
 
-    const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+    const download = await handleApiRequest(
+      new Request(`http://localhost${body.data.downloadUrl}`),
+    );
     expect(download.status).toBe(200);
     expect(download.headers.get('content-type')).toContain('application/json');
+    const actor = await download.json();
+    expect(actor._stats.coreVersion).toBe('14.364');
+    expect(actor._stats.systemVersion).toBe('5.3.3');
+  });
+
+  it('preserves a fractional challenge rating in a browser-ready standard Actor download', async () => {
+    const response = await post('/api/convert/single', {
+      fileName: 'fractional-cr.md',
+      content: [
+        '---',
+        'layout: creature',
+        'name: Fractional CR Web Fixture',
+        'size: small',
+        'type: humanoid',
+        'armor_class: 15',
+        'hit_points: "7 (2d6)"',
+        'speed: "30 ft."',
+        'str: 8',
+        'dex: 14',
+        'con: 10',
+        'int: 10',
+        'wis: 8',
+        'cha: 8',
+        'challenge: "1/4 (50 XP)"',
+        '---',
+        '### Actions',
+        '- Scimitar. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.',
+      ].join('\n'),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.verification.status).toBe('accepted');
+    const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+    const actor = await download.json();
+
+    expect(actor.system.details.cr).toBe(0.25);
+    expect(actor.system.details.xp.value).toBe(50);
   });
 
   it('keeps ordinary Web conversion offline when ambient translation credentials exist', async () => {
@@ -540,9 +742,18 @@ describe('web API', () => {
     try {
       globalThis.fetch = (async () => {
         networkCalls += 1;
-        return new Response(JSON.stringify({
-          choices: [{ message: { content: '<think>provider reasoning</think>网络翻译' } }],
-        }), { status: 200, headers: { 'content-type': 'application/json' } });
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: '<think>provider reasoning</think>网络翻译',
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
       }) as unknown as typeof fetch;
 
       const response = await post('/api/convert/single', {
@@ -561,13 +772,17 @@ describe('web API', () => {
         effectProfile: 'core',
       });
       const body = await response.json();
-      const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+      const download = await handleApiRequest(
+        new Request(`http://localhost${body.data.downloadUrl}`),
+      );
       const actor = await download.json();
 
       expect(response.status).toBe(200);
       expect(networkCalls).toBe(0);
       expect(actor.name).toBe('Deterministic Web Fixture');
-      expect(actor.items.map((item: { name: string }) => item.name)).toContain('Deterministic Strike');
+      expect(actor.items.map((item: { name: string }) => item.name)).toContain(
+        'Deterministic Strike',
+      );
     } finally {
       globalThis.fetch = previousFetch;
       delete Bun.env.TRANSLATION_BASE_URL;
@@ -623,52 +838,47 @@ describe('web API', () => {
     expect(job.summary.effectProfile).toBe('modded-v14');
     expect(job.files.length).toBeGreaterThan(0);
 
-    const zip = await handleApiRequest(new Request(`http://localhost/api/jobs/${job.id}/download.zip`));
+    const zip = await handleApiRequest(
+      new Request(`http://localhost/api/jobs/${job.id}/download.zip`),
+    );
     const bytes = new Uint8Array(await zip.arrayBuffer());
     expect(zip.status).toBe(200);
     expect(bytes[0]).toBe(0x50);
     expect(bytes[1]).toBe(0x4b);
   });
 
-  it('passes server-preset image assets to plaintext actor jobs only when enabled', async () => {
-    configureImageAssetTestPreset();
-    const source = [
-      '# **No Image Test Creature**',
-      '',
-      '_Medium Aberration, Neutral Evil_',
-      '',
-      '**Armor Class**: 12',
-      '**Hit Points**: 22 (4d8+4)',
-      '**Speed**: 30 ft.',
-      '**Challenge**: 1 (200 XP) Proficiency Bonus +2',
-      '',
-      '### Actions',
-      '',
-      '- **Claw**: Melee Weapon Attack: +4 to hit, reach 5 ft. Hit: 6 (1d8+2) slashing damage.',
-    ].join('\n');
-
-    const create = await post('/api/jobs', {
+  it('rejects removed legacy plaintext Actor jobs', async () => {
+    const response = await post('/api/jobs', {
       type: 'ingest-plaintext-actors',
       fileName: 'no-image.md',
-      content: source,
-      options: {
-        fvttVersion: '12',
-        effectProfile: 'core',
-        imageAssetsEnabled: true,
-      },
+      content: '# legacy plaintext',
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe('LEGACY_PLAINTEXT_ACTOR_REMOVED');
+    expect(body.error.message).toBe('旧网页纯文本 Actor 功能已删除，请使用“自动转换”入口。');
+  });
+
+  it('labels records plaintext output as an audit artifact that cannot feed JSON generation', async () => {
+    const recordsPath = resolve(
+      process.cwd(),
+      'src/core/crawl/__tests__/fixtures/goddessfantasy-records.json',
+    );
+    const create = await post('/api/jobs', {
+      type: 'records-to-plaintext',
+      fileName: 'records.json',
+      content: readFileSync(recordsPath, 'utf-8'),
+      options: { contentType: 'monster', dryRun: true },
     });
     const created = await create.json();
 
     expect(create.status).toBe(200);
-    expect(created.ok).toBe(true);
-
     const job = await waitForJob(created.data.id);
     expect(job.status).toBe('succeeded');
-    expect(job.summary.imageMode).toBe('ssh');
-    expect(job.summary.imagePublicBaseUrl).toBe('https://assets.example.invalid/imgSource');
-    expect(job.summary.imageWarnings).toBe(0);
-    expect(job.warnings).toEqual([]);
-    expect(job.files.some((file: any) => file.fileName.endsWith('.json'))).toBe(true);
+    expect(job.summary?.artifactRole).toBe('audit-only');
+    expect(job.summary?.feedsJsonGeneration).toBe(false);
   });
 
   it('passes server-preset image assets to vault sync jobs only when enabled', async () => {
@@ -836,7 +1046,11 @@ async function waitForJob(id: string): Promise<any> {
   for (let i = 0; i < 30; i++) {
     const response = await handleApiRequest(new Request(`http://localhost/api/jobs/${id}`));
     const body = await response.json();
-    if (body.data.status === 'succeeded' || body.data.status === 'partial' || body.data.status === 'failed') {
+    if (
+      body.data.status === 'succeeded' ||
+      body.data.status === 'partial' ||
+      body.data.status === 'failed'
+    ) {
       return body.data;
     }
     await Bun.sleep(50);
@@ -855,22 +1069,28 @@ function createCrawlFixtureServer(
       if (url.search.includes('action=printpage')) {
         const topicId = url.search.match(/topic=(\d+)/)?.[1] ?? 'unknown';
         requestedPrintTopics.push(topicId);
-        return htmlResponse([
-          '<html><body><div id="posts">',
-          `<div class="postheader">标题: 【怪物】Topic ${topicId} 作者: Tester 于 2026-06-20</div>`,
-          `<div class="postbody">Topic ${topicId} Medium aberration AC 12 HP 22</div>`,
-          '</div></body></html>',
-        ].join(''));
+        return htmlResponse(
+          [
+            '<html><body><div id="posts">',
+            `<div class="postheader">标题: 【怪物】Topic ${topicId} 作者: Tester 于 2026-06-20</div>`,
+            `<div class="postbody">Topic ${topicId} Medium aberration AC 12 HP 22</div>`,
+            '</div></body></html>',
+          ].join(''),
+        );
       }
-      return htmlResponse([
-        '<html><body>',
-        ...topicIds.map((topicId) => [
-          '<div class="windowbg"><span class="subject">',
-          `<a href="${url.origin}/bbs/index.php?topic=${topicId}.0">【怪物】Topic ${topicId}</a>`,
-          '</span></div>',
-        ].join('')),
-        '</body></html>',
-      ].join(''));
+      return htmlResponse(
+        [
+          '<html><body>',
+          ...topicIds.map((topicId) =>
+            [
+              '<div class="windowbg"><span class="subject">',
+              `<a href="${url.origin}/bbs/index.php?topic=${topicId}.0">【怪物】Topic ${topicId}</a>`,
+              '</span></div>',
+            ].join(''),
+          ),
+          '</body></html>',
+        ].join(''),
+      );
     },
   });
 }
@@ -915,7 +1135,8 @@ function crawlRecordFixture(topicId: string): Record<string, unknown> {
 }
 
 function minimalPdfBytes(): ArrayBuffer {
-  const content = 'BT /F1 12 Tf 10 80 Td (Fixture document text for native extraction validation. This page intentionally contains enough text to avoid OCR fallback. The document input route is being tested.) Tj ET';
+  const content =
+    'BT /F1 12 Tf 10 80 Td (Fixture document text for native extraction validation. This page intentionally contains enough text to avoid OCR fallback. The document input route is being tested.) Tj ET';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
@@ -931,7 +1152,10 @@ function minimalPdfBytes(): ArrayBuffer {
   });
   const xrefOffset = pdf.length;
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  pdf += offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('');
   pdf += `trailer\n<< /Root 1 0 R /Size ${objects.length + 1} >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
   return new TextEncoder().encode(pdf).buffer as ArrayBuffer;
 }

@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import * as cheerio from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import type {
+  CanonicalActorSource,
+  CanonicalActorSourceWarning,
+} from '@fvtt-json-generator/contracts/canonical-actor';
 import type { CrawledTopicRecord } from '../types';
 
 export interface PlaintextRenderWarning {
@@ -13,6 +17,12 @@ export interface PlaintextRenderWarning {
 export interface PlaintextRenderResult {
   markdown: string;
   warnings: PlaintextRenderWarning[];
+  heading: string;
+  chineseName: string;
+  englishName: string;
+}
+
+export interface CanonicalActorRenderResult extends CanonicalActorSource {
   heading: string;
   chineseName: string;
   englishName: string;
@@ -195,6 +205,70 @@ export function renderGoddessFantasyMonsterToPlaintextItems(
   return sources.map((source) => renderSource(record, source, loadWarnings));
 }
 
+/**
+ * Render a crawled topic directly into the standard project Actor Markdown
+ * contract. The legacy/plaintext rendering is retained only as an optional
+ * human-readable audit view on the same parsed source.
+ */
+export function renderGoddessFantasyMonsterToCanonicalSources(
+  record: CrawledTopicRecord,
+  options: { recordsDir: string },
+): CanonicalActorRenderResult[] {
+  const loadWarnings: PlaintextRenderWarning[] = [];
+  const sources = loadRenderSources(record, options.recordsDir, loadWarnings);
+
+  return sources.map((source, index) => {
+    const warnings = [...loadWarnings];
+    const data = parseStatblock(record, source.statText, source.imageUrls, source.loreText, source.title);
+
+    if (!source.usedRawHtml) {
+      warnings.push(warning(record, 'used-text-fallback', 'rawHtmlPath was missing or unreadable; used posts[0].text'));
+    }
+
+    if (source.statblockCandidateCount > 1) {
+      warnings.push(warning(record, 'possible-multiple-statblocks', 'first post appears to contain multiple statblocks'));
+    }
+
+    for (const field of ['armorClass', 'hitPoints', 'speed', 'abilities', 'challenge'] as const) {
+      if (!data[field]) {
+        warnings.push(warning(record, `missing-${field}`, `could not extract ${field}`));
+      }
+    }
+
+    const slug = slugifyForFileName(data.englishName || data.chineseName || data.title) || `entity-${index + 1}`;
+    const sourceId = `goddessfantasy:${record.topicId}:${slug}`;
+    const contractWarnings: CanonicalActorSourceWarning[] = warnings.map((entry) => ({
+      code: entry.code,
+      message: entry.message,
+      sourceId,
+    }));
+
+    return {
+      sourceId,
+      sourceUrl: record.printUrl || record.url,
+      fileName: `${record.topicId}__${slug}.md`,
+      markdown: emitCanonicalMarkdown(data),
+      auditMarkdown: emitMarkdown(data),
+      imageUrls: unique(source.imageUrls),
+      status: contractWarnings.length > 0 ? 'needs_review' : 'ok',
+      warnings: contractWarnings,
+      metadata: {
+        site: record.site,
+        boardId: record.boardId,
+        topicId: record.topicId,
+        entityId: slug,
+        title: record.title,
+        chineseName: data.chineseName,
+        englishName: data.englishName,
+        rawHtmlPath: record.rawHtmlPath,
+      },
+      heading: data.title,
+      chineseName: data.chineseName,
+      englishName: data.englishName,
+    };
+  });
+}
+
 function renderSource(
   record: CrawledTopicRecord,
   source: RenderSource,
@@ -375,6 +449,111 @@ function emitMarkdown(data: StatblockData): string {
   }
 
   return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
+}
+
+function emitCanonicalMarkdown(data: StatblockData): string {
+  const taxonomy = canonicalTaxonomy(data.taxonomy);
+  const lines = [
+    '---',
+    'layout: creature',
+    `type: ${quoteYaml(taxonomy.creatureType ?? 'npc')}`,
+    `name: ${quoteYaml(data.englishName || data.title)}`,
+  ];
+
+  pushYamlLine(lines, 'size', taxonomy.size);
+  pushYamlLine(lines, 'alignment', taxonomy.alignment);
+  pushYamlLine(lines, 'img', data.imageUrl);
+  pushYamlLine(lines, 'initiative', data.initiative);
+  pushYamlLine(lines, 'armor_class', data.armorClass);
+  pushYamlLine(lines, 'hit_points', data.hitPoints);
+  pushYamlLine(lines, 'speed', data.speed);
+  if (data.abilities?.length === 6) {
+    for (const [key, value] of ['str', 'dex', 'con', 'int', 'wis', 'cha'].map((key, index) => [key, data.abilities![index]!] as const)) {
+      pushYamlLine(lines, key, value);
+    }
+  }
+  pushYamlLine(lines, 'saving_throws', normalizeSavesForCanonical(data.saves));
+  pushYamlLine(lines, 'skills', data.skills);
+  pushYamlLine(lines, 'damage_vulnerabilities', data.damageVulnerabilities);
+  pushYamlLine(lines, 'damage_resistances', data.damageResistances);
+  pushYamlLine(lines, 'damage_immunities', data.damageImmunities);
+  pushYamlLine(lines, 'condition_immunities', data.conditionImmunities);
+  pushYamlLine(lines, 'senses', data.senses);
+  pushYamlLine(lines, 'languages', data.languages);
+  pushYamlLine(lines, 'challenge', data.challenge);
+  lines.push('---', '');
+
+  if (data.lore) lines.push(data.lore, '');
+
+  const sectionLabels: Record<SectionKey, string> = {
+    traits: 'Traits',
+    actions: 'Actions',
+    bonusActions: 'Bonus Actions',
+    reactions: 'Reactions',
+    legendaryActions: 'Legendary Actions',
+  };
+  for (const key of ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions'] as SectionKey[]) {
+    const entries = data.sections[key];
+    if (!entries || entries.length === 0) continue;
+    lines.push(`## ${sectionLabels[key]}`, '');
+    for (const entry of entries) lines.push(formatEntry(entry));
+    lines.push('');
+  }
+
+  return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
+}
+
+function pushYamlLine(lines: string[], key: string, value: string | undefined): void {
+  if (value === undefined || value.trim() === '') return;
+  lines.push(`${key}: ${quoteYaml(value)}`);
+}
+
+function quoteYaml(value: string): string {
+  return JSON.stringify(value.replace(/\r?\n/g, ' ').trim());
+}
+
+function canonicalTaxonomy(value: string | undefined): {
+  size?: string;
+  creatureType?: string;
+  alignment?: string;
+} {
+  if (!value) return {};
+  const [creaturePart, alignmentPart] = value.split('，', 2);
+  const englishCreature = creaturePart?.match(/\(([^)]+)\)/)?.[1]?.trim();
+  const englishSize = englishCreature?.match(/^(Tiny|Small|Medium|Large|Huge|Gargantuan)\b/i)?.[1];
+  const creatureType = englishCreature && englishSize
+    ? englishCreature.slice(englishSize.length).trim()
+    : undefined;
+  const chineseSize = Object.keys(SIZE_ENGLISH).find((key) => creaturePart?.startsWith(key));
+  const alignment = alignmentPart?.match(/\(([^)]+)\)/)?.[1]?.trim() || alignmentPart?.trim();
+  return {
+    size: englishSize || (chineseSize ? SIZE_ENGLISH[chineseSize] : undefined),
+    creatureType,
+    alignment,
+  };
+}
+
+function normalizeSavesForCanonical(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const labels: Record<string, string> = {
+    力量: 'Str',
+    敏捷: 'Dex',
+    体质: 'Con',
+    智力: 'Int',
+    感知: 'Wis',
+    魅力: 'Cha',
+  };
+  return value.replace(/力量|敏捷|体质|智力|感知|魅力/g, (label) => labels[label] ?? label);
+}
+
+function slugifyForFileName(value: string): string {
+  return value
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
 }
 
 function extractTableSources(

@@ -60,6 +60,21 @@ describe('EnglishBestiaryParser frontmatter', () => {
     expect(factory.parse(content).name).toBe('Test Creature');
   });
 
+  it('keeps a fractional challenge rating when standard frontmatter includes XP', () => {
+    const content = [
+      '---',
+      'layout: creature',
+      'name: Fractional Challenge Fixture',
+      'challenge: "1/4 (50 XP)"',
+      '---',
+    ].join('\n');
+
+    const result = parser.parse(content);
+
+    expect(result.details.cr).toBe(0.25);
+    expect(result.details.xp).toBe(50);
+  });
+
   it('extracts actions, legendary actions, and lair actions while preserving narrative biography', () => {
     const content = [
       '---',

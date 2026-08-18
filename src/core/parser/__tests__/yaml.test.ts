@@ -131,6 +131,16 @@ ${keyFor('cr')}: 1/2
     expect(parser.parse(yaml).details.cr).toBe(0.5);
   });
 
+  it('preserves fractional challenge ratings when the source includes XP', () => {
+    const yaml = `
+${keyFor('name')}: Fractional CR With XP Test
+${keyFor('type')}: npc
+${keyFor('cr')}: "1/4 (50 XP)"
+---`;
+
+    expect(parser.parse(yaml).details.cr).toBe(0.25);
+  });
+
   it('keeps legacy object-style actions on the legacy action path instead of creating blank structured actions', () => {
     const yaml = readFileSync('src/core/parser/__tests__/fixtures/yaml-legacy-actions.md', 'utf-8');
 
