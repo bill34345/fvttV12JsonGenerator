@@ -185,7 +185,7 @@ MONSTER_INTAKE_MODEL=gpt-5.6-luna
 MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
 ```
 
-这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`。
+这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`；这只是旧的本机兼容桥设置，不是网页的 Companion。Companion 留空时始终使用这台电脑当前 Codex CLI 的默认模型，不会偷偷填入 Luna。
 
 运行单只或合集：
 
@@ -246,9 +246,11 @@ bun run foundry:lab spell-resolver prepare-world --world=fvtt-v14-module-matrix 
 
 模块源码、构建和本地安装工具统一位于 [`foundry-modules/monster-spell-resolver/`](foundry-modules/monster-spell-resolver/README.zh-CN.md)。普通使用、升级、卸载、诊断和安全边界见 [`docs/foundry-spell-resolver-install.zh-CN.md`](docs/foundry-spell-resolver-install.zh-CN.md)。模块不支持 Foundry v12、生产世界自动安装或全世界批量迁移。
 
-## Legacy 纯文本转换器
+## 旧纯文本命令兼容
 
-以下命令是保留给历史脚本的规则转换器。它们不再扩展任意乱文本识别能力，识别到 0 只怪物时会失败；其 audit 只是格式诊断，不是语义验收。
+网页的旧“纯文本 Actor”任务已经删除；请在网页使用“自动转换”入口。CLI 仍保留下面的旧命令，方便历史脚本平滑迁移。它会先在临时区域生成标准 Actor Markdown，再走当前 Actor 流程；正式写入前会一次检查所有同名输入和输出，发现任何冲突就停止，不覆盖也不自动改名。
+
+它不会把识别失败或有警告的资料冒充正式结果，且不会在 AI Intake 不可用时偷偷改走 AI。
 
 仅拆分纯文本资料为项目 Markdown：
 
@@ -258,7 +260,7 @@ bun run src/index.ts `
   --emit-dir "obsidian/dnd数据转fvttjson/input"
 ```
 
-从纯文本直接生成中间 Markdown 和 Actor JSON：
+从纯文本转换为正式 Actor：
 
 ```powershell
 bun run src/index.ts `
@@ -268,7 +270,7 @@ bun run src/index.ts `
   --effect-profile core
 ```
 
-先用 `--dry-run` 检查识别数量和警告。Legacy 流程始终是规则化处理，不会在 AI Intake 缺少配置或失败时被自动调用。
+先用 `--dry-run` 检查识别数量和警告。`--ingest-plaintext-actors` 是兼容入口；新项目应优先使用标准 Actor Markdown 或网页“自动转换”。
 
 ## GoddessFantasy 流水线
 
@@ -303,7 +305,7 @@ bun run web:api
 bun run web:build
 ```
 
-`web:api` / `web:start` 默认只监听 `127.0.0.1:5174`。非回环或反向代理公开模式必须显式启用并配置服务器端 bearer token；浏览器不能提交 VPS 凭据。Web/API 支持上传 Markdown、单文件转换、批量怪物 job、下载 ZIP、来源核对及受限的 workspace path 模式。完整部署、鉴权、可信代理与资源上限见 [`docs/web-deployment.md`](docs/web-deployment.md)。
+`web:api` / `web:start` 默认只监听 `127.0.0.1:5174`。非回环或反向代理公开模式必须显式启用并配置服务器端 bearer token；浏览器不能提交 VPS 凭据。Web/API 支持上传 Markdown、单文件转换、批量怪物 job、下载 ZIP、来源核对及受限的 workspace path 模式。完整部署、鉴权、可信代理与资源上限见 [`docs/web-deployment.md`](docs/web-deployment.md)；三种 AI 连接方式和 Windows Companion 见 [`docs/web-ai-connections.md`](docs/web-ai-connections.md)。
 
 ## 参考缓存
 
@@ -346,8 +348,7 @@ bun run test:foundry-lab
 
 ## 更多资料
 
-- [`docs/manual.md`](docs/manual.md)：以 v12 为主的旧版详细使用手册；涉及版本时以本 README 和 `AGENTS.md` 为准。
-- [`docs/manual.md`](docs/manual.md)：包含 AI Intake、便携施法者、Legacy plaintext 和常见问题的详细操作说明。
+- [`docs/manual.md`](docs/manual.md)：以 v12 为主的旧版详细手册；涉及版本时以本 README 和 `AGENTS.md` 为准，也包含 AI Intake、便携施法者和兼容纯文本命令说明。
 - [`docs/generated-actor-verification.md`](docs/generated-actor-verification.md)：生成 Actor 的强制语义验收清单。
 - [`tools/foundry-ops/README.zh-CN.md`](tools/foundry-ops/README.zh-CN.md)：Foundry 本地测试、离线审计、生产只读盘点的统一入口、权限分类与外部配置说明。
 - [`scripts/foundry-lab/README.md`](scripts/foundry-lab/README.md)：旧 Foundry Lab 命令的兼容说明和详细操作手册。

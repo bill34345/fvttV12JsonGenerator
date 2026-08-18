@@ -1,5 +1,7 @@
 export * from './actorVerification';
+export * from './canonicalActorCollection';
 export * from './collectionConversion';
+export * from './conversionRouting';
 export * from './externalPorts';
 export * from './generationPipeline';
 export * from './iconPort';

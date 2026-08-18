@@ -159,7 +159,7 @@ program
 
 program
   .command('goddessfantasy-pipeline')
-  .description('Run Goddess Fantasy crawl, records-to-plaintext, actor JSON generation, and optional image upload')
+  .description('Run Goddess Fantasy crawl, canonical Actor JSON generation, and optional plaintext audit/image upload')
   .option('--board-url <url>', 'SMF board URL', 'https://www.goddessfantasy.net/bbs/index.php?board=2318.0')
   .option('--cookie-header <value>', 'Cookie header value')
   .option('--cookie-header-file <path>', 'File containing the Cookie header')
@@ -172,6 +172,7 @@ program
   .option('--out-dir <path>', 'Crawl output directory', 'obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318')
   .option('--vault <path>', 'Obsidian vault path', 'obsidian/dnd数据转fvttjson')
   .option('--plaintext-out-dir <path>', 'Output directory for per-monster plaintext files')
+  .option('--emit-plaintext-audit', 'Also emit plaintext Markdown as a human-readable audit artifact; it does not feed JSON generation')
   .option('--max-board-pages <n>', 'Maximum board pages to scan', parsePositiveInt, 20)
   .option('--max-topics <n>', 'Maximum topics to crawl', parsePositiveInt)
   .option('--concurrency <n>', 'Maximum concurrent requests', parsePositiveInt, 2)
@@ -182,9 +183,9 @@ program
   .option('--dry-run', 'Only scan the board and report crawl reuse/new-topic stats; downstream steps are skipped')
   .option('--skip-auth-probe', 'Skip the board auth probe before crawling')
   .option('--no-plaintext-force', 'Do not overwrite plaintext outputs')
-  .option('--allow-warnings', 'Continue/exit successfully even when plaintext or image warnings are emitted')
-  .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14', 'modded-v12')
-  .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
+  .option('--allow-warnings', 'Continue/exit successfully even when source or image warnings are emitted')
+  .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14', 'core')
+  .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '14')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
   .option('--image-ssh-target <target>', 'SSH target for image uploads')
   .option('--image-remote-root <path>', 'Remote image root directory for SSH uploads')
@@ -205,7 +206,10 @@ program
       const plaintextOutDir = options.plaintextOutDir ?? defaultPlaintextOutDir(options.outDir);
       const imageAssets = buildPipelineImageAssetOptions(options, options.outDir);
       const fvttVersion = parsePipelineFvttVersion(options.fvttVersion);
-      const defaultedEffectProfile = !process.argv.includes('--effect-profile') && fvttVersion === '14'
+      const effectProfileProvided = process.argv.some(
+        (argument) => argument === '--effect-profile' || argument.startsWith('--effect-profile='),
+      );
+      const defaultedEffectProfile = !effectProfileProvided && fvttVersion === '14'
         ? 'core'
         : options.effectProfile;
       const result = await runGoddessFantasyPipeline({
@@ -231,6 +235,7 @@ program
         vaultPath: options.vault,
         plaintextOutDir,
         plaintextForce: options.plaintextForce,
+        emitPlaintextAudit: Boolean(options.emitPlaintextAudit),
         failOnWarning: !options.allowWarnings,
         effectProfile: parsePipelineEffectProfile(defaultedEffectProfile),
         fvttVersion,
@@ -263,15 +268,20 @@ program
         console.log(`Plaintext collection: ${result.plaintext.outFile}`);
       }
 
-      if (result.actor) {
-        console.log(`Detected creatures: ${result.actor.markdown.files.length}`);
-        console.log(`Markdown dir: ${result.actor.markdown.emitDir}`);
-        console.log(`JSON dir: ${result.actor.sync.outputDir}`);
+      if (result.canonical) {
+        console.log(`Canonical Actor sources: ${result.canonical.sources.length}`);
+        console.log(`Canonical source warnings: ${result.canonical.warnings.length}`);
+        console.log(`Canonical source failures: ${result.canonical.failures.length}`);
+      }
+
+      if (result.actorCollection) {
+        console.log(`Detected creatures: ${result.actorCollection.itemCount}`);
+        console.log(`JSON dir: ${result.actorCollection.outputDir}`);
         console.log(`Image mode: ${imageAssets?.mode ?? 'none'}`);
-        console.log(`Processed: ${result.actor.sync.processed}`);
-        console.log(`Skipped: ${result.actor.sync.skipped}`);
-        console.log(`Failed: ${result.actor.sync.failed}`);
-        console.log(`Warnings: ${result.actor.sync.warnings.length}`);
+        console.log(`Processed: ${result.actorCollection.succeeded}`);
+        console.log(`Skipped: ${result.actorCollection.itemCount - result.actorCollection.succeeded - result.actorCollection.failed}`);
+        console.log(`Failed: ${result.actorCollection.failed}`);
+        console.log(`Warnings: ${result.actorCollection.warnings.length}`);
       }
 
       if (result.tokenReview) {

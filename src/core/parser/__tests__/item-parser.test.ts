@@ -45,6 +45,27 @@ describe('ItemParser', () => {
       expect(result.description).toBe('三祷之坠是一件诀别遗物...');
     });
 
+    it('parses English standard Item frontmatter used by the Web workbench', () => {
+      const content = [
+        '---',
+        'layout: item',
+        'name: Browser Short Sword',
+        'type: weapon',
+        'rarity: common',
+        'attunement: none',
+        '---',
+        'A short sword used for browser acceptance.',
+      ].join('\n');
+
+      const result = parser.parse(content);
+
+      expect(result.name).toBe('Browser Short Sword');
+      expect(result.type).toBe('weapon');
+      expect(result.rarity).toBe('common');
+      expect(result.attunement).toBe('none');
+      expect(result.description).toBe('A short sword used for browser acceptance.');
+    });
+
     it('classifies accessory-style Chinese item metadata as equipment', () => {
       const content = [
         '---',

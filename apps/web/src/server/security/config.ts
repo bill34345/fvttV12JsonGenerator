@@ -1,7 +1,20 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { isIP } from 'node:net';
+import { parseProviderOriginAllowlist } from '../ai-connections/security';
+import type { SiteAiQuotaConfig } from '../ai-connections/quota';
 
 export const DEFAULT_MAX_REQUEST_BODY_BYTES = 25 * 1024 * 1024;
+const localSessionSecret = randomBytes(32).toString('base64url');
+
+export interface WebAiConnectionsConfig {
+  sessionSecret: string;
+  secureCookies: boolean;
+  companionEnabled: boolean;
+  idleTtlMs: number;
+  absoluteTtlMs: number;
+  allowedProviderOrigins: string[];
+  site: SiteAiQuotaConfig & { enabled: boolean };
+}
 
 export interface WebSecurityConfig {
   hostname: string;
@@ -16,6 +29,7 @@ export interface WebSecurityConfig {
   globalLongJobs: number;
   retentionMs: number;
   maxRetainedJobs: number;
+  aiConnections: WebAiConnectionsConfig;
 }
 
 export type WebSecurityEnvironment = Record<string, string | undefined>;
@@ -33,6 +47,8 @@ export function getWebSecurityConfig(
   }
 
   const authToken = publicMode ? requirePublicAuthToken(env.FVTT_WEB_AUTH_TOKEN) : null;
+  const siteAiEnabled = env.FVTT_WEB_SITE_AI_ENABLED === '1';
+  const sessionSecret = resolveSessionSecret(env.FVTT_WEB_SESSION_SECRET, publicMode);
 
   return {
     hostname,
@@ -83,6 +99,26 @@ export function getWebSecurityConfig(
       100_000,
       'FVTT_WEB_MAX_RETAINED_JOBS',
     ),
+    aiConnections: {
+      sessionSecret,
+      secureCookies: publicMode,
+      companionEnabled: env.FVTT_WEB_CODEX_COMPANION_ENABLED === '1',
+      idleTtlMs: 8 * 60 * 60 * 1000,
+      absoluteTtlMs: 24 * 60 * 60 * 1000,
+      allowedProviderOrigins: parseProviderOriginAllowlist(env.FVTT_WEB_AI_PROVIDER_ALLOWLIST),
+      site: {
+        enabled: siteAiEnabled,
+        perSessionDaily: siteQuota(env, 'FVTT_WEB_SITE_AI_SESSION_DAILY_LIMIT', siteAiEnabled),
+        perIpDaily: siteQuota(env, 'FVTT_WEB_SITE_AI_IP_DAILY_LIMIT', siteAiEnabled),
+        globalDaily: siteQuota(env, 'FVTT_WEB_SITE_AI_GLOBAL_DAILY_LIMIT', siteAiEnabled),
+        perSessionConcurrent: boundedInteger(
+          env.FVTT_WEB_SITE_AI_SESSION_CONCURRENT_LIMIT, 1, 1, 20, 'FVTT_WEB_SITE_AI_SESSION_CONCURRENT_LIMIT',
+        ),
+        globalConcurrent: boundedInteger(
+          env.FVTT_WEB_SITE_AI_GLOBAL_CONCURRENT_LIMIT, 4, 1, 100, 'FVTT_WEB_SITE_AI_GLOBAL_CONCURRENT_LIMIT',
+        ),
+      },
+    },
   };
 }
 
@@ -146,4 +182,28 @@ function boundedInteger(
     throw new Error(`${name} must be an integer between ${min} and ${max}.`);
   }
   return parsed;
+}
+
+function resolveSessionSecret(value: string | undefined, publicMode: boolean): string {
+  const secret = value?.trim();
+  if (!secret) {
+    if (publicMode) throw new Error('FVTT_WEB_PUBLIC_MODE=1 requires FVTT_WEB_SESSION_SECRET.');
+    return localSessionSecret;
+  }
+  if (Buffer.byteLength(secret, 'utf8') < 32) {
+    throw new Error('FVTT_WEB_SESSION_SECRET must contain at least 32 bytes.');
+  }
+  return secret;
+}
+
+function siteQuota(
+  env: WebSecurityEnvironment,
+  name: 'FVTT_WEB_SITE_AI_SESSION_DAILY_LIMIT' | 'FVTT_WEB_SITE_AI_IP_DAILY_LIMIT' | 'FVTT_WEB_SITE_AI_GLOBAL_DAILY_LIMIT',
+  required: boolean,
+): number {
+  const value = env[name];
+  if (required && !value?.trim()) {
+    throw new Error(`Site AI quota ${name} is required when FVTT_WEB_SITE_AI_ENABLED=1.`);
+  }
+  return boundedInteger(value, 1, 1, 1_000_000, name);
 }

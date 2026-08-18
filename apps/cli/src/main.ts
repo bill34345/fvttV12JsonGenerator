@@ -1,10 +1,13 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Command } from 'commander';
 import {
   assertEffectProfileForTarget,
   buildImageAssetOptionsFromCli,
+  canonicalSourcesFromMarkdown,
   convertMarkdownContentToJson,
+  convertCanonicalActorCollection,
   documentDoctor,
   type EffectProfile,
   ItemTextWorkflow,
@@ -15,7 +18,6 @@ import {
   createItemIntakeProvider,
   createMonsterIntakeProvider,
   createSpeciesIntakeProvider,
-  PlainTextActorWorkflow,
   PlainTextIngestionWorkflow,
   parseFvttTargetVersion,
   parseIconMode,
@@ -53,8 +55,8 @@ program
   .option('--intake-species <source>', 'AI-first Species intake from TXT or canonical Species Markdown (Foundry V14/core)')
   .option('--resume-species-intake <run-dir>', 'Resume a Species Intake review bundle')
   .option('--decisions <path>', 'Decision JSON file for --resume-intake')
-  .option('--ingest-plaintext <source>', '[legacy rule-based] Split a plain-text creature collection into project markdown files')
-  .option('--ingest-plaintext-actors <source>', '[legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
+  .option('--ingest-plaintext <source>', '[deprecated legacy rule-based] Split a plain-text creature collection into project markdown files')
+  .option('--ingest-plaintext-actors <source>', '[deprecated legacy rule-based] Generate project markdown and actor JSON from a plain-text creature collection')
   .option('--ingest-items <source>', '[legacy strict format] Split a plain-text item collection into project markdown files')
   .option('--ingest-items-json <source>', '[legacy strict format] Generate project item markdown and Item JSON from a plain-text item collection')
   .option('--emit-dir <path>', 'Output directory for --ingest-plaintext', DEFAULT_EMIT_DIR)
@@ -284,7 +286,7 @@ program
       }
 
       if (options.ingestPlaintext) {
-        console.warn('[Legacy rule-based] This converter is retained for compatibility; use --intake-monsters for semantic intake.');
+        console.warn('[Legacy rule-based][deprecated] --ingest-plaintext is retained for one compatibility cycle; use --intake-monsters for semantic intake.');
         const workflow = new PlainTextIngestionWorkflow();
         const result = await workflow.ingest({
           sourcePath: options.ingestPlaintext,
@@ -309,54 +311,68 @@ program
       }
 
       if (options.ingestPlaintextActors) {
-        console.warn('[Legacy rule-based] This converter is retained for compatibility; use --intake-monsters for semantic intake.');
-        const workflow = new PlainTextActorWorkflow();
-        const result = await workflow.ingestActors({
-          sourcePath: options.ingestPlaintextActors,
-          vaultPath: options.vault,
-          dryRun: Boolean(options.dryRun),
-          enableAiNormalize: Boolean(options.enableAiNormalize),
-          effectProfile: effectProfileOption ? effectProfile : fvttVersion === '14' ? 'core' : 'modded-v12',
-          fvttVersion,
-          iconOptions,
-          imageAssets,
-        });
+        console.warn('[Legacy rule-based] 兼容入口（即将移除）：--ingest-plaintext-actors 仍可使用；它会先生成标准 Actor Markdown，再通过新的安全 Actor 流程写入正式目录。');
+        const workflow = new PlainTextIngestionWorkflow();
+        const temporaryMarkdownDir = mkdtempSync(join(tmpdir(), 'fvtt-legacy-plaintext-actors-'));
+        try {
+          const markdownResult = await workflow.ingest({
+            sourcePath: options.ingestPlaintextActors,
+            emitDir: temporaryMarkdownDir,
+            dryRun: Boolean(options.dryRun),
+            enableAiNormalize: Boolean(options.enableAiNormalize),
+          });
+          const sources = canonicalSourcesFromMarkdown(markdownResult.files.map((file) => ({
+            sourceId: `${options.ingestPlaintextActors}:${file.fileName}`,
+            sourceUrl: options.ingestPlaintextActors,
+            fileName: file.fileName,
+            markdown: file.markdown,
+          })));
+          const result = await convertCanonicalActorCollection({
+            sources,
+            vaultPath: options.vault,
+            dryRun: Boolean(options.dryRun),
+            fvttVersion,
+            effectProfile: effectProfileOption ? effectProfile : fvttVersion === '14' ? 'core' : 'modded-v12',
+            iconOptions,
+            imageAssets,
+          });
 
-        console.log(`Ingested source: ${result.sourcePath}`);
-        console.log(`Detected creatures: ${result.markdown.files.length}`);
-        console.log(`Vault: ${result.vaultPath}`);
-        console.log(`Effect profile: ${result.effectProfile}`);
-        console.log(`Dry run: ${result.markdown.dryRun ? 'yes' : 'no'}`);
-        console.log(`AI normalize: ${result.markdown.usedAi ? 'enabled' : 'disabled'}`);
-        console.log(`Image mode: ${imageAssets?.mode ?? 'none'}`);
-        console.log(`Markdown dir: ${result.markdown.emitDir}`);
-        console.log(`JSON dir: ${result.sync.outputDir}`);
+          console.log(`Ingested source: ${markdownResult.sourcePath}`);
+          console.log(`Detected creatures: ${markdownResult.files.length}`);
+          console.log(`Vault: ${result.vaultPath}`);
+          console.log(`Effect profile: ${result.effectProfile}`);
+          console.log(`Dry run: ${markdownResult.dryRun ? 'yes' : 'no'}`);
+          console.log(`AI normalize: ${markdownResult.usedAi ? 'enabled' : 'disabled'}`);
+          console.log(`Image mode: ${imageAssets?.mode ?? 'none'}`);
+          console.log('标准 Actor Markdown 已在临时区域完成检查；只有全部通过才会进入正式 input/output。');
+          console.log(`JSON dir: ${result.outputDir}`);
 
-        for (const file of result.markdown.files) {
-          console.log(`- ${file.fileName} | sections=${Object.keys(file.sections).length} | notes=${file.rawNotes.length}`);
-        }
-
-        if (!result.markdown.dryRun) {
-          console.log(`Processed: ${result.sync.processed}`);
-          console.log(`Skipped: ${result.sync.skipped}`);
-          console.log(`Failed: ${result.sync.failed}`);
-          console.log(`Backed up: ${result.sync.backedUp}`);
-          console.log(`Warnings: ${result.sync.warnings.length}`);
-        }
-
-        if (result.sync.failures.length > 0) {
-          for (const failure of result.sync.failures) {
-            console.error(`Failed: ${failure.input} -> ${failure.error}`);
+          for (const file of markdownResult.files) {
+            console.log(`- ${file.fileName} | sections=${Object.keys(file.sections).length} | notes=${file.rawNotes.length}`);
           }
-          process.exit(1);
-        }
-        for (const warning of result.sync.warnings) {
-          console.error(`Warning: ${warning.displayName ?? 'image'} [${warning.stage}] ${warning.message}`);
-        }
 
-        if (result.markdown.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
+          if (!markdownResult.dryRun && result.sync) {
+            console.log(`Processed: ${result.sync.processed}`);
+            console.log(`Skipped: ${result.sync.skipped}`);
+            console.log(`Failed: ${result.sync.failed}`);
+            console.log(`Warnings: ${result.sync.warnings.length}`);
+          }
 
-        return;
+          if (result.failures.length > 0) {
+            for (const failure of result.failures) {
+              console.error(`Failed: ${failure.sourceId || failure.index} -> ${failure.error}`);
+            }
+            process.exit(1);
+          }
+          for (const warning of result.warnings) console.error(`Warning: ${warning.code} ${warning.message}`);
+
+          if (markdownResult.files.length === 0) throw new Error('Legacy plaintext actor ingestion detected 0 monsters.');
+          if (result.status === 'needs_review' || result.status === 'partial') process.exitCode = 2;
+
+          return;
+        } finally {
+          rmSync(temporaryMarkdownDir, { recursive: true });
+        }
       }
 
       if (options.ingestItemsJson) {

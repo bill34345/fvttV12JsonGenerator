@@ -312,8 +312,11 @@ async function runGoddessFantasyFixtureSample(outDir: string, effectProfile: Eff
       effectProfile,
     });
 
-    const generatedJson = findSingleFile(result.actor?.sync.outputDir, '.json');
-    const generatedSource = findSingleFile(result.actor?.markdown.emitDir, '.md');
+    const generatedItem = result.actorCollection?.items.find((item) => item.outputFile);
+    const generatedJson = generatedItem?.outputFile?.path;
+    const generatedSource = generatedItem
+      ? join(vaultPath, 'input', generatedItem.source.fileName)
+      : undefined;
     if (!generatedJson || !generatedSource) {
       throw new Error(`GoddessFantasy fixture did not generate expected actor artifacts; stoppedAfter=${result.stoppedAfter}`);
     }
@@ -331,7 +334,7 @@ async function runGoddessFantasyFixtureSample(outDir: string, effectProfile: Eff
       kind: 'actor',
       name: String(actor.name ?? ''),
       itemCount: Array.isArray(actor.items) ? actor.items.length : 0,
-      validatorWarnings: result.actor?.sync.warnings.map((warning) => warning.message) ?? [],
+      validatorWarnings: result.actorCollection?.warnings.map((warning) => warning.message) ?? [],
       verificationWarnings: actorSummary.warnings,
       schemaChecks: runV14SchemaChecks(actor),
       actorSummary,

@@ -20,8 +20,6 @@ export type WebJobType =
   | 'item-collection'
   | 'vault-sync'
   | 'translate-json'
-  | 'ingest-plaintext'
-  | 'ingest-plaintext-actors'
   | 'ingest-items'
   | 'ai-item-intake'
   | 'ai-monster-intake'
@@ -58,6 +56,8 @@ export interface WebJob {
   createdAt: string;
   updatedAt: string;
   clientIp: string;
+  aiConnectionId?: string;
+  aiSessionBinding?: string;
   progress: {
     current: number;
     total: number;
@@ -78,7 +78,11 @@ const jobs = new Map<string, WebJob>();
 const activeJobIds = new Set<string>();
 const jobRoot = resolve(TEMP_WEB_DIR, 'jobs');
 
-export function createJob(type: WebJobType, clientIp: string): WebJob {
+export function createJob(
+  type: WebJobType,
+  clientIp: string,
+  ai?: { connectionId: string; sessionBinding: string },
+): WebJob {
   const now = new Date().toISOString();
   const job: WebJob = {
     id: randomUUID(),
@@ -87,6 +91,10 @@ export function createJob(type: WebJobType, clientIp: string): WebJob {
     createdAt: now,
     updatedAt: now,
     clientIp,
+    ...(ai ? {
+      aiConnectionId: ai.connectionId,
+      aiSessionBinding: ai.sessionBinding,
+    } : {}),
     progress: {
       current: 0,
       total: 1,

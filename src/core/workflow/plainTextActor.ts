@@ -31,6 +31,7 @@ export interface PlainTextActorWorkflowResult {
   sync: ObsidianSyncResult;
 }
 
+/** @deprecated Compatibility-only facade; use CanonicalActorSource collection workflows. */
 export class PlainTextActorWorkflow {
   private readonly implementation = new PackagePlainTextActorWorkflow({
     ingestion: new PlainTextIngestionWorkflow(),

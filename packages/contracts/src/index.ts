@@ -15,3 +15,9 @@ export type {
   FoundryTarget,
   FvttTargetVersion,
 } from './target';
+export type {
+  CanonicalActorSource,
+  CanonicalActorSourceMetadata,
+  CanonicalActorSourceStatus,
+  CanonicalActorSourceWarning,
+} from './canonicalActor';
