@@ -19,6 +19,83 @@ import {
 } from '../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
 
 describe('AI Item Intake V14 mechanics', () => {
+  test('preserves a source Item image and exact HTML description through formal Markdown generation', async () => {
+    const sourceImage = 'worlds/cor-cotn/packs/%E4%B8%89%E7%A5%B7%E4%B9%8B%E5%9D%A0%201.png';
+    const sourceDescription = '<div><p>奇物，传说（需同调）</p></div><div><p>三祷之坠是一件诀别遗物。</p></div><div><p>一面闪闪发光的黄金圆盘，系在一条精致的金链上。链条可以魔法般调整大小，变成适合佩戴者的项链尺寸。</p><p></p></div><div><p>在<span style="color:blue">休眠态Dormant状态</span>下，这件坠饰有着以下属性：</p></div><div><ul><li><p>佩戴者的 AC +1。</p></li><li><p>当佩戴或手握这件坠饰时，你可以以一个<span style="color:blue">动作</span>令它发出 15 尺半径的明亮光照和在此之外 15 尺的微光光照。光照会持续到你将其熄灭（无需动作）。</p></li><li><p>这件饰物具有 <strong>3</strong> 发充能，并且在每天黎明恢复所有被消耗的充能。</p><div><p>坠饰额外获得以下属性，当你手持或佩戴它时，你可以：</p><ul><li><p>消耗 1 发充能施展 隐形术 invisibility。</p></li></ul></div></li></ul></div><div><p></p></div>';
+    const markdown = [
+      '---',
+      'layout: item',
+      '名称: 三祷之坠 Jewel of Three Prayers',
+      '类型: 饰物',
+      '稀有度: 传说',
+      '需同调: true',
+      `img: "${sourceImage}"`,
+      'item-mechanics:',
+      '  schemaVersion: 1',
+      '  uses:',
+      '    max: 3',
+      '    recovery:',
+      '      - period: dawn',
+      '        type: recoverAll',
+      '  abilities:',
+      '    - id: ac-plus-one',
+      '      kind: passive-ac',
+      '      value: 1',
+      '    - id: light',
+      '      kind: light',
+      '      activation: action',
+      '      consumption: 0',
+      '      bright: 15',
+      '      dim: 30',
+      '      extinguish: disable-effect',
+      '    - id: invisibility',
+      '      kind: spell',
+      '      activation: action',
+      '      consumption: 1',
+      '      spell:',
+      '        identifier: invisibility',
+      '        name: Invisibility',
+      '---',
+      '## 三祷之坠 Jewel of Three Prayers',
+      sourceDescription,
+    ].join('\n');
+
+    const parsed = new ItemParser().parse(markdown);
+    expect(parsed.img).toBe(sourceImage);
+    expect(parsed.description).toBe(sourceDescription);
+
+    const result = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core' });
+    expect(result.status).toBe('accepted');
+    const item = result.rawJson as any;
+    expect(item.img).toBe(sourceImage);
+    expect(item.system.description.value).toBe(sourceDescription);
+    expect(item.system.properties).toContain('mgc');
+    expect(Object.values(item.system.activities).some((activity: any) => activity.type === 'utility')).toBe(true);
+    expect(Object.values(item.system.activities).some((activity: any) => activity.type === 'cast' && activity.consumption.spellSlot === false && activity.consumption.targets?.some((target: any) => target.type === 'itemUses' && target.value === '1'))).toBe(true);
+  });
+
+  test('marks every generated Item type as magical, including items without an attunement phrase', async () => {
+    const cases = [
+      ['魔法武器', '武器'],
+      ['魔法饰物', '饰物'],
+      ['魔法消耗品', '消耗品'],
+    ] as const;
+
+    for (const [name, type] of cases) {
+      const markdown = [
+        '---',
+        'layout: item',
+        `名称: ${name}`,
+        `类型: ${type}`,
+        '---',
+        '普通外观描述，没有同调标记。',
+      ].join('\n');
+      const result = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core' });
+      expect(result.status).toBe('accepted');
+      expect((result.rawJson as any).system.properties).toContain('mgc');
+    }
+  });
+
   test('resolves a formal spell only when its identifier and English name agree in the locked 5.3.3 catalog', () => {
     expect(resolveLockedDnd5eV14Spell('INVISIBILITY', 'inVisibility')).toEqual({
       identifier: 'invisibility',

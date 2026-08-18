@@ -23,6 +23,7 @@ export class ItemParser implements ItemParserStrategy {
     const name = this.parseName(rawData);
     const englishName = this.parseEnglishName(rawData);
     const type = this.parseType(rawData);
+    const img = this.parseImage(rawData);
     const rarity = this.parseRarity(rawData);
     const attunement = this.parseAttunement(rawData);
 
@@ -79,6 +80,7 @@ export class ItemParser implements ItemParserStrategy {
       name: finalName,
       englishName: finalEnglishName,
       type: finalType,
+      img,
       rarity: finalRarity,
       attunement: finalAttunement,
       description,
@@ -507,6 +509,14 @@ export class ItemParser implements ItemParserStrategy {
     const type = rawData['类型'];
     if (typeof type === 'string' && type.trim()) {
       return type.trim();
+    }
+    return undefined;
+  }
+
+  private parseImage(rawData: Record<string, unknown>): string | undefined {
+    const image = rawData['img'] ?? rawData['image'];
+    if (typeof image === 'string' && image.trim()) {
+      return image.trim();
     }
     return undefined;
   }

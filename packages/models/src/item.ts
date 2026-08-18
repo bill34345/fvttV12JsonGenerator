@@ -281,6 +281,9 @@ export interface ParsedItem {
   name: string;
   englishName?: string;
   type: ItemType;
+  // Optional source image path.  Item generation preserves this exact path
+  // instead of silently replacing it with the neutral fallback icon.
+  img?: string;
 
   // Physical properties
   quantity?: number;

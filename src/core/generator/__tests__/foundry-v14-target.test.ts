@@ -157,7 +157,7 @@ describe('Foundry v14 generator target', () => {
         uses: { max: '', spent: 0, recovery: [] },
         activities: {},
         identifier: 'contract-item',
-        properties: [],
+        properties: ['mgc'],
         container: null,
         unidentified: { description: '' },
         armor: { value: null, dex: null, magicalBonus: null },
@@ -179,7 +179,7 @@ describe('Foundry v14 generator target', () => {
     expect(generated.img).toBe('icons/svg/item-bag.svg');
     expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: null });
     expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
-    expect(generated.system.properties).toEqual([]);
+    expect(generated.system.properties).toEqual(['mgc']);
     expect(generated.effects).toEqual([]);
   });
 

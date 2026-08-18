@@ -150,7 +150,7 @@ describe('source-derived standalone Item semantics', () => {
     expect(generated.img).toBe('icons/svg/item-bag.svg');
     expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: null });
     expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
-    expect(generated.system.properties).toEqual([]);
+    expect(generated.system.properties).toEqual(['mgc']);
     expect(generated.system.weight).toEqual({ value: 0, units: 'lb' });
     expect(generated.system.price).toEqual({ value: 0, denomination: 'gp' });
     expect(generated.effects).toEqual([]);

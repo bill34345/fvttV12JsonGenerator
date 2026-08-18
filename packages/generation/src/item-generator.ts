@@ -210,6 +210,22 @@ export class ItemGenerator {
       item.system.identifier = this.sanitizeIdentifier(parsed.name);
     }
 
+    // Preserve a source-provided image path; otherwise the neutral template's
+    // fallback icon remains in place.
+    if (parsed.img?.trim()) {
+      item.img = parsed.img.trim();
+    }
+
+    // User-approved project convention: every externally supplied Item is a
+    // magical item, so dnd5e exposes the native Magic property in its details
+    // UI. Preserve any other source/template properties without duplicates.
+    const properties = new Set<string>([
+      'mgc',
+      ...(Array.isArray(item.system.properties) ? item.system.properties : []),
+      ...(parsed.properties ?? []),
+    ]);
+    item.system.properties = [...properties];
+
     // Description
     if (parsed.description !== undefined || parsed.cumulativeRequirements || parsed.stages?.[0]?.requirements?.length) {
       item.system.description = item.system.description || { value: '', chat: '' };
