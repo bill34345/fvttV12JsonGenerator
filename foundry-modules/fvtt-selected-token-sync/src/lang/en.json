@@ -1,0 +1,21 @@
+{
+  "fvtt-selected-token-sync": {
+    "settings": {
+      "enabled": {
+        "name": "Selected Token Sync",
+        "hint": "Mirror Token HUD statuses and movement actions to the other selected tokens."
+      }
+    },
+    "controls": {
+      "toggle": {
+        "name": "Selected Token Sync"
+      }
+    },
+    "errors": {
+      "notAllEligible": "Selected Token Sync was cancelled because not every selected token is editable",
+      "syncFailed": "Selected Token Sync could not update every target",
+      "settingFailed": "Selected Token Sync could not save its setting",
+      "multistatusConflict": "Selected Token Sync is disabled because Multi Token Status is active"
+    }
+  }
+}

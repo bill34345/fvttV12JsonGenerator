@@ -1,0 +1,17 @@
+{
+  "name": "@fvtt-json-generator/fvtt-selected-token-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "test": "bun test tests --max-concurrency 4",
+    "typecheck": "tsc -p tsconfig.json --pretty false",
+    "install:local": "bun run labCli.ts install --apply",
+    "verify-install": "bun run labCli.ts verify-install"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

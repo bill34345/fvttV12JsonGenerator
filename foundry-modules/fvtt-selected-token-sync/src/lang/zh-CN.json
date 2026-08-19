@@ -1,0 +1,21 @@
+{
+  "fvtt-selected-token-sync": {
+    "settings": {
+      "enabled": {
+        "name": "框选 Token 同步",
+        "hint": "把 Token HUD 的状态和移动方式同步到其他框选 Token。"
+      }
+    },
+    "controls": {
+      "toggle": {
+        "name": "框选 Token 同步"
+      }
+    },
+    "errors": {
+      "notAllEligible": "已取消框选同步，因为并非所有框选 Token 都可编辑",
+      "syncFailed": "框选同步未能更新全部目标",
+      "settingFailed": "框选同步开关保存失败",
+      "multistatusConflict": "Multi Token Status 已启用，框选 Token 同步已停用"
+    }
+  }
+}
