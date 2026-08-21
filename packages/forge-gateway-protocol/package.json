@@ -1,0 +1,21 @@
+{
+  "name": "@fvtt-json-generator/forge-gateway-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./hash": "./src/hash.ts",
+    "./routing": "./src/routing.ts",
+    "./schema": "./src/schema.ts",
+    "./source-identity": "./src/sourceIdentity.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
+    "js-yaml": "^4.1.1"
+  }
+}

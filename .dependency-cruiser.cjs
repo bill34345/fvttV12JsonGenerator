@@ -16,6 +16,15 @@ module.exports = {
       to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/))' },
     },
     {
+      name: 'forge-gateway-protocol-is-browser-safe',
+      severity: 'error',
+      comment: 'Forge Gateway Protocol is a browser-safe contract package and must not depend on delivery, runtime, workflow, generator, or operator layers.',
+      from: { path: '^packages/forge-gateway-protocol/' },
+      to: {
+        path: '^(node:|bun:|src/|scripts/|apps/|foundry-modules/|tools/|packages/(?!contracts/|forge-gateway-protocol/))',
+      },
+    },
+    {
       name: 'parser-package-is-independent',
       severity: 'error',
       comment: 'Parser package code depends only on contracts, models, spell contracts, and declared third-party packages.',

@@ -8,6 +8,7 @@
         "@fvtt-json-generator/assets-icons": "workspace:*",
         "@fvtt-json-generator/contracts": "workspace:*",
         "@fvtt-json-generator/crawl-goddessfantasy": "workspace:*",
+        "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
         "@fvtt-json-generator/generation": "workspace:*",
         "@fvtt-json-generator/ingest-documents": "workspace:*",
         "@fvtt-json-generator/ingest-plaintext": "workspace:*",
@@ -172,6 +173,14 @@
         "domhandler": "^6.0.1",
       },
     },
+    "packages/forge-gateway-protocol": {
+      "name": "@fvtt-json-generator/forge-gateway-protocol",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/contracts": "workspace:*",
+        "js-yaml": "^4.1.1",
+      },
+    },
     "packages/generation": {
       "name": "@fvtt-json-generator/generation",
       "version": "0.1.0",
@@ -327,6 +336,8 @@
     "@fvtt-json-generator/contracts": ["@fvtt-json-generator/contracts@workspace:packages/contracts"],
 
     "@fvtt-json-generator/crawl-goddessfantasy": ["@fvtt-json-generator/crawl-goddessfantasy@workspace:packages/crawl-goddessfantasy"],
+
+    "@fvtt-json-generator/forge-gateway-protocol": ["@fvtt-json-generator/forge-gateway-protocol@workspace:packages/forge-gateway-protocol"],
 
     "@fvtt-json-generator/foundry-ops": ["@fvtt-json-generator/foundry-ops@workspace:tools/foundry-ops"],
 
