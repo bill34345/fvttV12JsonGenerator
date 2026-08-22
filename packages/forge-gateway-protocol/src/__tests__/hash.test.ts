@@ -42,4 +42,14 @@ describe('Forge canonical hashes', () => {
     cyclic.self = cyclic;
     expect(() => hashArtifact(cyclic as never)).toThrow();
   });
+
+  test('preserves prototype-named own keys in canonical hashes', () => {
+    const withPrototypeKeys = JSON.parse('{"__proto__":{"nested":true},"constructor":"own","prototype":[1]}');
+    const withoutProtoKey = JSON.parse('{"constructor":"own","prototype":[1]}');
+    const nestedPrototypeKey = JSON.parse('{"nested":{"__proto__":{"value":1}}}');
+
+    expect(canonicalJsonStringify(withPrototypeKeys)).toContain('"__proto__"');
+    expect(hashArtifact(withPrototypeKeys)).not.toBe(hashArtifact(withoutProtoKey));
+    expect(canonicalJsonStringify(nestedPrototypeKey)).toContain('"__proto__"');
+  });
 });

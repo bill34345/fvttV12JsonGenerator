@@ -128,7 +128,7 @@ function canonicalize(value: unknown, path: string, stack: Set<object>): JsonVal
     normalized = output;
   } else {
     if (!isPlainObject(value)) throw new TypeError('Cannot hash non-plain object at ' + path + '.');
-    const output: Record<string, JsonValue> = {};
+    const output: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
     for (const key of Object.keys(value).sort()) {
       output[key] = canonicalize((value as Record<string, unknown>)[key], path + '/' + key, stack);
     }

@@ -3,6 +3,7 @@ import type { ParsedNPC } from './mapping';
 import { i18n } from './i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import type { ParserStrategy } from './types';
+import { validateForgeSourceMetadata } from './forgeSourceMetadata';
 
 const require = createRequire(import.meta.url);
 const yaml = require('js-yaml') as { load: (input: string) => unknown };
@@ -197,6 +198,7 @@ export class EnglishBestiaryParser implements ParserStrategy {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const raw = this.loadFrontmatter(frontmatter);
+    validateForgeSourceMetadata(raw);
 
     const result: ParsedNPC = {
       name: typeof raw.name === 'string' ? raw.name : '',

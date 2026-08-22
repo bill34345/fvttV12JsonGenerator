@@ -1,13 +1,17 @@
 import { load } from 'js-yaml';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import {
+  FORGE_SOURCE_ID_FIELD,
+  FORGE_SOURCE_ID_PREFIX,
+  isForgeSourceId,
+} from '@fvtt-json-generator/contracts';
 import type { ForgeSourceId, ForgeSourceRef, Sha256 } from './types';
 
-export const FORGE_SOURCE_ID_FIELD = 'forge-source-id' as const;
-export const FORGE_SOURCE_ID_PREFIX = 'actor:v1:' as const;
 export const FORGE_SOURCE_REF_PREFIX = 'source:v1:' as const;
 
-const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SOURCE_REF_PATTERN = /^source:v1:([A-Za-z0-9_-]{1,256})$/u;
+
+export { FORGE_SOURCE_ID_FIELD, FORGE_SOURCE_ID_PREFIX, isForgeSourceId } from '@fvtt-json-generator/contracts';
 
 export type ForgeSourceIdentityRead =
   | { status: 'missing'; reason: 'frontmatter-missing' | 'field-missing' }
@@ -29,16 +33,10 @@ interface FrontmatterRegion {
 
 export function createForgeSourceId(randomUuid: () => string = () => globalThis.crypto.randomUUID()): ForgeSourceId {
   const uuid = randomUuid().toLowerCase();
-  if (!UUID_V4_PATTERN.test(uuid)) {
+  if (!isForgeSourceId(FORGE_SOURCE_ID_PREFIX + uuid)) {
     throw new TypeError('Forge source UUID must be a canonical lowercase UUID v4.');
   }
   return (FORGE_SOURCE_ID_PREFIX + uuid) as ForgeSourceId;
-}
-
-export function isForgeSourceId(value: unknown): value is ForgeSourceId {
-  return typeof value === 'string'
-    && value.startsWith(FORGE_SOURCE_ID_PREFIX)
-    && UUID_V4_PATTERN.test(value.slice(FORGE_SOURCE_ID_PREFIX.length));
 }
 
 export function isForgeSourceRef(value: unknown): value is ForgeSourceRef {

@@ -8,7 +8,10 @@ import {
   decodeForgeHealth,
   decodeForgeSourceCreateRequest,
   decodeForgeSourceCreateResult,
+  FORGE_INPUT_ISSUE_TO_ERROR_CODE,
   hashArtifact,
+  mapForgeInputIssueToErrorCode,
+  projectForgeVerification,
   type ForgeSourceId,
 } from '..';
 
@@ -19,6 +22,26 @@ const TARGET = {
   generatorProfile: 'v12' as const,
   effectProfile: 'core' as const,
   iconMode: 'off' as const,
+};
+const SAFE_VERIFICATION = { status: 'accepted' as const, mechanicsCoverage: [] };
+const SAFE_ACTOR_VERIFICATION = {
+  actor: { name: 'Test Actor', type: 'npc', senses: {} },
+  items: [],
+  warnings: [],
+};
+const WARNING_DIAGNOSTIC = {
+  code: 'NEEDS_REVIEW',
+  severity: 'warning' as const,
+  stage: 'semantic' as const,
+  path: 'actor',
+  message: 'Manual review is required.',
+};
+const ERROR_DIAGNOSTIC = {
+  code: 'WORKFLOW_FAILED',
+  severity: 'error' as const,
+  stage: 'semantic' as const,
+  path: 'actor',
+  message: 'Workflow failed.',
 };
 
 function actorRequest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -109,6 +132,114 @@ describe('Forge protocol schemas', () => {
     expect(result.ok).toBe(true);
   });
 
+  test('applies the shared empty and UTF-8 byte input policy before hashing', () => {
+    const sourceCreate = (content: string) => ({
+      protocolVersion: 1,
+      capabilityId: 'source.actor.create.v1',
+      requestId: 'request-source-policy',
+      source: { displayName: 'Test Actor', content, utf8Sha256: sha256(content) },
+    });
+    const empty = decodeForgeSourceCreateRequest(sourceCreate(' \n\t '));
+    expect(empty.ok).toBe(false);
+    if (empty.ok) throw new Error('Expected whitespace-only source content to be rejected.');
+    expect(empty.issues.map((issue) => issue.code)).toContain('INPUT_EMPTY');
+    expect(mapForgeInputIssueToErrorCode({ code: 'INPUT_EMPTY' })).toBe(FORGE_INPUT_ISSUE_TO_ERROR_CODE.INPUT_EMPTY);
+
+    const exact = '中'.repeat(66_666) + 'aa';
+    expect(new TextEncoder().encode(exact).byteLength).toBe(200_000);
+    expect(decodeForgeSourceCreateRequest(sourceCreate(exact)).ok).toBe(true);
+    expect(mapForgeInputIssueToErrorCode({ code: 'INPUT_TOO_LARGE' })).toBe(FORGE_INPUT_ISSUE_TO_ERROR_CODE.INPUT_TOO_LARGE);
+
+    const tooLarge = '中'.repeat(66_667);
+    expect(new TextEncoder().encode(tooLarge).byteLength).toBe(200_001);
+    const rejected = decodeForgeSourceCreateRequest(sourceCreate(tooLarge));
+    expect(rejected.ok).toBe(false);
+    if (rejected.ok) throw new Error('Expected an over-limit source to be rejected.');
+    expect(rejected.issues.map((issue) => issue.code)).toContain('INPUT_TOO_LARGE');
+    expect(rejected.issues.map((issue) => issue.code)).not.toContain('SOURCE_HASH_MISMATCH');
+  });
+
+  test('applies the same byte limit to Actor requests at the exact boundary', () => {
+    const source = actorRequest().source as Record<string, unknown>;
+    const encoder = new TextEncoder();
+    const padToBytes = (prefix: string, bytes: number): string => {
+      const current = encoder.encode(prefix).byteLength;
+      if (current > bytes) throw new Error('Test prefix is larger than its requested boundary.');
+      return prefix + 'a'.repeat(bytes - current);
+    };
+    const exactContent = padToBytes(ACTOR_CONTENT, 200_000);
+    const exact = decodeForgeActorRequest(actorRequest({
+      source: { ...source, content: exactContent, utf8Sha256: sha256(exactContent) },
+    }));
+    expect(exact.ok).toBe(true);
+
+    const tooLargeContent = padToBytes(ACTOR_CONTENT, 200_001);
+    const tooLarge = decodeForgeActorRequest(actorRequest({
+      source: { ...source, content: tooLargeContent, utf8Sha256: sha256(tooLargeContent) },
+    }));
+    expect(tooLarge.ok).toBe(false);
+    if (tooLarge.ok) throw new Error('Expected an over-limit Actor source to be rejected.');
+    expect(tooLarge.issues.map((issue) => issue.code)).toContain('INPUT_TOO_LARGE');
+  });
+
+  test('projects workflow verification without copying path-like internal fields', () => {
+    const projection = projectForgeVerification({
+      verification: {
+        status: 'accepted',
+        mechanicsCoverage: [{
+          mechanicId: 'attack-1',
+          kind: 'attack',
+          sourcePath: 'C:\\repo\\source.md:actions/0',
+          status: 'projected',
+          outputPaths: ['documents/0/system/activities/0'],
+          target: { reference: { localCache: 'C:\\cache' } },
+        }],
+        sourcePath: 'C:\\repo\\source.md',
+      },
+      actorVerification: {
+        actor: { name: 'Test Actor', type: 'npc', senses: {}, actorPath: 'C:\\actor.json' },
+        items: [],
+        warnings: [],
+        localCache: 'C:\\cache',
+      },
+    });
+
+    expect(projection.verification.mechanicsCoverage[0]?.sourceField).toBe('actor.actions');
+    expect(JSON.stringify(projection)).not.toMatch(/sourcePath|actorPath|localCache|reference|C:\\/u);
+  });
+
+  test('projects workflow-supported empty creature types and heal activities', () => {
+    const projection = projectForgeVerification({
+      verification: SAFE_VERIFICATION,
+      actorVerification: {
+        actor: { name: 'Test Actor', type: 'npc', creatureType: '', senses: {} },
+        items: [{
+          name: 'Healing Rider',
+          type: 'feat',
+          activation: '',
+          activityTypes: ['heal'],
+          activities: [{ type: 'heal' }],
+          effects: [],
+        }],
+        warnings: [],
+      },
+    });
+
+    expect(projection.actorVerification.actor.creatureType).toBe('');
+    expect(projection.actorVerification.items[0]?.activityTypes).toEqual(['heal']);
+    expect(projection.actorVerification.items[0]?.activities).toEqual([{ type: 'heal' }]);
+  });
+
+  test('rejects sparse arrays at the projection boundary', () => {
+    const sparseMechanics: unknown[] = [];
+    sparseMechanics.length = 1;
+
+    expect(() => projectForgeVerification({
+      verification: { status: 'accepted', mechanicsCoverage: sparseMechanics },
+      actorVerification: SAFE_ACTOR_VERIFICATION,
+    })).toThrow(/dense array/u);
+  });
+
   test('enforces accepted/needs_review/failed result semantics', () => {
     const base = {
       sourceIdentity: { sourceId: SOURCE_ID, sourceHash: sha256(CONTENT) },
@@ -122,8 +253,8 @@ describe('Forge protocol schemas', () => {
         iconMode: 'off',
       },
       diagnostics: [],
-      verification: { status: 'accepted' },
-      actorVerification: { warnings: [] },
+      verification: SAFE_VERIFICATION,
+      actorVerification: SAFE_ACTOR_VERIFICATION,
     };
     expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
       ...base,
@@ -133,11 +264,21 @@ describe('Forge protocol schemas', () => {
     } }).ok).toBe(true);
     expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
       ...base,
+      diagnostics: [WARNING_DIAGNOSTIC],
+      verification: { status: 'needs_review', mechanicsCoverage: [] },
       status: 'needs_review',
       artifact: { name: 'Test Actor' },
     } }).ok).toBe(true);
     expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
       ...base,
+      diagnostics: [ERROR_DIAGNOSTIC],
+      verification: { status: 'failed', mechanicsCoverage: [] },
+      status: 'failed',
+    } }).ok).toBe(true);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      diagnostics: [ERROR_DIAGNOSTIC],
+      verification: { status: 'failed', mechanicsCoverage: [] },
       status: 'failed',
       artifact: { name: 'must-not-write' },
     } }).ok).toBe(false);
@@ -148,19 +289,79 @@ describe('Forge protocol schemas', () => {
     } }).ok).toBe(false);
     expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
       ...base,
+      verification: { status: 'needs_review', mechanicsCoverage: [] },
       status: 'needs_review',
-      verification: { unsupported: undefined },
+      artifact: { name: 'Test Actor' },
     } }).ok).toBe(false);
     expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
       ...base,
-      diagnostics: [{
-        code: 'INVALID',
-        severity: 'warning',
-        stage: 'semantic',
-        path: '$',
-        message: 'negative span',
-        evidence: [{ start: -1, end: 0, quote: 'x' }],
-      }],
+      diagnostics: [ERROR_DIAGNOSTIC],
+      verification: { status: 'needs_review', mechanicsCoverage: [] },
+      status: 'needs_review',
+      artifact: { name: 'Test Actor' },
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      status: 'failed',
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      artifact: { name: 'changed' },
+      status: 'accepted',
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      diagnostics: [WARNING_DIAGNOSTIC],
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      actorVerification: { ...SAFE_ACTOR_VERIFICATION, warnings: ['review'] },
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      verification: { status: 'failed', mechanicsCoverage: [] },
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      verification: { ...SAFE_VERIFICATION, sourcePath: 'C:\\secret' },
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      actorVerification: { ...SAFE_ACTOR_VERIFICATION, actorPath: 'C:\\secret' },
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    const safeMechanic = {
+      mechanicId: 'attack-1',
+      kind: 'attack',
+      sourceField: 'actor.actions',
+      status: 'projected',
+      outputPaths: ['documents/0/system/activities/0'],
+    };
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      verification: { status: 'accepted', mechanicsCoverage: [{ ...safeMechanic, outputPaths: ['/tmp/secret'] }] },
+      status: 'accepted',
+      artifact: { name: 'Test Actor' },
+      artifactHash: hashArtifact({ name: 'Test Actor' }),
+    } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
+      ...base,
+      verification: { status: 'accepted', mechanicsCoverage: [{ ...safeMechanic, outputPaths: ['documents/../secret'] }] },
       status: 'accepted',
       artifact: { name: 'Test Actor' },
       artifactHash: hashArtifact({ name: 'Test Actor' }),

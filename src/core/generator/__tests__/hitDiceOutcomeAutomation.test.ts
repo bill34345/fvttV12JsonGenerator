@@ -62,6 +62,45 @@ describe('hitDiceOutcomeAutomation', () => {
     expect(command).not.toContain('grantsTempHp: 10');
   });
 
+  it('omits absent optional fields instead of materializing undefined JSON values', () => {
+    const spec = buildHitDiceOutcomeAutomationSpec(
+      {
+        ...rider,
+        outcomes: [
+          {
+            kind: 'hitDiceChange',
+            direction: 'lose',
+            count: 1,
+            pool: 'unspent',
+            target: 'failedSaveTarget',
+            evidence: undefined,
+          },
+          {
+            kind: 'tempHp',
+            amount: 5,
+            target: 'self',
+            condition: undefined,
+            evidence: undefined,
+          },
+        ],
+      } as ExtractedRider,
+      {
+        primaryActivityId: 'act-save',
+        loseHitDieActivityId: 'act-lose-hd',
+        tempHpActivityId: undefined,
+        followupSaveActivityId: undefined,
+      },
+    );
+
+    expect(spec.hitDiceChange).toEqual(expect.objectContaining({ count: 1 }));
+    expect(Object.prototype.hasOwnProperty.call(spec.tempHp, 'condition')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(spec.tempHp, 'evidence')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(spec, 'followupSave')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(spec, 'tempHpActivityId')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(spec, 'followupSaveActivityId')).toBe(false);
+    expect(JSON.parse(JSON.stringify(spec))).toEqual(spec);
+  });
+
   it('falls back before temp hp automation when no versioned safe hit-dice path is confirmed', () => {
     const spentPoolSpec = buildHitDiceOutcomeAutomationSpec(
       {

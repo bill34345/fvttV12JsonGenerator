@@ -7,6 +7,7 @@ export { EnglishActionParser } from './englishAction';
 export { I18nMapper, i18n } from './i18n';
 export { ItemParser } from './itemParser';
 export { detectItemRoute, extractFrontmatter } from './itemRouter';
+export { validateForgeSourceMetadata } from './forgeSourceMetadata';
 export type { ItemParserStrategy } from './itemStrategy';
 export * from './mapping';
 export * from '@fvtt-json-generator/models/action';

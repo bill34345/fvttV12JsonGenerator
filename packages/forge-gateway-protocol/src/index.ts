@@ -26,11 +26,20 @@ export {
   decodeForgeCapability,
   decodeForgeError,
   decodeForgeHealth,
+  mapForgeInputIssueToErrorCode,
   decodeForgeRequest,
   decodeForgeSourceCreateRequest,
   decodeForgeSourceCreateResponse,
   decodeForgeSourceCreateResult,
 } from './schema';
+export {
+  mapForgeSourceField,
+  projectForgeDiagnostics,
+  projectForgeVerification,
+  requireForgeAcceptedVerification,
+  type ForgeVerificationProjection,
+  type ForgeVerificationProjectionInput,
+} from './projection';
 export {
   FORGE_SOURCE_ID_FIELD,
   FORGE_SOURCE_ID_PREFIX,

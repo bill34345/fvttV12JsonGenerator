@@ -1,4 +1,4 @@
-import type { EvidenceRef, GenerationDiagnostic } from '@fvtt-json-generator/contracts';
+import type { EvidenceRef } from '@fvtt-json-generator/contracts';
 import { hashArtifact, hashSource } from './hash';
 import {
   FORGE_ACTOR_CAPABILITY,
@@ -10,33 +10,62 @@ import {
 import { isForgeSourceId, isForgeSourceRef, readForgeSourceId } from './sourceIdentity';
 import {
   FORGE_ERROR_CODES,
+  FORGE_INPUT_ISSUE_TO_ERROR_CODE,
+  FORGE_ACTIVITY_TYPES,
+  FORGE_EXECUTION_MODES,
+  FORGE_EXPRESSION_COVERAGES,
   FORGE_GENERATOR_PROFILES,
+  FORGE_MECHANIC_COVERAGE_STATUSES,
+  FORGE_MECHANIC_KINDS,
   FORGE_PROTOCOL_VERSION,
   FORGE_SERVICE_ID,
+  FORGE_SOURCE_FIELDS,
   type ForgeActorCapability,
   type ForgeActorRequest,
   type ForgeActorResponse,
   type ForgeActorResult,
+  type ForgeActorResultBase,
+  type ForgeAcceptedVerificationSummary,
   type ForgeCapability,
   type ForgeDecodeIssue,
   type ForgeDecodeResult,
+  type ForgeActorVerificationSummary,
+  type ForgeActivityDamageSummary,
+  type ForgeActivityRangeSummary,
+  type ForgeActivitySummary,
+  type ForgeDamagePartSummary,
+  type ForgeEffectChangeSummary,
+  type ForgeEffectSummary,
+  type ForgeErrorCode,
   type ForgeGatewayError,
+  type ForgeDiagnostic,
   type ForgeGatewayHealth,
   type ForgeGeneratorProfile,
+  type ForgeHitPointSummary,
+  type ForgeArmorClassSummary,
+  type ForgeItemVerificationSummary,
+  type ForgeMechanicCoverageSummary,
   type ForgeResponse,
+  type ForgeSensesSummary,
   type ForgeSourceCreateRequest,
   type ForgeSourceCreateResult,
   type ForgeSourceCreateResponse,
+  type ForgeVerificationSummary,
   type JsonObject,
   type JsonValue,
   type Sha256,
 } from './types';
+import {
+  isSafeForgeDiagnosticPath,
+  isSafeForgeDocumentFieldPath,
+  isSafeForgeWireMessage,
+} from './wireSafety';
 
 const ACTOR_REQUEST_KEYS = new Set(['protocolVersion', 'capabilityId', 'requestId', 'source', 'foundryRuntime', 'resolvedTarget']);
 const SOURCE_CREATE_REQUEST_KEYS = new Set(['protocolVersion', 'capabilityId', 'requestId', 'source']);
 const RESPONSE_KEYS = new Set(['protocolVersion', 'requestId', 'result', 'error']);
 const HEALTH_KEYS = new Set(['protocolVersion', 'service', 'serviceVersion', 'instanceId', 'deployment', 'status']);
-const ERROR_KEYS = new Set(['code', 'message', 'retryable', 'details']);
+const ERROR_KEYS = new Set(['code', 'message', 'retryable']);
 const ACTOR_RESULT_KEYS = new Set([
   'sourceIdentity',
   'target',
@@ -48,6 +77,10 @@ const ACTOR_RESULT_KEYS = new Set([
   'artifactHash',
 ]);
 const SOURCE_RESULT_KEYS = new Set(['sourceRef', 'sourceId', 'displayName', 'sourceHash']);
+const MAX_INPUT_UTF8_BYTES = Math.min(
+  FORGE_ACTOR_CAPABILITY.maxInputUtf8Bytes,
+  FORGE_SOURCE_CREATE_CAPABILITY.maxInputUtf8Bytes,
+);
 
 export function decodeForgeHealth(value: unknown): ForgeDecodeResult<ForgeGatewayHealth> {
   const issues: ForgeDecodeIssue[] = [];
@@ -151,6 +184,14 @@ export function decodeForgeActorRequest(value: unknown): ForgeDecodeResult<Forge
   const warnings: ForgeDecodeIssue[] = [];
   if (foundryRuntime) {
     try {
+      const target = resolveForgeTarget(foundryRuntime.fvttVersion);
+      if (target.compatibility === 'forward-fallback') {
+        warnings.push({
+          path: '$/foundryRuntime/fvttVersion',
+          code: 'FORGE_FORWARD_FALLBACK',
+          message: target.compatibilityMessage ?? 'FVTT runtime is using the v14 generator fallback.',
+        });
+      }
       const message = getForgeDnd5eVersionWarning(foundryRuntime.fvttVersion, foundryRuntime.systemVersion);
       if (message) warnings.push({
         path: '$/foundryRuntime/systemVersion',
@@ -211,6 +252,10 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
   const base = readActorResultBase(record, issues);
   const status = readEnum(record, 'status', '$', ['accepted', 'needs_review', 'failed'] as const, issues);
   if (!status || !base) return failure(issues);
+  if (base.verification.status !== status) {
+    issue(issues, '$/verification/status', 'STATUS_MISMATCH', 'result.status must equal verification.status.');
+  }
+  validateResultStatusInvariants(status, base, issues);
 
   if (status === 'accepted') {
     const artifact = readJsonObject(record, 'artifact', '$', issues);
@@ -225,7 +270,13 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
       }
     }
     if (issues.length > 0 || !artifact || !artifactHash) return failure(issues);
-    return success({ ...base, status, artifact, artifactHash });
+    return success({
+      ...base,
+      verification: base.verification as ForgeAcceptedVerificationSummary,
+      status,
+      artifact,
+      artifactHash,
+    });
   }
 
   if (Object.prototype.hasOwnProperty.call(record, 'artifactHash')) {
@@ -245,6 +296,50 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
   return issues.length > 0 ? failure(issues) : success({ ...base, status });
 }
 
+function validateResultStatusInvariants(
+  status: ForgeActorResult['status'],
+  base: ForgeActorResultBase,
+  issues: ForgeDecodeIssue[],
+): void {
+  const hasError = base.diagnostics.some((entry) => entry.severity === 'error');
+  const hasWarning = base.diagnostics.some((entry) => entry.severity === 'warning');
+  const hasActorWarnings = base.actorVerification.warnings.length > 0;
+  const hasReviewOnlyCoverage = base.verification.mechanicsCoverage.some((entry) => (
+    entry.status !== 'projected'
+    || entry.outputPaths.length === 0
+    || (entry.expressionCoverage !== undefined && entry.expressionCoverage !== 'structured')
+    || entry.executionMode === 'gm-assisted'
+    || entry.executionMode === 'external-rule'
+  ));
+
+  if (status === 'accepted') {
+    if (hasError || hasWarning) {
+      issue(issues, '$/diagnostics', 'ACCEPTED_WITH_DIAGNOSTICS', 'Accepted results must not contain warning or error diagnostics.');
+    }
+    if (hasActorWarnings) {
+      issue(issues, '$/actorVerification/warnings', 'ACCEPTED_WITH_WARNINGS', 'Accepted results must not contain actor verification warnings.');
+    }
+    if (hasReviewOnlyCoverage) {
+      issue(issues, '$/verification/mechanicsCoverage', 'ACCEPTED_WITH_REVIEW_COVERAGE', 'Accepted results must contain only fully projected mechanics coverage.');
+    }
+    return;
+  }
+
+  if (status === 'needs_review') {
+    if (hasError) {
+      issue(issues, '$/diagnostics', 'NEEDS_REVIEW_WITH_ERROR', 'Needs-review results must not contain error diagnostics.');
+    }
+    if (!hasWarning) {
+      issue(issues, '$/diagnostics', 'NEEDS_REVIEW_WITHOUT_WARNING', 'Needs-review results must contain at least one warning diagnostic.');
+    }
+    return;
+  }
+
+  if (!hasError) {
+    issue(issues, '$/diagnostics', 'FAILED_WITHOUT_ERROR', 'Failed results must contain at least one error diagnostic.');
+  }
+}
+
 export function decodeForgeError(value: unknown): ForgeDecodeResult<ForgeGatewayError> {
   const issues: ForgeDecodeIssue[] = [];
   const record = readRecord(value, '$', ERROR_KEYS, issues);
@@ -252,11 +347,11 @@ export function decodeForgeError(value: unknown): ForgeDecodeResult<ForgeGateway
   const code = readEnum(record, 'code', '$', FORGE_ERROR_CODES, issues);
   const message = readNonEmptyString(record, 'message', '$', issues);
   const retryable = readBoolean(record, 'retryable', '$', issues);
-  const details = Object.prototype.hasOwnProperty.call(record, 'details')
-    ? readJsonObject(record, 'details', '$', issues)
-    : undefined;
+  if (message && !isSafeForgeWireMessage(message)) {
+    issue(issues, '$/message', 'UNSAFE_MESSAGE', 'Error messages must not expose internal filesystem paths.');
+  }
   if (issues.length > 0 || !code || !message || retryable === undefined) return failure(issues);
-  return success({ code, message, retryable, ...(details ? { details } : {}) });
+  return success({ code, message, retryable });
 }
 
 export function decodeForgeActorResponse(value: unknown): ForgeDecodeResult<ForgeActorResponse> {
@@ -265,6 +360,18 @@ export function decodeForgeActorResponse(value: unknown): ForgeDecodeResult<Forg
 
 export function decodeForgeSourceCreateResponse(value: unknown): ForgeDecodeResult<ForgeSourceCreateResponse> {
   return decodeResponse(value, decodeForgeSourceCreateResult);
+}
+
+/** Map decoder-only input policy issues to the stable Gateway error union. */
+export function mapForgeInputIssueToErrorCode(issue: Pick<ForgeDecodeIssue, 'code'>): ForgeErrorCode | undefined {
+  switch (issue.code) {
+    case 'INPUT_EMPTY':
+      return FORGE_INPUT_ISSUE_TO_ERROR_CODE.INPUT_EMPTY;
+    case 'INPUT_TOO_LARGE':
+      return FORGE_INPUT_ISSUE_TO_ERROR_CODE.INPUT_TOO_LARGE;
+    default:
+      return undefined;
+  }
 }
 
 export function decodeForgeRequest(value: unknown): ForgeDecodeResult<ForgeActorRequest | ForgeSourceCreateRequest> {
@@ -306,7 +413,7 @@ function readActorRequestSource(
   const record = readRecord(value, path, new Set(['displayName', 'content', 'sourceId', 'utf8Sha256']), issues);
   if (!record) return undefined;
   const displayName = readNonEmptyString(record, 'displayName', path, issues);
-  const content = readString(record, 'content', path, issues);
+  const content = readForgeSourceContent(record, path, issues);
   const sourceId = readSourceId(record, 'sourceId', path, issues);
   const utf8Sha256 = readHash(record, 'utf8Sha256', path, issues);
   if (!displayName || content === undefined || !sourceId || !utf8Sha256) return undefined;
@@ -321,10 +428,34 @@ function readSourceCreateSource(
   const record = readRecord(value, path, new Set(['displayName', 'content', 'utf8Sha256']), issues);
   if (!record) return undefined;
   const displayName = readNonEmptyString(record, 'displayName', path, issues);
-  const content = readString(record, 'content', path, issues);
+  const content = readForgeSourceContent(record, path, issues);
   const utf8Sha256 = readHash(record, 'utf8Sha256', path, issues);
   if (!displayName || content === undefined || !utf8Sha256) return undefined;
   return { displayName, content, utf8Sha256 };
+}
+
+function readForgeSourceContent(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): string | undefined {
+  const content = readString(record, 'content', path, issues);
+  if (content === undefined) return undefined;
+  if (content.trim().length === 0) {
+    issue(issues, path + '/content', 'INPUT_EMPTY', 'Source content must not be empty or whitespace-only.');
+    return undefined;
+  }
+  const utf8Bytes = new TextEncoder().encode(content).byteLength;
+  if (utf8Bytes > MAX_INPUT_UTF8_BYTES) {
+    issue(
+      issues,
+      path + '/content',
+      'INPUT_TOO_LARGE',
+      `Source content must be at most ${MAX_INPUT_UTF8_BYTES} UTF-8 bytes.`,
+    );
+    return undefined;
+  }
+  return content;
 }
 
 function readFoundryRuntime(
@@ -363,7 +494,7 @@ function readResolvedTarget(
 function readActorResultBase(
   record: Record<string, unknown>,
   issues: ForgeDecodeIssue[],
-): ForgeActorResult extends infer T ? T extends { status: string } ? Omit<T, 'status' | 'artifact' | 'artifactHash'> : never : never {
+): ForgeActorResultBase | undefined {
   const sourceIdentityRecord = readRecord(record.sourceIdentity, '$/sourceIdentity', new Set(['sourceId', 'sourceHash']), issues);
   const targetRecord = readRecord(record.target, '$/target', new Set([
     'fvttRuntimeVersion',
@@ -384,8 +515,8 @@ function readActorResultBase(
   const effectProfile = targetRecord ? readLiteral(targetRecord, 'effectProfile', '$/target', 'core', issues) : undefined;
   const iconMode = targetRecord ? readLiteral(targetRecord, 'iconMode', '$/target', 'off', issues) : undefined;
   const diagnostics = readDiagnostics(record.diagnostics, '$/diagnostics', issues);
-  const verification = readJsonObject(record, 'verification', '$', issues);
-  const actorVerification = readJsonObject(record, 'actorVerification', '$', issues);
+  const verification = readVerificationSummary(record.verification, '$/verification', issues);
+  const actorVerification = readActorVerificationSummary(record.actorVerification, '$/actorVerification', issues);
 
   if (fvttRuntimeVersion && generatorProfile) {
     try {
@@ -395,7 +526,7 @@ function readActorResultBase(
     }
   }
   if (issues.length > 0 || !sourceId || !sourceHash || !fvttRuntimeVersion || !generatorProfile || !generatorVersion || !systemId || !systemVersionObserved || !effectProfile || !iconMode || !diagnostics || !verification || !actorVerification) {
-    return undefined as never;
+    return undefined;
   }
   return {
     sourceIdentity: { sourceId, sourceHash },
@@ -411,10 +542,404 @@ function readActorResultBase(
     diagnostics,
     verification,
     actorVerification,
-  } as never;
+  };
 }
 
-function readDiagnostics(value: unknown, path: string, issues: ForgeDecodeIssue[]): GenerationDiagnostic[] | undefined {
+function readVerificationSummary(
+  value: unknown,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeVerificationSummary | undefined {
+  const record = readRecord(value, path, new Set(['status', 'mechanicsCoverage']), issues);
+  if (!record) return undefined;
+  const status = readEnum(record, 'status', path, ['accepted', 'needs_review', 'failed'] as const, issues);
+  const mechanicsCoverage = readMechanicsCoverage(record.mechanicsCoverage, path + '/mechanicsCoverage', issues);
+  if (!status || !mechanicsCoverage) return undefined;
+  return { status, mechanicsCoverage };
+}
+
+function readMechanicsCoverage(
+  value: unknown,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeMechanicCoverageSummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_MECHANICS_COVERAGE', 'mechanicsCoverage must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set([
+      'mechanicId',
+      'kind',
+      'sourceField',
+      'status',
+      'outputPaths',
+      'expressionCoverage',
+      'executionMode',
+    ]), issues);
+    if (!record) return [];
+    const mechanicId = readNonEmptyString(record, 'mechanicId', entryPath, issues);
+    const kind = readEnum(record, 'kind', entryPath, FORGE_MECHANIC_KINDS, issues);
+    const sourceField = readEnum(record, 'sourceField', entryPath, FORGE_SOURCE_FIELDS, issues);
+    const status = readEnum(record, 'status', entryPath, FORGE_MECHANIC_COVERAGE_STATUSES, issues);
+    const outputPaths = readSafeOutputPaths(record.outputPaths, entryPath + '/outputPaths', issues);
+    const expressionCoverage = readOptionalEnum(record, 'expressionCoverage', entryPath, FORGE_EXPRESSION_COVERAGES, issues);
+    const executionMode = readOptionalEnum(record, 'executionMode', entryPath, FORGE_EXECUTION_MODES, issues);
+    if (!mechanicId || !kind || !sourceField || !status || !outputPaths) return [];
+    return [{
+      mechanicId,
+      kind,
+      sourceField,
+      status,
+      outputPaths,
+      ...(expressionCoverage ? { expressionCoverage } : {}),
+      ...(executionMode ? { executionMode } : {}),
+    }];
+  });
+}
+
+function readSafeOutputPaths(value: unknown, path: string, issues: ForgeDecodeIssue[]): string[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_OUTPUT_PATHS', 'outputPaths must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    if (typeof entry !== 'string' || !isSafeDocumentFieldPath(entry)) {
+      issue(issues, path + '/' + index, 'INVALID_OUTPUT_PATH', 'outputPaths must contain safe document field paths.');
+      return [];
+    }
+    return [entry];
+  });
+}
+
+function isSafeDocumentFieldPath(value: string): boolean {
+  return isSafeForgeDocumentFieldPath(value);
+}
+
+function readActorVerificationSummary(
+  value: unknown,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeActorVerificationSummary | undefined {
+  const record = readRecord(value, path, new Set(['actor', 'items', 'warnings']), issues);
+  if (!record) return undefined;
+  const actor = readActorSummary(record.actor, path + '/actor', issues);
+  const items = readItemSummaries(record.items, path + '/items', issues);
+  const warnings = readNonEmptyStringArray(record.warnings, path + '/warnings', issues);
+  if (!actor || !items || !warnings) return undefined;
+  return { actor, items, warnings };
+}
+
+function readActorSummary(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeActorVerificationSummary['actor'] | undefined {
+  const record = readRecord(value, path, new Set(['name', 'type', 'creatureType', 'hp', 'ac', 'cr', 'senses']), issues);
+  if (!record) return undefined;
+  const name = readNonEmptyString(record, 'name', path, issues);
+  const type = readNonEmptyString(record, 'type', path, issues);
+  const creatureType = readOptionalString(record, 'creatureType', path, issues);
+  const hp = readOptionalHitPointSummary(record, 'hp', path, issues);
+  const ac = readOptionalArmorClassSummary(record, 'ac', path, issues);
+  const cr = readOptionalNumber(record, 'cr', path, issues);
+  const senses = readSensesSummary(record.senses, path + '/senses', issues);
+  if (!name || !type || !senses) return undefined;
+  return {
+    name,
+    type,
+    ...(creatureType !== undefined ? { creatureType } : {}),
+    ...(hp ? { hp } : {}),
+    ...(ac ? { ac } : {}),
+    ...(cr !== undefined ? { cr } : {}),
+    senses,
+  };
+}
+
+function readOptionalHitPointSummary(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeHitPointSummary | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  const value = record[key];
+  const entryPath = path + '/' + key;
+  const entry = readRecord(value, entryPath, new Set(['value', 'max', 'temp', 'tempmax', 'formula']), issues);
+  if (!entry) return undefined;
+  const result: ForgeHitPointSummary = {};
+  const valueNumber = readOptionalNumber(entry, 'value', entryPath, issues);
+  const max = readOptionalNumber(entry, 'max', entryPath, issues);
+  const temp = readOptionalNumberOrNull(entry, 'temp', entryPath, issues);
+  const tempmax = readOptionalNumberOrNull(entry, 'tempmax', entryPath, issues);
+  const formula = readOptionalString(entry, 'formula', entryPath, issues);
+  if (valueNumber !== undefined) result.value = valueNumber;
+  if (max !== undefined) result.max = max;
+  if (temp !== undefined) result.temp = temp;
+  if (tempmax !== undefined) result.tempmax = tempmax;
+  if (formula !== undefined) result.formula = formula;
+  return result;
+}
+
+function readOptionalArmorClassSummary(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeArmorClassSummary | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  const value = record[key];
+  const entryPath = path + '/' + key;
+  const entry = readRecord(value, entryPath, new Set(['value', 'flat', 'bonus', 'formula', 'calc']), issues);
+  if (!entry) return undefined;
+  const result: ForgeArmorClassSummary = {};
+  const valueNumber = readOptionalNumber(entry, 'value', entryPath, issues);
+  const flat = readOptionalNumber(entry, 'flat', entryPath, issues);
+  const bonus = readOptionalNumber(entry, 'bonus', entryPath, issues);
+  const formula = readOptionalString(entry, 'formula', entryPath, issues);
+  const calc = readOptionalString(entry, 'calc', entryPath, issues);
+  if (valueNumber !== undefined) result.value = valueNumber;
+  if (flat !== undefined) result.flat = flat;
+  if (bonus !== undefined) result.bonus = bonus;
+  if (formula !== undefined) result.formula = formula;
+  if (calc !== undefined) result.calc = calc;
+  return result;
+}
+
+function readSensesSummary(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeSensesSummary | undefined {
+  const record = readRecord(value, path, new Set([
+    'ranges',
+    'darkvision',
+    'blindsight',
+    'tremorsense',
+    'truesight',
+    'passive',
+    'special',
+    'units',
+  ]), issues);
+  if (!record) return undefined;
+  const ranges = readOptionalSenseRanges(record, path, issues);
+  const result: ForgeSensesSummary = {};
+  const directKeys = ['darkvision', 'blindsight', 'tremorsense', 'truesight', 'passive'] as const;
+  for (const key of directKeys) {
+    const number = readOptionalNumber(record, key, path, issues);
+    if (number !== undefined) result[key] = number;
+  }
+  const special = readOptionalString(record, 'special', path, issues);
+  const units = readOptionalString(record, 'units', path, issues);
+  if (ranges) result.ranges = ranges;
+  if (special !== undefined) result.special = special;
+  if (units !== undefined) result.units = units;
+  return result;
+}
+
+function readOptionalSenseRanges(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): NonNullable<ForgeSensesSummary['ranges']> | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, 'ranges')) return undefined;
+  const entryPath = path + '/ranges';
+  const entry = readRecord(record.ranges, entryPath, new Set(['darkvision', 'blindsight', 'tremorsense', 'truesight']), issues);
+  if (!entry) return undefined;
+  const result: NonNullable<ForgeSensesSummary['ranges']> = {};
+  for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const) {
+    const number = readOptionalNumber(entry, key, entryPath, issues);
+    if (number !== undefined) result[key] = number;
+  }
+  return result;
+}
+
+function readItemSummaries(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeItemVerificationSummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_ITEMS', 'items must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set(['name', 'type', 'activation', 'activityTypes', 'activities', 'effects']), issues);
+    if (!record) return [];
+    const name = readNonEmptyString(record, 'name', entryPath, issues);
+    const type = readNonEmptyString(record, 'type', entryPath, issues);
+    const activation = readString(record, 'activation', entryPath, issues);
+    const activityTypes = readEnumArray(record.activityTypes, entryPath + '/activityTypes', FORGE_ACTIVITY_TYPES, issues);
+    const activities = readActivitySummaries(record.activities, entryPath + '/activities', issues);
+    const effects = readEffectSummaries(record.effects, entryPath + '/effects', issues);
+    if (!name || !type || activation === undefined || !activityTypes || !activities || !effects) return [];
+    return [{ name, type, activation, activityTypes, activities, effects }];
+  });
+}
+
+function readActivitySummaries(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeActivitySummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_ACTIVITIES', 'activities must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set(['type', 'range', 'damage']), issues);
+    if (!record) return [];
+    const type = readEnum(record, 'type', entryPath, FORGE_ACTIVITY_TYPES, issues);
+    const range = readOptionalActivityRange(record, entryPath, issues);
+    const damage = readOptionalActivityDamage(record, entryPath, issues);
+    if (!type) return [];
+    return [{ type, ...(range ? { range } : {}), ...(damage ? { damage } : {}) }];
+  });
+}
+
+function readOptionalActivityRange(record: Record<string, unknown>, path: string, issues: ForgeDecodeIssue[]): ForgeActivityRangeSummary | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, 'range')) return undefined;
+  const entryPath = path + '/range';
+  const entry = readRecord(record.range, entryPath, new Set(['override', 'value', 'long', 'reach', 'units', 'special']), issues);
+  if (!entry) return undefined;
+  const result: ForgeActivityRangeSummary = {};
+  const override = readOptionalBoolean(entry, 'override', entryPath, issues);
+  const value = readOptionalNumberOrNull(entry, 'value', entryPath, issues);
+  const long = readOptionalNumberOrNull(entry, 'long', entryPath, issues);
+  const reach = readOptionalNumberOrNull(entry, 'reach', entryPath, issues);
+  const units = readOptionalString(entry, 'units', entryPath, issues);
+  const special = readOptionalString(entry, 'special', entryPath, issues);
+  if (override !== undefined) result.override = override;
+  if (value !== undefined) result.value = value;
+  if (long !== undefined) result.long = long;
+  if (reach !== undefined) result.reach = reach;
+  if (units !== undefined) result.units = units;
+  if (special !== undefined) result.special = special;
+  return result;
+}
+
+function readOptionalActivityDamage(record: Record<string, unknown>, path: string, issues: ForgeDecodeIssue[]): ForgeActivityDamageSummary | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, 'damage')) return undefined;
+  const entryPath = path + '/damage';
+  const entry = readRecord(record.damage, entryPath, new Set(['parts', 'includeBase', 'onSave']), issues);
+  if (!entry) return undefined;
+  const parts = readDamageParts(entry.parts, entryPath + '/parts', issues);
+  const includeBase = readOptionalBoolean(entry, 'includeBase', entryPath, issues);
+  const onSave = readOptionalString(entry, 'onSave', entryPath, issues);
+  if (!parts) return undefined;
+  return { parts, ...(includeBase !== undefined ? { includeBase } : {}), ...(onSave !== undefined ? { onSave } : {}) };
+}
+
+function readDamageParts(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeDamagePartSummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_DAMAGE_PARTS', 'damage.parts must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set(['number', 'denomination', 'bonus', 'types', 'custom', 'scaling']), issues);
+    if (!record) return [];
+    const number = readOptionalNumberOrNull(record, 'number', entryPath, issues);
+    const denomination = readOptionalNumberOrNull(record, 'denomination', entryPath, issues);
+    const bonus = readOptionalString(record, 'bonus', entryPath, issues);
+    const types = readNonEmptyStringArray(record.types, entryPath + '/types', issues, true);
+    const custom = readOptionalDamageCustom(record, entryPath, issues);
+    const scaling = readOptionalDamageScaling(record, entryPath, issues);
+    if (!types) return [];
+    return [{
+      ...(number !== undefined ? { number } : {}),
+      ...(denomination !== undefined ? { denomination } : {}),
+      ...(bonus !== undefined ? { bonus } : {}),
+      types,
+      ...(custom ? { custom } : {}),
+      ...(scaling ? { scaling } : {}),
+    }];
+  });
+}
+
+function readOptionalDamageCustom(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeDamagePartSummary['custom'] | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, 'custom')) return undefined;
+  const entryPath = path + '/custom';
+  const entry = readRecord(record.custom, entryPath, new Set(['enabled', 'formula']), issues);
+  if (!entry) return undefined;
+  const enabled = readBoolean(entry, 'enabled', entryPath, issues);
+  const formula = readString(entry, 'formula', entryPath, issues);
+  if (enabled === undefined || formula === undefined) return undefined;
+  return { enabled, formula };
+}
+
+function readOptionalDamageScaling(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeDamagePartSummary['scaling'] | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, 'scaling')) return undefined;
+  const entryPath = path + '/scaling';
+  const entry = readRecord(record.scaling, entryPath, new Set(['mode', 'number', 'formula']), issues);
+  if (!entry) return undefined;
+  const mode = readString(entry, 'mode', entryPath, issues);
+  const number = readOptionalNumberOrNull(entry, 'number', entryPath, issues);
+  const formula = readOptionalString(entry, 'formula', entryPath, issues);
+  if (mode === undefined) return undefined;
+  return { mode, ...(number !== undefined ? { number } : {}), ...(formula !== undefined ? { formula } : {}) };
+}
+
+function readEffectSummaries(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeEffectSummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_EFFECTS', 'effects must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set(['name', 'changes', 'sourceDerivedAcEffect', 'sourceText']), issues);
+    if (!record) return [];
+    const name = readNonEmptyString(record, 'name', entryPath, issues);
+    const changes = readEffectChangeSummaries(record.changes, entryPath + '/changes', issues);
+    const sourceDerivedAcEffect = readBoolean(record, 'sourceDerivedAcEffect', entryPath, issues);
+    const sourceText = readString(record, 'sourceText', entryPath, issues);
+    if (!name || !changes || sourceDerivedAcEffect === undefined || sourceText === undefined) return [];
+    return [{ name, changes, sourceDerivedAcEffect, sourceText }];
+  });
+}
+
+function readEffectChangeSummaries(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeEffectChangeSummary[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_EFFECT_CHANGES', 'effect changes must be an array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    const entryPath = path + '/' + index;
+    const record = readRecord(entry, entryPath, new Set(['key', 'mode', 'value', 'priority']), issues);
+    if (!record) return [];
+    const key = readNonEmptyString(record, 'key', entryPath, issues);
+    const mode = readSummaryScalar(record, 'mode', entryPath, issues);
+    const valueText = readString(record, 'value', entryPath, issues);
+    const priority = readSummaryScalar(record, 'priority', entryPath, issues);
+    if (!key || mode === undefined || valueText === undefined || priority === undefined) return [];
+    return [{ key, mode, value: valueText, priority }];
+  });
+}
+
+function readNonEmptyStringArray(value: unknown, path: string, issues: ForgeDecodeIssue[], allowEmpty = false): string[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_STRING_ARRAY', 'Expected a dense string array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    if (typeof entry !== 'string' || (!allowEmpty && entry.length === 0)) {
+      issue(issues, path + '/' + index, 'INVALID_STRING', 'Expected a non-empty string.');
+      return [];
+    }
+    return [entry];
+  });
+}
+
+function readEnumArray<T extends string>(value: unknown, path: string, values: readonly T[], issues: ForgeDecodeIssue[]): T[] | undefined {
+  if (!isDenseArray(value)) {
+    issue(issues, path, 'INVALID_ENUM_ARRAY', 'Expected a dense enum array.');
+    return undefined;
+  }
+  return value.flatMap((entry, index) => {
+    if (typeof entry !== 'string' || !values.includes(entry as T)) {
+      issue(issues, path + '/' + index, 'INVALID_ENUM', 'Expected a supported enum value.');
+      return [];
+    }
+    return [entry as T];
+  });
+}
+
+function readDiagnostics(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeDiagnostic[] | undefined {
   if (!isDenseArray(value)) {
     issue(issues, path, 'INVALID_DIAGNOSTICS', 'diagnostics must be an array.');
     return undefined;
@@ -428,11 +953,20 @@ function readDiagnostics(value: unknown, path: string, issues: ForgeDecodeIssue[
     const stage = readEnum(record, 'stage', entryPath, ['parse', 'ir', 'projection', 'schema', 'semantic'] as const, issues);
     const diagnosticPath = readString(record, 'path', entryPath, issues);
     const message = readNonEmptyString(record, 'message', entryPath, issues);
+    const safeDiagnosticPath = diagnosticPath !== undefined && isSafeForgeDiagnosticPath(diagnosticPath)
+      ? diagnosticPath
+      : undefined;
+    if (diagnosticPath !== undefined && safeDiagnosticPath === undefined) {
+      issue(issues, entryPath + '/path', 'UNSAFE_DIAGNOSTIC_PATH', 'Diagnostic paths must use a safe logical namespace.');
+    }
+    if (message && !isSafeForgeWireMessage(message)) {
+      issue(issues, entryPath + '/message', 'UNSAFE_DIAGNOSTIC_MESSAGE', 'Diagnostic messages must not expose internal filesystem paths.');
+    }
     const evidence = Object.prototype.hasOwnProperty.call(record, 'evidence')
       ? readEvidence(record.evidence, entryPath + '/evidence', issues)
       : undefined;
-    if (!code || !severity || !stage || diagnosticPath === undefined || !message || (Object.prototype.hasOwnProperty.call(record, 'evidence') && !evidence)) return [];
-    return [{ code, severity, stage, path: diagnosticPath, message, ...(evidence ? { evidence } : {}) }];
+    if (!code || !severity || !stage || safeDiagnosticPath === undefined || !message || (Object.prototype.hasOwnProperty.call(record, 'evidence') && !evidence)) return [];
+    return [{ code, severity, stage, path: safeDiagnosticPath, message, ...(evidence ? { evidence } : {}) }];
   });
 }
 
@@ -533,6 +1067,11 @@ function readString(record: Record<string, unknown>, key: string, path: string, 
   return readRequired(record, key, path, issues, (value): value is string => typeof value === 'string', 'INVALID_STRING', 'Expected a string.');
 }
 
+function readOptionalString(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  return readString(record, key, path, issues);
+}
+
 function readNonEmptyString(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): string | undefined {
   return readRequired(record, key, path, issues, (value): value is string => typeof value === 'string' && value.length > 0, 'INVALID_STRING', 'Expected a non-empty string.');
 }
@@ -541,8 +1080,23 @@ function readBoolean(record: Record<string, unknown>, key: string, path: string,
   return readRequired(record, key, path, issues, (value): value is boolean => typeof value === 'boolean', 'INVALID_BOOLEAN', 'Expected a boolean.');
 }
 
+function readOptionalBoolean(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): boolean | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  return readBoolean(record, key, path, issues);
+}
+
 function readInteger(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): number | undefined {
   return readRequired(record, key, path, issues, (value): value is number => Number.isSafeInteger(value), 'INVALID_INTEGER', 'Expected a safe integer.');
+}
+
+function readOptionalNumber(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): number | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  return readRequired(record, key, path, issues, (value): value is number => typeof value === 'number' && Number.isFinite(value), 'INVALID_NUMBER', 'Expected a finite number.');
+}
+
+function readOptionalNumberOrNull(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): number | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  return readRequired(record, key, path, issues, (value): value is number | null => value === null || (typeof value === 'number' && Number.isFinite(value)), 'INVALID_NUMBER', 'Expected a finite number or null.');
 }
 
 function readPositiveInteger(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): number | undefined {
@@ -557,6 +1111,17 @@ function readEnum<T extends string>(
   issues: ForgeDecodeIssue[],
 ): T | undefined {
   return readRequired(record, key, path, issues, (value): value is T => typeof value === 'string' && values.includes(value as T), 'INVALID_ENUM', 'Expected a supported enum value.');
+}
+
+function readOptionalEnum<T extends string>(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  values: readonly T[],
+  issues: ForgeDecodeIssue[],
+): T | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
+  return readEnum(record, key, path, values, issues);
 }
 
 function readLiteral<T extends string>(
@@ -579,6 +1144,19 @@ function readSourceId(record: Record<string, unknown>, key: string, path: string
 
 function readSourceRef(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]) {
   return readRequired(record, key, path, issues, isForgeSourceRef, 'INVALID_SOURCE_REF', 'Expected an opaque Forge source reference.');
+}
+
+function readSummaryScalar(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): string | number | boolean | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) {
+    issue(issues, path + '/' + escapePointerSegment(key), 'INVALID_SCALAR', 'Expected a declared scalar value.');
+    return undefined;
+  }
+  const value = record[key];
+  if (value === null || typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) {
+    return value;
+  }
+  issue(issues, path + '/' + escapePointerSegment(key), 'INVALID_SCALAR', 'Expected a JSON scalar value.');
+  return undefined;
 }
 
 function readJsonObject(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]): JsonObject | undefined {

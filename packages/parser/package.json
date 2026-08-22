@@ -30,6 +30,7 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*",
     "@fvtt-json-generator/models": "workspace:*",
     "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
     "js-yaml": "^4.1.1",

@@ -8,6 +8,7 @@
     "./hash": "./src/hash.ts",
     "./routing": "./src/routing.ts",
     "./schema": "./src/schema.ts",
+    "./projection": "./src/projection.ts",
     "./source-identity": "./src/sourceIdentity.ts",
     "./types": "./src/types.ts"
   },
