@@ -1,13 +1,25 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts';
-import { hashArtifact, hashSource } from './hash';
+import { canonicalJsonStringify, hashArtifact, hashSource } from './hash';
 import {
   FORGE_ACTOR_CAPABILITY,
+  FORGE_ITEM_CAPABILITY,
+  FORGE_ITEM_SOURCE_CREATE_CAPABILITY,
   FORGE_SOURCE_CREATE_CAPABILITY,
   assertForgeTargetProfile,
   getForgeDnd5eVersionWarning,
   resolveForgeTarget,
 } from './routing';
-import { isForgeSourceId, isForgeSourceRef, readForgeSourceId } from './sourceIdentity';
+import {
+  isForgeItemSourceId,
+  isForgeSourceId,
+  isForgeSourceRef,
+  readForgeItemSourceId,
+  readForgeSourceId,
+} from './sourceIdentity';
+import {
+  projectForgeItemDocumentSummary,
+  projectForgeItemVerification,
+} from './projection';
 import {
   FORGE_ERROR_CODES,
   FORGE_INPUT_ISSUE_TO_ERROR_CODE,
@@ -44,6 +56,15 @@ import {
   type ForgeHitPointSummary,
   type ForgeArmorClassSummary,
   type ForgeItemVerificationSummary,
+  type ForgeItemDocumentSummary,
+  type ForgeItemRequest,
+  type ForgeItemResponse,
+  type ForgeItemResult,
+  type ForgeItemResultBase,
+  type ForgeItemSourceCreateRequest,
+  type ForgeItemSourceCreateResult,
+  type ForgeItemSourceCreateResponse,
+  type ForgeItemSourceId,
   type ForgeMechanicCoverageSummary,
   type ForgeResponse,
   type ForgeSensesSummary,
@@ -77,6 +98,17 @@ const ACTOR_RESULT_KEYS = new Set([
   'artifactHash',
 ]);
 const SOURCE_RESULT_KEYS = new Set(['sourceRef', 'sourceId', 'displayName', 'sourceHash']);
+const ITEM_RESULT_KEYS = new Set([
+  'sourceIdentity',
+  'target',
+  'diagnostics',
+  'verification',
+  'itemVerification',
+  'itemDocument',
+  'status',
+  'artifact',
+  'artifactHash',
+]);
 const MAX_INPUT_UTF8_BYTES = Math.min(
   FORGE_ACTOR_CAPABILITY.maxInputUtf8Bytes,
   FORGE_SOURCE_CREATE_CAPABILITY.maxInputUtf8Bytes,
@@ -133,6 +165,29 @@ export function decodeForgeCapability(value: unknown): ForgeDecodeResult<ForgeCa
     if (issues.length > 0 || !systemId || !generatorProfiles || !versionRouting || !maxInputUtf8Bytes || !maxConcurrentJobs) return failure(issues);
     return success({ id, systemId, generatorProfiles, versionRouting, maxInputUtf8Bytes, maxConcurrentJobs } satisfies ForgeActorCapability);
   }
+  if (id === 'item.standard.generate.v1') {
+    const record = readRecord(value, '$', new Set(['id', 'systemId', 'generatorProfiles', 'versionRouting', 'maxInputUtf8Bytes', 'maxConcurrentJobs']), issues);
+    if (!record) return failure(issues);
+    const systemId = readLiteral(record, 'systemId', '$', 'dnd5e', issues);
+    const generatorProfiles = readGeneratorProfiles(record.generatorProfiles, '$/generatorProfiles', issues);
+    const versionRouting = readVersionRouting(record.versionRouting, '$/versionRouting', issues);
+    const maxInputUtf8Bytes = readPositiveInteger(record, 'maxInputUtf8Bytes', '$', issues);
+    const maxConcurrentJobs = readPositiveInteger(record, 'maxConcurrentJobs', '$', issues);
+    if (generatorProfiles && !sameGeneratorProfiles(generatorProfiles, FORGE_ITEM_CAPABILITY.generatorProfiles)) {
+      issue(issues, '$/generatorProfiles', 'CAPABILITY_MISMATCH', 'generatorProfiles must match the Forge Item capability.');
+    }
+    if (versionRouting && !sameVersionRouting(versionRouting, FORGE_ITEM_CAPABILITY.versionRouting)) {
+      issue(issues, '$/versionRouting', 'CAPABILITY_MISMATCH', 'versionRouting must match the Forge FVTT mapping.');
+    }
+    if (maxInputUtf8Bytes !== undefined && maxInputUtf8Bytes !== FORGE_ITEM_CAPABILITY.maxInputUtf8Bytes) {
+      issue(issues, '$/maxInputUtf8Bytes', 'CAPABILITY_MISMATCH', 'maxInputUtf8Bytes must match the Forge Item capability.');
+    }
+    if (maxConcurrentJobs !== undefined && maxConcurrentJobs !== FORGE_ITEM_CAPABILITY.maxConcurrentJobs) {
+      issue(issues, '$/maxConcurrentJobs', 'CAPABILITY_MISMATCH', 'maxConcurrentJobs must match the Forge Item capability.');
+    }
+    if (issues.length > 0 || !systemId || !generatorProfiles || !versionRouting || !maxInputUtf8Bytes || !maxConcurrentJobs) return failure(issues);
+    return success({ id, systemId, generatorProfiles, versionRouting, maxInputUtf8Bytes, maxConcurrentJobs });
+  }
   if (id === 'source.actor.create.v1') {
     const record = readRecord(value, '$', new Set(['id', 'sourceKind', 'maxInputUtf8Bytes', 'maxConcurrentJobs']), issues);
     if (!record) return failure(issues);
@@ -144,6 +199,21 @@ export function decodeForgeCapability(value: unknown): ForgeDecodeResult<ForgeCa
     }
     if (maxConcurrentJobs !== undefined && maxConcurrentJobs !== FORGE_SOURCE_CREATE_CAPABILITY.maxConcurrentJobs) {
       issue(issues, '$/maxConcurrentJobs', 'CAPABILITY_MISMATCH', 'maxConcurrentJobs must match the Forge source capability.');
+    }
+    if (issues.length > 0 || !sourceKind || !maxInputUtf8Bytes || !maxConcurrentJobs) return failure(issues);
+    return success({ id, sourceKind, maxInputUtf8Bytes, maxConcurrentJobs });
+  }
+  if (id === 'source.item.create.v1') {
+    const record = readRecord(value, '$', new Set(['id', 'sourceKind', 'maxInputUtf8Bytes', 'maxConcurrentJobs']), issues);
+    if (!record) return failure(issues);
+    const sourceKind = readLiteral(record, 'sourceKind', '$', 'item', issues);
+    const maxInputUtf8Bytes = readPositiveInteger(record, 'maxInputUtf8Bytes', '$', issues);
+    const maxConcurrentJobs = readPositiveInteger(record, 'maxConcurrentJobs', '$', issues);
+    if (maxInputUtf8Bytes !== undefined && maxInputUtf8Bytes !== FORGE_ITEM_SOURCE_CREATE_CAPABILITY.maxInputUtf8Bytes) {
+      issue(issues, '$/maxInputUtf8Bytes', 'CAPABILITY_MISMATCH', 'maxInputUtf8Bytes must match the Forge Item source capability.');
+    }
+    if (maxConcurrentJobs !== undefined && maxConcurrentJobs !== FORGE_ITEM_SOURCE_CREATE_CAPABILITY.maxConcurrentJobs) {
+      issue(issues, '$/maxConcurrentJobs', 'CAPABILITY_MISMATCH', 'maxConcurrentJobs must match the Forge Item source capability.');
     }
     if (issues.length > 0 || !sourceKind || !maxInputUtf8Bytes || !maxConcurrentJobs) return failure(issues);
     return success({ id, sourceKind, maxInputUtf8Bytes, maxConcurrentJobs });
@@ -213,6 +283,65 @@ export function decodeForgeActorRequest(value: unknown): ForgeDecodeResult<Forge
   }, warnings);
 }
 
+export function decodeForgeItemRequest(value: unknown): ForgeDecodeResult<ForgeItemRequest> {
+  const issues: ForgeDecodeIssue[] = [];
+  const record = readRecord(value, '$', ACTOR_REQUEST_KEYS, issues);
+  if (!record) return failure(issues);
+  readProtocolVersion(record, '$', issues);
+  readLiteral(record, 'capabilityId', '$', 'item.standard.generate.v1', issues);
+  const requestId = readNonEmptyString(record, 'requestId', '$', issues);
+  const source = readItemRequestSource(record.source, '$/source', issues);
+  const foundryRuntime = readFoundryRuntime(record.foundryRuntime, '$/foundryRuntime', issues);
+  const resolvedTarget = readResolvedTarget(record.resolvedTarget, '$/resolvedTarget', issues);
+
+  if (source && source.utf8Sha256 !== hashSource(source.content)) {
+    issue(issues, '$/source/utf8Sha256', 'SOURCE_HASH_MISMATCH', 'utf8Sha256 must match the exact final Item source content.');
+  }
+  if (source) {
+    const sourceIdentity = readForgeItemSourceId(source.content);
+    if (sourceIdentity.status !== 'valid' || sourceIdentity.sourceId !== source.sourceId) {
+      issue(issues, '$/source/sourceId', 'SOURCE_IDENTITY_MISMATCH', 'sourceId must match a valid item:v1 forge-source-id in the final Markdown.');
+    }
+  }
+  if (foundryRuntime && resolvedTarget) {
+    try {
+      assertForgeTargetProfile(foundryRuntime.fvttVersion, resolvedTarget.generatorProfile);
+    } catch (error) {
+      issue(issues, '$/resolvedTarget/generatorProfile', 'TARGET_MISMATCH', error instanceof Error ? error.message : 'resolvedTarget does not match FVTT runtime.');
+    }
+  }
+  const warnings: ForgeDecodeIssue[] = [];
+  if (foundryRuntime) {
+    try {
+      const target = resolveForgeTarget(foundryRuntime.fvttVersion);
+      if (target.compatibility === 'forward-fallback') {
+        warnings.push({
+          path: '$/foundryRuntime/fvttVersion',
+          code: 'FORGE_FORWARD_FALLBACK',
+          message: target.compatibilityMessage ?? 'FVTT runtime is using the v14 generator fallback.',
+        });
+      }
+      const message = getForgeDnd5eVersionWarning(foundryRuntime.fvttVersion, foundryRuntime.systemVersion);
+      if (message) warnings.push({
+        path: '$/foundryRuntime/systemVersion',
+        code: 'FORGE_SYSTEM_VERSION_UNVERIFIED',
+        message,
+      });
+    } catch {
+      // readFoundryRuntime already reported the invalid runtime as a decode issue.
+    }
+  }
+  if (issues.length > 0 || !requestId || !source || !foundryRuntime || !resolvedTarget) return failure(issues);
+  return success({
+    protocolVersion: FORGE_PROTOCOL_VERSION,
+    capabilityId: 'item.standard.generate.v1',
+    requestId,
+    source,
+    foundryRuntime,
+    resolvedTarget,
+  }, warnings);
+}
+
 export function decodeForgeSourceCreateRequest(value: unknown): ForgeDecodeResult<ForgeSourceCreateRequest> {
   const issues: ForgeDecodeIssue[] = [];
   const record = readRecord(value, '$', SOURCE_CREATE_REQUEST_KEYS, issues);
@@ -233,12 +362,44 @@ export function decodeForgeSourceCreateRequest(value: unknown): ForgeDecodeResul
   });
 }
 
+export function decodeForgeItemSourceCreateRequest(value: unknown): ForgeDecodeResult<ForgeItemSourceCreateRequest> {
+  const issues: ForgeDecodeIssue[] = [];
+  const record = readRecord(value, '$', SOURCE_CREATE_REQUEST_KEYS, issues);
+  if (!record) return failure(issues);
+  readProtocolVersion(record, '$', issues);
+  readLiteral(record, 'capabilityId', '$', 'source.item.create.v1', issues);
+  const requestId = readNonEmptyString(record, 'requestId', '$', issues);
+  const source = readSourceCreateSource(record.source, '$/source', issues);
+  if (source && source.utf8Sha256 !== hashSource(source.content)) {
+    issue(issues, '$/source/utf8Sha256', 'SOURCE_HASH_MISMATCH', 'utf8Sha256 must match the exact request content.');
+  }
+  if (issues.length > 0 || !requestId || !source) return failure(issues);
+  return success({
+    protocolVersion: FORGE_PROTOCOL_VERSION,
+    capabilityId: 'source.item.create.v1',
+    requestId,
+    source,
+  });
+}
+
 export function decodeForgeSourceCreateResult(value: unknown): ForgeDecodeResult<ForgeSourceCreateResult> {
   const issues: ForgeDecodeIssue[] = [];
   const record = readRecord(value, '$', SOURCE_RESULT_KEYS, issues);
   if (!record) return failure(issues);
   const sourceRef = readSourceRef(record, 'sourceRef', '$', issues);
   const sourceId = readSourceId(record, 'sourceId', '$', issues);
+  const displayName = readNonEmptyString(record, 'displayName', '$', issues);
+  const sourceHash = readHash(record, 'sourceHash', '$', issues);
+  if (issues.length > 0 || !sourceRef || !sourceId || !displayName || !sourceHash) return failure(issues);
+  return success({ sourceRef, sourceId, displayName, sourceHash });
+}
+
+export function decodeForgeItemSourceCreateResult(value: unknown): ForgeDecodeResult<ForgeItemSourceCreateResult> {
+  const issues: ForgeDecodeIssue[] = [];
+  const record = readRecord(value, '$', SOURCE_RESULT_KEYS, issues);
+  if (!record) return failure(issues);
+  const sourceRef = readSourceRef(record, 'sourceRef', '$', issues);
+  const sourceId = readItemSourceId(record, 'sourceId', '$', issues);
   const displayName = readNonEmptyString(record, 'displayName', '$', issues);
   const sourceHash = readHash(record, 'sourceHash', '$', issues);
   if (issues.length > 0 || !sourceRef || !sourceId || !displayName || !sourceHash) return failure(issues);
@@ -294,6 +455,89 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
     issue(issues, '$/artifact', 'UNEXPECTED_FIELD', 'Failed results must not include artifact.');
   }
   return issues.length > 0 ? failure(issues) : success({ ...base, status });
+}
+
+export function decodeForgeItemResult(value: unknown): ForgeDecodeResult<ForgeItemResult> {
+  const issues: ForgeDecodeIssue[] = [];
+  const record = readRecord(value, '$', ITEM_RESULT_KEYS, issues);
+  if (!record) return failure(issues);
+  const base = readItemResultBase(record, issues);
+  const status = readEnum(record, 'status', '$', ['accepted', 'needs_review', 'failed'] as const, issues);
+  if (!status || !base) return failure(issues);
+  if (base.verification.status !== status) {
+    issue(issues, '$/verification/status', 'STATUS_MISMATCH', 'result.status must equal verification.status.');
+  }
+  validateItemResultStatusInvariants(status, base, issues);
+
+  if (status === 'accepted') {
+    const artifact = readJsonObject(record, 'artifact', '$', issues);
+    const artifactHash = readHash(record, 'artifactHash', '$', issues);
+    if (artifact && artifactHash) {
+      try {
+        if (hashArtifact(artifact) !== artifactHash) {
+          issue(issues, '$/artifactHash', 'ARTIFACT_HASH_MISMATCH', 'artifactHash must match the canonical Item artifact.');
+        }
+      } catch (error) {
+        issue(issues, '$/artifact', 'ARTIFACT_INVALID', error instanceof Error ? error.message : 'Artifact is not hashable.');
+      }
+    }
+    if (issues.length > 0 || !artifact || !artifactHash) return failure(issues);
+    return success({
+      ...base,
+      verification: base.verification as ForgeAcceptedVerificationSummary,
+      status,
+      artifact,
+      artifactHash,
+    });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(record, 'artifactHash')) {
+    issue(issues, '$/artifactHash', 'UNEXPECTED_FIELD', 'Only accepted Item results may include artifactHash.');
+  }
+  if (status === 'needs_review') {
+    const artifact = Object.prototype.hasOwnProperty.call(record, 'artifact')
+      ? readJsonObject(record, 'artifact', '$', issues)
+      : undefined;
+    if (issues.length > 0) return failure(issues);
+    return success({ ...base, status, ...(artifact ? { artifact } : {}) });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(record, 'artifact')) {
+    issue(issues, '$/artifact', 'UNEXPECTED_FIELD', 'Failed Item results must not include artifact.');
+  }
+  return issues.length > 0 ? failure(issues) : success({ ...base, status });
+}
+
+function validateItemResultStatusInvariants(
+  status: ForgeItemResult['status'],
+  base: ForgeItemResultBase,
+  issues: ForgeDecodeIssue[],
+): void {
+  const hasError = base.diagnostics.some((entry) => entry.severity === 'error');
+  const hasWarning = base.diagnostics.some((entry) => entry.severity === 'warning');
+  const hasReviewOnlyCoverage = base.verification.mechanicsCoverage.some((entry) => (
+    entry.status !== 'projected'
+    || entry.outputPaths.length === 0
+    || (entry.expressionCoverage !== undefined && entry.expressionCoverage !== 'structured')
+    || entry.executionMode === 'gm-assisted'
+    || entry.executionMode === 'external-rule'
+  ));
+
+  if (status === 'accepted') {
+    if (hasError || hasWarning) {
+      issue(issues, '$/diagnostics', 'ACCEPTED_WITH_DIAGNOSTICS', 'Accepted Item results must not contain warning or error diagnostics.');
+    }
+    if (hasReviewOnlyCoverage) {
+      issue(issues, '$/verification/mechanicsCoverage', 'ACCEPTED_WITH_REVIEW_COVERAGE', 'Accepted Item results must contain only fully projected mechanics coverage.');
+    }
+    return;
+  }
+  if (status === 'needs_review') {
+    if (hasError) issue(issues, '$/diagnostics', 'NEEDS_REVIEW_WITH_ERROR', 'Needs-review Item results must not contain error diagnostics.');
+    if (!hasWarning) issue(issues, '$/diagnostics', 'NEEDS_REVIEW_WITHOUT_WARNING', 'Needs-review Item results must contain at least one warning diagnostic.');
+    return;
+  }
+  if (!hasError) issue(issues, '$/diagnostics', 'FAILED_WITHOUT_ERROR', 'Failed Item results must contain at least one error diagnostic.');
 }
 
 function validateResultStatusInvariants(
@@ -362,6 +606,14 @@ export function decodeForgeSourceCreateResponse(value: unknown): ForgeDecodeResu
   return decodeResponse(value, decodeForgeSourceCreateResult);
 }
 
+export function decodeForgeItemResponse(value: unknown): ForgeDecodeResult<ForgeItemResponse> {
+  return decodeResponse(value, decodeForgeItemResult);
+}
+
+export function decodeForgeItemSourceCreateResponse(value: unknown): ForgeDecodeResult<ForgeItemSourceCreateResponse> {
+  return decodeResponse(value, decodeForgeItemSourceCreateResult);
+}
+
 /** Map decoder-only input policy issues to the stable Gateway error union. */
 export function mapForgeInputIssueToErrorCode(issue: Pick<ForgeDecodeIssue, 'code'>): ForgeErrorCode | undefined {
   switch (issue.code) {
@@ -415,6 +667,21 @@ function readActorRequestSource(
   const displayName = readNonEmptyString(record, 'displayName', path, issues);
   const content = readForgeSourceContent(record, path, issues);
   const sourceId = readSourceId(record, 'sourceId', path, issues);
+  const utf8Sha256 = readHash(record, 'utf8Sha256', path, issues);
+  if (!displayName || content === undefined || !sourceId || !utf8Sha256) return undefined;
+  return { displayName, content, sourceId, utf8Sha256 };
+}
+
+function readItemRequestSource(
+  value: unknown,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeItemRequest['source'] | undefined {
+  const record = readRecord(value, path, new Set(['displayName', 'content', 'sourceId', 'utf8Sha256']), issues);
+  if (!record) return undefined;
+  const displayName = readNonEmptyString(record, 'displayName', path, issues);
+  const content = readForgeSourceContent(record, path, issues);
+  const sourceId = readItemSourceId(record, 'sourceId', path, issues);
   const utf8Sha256 = readHash(record, 'utf8Sha256', path, issues);
   if (!displayName || content === undefined || !sourceId || !utf8Sha256) return undefined;
   return { displayName, content, sourceId, utf8Sha256 };
@@ -543,6 +810,91 @@ function readActorResultBase(
     verification,
     actorVerification,
   };
+}
+
+function readItemResultBase(
+  record: Record<string, unknown>,
+  issues: ForgeDecodeIssue[],
+): ForgeItemResultBase | undefined {
+  const sourceIdentityRecord = readRecord(record.sourceIdentity, '$/sourceIdentity', new Set(['sourceId', 'sourceHash']), issues);
+  const targetRecord = readRecord(record.target, '$/target', new Set([
+    'fvttRuntimeVersion',
+    'generatorProfile',
+    'generatorVersion',
+    'systemId',
+    'systemVersionObserved',
+    'effectProfile',
+    'iconMode',
+  ]), issues);
+  const sourceId = sourceIdentityRecord ? readItemSourceId(sourceIdentityRecord, 'sourceId', '$/sourceIdentity', issues) : undefined;
+  const sourceHash = sourceIdentityRecord ? readHash(sourceIdentityRecord, 'sourceHash', '$/sourceIdentity', issues) : undefined;
+  const fvttRuntimeVersion = targetRecord ? readNonEmptyString(targetRecord, 'fvttRuntimeVersion', '$/target', issues) : undefined;
+  const generatorProfile = targetRecord ? readEnum(targetRecord, 'generatorProfile', '$/target', FORGE_GENERATOR_PROFILES, issues) : undefined;
+  const generatorVersion = targetRecord ? readNonEmptyString(targetRecord, 'generatorVersion', '$/target', issues) : undefined;
+  const systemId = targetRecord ? readLiteral(targetRecord, 'systemId', '$/target', 'dnd5e', issues) : undefined;
+  const systemVersionObserved = targetRecord ? readNonEmptyString(targetRecord, 'systemVersionObserved', '$/target', issues) : undefined;
+  const effectProfile = targetRecord ? readLiteral(targetRecord, 'effectProfile', '$/target', 'core', issues) : undefined;
+  const iconMode = targetRecord ? readLiteral(targetRecord, 'iconMode', '$/target', 'off', issues) : undefined;
+  const diagnostics = readDiagnostics(record.diagnostics, '$/diagnostics', issues);
+  const verification = readVerificationSummary(record.verification, '$/verification', issues);
+  const itemVerification = readClosedProjection(
+    record.itemVerification,
+    '$/itemVerification',
+    projectForgeItemVerification,
+    issues,
+  );
+  const itemDocument = readClosedProjection(
+    record.itemDocument,
+    '$/itemDocument',
+    projectForgeItemDocumentSummary,
+    issues,
+  );
+
+  if (fvttRuntimeVersion && generatorProfile) {
+    try {
+      assertForgeTargetProfile(fvttRuntimeVersion, generatorProfile);
+    } catch (error) {
+      issue(issues, '$/target/generatorProfile', 'TARGET_MISMATCH', error instanceof Error ? error.message : 'Result target does not match FVTT runtime.');
+    }
+  }
+  if (issues.length > 0 || !sourceId || !sourceHash || !fvttRuntimeVersion || !generatorProfile || !generatorVersion || !systemId || !systemVersionObserved || !effectProfile || !iconMode || !diagnostics || !verification || !itemVerification || !itemDocument) {
+    return undefined;
+  }
+  return {
+    sourceIdentity: { sourceId, sourceHash },
+    target: {
+      fvttRuntimeVersion,
+      generatorProfile,
+      generatorVersion,
+      systemId,
+      systemVersionObserved,
+      effectProfile,
+      iconMode,
+    },
+    diagnostics,
+    verification,
+    itemVerification,
+    itemDocument,
+  };
+}
+
+function readClosedProjection<T>(
+  value: unknown,
+  path: string,
+  projector: (value: unknown) => T,
+  issues: ForgeDecodeIssue[],
+): T | undefined {
+  try {
+    const projected = projector(value);
+    if (canonicalJsonStringify(value) !== canonicalJsonStringify(projected)) {
+      issue(issues, path, 'UNEXPECTED_FIELD', 'Value contains undeclared or non-canonical wire fields.');
+      return undefined;
+    }
+    return projected;
+  } catch (error) {
+    issue(issues, path, 'INVALID_PROJECTION', error instanceof Error ? error.message : 'Value is not a valid closed wire projection.');
+    return undefined;
+  }
 }
 
 function readVerificationSummary(
@@ -1140,6 +1492,15 @@ function readHash(record: Record<string, unknown>, key: string, path: string, is
 
 function readSourceId(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]) {
   return readRequired(record, key, path, issues, isForgeSourceId, 'INVALID_SOURCE_ID', 'Expected a canonical Forge source ID.');
+}
+
+function readItemSourceId(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  issues: ForgeDecodeIssue[],
+): ForgeItemSourceId | undefined {
+  return readRequired(record, key, path, issues, isForgeItemSourceId, 'INVALID_SOURCE_ID', 'Expected a canonical Forge Item source ID.');
 }
 
 function readSourceRef(record: Record<string, unknown>, key: string, path: string, issues: ForgeDecodeIssue[]) {

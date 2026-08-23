@@ -27,3 +27,8 @@ export {
   isForgeSourceId,
 } from './forgeSourceIdentity';
 export type { ForgeSourceId } from './forgeSourceIdentity';
+export {
+  FORGE_ITEM_SOURCE_ID_PREFIX,
+  isForgeItemSourceId,
+} from './forgeItemSourceIdentity';
+export type { ForgeItemSourceId } from './forgeItemSourceIdentity';

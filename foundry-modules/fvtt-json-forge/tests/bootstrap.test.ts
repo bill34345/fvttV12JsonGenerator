@@ -33,9 +33,10 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
     hooks.get('init')?.();
     hooks.get('ready')?.();
 
-    expect(menus).toHaveLength(1);
-    expect(menus[0]?.restricted).toBe(true);
-    expect((menus[0]?.type as any).prototype).toBeInstanceOf(ApplicationV2);
+    expect(menus).toHaveLength(2);
+    expect(menus.map((menu) => menu.name)).toEqual(['Forge Actor', 'Forge Item']);
+    expect(menus.every((menu) => menu.restricted === true)).toBe(true);
+    expect(menus.every((menu) => (menu.type as any).prototype instanceof ApplicationV2)).toBe(true);
     expect(module.api).toBeDefined();
   });
 
@@ -112,7 +113,7 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
     };
     callbacks.get('ready')?.forEach((callback) => callback());
 
-    expect(menus).toHaveLength(1);
+    expect(menus).toHaveLength(2);
     expect(module.api).toBeDefined();
   });
 });

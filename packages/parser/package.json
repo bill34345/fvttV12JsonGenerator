@@ -11,6 +11,7 @@
     "./chinese": "./src/chinese.ts",
     "./english": "./src/english.ts",
     "./english-action": "./src/englishAction.ts",
+    "./forge-item-source": "./src/forgeItemSource.ts",
     "./i18n": "./src/i18n.ts",
     "./item-parser": "./src/itemParser.ts",
     "./item-router": "./src/itemRouter.ts",

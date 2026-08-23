@@ -7,6 +7,8 @@ import {
   type ForgeActorCapability,
   type ForgeCapability,
   type ForgeGeneratorProfile,
+  type ForgeItemCapability,
+  type ForgeItemSourceCreateCapability,
   type ForgeSourceCreateCapability,
   type ForgeTargetResolution,
 } from './types';
@@ -44,9 +46,30 @@ export const FORGE_SOURCE_CREATE_CAPABILITY: ForgeSourceCreateCapability = Objec
   maxConcurrentJobs: 1,
 });
 
+export const FORGE_ITEM_CAPABILITY: ForgeItemCapability = Object.freeze({
+  id: 'item.standard.generate.v1',
+  systemId: 'dnd5e',
+  generatorProfiles: FORGE_GENERATOR_PROFILES,
+  versionRouting: FORGE_VERSION_ROUTING.map((entry) => ({
+    fvttVersion: `${entry.fvttMajor}.x`,
+    generatorProfile: entry.generatorProfile,
+  })),
+  maxInputUtf8Bytes: 200_000,
+  maxConcurrentJobs: 1,
+});
+
+export const FORGE_ITEM_SOURCE_CREATE_CAPABILITY: ForgeItemSourceCreateCapability = Object.freeze({
+  id: 'source.item.create.v1',
+  sourceKind: 'item',
+  maxInputUtf8Bytes: 200_000,
+  maxConcurrentJobs: 1,
+});
+
 export const FORGE_CAPABILITIES: readonly ForgeCapability[] = Object.freeze([
   FORGE_ACTOR_CAPABILITY,
   FORGE_SOURCE_CREATE_CAPABILITY,
+  FORGE_ITEM_CAPABILITY,
+  FORGE_ITEM_SOURCE_CREATE_CAPABILITY,
 ]);
 
 export const FORGE_PROTOCOL_INFO = Object.freeze({

@@ -31,6 +31,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await mkdir(resolve(moduleRoot, 'styles'), { recursive: true });
   await cp(resolve(sourceRoot, 'module.json'), resolve(moduleRoot, 'module.json'));
   await cp(resolve(sourceRoot, 'templates/forge-actor.hbs'), resolve(moduleRoot, 'templates/forge-actor.hbs'));
+  await cp(resolve(sourceRoot, 'templates/forge-item.hbs'), resolve(moduleRoot, 'templates/forge-item.hbs'));
   await cp(resolve(sourceRoot, 'styles/fvtt-json-forge.css'), resolve(moduleRoot, 'styles/fvtt-json-forge.css'));
 
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;

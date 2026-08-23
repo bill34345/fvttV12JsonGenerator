@@ -27,6 +27,14 @@ import { LEGACY_BROWSER_SPELLS } from './browser-legacy-spell-data';
 import { LOCKED_DND5E_V14_SPELLS } from './browser-v14-spell-data';
 import { normalizeForgeActorArtifact } from './artifact';
 
+export {
+  buildForgeItemRequest,
+  convertFinalItemSource,
+  prepareForgeFinalItemSource,
+  type BuildForgeItemRequestOptions,
+  type ForgeFinalItemSource,
+} from './item';
+
 export const BROWSER_GENERATOR_VERSION = '0.1.0' as const;
 export const BROWSER_MAX_CONCURRENT_ACTOR_JOBS = 1 as const;
 

@@ -17,10 +17,15 @@ import {
   type ForgeDiagnostic,
   type ForgeHitPointSummary,
   type ForgeItemVerificationSummary,
+  type ForgeItemDocumentSummary,
+  type ForgeItemActivityDocumentSummary,
+  type ForgeItemEffectDocumentSummary,
   type ForgeMechanicCoverageSummary,
   type ForgeSensesSummary,
   type ForgeSourceField,
   type ForgeVerificationSummary,
+  type JsonObject,
+  type JsonValue,
 } from './types';
 import {
   isSafeForgeDocumentFieldPath,
@@ -48,6 +53,65 @@ export function projectForgeVerification(
   return {
     verification: projectVerification(input.verification),
     actorVerification: projectActorVerification(input.actorVerification),
+  };
+}
+
+/** Project one generated world Item to the existing closed verification summary. */
+export function projectForgeItemVerification(value: unknown): ForgeItemVerificationSummary {
+  return projectItem(value, 0);
+}
+
+export function projectForgeVerificationSummary(value: unknown): ForgeVerificationSummary {
+  return projectVerification(value);
+}
+
+/**
+ * Project a generated world Item to the closed, path-free Item preview/readback
+ * summary. Every nested object is rebuilt from a declared field policy.
+ */
+export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSummary {
+  const item = requireRecord(value, 'itemDocument');
+  const system = requireRecord(item.system, 'itemDocument.system');
+  const activitiesRecord = requireRecord(system.activities, 'itemDocument.system.activities');
+  const activities: ForgeItemActivityDocumentSummary[] = Object.entries(activitiesRecord)
+    .sort(([left], [right]) => left.localeCompare(right, 'en'))
+    .map(([activityId, activityValue], index) => projectItemActivityDocument(activityId, activityValue, index));
+  const effects = requireArray(item.effects, 'itemDocument.effects')
+    .map((effect, index) => projectItemEffectDocument(effect, index));
+  return {
+    name: requireNonEmptyString(item.name, 'itemDocument.name'),
+    type: requireNonEmptyString(item.type, 'itemDocument.type'),
+    description: projectDeclaredObject(system.description, 'itemDocument.description', ITEM_DESCRIPTION_POLICY),
+    rarity: requireSummaryScalarValue(system.rarity, 'itemDocument.rarity'),
+    attunement: requireSummaryScalarValue(system.attunement, 'itemDocument.attunement'),
+    armor: projectDeclaredObject(system.armor, 'itemDocument.armor', ARMOR_POLICY),
+    itemType: projectDeclaredObject(system.type, 'itemDocument.itemType', ITEM_TYPE_POLICY),
+    properties: requireStringArray(system.properties, 'itemDocument.properties'),
+    weight: projectDeclaredObject(system.weight, 'itemDocument.weight', WEIGHT_POLICY),
+    uses: projectDeclaredObject(system.uses, 'itemDocument.uses', USES_POLICY),
+    activities,
+    effects,
+  };
+}
+
+/** Re-project an Item wire summary so decoders can reject every undeclared key. */
+export function projectForgeItemDocumentSummary(value: unknown): ForgeItemDocumentSummary {
+  const item = requireRecord(value, 'itemDocument');
+  return {
+    name: requireNonEmptyString(item.name, 'itemDocument.name'),
+    type: requireNonEmptyString(item.type, 'itemDocument.type'),
+    description: projectDeclaredObject(item.description, 'itemDocument.description', ITEM_DESCRIPTION_POLICY),
+    rarity: requireSummaryScalarValue(item.rarity, 'itemDocument.rarity'),
+    attunement: requireSummaryScalarValue(item.attunement, 'itemDocument.attunement'),
+    armor: projectDeclaredObject(item.armor, 'itemDocument.armor', ARMOR_POLICY),
+    itemType: projectDeclaredObject(item.itemType, 'itemDocument.itemType', ITEM_TYPE_POLICY),
+    properties: requireStringArray(item.properties, 'itemDocument.properties'),
+    weight: projectDeclaredObject(item.weight, 'itemDocument.weight', WEIGHT_POLICY),
+    uses: projectDeclaredObject(item.uses, 'itemDocument.uses', USES_POLICY),
+    activities: requireArray(item.activities, 'itemDocument.activities')
+      .map((activity, index) => projectItemActivityDocumentSummary(activity, index)),
+    effects: requireArray(item.effects, 'itemDocument.effects')
+      .map((effect, index) => projectItemEffectDocumentSummary(effect, index)),
   };
 }
 
@@ -303,6 +367,202 @@ function projectEffectChange(value: unknown, label: string): ForgeEffectChangeSu
     value: requireString(record.value, `${label}.value`),
     priority: projectScalar(record.priority),
   };
+}
+
+interface ProjectionRecord {
+  readonly [key: string]: ProjectionPolicy;
+}
+
+type ProjectionPolicy = true | ProjectionRecord;
+
+const SCALING_POLICY = { mode: true, number: true, formula: true } as const;
+const RANGE_POLICY = { override: true, value: true, long: true, reach: true, units: true, special: true } as const;
+const USES_POLICY = {
+  spent: true,
+  max: true,
+  recovery: { $array: { period: true, type: true, formula: true } },
+} as const;
+const ARMOR_POLICY = { value: true, dex: true, magicalBonus: true } as const;
+const ITEM_TYPE_POLICY = { value: true, baseItem: true } as const;
+const WEIGHT_POLICY = { value: true, units: true } as const;
+const ITEM_DESCRIPTION_POLICY = { value: true, chat: true } as const;
+const ACTIVITY_POLICIES = {
+  description: { chatFlavor: true },
+  activation: { type: true, value: true, condition: true, override: true },
+  attack: {
+    ability: true,
+    bonus: true,
+    flat: true,
+    type: { value: true, classification: true },
+  },
+  save: {
+    ability: { $array: true },
+    dc: { calculation: true, formula: true },
+  },
+  damage: {
+    parts: {
+      $array: {
+        number: true,
+        denomination: true,
+        bonus: true,
+        types: { $array: true },
+        custom: { enabled: true, formula: true },
+        scaling: SCALING_POLICY,
+      },
+    },
+    includeBase: true,
+    onSave: true,
+  },
+  range: RANGE_POLICY,
+  consumption: {
+    targets: {
+      $array: {
+        type: true,
+        target: true,
+        value: true,
+        scaling: SCALING_POLICY,
+      },
+    },
+    scaling: { allowed: true, max: true },
+    spellSlot: true,
+  },
+  uses: USES_POLICY,
+  target: {
+    override: true,
+    prompt: true,
+    template: {
+      count: true,
+      contiguous: true,
+      type: true,
+      size: true,
+      width: true,
+      height: true,
+      units: true,
+    },
+    affects: { count: true, type: true, choice: true, special: true },
+  },
+  duration: { value: true, units: true, concentration: true, override: true },
+} as const;
+
+function projectItemActivityDocument(
+  activityId: string,
+  value: unknown,
+  index: number,
+): ForgeItemActivityDocumentSummary {
+  const label = `itemDocument.activities[${index}]`;
+  const activity = requireRecord(value, label);
+  const id = hasValue(activity, '_id') ? requireNonEmptyString(activity._id, `${label}.id`) : activityId;
+  const result: ForgeItemActivityDocumentSummary = {
+    id,
+    name: requireNonEmptyString(activity.name, `${label}.name`),
+    type: requireNonEmptyString(activity.type, `${label}.type`),
+    effectIds: requireArray(activity.effects ?? [], `${label}.effects`).map((entry, effectIndex) => {
+      const effect = requireRecord(entry, `${label}.effects[${effectIndex}]`);
+      return requireNonEmptyString(effect._id, `${label}.effects[${effectIndex}].id`);
+    }),
+  };
+  for (const key of Object.keys(ACTIVITY_POLICIES) as Array<keyof typeof ACTIVITY_POLICIES>) {
+    if (hasValue(activity, key)) {
+      result[key] = projectDeclaredObject(activity[key], `${label}.${key}`, ACTIVITY_POLICIES[key]);
+    }
+  }
+  return result;
+}
+
+function projectItemEffectDocument(value: unknown, index: number): ForgeItemEffectDocumentSummary {
+  const label = `itemDocument.effects[${index}]`;
+  const effect = requireRecord(value, label);
+  const origin = hasValue(effect, 'origin') ? requireString(effect.origin, `${label}.origin`) : undefined;
+  return {
+    id: requireNonEmptyString(effect._id, `${label}.id`),
+    name: requireNonEmptyString(effect.name, `${label}.name`),
+    ...(origin !== undefined ? { origin } : {}),
+    statuses: requireStringArray(effect.statuses ?? [], `${label}.statuses`),
+    changes: requireArray(effect.changes ?? [], `${label}.changes`).map((entry, changeIndex) => {
+      const change = requireRecord(entry, `${label}.changes[${changeIndex}]`);
+      return {
+        key: requireNonEmptyString(change.key, `${label}.changes[${changeIndex}].key`),
+        mode: projectScalar(change.mode),
+        value: requireString(change.value, `${label}.changes[${changeIndex}].value`),
+        priority: projectScalar(change.priority),
+      };
+    }),
+  };
+}
+
+function projectItemActivityDocumentSummary(value: unknown, index: number): ForgeItemActivityDocumentSummary {
+  const label = `itemDocument.activities[${index}]`;
+  const activity = requireRecord(value, label);
+  const result: ForgeItemActivityDocumentSummary = {
+    id: requireNonEmptyString(activity.id, `${label}.id`),
+    name: requireNonEmptyString(activity.name, `${label}.name`),
+    type: requireNonEmptyString(activity.type, `${label}.type`),
+    effectIds: requireStringArray(activity.effectIds, `${label}.effectIds`),
+  };
+  for (const [key, policy] of Object.entries(ACTIVITY_POLICIES)) {
+    if (activity[key] !== undefined) {
+      result[key as keyof typeof ACTIVITY_POLICIES] = projectDeclaredObject(
+        activity[key],
+        `${label}.${key}`,
+        policy,
+      );
+    }
+  }
+  return result;
+}
+
+function projectItemEffectDocumentSummary(value: unknown, index: number): ForgeItemEffectDocumentSummary {
+  const label = `itemDocument.effects[${index}]`;
+  const effect = requireRecord(value, label);
+  const result: ForgeItemEffectDocumentSummary = {
+    id: requireNonEmptyString(effect.id, `${label}.id`),
+    name: requireNonEmptyString(effect.name, `${label}.name`),
+    statuses: requireStringArray(effect.statuses, `${label}.statuses`),
+    changes: requireArray(effect.changes, `${label}.changes`)
+      .map((change, changeIndex) => projectEffectChange(change, `${label}.changes[${changeIndex}]`)),
+  };
+  if (effect.origin !== undefined) result.origin = requireString(effect.origin, `${label}.origin`);
+  return result;
+}
+
+function projectDeclaredObject(
+  value: unknown,
+  label: string,
+  policy: Readonly<Record<string, ProjectionPolicy>>,
+): JsonObject {
+  return projectByPolicy(value, label, policy) as JsonObject;
+}
+
+function projectByPolicy(value: unknown, label: string, policy: ProjectionPolicy): JsonValue {
+  if (policy === true) return cloneJsonValue(value, label);
+  if ('$array' in policy) {
+    return requireArray(value, label).map((entry, index) => projectByPolicy(entry, `${label}[${index}]`, policy.$array!));
+  }
+  const record = requireRecord(value, label);
+  const output: JsonObject = Object.create(null) as JsonObject;
+  for (const [key, childPolicy] of Object.entries(policy)) {
+    if (hasValue(record, key)) output[key] = projectByPolicy(record[key], `${label}.${key}`, childPolicy);
+  }
+  return output;
+}
+
+function cloneJsonValue(value: unknown, label: string): JsonValue {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${label} must be a finite number.`);
+    return value;
+  }
+  if (Array.isArray(value)) return requireArray(value, label).map((entry, index) => cloneJsonValue(entry, `${label}[${index}]`));
+  const record = requireRecord(value, label);
+  const output: JsonObject = Object.create(null) as JsonObject;
+  for (const [key, entry] of Object.entries(record)) output[key] = cloneJsonValue(entry, `${label}.${key}`);
+  return output;
+}
+
+function requireSummaryScalarValue(value: unknown, label: string): string | number | boolean | null {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  throw new TypeError(`${label} must be a JSON scalar.`);
 }
 
 function projectScalar(value: unknown): string | number | boolean | null {

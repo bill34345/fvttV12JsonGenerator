@@ -74,6 +74,7 @@ describe('AGENTS/Ruler governance checker', () => {
     'foundry-modules/fvtt-blood-hunter-2024/AGENTS.md',
     'foundry-modules/fvtt-babele-rolltable-embed-translation/AGENTS.md',
     'foundry-modules/fvtt-injury-fading-spirits/AGENTS.md',
+    'foundry-modules/fvtt-json-forge/AGENTS.md',
     'foundry-modules/fvtt-house-rules/AGENTS.md',
   ])('fails closed when required leaf is missing: %s', (leaf) => {
     const root = createFixture();

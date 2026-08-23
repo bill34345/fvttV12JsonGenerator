@@ -4,6 +4,7 @@ import type {
   DiagnosticStage,
   EvidenceRef,
   ForgeSourceId,
+  ForgeItemSourceId,
   FvttTargetVersion,
 } from '@fvtt-json-generator/contracts';
 
@@ -13,6 +14,8 @@ export const FORGE_SERVICE_ID = 'foundry-forge-gateway' as const;
 export const FORGE_CAPABILITY_IDS = [
   'actor.standard.generate.v1',
   'source.actor.create.v1',
+  'item.standard.generate.v1',
+  'source.item.create.v1',
 ] as const;
 export type ForgeCapabilityId = typeof FORGE_CAPABILITY_IDS[number];
 
@@ -297,7 +300,30 @@ export interface ForgeSourceCreateCapability {
   maxConcurrentJobs: number;
 }
 
-export type ForgeCapability = ForgeActorCapability | ForgeSourceCreateCapability;
+export interface ForgeItemCapability {
+  id: 'item.standard.generate.v1';
+  systemId: 'dnd5e';
+  generatorProfiles: readonly ForgeGeneratorProfile[];
+  versionRouting: ReadonlyArray<{
+    fvttVersion: string;
+    generatorProfile: ForgeGeneratorProfile;
+  }>;
+  maxInputUtf8Bytes: number;
+  maxConcurrentJobs: number;
+}
+
+export interface ForgeItemSourceCreateCapability {
+  id: 'source.item.create.v1';
+  sourceKind: 'item';
+  maxInputUtf8Bytes: number;
+  maxConcurrentJobs: number;
+}
+
+export type ForgeCapability =
+  | ForgeActorCapability
+  | ForgeSourceCreateCapability
+  | ForgeItemCapability
+  | ForgeItemSourceCreateCapability;
 
 export interface ForgeActorRequest {
   protocolVersion: typeof FORGE_PROTOCOL_VERSION;
@@ -321,6 +347,20 @@ export interface ForgeActorRequest {
   };
 }
 
+export interface ForgeItemRequest {
+  protocolVersion: typeof FORGE_PROTOCOL_VERSION;
+  capabilityId: 'item.standard.generate.v1';
+  requestId: string;
+  source: {
+    displayName: string;
+    content: string;
+    sourceId: ForgeItemSourceId;
+    utf8Sha256: Sha256;
+  };
+  foundryRuntime: ForgeActorRequest['foundryRuntime'];
+  resolvedTarget: ForgeActorRequest['resolvedTarget'];
+}
+
 export interface ForgeSourceCreateRequest {
   protocolVersion: typeof FORGE_PROTOCOL_VERSION;
   capabilityId: 'source.actor.create.v1';
@@ -332,11 +372,65 @@ export interface ForgeSourceCreateRequest {
   };
 }
 
+export interface ForgeItemSourceCreateRequest {
+  protocolVersion: typeof FORGE_PROTOCOL_VERSION;
+  capabilityId: 'source.item.create.v1';
+  requestId: string;
+  source: ForgeSourceCreateRequest['source'];
+}
+
 export interface ForgeSourceCreateResult {
   sourceRef: ForgeSourceRef;
   sourceId: ForgeSourceId;
   displayName: string;
   sourceHash: Sha256;
+}
+
+export interface ForgeItemSourceCreateResult {
+  sourceRef: ForgeSourceRef;
+  sourceId: ForgeItemSourceId;
+  displayName: string;
+  sourceHash: Sha256;
+}
+
+export interface ForgeItemActivityDocumentSummary {
+  id: string;
+  name: string;
+  type: string;
+  description?: JsonObject;
+  activation?: JsonObject;
+  attack?: JsonObject;
+  save?: JsonObject;
+  damage?: JsonObject;
+  range?: JsonObject;
+  consumption?: JsonObject;
+  uses?: JsonObject;
+  target?: JsonObject;
+  duration?: JsonObject;
+  effectIds: string[];
+}
+
+export interface ForgeItemEffectDocumentSummary {
+  id: string;
+  name: string;
+  origin?: string;
+  statuses: string[];
+  changes: ForgeEffectChangeSummary[];
+}
+
+export interface ForgeItemDocumentSummary {
+  name: string;
+  type: string;
+  description: JsonObject;
+  rarity: ForgeSummaryScalar;
+  attunement: ForgeSummaryScalar;
+  armor: JsonObject;
+  itemType: JsonObject;
+  properties: string[];
+  weight: JsonObject;
+  uses: JsonObject;
+  activities: ForgeItemActivityDocumentSummary[];
+  effects: ForgeItemEffectDocumentSummary[];
 }
 
 export interface ForgeActorResultBase {
@@ -370,6 +464,33 @@ export type ForgeActorResult =
       artifact?: JsonObject;
     })
   | (ForgeActorResultBase & {
+      status: 'failed';
+    });
+
+export interface ForgeItemResultBase {
+  sourceIdentity: {
+    sourceId: ForgeItemSourceId;
+    sourceHash: Sha256;
+  };
+  target: ForgeActorResultBase['target'];
+  diagnostics: ForgeDiagnostic[];
+  verification: ForgeVerificationSummary;
+  itemVerification: ForgeItemVerificationSummary;
+  itemDocument: ForgeItemDocumentSummary;
+}
+
+export type ForgeItemResult =
+  | (Omit<ForgeItemResultBase, 'verification'> & {
+      status: 'accepted';
+      artifact: JsonObject;
+      artifactHash: Sha256;
+      verification: ForgeAcceptedVerificationSummary;
+    })
+  | (ForgeItemResultBase & {
+      status: 'needs_review';
+      artifact?: JsonObject;
+    })
+  | (ForgeItemResultBase & {
       status: 'failed';
     });
 
@@ -423,6 +544,8 @@ export type ForgeResponse<T> =
 
 export type ForgeActorResponse = ForgeResponse<ForgeActorResult>;
 export type ForgeSourceCreateResponse = ForgeResponse<ForgeSourceCreateResult>;
+export type ForgeItemResponse = ForgeResponse<ForgeItemResult>;
+export type ForgeItemSourceCreateResponse = ForgeResponse<ForgeItemSourceCreateResult>;
 
 export interface ForgeDecodeIssue {
   path: string;
@@ -443,3 +566,4 @@ export interface ForgeDiagnostic {
   evidence?: EvidenceRef[];
 }
 export type { ConversionStatus, DiagnosticSeverity, DiagnosticStage, EvidenceRef };
+export type { ForgeItemSourceId } from '@fvtt-json-generator/contracts';

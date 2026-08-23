@@ -1,0 +1,39 @@
+<section class="fvtt-json-forge-form forge-item-panel">
+  <p class="forge-security-note">仅支持 Foundry 14.364 / dnd5e 5.3.3 / core / icon off。只创建世界 Item，不创建或修改 Actor。</p>
+  <label>模式
+    <select name="mode">
+      <option value="structured">正式 structured Item</option>
+    </select>
+  </label>
+  <label>显示名称
+    <input name="displayName" type="text" value="Forge Item">
+  </label>
+  <label>Item 来源
+    <textarea name="source" rows="16" spellcheck="false" placeholder="粘贴单个正式 Item Markdown/YAML 来源"></textarea>
+  </label>
+  <div class="forge-actions">
+    <button type="button" data-action="generate"><i class="fas fa-hammer"></i> 生成预览</button>
+    <button type="button" data-action="cancel" disabled>取消生成</button>
+    <button type="button" data-action="clear">清除</button>
+  </div>
+  <p data-status>尚未生成。</p>
+  <section data-diagnostics hidden>
+    <h3>诊断</h3>
+    <ul data-diagnostic-list></ul>
+  </section>
+  <section data-preview hidden>
+    <h3>安全预览</h3>
+    <pre data-preview-text></pre>
+    <details>
+      <summary>候选 Item JSON</summary>
+      <pre data-json></pre>
+    </details>
+    <details>
+      <summary>来源身份</summary>
+      <pre data-final-source></pre>
+    </details>
+  </section>
+  <div class="forge-actions forge-submit">
+    <button type="button" data-action="create" disabled><i class="fas fa-cube"></i> 确认创建世界 Item</button>
+  </div>
+</section>
