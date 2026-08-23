@@ -8,6 +8,7 @@
         "@fvtt-json-generator/assets-icons": "workspace:*",
         "@fvtt-json-generator/contracts": "workspace:*",
         "@fvtt-json-generator/crawl-goddessfantasy": "workspace:*",
+        "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
         "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
         "@fvtt-json-generator/generation": "workspace:*",
         "@fvtt-json-generator/ingest-documents": "workspace:*",
@@ -115,6 +116,18 @@
         "typescript": "^5.9.3",
       },
     },
+    "foundry-modules/fvtt-json-forge": {
+      "name": "@fvtt-json-generator/fvtt-json-forge",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
+        "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "typescript": "^5.9.3",
+      },
+    },
     "foundry-modules/fvtt-selected-token-sync": {
       "name": "@fvtt-json-generator/fvtt-selected-token-sync",
       "version": "0.1.0",
@@ -171,6 +184,21 @@
         "cheerio": "^1.2.0",
         "crawlee": "^3.17.0",
         "domhandler": "^6.0.1",
+      },
+    },
+    "packages/forge-browser-runtime": {
+      "name": "@fvtt-json-generator/forge-browser-runtime",
+      "version": "0.1.0",
+      "dependencies": {
+        "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
+        "@fvtt-json-generator/generation": "workspace:*",
+        "@fvtt-json-generator/intake-ai": "workspace:*",
+        "@fvtt-json-generator/models": "workspace:*",
+        "@fvtt-json-generator/parser": "workspace:*",
+        "@fvtt-json-generator/workflows": "workspace:*",
+        "js-yaml": "^4.1.1",
+        "opencc-js": "^1.0.5",
       },
     },
     "packages/forge-gateway-protocol": {
@@ -338,6 +366,8 @@
 
     "@fvtt-json-generator/crawl-goddessfantasy": ["@fvtt-json-generator/crawl-goddessfantasy@workspace:packages/crawl-goddessfantasy"],
 
+    "@fvtt-json-generator/forge-browser-runtime": ["@fvtt-json-generator/forge-browser-runtime@workspace:packages/forge-browser-runtime"],
+
     "@fvtt-json-generator/forge-gateway-protocol": ["@fvtt-json-generator/forge-gateway-protocol@workspace:packages/forge-gateway-protocol"],
 
     "@fvtt-json-generator/foundry-ops": ["@fvtt-json-generator/foundry-ops@workspace:tools/foundry-ops"],
@@ -351,6 +381,8 @@
     "@fvtt-json-generator/fvtt-house-rules": ["@fvtt-json-generator/fvtt-house-rules@workspace:foundry-modules/fvtt-house-rules"],
 
     "@fvtt-json-generator/fvtt-injury-fading-spirits": ["@fvtt-json-generator/fvtt-injury-fading-spirits@workspace:foundry-modules/fvtt-injury-fading-spirits"],
+
+    "@fvtt-json-generator/fvtt-json-forge": ["@fvtt-json-generator/fvtt-json-forge@workspace:foundry-modules/fvtt-json-forge"],
 
     "@fvtt-json-generator/fvtt-selected-token-sync": ["@fvtt-json-generator/fvtt-selected-token-sync@workspace:foundry-modules/fvtt-selected-token-sync"],
 
@@ -1198,6 +1230,10 @@
 
     "@fvtt-json-generator/chat-memory-guard/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
+    "@fvtt-json-generator/forge-browser-runtime/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
+
+    "@fvtt-json-generator/forge-gateway-protocol/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
+
     "@fvtt-json-generator/foundry-ops/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@fvtt-json-generator/fvtt-babele-rolltable-embed-translation/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
@@ -1211,6 +1247,8 @@
     "@fvtt-json-generator/fvtt-house-rules/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@fvtt-json-generator/fvtt-injury-fading-spirits/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
+    "@fvtt-json-generator/fvtt-json-forge/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@fvtt-json-generator/fvtt-selected-token-sync/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
@@ -1367,6 +1405,8 @@
     "@fvtt-json-generator/fvtt-house-rules/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@fvtt-json-generator/fvtt-injury-fading-spirits/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+
+    "@fvtt-json-generator/fvtt-json-forge/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@fvtt-json-generator/fvtt-selected-token-sync/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

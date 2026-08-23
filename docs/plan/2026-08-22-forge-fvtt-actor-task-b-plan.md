@@ -35,6 +35,7 @@ convertRawActorSourceWithAi(input, provider, signal): Promise<BrowserActorIntake
 - 用 browser-safe hash 和显式注入的只读资源替代 Node crypto、工作目录、模板文件和法术 catalog 读取；
 - 与 CLI/Web 共用同一套业务规则；
 - 对同一最终来源，浏览器和 Node workflow 的 artifact hash、verification 和安全摘要必须一致；
+- Forge wire artifact 通过 Node/browser 共用的纯投影消除非语义易变字段：已有 `_stats.createdTime`/`modifiedTime` 归一为 `null`，嵌入 ActiveEffect ID 及其引用按内容确定性重键，然后重新执行正式 verifier。普通 CLI/Web 的原始输出不受该 Forge 投影影响；
 - Task A protocol 类型和 decoder 保持 v1，不破坏现有 import，不删除 health/capabilities 类型。
 
 ### 来源路径
@@ -45,9 +46,9 @@ convertRawActorSourceWithAi(input, provider, signal): Promise<BrowserActorIntake
 
 ### AI 连接
 
-第一版支持 OpenAI-compatible HTTPS endpoint、提取模型、复核模型和 API Key。API Key 保存到 browser client-only 设置，默认掩码，可清除，并明确警告同页其他模块可能读取。不得写入世界、Actor、Chat、日志、诊断、Forge request 或导出。
+第一版支持 OpenAI-compatible HTTPS endpoint、提取模型、复核模型和 API Key。API Key 默认只保留在当前内存；只有用户明确勾选后才保存到 browser client-only 设置。输入默认掩码，可清除，并明确警告同页其他模块可能读取已保存的 Key。不得写入世界、Actor、Chat、日志、诊断、Forge request 或导出。
 
-必须区分 CORS、401/403、429、timeout、network 和 invalid JSON。AI 模式显示 discover、extract、validate、repair、generate、review、finalize 阶段；只允许一个活动任务；使用 `AbortController` 取消未完成的模型请求。刷新页面会中止当前任务，第一版不做断点恢复。
+必须区分 401/403、429、timeout 和 invalid JSON。浏览器无法可靠区分 CORS 与底层 network failure，两者使用明确的 browser transport 诊断，不做启发式假精确分类。AI 模式实时显示 discover、extract、validate、repair、generate、review、finalize 阶段；只允许一个活动任务；使用 `AbortController` 取消未完成的模型请求。刷新页面会中止当前任务，第一版不做断点恢复。
 
 Codex OAuth Companion 只保留可替换 provider 接口，本 Task 不实现。
 
@@ -71,12 +72,13 @@ Codex OAuth Companion 只保留可替换 provider 接口，本 Task 不实现。
 
 使用 Foundry 公开 Document API，不直接改 LevelDB：
 
-1. 创建本次操作专用临时 Actor。
-2. 调用公开 `importFromJSON()` 导入已验证 artifact。
-3. 写入 `flags.fvtt-json-forge`：protocolVersion、requestId、sourceId、sourceHash、适用时的 rawSourceHash、artifactHash。
-4. 调用 `toObject()` 重新投影。
-5. 核对 name、type、hp、ac、cr、senses、Activities、damage/save/uses、effects/linkage 和 Forge identity。
-6. 一致后返回 Actor UUID；任何失败只删除本次临时 Actor。
+1. 在内存中准备完整已验证 artifact，并附加 `flags.fvtt-json-forge`：protocolVersion、requestId、sourceId、sourceHash、适用时的 rawSourceHash、artifactHash。
+2. 以仅由 `sourceId` 派生的确定性 Document ID 调用一次公开 `Actor.create()`；这是唯一世界写入，也是跨窗口 source claim。
+3. 调用 `toObject()` 重新投影。
+4. 核对 name、type、creature type、abilities、hp、ac、cr、senses、Activities、damage/save/uses、effects/linkage 和 Forge identity。
+5. 一致后返回 Actor UUID；提交前可以取消；调用世界写入后进入不可取消的短提交区间，界面明确显示“正在提交并重新读取核对（不可取消）”并锁定生成、创建、取消和来源控件，readback 等普通失败尽最大努力只删除本次新建 Actor。
+
+纯浏览器边界：如果浏览器在服务器提交 `Actor.create()` 后瞬间崩溃，完整且带 Forge identity 的 Actor 可能已经存在。第一版不宣称跨进程事务回滚；重新确认会复用相同 artifact 或报告 hash 冲突，不使用恢复日志自动删除完整 Actor。
 
 重复规则：同一 `sourceId + artifactHash` 返回既有 Actor；同一 sourceId 不同 artifactHash 报冲突；Task B 不覆盖、不更新、不删除既有 Actor。
 
@@ -89,10 +91,10 @@ Codex OAuth Companion 只保留可替换 provider 接口，本 Task 不实现。
 - browser 与 Node artifact hash/verification 相同；
 - 普通非 Forge CLI/Web 输出不变；
 - bundle 不含 Node、Bun、filesystem、Sharp、Crawlee、SSH、`process.env`；
-- AI 显式触发、fake provider 的四阶段、重试、取消、超时、429、401、CORS、network 和非法 JSON；
+- AI 显式触发、七阶段实时进度、正式 discovery normalization/partition parity、fake provider、重试、取消、超时、429、401、browser transport 和非法 JSON；
 - API Key 保存/清除/日志脱敏；
 - 非 GM、错误版本、needs_review、failed 不可创建；
-- 确认前无世界写入；重复点击不重复创建；hash 冲突阻断；import/flag/readback 失败回滚临时 Actor。
+- 确认前无世界写入；同 sourceId 的跨窗口创建由同一 Document ID 原子争用；重复点击不重复创建；hash 冲突阻断；create/readback 普通失败做 best-effort 回滚。
 
 机械门禁：
 
@@ -115,7 +117,7 @@ git diff --check
 - 人工核对 name/type/HP/AC/CR/senses、embedded Item、Activities、damage/save/uses/effects/linkage；
 - 打开 Actor sheet 执行一个代表性 Activity；
 - 使用用户明确授权的真实外部模型完成一次普通文本 Intake，核对 evidence、最终 Markdown、Actor 和 readback；
-- 错误 API Key、CORS、取消和 needs_review 不留下 Actor；
+- 错误 API Key、browser transport error、创建前取消和 needs_review 不写入 Actor；世界写入提交后不再宣称可取消，readback 等普通失败执行 best-effort 删除；
 - 检查 API Key 不在世界数据、日志、诊断和导出中；
 - 只使用本地 Lab，不碰生产。
 

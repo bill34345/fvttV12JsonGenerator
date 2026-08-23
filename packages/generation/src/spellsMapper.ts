@@ -141,6 +141,13 @@ export class SpellsMapper {
     const normalized = name.trim();
     return this.spells.get(normalized) ?? this.spellsLower.get(normalized.toLowerCase());
   }
+
+  public entries(): readonly SpellInfo[] {
+    const entries = [...this.spells.values()]
+      .map((spell) => Object.freeze({ ...spell }))
+      .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : left.uuid < right.uuid ? -1 : left.uuid > right.uuid ? 1 : 0);
+    return Object.freeze(entries);
+  }
 }
 
 export const spellsMapper = new SpellsMapper();

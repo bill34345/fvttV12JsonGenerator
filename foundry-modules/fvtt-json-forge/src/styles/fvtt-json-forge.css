@@ -1,0 +1,8 @@
+.fvtt-json-forge-form { display: grid; gap: 0.65rem; min-width: 44rem; }
+.fvtt-json-forge-form label { display: grid; gap: 0.25rem; }
+.fvtt-json-forge-form input, .fvtt-json-forge-form textarea { width: 100%; box-sizing: border-box; }
+.fvtt-json-forge-form textarea { font-family: var(--font-mono); resize: vertical; }
+.forge-security-note { color: var(--color-text-dark-secondary); font-size: 0.9rem; }
+.forge-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.forge-actions button[data-action="create"] { font-weight: 700; }
+.fvtt-json-forge-form pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }

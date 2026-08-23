@@ -1,0 +1,51 @@
+<form class="fvtt-json-forge-form">
+  <p class="forge-security-note">API Key 只保存在当前浏览器的 client-only 设置中；同一 Foundry 页面内的其他模块理论上可能读取它。不会写入世界、Actor、聊天、日志或诊断。</p>
+  <p class="forge-creation-note">确认创建会用一次世界写入保存完整 Actor，再立即回读核对。提交前可以取消；世界写入开始后进入不可取消的短提交区间，普通 readback 失败会尝试删除。如果浏览器恰好在服务器写入后崩溃，完整且带 Forge 身份的 Actor 可能已经存在，重新确认时会按 sourceId 复用或报告冲突。</p>
+  <label>输入模式
+    <select name="mode">
+      <option value="structured">规范 Actor 文本，不调用 AI</option>
+      <option value="ai">普通文本，发送给所选模型</option>
+    </select>
+  </label>
+  <label>Actor 名称 <input name="displayName" type="text" autocomplete="off"></label>
+  <label>来源文本
+    <textarea name="source" rows="16" spellcheck="false" required></textarea>
+  </label>
+  <fieldset data-ai-settings>
+    <legend>模型连接（仅普通文本模式）</legend>
+    <label>HTTPS endpoint <input name="endpoint" type="url" placeholder="https://example.com/v1"></label>
+    <label>提取模型 <input name="model" type="text" autocomplete="off"></label>
+    <label>复核模型 <input name="reviewModel" type="text" autocomplete="off"></label>
+    <label>API Key <input name="apiKey" type="password" autocomplete="off"></label>
+    <label><input name="persistApiKey" type="checkbox"> 保存 API Key 到当前浏览器</label>
+    <button type="button" data-action="clear-key">清除 API Key</button>
+  </fieldset>
+  <div class="forge-actions">
+    <button type="button" data-action="generate">生成预览</button>
+    <button type="button" data-action="cancel" disabled>取消</button>
+    <button type="button" data-action="clear">清除</button>
+    <button type="button" data-action="create" disabled>确认创建 Actor</button>
+  </div>
+  <p data-status>尚未生成。</p>
+  <ol data-stages></ol>
+  <section data-diagnostics hidden>
+    <h3>诊断</h3>
+    <ul data-diagnostic-list></ul>
+  </section>
+  <section data-preview hidden>
+    <h3>Actor 预览</h3>
+    <pre data-preview-text></pre>
+    <details>
+      <summary>完整候选 JSON</summary>
+      <pre data-json></pre>
+    </details>
+    <details>
+      <summary>AI 来源证据与身份链</summary>
+      <pre data-intake-evidence></pre>
+    </details>
+    <details>
+      <summary>最终规范来源</summary>
+      <pre data-final-source></pre>
+    </details>
+  </section>
+</form>

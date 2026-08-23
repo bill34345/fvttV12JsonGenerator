@@ -1,12 +1,9 @@
-import { createRequire } from 'node:module';
+import * as yaml from 'js-yaml';
 import type { ParsedNPC } from './mapping';
 import { i18n } from './i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import type { ParserStrategy } from './types';
 import { validateForgeSourceMetadata } from './forgeSourceMetadata';
-
-const require = createRequire(import.meta.url);
-const yaml = require('js-yaml') as { load: (input: string) => unknown };
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 type AbilityKey = (typeof ABILITIES)[number];
