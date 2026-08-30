@@ -3,6 +3,10 @@ import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
 export const MODULE_VERSION = '0.1.0' as const;
+export const RELEASE_TAG = `${MODULE_ID}-v${MODULE_VERSION}` as const;
+export const REPOSITORY_URL = 'https://github.com/bill34345/fvttV12JsonGenerator' as const;
+export const MANIFEST_URL = `https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/${MODULE_ID}/src/module.json` as const;
+export const DOWNLOAD_URL = `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/${MODULE_ID}-${MODULE_VERSION}.zip` as const;
 
 const packageRoot = resolve(import.meta.dir);
 const sourceRoot = resolve(packageRoot, 'src');
@@ -69,6 +73,8 @@ export async function buildBrowserBundle(options: BrowserBundleOptions): Promise
 
 export function validateManifest(manifest: Record<string, unknown>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('FVTT JSON Forge manifest identity/version drifted.');
+  if (manifest.url !== `${REPOSITORY_URL}/tree/master/foundry-modules/${MODULE_ID}`) throw new Error('FVTT JSON Forge project URL drifted.');
+  if (manifest.manifest !== MANIFEST_URL || manifest.download !== DOWNLOAD_URL) throw new Error('FVTT JSON Forge release URLs drifted.');
   const compatibility = asRecord(manifest.compatibility);
   if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.364') {
     throw new Error('FVTT JSON Forge supports exactly Foundry 14.364.');

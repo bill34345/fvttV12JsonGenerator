@@ -178,7 +178,7 @@ describe('browser Forge Actor runtime', () => {
     const referenceCacheRoot = process.env.FVTT_REFERENCE_CACHE_ROOT?.trim();
     if (!referenceCacheRoot) throw new Error('FVTT_REFERENCE_CACHE_ROOT is required for v14 spell snapshot parity.');
     const snapshot = await buildV14SpellSnapshot(referenceCacheRoot);
-    expect(snapshot.entries).toEqual(LOCKED_DND5E_V14_SPELLS);
+    expect(snapshot.entries).toEqual([...LOCKED_DND5E_V14_SPELLS]);
     expect(snapshot.entries).toHaveLength(319);
     expect(renderV14SpellSnapshot(snapshot)).toBe(readFileSync(
       'packages/forge-browser-runtime/src/browser-v14-spell-data.ts',

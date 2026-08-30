@@ -14,6 +14,18 @@
 
 Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse → canonical IR → validate IR → target projector → validate output → write` 管线。诊断状态为 `failed` 或 `needs_review` 时不会写入正式 output；`core` profile 不包含 MIDI-QOL、DAE、Times Up 或 Item Macro 专属字段。
 
+## FVTT JSON Forge（Foundry 模块）
+
+`fvtt-json-forge` 是 A–E 统一交付的 GM-only 浏览器模块，锁定 Foundry `14.364` / dnd5e `5.3.3` / `core`。它提供 Actor、Item、证据优先 Intake、review bundle 恢复、当前浏览器/世界/GM scope 的 Source Library，以及 mixed Actor/Item Collection、标准 ZIP、concurrency-1 可恢复队列和 accepted-only 批量创建/readback。
+
+正式发行版通过 Foundry Setup 的 **Install Module** 安装，manifest URL 为：
+
+```text
+https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/fvtt-json-forge/src/module.json
+```
+
+模块不是任意 JSON 导入器：只有当前、完整、decoded 且 formal verification 与 review 均为 `accepted` 的结果可以写入世界。浏览器关闭或刷新会把运行中任务标记为 `interrupted`，不会在后台继续或自动重发可能计费的请求。详细安装、操作、数据与支持边界见 [`foundry-modules/fvtt-json-forge/README.zh-CN.md`](foundry-modules/fvtt-json-forge/README.zh-CN.md)。
+
 ## 安装
 
 需要 [Bun](https://bun.sh/) 1.3 或兼容版本：

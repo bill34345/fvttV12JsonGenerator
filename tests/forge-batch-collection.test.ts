@@ -121,7 +121,7 @@ describe('Forge browser batch collection and ZIP contract', () => {
     const crcDrift = new Uint8Array(zip);
     const sourceOffset = findAscii(crcDrift, 'Rat source');
     expect(sourceOffset).toBeGreaterThan(0);
-    crcDrift[sourceOffset] ^= 1;
+    crcDrift[sourceOffset] = crcDrift[sourceOffset]! ^ 1;
     await expect(decodeForgeBatchCollectionZip(crcDrift)).rejects.toThrow(/CRC/u);
 
     const trailing = new Uint8Array(zip.byteLength + 1);
@@ -227,7 +227,7 @@ async function deflateStoredZip(input: Uint8Array): Promise<Uint8Array> {
   const centralParts: Uint8Array[] = [];
   let localOffset = 0;
   for (const entry of entries) {
-    const stream = new Blob([entry.data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const stream = new Blob([entry.data.slice().buffer]).stream().pipeThrough(new CompressionStream('deflate-raw'));
     const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
     const local = new Uint8Array(30 + entry.path.byteLength);
     const lv = new DataView(local.buffer);

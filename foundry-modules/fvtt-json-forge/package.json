@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "bun run build.ts",
-    "test": "bun test src tests --max-concurrency 4",
+    "release": "bun run release.ts",
+    "test": "bun test src tests --max-concurrency 1",
+    "verify:release": "bun test tests/release.test.ts --max-concurrency 1",
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {

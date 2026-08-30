@@ -193,7 +193,7 @@ describe('Foundry v14 generator target', () => {
     expect(generated._stats).not.toHaveProperty('lastModifiedBy');
   });
 
-  it('targets v14 AC formula instead of legacy AC bonus path', () => {
+  it('targets the canonical v14 Item AC bonus in system changes', () => {
     const effect = new ActivityGenerator({ fvttVersion: '14' }).generatePassiveEffect({
       name: 'Natural Guard',
       type: 'effect',
@@ -207,10 +207,11 @@ describe('Foundry v14 generator target', () => {
     expect(effect?.changes).toBeUndefined();
     expect(effect?.type).toBe('base');
     expect(effect?.system.changes[0]).toEqual(expect.objectContaining({
-      key: 'system.attributes.ac.formula',
+      key: 'system.attributes.ac.bonus',
       type: 'add',
       phase: 'initial',
-      value: '+2',
+      value: 2,
+      priority: null,
     }));
     expect(effect?._stats.coreVersion).toBe('14.364');
     expect(effect?._stats.systemVersion).toBe('5.3.3');

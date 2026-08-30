@@ -57,6 +57,7 @@ export const requiredAgentsFiles = [
   'foundry-modules/fvtt-house-rules/AGENTS.md',
   'foundry-modules/fvtt-injury-fading-spirits/AGENTS.md',
   'foundry-modules/fvtt-json-forge/AGENTS.md',
+  'foundry-modules/fvtt-selected-token-sync/AGENTS.md',
   'tools/AGENTS.md',
   'tools/foundry-ops/AGENTS.md',
 ] as const;

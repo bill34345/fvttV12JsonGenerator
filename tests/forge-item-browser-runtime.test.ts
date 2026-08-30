@@ -11,6 +11,7 @@ import {
   type ForgeItemRequest,
   type ForgeItemResponse,
   type ForgeItemSourceId,
+  type JsonObject,
 } from '@fvtt-json-generator/forge-gateway-protocol';
 import {
   buildForgeItemRequest,
@@ -147,12 +148,12 @@ describe('browser Forge Item runtime', () => {
     }));
     expect(field).toMatchObject({
       type: 'utility',
-      description: { chatFlavor: expect.stringContaining('次日黎明') },
+      description: { chatFlavor: expect.stringMatching(/5 尺内[\s\S]*次日黎明/) },
       activation: { type: 'reaction' },
-      range: { value: '5', units: 'ft' },
+      range: { override: false },
       uses: { max: '1', recovery: [{ period: 'dawn', type: 'recoverAll' }] },
       duration: { value: '1', units: 'minute', concentration: true },
-      target: { template: { type: 'radius', size: '5', units: 'ft' } },
+      target: { override: false, template: { type: 'radius', size: '5' } },
     });
   });
 

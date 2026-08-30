@@ -50,9 +50,11 @@ describe('Forge browser AI Item Intake review stages', () => {
         } as Response);
       }) as unknown as typeof fetch;
       const provider = new OpenAICompatibleItemIntakeProvider({
+        authMode: 'api-key',
         apiKey: 'test-only-key',
         baseUrl: 'https://provider.example',
         model: 'test-model',
+        reviewModel: 'test-model',
         responseFormat: 'json_object',
         timeoutMs: 1_000,
         repairTimeoutMs: 1_000,
@@ -136,9 +138,11 @@ describe('Forge browser AI Item Intake review stages', () => {
         }),
       } as Response)) as unknown as typeof fetch;
       const provider = new OpenAICompatibleItemIntakeProvider({
+        authMode: 'api-key',
         apiKey: 'test-only-key',
         baseUrl: 'https://provider.example',
         model: 'test-model',
+        reviewModel: 'test-model',
         responseFormat: 'json_object',
         timeoutMs: 1_000,
         repairTimeoutMs: 1_000,

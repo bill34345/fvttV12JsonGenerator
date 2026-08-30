@@ -86,6 +86,9 @@ describe('Forge protocol/workflow conformance', () => {
     if (!decodedResponse.ok || !('result' in decodedResponse.value)) {
       throw new Error('Expected the accepted Forge response to decode.');
     }
+    if (decodedResponse.value.result.status !== 'accepted') {
+      throw new Error(`Expected accepted Forge result, received ${decodedResponse.value.result.status}.`);
+    }
 
     expect(decodedResponse.value.result.sourceIdentity.sourceId).toBe(decodedRequest.value.source.sourceId);
     expect(decodedResponse.value.result.sourceIdentity.sourceHash).toBe(decodedRequest.value.source.utf8Sha256);

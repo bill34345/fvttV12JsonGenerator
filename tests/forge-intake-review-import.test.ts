@@ -105,7 +105,7 @@ describe('Forge Intake untrusted review bundle import', () => {
   });
 
   test('rejects unknown schema, version, keys, prototype keys, roots, and excessive structures', () => {
-    const base = buildForgeIntakeReviewBundle(acceptedInput()) as Record<string, unknown>;
+    const base = buildForgeIntakeReviewBundle(acceptedInput()) as unknown as Record<string, unknown>;
     expect(() => decodeObject({ ...base, schema: 'other' })).toThrow(/schema/u);
     expect(() => decodeObject({ ...base, version: 99 })).toThrow(/version/u);
     expect(() => decodeObject({ ...base, authorization: 'Bearer secret' })).toThrow(/unknown key/u);

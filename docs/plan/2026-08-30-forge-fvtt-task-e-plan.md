@@ -1,7 +1,7 @@
 # Forge FVTT Task E：可恢复 Library、Collection/ZIP、批量审阅与跨会话队列
 
 - 日期：2026-08-30
-- 状态：**Task E active**；E1 已发布，E2 已实现、验收并清理；从当前 E2 WorkTree 连续完成 Collection/ZIP、批量审阅、accepted-only 批量处理与可恢复跨会话队列，内部阶段不再作为用户停工点
+- 状态：**Task E complete and published to `codex/forge-fvtt-product`**；A–E 产品基线为 `925377eb97d53c5995718be8a90b96a497fac9e5`。后续统一发行收口由 [`2026-08-30-forge-fvtt-release-closure.md`](2026-08-30-forge-fvtt-release-closure.md) 接管，不把它扩写成 Task F。
 - 计划基线：`codex/forge-fvtt-product@7cea7c15e321f37ac822bf9766649d43629ec1b4`
 - 计划 WorkTree：`C:\Users\Administrator\.codex\worktrees\d42e\fvttV12JsonGenerator`
 - 计划分支：`codex/20260830-forge-fvtt-task-e-plan`
@@ -504,3 +504,5 @@ E2 的实现、标准 Forge 门禁、独立安全复核和真实 Foundry revisio
 - 真实语义层：Foundry `14.364` / dnd5e `5.3.3` 的 Collection/ZIP、跨会话恢复、zero-request plaintext runner、partial apply failure、最小修复、apply-failed recovery、两个 Actor readback/reuse 与零残留均 PASS。
 - 不在本次完成声明内：真实 AI Provider、生产、四小时长时会话，以及浏览器关闭后仍执行的独立 Companion/Gateway。Task E 明确交付诚实的 browser-local 可恢复队列；不会把页面关闭后的 `interrupted` 恢复冒充真正后台守护进程。
 - 明确停止点：实现和本地验收完成，但当前 WorkTree 仍未提交，产品 WorkTree 未写入。下一动作只剩用户另行授权的 commit / fast-forward integration / push；不得自动 commit、push、merge、stash、reset 或清理 WorkTree/branch。
+
+上述停止点是实现 WorkTree 的历史记录。Task E 随后以提交 `925377eb97d53c5995718be8a90b96a497fac9e5` fast-forward 到 `codex/forge-fvtt-product` 并推送远端；Release Closure 只统一发行身份、文档、ZIP 和干净 Lab 安装 smoke，不新增 Task F 产品能力。
