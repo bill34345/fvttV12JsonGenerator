@@ -1,0 +1,105 @@
+.open-session-deck {
+  --osd-bg: var(--color-cool-5, #171a20);
+  --osd-panel: color-mix(in srgb, var(--color-cool-4, #252b34) 84%, transparent);
+  --osd-panel-strong: var(--color-cool-4, #252b34);
+  --osd-border: color-mix(in srgb, var(--color-light-4, #b5b3a4) 28%, transparent);
+  --osd-text: var(--color-light-1, #f2f0e7);
+  --osd-muted: var(--color-light-5, #aaa79c);
+  --osd-accent: var(--color-warm-1, #ee9b3a);
+  --osd-danger: var(--color-level-error, #d45a5a);
+  --osd-success: var(--color-level-success, #53a66f);
+  color: var(--osd-text);
+  font-family: var(--font-body, "Signika", sans-serif);
+}
+
+.osd-panel-window .window-content { padding: 0; overflow: hidden; background: var(--osd-bg); }
+.osd-popout-body { margin: 0; min-height: 100vh; background: var(--osd-bg); }
+.osd-popout-root { min-height: 100vh; }
+.osd-deck { container: osd-deck / inline-size; display: flex; flex-direction: column; min-height: 100%; height: 100%; background: radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--osd-accent) 12%, transparent), transparent 35%), var(--osd-bg); }
+.osd-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; border-bottom: 1px solid var(--osd-border); background: color-mix(in srgb, var(--osd-panel-strong) 92%, transparent); }
+.osd-heading h1, .osd-section-heading h2, .osd-identity h3 { margin: 0; color: var(--osd-text); }
+.osd-heading h1 { font-size: 1.25rem; letter-spacing: .02em; }
+.osd-heading p, .osd-section-heading p, .osd-identity p { margin: .15rem 0 0; color: var(--osd-muted); font-size: .82rem; }
+.osd-header-actions, .osd-controls, .osd-encounter-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.open-session-deck button, .open-session-deck select, .open-session-deck input { min-height: 2rem; border: 1px solid var(--osd-border); border-radius: .38rem; color: var(--osd-text); background: var(--osd-panel-strong); font: inherit; }
+.open-session-deck button { padding: .34rem .58rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+.open-session-deck button:hover:not(:disabled), .open-session-deck button:focus-visible { border-color: var(--osd-accent); box-shadow: 0 0 0 1px var(--osd-accent); }
+.open-session-deck button:disabled { opacity: .42; cursor: not-allowed; }
+.open-session-deck button[aria-busy="true"] { cursor: wait; opacity: .58; }
+.osd-online { display: inline-flex; align-items: center; gap: .3rem; color: var(--osd-success); }
+.osd-banner { padding: .65rem 1rem; border-bottom: 1px solid var(--osd-border); }
+.osd-error { background: color-mix(in srgb, var(--osd-danger) 24%, var(--osd-panel)); }
+.osd-tabs { display: none; grid-template-columns: 1fr 1fr; padding: .5rem; gap: .5rem; }
+.osd-tabs button.active { border-color: var(--osd-accent); color: var(--osd-accent); }
+.osd-tabs span { color: var(--osd-muted); }
+.osd-columns { display: grid; grid-template-columns: minmax(340px, 42fr) minmax(480px, 58fr); flex: 1; min-height: 0; }
+.osd-column { min-width: 0; overflow: auto; padding: .85rem; }
+.osd-party-column { border-right: 1px solid var(--osd-border); }
+.osd-section-heading { display: flex; justify-content: space-between; align-items: center; min-height: 2.7rem; margin-bottom: .7rem; }
+.osd-section-heading h2 { font-size: 1.05rem; }
+.osd-card-list { display: grid; gap: .65rem; }
+.osd-actor-card { padding: .7rem; border: 1px solid var(--osd-border); border-radius: .6rem; background: var(--osd-panel); box-shadow: 0 4px 12px rgb(0 0 0 / 12%); }
+.osd-actor-card.in-combat { border-left: 3px solid var(--osd-accent); }
+.osd-actor-card.current { border-color: var(--osd-accent); box-shadow: 0 0 0 1px var(--osd-accent), 0 8px 22px rgb(0 0 0 / 22%); }
+.osd-card-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .65rem; }
+.osd-portrait { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--osd-border); border-radius: .45rem; }
+.osd-identity { min-width: 0; }
+.osd-identity h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .98rem; }
+.osd-player-list { display: flex; flex-wrap: wrap; gap: .2rem .55rem; }
+.osd-player { display: inline-flex; align-items: center; white-space: nowrap; }
+.osd-player-state { margin-left: .18rem; }
+.osd-presence { display: inline-block; width: .5rem; height: .5rem; margin-right: .3rem; border-radius: 50%; background: var(--osd-muted); }
+.osd-presence.online { background: var(--osd-success); }
+.osd-primary-stats { display: grid; gap: .2rem; justify-items: end; font-variant-numeric: tabular-nums; font-size: .8rem; color: var(--osd-muted); }
+.osd-hp-line { margin-top: .55rem; }
+.osd-hp-line > div:first-child { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-variant-numeric: tabular-nums; }
+.osd-hp-line small { color: var(--osd-muted); }
+.osd-meter { height: .42rem; margin-top: .3rem; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--osd-bg) 75%, white 8%); }
+.osd-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--osd-danger), var(--osd-success)); transition: width 160ms ease; }
+.osd-flags, .osd-statuses { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .45rem; }
+.osd-flags span, .osd-statuses span { display: inline-flex; align-items: center; gap: .25rem; padding: .17rem .38rem; border: 1px solid var(--osd-border); border-radius: 999px; color: var(--osd-muted); font-size: .72rem; }
+.osd-flags span.active { color: var(--osd-accent); border-color: color-mix(in srgb, var(--osd-accent) 55%, transparent); }
+.osd-statuses img { width: 14px; height: 14px; border: 0; }
+.osd-statuses small { color: var(--osd-muted); }
+.osd-controls { margin-top: .55rem; }
+.osd-controls label { display: inline-flex; align-items: center; gap: .25rem; color: var(--osd-muted); font-size: .75rem; }
+.osd-controls input { width: 4.2rem; padding: .25rem .4rem; }
+.osd-controls select { min-width: 8rem; max-width: 12rem; padding: .25rem; }
+.osd-controls button { font-size: .78rem; }
+.osd-secondary-controls { padding-top: .45rem; border-top: 1px solid var(--osd-border); }
+.osd-initiative { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: var(--osd-accent); border: 1px solid var(--osd-accent); font-weight: 700; }
+.osd-combatant .osd-card-main { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+.osd-empty { display: grid; place-items: center; min-height: 13rem; color: var(--osd-muted); text-align: center; }
+.osd-empty i { font-size: 2rem; opacity: .5; }
+.osd-roster-manager { margin-top: .8rem; padding: .65rem; border: 1px solid var(--osd-border); border-radius: .5rem; background: var(--osd-panel); }
+.osd-roster-manager summary { cursor: pointer; font-weight: 600; }
+.osd-roster-manager > p, .osd-stale p { color: var(--osd-muted); font-size: .78rem; }
+.osd-roster-list { display: grid; gap: .35rem; max-height: 18rem; overflow: auto; }
+.osd-roster-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .4rem; }
+.osd-roster-row img { width: 28px; height: 28px; object-fit: cover; border-radius: .25rem; }
+.osd-roster-row small { color: var(--osd-muted); }
+.osd-warning-count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; border-radius: 999px; background: var(--osd-danger); }
+.osd-stale { display: grid; gap: .3rem; margin-top: .5rem; }
+.osd-stale code { overflow-wrap: anywhere; color: var(--osd-muted); }
+.osd-compact .osd-actor-card { padding: .45rem; }
+.osd-compact .osd-portrait { width: 34px; height: 34px; }
+.osd-compact .osd-secondary-controls { display: none; }
+
+@container osd-deck (max-width: 959px) {
+  .osd-tabs { display: grid; }
+  .osd-columns { display: block; }
+  .osd-column { border: 0; }
+  .osd-columns[data-active-tab="party"] .osd-encounter-column,
+  .osd-columns[data-active-tab="encounter"] .osd-party-column { display: none; }
+}
+
+@media (max-width: 720px) {
+  .osd-header { align-items: flex-start; flex-direction: column; }
+  .osd-card-main, .osd-combatant .osd-card-main { grid-template-columns: auto minmax(0, 1fr); }
+  .osd-primary-stats { grid-column: 1 / -1; display: flex; justify-content: flex-start; }
+  .osd-initiative { grid-row: span 2; }
+  .osd-roster-row { grid-template-columns: auto minmax(0, 1fr); }
+  .osd-roster-row button { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) { .osd-meter span { transition: none; } }

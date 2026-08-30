@@ -1,0 +1,104 @@
+<section class="osd-deck {{#if compact}}osd-compact{{/if}}" data-osd-deck>
+  <header class="osd-header">
+    <div class="osd-heading">
+      <h1>{{localize "OSD.Title"}}</h1>
+      <p>{{world.title}} · {{system.id}} {{system.version}}{{#if scene}} · {{scene.name}}{{/if}}</p>
+    </div>
+    <div class="osd-header-actions">
+      <span class="osd-online" title="{{localize 'OSD.Header.OnlineHint'}}"><i class="fa-solid fa-signal" aria-hidden="true"></i> {{onlineUsers}}</span>
+      <button type="button" data-osd-action="toggle-density" title="{{localize 'OSD.Actions.ToggleDensity'}}"><i class="fa-solid fa-table-cells" aria-hidden="true"></i><span>{{localize "OSD.Actions.Density"}}</span></button>
+      {{#if isPopout}}
+        <button type="button" data-osd-action="open-panel"><i class="fa-solid fa-window-restore" aria-hidden="true"></i><span>{{localize "OSD.Actions.OpenPanel"}}</span></button>
+        <button type="button" data-osd-action="close-popout"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>{{localize "OSD.Actions.ClosePopout"}}</span></button>
+      {{else}}
+        <button type="button" data-osd-action="open-popout"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i><span>{{localize "OSD.Actions.OpenPopout"}}</span></button>
+      {{/if}}
+    </div>
+  </header>
+
+  {{#unless supported}}<div class="osd-banner osd-error" role="alert"><strong>{{localize "OSD.Errors.Unsupported"}}</strong> {{supportError}}</div>{{/unless}}
+  {{#if error}}<div class="osd-banner osd-error" role="alert">{{error}}</div>{{/if}}
+
+  <nav class="osd-tabs" aria-label="{{localize 'OSD.Tabs.Label'}}">
+    <button type="button" class="{{#if partyTabActive}}active{{/if}}" data-osd-action="party-tab">{{localize "OSD.Party.Title"}} <span>{{party.length}}</span></button>
+    <button type="button" class="{{#if encounterTabActive}}active{{/if}}" data-osd-action="encounter-tab">{{localize "OSD.Encounter.Title"}} <span>{{encounter.combatants.length}}</span></button>
+  </nav>
+
+  <div class="osd-columns" data-active-tab="{{activeTab}}">
+    <section class="osd-column osd-party-column" aria-labelledby="osd-party-title">
+      <div class="osd-section-heading">
+        <div><h2 id="osd-party-title">{{localize "OSD.Party.Title"}}</h2><p>{{localize "OSD.Party.Subtitle"}}</p></div>
+      </div>
+
+      {{#if hasParty}}
+        <div class="osd-card-list">
+          {{#each party}}
+            <article class="osd-actor-card {{#if inCombat}}in-combat{{/if}}" data-actor-card data-actor-uuid="{{uuid}}">
+              <div class="osd-card-main">
+                <img class="osd-portrait" src="{{img}}" alt="">
+                <div class="osd-identity">
+                  <h3>{{name}}</h3>
+                  <p class="osd-player-list">{{#each players}}<span class="osd-player"><span class="osd-presence {{#if active}}online{{/if}}" aria-hidden="true"></span>{{name}} <span class="osd-player-state">({{#if active}}{{localize "OSD.Actor.Online"}}{{else}}{{localize "OSD.Actor.Offline"}}{{/if}})</span></span>{{else}}{{type}}{{/each}}</p>
+                </div>
+                <div class="osd-primary-stats"><span title="{{localize 'OSD.Actor.AC'}}">AC {{#if ac}}{{ac}}{{else}}—{{/if}}</span><span title="{{localize 'OSD.Actor.Exhaustion'}}">EXH {{exhaustion}}</span></div>
+              </div>
+              <div class="osd-hp-line"><div><strong>{{localize "OSD.Actor.HP"}}</strong> {{hp.value}} / {{hp.max}} <small>+{{hp.temp}} {{localize "OSD.Actor.Temp"}}</small></div><div class="osd-meter" role="meter" aria-valuemin="0" aria-valuemax="{{hp.max}}" aria-valuenow="{{hp.value}}"><span style="width: {{hp.percent}}%"></span></div></div>
+              <div class="osd-flags">
+                <span class="{{#if inspiration}}active{{/if}}"><i class="fa-solid fa-star" aria-hidden="true"></i> {{#if inspiration}}{{localize "OSD.Actor.Inspired"}}{{else}}{{localize "OSD.Actor.NotInspired"}}{{/if}}</span>
+                <span class="{{#if inCombat}}active{{/if}}"><i class="fa-solid fa-swords" aria-hidden="true"></i> {{#if inCombat}}{{localize "OSD.Actor.InEncounter"}}{{else}}{{localize "OSD.Actor.NotInEncounter"}}{{/if}}</span>
+                {{#if concentrating}}<span class="active"><i class="fa-solid fa-brain" aria-hidden="true"></i> {{localize "OSD.Actor.Concentrating"}}</span>{{/if}}
+                {{#if death}}<span>{{localize "OSD.Actor.DeathSaves"}} {{death.success}}✓ / {{death.failure}}✕</span>{{/if}}
+              </div>
+              <div class="osd-statuses" aria-label="{{localize 'OSD.Actor.Statuses'}}">{{#each statuses}}<span title="{{label}}">{{#if icon}}<img src="{{icon}}" alt="">{{/if}}{{label}}</span>{{else}}<small>{{localize "OSD.Actor.NoStatuses"}}</small>{{/each}}</div>
+              <div class="osd-controls">
+                <label><span>{{localize "OSD.Actions.Amount"}}</span><input type="number" min="1" step="1" value="1" data-osd-amount inputmode="numeric"></label>
+                <button type="button" data-osd-command="actor.damage" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.damage.enabled}}disabled{{/unless}} title="{{localize commands.damage.tooltipKey}}" data-tooltip="{{commands.damage.tooltipKey}}">{{localize "OSD.Actions.Damage"}}</button>
+                <button type="button" data-osd-command="actor.heal" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.heal.enabled}}disabled{{/unless}} title="{{localize commands.heal.tooltipKey}}" data-tooltip="{{commands.heal.tooltipKey}}">{{localize "OSD.Actions.Heal"}}</button>
+                <button type="button" data-osd-command="actor.temp-hp" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.tempHp.enabled}}disabled{{/unless}} title="{{localize commands.tempHp.tooltipKey}}" data-tooltip="{{commands.tempHp.tooltipKey}}">{{localize "OSD.Actions.TempHP"}}</button>
+              </div>
+              <div class="osd-controls osd-secondary-controls">
+                <button type="button" data-osd-command="actor.toggle-inspiration" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.toggleInspiration.enabled}}disabled{{/unless}} title="{{localize commands.toggleInspiration.tooltipKey}}" data-tooltip="{{commands.toggleInspiration.tooltipKey}}">{{localize "OSD.Actions.Inspiration"}}</button>
+                <button type="button" data-osd-command="actor.adjust-exhaustion" data-target-uuid="{{uuid}}" data-delta="-1" data-busy-key="{{uuid}}" {{#unless commands.exhaustionDown.enabled}}disabled{{/unless}} title="{{localize commands.exhaustionDown.tooltipKey}}" data-tooltip="{{commands.exhaustionDown.tooltipKey}}" aria-label="{{localize commands.exhaustionDown.tooltipKey}}">EXH −</button>
+                <button type="button" data-osd-command="actor.adjust-exhaustion" data-target-uuid="{{uuid}}" data-delta="1" data-busy-key="{{uuid}}" {{#unless commands.exhaustionUp.enabled}}disabled{{/unless}} title="{{localize commands.exhaustionUp.tooltipKey}}" data-tooltip="{{commands.exhaustionUp.tooltipKey}}" aria-label="{{localize commands.exhaustionUp.tooltipKey}}">EXH +</button>
+                <select data-osd-status {{#unless commands.toggleStatus.enabled}}disabled{{/unless}} title="{{localize commands.toggleStatus.tooltipKey}}" aria-label="{{localize 'OSD.Actions.Status'}}">{{#each @root.statusOptions}}<option value="{{id}}">{{label}}</option>{{/each}}</select>
+                <button type="button" data-osd-command="actor.toggle-status" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.toggleStatus.enabled}}disabled{{/unless}} title="{{localize commands.toggleStatus.tooltipKey}}" data-tooltip="{{commands.toggleStatus.tooltipKey}}">{{localize "OSD.Actions.ToggleStatus"}}</button>
+                <button type="button" data-osd-command="actor.open-sheet" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.openSheet.enabled}}disabled{{/unless}} title="{{localize commands.openSheet.tooltipKey}}" data-tooltip="{{commands.openSheet.tooltipKey}}"><i class="fa-solid fa-id-card" aria-hidden="true"></i><span>{{localize "OSD.Actions.OpenSheet"}}</span></button>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}<div class="osd-empty"><i class="fa-solid fa-user-group" aria-hidden="true"></i><p>{{localize "OSD.Party.Empty"}}</p></div>{{/if}}
+
+      <details class="osd-roster-manager">
+        <summary>{{localize "OSD.Roster.Manage"}}{{#if staleCount}} <span class="osd-warning-count">{{staleCount}}</span>{{/if}}</summary>
+        <p>{{localize "OSD.Roster.Hint"}}</p>
+        <div class="osd-roster-list">
+          {{#each rosterManager}}
+            <div class="osd-roster-row"><img src="{{img}}" alt=""><span>{{name}} <small>{{type}}{{#if automatic}} · {{localize "OSD.Roster.Automatic"}}{{/if}}</small></span><button type="button" data-osd-command="roster.toggle-pin" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}">{{#if pinned}}{{localize "OSD.Roster.Unpin"}}{{else}}{{localize "OSD.Roster.Pin"}}{{/if}}</button><button type="button" data-osd-command="roster.toggle-hide" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}">{{#if hidden}}{{localize "OSD.Roster.Show"}}{{else}}{{localize "OSD.Roster.Hide"}}{{/if}}</button></div>
+          {{/each}}
+        </div>
+        {{#if staleCount}}<div class="osd-stale"><p>{{localize "OSD.Roster.Stale"}}</p>{{#each stalePinned}}<code>{{this}}</code>{{/each}}{{#each staleHidden}}<code>{{this}}</code>{{/each}}<button type="button" data-osd-command="roster.cleanup" data-busy-key="roster.cleanup">{{localize "OSD.Roster.Cleanup"}}</button></div>{{/if}}
+      </details>
+    </section>
+
+    <section class="osd-column osd-encounter-column" aria-labelledby="osd-encounter-title">
+      <div class="osd-section-heading osd-encounter-heading">
+        <div><h2 id="osd-encounter-title">{{localize "OSD.Encounter.Title"}}</h2>{{#if encounter.active}}<p>{{localize "OSD.Encounter.Round"}} {{encounter.round}} · {{localize "OSD.Encounter.Turn"}} {{encounter.displayTurn}}</p>{{else}}<p>{{localize "OSD.Encounter.Inactive"}}</p>{{/if}}</div>
+        {{#if encounter.active}}<div class="osd-encounter-actions"><button type="button" data-osd-command="combat.previous-turn" data-combat-uuid="{{encounter.uuid}}" data-busy-key="{{encounter.uuid}}" {{#unless encounter.commands.previousTurn.enabled}}disabled{{/unless}} title="{{localize encounter.commands.previousTurn.tooltipKey}}" data-tooltip="{{encounter.commands.previousTurn.tooltipKey}}" aria-label="{{localize encounter.commands.previousTurn.tooltipKey}}"><i class="fa-solid fa-backward-step" aria-hidden="true"></i></button><button type="button" data-osd-action="focus-current" {{#unless encounter.commands.focusCurrent.enabled}}disabled{{/unless}} title="{{localize encounter.commands.focusCurrent.tooltipKey}}" data-tooltip="{{encounter.commands.focusCurrent.tooltipKey}}">{{localize "OSD.Actions.FocusCurrent"}}</button><button type="button" data-osd-command="combat.next-turn" data-combat-uuid="{{encounter.uuid}}" data-busy-key="{{encounter.uuid}}" {{#unless encounter.commands.nextTurn.enabled}}disabled{{/unless}} title="{{localize encounter.commands.nextTurn.tooltipKey}}" data-tooltip="{{encounter.commands.nextTurn.tooltipKey}}" aria-label="{{localize encounter.commands.nextTurn.tooltipKey}}"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></button></div>{{/if}}
+      </div>
+
+      {{#if hasEncounterCards}}
+        <div class="osd-card-list osd-encounter-list">
+          {{#each encounter.combatants}}
+            <article class="osd-actor-card osd-combatant {{#if current}}current{{/if}}" data-actor-card data-actor-uuid="{{uuid}}" data-current="{{current}}">
+              <div class="osd-card-main"><div class="osd-initiative" title="{{localize 'OSD.Encounter.Initiative'}}">{{#if hasInitiative}}{{initiative}}{{else}}—{{/if}}</div><img class="osd-portrait" src="{{img}}" alt=""><div class="osd-identity"><h3>{{name}}</h3><p>{{#if current}}{{localize "OSD.Encounter.Current"}}{{else}}{{type}}{{/if}}</p></div><div class="osd-primary-stats"><span>AC {{#if ac}}{{ac}}{{else}}—{{/if}}</span><span>HP {{hp.value}}/{{hp.max}}{{#if hp.temp}} +{{hp.temp}}{{/if}}</span></div></div>
+              <div class="osd-meter" role="meter" aria-valuemin="0" aria-valuemax="{{hp.max}}" aria-valuenow="{{hp.value}}"><span style="width: {{hp.percent}}%"></span></div>
+              <div class="osd-statuses">{{#each statuses}}<span>{{#if icon}}<img src="{{icon}}" alt="">{{/if}}{{label}}</span>{{else}}<small>{{localize "OSD.Actor.NoStatuses"}}</small>{{/each}}</div>
+              <div class="osd-controls"><label><span>{{localize "OSD.Actions.Amount"}}</span><input type="number" min="1" step="1" value="1" data-osd-amount inputmode="numeric"></label><button type="button" data-osd-command="actor.damage" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.damage.enabled}}disabled{{/unless}} title="{{localize commands.damage.tooltipKey}}" data-tooltip="{{commands.damage.tooltipKey}}">{{localize "OSD.Actions.Damage"}}</button><button type="button" data-osd-command="actor.heal" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.heal.enabled}}disabled{{/unless}} title="{{localize commands.heal.tooltipKey}}" data-tooltip="{{commands.heal.tooltipKey}}">{{localize "OSD.Actions.Heal"}}</button><select data-osd-status {{#unless commands.toggleStatus.enabled}}disabled{{/unless}} title="{{localize commands.toggleStatus.tooltipKey}}" aria-label="{{localize 'OSD.Actions.Status'}}">{{#each @root.statusOptions}}<option value="{{id}}">{{label}}</option>{{/each}}</select><button type="button" data-osd-command="actor.toggle-status" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.toggleStatus.enabled}}disabled{{/unless}} title="{{localize commands.toggleStatus.tooltipKey}}" data-tooltip="{{commands.toggleStatus.tooltipKey}}">{{localize "OSD.Actions.ToggleStatus"}}</button><button type="button" data-osd-command="actor.open-sheet" data-target-uuid="{{uuid}}" data-busy-key="{{uuid}}" {{#unless commands.openSheet.enabled}}disabled{{/unless}} title="{{localize commands.openSheet.tooltipKey}}" data-tooltip="{{commands.openSheet.tooltipKey}}" aria-label="{{localize commands.openSheet.tooltipKey}}"><i class="fa-solid fa-id-card" aria-hidden="true"></i></button><button type="button" data-osd-command="token.locate" data-token-uuid="{{tokenUuid}}" data-busy-key="{{tokenUuid}}" {{#unless commands.locate.enabled}}disabled{{/unless}} title="{{localize commands.locate.tooltipKey}}" data-tooltip="{{commands.locate.tooltipKey}}" aria-label="{{localize commands.locate.tooltipKey}}"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i></button></div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}<div class="osd-empty"><i class="fa-solid fa-swords" aria-hidden="true"></i><p>{{localize "OSD.Encounter.Empty"}}</p></div>{{/if}}
+    </section>
+  </div>
+</section>
