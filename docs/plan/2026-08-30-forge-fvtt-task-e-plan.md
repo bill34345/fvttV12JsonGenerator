@@ -1,7 +1,7 @@
 # Forge FVTT Task E：可恢复审阅与后续批量路线
 
 - 日期：2026-08-30
-- 状态：权威计划草案，等待用户审阅；未授权实现
+- 状态：E1 已完成 contract/module、独立只读复核、真实 Foundry 导入、fresh plaintext recovery 与本地 Actor create/readback/reuse/cleanup 验收；实现提交为 `090df31c29c40a24a7730d5677051c1eaa578ccf`，用户已授权将本 E1 发布批次 fast-forward 集成并推送至产品分支
 - 计划基线：`codex/forge-fvtt-product@7cea7c15e321f37ac822bf9766649d43629ec1b4`
 - 计划 WorkTree：`C:\Users\Administrator\.codex\worktrees\d42e\fvttV12JsonGenerator`
 - 计划分支：`codex/20260830-forge-fvtt-task-e-plan`
@@ -312,13 +312,13 @@ git diff --check
 
 ## 13. 清理、发布与权限边界
 
-- 当前阶段只新增本计划文件；不 commit、push、merge、stash、reset、备份或清理 WorkTree。
-- 计划批准不自动授权实现；计划 commit/产品分支 fast-forward 与新 implementation WorkTree 创建按用户后续明确指令执行。
-- 实现批准不自动授权 Lab、真实 Provider、世界 Document、commit、push、merge 或清理；这些层级按计划停止点分别确认。
+- 本计划阶段、实现阶段与发布阶段保持独立授权；已经完成的动作及其证据以第 15、16 节为准，不由较早阶段的授权外推。
+- 用户已分别授权 E1 实现、本地 Foundry 文件导入只读验收、本地 fresh plaintext recovery 与临时世界 Document create/readback/reuse/cleanup，以及本轮 E1 topic commit、产品分支 `--ff-only` 集成和产品分支 push。
+- 本次发布授权不包含 topic 分支 push、WorkTree/branch 清理、E2 实现、真实 AI Provider、生产或其他范围扩张。
 - 本地 E2E 只允许经核对的 `F:\FoundryLab\foundry-v14\data\server-mirror`、`cor-cotn`、`127.0.0.1:30001`；生产 `8080/51020` 不是替代证据。
 - 不直接访问 LevelDB。所有授权的临时世界对象必须通过公共 Document API 创建、记录 exact UUID/sourceId/hash、readback，并只删除本次精确对象。
 - 不创建备份，不保留隐蔽副本；失败时停止并报告。
-- topic commit、fast-forward 到 `codex/forge-fvtt-product`、push、WorkTree/branch 清理均等待明确发布授权；真实 `master` 不进入 Task E。
+- E1 topic commit、fast-forward 到 `codex/forge-fvtt-product` 与该产品分支 push 已获得明确授权；topic push 和 WorkTree/branch 清理仍未授权，真实 `master` 不进入 Task E。
 
 ## 14. 风险与明确停止条件
 
@@ -337,10 +337,77 @@ git diff --check
 
 ## 15. 当前停止点
 
-Task E 接管审计和权威计划已完成到“等待用户审阅”状态。下一步只能是用户对以下决定给出反馈或批准：
+用户已批准 E1 计划，并授权计划提交与本地产品分支 fast-forward；计划提交为 `91435d1f5bbd1429c23ca4d7df2aa2f700e4dfc3`，未 push。实现位于独立 WorkTree `I:\OpenCode\fvttV12JsonGenerator-worktrees\20260830-134745-forge-fvtt-task-e-review-recovery`、分支 `codex/20260830-134745-forge-fvtt-task-e-review-recovery`，以该计划提交为基线。
 
-1. E1 是否以“strict import + imported read-only + explicit fresh attempt”为唯一 MVP；
-2. imported accepted 是否继续严格禁止直接创建（本计划推荐且要求禁止）；
-3. E1 完成后是否先停下，再单独决定 E2 source library 存储 ADR。
+完整 E1 的证据报告已获用户审阅并进入发布闭环。GM 文件导入、错误反馈、target/GM 门禁、fresh plaintext recovery、V2 lineage、新 identity/current snapshot、accepted-only Actor create/readback、deterministic UUID reuse 与精确 cleanup 均已在真实 Foundry Lab 完成；真实 AI Provider 因没有凭据使用授权而不执行，生产、LevelDB 与 E2 不在 E1 范围。本轮只将实现提交 `090df31c29c40a24a7730d5677051c1eaa578ccf` 和本证据文档 fast-forward 集成至 `codex/forge-fvtt-product` 并推送该产品分支；成功后停止于 E1 发布边界，保留 topic 分支与 WorkTree，等待用户另行决定 E2。
 
-在批准前不进入实现、不启动 Foundry Lab、不调用真实 AI Provider、不写世界 Document。
+## 16. E1 实施与发布证据（2026-08-30）
+
+### 16.1 已实现边界
+
+- 保持 Task D `ForgeIntakeReviewBundleV1` builder/serializer 不变；新增 browser-safe V1/V2 strict decoder、V1→只读 V2 internal migration、normalized bundle hash、deep freeze、`sourceLabel` 与 `recoveredFrom` lineage。
+- decoder 在 `JSON.parse` 前执行 4 MiB UTF-8 文件门禁，随后逐对象 exact-key 解码，并限制 200,000-byte raw source、递归深度、总节点、数组和各集合数量；拒绝 prototype keys、错误 union/target、非安全整数、错误 hash/sourceId/canonical identity、乱序 history、accepted 摘要不一致与 evidence UTF-16 range/quote 漂移。
+- Forge Intake 新增显式 JSON file picker。导入记录与 live state 分离；invalid import 原子失败，既有 live/imported 状态保持；导入展示只使用 `textContent` 或逐项 HTML escaping。
+- imported accepted 不携带完整 response/artifact，`isApplyable()` 与所有 live analyze/generate/repair/regenerate/reject/connection 隐藏动作均额外 fail-closed；Confirm Create 始终禁用。
+- “开启新 attempt”只建立 recovery draft，复制 raw source/mode/安全 label；要求 GM、精确 runtime、兼容 target 和非空显示名。新 requestId/attemptId/snapshot 只在后续显式 Analyze 时创建；旧 calls/repair/history/response 不继承，新导出记录 normalized lineage。
+
+### 16.2 机械证据
+
+- focused contract/Application：`38 pass / 0 fail / 246 expect()`；同时覆盖 accepted 与 needs_review 的精确导入提示。
+- `bun run test:fvtt-json-forge`：`125 pass / 0 fail / 1600 expect()`。
+- `bun run typecheck:packages`：PASS。
+- `bun run typecheck:foundry-modules`：PASS。
+- `bun run architecture:verify`：PASS，`10923 modules / 12136 dependencies` 无依赖违规，cycle gate 无输出失败。
+- `bun run build:fvtt-json-forge`：PASS，产生精确 manifest、browser script、stylesheet 与三份 template。
+- `bun run agents:generate`：PASS，未引入新的 WorkTree 状态差异。
+- `git diff --check`：PASS。
+- `bun run agents:check`：**继承基线 FAIL**；唯一报告仍是 `foundry-modules/fvtt-selected-token-sync/AGENTS.md` 未列入显式清单，本 E1 不修改无关 owner 掩盖该失败。
+- `bun run ci:verify`：**FAIL at inherited `agents:check`**；此前 `test-env:check` 与 `test-isolation:check` 均 PASS，后续 CI steps 因 fail-fast 未执行。
+- `bun run test`：**未完成且按失败报告**；同一 hermetic wrapper 问题本轮再次复现：既有 species fixture 子命令 `bun --no-env-file run src/index.ts --intake-species ...\\tests\\fixtures\\species\\ogre.txt --fvtt-version 12 --effect-profile core` 在前序测试通过后持续无新输出，约 60 秒有界观察后中断本次测试进程树，exit `1`；所有相关 PID 均已退出。此前同一 WorkTree 曾观察约七分钟仍不结算。E1 focused/module 门禁独立绿色不能替代该全仓失败。
+
+### 16.3 父 Sol 语义验收
+
+- fixture 层逐字段读取 V1 accepted Actor 的 raw source/hash、candidate/evidence、provider/prompt/calls/history、canonical identity、target 与 accepted 安全摘要；迁移后字段保真且 malicious HTML 字符串保持为惰性文本。
+- 历史 accepted 在按钮与隐藏方法两层都不能进入 Actor/Item adapter；Provider、connection test 与 world create spy 均为 0。
+- invalid/篡改/过大/错误 GM/错误 target 输入均 fail-closed；async 读取期间失去 GM 权限也不会落入 imported state；既有 live accepted attempt 不丢失。
+- fresh plaintext recovery 先形成无 identity 的 draft，后续 Analyze 才获得不同于历史记录的新 requestId/attemptId；calls、repair、history 归零，V2 导出保留 normalized `recoveredFrom`。
+- 独立只读 Sol 首轮复核判定 `REVISE`：发现 accepted 跨字段一致性不足、unknown-key error 回显、imported raw source 未独立展示、隐藏 clear-key handler 可改 settings；二次复核又发现 toggle-key/toggle-endpoint 隐藏 handler 可绕过 disabled UI。全部问题均已按最小范围修正并补负例；同一 reviewer 第三轮判定 `PASS`，当前 diff 未发现剩余 P1/P2。
+
+### 16.4 真实本地 Foundry 只读导入证据
+
+- 精确环境：唯一 `server-mirror` Lab，`127.0.0.1:30001`、`cor-cotn`、Foundry `14.364`、dnd5e `5.3.3`；本轮启动 PID `42324`，结束后 PID 已退出且 30001 无监听。当前 E1 build 仅覆盖目标模块既有六文件，源/目标 SHA-256 全部一致；browser script 为 `4DAF5193DF7A55FC50080F53722E9C234BA6A6F8A70ADE32831B30EB05F2FA72`。未创建第二 Lab、备份或世界副本。
+- GM `Gamemaster` 通过真实 JSON file chooser 导入 V1 accepted Actor。ApplicationV2 明确显示“导入的只读历史状态：accepted”；raw source、candidate、evidence、provider/model/prompt/calls/history、canonical source、sourceId/hash、target 与 accepted safe summary 逐项保真，`<script>`/`<b>` 字符串只作为文本，未形成 HTML 元素。Confirm Create、Generate、Repair、Regenerate 均禁用；仅兼容 target 的“开启新 attempt”可见可用，但本次未点击。
+- 篡改样本在顶层加入未知 `authorization` 字段后明确拒绝；错误只显示 unknown-key 类别，不回显字段名、Bearer 内容或 attacker 文本，导入前 accepted 状态和来源保持不变。
+- V1 needs_review Item 通过真实 file chooser 导入；状态、raw source、15/30 light evidence、blocking uncertainty/finding、`reviewVerdict: revise`、repairCount `1`、repair history 和兼容 target 完整显示。Confirm Create 与所有旧 attempt 操作保持禁用。
+- 同一 Item 的 Foundry target 改为 `14.365` 后仍只读展示，metadata 标记 `compatibleWithCurrentRecoveryTarget: false`，且“开启新 attempt”禁用。
+- 非 GM 用户 `SY` 真实登录后 `isGM: false`；配置页不显示 `FVTT JSON Forge` 分组或 `Forge Intake` 菜单。未调用隐藏 module API，也未尝试绕过禁用控件。
+- 导入前后主页面读取的世界计数始终为 Actor `283`、Item `179`、ChatMessage `973`、Scene `64`。CDP `Network.requestWillBeSent` 在 accepted、tampered、needs_review 和 incompatible 四段观测窗口内均为零；没有 Provider 请求、connection probe、Actor/Item/Chat/Scene 写入。
+- 视觉核对：实际窗口的只读说明、needs_review 状态、blocking finding、独立 raw source/evidence 与禁用的 Generate/Confirm Create/Repair/Regenerate/Reject 按钮均可见且语义一致。
+- 上轮发现的 toast 文案风险已按最小范围修复：accepted 精确显示“历史状态为 accepted”，needs_review 精确显示“历史状态为 needs_review”；状态值来自 strict decoder enum。focused test 同时锁定两条完整文案；真实 needs_review 导入确认不再含误导性的“历史 accepted”。
+- 本轮四个文件导入窗口均在动作前建立网络游标；accepted、tampered、needs_review、incompatible 各自观测到 `0` 个 `Network.requestWillBeSent`，且世界计数始终为 Actor `283`、Item `179`、ChatMessage `973`、Scene `64`。任务临时夹具目录在验收后按精确路径删除，浏览器页签关闭，Lab 正常停止。
+
+本地 Foundry 14.364 / dnd5e 5.3.3 GM import 层：`PASS`。这只证明 E1 的文件导入、只读展示、错误反馈、target/GM 门禁和零副作用，不升级 fresh attempt、世界写入或真实 Provider 层。
+
+### 16.5 真实本地 fresh attempt 与世界 readback 证据
+
+- 使用当前可信 V1 builder 从 tracked plaintext fixture 的单一生物块生成 `needs_review` Actor bundle，再由当前 strict decoder round-trip；文件 SHA-256 为 `8028259202FA21D8C353C2DC4A2594EA09ACC3D1DAFF877210453E4DB0A53CF1`。没有读取旧 Task D 下载、旧浏览器或旧 WorkTree 现场。
+- GM 导入后显式点击“以当前来源开启新 attempt”。恢复草稿立即变为 `empty`，复制精确 `1979` 字符 raw source、`plaintext-actor` mode 和安全 candidate label；`requestId`、`attemptId` 为空，`repairCount` 为 `0`、history 为空，且动作窗口没有 HTTP 请求或世界计数变化。
+- 显式 Analyze 后产生新的 requestId `forge-intake-plaintext-actor-9bc819f4-9125-49db-84f1-035fb43cc77e`、attemptId `...:attempt-1` 与当前 snapshot `0badb500f5abc5b255fbc63cdb340eec1162b12fa800a28307521481559bdbcc`；旧 request/attempt 未继承，状态进入 `ready_to_generate`。
+- 浏览器 Export 动作传给 `URL.createObjectURL` 的实际 Blob 内容经临时、随后恢复的测试探针读取：V2 bundle 的 `recoveredFrom` 精确保留旧 request/attempt、V1 bundle hash、raw source hash 与旧 `needs_review` 状态；当前 calls 四项均为 `0`、repairCount `0`、history 空，且不含 Authorization、Bearer 或 API Key。应用同时显示导出成功通知；当前自动化表面没有交付可核对的磁盘下载句柄，因此本证据不冒充“磁盘文件已保存”。
+- Generate Candidate 从新 snapshot 重新执行正式 plaintext generation/verification，得到 `accepted`；预览为 NPC `E1恢复蛮蟹 (E1 Recovery Serpentmaw 20260830)`、HP `75`、AC `17`、CR `5`、aberration、七个 embedded Item，Confirm Create 仅此时启用。accepted V2 bundle 绑定新的 sourceId `actor:v1:22aa5b0e-be23-4821-ad08-4a819b92b025`、finalSourceHash `3bb9d4ab6f84c936f11bc332d0bcd9d598a24258f8cb53a7cd9414b5148fea8f` 和 artifactHash `c4b0d6f46ff0043c6e6ffe3d320d32c0240190246589c47d9bdab5e41fad6ca6`。
+- 写入前按精确 sourceId 与测试名称确认世界中无匹配 Actor。首次 Confirm Create 通过既有 Actor adapter 创建并回读 `Actor.7e911f7c71127f88`；Actor 计数 `283→284`，Item/ChatMessage/Scene 保持 `179/973/64`，readback 的名称、type、HP、AC、CR、creature type、七个 embedded Item 与完整 Forge identity 均匹配。
+- 第二次 Confirm Create 返回“已复用 Actor”，UUID 仍为 `Actor.7e911f7c71127f88`，Actor 数保持 `284`，没有重复对象。随后仅对该精确 UUID/sourceId/artifactHash 调用公共 Document API `delete()`；剩余匹配为空，计数恢复 Actor `283`、Item `179`、ChatMessage `973`、Scene `64`。
+- Analyze、Generate 与两个 Confirm 窗口均无新的 `Network.requestWillBeSent`；完整观察期只有八个 `127.0.0.1:30001` 静态资源请求，外部请求为 `0`。未调用真实 Provider。启动 PID `30968` 已退出，30001 无监听；代理页签关闭，未创建第二 Lab、备份、世界副本或 LevelDB 访问。
+
+本地 Foundry fresh plaintext attempt 层：`PASS`。本地 Actor create/readback/UUID reuse/cleanup 层：`PASS`。这是 E1 的完整 plaintext import/recovery 用户路径，不代表真实 AI Provider 或生产验收。
+
+### 16.6 未执行验收层级
+
+- 真实 AI Provider：没有当次凭据使用授权，`NOT_EXECUTED`；不影响已经独立完成的 plaintext E1 路径，也不能据此宣称 AI recovery PASS。
+- 生产、长时、source library、batch、queue：不在 E1 范围，`NOT_EXECUTED`。
+
+### 16.7 发布批次与边界
+
+- E1 实现提交：`090df31c29c40a24a7730d5677051c1eaa578ccf`，精确包含七个 Forge runtime/module/test/package 路径；敏感词复核只命中 UI 字段名、拒绝恶意字段的负例，以及 `keep-me` / `keep-secret` 惰性测试哨兵，没有真实凭据。
+- 发布前产品 WorkTree `I:\OpenCode\fvttV12JsonGenerator-worktrees\20260822-150000-forge-fvtt-product` 状态 clean、索引为空，本地 `codex/forge-fvtt-product` 为 `91435d1f5bbd1429c23ca4d7df2aa2f700e4dfc3`；远端发布前为 `7cea7c15e321f37ac822bf9766649d43629ec1b4`，本地仅领先已批准但此前未 push 的 Task E 计划提交。
+- 本发布批次只允许 `--ff-only` 集成 topic 最终提交并 push `origin codex/forge-fvtt-product`。发布完成以 topic/product/tracking/`ls-remote` 精确 SHA 一致和两个 WorkTree clean 为机械证据；不 push topic，不清理 WorkTree/branch，不进入 E2。
