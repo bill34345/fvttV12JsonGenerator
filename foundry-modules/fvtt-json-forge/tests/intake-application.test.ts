@@ -7,7 +7,15 @@ import {
   convertFinalItemSource,
 } from '@fvtt-json-generator/forge-browser-runtime';
 import { hashSource, type ForgeActorResponse, type ForgeItemResponse } from '@fvtt-json-generator/forge-gateway-protocol';
-import { createForgeIntakeSnapshot } from '@fvtt-json-generator/forge-browser-runtime/intake-review';
+import {
+  buildForgeIntakeReviewBundle,
+  createForgeIntakeSnapshot,
+  serializeForgeIntakeReviewBundle,
+} from '@fvtt-json-generator/forge-browser-runtime/intake-review';
+import {
+  FORGE_INTAKE_REVIEW_BUNDLE_MAX_UTF8_BYTES,
+  decodeForgeIntakeReviewBundleText,
+} from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
 import {
   createForgeIntakeApplicationClass,
   type ForgeIntakeApplicationServices,
@@ -371,6 +379,269 @@ describe('Forge Intake Application review workspace', () => {
     });
     expect(exported).not.toMatch(/must-not-export|query-secret|Authorization|rawResponse|endpoint/iu);
     expect(exported.endsWith('\n')).toBe(true);
+    expect(bundle.version).toBe(2);
+    expect(decodeForgeIntakeReviewBundleText(exported).bundle.rawSource).toBe(source);
+  });
+
+  test('imports historical accepted bundles as read-only records with zero Provider and world side effects', async () => {
+    let providerCalls = 0;
+    let actorCreates = 0;
+    let itemCreates = 0;
+    const downloads: Array<{ fileName: string; content: string }> = [];
+    const { application, root, notifications } = makeApplication({
+      createBrowserAiProvider: (() => { providerCalls += 1; return {}; }) as any,
+      createAcceptedForgeActor: (async () => { actorCreates += 1; return actorCreateResult(); }) as any,
+      createAcceptedForgeItem: (async () => { itemCreates += 1; return itemCreateResult(); }) as any,
+      downloadReviewBundle: ((fileName: string, content: string) => downloads.push({ fileName, content })) as any,
+    });
+    root.source.value = 'existing live draft';
+    root.reviewBundleFile.files = [reviewBundleFile(acceptedReviewBundleText())];
+
+    await (application as any).importBundle(root);
+
+    expect((application as any).importedReview.bundle.status).toBe('accepted');
+    expect((application as any).status).toBe('empty');
+    expect(root.source.value).toBe('existing live draft');
+    expect(root.status.textContent).toContain('只读历史状态：accepted');
+    expect(root.humanSummary.textContent).toContain('不能直接 Confirm Create');
+    expect(root.rawSource.textContent).toBe('Rat source');
+    expect(root.json.textContent).toContain('不包含可提交的完整');
+    expect(root.create.disabled).toBe(true);
+    await (application as any).create(root);
+    expect({ providerCalls, actorCreates, itemCreates }).toEqual({ providerCalls: 0, actorCreates: 0, itemCreates: 0 });
+    (application as any).exportBundle(root);
+    expect(JSON.parse(downloads[0]!.content).version).toBe(2);
+    expect(notifications.infos).toContain('Review bundle 已作为只读历史记录导入；历史状态为 accepted，不能直接创建。');
+  });
+
+  test('does not let imported hidden key-clear handlers mutate client settings', async () => {
+    const { application, root } = makeApplication();
+    (application as any).settings = { ...(application as any).settings, apiKey: 'keep-me', persistApiKey: true, savedApiKeys: { profile: 'keep-me' } };
+    root.reviewBundleFile.files = [reviewBundleFile(acceptedReviewBundleText())];
+    await (application as any).importBundle(root);
+    const before = structuredClone((application as any).settings);
+
+    root.clearKey.onclick?.();
+    root.clearAllKeys.onclick?.();
+
+    expect((application as any).settings).toEqual(before);
+    expect(root.clearKey.disabled).toBe(true);
+    expect(root.clearAllKeys.disabled).toBe(true);
+  });
+
+  test('does not let imported hidden connection toggles reveal keys or mutate the preserved live attempt', async () => {
+    const { application, root } = makeApplication();
+    root.apiKey.value = 'keep-secret';
+    root.apiKey.type = 'password';
+    root.endpoint.value = 'https://provider.example/v1';
+    root.mode.value = 'plaintext-actor';
+    root.source.value = 'preserved source';
+    root.displayName.value = 'Preserved';
+    const snapshot = currentSnapshot(application, root);
+    (application as any).status = 'accepted';
+    (application as any).response = acceptedActor;
+    (application as any).snapshot = snapshot;
+    (application as any).analysis = { status: 'ready_to_generate', candidates: [], findings: [], canonicalSource: ACTOR_SOURCE };
+    root.reviewBundleFile.files = [reviewBundleFile(acceptedReviewBundleText())];
+    await (application as any).importBundle(root);
+
+    root.toggleKey.onclick?.();
+    root.toggleEndpoint.onclick?.();
+
+    expect(root.apiKey.type).toBe('password');
+    expect(root.endpoint.value).toBe('https://provider.example/v1');
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBe(acceptedActor);
+    expect((application as any).snapshot).toBe(snapshot);
+    expect(root.toggleKey.disabled).toBe(true);
+    expect(root.toggleEndpoint.disabled).toBe(true);
+  });
+
+  test('sanitizes malicious decoder errors before sending them to Foundry notifications', async () => {
+    const malicious = JSON.parse(acceptedReviewBundleText());
+    malicious['<img src=x onerror=alert(1)>'] = true;
+    const { application, root, notifications } = makeApplication();
+    root.reviewBundleFile.files = [reviewBundleFile(JSON.stringify(malicious))];
+
+    await (application as any).importBundle(root);
+
+    expect((application as any).importedReview).toBeUndefined();
+    expect(notifications.errors.at(-1)).toMatch(/unknown key/u);
+    expect(notifications.errors.at(-1)).not.toContain('<img');
+  });
+
+  test('hard-gates hidden live generation and connection actions while an imported record is open', async () => {
+    let conversions = 0;
+    let connectionTests = 0;
+    const { application, root, notifications } = makeApplication({
+      convertFinalActorSource: (async () => { conversions += 1; return acceptedActor; }) as any,
+      testForgeProviderConnection: (async () => { connectionTests += 1; return { status: 'failed', models: [], message: 'unexpected' }; }) as any,
+    });
+    root.mode.value = 'plaintext-actor';
+    root.source.value = 'live ready source';
+    root.displayName.value = 'Live Ready';
+    (application as any).analysis = { status: 'ready_to_generate', candidates: [], findings: [], canonicalSource: ACTOR_SOURCE };
+    (application as any).snapshot = currentSnapshot(application, root);
+    (application as any).reviewSource = root.source.value;
+    (application as any).requestId = 'live-ready-request';
+    (application as any).attemptId = 'live-ready-attempt';
+    (application as any).status = 'ready_to_generate';
+    root.reviewBundleFile.files = [reviewBundleFile(acceptedReviewBundleText())];
+    await (application as any).importBundle(root);
+
+    await (application as any).generate(root);
+    await (application as any).testConnection(root);
+    await (application as any).runAnalysis(root, false);
+    expect({ conversions, connectionTests }).toEqual({ conversions: 0, connectionTests: 0 });
+    expect((application as any).status).toBe('ready_to_generate');
+    expect((application as any).response).toBeUndefined();
+    expect(root.generate.disabled).toBe(true);
+    expect(root.create.disabled).toBe(true);
+  });
+
+  test('rejects invalid imports atomically without replacing a live accepted attempt or calling external services', async () => {
+    let externalCalls = 0;
+    const { application, root, notifications } = makeApplication({
+      readReviewBundleFile: (async () => '{"schema":"forge-intake-review-bundle","version":99}') as any,
+      createBrowserAiProvider: (() => { externalCalls += 1; return {}; }) as any,
+      createAcceptedForgeActor: (async () => { externalCalls += 1; return actorCreateResult(); }) as any,
+    });
+    root.mode.value = 'plaintext-actor';
+    root.source.value = 'live source';
+    root.displayName.value = 'Live Actor';
+    (application as any).analysis = { status: 'ready_to_generate', candidates: [], findings: [], canonicalSource: ACTOR_SOURCE };
+    (application as any).snapshot = currentSnapshot(application, root);
+    (application as any).reviewSource = root.source.value;
+    (application as any).requestId = 'live-request';
+    (application as any).attemptId = 'live-attempt';
+    (application as any).status = 'accepted';
+    (application as any).response = acceptedActor;
+    root.reviewBundleFile.files = [reviewBundleFile('ignored')];
+    (application as any).renderResult(root);
+    expect(root.create.disabled).toBe(false);
+
+    await (application as any).importBundle(root);
+
+    expect((application as any).importedReview).toBeUndefined();
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBe(acceptedActor);
+    expect((application as any).requestId).toBe('live-request');
+    expect(root.create.disabled).toBe(false);
+    expect(externalCalls).toBe(0);
+    expect(notifications.errors.at(-1)).toMatch(/version/u);
+  });
+
+  test('rejects an oversized File before reading its contents', async () => {
+    let textReads = 0;
+    const { application, root, notifications } = makeApplication();
+    root.reviewBundleFile.files = [{
+      size: FORGE_INTAKE_REVIEW_BUNDLE_MAX_UTF8_BYTES + 1,
+      text: async () => { textReads += 1; return acceptedReviewBundleText(); },
+    } as File];
+
+    await (application as any).importBundle(root);
+
+    expect(textReads).toBe(0);
+    expect((application as any).importedReview).toBeUndefined();
+    expect(notifications.errors.at(-1)).toMatch(/不能超过/u);
+  });
+
+  test('creates only a recovery draft, then assigns fresh identities on explicit Analyze and exports lineage', async () => {
+    const downloads: Array<{ fileName: string; content: string }> = [];
+    let analyses = 0;
+    const { application, root, notifications } = makeApplication({
+      analyzePlaintextActorSource: ((source: string) => {
+        analyses += 1;
+        return {
+          status: 'ready_to_generate', rawSourceHash: hashSource(source),
+          candidates: [{ id: 'rat', label: 'Rat', start: 0, end: 3, quote: 'Rat' }],
+          candidate: { id: 'rat', label: 'Rat', start: 0, end: 3, quote: 'Rat' },
+          canonicalSource: ACTOR_SOURCE, findings: [],
+        };
+      }) as any,
+      downloadReviewBundle: ((fileName: string, content: string) => downloads.push({ fileName, content })) as any,
+    });
+    root.reviewBundleFile.files = [reviewBundleFile(plaintextReviewBundleText())];
+    await (application as any).importBundle(root);
+    expect(notifications.infos).toContain('Review bundle 已作为只读历史记录导入；历史状态为 needs_review，不能直接创建。');
+    const oldRequestId = (application as any).importedReview.bundle.requestId;
+    const oldAttemptId = (application as any).importedReview.bundle.attemptId;
+
+    (application as any).startNewAttempt(root);
+    expect(analyses).toBe(0);
+    expect((application as any).importedReview).toBeUndefined();
+    expect((application as any).status).toBe('empty');
+    expect((application as any).requestId).toBe('');
+    expect((application as any).attemptId).toBe('');
+    expect((application as any).history).toEqual([]);
+    expect(root.source.value).toBe('Rat source');
+    expect(root.displayName.value).toBe('Rat');
+    expect(root.mode.value).toBe('plaintext-actor');
+
+    await (application as any).analyze(root);
+    expect(analyses).toBe(1);
+    expect((application as any).requestId).not.toBe(oldRequestId);
+    expect((application as any).attemptId).not.toBe(oldAttemptId);
+    expect((application as any).status).toBe('ready_to_generate');
+    (application as any).exportBundle(root);
+    const exported = JSON.parse(downloads[0]!.content);
+    expect(exported.version).toBe(2);
+    expect(exported.recoveredFrom).toMatchObject({ requestId: oldRequestId, attemptId: oldAttemptId, status: 'needs_review' });
+    expect(exported.calls).toEqual({ discovery: 0, extraction: 0, review: 0, repair: 0 });
+    expect(exported.repairCount).toBe(0);
+    expect(exported.history).toEqual([]);
+  });
+
+  test('rechecks GM authority after async file reading and leaves the current workspace untouched', async () => {
+    let finishRead!: (value: string) => void;
+    const pendingRead = new Promise<string>((resolve) => { finishRead = resolve; });
+    const { application, root, game, notifications } = makeApplication({
+      readReviewBundleFile: (async () => await pendingRead) as any,
+    });
+    root.source.value = 'preserve me';
+    root.reviewBundleFile.files = [reviewBundleFile('pending')];
+    const pending = (application as any).importBundle(root);
+    game.user.isGM = false;
+    finishRead(acceptedReviewBundleText());
+    await pending;
+
+    expect((application as any).importedReview).toBeUndefined();
+    expect(root.source.value).toBe('preserve me');
+    expect(notifications.errors.at(-1)).toMatch(/GM/u);
+  });
+
+  test('shows target-incompatible history but blocks both visible and hidden fresh-attempt actions', async () => {
+    const incompatible = JSON.parse(plaintextReviewBundleText());
+    incompatible.target.fvttVersion = '14.365';
+    const { application, root, notifications } = makeApplication();
+    root.source.value = 'live draft';
+    root.reviewBundleFile.files = [reviewBundleFile(JSON.stringify(incompatible))];
+    await (application as any).importBundle(root);
+
+    expect((application as any).importedReview).toBeDefined();
+    expect(root.startNewAttempt.disabled).toBe(true);
+    (application as any).startNewAttempt(root);
+    expect((application as any).importedReview).toBeDefined();
+    expect(root.source.value).toBe('live draft');
+    expect(notifications.errors.at(-1)).toMatch(/target.*不兼容/u);
+  });
+
+  test('requires an explicit non-empty display name before a recovered draft can analyze', async () => {
+    let analyses = 0;
+    const bundle = JSON.parse(plaintextReviewBundleText());
+    delete bundle.candidate;
+    const { application, root, notifications } = makeApplication({
+      analyzePlaintextActorSource: ((source: string) => { analyses += 1; return readyActorAnalysis(source); }) as any,
+    });
+    root.reviewBundleFile.files = [reviewBundleFile(JSON.stringify(bundle))];
+    await (application as any).importBundle(root);
+    (application as any).startNewAttempt(root);
+    expect(root.displayName.value).toBe('');
+
+    await (application as any).analyze(root);
+    expect(analyses).toBe(0);
+    expect((application as any).requestId).toBe('');
+    expect(notifications.errors.at(-1)).toMatch(/显示名称/u);
   });
 
   test('rechecks GM authority at click time and blocks accepted creation after authority loss', async () => {
@@ -482,20 +753,57 @@ class FakeRoot {
   mode = control('plaintext-actor', 'select'); source = control('', 'textarea'); displayName = control('');
   provider = control('openai', 'select'); endpoint = control(''); protocol = control('openai-responses', 'select'); authScheme = control('bearer', 'select'); region = control('', 'select'); reasoning = control('auto', 'select'); structuredOutput = control('json_schema', 'select');
   model = control(''); reviewModel = control(''); apiKey = control('', 'password'); persistApiKey = control('', 'checkbox'); useSeparateReviewModel = control('', 'checkbox'); aiSettings = control('');
-  analyze = control(''); repair = control(''); generate = control(''); regenerate = control(''); reject = control(''); cancel = control(''); clear = control(''); export = control(''); create = control(''); clearKey = control('');
-  status = control(''); stages = control(''); diagnostics = control(''); diagnosticList = control(''); previewSection = control(''); candidate = control(''); evidence = control(''); metadata = control(''); canonical = control(''); preview = control(''); json = control('');
+  reviewBundleFile = control('', 'file'); import = control(''); startNewAttempt = control('');
+  analyze = control(''); repair = control(''); generate = control(''); regenerate = control(''); reject = control(''); cancel = control(''); clear = control(''); export = control(''); create = control(''); clearKey = control(''); clearAllKeys = control(''); toggleKey = control(''); toggleEndpoint = control('');
+  status = control(''); humanSummary = control(''); stages = control(''); diagnostics = control(''); diagnosticList = control(''); previewSection = control(''); activityCard = control(''); candidate = control(''); evidence = control(''); metadata = control(''); canonical = control(''); rawSource = control(''); preview = control(''); json = control('');
   querySelector(selector: string): any {
     return ({
       '[name="mode"]': this.mode, '[name="source"]': this.source, '[name="displayName"]': this.displayName, '[name="provider"]': this.provider, '[name="endpoint"]': this.endpoint,
       '[name="protocol"]': this.protocol, '[name="authScheme"]': this.authScheme, '[name="region"]': this.region, '[name="reasoning"]': this.reasoning, '[name="structuredOutput"]': this.structuredOutput,
       '[name="model"]': this.model, '[name="reviewModel"]': this.reviewModel, '[name="apiKey"]': this.apiKey, '[name="persistApiKey"]': this.persistApiKey, '[name="useSeparateReviewModel"]': this.useSeparateReviewModel,
+      '[name="reviewBundleFile"]': this.reviewBundleFile,
       '[data-ai-settings]': this.aiSettings, '[data-action="analyze"]': this.analyze, '[data-action="repair"]': this.repair, '[data-action="generate"]': this.generate,
       '[data-action="regenerate"]': this.regenerate, '[data-action="reject"]': this.reject, '[data-action="cancel"]': this.cancel, '[data-action="clear"]': this.clear,
       '[data-action="export"]': this.export, '[data-action="create"]': this.create, '[data-action="clear-key"]': this.clearKey,
+      '[data-action="clear-all-keys"]': this.clearAllKeys,
+      '[data-action="toggle-key"]': this.toggleKey, '[data-action="toggle-endpoint"]': this.toggleEndpoint,
+      '[data-action="import"]': this.import, '[data-action="start-new-attempt"]': this.startNewAttempt,
       '[data-status]': this.status, '[data-stages]': this.stages, '[data-diagnostics]': this.diagnostics, '[data-diagnostic-list]': this.diagnosticList,
+      '[data-human-summary]': this.humanSummary, '[data-activity-card]': this.activityCard,
       '[data-preview-section]': this.previewSection, '[data-candidate]': this.candidate, '[data-evidence]': this.evidence, '[data-metadata]': this.metadata,
-      '[data-canonical]': this.canonical, '[data-preview]': this.preview, '[data-json]': this.json,
+      '[data-canonical]': this.canonical, '[data-raw-source]': this.rawSource, '[data-preview]': this.preview, '[data-json]': this.json,
     } as Record<string, any>)[selector] ?? null;
   }
 }
-function control(value: string, type = 'button'): any { return { value, type, checked: false, disabled: false, hidden: false, textContent: '', innerHTML: '', onclick: undefined, onchange: undefined, oninput: undefined }; }
+function control(value: string, type = 'button'): any { return { value, type, checked: false, files: undefined, disabled: false, hidden: false, textContent: '', innerHTML: '', onclick: undefined, onchange: undefined, oninput: undefined }; }
+
+function reviewBundleFile(content: string): File {
+  return { size: new TextEncoder().encode(content).byteLength, text: async () => content } as File;
+}
+
+function acceptedReviewBundleText(): string {
+  const rawSource = 'Rat source';
+  const sourceId = 'actor:v1:123e4567-e89b-42d3-a456-426614174000';
+  const canonicalSource = `---\nforge-source-id: ${sourceId}\n---\n${rawSource}`;
+  return serializeForgeIntakeReviewBundle(buildForgeIntakeReviewBundle({
+    objectKind: 'actor', mode: 'ai-monster', requestId: 'old-request', attemptId: 'old-attempt', status: 'accepted',
+    rawSource, rawSourceHash: hashSource(rawSource), candidate: { id: 'rat', label: 'Rat', start: 0, end: 3, quote: 'Rat' },
+    reviewVerdict: 'accepted',
+    deterministicFindings: [], aiReviewFindings: [], calls: { discovery: 1, extraction: 1, review: 1, repair: 0 }, repairCount: 0,
+    canonicalSource, sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) },
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    candidateResponse: { requestId: 'old-request', status: 'accepted', artifactHash: hashSource('historical-artifact'), verificationStatus: 'accepted', diagnostics: [] },
+    history: [],
+  }));
+}
+
+function plaintextReviewBundleText(): string {
+  const rawSource = 'Rat source';
+  return serializeForgeIntakeReviewBundle(buildForgeIntakeReviewBundle({
+    objectKind: 'actor', mode: 'plaintext-actor', requestId: 'old-plaintext-request', attemptId: 'old-plaintext-attempt', status: 'needs_review',
+    rawSource, rawSourceHash: hashSource(rawSource), candidate: { id: 'rat', label: 'Rat', start: 0, end: 3, quote: 'Rat' },
+    deterministicFindings: [], aiReviewFindings: [], calls: { discovery: 9, extraction: 9, review: 9, repair: 1 }, repairCount: 1,
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    history: [{ sequence: 1, action: 'repair', attemptId: 'old-plaintext-attempt', resultingStatus: 'needs_review' }],
+  }));
+}

@@ -2,6 +2,15 @@
   <p class="forge-security-note">Review workspace 只导出严格安全投影；API Key、Authorization、完整 endpoint、provider 原始响应和本机路径不会进入 bundle、世界 Document、Chat 或日志。若勾选保存 API Key，它会进入当前浏览器的 client-only setting，同一 Foundry 页面内的其他模块理论上可能读取它。</p>
   <p class="forge-creation-note">Analyze 只建立证据与审阅状态，不创建世界 Document。只有同一 snapshot 的单对象结果在 deterministic、AI review 与正式 Forge response 全部 accepted 后，Confirm Create 才可用。</p>
 
+  <section class="forge-import-card" aria-labelledby="forge-import-heading">
+    <div>
+      <h2 id="forge-import-heading">导入只读 Review Bundle</h2>
+      <p>最多 4 MiB。导入只恢复安全审阅投影，不会调用 Provider、恢复旧请求或创建世界 Document；历史 accepted 也必须开启全新 attempt。</p>
+    </div>
+    <label>Review bundle JSON <input name="reviewBundleFile" type="file" accept="application/json,.json"></label>
+    <button type="button" data-action="import" disabled>Import Review Bundle</button>
+  </section>
+
   <nav class="forge-step-nav" data-step-nav aria-label="Forge Intake 工作流">
     <ol>
       <li data-step-indicator="connection">1. 连接 AI</li>
@@ -121,6 +130,7 @@
       <ul data-diagnostic-list></ul>
     </section>
     <section data-preview-section hidden class="forge-review-grid">
+      <details class="forge-human-review" open><summary>原始来源（导入记录使用独立只读副本）</summary><pre data-raw-source></pre></details>
       <details class="forge-human-review" open><summary>结果摘要与安全语义</summary><pre data-preview></pre></details>
       <details class="forge-human-review" open><summary>来源与 evidence</summary><pre data-evidence></pre></details>
       <details class="forge-technical-details"><summary>候选边界</summary><pre data-candidate></pre></details>
@@ -146,6 +156,7 @@
       <div class="forge-action-group forge-tool-actions" data-action-group="tools">
         <span>工具操作</span>
         <button type="button" data-action="export" disabled>Export Review Bundle</button>
+        <button type="button" data-action="start-new-attempt" disabled>以当前来源开启新 attempt</button>
         <button type="button" data-action="clear">Clear</button>
       </div>
       <button class="forge-running-cancel" type="button" data-action="cancel" disabled>结束请求</button>

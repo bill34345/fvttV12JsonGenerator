@@ -25,16 +25,23 @@ import {
 } from '@fvtt-json-generator/forge-browser-runtime/item-intake';
 import { analyzePlaintextActorSource, type BrowserPlaintextActorAnalysis } from '@fvtt-json-generator/forge-browser-runtime/plaintext';
 import {
-  buildForgeIntakeReviewBundle,
   createForgeIntakeSnapshot,
   sameForgeIntakeSnapshot,
-  serializeForgeIntakeReviewBundle,
   transitionForgeIntakeReviewStatus,
   type ForgeIntakeMode,
   type ForgeIntakeReviewBundleInput,
   type ForgeIntakeReviewStatus,
   type ForgeIntakeSnapshot,
 } from '@fvtt-json-generator/forge-browser-runtime/intake-review';
+import {
+  FORGE_INTAKE_REVIEW_BUNDLE_MAX_UTF8_BYTES,
+  buildForgeIntakeReviewBundleV2,
+  createForgeIntakeRecoveryLineage,
+  decodeForgeIntakeReviewBundleText,
+  serializeForgeIntakeReviewBundleV2,
+  type ForgeIntakeReviewRecoveryLineage,
+  type ImportedForgeIntakeReviewRecord,
+} from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
 import {
   decodeForgeActorResponse,
   decodeForgeItemResponse,
@@ -115,6 +122,7 @@ export interface ForgeIntakeApplicationServices {
   convertFinalItemSource: typeof convertFinalItemSource;
   createAcceptedForgeActor: typeof createAcceptedForgeActor;
   createAcceptedForgeItem: typeof createAcceptedForgeItem;
+  readReviewBundleFile(file: File): Promise<string>;
   downloadReviewBundle(fileName: string, content: string): void;
 }
 
@@ -133,6 +141,7 @@ const DEFAULT_SERVICES: ForgeIntakeApplicationServices = {
   convertFinalItemSource,
   createAcceptedForgeActor,
   createAcceptedForgeItem,
+  readReviewBundleFile,
   downloadReviewBundle,
 };
 
@@ -166,6 +175,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private controller?: AbortController;
     private revision = 0;
     private creating = false;
+    private importing = false;
+    private importRevision = 0;
+    private importedReview?: ImportedForgeIntakeReviewRecord;
+    private recoveredFrom?: ForgeIntakeReviewRecoveryLineage;
     private settings: ForgeClientSettings = readClientSettings();
     private connectionProbe?: Awaited<ReturnType<typeof testForgeProviderConnection>>;
     private connectionProbeRevision = -1;
@@ -310,7 +323,13 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.bind(root, 'cancel', () => this.cancel());
       this.bind(root, 'clear', () => this.clear(root));
       this.bind(root, 'export', () => this.exportBundle(root));
+      this.bind(root, 'import', () => void this.importBundle(root));
+      this.bind(root, 'start-new-attempt', () => this.startNewAttempt(root));
+      const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+      if (importFile) importFile.onchange = () => this.renderResult(root);
       this.bind(root, 'clear-key', () => {
+        if (this.importedReview) return;
+        try { assertGm(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
         this.settings = clearApiKey();
         this.connectionCredentialRevision += 1;
         this.connectionProbe = undefined;
@@ -320,6 +339,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.notify('info', 'API Key 已清除。');
       });
       this.bind(root, 'clear-all-keys', () => {
+        if (this.importedReview) return;
+        try { assertGm(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
         this.settings = clearAllApiKeys();
         this.connectionCredentialRevision += 1;
         this.connectionProbe = undefined;
@@ -343,13 +364,15 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         return this;
       }
       this.cancel();
+      this.importRevision += 1;
+      this.importing = false;
       this.unregisterAvailabilityHooks();
       this.unregisterPageGuard();
       return super.close(options);
     }
 
     private async analyze(root: HTMLElement): Promise<void> {
-      if (this.busy()) return;
+      if (this.busy() || this.importedReview) return;
       if (this.status !== 'empty') {
         this.notify('error', '当前 attempt 已存在；请使用 Regenerate 开启新 attempt，或 Clear 清空。');
         return;
@@ -358,8 +381,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private async runAnalysis(root: HTMLElement, regenerated: boolean): Promise<void> {
+      if (this.importedReview) return;
       const form = readForm(root);
       if (!form.source.trim()) return void this.notify('error', '来源文本不能为空。');
+      if (this.recoveredFrom && !form.displayName) return void this.notify('error', '恢复草稿必须由 GM 确认非空显示名称后才能 Analyze。');
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       const ai = form.mode !== 'plaintext-actor';
       if (ai && (!form.endpoint || !form.model || (form.authScheme !== 'none' && !form.apiKey))) return void this.notify('error', 'AI Intake 需要 HTTPS endpoint、提取模型和对应认证凭据。');
@@ -425,7 +450,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private async repair(root: HTMLElement): Promise<void> {
-      if (this.busy() || this.status !== 'needs_review' || !this.snapshotCurrent(root)) return;
+      if (this.busy() || this.importedReview || this.status !== 'needs_review' || !this.snapshotCurrent(root)) return;
       if (((this.analysis as any)?.repairCount ?? 0) >= 1) {
         this.notify('error', '当前 attempt 已用完一次 bounded repair；请修改来源或 Regenerate。');
         return;
@@ -471,7 +496,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private async generate(root: HTMLElement): Promise<void> {
-      if (this.busy() || this.status !== 'ready_to_generate' || !this.snapshotCurrent(root) || !this.analysis) return;
+      if (this.busy() || this.importedReview || this.status !== 'ready_to_generate' || !this.snapshotCurrent(root) || !this.analysis) return;
       const form = readForm(root);
       const ai = form.mode !== 'plaintext-actor';
       if (ai && !claimForgeAiJob(this)) return void this.notify('error', '已有 Forge AI Intake 任务正在运行。');
@@ -538,7 +563,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private async regenerate(root: HTMLElement): Promise<void> {
-      if (this.busy() || !['needs_review', 'failed', 'rejected'].includes(this.status)) return;
+      if (this.busy() || this.importedReview || !['needs_review', 'failed', 'rejected'].includes(this.status)) return;
       const priorAttempt = this.attemptId;
       this.response = undefined;
       this.analysis = undefined;
@@ -551,7 +576,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private reject(root: HTMLElement): void {
-      if (this.busy() || !['needs_review', 'failed'].includes(this.status)) return;
+      if (this.busy() || this.importedReview || !['needs_review', 'failed'].includes(this.status)) return;
       this.status = transitionForgeIntakeReviewStatus(this.status, 'reject');
       this.response = undefined;
       this.history.push({ sequence: this.history.length + 1, action: 'reject', attemptId: this.attemptId, resultingStatus: this.status });
@@ -559,7 +584,14 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private clear(root: HTMLElement): void {
-      if (this.creating) return;
+      if (this.creating || this.importing) return;
+      if (this.importedReview) {
+        this.importedReview = undefined;
+        const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+        if (importFile) importFile.value = '';
+        this.renderResult(root);
+        return;
+      }
       this.cancel();
       this.status = this.status === 'committing_and_reading_back' ? this.status : transitionForgeIntakeReviewStatus(this.status, 'clear');
       this.analysis = undefined;
@@ -573,6 +605,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.staleFinding = undefined;
       this.stageProgress = [];
       this.providerActivity = undefined;
+      this.recoveredFrom = undefined;
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       if (source) source.value = '';
@@ -581,10 +614,17 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private exportBundle(root: HTMLElement): void {
-      if (!this.snapshot || !this.analysis || !this.requestId || !this.attemptId) return;
       try {
+        if (this.importedReview) {
+          const serialized = serializeForgeIntakeReviewBundleV2(this.importedReview.bundle);
+          assertSafeReviewExport(serialized, readForm(root));
+          this.services.downloadReviewBundle(`forge-intake-imported-${safeName(this.importedReview.bundle.attemptId)}.json`, serialized);
+          this.notify('info', '只读 review bundle 已按规范化 V2 重新导出。');
+          return;
+        }
+        if (!this.snapshot || !this.analysis || !this.requestId || !this.attemptId) return;
         const bundle = this.buildBundle(readForm(root));
-        const serialized = serializeForgeIntakeReviewBundle(bundle);
+        const serialized = serializeForgeIntakeReviewBundleV2(bundle);
         assertSafeReviewExport(serialized, readForm(root));
         this.services.downloadReviewBundle(`forge-intake-${bundle.mode}-${safeName(bundle.attemptId)}.json`, serialized);
         this.notify('info', 'Review bundle 已导出；不含 API Key、Authorization 或完整 endpoint。');
@@ -667,7 +707,72 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         } } : {}),
         history: this.history,
       };
-      return buildForgeIntakeReviewBundle(input);
+      return buildForgeIntakeReviewBundleV2(input, {
+        ...(form.displayName ? { sourceLabel: form.displayName } : {}),
+        ...(this.recoveredFrom ? { recoveredFrom: this.recoveredFrom } : {}),
+      });
+    }
+
+    private async importBundle(root: HTMLElement): Promise<void> {
+      if (this.busy()) return;
+      try { assertGm(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
+      const input = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+      const file = input?.files?.[0];
+      if (!file) return void this.notify('error', '请选择一个 review bundle JSON 文件。');
+      const revision = ++this.importRevision;
+      this.importing = true;
+      this.renderResult(root);
+      try {
+        const text = await this.services.readReviewBundleFile(file);
+        const imported = decodeForgeIntakeReviewBundleText(text);
+        if (revision !== this.importRevision) return;
+        assertGm(environment.game);
+        this.importedReview = imported;
+        this.notify('info', `Review bundle 已作为只读历史记录导入；历史状态为 ${imported.bundle.status}，不能直接创建。`);
+      } catch (error) {
+        this.notify('error', safeUntrustedMessage(error));
+        this.focusError(root);
+      } finally {
+        if (revision === this.importRevision) this.importing = false;
+        this.renderResult(root);
+      }
+    }
+
+    private startNewAttempt(root: HTMLElement): void {
+      if (this.busy() || !this.importedReview) return;
+      try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
+      if (!importedTargetCompatible(this.importedReview)) {
+        this.notify('error', '导入记录的 target 与当前 Foundry 14.364 / dnd5e 5.3.3 安全边界不兼容，不能开启新 attempt。');
+        return;
+      }
+      const imported = this.importedReview;
+      this.cancel();
+      this.status = 'empty';
+      this.analysis = undefined;
+      this.generation = undefined;
+      this.response = undefined;
+      this.snapshot = undefined;
+      this.reviewSource = '';
+      this.requestId = '';
+      this.attemptId = '';
+      this.history = [];
+      this.staleFinding = undefined;
+      this.stageProgress = [];
+      this.providerActivity = undefined;
+      this.recoveredFrom = createForgeIntakeRecoveryLineage(imported);
+      this.importedReview = undefined;
+      const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
+      const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
+      const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
+      if (source) source.value = imported.bundle.rawSource;
+      if (displayName) displayName.value = imported.bundle.sourceLabel ?? imported.bundle.candidate?.label ?? '';
+      if (mode) mode.value = imported.bundle.mode;
+      const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+      if (importFile) importFile.value = '';
+      this.refreshAiVisibility(root);
+      this.refreshProviderUi(root);
+      this.renderResult(root);
+      this.notify('info', '已建立恢复草稿。请确认显示名称、当前 target 与 AI 连接，然后从 Analyze 开启全新 attempt。');
     }
 
     private async create(root: HTMLElement): Promise<void> {
@@ -701,6 +806,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private isApplyable(root: HTMLElement): boolean {
+      if (this.importedReview) return false;
       if (!['accepted', 'committing_and_reading_back'].includes(this.status) || !this.response || !this.snapshotCurrent(root) || !isCurrentRuntime(environment.game)) return false;
       if (allFindings(this.analysis, this.generation, this.staleFinding).some((entry) => entry.blocking)) return false;
       const mode = readForm(root).mode;
@@ -754,7 +860,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (root) this.renderResult(root);
     }
 
-    private busy(): boolean { return Boolean(this.controller || this.creating); }
+    private busy(): boolean { return Boolean(this.controller || this.creating || this.importing); }
     private isCurrent(controller: AbortController, revision: number): boolean { return this.controller === controller && this.revision === revision && !controller.signal.aborted; }
     private updateStage(root: HTMLElement, controller: AbortController, revision: number, stage: { stage: string; status: string; message?: string }): void {
       if (!this.isCurrent(controller, revision)) return;
@@ -766,6 +872,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
 
     private renderResult(root: HTMLElement): void {
       const form = readForm(root);
+      if (this.importedReview) {
+        this.renderImportedReview(root, form);
+        return;
+      }
       const responseResult: any = this.response && 'result' in this.response ? this.response.result : undefined;
       const findings = allFindings(this.analysis, this.generation, this.staleFinding);
       const currentStep = form.mode !== 'plaintext-actor' && !this.connectionReady(form)
@@ -804,6 +914,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         history: this.history,
       }, null, 2));
       text(root, 'canonical', (this.generation as any)?.finalSource ?? (this.analysis as any)?.canonicalSource ?? '');
+      text(root, 'raw-source', this.reviewSource);
       text(root, 'preview', responseResult ? JSON.stringify(form.mode === 'ai-item'
         ? { item: responseResult.itemDocument, verification: responseResult.itemVerification }
         : { actor: responseResult.actorVerification?.actor, items: responseResult.actorVerification?.items }, null, 2) : '');
@@ -828,6 +939,9 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       setDisabled(root, 'reject', this.busy() || !['needs_review', 'failed'].includes(this.status));
       setDisabled(root, 'cancel', this.creating || !this.controller);
       setDisabled(root, 'export', !this.analysis || !this.snapshot);
+      setDisabled(root, 'import', this.busy() || !selectedImportFile(root));
+      setDisabled(root, 'start-new-attempt', true);
+      for (const action of ['test-connection', 'clear-key', 'clear-all-keys', 'toggle-key', 'toggle-endpoint']) setDisabled(root, action, this.creating);
       setDisabled(root, 'create', !this.isApplyable(root));
       const running = Boolean(this.controller || this.creating);
       const actionButtons = typeof (root as any).querySelectorAll === 'function' ? root.querySelectorAll('[data-action]') : [];
@@ -841,6 +955,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
         if (input) input.disabled = this.creating;
       }
+      const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+      if (importFile) importFile.disabled = this.busy();
       const connectionStatus = root.querySelector('[data-connection-status]') as HTMLElement | null;
       if (connectionStatus && !this.creating) {
         connectionStatus.textContent = this.connectionProbe && this.connectionReady(form)
@@ -849,6 +965,77 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             ? this.connectionProbe.message
             : this.connectionProbe ? '连接配置已变化，需要重新测试。' : connectionStatus.textContent || '未测试连接。';
       }
+    }
+
+    private renderImportedReview(root: HTMLElement, form: ReturnType<typeof readForm>): void {
+      const imported = this.importedReview!;
+      const bundle = imported.bundle;
+      const compatible = importedTargetCompatible(imported);
+      const dataset = ((root as any).dataset ??= {});
+      dataset.currentStep = 'review';
+      const indicators = typeof (root as any).querySelectorAll === 'function' ? root.querySelectorAll('[data-step-indicator]') : [];
+      for (const indicator of indicators) {
+        const element = indicator as HTMLElement;
+        element.dataset.active = element.dataset.stepIndicator === 'review' ? 'true' : 'false';
+      }
+      text(root, 'status', `导入的只读历史状态：${bundle.status}`);
+      text(root, 'human-summary', bundle.status === 'accepted' || bundle.status === 'committing_and_reading_back'
+        ? '历史记录显示 accepted，但不含可提交的完整 response/artifact，不能直接 Confirm Create。请显式开启新 attempt 并重新 Analyze、Generate 与验证。'
+        : `历史记录显示 ${bundle.status}。这是只读证据，不会恢复旧请求、自动调用 Provider 或写世界 Document。`);
+      html(root, 'stages', '');
+      const importedFindings = [...bundle.deterministicFindings, ...bundle.aiReviewFindings];
+      const responseDiagnostics = bundle.candidateResponse?.diagnostics ?? [];
+      const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
+      if (diagnostics) diagnostics.hidden = importedFindings.length === 0 && responseDiagnostics.length === 0;
+      html(root, 'diagnostic-list', [
+        ...responseDiagnostics.map((entry) => `[history:${entry.severity}] ${entry.code}: ${entry.message}`),
+        ...importedFindings.map((entry) => `[history:${entry.origin}] ${entry.code}: ${entry.message}`),
+      ].map((entry) => `<li>${escapeHtml(entry)}</li>`).join(''));
+      text(root, 'candidate', JSON.stringify(bundle.candidate ?? {}, null, 2));
+      text(root, 'evidence', JSON.stringify(bundle.evidence ?? {}, null, 2));
+      text(root, 'metadata', JSON.stringify({
+        importedReadOnly: true,
+        originalSchema: imported.originalSchema,
+        originalVersion: imported.originalVersion,
+        normalizedBundleHash: imported.normalizedBundleHash,
+        sourceLabel: bundle.sourceLabel,
+        requestId: bundle.requestId,
+        attemptId: bundle.attemptId,
+        rawSourceHash: bundle.rawSourceHash,
+        provider: bundle.provider,
+        calls: bundle.calls,
+        repairCount: bundle.repairCount,
+        reviewVerdict: bundle.reviewVerdict,
+        history: bundle.history,
+        target: bundle.target,
+        recoveredFrom: bundle.recoveredFrom,
+        compatibleWithCurrentRecoveryTarget: compatible,
+      }, null, 2));
+      text(root, 'canonical', bundle.canonicalSource ?? '');
+      text(root, 'raw-source', bundle.rawSource);
+      text(root, 'preview', JSON.stringify(bundle.candidateResponse ?? {}, null, 2));
+      text(root, 'json', '历史 bundle 不包含可提交的完整 Actor/Item artifact。');
+      const previewSection = root.querySelector('[data-preview-section]') as HTMLElement | null;
+      if (previewSection) previewSection.hidden = false;
+      const activityCard = root.querySelector('[data-activity-card]') as HTMLElement | null;
+      if (activityCard) activityCard.hidden = true;
+      for (const action of ['analyze', 'repair', 'generate', 'regenerate', 'reject', 'cancel', 'create']) setDisabled(root, action, true);
+      for (const action of ['test-connection', 'clear-key', 'clear-all-keys', 'toggle-key', 'toggle-endpoint']) setDisabled(root, action, true);
+      setDisabled(root, 'export', this.importing);
+      setDisabled(root, 'import', this.importing || !selectedImportFile(root));
+      setDisabled(root, 'start-new-attempt', this.importing || !compatible || !isCurrentRuntime(environment.game));
+      for (const name of ['source', 'displayName', 'mode', 'provider', 'endpoint', 'protocol', 'region', 'model', 'reviewModel', 'reasoning', 'structuredOutput', 'authScheme', 'apiKey', 'persistApiKey', 'useSeparateReviewModel']) {
+        const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        if (input) input.disabled = true;
+      }
+      const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
+      if (importFile) importFile.disabled = this.importing;
+      const actionButtons = typeof (root as any).querySelectorAll === 'function' ? root.querySelectorAll('[data-action]') : [];
+      for (const button of actionButtons) (button as HTMLElement).hidden = (button as HTMLElement).dataset.action === 'cancel';
+      const actionGroups = typeof (root as any).querySelectorAll === 'function' ? root.querySelectorAll('[data-action-group]') : [];
+      for (const group of actionGroups) (group as HTMLElement).hidden = false;
+      const connectionStatus = root.querySelector('[data-connection-status]') as HTMLElement | null;
+      if (connectionStatus) connectionStatus.textContent = form.mode === 'plaintext-actor' ? '' : '导入不会测试或复用历史 Provider 连接。';
     }
 
     private fillSettings(root: HTMLElement): void {
@@ -966,6 +1153,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       }
     }
     private toggleApiKeyVisibility(root: HTMLElement): void {
+      if (this.importedReview) return;
+      try { assertGm(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       const key = root.querySelector('[name="apiKey"]') as HTMLInputElement | null;
       const toggle = root.querySelector('[data-action="toggle-key"]') as HTMLButtonElement | null;
       if (!key) return;
@@ -973,6 +1162,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (toggle) toggle.setAttribute('aria-label', key.type === 'password' ? '显示 API Key' : '隐藏 API Key');
     }
     private toggleEndpointOverride(root: HTMLElement): void {
+      if (this.importedReview) return;
+      try { assertGm(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       const endpoint = root.querySelector('[name="endpoint"]') as HTMLInputElement | null;
       if (!endpoint) return;
       const next = endpoint.dataset.forgeEndpointOverride !== 'true';
@@ -986,6 +1177,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.invalidateReview(root);
     }
     private async testConnection(root: HTMLElement): Promise<void> {
+      if (this.importedReview) return;
       if (this.busy()) return;
       const form = readForm(root);
       if (form.mode === 'plaintext-actor') return;
@@ -1285,6 +1477,7 @@ function cancelledFinding() { return { id: 'forge-intake:INTAKE_CANCELLED', code
 function randomRequestId(mode: ForgeIntakeMode): string { return `forge-intake-${mode}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`; }
 function safeName(value: string): string { return value.replace(/[^a-zA-Z0-9._-]/gu, '-').slice(0, 120); }
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error); }
+function safeUntrustedMessage(error: unknown): string { return escapeHtml(messageOf(error)).slice(0, 1_000); }
 function escapeHtml(value: string): string { return value.replace(/[&<>"']/gu, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!)); }
 function text(root: HTMLElement, key: string, value: string): void { const element = root.querySelector(`[data-${key}]`) as HTMLElement | null; if (element) element.textContent = value; }
 function html(root: HTMLElement, key: string, value: string): void { const element = root.querySelector(`[data-${key}]`) as HTMLElement | null; if (element) element.innerHTML = value; }
@@ -1293,6 +1486,29 @@ function setDisabled(root: HTMLElement, action: string, disabled: boolean): void
     ? root.querySelectorAll(`[data-action="${action}"]`)
     : [root.querySelector(`[data-action="${action}"]`)].filter(Boolean);
   for (const element of elements) (element as HTMLButtonElement).disabled = disabled;
+}
+
+function selectedImportFile(root: HTMLElement): File | undefined {
+  return (root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null)?.files?.[0];
+}
+
+function importedTargetCompatible(imported: ImportedForgeIntakeReviewRecord): boolean {
+  const target = imported.bundle.target;
+  return Boolean(target
+    && target.fvttVersion === EXPECTED_FOUNDRY_VERSION
+    && target.systemId === 'dnd5e'
+    && target.systemVersion === EXPECTED_SYSTEM_VERSION
+    && target.generatorProfile === 'v14'
+    && target.effectProfile === 'core'
+    && target.iconMode === 'off');
+}
+
+async function readReviewBundleFile(file: File): Promise<string> {
+  if (Number.isFinite(file.size) && file.size > FORGE_INTAKE_REVIEW_BUNDLE_MAX_UTF8_BYTES) {
+    throw new Error(`Review bundle 文件不能超过 ${FORGE_INTAKE_REVIEW_BUNDLE_MAX_UTF8_BYTES} bytes。`);
+  }
+  if (typeof file.text !== 'function') throw new Error('当前浏览器不能读取所选 review bundle。');
+  return await file.text();
 }
 
 function downloadReviewBundle(fileName: string, content: string): void {

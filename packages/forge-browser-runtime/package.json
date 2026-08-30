@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./ai": "./src/ai.ts",
     "./intake-review": "./src/intakeReview.ts",
+    "./intake-review-import": "./src/intakeReviewImport.ts",
     "./item-intake": "./src/itemIntake.ts",
     "./plaintext": "./src/plaintext.ts",
     "./provider-connections": "./src/providerConnections.ts"

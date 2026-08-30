@@ -14,6 +14,8 @@
 .forge-step-kicker { color: var(--color-text-dark-secondary); font-size: 0.8rem; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
 .forge-connection-card { display: grid; gap: 0.6rem; border: 1px solid var(--color-border-light-primary); border-radius: 0.25rem; padding: 0.65rem; }
 .forge-connection-grid, .forge-advanced-grid, .forge-input-grid { display: grid; gap: 0.65rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.forge-import-card { display: grid; gap: 0.55rem; grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.55fr) auto; align-items: end; border: 1px solid var(--color-border-light-primary); padding: 0.65rem; margin-block: 0.65rem; }
+.forge-import-card h2, .forge-import-card p { margin: 0; }
 .forge-input-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .forge-secret-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem; min-width: 0; }
 .forge-api-key-field { grid-column: span 1; }
@@ -50,7 +52,7 @@
   .forge-connection-grid, .forge-advanced-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 42rem) {
-  .forge-connection-grid, .forge-advanced-grid, .forge-input-grid, .forge-review-grid { grid-template-columns: minmax(0, 1fr); }
+  .forge-connection-grid, .forge-advanced-grid, .forge-input-grid, .forge-review-grid, .forge-import-card { grid-template-columns: minmax(0, 1fr); }
   .forge-api-key-field { grid-column: auto; }
   .forge-action-group { width: 100%; }
   .forge-running-cancel { margin-inline-start: 0; width: 100%; }
