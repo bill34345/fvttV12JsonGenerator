@@ -823,69 +823,7 @@ export class ItemParser implements ItemParserStrategy {
   }
 
   private parseStages(body: string): ItemStage[] {
-    const stages: ItemStage[] = [];
-    const stageKeywords = [
-      { zh: '休眠态', en: 'Dormant State' },
-      { zh: '觉醒态', en: 'Awakened State' },
-      { zh: '升华态', en: 'Exalted State' },
-    ];
-
-    const lines = body.split(/\r?\n/);
-    let currentStage: ItemStage | null = null;
-    let inBulletSection = false;
-    let currentAbilities: string[] = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-
-      let detectedStage = false;
-      for (const keyword of stageKeywords) {
-        const escapedZh = keyword.zh.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const escapedEn = keyword.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const stagePattern = new RegExp(`^\\*\\*${escapedZh}（${escapedEn}）\\.`);
-        if (stagePattern.test(trimmed)) {
-          if (currentStage) {
-            currentStage.requirements = [...currentAbilities];
-            stages.push(currentStage);
-          }
-          const descMatch = trimmed.match(/^\*\*[^*]+（[^）]+）\*\*\.\s*(.*)$/);
-          currentStage = {
-            name: keyword.zh,
-            description: descMatch ? descMatch[1] : '',
-            requirements: [],
-          };
-          currentAbilities = [];
-          inBulletSection = false;
-          detectedStage = true;
-          break;
-        }
-      }
-
-      if (detectedStage) continue;
-
-      if (currentStage) {
-        if (currentStage.description && !inBulletSection) {
-          const introPattern = /在[^，,]+状态下/;
-          if (introPattern.test(trimmed)) {
-            inBulletSection = true;
-            continue;
-          }
-        }
-
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          inBulletSection = true;
-          const ability = trimmed.replace(/^[-*]\s*/, '');
-          currentAbilities.push(ability);
-        }
-      }
-    }
-
-    if (currentStage) {
-      currentStage.requirements = [...currentAbilities];
-      stages.push(currentStage);
-    }
-
-    return stages;
+    return parseItemStages(body);
   }
 
   /**
@@ -1714,4 +1652,75 @@ export class ItemParser implements ItemParserStrategy {
       usesPerDay,
     };
   }
+}
+
+/**
+ * Parse the source-defined lifecycle stage headers used by the formal Item
+ * parser. Browser Intake reuses this exact detector so a provider cannot erase
+ * a multi-stage source boundary from its IR.
+ */
+export function parseItemStages(body: string): ItemStage[] {
+  const stages: ItemStage[] = [];
+  const stageKeywords = [
+    { zh: '休眠态', en: 'Dormant State' },
+    { zh: '觉醒态', en: 'Awakened State' },
+    { zh: '升华态', en: 'Exalted State' },
+  ];
+
+  const lines = body.split(/\r?\n/);
+  let currentStage: ItemStage | null = null;
+  let inBulletSection = false;
+  let currentAbilities: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    let detectedStage = false;
+    for (const keyword of stageKeywords) {
+      const escapedZh = keyword.zh.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedEn = keyword.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const stagePattern = new RegExp(`^\\*\\*${escapedZh}（${escapedEn}）\\.`);
+      if (stagePattern.test(trimmed)) {
+        if (currentStage) {
+          currentStage.requirements = [...currentAbilities];
+          stages.push(currentStage);
+        }
+        const descMatch = trimmed.match(/^\*\*[^*]+（[^）]+）\*\*\.\s*(.*)$/);
+        currentStage = {
+          name: keyword.zh,
+          description: descMatch ? descMatch[1] : '',
+          requirements: [],
+        };
+        currentAbilities = [];
+        inBulletSection = false;
+        detectedStage = true;
+        break;
+      }
+    }
+
+    if (detectedStage) continue;
+
+    if (currentStage) {
+      if (currentStage.description && !inBulletSection) {
+        const introPattern = /在[^，,]+状态下/;
+        if (introPattern.test(trimmed)) {
+          inBulletSection = true;
+          continue;
+        }
+      }
+
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        inBulletSection = true;
+        const ability = trimmed.replace(/^[-*]\s*/, '');
+        currentAbilities.push(ability);
+      }
+    }
+  }
+
+  if (currentStage) {
+    currentStage.requirements = [...currentAbilities];
+    stages.push(currentStage);
+  }
+
+  return stages;
 }

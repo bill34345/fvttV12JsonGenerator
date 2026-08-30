@@ -19,6 +19,9 @@ import {
   type IntakeProviderAuditEvent,
 } from '../provider';
 import type { HttpClient, HttpRequest, HttpResponse } from '../../translation/types';
+import { validateMonsterIntakeIR } from '../validator';
+import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
+import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 
 function response(status: number, content: string): HttpResponse {
   return {
@@ -177,7 +180,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v15');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v18');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
@@ -230,6 +233,9 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('not an inferred immunity, resistance, skill, or language');
     expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
     expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
+    expect(prompt).toContain('Standard 2024 stat-block Initiative +4 (14)');
+    expect(prompt).toContain('Multiattack is an action aggregator, not an attack roll');
+    expect(prompt).toContain('omit legendary entirely');
   });
 
   test('review prompt independently checks source action economy against IR and Actor activation', async () => {
@@ -243,7 +249,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v20');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v23');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
@@ -299,7 +305,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v15');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v18');
     expect(prompt).toContain('Return a compact JSON Patch envelope only');
     expect(prompt).toContain('Do not repeat the complete MonsterIntakeIR');
     expect(prompt).toContain('at most 64 operations');
@@ -526,6 +532,303 @@ describe('OpenAI-compatible monster intake provider', () => {
     }]);
   });
 
+  test('re-anchors exact extraction evidence and derives a stable missing spellcasting group id', async () => {
+    const source = 'prefix\nInnate Spellcasting. Its spellcasting ability is Charisma.\nAt will: mage armor\nsuffix';
+    const quote = 'Innate Spellcasting. Its spellcasting ability is Charisma.';
+    const grant = 'At will: mage armor';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: {
+        spellcasting: [{
+          groupId: '',
+          featureName: 'Innate Spellcasting',
+          featureEnglishName: 'Innate Spellcasting',
+          description: quote,
+          evidence: [{ start: 0, end: 1, quote }],
+          ability: 'cha',
+          abilityEvidence: [{ start: 0, end: 1, quote: 'spellcasting ability is Charisma' }],
+          usageGroups: [{
+            usage: 'at-will',
+            evidence: [{ start: 0, end: 1, quote: grant }],
+            spellRefs: [{
+              refId: 'mage-armor', identifier: 'mage-armor', originalName: 'mage armor', aliases: ['mage armor'],
+              evidence: [{ start: 0, end: 1, quote: 'mage armor' }],
+            }],
+          }],
+        }],
+      },
+      claims: [{
+        path: '/creature/spellcasting/0', valueKind: 'explicit', confidence: 'high',
+        evidence: [{ start: 0, end: 1, quote }],
+      }],
+      coverage: [{
+        start: 0, end: 1, quote: source, classification: 'mechanical',
+        claimPaths: ['/creature/spellcasting/0'],
+      }],
+      uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source,
+      sourceSha256: 'hash',
+      candidate: { id: 'candidate', label: 'Candidate', start: 0, end: source.length, quote: source },
+    });
+    const group = result.creature.spellcasting![0]!;
+    expect(group.groupId).toBe(`innate-spellcasting-${source.indexOf(quote)}`);
+    expect(group.evidence).toEqual([{
+      start: source.indexOf(quote), end: source.indexOf(quote) + quote.length, quote,
+    }]);
+    expect(group.usageGroups[0]!.evidence[0]).toEqual({
+      start: source.indexOf(grant), end: source.indexOf(grant) + grant.length, quote: grant,
+    });
+    expect(result.coverage[0]).toMatchObject({ start: 0, end: source.length, quote: source });
+  });
+
+  test('restores request-owned source identity and omits a meaningless empty spellcasting collection', async () => {
+    const source = 'Clockwork scout\nArmor Class 13';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'provider-invented', length: 999 },
+      creature: { spellcasting: [] },
+      claims: [],
+      coverage: [],
+      uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source,
+      sourceSha256: 'request-owned-sha256',
+      candidate: { id: 'scout', label: 'Scout', start: 0, end: source.length, quote: source },
+    });
+
+    expect(result.source).toEqual({ sha256: 'request-owned-sha256', length: source.length });
+    expect(result.creature).not.toHaveProperty('spellcasting');
+  });
+
+  test('removes caster level drift from innate groups but preserves prepared caster level', async () => {
+    const source = [
+      'Innate Spellcasting. At will: mage armor.',
+      'Spellcasting. The mage is a 5th-level spellcaster. 1st level (4 slots): shield.',
+    ].join('\n');
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: {
+        spellcasting: [
+          {
+            groupId: 'innate', featureName: 'Innate Spellcasting', casterLevel: 9,
+            casterLevelEvidence: [{ start: 0, end: 1, quote: 'Innate Spellcasting' }],
+            usageGroups: [{ usage: 'at-will', evidence: [], spellRefs: [] }],
+          },
+          {
+            groupId: 'prepared', featureName: 'Spellcasting', casterLevel: 5,
+            casterLevelEvidence: [{ start: 0, end: 1, quote: '5th-level spellcaster' }],
+            usageGroups: [{ usage: 'prepared-slots', level: 1, slots: 4, evidence: [], spellRefs: [] }],
+          },
+        ],
+      },
+      claims: [], coverage: [], uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source,
+      sourceSha256: 'hash',
+      candidate: { id: 'mage', label: 'Mage', start: 0, end: source.length, quote: source },
+    });
+
+    expect(result.creature.spellcasting?.[0]).not.toHaveProperty('casterLevel');
+    expect(result.creature.spellcasting?.[0]).not.toHaveProperty('casterLevelEvidence');
+    expect(result.creature.spellcasting?.[1]).toMatchObject({ casterLevel: 5 });
+  });
+
+  test('removes invented Multiattack attack automation while preserving explicit attacks', async () => {
+    const multiattack = 'Multiattack. The lurker makes two Claw attacks.';
+    const claw = 'Claw. Melee Weapon Attack: +4 to hit, reach 5 ft., one target.';
+    const source = `${multiattack}\n${claw}`;
+    const evidence = (quote: string) => ({
+      start: source.indexOf(quote), end: source.indexOf(quote) + quote.length, quote,
+    });
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: {
+        actions: [
+          {
+            name: '多重攻击（Multiattack）', description: multiattack, activityType: 'attack', evidence: [evidence(multiattack)],
+            attack: { type: 'mwak', toHit: 0, reach: 5 },
+          },
+          {
+            name: 'Claw', description: claw, activityType: 'attack', evidence: [evidence(claw)],
+            attack: { type: 'mwak', toHit: 4, reach: 5 },
+          },
+        ],
+      },
+      claims: [], coverage: [], uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source,
+      sourceSha256: 'hash',
+      candidate: { id: 'lurker', label: 'Lurker', start: 0, end: source.length, quote: source },
+    });
+
+    expect(result.creature.actions?.[0]).toMatchObject({
+      name: '多重攻击（Multiattack）', description: multiattack, activityType: 'utility', evidence: [evidence(multiattack)],
+    });
+    expect(result.creature.actions?.[0]).not.toHaveProperty('attack');
+    expect(result.creature.actions?.[1]).toMatchObject({
+      name: 'Claw', activityType: 'attack', attack: { type: 'mwak', toHit: 4, reach: 5 },
+    });
+  });
+
+  test('returns the real Lurker fixture to a fully valid IR after the observed provider drifts', async () => {
+    const ir = buildValidLurkerIr();
+    ir.source = { sha256: 'provider-drift', length: LURKER_SOURCE.length + 77 };
+    ir.creature.spellcasting = [];
+    const multiattack = ir.creature.actions![0]!;
+    multiattack.activityType = 'attack';
+    multiattack.attack = { type: 'mwak', toHit: 0, reach: 5 };
+    const provider = makeProvider(async () => response(200, JSON.stringify(ir)));
+    const candidate = {
+      id: 'lurker', label: 'Lurker in the Dark', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    };
+
+    const normalized = await provider.extract({
+      source: LURKER_SOURCE,
+      sourceSha256: buildValidLurkerIr().source.sha256,
+      candidate,
+    });
+
+    expect(normalized.creature.actions?.[0]).toMatchObject({ activityType: 'utility' });
+    expect(normalized.creature.actions?.[0]).not.toHaveProperty('attack');
+    expect(normalized.creature).not.toHaveProperty('spellcasting');
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, normalized, { coverageRange: candidate }).blocking).toEqual([]);
+  });
+
+  test.each([
+    { label: 'null', legendary: null },
+    { label: 'array', legendary: [] },
+    { label: 'empty string', legendary: '' },
+    { label: 'empty object', legendary: {} },
+    { label: 'invented zero object', legendary: { max: 0, preamble: '', evidence: [] } },
+  ])('omits provider legendary placeholder $label when the source has no legendary semantics', async ({ legendary }) => {
+    const source = 'Claw. Melee Weapon Attack: +4 to hit.';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: { legendary }, claims: [], coverage: [], uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source, sourceSha256: 'hash',
+      candidate: { id: 'claw', label: 'Claw', start: 0, end: source.length, quote: source },
+    });
+
+    expect(result.creature).not.toHaveProperty('legendary');
+  });
+
+  test('keeps invalid legendary metadata blocking when the source really contains legendary semantics', async () => {
+    const source = 'Legendary Actions. The dragon can take 3 legendary actions.';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: { legendary: null }, claims: [], coverage: [], uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source, sourceSha256: 'hash',
+      candidate: { id: 'dragon', label: 'Dragon', start: 0, end: source.length, quote: source },
+    });
+
+    expect((result.creature as any).legendary).toBeNull();
+    expect(validateMonsterIntakeIR(source, result).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_LEGENDARY_METADATA', path: '/creature/legendary',
+    }));
+  });
+
+  test('preserves valid source-backed legendary metadata', async () => {
+    const source = 'Legendary Actions. The dragon can take 3 legendary actions.';
+    const preamble = 'The dragon can take 3 legendary actions.';
+    const start = source.indexOf(preamble);
+    const legendary = { max: 3, preamble, evidence: [{ start, end: start + preamble.length, quote: preamble }] };
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: { legendary }, claims: [], coverage: [], uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source, sourceSha256: 'hash',
+      candidate: { id: 'dragon', label: 'Dragon', start: 0, end: source.length, quote: source },
+    });
+
+    expect(result.creature.legendary).toEqual(legendary);
+  });
+
+  test('keeps ambiguous extraction evidence invalid instead of guessing between equal source occurrences', async () => {
+    const source = 'same marker / same marker';
+    const provider = makeProvider(async () => response(200, JSON.stringify({
+      schemaVersion: 1,
+      source: { sha256: 'hash', length: source.length },
+      creature: {},
+      claims: [{
+        path: '/creature/identity/name', valueKind: 'explicit', confidence: 'high',
+        evidence: [{ start: 7, end: 8, quote: 'same marker' }],
+      }],
+      coverage: [],
+      uncertainties: [],
+    })));
+
+    const result = await provider.extract({
+      source,
+      sourceSha256: 'hash',
+      candidate: { id: 'candidate', label: 'Candidate', start: 0, end: source.length, quote: source },
+    });
+    expect(result.claims[0]!.evidence[0]).toEqual({ start: 7, end: 8, quote: 'same marker' });
+  });
+
+  test('recovers the complete Rat Warlock IR from common provider normalization drift without weakening validation', async () => {
+    const ir = buildRatWarlockIr();
+    const statblockStart = RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God', 1);
+    const candidate = {
+      id: 'rat-warlock', label: '鼠神邪术师', start: statblockStart,
+      end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE.slice(statblockStart),
+    };
+    const groupEvidence = ir.creature.spellcasting![0]!.evidence[0]!;
+    const usageStarts = ir.creature.spellcasting![0]!.usageGroups.map((usageGroup) => usageGroup.evidence[0]!.start);
+    const coverageBreaks = [candidate.start, groupEvidence.start, ...usageStarts, groupEvidence.end + 2, candidate.end];
+    ir.coverage = coverageBreaks.slice(0, -1).map((start, index) => {
+      const end = coverageBreaks[index + 1]!;
+      return {
+        start, end, quote: RAT_WARLOCK_SOURCE.slice(start, end), classification: 'mechanical' as const,
+        claimPaths: ir.claims.map((claim) => claim.path).filter((path) => (
+          path !== '/creature/spellcasting/0' || (start === groupEvidence.start && end === usageStarts[0])
+        )),
+      };
+    });
+    ir.creature.spellcasting![0]!.groupId = '';
+    (ir.creature.spellcasting![0] as any).ability = 'charisma';
+    for (const usageGroup of ir.creature.spellcasting![0]!.usageGroups) {
+      for (const spellRef of usageGroup.spellRefs) delete (spellRef as any).aliases;
+    }
+    driftEveryEvidenceRange(ir);
+    const provider = makeProvider(async () => response(200, JSON.stringify(ir)));
+
+    const normalized = await provider.extract({
+      source: RAT_WARLOCK_SOURCE,
+      sourceSha256: ir.source.sha256,
+      candidate,
+    });
+
+    expect(normalized.creature.spellcasting![0]!.groupId).toStartWith('innate-spellcasting-');
+    expect(normalized.creature.spellcasting![0]!.ability).toBe('cha');
+    expect(normalized.creature.spellcasting![0]!.usageGroups.every((usageGroup) => (
+      usageGroup.spellRefs.every((spellRef) => Array.isArray(spellRef.aliases))
+    ))).toBe(true);
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, normalized, { coverageRange: candidate }).blocking).toEqual([]);
+  });
+
   test('rebinds a unique review evidence quote when only source whitespace was compressed', async () => {
     const source = 'prefix exact\nreview quote suffix';
     const provider = makeProvider(async () => response(200, JSON.stringify({
@@ -654,4 +957,18 @@ function makeProvider(
     httpClient,
     audit: (event) => audit.push(event),
   });
+}
+
+function driftEveryEvidenceRange(value: unknown): void {
+  if (Array.isArray(value)) {
+    value.forEach(driftEveryEvidenceRange);
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  const record = value as Record<string, unknown>;
+  if (typeof record.quote === 'string' && Number.isInteger(record.start) && Number.isInteger(record.end)) {
+    record.start = Math.max(0, (record.start as number) - 1);
+    record.end = Math.max((record.start as number) + 1, (record.end as number) - 1);
+  }
+  Object.values(record).forEach(driftEveryEvidenceRange);
 }

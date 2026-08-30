@@ -7,6 +7,8 @@ import type { StructuredActionData } from '@fvtt-json-generator/models/action';
 import { validatePortableSpellManifestStructure } from '@fvtt-json-generator/spell-manifest-contracts/validator';
 import { parseActorResourceSemantics } from './resourceSemantics';
 import { parseActorBehaviorSemantics } from './behaviorSemantics';
+import { validateForgeSourceMetadata } from './forgeSourceMetadata';
+import { FORGE_SOURCE_ID_FIELD } from '@fvtt-json-generator/contracts';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -31,6 +33,7 @@ export class YamlParser {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const rawData = yaml.load(frontmatter) as Record<string, any>;
+    validateForgeSourceMetadata(rawData);
 
     const result: ParsedNPC = {
       name: '',
@@ -82,7 +85,7 @@ export class YamlParser {
       }
     }
 
-    this.traverse(rawData, result);
+    this.traverse(rawData, result, true);
 
     if (rawData && typeof rawData === 'object') {
       if ('豁免熟练' in rawData) {
@@ -127,15 +130,16 @@ export class YamlParser {
     return { frontmatter: normalized, body: '' };
   }
 
-  private traverse(obj: any, result: ParsedNPC) {
+  private traverse(obj: any, result: ParsedNPC, isRoot = false) {
     for (const [key, value] of Object.entries(obj)) {
+      if (isRoot && key === FORGE_SOURCE_ID_FIELD) continue;
       const mapping = FIELD_MAPPING[key];
 
       if (mapping) {
         this.applyField(mapping, value, result);
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested container (e.g. "能力" or "Attributes")
-        this.traverse(value, result);
+        this.traverse(value, result, false);
       } else {
         // Unknown key at leaf level -> Strict Mode Error
         throw new Error(`InvalidField: Unknown field '${key}'`);

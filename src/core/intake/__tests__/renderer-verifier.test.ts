@@ -29,6 +29,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const actor = generated.rawJson as any;
 
     expect(markdown).toContain('生物类型备注: goblinoid');
+    expect(actor.system.details.type.value).toBe('fey');
     expect(actor.system.details.type.custom).toBe('goblinoid');
 
     actor.system.details.type.custom = '';

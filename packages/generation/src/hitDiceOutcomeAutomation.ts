@@ -18,19 +18,71 @@ export function buildHitDiceOutcomeAutomationSpec(
   rider: Pick<ExtractedRider, 'key' | 'outcomes'>,
   activityIds: HitDiceOutcomeActivityIds,
 ): HitDiceOutcomeAutomationSpec {
+  const hitDiceChange = rider.outcomes.find((outcome) => outcome.kind === 'hitDiceChange') as
+    | Extract<HitDiceOutcome, { kind: 'hitDiceChange' }>
+    | undefined;
+  const tempHp = rider.outcomes.find((outcome) => outcome.kind === 'tempHp') as
+    | Extract<HitDiceOutcome, { kind: 'tempHp' }>
+    | undefined;
+  const followupSave = rider.outcomes.find((outcome) => outcome.kind === 'followupSave') as
+    | Extract<HitDiceOutcome, { kind: 'followupSave' }>
+    | undefined;
   return {
     mode: 'hit-dice-outcome',
-    ...activityIds,
-    hitDiceChange: rider.outcomes.find((outcome) => outcome.kind === 'hitDiceChange') as
-      | Extract<HitDiceOutcome, { kind: 'hitDiceChange' }>
-      | undefined,
-    tempHp: rider.outcomes.find((outcome) => outcome.kind === 'tempHp') as
-      | Extract<HitDiceOutcome, { kind: 'tempHp' }>
-      | undefined,
-    followupSave: rider.outcomes.find((outcome) => outcome.kind === 'followupSave') as
-      | Extract<HitDiceOutcome, { kind: 'followupSave' }>
-      | undefined,
+    primaryActivityId: activityIds.primaryActivityId,
+    ...(activityIds.loseHitDieActivityId !== undefined
+      ? { loseHitDieActivityId: activityIds.loseHitDieActivityId }
+      : {}),
+    ...(activityIds.tempHpActivityId !== undefined
+      ? { tempHpActivityId: activityIds.tempHpActivityId }
+      : {}),
+    ...(activityIds.followupSaveActivityId !== undefined
+      ? { followupSaveActivityId: activityIds.followupSaveActivityId }
+      : {}),
+    ...(hitDiceChange ? { hitDiceChange: projectHitDiceOutcome(hitDiceChange) } : {}),
+    ...(tempHp ? { tempHp: projectHitDiceOutcome(tempHp) } : {}),
+    ...(followupSave ? { followupSave: projectHitDiceOutcome(followupSave) } : {}),
   };
+}
+
+function projectHitDiceOutcome<T extends HitDiceOutcome>(outcome: T): T {
+  const evidence = outcome.evidence === undefined
+    ? {}
+    : {
+        evidence: {
+          text: outcome.evidence.text,
+          startOffset: outcome.evidence.startOffset,
+          endOffset: outcome.evidence.endOffset,
+          kind: outcome.evidence.kind,
+        },
+      };
+  switch (outcome.kind) {
+    case 'hitDiceChange':
+      return {
+        kind: outcome.kind,
+        direction: outcome.direction,
+        count: outcome.count,
+        pool: outcome.pool,
+        target: outcome.target,
+        ...evidence,
+      } as T;
+    case 'tempHp':
+      return {
+        kind: outcome.kind,
+        amount: outcome.amount,
+        target: outcome.target,
+        ...(outcome.condition !== undefined ? { condition: outcome.condition } : {}),
+        ...evidence,
+      } as T;
+    case 'followupSave':
+      return {
+        kind: outcome.kind,
+        label: outcome.label,
+        trigger: outcome.trigger,
+        target: outcome.target,
+        ...evidence,
+      } as T;
+  }
 }
 
 export function buildHitDiceOutcomeMacroCommand(spec: HitDiceOutcomeAutomationSpec): string {

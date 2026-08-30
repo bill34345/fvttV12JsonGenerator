@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module';
+import * as yaml from 'js-yaml';
 import type { ParsedNPC } from './mapping';
 import { i18n } from './i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import type { ParserStrategy } from './types';
-
-const require = createRequire(import.meta.url);
-const yaml = require('js-yaml') as { load: (input: string) => unknown };
+import { validateForgeSourceMetadata } from './forgeSourceMetadata';
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 type AbilityKey = (typeof ABILITIES)[number];
@@ -197,6 +195,7 @@ export class EnglishBestiaryParser implements ParserStrategy {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const raw = this.loadFrontmatter(frontmatter);
+    validateForgeSourceMetadata(raw);
 
     const result: ParsedNPC = {
       name: typeof raw.name === 'string' ? raw.name : '',

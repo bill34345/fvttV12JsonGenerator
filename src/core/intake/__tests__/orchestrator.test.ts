@@ -1056,6 +1056,97 @@ describe('AI monster intake orchestrator', () => {
     expect(anchored.uncertainties[0]!.code).toBe('AMBIGUOUS_SHARED_USE');
   });
 
+  test('removes only a standard 2024 initiative-score uncertainty proven by exact source evidence', () => {
+    const candidate = {
+      id: 'lurker', label: 'Lurker in the Dark', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
+    };
+    const standard = buildValidLurkerIr();
+    const standardQuote = 'AC 14 先攻 +4（14）';
+    const standardStart = LURKER_SOURCE.indexOf(standardQuote);
+    const standardDisplay = '先攻 +4（14）';
+    const standardDisplayStart = LURKER_SOURCE.indexOf(standardDisplay);
+    standard.claims.find((claim) => claim.path === '/creature/attributes/initiative')!.evidence = [{
+      start: standardDisplayStart,
+      end: standardDisplayStart + standardDisplay.length,
+      quote: standardDisplay,
+    }];
+    standard.uncertainties = [{
+      id: 'initiative-parenthetical', code: 'initiative-parenthetical', path: '/creature/attributes/initiative',
+      message: 'The parenthetical initiative score was not encoded.', blocking: true,
+      evidence: [{ start: standardStart, end: standardStart + standardQuote.length, quote: standardQuote }],
+      candidates: [4, 14],
+    }];
+
+    expect(anchorIrEvidence(LURKER_SOURCE, candidate, standard).uncertainties).toEqual([]);
+
+    const negativeSource = LURKER_SOURCE.replace('先攻 +4（14）', '先攻 -2（8）');
+    const negative = buildValidLurkerIr();
+    negative.creature.attributes.initiative = -2;
+    const negativeDisplay = '先攻 -2（8）';
+    const negativeDisplayStart = negativeSource.indexOf(negativeDisplay);
+    negative.claims.find((claim) => claim.path === '/creature/attributes/initiative')!.evidence = [{
+      start: negativeDisplayStart,
+      end: negativeDisplayStart + negativeDisplay.length,
+      quote: negativeDisplay,
+    }];
+    negative.uncertainties = [{
+      id: 'initiative-negative-parenthetical', code: 'initiative-parenthetical', path: '/creature/attributes/initiative',
+      message: 'The negative initiative display was not encoded.', blocking: true,
+      evidence: [{ start: negativeDisplayStart, end: negativeDisplayStart + negativeDisplay.length, quote: negativeDisplay }],
+      candidates: [-2, 8],
+    }];
+
+    expect(anchorIrEvidence(negativeSource, {
+      ...candidate, end: negativeSource.length, quote: negativeSource,
+    }, negative).uncertainties).toEqual([]);
+
+    const unrelatedCode = buildValidLurkerIr();
+    unrelatedCode.claims.find((claim) => claim.path === '/creature/attributes/initiative')!.evidence = [{
+      start: standardDisplayStart,
+      end: standardDisplayStart + standardDisplay.length,
+      quote: standardDisplay,
+    }];
+    unrelatedCode.uncertainties = [{
+      id: 'initiative-semantic', code: 'ambiguous-initiative-source', path: '/creature/attributes/initiative',
+      message: 'A semantic initiative ambiguity remains.', blocking: true,
+      evidence: [{ start: standardDisplayStart, end: standardDisplayStart + standardDisplay.length, quote: standardDisplay }],
+    }];
+
+    expect(anchorIrEvidence(LURKER_SOURCE, candidate, unrelatedCode).uncertainties).toHaveLength(1);
+
+    const conflictingSource = `${LURKER_SOURCE}\nAlternate form: Initiative +3 (13)`;
+    const conflicting = buildValidLurkerIr();
+    conflicting.claims.find((claim) => claim.path === '/creature/attributes/initiative')!.evidence = [{
+      start: standardDisplayStart,
+      end: standardDisplayStart + standardDisplay.length,
+      quote: standardDisplay,
+    }];
+    conflicting.uncertainties = [{
+      id: 'initiative-conflicting-displays', code: 'initiative-parenthetical', path: '/creature/attributes/initiative',
+      message: 'The source contains conflicting initiative displays.', blocking: true,
+      evidence: [{ start: standardDisplayStart, end: standardDisplayStart + standardDisplay.length, quote: standardDisplay }],
+    }];
+
+    expect(anchorIrEvidence(conflictingSource, {
+      ...candidate, end: conflictingSource.length, quote: conflictingSource,
+    }, conflicting).uncertainties).toHaveLength(1);
+
+    const inconsistentSource = LURKER_SOURCE.replace('先攻 +4（14）', '先攻 +4（15）');
+    const inconsistent = buildValidLurkerIr();
+    const inconsistentQuote = 'AC 14 先攻 +4（15）';
+    const inconsistentStart = inconsistentSource.indexOf(inconsistentQuote);
+    inconsistent.uncertainties = [{
+      id: 'initiative-conflict', code: 'initiative-parenthetical', path: '/creature/attributes/initiative',
+      message: 'The parenthetical initiative score conflicts with the modifier.', blocking: true,
+      evidence: [{ start: inconsistentStart, end: inconsistentStart + inconsistentQuote.length, quote: inconsistentQuote }],
+      candidates: [4, 15],
+    }];
+
+    expect(anchorIrEvidence(inconsistentSource, {
+      ...candidate, end: inconsistentSource.length, quote: inconsistentSource,
+    }, inconsistent).uncertainties).toHaveLength(1);
+  });
+
   test('keeps semantic target-offset uncertainty despite exact whole-source evidence', () => {
     const ir = buildRatWarlockIr();
     ir.uncertainties = [{

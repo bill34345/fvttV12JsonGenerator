@@ -16,6 +16,8 @@ export interface HttpResponse {
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
+  /** Optional response body used by browser-safe streaming transports. */
+  body?: ReadableStream<any> | AsyncIterable<any> | null;
 }
 
 export type HttpClient = (url: string, init: HttpRequest) => Promise<HttpResponse>;

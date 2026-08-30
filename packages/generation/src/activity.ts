@@ -623,9 +623,9 @@ export class ActivityGenerator {
       });
       const change = this.isV14()
         ? {
-            key: 'system.attributes.ac.formula',
+            key: 'system.attributes.ac.bonus',
             type: 'add',
-            value: `+${action.passiveEffect.value}`,
+            value: action.passiveEffect.value,
             phase: 'initial',
             priority: null,
           }

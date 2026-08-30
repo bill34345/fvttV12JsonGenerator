@@ -21,3 +21,14 @@ export type {
   CanonicalActorSourceStatus,
   CanonicalActorSourceWarning,
 } from './canonicalActor';
+export {
+  FORGE_SOURCE_ID_FIELD,
+  FORGE_SOURCE_ID_PREFIX,
+  isForgeSourceId,
+} from './forgeSourceIdentity';
+export type { ForgeSourceId } from './forgeSourceIdentity';
+export {
+  FORGE_ITEM_SOURCE_ID_PREFIX,
+  isForgeItemSourceId,
+} from './forgeItemSourceIdentity';
+export type { ForgeItemSourceId } from './forgeItemSourceIdentity';

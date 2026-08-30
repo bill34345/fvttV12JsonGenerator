@@ -537,23 +537,23 @@ function verifyItemSpecificMechanic(
     // Markdown still supports V12, whose effect contract is verified by the
     // generic projection check below.
     if (target !== '14') return undefined;
-    const expectedValue = `+${String(expected.passiveEffect.value)}`;
+    const expectedValue = Number(expected.passiveEffect.value);
     const effectIndex = (document?.effects ?? []).findIndex((effect: any) =>
       effect?.transfer === true
       && effect?.type === 'base'
       && effect?.changes === undefined
       && Array.isArray(effect?.system?.changes)
       && effect.system.changes.some((change: any) =>
-        change?.key === 'system.attributes.ac.formula'
+        change?.key === 'system.attributes.ac.bonus'
         && change?.type === 'add'
         && change?.phase === 'initial'
-        && String(change?.value) === expectedValue));
+        && Number(change?.value) === expectedValue));
     if (effectIndex < 0) {
       diagnostics.push(error(
         'GEN_ITEM_AC_EFFECT_MISMATCH',
         'semantic',
         mechanic.path,
-        `Expected a transfer V14 Active Effect setting system.attributes.ac.formula to ${expectedValue}.`,
+        `Expected a transfer V14 Active Effect adding ${expectedValue} to system.attributes.ac.bonus.`,
       ));
       return [];
     }
