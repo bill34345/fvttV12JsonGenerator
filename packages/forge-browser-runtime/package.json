@@ -5,7 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./ai": "./src/ai.ts"
+    "./ai": "./src/ai.ts",
+    "./intake-review": "./src/intakeReview.ts",
+    "./item-intake": "./src/itemIntake.ts",
+    "./plaintext": "./src/plaintext.ts",
+    "./provider-connections": "./src/providerConnections.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"
@@ -14,6 +18,7 @@
     "@fvtt-json-generator/contracts": "workspace:*",
     "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
     "@fvtt-json-generator/generation": "workspace:*",
+    "@fvtt-json-generator/ingest-plaintext": "workspace:*",
     "@fvtt-json-generator/intake-ai": "workspace:*",
     "@fvtt-json-generator/models": "workspace:*",
     "@fvtt-json-generator/parser": "workspace:*",

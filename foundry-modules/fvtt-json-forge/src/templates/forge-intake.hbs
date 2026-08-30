@@ -1,0 +1,154 @@
+<section class="fvtt-json-forge-form forge-intake-panel" data-current-step="input">
+  <p class="forge-security-note">Review workspace 只导出严格安全投影；API Key、Authorization、完整 endpoint、provider 原始响应和本机路径不会进入 bundle、世界 Document、Chat 或日志。若勾选保存 API Key，它会进入当前浏览器的 client-only setting，同一 Foundry 页面内的其他模块理论上可能读取它。</p>
+  <p class="forge-creation-note">Analyze 只建立证据与审阅状态，不创建世界 Document。只有同一 snapshot 的单对象结果在 deterministic、AI review 与正式 Forge response 全部 accepted 后，Confirm Create 才可用。</p>
+
+  <nav class="forge-step-nav" data-step-nav aria-label="Forge Intake 工作流">
+    <ol>
+      <li data-step-indicator="connection">1. 连接 AI</li>
+      <li data-step-indicator="input">2. 输入与分析</li>
+      <li data-step-indicator="review">3. 审阅与创建</li>
+    </ol>
+  </nav>
+
+  <section class="forge-step forge-connection-step" data-step="connection" data-ai-settings hidden aria-labelledby="forge-connection-heading">
+    <header class="forge-step-heading">
+      <p class="forge-step-kicker">步骤 1</p>
+      <h2 id="forge-connection-heading">连接 AI</h2>
+      <p>先填写 Provider、API Key 和模型，再测试当前连接。Key 默认只保留在这个 Forge Intake 窗口内。</p>
+    </header>
+    <div class="forge-connection-card">
+      <div class="forge-connection-grid">
+        <label>Provider
+          <select name="provider">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="google-gemini">Google Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="xai">xAI (Grok)</option>
+            <option value="mistral">Mistral</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="alibaba-qwen">Alibaba Qwen</option>
+            <option value="moonshot-kimi">Moonshot / Kimi</option>
+            <option value="zhipu-glm">Zhipu GLM</option>
+            <option value="custom">Custom Provider</option>
+          </select>
+        </label>
+        <label>模型
+          <input name="model" type="search" list="forge-provider-model-options" autocomplete="off" placeholder="选择推荐模型或输入精确 model ID">
+          <datalist id="forge-provider-model-options" data-model-options></datalist>
+        </label>
+        <label class="forge-api-key-field">API Key
+          <span class="forge-secret-input"><input name="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="forge-key-memory-note"><button type="button" data-action="toggle-key" aria-label="显示 API Key">显示</button></span>
+        </label>
+      </div>
+      <p id="forge-key-memory-note" class="forge-key-memory-badge" role="status">仅保留在当前窗口 · 不会写入 snapshot、bundle、日志或世界数据</p>
+      <p data-connection-summary class="forge-connection-summary">请选择 Provider。</p>
+      <p data-connection-status class="forge-connection-status" role="status" aria-live="polite">未测试连接。</p>
+      <div class="forge-connection-actions">
+        <button type="button" data-action="test-connection">测试连接并加载模型</button>
+        <a data-provider-docs target="_blank" rel="noreferrer">从 Provider 官方页面获取 Key</a>
+      </div>
+    </div>
+    <details class="forge-advanced-settings">
+      <summary>高级连接设置（Chat Completions 为手动兼容选项）</summary>
+      <div class="forge-advanced-grid">
+        <label>HTTPS endpoint
+          <span class="forge-secret-input"><input name="endpoint" type="url" placeholder="https://example.com/v1"><button type="button" data-action="toggle-endpoint">自定义 endpoint</button></span>
+        </label>
+        <label>API 协议
+          <select name="protocol">
+            <option value="openai-responses">OpenAI Responses API（流式）</option>
+            <option value="openai-chat">OpenAI Chat Completions（手动选择）</option>
+            <option value="anthropic-messages">Anthropic Messages</option>
+          </select>
+        </label>
+        <label>区域 <select name="region"><option value="">默认</option></select></label>
+        <label>认证方式 <select name="authScheme"><option value="bearer">Bearer</option></select></label>
+        <label>Reasoning <select name="reasoning"><option value="auto">Auto</option></select></label>
+        <label>结构化输出 <select name="structuredOutput"><option value="json_schema">JSON Schema</option><option value="json_object">JSON Object</option><option value="prompt_fallback">严格 Prompt JSON fallback</option></select></label>
+      </div>
+    </details>
+    <label class="forge-inline-field"><input name="useSeparateReviewModel" type="checkbox"> 使用独立复核模型</label>
+    <label data-review-model-field>复核模型 <input name="reviewModel" type="search" autocomplete="off"></label>
+    <label class="forge-inline-field"><input name="persistApiKey" type="checkbox"> 保存 API Key 到当前浏览器（非默认）</label>
+    <p class="forge-key-warning">开启保存前请确认风险：这是 client-only setting，同一 Foundry 页面内其他模块理论上可能读取它。</p>
+    <div class="forge-secondary-actions">
+      <button type="button" data-action="clear-key">清除当前 API Key</button>
+      <button type="button" data-action="clear-all-keys">清除全部已保存 Key</button>
+    </div>
+  </section>
+
+  <section class="forge-step forge-input-step" data-step="input" aria-labelledby="forge-input-heading">
+    <header class="forge-step-heading">
+      <p class="forge-step-kicker">步骤 2</p>
+      <h2 id="forge-input-heading">输入与分析</h2>
+      <p>选择 Intake 类型，提供显示名称和来源文本，然后运行一次 Analyze。</p>
+    </header>
+    <div class="forge-input-grid">
+      <label>Intake 类型
+        <select name="mode">
+          <option value="plaintext-actor">Plaintext Actor</option>
+          <option value="ai-monster">AI Monster</option>
+          <option value="ai-item">AI Item</option>
+        </select>
+      </label>
+      <label>显示名称 <input name="displayName" type="text" autocomplete="off"></label>
+    </div>
+    <label>原始来源
+      <textarea name="source" rows="12" spellcheck="false" required></textarea>
+    </label>
+    <section class="forge-activity-card" data-activity-card hidden aria-live="polite">
+      <h3>当前 AI 请求</h3>
+      <p data-activity-summary>尚未开始请求。</p>
+      <p data-activity-detail></p>
+      <button type="button" data-action="cancel" disabled>结束请求</button>
+    </section>
+    <div class="forge-actions forge-input-actions">
+      <button type="button" data-action="analyze">Analyze</button>
+    </div>
+  </section>
+
+  <section class="forge-step forge-review-step" data-step="review" aria-labelledby="forge-review-heading">
+    <header class="forge-step-heading">
+      <p class="forge-step-kicker">步骤 3</p>
+      <h2 id="forge-review-heading">审阅与创建</h2>
+      <p data-human-summary>分析完成后，这里会按人类阅读顺序展示结果、Findings、证据和可用操作。</p>
+    </header>
+    <p data-status role="status" aria-live="polite">状态：empty</p>
+    <ol class="forge-stage-timeline" data-stages aria-label="阶段时间线"></ol>
+    <section class="forge-findings forge-diagnostics" data-diagnostics hidden tabindex="-1">
+      <h3>Findings / 需要处理的问题</h3>
+      <ul data-diagnostic-list></ul>
+    </section>
+    <section data-preview-section hidden class="forge-review-grid">
+      <details class="forge-human-review" open><summary>结果摘要与安全语义</summary><pre data-preview></pre></details>
+      <details class="forge-human-review" open><summary>来源与 evidence</summary><pre data-evidence></pre></details>
+      <details class="forge-technical-details"><summary>候选边界</summary><pre data-candidate></pre></details>
+      <details class="forge-technical-details"><summary>技术详情：Provider、model、calls、history</summary><pre data-metadata></pre></details>
+      <details class="forge-technical-details"><summary>Canonical source</summary><pre data-canonical></pre></details>
+      <details class="forge-technical-details"><summary>Accepted 候选 JSON</summary><pre data-json></pre></details>
+    </section>
+    <div class="forge-actions forge-action-groups forge-review-actions">
+      <div class="forge-action-group forge-primary-actions" data-action-group="primary">
+        <span>主要操作</span>
+        <button type="button" data-action="generate" disabled>Generate Candidate</button>
+        <button type="button" data-action="create" disabled>Confirm Create</button>
+      </div>
+      <div class="forge-action-group forge-repair-actions" data-action-group="repair">
+        <span>修复操作</span>
+        <button type="button" data-action="repair" disabled>Repair（本 attempt 最多一次）</button>
+        <button type="button" data-action="regenerate" disabled>Regenerate</button>
+      </div>
+      <div class="forge-action-group forge-decision-actions" data-action-group="decision">
+        <span>决策操作</span>
+        <button type="button" data-action="reject" disabled>Reject</button>
+      </div>
+      <div class="forge-action-group forge-tool-actions" data-action-group="tools">
+        <span>工具操作</span>
+        <button type="button" data-action="export" disabled>Export Review Bundle</button>
+        <button type="button" data-action="clear">Clear</button>
+      </div>
+      <button class="forge-running-cancel" type="button" data-action="cancel" disabled>结束请求</button>
+    </div>
+  </section>
+</section>

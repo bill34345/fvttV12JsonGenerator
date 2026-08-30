@@ -5,8 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./plaintext": "./src/plaintext.ts",
-    "./audit": "./src/plaintextAudit.ts"
+    "./plaintext": "./src/plaintextNode.ts",
+    "./plaintext-core": "./src/plaintext.ts",
+    "./audit": "./src/plaintextAudit.ts",
+    "./audit-core": "./src/plaintextAuditCore.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

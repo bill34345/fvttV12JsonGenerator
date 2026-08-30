@@ -309,8 +309,8 @@ function assertReadback(
 }
 
 function assertActorSemantics(artifact: JsonObject, readback: unknown): void {
-  const actual = actorSemantics(readback);
-  const expected = actorSemantics(artifact);
+  const actual = actorSemantics(readback, 'readback');
+  const expected = actorSemantics(artifact, 'artifact');
   const projected = projectReadbackToExpected(actual, expected);
   if (stableJson(projected) !== stableJson(expected)) {
     const path = firstDifferencePath(projected, expected) ?? 'unknown';
@@ -387,13 +387,13 @@ function getForgeIdentity(value: ForgeActorLike | unknown): {
   };
 }
 
-function actorSemantics(value: unknown): unknown {
+function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): unknown {
   const actor = getRecord(value);
   const system = getRecord(actor.system);
   const attributes = getRecord(system.attributes);
   const details = getRecord(system.details);
   const traits = getRecord(system.traits);
-  const items = Array.isArray(actor.items) ? actor.items.map((item) => itemSemantics(item)) : [];
+  const items = Array.isArray(actor.items) ? actor.items.map((item) => itemSemantics(item, effectSource)) : [];
   return {
     name: actor.name,
     type: actor.type,
@@ -404,11 +404,11 @@ function actorSemantics(value: unknown): unknown {
     senses: attributes.senses ?? traits.senses,
     abilities: system.abilities,
     items,
-    effects: Array.isArray(actor.effects) ? actor.effects.map(effectSemantics) : undefined,
+    effects: Array.isArray(actor.effects) ? actor.effects.map((effect) => effectSemantics(effect, effectSource)) : undefined,
   };
 }
 
-function itemSemantics(value: unknown): unknown {
+function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): unknown {
   const item = getRecord(value);
   const system = getRecord(item.system);
   const itemRange = system.range === undefined ? undefined : stripDocumentNoise(system.range);
@@ -423,13 +423,14 @@ function itemSemantics(value: unknown): unknown {
     uses: system.uses,
     ...(itemRange === undefined ? {} : { range: itemRange }),
     activities,
-    effects: Array.isArray(item.effects) ? item.effects.map(effectSemantics) : [],
+    effects: Array.isArray(item.effects) ? item.effects.map((effect) => effectSemantics(effect, effectSource)) : [],
   };
 }
 
 function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   const activity = getRecord(stripDocumentNoise(value));
   normalizeLegacySpellReferenceForComparison(activity);
+  normalizeInactiveActivityTemplateForComparison(activity);
   const activityRange = getRecord(activity.range);
   const parentRange = getRecord(itemRange);
   const itemReach = parentRange.reach;
@@ -445,6 +446,17 @@ function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
     activity.range = { ...getRecord(activity.range), long: itemLong };
   }
   return activity;
+}
+
+function normalizeInactiveActivityTemplateForComparison(activity: Record<string, any>): void {
+  const target = getRecord(activity.target);
+  const template = getRecord(target.template);
+  const hasType = template.type !== undefined && template.type !== null && template.type !== '';
+  const hasDimension = ['count', 'size', 'width', 'height']
+    .some((key) => template[key] !== undefined && template[key] !== null && template[key] !== '');
+  if (hasType || hasDimension || !Object.hasOwn(template, 'units')) return;
+  const { units: _units, ...templateWithoutInactiveUnits } = template;
+  activity.target = { ...target, template: templateWithoutInactiveUnits };
 }
 
 const LEGACY_SPELL_UUID_PATTERN = /^[0-9a-f]{16}$/u;
@@ -476,15 +488,57 @@ function normalizeLegacySpellReferenceForComparison(activity: Record<string, any
   if (legacyUuid) spell.uuid = legacyUuid;
 }
 
-function effectSemantics(value: unknown): unknown {
+function effectSemantics(value: unknown, source: 'artifact' | 'readback'): unknown {
   const effect = getRecord(value);
+  const systemChanges = getRecord(effect.system).changes;
+  const usesCanonicalChanges = Array.isArray(systemChanges);
+  const changes = usesCanonicalChanges ? systemChanges : effect.changes;
   return {
     id: effect._id,
     name: effect.name,
-    changes: effect.changes,
+    changes: Array.isArray(changes)
+      ? changes.map((changeValue: unknown) => {
+        const change = getRecord(changeValue);
+        const projectedChange = source === 'artifact' && !usesCanonicalChanges
+          ? normalizeFoundryV14LegacyEffectChange(change)
+          : change;
+        return {
+          ...projectedChange,
+          value: stableJson(projectedChange.value),
+        };
+      })
+      : changes,
     transfer: effect.transfer,
     statuses: effect.statuses,
   };
+}
+
+const FOUNDRY_V14_EFFECT_TYPES_BY_MODE: Readonly<Record<number, string>> = {
+  0: 'custom',
+  1: 'multiply',
+  2: 'add',
+  3: 'downgrade',
+  4: 'upgrade',
+  5: 'override',
+};
+
+function normalizeFoundryV14LegacyEffectChange(change: Record<string, any>): Record<string, any> {
+  const normalized = { ...change };
+  if (!Object.hasOwn(normalized, 'type') && typeof normalized.mode === 'number') {
+    normalized.type = FOUNDRY_V14_EFFECT_TYPES_BY_MODE[normalized.mode] ?? `custom.${normalized.mode}`;
+    delete normalized.mode;
+  }
+  normalized.value = normalizeFoundryV14EffectChangeValue(normalized.value);
+  return normalized;
+}
+
+function normalizeFoundryV14EffectChangeValue(value: unknown): unknown {
+  if (typeof value !== 'string' || value === '') return value;
+  try {
+    return normalizeFoundryV14EffectChangeValue(JSON.parse(value));
+  } catch {
+    return value;
+  }
 }
 
 function stripDocumentNoise(value: unknown): unknown {

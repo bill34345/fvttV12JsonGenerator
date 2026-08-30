@@ -72,6 +72,8 @@ export function projectForgeVerificationSummary(value: unknown): ForgeVerificati
 export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSummary {
   const item = requireRecord(value, 'itemDocument');
   const system = requireRecord(item.system, 'itemDocument.system');
+  const armor = projectDeclaredObject(system.armor, 'itemDocument.armor', ARMOR_POLICY);
+  if (armor.magicalBonus === null) delete armor.magicalBonus;
   const activitiesRecord = requireRecord(system.activities, 'itemDocument.system.activities');
   const activities: ForgeItemActivityDocumentSummary[] = Object.entries(activitiesRecord)
     .sort(([left], [right]) => left.localeCompare(right, 'en'))
@@ -84,7 +86,7 @@ export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSumma
     description: projectDeclaredObject(system.description, 'itemDocument.description', ITEM_DESCRIPTION_POLICY),
     rarity: requireSummaryScalarValue(system.rarity, 'itemDocument.rarity'),
     attunement: requireSummaryScalarValue(system.attunement, 'itemDocument.attunement'),
-    armor: projectDeclaredObject(system.armor, 'itemDocument.armor', ARMOR_POLICY),
+    armor,
     itemType: projectDeclaredObject(system.type, 'itemDocument.itemType', ITEM_TYPE_POLICY),
     properties: requireStringArray(system.properties, 'itemDocument.properties'),
     weight: projectDeclaredObject(system.weight, 'itemDocument.weight', WEIGHT_POLICY),
@@ -463,7 +465,15 @@ function projectItemActivityDocument(
   };
   for (const key of Object.keys(ACTIVITY_POLICIES) as Array<keyof typeof ACTIVITY_POLICIES>) {
     if (hasValue(activity, key)) {
-      result[key] = projectDeclaredObject(activity[key], `${label}.${key}`, ACTIVITY_POLICIES[key]);
+      const projected = projectDeclaredObject(activity[key], `${label}.${key}`, ACTIVITY_POLICIES[key]);
+      if (key === 'range' && projected.override === false) {
+        result[key] = { override: false };
+        continue;
+      }
+      if (key === 'target' && projected.override === false && isRecord(projected.template)) {
+        delete projected.template.units;
+      }
+      if (Object.keys(projected).length > 0) result[key] = projected;
     }
   }
   return result;
@@ -478,16 +488,78 @@ function projectItemEffectDocument(value: unknown, index: number): ForgeItemEffe
     name: requireNonEmptyString(effect.name, `${label}.name`),
     ...(origin !== undefined ? { origin } : {}),
     statuses: requireStringArray(effect.statuses ?? [], `${label}.statuses`),
-    changes: requireArray(effect.changes ?? [], `${label}.changes`).map((entry, changeIndex) => {
-      const change = requireRecord(entry, `${label}.changes[${changeIndex}]`);
-      return {
-        key: requireNonEmptyString(change.key, `${label}.changes[${changeIndex}].key`),
-        mode: projectScalar(change.mode),
-        value: requireString(change.value, `${label}.changes[${changeIndex}].value`),
-        priority: projectScalar(change.priority),
-      };
-    }),
+    changes: projectItemEffectChanges(effect, label),
   };
+}
+
+function projectItemEffectChanges(
+  effect: Record<string, unknown>,
+  label: string,
+): ForgeItemEffectDocumentSummary['changes'] {
+  const system = effect.system === undefined
+    ? undefined
+    : requireRecord(effect.system, `${label}.system`);
+  const legacy = effect.changes === undefined
+    ? undefined
+    : projectItemEffectChangeArray(effect.changes, `${label}.changes`);
+  const canonical = system?.changes === undefined
+    ? undefined
+    : projectItemEffectChangeArray(system.changes, `${label}.system.changes`);
+
+  if (legacy && canonical && legacy.length > 0 && canonical.length > 0) {
+    if (JSON.stringify(legacy) !== JSON.stringify(canonical)) {
+      throw new TypeError(`${label} contains conflicting legacy and canonical effect changes.`);
+    }
+    return canonical;
+  }
+  if (canonical && canonical.length > 0) return canonical;
+  if (legacy) return legacy;
+  return canonical ?? [];
+}
+
+function projectItemEffectChangeArray(
+  value: unknown,
+  label: string,
+): ForgeItemEffectDocumentSummary['changes'] {
+  return requireArray(value, label).map((entry, changeIndex) => {
+    const changeLabel = `${label}[${changeIndex}]`;
+    const change = requireRecord(entry, changeLabel);
+    return {
+      key: requireNonEmptyString(change.key, `${changeLabel}.key`),
+      mode: projectItemEffectChangeMode(change, `${changeLabel}.mode`),
+      value: projectEffectChangeValue(change.value, `${changeLabel}.value`),
+      priority: projectScalar(change.phase ?? change.priority),
+    };
+  });
+}
+
+const LEGACY_EFFECT_CHANGE_MODES = [
+  'custom',
+  'multiply',
+  'add',
+  'downgrade',
+  'upgrade',
+  'override',
+] as const;
+
+function projectItemEffectChangeMode(
+  change: Record<string, unknown>,
+  label: string,
+): string | number | boolean | null {
+  if (change.type !== undefined) return requireNonEmptyString(change.type, label);
+  if (typeof change.mode === 'number' && Number.isInteger(change.mode)) {
+    const canonical = LEGACY_EFFECT_CHANGE_MODES[change.mode];
+    if (canonical !== undefined) return canonical;
+  }
+  return projectScalar(change.mode);
+}
+
+function projectEffectChangeValue(value: unknown, label: string): string {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${label} must be a finite number or string.`);
+    return String(value);
+  }
+  return requireString(value, label);
 }
 
 function projectItemActivityDocumentSummary(value: unknown, index: number): ForgeItemActivityDocumentSummary {

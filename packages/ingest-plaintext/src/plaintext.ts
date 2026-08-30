@@ -1,7 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
 import yaml from 'js-yaml';
-import { PlainTextAuditWorkflow } from './plaintextAudit';
 import { normalizeChineseText } from '@fvtt-json-generator/parser/normalize';
 
 const SECTION_ORDER = ['特性', '动作', '附赠动作', '反应', '传奇动作'] as const;
@@ -218,13 +215,6 @@ export interface PlainTextAiNormalizer {
   normalizeBlock(block: string): Promise<string>;
 }
 
-export interface PlainTextIngestionOptions {
-  sourcePath: string;
-  emitDir: string;
-  dryRun?: boolean;
-  enableAiNormalize?: boolean;
-}
-
 export interface IngestedCreatureFile {
   chineseName: string;
   englishName: string;
@@ -236,96 +226,24 @@ export interface IngestedCreatureFile {
   rawNotes: string[];
 }
 
-export interface PlainTextIngestionResult {
-  sourcePath: string;
-  emitDir: string;
-  dryRun: boolean;
-  usedAi: boolean;
-  files: IngestedCreatureFile[];
-}
-
-export class PlainTextIngestionWorkflow {
-  private readonly aiNormalizer?: PlainTextAiNormalizer;
-
-  constructor(options: { aiNormalizer?: PlainTextAiNormalizer | null } = {}) {
-    this.aiNormalizer = options.aiNormalizer ?? undefined;
-  }
-
-  public async ingest(options: PlainTextIngestionOptions): Promise<PlainTextIngestionResult> {
-    const sourcePath = this.resolvePath(options.sourcePath);
-    const emitDir = this.resolvePath(options.emitDir);
-    const middleDir = join(dirname(emitDir), 'middle');
-    const auditDir = join(dirname(emitDir), 'audits');
-    const raw = readFileSync(sourcePath, 'utf-8');
-    const blocks = splitCollection(raw);
-    const files: IngestedCreatureFile[] = [];
-
-    for (const block of blocks) {
-      const ruleBasedNormalized = normalizeBlock(block.rawBlock);
-      let normalized = ruleBasedNormalized;
-
-      if (options.enableAiNormalize && this.aiNormalizer) {
-        try {
-          const aiText = await this.aiNormalizer.normalizeBlock(ruleBasedNormalized);
-          const isYaml = aiText.trim().startsWith('---');
-          const isMarkdown = aiText.includes('# **');
-          if (isYaml || isMarkdown) {
-            normalized = aiText;
-          }
-        } catch {
-        }
-      }
-
-      let creature: IngestedCreatureFile;
-      if (normalized.trim().startsWith('---')) {
-        creature = parseYamlNormalizedBlock(normalized, block.heading);
-      } else {
-        creature = parseCreatureBlock(normalized);
-      }
-      files.push(creature);
-    }
-
-    if (!options.dryRun) {
-      mkdirSync(middleDir, { recursive: true });
-      mkdirSync(auditDir, { recursive: true });
-      for (const file of files) {
-        const outputPath = join(middleDir, file.fileName);
-        mkdirSync(dirname(outputPath), { recursive: true });
-        writeFileSync(outputPath, file.markdown);
-      }
-
-      // 触发审计
-      const auditWorkflow = new PlainTextAuditWorkflow();
-      auditWorkflow.audit(middleDir, sourcePath);
-    }
-
-    return {
-      sourcePath,
-      emitDir: middleDir,
-      dryRun: Boolean(options.dryRun),
-      usedAi: Boolean(options.enableAiNormalize && this.aiNormalizer),
-      files,
-    };
-  }
-
-  private resolvePath(path: string): string {
-    return isAbsolute(path) ? path : resolve(process.cwd(), path);
-  }
-}
-
 export function splitCollection(text: string): Array<{
   rawBlock: string;
   heading: string;
   chineseName: string;
   englishName: string;
+  start: number;
+  end: number;
+  quote: string;
 }> {
-  const normalized = text.replace(/\r\n/g, '\n');
-  const matches = [...normalized.matchAll(/^#\s+\*\*(.+?)\*\*\s*$/gm)];
+  const matches = [...text.matchAll(/^#\s+\*\*(.+?)\*\*\s*$/gm)];
   const blocks: Array<{
     rawBlock: string;
     heading: string;
     chineseName: string;
     englishName: string;
+    start: number;
+    end: number;
+    quote: string;
   }> = [];
 
   for (let index = 0; index < matches.length; index++) {
@@ -336,14 +254,18 @@ export function splitCollection(text: string): Array<{
     }
 
     const start = current.index ?? 0;
-    const end = next?.index ?? normalized.length;
-    const rawBlock = normalized.slice(start, end).trim();
+    const end = next?.index ?? text.length;
+    const quote = text.slice(start, end);
+    const rawBlock = quote.replace(/\r\n/g, '\n').trim();
     const names = parseNamesFromHeading(current[1]);
     blocks.push({
       rawBlock,
       heading: current[1].trim(),
       chineseName: names.chineseName,
       englishName: names.englishName,
+      start,
+      end,
+      quote,
     });
   }
 

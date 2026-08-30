@@ -1,5 +1,6 @@
 import { createForgeActorApplicationClass } from './application';
 import { createForgeItemApplicationClass } from './itemApplication';
+import { createForgeIntakeApplicationClass } from './intakeApplication';
 import {
   assertExactRuntime,
   assertGm,
@@ -32,13 +33,26 @@ export function openForgeItem(): unknown {
   return new Application().render(true);
 }
 
+export function openForgeIntake(): unknown {
+  const game = (globalThis as any).game;
+  assertGm(game);
+  assertExactRuntime(game);
+  const Application = createForgeIntakeApplicationClass({
+    game,
+    ui: (globalThis as any).ui,
+    foundry: (globalThis as any).foundry,
+  });
+  return new Application().render(true);
+}
+
 export function initializeForgeModule(globalEnvironment: any = globalThis): void {
   if (!globalEnvironment.Hooks) return;
   let actorMenuRegistered = false;
   let itemMenuRegistered = false;
+  let intakeMenuRegistered = false;
   let registrationRetryCount = 0;
   const registerForgeMenus = () => {
-    if (actorMenuRegistered && itemMenuRegistered) return;
+    if (actorMenuRegistered && itemMenuRegistered && intakeMenuRegistered) return;
     const settings = globalEnvironment.game?.settings;
     if (!settings?.registerMenu) return;
     try {
@@ -74,12 +88,28 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
         });
         itemMenuRegistered = true;
       }
+      if (!intakeMenuRegistered) {
+        const intakeMenuType = createForgeIntakeApplicationClass({
+          game: globalEnvironment.game,
+          ui: globalEnvironment.ui,
+          foundry: globalEnvironment.foundry,
+        });
+        settings.registerMenu(MODULE_ID, 'forgeIntake', {
+          name: 'Forge Intake',
+          label: 'Forge Intake',
+          hint: `GM-only bounded review workspace for Foundry ${EXPECTED_FOUNDRY_VERSION} / dnd5e ${EXPECTED_SYSTEM_VERSION}.`,
+          icon: 'fas fa-magnifying-glass-chart',
+          type: intakeMenuType,
+          restricted: true,
+        });
+        intakeMenuRegistered = true;
+      }
     } catch (error) {
       globalEnvironment.console?.error?.('FVTT JSON Forge menus were not fully registered because ApplicationV2 was unavailable.', error);
     }
   };
   const retryMenuRegistration = () => {
-    if ((actorMenuRegistered && itemMenuRegistered) || registrationRetryCount >= 20 || typeof globalEnvironment.setTimeout !== 'function') return;
+    if ((actorMenuRegistered && itemMenuRegistered && intakeMenuRegistered) || registrationRetryCount >= 20 || typeof globalEnvironment.setTimeout !== 'function') return;
     registrationRetryCount += 1;
     globalEnvironment.setTimeout(() => {
       registerForgeMenus();
@@ -93,7 +123,7 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
     registerForgeMenus();
     const game = globalEnvironment.game;
     const module = game?.modules?.get?.(MODULE_ID);
-    if (module) module.api = Object.freeze({ openForgeActor, openForgeItem });
+    if (module) module.api = Object.freeze({ openForgeActor, openForgeItem, openForgeIntake });
     if (game?.user?.isGM !== true) return;
     try {
       assertExactRuntime(game);

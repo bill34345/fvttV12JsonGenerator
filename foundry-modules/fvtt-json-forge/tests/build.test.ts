@@ -11,6 +11,7 @@ describe('FVTT JSON Forge browser build', () => {
       'scripts/index.js',
       'styles/fvtt-json-forge.css',
       'templates/forge-actor.hbs',
+      'templates/forge-intake.hbs',
       'templates/forge-item.hbs',
     ]);
     const manifest = JSON.parse(await readFile(resolve(result.moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;

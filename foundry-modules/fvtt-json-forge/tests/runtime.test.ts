@@ -111,6 +111,104 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(collection.contents).toHaveLength(1);
   });
 
+  test('accepts Foundry v14 migration of legacy ActiveEffect changes and rejects readback drift', async () => {
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/scuttling-serpentmaw__蛇口蛮蟹.md').text();
+    const response = await convertFinalActorSource(buildForgeActorRequest({
+      content: source,
+      displayName: 'Scuttling Serpentmaw',
+      requestId: 'runtime-v14-effect-change-value',
+      fvttVersion: '14.364',
+      systemVersion: '5.3.3',
+    }));
+    if (!('result' in response) || response.result.status !== 'accepted') {
+      throw new Error(`Expected an accepted Scuttling Serpentmaw response: ${JSON.stringify(response)}`);
+    }
+
+    const brittleShell = (response.result.artifact.items as Array<Record<string, any>>)
+      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+    expect(brittleShell?.effects?.[0]?.changes?.[0]?.mode).toBe(5);
+    expect(brittleShell?.effects?.[0]?.changes?.[0]?.value).toBe('14');
+
+    const collection = new FakeActorCollection();
+    const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
+    const imported = collection.contents[0]!.toObject() as Record<string, any>;
+    const importedBrittleShell = (imported.items as Array<Record<string, any>>)
+      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+    const importedEffect = importedBrittleShell?.effects?.[0] as Record<string, any>;
+
+    expect(result.status).toBe('created');
+    expect(importedEffect?.system?.changes?.[0]?.type).toBe('override');
+    expect(importedEffect?.system?.changes?.[0]).not.toHaveProperty('mode');
+    expect(importedEffect?.system?.changes?.[0]?.value).toBe(14);
+
+    const persistedBrittleShell = (collection.contents[0]!.data.items as Array<Record<string, any>>)
+      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+    const persistedEffect = persistedBrittleShell?.effects?.[0] as Record<string, any>;
+    const canonicalChanges = structuredClone(persistedEffect.system.changes);
+    delete persistedEffect.system.changes;
+    persistedEffect.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: '14' }));
+    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
+      .rejects.toThrow(/failed readback verification/u);
+
+    delete persistedEffect.changes;
+    persistedEffect.system.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: 15 }));
+    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
+      .rejects.toThrow(/failed readback verification/u);
+
+    persistedEffect.system.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, type: 'add' }));
+    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
+      .rejects.toThrow(/failed readback verification/u);
+    expect(collection.createCount).toBe(1);
+    expect(collection.contents).toHaveLength(1);
+
+    const canonicalResponse = withCanonicalEffectChanges(response, '脆壳反震 (Brittle Shell)');
+    const canonicalCollection = new FakeActorCollection();
+    await expect(createAcceptedForgeActor({ game: supportedGame(canonicalCollection), response: canonicalResponse }))
+      .resolves.toMatchObject({ status: 'created' });
+    const canonicalImportedItem = (canonicalCollection.contents[0]!.data.items as Array<Record<string, any>>)
+      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+    expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.type).toBe('override');
+    expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]).not.toHaveProperty('mode');
+    expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.value).toBe('14');
+  });
+
+  test('ignores only inactive Activity template unit defaults and rejects active-template unit drift', async () => {
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/scuttling-serpentmaw__蛇口蛮蟹.md').text();
+    const response = await convertFinalActorSource(buildForgeActorRequest({
+      content: source,
+      displayName: 'Scuttling Serpentmaw',
+      requestId: 'runtime-v14-inactive-template-units',
+      fvttVersion: '14.364',
+      systemVersion: '5.3.3',
+    }));
+    if (!('result' in response) || response.result.status !== 'accepted') {
+      throw new Error(`Expected an accepted Scuttling Serpentmaw response: ${JSON.stringify(response)}`);
+    }
+
+    const venomousBite = (response.result.artifact.items as Array<Record<string, any>>)
+      .find((item) => item.name === '毒液咬击 (Venomous Bite)');
+    const utilityActivity = Object.values(asRecord(venomousBite?.system?.activities))
+      .map(asRecord)
+      .find((activity) => activity.name === 'Gain Temporary HP');
+    expect(utilityActivity?.target?.template).toMatchObject({ type: '', size: '', units: '' });
+
+    const collection = new FakeActorCollection();
+    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
+      .resolves.toMatchObject({ status: 'created' });
+    const importedUtility = findActivity(collection.contents[0]!.data, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    expect(importedUtility.target.template.units).toBe('ft');
+
+    const activeResponse = withActiveActivityTemplate(response, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    const activeCollection = new FakeActorCollection();
+    await expect(createAcceptedForgeActor({ game: supportedGame(activeCollection), response: activeResponse }))
+      .resolves.toMatchObject({ status: 'created' });
+    const activeImported = findActivity(activeCollection.contents[0]!.data, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    activeImported.target.template.units = 'm';
+    await expect(createAcceptedForgeActor({ game: supportedGame(activeCollection), response: activeResponse }))
+      .rejects.toThrow(/failed readback verification/u);
+    expect(activeCollection.createCount).toBe(1);
+  });
+
   test('rejects a matching-flags existing Actor when its readback semantics are corrupt', async () => {
     const collection = new FakeActorCollection();
     const game = supportedGame(collection);
@@ -467,6 +565,58 @@ function conflictingResponse(response: ForgeActorResponse): ForgeActorResponse {
   };
 }
 
+function withCanonicalEffectChanges(response: ForgeActorResponse, itemName: string): ForgeActorResponse {
+  if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Accepted response fixture required.');
+  const artifact = structuredClone(response.result.artifact) as Record<string, any>;
+  const item = (artifact.items as Array<Record<string, any>>).find((entry) => entry.name === itemName);
+  const effect = item?.effects?.[0] as Record<string, any>;
+  const changes = structuredClone(effect.changes).map(simulateFoundryV14LegacyEffectChangeMode);
+  delete effect.changes;
+  effect.system = { ...asRecord(effect.system), changes };
+  return {
+    ...response,
+    result: {
+      ...response.result,
+      artifact,
+      artifactHash: hashArtifact(artifact),
+    },
+  };
+}
+
+function withActiveActivityTemplate(
+  response: ForgeActorResponse,
+  itemName: string,
+  activityId: string,
+): ForgeActorResponse {
+  if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Accepted response fixture required.');
+  const artifact = structuredClone(response.result.artifact) as Record<string, any>;
+  const item = (artifact.items as Array<Record<string, any>>).find((entry) => entry.name === itemName);
+  const activity = asRecord(item?.system?.activities?.[activityId]);
+  const target = asRecord(activity.target);
+  activity.target = {
+    ...target,
+    template: {
+      ...asRecord(target.template),
+      type: 'sphere',
+      size: '10',
+      units: 'ft',
+    },
+  };
+  return {
+    ...response,
+    result: {
+      ...response.result,
+      artifact,
+      artifactHash: hashArtifact(artifact),
+    },
+  };
+}
+
+function findActivity(actor: Record<string, any>, itemName: string, activityId: string): Record<string, any> {
+  const item = (actor.items as Array<Record<string, any>>).find((entry) => entry.name === itemName);
+  return asRecord(item?.system?.activities?.[activityId]);
+}
+
 function asRecord(value: unknown): Record<string, any> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {};
 }
@@ -482,15 +632,83 @@ function simulateDnd5eImport(item: Record<string, any>): Record<string, any> {
   const activities = asRecord(system.activities);
   return {
     ...item,
+    effects: Array.isArray(item.effects)
+      ? item.effects.map(simulateFoundryV14EffectImport)
+      : item.effects,
     system: {
       ...system,
       activities: Object.fromEntries(Object.entries(activities).map(([id, activity]) => {
         const value = asRecord(activity);
         const range = asRecord(value.range);
-        if (!Object.prototype.hasOwnProperty.call(range, 'reach') && !Object.prototype.hasOwnProperty.call(range, 'long')) return [id, activity];
+        const target = asRecord(value.target);
+        const template = asRecord(target.template);
+        const importedTarget = Object.keys(target).length === 0
+          ? value.target
+          : {
+            ...target,
+            template: Object.keys(template).length === 0
+              ? target.template
+              : { ...template, units: template.units === '' ? 'ft' : template.units },
+          };
+        if (!Object.prototype.hasOwnProperty.call(range, 'reach') && !Object.prototype.hasOwnProperty.call(range, 'long')) {
+          return [id, { ...value, target: importedTarget }];
+        }
         const { reach: _reach, long: _long, ...rangeWithoutFoundryOnlyFields } = range;
-        return [id, { ...value, range: rangeWithoutFoundryOnlyFields }];
+        return [id, { ...value, range: rangeWithoutFoundryOnlyFields, target: importedTarget }];
       })),
     },
   };
+}
+
+function simulateFoundryV14EffectImport(effectValue: unknown): Record<string, any> {
+  const effect = asRecord(effectValue);
+  const effectSystem = asRecord(effect.system);
+  const usesCanonicalChanges = Array.isArray(effectSystem.changes);
+  const sourceChanges = usesCanonicalChanges ? effectSystem.changes : effect.changes;
+  const { changes: _legacyChanges, system: _system, ...effectWithoutLegacyChanges } = effect;
+  return {
+    ...effectWithoutLegacyChanges,
+    system: {
+      ...effectSystem,
+      changes: Array.isArray(sourceChanges)
+        ? sourceChanges.map((changeValue: unknown) => {
+          const change = asRecord(changeValue);
+          return usesCanonicalChanges ? change : simulateFoundryV14LegacyEffectChange(change);
+        })
+        : sourceChanges,
+    },
+  };
+}
+
+const FOUNDRY_V14_EFFECT_TYPES_BY_MODE: Readonly<Record<number, string>> = {
+  0: 'custom',
+  1: 'multiply',
+  2: 'add',
+  3: 'downgrade',
+  4: 'upgrade',
+  5: 'override',
+};
+
+function simulateFoundryV14LegacyEffectChange(change: Record<string, any>): Record<string, any> {
+  const normalized = simulateFoundryV14LegacyEffectChangeMode(change);
+  normalized.value = simulateFoundryV14EffectChangeValue(normalized.value);
+  return normalized;
+}
+
+function simulateFoundryV14LegacyEffectChangeMode(change: Record<string, any>): Record<string, any> {
+  const normalized = { ...change };
+  if (!Object.hasOwn(normalized, 'type') && typeof normalized.mode === 'number') {
+    normalized.type = FOUNDRY_V14_EFFECT_TYPES_BY_MODE[normalized.mode] ?? `custom.${normalized.mode}`;
+    delete normalized.mode;
+  }
+  return normalized;
+}
+
+function simulateFoundryV14EffectChangeValue(value: unknown): unknown {
+  if (typeof value !== 'string' || value === '') return value;
+  try {
+    return simulateFoundryV14EffectChangeValue(JSON.parse(value));
+  } catch {
+    return value;
+  }
 }

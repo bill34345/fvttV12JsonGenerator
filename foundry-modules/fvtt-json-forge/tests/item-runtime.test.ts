@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { buildForgeItemRequest, convertFinalItemSource } from '@fvtt-json-generator/forge-browser-runtime';
 import {
   hashArtifact,
+  projectForgeItemDocument,
   type ForgeItemResponse,
   type ForgeItemSourceId,
   type JsonObject,
@@ -55,6 +56,86 @@ describe('Forge world Item adapter', () => {
     expect(second.uuid).toBe(first.uuid);
     expect(world.createCalls).toBe(1);
     expect(world.game.actors.contents).toHaveLength(actorCount);
+  });
+
+  test('accepts Foundry V14 readback after dnd5e moves Item effect changes into system.changes', async () => {
+    const world = makeWorld();
+    world.mutateCreated = (data) => {
+      const changed = clone(data) as Record<string, any>;
+      for (const effect of changed.effects ?? []) {
+        const legacyChanges = Array.isArray(effect.changes) ? effect.changes : [];
+        const canonicalChanges = Array.isArray(effect.system?.changes) ? effect.system.changes : [];
+        const normalizedChanges = (canonicalChanges.length > 0
+          ? canonicalChanges
+          : legacyChanges.map((change: Record<string, unknown>) => ({
+            key: change.key,
+            type: change.mode,
+            value: change.value,
+            phase: change.priority,
+          }))).map((change: Record<string, unknown>) => ({
+            ...change,
+            mode: change.type === 'add' ? 2 : change.type === 'override' ? 5 : change.mode,
+          }));
+        effect.system = {
+          ...(effect.system ?? {}),
+          changes: normalizedChanges,
+        };
+        effect.changes = normalizedChanges;
+      }
+      return changed;
+    };
+
+    const first = await createAcceptedForgeItem({ game: world.game, response: acceptedResponse });
+    expect(first.status).toBe('created');
+    const second = await createAcceptedForgeItem({ game: world.game, response: acceptedResponse });
+    expect(second.status).toBe('existing');
+    expect(second.uuid).toBe(first.uuid);
+    expect(world.createCalls).toBe(1);
+  });
+
+  test('normalizes Foundry-added non-override Activity defaults without hiding active semantics', () => {
+    if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') {
+      throw new Error('Missing accepted fixture.');
+    }
+    const expected = clone(acceptedResponse.result.artifact) as Record<string, any>;
+    const activity = Object.values(expected.system.activities)[0] as Record<string, any>;
+    delete activity.description;
+    activity.range = { override: false };
+    activity.target = { override: false, template: { units: '' }, affects: { type: 'self' } };
+    const readback = clone(expected) as Record<string, any>;
+    const readbackActivity = Object.values(readback.system.activities)[0] as Record<string, any>;
+    readbackActivity.description = {};
+    readbackActivity.range.units = 'self';
+    readbackActivity.target.template.units = 'ft';
+    expected.system.armor.magicalBonus = null;
+    delete readback.system.armor.magicalBonus;
+
+    expect(projectForgeItemDocument(readback)).toEqual(projectForgeItemDocument(expected));
+    expect(projectForgeItemDocument(readback).activities[0]?.target).toMatchObject({
+      override: false,
+      affects: { type: 'self' },
+    });
+  });
+
+  test('fails closed when legacy and canonical Item effect changes conflict', async () => {
+    const world = makeWorld();
+    world.mutateCreated = (data) => {
+      const changed = clone(data) as Record<string, any>;
+      const effect = changed.effects?.[0];
+      if (effect) {
+        effect.system = {
+          ...(effect.system ?? {}),
+          changes: [{ key: 'system.attributes.ac.bonus', type: 'add', value: '+1', phase: 'initial' }],
+        };
+        effect.changes = [{ key: 'system.attributes.ac.bonus', mode: 'add', value: '+2', priority: 'initial' }];
+      }
+      return changed;
+    };
+
+    await expect(createAcceptedForgeItem({ game: world.game, response: acceptedResponse }))
+      .rejects.toThrow(/cannot be projected/u);
+    expect(world.items).toEqual([]);
+    expect(world.deletedIds).toHaveLength(1);
   });
 
   test('reuses the atomic deterministic-ID winner after a concurrent create rejection', async () => {

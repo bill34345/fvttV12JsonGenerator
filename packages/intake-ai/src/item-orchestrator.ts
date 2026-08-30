@@ -12,19 +12,27 @@ import {
 } from '@fvtt-json-generator/generation/v14-spell-catalog';
 import { renderItemIntakeMarkdown } from './item-renderer';
 import type {
-  ItemIntakeCoverage,
   ItemAiReviewResult,
   ItemDiscoveryCandidate,
   ItemIntakeAiProvider,
   ItemIntakeDecisionsFile,
-  ItemIntakeAbility,
   ItemIntakeFinding,
   ItemIntakeIR,
   ItemIntakeOptions,
   ItemIntakeResultEntry,
   ItemIntakeRunResult,
 } from './item-types';
+import {
+  itemCandidateBoundaryIssue,
+  normalizeItemCandidates,
+  normalizeItemIntakeIR,
+} from './item-core';
 import { validateItemIntakeIR } from './item-validator';
+
+const NODE_ITEM_CORE_RESOLVER = {
+  resolveSpell: resolveLockedDnd5eV14Spell,
+  resolveActivation: resolveLockedDnd5eV14SpellActivation,
+};
 
 export const ITEM_INTAKE_LIMITS = {
   maxSourceLength: 200_000,
@@ -93,7 +101,7 @@ export async function runItemIntake(
 
   try {
     const discovery = await provider.discover({ source: options.source, sourceSha256 });
-    const candidates = normalizeCandidates(options.source, discovery?.candidates ?? []);
+    const candidates = normalizeItemCandidates(options.source, discovery?.candidates ?? []);
     writeJson(join(runPath, 'discovery.json'), { schemaVersion: 1, candidates });
     if (candidates.length === 0) {
       const entry = discoveryFailure(runPath, 'DISCOVERY_EMPTY', 'AI Item Intake found no recognizable Item boundary.');
@@ -103,7 +111,7 @@ export async function runItemIntake(
       const entry = discoveryFailure(runPath, 'DISCOVERY_LIMIT', `AI Item Intake found more than ${ITEM_INTAKE_LIMITS.maxItems} Items.`);
       return finish(manifest, runPath, sourceSha256, [entry], 'needs_review', candidates.length);
     }
-    const boundaryIssue = candidateBoundaryIssue(options.source, candidates);
+    const boundaryIssue = itemCandidateBoundaryIssue(options.source, candidates);
     if (boundaryIssue) {
       const entry = discoveryFailure(runPath, boundaryIssue.code, boundaryIssue.message);
       return finish(manifest, runPath, sourceSha256, [entry], 'needs_review', candidates.length);
@@ -199,7 +207,7 @@ async function processIr(
 ): Promise<ItemIntakeResultEntry> {
   const bundlePath = join(runPath, 'items', safeId(candidate.id));
   mkdirSync(bundlePath, { recursive: true });
-  let ir = normalizeItemIntakeIR(options.source, candidate, initialIr);
+  let ir = normalizeItemIntakeIR(options.source, candidate, initialIr, NODE_ITEM_CORE_RESOLVER);
   while (true) {
     writeJson(join(bundlePath, 'intake-ir.json'), ir);
     const deterministic = validateItemIntakeIR(options.source, ir, candidate);
@@ -207,7 +215,7 @@ async function processIr(
       if (calls.repair === 0) {
         calls.repair += 1;
         try {
-          ir = normalizeItemIntakeIR(options.source, candidate, await provider.repair({ source: options.source, candidate, ir, deterministicFindings: deterministic.findings }));
+          ir = normalizeItemIntakeIR(options.source, candidate, await provider.repair({ source: options.source, candidate, ir, deterministicFindings: deterministic.findings }), NODE_ITEM_CORE_RESOLVER);
           continue;
         } catch (error) {
           return failedCandidate(runPath, candidate, calls, error, deterministic.findings);
@@ -261,7 +269,7 @@ async function processIr(
     if (review.verdict === 'revise' && calls.repair === 0) {
       calls.repair += 1;
       try {
-        ir = normalizeItemIntakeIR(options.source, candidate, await provider.repair({ source: options.source, candidate, ir, deterministicFindings: deterministic.findings, review }));
+        ir = normalizeItemIntakeIR(options.source, candidate, await provider.repair({ source: options.source, candidate, ir, deterministicFindings: deterministic.findings, review }), NODE_ITEM_CORE_RESOLVER);
         continue;
       } catch (error) {
         return failedCandidate(runPath, candidate, calls, error, reviewFindings);
@@ -311,256 +319,6 @@ function promoteAccepted(
   writeFileSync(markdownPath, markdown, 'utf-8');
   copyFileSync(candidateJsonPath, itemPath);
   return { markdownPath, itemPath, findings: [] };
-}
-
-function normalizeCandidates(source: string, candidates: unknown[]): ItemDiscoveryCandidate[] {
-  if (!Array.isArray(candidates)) return [];
-  return candidates.filter((candidate): candidate is ItemDiscoveryCandidate => {
-    const value = candidate as ItemDiscoveryCandidate;
-    if (typeof value?.id !== 'string' || typeof value.label !== 'string' || typeof value.quote !== 'string' || !value.quote) return false;
-    if (Number.isInteger(value.start) && Number.isInteger(value.end)
-      && value.start >= 0 && value.end > value.start && value.end <= source.length
-      && source.slice(value.start, value.end) === value.quote) return true;
-
-    // Models often omit trailing whitespace from a full-item quote while
-    // reporting the intended boundary. Re-anchor only an exact quote that is
-    // unique in the immutable source; repeated or approximate quotes remain
-    // invalid and must go to review.
-    const firstStart = source.indexOf(value.quote);
-    if (firstStart < 0 || source.indexOf(value.quote, firstStart + value.quote.length) >= 0) return false;
-    value.start = firstStart;
-    value.end = firstStart + value.quote.length;
-    return true;
-  }).sort((left, right) => left.start - right.start || left.end - right.end);
-}
-
-/**
- * Canonicalize only mechanically derivable evidence drift before validation.
- *
- * Models occasionally count a trailing newline differently, or insert a
- * paragraph newline while quoting a sentence.  The source text is immutable,
- * so it is safe to replace a reported reference only when the same text can
- * be located uniquely (or the only difference is whitespace).  Ambiguous or
- * approximate evidence is left untouched and remains a blocking review
- * finding.
- */
-function normalizeItemIntakeIR(source: string, candidate: ItemDiscoveryCandidate, initial: ItemIntakeIR): ItemIntakeIR {
-  const next = structuredClone(initial);
-  if (next.source) next.source.length = source.length;
-  if (Array.isArray(next.item?.stages)) {
-    next.item.stages = next.item.stages.map((stage) => ({
-      ...stage,
-      evidence: normalizeEvidenceRefs(source, candidate, stage.evidence),
-    }));
-  }
-  if (Array.isArray(next.item?.abilities)) {
-    next.item.abilities = next.item.abilities.map((ability) => {
-      const normalized = {
-        ...ability,
-        evidence: normalizeEvidenceRefs(source, candidate, ability.evidence),
-      } as ItemIntakeAbility;
-      if (normalized.kind === 'light') {
-        const radii = deriveLightRadii(normalized.evidence.map((ref) => ref.quote).join('\n'));
-        if (radii) Object.assign(normalized, radii);
-      }
-      if (normalized.kind === 'spell') {
-        const resolved = resolveLockedDnd5eV14Spell(normalized.spell.identifier, normalized.spell.name);
-        if (resolved) normalized.spell = { identifier: resolved.identifier, name: resolved.name };
-      }
-      return normalized;
-    }) as ItemIntakeAbility[];
-  }
-  if (Array.isArray(next.claims)) {
-    next.claims = next.claims.map((claim) => ({
-      ...claim,
-      evidence: normalizeEvidenceRefs(source, candidate, claim.evidence),
-    }));
-  }
-  if (Array.isArray(next.uncertainties)) {
-    next.uncertainties = next.uncertainties.map((uncertainty) => ({
-      ...uncertainty,
-      evidence: normalizeEvidenceRefs(source, candidate, uncertainty.evidence),
-    }));
-    next.uncertainties = next.uncertainties.map((uncertainty, index) => {
-      const ability = spellAbilityForActivationPath(next.item.abilities, uncertainty.path);
-      if (uncertainty.blocking && (uncertainty.code === 'UNSPECIFIED_ACTIVATION' || uncertainty.code === 'UNSUPPORTED_ACTIVATION')
-        && ability?.kind === 'spell'
-        && resolveLockedDnd5eV14SpellActivation(ability.spell.identifier, ability.spell.name) === ability.activation) {
-        return {
-          ...uncertainty,
-          id: `DERIVED_SPELL_ACTIVATION:${uncertainty.path}:${index}`,
-          code: 'DERIVED_SPELL_ACTIVATION',
-          blocking: false,
-          message: `Spell activation ${ability.activation} is derived from the uniquely resolved locked dnd5e 5.3.3 spell record; source prose did not repeat the casting time.`,
-        };
-      }
-      return uncertainty;
-    });
-  }
-  if (Array.isArray(next.claims) && Array.isArray(next.item?.abilities)) {
-    const claimPaths = new Set(next.claims.map((claim) => claim.path));
-    for (const ability of next.item.abilities) {
-      const path = `/item/abilities/${ability.id}`;
-      if (claimPaths.has(path)) continue;
-      next.claims.push({ path, valueKind: 'explicit', value: ability.kind, evidence: ability.evidence });
-      claimPaths.add(path);
-    }
-  }
-  if (Array.isArray(next.coverage)) next.coverage = normalizeCoverage(source, candidate, next.coverage);
-  return next;
-}
-
-function deriveLightRadii(text: string): { bright: number; dim: number } | undefined {
-  const chinese = text.match(/(\d+)\s*尺(?:半径)?的明亮光照和在此之外\s*(\d+)\s*尺的微光光照/iu);
-  if (chinese) {
-    const bright = Number(chinese[1]);
-    return { bright, dim: bright + Number(chinese[2]) };
-  }
-  const english = text.match(/(\d+)\s*(?:ft|feet)\b[^.\n]{0,80}?bright(?:\s+light)?[^.\n]{0,80}?outside\s+(\d+)\s*(?:ft|feet)\b[^.\n]{0,40}?dim(?:\s+light)?/iu);
-  if (english) {
-    const bright = Number(english[1]);
-    return { bright, dim: bright + Number(english[2]) };
-  }
-  return undefined;
-}
-
-function spellAbilityForActivationPath(abilities: ItemIntakeAbility[], path: string): Extract<ItemIntakeAbility, { kind: 'spell' }> | undefined {
-  const match = /^\/item\/abilities\/([^/]+)\/activation$/u.exec(path);
-  if (!match) return undefined;
-  const key = match[1]!;
-  const ability = Number.isInteger(Number(key)) ? abilities[Number(key)] : abilities.find((entry) => entry.id === key);
-  return ability?.kind === 'spell' ? ability : undefined;
-}
-
-function normalizeEvidenceRefs(source: string, candidate: ItemDiscoveryCandidate, refs: unknown): any[] {
-  if (!Array.isArray(refs)) return refs as any[];
-  return refs.map((ref) => {
-    if (!isEvidenceRef(ref)) return ref;
-    const match = findEvidenceMatch(source, candidate, ref, candidate.start);
-    return match ? { ...ref, start: match.start, end: match.end, quote: source.slice(match.start, match.end) } : ref;
-  });
-}
-
-function normalizeCoverage(source: string, candidate: ItemDiscoveryCandidate, coverage: ItemIntakeCoverage[]): ItemIntakeCoverage[] {
-  const normalized: ItemIntakeCoverage[] = [];
-  let cursor = candidate.start;
-  for (const entry of coverage) {
-    if (!isEvidenceRef(entry) || typeof entry.classification !== 'string') {
-      normalized.push(entry);
-      continue;
-    }
-    const quote = entry.quote.trim();
-    if (!quote) {
-      if (cursor < candidate.end && /\s/u.test(source[cursor] ?? '')) {
-        const end = consumeWhitespace(source, cursor, candidate.end);
-        normalized.push({ ...entry, start: cursor, end, quote: source.slice(cursor, end) });
-        cursor = end;
-      }
-      continue;
-    }
-    const match = findEvidenceMatch(source, candidate, entry, cursor);
-    if (!match) {
-      normalized.push(entry);
-      continue;
-    }
-    const start = match.start > cursor && source.slice(cursor, match.start).trim() === '' ? cursor : match.start;
-    const end = match.end;
-    normalized.push({ ...entry, start, end, quote: source.slice(start, end) });
-    cursor = end;
-  }
-  if (normalized.length > 0 && cursor < candidate.end && source.slice(cursor, candidate.end).trim() === '') {
-    const last = normalized[normalized.length - 1]!;
-    last.end = candidate.end;
-    last.quote = source.slice(last.start, candidate.end);
-  }
-  return normalized;
-}
-
-function findEvidenceMatch(
-  source: string,
-  candidate: ItemDiscoveryCandidate,
-  ref: { start: number; end: number; quote: string },
-  minimumStart: number,
-): { start: number; end: number } | undefined {
-  const rangeStart = Math.max(candidate.start, Number.isInteger(minimumStart) ? minimumStart : candidate.start);
-  const rangeEnd = candidate.end;
-  const exact = findStringMatches(source, ref.quote, rangeStart, rangeEnd);
-  const exactMatch = chooseEvidenceMatch(exact, ref);
-  if (exactMatch) return exactMatch;
-
-  const trimmed = ref.quote.trim();
-  if (!trimmed) return undefined;
-  const trimmedMatch = chooseEvidenceMatch(findStringMatches(source, trimmed, rangeStart, rangeEnd), ref);
-  if (trimmedMatch) return trimmedMatch;
-
-  const pattern = whitespaceTolerantPattern(trimmed);
-  if (!pattern) return undefined;
-  const bounded = source.slice(rangeStart, rangeEnd);
-  const matches: Array<{ start: number; end: number }> = [];
-  const expression = new RegExp(pattern, 'gu');
-  for (const match of bounded.matchAll(expression)) {
-    if (match.index === undefined || !match[0]) continue;
-    matches.push({ start: rangeStart + match.index, end: rangeStart + match.index + match[0].length });
-  }
-  return chooseEvidenceMatch(matches, ref);
-}
-
-function findStringMatches(source: string, value: string, start: number, end: number): Array<{ start: number; end: number }> {
-  if (!value) return [];
-  const matches: Array<{ start: number; end: number }> = [];
-  let cursor = Math.max(0, start);
-  while (cursor <= end - value.length) {
-    const index = source.indexOf(value, cursor);
-    if (index < 0 || index + value.length > end) break;
-    matches.push({ start: index, end: index + value.length });
-    cursor = index + Math.max(1, value.length);
-  }
-  return matches;
-}
-
-function chooseEvidenceMatch(matches: Array<{ start: number; end: number }>, ref: { start: number; end: number }): { start: number; end: number } | undefined {
-  if (matches.length === 1) return matches[0];
-  if (matches.length === 0 || !Number.isInteger(ref.start) || !Number.isInteger(ref.end)) return undefined;
-  const ranked = matches
-    .map((match) => ({ match, distance: Math.abs(match.start - ref.start) + Math.abs(match.end - ref.end) }))
-    .sort((left, right) => left.distance - right.distance);
-  if (ranked[0]!.distance <= 4 && ranked[0]!.distance < (ranked[1]?.distance ?? Number.POSITIVE_INFINITY)) return ranked[0]!.match;
-  return undefined;
-}
-
-function consumeWhitespace(source: string, start: number, end: number): number {
-  let cursor = start;
-  while (cursor < end && /\s/u.test(source[cursor] ?? '')) cursor += 1;
-  return cursor;
-}
-
-function whitespaceTolerantPattern(value: string): string {
-  return value.split(/(\s+)/u).filter(Boolean).map((part) => /\s/u.test(part) ? '\\s+' : escapeRegExp(part)).join('');
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-}
-
-function isEvidenceRef(value: unknown): value is { start: number; end: number; quote: string } {
-  return Boolean(value) && typeof value === 'object'
-    && Number.isInteger((value as any).start)
-    && Number.isInteger((value as any).end)
-    && typeof (value as any).quote === 'string';
-}
-
-function candidateBoundaryIssue(source: string, candidates: ItemDiscoveryCandidate[]): { code: string; message: string } | undefined {
-  const ids = new Set<string>();
-  let end = -1;
-  for (const candidate of candidates) {
-    if (ids.has(candidate.id)) return { code: 'DISCOVERY_DUPLICATE_ID', message: `Discovery returned duplicate Item id ${candidate.id}.` };
-    if (candidate.start < 0 || candidate.end <= candidate.start || candidate.end > source.length || candidate.start < end) {
-      return { code: 'DISCOVERY_AMBIGUOUS_BOUNDARY', message: 'Item candidates overlap or do not form distinct source boundaries.' };
-    }
-    ids.add(candidate.id);
-    end = candidate.end;
-  }
-  return undefined;
 }
 
 function validateOptions(options: ItemIntakeOptions): void {

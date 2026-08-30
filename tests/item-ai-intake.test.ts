@@ -133,7 +133,7 @@ describe('AI Item Intake V14 mechanics', () => {
       const ac = item.effects.find((effect: any) => effect.transfer === true);
       expect(ac.type).toBe('base');
       expect(ac.changes).toBeUndefined();
-      expect(ac.system.changes).toEqual([{ key: 'system.attributes.ac.formula', type: 'add', value: '+1', phase: 'initial', priority: null }]);
+      expect(ac.system.changes).toEqual([{ key: 'system.attributes.ac.bonus', type: 'add', value: 1, phase: 'initial', priority: null }]);
       const lightEffect = item.effects.find((effect: any) => effect.transfer === false);
       expect(lightEffect.system.changes).toEqual(expect.arrayContaining([
         { key: 'token.light.bright', type: 'override', value: 15, phase: 'initial', priority: null },

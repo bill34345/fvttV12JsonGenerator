@@ -1607,6 +1607,35 @@ function isDisprovedStatblockUncertainty(
   uncertainty: MonsterIntakeIR['uncertainties'][number],
 ): boolean {
   const code = uncertainty.code.toLocaleLowerCase('en-US').replace(/[_\s]+/gu, '-');
+  const initiativeProcessCodes = new Set([
+    'initiative-parenthetical',
+    'initiative-parenthetical-score',
+    'initiative-score-parenthetical',
+    'initiative-display-score',
+  ]);
+  if (uncertainty.path === '/creature/attributes/initiative' && initiativeProcessCodes.has(code)) {
+    const initiative = ir.creature.attributes.initiative;
+    const displays = [...source.matchAll(/(?:initiative|先攻)\s*[:：]?\s*([+-]?\d+)\s*[（(]\s*(\d+)\s*[）)]/giu)];
+    const displayValues = new Set(displays.map((display) => `${Number(display[1])}:${Number(display[2])}`));
+    if (displayValues.size !== 1) return false;
+    for (const display of displays) {
+      const modifier = Number(display[1]);
+      const score = Number(display[2]);
+      const start = display.index;
+      const end = start + display[0].length;
+      const exactOverlappingUncertaintyEvidence = uncertainty.evidence.some((ref) => (
+        source.slice(ref.start, ref.end) === ref.quote && ref.start < end && ref.end > start
+      ));
+      const exactInitiativeClaimEvidence = ir.claims
+        .filter((claim) => claim.path === '/creature/attributes/initiative')
+        .flatMap((claim) => claim.evidence)
+        .some((ref) => source.slice(ref.start, ref.end) === ref.quote && ref.start <= start && ref.end >= end);
+      if (initiative === modifier
+        && score === 10 + modifier
+        && exactOverlappingUncertaintyEvidence
+        && exactInitiativeClaimEvidence) return true;
+    }
+  }
   if (code === 'creature-type-custom-not-standardized') {
     return uncertainty.path === '/creature/identity/creatureType'
       && ir.creature.identity.creatureType === 'humanoid'

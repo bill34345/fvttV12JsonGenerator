@@ -1,7 +1,7 @@
 {
   "id": "fvtt-json-forge",
   "title": "FVTT JSON Forge",
-  "description": "GM-only browser Actor generation, preview, confirmed creation, and readback verification for structured Chinese and English Actor sources.",
+  "description": "GM-only browser Actor/Item generation plus bounded Intake review, confirmed creation, and readback verification.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14.364",

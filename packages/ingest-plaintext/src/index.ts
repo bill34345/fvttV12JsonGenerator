@@ -1,2 +1,2 @@
-export * from './plaintext';
+export * from './plaintextNode';
 export * from './plaintextAudit';

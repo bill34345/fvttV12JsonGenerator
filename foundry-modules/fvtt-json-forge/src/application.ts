@@ -26,6 +26,7 @@ import {
   saveClientSettings,
   type ForgeClientSettings,
 } from './settings';
+import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 
 export interface ForgeApplicationEnvironment {
   game: any;
@@ -164,6 +165,11 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         this.notify('error', `已有 Forge Actor 生成任务正在运行；当前模块最多允许 ${BROWSER_MAX_CONCURRENT_ACTOR_JOBS} 个活动任务。`);
         return;
       }
+      if (mode === 'ai' && !claimForgeAiJob(this)) {
+        releaseGeneration(this);
+        this.notify('error', '已有 Forge AI Intake 任务正在运行；Actor 与 Item AI 共用一个活动任务上限。');
+        return;
+      }
       this.response = undefined;
       this.intake = undefined;
       this.stageProgress = [];
@@ -227,6 +233,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
           this.renderResult(root);
         }
         releaseGeneration(this);
+        if (mode === 'ai') releaseForgeAiJob(this);
       }
     }
 

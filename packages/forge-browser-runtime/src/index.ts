@@ -34,6 +34,7 @@ export {
   type BuildForgeItemRequestOptions,
   type ForgeFinalItemSource,
 } from './item';
+export * from './providerConnections';
 
 export const BROWSER_GENERATOR_VERSION = '0.1.0' as const;
 export const BROWSER_MAX_CONCURRENT_ACTOR_JOBS = 1 as const;

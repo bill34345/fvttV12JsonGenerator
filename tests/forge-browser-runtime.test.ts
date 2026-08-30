@@ -30,8 +30,12 @@ import {
 import { SpellsMapper } from '@fvtt-json-generator/generation/spells-mapper';
 import { resolveLockedDnd5eV14Spell as resolveNodeV14Spell } from '@fvtt-json-generator/generation/v14-spell-catalog';
 import {
+  analyzeBrowserActorSourceWithAi,
   createBrowserAiProvider,
   convertRawActorSourceWithAi,
+  generateAndReviewBrowserActorIntake,
+  repairBrowserActorIntake,
+  type BrowserActorIntakeInput,
 } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import type {
   DiscoveryResult,
@@ -40,9 +44,16 @@ import type {
 } from '@fvtt-json-generator/intake-ai/types';
 import { conversionApplication } from '../src/core/application/conversion';
 import { RAT_WARLOCK_SOURCE, buildRatWarlockIr } from '../src/core/intake/__tests__/fixtures/rat-warlock';
+import { LURKER_SOURCE, buildValidLurkerIr } from '../src/core/intake/__tests__/fixtures/lurker';
 import { buildBrowserBundle } from '../foundry-modules/fvtt-json-forge/build';
 import { resolveActorIntakeStatus } from '../packages/forge-browser-runtime/src/status';
 import { normalizeForgeActorArtifact } from '../packages/forge-browser-runtime/src/artifact';
+import {
+  BROWSER_AI_REPAIR_TIMEOUT_MS,
+  BROWSER_AI_STAGE_TIMEOUT_MS,
+  BROWSER_AI_WAIT_CYCLE_MS,
+  BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION,
+} from '../packages/forge-browser-runtime/src/providerTiming';
 
 const SOURCE_ID = 'actor:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeSourceId;
 const NIGHTGAUNT_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md'), 'utf8');
@@ -65,6 +76,13 @@ const ENGLISH_SOURCE = [
 const NIGHTGAUNT_CASTER_SOURCE = NIGHTGAUNT_SOURCE.replace('背景: |-', '施法:\n  - "随意: Fireball"\n背景: |-');
 
 describe('browser Forge Actor runtime', () => {
+  test('uses 180-second browser observation cycles and asks after four cycles', () => {
+    expect(BROWSER_AI_STAGE_TIMEOUT_MS).toBe(180_000);
+    expect(BROWSER_AI_REPAIR_TIMEOUT_MS).toBe(180_000);
+    expect(BROWSER_AI_WAIT_CYCLE_MS).toBe(180_000);
+    expect(BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION).toBe(4);
+  });
+
   test.each([
     ['12.331', '12', '4.3.9'],
     ['13.340', '12', '4.3.9'],
@@ -396,6 +414,194 @@ describe('browser Forge Actor runtime', () => {
     expect(JSON.stringify(result)).not.toContain('fake-api-key');
   });
 
+  test('pauses AI Monster Intake after evidence-first analysis with provider and prompt identity', async () => {
+    const provider = ratWarlockProvider();
+    const input = actorAiInput('staged-analysis');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider, undefined, 'staged-analysis:attempt-7');
+
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.attemptId).toBe('staged-analysis:attempt-7');
+    expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(analysis.provider).toMatchObject({
+      providerName: 'fake-staged-provider',
+      extractionModel: 'fake-extract',
+      reviewModel: 'fake-review',
+      promptVersions: {
+        discover: expect.stringContaining('monster-intake-discover'),
+        extract: expect.stringContaining('monster-intake-extract'),
+        review: expect.stringContaining('monster-intake-review'),
+        repair: expect.stringContaining('monster-intake-repair'),
+      },
+    });
+    expect(analysis.evidence?.candidate).toMatchObject({ start: 0, end: RAT_WARLOCK_SOURCE.length });
+    expect(analysis).not.toHaveProperty('response');
+    expect(JSON.stringify(analysis)).not.toMatch(/artifactHash|api-key|authorization/iu);
+  });
+
+  test('materializes omitted claim evidence quotes before browser validation and after bounded repair', async () => {
+    const withoutClaimQuotes = (): MonsterIntakeIR => {
+      const ir = buildRatWarlockIr();
+      for (const claim of ir.claims) {
+        for (const evidence of claim.evidence) delete (evidence as Partial<typeof evidence>).quote;
+      }
+      return ir;
+    };
+    let reviewCalls = 0;
+    const provider = ratWarlockProvider({
+      extract: async () => withoutClaimQuotes(),
+      repair: async () => withoutClaimQuotes(),
+      review: async () => {
+        reviewCalls += 1;
+        return reviewCalls === 1
+          ? {
+              schemaVersion: 1,
+              verdict: 'revise',
+              findings: [{
+                id: 'request-one-repair', code: 'REQUEST_ONE_REPAIR', path: '/creature',
+                message: 'Exercise one bounded repair.', blocking: true, origin: 'ai-review',
+              }],
+            }
+          : { schemaVersion: 1, verdict: 'accepted', findings: [] };
+      },
+    });
+    const input = actorAiInput('omitted-claim-quotes');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'EVIDENCE_MISMATCH' }));
+    expect(analysis.ir?.claims.every((claim) => claim.evidence.every((ref) => (
+      RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) === ref.quote
+    )))).toBe(true);
+
+    const first = await generateAndReviewBrowserActorIntake(input, analysis, provider);
+    expect(first.status).toBe('needs_review');
+    const repaired = await repairBrowserActorIntake(input, first, provider);
+    expect(repaired.status).toBe('ready_to_generate');
+    expect(repaired.repairCount).toBe(1);
+    expect(repaired.ir?.claims.every((claim) => claim.evidence.every((ref) => (
+      RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) === ref.quote
+    )))).toBe(true);
+  });
+
+  test('normalizes only source-absent optional feature arrays and expands exact feature coverage parents', async () => {
+    const drifted = buildRatWarlockIr();
+    delete (drifted.creature as Partial<typeof drifted.creature>).reactions;
+    delete (drifted.creature as Partial<typeof drifted.creature>).legendaryActions;
+    for (const entry of drifted.coverage) {
+      entry.claimPaths = [...new Set(entry.claimPaths.map((path) => (
+        path.replace(/^(\/creature\/(?:traits|actions|bonusActions))\/\d+$/u, '$1')
+      )))];
+    }
+
+    const analysis = await analyzeBrowserActorSourceWithAi(
+      actorAiInput('optional-feature-and-coverage-drift'),
+      ratWarlockProvider({ extract: async () => drifted }),
+    );
+
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.ir?.creature.reactions).toEqual([]);
+    expect(analysis.ir?.creature.legendaryActions).toEqual([]);
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION' }));
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
+    expect(analysis.ir?.coverage.flatMap((entry) => entry.claimPaths)).not.toContain('/creature/actions');
+  });
+
+  test('keeps an absent feature section and parent coverage without exact child claims fail-closed', async () => {
+    const invalid = buildRatWarlockIr();
+    delete (invalid.creature as Partial<typeof invalid.creature>).reactions;
+    invalid.coverage[0]!.classification = 'mechanical';
+    invalid.coverage[0]!.claimPaths = ['/creature/reactions'];
+
+    const analysis = await analyzeBrowserActorSourceWithAi(
+      actorAiInput('unproven-empty-feature-section'),
+      ratWarlockProvider({ extract: async () => invalid }),
+    );
+
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION', path: '/creature/reactions' }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
+  });
+
+  test.each([
+    {
+      label: 'non-empty wrong quote',
+      mutate: (ir: MonsterIntakeIR) => { ir.claims[0]!.evidence[0]!.quote = 'not the submitted source slice'; },
+      code: 'EVIDENCE_MISMATCH',
+    },
+    {
+      label: 'missing quote with out-of-range offsets',
+      mutate: (ir: MonsterIntakeIR) => {
+        const ref = ir.claims[0]!.evidence[0]!;
+        ref.start = RAT_WARLOCK_SOURCE.length + 1;
+        ref.end = RAT_WARLOCK_SOURCE.length + 2;
+        delete (ref as Partial<typeof ref>).quote;
+      },
+      code: 'EVIDENCE_OUT_OF_RANGE',
+    },
+  ])('keeps $label fail-closed in browser analysis', async ({ mutate, code }) => {
+    const invalid = buildRatWarlockIr();
+    mutate(invalid);
+    const analysis = await analyzeBrowserActorSourceWithAi(
+      actorAiInput(`claim-evidence-${code.toLocaleLowerCase('en-US')}`),
+      ratWarlockProvider({ extract: async () => invalid }),
+    );
+
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code, blocking: true }));
+    expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+  });
+
+  test('keeps revise non-creatable, permits one semantic repair, and preserves attempt identity on regenerate', async () => {
+    let reviewCalls = 0;
+    const provider = ratWarlockProvider({
+      review: async () => {
+        reviewCalls += 1;
+        return reviewCalls === 1
+          ? {
+              schemaVersion: 1,
+              verdict: 'revise',
+              findings: [{
+                id: 'semantic-revise', code: 'SEMANTIC_REVISE', path: '/creature',
+                message: 'Regenerate after one bounded semantic repair.', blocking: true, origin: 'ai-review',
+              }],
+            }
+          : { schemaVersion: 1, verdict: 'accepted', findings: [] };
+      },
+    });
+    const input = actorAiInput('staged-regenerate');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider, undefined, 'stable-attempt');
+    const first = await generateAndReviewBrowserActorIntake(input, analysis, provider);
+    expect(first.status).toBe('needs_review');
+    expect(first.response).toBeUndefined();
+    expect(JSON.stringify(first)).not.toContain('artifactHash');
+
+    const repaired = await repairBrowserActorIntake(input, first, provider);
+    expect(repaired.status).toBe('ready_to_generate');
+    expect(repaired.repairCount).toBe(1);
+    expect(repaired.attemptId).toBe('stable-attempt');
+    const exhausted = await repairBrowserActorIntake(input, repaired, provider);
+    expect(exhausted.status).toBe('needs_review');
+    expect(exhausted.findings).toContainEqual(expect.objectContaining({ code: 'REPAIR_BUDGET_EXHAUSTED' }));
+    expect(exhausted.calls.repair).toBe(1);
+
+    const accepted = await generateAndReviewBrowserActorIntake(input, repaired, provider);
+    expect(accepted.status).toBe('accepted');
+    expect(accepted.analysis.attemptId).toBe('stable-attempt');
+    expect(accepted.calls).toEqual({ discovery: 1, extraction: 1, repair: 1, review: 2 });
+    expect(accepted.response && 'result' in accepted.response ? accepted.response.result.status : 'failed').toBe('accepted');
+  });
+
+  test('pauses evidence drift before generation and never fabricates a creatable response', async () => {
+    const invalid = buildRatWarlockIr();
+    invalid.source = { ...invalid.source, sha256: '0'.repeat(64) };
+    const provider = ratWarlockProvider({ extract: async () => invalid });
+    const analysis = await analyzeBrowserActorSourceWithAi(actorAiInput('evidence-drift'), provider);
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'SOURCE_HASH_MISMATCH', blocking: true }));
+    expect(analysis.calls.review).toBe(0);
+    expect(JSON.stringify(analysis)).not.toContain('artifactHash');
+  });
+
   test('never turns multiple discovery candidates or cancellation into an Actor response', async () => {
     let extractionCalls = 0;
     const provider: MonsterIntakeAiProvider = {
@@ -470,6 +676,125 @@ describe('browser Forge Actor runtime', () => {
 
     expect(extractionCalls).toBe(1);
     expect(result.errorCode).not.toBe('multiple_entities');
+  });
+
+  test('discards an AI-only empty legendary placeholder finding disproved by source and normalized IR', async () => {
+    const provider = ratWarlockProvider({
+      review: async () => ({
+        schemaVersion: 1,
+        verdict: 'revise',
+        findings: [{
+          id: 'legendary-placeholder',
+          code: 'optional-field-empty-placeholder',
+          path: '/creature/legendary',
+          message: 'The optional legendary field must be omitted instead of emitted as an empty placeholder.',
+          blocking: true,
+          origin: 'ai-review',
+        }],
+      }),
+    });
+    const input = actorAiInput('disproved-legendary-placeholder');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    expect(analysis.ir?.creature.legendary).toBeUndefined();
+    expect(RAT_WARLOCK_SOURCE).not.toMatch(/(?:\blegendary\s+actions?\b|传奇动作)/iu);
+
+    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
+
+    expect(result.status).toBe('accepted');
+    expect(result.review).toEqual({ schemaVersion: 1, verdict: 'accepted', findings: [] });
+    expect(result.findings).not.toContainEqual(expect.objectContaining({ code: 'optional-field-empty-placeholder' }));
+  });
+
+  test('keeps the canonical Foundry creature type and discards review claims disproved by v14 Actor semantics', async () => {
+    const provider: MonsterIntakeAiProvider = {
+      providerName: 'fake-lurker-review-provider',
+      extractionModel: 'fake-extract',
+      reviewModel: 'fake-review',
+      discover: async () => ({
+        schemaVersion: 1,
+        candidates: [{ id: 'lurker', label: '暗影潜妖', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }],
+      }),
+      extract: async () => buildValidLurkerIr(),
+      repair: async () => buildValidLurkerIr(),
+      review: async () => ({
+        schemaVersion: 1,
+        verdict: 'revise',
+        findings: [
+          {
+            id: 'lost-damage-bonus', code: 'lost-damage-bonus',
+            path: '/actorProjection/items/4/system/damage/base/bonus',
+            message: 'actorProjection damage.base.bonus is empty, so the structural formula rolls without +4.',
+            blocking: true, origin: 'ai-review',
+          },
+          {
+            id: 'creature-type-enum-drift', code: 'creature-type-enum-drift',
+            path: '/actorProjection/system/details/type/value',
+            message: 'Use the Foundry creature type identifier fey.',
+            blocking: true, origin: 'ai-review',
+          },
+          {
+            id: 'unwanted-legendary-placeholder', code: 'unwanted-legendary-placeholder',
+            path: '/actorProjection/system/resources',
+            message: 'Source has no Legendary Actions, but zero-valued legact/legres placeholders are present.',
+            blocking: true, origin: 'ai-review',
+          },
+          {
+            id: 'absent-sense-zero', code: 'absent-sense-zero',
+            path: '/actorProjection/system/attributes/senses/ranges',
+            message: 'Absent blindsight, tremorsense, and truesight are numeric 0.',
+            blocking: true, origin: 'ai-review',
+          },
+        ],
+      }),
+    };
+    const input: BrowserActorIntakeInput = {
+      source: LURKER_SOURCE,
+      sourceName: 'lurker.raw.txt',
+      displayName: '暗影潜妖 Lurker in the Dark',
+      requestId: 'disproved-v14-review-findings',
+      fvttVersion: '14.364',
+      systemVersion: '5.3.3',
+      sourceId: SOURCE_ID,
+    };
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
+
+    expect(result.status).toBe('accepted');
+    expect(result.review).toEqual({ schemaVersion: 1, verdict: 'accepted', findings: [] });
+    expect(result.findings).toEqual([]);
+    const actor = result.response && 'result' in result.response && result.response.result.status === 'accepted'
+      ? result.response.result.artifact as any
+      : undefined;
+    expect(actor?.system.details.type.value).toBe('fey');
+    const claw = actor?.items.find((item: any) => String(item.name).includes('爪击'));
+    expect(claw?.system.damage.base).toMatchObject({ number: 1, denomination: 10, bonus: '' });
+    expect(Object.values(claw?.system.activities ?? {})[0]).toMatchObject({
+      attack: { ability: 'str' }, damage: { includeBase: true },
+    });
+  });
+
+  test('keeps a real empty legendary field blocked before AI review', async () => {
+    let reviewCalls = 0;
+    const provider = ratWarlockProvider({
+      review: async () => {
+        reviewCalls += 1;
+        return { schemaVersion: 1, verdict: 'accepted', findings: [] };
+      },
+    });
+    const input = actorAiInput('real-empty-legendary-placeholder');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    if (!analysis.ir) throw new Error('Expected a validated test IR.');
+    analysis.ir.creature.legendary = [] as unknown as NonNullable<MonsterIntakeIR['creature']['legendary']>;
+
+    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'INVALID_LEGENDARY_METADATA',
+      path: '/creature/legendary',
+      blocking: true,
+    }));
+    expect(reviewCalls).toBe(0);
   });
 
   test('never reports accepted when the final AI review still carries a blocking finding', async () => {
@@ -667,6 +992,34 @@ describe('browser Forge Actor runtime', () => {
       expect(timeout.errorCode).toBe('timeout');
       expect(timeout.stages.at(-1)?.message).toMatch(/timed out/u);
       expect(JSON.stringify(timeout)).not.toContain('secret-key');
+
+      globalThis.fetch = ((_request: RequestInfo | URL, init?: RequestInit) => Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => new Promise((resolveBody, rejectBody) => {
+          const complete = setTimeout(() => resolveBody({
+            choices: [{ message: { content: JSON.stringify({ schemaVersion: 1, candidates: [] }) } }],
+          }), 40);
+          const abortBody = () => {
+            clearTimeout(complete);
+            rejectBody(new DOMException('The response body was aborted.', 'AbortError'));
+          };
+          if (init?.signal?.aborted) abortBody();
+          else init?.signal?.addEventListener('abort', abortBody, { once: true });
+        }),
+      } as Response)) as unknown as typeof fetch;
+      const bodyTimeoutProvider = createBrowserAiProvider({
+        apiKey: 'secret-key',
+        baseUrl: 'https://provider.example/v1',
+        model: 'extractor',
+        timeoutMs: 5,
+      });
+      await expect(bodyTimeoutProvider.discover({
+        source: RAT_WARLOCK_SOURCE,
+        sourceSha256: hashSource(RAT_WARLOCK_SOURCE),
+        chunkStart: 0,
+        chunkEnd: RAT_WARLOCK_SOURCE.length,
+      })).rejects.toMatchObject({ code: 'timeout' });
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -675,15 +1028,22 @@ describe('browser Forge Actor runtime', () => {
     const originalFetch = globalThis.fetch;
     const controller = new AbortController();
     let calls = 0;
+    let bodyAborted = false;
     try {
       globalThis.fetch = ((_request: RequestInfo | URL, init?: RequestInit) => {
         calls += 1;
-        return new Promise<Response>((_resolve, reject) => {
-          const signal = init?.signal;
-          const rejectAborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'));
-          if (signal?.aborted) rejectAborted();
-          else signal?.addEventListener('abort', rejectAborted, { once: true });
-        });
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => new Promise((_resolve, reject) => {
+            const rejectAborted = () => {
+              bodyAborted = true;
+              reject(new DOMException('The response body was aborted.', 'AbortError'));
+            };
+            if (init?.signal?.aborted) rejectAborted();
+            else init?.signal?.addEventListener('abort', rejectAborted, { once: true });
+          }),
+        } as Response);
       }) as unknown as typeof fetch;
 
       const provider = createBrowserAiProvider({
@@ -698,14 +1058,117 @@ describe('browser Forge Actor runtime', () => {
         chunkEnd: RAT_WARLOCK_SOURCE.length,
       });
       await Promise.resolve();
+      await Promise.resolve();
       controller.abort();
       await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
       expect(calls).toBe(1);
+      expect(bodyAborted).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('keeps an interactive Actor request open past the legacy stage timeout without reposting', async () => {
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    let decisions = 0;
+    let resolveBody!: (value: unknown) => void;
+    try {
+      globalThis.fetch = (() => {
+        calls += 1;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => new Promise((resolve) => { resolveBody = resolve; }),
+        } as Response);
+      }) as unknown as typeof fetch;
+      const provider = createBrowserAiProvider({
+        apiKey: 'secret-key',
+        baseUrl: 'https://provider.example/v1',
+        model: 'extractor',
+        timeoutMs: 1,
+        waitPolicy: {
+          cycleMs: 2,
+          cyclesBeforeDecision: 4,
+          onDecision: async () => {
+            decisions += 1;
+            resolveBody({ choices: [{ message: { content: JSON.stringify({ schemaVersion: 1, candidates: [] }) } }] });
+            return 'continue';
+          },
+        },
+      });
+      await expect(provider.discover({
+        source: RAT_WARLOCK_SOURCE,
+        sourceSha256: hashSource(RAT_WARLOCK_SOURCE),
+        chunkStart: 0,
+        chunkEnd: RAT_WARLOCK_SOURCE.length,
+      })).resolves.toMatchObject({ schemaVersion: 1, candidates: [] });
+      expect(calls).toBe(1);
+      expect(decisions).toBe(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('never automatically retries a completed failed POST in interactive Actor mode', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      const cases: Array<() => Promise<Response>> = [
+        async () => { throw new TypeError('network failed'); },
+        async () => ({ ok: false, status: 500, json: async () => ({}) } as Response),
+        async () => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'not-json' } }] }) } as Response),
+      ];
+      for (const response of cases) {
+        let calls = 0;
+        globalThis.fetch = (() => { calls += 1; return response(); }) as unknown as typeof fetch;
+        const provider = createBrowserAiProvider({
+          apiKey: 'secret-key', baseUrl: 'https://provider.example/v1', model: 'extractor',
+          waitPolicy: { cycleMs: 2, cyclesBeforeDecision: 4, onDecision: async () => 'continue' },
+        });
+        await expect(provider.discover({
+          source: RAT_WARLOCK_SOURCE,
+          sourceSha256: hashSource(RAT_WARLOCK_SOURCE),
+          chunkStart: 0,
+          chunkEnd: RAT_WARLOCK_SOURCE.length,
+        })).rejects.toBeDefined();
+        expect(calls).toBe(1);
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 });
+
+function actorAiInput(requestId: string): BrowserActorIntakeInput {
+  return {
+    source: RAT_WARLOCK_SOURCE,
+    sourceName: `${requestId}.raw.txt`,
+    displayName: '鼠神邪术师',
+    requestId,
+    fvttVersion: '14.364',
+    systemVersion: '5.3.3',
+    sourceId: SOURCE_ID,
+  };
+}
+
+function ratWarlockProvider(overrides: Partial<MonsterIntakeAiProvider> = {}): MonsterIntakeAiProvider {
+  const provider: MonsterIntakeAiProvider = {
+    providerName: 'fake-staged-provider',
+    extractionModel: 'fake-extract',
+    reviewModel: 'fake-review',
+    discover: async () => ({
+      schemaVersion: 1,
+      candidates: [{
+        id: 'rat-warlock', label: '鼠神邪术师', start: 0, end: RAT_WARLOCK_SOURCE.length,
+        quote: RAT_WARLOCK_SOURCE,
+      }],
+    }),
+    extract: async () => buildRatWarlockIr(),
+    repair: async () => buildRatWarlockIr(),
+    review: async () => ({ schemaVersion: 1, verdict: 'accepted', findings: [] }),
+  };
+  return { ...provider, ...overrides };
+}
 
 function makeRequest(content: string): ForgeActorRequest {
   return {

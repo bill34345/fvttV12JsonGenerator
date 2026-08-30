@@ -193,6 +193,7 @@
         "@fvtt-json-generator/contracts": "workspace:*",
         "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",
         "@fvtt-json-generator/generation": "workspace:*",
+        "@fvtt-json-generator/ingest-plaintext": "workspace:*",
         "@fvtt-json-generator/intake-ai": "workspace:*",
         "@fvtt-json-generator/models": "workspace:*",
         "@fvtt-json-generator/parser": "workspace:*",
@@ -1253,6 +1254,8 @@
     "@fvtt-json-generator/fvtt-selected-token-sync/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@fvtt-json-generator/generation/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
+
+    "@fvtt-json-generator/ingest-plaintext/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
 
     "@fvtt-json-generator/intake-ai/js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
 

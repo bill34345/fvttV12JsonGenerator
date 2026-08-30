@@ -263,3 +263,17 @@ E2E 返回截图、UUID/hash、readback、Activity/lifecycle 数值、bundle sec
 - 需要 Gateway/Companion、服务端权限、生产、LevelDB、embedded Item 产品功能、批量恢复、任意 Item/文本支持或 Foundry/dnd5e 升级。
 
 Task D 完成不代表 Task E/F/G 或发布完成。commit、合并到 `codex/forge-fvtt-product`、push 和 WorkTree 清理继续分别等待用户明确授权。
+
+## 15. 2026-08-30 最终执行证据
+
+本节记录实现 WorkTree 的最终验收状态，不构成发布授权。
+
+- 真实 DeepSeek AI Monster：`deepseek-v4-flash`、Responses SSE、`json_object`、reasoning `auto`；最终 request `forge-intake-ai-monster-be877122-00d6-4458-b75b-664b7fc46a1f` 经 discover/extract/validate、一次 bounded repair、generate/review/finalize 全部完成，formal response 与 review verdict 均为 `accepted`。prompt identity 为 discover v1、extract v18、review v23、repair v18；调用计数 discovery 1、extraction 1、review 1、repair 1。
+- 真实运行修复：浏览器入口只为缺少 quote 且范围精确的 claim 补 source slice；只在来源无相应段信号且 claims/coverage 均未引用时，把缺失/null 的 bonusActions、reactions、legendaryActions 规范化为空数组；feature parent coverage 只展开到 evidence 与 coverage 精确重叠的现有叶 claim。错误 quote、越界 range、来源有段信号、已有 parent 引用但无精确 child 均继续 fail-closed。
+- accepted Actor create-only/readback：仅创建 `Actor.fefed8dc1fb8578c`；核对 NPC/fey/medium、CR 4、XP 1100、PB 2、六属性与豁免、AC 14、initiative +4/score 14、HP 65 (`10d8 + 20`)、walk/climb 30、skills、resistance/condition immunities、darkvision/languages、6 个 embedded Item、Claw Activity/Effects 与 Dark Teleport bonus/CHA DC 13 来源语义。创建后计数 284/179/973。
+- 非 accepted 零写入：真实 `needs_review`、一次 bounded `repairing`/repair 后 review 状态、真实 `rejected`、`regenerating` 与 `failed` 均保持 Actor/Item/ChatMessage 283/179/973；Confirm Create 在这些状态不可用。最终 accepted 前也保持同一基线。
+- reject / bounded repair / regenerate identity：真实 UI 已执行；repair 每 attempt 最多一次并禁用第二次，regenerate 产生新 request/attempt identity，旧 attempt 不回填。
+- 清理与凭据：精确删除唯一临时 Actor 后恢复 283/179/973；本次 Monster request/name 残留扫描为空。UI Key 字段、应用内 Key、进程变量均清空，persist=false；密钥文件未修改。专用 Chrome 页已关闭，唯一 server-mirror Lab 已停止，30001 无监听。
+- 机械门禁：聚焦 intake/provider/browser 166/166 PASS；`test:fvtt-json-forge` 114/114 PASS；`typecheck:packages`、`typecheck:foundry-modules`、`architecture:verify`、`hygiene:repository`、`build:fvtt-json-forge`、六文件安装 SHA-256 一致、`git diff --check` 均 PASS。独立 Sol reviewer 最终 PASS。
+- 已知非 Task D 实现失败：`agents:check` 仍因继承的 tracked root AGENTS 生成差异及未列入显式清单的既有局部 AGENTS 路径失败；未修改该无关状态掩盖失败。
+- 未执行且不在本任务授权内：生产 8080/51020、LevelDB、Gateway、Companion、第二 Lab、备份、commit、push、merge、stash、reset。
