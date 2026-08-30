@@ -11,6 +11,47 @@
     <button type="button" data-action="import" disabled>Import Review Bundle</button>
   </section>
 
+  <details class="forge-source-library" open aria-labelledby="forge-source-library-heading">
+    <summary id="forge-source-library-heading">Managed Source Library</summary>
+    <p class="forge-library-warning">记录保存在当前浏览器、当前 world/GM scope 的 IndexedDB 中，不写世界 settings/flags，也不是加密保险箱；同一 Foundry origin 的其他模块理论上可以读取。它不会自动 Analyze、调用 Provider、恢复旧请求或创建世界 Document。</p>
+    <div class="forge-library-toolbar">
+      <label>搜索来源与 review
+        <input name="sourceLibrarySearch" type="search" autocomplete="off" placeholder="名称、hash、mode、状态、attempt…">
+      </label>
+      <button type="button" data-action="library-refresh">刷新</button>
+      <button type="button" data-action="library-save" disabled>保存当前来源 / review</button>
+      <button type="button" data-action="library-export" disabled>导出完整 Library</button>
+    </div>
+    <div class="forge-library-import">
+      <label>Portable library JSON（最多 64 MiB）
+        <input name="sourceLibraryFile" type="file" accept="application/json,.json">
+      </label>
+      <button type="button" data-action="library-import" disabled>Strict Import / Merge</button>
+    </div>
+    <p data-library-summary role="status" aria-live="polite">Source library 尚未加载。</p>
+    <div data-library-list class="forge-library-list"><p>暂无可显示记录。</p></div>
+  </details>
+
+  <details class="forge-source-library forge-batch-queue" open aria-labelledby="forge-batch-queue-heading">
+    <summary id="forge-batch-queue-heading">Collection / ZIP / 可恢复 Batch Queue</summary>
+    <p class="forge-library-warning">队列保存在当前浏览器、当前 world/GM scope。GM 显式启动后只以 concurrency 1 顺序运行；关页或刷新会把 running/applying 标为 interrupted，不会在后台自动重发 Provider 请求。只有当前页面仍持有完整 accepted response 的 job 才能进入一次确认的 apply manifest。</p>
+    <div class="forge-library-import forge-batch-import">
+      <label>Collection JSON / ZIP / Portable queue（最多 64 MiB）
+        <input name="batchCollectionFile" type="file" accept="application/json,application/zip,.json,.zip">
+      </label>
+      <button type="button" data-action="batch-import" disabled>Strict Import / Merge</button>
+    </div>
+    <div class="forge-library-toolbar forge-batch-toolbar">
+      <button type="button" data-action="batch-refresh">刷新 Queue</button>
+      <button type="button" data-action="batch-export" disabled>导出 Portable Queue</button>
+      <button type="button" data-action="batch-run" disabled>顺序运行可恢复 Jobs</button>
+      <button type="button" data-action="batch-stop" disabled>停止 Runner</button>
+      <button type="button" data-action="batch-apply" disabled>确认并逐项 Apply 当前 Accepted</button>
+    </div>
+    <p data-batch-summary role="status" aria-live="polite">Batch queue 尚未加载。</p>
+    <div data-batch-list class="forge-library-list forge-batch-list"><p>暂无 Collection 或 queue job。</p></div>
+  </details>
+
   <nav class="forge-step-nav" data-step-nav aria-label="Forge Intake 工作流">
     <ol>
       <li data-step-indicator="connection">1. 连接 AI</li>

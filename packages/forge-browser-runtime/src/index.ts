@@ -121,7 +121,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest): Promi
       iconWorkflow: { createResolutionSession: (_targetVersion, options) => createDisabledIconResolutionSession(options) },
       iconOptions: { mode: 'off' },
     });
-    const artifact = normalizeForgeActorArtifact(generated.actor);
+    const artifact = normalizeForgeActorArtifact(generated.actor, targetVersion);
     const formalVerification = verifyGeneratedDocument({
       canonical: generated.canonical,
       output: artifact,

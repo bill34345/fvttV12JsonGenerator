@@ -113,7 +113,7 @@ describe('browser Forge Actor runtime', () => {
       effectProfile: 'core',
     });
     expect(nodeResult.status).toBe('accepted');
-    const normalizedNodeArtifact = normalizeForgeActorArtifact(nodeResult.rawJson);
+    const normalizedNodeArtifact = normalizeForgeActorArtifact(nodeResult.rawJson, workflowTarget);
     expect(decoded.value.result.sourceIdentity.sourceHash).toBe(hashSource(finalSource));
     expect(decoded.value.result.artifact).toEqual(normalizedNodeArtifact);
     expect(decoded.value.result.artifactHash).toBe(hashArtifact(normalizedNodeArtifact));

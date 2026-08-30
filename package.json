@@ -69,7 +69,7 @@
     "build:fvtt-json-forge": "bun run foundry-modules/fvtt-json-forge/build.ts",
     "generate:forge-legacy-spell-data": "bun run packages/forge-browser-runtime/scripts/generate-legacy-spell-data.ts",
     "generate:forge-v14-spell-data": "bun run packages/forge-browser-runtime/scripts/generate-v14-spell-data.ts",
-    "test:fvtt-json-forge": "bun test tests/forge-browser-runtime.test.ts foundry-modules/fvtt-json-forge/tests --max-concurrency 1",
+    "test:fvtt-json-forge": "bun test tests/forge-browser-runtime.test.ts tests/forge-source-library.test.ts tests/forge-source-library-indexed-db.test.ts tests/forge-batch-collection.test.ts tests/forge-batch-queue.test.ts tests/forge-batch-queue-indexed-db.test.ts foundry-modules/fvtt-json-forge/tests --max-concurrency 1",
     "build:chat-memory-guard": "bun run foundry-modules/chat-memory-guard/build.ts --workspace-root .",
     "install:chat-memory-guard": "bun run foundry-modules/chat-memory-guard/build.ts --workspace-root . --install",
     "test:chat-memory-guard": "bun test foundry-modules/chat-memory-guard/src --max-concurrency 4",

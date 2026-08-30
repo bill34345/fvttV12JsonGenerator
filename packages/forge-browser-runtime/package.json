@@ -8,6 +8,11 @@
     "./ai": "./src/ai.ts",
     "./intake-review": "./src/intakeReview.ts",
     "./intake-review-import": "./src/intakeReviewImport.ts",
+    "./source-library": "./src/sourceLibrary.ts",
+    "./source-library-indexed-db": "./src/sourceLibraryIndexedDb.ts",
+    "./batch-collection": "./src/batchCollection.ts",
+    "./batch-queue": "./src/batchQueue.ts",
+    "./batch-queue-indexed-db": "./src/batchQueueIndexedDb.ts",
     "./item-intake": "./src/itemIntake.ts",
     "./plaintext": "./src/plaintext.ts",
     "./provider-connections": "./src/providerConnections.ts"

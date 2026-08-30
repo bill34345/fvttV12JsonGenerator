@@ -13,9 +13,12 @@ import {
  * second conversion of the same final source look like a conflicting Actor.
  * This projection is Forge-only so existing CLI/Web output remains unchanged.
  */
-export function normalizeForgeActorArtifact(value: unknown): JsonObject {
+export function normalizeForgeActorArtifact(value: unknown, target: '12' | '14'): JsonObject {
   const actor = cloneJsonObject(value);
   normalizeStats(actor);
+  if (target === '14' && Array.isArray(actor.items)) {
+    for (const item of actor.items) if (isJsonObject(item)) normalizeEmbeddedAttackRangesForFoundryV14(item);
+  }
 
   const replacements = collectEffectIdReplacements(actor);
   replaceGeneratedEffectIds(actor, replacements);
@@ -82,11 +85,29 @@ function normalizeItemActivitiesForFoundryV14(item: JsonObject): void {
     uses.recovery ??= [];
     uses.spent ??= 0;
 
-    normalizeAttackActivityRange(activityValue);
+    normalizeAttackActivityRange(activityValue, 'string');
   }
 }
 
-function normalizeAttackActivityRange(activity: JsonObject): void {
+/**
+ * dnd5e projects a weapon Activity's reach through the parent Item range, and
+ * the Foundry readback verifier deliberately reconstructs that supported
+ * representation. Embedded feat attacks have no parent range, however, so a
+ * legacy Activity `reach` would otherwise be silently discarded by RangeField.
+ * Materialize only that unrepresentable case without rewriting weapon range
+ * semantics or adding the standalone-Item default fields to every Actor item.
+ */
+function normalizeEmbeddedAttackRangesForFoundryV14(item: JsonObject): void {
+  const system = isJsonObject(item.system) ? item.system : undefined;
+  if (!system || isJsonObject(system.range)) return;
+  const activities = isJsonObject(system.activities) ? system.activities : undefined;
+  if (!activities) return;
+  for (const activity of Object.values(activities)) {
+    if (isJsonObject(activity)) normalizeAttackActivityRange(activity, 'number');
+  }
+}
+
+function normalizeAttackActivityRange(activity: JsonObject, valueKind: 'number' | 'string'): void {
   if (activity.type !== 'attack' || !isJsonObject(activity.range)) return;
   const range = activity.range;
   const reach = range.reach;
@@ -95,8 +116,10 @@ function normalizeAttackActivityRange(activity: JsonObject): void {
     && (typeof reach === 'string' || (typeof reach === 'number' && Number.isFinite(reach)))
     && String(reach).length > 0
   ) {
+    const numericValue = typeof reach === 'number' ? reach : Number(reach);
+    if (valueKind === 'number' && !Number.isFinite(numericValue)) return;
     range.override = true;
-    range.value = String(reach);
+    range.value = valueKind === 'number' ? numericValue : String(reach);
     delete range.long;
     delete range.reach;
   }

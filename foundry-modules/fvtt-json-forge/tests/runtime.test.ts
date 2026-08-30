@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
+import { analyzePlaintextActorSource } from '@fvtt-json-generator/forge-browser-runtime/plaintext';
 import { hashArtifact, type ForgeActorResponse, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
+import { splitCollection } from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import {
   createAcceptedForgeActor,
   ForgeTemporaryActorCleanupError,
@@ -170,6 +172,42 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.type).toBe('override');
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]).not.toHaveProperty('mode');
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.value).toBe('14');
+  });
+
+  test('materializes embedded feat attack reach in the v14 Activity RangeField before Actor readback', async () => {
+    const source = await Bun.file('tests/fixtures/plaintext/月蚀矿腐化生物数据.md').text();
+    const block = splitCollection(source).find((entry) => entry.englishName === 'Slithering Bloodfin');
+    if (!block) throw new Error('Slithering Bloodfin plaintext fixture block was not found.');
+    const analysis = analyzePlaintextActorSource(block.rawBlock);
+    if (analysis.status !== 'ready_to_generate' || !analysis.canonicalSource) {
+      throw new Error(`Expected a ready Slithering Bloodfin analysis: ${JSON.stringify(analysis)}`);
+    }
+    const response = await convertFinalActorSource(buildForgeActorRequest({
+      content: analysis.canonicalSource,
+      displayName: 'Slithering Bloodfin',
+      requestId: 'runtime-v14-embedded-feat-reach',
+      fvttVersion: '14.364',
+      systemVersion: '5.3.3',
+    }));
+    if (!('result' in response) || response.result.status !== 'accepted') {
+      throw new Error(`Expected an accepted Slithering Bloodfin response: ${JSON.stringify(response)}`);
+    }
+
+    const swallow = (response.result.artifact.items as Array<Record<string, any>>)
+      .find((item) => item.name === '吞咽 (Swallow)');
+    const attackEntry = Object.entries(asRecord(swallow?.system?.activities))
+      .find(([, activity]) => asRecord(activity).type === 'attack');
+    if (!attackEntry) throw new Error('Swallow attack Activity was not found.');
+    const [attackId, attack] = attackEntry;
+    expect(asRecord(attack).range).toMatchObject({ override: true, value: 5, units: 'ft' });
+    expect(asRecord(attack).range).not.toHaveProperty('reach');
+
+    const collection = new FakeActorCollection();
+    const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
+    const imported = collection.contents[0]!.toObject() as Record<string, any>;
+    expect(result.status).toBe('created');
+    expect(findActivity(imported, '吞咽 (Swallow)', attackId).range)
+      .toMatchObject({ override: true, value: 5, units: 'ft' });
   });
 
   test('ignores only inactive Activity template unit defaults and rejects active-template unit drift', async () => {
