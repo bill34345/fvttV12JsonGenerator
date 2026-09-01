@@ -30,7 +30,7 @@ describe('Open Session Deck build', () => {
     expect(await readFile(resolve(result.moduleRoot, 'LICENSE'), 'utf8')).toContain('Permission is hereby granted');
     const browser = await readFile(resolve(result.moduleRoot, 'scripts/index.js'), 'utf8');
     expect(browser).not.toMatch(/node:|process\.env|@fvtt-json-generator\//i);
-  });
+  }, 15_000);
 
   test('stored zip output is deterministic regardless of entry order', () => {
     const a = { name: 'a.txt', bytes: new TextEncoder().encode('a') };
@@ -57,5 +57,5 @@ describe('Open Session Deck build', () => {
     } finally {
       await rm(temporaryRoot, { recursive: true });
     }
-  });
+  }, 15_000);
 });

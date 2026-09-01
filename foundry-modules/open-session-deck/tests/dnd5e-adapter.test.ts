@@ -12,7 +12,7 @@ function actor(id: string, options: Record<string, any> = {}) {
     ownership: options.ownership ?? {},
     system: {
       attributes: {
-        hp: { value: options.hp ?? 10, max: options.max ?? 20, temp: options.temp ?? 0 },
+        hp: { value: options.hp ?? 10, max: options.max ?? 20, tempmax: options.tempmax ?? 0, temp: options.temp ?? 0 },
         ac: { value: options.ac ?? 15 },
         inspiration: options.inspiration ?? 0,
         exhaustion: options.exhaustion ?? 0,
@@ -22,9 +22,12 @@ function actor(id: string, options: Record<string, any> = {}) {
     concentration: { effects: new Set(options.concentrating ? [{}] : []) },
     statuses: new Set(options.statuses ?? []),
     effects: options.effects ?? [],
+    folder: Object.hasOwn(options, 'folder') ? options.folder : { id: 'party', name: 'Party', type: 'Actor' },
     applyDamage: async (value: number) => { options.calls?.push(['applyDamage', value]); },
     applyTempHP: async (value: number) => { options.calls?.push(['applyTempHP', value]); },
     update: async (value: unknown) => { options.calls?.push(['update', value]); },
+    createEmbeddedDocuments: async (type: string, value: unknown) => { options.calls?.push(['createEmbeddedDocuments', type, value]); },
+    deleteEmbeddedDocuments: async (type: string, value: unknown) => { options.calls?.push(['deleteEmbeddedDocuments', type, value]); },
     toggleStatusEffect: async (value: string) => { options.calls?.push(['toggleStatusEffect', value]); },
     sheet: { render: (value: boolean) => options.calls?.push(['sheet', value]) },
   };
@@ -34,6 +37,8 @@ function runtime(options: Record<string, any> = {}): Dnd5eRuntime {
   const settings = new Map<string, unknown>([
     ['pinnedActors', options.pinned ?? []],
     ['hiddenActors', options.hidden ?? []],
+    ['partyFolderId', options.partyFolderId ?? 'party'],
+    ['includePartySubfolders', options.includePartySubfolders ?? true],
     ['lastOpenMode', 'panel'],
     ['cardDensity', 'comfortable'],
     ['activeTab', 'party'],
@@ -47,6 +52,7 @@ function runtime(options: Record<string, any> = {}): Dnd5eRuntime {
       world: { id: 'world', title: 'World' },
       users: options.users ?? [],
       actors,
+      folders: options.folders ?? [{ id: 'party', name: 'Party', type: 'Actor' }],
       combat: options.combat ?? null,
       settings: {
         get: (_module: string, key: string) => settings.get(key),
@@ -89,22 +95,71 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(value.rosterManager).toEqual([]);
   });
 
-  test('builds automatic and pinned roster while hiding automatic actors', () => {
-    const assigned = actor('assigned', { name: 'Assigned' });
-    const owned = actor('owned', { name: 'Owned', ownership: { player2: 3 } });
-    const hidden = actor('hidden', { name: 'Hidden' });
-    const npc = actor('npc', { name: 'Pinned NPC', type: 'npc' });
+  test('keeps no-active-combat commands unavailable with an explicit reason', () => {
+    const value = new Dnd5eAdapter(runtime()).buildSnapshot();
+    expect(value.encounter.active).toBeFalse();
+    expect(value.encounter.commands).toEqual({
+      previousTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      nextTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      focusCurrent: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      swapInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      rollNpcInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+    });
+  });
+
+  test('keeps turn controls unavailable when active combat has no current combatant', () => {
+    const combat = { uuid: 'Combat.empty-turn', combatants: [], combatant: null, turn: -1, previousTurn: async () => {}, nextTurn: async () => {} };
+    const value = new Dnd5eAdapter(runtime({ combat })).buildSnapshot();
+    expect(value.encounter.active).toBeTrue();
+    expect(value.encounter.commands).toEqual({
+      previousTurn: { enabled: false, tooltipKey: 'OSD.Errors.CombatTurnUnavailable' },
+      nextTurn: { enabled: false, tooltipKey: 'OSD.Errors.CombatTurnUnavailable' },
+      focusCurrent: { enabled: false, tooltipKey: 'OSD.Errors.CurrentCombatantUnavailable' },
+      swapInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NativeApiUnavailable' },
+      rollNpcInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NativeApiUnavailable' },
+    });
+  });
+
+  test('builds the party from the selected Actor folder in directory order and includes descendants', () => {
+    const partyFolder = { id: 'party', name: 'Party', type: 'Actor' };
+    const childFolder = { id: 'child', name: 'Companions', type: 'Actor', folder: 'party' };
+    const assigned = actor('assigned', { name: 'Assigned', folder: partyFolder });
+    const owned = actor('owned', { name: 'Owned', ownership: { player2: 3 }, folder: partyFolder });
+    const hidden = actor('hidden', { name: 'Outside', folder: null });
+    const npc = actor('npc', { name: 'Companion NPC', type: 'npc', folder: childFolder });
     const users = [
       { id: 'player1', name: 'Player One', isGM: false, active: true, character: assigned },
       { id: 'player2', name: 'Player Two', isGM: false, active: false },
     ];
-    const adapter = new Dnd5eAdapter(runtime({ actors: [assigned, owned, hidden, npc], users, pinned: [npc.uuid, 'Actor.stale'], hidden: [hidden.uuid, 'Actor.gone'] }));
+    const adapter = new Dnd5eAdapter(runtime({ actors: [assigned, owned, hidden, npc], folders: [partyFolder, childFolder], users }));
     const value = adapter.buildSnapshot();
-    expect(value.party.map((entry) => entry.name)).toEqual(['Assigned', 'Owned', 'Pinned NPC']);
+    expect(value.party.map((entry) => entry.name)).toEqual(['Assigned', 'Owned', 'Companion NPC']);
     expect(value.party[0]?.players[0]?.active).toBe(true);
-    expect(value.stalePinned).toEqual(['Actor.stale']);
-    expect(value.staleHidden).toEqual(['Actor.gone']);
+    expect(value.partyFolder.selectedName).toBe('Party');
     expect(value.statusOptions.map((entry) => entry.id)).toEqual(['poisoned']);
+  });
+
+  test('marks a folder party Actor in combat when the Combatant carries an Actor ID', () => {
+    const partyFolder = { id: 'party', name: 'Party', type: 'Actor' };
+    const hero = actor('hero', { name: 'Hero', folder: partyFolder });
+    const combatant = {
+      id: 'token-combatant',
+      actorId: hero.id,
+      actor: hero,
+      token: { id: 'token', uuid: 'Scene.scene.Token.token', parent: { id: 'scene' } },
+      initiative: 12.5,
+      hidden: false,
+    };
+    const combat = {
+      uuid: 'Combat.token-backed',
+      turns: [combatant],
+      combatants: [combatant],
+      combatant,
+      turn: 0,
+    };
+    const value = new Dnd5eAdapter(runtime({ actors: [hero], folders: [partyFolder], combat })).buildSnapshot();
+    expect(value.party[0]?.inCombat).toBeTrue();
+    expect(value.encounter.combatants[0]?.partyMember).toBeTrue();
   });
 
   test('projects system fields and current statuses without exposing concentration as a toggle', () => {
@@ -118,7 +173,7 @@ describe('Dnd5eAdapter snapshots', () => {
     });
     const adapter = new Dnd5eAdapter(runtime({ actors: [statusActor], users: [{ id: 'p', name: 'P', isGM: false, active: true, character: statusActor }] }));
     const card = adapter.buildSnapshot().party[0]!;
-    expect(card.hp).toEqual({ value: 10, max: 20, temp: 4, percent: 50 });
+    expect(card.hp).toEqual({ value: 10, max: 20, baseMax: 20, maxModifier: 0, maxModifierDisplay: '0', effectiveMax: 20, temp: 4, percent: 50 });
     expect(card.inspiration).toBe(true);
     expect(card.exhaustion).toBe(2);
     expect(card.concentrating).toBe(true);
@@ -214,5 +269,55 @@ describe('Dnd5eAdapter commands', () => {
     await adapter.execute({ id: 'combat.next-turn', combatUuid: combat.uuid });
     expect(calls).toEqual(['previous', 'next']);
     expect(adapter.execute({ id: 'combat.next-turn', combatUuid: 'Combat.old' })).rejects.toThrow('changed');
+  });
+
+  test('supports direct HP fields, exact temp HP, max modifier clamping, statuses, concentration, AC, and death saves', async () => {
+    const calls: unknown[] = [];
+    const hero = actor('hero', { calls, hp: 10, max: 20, tempmax: 5, temp: 3, statuses: ['poisoned'] });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero] }));
+    await adapter.execute({ id: 'actor.set-hp', targetUuid: hero.uuid, value: 4 });
+    await adapter.execute({ id: 'actor.set-temp-hp', targetUuid: hero.uuid, value: 1 });
+    await adapter.execute({ id: 'actor.set-max-modifier', targetUuid: hero.uuid, value: -15 });
+    await adapter.execute({ id: 'actor.set-status', targetUuid: hero.uuid, statusId: 'poisoned', active: false });
+    await adapter.execute({ id: 'actor.toggle-concentration', targetUuid: hero.uuid });
+    await adapter.execute({ id: 'actor.set-ac-modifier', targetUuid: hero.uuid, value: 2 });
+    await adapter.execute({ id: 'actor.set-death-save', targetUuid: hero.uuid, field: 'failure', value: 3 });
+    expect(calls).toEqual([
+      ['applyDamage', 6],
+      ['update', { 'system.attributes.hp.temp': 1 }],
+      ['update', { 'system.attributes.hp.tempmax': -15, 'system.attributes.hp.value': 5 }],
+      ['toggleStatusEffect', 'poisoned'],
+      ['toggleStatusEffect', 'concentrating'],
+      ['createEmbeddedDocuments', 'ActiveEffect', [{
+        name: 'Open Session Deck: AC Modifier', img: 'icons/svg/shield.svg',
+        changes: [{ key: 'system.attributes.ac.bonus', mode: 2, value: '2', priority: 20 }],
+        flags: { 'open-session-deck': { acModifier: true } },
+      }]],
+      ['update', { 'system.attributes.death.failure': 3 }],
+    ]);
+  });
+
+  test('preserves decimal initiative, swaps exact values, and rolls only missing NPC initiative privately', async () => {
+    const combatCalls: unknown[] = [];
+    const first = { id: 'first', actor: actor('npc-a', { type: 'npc' }), initiative: 20.08, hidden: false };
+    const second = { id: 'second', actor: actor('npc-b', { type: 'npc' }), initiative: 11.22, hidden: false };
+    const missing = { id: 'missing', actor: actor('npc-c', { type: 'npc' }), initiative: null, hidden: false };
+    const hero = { id: 'hero', actor: actor('hero'), initiative: null, hidden: false };
+    const combat = {
+      uuid: 'Combat.one', combatants: [first, second, missing, hero],
+      setInitiative: async (...args: unknown[]) => combatCalls.push(['setInitiative', ...args]),
+      updateEmbeddedDocuments: async (...args: unknown[]) => combatCalls.push(['updateEmbeddedDocuments', ...args]),
+      rollInitiative: async (...args: unknown[]) => combatCalls.push(['rollInitiative', ...args]),
+    };
+    const adapter = new Dnd5eAdapter(runtime({ combat }));
+    await adapter.execute({ id: 'combat.set-initiative', combatUuid: combat.uuid, combatantId: first.id, value: 18.14 });
+    await adapter.execute({ id: 'combat.swap-initiative', combatUuid: combat.uuid, combatantId: first.id, secondCombatantId: second.id });
+    await adapter.execute({ id: 'combat.roll-npc-initiative', combatUuid: combat.uuid });
+    expect(combatCalls).toEqual([
+      ['setInitiative', 'first', 18.14],
+      ['updateEmbeddedDocuments', 'Combatant', [{ _id: 'first', initiative: 11.22 }, { _id: 'second', initiative: 20.08 }]],
+      ['updateEmbeddedDocuments', 'Combatant', [{ _id: 'missing', hidden: true, 'flags.open-session-deck.revealed': false }]],
+      ['rollInitiative', ['missing'], { messageOptions: { rollMode: 'gmroll' } }],
+    ]);
   });
 });

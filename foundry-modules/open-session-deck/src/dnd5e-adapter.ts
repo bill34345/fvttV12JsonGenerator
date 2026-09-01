@@ -70,6 +70,7 @@ export class Dnd5eAdapter {
         party: [],
         encounter: emptyEncounter('OSD.Errors.Unsupported'),
         statusOptions: [],
+        partyFolder: { includeDescendants: true, missing: false, options: [] },
         rosterManager: [],
         stalePinned: [],
         staleHidden: [],
@@ -80,37 +81,26 @@ export class Dnd5eAdapter {
     }
     const actors = collectionValues(runtimeGame.actors);
     const nonGmUsers = users.filter((user) => !user.isGM);
-    const pinned = stringSetting(runtimeGame, SETTINGS.pinnedActors);
-    const hidden = stringSetting(runtimeGame, SETTINGS.hiddenActors);
-    const pinnedSet = new Set(pinned);
-    const hiddenSet = new Set(hidden);
     const compatibleActors = actors.filter(isCompatibleActor);
-    const actorByUuid = new Map(compatibleActors.map((actor) => [String(actor.uuid), actor]));
-    const automaticSet = new Set<string>();
-
-    for (const user of nonGmUsers) {
-      if (user.character?.type === 'character' && isCompatibleActor(user.character)) automaticSet.add(String(user.character.uuid));
-    }
-    for (const actor of compatibleActors) {
-      if (actor.type !== 'character') continue;
-      if (nonGmUsers.some((user) => Number(actor.ownership?.[user.id] ?? 0) >= 3)) automaticSet.add(String(actor.uuid));
-    }
+    const folders = collectionValues(runtimeGame.folders).filter((folder) => String(folder?.type ?? '') === 'Actor');
+    const folderById = new Map(folders.map((folder) => [String(folder.id), folder]));
+    const selectedFolderId = settingOr(runtimeGame, SETTINGS.partyFolderId, '');
+    const selectedFolder = folderById.get(selectedFolderId);
+    const includeDescendants = booleanSetting(runtimeGame, SETTINGS.includePartySubfolders, true);
+    const statusOptions = this.statusOptions();
 
     const combat = runtimeGame.combat ?? null;
-    const combatants = combat ? collectionValues(combat.combatants) : [];
-    const combatActorIds = new Set(combatants.map((combatant) => String(combatant.actor?.uuid ?? '')).filter(Boolean));
-    const partyUuids = new Set<string>();
-    for (const uuid of automaticSet) if (!hiddenSet.has(uuid)) partyUuids.add(uuid);
-    for (const uuid of pinnedSet) if (actorByUuid.has(uuid)) partyUuids.add(uuid);
-
-    const party = [...partyUuids]
-      .map((uuid) => actorByUuid.get(uuid))
-      .filter(Boolean)
+    const combatants = combat ? collectionValues(combat.turns ?? combat.combatants) : [];
+    const combatActorIds = new Set(combatants.map((combatant) => String(combatant.actorId ?? combatant.actor?.id ?? '')).filter(Boolean));
+    const partyActors = selectedFolder
+      ? compatibleActors.filter((actor) => actorInFolder(actor, selectedFolderId, includeDescendants, folderById))
+      : [];
+    const partyActorIds = new Set(partyActors.map((actor) => String(actor.id)));
+    const party = partyActors
       .map((actor) => this.projectActor(actor, users, {
-        sources: [automaticSet.has(actor.uuid) ? 'automatic' : null, pinnedSet.has(actor.uuid) ? 'pinned' : null].filter(Boolean) as RosterSource[],
-        inCombat: combatActorIds.has(String(actor.uuid)),
-      }))
-      .sort(compareActorCards);
+        sources: ['folder'],
+        inCombat: combatActorIds.has(String(actor.id)),
+      }, statusOptions));
 
     const encounterCards = combatants.map((combatant) => {
       const actor = combatant.actor;
@@ -127,18 +117,12 @@ export class Dnd5eAdapter {
         tokenSceneId: tokenSceneId || undefined,
         canLocate: Boolean(token?.uuid && runtimeCanvas?.scene?.id && tokenSceneId === String(runtimeCanvas.scene.id)),
         current: String(combat.combatant?.id ?? '') === String(combatant.id),
-      });
+        partyMember: partyActorIds.has(String(combatant.actorId)),
+        characterControls: String(actor.type) === 'character',
+        hidden: Boolean(combatant.hidden),
+        revealed: Boolean(combatant.flags?.[MODULE_ID]?.revealed),
+      }, statusOptions);
     }).filter(Boolean) as DeckActorCard[];
-
-    const manager = compatibleActors.map((actor) => ({
-      uuid: String(actor.uuid),
-      name: String(actor.name ?? ''),
-      img: String(actor.img ?? 'icons/svg/mystery-man.svg'),
-      type: String(actor.type ?? ''),
-      automatic: automaticSet.has(String(actor.uuid)),
-      pinned: pinnedSet.has(String(actor.uuid)),
-      hidden: hiddenSet.has(String(actor.uuid)),
-    })).sort((a, b) => a.name.localeCompare(b.name, runtimeGame.i18n?.lang ?? 'en'));
 
     const combatTurn = Number.isInteger(combat?.turn) ? Number(combat.turn) : -1;
     const hasCurrentCombatant = Boolean(combat?.combatant && combatTurn >= 0);
@@ -160,27 +144,51 @@ export class Dnd5eAdapter {
         combatants: encounterCards,
         commands: combat ? encounterCommands(combat, hasCurrentCombatant) : emptyEncounterCommands('OSD.Errors.NoActiveCombat'),
       },
-      statusOptions: this.statusOptions(),
-      rosterManager: manager,
-      stalePinned: pinned.filter((uuid) => !actorByUuid.has(uuid)),
-      staleHidden: hidden.filter((uuid) => !actorByUuid.has(uuid)),
+      statusOptions,
+      partyFolder: {
+        selectedId: selectedFolderId || undefined,
+        selectedName: selectedFolder ? String(selectedFolder.name ?? '') : undefined,
+        includeDescendants,
+        missing: Boolean(selectedFolderId && !selectedFolder),
+        options: folders.map((folder) => ({ id: String(folder.id), name: String(folder.name ?? ''), depth: folderDepth(folder, folderById) })),
+      },
+      rosterManager: [],
+      stalePinned: [],
+      staleHidden: [],
       density: settingOr(runtimeGame, SETTINGS.cardDensity, 'comfortable') as DeckDensity,
       activeTab: settingOr(runtimeGame, SETTINGS.activeTab, 'party') as DeckTab,
       refreshedAt: Date.now(),
     };
   }
 
-  projectActor(actor: any, users: any[], options: Partial<DeckActorCard> & { sources: RosterSource[]; inCombat: boolean }): DeckActorCard {
+  projectActor(
+    actor: any,
+    users: any[],
+    options: Partial<DeckActorCard> & { sources: RosterSource[]; inCombat: boolean },
+    statusOptions = this.statusOptions(),
+  ): DeckActorCard {
     const hp = actor.system?.attributes?.hp ?? {};
-    const max = finiteNumber(hp.max);
+    const baseMax = finiteNumber(hp.max);
+    const maxModifier = finiteNumber(hp.tempmax);
+    const effectiveMax = Math.max(0, baseMax + maxModifier);
     const value = finiteNumber(hp.value);
     const statuses = actorStatuses(actor, this.statusMap());
+    const activeStatusIds = new Set(statuses.map((status) => status.id));
     const players = users.filter((user) => !user.isGM && (String(user.character?.uuid ?? '') === String(actor.uuid) || Number(actor.ownership?.[user.id] ?? 0) >= 3))
       .map((user) => ({ id: String(user.id), name: String(user.name ?? ''), active: Boolean(user.active) }));
     const death = actor.system?.attributes?.death;
     const exhaustion = finiteNumber(actor.system?.attributes?.exhaustion);
     const exhaustionMax = Number(this.runtime.config.DND5E?.conditionTypes?.exhaustion?.levels);
     const canLocate = Boolean(options.canLocate);
+    const combat = this.runtime.game.combat;
+    const commands: DeckActorCommands = {
+      ...actorCommands(actor, exhaustion, exhaustionMax, statusOptions.length > 0, canLocate),
+      ...(options.combatantId ? {
+        setInitiative: available(typeof combat?.setInitiative === 'function', 'OSD.Actions.SetInitiative', 'OSD.Errors.NativeApiUnavailable'),
+        rollInitiative: available(typeof combat?.rollInitiative === 'function', 'OSD.Actions.RollInitiative', 'OSD.Errors.NativeApiUnavailable'),
+        toggleVisibility: available(typeof combat?.updateEmbeddedDocuments === 'function', 'OSD.Actions.ToggleVisibility', 'OSD.Errors.NativeApiUnavailable'),
+      } : {}),
+    };
     return {
       uuid: String(actor.uuid),
       id: String(actor.id),
@@ -190,16 +198,27 @@ export class Dnd5eAdapter {
       players,
       playerNames: players.map((player) => player.name).join(', '),
       anyPlayerActive: players.some((player) => player.active),
-      hp: { value, max, temp: finiteNumber(hp.temp), percent: max > 0 ? Math.max(0, Math.min(100, Math.round((value / max) * 100))) : 0 },
+      hp: {
+        value,
+        max: effectiveMax,
+        baseMax,
+        maxModifier,
+        maxModifierDisplay: signedNumber(maxModifier),
+        effectiveMax,
+        temp: finiteNumber(hp.temp),
+        percent: effectiveMax > 0 ? Math.max(0, Math.min(100, Math.round((value / effectiveMax) * 100))) : 0,
+      },
       ac: Number.isFinite(actor.system?.attributes?.ac?.value) ? Number(actor.system.attributes.ac.value) : null,
+      acModifier: actorAcModifier(actor),
       inspiration: Boolean(actor.system?.attributes?.inspiration),
       exhaustion,
       death: death ? { success: finiteNumber(death.success), failure: finiteNumber(death.failure) } : null,
       concentrating: Number(actor.concentration?.effects?.size ?? 0) > 0,
       statuses,
+      statusChoices: statusOptions.map((status) => ({ ...status, active: activeStatusIds.has(status.id) })),
       inCombat: options.inCombat,
       sources: options.sources,
-      commands: actorCommands(actor, exhaustion, exhaustionMax, this.statusOptions().length > 0, canLocate),
+      commands,
       combatantId: options.combatantId,
       initiative: options.initiative,
       hasInitiative: options.hasInitiative,
@@ -207,6 +226,10 @@ export class Dnd5eAdapter {
       tokenSceneId: options.tokenSceneId,
       canLocate,
       current: options.current,
+      partyMember: options.partyMember,
+      characterControls: options.characterControls ?? String(actor.type) === 'character',
+      hidden: options.hidden,
+      revealed: options.revealed,
     };
   }
 
@@ -215,7 +238,41 @@ export class Dnd5eAdapter {
     if (command.id.startsWith('actor.')) {
       const actor = await this.resolveActor(command.targetUuid);
       this.assertCommandAllowed();
-      if (command.id === 'actor.damage') await actor.applyDamage(positiveInteger(command.amount));
+      if (command.id === 'actor.set-hp') {
+        const hp = actor.system?.attributes?.hp ?? {};
+        const effectiveMax = Math.max(0, finiteNumber(hp.max) + finiteNumber(hp.tempmax));
+        const desired = boundedInteger(command.value, 0, effectiveMax, 'Current HP');
+        const delta = finiteNumber(hp.value) - desired;
+        if (delta !== 0) await actor.applyDamage(delta);
+      } else if (command.id === 'actor.set-temp-hp') {
+        const desired = nonNegativeInteger(command.value, 'Temporary HP');
+        const current = finiteNumber(actor.system?.attributes?.hp?.temp);
+        if (desired > current && typeof actor.applyTempHP === 'function') await actor.applyTempHP(desired);
+        else if (desired !== current) await actor.update({ 'system.attributes.hp.temp': desired });
+      } else if (command.id === 'actor.set-max-modifier') {
+        const modifier = integer(command.value, 'Maximum HP modifier');
+        const baseMax = finiteNumber(actor.system?.attributes?.hp?.max);
+        const effectiveMax = Math.max(0, baseMax + modifier);
+        const current = finiteNumber(actor.system?.attributes?.hp?.value);
+        await actor.update({
+          'system.attributes.hp.tempmax': modifier,
+          ...(current > effectiveMax ? { 'system.attributes.hp.value': effectiveMax } : {}),
+        });
+      } else if (command.id === 'actor.set-ac-modifier') {
+        await setActorAcModifier(actor, integer(command.value, 'AC modifier'));
+      } else if (command.id === 'actor.set-status') {
+        const allowed = new Set(this.statusOptions().map((option) => option.id));
+        if (!command.statusId || !allowed.has(command.statusId)) throw new Error('The selected status is not available for Deck control.');
+        if (typeof command.active !== 'boolean') throw new Error('Status target state is required.');
+        const current = new Set(collectionValues(actor.statuses).map(String)).has(command.statusId);
+        if (current !== command.active) await actor.toggleStatusEffect(command.statusId, { active: command.active });
+      } else if (command.id === 'actor.toggle-concentration') {
+        await toggleActorConcentration(actor);
+      } else if (command.id === 'actor.set-death-save') {
+        if (command.field !== 'success' && command.field !== 'failure') throw new Error('Death save field is invalid.');
+        const value = boundedInteger(command.value, 0, 3, 'Death save');
+        await actor.update({ [`system.attributes.death.${command.field}`]: value });
+      } else if (command.id === 'actor.damage') await actor.applyDamage(positiveInteger(command.amount));
       else if (command.id === 'actor.heal') await actor.applyDamage(-positiveInteger(command.amount));
       else if (command.id === 'actor.temp-hp') await actor.applyTempHP(positiveInteger(command.amount));
       else if (command.id === 'actor.toggle-inspiration') await actor.update({ 'system.attributes.inspiration': actor.system.attributes.inspiration ? 0 : 1 });
@@ -241,6 +298,45 @@ export class Dnd5eAdapter {
       const combat = this.resolveCombat(command.combatUuid);
       if (command.id === 'combat.previous-turn') await combat.previousTurn();
       else await combat.nextTurn();
+      return { messageKey: 'OSD.Notifications.CombatUpdated' };
+    }
+
+    if (command.id.startsWith('combat.')) {
+      const combat = this.resolveCombat(command.combatUuid);
+      this.assertCommandAllowed();
+      if (command.id === 'combat.set-initiative') {
+        if (!command.combatantId) throw new Error('Combatant ID is required.');
+        await combat.setInitiative(command.combatantId, finite(command.value, 'Initiative'));
+      } else if (command.id === 'combat.swap-initiative') {
+        const first = resolveCombatant(combat, command.combatantId);
+        const second = resolveCombatant(combat, command.secondCombatantId);
+        if (first.id === second.id) throw new Error('Choose two different combatants.');
+        if (!Number.isFinite(first.initiative) || !Number.isFinite(second.initiative)) throw new Error('Both combatants need initiative values before swapping.');
+        await combat.updateEmbeddedDocuments('Combatant', [
+          { _id: first.id, initiative: second.initiative },
+          { _id: second.id, initiative: first.initiative },
+        ]);
+      } else if (command.id === 'combat.roll-initiative' || command.id === 'combat.roll-npc-initiative') {
+        const combatants = collectionValues(combat.combatants);
+        const ids = command.id === 'combat.roll-initiative'
+          ? [resolveCombatant(combat, command.combatantId).id]
+          : combatants.filter((entry) => entry.actor?.type === 'npc' && !Number.isFinite(entry.initiative)).map((entry) => String(entry.id));
+        if (ids.length === 0) return { messageKey: 'OSD.Notifications.NoInitiativeNeeded' };
+        const npcIds = new Set(combatants.filter((entry) => entry.actor?.type === 'npc').map((entry) => String(entry.id)));
+        const hiddenUpdates = ids.filter((id) => npcIds.has(id)).map((id) => ({ _id: id, hidden: true, [`flags.${MODULE_ID}.revealed`]: false }));
+        if (hiddenUpdates.length > 0) await combat.updateEmbeddedDocuments('Combatant', hiddenUpdates);
+        await combat.rollInitiative(ids, { messageOptions: { rollMode: 'gmroll' } });
+      } else if (command.id === 'combat.toggle-visibility') {
+        const combatant = resolveCombatant(combat, command.combatantId);
+        const hidden = !Boolean(combatant.hidden);
+        await combat.updateEmbeddedDocuments('Combatant', [{
+          _id: combatant.id,
+          hidden,
+          [`flags.${MODULE_ID}.revealed`]: !hidden,
+        }]);
+      } else {
+        throw new Error(`Unsupported Deck command: ${command.id}`);
+      }
       return { messageKey: 'OSD.Notifications.CombatUpdated' };
     }
 
@@ -271,6 +367,17 @@ export class Dnd5eAdapter {
         this.assertCommandAllowed();
         await this.runtime.game.settings.set(MODULE_ID, key, stringSetting(this.runtime.game, key).filter((uuid) => actorUuids.has(uuid)));
       }
+      return { messageKey: 'OSD.Notifications.RosterUpdated' };
+    }
+
+    if (command.id === 'roster.set-folder') {
+      const folderId = String(command.folderId ?? '');
+      if (folderId) {
+        const folder = collectionValues(this.runtime.game.folders).find((entry) => String(entry.id) === folderId && String(entry.type) === 'Actor');
+        if (!folder) throw new Error('The selected Actor folder no longer exists.');
+      }
+      await this.runtime.game.settings.set(MODULE_ID, SETTINGS.partyFolderId, folderId);
+      await this.runtime.game.settings.set(MODULE_ID, SETTINGS.includePartySubfolders, command.includeDescendants !== false);
       return { messageKey: 'OSD.Notifications.RosterUpdated' };
     }
 
@@ -325,6 +432,7 @@ function actorCommands(actor: any, exhaustion: number, exhaustionMax: number, ha
   const hasExhaustionModel = canUpdate && Number.isFinite(exhaustionMax);
   const canToggleStatus = typeof actor.toggleStatusEffect === 'function' && hasStatuses;
   const canOpenSheet = typeof actor.sheet?.render === 'function';
+  const canEditEmbedded = typeof actor.createEmbeddedDocuments === 'function' && typeof actor.deleteEmbeddedDocuments === 'function';
   return {
     damage: available(canApplyDamage, 'OSD.Actions.Damage', 'OSD.Errors.NativeApiUnavailable'),
     heal: available(canApplyDamage, 'OSD.Actions.Heal', 'OSD.Errors.NativeApiUnavailable'),
@@ -335,14 +443,27 @@ function actorCommands(actor: any, exhaustion: number, exhaustionMax: number, ha
     toggleStatus: available(canToggleStatus, 'OSD.Actions.ToggleStatus', hasStatuses ? 'OSD.Errors.NativeApiUnavailable' : 'OSD.Errors.NoControllableStatuses'),
     openSheet: available(canOpenSheet, 'OSD.Actions.OpenSheet', 'OSD.Errors.SheetUnavailable'),
     locate: available(canLocate, 'OSD.Actions.Locate', 'OSD.Errors.TokenNotActive'),
+    setHp: available(canApplyDamage, 'OSD.Actions.SetHP', 'OSD.Errors.NativeApiUnavailable'),
+    setTempHp: available(canApplyTempHp || canUpdate, 'OSD.Actions.SetTempHP', 'OSD.Errors.NativeApiUnavailable'),
+    setMaxModifier: available(canUpdate, 'OSD.Actions.SetMaxModifier', 'OSD.Errors.NativeApiUnavailable'),
+    setAcModifier: available(canEditEmbedded, 'OSD.Actions.SetACModifier', 'OSD.Errors.NativeApiUnavailable'),
+    toggleConcentration: available(typeof actor.toggleStatusEffect === 'function', 'OSD.Actions.ToggleConcentration', 'OSD.Errors.NativeApiUnavailable'),
+    setDeathSave: available(canUpdate && Boolean(actor.system?.attributes?.death), 'OSD.Actions.SetDeathSave', 'OSD.Errors.NativeApiUnavailable'),
+    setInitiative: available(false, 'OSD.Actions.SetInitiative', 'OSD.Errors.NoActiveCombat'),
+    rollInitiative: available(false, 'OSD.Actions.RollInitiative', 'OSD.Errors.NoActiveCombat'),
+    toggleVisibility: available(false, 'OSD.Actions.ToggleVisibility', 'OSD.Errors.NoActiveCombat'),
   };
 }
 
 function encounterCommands(combat: any, hasCurrentCombatant: boolean): DeckEncounterCommands {
+  const canUpdateCombatants = typeof combat.updateEmbeddedDocuments === 'function';
+  const canRoll = typeof combat.rollInitiative === 'function';
   return {
     previousTurn: available(hasCurrentCombatant && typeof combat.previousTurn === 'function', 'OSD.Actions.PreviousTurn', 'OSD.Errors.CombatTurnUnavailable'),
     nextTurn: available(hasCurrentCombatant && typeof combat.nextTurn === 'function', 'OSD.Actions.NextTurn', 'OSD.Errors.CombatTurnUnavailable'),
     focusCurrent: available(hasCurrentCombatant, 'OSD.Actions.FocusCurrent', 'OSD.Errors.CurrentCombatantUnavailable'),
+    swapInitiative: available(canUpdateCombatants, 'OSD.Actions.SwapInitiative', 'OSD.Errors.NativeApiUnavailable'),
+    rollNpcInitiative: available(canRoll, 'OSD.Actions.RollNpcInitiative', 'OSD.Errors.NativeApiUnavailable'),
   };
 }
 
@@ -351,6 +472,8 @@ function emptyEncounterCommands(reasonKey: string): DeckEncounterCommands {
     previousTurn: available(false, 'OSD.Actions.PreviousTurn', reasonKey),
     nextTurn: available(false, 'OSD.Actions.NextTurn', reasonKey),
     focusCurrent: available(false, 'OSD.Actions.FocusCurrent', reasonKey),
+    swapInitiative: available(false, 'OSD.Actions.SwapInitiative', reasonKey),
+    rollNpcInitiative: available(false, 'OSD.Actions.RollNpcInitiative', reasonKey),
   };
 }
 
@@ -363,8 +486,88 @@ function actorStatuses(actor: any, map: Map<string, DeckStatusOption>): DeckStat
   return [...ids].map((id) => map.get(id) ?? { id, label: id }).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+function actorAcModifier(actor: any): number {
+  const effect = collectionValues(actor.effects).find((entry) => Boolean(entry.flags?.[MODULE_ID]?.acModifier));
+  const change = collectionValues(effect?.changes).find((entry) => String(entry.key) === 'system.attributes.ac.bonus');
+  return finiteNumber(change?.value);
+}
+
+async function setActorAcModifier(actor: any, value: number): Promise<void> {
+  const effect = collectionValues(actor.effects).find((entry) => Boolean(entry.flags?.[MODULE_ID]?.acModifier));
+  if (value === 0) {
+    if (effect?.id) await actor.deleteEmbeddedDocuments('ActiveEffect', [String(effect.id)]);
+    return;
+  }
+  const data = {
+    name: 'Open Session Deck: AC Modifier',
+    img: 'icons/svg/shield.svg',
+    changes: [{ key: 'system.attributes.ac.bonus', mode: 2, value: String(value), priority: 20 }],
+    flags: { [MODULE_ID]: { acModifier: true } },
+  };
+  if (effect?.id && typeof effect.update === 'function') await effect.update(data);
+  else await actor.createEmbeddedDocuments('ActiveEffect', [data]);
+}
+
+async function toggleActorConcentration(actor: any): Promise<void> {
+  const effects = collectionValues(actor.concentration?.effects);
+  if (effects.length > 0) {
+    if (typeof actor.endConcentration === 'function') await actor.endConcentration();
+    else {
+      const ids = effects.map((effect) => String(effect.id ?? effect._id ?? '')).filter(Boolean);
+      if (ids.length > 0) await actor.deleteEmbeddedDocuments('ActiveEffect', ids);
+      else await actor.toggleStatusEffect('concentrating', { active: false });
+    }
+  } else await actor.toggleStatusEffect('concentrating', { active: true });
+}
+
+function actorInFolder(actor: any, selectedId: string, includeDescendants: boolean, folderById: Map<string, any>): boolean {
+  let folder = actor.folder;
+  if (!folder) return false;
+  const seen = new Set<string>();
+  while (folder) {
+    const id = String(folder.id ?? folder);
+    if (!id || seen.has(id)) return false;
+    if (id === selectedId) return true;
+    if (!includeDescendants) return false;
+    seen.add(id);
+    const parentId = String(folder.folder?.id ?? folder.folder ?? folder.parent?.id ?? folder.parent ?? '');
+    folder = parentId ? folderById.get(parentId) : null;
+  }
+  return false;
+}
+
+function folderDepth(folder: any, folderById: Map<string, any>): number {
+  let depth = 0;
+  let parentId = String(folder.folder?.id ?? folder.folder ?? folder.parent?.id ?? folder.parent ?? '');
+  const seen = new Set<string>();
+  while (parentId && !seen.has(parentId)) {
+    seen.add(parentId);
+    const parent = folderById.get(parentId);
+    if (!parent) break;
+    depth += 1;
+    parentId = String(parent.folder?.id ?? parent.folder ?? parent.parent?.id ?? parent.parent ?? '');
+  }
+  return depth;
+}
+
+function resolveCombatant(combat: any, id?: string): any {
+  if (!id) throw new Error('Combatant ID is required.');
+  const combatant = collectionValues(combat.combatants).find((entry) => String(entry.id) === id);
+  if (!combatant) throw new Error(`Combatant is missing: ${id}`);
+  return combatant;
+}
+
 function isCompatibleActor(actor: any): boolean { return Boolean(actor?.uuid && actor?.system?.attributes?.hp); }
 function finiteNumber(value: unknown): number { const number = Number(value); return Number.isFinite(number) ? number : 0; }
+function signedNumber(value: number): string { return value > 0 ? `+${value}` : String(value); }
+function finite(value: unknown, label: string): number { const number = Number(value); if (!Number.isFinite(number)) throw new Error(`${label} must be a number.`); return number; }
+function integer(value: unknown, label: string): number { const number = finite(value, label); if (!Number.isInteger(number)) throw new Error(`${label} must be an integer.`); return number; }
+function nonNegativeInteger(value: unknown, label: string): number { const number = integer(value, label); if (number < 0) throw new Error(`${label} cannot be negative.`); return number; }
+function boundedInteger(value: unknown, minimum: number, maximum: number, label: string): number {
+  const number = integer(value, label);
+  if (number < minimum || number > maximum) throw new Error(`${label} must be between ${minimum} and ${maximum}.`);
+  return number;
+}
 function positiveInteger(value: unknown): number { const number = Number(value); if (!Number.isInteger(number) || number <= 0) throw new Error('Amount must be a positive integer.'); return number; }
 function compareActorCards(a: DeckActorCard, b: DeckActorCard): number { return a.name.localeCompare(b.name); }
 function collectionValues(value: any): any[] {
@@ -382,4 +585,8 @@ function stringSetting(runtimeGame: any, key: string): string[] {
 function settingOr(runtimeGame: any, key: string, fallback: string): string {
   const value = runtimeGame.settings?.get?.(MODULE_ID, key);
   return typeof value === 'string' && value ? value : fallback;
+}
+function booleanSetting(runtimeGame: any, key: string, fallback: boolean): boolean {
+  const value = runtimeGame.settings?.get?.(MODULE_ID, key);
+  return typeof value === 'boolean' ? value : fallback;
 }

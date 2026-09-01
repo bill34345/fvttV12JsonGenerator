@@ -161,4 +161,22 @@ describe('DeckController behavior', () => {
     expect(sequence.slice(-3)).toEqual(['refresh', 'panel:false', 'popout:false']);
     expect(fixture.errors[0]).toContain('native write failed');
   });
+
+  test('executes a selected batch sequentially and publishes one refreshed snapshot', async () => {
+    installControllerGlobals();
+    const controller = new DeckController();
+    const sequence: string[] = [];
+    controller.adapter.execute = async (command) => {
+      sequence.push(`${command.id}:${command.targetUuid}`);
+      return { messageKey: 'OSD.Notifications.ActorUpdated' };
+    };
+    controller.store.refreshNow = async () => { sequence.push('refresh'); };
+
+    await controller.executeBatch([
+      { id: 'actor.damage', targetUuid: 'Actor.first', amount: 3 },
+      { id: 'actor.damage', targetUuid: 'Actor.second', amount: 3 },
+    ]);
+
+    expect(sequence).toEqual(['actor.damage:Actor.first', 'actor.damage:Actor.second', 'refresh']);
+  });
 });

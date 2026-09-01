@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { PanelSurface, PopoutSurface, type DeckSurfaceHandlers } from '../src/surfaces.ts';
+import { bindDeckRoot, PanelSurface, PopoutSurface, type DeckSurfaceHandlers } from '../src/surfaces.ts';
 import type { DeckSnapshot } from '../src/types.ts';
 
 const originalGlobals = {
+  CSS: globalThis.CSS,
   document: globalThis.document,
   foundry: (globalThis as any).foundry,
   game: (globalThis as any).game,
@@ -28,9 +29,12 @@ function snapshot(refreshedAt = 0): DeckSnapshot {
         previousTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
         nextTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
         focusCurrent: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+        swapInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+        rollNpcInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
       },
     },
     statusOptions: [],
+    partyFolder: { includeDescendants: true, missing: false, options: [] },
     rosterManager: [],
     stalePinned: [],
     staleHidden: [],
@@ -42,7 +46,7 @@ function snapshot(refreshedAt = 0): DeckSnapshot {
 
 function handlers(onOpenPanel: () => void = () => {}): DeckSurfaceHandlers {
   return {
-    execute: async () => {}, openPanel: async () => { onOpenPanel(); }, openPopout: async () => {}, closePopout: async () => {},
+    execute: async () => {}, executeBatch: async () => {}, openPanel: async () => { onOpenPanel(); }, openPopout: async () => {}, closePopout: async () => {},
     setTab: async () => {}, toggleDensity: async () => {},
   };
 }
@@ -131,6 +135,53 @@ describe('PanelSurface', () => {
 });
 
 describe('PopoutSurface', () => {
+  test('opens a dialog and confirms commands in the popout document realm', async () => {
+    let click: ((event: any) => void) | undefined;
+    let shown = 0;
+    let executions = 0;
+    let allow = false;
+    const layer: any = {
+      hidden: true,
+      open: false,
+      tagName: 'DIALOG',
+      showModal: () => { shown += 1; layer.open = true; },
+      querySelector: () => ({ focus: () => {} }),
+    };
+    const root: any = {
+      dataset: {},
+      addEventListener: (name: string, callback: (event: any) => void) => { if (name === 'click') click = callback; },
+      querySelectorAll: () => [],
+      querySelector: (selector: string) => selector.includes('data-osd-layer') ? layer : null,
+    };
+    const surfaceHandlers = handlers();
+    surfaceHandlers.execute = async () => { executions += 1; };
+    Object.assign(globalThis, { CSS: { escape: (value: string) => value } });
+    bindDeckRoot(root, surfaceHandlers);
+
+    const openButton: any = {
+      disabled: false,
+      dataset: { osdAction: 'open-layer', targetLayer: 'batch' },
+      closest: () => openButton,
+    };
+    click?.({ target: openButton, preventDefault: () => {} });
+    expect(shown).toBe(1);
+    expect(layer.hidden).toBeFalse();
+
+    const commandButton: any = {
+      disabled: false,
+      dataset: { osdCommand: 'combat.next-turn', combatUuid: 'Combat.one', confirm: 'Confirm' },
+      ownerDocument: { defaultView: { confirm: () => allow } },
+      closest: (selector: string) => selector.startsWith('button') ? commandButton : null,
+    };
+    click?.({ target: commandButton, preventDefault: () => {} });
+    await Promise.resolve();
+    expect(executions).toBe(0);
+    allow = true;
+    click?.({ target: commandButton, preventDefault: () => {} });
+    await Promise.resolve();
+    expect(executions).toBe(1);
+  });
+
   test('reuses and focuses the fixed named blank window while rendering shared snapshots', async () => {
     const fixture = installWindowFixture();
     const surface = new PopoutSurface(snapshot(1), handlers());

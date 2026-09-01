@@ -2,7 +2,7 @@ export type DeckOpenMode = 'panel' | 'popout';
 export type DeckTab = 'party' | 'encounter';
 export type DeckDensity = 'comfortable' | 'compact';
 export type DeckCloseMode = DeckOpenMode | 'all';
-export type RosterSource = 'automatic' | 'pinned' | 'encounter';
+export type RosterSource = 'folder' | 'encounter' | 'automatic' | 'pinned';
 
 export interface DeckStatus {
   readonly id: string;
@@ -11,6 +11,10 @@ export interface DeckStatus {
 }
 
 export interface DeckStatusOption extends DeckStatus {}
+
+export interface DeckStatusChoice extends DeckStatusOption {
+  readonly active: boolean;
+}
 
 export interface DeckPlayer {
   readonly id: string;
@@ -33,12 +37,37 @@ export interface DeckActorCommands {
   readonly toggleStatus: DeckCommandAvailability;
   readonly openSheet: DeckCommandAvailability;
   readonly locate: DeckCommandAvailability;
+  readonly setHp: DeckCommandAvailability;
+  readonly setTempHp: DeckCommandAvailability;
+  readonly setMaxModifier: DeckCommandAvailability;
+  readonly setAcModifier: DeckCommandAvailability;
+  readonly toggleConcentration: DeckCommandAvailability;
+  readonly setDeathSave: DeckCommandAvailability;
+  readonly setInitiative: DeckCommandAvailability;
+  readonly rollInitiative: DeckCommandAvailability;
+  readonly toggleVisibility: DeckCommandAvailability;
 }
 
 export interface DeckEncounterCommands {
   readonly previousTurn: DeckCommandAvailability;
   readonly nextTurn: DeckCommandAvailability;
   readonly focusCurrent: DeckCommandAvailability;
+  readonly swapInitiative: DeckCommandAvailability;
+  readonly rollNpcInitiative: DeckCommandAvailability;
+}
+
+export interface DeckPartyFolderOption {
+  readonly id: string;
+  readonly name: string;
+  readonly depth: number;
+}
+
+export interface DeckPartyFolder {
+  readonly selectedId?: string;
+  readonly selectedName?: string;
+  readonly includeDescendants: boolean;
+  readonly missing: boolean;
+  readonly options: readonly DeckPartyFolderOption[];
 }
 
 export interface DeckActorCard {
@@ -50,13 +79,24 @@ export interface DeckActorCard {
   readonly players: readonly DeckPlayer[];
   readonly playerNames: string;
   readonly anyPlayerActive: boolean;
-  readonly hp: Readonly<{ value: number; max: number; temp: number; percent: number }>;
+  readonly hp: Readonly<{
+    value: number;
+    max: number;
+    baseMax: number;
+    maxModifier: number;
+    maxModifierDisplay: string;
+    effectiveMax: number;
+    temp: number;
+    percent: number;
+  }>;
   readonly ac: number | null;
+  readonly acModifier: number;
   readonly inspiration: boolean;
   readonly exhaustion: number;
   readonly death: Readonly<{ success: number; failure: number }> | null;
   readonly concentrating: boolean;
   readonly statuses: readonly DeckStatus[];
+  readonly statusChoices: readonly DeckStatusChoice[];
   readonly inCombat: boolean;
   readonly sources: readonly RosterSource[];
   readonly commands: DeckActorCommands;
@@ -67,6 +107,10 @@ export interface DeckActorCard {
   readonly tokenSceneId?: string;
   readonly canLocate?: boolean;
   readonly current?: boolean;
+  readonly partyMember?: boolean;
+  readonly characterControls?: boolean;
+  readonly hidden?: boolean;
+  readonly revealed?: boolean;
 }
 
 export interface DeckRosterManagerEntry {
@@ -101,6 +145,7 @@ export interface DeckSnapshot {
   readonly party: readonly DeckActorCard[];
   readonly encounter: DeckEncounter;
   readonly statusOptions: readonly DeckStatusOption[];
+  readonly partyFolder: DeckPartyFolder;
   readonly rosterManager: readonly DeckRosterManagerEntry[];
   readonly stalePinned: readonly string[];
   readonly staleHidden: readonly string[];
@@ -117,10 +162,23 @@ export type DeckCommandId =
   | 'actor.toggle-inspiration'
   | 'actor.adjust-exhaustion'
   | 'actor.toggle-status'
+  | 'actor.set-hp'
+  | 'actor.set-temp-hp'
+  | 'actor.set-max-modifier'
+  | 'actor.set-ac-modifier'
+  | 'actor.set-status'
+  | 'actor.toggle-concentration'
+  | 'actor.set-death-save'
   | 'actor.open-sheet'
   | 'combat.previous-turn'
   | 'combat.next-turn'
+  | 'combat.set-initiative'
+  | 'combat.swap-initiative'
+  | 'combat.roll-initiative'
+  | 'combat.roll-npc-initiative'
+  | 'combat.toggle-visibility'
   | 'token.locate'
+  | 'roster.set-folder'
   | 'roster.toggle-pin'
   | 'roster.toggle-hide'
   | 'roster.cleanup';
@@ -131,8 +189,15 @@ export interface DeckCommand {
   combatUuid?: string;
   tokenUuid?: string;
   amount?: number;
+  value?: number;
   delta?: number;
   statusId?: string;
+  active?: boolean;
+  field?: 'success' | 'failure';
+  combatantId?: string;
+  secondCombatantId?: string;
+  folderId?: string;
+  includeDescendants?: boolean;
 }
 
 export interface DeckCommandResult {

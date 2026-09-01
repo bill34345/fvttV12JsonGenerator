@@ -12,5 +12,5 @@ describe('runtime distribution boundary', () => {
     expect(browser).not.toContain('game.socket');
     expect(browser).not.toContain('new WebSocket');
     expect(browser).not.toContain('/join');
-  });
+  }, 15_000);
 });

@@ -12,12 +12,16 @@ Other versions and systems fail closed. Daggerheart support is planned for a lat
 ## Features
 
 - Shared in-Foundry panel and same-session browser popout
-- Automatic player-character roster plus world-level pinned/hidden actors
-- Rule-aware damage, healing, temporary HP, inspiration, exhaustion, and status controls
+- World-level Actor-folder party source with optional descendant folders
+- Direct current/base/effective/temporary HP, maximum and AC modifiers, inspiration, exhaustion, statuses, concentration, and death saves
+- Focused batch workspace limited to HP and explicit add-to-all/remove-from-all status actions
+- Compact party placeholders in the encounter and complete operational cards for NPCs
+- Decimal initiative editing and swapping, private individual or missing-NPC rolls, and GM visibility control
+- Progressive first-round friendly initiative reveal in the official player Combat Tracker; hostile combatants hidden by default
 - Active encounter overview, previous/next turn, and main-canvas token location
 - English and Simplified Chinese UI
 
-The module does not include player dashboards, dice or action automation, a second map, AI features, or custom networking.
+Player initiative concealment is ordinary UI presentation and is not claimed as secrecy against clients inspecting document data. The module does not include a separate player dashboard, action automation, a second map, AI features, or custom networking.
 
 ## Development
 

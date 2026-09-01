@@ -8,6 +8,8 @@ export const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/open-session-deck.cs
 export const POPOUT_NAME = 'open-session-deck' as const;
 
 export const SETTINGS = {
+  partyFolderId: 'partyFolderId',
+  includePartySubfolders: 'includePartySubfolders',
   pinnedActors: 'pinnedActors',
   hiddenActors: 'hiddenActors',
   lastOpenMode: 'lastOpenMode',

@@ -1,10 +1,13 @@
 import { DeckController, registerSettings } from './controller.ts';
 import { createDeckApi } from './api.ts';
 import { MODULE_ID, SETTINGS } from './constants.ts';
+import { registerTrackerPrivacyHooks } from './tracker-privacy.ts';
 
 let controller: DeckController | undefined;
 
 const api = createDeckApi(() => controller, () => Boolean(game.user?.isGM));
+
+registerTrackerPrivacyHooks();
 
 Hooks.once('init', () => {
   registerSettings(() => controller?.refresh());

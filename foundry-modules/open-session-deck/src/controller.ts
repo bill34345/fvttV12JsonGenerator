@@ -21,9 +21,12 @@ const EMPTY_SNAPSHOT: DeckSnapshot = {
       previousTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
       nextTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
       focusCurrent: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      swapInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
+      rollNpcInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
     },
   },
   statusOptions: [],
+  partyFolder: { includeDescendants: true, missing: false, options: [] },
   rosterManager: [],
   stalePinned: [],
   staleHidden: [],
@@ -85,23 +88,33 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
   refresh(): void { this.assertGm(); this.store.invalidate(); }
 
   async execute(command: DeckCommand): Promise<void> {
+    await this.executeBatch([command]);
+  }
+
+  async executeBatch(commands: readonly DeckCommand[]): Promise<void> {
     this.assertGm();
-    const busyKey = command.targetUuid ?? command.combatUuid ?? command.tokenUuid ?? command.id;
-    if (this.#busy.has(busyKey)) return;
-    this.#busy.add(busyKey);
-    this.panel.setBusy(busyKey, true);
-    this.popout.setBusy(busyKey, true);
+    if (commands.length === 0) return;
+    const busyKeys = [...new Set(commands.map((command) => command.targetUuid ?? command.combatUuid ?? command.tokenUuid ?? command.id))];
+    if (busyKeys.some((key) => this.#busy.has(key))) return;
+    for (const key of busyKeys) {
+      this.#busy.add(key);
+      this.panel.setBusy(key, true);
+      this.popout.setBusy(key, true);
+    }
     try {
-      const result = await this.adapter.execute(command);
+      let result = { messageKey: 'OSD.Notifications.ActorUpdated' };
+      for (const command of commands) result = await this.adapter.execute(command);
       await this.store.refreshNow();
       ui.notifications?.info?.(game.i18n.localize(result.messageKey));
     } catch (error) {
       ui.notifications?.error?.(`${game.i18n.localize('OSD.Notifications.CommandFailed')}: ${String(error)}`);
       await this.store.refreshNow();
     } finally {
-      this.#busy.delete(busyKey);
-      this.panel.setBusy(busyKey, false);
-      this.popout.setBusy(busyKey, false);
+      for (const key of busyKeys) {
+        this.#busy.delete(key);
+        this.panel.setBusy(key, false);
+        this.popout.setBusy(key, false);
+      }
     }
   }
 
@@ -123,6 +136,7 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
       'createCombat', 'updateCombat', 'deleteCombat',
       'createCombatant', 'updateCombatant', 'deleteCombatant',
       'createToken', 'updateToken', 'deleteToken',
+      'createFolder', 'updateFolder', 'deleteFolder',
       'updateUser', 'canvasReady', 'canvasTearDown',
     ]) Hooks.on(hook, () => {
       if (!game.user?.isGM) {
@@ -136,6 +150,8 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
 }
 
 export function registerSettings(onChange: () => void): void {
+  game.settings.register(MODULE_ID, SETTINGS.partyFolderId, { scope: 'world', config: false, type: String, default: '', restricted: true, onChange });
+  game.settings.register(MODULE_ID, SETTINGS.includePartySubfolders, { scope: 'world', config: false, type: Boolean, default: true, restricted: true, onChange });
   game.settings.register(MODULE_ID, SETTINGS.pinnedActors, { scope: 'world', config: false, type: Array, default: [], restricted: true, onChange });
   game.settings.register(MODULE_ID, SETTINGS.hiddenActors, { scope: 'world', config: false, type: Array, default: [], restricted: true, onChange });
   game.settings.register(MODULE_ID, SETTINGS.lastOpenMode, { scope: 'client', config: false, type: String, default: 'panel', choices: { panel: 'OSD.Mode.Panel', popout: 'OSD.Mode.Popout' }, onChange });
