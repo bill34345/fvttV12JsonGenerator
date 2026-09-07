@@ -59,6 +59,7 @@ export const FORGE_DIAGNOSTIC_PATHS = [
 export type ForgeDiagnosticPath = typeof FORGE_DIAGNOSTIC_PATHS[number];
 
 export const FORGE_MECHANIC_KINDS = [
+  'armor',
   'activation',
   'attack',
   'damage',
@@ -106,6 +107,7 @@ export const FORGE_SOURCE_FIELDS = [
   'actor.actions',
   'actor.items',
   'actor.behaviors',
+  'item.armor',
   'item.activation',
   'item.attack',
   'item.damage',

@@ -1,10 +1,20 @@
-import { describe, it, expect } from 'bun:test';
+import { afterEach, beforeEach, describe, it, expect } from 'bun:test';
 import { ActorGenerator } from '../actor';
 import type { ParsedNPC } from '../../../config/mapping';
 import { spellsMapper } from '../../mapper/spells';
 
 describe('ActorGenerator E2E Comprehensive Tests', () => {
   const generator = new ActorGenerator({ translationService: null });
+  let previousFireball: unknown;
+  let hadFireball = false;
+  beforeEach(() => {
+    hadFireball = (spellsMapper as any).spells.has('Fireball');
+    previousFireball = (spellsMapper as any).spells.get('Fireball');
+  });
+  afterEach(() => {
+    if (hadFireball) (spellsMapper as any).spells.set('Fireball', previousFireball);
+    else (spellsMapper as any).spells.delete('Fireball');
+  });
 
   it('generates legendary creature with 3 actions and lair initiative 20', async () => {
     const input: ParsedNPC = {

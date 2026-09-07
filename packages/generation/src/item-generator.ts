@@ -13,6 +13,7 @@ import {
 import { mapSourceItemTypeToFoundry } from './item-type-mapping';
 import { createStableDocumentId } from './stableId';
 import type { GenerationIconResolver } from './ports';
+import { renderFoundryItemDescriptionHtml } from './item-description';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -157,9 +158,9 @@ export class ItemGenerator {
         },
         source: {
           custom: '',
-          book: 'SRD 5.1',
+          book: '',
           page: '',
-          license: 'CC-BY-4.0',
+          license: '',
           rules: '2014',
         },
         quantity: 1,
@@ -237,6 +238,10 @@ export class ItemGenerator {
 
       desc = desc || '';
 
+      if (this.isV14()) {
+        desc = renderFoundryItemDescriptionHtml(desc);
+      }
+
       if (parsed.cumulativeRequirements?.length) {
         const reqHtml = parsed.cumulativeRequirements
           .map((r) => `<p>${r}</p>`)
@@ -292,6 +297,14 @@ export class ItemGenerator {
       item.system.damage = parsed.damage;
     }
 
+    // Preserve a source-derived standard weapon subtype such as spear.
+    if (parsed.weapon) {
+      item.system.type = {
+        value: parsed.weapon.value,
+        baseItem: parsed.weapon.baseItem,
+      };
+    }
+
     // Range (for weapons/ranged items)
     if (parsed.range) {
       item.system.range = {
@@ -304,7 +317,12 @@ export class ItemGenerator {
 
     // Properties (for weapons/armor)
     if (parsed.properties) {
-      item.system.properties = parsed.properties;
+      item.system.properties = [
+        ...new Set([
+          ...(Array.isArray(item.system.properties) ? item.system.properties : []),
+          ...parsed.properties,
+        ]),
+      ];
     }
 
     // Armor class (for armor/equipment)

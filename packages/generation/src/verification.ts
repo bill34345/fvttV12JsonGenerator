@@ -1,6 +1,7 @@
 import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
+import { isFoundryHtmlDescription } from './item-description';
 import type {
   CanonicalGenerationDocument,
   CanonicalGenerationMechanic,
@@ -31,6 +32,18 @@ export function verifyGeneratedDocument(
       'type',
       `Expected Foundry document type "${options.canonical.targetDocumentType}", received "${String(options.output?.type)}".`,
     ));
+  }
+
+  if (options.canonical.kind === 'item' && options.target === '14') {
+    const description = options.output?.system?.description?.value;
+    if (typeof description === 'string' && description.trim() && !isFoundryHtmlDescription(description)) {
+      diagnostics.push(error(
+        'GEN_V14_ITEM_DESCRIPTION_NOT_HTML',
+        'semantic',
+        'system/description/value',
+        'Foundry V14 Item descriptions must be projected as HTML rather than raw Markdown.',
+      ));
+    }
   }
 
   for (const [documentIndex, document] of documents.entries()) {
@@ -384,9 +397,24 @@ function verifyMechanicCoverage(
   for (const [documentIndex, document] of documents.entries()) {
     const allActivities = Object.values(document?.system?.activities ?? {}) as any[];
     const activities = activitiesForMechanic(mechanic, allActivities);
+    if (mechanic.kind === 'uses' && typeof mechanic.value === 'number' && mechanic.path.startsWith('actor/')) {
+      const uses = document?.system?.uses;
+      const primary = activities[0];
+      const costs = primary?.consumption?.targets ?? [];
+      if (String(uses?.max) === String(mechanic.value)
+        && uses?.recovery?.some((entry: any) => entry.period === 'lr' && entry.type === 'recoverAll')
+        && primary?.consumption?.spellSlot === false
+        && costs.length === 1 && costs[0]?.type === 'itemUses' && costs[0]?.target === '' && String(costs[0]?.value) === '1') {
+        outputPaths.push(`documents/${documentIndex}/system/uses`);
+      }
+      continue;
+    }
     for (const [activityIndex, activity] of activities.entries()) {
       if (matchesActivity(mechanic.kind, activity)) {
         outputPaths.push(`documents/${documentIndex}/system/activities/${activityIndex}`);
+        if (target === '14' && mechanic.kind === 'attack') {
+          verifyV14DynamicWeaponDamage(mechanic, activity, document, diagnostics);
+        }
         if (mechanic.kind === 'save') {
           verifySaveOutcome(mechanic, activity, diagnostics);
         }
@@ -505,6 +533,19 @@ function verifyItemSpecificMechanic(
   diagnostics: GenerationDiagnostic[],
   target: FvttTargetVersion,
 ): string[] | undefined {
+  if (mechanic.kind === 'armor') {
+    const expected = mechanic.value as { value: number; dex?: number | null; magicalBonus?: number | null; type?: string; baseItem?: string };
+    const actual = document?.system?.armor;
+    if (!actual || actual.value !== expected.value
+      || (actual.dex ?? null) !== (expected.dex ?? null)
+      || (actual.magicalBonus ?? null) !== (expected.magicalBonus ?? null)
+      || document?.system?.type?.value !== (expected.type ?? 'trinket')
+      || document?.system?.type?.baseItem !== (expected.baseItem ?? '')) {
+      diagnostics.push(error('GEN_ITEM_ARMOR_MISMATCH', 'semantic', mechanic.path,
+        'Armor value, magical bonus or armor identity differs from the source contract.'));
+    }
+    return ['documents/0/system/armor', 'documents/0/system/type'];
+  }
   const activities = Object.entries(document?.system?.activities ?? {}) as Array<[string, any]>;
   const scopedActivities = activitiesForMechanic(mechanic, activities.map(([, activity]) => activity));
   const scopedEntries = scopedActivities.length === activities.length
@@ -601,6 +642,94 @@ function verifyItemSpecificMechanic(
     return [];
   }
 
+  if (mechanic.kind === 'save') {
+    const expected = mechanic.value as {
+      dc?: number;
+      ability?: string;
+      outcome?: string;
+      damage?: Array<{
+        formula: string;
+        type: string;
+        types?: string[];
+        scaling?: { mode: string; number: number; formula?: string };
+      }>;
+      useAction?: {
+        consumption?: number;
+        activation?: string;
+        consumptionScaling?: { allowed: boolean; max: string };
+      };
+      activity?: {
+        range?: { value: string; units: string };
+        duration?: { value: string; units: string; concentration: boolean };
+        target?: { affects?: { count: number | string; type: string; special?: string } };
+      };
+    };
+    // Keep the legacy structured-save compatibility path on the generic
+    // verifier.  The value-level Item contract below is for the formal
+    // item-mechanics save action, which carries an explicit useAction block.
+    // Otherwise a planted onSave drift would be reported only as a generic
+    // Item mismatch, bypassing the existing GEN_SAVE_OUTCOME_MISMATCH gate.
+    if (expected.useAction === undefined && expected.activity === undefined) {
+      return undefined;
+    }
+    for (const [activityId, activity] of scopedEntries) {
+      if (activity?.type !== 'save') continue;
+      const expectedUse = expected.useAction;
+      const expectedScaling = expectedUse?.consumptionScaling ?? { allowed: false, max: '' };
+      const expectedConsumption = expectedUse?.consumption ?? 0;
+      const actualTarget = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
+      const consumptionMatches = expectedUse === undefined
+        || (
+          activity?.activation?.type === expectedUse.activation
+          && (expectedConsumption > 0
+            ? String(actualTarget?.value ?? '') === String(expectedConsumption)
+              && (activity?.consumption?.targets ?? []).length === 1
+              && actualTarget?.target === ''
+            : (activity?.consumption?.targets ?? []).length === 0)
+          && (expectedConsumption > 0 ? actualTarget?.scaling?.mode === (expectedScaling.allowed ? 'amount' : '') : true)
+          && Boolean(activity?.consumption?.spellSlot) === false
+          && Boolean(activity?.consumption?.scaling?.allowed) === expectedScaling.allowed
+          && String(activity?.consumption?.scaling?.max ?? '') === String(expectedScaling.max ?? '')
+        );
+      const actualDc = activity?.save?.dc?.value ?? activity?.save?.dc?.formula;
+      const saveMatches = (expected.dc === undefined || Number(actualDc) === expected.dc)
+        && (expected.ability === undefined || JSON.stringify(activity?.save?.ability ?? []) === JSON.stringify([expected.ability]))
+        && (expected.outcome === undefined || expected.outcome === 'literal' || activity?.damage?.onSave === expected.outcome);
+      const damageMatches = (activity?.damage?.parts ?? []).length === (expected.damage ?? []).length
+        && (expected.damage ?? []).every((damage, index) =>
+        matchesExpectedDamagePart(damage, activity?.damage?.parts?.[index]));
+      const rangeMatches = expected.activity?.range === undefined
+        || (
+          String(activity?.range?.value ?? '') === String(expected.activity.range.value)
+          && activity?.range?.units === expected.activity.range.units
+        );
+      const durationMatches = expected.activity?.duration === undefined
+        || (
+          String(activity?.duration?.value ?? '') === String(expected.activity.duration.value)
+          && activity?.duration?.units === expected.activity.duration.units
+          && Boolean(activity?.duration?.concentration) === expected.activity.duration.concentration
+        );
+      const targetMatches = expected.activity?.target?.affects === undefined
+        || (
+          String(activity?.target?.affects?.count ?? '') === String(expected.activity.target.affects.count)
+          && activity?.target?.affects?.type === expected.activity.target.affects.type
+          && (expected.activity.target.affects.special === undefined
+            || activity?.target?.affects?.special === expected.activity.target.affects.special)
+        );
+
+      if (saveMatches && damageMatches && consumptionMatches && rangeMatches && durationMatches && targetMatches) {
+        return [`documents/0/system/activities/${activityId}`];
+      }
+    }
+    diagnostics.push(error(
+      'GEN_ITEM_SAVE_ACTIVITY_MISMATCH',
+      'semantic',
+      mechanic.path,
+      'Save Activity must preserve the source DC, save ability, damage/scaling, activation, Item-use cost, range, duration, and target metadata.',
+    ));
+    return [];
+  }
+
   if (mechanic.kind === 'spell') {
     const expected = mechanic.value as { identifier?: string; name?: string; consumption?: number; activation?: string };
     const hasFormalIdentifier = typeof expected.identifier === 'string' && expected.identifier.trim().length > 0;
@@ -643,12 +772,15 @@ function verifyItemSpecificMechanic(
     const expectedUuid = resolved.uuid;
     for (const [activityId, activity] of scopedEntries) {
       const target = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
+      const consumptionMatches = Number(expected.consumption) > 0
+        ? String(target?.value) === String(expected.consumption)
+        : (activity?.consumption?.targets ?? []).length === 0;
       if (
         activity?.type === 'cast'
         && activity?.spell?.uuid === expectedUuid
         && activity?.activation?.type === expected.activation
         && activity?.consumption?.spellSlot === false
-        && String(target?.value) === String(expected.consumption)
+        && consumptionMatches
       ) {
         return [`documents/0/system/activities/${activityId}`];
       }
@@ -722,6 +854,81 @@ function matchesActivity(kind: CanonicalGenerationMechanic['kind'], activity: an
   if (kind === 'activation') return Boolean(activity?.activation);
   if (kind === 'range') return Boolean(activity?.range);
   return false;
+}
+
+function verifyV14DynamicWeaponDamage(
+  mechanic: CanonicalGenerationMechanic,
+  activity: any,
+  document: any,
+  diagnostics: GenerationDiagnostic[],
+): void {
+  if (activity?.attack?.type?.classification !== 'weapon' || activity.attack.flat !== false) {
+    return;
+  }
+
+  const hasDynamicDamage = document?.type === 'weapon'
+    ? Boolean(document?.system?.damage?.base)
+    : isDynamicDamagePart(activity?.damage?.parts?.[0]);
+  if (hasDynamicDamage) return;
+
+  diagnostics.push(error(
+    'GEN_V14_DYNAMIC_WEAPON_DAMAGE_MISSING',
+    'semantic',
+    `${mechanic.path}/damage`,
+    'A non-flat V14 weapon attack must project its ability-based damage through a weapon base or @mod damage part.',
+  ));
+}
+
+function isDynamicDamagePart(part: any): boolean {
+  if (part?.bonus === '@mod') return true;
+  return part?.custom?.enabled === true && /(^|[^\w])@mod([^\w]|$)/u.test(String(part.custom.formula ?? ''));
+}
+
+function matchesExpectedDamagePart(expected: {
+  formula: string;
+  type: string;
+  types?: string[];
+  scaling?: { mode: string; number: number; formula?: string };
+}, actual: any): boolean {
+  const formula = String(expected.formula).replace(/\s+/g, '');
+  const match = formula.match(/^(\d+)d(\d+)(?:([+-]\d+))?$/i);
+  if (!match) return false;
+  const expectedTypes = (expected.types?.length ? expected.types : [expected.type])
+    .map((type) => normalizeVerificationDamageType(type));
+  const actualTypes = Array.isArray(actual?.types) ? actual.types : [];
+  const typeMatches = new Set(actualTypes).size === new Set(expectedTypes).size
+    && expectedTypes.every((type) => actualTypes.includes(type));
+  const scalingMatches = expected.scaling === undefined
+    || (
+      actual?.scaling?.mode === expected.scaling.mode
+      && Number(actual?.scaling?.number) === expected.scaling.number
+      && (expected.scaling.formula === undefined || String(actual?.scaling?.formula ?? '') === expected.scaling.formula)
+    );
+  const formulaMatches = actual?.custom?.enabled === true
+    ? String(actual.custom.formula ?? '').replace(/\s+/g, '') === formula
+    : Number(actual?.number) === Number(match[1])
+      && Number(actual?.denomination) === Number(match[2])
+      && String(actual?.bonus ?? '') === String(match[3] ?? '').replace(/^\+/, '');
+  return formulaMatches && typeMatches && scalingMatches;
+}
+
+function normalizeVerificationDamageType(type: string): string {
+  const normalized = type.trim().toLowerCase();
+  const map: Record<string, string> = {
+    光耀: 'radiant',
+    radiant: 'radiant',
+    火焰: 'fire',
+    fire: 'fire',
+    寒冷: 'cold',
+    cold: 'cold',
+    闪电: 'lightning',
+    lightning: 'lightning',
+    力场: 'force',
+    force: 'force',
+    暗蚀: 'necrotic',
+    necrotic: 'necrotic',
+  };
+  return map[normalized] ?? normalized;
 }
 
 function verifyTargetMetadata(

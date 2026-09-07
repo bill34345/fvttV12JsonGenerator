@@ -144,9 +144,9 @@ describe('Forge protocol/workflow conformance', () => {
     }
   });
 
-  test('projects existing accepted Actors with empty creature type and heal activities', async () => {
+  test('projects source-correct creature type and heal activities', async () => {
     const cases = [
-      ['obsidian/dnd数据转fvttjson/input/white-tusk-shaman.md', 'empty-creature-type'],
+      ['obsidian/dnd数据转fvttjson/input/white-tusk-shaman.md', 'humanoid-creature-type'],
       ['obsidian/dnd数据转fvttjson/input/scuttling-serpentmaw__蛇口蛮蟹.md', 'heal-activity'],
     ] as const;
 
@@ -171,9 +171,9 @@ describe('Forge protocol/workflow conformance', () => {
         verification: generated.verification,
         actorVerification: generated.actorVerification,
       });
-      if (expectation === 'empty-creature-type') {
-        expect(generated.actorVerification.actor.creatureType).toBe('');
-        expect(projection.actorVerification.actor.creatureType).toBe('');
+      if (expectation === 'humanoid-creature-type') {
+        expect(generated.actorVerification.actor.creatureType).toBe('humanoid');
+        expect(projection.actorVerification.actor.creatureType).toBe('humanoid');
       } else {
         expect(generated.actorVerification.items.some((item) => item.activityTypes.includes('heal'))).toBe(true);
         expect(projection.actorVerification.items.some((item) => item.activityTypes.includes('heal'))).toBe(true);
@@ -188,11 +188,11 @@ describe('Forge protocol/workflow conformance', () => {
       );
       const decodedResponse = decodeForgeActorResponse(response);
       expect(decodedResponse.ok).toBe(true);
-      if (expectation === 'empty-creature-type') {
+      if (expectation === 'humanoid-creature-type') {
         if (!decodedResponse.ok || !('result' in decodedResponse.value)) {
           throw new Error(`Expected ${sourcePath} to produce a decoded Forge result.`);
         }
-        expect(decodedResponse.value.result.actorVerification.actor.creatureType).toBe('');
+        expect(decodedResponse.value.result.actorVerification.actor.creatureType).toBe('humanoid');
       }
     }
   });

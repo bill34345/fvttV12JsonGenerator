@@ -73,6 +73,14 @@ export async function convertMonsterCollectionToJson(
     throw new Error('No monster blocks found. Expected headings like # **名称 (English Name)**.');
   }
 
+  // Preflight the entire batch before any output is materialized.
+  const prepared = blocks.map((block) => {
+    try { return { generated: dependencies.ingestion.parseMonsterBlock(block.rawBlock) }; }
+    catch (error) { return { error }; }
+  });
+  assertUniqueCollectionNames(prepared.map((entry) =>
+    entry.generated?.fileName.replace(/\.md$/i, '.json')));
+
   const outputDir = resolve(options.outputDir);
   mkdirSync(outputDir, { recursive: true });
   const items: CollectionItemResult[] = [];
@@ -81,7 +89,9 @@ export async function convertMonsterCollectionToJson(
     const block = blocks[index]!;
     const sourceName = block.englishName ? `${block.chineseName} (${block.englishName})` : block.chineseName;
     try {
-      const generated = dependencies.ingestion.parseMonsterBlock(block.rawBlock);
+      const entry = prepared[index]!;
+      if (!entry.generated) throw entry.error;
+      const generated = entry.generated;
       const outputFile = outputFileFor(outputDir, generated.fileName.replace(/\.md$/i, '.json'), sourceName);
       const result = await convertMarkdownContentToJson({
         content: generated.markdown,
@@ -141,6 +151,8 @@ export async function convertItemCollectionToJson(
   if (blocks.length === 0) {
     throw new Error('No item blocks found. Expected headings like ## 物品名（English Name）.');
   }
+
+  assertUniqueCollectionNames(blocks.map((block) => itemBlockFileName(block).replace(/\.md$/i, '.json')));
 
   const outputDir = resolve(options.outputDir);
   mkdirSync(outputDir, { recursive: true });
@@ -302,4 +314,18 @@ function slugify(value: string): string {
 function sanitizeFileName(value: string): string {
   const clean = value.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
   return clean || 'output.json';
+}
+
+/** Windows-compatible identity: sanitization, Unicode and case must not hide a collision. */
+function assertUniqueCollectionNames(names: Array<string | undefined>): void {
+  const seen = new Map<string, number>();
+  for (const [index, name] of names.entries()) {
+    if (!name) continue;
+    const key = sanitizeFileName(name).normalize('NFC').replace(/[. ]+$/g, '').toLowerCase();
+    const previous = seen.get(key);
+    if (previous !== undefined) {
+      throw new Error(`COLLECTION_OUTPUT_COLLISION: entries ${previous + 1} and ${index + 1} resolve to "${name}". Rename one source before retrying; no batch output was written.`);
+    }
+    seen.set(key, index);
+  }
 }

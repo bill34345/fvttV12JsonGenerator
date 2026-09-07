@@ -19,6 +19,8 @@ import {
 } from './iconPort';
 
 export interface ItemGenerationWorkflowOptions {
+  sourceText?: string;
+  sourcePath?: string;
   fvttVersion: FvttTargetVersion;
   effectProfile: EffectProfile;
   iconOptions?: IconWorkflowOptions;
@@ -47,7 +49,10 @@ export async function generateItemArtifacts(
   const artifacts: ItemGenerationArtifact[] = [];
   for (const entry of expanded) {
     const reviewStart = iconSession.entries.length;
-    const canonical = adaptParsedItemToCanonical(entry.parsed);
+    const canonical = adaptParsedItemToCanonical(entry.parsed, {
+      sourceText: options.sourceText,
+      sourcePath: options.sourcePath,
+    });
     const item = await projector.project(canonical, {
       ...options,
       targetVersion: options.fvttVersion,

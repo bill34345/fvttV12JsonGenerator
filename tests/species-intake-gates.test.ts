@@ -45,6 +45,29 @@ function splitCandidates(source: string): SpeciesDiscoveryCandidate[] {
 }
 
 describe('Species Intake deterministic gates', () => {
+  test('keeps accepted Markdown and ledger hashes independent across targets', async () => {
+    const source = '种族：阿尔法\n特性：甲';
+    const candidate = { id: 'alpha', label: '阿尔法', start: 0, end: source.length, quote: source };
+    const root = mkdtempSync(join(tmpdir(), 'species-target-isolation-'));
+    const vaultPath = join(root, 'vault');
+    const base = { source, sourceName: 'alpha.txt', runRoot: join(root, 'runs'), vaultPath, effectProfile: 'core' as const };
+    const v14 = await runSpeciesIntake({ ...base, fvttVersion: '14' }, new Provider(source, [candidate]));
+    expect(v14.status).toBe('succeeded');
+    const v14Path = v14.species[0]!.markdownPath!;
+    const v14Markdown = readFileSync(v14Path, 'utf8');
+    const v12 = await runSpeciesIntake({ ...base, fvttVersion: '12' }, new Provider(source, [candidate], { suffix: '（V12修订）' }));
+    expect(v12.status).toBe('succeeded');
+    expect(v12.species[0]!.markdownPath).not.toBe(v14Path);
+    const replacement = await runSpeciesIntake({ ...base, fvttVersion: '12', replaceConflicts: new Set(['alpha']) }, new Provider(source, [candidate], { suffix: '（V12再修订）' }));
+    expect(replacement.status).toBe('succeeded');
+    expect(readFileSync(v14Path, 'utf8')).toBe(v14Markdown);
+    const ledger = JSON.parse(readFileSync(join(vaultPath, 'output/species/accepted-ledger.json'), 'utf8'));
+    expect(ledger.entries).toHaveLength(2);
+    for (const entry of ledger.entries) {
+      expect(sha(readFileSync(join(vaultPath, entry.markdownPath), 'utf8'))).toBe(entry.markdownSha256);
+      expect(JSON.parse(readFileSync(join(vaultPath, entry.packagePath), 'utf8')).logicalHash).toBe(entry.logicalHash);
+    }
+  });
   test('aggregates multi-Species accepted plus review as partial', async () => {
     const source = '种族：阿尔法\r\n特性：甲\r\n\r\n种族：贝塔\r\n特性：乙'; const candidates = splitCandidates(source);
     const root = mkdtempSync(join(tmpdir(), 'species-gates-'));
@@ -155,6 +178,7 @@ describe('Species Intake deterministic gates', () => {
     const decisionsPath = join(root, 'decisions.json');
     const decisionsBytes = `${JSON.stringify({ runId: conflict.runId, sourceSha256: conflict.sourceSha256, decisions: [{ issueId: 'target-conflict:alpha', action: 'replace' }] }, null, 2)}\n`;
     writeFileSync(decisionsPath, decisionsBytes, 'utf8');
+    await expect(resumeSpeciesIntake(conflict.runPath, decisionsPath, new Provider(source, [candidate], { suffix: '（改动）' }), base.vaultPath, { fvttVersion: '12', effectProfile: 'core' })).rejects.toThrow('resume target mismatch');
     const resumed = await resumeSpeciesIntake(conflict.runPath, decisionsPath, new Provider(source, [candidate], { suffix: '（改动）' }), base.vaultPath);
     expect(resumed.status).toBe('succeeded');
     const resumedManifest = JSON.parse(readFileSync(join(resumed.runPath, 'manifest.json'), 'utf8'));

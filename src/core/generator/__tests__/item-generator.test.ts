@@ -48,7 +48,8 @@ require-attunement: true
 
       // Source field
       expect(item.system.source).toBeDefined();
-      expect(item.system.source.book).toBe('SRD 5.1');
+      expect(item.system.source.book).toBe('');
+      expect(item.system.source.license).toBe('');
 
       // Physical properties
       expect(item.system.quantity).toBeDefined();

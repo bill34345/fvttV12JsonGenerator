@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Battlefield Painter media generator</title>
+<canvas id="canvas" width="512" height="512"></canvas>
+<pre id="status">starting</pre>
+<pre id="payload"></pre>
+<script>
+(() => {
+  const canvas = document.querySelector("#canvas");
+  const context = canvas.getContext("2d");
+  const TAU = Math.PI * 2;
+  const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const sources = new Map();
+  const loadSource = async (kind) => {
+    const source = new Image();
+    source.src = `../assets/terrain/${kind}.webp`;
+    await new Promise((resolve, reject) => {
+      source.onload = resolve;
+      source.onerror = () => reject(new Error(`Unable to load ${source.src}`));
+    });
+    sources.set(kind, source);
+  };
+  const drawFrame = (kind, progress) => {
+    context.clearRect(0, 0, 512, 512);
+    const source = sources.get(kind);
+    const phase = progress * TAU;
+    const amplitude = kind === "fire" ? 2.5 : kind === "frost" ? 1.25 : 0.8;
+    const offsetX = Math.sin(phase) * amplitude;
+    const offsetY = Math.cos(phase * 0.8) * amplitude * 0.6;
+
+    // Keep the animation as a restrained movement of the approved 2D art.
+    // Extra particles, glows, and independently drawn vines made the WebM
+    // diverge from the static square overlay and introduced visual noise.
+    context.globalAlpha = 1;
+    context.drawImage(source, offsetX, offsetY, 512, 512);
+    context.globalAlpha = 0.08;
+    context.drawImage(source, -offsetX * 0.5, -offsetY * 0.5, 512, 512);
+    context.globalAlpha = 1;
+  };
+  const recordVideo = async (kind) => {
+    const stream = canvas.captureStream(24);
+    const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: 1200000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const stopped = new Promise((resolve, reject) => { recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType })); recorder.onerror = () => reject(recorder.error); });
+    recorder.start(250);
+    const frameCount = 96;
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      drawFrame(kind, frame / (frameCount - 1));
+      await wait(1000 / 24);
+    }
+    recorder.stop();
+    const blob = await stopped;
+    return await blob.arrayBuffer();
+  };
+  const encode = (bytes) => {
+    const value = new Uint8Array(bytes);
+    let binary = "";
+    const block = 0x8000;
+    for (let index = 0; index < value.length; index += block) {
+      binary += String.fromCharCode(...value.subarray(index, Math.min(index + block, value.length)));
+    }
+    return btoa(binary);
+  };
+  const run = async () => {
+    if (!MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) throw new Error("Chrome VP9 WebM recording is unavailable");
+    const payload = {};
+    for (const kind of ["fire", "frost", "brambles"]) {
+      await loadSource(kind);
+      payload[`${kind}.webm`] = encode(await recordVideo(kind));
+      document.querySelector("#status").textContent = `generated ${kind}`;
+    }
+    document.querySelector("#payload").textContent = JSON.stringify(payload);
+    document.title = "MEDIA_READY";
+  };
+  run().catch((error) => { document.querySelector("#status").textContent = `ERROR:${error?.stack || error}`; document.title = "MEDIA_ERROR"; });
+})();
+</script>

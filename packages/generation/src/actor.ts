@@ -129,6 +129,7 @@ type GeneratedActionData = ActionData & {
   legendaryCost?: number;
   activationCost?: number;
   usesPerLongRest?: number;
+  restRecharge?: 'sr' | 'lr';
   requiresConcentration?: boolean;
   targetCondition?: string;
 };
@@ -387,6 +388,9 @@ export class ActorGenerator {
       if (parsed.details.creatureTypeCustom) {
         if (!actor.system.details.type) actor.system.details.type = {};
         actor.system.details.type.custom = parsed.details.creatureTypeCustom;
+      }
+      if (parsed.details.creatureTypeSubtype) {
+        actor.system.details.type.subtype = parsed.details.creatureTypeSubtype;
       }
       if (parsed.details.biography) actor.system.details.biography.value = parsed.details.biography;
       
@@ -904,7 +908,8 @@ export class ActorGenerator {
     };
     const activities = this.activityGenerator.generate(activityData, activityContext);
     const item = this.createItemFromAction(
-      { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe } as any,
+      { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe,
+        usesPerLongRest: action.perLongRest } as any,
       activities,
       effectiveActivationType === 'passive' ? '' : effectiveActivationType,
       sectionOverride,
@@ -1073,8 +1078,13 @@ export class ActorGenerator {
       uses = this.createDailyUses(n);
       itemName = itemName.replace(/\s*\[\d+\/(?:日|Day)\]/, '').trim();
     }
-    const itemUses = !uses && action.usesPerLongRest !== undefined ? this.createDailyUses(action.usesPerLongRest) : uses;
-    const nativeBaseDamage = this.extractNativeBaseDamage(activities);
+    const itemUses = action.restRecharge
+      ? { spent: 0, max: '1', recovery: [{ period: action.restRecharge, type: 'recoverAll' }] }
+      : !uses && action.usesPerLongRest !== undefined ? this.createDailyUses(action.usesPerLongRest) : uses;
+    if (this.fvttVersion === '14' && !isWeapon) {
+      this.restoreNativeBaseDamageAsDynamicActivity(activities);
+    }
+    const nativeBaseDamage = isWeapon ? this.extractNativeBaseDamage(activities) : null;
 
     const item = {
       name: itemName,
@@ -1198,6 +1208,25 @@ export class ActorGenerator {
       }
     }
     return null;
+  }
+
+  private restoreNativeBaseDamageAsDynamicActivity(activities: Record<string, any>): void {
+    for (const activity of Object.values(activities ?? {}) as any[]) {
+      const nativeWeaponRoll = activity?.flags?.fvttJsonGenerator?.nativeWeaponRoll;
+      const baseDamage = nativeWeaponRoll?.baseDamage;
+      if (activity?.type !== 'attack' || !baseDamage) {
+        continue;
+      }
+
+      activity.damage = {
+        ...(activity.damage ?? {}),
+        parts: [
+          { ...baseDamage, bonus: '@mod' },
+          ...(Array.isArray(activity.damage?.parts) ? activity.damage.parts : []),
+        ],
+        includeBase: false,
+      };
+    }
   }
 
   private removeNativeBaseDamageFlags(activities: Record<string, any>): void {
@@ -2831,14 +2860,14 @@ export class ActorGenerator {
 
       if (uses && index === 0 && !activity.consumption) {
         activity.consumption = {
-          scaling: { allowed: false },
-          spellSlot: true,
+          scaling: { allowed: false, max: '' },
+          spellSlot: false,
           targets: [
             {
               type: 'itemUses',
               value: '1',
               target: '',
-              scaling: {},
+              scaling: { mode: '', formula: '' },
             },
           ],
         };
@@ -3022,6 +3051,12 @@ export class ActorGenerator {
 
   private enrichGeneratedAction(action: ActionData, rawLine: string): GeneratedActionData {
     const derived = { ...action } as GeneratedActionData;
+    // source-derived; schema-derived: dnd5e 5.3.3 UsesField supports a single sr/lr recharge.
+    const rest = rawLine.match(/\(\s*Recharges?\s+after\s+(?:a\s+)?(Short\s+or\s+Long|Short|Long)\s+Rest\s*\)/i);
+    if (rest?.[1]) {
+      derived.restRecharge = /^short/i.test(rest[1]) ? 'sr' : 'lr';
+      derived.desc = `${rest[0].replace(/\s+/g, ' ')}. ${derived.desc ?? ''}`;
+    }
     const header = this.extractActionHeaderMetadata(derived.name, derived.englishName);
 
     derived.name = header.name;
@@ -3214,7 +3249,10 @@ export class ActorGenerator {
     const abilityKey = skill.ability || SKILL_ABILITIES[skillKey] || 'wis';
     const abilityScore = Number(actor.system?.abilities?.[abilityKey]?.value ?? 10);
     const baseMod = Math.floor((abilityScore - 10) / 2);
-    const profBonus = Number(actor.system?.attributes?.prof ?? 0);
+    // schema-derived: dnd5e NPC prepares proficiency from max(CR, level, 1).
+    // It is derived data and may be absent from an exported source document.
+    const derivedProf = Math.floor((Math.max(Number(actor.system?.details?.cr ?? 0), Number(actor.system?.details?.level ?? 0), 1) + 7) / 4);
+    const profBonus = Number(actor.system?.attributes?.prof ?? derivedProf);
     const skillValue = Number(skill.value ?? 0);
     const checkBonus = this.parseSignedBonus(skill.bonuses?.check);
 

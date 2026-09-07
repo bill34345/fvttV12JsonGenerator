@@ -98,14 +98,38 @@ describe('Species TXT Intake and Ogre v14 projection', () => {
     expect(validateNativeSpeciesPackage(arbitraryPackage).findings.some((finding) => finding.code === 'EFFECT_KEY')).toBeTrue();
   });
 
-  test('is deterministic and refuses unsupported targets before provider work', async () => {
+  test('is deterministic and accepts only V12/V14 core targets before provider work', async () => {
     const root = mkdtempSync(join(tmpdir(), 'species-intake-'));
     const provider = new FakeProvider();
     const result = await runSpeciesIntake({ source, sourceName: 'ogre.txt', runRoot: join(root, 'runs'), vaultPath: join(root, 'vault'), fvttVersion: '14', effectProfile: 'core' }, provider);
     const markdown = readFileSync(result.species[0]!.markdownPath!, 'utf8');
     expect(compileSpeciesMarkdownV14(markdown).logicalHash).toBe(compileSpeciesMarkdownV14(markdown).logicalHash);
     await expect(runSpeciesIntake({ source, sourceName: 'ogre.txt', fvttVersion: '14', effectProfile: 'core', dryRun: true })).resolves.toMatchObject({ status: 'dry_run' });
-    await expect(runSpeciesIntake({ source, sourceName: 'ogre.txt', fvttVersion: '12' as any, effectProfile: 'core' }, provider)).rejects.toThrow('only supports');
+    await expect(runSpeciesIntake({ source, sourceName: 'ogre.txt', fvttVersion: '13' as any, effectProfile: 'core' }, provider)).rejects.toThrow('12|14');
+    await expect(runSpeciesIntake({ source, sourceName: 'ogre.txt', fvttVersion: '12', effectProfile: 'modded-v12' as any }, provider)).rejects.toThrow('core');
+  });
+
+  test('promotes V12 and V14 packages side by side in ledger schema v2', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'species-intake-targets-'));
+    const vaultPath = join(root, 'vault');
+    const runRoot = join(root, 'runs');
+    const provider = new FakeProvider();
+    const v14 = await runSpeciesIntake({ source, sourceName: 'ogre.txt', runRoot, vaultPath, fvttVersion: '14', effectProfile: 'core' }, provider);
+    const v12 = await runSpeciesIntake({ source, sourceName: 'ogre.txt', runRoot, vaultPath, fvttVersion: '12', effectProfile: 'core' }, provider);
+    expect(v14.status).toBe('succeeded');
+    expect(v12.status).toBe('succeeded');
+    expect(v14.species[0]?.packagePath).toBe(join(vaultPath, 'output/species/ogre.json'));
+    expect(v12.species[0]?.packagePath).toBe(join(vaultPath, 'output/species/v12/ogre.json'));
+    const ledger = JSON.parse(readFileSync(join(vaultPath, 'output/species/accepted-ledger.json'), 'utf8'));
+    expect(ledger.schemaVersion).toBe(2);
+    expect(ledger.entries.map((entry: any) => [entry.identifier, entry.fvttVersion, entry.effectProfile, entry.rules, entry.packagePath])).toEqual([
+      ['ogre', '12', 'core', '2024', 'output/species/v12/ogre.json'],
+      ['ogre', '14', 'core', '2024', 'output/species/ogre.json'],
+    ]);
+    const manifest = JSON.parse(readFileSync(join(v12.runPath, 'manifest.json'), 'utf8'));
+    expect(manifest).toMatchObject({ fvttVersion: '12', effectProfile: 'core', rules: '2024', target: { foundry: '12.331', dnd5e: '4.3.9', effectProfile: 'core', rules: '2024' } });
+    const report = JSON.parse(readFileSync(join(v12.species[0]!.bundlePath, 'deterministic-report.json'), 'utf8'));
+    expect(report.target).toEqual({ foundry: '12.331', dnd5e: '4.3.9', effectProfile: 'core', rules: '2024' });
   });
 
   test('rejects rehashed package mutations that escape declared Core mechanics', () => {

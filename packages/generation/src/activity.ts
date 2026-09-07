@@ -105,9 +105,59 @@ export class ActivityGenerator {
       activities[id].target = this.buildTargetSchema();
     } else if (action.save) {
       const nativeSaveDc = this.inferNativeSaveDc(action, context);
+      const useAction = action.useAction;
+      const consumptionScaling = useAction?.consumptionScaling ?? { allowed: false, max: '' };
+      const consumption = useAction?.consumption ?? 0;
       activities[id] = {
         _id: id,
         type: 'save',
+        ...(useAction ? {
+          activation: {
+            type: useAction.activation,
+            value: useAction.activation === 'free' ? 0 : 1,
+            override: false,
+          },
+          consumption: {
+            targets: consumption > 0 ? [{
+              type: 'itemUses',
+              target: '',
+              value: String(consumption),
+              scaling: {
+                mode: consumptionScaling.allowed ? 'amount' : '',
+                formula: '',
+              },
+            }] : [],
+            scaling: consumptionScaling,
+            spellSlot: false,
+          },
+          duration: {
+            units: 'inst',
+            concentration: false,
+            override: false,
+          },
+          range: { override: false },
+          ...(action.activity?.target ? {
+            target: {
+              prompt: true,
+              override: false,
+              template: {
+                count: '',
+                contiguous: false,
+                type: '',
+                size: '',
+                width: '',
+                height: '',
+                units: 'ft',
+              },
+              affects: {
+                count: action.activity.target.affects?.count ?? '',
+                type: action.activity.target.affects?.type ?? '',
+                choice: false,
+                special: action.activity.target.affects?.special ?? '',
+              },
+            },
+          } : {}),
+        } : {}),
         save: {
           ability: [action.save.ability],
           dc: this.buildSaveDc(action.save.dc, nativeSaveDc?.calculation)
@@ -430,7 +480,13 @@ export class ActivityGenerator {
         bonus: options.omitBonus ? '' : match[3] || '',
         types: this.normalizeDamageTypes(damage),
         custom: { enabled: false, formula: '' },
-        scaling: { mode: 'whole', number: 1, formula: '' }
+        scaling: damage.scaling
+          ? {
+              mode: damage.scaling.mode,
+              number: damage.scaling.number,
+              formula: damage.scaling.formula ?? '',
+            }
+          : { mode: 'whole', number: 1, formula: '' }
       };
     }
     // Fallback: simple formula string?
@@ -441,7 +497,13 @@ export class ActivityGenerator {
         bonus: '',
         types: this.normalizeDamageTypes(damage),
         custom: { enabled: true, formula: damage.formula },
-        scaling: { mode: 'whole', number: 1, ...(this.isV14() ? { formula: '' } : {}) }
+        scaling: damage.scaling
+          ? {
+              mode: damage.scaling.mode,
+              number: damage.scaling.number,
+              ...(this.isV14() ? { formula: damage.scaling.formula ?? '' } : {}),
+            }
+          : { mode: 'whole', number: 1, ...(this.isV14() ? { formula: '' } : {}) }
     };
   }
 

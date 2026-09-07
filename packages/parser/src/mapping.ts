@@ -108,6 +108,7 @@ export interface ParsedNPC {
     alignment?: string;
     creatureType?: string;
     creatureTypeCustom?: string;
+    creatureTypeSubtype?: string;
     spellLevel?: number;
   };
 

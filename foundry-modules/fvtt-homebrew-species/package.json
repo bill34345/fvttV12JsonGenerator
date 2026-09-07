@@ -6,6 +6,9 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false",
     "build": "bun run build.ts",
+    "build:v12-candidate": "bun run build.ts --fvtt-version 12",
+    "verify": "bun run verify.ts",
+    "verify:v12-candidate": "bun run verify.ts --fvtt-version 12",
     "test": "bun test tests --max-concurrency 1"
   },
   "dependencies": {

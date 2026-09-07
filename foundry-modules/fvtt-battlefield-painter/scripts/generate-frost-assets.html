@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FROST_GENERATOR_LOADING</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    canvas { display: block; background: transparent; }
+  </style>
+</head>
+<body>
+  <canvas id="surface" width="1280" height="1024"></canvas>
+  <script>
+    (() => {
+      "use strict";
+
+      const TAU = Math.PI * 2;
+      const surface = document.querySelector("#surface");
+      const context = surface.getContext("2d", { alpha: true, willReadFrequently: false });
+      const film = document.createElement("canvas");
+      film.width = 1024;
+      film.height = 1024;
+      const filmContext = film.getContext("2d", { alpha: true });
+      let previewFilm = film;
+      let previewBackground = null;
+      let finalMistVideos = [];
+
+      function fract(value) {
+        return value - Math.floor(value);
+      }
+
+      function hash2(x, y, seed = 0) {
+        return fract(Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453123);
+      }
+
+      function modulo(value, divisor) {
+        return ((value % divisor) + divisor) % divisor;
+      }
+
+      function valueNoise(x, y, period, seed = 0) {
+        const px = x * period;
+        const py = y * period;
+        const ix = Math.floor(px);
+        const iy = Math.floor(py);
+        const fx = px - ix;
+        const fy = py - iy;
+        const sx = fx * fx * (3 - 2 * fx);
+        const sy = fy * fy * (3 - 2 * fy);
+        const sample = (dx, dy) => hash2(modulo(ix + dx, period), modulo(iy + dy, period), seed);
+        const top = sample(0, 0) * (1 - sx) + sample(1, 0) * sx;
+        const bottom = sample(0, 1) * (1 - sx) + sample(1, 1) * sx;
+        return top * (1 - sy) + bottom * sy;
+      }
+
+      function frostNoise(x, y, seed = 0) {
+        return valueNoise(x, y, 4, seed) * 0.44
+          + valueNoise(x, y, 9, seed + 1) * 0.27
+          + valueNoise(x, y, 19, seed + 2) * 0.18
+          + valueNoise(x, y, 37, seed + 3) * 0.11;
+      }
+
+      function smoothPulse(phase) {
+        const wave = 0.5 - 0.5 * Math.cos(phase);
+        return wave * wave * (3 - 2 * wave);
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        const amount = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+        return amount * amount * (3 - 2 * amount);
+      }
+
+      function iceCell(nx, ny) {
+        const period = 11;
+        const px = nx * period;
+        const py = ny * period;
+        const ix = Math.floor(px);
+        const iy = Math.floor(py);
+        let nearest = Number.POSITIVE_INFINITY;
+        let secondNearest = Number.POSITIVE_INFINITY;
+        let cellTone = 0;
+        for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+          for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+            const cellX = modulo(ix + offsetX, period);
+            const cellY = modulo(iy + offsetY, period);
+            const seedX = (cellX + 0.16 + hash2(cellX, cellY, 211) * 0.68) / period;
+            const seedY = (cellY + 0.16 + hash2(cellX, cellY, 223) * 0.68) / period;
+            const rawDx = Math.abs(nx - seedX);
+            const rawDy = Math.abs(ny - seedY);
+            const dx = Math.min(rawDx, 1 - rawDx);
+            const dy = Math.min(rawDy, 1 - rawDy);
+            const distance = dx * dx + dy * dy;
+            if (distance < nearest) {
+              secondNearest = nearest;
+              nearest = distance;
+              cellTone = hash2(cellX, cellY, 227);
+            } else if (distance < secondNearest) {
+              secondNearest = distance;
+            }
+          }
+        }
+        return { nearest, edgeDistance: secondNearest - nearest, cellTone };
+      }
+
+      function drawFrostBranch(ctx, x, y, angle, length, depth, seed, alpha) {
+        if (depth <= 0 || length < 6) return;
+        const path = new Path2D();
+        path.moveTo(x, y);
+        let currentX = x;
+        let currentY = y;
+        let currentAngle = angle;
+        const points = [];
+        for (let segment = 0; segment < 4; segment += 1) {
+          currentAngle += (hash2(seed, segment, 239 + depth) - 0.5) * 0.22;
+          const segmentLength = length * (0.21 + hash2(seed, segment, 241) * 0.07);
+          currentX += Math.cos(currentAngle) * segmentLength;
+          currentY += Math.sin(currentAngle) * segmentLength;
+          path.lineTo(currentX, currentY);
+          points.push({ x: currentX, y: currentY, angle: currentAngle });
+        }
+        ctx.strokeStyle = `rgba(151, 218, 248, ${alpha * 0.62})`;
+        ctx.lineWidth = Math.max(1.2, depth * 1.35);
+        ctx.stroke(path);
+        ctx.strokeStyle = `rgba(246, 253, 255, ${alpha})`;
+        ctx.lineWidth = Math.max(0.55, depth * 0.56);
+        ctx.stroke(path);
+
+        for (let index = 1; index < points.length; index += 1) {
+          if (depth <= 1 || hash2(seed, index, 251) < 0.28) continue;
+          const point = points[index];
+          const side = hash2(seed, index, 257) < 0.5 ? -1 : 1;
+          const branchAngle = point.angle + side * (0.54 + hash2(seed, index, 263) * 0.42);
+          drawFrostBranch(
+            ctx,
+            point.x,
+            point.y,
+            branchAngle,
+            length * (0.43 + hash2(seed, index, 269) * 0.17),
+            depth - 1,
+            seed * 7.13 + index * 3.71,
+            alpha * 0.82,
+          );
+        }
+      }
+
+      function drawFrostDendrites(ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        for (let cluster = 0; cluster < 34; cluster += 1) {
+          const originX = hash2(cluster, 3, 271) * 1024;
+          const originY = hash2(cluster, 7, 277) * 1024;
+          const baseAngle = hash2(cluster, 11, 281) * TAU;
+          const length = 54 + hash2(cluster, 13, 283) * 76;
+          const alpha = 0.28 + hash2(cluster, 17, 293) * 0.34;
+          for (const offsetY of [-1024, 0, 1024]) {
+            for (const offsetX of [-1024, 0, 1024]) {
+              const x = originX + offsetX;
+              const y = originY + offsetY;
+              for (let arm = 0; arm < 3; arm += 1) {
+                drawFrostBranch(
+                  ctx,
+                  x,
+                  y,
+                  baseAngle + arm * (TAU / 3) + (hash2(cluster, arm, 307) - 0.5) * 0.38,
+                  length * (0.78 + hash2(cluster, arm, 311) * 0.28),
+                  3,
+                  cluster * 17.9 + arm * 5.3,
+                  alpha,
+                );
+              }
+            }
+          }
+        }
+        ctx.restore();
+      }
+
+      function buildFilm() {
+        const image = filmContext.createImageData(1024, 1024);
+        const pixels = image.data;
+        for (let y = 0; y < 1024; y += 1) {
+          const ny = y / 1024;
+          for (let x = 0; x < 1024; x += 1) {
+            const nx = x / 1024;
+            const broad = frostNoise(nx, ny, 13);
+            const warpedX = modulo(nx + (frostNoise(nx, ny, 29) - 0.5) * 0.055, 1);
+            const warpedY = modulo(ny + (frostNoise(nx, ny, 37) - 0.5) * 0.055, 1);
+            const fine = frostNoise(warpedX, warpedY, 53);
+            const grain = valueNoise(warpedX, warpedY, 73, 71);
+            const micro = valueNoise(warpedX, warpedY, 97, 101);
+            const pinprick = valueNoise(warpedX, warpedY, 157, 107);
+            const cell = iceCell(warpedX, warpedY);
+            const plateEdge = 1 - smoothstep(0.00018, 0.00165, cell.edgeDistance);
+            const interiorShade = smoothstep(0.001, 0.012, cell.nearest);
+            const frostBloom = smoothstep(0.56, 0.76, fine * 0.72 + broad * 0.38);
+            const frostDust = Math.pow(smoothstep(0.66, 0.86, micro), 2.4);
+            const crystalGlint = Math.pow(smoothstep(0.72, 0.91, pinprick), 1.45);
+            const diagonal = 0.5 + 0.5 * Math.sin(
+              TAU * (nx * 23 + ny * 17 + (grain - 0.5) * 1.8),
+            );
+            const brushedIce = Math.pow(diagonal, 5.5) * (0.35 + interiorShade * 0.65);
+            const whiteFrost = Math.max(frostBloom * 0.82, frostDust * 0.72, plateEdge * 0.68);
+            const opacity = Math.max(44, Math.min(208,
+              44 + broad * 20 + cell.cellTone * 11 + interiorShade * 8
+              + frostBloom * 34 + frostDust * 56 + plateEdge * 96
+              + crystalGlint * 50 + brushedIce * 42,
+            ));
+            const i = (y * 1024 + x) * 4;
+            pixels[i] = Math.round(135 + broad * 20 + whiteFrost * 82 + crystalGlint * 14);
+            pixels[i + 1] = Math.round(205 + broad * 14 + whiteFrost * 42 + crystalGlint * 8);
+            pixels[i + 2] = Math.round(246 + whiteFrost * 9);
+            pixels[i + 3] = Math.round(opacity);
+          }
+        }
+        filmContext.putImageData(image, 0, 0);
+        drawFrostDendrites(filmContext);
+      }
+
+      function radialWisp(ctx, x, y, radiusX, radiusY, rotation, alpha, coolness = 0.5) {
+        if (alpha <= 0.002) return;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(radiusX, radiusY);
+        const gradient = ctx.createRadialGradient(-0.18, -0.12, 0.015, 0, 0, 1);
+        const r = Math.round(205 + coolness * 32);
+        const g = Math.round(235 + coolness * 18);
+        gradient.addColorStop(0, `rgba(${r}, ${g}, 255, ${alpha})`);
+        gradient.addColorStop(0.26, `rgba(${r}, ${g}, 255, ${alpha * 0.82})`);
+        gradient.addColorStop(0.58, `rgba(${r}, ${g}, 255, ${alpha * 0.38})`);
+        gradient.addColorStop(0.82, `rgba(${r}, ${g}, 255, ${alpha * 0.11})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, 255, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawMistCluster(ctx, centerX, centerY, size, variant, cycle, intensity = 1) {
+        const seed = variant * 19.37 + 3.1;
+        const basePhase = cycle * TAU;
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.filter = "none";
+
+        // A broad, cold ground layer makes Stage II read as freezing terrain before the
+        // taller vapour plumes are noticed. It breathes in place instead of travelling.
+        const rootBreath = 0.88 + 0.12 * Math.sin(basePhase + seed);
+        radialWisp(ctx, centerX, centerY + size * 0.12, size * 0.44 * rootBreath,
+          size * 0.15 * rootBreath, 0.10 * Math.sin(basePhase + seed), 0.18 * intensity, 0.92);
+        radialWisp(ctx, centerX - size * 0.16, centerY + size * 0.08, size * 0.26,
+          size * 0.105, -0.22, 0.16 * intensity, 0.74);
+
+        // Four staggered vapour blooms expand around fixed anchors. The drift is short
+        // and oblique, so a dense lattice reads as ground chill instead of vertical columns.
+        for (let plume = 0; plume < 4; plume += 1) {
+          const local = hash2(plume, variant, 7);
+          const age = fract(cycle + plume / 4 + local * 0.055);
+          const appear = smoothstep(0.01, 0.13, age);
+          const disappear = 1 - smoothstep(0.66, 0.98, age);
+          const envelope = appear * disappear;
+          if (envelope <= 0.002) continue;
+
+          const side = (plume % 2 === 0 ? -1 : 1) * (variant % 2 === 0 ? 1 : -1);
+          const rootX = centerX + (local - 0.5) * size * 0.44;
+          const rootY = centerY + size * (0.075 + hash2(variant, plume, 13) * 0.10);
+          const driftAngle = -Math.PI / 2 + side * (0.48 + local * 0.42)
+            + Math.sin(seed + age * TAU) * 0.16;
+          const drift = size * age * (0.14 + local * 0.10);
+          const bloomX = rootX + Math.cos(driftAngle) * drift;
+          const bloomY = rootY + Math.sin(driftAngle) * drift;
+          const expansion = size * (0.115 + age * (0.12 + local * 0.035));
+          const lobeAlpha = intensity * envelope * (0.34 + local * 0.08);
+          const curl = side * (0.24 + Math.sin(seed + plume + age * 2.7) * 0.16);
+
+          radialWisp(ctx, rootX, rootY, expansion * 1.48, expansion * 0.62,
+            -curl * 0.55, lobeAlpha * 0.66, 0.68);
+          radialWisp(ctx, bloomX - side * expansion * 0.28, bloomY + expansion * 0.06,
+            expansion * 1.58, expansion * 1.12, curl, lobeAlpha, 0.82);
+          radialWisp(ctx, bloomX + side * expansion * 0.34, bloomY - expansion * 0.18,
+            expansion * 1.32, expansion * 0.96, -curl * 1.18, lobeAlpha * 0.88, 0.94);
+          radialWisp(ctx, bloomX - side * expansion * 0.06, bloomY - expansion * 0.46,
+            expansion * 1.06, expansion * 0.88, curl * 1.42, lobeAlpha * 0.72, 1);
+        }
+        ctx.restore();
+      }
+
+      function configure(width, height) {
+        surface.width = width;
+        surface.height = height;
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, width, height);
+      }
+
+      function renderFilm() {
+        configure(1024, 1024);
+        context.drawImage(film, 0, 0);
+        return { width: 1024, height: 1024 };
+      }
+
+      function renderMistFrame(frame) {
+        configure(1024, 1024);
+        const cycle = ((frame % 96) + 96) % 96 / 96;
+        for (let variant = 0; variant < 4; variant += 1) {
+          const column = variant % 2;
+          const row = Math.floor(variant / 2);
+          context.save();
+          context.beginPath();
+          context.rect(column * 512, row * 512, 512, 512);
+          context.clip();
+          drawMistCluster(context, column * 512 + 256, row * 512 + 276, 430, variant, cycle, 1);
+          context.restore();
+        }
+        return { width: 1024, height: 1024, frame };
+      }
+
+      const layouts = {
+        "stage1-single": [[1]],
+        "stage1-3x3": [[1,1,1],[1,1,1],[1,1,1]],
+        "stage2-single": [[2]],
+        "stage2-1x3": [[2,2,2]],
+        "stage2-3x3": [[2,2,2],[2,2,2],[2,2,2]],
+        "mixed-stage": [[1,1,2],[1,2,2],[1,2,2]],
+        "adjacent-draws": [[2,2,2,2],[2,2,2,2]],
+        "l-shape": [[2,0,0],[2,0,0],[2,2,2]],
+        "center-hole": [[2,2,2],[2,0,2],[2,2,2]],
+        "dark-map-token": [[2,2,2],[2,2,2],[2,2,2]],
+        "light-map-token": [[1,1,2],[1,2,2],[1,2,2]],
+      };
+
+      const mapBackgrounds = new Map();
+
+      function getMapBackground(width, height, light) {
+        const key = `${width}x${height}:${light}`;
+        if (mapBackgrounds.has(key)) return mapBackgrounds.get(key);
+        const map = document.createElement("canvas");
+        map.width = width;
+        map.height = height;
+        const mapContext = map.getContext("2d", { alpha: false });
+        const image = mapContext.createImageData(width, height);
+        const pixels = image.data;
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const nx = x / width;
+            const ny = y / height;
+            const stone = frostNoise(nx, ny, light ? 131 : 127);
+            const grain = valueNoise(nx, ny, 47, light ? 139 : 137);
+            const i = (y * width + x) * 4;
+            if (light) {
+              pixels[i] = 91 + stone * 54 + grain * 13;
+              pixels[i + 1] = 84 + stone * 49 + grain * 12;
+              pixels[i + 2] = 74 + stone * 43 + grain * 10;
+            } else {
+              pixels[i] = 11 + stone * 26 + grain * 6;
+              pixels[i + 1] = 17 + stone * 31 + grain * 7;
+              pixels[i + 2] = 23 + stone * 37 + grain * 8;
+            }
+            pixels[i + 3] = 255;
+          }
+        }
+        mapContext.putImageData(image, 0, 0);
+        mapBackgrounds.set(key, map);
+        return map;
+      }
+
+      function drawMapBackground(ctx, width, height, light) {
+        if (previewBackground) {
+          const scale = Math.max(width / previewBackground.width, height / previewBackground.height);
+          const drawWidth = previewBackground.width * scale;
+          const drawHeight = previewBackground.height * scale;
+          ctx.drawImage(
+            previewBackground,
+            (width - drawWidth) / 2,
+            (height - drawHeight) / 2,
+            drawWidth,
+            drawHeight,
+          );
+          ctx.fillStyle = "rgba(8, 18, 28, 0.08)";
+          ctx.fillRect(0, 0, width, height);
+          return;
+        }
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        if (light) {
+          gradient.addColorStop(0, "#776f64");
+          gradient.addColorStop(0.52, "#9d9384");
+          gradient.addColorStop(1, "#675f56");
+        } else {
+          gradient.addColorStop(0, "#171d25");
+          gradient.addColorStop(0.52, "#28323b");
+          gradient.addColorStop(1, "#10151b");
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        ctx.save();
+        ctx.globalAlpha = light ? 0.42 : 0.52;
+        ctx.drawImage(getMapBackground(width, height, light), 0, 0);
+        ctx.restore();
+      }
+
+      function stageAt(layout, column, row) {
+        if (row < 0 || column < 0 || row >= layout.length || column >= layout[row].length) return 0;
+        return layout[row][column] || 0;
+      }
+
+      function drawFilmCells(ctx, layout, originX, originY, cellSize, shimmer) {
+        for (let row = 0; row < layout.length; row += 1) {
+          for (let column = 0; column < layout[row].length; column += 1) {
+            const stage = layout[row][column];
+            if (!stage) continue;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(originX + column * cellSize, originY + row * cellSize, cellSize, cellSize);
+            ctx.clip();
+            ctx.globalAlpha = (stage === 1 ? 0.48 : 0.62) * (0.96 + shimmer * 0.04);
+            // Oversize the seamless source so there is no per-cell UV restart in the preview.
+            ctx.drawImage(previewFilm, originX - cellSize * 1.3, originY - cellSize * 1.1,
+              cellSize * 5.4, cellSize * 5.4);
+            ctx.restore();
+          }
+        }
+      }
+
+      function drawMistField(ctx, layout, originX, originY, cellSize, cycle) {
+        ctx.save();
+        ctx.beginPath();
+        for (let row = 0; row < layout.length; row += 1) {
+          for (let column = 0; column < layout[row].length; column += 1) {
+            if (layout[row][column] !== 2) continue;
+            ctx.rect(originX + column * cellSize, originY + row * cellSize, cellSize, cellSize);
+          }
+        }
+        ctx.clip();
+        const columns = Math.max(...layout.map((row) => row.length));
+        const spacing = cellSize * 0.62;
+        const minX = originX - cellSize * 0.35;
+        const maxX = originX + columns * cellSize + cellSize * 0.35;
+        const minY = originY - cellSize * 0.35;
+        const maxY = originY + layout.length * cellSize + cellSize * 0.35;
+        let latticeI = 0;
+        for (let baseY = minY; baseY <= maxY; baseY += spacing, latticeI += 1) {
+          const stagger = latticeI % 2 === 1 ? 0.5 : 0;
+          let latticeJ = 0;
+          for (let baseX = minX + stagger * spacing; baseX <= maxX; baseX += spacing, latticeJ += 1) {
+            const x = baseX + (hash2(latticeJ, latticeI, 3) - 0.5) * spacing * 0.34;
+            const y = baseY + (hash2(latticeJ, latticeI, 7) - 0.5) * spacing * 0.34;
+            const column = Math.floor((x - originX) / cellSize);
+            const row = Math.floor((y - originY) / cellSize);
+            if (stageAt(layout, column, row) !== 2) continue;
+            const gx = Math.round(x / spacing);
+            const gy = Math.round(y / spacing);
+            const variant = Math.floor(hash2(gx, gy, 91) * 4) % 4;
+            const phase = fract(cycle + hash2(gx, gy, 101));
+            const scale = 0.78 + hash2(gx, gy, 109) * 0.36;
+            drawMistCluster(ctx, x, y, cellSize * 0.95 * scale, variant, phase, 0.78);
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawFinalMistField(ctx, layout, originX, originY, cellSize) {
+        ctx.save();
+        ctx.beginPath();
+        for (let row = 0; row < layout.length; row += 1) {
+          for (let column = 0; column < layout[row].length; column += 1) {
+            if (layout[row][column] !== 2) continue;
+            ctx.rect(originX + column * cellSize, originY + row * cellSize, cellSize, cellSize);
+          }
+        }
+        ctx.clip();
+        const columns = Math.max(...layout.map((row) => row.length));
+        const spacing = cellSize * 0.62;
+        const minX = originX - cellSize * 0.35;
+        const maxX = originX + columns * cellSize + cellSize * 0.35;
+        const minY = originY - cellSize * 0.35;
+        const maxY = originY + layout.length * cellSize + cellSize * 0.35;
+        let latticeI = 0;
+        for (let baseY = minY; baseY <= maxY; baseY += spacing, latticeI += 1) {
+          const stagger = latticeI % 2 === 1 ? 0.5 : 0;
+          let latticeJ = 0;
+          for (let baseX = minX + stagger * spacing; baseX <= maxX; baseX += spacing, latticeJ += 1) {
+            const x = baseX + (hash2(latticeJ, latticeI, 3) - 0.5) * spacing * 0.34;
+            const y = baseY + (hash2(latticeJ, latticeI, 7) - 0.5) * spacing * 0.34;
+            const column = Math.floor((x - originX) / cellSize);
+            const row = Math.floor((y - originY) / cellSize);
+            if (stageAt(layout, column, row) !== 2) continue;
+            const gx = Math.round(x / spacing);
+            const gy = Math.round(y / spacing);
+            const variant = Math.floor(hash2(gx, gy, 91) * 4) % 4;
+            const phaseGroup = Math.floor(hash2(gx, gy, 101) * 4) % 4;
+            const scale = 0.84 + hash2(gx, gy, 109) * 0.30;
+            const rotation = (hash2(gx, gy, 113) - 0.5) * 0.72;
+            const source = finalMistVideos[phaseGroup];
+            const sourceX = (variant % 2) * 512;
+            const sourceY = Math.floor(variant / 2) * 512;
+            const destinationSize = cellSize * 1.34 * scale;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.globalAlpha = 0.84;
+            ctx.drawImage(source, sourceX, sourceY, 512, 512,
+              -destinationSize / 2, -destinationSize * 0.54, destinationSize, destinationSize);
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawGrid(ctx, layout, originX, originY, cellSize) {
+        const columns = Math.max(...layout.map((row) => row.length));
+        ctx.save();
+        ctx.strokeStyle = "rgba(225, 237, 244, 0.38)";
+        ctx.lineWidth = 1;
+        for (let column = 0; column <= columns; column += 1) {
+          ctx.beginPath();
+          ctx.moveTo(originX + column * cellSize + 0.5, originY + 0.5);
+          ctx.lineTo(originX + column * cellSize + 0.5, originY + layout.length * cellSize + 0.5);
+          ctx.stroke();
+        }
+        for (let row = 0; row <= layout.length; row += 1) {
+          ctx.beginPath();
+          ctx.moveTo(originX + 0.5, originY + row * cellSize + 0.5);
+          ctx.lineTo(originX + columns * cellSize + 0.5, originY + row * cellSize + 0.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawToken(ctx, x, y, radius) {
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.75)";
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = "rgba(29, 31, 39, 0.94)";
+        ctx.strokeStyle = "#f3d184";
+        ctx.lineWidth = Math.max(4, radius * 0.08);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#e8edf2";
+        ctx.beginPath();
+        ctx.arc(x, y - radius * 0.18, radius * 0.24, 0, TAU);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x, y + radius * 0.28, radius * 0.42, radius * 0.28, 0, Math.PI, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function renderPreview(name, frame = 0) {
+        const layout = layouts[name];
+        if (!layout) throw new Error(`Unknown preview layout: ${name}`);
+        configure(1280, 720);
+        const light = name === "light-map-token";
+        drawMapBackground(context, 1280, 720, light);
+        const columns = Math.max(...layout.map((row) => row.length));
+        const cellSize = Math.min(176, 510 / Math.max(columns, layout.length));
+        const originX = Math.round((1280 - columns * cellSize) / 2);
+        const originY = Math.round((720 - layout.length * cellSize) / 2);
+        const cycle = ((frame % 96) + 96) % 96 / 96;
+        // The runtime film shimmer has its own 10-second clock. Keep it neutral in the
+        // four-second media previews so looping those previews tests only the mist asset
+        // and cannot introduce an artificial four-second film reset.
+        const shimmer = 0;
+        drawFilmCells(context, layout, originX, originY, cellSize, shimmer);
+        drawMistField(context, layout, originX, originY, cellSize, cycle);
+        drawGrid(context, layout, originX, originY, cellSize);
+        if (name.includes("token")) {
+          drawToken(context, originX + columns * cellSize * 0.55,
+            originY + layout.length * cellSize * 0.50, cellSize * 0.34);
+        }
+        return { width: 1280, height: 720, name, frame };
+      }
+
+      function loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.addEventListener("load", () => resolve(image), { once: true });
+          image.addEventListener("error", () => reject(new Error(`Unable to load image: ${url}`)), { once: true });
+          image.src = url;
+        });
+      }
+
+      function loadVideo(url) {
+        return new Promise((resolve, reject) => {
+          const video = document.createElement("video");
+          video.muted = true;
+          video.preload = "auto";
+          video.playsInline = true;
+          video.addEventListener("loadeddata", () => resolve(video), { once: true });
+          video.addEventListener("error", () => reject(new Error(`Unable to load video: ${url}`)), { once: true });
+          video.src = url;
+          video.load();
+        });
+      }
+
+      function seekVideo(video, time) {
+        if (Math.abs(video.currentTime - time) < 0.0005 && video.readyState >= 2) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error(`Video seek timed out at ${time}`)), 5000);
+          video.addEventListener("seeked", () => {
+            clearTimeout(timeout);
+            resolve();
+          }, { once: true });
+          video.currentTime = time;
+        });
+      }
+
+      async function loadFinalMedia(filmUrl, mistUrl) {
+        previewFilm = await loadImage(filmUrl);
+        finalMistVideos = await Promise.all([0, 1, 2, 3].map(() => loadVideo(mistUrl)));
+        return { film: true, mistVideos: finalMistVideos.length };
+      }
+
+      async function loadPreviewBackground(url) {
+        previewBackground = await loadImage(url);
+        return { width: previewBackground.width, height: previewBackground.height };
+      }
+
+      async function renderFinalPreview(name, frame = 0) {
+        if (!finalMistVideos.length) throw new Error("Final Frost media has not been loaded");
+        const layout = layouts[name];
+        if (!layout) throw new Error(`Unknown preview layout: ${name}`);
+        const second = (((frame % 96) + 96) % 96) / 24;
+        await Promise.all(finalMistVideos.map((video, index) => seekVideo(video, (second + index) % 4)));
+        configure(1280, 720);
+        const light = name === "light-map-token";
+        drawMapBackground(context, 1280, 720, light);
+        const columns = Math.max(...layout.map((row) => row.length));
+        const cellSize = Math.min(176, 510 / Math.max(columns, layout.length));
+        const originX = Math.round((1280 - columns * cellSize) / 2);
+        const originY = Math.round((720 - layout.length * cellSize) / 2);
+        // The runtime film shimmer has its own 10-second clock. Keep it neutral in the
+        // four-second final-media previews so their loop boundary measures only mist.
+        const shimmer = 0;
+        drawFilmCells(context, layout, originX, originY, cellSize, shimmer);
+        drawFinalMistField(context, layout, originX, originY, cellSize);
+        drawGrid(context, layout, originX, originY, cellSize);
+        if (name.includes("token")) {
+          drawToken(context, originX + columns * cellSize * 0.55,
+            originY + layout.length * cellSize * 0.50, cellSize * 0.34);
+        }
+        return { width: 1280, height: 720, name, frame, finalMedia: true };
+      }
+
+      buildFilm();
+      window.frostGenerator = {
+        renderFilm,
+        renderMistFrame,
+        renderPreview,
+        loadFinalMedia,
+        loadPreviewBackground,
+        renderFinalPreview,
+        layouts: Object.keys(layouts),
+      };
+      document.title = "FROST_GENERATOR_READY";
+    })();
+  </script>
+</body>
+</html>

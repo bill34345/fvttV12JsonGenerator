@@ -142,7 +142,7 @@ describe('appendStructuredActionItems', () => {
     });
 
     it('uses native ability-based weapon rolls for exact attack and damage modifier matches', () => {
-      const generator = new ActorGenerator();
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
       const structuredActions: StructuredActionData[] = [
         {
           name: '爪击',
@@ -187,7 +187,7 @@ describe('appendStructuredActionItems', () => {
     });
 
     it('keeps flat attack and literal damage when no exact ability match exists', () => {
-      const generator = new ActorGenerator();
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
       const structuredActions: StructuredActionData[] = [
         {
           name: '强化爪击',
@@ -443,55 +443,85 @@ describe('appendStructuredActionItems', () => {
       expect(item.system.activation).toBeUndefined();
     });
 
-    it('maps 附赠动作 section to bonus activation', () => {
-      const generator = new ActorGenerator();
+    it('projects an exact bonus weapon attack as dynamic @mod damage while keeping a feat item', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
       const structuredActions: StructuredActionData[] = [
         {
-          name: '快速打击',
-          englishName: 'Quick Strike',
+          name: '尾击',
+          englishName: 'Tail',
           type: 'attack',
           attackType: 'mwak',
-          toHit: 8,
+          toHit: 9,
           range: '触及5尺',
-          damage: [{ formula: '1d6+4', type: '挥砍' }],
+          damage: [
+            { formula: '1d10+6', type: '钝击' },
+            { formula: '1d6', type: '火焰' },
+          ],
         },
       ];
 
       const parsed = createMinimalParsedNPC({
         附赠动作: structuredActions,
       });
+      parsed.abilities = { str: 23, dex: 11, con: 21, int: 1, wis: 10, cha: 5 };
+      parsed.attributes.prof = 3;
 
       const actor = generator.generate(parsed);
-      const item = actor.items.find((i: any) => i.name.includes('快速打击'));
+      const item = actor.items.find((i: any) => i.name.includes('尾击'));
 
       expect(item).toBeDefined();
-      expect(getActivities(item)[0]?.activation?.type).toBe('bonus');
+      expect(item.type).toBe('feat');
+      const attackActivity = getActivities(item).find((activity: any) => activity.type === 'attack');
+      expect(attackActivity.activation?.type).toBe('bonus');
+      expect(attackActivity.attack).toEqual(expect.objectContaining({
+        ability: 'str',
+        bonus: '',
+        flat: false,
+      }));
+      expect(attackActivity.damage.includeBase).toBe(false);
+      expect(attackActivity.damage.parts).toEqual([
+        expect.objectContaining({ number: 1, denomination: 10, bonus: '@mod', types: ['bludgeoning'] }),
+        expect.objectContaining({ number: 1, denomination: 6, bonus: '', types: ['fire'] }),
+      ]);
+      expect(item.system.damage).toBeUndefined();
       expect(item.system.activation).toBeUndefined();
     });
 
-    it('maps 反应 section to reaction activation', () => {
-      const generator = new ActorGenerator();
+    it('projects an exact reaction ranged weapon attack as dynamic dexterity damage', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
       const structuredActions: StructuredActionData[] = [
         {
-          name: '借机攻击',
-          englishName: 'Opportunity Attack',
+          name: '反应射击',
+          englishName: 'Reaction Shot',
           type: 'attack',
-          attackType: 'mwak',
-          toHit: 10,
-          range: '触及10尺',
-          damage: [{ formula: '2d6+5', type: '钝击' }],
+          attackType: 'rwak',
+          toHit: 7,
+          range: '射程30尺',
+          damage: [{ formula: '1d8+4', type: '穿刺' }],
         },
       ];
 
       const parsed = createMinimalParsedNPC({
         反应: structuredActions,
       });
+      parsed.abilities = { str: 10, dex: 18, con: 10, int: 10, wis: 10, cha: 10 };
+      parsed.attributes.prof = 3;
 
       const actor = generator.generate(parsed);
-      const item = actor.items.find((i: any) => i.name.includes('借机攻击'));
+      const item = actor.items.find((i: any) => i.name.includes('反应射击'));
 
       expect(item).toBeDefined();
-      expect(getActivities(item)[0]?.activation?.type).toBe('reaction');
+      expect(item.type).toBe('feat');
+      const attackActivity = getActivities(item).find((activity: any) => activity.type === 'attack');
+      expect(attackActivity.activation?.type).toBe('reaction');
+      expect(attackActivity.attack).toEqual(expect.objectContaining({
+        ability: 'dex',
+        bonus: '',
+        flat: false,
+      }));
+      expect(attackActivity.damage.parts[0]).toEqual(
+        expect.objectContaining({ number: 1, denomination: 8, bonus: '@mod', types: ['piercing'] }),
+      );
       expect(item.system.activation).toBeUndefined();
     });
   });

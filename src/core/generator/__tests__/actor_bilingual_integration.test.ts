@@ -353,7 +353,7 @@ describe('ActorGenerator english bilingual integration', () => {
       },
       {
         name: 'Spirit-Bonded Body',
-        description: '<p>As a bonus action, the orc can transform into a dire wolf for up to 4 hours. The orc reverts to its true form if it falls unconscious.</p>',
+        description: '<p>(Recharges after a Short or Long Rest). As a bonus action, the orc can transform into a dire wolf for up to 4 hours. The orc reverts to its true form if it falls unconscious.</p>',
       },
       {
         name: 'Spirit-Bonded Mind',

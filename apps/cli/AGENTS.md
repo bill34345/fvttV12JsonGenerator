@@ -11,6 +11,7 @@
 - 默认 Vault 为 `obsidian/dnd数据转fvttjson`；不得因为测试方便改变正式 input/output 约定。
 - `--dry-run` 不得执行 Vault promotion、远程上传或其他外部写入。
 - v14 safe icon、effect profile、图片 SSH 等互斥/版本条件必须在写文件前失败。
+- Species Intake 只接受 V12/core/2024 或 V14/core/2024；V13、legacy/2014、modded-v12 和 resume target drift 必须在 provider 配置或文件写入前失败。
 - CLI 显示“成功”前，正式 artifact gate 必须已经完成；needs-review 不能以退出成功文案伪装成 accepted。
 
 ## 验证

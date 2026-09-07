@@ -669,7 +669,8 @@ describe('web API', () => {
     expect(runningJobsTotal()).toBe(1);
 
     resetJobsForTests({ preserveFiles: true });
-    expect(getJob(stale.id)?.status).toBe('running');
+    expect(getJob(stale.id)?.status).toBe('failed');
+    expect(getJob(stale.id)?.error?.code).toBe('JOB_INTERRUPTED');
     expect(runningJobsTotal()).toBe(0);
   });
 

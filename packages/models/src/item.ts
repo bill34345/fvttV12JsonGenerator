@@ -297,8 +297,15 @@ export interface ParsedItem {
   // Item description
   description?: string;
   source?: string;
+  /** Source-derived clauses whose mechanics cannot yet be represented unambiguously. */
+  unresolvedMechanics?: string[];
 
   // Weapon-specific
+  // Source subtype mapping for standard weapon families (for example spear).
+  weapon?: {
+    value: string;
+    baseItem: string;
+  };
   damage?: DamageData;
   range?: RangeData;
   properties?: string[];

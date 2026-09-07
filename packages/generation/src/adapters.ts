@@ -67,7 +67,12 @@ function collectActionMechanics(
     result.push(mechanic(
       'save',
       `${path}/save`,
-      save,
+      {
+        ...save,
+        ...(raw.damage ? { damage: raw.damage } : {}),
+        ...(raw.useAction ? { useAction: raw.useAction } : {}),
+        ...(raw.activity ? { activity: raw.activity } : {}),
+      },
       outcome === 'literal' ? 'literal-only' : 'projected',
     ));
   }
@@ -169,6 +174,10 @@ export function adaptParsedItemToCanonical(
   options: AdapterSource = {},
 ): CanonicalItemDocument {
   const mechanics: CanonicalGenerationMechanic[] = [];
+  if (parsed.armor) mechanics.push(mechanic('armor', 'item/armor', parsed.armor));
+  for (const [index, text] of (parsed.unresolvedMechanics ?? []).entries()) {
+    mechanics.push(mechanic('armor', `item/armor/unresolved/${index}`, { text }, 'literal-only'));
+  }
   if (parsed.uses) {
     mechanics.push(mechanic('uses', 'item/uses', parsed.uses));
   }

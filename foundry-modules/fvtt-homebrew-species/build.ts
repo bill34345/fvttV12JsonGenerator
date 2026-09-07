@@ -4,16 +4,24 @@ import { existsSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { compileSpeciesMarkdownV14, validateNativeSpeciesPackage, type NativeSpeciesPackage } from '@fvtt-json-generator/generation/species-v14';
+import {
+  compileSpeciesMarkdown,
+  validateNativeSpeciesPackage,
+  type NativeSpeciesPackage,
+  type SpeciesTargetVersion,
+} from '@fvtt-json-generator/generation/species';
 
 export const MODULE_ID = 'fvtt-homebrew-species' as const;
 export const MODULE_VERSION = '1.0.0' as const;
 
 interface SpeciesAcceptedLedger {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   moduleId: typeof MODULE_ID;
   entries: Array<{
     identifier: string;
+    fvttVersion?: SpeciesTargetVersion;
+    effectProfile?: 'core';
+    rules?: '2024';
     markdownPath: string;
     packagePath: string;
     markdownSha256: string;
@@ -30,22 +38,23 @@ interface ClassicLevelStore { put(key: string, value: unknown): Promise<void>; i
 interface ClassicLevelDb extends ClassicLevelStore { open(): Promise<void>; close(): Promise<void>; sublevel(name: string, options?: Record<string, unknown>): ClassicLevelStore }
 interface ClassicLevelModule { ClassicLevel?: new (path: string, options?: Record<string, unknown>) => ClassicLevelDb }
 
-export interface SpeciesBuildOptions { vaultPath?: string; ledgerPath?: string; distRoot?: string; temporaryParent?: string; publish?: boolean; classicLevelEntry?: string }
+export interface SpeciesBuildOptions { vaultPath?: string; ledgerPath?: string; distRoot?: string; temporaryParent?: string; publish?: boolean; classicLevelEntry?: string; fvttVersion?: SpeciesTargetVersion }
 export interface SpeciesBuildResult { distRoot: string; moduleRoot: string; zipPath: string; zipSha256: string; logicalHash: string; counts: { species: number; features: number }; uuids: string[] }
 
 export async function buildHomebrewSpeciesModule(options: SpeciesBuildOptions = {}): Promise<SpeciesBuildResult> {
+  const fvttVersion = options.fvttVersion ?? '14';
   const vault = resolve(options.vaultPath ?? 'obsidian/dnd数据转fvttjson');
   const ledgerPath = resolve(options.ledgerPath ?? resolve(vault, 'output/species/accepted-ledger.json'));
-  const packages = await loadAcceptedPackages(vault, ledgerPath);
+  const packages = await loadAcceptedPackages(vault, ledgerPath, fvttVersion);
   const logicalHash = sha256(canonicalJson(packages.map((pkg) => pkg.logicalHash)));
-  const classicLevelEntry = resolveClassicLevelEntry(options.classicLevelEntry);
+  const classicLevelEntry = resolveClassicLevelEntry(fvttVersion, options.classicLevelEntry);
   const temporaryRoot = await mkdtemp(resolve(options.temporaryParent ?? tmpdir(), 'fvtt-homebrew-species-'));
   try {
-    const first = await writeCandidate(resolve(temporaryRoot, 'candidate-a'), packages, logicalHash, classicLevelEntry);
-    const second = await writeCandidate(resolve(temporaryRoot, 'candidate-b'), packages, logicalHash, classicLevelEntry);
+    const first = await writeCandidate(resolve(temporaryRoot, 'candidate-a'), packages, logicalHash, classicLevelEntry, fvttVersion);
+    const second = await writeCandidate(resolve(temporaryRoot, 'candidate-b'), packages, logicalHash, classicLevelEntry, fvttVersion);
     const firstHash = await hashTree(first.moduleRoot); const secondHash = await hashTree(second.moduleRoot);
     if (canonicalJson(firstHash) !== canonicalJson(secondHash) || first.zipSha256 !== second.zipSha256) throw new Error('Species module clean builds are not deterministic.');
-    const distRoot = resolve(options.distRoot ?? resolve(import.meta.dir, 'dist'));
+    const distRoot = resolve(options.distRoot ?? resolve(import.meta.dir, fvttVersion === '12' ? 'dist/v12-candidate' : 'dist'));
     if (options.publish !== false) {
       const next = `${distRoot}.next-${process.pid}`;
       await rm(next, { recursive: true, force: true });
@@ -62,17 +71,20 @@ export async function buildHomebrewSpeciesModule(options: SpeciesBuildOptions = 
   } finally { await rm(temporaryRoot, { recursive: true, force: true }); }
 }
 
-export async function loadAcceptedPackages(vault: string, ledgerPath: string): Promise<NativeSpeciesPackage[]> {
+export async function loadAcceptedPackages(vault: string, ledgerPath: string, fvttVersion: SpeciesTargetVersion = '14'): Promise<NativeSpeciesPackage[]> {
   const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as SpeciesAcceptedLedger;
-  if (ledger.schemaVersion !== 1 || ledger.moduleId !== MODULE_ID || !Array.isArray(ledger.entries) || !ledger.entries.length) throw new Error('Species module build requires a non-empty accepted ledger.');
+  if (![1, 2].includes(ledger.schemaVersion) || ledger.moduleId !== MODULE_ID || !Array.isArray(ledger.entries) || !ledger.entries.length) throw new Error('Species module build requires a non-empty accepted ledger.');
+  const targetEntries = ledger.entries.filter((entry) => (entry.fvttVersion ?? '14') === fvttVersion
+    && (entry.effectProfile ?? 'core') === 'core' && (entry.rules ?? '2024') === '2024');
+  if (!targetEntries.length) throw new Error(`Species module build requires accepted ${fvttVersion}/core/2024 packages.`);
   const identifiers = new Set<string>(); const packages: NativeSpeciesPackage[] = [];
-  for (const entry of [...ledger.entries].sort((a, b) => a.identifier.localeCompare(b.identifier, 'en'))) {
+  for (const entry of [...targetEntries].sort((a, b) => a.identifier.localeCompare(b.identifier, 'en'))) {
     if (identifiers.has(entry.identifier)) throw new Error(`Duplicate accepted Species identifier: ${entry.identifier}.`); identifiers.add(entry.identifier);
     const markdownPath = safeLedgerPath(vault, entry.markdownPath);
     const packagePath = safeLedgerPath(vault, entry.packagePath);
     const markdown = await readFile(markdownPath, 'utf8');
     if (sha256(markdown) !== entry.markdownSha256) throw new Error(`Accepted Species Markdown is stale: ${entry.identifier}. Re-run --intake-species.`);
-    const pkg = compileSpeciesMarkdownV14(markdown);
+    const pkg = compileSpeciesMarkdown(markdown, { fvttVersion });
     const validation = validateNativeSpeciesPackage(pkg);
     if (!validation.ok) throw new Error(`Species package validation failed for ${entry.identifier}: ${validation.findings.map((finding) => finding.code).join(', ')}.`);
     if (pkg.sourceSha256 !== entry.sourceSha256 || pkg.logicalHash !== entry.logicalHash || pkg.markdownSha256 !== entry.markdownSha256) throw new Error(`Accepted ledger hashes do not match current projection for ${entry.identifier}.`);
@@ -84,14 +96,14 @@ export async function loadAcceptedPackages(vault: string, ledgerPath: string): P
   return packages;
 }
 
-async function writeCandidate(root: string, packages: NativeSpeciesPackage[], logicalHash: string, classicLevelEntry: string): Promise<{ root: string; moduleRoot: string; zipPath: string; zipSha256: string }> {
+async function writeCandidate(root: string, packages: NativeSpeciesPackage[], logicalHash: string, classicLevelEntry: string, fvttVersion: SpeciesTargetVersion): Promise<{ root: string; moduleRoot: string; zipPath: string; zipSha256: string }> {
   const moduleRoot = resolve(root, 'module'); await mkdir(resolve(moduleRoot, 'packs'), { recursive: true });
-  const manifest = JSON.parse(await readFile(resolve(import.meta.dir, 'src/module.json'), 'utf8'));
+  const manifest = moduleManifest(JSON.parse(await readFile(resolve(import.meta.dir, 'src/module.json'), 'utf8')), fvttVersion);
   await writeCanonicalJson(resolve(moduleRoot, 'module.json'), manifest);
   const species = packages.map((pkg) => pkg.species); const features = packages.flatMap((pkg) => pkg.features);
   await writeLevelDbPack(resolve(moduleRoot, 'packs/species'), species, classicLevelEntry);
   await writeLevelDbPack(resolve(moduleRoot, 'packs/features'), features, classicLevelEntry);
-  const identity = { schemaVersion: 1, moduleId: MODULE_ID, version: MODULE_VERSION, target: { foundry: '14.364', dnd5e: '5.3.3', effectProfile: 'core' }, logicalHash, counts: { species: species.length, features: features.length }, packs: [{ name: 'species', documentIds: species.map((item) => item._id), uuids: species.map((item) => uuid('species', item._id)) }, { name: 'features', documentIds: features.map((item) => item._id), uuids: features.map((item) => uuid('features', item._id)) }] };
+  const identity = { schemaVersion: 1, moduleId: MODULE_ID, version: MODULE_VERSION, target: fvttVersion === '12' ? { foundry: '12.331', dnd5e: '4.3.9', effectProfile: 'core', rules: '2024' } : { foundry: '14.364', dnd5e: '5.3.3', effectProfile: 'core' }, ...(fvttVersion === '12' ? { supportStatus: 'static-candidate' } : {}), logicalHash, counts: { species: species.length, features: features.length }, packs: [{ name: 'species', documentIds: species.map((item) => item._id), uuids: species.map((item) => uuid('species', item._id)) }, { name: 'features', documentIds: features.map((item) => item._id), uuids: features.map((item) => uuid('features', item._id)) }] };
   await mkdir(resolve(moduleRoot, 'data'), { recursive: true });
   await writeCanonicalJson(resolve(moduleRoot, 'data/identity-manifest.json'), identity);
   await writeCanonicalJson(resolve(moduleRoot, 'data/accepted-packages.json'), packages);
@@ -117,12 +129,25 @@ async function writeLevelDbPack(path: string, documents: Record<string, any>[], 
   for (const file of await readdir(path)) if (/^(?:LOG|LOCK)/iu.test(file)) await unlink(resolve(path, file));
 }
 
-function resolveClassicLevelEntry(explicit?: string): string {
+function resolveClassicLevelEntry(fvttVersion: SpeciesTargetVersion, explicit?: string): string {
   const labRoot = process.env.FVTT_OPS_LAB_ROOT?.trim();
   const testEntry = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim();
-  const entry = resolve(explicit ?? testEntry ?? (labRoot ? resolve(labRoot, 'app/14.364/node_modules/classic-level/index.js') : ''));
-  if (!isAbsolute(entry) || !entry.toLowerCase().endsWith('app\\14.364\\node_modules\\classic-level\\index.js') || !existsSync(entry)) throw new Error('Species build requires the read-only Foundry 14.364 classic-level entry via FVTT_OPS_LAB_ROOT or an explicit option.');
+  const foundryVersion = fvttVersion === '12' ? '12.331' : '14.364';
+  const entry = resolve(explicit ?? testEntry ?? (labRoot ? resolve(labRoot, `app/${foundryVersion}/node_modules/classic-level/index.js`) : ''));
+  const isHermeticV12Candidate = fvttVersion === '12' && Boolean(testEntry) && entry === resolve(testEntry!);
+  if (!isAbsolute(entry) || !existsSync(entry) || (!isHermeticV12Candidate && !entry.toLowerCase().endsWith(`app\\${foundryVersion}\\node_modules\\classic-level\\index.js`))) {
+    throw new Error(`Species ${fvttVersion} build requires ${isHermeticV12Candidate ? 'the hermetic candidate' : `the read-only Foundry ${foundryVersion}`} classic-level entry.`);
+  }
   return entry;
+}
+function moduleManifest(source: any, fvttVersion: SpeciesTargetVersion): any {
+  if (fvttVersion === '14') return source;
+  return {
+    ...source,
+    description: 'Static candidate content-only Foundry 12.331 / dnd5e 4.3.9 compendia for accepted homebrew Species. Runtime not accepted.',
+    compatibility: { minimum: '12.331', verified: '12.331', maximum: '12.331' },
+    relationships: { systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '4.3.9', verified: '4.3.9', maximum: '4.3.9' } }] },
+  };
 }
 function safeLedgerPath(vault: string, value: string): string { if (typeof value !== 'string' || !value || isAbsolute(value)) throw new Error('Species ledger paths must be relative to the vault.'); const path = resolve(vault, value); const rel = relative(vault, path); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('Species ledger path escapes the vault.'); return path; }
 function moduleUuids(packages: NativeSpeciesPackage[]): string[] { return packages.flatMap((pkg) => [uuid('species', pkg.species._id), ...pkg.features.map((item) => uuid('features', item._id))]).sort(); }
@@ -146,4 +171,9 @@ function concat(parts: Uint8Array[]): Uint8Array { const result = new Uint8Array
 const CRC_TABLE = (() => { const table = new Uint32Array(256); for (let index = 0; index < 256; index += 1) { let value = index; for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? 0xedb88320 ^ (value >>> 1) : value >>> 1; table[index] = value >>> 0; } return table; })();
 function crc32(bytes: Uint8Array): number { let value = 0xffffffff; for (const byte of bytes) value = CRC_TABLE[(value ^ byte) & 0xff]! ^ (value >>> 8); return (value ^ 0xffffffff) >>> 0; }
 
-if (import.meta.main) buildHomebrewSpeciesModule().then((result) => console.log(JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+if (import.meta.main) {
+  const versionIndex = process.argv.indexOf('--fvtt-version');
+  const fvttVersion = versionIndex >= 0 ? process.argv[versionIndex + 1] : '14';
+  if (!['12', '14'].includes(fvttVersion ?? '')) throw new Error('Species module build --fvtt-version must be 12 or 14.');
+  buildHomebrewSpeciesModule({ fvttVersion: fvttVersion as SpeciesTargetVersion }).then((result) => console.log(JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+}

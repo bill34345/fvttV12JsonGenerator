@@ -75,7 +75,7 @@ export interface SpeciesIntakeOptions {
   runRoot?: string;
   vaultPath?: string;
   dryRun?: boolean;
-  fvttVersion?: '14';
+  fvttVersion?: '12' | '14';
   effectProfile?: 'core';
   replaceConflicts?: Set<string>;
   resumeContext?: { resumedFromRunId: string; decisionsSha256: string };
@@ -104,6 +104,9 @@ export interface SpeciesIntakeRunResult {
 
 export interface SpeciesAcceptedLedgerEntry {
   identifier: string;
+  fvttVersion: '12' | '14';
+  effectProfile: 'core';
+  rules: '2024';
   markdownPath: string;
   packagePath: string;
   markdownSha256: string;
@@ -115,5 +118,5 @@ export interface SpeciesAcceptedLedgerEntry {
   decisionsSha256?: string;
 }
 
-export interface SpeciesAcceptedLedger { schemaVersion: 1; moduleId: 'fvtt-homebrew-species'; entries: SpeciesAcceptedLedgerEntry[] }
+export interface SpeciesAcceptedLedger { schemaVersion: 2; moduleId: 'fvtt-homebrew-species'; entries: SpeciesAcceptedLedgerEntry[] }
 export interface SpeciesIntakeDecisionsFile { runId: string; sourceSha256: string; decisions: Array<{ issueId: string; action: 'replace'; note?: string }> }

@@ -58,6 +58,7 @@ export interface ActorVerificationSummary {
   };
   items: ItemSummary[];
   warnings: string[];
+  sourceIntegrityErrors: string[];
 }
 
 type RecordLike = Record<string, unknown>;
@@ -140,7 +141,61 @@ export function buildActorVerificationSummaryFromValues(
     },
     items,
     warnings,
+    sourceIntegrityErrors: verifySourceIdentityAndRecovery(source, actor),
   };
+}
+
+// Read explicit source clauses independently of parser/generator extraction so that
+// a dropped field cannot pass verification merely because it also vanished from IR.
+function verifySourceIdentityAndRecovery(source: string, actor: RecordLike): string[] {
+  const errors: string[] = [];
+  const system = getRecord(actor.system);
+  const type = getRecord(getRecord(system.details).type);
+  const frontmatter = source.match(/^\uFEFF?---\s*\r?\n([\s\S]*?)\r?\n---/);
+  if (frontmatter) {
+    const header = frontmatter[1] ?? '';
+    const explicit = header.match(/^(?:creature_type|type):\s*["']?([a-z]+)(?:\s*\(([^)]+)\))?["']?\s*$/im);
+    const combined = header.match(/^size:\s*["']?(?:tiny|small|medium|large|huge|gargantuan)\s+([a-z]+)(?:\s*\(([^)]+)\))?["']?\s*$/im);
+    const expected = explicit && explicit[1]?.toLowerCase() !== 'npc' ? explicit : combined;
+    if (expected) {
+      if (type.value !== expected[1]!.toLowerCase()) errors.push('SOURCE_CREATURE_TYPE_MISMATCH: creature type differs from source.');
+      if (String(type.subtype ?? '') !== (expected[2]?.trim() ?? '')) errors.push('SOURCE_CREATURE_SUBTYPE_MISMATCH: creature subtype differs from source.');
+    }
+    const passive = header.match(/^senses:.*?passive\s+Perception\s+(\d+)/im);
+    if (passive) {
+      const skill = getRecord(getRecord(system.skills).prc);
+      const bonuses = getRecord(skill.bonuses);
+      const ability = getRecord(getRecord(system.abilities)[String(skill.ability ?? 'wis')]);
+      const actorDetails = getRecord(system.details);
+      const proficiency = Number(getRecord(system.attributes).prof
+        ?? Math.floor((Math.max(Number(actorDetails.cr ?? 0), Number(actorDetails.level ?? 0), 1) + 7) / 4));
+      const score = 10 + Math.floor((Number(ability.value ?? 10) - 10) / 2)
+        + Number(skill.value ?? 0) * proficiency
+        + Number(bonuses.check || 0) + Number(bonuses.passive || 0);
+      if (score !== Number(passive[1])) errors.push('SOURCE_PASSIVE_PERCEPTION_MISMATCH: passive Perception differs from source.');
+    }
+  }
+  const items = Array.isArray(actor.items) ? actor.items.map(getRecord) : [];
+  const restHeaders = /^[ \t>*#-]*([^\r\n*]+?)\s*\((Recharges?\s+after\s+(?:a\s+)?(Short\s+or\s+Long|Short|Long)\s+Rest)\)\.?[*]*/gim;
+  for (const match of source.matchAll(restHeaders)) {
+    const name = match[1]!.trim();
+    const item = items.find(candidate => String(candidate.name ?? '').split(' (')[0]?.trim() === name);
+    const itemSystem = getRecord(item?.system);
+    const uses = getRecord(itemSystem.uses);
+    const recovery = Array.isArray(uses.recovery) ? uses.recovery.map(getRecord) : [];
+    const period = /^short/i.test(match[3]!) ? 'sr' : 'lr';
+    const consumes = Object.values(getRecord(itemSystem.activities)).some(activity =>
+      (getRecord(getRecord(activity).consumption).targets as unknown[] | undefined)?.some(target =>
+        getRecord(target).type === 'itemUses' && String(getRecord(target).value) === '1'));
+    if (!item || String(uses.max) !== '1' || !recovery.some(entry => entry.period === period && entry.type === 'recoverAll') || !consumes) {
+      errors.push(`SOURCE_REST_RECOVERY_MISMATCH: ${name} must consume one use and recover on ${period}.`);
+    }
+    const description = String(getRecord(itemSystem.description).value ?? '').replace(/\s+/g, ' ').toLowerCase();
+    if (!description.includes(match[2]!.replace(/\s+/g, ' ').toLowerCase())) {
+      errors.push(`SOURCE_REST_TEXT_MISSING: ${name} lost its source recovery qualifier.`);
+    }
+  }
+  return errors;
 }
 
 function summarizeItem(value: unknown): ItemSummary {
@@ -232,4 +287,3 @@ function getRecord(value: unknown): RecordLike {
 function readTextFile(path: string): string {
   return readFileSync(path, 'utf-8').replace(/^\uFEFF/, '');
 }
-

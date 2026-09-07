@@ -4,6 +4,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -108,9 +109,9 @@ export function createJob(
   };
 
   mkdirSync(jobDir(job.id), { recursive: true });
+  persistJob(job);
   jobs.set(job.id, job);
   activeJobIds.add(job.id);
-  persistJob(job);
   return job;
 }
 
@@ -125,10 +126,10 @@ export function updateJob(id: string, update: Partial<WebJob>): WebJob {
     ...update,
     updatedAt: new Date().toISOString(),
   };
+  persistJob(next);
   jobs.set(id, next);
   if (next.status === 'queued' || next.status === 'running') activeJobIds.add(id);
   else activeJobIds.delete(id);
-  persistJob(next);
   return next;
 }
 
@@ -246,13 +247,29 @@ function getExistingJob(id: string): WebJob {
 
 function persistJob(job: WebJob): void {
   mkdirSync(jobDir(job.id), { recursive: true });
-  writeFileSync(join(jobDir(job.id), 'result.json'), `${JSON.stringify(job, null, 2)}\n`, 'utf-8');
+  const temporary = join(jobDir(job.id), `result-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(temporary, `${JSON.stringify(job, null, 2)}\n`, { encoding: 'utf-8', flag: 'wx' });
+    renameSync(temporary, join(jobDir(job.id), 'result.json'));
+  } finally {
+    if (existsSync(temporary)) rmSync(temporary);
+  }
 }
 
 function readPersistedJob(id: string): WebJob | undefined {
   const path = join(jobDir(id), 'result.json');
   if (!existsSync(path)) return undefined;
   const parsed = JSON.parse(readFileSync(path, 'utf-8')) as WebJob;
+  if (parsed.id !== id) throw new Error('Persisted job identity mismatch.');
+  if (parsed.status === 'queued' || parsed.status === 'running') {
+    const message = '服务重启导致任务中断，请确认结果后重新提交任务。';
+    parsed.status = 'failed';
+    parsed.error = { code: 'JOB_INTERRUPTED', message };
+    parsed.updatedAt = new Date().toISOString();
+    parsed.progress = { ...parsed.progress, label: '任务已中断' };
+    parsed.logs = [...parsed.logs, { at: parsed.updatedAt, level: 'error', message }];
+    persistJob(parsed);
+  }
   jobs.set(parsed.id, parsed);
   return parsed;
 }

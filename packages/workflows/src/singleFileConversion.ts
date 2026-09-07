@@ -105,6 +105,8 @@ export async function convertMarkdownContentToJson(
     const parser = new ItemParser();
     const parsed = parser.parse(options.content);
     const artifacts = await generateItemArtifacts(parsed, {
+      sourceText: options.content,
+      sourcePath,
       fvttVersion,
       effectProfile,
       iconOptions: options.iconOptions,
@@ -177,8 +179,18 @@ export async function convertMarkdownContentToJson(
     path: `legacy-validator/${index}`,
     message,
   }));
-  const diagnostics = [...generated.diagnostics, ...legacyDiagnostics];
-  const status = generated.verification.status === 'failed'
+  const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
+  const actorVerification = buildActorVerificationSummaryFromValues({
+    source: options.content,
+    actor,
+    sourcePath: sourcePath ?? '<uploaded-markdown>',
+    actorPath: requestedOutputPath ?? '<generated-preview>',
+  });
+  const sourceDiagnostics: GenerationDiagnostic[] = actorVerification.sourceIntegrityErrors.map(message => ({
+    code: 'GEN_SOURCE_INTEGRITY_MISMATCH', severity: 'error', stage: 'semantic', path: 'source', message,
+  }));
+  const diagnostics = [...generated.diagnostics, ...legacyDiagnostics, ...sourceDiagnostics];
+  const status = generated.verification.status === 'failed' || sourceDiagnostics.length > 0
     ? 'failed'
     : legacyDiagnostics.length > 0 || generated.verification.status === 'needs_review'
       ? 'needs_review'
@@ -188,7 +200,6 @@ export async function convertMarkdownContentToJson(
     status,
     diagnostics,
   };
-  const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
   const reviewableBehaviorOutput = status === 'needs_review'
     && isIntentionalBehaviorReviewOnly(diagnostics);
   if (status === 'accepted' || reviewableBehaviorOutput) {
@@ -202,13 +213,6 @@ export async function convertMarkdownContentToJson(
         iconWorkflow,
       )
     : undefined;
-  const actorVerification = buildActorVerificationSummaryFromValues({
-    source: options.content,
-    actor,
-    sourcePath: sourcePath ?? '<uploaded-markdown>',
-    actorPath: requestedOutputPath ?? '<generated-preview>',
-  });
-
   return {
     kind: 'actor',
     sourcePath,

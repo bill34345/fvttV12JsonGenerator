@@ -169,6 +169,7 @@ export function requireForgeAcceptedVerification(
 
 export function mapForgeSourceField(sourcePath: string): ForgeSourceField {
   const normalized = sourcePath.replaceAll('\\', '/').toLowerCase();
+  if (/^item[/.:]armor([/.:]|$)/u.test(normalized)) return 'item.armor';
   if (/(^|[/.:])name([/.:]|$)/u.test(normalized)) return 'actor.name';
   if (/(attributes|ability|hp|ac|armor|hit[-_ ]?points|challenge|cr)([/.:]|$)/u.test(normalized)) return 'actor.attributes';
   if (/(traits?|senses?|languages?|resistances?|immunit|condition)([/.:]|$)/u.test(normalized)) return 'actor.traits';

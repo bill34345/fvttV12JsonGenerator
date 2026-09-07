@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { mapForgeSourceField } from '../projection';
 import {
   decodeForgeActorResponse,
   decodeForgeError,
@@ -13,7 +14,28 @@ const SOURCE_ID = 'actor:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeSource
 const HASH = 'a'.repeat(64);
 
 describe('Forge wire safety boundaries', () => {
+  test('keeps Item armor in the Item source-field namespace', () => {
+    expect(mapForgeSourceField('item/armor')).toBe('item.armor');
+    expect(mapForgeSourceField('item/armor/magicalBonus')).toBe('item.armor');
+    expect(mapForgeSourceField('actor/armor')).toBe('actor.attributes');
+    const verification = {
+      status: 'accepted',
+      mechanicsCoverage: [{ mechanicId: 'armor-1', kind: 'armor', sourcePath: 'item/armor',
+        status: 'projected', outputPaths: ['documents/0/system/armor'] }],
+    };
+    expect(projectForgeVerification({ verification, actorVerification: actorVerification() }).verification.mechanicsCoverage[0]!.sourceField).toBe('item.armor');
+  });
   test('accepts only Foundry document-field output paths', () => {
+    for (const field of ['armor', 'type']) {
+      expect(() => projectForgeVerification({
+        verification: verificationWithOutputPath(`documents/0/system/${field}`),
+        actorVerification: actorVerification(),
+      })).not.toThrow();
+      expect(() => projectForgeVerification({
+        verification: verificationWithOutputPath(`documents/0/system/${field}/../../private`),
+        actorVerification: actorVerification(),
+      })).toThrow(/safe document field path/u);
+    }
     expect(() => projectForgeVerification({
       verification: verificationWithOutputPath('documents/0/system/activities/0'),
       actorVerification: actorVerification(),

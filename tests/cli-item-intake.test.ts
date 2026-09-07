@@ -83,22 +83,24 @@ describe('AI Item Intake CLI', () => {
     }
   }, 30_000);
 
-  test('fails closed without shared provider configuration outside dry-run', () => {
-    const proc = Bun.spawnSync({
+  test('fails closed without shared provider configuration outside dry-run', async () => {
+    const proc = Bun.spawn({
       cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-items', resolve('src/core/intake/__tests__/fixtures/jewel-of-three-prayers.raw.txt'), '--fvtt-version', '14'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', env: withoutIntakeEnv(),
     });
-    expect(proc.exitCode).toBe(1);
-    expect(proc.stderr.toString()).toContain('MONSTER_INTAKE_API_KEY');
+    const result = await collectSubprocess(proc, 20_000);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('MONSTER_INTAKE_API_KEY');
   }, 30_000);
 
-  test('dry-run is provider-free and enforces the V14/core boundary', () => {
-    const proc = Bun.spawnSync({
+  test('dry-run is provider-free and enforces the V14/core boundary', async () => {
+    const proc = Bun.spawn({
       cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-items', resolve('src/core/intake/__tests__/fixtures/jewel-of-three-prayers.raw.txt'), '--dry-run', '--fvtt-version', '14', '--effect-profile', 'core'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', env: withoutIntakeEnv(),
     });
-    expect(proc.exitCode).toBe(0);
-    expect(proc.stdout.toString()).toContain('Status: dry_run');
+    const result = await collectSubprocess(proc, 20_000);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Status: dry_run');
   });
 });
 

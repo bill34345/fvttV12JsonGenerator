@@ -571,9 +571,14 @@ export class EnglishBestiaryParser implements ParserStrategy {
     const alignment = this.readString(raw, ['alignment']);
     if (alignment) result.details.alignment = alignment;
 
-    const creatureType = this.readString(raw, ['type', 'creature_type']);
+    // source-derived: bestiary frontmatter can combine size, type and subtype.
+    const combinedSize = this.readString(raw, ['size']) ?? '';
+    const creatureType = this.readString(raw, ['type', 'creature_type'])
+      || combinedSize.match(/^(?:Tiny|Small|Medium|Large|Huge|Gargantuan)\s+(.+)$/i)?.[1];
     if (creatureType && creatureType.toLowerCase() !== 'npc') {
-      result.details.creatureType = creatureType.toLowerCase();
+      const typed = creatureType.match(/^([^()]+?)(?:\s*\(([^)]+)\))?$/);
+      result.details.creatureType = (typed?.[1] ?? creatureType).trim().toLowerCase();
+      if (typed?.[2]) result.details.creatureTypeSubtype = typed[2].trim();
     }
 
     for (const ability of ABILITIES) {
@@ -610,6 +615,8 @@ export class EnglishBestiaryParser implements ParserStrategy {
 
     const senses = this.parseSenses(this.getValue(raw, ['senses']));
     if (Object.keys(senses).length > 0) result.traits.senses = senses;
+    // source-derived: an explicit passive Perception is a target score, not a sense distance.
+    if (senses.passive !== undefined) result.skillPassives = { prc: senses.passive };
 
     const languages = this.parseTerms(this.getValue(raw, ['languages']), LANGUAGE_ALIASES);
     if (languages.length > 0) result.traits.languages = languages;

@@ -31,6 +31,8 @@
     "./projectors": "./src/projectors.ts",
     "./resources": "./src/resources.ts",
     "./save-outcome": "./src/save-outcome.ts",
+    "./species": "./src/species.ts",
+    "./species-v12": "./src/speciesV12.ts",
     "./species-v14": "./src/speciesV14.ts",
     "./spells-mapper": "./src/spellsMapper.ts",
     "./stable-id": "./src/stableId.ts",

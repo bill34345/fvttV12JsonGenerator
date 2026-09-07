@@ -1,11 +1,7 @@
 import { handleApiRequest } from './api';
 import { createAiConnectionsRuntime } from './ai-connections/runtime';
 import { extname, join, relative, resolve } from 'node:path';
-import { getWebSecurityConfig } from './security/config';
-
-const securityConfig = getWebSecurityConfig();
-const aiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections);
-const webRoot = resolve(process.cwd(), 'dist/web');
+import { getWebSecurityConfig, type WebSecurityConfig } from './security/config';
 
 interface CompanionSocketData {
   pendingId?: string;
@@ -13,7 +9,15 @@ interface CompanionSocketData {
   pendingTimer?: ReturnType<typeof setTimeout>;
 }
 
-Bun.serve<CompanionSocketData>({
+export function startWebServer(options: {
+  securityConfig?: WebSecurityConfig;
+  webRoot?: string;
+  env?: Record<string, string | undefined>;
+} = {}) {
+  const securityConfig = options.securityConfig ?? getWebSecurityConfig(options.env);
+  const aiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections, { env: options.env });
+  const webRoot = options.webRoot ?? resolve(process.cwd(), 'dist/web');
+  const server = Bun.serve<CompanionSocketData>({
   hostname: securityConfig.hostname,
   port: securityConfig.port,
   maxRequestBodySize: securityConfig.maxRequestBodyBytes,
@@ -34,7 +38,7 @@ Bun.serve<CompanionSocketData>({
         aiRuntime,
       });
     }
-    return serveStatic(url.pathname);
+    return serveStatic(url.pathname, webRoot);
   },
   websocket: {
     open(socket) {
@@ -76,11 +80,18 @@ Bun.serve<CompanionSocketData>({
 });
 
 console.log(
-  `fvttV12Json web listening on http://${securityConfig.hostname}:${securityConfig.port} (${securityConfig.publicMode ? 'authenticated public/proxied' : 'local'})`,
+  `fvttV12Json web listening on http://${securityConfig.hostname}:${server.port} (${securityConfig.publicMode ? 'authenticated public/proxied' : 'local'})`,
 );
 
-async function serveStatic(pathname: string): Promise<Response> {
-  const filePath = resolveStaticPath(pathname);
+  return server;
+}
+
+if (import.meta.main) startWebServer();
+
+async function serveStatic(pathname: string, webRoot: string): Promise<Response> {
+  let filePath: string;
+  try { filePath = resolveStaticPath(pathname, webRoot); }
+  catch { return new Response('Invalid URL path.', { status: 400 }); }
   const file = Bun.file(filePath);
   if (await file.exists()) {
     return new Response(file, {
@@ -102,7 +113,7 @@ async function serveStatic(pathname: string): Promise<Response> {
   return new Response('web build not found. Run bun run web:build first.', { status: 404 });
 }
 
-function resolveStaticPath(pathname: string): string {
+function resolveStaticPath(pathname: string, webRoot: string): string {
   const decoded = decodeURIComponent(pathname);
   const requested = resolve(webRoot, decoded.replace(/^\/+/, '') || 'index.html');
   const rel = relative(webRoot, requested);

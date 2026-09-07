@@ -25,7 +25,7 @@ The current core contract supports:
 
 - Explicit `AC +N` only: a transfer Active Effect with `system.attributes.ac.formula`, `type: add`, `phase: initial`.
 - A light ability with explicit action, bright radius and dim outer radius: a zero-cost `utility` Activity which applies a non-transfer Actor effect. Disabling or deleting that Actor effect extinguishes the light.
-- Shared Item uses with explicit recovery. `recoverAll` at `dawn` is represented on the Item uses pool.
+- Shared Item uses with explicit recovery. `recoverAll` at `dawn` is represented on the Item uses pool. The strict Markdown `item-mechanics` boundary requires a positive integer capacity, supported recovery periods/types, and numeric or simple dice recovery formulas; it rejects misspelled recovery values. Scaled save consumption must be an integer within the pool capacity, with a valid maximum no greater than that capacity.
 - A uniquely resolved spell: a `cast` Activity consuming `itemUses`, with `spellSlot: false`. The submitted identifier and English name must case-insensitively select the same spell in the manifest-pinned dnd5e `5.3.3` source catalog; ambiguous, missing, or mismatched references are rejected and are never changed into Utility Activities.
 
 For example, the dormant Jewel of Three Prayers contract has AC `+1`, an action to apply `bright: 15` / `dim: 30` light with no charge cost, a three-charge dawn-recovery pool, and a one-charge `Invisibility` cast. `dim: 30` is the outer edge of dim light, not an additional 30 feet after the bright radius.

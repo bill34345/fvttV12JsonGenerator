@@ -13,6 +13,7 @@ export {
   JsonTranslationSyncWorkflow,
   ObsidianSyncWorkflow,
   PlainTextActorWorkflow,
+  assertSpeciesResumeTarget,
   resumeItemIntake,
   resumeMonsterIntake,
   resumeSpeciesIntake,

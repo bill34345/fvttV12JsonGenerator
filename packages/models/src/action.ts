@@ -3,6 +3,12 @@ export interface Damage {
   formula: string;
   type: string;
   types?: string[];
+  /** V14-native dice scaling, such as 2d8 per additional charge. */
+  scaling?: {
+    mode: 'whole' | 'half' | string;
+    number: number;
+    formula?: string;
+  };
 }
 
 export interface HealingPart {
@@ -72,6 +78,11 @@ export interface ActionData {
         size: string;
         units: 'ft' | string;
       };
+      affects?: {
+        count: number | string;
+        type: 'creature' | 'object' | string;
+        special?: string;
+      };
     };
   };
 
@@ -116,6 +127,10 @@ export interface ActionData {
     consumption: number;
     activation: 'action' | 'bonus' | 'reaction' | 'free';
     description?: string;
+    consumptionScaling?: {
+      allowed: boolean;
+      max: string;
+    };
     limitedUses?: {
       spent: number;
       max: string;

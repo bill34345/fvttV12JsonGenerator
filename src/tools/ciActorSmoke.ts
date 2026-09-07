@@ -33,7 +33,7 @@ export async function runCiActorSmoke(): Promise<void> {
       fvttVersion: '14',
       effectProfile: 'modded-v14',
     });
-    const actor = result.rawJson as { items?: Array<{ name?: unknown }> };
+    const actor = result.rawJson as { system: any; items?: Array<{ name?: unknown; system?: any }> };
     const itemNames = (actor.items ?? []).map((item) => String(item.name ?? ''));
 
     if (networkCalls !== 0) {
@@ -44,6 +44,17 @@ export async function runCiActorSmoke(): Promise<void> {
     }
     if ((result.actorVerification?.warnings.length ?? 0) !== 0) {
       throw new Error(`Actor verifier reported warnings: ${JSON.stringify(result.actorVerification?.warnings)}`);
+    }
+    if (result.status !== 'accepted' || result.actorVerification?.sourceIntegrityErrors.length !== 0) {
+      throw new Error(`Actor source integrity failed: ${JSON.stringify(result.diagnostics)}`);
+    }
+    if (actor.system.details.type.value !== 'humanoid' || actor.system.details.type.subtype !== 'orc, shapechanger'
+      || actor.system.attributes.hp.max !== 52 || actor.system.details.cr !== 3) {
+      throw new Error('White Tusk source identity, HP or CR was lost.');
+    }
+    const body = actor.items?.find(item => item.name === 'Spirit-Bonded Body');
+    if (String(body?.system?.uses?.max) !== '1' || body?.system?.uses?.recovery?.[0]?.period !== 'sr') {
+      throw new Error('White Tusk source rest recovery was lost.');
     }
     if (JSON.stringify(result.rawJson).includes('<think>')) {
       throw new Error('generated Actor contains provider reasoning markup');

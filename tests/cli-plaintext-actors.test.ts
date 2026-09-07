@@ -1,3 +1,4 @@
+import { runTestProcess } from './helpers/subprocess';
 import { afterAll, describe, expect, it, setDefaultTimeout } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,11 +20,11 @@ describe('CLI plaintext actor import', () => {
     }
   });
 
-  it('supports --ingest-plaintext-actors with dry-run summary output', () => {
+  it('supports --ingest-plaintext-actors with dry-run summary output', async () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-cli-plaintext-actors-'));
     roots.push(vaultPath);
 
-    const proc = Bun.spawnSync({
+    const proc = await runTestProcess({
       cmd: [
         'bun',
         'run',
@@ -50,11 +51,11 @@ describe('CLI plaintext actor import', () => {
     expect(stderr).toContain('[Legacy rule-based]');
   });
 
-  it('accepts image workflow options during dry-run without uploading assets', () => {
+  it('accepts image workflow options during dry-run without uploading assets', async () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-cli-plaintext-actors-images-'));
     roots.push(vaultPath);
 
-    const proc = Bun.spawnSync({
+    const proc = await runTestProcess({
       cmd: [
         'bun',
         'run',
@@ -99,7 +100,7 @@ describe('CLI plaintext actor import', () => {
     expect(stderr).toContain('[Legacy rule-based]');
   });
 
-  it('accepts image token crop override manifests during dry-run', () => {
+  it('accepts image token crop override manifests during dry-run', async () => {
     const vaultPath = mkdtempSync(join(tmpdir(), 'fvtt-cli-plaintext-actors-crops-'));
     const cropPath = join(vaultPath, 'token-crops.json');
     roots.push(vaultPath);
@@ -107,7 +108,7 @@ describe('CLI plaintext actor import', () => {
       abc12345: { left: 0.1, top: 0.2, width: 0.7, height: 0.7 },
     }));
 
-    const proc = Bun.spawnSync({
+    const proc = await runTestProcess({
       cmd: [
         'bun',
         'run',

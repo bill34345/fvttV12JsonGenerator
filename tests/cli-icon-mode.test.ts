@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { runTestProcess } from './helpers/subprocess';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { IconReviewReport } from '../src/core/icons/types';
@@ -12,15 +12,13 @@ const NIGHTGAUNT = resolve(
 );
 
 describe('CLI v14 safe icon mode', () => {
-  test('regenerates an Actor and writes a review report through the project workflow', () => {
+  test('regenerates an Actor and writes a review report through the project workflow', async () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-cli-icons-'));
     const outputPath = join(root, 'nightgaunt.json');
     const reportPath = join(root, 'nightgaunt.icon-review.json');
 
     try {
-      const result = spawnSync(
-        'bun',
-        [
+      const result = await runTestProcess({ cmd: ['bun',
           'run',
           CLI,
           NIGHTGAUNT,
@@ -32,12 +30,9 @@ describe('CLI v14 safe icon mode', () => {
           'core',
           '--icon-mode',
           'safe',
-        ],
-        { cwd: process.cwd(), encoding: 'utf-8', timeout: 4_000 },
-      );
+        ], cwd: process.cwd() }, 4_000);
 
-      expect(result.error).toBeUndefined();
-      expect(result.status).toBe(0);
+      expect(result.exitCode).toBe(0);
       expect(existsSync(outputPath)).toBe(true);
       expect(existsSync(reportPath)).toBe(true);
 
@@ -71,14 +66,12 @@ describe('CLI v14 safe icon mode', () => {
     }
   });
 
-  test('fails closed outside Foundry v14 and does not create output', () => {
+  test('fails closed outside Foundry v14 and does not create output', async () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-cli-icons-'));
     const outputPath = join(root, 'nightgaunt-v12.json');
 
     try {
-      const result = spawnSync(
-        'bun',
-        [
+      const result = await runTestProcess({ cmd: ['bun',
           'run',
           CLI,
           NIGHTGAUNT,
@@ -88,12 +81,9 @@ describe('CLI v14 safe icon mode', () => {
           '12',
           '--icon-mode',
           'safe',
-        ],
-        { cwd: process.cwd(), encoding: 'utf-8', timeout: 4_000 },
-      );
+        ], cwd: process.cwd() }, 4_000);
 
-      expect(result.error).toBeUndefined();
-      expect(result.status).not.toBe(0);
+      expect(result.exitCode).not.toBe(0);
       expect(`${result.stdout}\n${result.stderr}`).toContain(
         '--icon-mode safe requires --fvtt-version 14',
       );

@@ -1,4 +1,5 @@
 import { lstatSync, readdirSync } from 'node:fs';
+import { execFile } from 'node:child_process';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
@@ -76,24 +77,19 @@ export async function buildSpellResolverPackageForRepo(repoRoot: string): Promis
 }
 
 async function buildBrowserBundleInSubprocess(paths: SpellResolverBuildPaths): Promise<void> {
-  const child = Bun.spawn(
-    [process.execPath, resolve(paths.packageRoot, 'build.ts'), '--bundle-only', paths.repoRoot],
-    {
+  // Own pipe collection and process termination independently of Bun's test lifecycle.
+  await new Promise<void>((resolveBuild, rejectBuild) => {
+    execFile(process.execPath, [resolve(paths.packageRoot, 'build.ts'), '--bundle-only', paths.repoRoot], {
       cwd: paths.repoRoot,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-  );
-  const [exitCode, stdout, stderr] = await Promise.all([
-    child.exited,
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-  ]);
-  if (exitCode !== 0) {
-    throw new Error(
-      `Spell resolver browser build subprocess failed (${exitCode}).\n${stderr || stdout}`,
-    );
-  }
+      windowsHide: true,
+      timeout: 8_000,
+      maxBuffer: 4 * 1024 * 1024,
+      encoding: 'utf8',
+    }, (error, stdout, stderr) => {
+      if (error) rejectBuild(new Error(`Spell resolver browser build subprocess failed: ${error.message}\n${stderr || stdout}`));
+      else resolveBuild();
+    });
+  });
 }
 
 async function buildBrowserBundle(paths: SpellResolverBuildPaths): Promise<void> {

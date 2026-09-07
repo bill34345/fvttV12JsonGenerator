@@ -74,6 +74,161 @@ describe('AI Item Intake V14 mechanics', () => {
     expect(Object.values(item.system.activities).some((activity: any) => activity.type === 'cast' && activity.consumption.spellSlot === false && activity.consumption.targets?.some((target: any) => target.type === 'itemUses' && target.value === '1'))).toBe(true);
   });
 
+  test('projects Moonweaver spear source mechanics into native V14 weapon, light, save, and charge scaling fields', async () => {
+    const markdown = [
+      '---',
+      'layout: item',
+      '名称: 织月者之矛',
+      "英文名: MOONWEAVER'S SPEAR",
+      '类型: 武器',
+      '稀有度: 稀有',
+      'require-attunement: true',
+      'item-mechanics:',
+      '  schemaVersion: 1',
+      '  uses:',
+      '    max: 3',
+      '    recovery:',
+      '      - period: dawn',
+      '        type: recoverAll',
+      '  abilities:',
+      '    - id: moonlight',
+      '      name: 月光',
+      '      kind: light',
+      '      activation: bonus',
+      '      consumption: 0',
+      '      bright: 10',
+      '      dim: 20',
+      '      extinguish: disable-effect',
+      '    - id: moonweavers-touch',
+      '      name: 织月者之触',
+      "      englishName: Moonweaver's Touch",
+      '      kind: save',
+      '      activation: action',
+      '      consumption: 1',
+      '      scale-consumption: true',
+      '      scale-max: 3',
+      '      dc: 15',
+      '      ability: con',
+      '      outcome: half',
+      '      range:',
+      '        value: 30',
+      '        units: ft',
+      '      target:',
+      '        type: creature',
+      '        count: 1',
+      '        special: 你能看见的生物',
+      '      duration:',
+      '        value: 1',
+      '        units: minute',
+      '        concentration: true',
+      '      damage:',
+      '        formula: 2d8',
+      '        type: radiant',
+      '        scaling:',
+      '          mode: whole',
+      '          number: 2',
+      '      description: 失败时变形成由你选择的挑战等级0微型野兽，并在每回合结束重复豁免。',
+      '---',
+      '## 织月者之矛（MOONWEAVER\'S SPEAR）',
+      '*武器（长矛），稀有（需要同调）*',
+      '',
+      '这柄魔法长矛散发着微弱的银色光芒。',
+      '',
+      '当你手持这柄长矛时，可以使用一个**附赠动作**，令其散发：',
+      '',
+      '- 半径10尺的明亮光照；',
+      '- 再向外10尺的微光光照。',
+      '',
+      '你也可以使用附赠动作熄灭这些光芒。',
+      '',
+      "### 织月者之触（Moonweaver's Touch）",
+      '',
+      '长矛拥有 **3发充能**，并在每天黎明时恢复所有已消耗的充能。',
+      '',
+      '当你手持长矛时，可以使用一个动作并消耗**1发或更多充能**，向你能看见的30尺内一个生物射出一道月光。',
+      '',
+      '目标必须进行一次 **DC 15 体质豁免**。',
+      '',
+      '每消耗1发充能：',
+      '',
+      '- **豁免失败：**受到 **2d8光耀伤害**；',
+      '- **豁免成功：**受到一半伤害。',
+      '',
+      '如果豁免失败，目标还会变形成一只由你选择的、**挑战等级0的微型野兽**，持续1分钟，如同受到 *变形术（Polymorph）* 影响，而此期间你需要维持专注，如同你专注一个法术一般。',
+      '',
+      '目标可以在自己的每个回合结束时重复该豁免，成功则提前结束自身受到的变形效果。',
+    ].join('\n');
+
+    const result = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core' });
+    expect(result.status).toBe('accepted');
+    const item = result.rawJson as any;
+    expect(item.type).toBe('weapon');
+    expect(item.system.type).toEqual({ value: 'simpleM', baseItem: 'spear' });
+    expect(item.system.damage.base).toEqual(expect.objectContaining({ number: 1, denomination: 6, bonus: '', types: ['piercing'] }));
+    expect(item.system.damage.versatile).toEqual(expect.objectContaining({ number: 1, denomination: 8, types: ['piercing'] }));
+    expect(item.system.range).toEqual(expect.objectContaining({ value: 20, long: 60, units: 'ft' }));
+    expect(item.system.properties).toEqual(expect.arrayContaining(['mgc', 'thr', 'ver']));
+    expect(item.system.uses).toEqual({ max: '3', spent: 0, recovery: [{ period: 'dawn', type: 'recoverAll' }] });
+
+    const activities = Object.values(item.system.activities) as any[];
+    const light = activities.find((activity) => activity.type === 'utility' && activity.activation?.type === 'bonus');
+    expect(light).toBeDefined();
+    const lightEffect = item.effects.find((effect: any) => effect.transfer === false);
+    expect(lightEffect.system.changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'token.light.bright', value: 10 }),
+      expect.objectContaining({ key: 'token.light.dim', value: 20 }),
+    ]));
+
+    const touch = activities.find((activity) => activity.type === 'save');
+    expect(touch).toEqual(expect.objectContaining({
+      activation: expect.objectContaining({ type: 'action' }),
+      consumption: expect.objectContaining({
+        targets: [{ type: 'itemUses', target: '', value: '1', scaling: { mode: 'amount', formula: '' } }],
+        scaling: { allowed: true, max: '3' },
+        spellSlot: false,
+      }),
+      save: { ability: ['con'], dc: { calculation: '', formula: '15' } },
+      damage: expect.objectContaining({
+        onSave: 'half',
+        parts: [expect.objectContaining({ number: 2, denomination: 8, types: ['radiant'], scaling: { mode: 'whole', number: 2, formula: '' } })],
+      }),
+      range: expect.objectContaining({ value: '30', units: 'ft' }),
+      duration: expect.objectContaining({ value: '1', units: 'minute', concentration: true }),
+      target: expect.objectContaining({ affects: { count: 1, type: 'creature', choice: false, special: '你能看见的生物' } }),
+    }));
+    expect(activities.filter((activity) => activity.type === 'cast')).toEqual([]);
+    expect(item.system.description.value).toContain('<h3>织月者之触（Moonweaver&#39;s Touch）</h3>');
+    expect(item.system.description.value).toContain('<ul><li><strong>豁免失败：</strong>受到 <strong>2d8光耀伤害</strong>；</li>');
+    expect(item.system.description.value).toContain('<em>变形术（Polymorph）</em>');
+    expect(item.system.description.value).not.toContain('###');
+    expect(item.system.description.value).not.toContain('**');
+    expect(item.system.description.value).not.toContain('\n- ');
+    expect(item._stats).toEqual(expect.objectContaining({ coreVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' }));
+  });
+
+  test('rejects a V14 Item whose description regresses to raw Markdown', async () => {
+    const markdown = [
+      '---',
+      'layout: item',
+      '名称: 描述格式门禁',
+      '类型: 奇物',
+      '---',
+      '### 功能',
+      '**重要。** 这是正文。',
+    ].join('\n');
+    const parsed = new ItemParser().parse(markdown);
+    const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core' });
+    const item = structuredClone(generated.rawJson) as any;
+    item.system.description.value = parsed.description;
+
+    const verification = verifyGeneratedDocument({
+      canonical: adaptParsedItemToCanonical(parsed), output: item, target: '14', effectProfile: 'core',
+    });
+
+    expect(verification.status).toBe('failed');
+    expect(verification.diagnostics.map((entry) => entry.code)).toContain('GEN_V14_ITEM_DESCRIPTION_NOT_HTML');
+  });
+
   test('marks every generated Item type as magical, including items without an attunement phrase', async () => {
     const cases = [
       ['魔法武器', '武器'],

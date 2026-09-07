@@ -5,6 +5,15 @@ import type { ParsedItem, ItemRarity, AttunementType, ItemType, UsesData, ItemSt
 import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 import { i18n } from './i18n';
 
+// source-derived: explicit AC gains must not disappear merely because "additional" is absent.
+function unresolvedArmorClauses(body: string): string[] {
+  return body.split(/[。.!?；;\n]+/).map((clause) => clause.trim()).filter((clause) =>
+    /(?:护甲等级|\bAC\b|armor class)/i.test(clause)
+    && /\+\s*\d+/.test(clause)
+    && /(?:获得|加值|提高|提升|增加|gain|bonus|increase|improve|raise)/i.test(clause)
+    && !/(?:不能|不会|无法|不提供|不提高|不提升|不增加|does not|do not|doesn't|cannot|can't|no bonus)/i.test(clause));
+}
+
 /**
  * Item parser - handles layout: item frontmatter content
  * Full implementation in T7-T10
@@ -39,12 +48,13 @@ export class ItemParser implements ItemParserStrategy {
     const itemMechanics = this.parseItemMechanics(rawData['item-mechanics']);
     const uses = itemMechanics?.uses ?? this.parseUses(body);
     const armor = this.parseArmor(body, type, headerInfo.type);
-    const properties = armor?.magicalBonus ? ['mgc'] : undefined;
+    const weapon = this.parseWeapon(type, headerInfo.type);
+    const properties = armor?.magicalBonus ? ['mgc'] : weapon?.properties;
     const weight = armor?.baseItem === 'shield'
       // schema-derived: the locked dnd5e 4.3.9 and 5.3.3 shield records
       // both define the base shield as 6 lb.
       ? { value: 6, units: 'lb' as const }
-      : undefined;
+      : weapon?.weight;
 
     let stages: ItemStage[];
     let structuredActions: ParsedItem['structuredActions'];
@@ -84,6 +94,13 @@ export class ItemParser implements ItemParserStrategy {
       rarity: finalRarity,
       attunement: finalAttunement,
       description,
+      source: typeof rawData.source === 'string' ? rawData.source
+        : typeof rawData['来源'] === 'string' ? rawData['来源'] : undefined,
+      unresolvedMechanics: armor && armor.magicalBonus === null
+        ? unresolvedArmorClauses(body) : undefined,
+      ...(weapon?.weapon ? { weapon: weapon.weapon } : {}),
+      ...(weapon?.damage ? { damage: weapon.damage } : {}),
+      ...(weapon?.range ? { range: weapon.range } : {}),
       armor,
       properties,
       weight,
@@ -119,17 +136,22 @@ export class ItemParser implements ItemParserStrategy {
       }
       const rawUses = contract.uses as Record<string, unknown>;
       const max = rawUses.max;
-      if ((typeof max !== 'number' && typeof max !== 'string') || String(max).trim() === '') {
-        throw new Error('item-mechanics.uses.max is required.');
+      if ((typeof max !== 'number' && typeof max !== 'string') || !/^\d+$/.test(String(max)) || !Number.isSafeInteger(Number(max)) || Number(max) < 1) {
+        throw new Error('item-mechanics.uses.max must be a positive integer.');
       }
+      if (rawUses.recovery !== undefined && !Array.isArray(rawUses.recovery)) throw new Error('item-mechanics.uses.recovery must be an array.');
       const recovery = Array.isArray(rawUses.recovery) ? rawUses.recovery.map((entry, index) => {
         if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
           throw new Error(`item-mechanics.uses.recovery[${index}] must be a mapping.`);
         }
         const record = entry as Record<string, unknown>;
-        if (typeof record.period !== 'string' || typeof record.type !== 'string') {
-          throw new Error(`item-mechanics.uses.recovery[${index}] requires period and type.`);
+        // schema-derived: dnd5e 5.3.3 limitedUsePeriods and ItemSheet recoveryTypes.
+        if (typeof record.period !== 'string' || !['lr', 'sr', 'day', 'dawn', 'dusk', 'initiative', 'turnStart', 'turnEnd', 'turn', 'recharge'].includes(record.period)
+          || typeof record.type !== 'string' || !['recoverAll', 'loseAll', 'formula'].includes(record.type)) {
+          throw new Error(`item-mechanics.uses.recovery[${index}] requires supported period and type.`);
         }
+        if (record.type === 'formula' && (typeof record.formula !== 'string' || !/^\s*\d+(?:d[1-9]\d*)?(?:\s*[+-]\s*\d+)?\s*$/.test(record.formula))) throw new Error(`item-mechanics.uses.recovery[${index}] requires a supported numeric or dice formula.`);
+        if (record.period === 'recharge' && (record.type !== 'recoverAll' || (record.formula !== undefined && !/^[2-6]$/.test(String(record.formula))))) throw new Error(`item-mechanics.uses.recovery[${index}] recharge requires recoverAll and a 2-6 threshold.`);
         return {
           period: record.period,
           type: record.type as UsesData['recovery'][number]['type'],
@@ -145,6 +167,7 @@ export class ItemParser implements ItemParserStrategy {
     const effects: ActionData[] = [];
     const usesActions: ActionData[] = [];
     const spells: ActionData[] = [];
+    const saves: ActionData[] = [];
     for (const [index, entry] of contract.abilities.entries()) {
       if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
         throw new Error(`item-mechanics.abilities[${index}] must be a mapping.`);
@@ -192,6 +215,71 @@ export class ItemParser implements ItemParserStrategy {
         });
         continue;
       }
+      if (kind === 'save') {
+        const dc = ability.dc;
+        const saveAbility = ability.ability;
+        if (typeof dc !== 'number' || !Number.isFinite(dc) || dc < 0) {
+          throw new Error(`item-mechanics.abilities[${index}].dc must be a non-negative number.`);
+        }
+        if (typeof saveAbility !== 'string' || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(saveAbility.trim())) {
+          throw new Error(`item-mechanics.abilities[${index}].ability must name a supported save ability.`);
+        }
+
+        const consumption = ability.consumption;
+        if (typeof consumption !== 'number' || !Number.isSafeInteger(consumption) || consumption < 0 || (consumption > 0 && (!uses || consumption > Number(uses.max)))) {
+          throw new Error(`item-mechanics.abilities[${index}].consumption must be an integer within the Item uses capacity.`);
+        }
+        const scaleConsumption = ability['scale-consumption'];
+        if (scaleConsumption !== undefined && typeof scaleConsumption !== 'boolean') {
+          throw new Error(`item-mechanics.abilities[${index}].scale-consumption must be boolean.`);
+        }
+        const scaleMax = ability['scale-max'];
+        if (scaleConsumption === true && (
+          consumption <= 0
+          || (typeof scaleMax !== 'number' && typeof scaleMax !== 'string')
+          || !/^\d+$/.test(String(scaleMax)) || !Number.isSafeInteger(Number(scaleMax))
+          || Number(scaleMax) < consumption || !uses || Number(scaleMax) > Number(uses.max)
+        )) {
+          throw new Error(`item-mechanics.abilities[${index}] scaled save requires positive consumption and scale-max.`);
+        }
+
+        const rawOutcome = ability.outcome;
+        const outcome = rawOutcome === undefined ? undefined : String(rawOutcome);
+        if (outcome !== undefined && !['none', 'half', 'full', 'literal'].includes(outcome)) {
+          throw new Error(`item-mechanics.abilities[${index}].outcome is unsupported.`);
+        }
+        const activity = this.parseItemMechanicsActivity(ability, index);
+        const damage = this.parseItemMechanicsDamage(ability.damage, index);
+        const name = typeof ability.name === 'string' && ability.name.trim()
+          ? ability.name.trim()
+          : id;
+        const englishName = typeof ability.englishName === 'string' && ability.englishName.trim()
+          ? ability.englishName.trim()
+          : undefined;
+        saves.push({
+          name,
+          ...(englishName ? { englishName } : {}),
+          logicalPath: `item-mechanics/${id}`,
+          type: 'save',
+          save: {
+            dc,
+            ability: saveAbility.trim(),
+            ...(outcome ? { outcome: outcome as NonNullable<ActionData['save']>['outcome'] } : {}),
+            ...(typeof ability.onFail === 'string' ? { onFail: ability.onFail } : {}),
+          },
+          ...(damage.length > 0 ? { damage } : {}),
+          ...(activity ? { activity } : {}),
+          useAction: {
+            consumption,
+            activation: this.mapActivation(String(ability.activation ?? 'action')),
+            ...(scaleConsumption === true ? {
+              consumptionScaling: { allowed: true, max: String(scaleMax) },
+            } : {}),
+          },
+          ...(typeof ability.description === 'string' ? { desc: ability.description } : {}),
+        });
+        continue;
+      }
       if (kind === 'spell') {
         const spell = ability.spell;
         if (typeof spell !== 'object' || spell === null || Array.isArray(spell)) {
@@ -224,12 +312,117 @@ export class ItemParser implements ItemParserStrategy {
     const structuredActions: ParsedItem['structuredActions'] = {
       ...(effects.length > 0 ? { effects } : {}),
       ...(usesActions.length > 0 ? { uses: usesActions } : {}),
+      ...(saves.length > 0 ? { saves } : {}),
       ...(spells.length > 0 ? { spells } : {}),
     };
     return {
       uses,
       structuredActions: Object.keys(structuredActions).length > 0 ? structuredActions : undefined,
     };
+  }
+
+  private parseItemMechanicsDamage(value: unknown, abilityIndex: number): Damage[] {
+    if (value === undefined) return [];
+    const entries = Array.isArray(value) ? value : [value];
+    return entries.map((entry, damageIndex) => {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].damage[${damageIndex}] must be a mapping.`);
+      }
+      const damage = entry as Record<string, unknown>;
+      const formula = typeof damage.formula === 'string' ? damage.formula.replace(/\s+/g, '') : '';
+      const type = typeof damage.type === 'string' ? damage.type.trim() : '';
+      if (!/^[1-9]\d*d[1-9]\d*(?:[+-]\d+)?$/i.test(formula) || !type) {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].damage[${damageIndex}] requires formula and type.`);
+      }
+
+      let scaling: Damage['scaling'];
+      if (damage.scaling !== undefined) {
+        if (typeof damage.scaling !== 'object' || damage.scaling === null || Array.isArray(damage.scaling)) {
+          throw new Error(`item-mechanics.abilities[${abilityIndex}].damage[${damageIndex}].scaling must be a mapping.`);
+        }
+        const rawScaling = damage.scaling as Record<string, unknown>;
+        const mode = rawScaling.mode;
+        const number = rawScaling.number;
+        if (typeof mode !== 'string' || !['whole', 'half'].includes(mode) || typeof number !== 'number' || !Number.isSafeInteger(number) || number < 0) {
+          throw new Error(`item-mechanics.abilities[${abilityIndex}].damage[${damageIndex}].scaling requires whole/half mode and a non-negative integer number.`);
+        }
+        scaling = {
+          mode: mode.trim(),
+          number,
+          ...(typeof rawScaling.formula === 'string' ? { formula: rawScaling.formula } : {}),
+        };
+      }
+
+      return {
+        formula,
+        type,
+        ...(Array.isArray(damage.types)
+          ? { types: damage.types.filter((entry): entry is string => typeof entry === 'string') }
+          : {}),
+        ...(scaling ? { scaling } : {}),
+      };
+    });
+  }
+
+  private parseItemMechanicsActivity(
+    ability: Record<string, unknown>,
+    abilityIndex: number,
+  ): ActionData['activity'] | undefined {
+    const activity: NonNullable<ActionData['activity']> = {};
+    const rawRange = ability.range;
+    if (rawRange !== undefined) {
+      if (typeof rawRange === 'number' || typeof rawRange === 'string') {
+        activity.range = { value: String(rawRange), units: 'ft' };
+      } else if (typeof rawRange === 'object' && rawRange !== null && !Array.isArray(rawRange)) {
+        const range = rawRange as Record<string, unknown>;
+        const value = range.value;
+        const units = range.units;
+        if ((typeof value !== 'number' && typeof value !== 'string') || typeof units !== 'string' || !units.trim()) {
+          throw new Error(`item-mechanics.abilities[${abilityIndex}].range requires value and units.`);
+        }
+        activity.range = { value: String(value), units: units.trim() };
+      } else {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].range must be a number or mapping.`);
+      }
+    }
+
+    const rawDuration = ability.duration;
+    if (rawDuration !== undefined) {
+      if (typeof rawDuration !== 'object' || rawDuration === null || Array.isArray(rawDuration)) {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].duration must be a mapping.`);
+      }
+      const duration = rawDuration as Record<string, unknown>;
+      const value = duration.value;
+      const units = duration.units;
+      const concentration = duration.concentration;
+      if ((typeof value !== 'number' && typeof value !== 'string') || typeof units !== 'string' || typeof concentration !== 'boolean') {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].duration requires value, units, and concentration.`);
+      }
+      activity.duration = { value: String(value), units, concentration };
+    }
+
+    const rawTarget = ability.target;
+    if (rawTarget !== undefined) {
+      if (typeof rawTarget !== 'object' || rawTarget === null || Array.isArray(rawTarget)) {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].target must be a mapping.`);
+      }
+      const target = rawTarget as Record<string, unknown>;
+      const type = target.type;
+      const count = target.count;
+      if (typeof type !== 'string' || !type.trim() || (typeof count !== 'number' && typeof count !== 'string')) {
+        throw new Error(`item-mechanics.abilities[${abilityIndex}].target requires type and count.`);
+      }
+      activity.target = {
+        template: { type: '', size: '', units: 'ft' },
+        affects: {
+          count,
+          type: type.trim(),
+          ...(typeof target.special === 'string' ? { special: target.special } : {}),
+        },
+      };
+    }
+
+    return Object.keys(activity).length > 0 ? activity : undefined;
   }
 
   /**
@@ -719,6 +912,7 @@ export class ItemParser implements ItemParserStrategy {
       '非普通': 'uncommon',
       uncommon: 'uncommon',
       '稀有': 'rare',
+      '珍稀': 'rare',
       rare: 'rare',
       '极珍稀': 'veryRare',
       '非常稀有': 'veryRare',
@@ -1498,6 +1692,48 @@ export class ItemParser implements ItemParserStrategy {
       }
     }
     return undefined;
+  }
+
+  private parseWeapon(
+    frontmatterType: string | undefined,
+    headerType: string | undefined,
+  ): {
+    weapon: NonNullable<ParsedItem['weapon']>;
+    damage: NonNullable<ParsedItem['damage']>;
+    range: NonNullable<ParsedItem['range']>;
+    properties: string[];
+    weight: NonNullable<ParsedItem['weight']>;
+  } | undefined {
+    const typeText = `${frontmatterType ?? ''} ${headerType ?? ''}`;
+    if (!/(?:武器|\bweapon\b)/i.test(typeText) || !/(?:长矛|\bspear\b)/i.test(typeText)) {
+      return undefined;
+    }
+
+    // schema-derived from the locked dnd5e 5.3.3 standard Spear record.
+    const base = {
+      number: 1,
+      denomination: 6,
+      bonus: '',
+      types: ['piercing'],
+      custom: { enabled: false, formula: '' },
+      scaling: { mode: 'whole', number: 1, formula: '' },
+    };
+    const versatile = {
+      number: 1,
+      denomination: 8,
+      bonus: '',
+      types: ['piercing'],
+      custom: { enabled: false, formula: '' },
+      scaling: { mode: 'whole', number: 1, formula: '' },
+    };
+
+    return {
+      weapon: { value: 'simpleM', baseItem: 'spear' },
+      damage: { base, versatile },
+      range: { value: 20, long: 60, reach: null, units: 'ft' },
+      properties: ['thr', 'ver'],
+      weight: { value: 3, units: 'lb' },
+    };
   }
 
   private parseArmor(

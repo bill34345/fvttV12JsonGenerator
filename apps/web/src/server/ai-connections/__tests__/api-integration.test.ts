@@ -3,11 +3,21 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { handleApiRequest } from '../../api';
-import { jobDir, resetJobsForTests } from '../../jobs/jobStore';
+import { getJob, jobDir, resetJobsForTests } from '../../jobs/jobStore';
 import { getWebSecurityConfig } from '../../security/config';
 import { createAiConnectionsRuntime } from '../runtime';
 
-afterEach(() => resetJobsForTests());
+const startedJobIds: string[] = [];
+afterEach(async () => {
+  // A response acknowledges a background task; it does not mean it has settled.
+  for (const id of startedJobIds) {
+    const deadline = Date.now() + 5_000;
+    while (['queued', 'running'].includes(getJob(id)?.status ?? '') && Date.now() < deadline) await Bun.sleep(10);
+    expect(getJob(id)?.status).toBe('failed');
+  }
+  startedJobIds.length = 0;
+  resetJobsForTests();
+});
 
 describe('AI connection API integration', () => {
   it('mounts the connection API and requires an explicit connection for AI jobs', async () => {
@@ -43,6 +53,7 @@ describe('AI connection API integration', () => {
       options: { fvttVersion: '14', effectProfile: 'core', iconMode: 'off' },
     }), { securityConfig, aiRuntime });
     const job = (await started.json()).data;
+    startedJobIds.push(job.id);
     expect(started.status).toBe(200);
     expect(job.aiConnectionId).toBe(connection.id);
     expect(JSON.stringify(job)).not.toContain('sk-must-not-persist');
@@ -54,7 +65,9 @@ describe('AI connection API integration', () => {
 
   it('does not let another anonymous session inspect an AI job', async () => {
     const securityConfig = getWebSecurityConfig({});
-    const aiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections);
+    const aiRuntime = createAiConnectionsRuntime(securityConfig.aiConnections, {
+      fetcher: async () => new Response('{}', { status: 500 }),
+    });
     const owner = await getSession(securityConfig, aiRuntime);
     const created = await handleApiRequest(stateRequest('/api/ai-connections/byok', owner, {
       apiKey: 'sk-owner-only', baseUrl: 'https://api.openai.com/v1', model: 'test-model', reviewModel: 'test-model', reasoningEffort: 'high',
@@ -65,6 +78,7 @@ describe('AI connection API integration', () => {
       options: { fvttVersion: '14', effectProfile: 'core', iconMode: 'off' },
     }), { securityConfig, aiRuntime });
     const job = (await started.json()).data;
+    startedJobIds.push(job.id);
     const attacker = await getSession(securityConfig, aiRuntime);
     const inspected = await handleApiRequest(new Request(`http://localhost/api/jobs/${job.id}`, {
       headers: { cookie: attacker.cookie },

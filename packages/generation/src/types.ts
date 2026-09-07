@@ -18,6 +18,7 @@ export type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 export type { GenerationDiagnostic } from '@fvtt-json-generator/contracts/diagnostics';
 export type GenerationDocumentKind = 'actor' | 'item';
 export type GenerationMechanicKind =
+  | 'armor'
   | 'activation'
   | 'attack'
   | 'damage'

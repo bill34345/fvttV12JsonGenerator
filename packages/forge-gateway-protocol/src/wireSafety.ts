@@ -6,7 +6,7 @@ import {
 const DOCUMENT_INDEX = '(?:0|[1-9]\\d*)';
 const ACTIVITY_KEY = '(?:0|[1-9]\\d*|[A-Za-z0-9]{16})';
 const OUTPUT_PATH_PATTERNS = [
-  new RegExp(`^documents/${DOCUMENT_INDEX}/system/(?:uses|damage/base)$`, 'u'),
+  new RegExp(`^documents/${DOCUMENT_INDEX}/system/(?:armor|type|uses|damage/base)$`, 'u'),
   new RegExp(`^documents/${DOCUMENT_INDEX}/system/activities/${ACTIVITY_KEY}(?:/consumption/targets|/flags/fvttJsonGenerator/(?:resourceConsumption|resourceTransition))?$`, 'u'),
   new RegExp(`^documents/${DOCUMENT_INDEX}/effects(?:/${DOCUMENT_INDEX}(?:/flags/fvttJsonGenerator/resourceTier)?)?$`, 'u'),
   new RegExp(`^documents/${DOCUMENT_INDEX}/flags/fvttJsonGenerator/(?:stage|resource|behaviorMechanics/${DOCUMENT_INDEX})$`, 'u'),

@@ -16,7 +16,9 @@ if (import.meta.main) {
   const summary = buildActorVerificationSummary({ sourcePath, actorPath });
   console.log(JSON.stringify(summary, null, 2));
 
-  if (summary.warnings.length > 0) {
+  if (summary.sourceIntegrityErrors.length > 0) {
+    process.exitCode = 1;
+  } else if (summary.warnings.length > 0) {
     process.exitCode = 2;
   }
 }

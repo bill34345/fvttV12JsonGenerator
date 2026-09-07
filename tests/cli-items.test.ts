@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { runTestProcess } from './helpers/subprocess';
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -19,17 +19,16 @@ describe("CLI item import", () => {
     );
   };
 
-  it("supports --ingest-items-json with final output under vault/output/items", () => {
+  it.each([true, false])("publishes only explicit shield mechanics (explicit=%s)", async (explicit) => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
     const sourcePath = join(root, "items.md");
     const vaultPath = join(root, "vault");
 
     writeItemCollection(sourcePath);
+    if (explicit) writeFileSync(sourcePath, readFileSync(sourcePath, 'utf8').replace('获得 +2', '获得额外 +2'));
 
     try {
-      const result = spawnSync(
-        "bun",
-        [
+      const result = await runTestProcess({ cmd: ['bun',
           "run",
           resolve(process.cwd(), "src/index.ts"),
           "--ingest-items-json",
@@ -38,14 +37,14 @@ describe("CLI item import", () => {
           vaultPath,
           "--fvtt-version",
           "14",
-        ],
-        {
-          cwd: process.cwd(),
-          encoding: "utf-8",
-        },
-      );
+        ], cwd: process.cwd() }, 15_000);
 
-      expect(result.status).toBe(0);
+      if (!explicit) {
+        expect(result.exitCode).toBe(1);
+        expect(existsSync(join(vaultPath, "output", "items", "shield-of-the-cavalier__骑士之盾.json"))).toBe(false);
+        return;
+      }
+      expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("Detected items: 1");
       expect(result.stdout).toContain("JSON dir:");
 
@@ -66,7 +65,7 @@ describe("CLI item import", () => {
     }
   }, 30_000);
 
-  it("defaults split-only --ingest-items output to vault/middle/items", () => {
+  it("defaults split-only --ingest-items output to vault/middle/items", async () => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
     const sourcePath = join(root, "items.md");
     const vaultPath = join(root, "vault");
@@ -74,9 +73,7 @@ describe("CLI item import", () => {
     writeItemCollection(sourcePath);
 
     try {
-      const result = spawnSync(
-        "bun",
-        [
+      const result = await runTestProcess({ cmd: ['bun',
           "run",
           resolve(process.cwd(), "src/index.ts"),
           "--ingest-items",
@@ -84,21 +81,16 @@ describe("CLI item import", () => {
           "--vault",
           vaultPath,
           "--dry-run",
-        ],
-        {
-          cwd: process.cwd(),
-          encoding: "utf-8",
-        },
-      );
+        ], cwd: process.cwd() }, 15_000);
 
-      expect(result.status).toBe(0);
+      expect(result.exitCode).toBe(0);
       expect(result.stdout.replace(/\\/g, "/")).toContain(`Output dir: ${vaultPath.replace(/\\/g, "/")}/middle/items`);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
 
-  it("respects an explicit --emit-dir even when it matches the global default", () => {
+  it("respects an explicit --emit-dir even when it matches the global default", async () => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
     const sourcePath = join(root, "items.md");
     const vaultPath = join(root, "vault");
@@ -107,9 +99,7 @@ describe("CLI item import", () => {
     writeItemCollection(sourcePath);
 
     try {
-      const result = spawnSync(
-        "bun",
-        [
+      const result = await runTestProcess({ cmd: ['bun',
           "run",
           resolve(process.cwd(), "src/index.ts"),
           "--ingest-items",
@@ -119,14 +109,9 @@ describe("CLI item import", () => {
           "--emit-dir",
           explicitEmitDir,
           "--dry-run",
-        ],
-        {
-          cwd: process.cwd(),
-          encoding: "utf-8",
-        },
-      );
+        ], cwd: process.cwd() }, 15_000);
 
-      expect(result.status).toBe(0);
+      expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(`Output dir: ${explicitEmitDir}`);
       expect(result.stdout.replace(/\\/g, "/")).not.toContain(`${vaultPath.replace(/\\/g, "/")}/middle/items`);
     } finally {

@@ -1076,6 +1076,7 @@ export function App() {
     Boolean(job) || Boolean(singleResult) || status === "loading";
 
   const reviewCount = reviewBlockerCount(singleResult, job);
+  const taskFailed = job?.status === "failed" || singleResult?.status === "failed" || status === "error";
   const formalArtifactReady = isFormalArtifactReady(singleResult, job);
   const activeStage =
     status === "loading" || (job && !terminalStatuses.includes(job.status))
@@ -1097,7 +1098,7 @@ export function App() {
       id: "extract",
       label: "提取",
       detail:
-        activeStage === "extract"
+        taskFailed ? "提取失败或中断" : activeStage === "extract"
           ? "正在处理"
           : job || singleResult
             ? "已生成结构"
@@ -1107,9 +1108,9 @@ export function App() {
     {
       id: "review",
       label: "核对",
-      detail: reviewCount
+      detail: taskFailed ? "未通过核对" : reviewCount
         ? reviewCount + " 项待确认"
-        : job || singleResult
+        : formalArtifactReady
           ? "无需人工确认"
           : "等待提取",
       icon: <ExclamationTriangleIcon />,
@@ -1117,7 +1118,7 @@ export function App() {
     {
       id: "deliver",
       label: "交付",
-      detail: formalArtifactReady ? "正式产物可用" : "等待验收",
+      detail: taskFailed ? "未生成正式产物" : formalArtifactReady ? "正式产物可用" : "等待验收",
       icon: <RocketIcon />,
     },
   ] as const;
@@ -1874,7 +1875,7 @@ export function App() {
                 <small>
                   {formalArtifactReady
                     ? "已通过工作流验收，可下载"
-                    : reviewCount
+                    : taskFailed ? "任务失败或中断，请查看错误并重新提交" : reviewCount
                       ? "被待确认问题阻止"
                       : "等待任务完成"}
                 </small>
@@ -2741,11 +2742,15 @@ function Warnings(props: {
 }) {
   const warnings = props.singleResult?.warnings ?? props.job?.warnings ?? [];
   const failures = props.job?.failures ?? [];
+  const error = props.job?.error;
+  const diagnostics = props.singleResult?.diagnostics.filter(entry => entry.severity === "error") ?? [];
   return (
     <div className="warning-stack">
-      {warnings.length === 0 && failures.length === 0 ? (
+      {warnings.length === 0 && failures.length === 0 && !error && diagnostics.length === 0 ? (
         <div className="success-box">暂无 warning 或失败条目。</div>
       ) : null}
+      {error ? <div className="failure-row"><strong>{error.code}</strong><span>{error.message}</span></div> : null}
+      {diagnostics.map((entry, index) => <div className="failure-row" key={index}><strong>{entry.code}</strong><span>{entry.message}</span></div>)}
       {warnings.map((warning, index) => (
         <div className="warning-row" key={`${warning}-${index}`}>
           {warning}

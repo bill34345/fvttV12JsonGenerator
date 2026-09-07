@@ -1,3 +1,4 @@
+import { runTestProcess } from './helpers/subprocess';
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -9,14 +10,14 @@ const DOCUMENT_RUN_ROOT = resolve(process.cwd(), '.local', 'document-runs');
 setDefaultTimeout(30_000);
 
 describe('CLI document input', () => {
-  test('routes a PDF through extract-only and emits the document artifacts', () => {
+  test('routes a PDF through extract-only and emits the document artifacts', async () => {
     const root = mkdtempSync(join(tmpdir(), 'fvtt-cli-document-'));
     const inputPath = join(root, 'fixture.pdf');
     writeFileSync(inputPath, minimalPdfBytes());
     let runPath: string | undefined;
 
     try {
-      const result = Bun.spawnSync({
+      const result = await runTestProcess({
         cmd: ['bun', 'run', CLI, inputPath, '--document-engine', 'native', '--extract-only'],
         cwd: process.cwd(),
         stdout: 'pipe',

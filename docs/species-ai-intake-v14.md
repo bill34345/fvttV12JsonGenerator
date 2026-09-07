@@ -1,22 +1,25 @@
-# Species AI Intake：TXT → Markdown → Foundry V14 race/feat
+# Species AI Intake：TXT → Markdown → Foundry V12/V14 race/feat
 
-`--intake-species` 是不规则 TXT 或已人工编辑 Species Markdown 的正式入口，目标固定为 Foundry `14.364` / dnd5e `5.3.3` / `core` / 2024 角色创建规则。
+`--intake-species` 是不规则 TXT 或已人工编辑 Species Markdown 的正式入口。允许的精确目标只有 Foundry `12.331` / dnd5e `4.3.9` / `core` / 2024（`V12 static candidate`），或 Foundry `14.364` / dnd5e `5.3.3` / `core` / 2024（保留既有 V14 运行验收）。V13、legacy/2014、`modded-v12` 和第三方模块兼容均 fail-closed。
 
 ## 数据链与状态
 
 ```text
 TXT → discovery → Species Evidence IR → deterministic Markdown
-    → parser → V14 race/feat package → deterministic validator → AI review
+    → parser → target race/feat package → target validator → AI review
     → accepted ledger → 独立模块 build
 ```
 
 一个 TXT 最多发现 50 个互不重叠候选。每个候选单独得到 `accepted`、`needs_review` 或 `failed`；整次运行可为 `succeeded`、`partial`、`needs_review` 或 `failed`。运行包位于 `.local/species-intake-runs/<run-id>/`，保存不可变来源、discovery、逐候选 IR、Markdown、JSON package、确定性报告、AI review、provider audit 和 manifest。
 
-AI 不直接编写正式 JSON。证据范围、完整 coverage、字段范围、mechanic allowlist、Markdown parser、V14 projector、package validator 与 AI cross-review 全部通过后，候选才会推广到：
+AI 不直接编写正式 JSON。证据范围、完整 coverage、字段范围、mechanic allowlist、Markdown parser、目标 projector、package validator 与 AI cross-review 全部通过后，候选才会推广到：
 
-- `input/species/<identifier>.md`
-- `output/species/<identifier>.json`
+- V14：`input/species/<identifier>.md`；V12：`input/species/v12/<identifier>.md`，两个目标的已接受来源分别保存，避免一次修改使另一个版本的 ledger 失效。
+- V14：`output/species/<identifier>.json`
+- V12：`output/species/v12/<identifier>.json`
 - `output/species/accepted-ledger.json`
+
+accepted ledger schema v2 以 `(identifier, fvttVersion, effectProfile, rules)` 为唯一身份，V12 与 V14 可以共存且互不覆盖。schema v1 只解释为 V14/core/2024；读取、验证或 build 不会改写旧 ledger，只有一次新的成功 promotion 才原子升级为 v2。同一目标的 Markdown、package、ledger hash 必须闭合，另一目标的 package 不能冒充证据。
 
 ## Markdown 契约
 
@@ -44,7 +47,16 @@ bun run src/index.ts --intake-species "path/to/species.txt" `
   --effect-profile core
 ```
 
-`--dry-run` 不调用 provider、不创建 run bundle、不推广正式文件。其他 target/profile 会在 provider 调用前失败。
+V12 static candidate 使用同一入口：
+
+```powershell
+bun run src/index.ts --intake-species "path/to/species.txt" `
+  --vault "obsidian/dnd数据转fvttjson" `
+  --fvtt-version 12 `
+  --effect-profile core
+```
+
+`--dry-run` 不调用 provider、不创建 run bundle、不推广正式文件。V13、modded/legacy 和其他 target/profile 会在 provider 调用前失败。
 
 处理精确 target conflict 或恢复 provider 故障：
 
@@ -58,6 +70,7 @@ bun run src/index.ts --resume-species-intake ".local/species-intake-runs/<run-id
 
 decision 只能批准精确 `target-conflict:<identifier>` 的 replace；不能覆盖来源证据、coverage、语义或 unsupported mechanic finding。
 恢复会创建新的 immutable run；新 manifest 和 accepted ledger 同时记录 `resumedFromRunId` 与 decisions 文件 SHA-256，从而能回溯被恢复的旧 run，而不是改写旧证据。
+resume 命令中的版本/profile 必须与原 run 完全一致；目标漂移在 provider 调用前拒绝。
 
 accepted Markdown 可以编辑，但 ledger 保存了当前 Markdown SHA-256。任何字节变化都会使条目 stale，模块 build 立即 fail-closed。编辑后必须再次把该 Markdown 交给 `--intake-species`，重新生成 run、IR、review、JSON 和 ledger revision。
 
@@ -67,11 +80,15 @@ accepted Markdown 可以编辑，但 ledger 保存了当前 Markdown SHA-256。�
 bun run build:homebrew-species
 bun run test:homebrew-species
 bun run verify:homebrew-species
+bun run build:homebrew-species:v12-candidate
+bun run verify:homebrew-species:v12-candidate
 ```
 
-`fvtt-homebrew-species` 是纯内容模块，只有 `species` 和 `features` 两个 Item Compendium。build 只读取 accepted ledger 和当前 Markdown，重新走 parser/projector/validator，在随机临时根生成两次 LevelDB 与确定性 ZIP，通过 identity/coverage/UUID 闭合后才发布 `dist/`。模块没有 browser runtime、socket、自动迁移或世界扫描。
+`fvtt-homebrew-species` 是纯内容模块，只有 `species` 和 `features` 两个 Item Compendium。V14 默认输出仍为 `dist/`；V12 static candidate 输出为 `dist/v12-candidate/`，identity 带 `supportStatus: "static-candidate"`。build 只读取当前目标的 accepted ledger 条目和 Markdown，重新走 parser/projector/validator，在随机临时根生成两次 LevelDB 与确定性 ZIP，并检查 identity/coverage/UUID 闭合。V12/V14 的 module ID、pack 名、Race/Feature/Effect/Advancement ID 与 Compendium UUID 相同，版本 metadata 和 Activity 形状是允许差异。
 
-安装器会在复制前验证完整 build artifact，在 staging 和最终目标再次验证 manifest、content-only 文件面、LevelDB documents 和 ItemGrant UUID 闭合；`verify-install:homebrew-species` 要求目标已经存在并完成同一目标验证。路径逃逸、production/non-canonical target 和 foreign same-ID 都会 fail-closed。
+V12 candidate 可以在隔离测试中使用显式 `FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY` 写入并回读 LevelDB；任何未来可安装 V12 build 必须使用真实 `app/12.331/node_modules/classic-level`。本轮没有扩展安装器、创建 V12 Lab、安装模块或运行 Foundry。
+
+现有安装器仍只属于已验收的 V14 路径；V12 candidate 不得调用它。V12 ZIP 构建成功、LevelDB 回读或静态 validator 绿色都不构成 V12 Runtime Pass。
 
 散装 JSON 是模块绑定的审阅/构建输入；race ItemGrant 使用 `Compendium.fvtt-homebrew-species.features.Item.<id>`，因此不承诺脱离模块独立导入。已经授予 Actor 的嵌入 Item 是快照，v1 不提供迁移器。
 
@@ -86,6 +103,8 @@ bun run verify:homebrew-species
 - 不添加来源未声明的 ASI、语言、触及、负重、武器熟练、徒手伤害、抗性或大型生物额外收益。
 
 ## 当前验收边界
+
+V12 当前只通过静态候选层：锁定 4.3.9 模型的 Race、Size、ItemGrant、Utility Activity、itemUses、lr/sr recoverAll、Race 升级流以及 HP/AC Effect 路径有参考契约；Ogre V12 package 已逐条核对语义；两次 clean candidate build 的树、logical hash、UUID 和 ZIP 可确定重现。当前机器没有 V12 Lab，因此尚未验收 Token 2×2、真实 Add Species UI、1→5 级升级、AC/HP 运行值、次数消耗、Long Rest 或重开读回。只能声明“V12 静态候选支持”，不能声明“V12 可用”或“V12 正式支持”。
 
 自动测试继续使用 fake provider，以保持离线、确定和可重复；正式食人魔另以本机 Codex OAuth provider 完成了真实运行 `species-20260811022558-9a41c4a1`。该 run 的 deterministic report 与 AI review 均为 `accepted`，没有 repair；正式 ledger、Markdown 与 JSON 的来源/内容/logical hash 闭合。模块 build/verify 得到 1 个 race、5 个 feat，ZIP SHA-256 为 `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`。
 

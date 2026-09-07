@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/foundryvtt/dnd5e.git",
+    "tag": "release-4.3.9",
+    "revision": "309046cc7548778f5f06812dc2038abb3fae66bb"
+  },
+  "target": {
+    "foundry": "12.331",
+    "dnd5e": "4.3.9"
+  },
+  "race": {
+    "itemType": "race",
+    "advancementTypes": ["Size", "ItemGrant"],
+    "sizeValue": { "size": "" },
+    "source": "packs/_source/races/dwarf/hill-dwarf.json"
+  },
+  "utilityActivity": {
+    "type": "utility",
+    "baseFields": ["_id", "type", "name", "img", "sort", "activation", "consumption", "description", "duration", "effects", "range", "target", "uses", "roll"],
+    "effectField": "effects",
+    "forbiddenFields": ["appliedEffects"],
+    "consumptionType": "itemUses",
+    "source": "module/data/activity/base-activity.mjs"
+  },
+  "uses": {
+    "recoveryPeriods": ["lr", "sr"],
+    "recoveryType": "recoverAll",
+    "source": "module/data/shared/uses-field.mjs"
+  },
+  "raceLevelAdvancement": {
+    "managerMethod": "createLevelChangeSteps",
+    "raceFlowAtCharacterLevel": true,
+    "source": "module/applications/advancement/advancement-manager.mjs"
+  },
+  "effects": {
+    "hpPerLevelPath": "system.attributes.hp.bonuses.level",
+    "hpUsesTotalCharacterLevel": true,
+    "acBonusPath": "system.attributes.ac.bonus",
+    "acIncludedInFinalValue": true,
+    "sources": [
+      "module/data/actor/character.mjs",
+      "module/data/actor/templates/attributes.mjs"
+    ]
+  }
+}

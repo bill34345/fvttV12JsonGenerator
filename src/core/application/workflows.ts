@@ -41,6 +41,7 @@ import {
   runItemIntake as runPackageItemIntake,
 } from '@fvtt-json-generator/intake-ai/item-orchestrator';
 import {
+  assertSpeciesResumeTarget as assertPackageSpeciesResumeTarget,
   resumeSpeciesIntake as resumePackageSpeciesIntake,
   runSpeciesIntake as runPackageSpeciesIntake,
 } from '@fvtt-json-generator/intake-ai/species-orchestrator';
@@ -260,6 +261,14 @@ export function resumeSpeciesIntake(
   decisionsPath: string,
   provider: SpeciesIntakeAiProvider,
   vaultPath?: string,
+  requestedTarget?: { fvttVersion: '12' | '14'; effectProfile: 'core' },
 ): Promise<SpeciesIntakeRunResult> {
-  return resumePackageSpeciesIntake(runPath, decisionsPath, provider, vaultPath);
+  return resumePackageSpeciesIntake(runPath, decisionsPath, provider, vaultPath, requestedTarget);
+}
+
+export function assertSpeciesResumeTarget(
+  runPath: string,
+  requestedTarget: { fvttVersion: '12' | '14'; effectProfile: 'core' },
+): void {
+  return assertPackageSpeciesResumeTarget(runPath, requestedTarget);
 }

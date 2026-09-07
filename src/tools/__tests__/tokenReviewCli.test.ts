@@ -1,3 +1,4 @@
+import { runTestProcess } from '../../../tests/helpers/subprocess';
 import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -5,6 +6,12 @@ import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 
 describe('token-review CLI', () => {
+  test('kills and reaps a child that never exits before rejecting', async () => {
+    await expect(runCli([], {
+      timeoutMs: 50,
+      command: [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    })).rejects.toThrow('was reaped');
+  });
   test('token-review --dry-run reports stats without writing artifacts', async () => {
     const root = mkdtempSync(join(tmpdir(), 'token-review-cli-dry-'));
     try {
@@ -61,18 +68,11 @@ describe('token-review CLI', () => {
   }, 60_000);
 });
 
-async function runCli(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const proc = Bun.spawn(['bun', 'run', 'src/tools/crawlSites.ts', ...args], {
+async function runCli(args: string[], options: { timeoutMs?: number; command?: string[] } = {}): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return runTestProcess({
+    cmd: options.command ?? [process.execPath, 'src/tools/crawlSites.ts', ...args],
     cwd: resolve(process.cwd()),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  return { exitCode, stdout, stderr };
+  }, options.timeoutMs ?? 30_000);
 }
 
 async function writeTokenReviewFixture(root: string): Promise<{

@@ -1,3 +1,4 @@
+import { runTestProcess } from './helpers/subprocess';
 import { describe, expect, test } from 'bun:test';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,8 +8,8 @@ import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from '../src/core/intake/__test
 const SOURCE = resolve('src/core/intake/__tests__/fixtures/lurker-in-the-dark.raw.txt');
 
 describe('AI monster intake CLI', () => {
-  test('dry-run does not require AI configuration or write a run bundle', () => {
-    const proc = Bun.spawnSync({
+  test('dry-run does not require AI configuration or write a run bundle', async () => {
+    const proc = await runTestProcess({
       cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-monsters', SOURCE, '--dry-run', '--fvtt-version', '14', '--effect-profile', 'core'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
       env: withoutIntakeEnv(),
@@ -19,8 +20,8 @@ describe('AI monster intake CLI', () => {
     expect(proc.stderr.toString()).toBe('');
   });
 
-  test('fails closed without dedicated provider configuration outside dry-run', () => {
-    const proc = Bun.spawnSync({
+  test('fails closed without dedicated provider configuration outside dry-run', async () => {
+    const proc = await runTestProcess({
       cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-monsters', SOURCE],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
       env: withoutIntakeEnv(),
@@ -32,6 +33,7 @@ describe('AI monster intake CLI', () => {
 
   test('CLI intake doctor reports a reachable Codex OAuth bridge without exposing bridge credentials', async () => {
     const server = Bun.serve({
+      hostname: '127.0.0.1',
       port: 0,
       fetch(request) {
         const pathname = new URL(request.url).pathname;
@@ -45,15 +47,10 @@ describe('AI monster intake CLI', () => {
       env.MONSTER_INTAKE_AUTH_MODE = 'codex-oauth';
       env.MONSTER_INTAKE_CODEX_OAUTH_BASE_URL = `${server.url}v1`;
       env.MONSTER_INTAKE_CODEX_OAUTH_BRIDGE_TOKEN = 'secret-bridge-token';
-      const proc = Bun.spawn({
+      const { exitCode, stdout, stderr } = await runTestProcess({
         cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--intake-doctor'],
         cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', env,
       });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        proc.exited,
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
 
       expect(exitCode).toBe(0);
       expect(stderr).toBe('');
@@ -67,6 +64,7 @@ describe('AI monster intake CLI', () => {
 
   test('reports accepted portable caster spells separately as pending target-world resolution', async () => {
     const server = Bun.serve({
+      hostname: '127.0.0.1',
       port: 0,
       async fetch(request) {
         const body = await request.json() as any;
@@ -85,7 +83,7 @@ describe('AI monster intake CLI', () => {
     copyFileSync(resolve('data/spells.ldb'), join(root, 'data/spells.ldb'));
     copyFileSync(resolve('data/golden-master.json'), join(root, 'data/golden-master.json'));
     try {
-      const proc = Bun.spawn({
+      const { exitCode, stdout, stderr } = await runTestProcess({
         cmd: [
           'bun', '--no-env-file', 'run', resolve('src/index.ts'),
           '--intake-monsters', resolve('src/core/intake/__tests__/fixtures/rat-warlock.raw.txt'),
@@ -104,11 +102,6 @@ describe('AI monster intake CLI', () => {
           MONSTER_INTAKE_MODEL: 'test-model',
         },
       });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        proc.exited,
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
 
       expect({ exitCode, stdout, stderr }).toEqual({ exitCode: 0, stdout: expect.any(String), stderr: '' });
       expect(stdout).toContain('鼠神邪术师: accepted');
@@ -128,8 +121,8 @@ describe('AI monster intake CLI', () => {
     }
   }, 20_000);
 
-  test('legacy raw ingestion fails when the rule-based splitter finds zero monsters', () => {
-    const proc = Bun.spawnSync({
+  test('legacy raw ingestion fails when the rule-based splitter finds zero monsters', async () => {
+    const proc = await runTestProcess({
       cmd: ['bun', '--no-env-file', 'run', 'src/index.ts', '--ingest-plaintext', SOURCE, '--dry-run'],
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
     });
