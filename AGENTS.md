@@ -8,15 +8,15 @@
 ## 项目与默认目标
 
 - 本项目把 Obsidian 中文 YAML/Markdown、英文 bestiary Markdown 和正式 Intake 接受的文本，转换为 Foundry Virtual Tabletop（Foundry VTT）dnd5e Actor/Item JSON。默认输入、输出分别位于 `obsidian/dnd数据转fvttjson/input` 与 `obsidian/dnd数据转fvttjson/output`。
-- 最终交付物必须由项目 CLI 或正式 workflow 生成；不得手写、手工修补或把临时 JSON 冒充正式结果。
+- Actor/Item JSON 最终交付物必须由项目 CLI 或正式 workflow 生成；不得手写、手工修补或把临时 JSON 冒充正式结果。
 - 用户未指定目标时，代理必须显式使用 `--fvtt-version 14 --effect-profile core`，并按 Foundry `14.364` / dnd5e `5.3.3` 验证。CLI/workflow 省略版本时默认 v12，Web 界面初始选择为 v14；代理操作默认不改变这两个入口的产品行为。用户明确要求 v12、`modded-v14` 或其他已支持目标时按请求执行。
 - 版本相关开发按 [`docs/runbooks/foundry-v14-development-source-routing.md`](docs/runbooks/foundry-v14-development-source-routing.md) 选择最小且足够的资料组合；Context7、官方 API/Wiki、上游源码、官方 CLI、模板与本机 MCP 都是可选入口，不要求每次全部调用。
 - Context7 主要用于发现、速查和定位候选 API；最终版本相关结论仍优先核对 `references/` 的 tracked provenance、配置的完整 reference cache 或精确版本官方源码。不得凭记忆、未锁版本的搜索结果或“最新版”推断 flags、hooks、schema 或模块行为。
 
-## 每次任务开始的硬门禁
+## 任务范围与工作区门禁
 
-- 第一次工作更新必须说明：`AGENTS.md` 已生效、本次使用的功能路径、机械验证与真实语义验收分别是什么。
-- 修改目录前读取路径上最近的局部 `AGENTS.md`。根文件只放全仓不变量和导航；局部文件只补该 owner 的用途、边界、入口和验收。
+- 非微小工程任务的第一次工作更新说明功能路径及机械/语义完成标准；简单问答或纯文字修改无需重复完整门禁回执。
+- 首次进入修改范围时读取路径上适用的局部 `AGENTS.md`；已读且未变的文件无需每次编辑前重读。根文件只放全仓不变量和导航；局部文件只补该 owner 的用途、边界、入口和验收。
 - 只读审计可在主工作区执行；任何会修改仓库的任务必须按 [`docs/runbooks/worktree-development.md`](docs/runbooks/worktree-development.md) 创建唯一、短寿命的 sibling worktree 和 `codex/<timestamp>-<task-slug>` 分支，不得直接在 `master` 工作区开发。
 - 创建 worktree 前检查 `git status --short --branch` 和 `git worktree list --porcelain`。若任务不依赖主工作区未提交成果，从已提交的 `master` 建立；若依赖，停止并让用户决定如何整合，禁止自动 stash、自动提交或忽略相关成果。
 - 保护所有无关 tracked/untracked 用户文件；不得覆盖、丢弃、暂存或提交任务范围外的改动。
@@ -62,6 +62,12 @@
 - 删除任务开始前已存在的 tracked 文件必须先询问；未知既有 untracked 文件必须保留。
 - worktree/branch 只有在证明由本任务创建、状态 clean、改动已按授权集成并推送后才能清理；细节见 worktree runbook。
 - commit、合并和 push 需要一次明确发布授权。发布前必须证明主工作区索引为空、topic 与既有 dirty/untracked 路径不重叠、用户基线保持不变；无法证明时停止，禁止 stash 或在其他 worktree 背后更新 `master` ref。
+
+## 按改动选择验证
+
+- 下列及局部文件的测试命令用于对应实现、构建或运行时变化；纯文档/指令修改检查表达、引用、作用域和生成一致性，不因此运行无关全仓测试或启动 Foundry。
+- parser/generation/inference 的 anti-overfit、正式数据来源验收、安全包装器和受影响 runtime 门禁保持必需；同一改动已通过的共同检查无需因多层文档重复运行。
+- 在当前授权范围内可运行本地安全测试、修复本次引入的失败并重跑受影响检查；失败涉及生产、用户数据或范围外改动时按对应边界处理。
 
 ## 关键命令
 

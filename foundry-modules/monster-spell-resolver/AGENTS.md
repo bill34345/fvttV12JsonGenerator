@@ -19,7 +19,7 @@
 - 本目录是唯一功能 owner：浏览器源码和 manifest 位于 `src/`，构建位于 `build.ts`，本地 Lab 安装与一次性世界准备位于 `lab.ts`、`labCli.ts` 和 `labConfig.ts`。旧 `src/foundry/monster-spell-resolver`、`scripts/buildSpellResolver.ts` 与 `scripts/foundry-lab/spellResolver*.ts` 不得恢复为实现或兼容副本。
 - 本地构建、安装与短时 runtime 目标是 `F:\FoundryLab\foundry-v14` 的 v14 集成测试环境；生产只指远程服务器 8080 Foundry。生产只读核对可在目标明确、带 `--apply` 与 `--allow-production-read`、并通过外部配置 guard 时自主执行；生产安装、hydration 和其他写入仍须再次明确授权。
 - 本地 Lab 安装与短时测试可在完成 PID、端口、路径和运行者预检，且确认 mirror 未被他人占用后自主执行；若被占用则等待协调或释放，不得自行停止、复用或替换该环境。
-- 本地事务测试只能使用停止状态的一次性测试世界，保留原模块可恢复备份、hash、锁和清理证据。会故意损坏、删除、链接、锁定或替换路径的 fixture 必须使用随机临时根；只能从 F 盘只读加载匹配 14.364 的 `classic-level`。
+- 本地事务测试只能使用停止状态的一次性测试世界，保留 hash、锁和清理证据，遵守根级无备份规则；事务的运行时补偿契约仍须验证。会故意损坏、删除、链接、锁定或替换路径的 fixture 必须使用随机临时根；只能从 F 盘只读加载匹配 14.364 的 `classic-level`。
 - Foundry/dnd5e hook、Activity 和 Item 结构必须对照锁定版本资料，不得凭最新版或记忆实现。
 
 ## 验证
