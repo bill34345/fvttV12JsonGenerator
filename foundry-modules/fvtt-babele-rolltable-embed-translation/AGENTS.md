@@ -10,7 +10,7 @@
 - 只包装 `RollTable.prototype._buildEmbedHTML`；翻译失败时保留原生输出。
 - TableResult 按 `_id` 优先、`range` 回退匹配；文档型结果必须保留 `documentUuid` 和 content-link 语义。
 - 渲染只使用临时数据和 DOM，不调用 `update`、`updateSource`、`updateEmbeddedDocuments` 或 `game.settings.set`。
-- 本地安装只允许指向配置的 `F:\FoundryLab\foundry-v14\data\server-mirror`，替换已有同 ID 模块必须先备份并验证归属。
+- 本地安装只允许指向配置的 `F:\FoundryLab\foundry-v14\data\server-mirror`，替换已有同 ID 模块必须验证归属并记录前后清单与哈希；遵守根级无备份运维规则。
 
 ## 验证
 

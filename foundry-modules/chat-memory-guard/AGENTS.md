@@ -11,7 +11,7 @@
 - 诊断和日志只记录计数、估算字节、失败数和有效设置，不得记录聊天正文、用户秘密或凭据。
 - thumbnail 是页面会话级缓存，刷新/关闭后释放；不得把自动缩略图描述成阻止了首次原图请求。
 - 本模块是独立 release unit，不依赖 generator、AI Intake、workflow、crawler 或其他 Foundry 模块私有实现。
-- 本地 installer 不是生产部署；替换已存在同 ID 模块前必须执行 owned-module 检查和备份。
+- 本地 installer 不是生产部署；替换已存在同 ID 模块前必须执行 owned-module 检查并记录前后文件清单与哈希；遵守根级无备份运维规则。
 
 ## 验证
 
