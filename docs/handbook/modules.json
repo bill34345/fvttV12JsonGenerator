@@ -1,0 +1,760 @@
+[
+  {
+    "id": "chat-memory-guard",
+    "title": "聊天内存保护",
+    "category": "maintain",
+    "summary": "限制当前浏览器中已渲染聊天卡片和头像媒体的占用，保留世界聊天记录。",
+    "when": "聊天栏长时间堆积卡片或头像媒体造成浏览器压力时，按世界默认值或当前客户端覆盖进行限制。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM（修改世界默认值时）"
+    ],
+    "steps": [
+      {
+        "title": "启用并打开配置",
+        "text": "在精确支持版本的世界中启用 Chat Memory Guard；进入“游戏设置 → 模块设置 → 聊天内存保护”。模块会在世界准备完成后接管当前聊天窗口和聊天弹窗。"
+      },
+      {
+        "title": "设置世界默认值",
+        "text": "GM 设置启用开关、保留的已渲染消息数（20–200）、头像来源（系统、Token、Actor 或隐藏）、原图或会话级 WebP，以及缩略图最长边（48–256 px）和质量（40–95）。保存后当前聊天立即重新渲染。"
+      },
+      {
+        "title": "设置个人覆盖",
+        "text": "每位用户可以选择跟随世界默认值，或只为当前浏览器保存覆盖值。玩家的 client 设置不会改写 GM 的世界默认值。"
+      },
+      {
+        "title": "观察聊天与诊断",
+        "text": "打开聊天栏或聊天弹窗观察卡片保留和头像显示；需要排障时，在浏览器控制台读取 game.modules.get(\"chat-memory-guard\").api.getStats()，只查看渲染数、裁剪数、缩略图估算字节、失败数和有效设置。"
+      },
+      {
+        "title": "运行离线检查",
+        "text": "维护者从仓库根目录运行模块测试；该检查属于机械证据，不能代替真实长时间跑团观察。",
+        "command": "bun run test:chat-memory-guard"
+      }
+    ],
+    "outputs": [
+      "当前浏览器聊天 DOM 按有效保留数裁剪",
+      "按设置显示系统、Token 或 Actor 头像，或使用会话级 WebP 缩略图",
+      "game.modules.get(\"chat-memory-guard\").api.getStats() 诊断结果"
+    ],
+    "limits": [
+      "只限制当前浏览器里已渲染的聊天卡片，不删除世界聊天记录。",
+      "缩略图只存在于当前页面会话，不能阻止 dnd5e 创建头像前的首次原图请求",
+      "短时 A/B、单元测试和构建不能证明长时间跑团内存永不增长",
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3"
+    ],
+    "keywords": [
+      "聊天",
+      "内存",
+      "DOM",
+      "头像",
+      "缩略图",
+      "Chat Memory Guard"
+    ],
+    "sources": [
+      "foundry-modules/chat-memory-guard/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/chat-memory-guard/"
+    ],
+    "module": "chat-memory-guard"
+  },
+  {
+    "id": "fvtt-babele-rolltable-embed-translation",
+    "title": "Babele 随机表嵌入翻译兼容",
+    "category": "maintain",
+    "summary": "在 Babele 翻译已经存在时，修复 Foundry v14 的 @Embed 随机表结果仍显示英文的渲染缺口。",
+    "when": "Journal、聊天或其他文本中的 Compendium RollTable 使用 @Embed 后，表名已翻译但结果行仍为英文时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "Babele 2.9.1",
+      "libWrapper 1.13.5.1",
+      "可读取的 Babele 随机表翻译文件"
+    ],
+    "steps": [
+      {
+        "title": "准备依赖并启用模块",
+        "text": "在目标世界先启用 Babele 与 libWrapper，再启用本模块并重新加载世界。模块在 init 阶段只注册 RollTable 的渲染包装；依赖缺失时不会提供翻译覆盖。"
+      },
+      {
+        "title": "准备可读取的随机表",
+        "text": "确保目标 Compendium RollTable 对当前世界可读，并由 Babele 提供对应翻译。翻译源继续由现有 Babele 翻译包维护，本模块不编辑翻译文件。"
+      },
+      {
+        "title": "渲染 @Embed",
+        "text": "在 Journal、聊天或其他支持富文本的地方插入目标随机表的 @Embed，再打开包含该表的页面，核对表名和各范围对应的中文结果。"
+      },
+      {
+        "title": "核对结果与链接",
+        "text": "检查各个范围是否仍对应正确的结果。若使用狂野魔法浪涌或困惑术，可按原始说明逐行对照；文档型结果应仍能打开原来的目标条目。"
+      },
+      {
+        "title": "运行离线检查",
+        "text": "维护者从仓库根目录运行模块测试；测试和构建只证明静态包装逻辑，实际表格行仍需在锁定版本的 Foundry UI 中复核。",
+        "command": "bun run test:fvtt-babele-rolltable-embed-translation"
+      }
+    ],
+    "outputs": [
+      "Compendium RollTable @Embed 中按范围显示的中文结果",
+      "文档型结果继续生成指向原 UUID 的 content-link",
+      "翻译失败时保留 Foundry 原生嵌入结果"
+    ],
+    "limits": [
+      "只修正随机表嵌入的显示，不改写随机表、角色、物品、日志或世界设置。",
+      "Babele 或 libWrapper 不可用、翻译失败或数据无法对齐时会保持原生输出或停用覆盖",
+      "依赖版本锁定为 Foundry 14.364、dnd5e 5.3.3、Babele 2.9.1 和 libWrapper 1.13.5.1",
+      "单测、构建和安装校验不等于实际 UI 中的 25 行、5 行和文档链接验收"
+    ],
+    "keywords": [
+      "Babele",
+      "@Embed",
+      "RollTable",
+      "随机表",
+      "翻译",
+      "content-link"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-babele-rolltable-embed-translation/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-babele-rolltable-embed-translation/"
+    ],
+    "module": "fvtt-babele-rolltable-embed-translation"
+  },
+  {
+    "id": "fvtt-battlefield-painter",
+    "title": "战场地形画笔",
+    "category": "play",
+    "summary": "GM 在 Foundry v14 画布上绘制可追踪、可擦除和可回滚的火焰、冰霜与荆棘地形。",
+    "when": "跑团中需要快速铺设地形、改变阶段、表达移动代价或清理本模块地形文档时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM",
+      "已打开并激活的场景和可用画布网格"
+    ],
+    "steps": [
+      {
+        "title": "启用并打开场景",
+        "text": "以 GM 身份在精确支持版本的世界中启用模块，然后打开并激活要编辑的场景。非 GM、无活动场景或网格接口不可用时不会允许修改。"
+      },
+      {
+        "title": "打开地形画笔",
+        "text": "在场景控制组的 Tiles 工具栏点击火焰图标“战场地形画笔”，打开 ApplicationV2 控制面板。该入口只在精确版本和 GM 客户端中出现。"
+      },
+      {
+        "title": "选择地形与画笔",
+        "text": "选择火焰、冰霜或荆棘，选择阶段 I 或 II，再选择绘制、擦除或切换阶段。P1 开启时还可选择自由、直线或填充形状，以及 0–4 格笔刷半径。"
+      },
+      {
+        "title": "在画布上操作",
+        "text": "点击“启用画笔”后，在地图上按住左键拖动，松开时一次创建该笔画；擦除只处理本模块拥有的文档，切换阶段作用于命中的完整笔画批次。P1 提供撤销和重做。"
+      },
+      {
+        "title": "处理清除与旧声音",
+        "text": "需要清理本场景地形时先查看数量预览，再在确认框中确认；发现旧版本 AmbientSound 时也必须由 GM 显式确认清理。旧声音清理不可撤销，模块不会自动迁移或删除场景数据。"
+      }
+    ],
+    "outputs": [
+      "带 fvtt-battlefield-painter 所有权标记的 Tile、Region、Wall 和火焰 AmbientLight 场景文档",
+      "火焰、冰霜和荆棘的两个阶段；成熟荆棘阶段可形成 Wall 边界",
+      "Region 移动消耗、P2 火焰/冰霜画布效果，以及本模块笔画历史和回滚能力"
+    ],
+    "limits": [
+      "版本锁定为 Foundry 14.364 与 dnd5e 5.3.3，只有 GM 能修改场景",
+      "当前是 0.3.0-alpha.1 P2 alpha；Fire B13 的完整真实 Canvas 验收仍待完成，其他运行时结论以对应 micro-batch 记录为准",
+      "不提供伤害自动结算、12 色变体、跨客户端并发锁或第三方自动化集成",
+      "新版本不创建 AmbientSound；旧环境音清理不可撤销，静态测试和构建不等于真实画布验收"
+    ],
+    "keywords": [
+      "战场",
+      "地形",
+      "火焰",
+      "冰霜",
+      "荆棘",
+      "画笔",
+      "Canvas",
+      "Region"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-battlefield-painter/README.zh-CN.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/acceptance-checklist.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-battlefield-painter/"
+    ],
+    "module": "fvtt-battlefield-painter"
+  },
+  {
+    "id": "fvtt-blood-hunter-2024",
+    "title": "血猎手 2024",
+    "category": "library",
+    "summary": "提供血猎手 2024 的职业、结社和特性合集，使用 dnd5e 原生升级流程。",
+    "when": "给新角色添加血猎手职业、查看结社特性，或只读检查旧角色与当前内容差异时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM",
+      "可被 canonical flags 或严格 legacy 条件唯一匹配的 Blood Hunter Actor（迁移时）"
+    ],
+    "steps": [
+      {
+        "title": "启用并检查内容包",
+        "text": "在精确支持版本的世界中启用模块，打开 Compendium 目录确认“血猎手 2024：职业”“血猎手 2024：子职”和“血猎手 2024：特性”三个 Item pack 可读。"
+      },
+      {
+        "title": "给新角色添加职业",
+        "text": "从 classes（职业）合集中把“血猎手”拖入角色卡，按 dnd5e 原生 Advancement 提示完成选择。"
+      },
+      {
+        "title": "按原生流程升级",
+        "text": "通过角色卡的升级流程选择结社和对应特性；需要 GM/玩家判断的规则按原文处理，不把 assisted 项当作全自动。"
+      },
+      {
+        "title": "更新合集后检查角色",
+        "text": "已经加入角色卡的职业和特性是快照，模块更新不会实时替换它们。核对角色已有等级、选择和消耗，再决定是否需要另行处理。"
+      },
+      {
+        "title": "旧角色仅做只读预览",
+        "text": "GM 在“游戏设置 → 模块设置”打开“血猎手 2024：角色迁移”，输入 Actor ID 或精确名称，点击 Preview 查看差异。当前 Create migrated copy 与 Apply original 流程要求创建副本和 JSON 备份，与本项目无备份规则冲突，因此停在 Preview，不继续迁移。"
+      }
+    ],
+    "outputs": [
+      "classes、subclasses、features 三个 dnd5e Item Compendium pack",
+      "迁移 Preview、验证后的 Actor 副本和 canonical/migration 契约证明",
+      "仅更新模块拥有 Blood Hunter Item 的原 Actor 投影，以及模块要求的 JSON backup"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；MIDI-QOL 14.0.11 和 DAE 14.0.12 是推荐依赖而非硬依赖",
+      "不会自动 ready 扫描 Actor；不修改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags",
+      "旧安装替换及角色迁移包含备份行为，与本项目无备份规则冲突。当前仅介绍已安装内容的使用和只读 Preview；执行这些旧写入流程前须先处理冲突，不能用隐藏副本绕过。",
+      "这是构建快照，不实时同步远程 homebrew、旧 side-data 或 Actor 变化；本地静态检查不等于真实游戏性验收"
+    ],
+    "keywords": [
+      "Blood Hunter",
+      "血猎手",
+      "职业",
+      "子职",
+      "迁移",
+      "Actor",
+      "Activity",
+      "Effect"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md",
+      "README.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-blood-hunter-2024/"
+    ],
+    "module": "fvtt-blood-hunter-2024"
+  },
+  {
+    "id": "fvtt-homebrew-species",
+    "title": "自制种族内容",
+    "category": "library",
+    "summary": "提供 accepted homebrew Species 的纯内容 Item 合集；V14 是运行目标，V12 产物只作为明确标记的静态候选。",
+    "when": "需要在精确 dnd5e v14 世界浏览或使用已接受的自制种族与种族特性时使用；V12 仅用于静态审阅。",
+    "requires": [
+      "Foundry VTT 14.364 + dnd5e 5.3.3（运行包）",
+      "Foundry VTT 12.331 + dnd5e 4.3.9 + 2024 规则（仅 V12 static candidate）"
+    ],
+    "steps": [
+      {
+        "title": "启用 V14 内容包",
+        "text": "在 Foundry 14.364 / dnd5e 5.3.3 世界启用模块，打开 Compendium 目录确认“Homebrew Species / 自制种族”和“Species Features / 种族特性”两个 Item pack 可读。"
+      },
+      {
+        "title": "浏览种族与特性",
+        "text": "在两个 Item pack 中查看 Species 和 features；这是 content-only 模块，没有浏览器 JavaScript、socket、设置菜单、自动迁移或世界扫描。"
+      },
+      {
+        "title": "按系统流程使用",
+        "text": "在 dnd5e 角色卡使用 Add Species（添加种族）流程，选择本模块的种族条目，再按提示应用特性。已授予角色的特性是快照，更新合集不会自动替换。"
+      },
+      {
+        "title": "检查 V12 静态候选",
+        "text": "维护者需要 V12 候选时可运行下面的构建命令；构建会写入 dist/v12-candidate，不能称为只读操作。它不调用安装器，也不证明 V12 角色流程可用。",
+        "command": "bun run build:homebrew-species:v12-candidate"
+      },
+      {
+        "title": "核对 V14 构建",
+        "text": "维护者可从仓库根目录运行 V14 构建检查；ledger、Markdown 和 target hash 任一过期都会 fail-closed。",
+        "command": "bun run build:homebrew-species"
+      }
+    ],
+    "outputs": [
+      "species Item pack 和 features Item pack",
+      "V14 target-specific 的文档、UUID、logical hash、coverage ledger 与确定性 ZIP",
+      "V12/12.331 candidate 构建及 supportStatus: static-candidate 身份标记"
+    ],
+    "limits": [
+      "V14 产物精确绑定 Foundry 14.364 / dnd5e 5.3.3；V12 候选精确绑定 Foundry 12.331 / dnd5e 4.3.9 / Core / 2024",
+      "V12 candidate build/verify 不调用安装器，也不证明 Add Species、升级、HP/AC、次数、Long Rest 或重开读回",
+      "没有浏览器运行时、socket、自动迁移和世界扫描；ItemGrant 依赖本模块 features pack，已嵌入 Actor 的 Feature 不会自动更新",
+      "ledger、Markdown、package 或 target hash 过期时拒绝构建；静态构建与 LevelDB 校验不等于 Foundry runtime、生产或长期跑团验收"
+    ],
+    "keywords": [
+      "自制种族",
+      "Species",
+      "种族特性",
+      "Compendium",
+      "ItemGrant",
+      "V14",
+      "V12 candidate"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-homebrew-species/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-homebrew-species/"
+    ],
+    "module": "fvtt-homebrew-species"
+  },
+  {
+    "id": "fvtt-house-rules",
+    "title": "本团村规",
+    "category": "play",
+    "summary": "以显式标签和 GM 权威为前提，提供治疗药水、生命骰、弹药、隐匿和自然 1/重击等村规辅助。",
+    "when": "希望把本团约定接入 dnd5e 原生骰子、Activity、状态和 Document API，同时保留 GM 裁定时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "活动 GM",
+      "药水和弹药上的显式 fvtt-house-rules flags（使用对应功能时）"
+    ],
+    "steps": [
+      {
+        "title": "启用并确认默认状态",
+        "text": "在精确支持版本的世界中启用模块并重新加载；首次提示说明所有会修改数据的规则默认关闭。"
+      },
+      {
+        "title": "由 GM 配置规则",
+        "text": "在 Foundry“配置设置 → 模块设置”中逐项启用需要的功能，并设置低属性阈值、自然 1 后果倍率/其他 RollTable UUID 和隐匿全速等级；这些世界设置只有 GM 可改。"
+      },
+      {
+        "title": "准备显式标签",
+        "text": "在 Item 数据中使用 flags.fvtt-house-rules.potion 或 flags.fvtt-house-rules.ammo 写明药水骰、弹药 key 和 tier（0–3）。模块不从中文或英文名称猜测药水、弹药、武器或特性。"
+      },
+      {
+        "title": "在跑团中调用助手",
+        "text": "使用 game.fvttHouseRules 的 GM API 或对应原生事件处理药水 preview/apply/restore、生命骰赌博、弹药记录/找回、隐匿提示和自然 1 后果；GM-only 卡片确认前不会执行伤害、反击或武器损坏。"
+      },
+      {
+        "title": "运行规则检查",
+        "text": "维护者从仓库根目录运行模块测试；通过只代表规则投影与构建层检查，真实 Foundry 多客户端语义仍需单独回放。",
+        "command": "bun run test:house-rules"
+      }
+    ],
+    "outputs": [
+      "显式模块 flags、幂等事务 ledger 和 GM 世界设置",
+      "治疗药水的三个原生 heal Activity、生命骰与弹药账本、隐匿提醒",
+      "GM 确认的自然 1 后果卡和支持路径中的重击首颗伤害骰按满值投影"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；所有修改由确定性的活动 GM 执行",
+      "缺少显式标签、来源不唯一、对象无权限或版本不精确时失败关闭；不会按名称猜测或扫描全世界",
+      "MIDI-QOL 14.0.11、DAE 14.0.12 和 Die So Nice 6.2.9 的扩展路径只在精确版本组合下使用，其他组合保持原生或失败关闭",
+      "弹药找回、自然 1 后果、武器修复和重击适配都不自动代替 GM 裁定；盲骰原始面值不写入模块 flags、消息或审计摘要"
+    ],
+    "keywords": [
+      "村规",
+      "治疗药水",
+      "生命骰",
+      "弹药",
+      "隐匿",
+      "自然 1",
+      "重击",
+      "GM"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-house-rules/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-house-rules/"
+    ],
+    "module": "fvtt-house-rules"
+  },
+  {
+    "id": "fvtt-injury-fading-spirits",
+    "title": "伤势与消逝的灵魂",
+    "category": "play",
+    "summary": "以活动 GM 为权威管理 0–3 层伤势、死亡豁免扩展和 Critical Role 风格的消逝灵魂复活流程。",
+    "when": "跑团需要把倒地、恢复、伤势、复活仪式和 GM 裁定记录到 Actor 长期状态时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "活动 GM",
+      "要管理的 character Actor 或其 Token"
+    ],
+    "steps": [
+      {
+        "title": "启用并配置",
+        "text": "在精确支持版本的世界启用模块；在“配置设置 → 模块设置”中启用“伤势与消逝灵魂自动化”，按需选择是否管理 NPC。首次设置提示不会自动打开修改功能。"
+      },
+      {
+        "title": "打开 Actor 面板",
+        "text": "GM 可在 Actor 目录条目上右键选择“伤势与消逝的灵魂”，或先选中 Token 后在聊天输入 /ifs；模块只读取明确选择的 Actor，玩家入口会转交活动 GM 验权。"
+      },
+      {
+        "title": "调整或观察伤势",
+        "text": "在面板设置 0–3 层伤势，或在 Token 状态列表中左键增加、右键减少。模块还会观察 HP 归零、首次恢复正 HP、成功短休/长休和死亡豁免事件，并把状态投影到 Actor flag、Active Effect 和 Token 图标。"
+      },
+      {
+        "title": "开始复活仪式",
+        "text": "在复活仪式向导选择普通、最终、快速或 9 环/奇迹模式；普通/最终仪式最多填写三名不同参与者的 Actor UUID、技能、可选属性覆盖、DC 10–20 和优势状态，快速复活填写施法关键属性调整值。"
+      },
+      {
+        "title": "由 GM 结算",
+        "text": "在待处理仪式卡片或面板中查看原生关联检定，逐项确认贡献成功/失败和灵魂是否愿意回归，再结算仪式。成功只记录回归和下一次恢复保护；实际 HP 恢复仍由对应法术或 Activity 完成。"
+      }
+    ],
+    "outputs": [
+      "Actor flags 中的伤势、复活尝试、锁定和历史状态",
+      "伤势 Active Effect、Token HUD 分层状态、死亡豁免自然 19/20 处理",
+      "复活贡献请求、GM-only 结算卡和不含盲骰原始面的审计摘要"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；长期状态只有活动 GM 写入",
+      "三层伤势时先让 GM 选择，不会预写死亡；直接死亡、环境例外、灵魂意愿和贡献结果都保留 GM 确认",
+      "不依赖 MIDI-QOL、DAE 或其他村规模块；外部复活 Activity 若直接恢复 HP，应由活动 GM 使用公开 suppression API 包裹事务",
+      "ChatMessage 只是交互投影，不是历史事实来源；自动测试和本地 Lab 不能代替 GM/玩家多客户端或长期跑团验收"
+    ],
+    "keywords": [
+      "伤势",
+      "消逝的灵魂",
+      "复活",
+      "死亡豁免",
+      "倒地",
+      "Actor flag",
+      "活动 GM"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-injury-fading-spirits/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-injury-fading-spirits/"
+    ],
+    "module": "fvtt-injury-fading-spirits"
+  },
+  {
+    "id": "fvtt-json-forge",
+    "title": "FVTT JSON Forge",
+    "category": "convert",
+    "summary": "在 Foundry 内生成、审阅怪物与物品；由 GM 确认后创建，并读取结果核对。",
+    "when": "已经打开 Foundry，希望直接把结构化资料或原始文本整理成世界中的 Actor/Item 时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM",
+      "结构化 Actor/Item 来源，或已完成审阅的 Intake 结果",
+      "AI 模式的客户端 Provider、协议、模型和 API Key（仅使用 AI 时）"
+    ],
+    "steps": [
+      {
+        "title": "启用并打开三个入口",
+        "text": "在精确支持版本的世界启用模块；GM 在“配置设置 → 模块设置”中会看到 Forge Actor、Forge Item 和 Forge Intake 三个入口。非 GM、版本不符或 ApplicationV2 不可用时不会创建世界文档。"
+      },
+      {
+        "title": "生成 Actor",
+        "text": "在 Forge Actor 中粘贴或导入结构化 Actor 来源，填写显示名称并完成生成。先阅读预览、来源、验证状态和诊断，只有通过检查的 accepted 结果才允许创建。"
+      },
+      {
+        "title": "生成 Item",
+        "text": "在 Forge Item 中提交单一、受支持的结构化物品来源，核对预览后创建或复用世界物品。这个入口不会替你修改角色卡。"
+      },
+      {
+        "title": "审阅 Intake",
+        "text": "在 Forge Intake 选择 plaintext-actor、ai-monster 或 ai-item；Analyze 只建立来源证据，Generate Candidate 后还必须同时通过 formal verification 和 review，最后由 GM 点击 Confirm Create。"
+      },
+      {
+        "title": "管理复查与批量队列",
+        "text": "在 Forge Intake 管理来源库、审查包、混合 Actor/Item 合集与批量队列。历史 accepted 记录需显式开启新尝试；队列一次运行一项。刷新或关闭页面会中断任务，不会自动重发 AI 请求。"
+      }
+    ],
+    "outputs": [
+      "带 Forge source/artifact identity 的 Foundry Actor 或 world Item，以及创建后的 readback 结果",
+      "正式验证、审阅、诊断、来源库、Collection 和可恢复队列数据",
+      "按 sourceId 派生的确定性 Document ID 和重复复用状态"
+    ],
+    "limits": [
+      "只支持 Foundry 14.364 / dnd5e 5.3.3 / core profile，且所有创建入口只允许 GM",
+      "不支持 OCR、PDF、图片 Intake、update/overwrite、按名称合并、embedded Item 产品入口或跨 Document 原子事务",
+      "API Key 默认只在当前页面内存，显式持久化时也只写当前浏览器 local storage；不会进入世界 Document、Chat、review bundle、Collection、日志或响应",
+      "页面关闭后不会继续 AI/HTTP；本地构建或 Lab 结果不等于目标世界 runtime、生产或四小时真实会话验收"
+    ],
+    "keywords": [
+      "Forge",
+      "Actor",
+      "Item",
+      "Intake",
+      "structured",
+      "review",
+      "accepted",
+      "readback"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-json-forge/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-json-forge/"
+    ],
+    "module": "fvtt-json-forge"
+  },
+  {
+    "id": "fvtt-selected-token-sync",
+    "title": "框选 Token 同步",
+    "category": "play",
+    "summary": "把一个 Token HUD 发起的核心状态和 Foundry v14 movementAction 同步到当前选中的其他 Token。",
+    "when": "需要对一组 Token 同时切换状态或移动方式，并希望保留每位用户独立的开关时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "至少两个可控制且可更新的 Token",
+      "当前用户拥有对应 Actor/Token 权限"
+    ],
+    "steps": [
+      {
+        "title": "启用模块",
+        "text": "在精确支持版本的世界启用 Selected Token Sync；模块不会要求 libWrapper，也不修改 Foundry 或 dnd5e 原型。"
+      },
+      {
+        "title": "打开同步开关",
+        "text": "在 Token 场景控制栏打开“框选 Token 同步”。这是每位用户独立保存的 client setting，默认关闭；开关打开时模块会拒绝与已启用的 multistatus 同时工作。"
+      },
+      {
+        "title": "框选同步集合",
+        "text": "在画布上选中需要同步的多个 Token；模块以点击 HUD 时的选择为准，并对同一个 linked Actor 去重。"
+      },
+      {
+        "title": "从一个 HUD 发起操作",
+        "text": "打开选中集合中一个 Token 的 HUD，点击核心状态图标或 movementAction（walk、fly、swim、burrow、crawl、climb 或默认）。状态、overlay 和移动方式会复制到其余合格 Token。"
+      },
+      {
+        "title": "关闭并核对字段",
+        "text": "再次关闭工具栏开关即可恢复单 Token 行为；选择“默认”时核对 TokenDocument 的 movementAction 为 null，Actor 的 system.attributes.movement.walk 等速度字段不会被改写。"
+      }
+    ],
+    "outputs": [
+      "选中 Token 的核心 Active Effect 状态和 overlay 同步",
+      "选中 Token 的 movementAction 批量更新",
+      "按 Token/Actor 去重并带权限失败提示的同步事务"
+    ],
+    "limits": [
+      "仅处理 Token HUD 核心状态按钮和 v14 movementAction；物品、法术、DAE、MIDI-QOL 或其他模块直接产生的 ActiveEffect 不会触发同步",
+      "只更新 TokenDocument movementAction，不修改 Actor 移动速度或 Actor system 字段",
+      "同步由发起操作的当前客户端执行，权限不足或对象不唯一时会停止；multistatus 启用时模块会拒绝同步模式",
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；单测、构建和安装检查不代替真实 HUD/多客户端回放"
+    ],
+    "keywords": [
+      "Token",
+      "HUD",
+      "框选",
+      "状态",
+      "overlay",
+      "movementAction",
+      "multistatus"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-selected-token-sync/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-selected-token-sync/"
+    ],
+    "module": "fvtt-selected-token-sync"
+  },
+  {
+    "id": "monster-spell-resolver",
+    "title": "怪物法术解析器",
+    "category": "convert",
+    "summary": "读取生成 Actor 的可移植法术清单，在目标世界可读的 dnd5e Item pack 中选择法术，并安全水合模块拥有的 Spell 与 Cast Activity。",
+    "when": "生成 Actor 已携带有效 spell manifest，需要把便携法术引用解析到当前世界的具体法术资料包时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM/活动 GM 权威",
+      "带有效 spellManifest 的生成 Actor",
+      "至少一个已启用且可读取的目标世界 dnd5e Item 法术包"
+    ],
+    "steps": [
+      {
+        "title": "启用并等待来源索引",
+        "text": "在精确支持版本的世界启用模块；世界 ready 时模块读取已启用且可读的 Item pack 并建立来源索引。来源不可读、规则元数据无效或运行时不兼容时保持禁止写入。"
+      },
+      {
+        "title": "配置来源优先级",
+        "text": "在“游戏设置 → 模块设置”打开“目标世界法术解析器”，按包 ID/合集 ID 调整来源顺序，查看 2024/2014 计数和诊断，并在来源变化后点击“重建来源索引”。"
+      },
+      {
+        "title": "解析带清单的 Actor",
+        "text": "在带有效 spellManifest 的 Actor 目录条目中使用标题栏或右键菜单的“解析或重新解析法术”；创建或更新这类 Actor 时也可能由模块排队处理。普通无 manifest Actor 不会被扫描。"
+      },
+      {
+        "title": "处理人工检查",
+        "text": "若出现法术解析检查窗口，选择一个具体目标法术来源；对模块管理内容的人工修改逐项选择“保留人工修改”或“用生成内容覆盖”，关闭窗口等同取消。"
+      },
+      {
+        "title": "查看结果与回退",
+        "text": "从同一 Actor 菜单查看解析报告、来源、导出诊断或撤销上次水合；状态为 hydrated 只表示模块拥有缓存投影已完成，原生 Cast 的攻击、豁免、目标、消耗仍需单独使用验证。"
+      }
+    ],
+    "outputs": [
+      "Actor 内模块拥有的 embedded Spell 和与生成 feature 关联的 Cast Activity",
+      "spellResolution 状态、来源选择、投影差异、报告和撤销快照",
+      "目标世界来源索引的包信息、规则计数、哈希和阻断诊断"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；只有有效便携 manifest 的 Actor 才有资格处理",
+      "只修改模块拥有的 embedded Spells 和明确关联的 Cast Activities，不按名称扫描全世界，不修改 Compendium、Foundry/dnd5e 原型或生成阶段 manifest",
+      "水合按 Actor 全有或全无执行，中途失败尝试补偿回滚；人工 Keep/Overwrite/Cancel 未完成时不会 Apply",
+      "portable/static manifest、目标世界 hydration、native Cast runtime 和生产接受是不同层级；单测、build 或 hydration 成功不能替代后两层"
+    ],
+    "keywords": [
+      "怪物",
+      "法术",
+      "spell manifest",
+      "水合",
+      "Cast Activity",
+      "2024",
+      "2014",
+      "来源索引"
+    ],
+    "sources": [
+      "foundry-modules/monster-spell-resolver/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/monster-spell-resolver/"
+    ],
+    "module": "monster-spell-resolver"
+  },
+  {
+    "id": "open-session-deck",
+    "title": "开放式跑团副屏",
+    "category": "play",
+    "summary": "GM-only 的队伍与遭遇工作台，可在 Foundry 主窗口或同会话浏览器副屏查看并处理跑团状态。",
+    "when": "GM 需要第二块显示器上的队伍、遭遇、先攻和回合操作，同时不想启动第二个 Foundry 客户端时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM",
+      "用于队伍来源的世界级 Actor 文件夹",
+      "允许浏览器打开同会话弹窗（使用副屏时）"
+    ],
+    "steps": [
+      {
+        "title": "启用并确认 GM 入口",
+        "text": "在精确支持版本的世界启用模块并以 GM 进入；Token 场景控制栏会出现“开放式跑团副屏”按钮，模块也注册 GM-only 的 toggleDeck 快捷键。"
+      },
+      {
+        "title": "打开工作台",
+        "text": "点击 Token 控制栏的表格图标打开上次使用的面板或副屏模式；如果弹窗被浏览器阻止，模块会回退到 Foundry 内面板。"
+      },
+      {
+        "title": "设置队伍来源",
+        "text": "在工作台的队伍设置层选择世界级 Actor 文件夹，并决定是否包含子文件夹；保存后成员和临时同行 NPC 会按文件夹重新计算。"
+      },
+      {
+        "title": "处理队伍与遭遇",
+        "text": "在队伍/遭遇页查看当前、基础和临时 HP、AC 修正、激励、力竭、状态、专注和死亡豁免；GM 可批量处理 HP 与显式状态、编辑/交换小数先攻、投掷缺失 NPC 先攻、切换回合和定位主画布 Token。"
+      },
+      {
+        "title": "使用同会话副屏",
+        "text": "点击打开副屏后将窗口移到第二显示器；它由 GM 已登录会话渲染，关闭副屏或切回面板不会创建第二个世界连接。"
+      }
+    ],
+    "outputs": [
+      "Foundry 内 ApplicationV2 队伍/遭遇面板",
+      "同会话浏览器 popout 的队伍占位、NPC 操作卡和回合信息",
+      "通过原生 dnd5e Actor、Token 和 Combat API 完成的 GM 状态更新"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3，所有 UI 入口和命令都重新检查 GM 权限",
+      "玩家先攻隐藏只是界面呈现，不保证对检查客户端文档数据的玩家保密",
+      "副屏不加载第二个 Foundry world URL、Canvas、登录页或模块 socket；不提供独立玩家面板、行动自动化、第二张地图、AI 或自定义网络协议",
+      "构建、安装 hash 和单测是机械证据；真实 GM/玩家运行与视觉验收仍需在精确版本中单独完成"
+    ],
+    "keywords": [
+      "跑团副屏",
+      "队伍",
+      "遭遇",
+      "先攻",
+      "HP",
+      "Combat Tracker",
+      "GM"
+    ],
+    "sources": [
+      "foundry-modules/open-session-deck/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/open-session-deck/"
+    ],
+    "module": "open-session-deck"
+  },
+  {
+    "id": "session-monitor",
+    "title": "跑团会话监测器",
+    "category": "maintain",
+    "summary": "由 GM-only Foundry 模块和 Windows/Chrome companion 共同记录隐私过滤的浏览器、进程和生命周期排障时间线。",
+    "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，先做短时或由用户亲自进行长时记录。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM",
+      "正常登录的 Foundry 世界",
+      "专用 Chrome profile 和可运行的 companion"
+    ],
+    "steps": [
+      {
+        "title": "启用并确认 GM 面板",
+        "text": "在精确支持版本的世界启用模块并以 GM 进入；世界 ready 后页面会出现“跑团会话监测器”面板。玩家客户端不会启动监测运行时。"
+      },
+      {
+        "title": "由用户启动 companion",
+        "text": "需要同时记录 Chrome/Windows 信号时，由用户从仓库根目录启动 companion；它只创建和管理自己的专用 Chrome profile，并等待 GM 正常登录，不读取日常浏览器凭据。",
+        "command": "bun run monitor:session -- record"
+      },
+      {
+        "title": "开始记录",
+        "text": "在 GM 面板点击“开始”；模块建立 IndexedDB 会话并立即采样，companion 在没有 active session 时会通过模块 API 开始或续接同一 session ID。"
+      },
+      {
+        "title": "标记卡顿",
+        "text": "记录期间遇到卡顿时点击“刚才卡顿”，或使用已注册但默认未绑定的 markJank GM 快捷键；关闭专用 Chrome 会被记录为下一代浏览器并尝试恢复同一会话。"
+      },
+      {
+        "title": "停止并查看报告",
+        "text": "跑团记录结束后点击“停止并导出”或按 Ctrl+C 结束 companion；检查 browser-session.json、companion.jsonl、companion-events.jsonl、session-combined.json、report.md 和 heap-timeline.svg。"
+      }
+    ],
+    "outputs": [
+      "Foundry 模块导出的 browser-session.json",
+      "Chrome/Windows 采样、错误和浏览器/renderer 代际事件 JSONL",
+      "合并后的 session-combined.json、隐私过滤 report.md 和 heap-timeline.svg"
+    ],
+    "limits": [
+      "仅支持 Foundry 14.364 与 dnd5e 5.3.3，v1 只在 GM 客户端运行；模块和 companion 只观察，不清缓存、不改设置、不删文档、不写 LevelDB",
+      "companion 只管理专用 Chrome profile，不接管日常 Chrome，不读取 Cookie、密码或浏览器凭据；GM 必须正常登录",
+      "单次会话最多 12 小时、4,320 个浏览器采样、10,000 个事件和 1,000 个错误，达到上限会标记 truncated 并安全停止",
+      "代理不启动、等待或拼接超过 30 分钟的监测；四小时真实跑团和非 GM 设备证据由用户完成，指标相关性不等于因果证明"
+    ],
+    "keywords": [
+      "跑团",
+      "会话监测",
+      "卡顿",
+      "Chrome",
+      "CDP",
+      "renderer",
+      "heap",
+      "隐私"
+    ],
+    "sources": [
+      "foundry-modules/session-monitor/README.zh-CN.md"
+    ],
+    "watch": [
+      "foundry-modules/session-monitor/"
+    ],
+    "module": "session-monitor"
+  }
+]

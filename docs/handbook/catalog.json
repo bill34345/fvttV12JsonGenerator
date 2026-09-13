@@ -1,0 +1,138 @@
+[
+  {
+    "id":"web-workbench","title":"Web 工作台","category":"convert",
+    "summary":"用中文页面上传资料、查看转换进度，下载 JSON、Markdown 和 ZIP。",
+    "when":"希望通过页面操作，或者需要查看批量任务、警告和下载结果时，从这里开始。",
+    "requires":["本机已安装项目锁定依赖；运行命令时位于项目根目录。","实际使用需要启动 Web 服务；阅读本手册不需要。AI 任务还需按页面配置 AI 连接。"],
+    "steps":[{"title":"启动本机工作台","text":"先构建页面，再启动仅监听本机的服务；服务运行期间保留终端。","command":"bun run web:build\nbun run web:start"},{"title":"打开页面并选择任务","text":"在浏览器打开 http://127.0.0.1:5174。按资料类型选择转换入口，核对目标版本与 effect profile，上传真实来源文件。"},{"title":"核对任务与结果","text":"查看任务摘要、来源和诊断；遇到 needs_review 或 failed 先处理问题。单文件下载 JSON，批量下载逐项结果或 ZIP。"},{"title":"需要本机 Companion 时","text":"开发入口会构建 Windows Companion 并在 5173 启动单一页面/API 服务。按 AI 连接面板下载 EXE、双击并完成配对。","command":"bun run web:dev"}],
+    "outputs":["可下载的正式 JSON、任务对应的 Markdown、诊断和批量 ZIP。","上传任务在隔离的任务区域处理，不会按 Vault Sync 的方式修改资料库 manifest。"],
+    "limits":["web:dev 是构建后启动，不是前端热更新；修改后需要重新运行。","网站 AI、个人 API Key 与本机 Companion 是不同连接方式，不应混用其配置；公开部署需独立配置和授权。","页面成功下载不等于来源语义或 Foundry 运行时通过。"],
+    "keywords":["网页","上传","自动转换","下载","批处理","AI连接","Companion"],
+    "sources":["docs/web-deployment.md","docs/web-ai-connections.md"],"watch":["apps/web/","packages/forge-gateway-protocol/"]
+  },
+  {
+    "id":"markdown-convert","title":"Markdown 转 Actor / Item","category":"convert",
+    "summary":"把符合项目格式的中文 YAML/Markdown 或英文 bestiary 转为 Foundry 数据。",
+    "when":"来源已经是项目支持的结构化 Markdown，想直接生成单文件或合集时使用。杂乱 TXT 先看 AI Intake。",
+    "requires":["符合项目契约的来源 Markdown，可先参照 templates/npc-example.md。","明确 Foundry 目标与效果模式；下面示例显式选择 v14/core，并关闭图标替换。"],
+    "steps":[{"title":"查看可用参数","text":"确认本版本 CLI 帮助，特别是版本、输出路径和输入类型。","command":"bun run cli:help"},{"title":"生成示例 Actor","text":"示例来源在仓库中；正式使用时替换来源和输出名称，保持原文可追溯。","command":"bun run src/index.ts \"templates/npc-example.md\" -o \"obsidian/dnd数据转fvttjson/output/example-v14.json\" --fvtt-version 14 --effect-profile core --icon-mode off"},{"title":"对照来源验证","text":"运行来源验证，并人工核对属性、动作、豁免、效果与施法；修改来源或生成逻辑后重新生成。","command":"bun run verify:actor \"templates/npc-example.md\" \"obsidian/dnd数据转fvttjson/output/example-v14.json\""}],
+    "outputs":["由正式 workflow 生成的 Actor 或 Item JSON。","未通过正式检查的结果停在 needs_review / failed，不写正式 output。"],
+    "limits":["CLI 省略版本默认 v12；本手册的示例不改变这个产品默认值。","v14 锁定 Foundry 14.364 / dnd5e 5.3.3。core 不输出专属 modded 字段；不同模块组合的兼容性需单独核实。","不可手工修补最终 JSON 来绕过生成或审查。"],
+    "keywords":["生成器","NPC","Actor","Item","JSON","YAML","CLI","合集"],
+    "sources":["README.md","docs/generated-actor-verification.md","docs/acceptance/current-support-matrix.md"],
+    "watch":["apps/cli/","packages/contracts/","packages/models/","packages/parser/","packages/generation/","packages/workflows/"]
+  },
+  {
+    "id":"monster-intake","title":"AI 怪物资料整理","category":"convert",
+    "summary":"从原始 TXT 或不规则 Markdown 提取怪物证据，生成标准来源和 Actor JSON。",
+    "when":"刚拿到一段怪物资料或多个怪物的合集，尚未整理为项目格式时使用。",
+    "requires":["真实 TXT/Markdown 来源，不将截图直接交给此文本入口。","配置专用 MONSTER_INTAKE_* provider；内容会发给所选 AI 服务。凭据只保留在本地配置。"],
+    "steps":[{"title":"检查 AI 配置","text":"API Key 模式检查配置；本机 OAuth 兼容桥模式还会检查本机健康端点。","command":"bun run src/index.ts --intake-doctor"},{"title":"先预览输入","text":"替换 source.txt 为真实文件。dry-run 检查输入与配置，估算数量，不调用 AI、不推广文件。","command":"bun run src/index.ts --intake-monsters \"source.txt\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core --dry-run"},{"title":"执行整理并阅读审查结果","text":"移除上一条命令的 --dry-run 运行正式整理。accepted 后核对原文、标准 Markdown 与 JSON；needs_review 时使用本次 run 的 decisions 进行明确审查。"},{"title":"恢复需要审查的任务","text":"使用真实 run-id 和人工填写的 decisions.json；恢复会重新验证，不是手改候选 JSON。","command":"bun run src/index.ts --resume-intake \".local/intake-runs/<run-id>\" --decisions \".local/intake-runs/<run-id>/decisions.json\" --vault \"obsidian/dnd数据转fvttjson\""}],
+    "outputs":["accepted 的来源 Markdown 写入 vault input，Actor JSON 经既有 workflow 写入 output。","审查材料保留在 .local/intake-runs/<run-id>/，可追溯来源与诊断。"],
+    "limits":["最多 50 个候选、200,000 个 UTF-16 字符；任意资料和任意模型不保证自动通过。","此入口不做 PDF/图片 OCR；请先使用文档输入流程。","退出码 0 为全部 accepted 或预览，2 为存在 needs_review 且无 failed，1 为存在 failed。"],
+    "keywords":["怪物","文本","TXT","Intake","审查","resume","AI"],
+    "sources":["README.md","docs/acceptance/current-support-matrix.md"],"watch":["packages/intake-ai/"]
+  },
+  {
+    "id":"item-intake","title":"AI 物品资料整理","category":"convert",
+    "summary":"把自然语言物品资料整理成有来源证据的 Item，并核对机制和法术。",
+    "when":"物品描述是 TXT 或不规则 Markdown，包含充能、效果或施法机制，需要正式 Item Intake 时使用。",
+    "requires":["原始物品文本，单次不超过 50 项和 200,000 个 UTF-16 字符。","与 Monster Intake 共用专用 provider 配置，但使用独立 Item IR 和生成检查。"],
+    "steps":[{"title":"确认配置和目标","text":"检查 AI provider；此入口固定为 Foundry 14.364 / dnd5e 5.3.3 / core。","command":"bun run src/index.ts --intake-doctor"},{"title":"整理物品来源","text":"替换文件路径。AI 提取证据，确定性规则生成 item-mechanics Markdown 和 Item JSON。","command":"bun run src/index.ts --intake-items \"items.txt\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core"},{"title":"阅读机制与审查材料","text":"重点核对 AC、充能、恢复时机、Activity 消耗和法术身份。needs_review 时通过本次审查包的 decisions 恢复。","command":"bun run src/index.ts --resume-item-intake \".local/item-intake-runs/<run-id>\" --decisions \".local/item-intake-runs/<run-id>/decisions.json\" --vault \"obsidian/dnd数据转fvttjson\""}],
+    "outputs":["accepted 的 Markdown 和 JSON 分别进入 input/items 与 output/items。","独立 .local/item-intake-runs/<run-id>/ 保留证据、诊断和 provider 审计。"],
+    "limits":["法术身份必须唯一命中锁定目录；无法解析不能用空 Utility 伪装成功。","静态和应用层验收不等于每种物品已通过 Foundry AC、充能与效果生命周期实测。"],
+    "keywords":["物品","魔法物品","充能","Item","Intake"],"sources":["docs/item-ai-intake-v14.md"],"watch":["packages/intake-ai/"]
+  },
+  {
+    "id":"species-intake","title":"种族资料整理","category":"convert",
+    "summary":"把种族 TXT 或规范 Markdown 整理成 race/feat 包，保留累计构建所需的审查记录。",
+    "when":"新增自制种族，或修改已经接受的种族 Markdown，需要重新审查并纳入内容合集时使用。",
+    "requires":["种族原文、Intake provider 和明确目标。常规路径使用 v14/core、2024 规则。","理解自动化与 GM 辅助边界，复杂规则不能用空 Activity 冒充实现。"],
+    "steps":[{"title":"运行 Species Intake","text":"替换真实来源；同一入口也接收人工编辑后的规范 Species Markdown。","command":"bun run src/index.ts --intake-species \"species.txt\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core"},{"title":"核对种族机制","text":"对照体型、速度、感官、AC/HP、等级特性和 GM 判断项，确认 accepted ledger 与当前 Markdown 一致。"},{"title":"显式构建累计合集","text":"Intake 成功不会自动重建模块。准备分发内容时再显式构建并验证；安装是另一项操作。","command":"bun run build:homebrew-species\nbun run verify:homebrew-species"}],
+    "outputs":["来源证据、标准 Species Markdown、race/feat package 与 accepted ledger。","显式构建后得到自制种族模块内容；使用方式见“自制种族合集”条目。"],
+    "limits":["修改 accepted Markdown 后必须重新 Intake，否则 hash 过期会阻止构建。","v12/core 存在静态候选路线，不代表已通过 v12 安装和游戏实测；不得把 v14 的食人魔样本证据平移到其他目标。"],
+    "keywords":["种族","食人魔","Species","Race","特性","ledger"],"sources":["docs/species-ai-intake-v14.md"],"watch":["packages/intake-ai/"]
+  },
+  {
+    "id":"document-extraction","title":"PDF 与图片文档提取","category":"convert",
+    "summary":"先提取文字、页码和位置，再筛选怪物候选，接入翻译与正式 Actor 生成。",
+    "when":"来源是 PDF、PNG、JPG、JPEG 或 WebP，尤其是双栏怪物页面或截图时使用。",
+    "requires":["本机 PDF/OCR 依赖通过 doctor；文字 PDF 优先读取文字层，扫描页与图片需要 OCR。","正式生成还需要相应翻译与 Monster Intake 服务；只提取可以先核对原始阅读顺序。"],
+    "steps":[{"title":"检查文档依赖","text":"按报告补齐本机依赖；不把 OCR 缺失产生的乱码继续送入生成器。","command":"bun run document:doctor"},{"title":"先提取并筛选候选","text":"替换为真实 PDF 或图片，阅读 raw-extracted.md、候选清单和提取报告。","command":"bun run src/index.ts \"monsters.pdf\" --extract-only --fvtt-version 14 --effect-profile core"},{"title":"选择候选进行正式生成","text":"从清单读取 candidate-id，核对原页面的名字、数字、页码与阅读顺序，再运行选中候选。","command":"bun run src/index.ts \"monsters.pdf\" --document-candidate \"<candidate-id>\" --fvtt-version 14 --effect-profile core"}],
+    "outputs":[".local/document-runs/<run-id>/ 中的 raw-extracted.md、document-candidates.json 和 extraction-report.json。","符合条件时继续产出翻译/标准 Markdown 与正式 Actor JSON；原始文件不复制进 Vault manifest。"],
+    "limits":["当前文档链路只承诺 NPC/怪物 Actor，不是任意 PDF 物品或种族转换器。","原始块需保留页码、坐标、语言与置信度；OCR 和候选翻译均需与原页面核对。","翻译缺失、机械字段丢失或 Intake 未配置会停下，不静默生成。"],
+    "keywords":["OCR","PDF","截图","图片","PaddleOCR","文档","扫描"],"sources":["docs/document-input-workflow.md"],"watch":["packages/ingest-documents/"]
+  },
+  {
+    "id":"vault-sync","title":"Obsidian 资料库同步","category":"library",
+    "summary":"识别资料库 input 中新增或变化的 Markdown，增量更新对应 JSON。",
+    "when":"需要了解批量增量同步的行为时查阅。当前旧同步仍含备份和清理逻辑，不作为本机默认批处理入口。",
+    "requires":["核对 input/output 和同步 manifest 的实际目标，保护既有资料。","本项目用户规则禁止创建备份；现有同步覆盖流程仍写 output_backup，需先解决这项行为冲突。"],
+    "steps":[{"title":"检查来源和目标范围","text":"默认资料库为 obsidian/dnd数据转fvttjson；确认 input 内容、既有 output 和 .fvtt-sync-manifest.json 的归属。"},{"title":"选择当前可用的替代入口","text":"日常先用单文件转换或 Web 上传任务。旧 sync:vault 命令会写备份并可能清理过期输出，本手册不将它作为可直接执行的推荐命令。"},{"title":"需要同步时先明确处理方案","text":"先处理无备份规则与旧实现冲突，再对新增、修改和删除来源分别做明确验收。不要用 --clear-backup 绕过限制。"}],
+    "outputs":["按原有设计，同步 manifest 记录输入变化，output 对应生成 JSON。","本条目提供行为说明，不代表已经修复无备份冲突或运行了同步。"],
+    "limits":["旧实现覆盖前保留 output_backup，与当前无备份要求冲突；本次手册工作不修改同步实现。","源文件删除可能导致过期输出被移除；增量同步不是纯只读操作。"],
+    "keywords":["Obsidian","Vault","同步","批量","增量","backup"],"sources":["README.md"],"watch":["packages/workflows/"]
+  },
+  {
+    "id":"goddessfantasy-crawl","title":"GoddessFantasy 资料采集","category":"library",
+    "summary":"从论坛板块收集来源记录，再整理为可用于怪物转换的纯文本。",
+    "when":"需要按板块批量整理论坛怪物资料，并保留采集记录时使用。",
+    "requires":["明确板块与采集范围；需要登录的内容依赖有效授权和本地凭据。","cookie 只保存在忽略的本地文件或环境中，不放进仓库、手册或最终数据。"],
+    "steps":[{"title":"查看采集入口与参数","text":"先核对本版本帮助，明确增量或完整采集、来源 URL 和输出目录。","command":"bun run src/tools/crawlSites.ts --help"},{"title":"核对来源后执行采集","text":"按 README 的 goddessfantasy-board 参数配置真实板块与本地 cookie 文件。先 dry-run，记录范围后再执行已授权采集。"},{"title":"从记录生成纯文本","text":"采集后使用 records-to-plaintext，把实际 records.json 转为怪物文本，再选择正式转换或 Intake。","command":"bun run src/tools/crawlSites.ts records-to-plaintext --records \"obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318/records.json\" --out-dir \"obsidian/dnd数据转fvttjson/crawls/goddessfantasy/board-2318/plaintext/monsters\""}],
+    "outputs":["采集记录 records.json、可追溯的来源信息与拆分后的纯文本。","默认保存在 obsidian/dnd数据转fvttjson/crawls 下；正式 JSON 另走生成流程。"],
+    "limits":["真实登录态采集依赖网络，离线测试不能证明其成功。","采集到文字不代表语义完整；仍需核对原帖边界、怪物数量与机制。"],
+    "keywords":["女神幻想","论坛","采集","爬虫","GoddessFantasy","records"],"sources":["README.md"],"watch":["packages/crawl-goddessfantasy/"]
+  },
+  {
+    "id":"artwork-icons","title":"角色图片、Token 与图标","category":"library",
+    "summary":"分别管理角色立绘与 Token，用受支持目录解析物品图标并生成审阅报告。",
+    "when":"需要检查角色图片和 Token 是否用对，或显式启用 v14 的名称驱动图标解析时使用。",
+    "requires":["区分 actor.img 与 prototypeToken.texture.src 的用途；裁切只产出候选，必须查看实际图片。","普通生成默认 icon-mode off。只有明确需要图标匹配时才用 safe。"],
+    "steps":[{"title":"确认图片用途与来源","text":"角色画像保留合适的原图，Token 单独检查框选与裁切。SSH 图片上传是外部写入，需单独明确目标与授权。"},{"title":"显式生成安全图标候选","text":"下面是需要名称驱动图标时的可选示例；只使用锁定 v14/dnd5e 目录，低置信候选不会强行替换。","command":"bun run src/index.ts \"templates/npc-example.md\" -o \"obsidian/dnd数据转fvttjson/output/example-icons.json\" --fvtt-version 14 --effect-profile core --icon-mode safe"},{"title":"打开图标审阅报告","text":"生成报告页面后在浏览器查看图片；需要 override 时维护独立映射并重新生成。","command":"bun run review:icons:v14 --report \"obsidian/dnd数据转fvttjson/output/example-icons.icon-review.json\" --output \".local/icon-review/example-icons.html\""}],
+    "outputs":["独立 Actor/Token 资产、裁切候选，以及 safe 模式下的 icon-review.json 与可选审阅页。"],
+    "limits":["safe 图标模式只适用于 v14；尺寸、URL 或上传成功不等于视觉验收。","不凭名称相似度强行选图，不把上传配置和凭据带进生成数据。"],
+    "keywords":["图片","立绘","Token","头像","裁切","图标","icon"],"sources":["README.md","packages/assets-icons/AGENTS.md"],"watch":["packages/assets-icons/"]
+  },
+  {
+    "id":"legacy-text","title":"旧纯文本转换与兼容入口","category":"convert",
+    "summary":"为已有严格格式资料和历史脚本保留的拆分与转换命令。",
+    "when":"正在维护旧脚本，或者来源本来就符合旧格式时查阅。新资料优先标准 Markdown 或正式 Intake。",
+    "requires":["来源必须符合对应严格格式，不规则物品 TXT 应使用 AI Item Intake。","确认输出不与已有 input/output 同名冲突。"],
+    "steps":[{"title":"先检查识别与冲突","text":"旧 Actor 入口可先 dry-run；不能把有警告或识别失败的资料当作正式结果。","command":"bun run src/index.ts --ingest-plaintext-actors \"collection.txt\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core --dry-run"},{"title":"仅拆分旧格式物品","text":"需要中间 Markdown 时使用严格格式拆分入口。","command":"bun run src/index.ts --ingest-items \"items.md\" --vault \"obsidian/dnd数据转fvttjson\""},{"title":"核对后正式转换","text":"Actor 预览无误后可移除 dry-run；物品需要直接生成时使用 ingest-items-json。只处理本次推广的 Item 来源。","command":"bun run src/index.ts --ingest-items-json \"items.md\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core"}],
+    "outputs":["按入口生成中间 Markdown，或本次来源对应的正式 Markdown 和 JSON。"],
+    "limits":["网页旧纯文本 Actor 任务已删除，网页应使用自动转换。","兼容入口不会在失败时偷偷切换成 AI，也不能替代不规则 Item Intake。"],
+    "keywords":["legacy","纯文本","拆分","旧命令","兼容"],"sources":["README.md"],"watch":["packages/ingest-plaintext/"]
+  },
+  {
+    "id":"json-translation","title":"待翻译 JSON 整理","category":"library",
+    "summary":"对本地待翻译目录中的 JSON 执行字段翻译，供后续人工核对。",
+    "when":"已有待翻译 JSON，想按旧翻译工作流处理本地队列时使用。它不是任意文档生成入口。",
+    "requires":["核对真实输入目录和文件归属；此工作流会原位写入 JSON。","配置独立翻译服务，确认发送给服务的内容在授权范围内。"],
+    "steps":[{"title":"核对队列目录","text":"默认目录 data/need_tran 被 Git 忽略；正式运行前先检查里面的文件。"},{"title":"执行明确目录的翻译","text":"替换为已经核对的目录；该命令会修改目录内符合条件的文件。","command":"bun run src/index.ts --translate-json --translate-dir \"data/need_tran\""},{"title":"人工对照原意与数字","text":"检查名称、机制术语、数值和规则含义。翻译完成不能替代正式来源语义验收。"}],
+    "outputs":["目标目录内经翻译工作流更新的 JSON。"],
+    "limits":["这会写用户数据，不能将整目录运行当作预览。","此入口不自动升级 schema 或目标版本，也不代替 Actor/Item 正式生成。"],
+    "keywords":["翻译","中文化","JSON","translate","队列"],"sources":["README.md"],"watch":["packages/workflows/"]
+  },
+  {
+    "id":"foundry-ops","title":"Foundry 环境与资产检查","category":"maintain",
+    "summary":"统一查看本地 Lab、资产清单、离线世界审计与受限生产只读工具。",
+    "when":"想知道环境有哪些资产、命令会读写什么，或准备排查本地 Foundry 环境时使用。",
+    "requires":["先明确实际目标、路径、进程和占用者；不要停止他人正在用的 Lab。","读取生产需走明确目标与外部配置门禁；生产写入需要当次授权。"],
+    "steps":[{"title":"先看命令目录","text":"catalog 会标注目标与最大权限，用来判断只读、修改本地或不受支持的生产写入。","command":"bun run foundry:ops catalog"},{"title":"检查本地资产范围","text":"scope 枚举已登记、隐私排除和待人工判断项；只生成报告，不因此移动或删除资产。","command":"bun run foundry:ops assets scope"},{"title":"需要字节清单时盘点","text":"读取注册的本地资产并写审计报告，包含相对路径和 SHA-256；清单不构成清理授权。","command":"bun run foundry:ops assets inventory --hash-concurrency=4"}],
+    "outputs":[".local 中的本地资产或范围报告、完整性状态与待判断项。"],
+    "limits":["本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。","不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。","手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。"],
+    "keywords":["Lab","环境","运维","盘点","资产","诊断","世界","性能"],"sources":["tools/foundry-ops/README.zh-CN.md"],"watch":["tools/foundry-ops/"]
+  },
+  {
+    "id":"verification-development","title":"验证工具与开发资料","category":"maintain",
+    "summary":"查阅来源验证、测试、支持矩阵和锁定版本参考资料，也用于持续维护本手册。",
+    "when":"需要知道“通过”具体指哪一层，或完成新功能后更新项目说明时使用。",
+    "requires":["工程工作先遵守 worktree 规则；按改动范围选择检查。","测试绿色、文件存在、真实 Foundry 操作和生产验收分别记录。"],
+    "steps":[{"title":"选择必要检查","text":"普通说明修改核对文义和链接；实现修改按 owner 规则运行受影响测试。完整工程门禁如下，耗时较长。","command":"bun run ci:verify"},{"title":"查阅锁定参考","text":"参考缓存是开发资料，不是正常生成器的运行依赖。先 dry-run 查看将获取什么。","command":"bun run references bootstrap --dry-run"},{"title":"同步工具手册","text":"功能说明与实现一起维护。status 列出需要核对的条目；人工核对后按维护文档记录，再 build 和 check。","command":"bun run handbook:status\nbun run handbook:build\nbun run handbook:check"}],
+    "outputs":["与具体改动对应的检查证据和来源语义结论。","随代码合并更新的 工具手册.html，可直接离线打开。"],
+    "limits":["ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。","本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。","内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。"],
+    "keywords":["测试","验证","verify","参考","开发","更新","手册","构建","master"],
+    "sources":["docs/generated-actor-verification.md","docs/acceptance/current-support-matrix.md","docs/REFERENCE_INDEX.md","docs/runbooks/handbook-maintenance.md"],
+    "watch":["package.json","src/tools/","scripts/","packages/forge-browser-runtime/","packages/spell-manifest-contracts/","packages/blood-hunter-v14/"]
+  }
+]

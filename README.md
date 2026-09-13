@@ -2,6 +2,12 @@
 
 把 Obsidian 中的中文 YAML/Markdown、英文 bestiary 文本和批量怪物资料转换成 Foundry VTT dnd5e Actor/Item JSON。项目默认兼容 Foundry v12，同时支持显式生成 Foundry v14 JSON，并提供来源核对、GoddessFantasy 采集流水线、图片处理、Web 工作台和隔离的 Foundry v14 验收环境。
 
+## 离线中文工具手册
+
+双击根目录的 [工具手册.html](工具手册.html)，按用途查找转换入口、资料工具、Foundry 模块和维护说明。页面自带全文搜索、操作步骤、命令和选定原始文档，阅读无需联网或启动服务。建议收藏 master 工作区里的文件；单独复制出去的文件是版本快照。
+
+新功能或用户可见行为变化应在同一分支更新工具说明，人工核对后重新生成页面，与功能一起合并到 master。`bun run handbook:check` 已纳入完整仓库门禁。维护命令、核对记录和合并后步骤见 [手册维护流程](docs/runbooks/handbook-maintenance.md)。
+
 ## 支持范围
 
 | 目标 | 系统版本 | Effect profile | 当前状态 |
