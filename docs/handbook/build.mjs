@@ -59,7 +59,9 @@ export function fingerprint(repo, entry, files = listFiles(repo)) {
   return hash(JSON.stringify(entry) + sources.map(p => {
     if (!existsSync(resolve(repo, p))) return `\n${p}\0DELETED`;
     const bytes = readFileSync(resolve(repo, p));
-    const content = /\.(?:[cm]?[jt]sx?|json|md|html|css|yml|yaml|txt|toml|ps1|sh)$/.test(p) ? normalize(bytes.toString('utf8')) : bytes;
+    const textFile = /\.(?:[cm]?[jt]sx?|json|md|html|hbs|css|yml|yaml|txt|toml|ps1|sh|py)$/.test(p)
+      || /(?:^|\/)\.env\.(?:example|sample|template)$/.test(p);
+    const content = textFile ? normalize(bytes.toString('utf8')) : bytes;
     return `\n${p}\0${hash(content)}`;
   }).join(''));
 }

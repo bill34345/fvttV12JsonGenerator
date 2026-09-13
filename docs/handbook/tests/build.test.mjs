@@ -56,3 +56,16 @@ test('LF and CRLF worktrees share fingerprints; implementation additions are det
 test('test-only files do not demand a user documentation rewrite',t=>{
   const f=fixture(t);const before=fingerprint(f.repo,f.entry);f.put('apps/cli/__tests__/demo.test.ts','new test');assert.equal(fingerprint(f.repo,f.entry),before);
 });
+test('Python, Handlebars and environment examples survive CRLF checkouts without hiding edits',t=>{
+  const f=fixture(t);
+  for (const path of ['apps/cli/extract.py','apps/cli/settings.hbs','apps/cli/.env.example']) {
+    f.put(path,'first\nsecond\n');const before=fingerprint(f.repo,f.entry);
+    f.put(path,'first\r\nsecond\r\n');assert.equal(fingerprint(f.repo,f.entry),before,path);
+    f.put(path,'first\r\nchanged\r\n');assert.notEqual(fingerprint(f.repo,f.entry),before,path);
+  }
+});
+test('binary payload hashes preserve byte differences including CRLF',t=>{
+  const f=fixture(t);const path=join(f.repo,'apps/cli/asset.bin');
+  writeFileSync(path,Buffer.from([0,255,13,10]));const before=fingerprint(f.repo,f.entry);
+  writeFileSync(path,Buffer.from([0,255,10]));assert.notEqual(fingerprint(f.repo,f.entry),before);
+});
