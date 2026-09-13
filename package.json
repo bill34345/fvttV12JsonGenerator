@@ -14,6 +14,8 @@
     "handbook:status": "node docs/handbook/build.mjs status",
     "handbook:review": "node docs/handbook/build.mjs review",
     "handbook:test": "node --test docs/handbook/tests/build.test.mjs",
+    "handbook:test:bun": "bun run src/tools/runHermeticFoundryScript.ts handbook:test:bun:raw",
+    "handbook:test:bun:raw": "bun test docs/handbook/tests/build.test.mjs --max-concurrency 1",
     "test:robustness": "bun run src/tools/runHermeticFoundryScript.ts test:robustness:raw",
     "test:robustness:raw": "bun test tests/project-robustness.test.ts apps/web/src/server/jobs/__tests__/jobRecovery.test.ts src/tools/__tests__/tokenReviewCli.test.ts src/tools/__tests__/coverageGate.test.ts tests/helpers/subprocess.test.ts apps/web/src/server/__tests__/server-lifecycle.test.ts --max-concurrency 1",
     "test": "bun run src/tools/runHermeticFoundryScript.ts test:raw",

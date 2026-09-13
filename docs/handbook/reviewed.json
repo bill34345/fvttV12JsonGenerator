@@ -60,9 +60,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "verification-development": {
-    "fingerprint": "82cb7ee5bb8e1f1ffff38ea35c20e2f4a3e4ff07799ed1dbd06a0fe5c59d72a7",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "0adcd07a215f090258faa2c2a3f6cbfb34a0d966710d6f96d0244d48e8341109",
+    "reviewedOn": "2026-09-13",
+    "note": "已核对精简 AGENTS 与手册同步规则；新增局部指令登记和安全 Bun 单文件验证入口，Node 与 Bun 各 10 项测试通过"
   },
   "chat-memory-guard": {
     "fingerprint": "584662ab88e9fc75b2792e3bf479164a184c5b53e34e4f18a02eda4bdb6d3d29",

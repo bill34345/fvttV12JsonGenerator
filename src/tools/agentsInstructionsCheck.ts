@@ -33,6 +33,7 @@ export const rulerApplyArgs = [
 /** Runtime AGENTS files required by the repository governance contract. */
 export const requiredAgentsFiles = [
   'AGENTS.md',
+  'docs/handbook/AGENTS.md',
   'packages/AGENTS.md',
   'packages/parser/AGENTS.md',
   'packages/generation/AGENTS.md',
