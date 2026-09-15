@@ -127,7 +127,7 @@
     },
     "foundry-modules/fvtt-json-forge": {
       "name": "@fvtt-json-generator/fvtt-json-forge",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "dependencies": {
         "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
         "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",

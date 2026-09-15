@@ -179,7 +179,8 @@ function stateEffect(
           stateId: state.id,
           target: state.target,
           removal: state.removal,
-          duration: state.duration ?? null,
+          // Optional duration members must remain absent on the JSON boundary.
+          duration: state.duration ? Object.fromEntries(Object.entries(state.duration).filter(([, value]) => value !== undefined)) : null,
         },
       },
     },
@@ -192,7 +193,9 @@ function mechanicDescription(mechanic: ActorBehaviorMechanic, operation: ActorBe
     ...(mechanic.trigger
       ? [`触发：${mechanic.trigger.event} / ${mechanic.trigger.frequency}${mechanic.trigger.condition ? ` / ${mechanic.trigger.condition}` : ''}`]
       : []),
-    ...mechanic.conditions.map((entry) => `条件：${entry}`),
+    ...mechanic.conditions
+      .filter((entry) => !entry.startsWith('encounter-staged'))
+      .map((entry) => `条件：${entry}`),
     `操作：${operation.description}`,
     ...mechanic.gmSteps.map((entry, index) => `GM ${index + 1}：${entry}`),
     ...(mechanic.externalRule
@@ -239,6 +242,7 @@ function appendMechanic(
     ruleSource: mechanic.ruleSource,
     trigger: mechanic.trigger ?? null,
     conditions: mechanic.conditions,
+    carrier: { section: mechanic.carrier.section, name: mechanic.carrier.name },
     references: resolvedReferences,
     gmSteps: mechanic.gmSteps,
     capacity: mechanic.capacity ?? null,

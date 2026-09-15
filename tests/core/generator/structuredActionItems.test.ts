@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { ActorGenerator } from '../../../src/core/generator/actor';
 import type { StructuredActionData } from '../../../src/core/models/action';
+import { attachEmbeddedEffects } from '../../../packages/generation/src/actor-item-builder';
+import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
+import { YamlParser } from '../../../packages/parser/src/yaml';
 
 describe('appendStructuredActionItems', () => {
   function createMinimalParsedNPC(structuredActions: any): any {
@@ -32,7 +35,54 @@ describe('appendStructuredActionItems', () => {
     return Object.values(item.system?.activities ?? {});
   }
 
+  function rechargeMarkdown(value: string): string {
+    return `---
+名称: Recharge Fixture
+类型: npc
+体型: 中型
+生物类型: 怪兽
+护甲等级: 12
+生命值: 30
+能力:
+  力量: 12
+  敏捷: 12
+  体质: 12
+  智力: 12
+  感知: 12
+  魅力: 12
+挑战等级: 1
+动作:
+  - 名称: Recharge Breath
+    类型: save
+    充能: ${value}
+    DC: 13
+    DC来源: literal
+    属性: 体质
+    AoE: {形状: cone, 范围: 60}
+    伤害:
+      - 公式: 2d6
+        类型: cold
+    描述: 每个生物进行 DC 13 体质豁免。
+---
+`;
+  }
+
   describe('utility action generation', () => {
+    it('does not infer save mitigation, domination escape or attack-hit metadata from unrelated prose', () => {
+      const actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(createMinimalParsedNPC({特性:[
+        {name:'Threshold Ward',type:'utility',describe:'每次受到超过20点伤害时，使本次伤害减半。'},
+        {name:'血液支配',type:'save',DC:18,ability:'wis',describe:'目标进行DC18感知豁免；生命值未受损时具有优势。失败时使用反应攻击另一个目标。'},
+        {name:'Choice After Hit',type:'save',DC:19,ability:'str',describe:'攻击命中后，可以选择要求目标进行DC19力量豁免。失败时目标倒地（Prone）；成功时无效果。'},
+        {name:'Reverse Outcome',type:'utility',describe:'On a successful save, the target takes no damage. On a failed save, it takes half damage.'},
+        {name:'反向分支',type:'utility',describe:'目标进行豁免。成功时不受伤害，失败时伤害减半。'},
+      ]}));
+      expect(actor.items[0].flags?.fvttJsonGenerator?.rules?.halfDamageOnSave).toBeUndefined();
+      expect(actor.items[1].flags?.fvttJsonGenerator?.rules?.allyEscapeSave).toBeUndefined();
+      expect(actor.items[2].flags?.fvttJsonGenerator?.rules?.onHitRiders).toBeUndefined();
+      expect(getActivities(actor.items[2])[0].save.dc.formula).toBe('19');
+      expect(actor.items[3].flags?.fvttJsonGenerator?.rules?.halfDamageOnSave).toBeUndefined();
+      expect(actor.items[4].flags?.fvttJsonGenerator?.rules?.halfDamageOnSave).toBeUndefined();
+    });
     it('generates utility action item from structured data', () => {
       const generator = new ActorGenerator();
       const structuredActions: StructuredActionData[] = [
@@ -139,6 +189,113 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((entry: any) => entry.name.includes('Escape Training'));
 
       expect(item.effects ?? []).toEqual([]);
+    });
+
+    it('promotes a generic inferred status into the single source-derived embedded effect with its duration and failed-save linkage', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
+      const parsed = createMinimalParsedNPC({
+        动作: [{
+          name: 'Source Fear',
+          type: 'save',
+          DC: 15,
+          ability: 'wis',
+          describe: 'Each target makes a DC 15 Wisdom saving throw. On a failed save, the target becomes frightened for 1 minute.',
+          embeddedEffects: [{
+            type: '恐慌（Frightened）',
+            describe: 'Source rule: duration is 1 minute.',
+            duration: '1 minute',
+          }],
+        }],
+      });
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((entry: any) => entry.name.includes('Source Fear'));
+      const activity = getActivities(item)[0];
+
+      expect(item.effects).toHaveLength(1);
+      expect(item.effects[0]).toMatchObject({
+        statuses: ['frightened'],
+        duration: { seconds: 60 },
+        flags: { fvttJsonGenerator: { sourceDerivedEmbeddedEffect: true, sourceDuration: '1 minute' } },
+      });
+      expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+    });
+
+    it('keeps independent source-derived effects while suppressing only their generic status duplicates', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
+      const parsed = createMinimalParsedNPC({
+        动作: [{
+          name: 'Twin Afflictions',
+          type: 'save',
+          DC: 14,
+          ability: 'con',
+          describe: 'On a failed save, the target becomes frightened and dazed for 1 minute.',
+          embeddedEffects: [
+            { type: 'Frightened Rider', describe: 'On a failed save, the target becomes frightened for 1 minute.', duration: '1 minute' },
+            { type: 'Dazed Rider', describe: 'On a failed save, the target becomes dazed for 1 minute.', duration: '1 minute' },
+          ],
+        }],
+      });
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((entry: any) => entry.name.includes('Twin Afflictions'));
+      const activity = getActivities(item)[0];
+
+      expect(item.effects).toHaveLength(2);
+      expect(item.effects.map((effect: any) => effect.statuses[0]).sort()).toEqual(['dazed', 'frightened']);
+      expect(item.effects.every((effect: any) => effect.flags?.fvttJsonGenerator?.sourceDerivedEmbeddedEffect)).toBeTrue();
+      expect(activity.effects).toEqual(item.effects.map((effect: any) => ({ _id: effect._id, onSave: false })));
+    });
+
+    it('does not merge two source-authored effects that share one status but have independent duration and description', () => {
+      const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
+      const parsed = createMinimalParsedNPC({
+        动作: [{
+          name: 'Layered Fear',
+          type: 'save',
+          DC: 14,
+          ability: 'wis',
+          describe: 'On a failed save, the target becomes frightened.',
+          embeddedEffects: [
+            { type: 'frightened', describe: 'First fear lasts 1 minute.', duration: '1 minute' },
+            { type: 'frightened', describe: 'Second fear lasts 2 rounds.', duration: '2 rounds' },
+          ],
+        }],
+      });
+
+      const actor = generator.generate(parsed);
+      const item = actor.items.find((entry: any) => entry.name.includes('Layered Fear'));
+      const activity = getActivities(item)[0];
+
+      expect(item.effects).toHaveLength(2);
+      expect(item.effects.map((effect: any) => effect._id)).toHaveLength(2);
+      expect(item.effects.map((effect: any) => effect.description)).toEqual(['First fear lasts 1 minute.', 'Second fear lasts 2 rounds.']);
+      expect(item.effects.map((effect: any) => effect.duration)).toEqual([
+        expect.objectContaining({ seconds: 60 }),
+        expect.objectContaining({ rounds: 2 }),
+      ]);
+      expect(activity.effects).toEqual(item.effects.map((effect: any) => ({ _id: effect._id, onSave: false })));
+    });
+
+    it('does not consume an ambiguous multi-status generic effect for a single source status', () => {
+      const item: any = {
+        name: 'Ambiguous Effect Carrier',
+        effects: [{ _id: 'generic-both', statuses: ['frightened', 'dazed'], duration: {}, description: 'generic effect', flags: {} }],
+        system: { activities: { save: { effects: [{ _id: 'generic-both' }] } } },
+      };
+
+      attachEmbeddedEffects(item, [{ type: 'frightened', describe: 'Source fear lasts 1 minute.', duration: '1 minute' }]);
+
+      expect(item.effects).toHaveLength(2);
+      expect(item.effects[0]).toMatchObject({ _id: 'generic-both', statuses: ['frightened', 'dazed'], flags: {} });
+      expect(item.effects[1]).toMatchObject({
+        statuses: ['frightened'], duration: { seconds: 60 },
+        flags: { fvttJsonGenerator: { sourceDerivedEmbeddedEffect: true, sourceDuration: '1 minute' } },
+      });
+      expect(item.system.activities.save.effects).toEqual([
+        { _id: 'generic-both' },
+        { _id: item.effects[1]._id, onSave: false },
+      ]);
     });
 
     it('uses native ability-based weapon rolls for exact attack and damage modifier matches', () => {
@@ -338,8 +495,8 @@ describe('appendStructuredActionItems', () => {
       expect(item).toBeDefined();
       expect(item.system.uses).toEqual({
         spent: 0,
-        max: '',
-        recovery: [{ period: 'recharge', type: 'recoverAll' }],
+        max: '1',
+        recovery: [{ period: 'recharge', type: 'recoverAll', formula: '5' }],
       });
     });
 
@@ -375,6 +532,49 @@ describe('appendStructuredActionItems', () => {
           value: 15,
         }),
       );
+    });
+
+    it.each(['5-6', '5–6', '5 至 6'])('parses renderer-compatible recharge range %s while rejecting a near non-range literal', (recharge) => {
+      const source = rechargeMarkdown(recharge);
+      const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(new YamlParser().parse(source));
+      const item = actor.items.find((entry: any) => entry.name === 'Recharge Breath');
+      expect(item.system.uses).toEqual({
+        spent: 0,
+        max: '1',
+        recovery: [{ period: 'recharge', type: 'recoverAll', formula: '5' }],
+      });
+      expect(getActivities(item)[0].consumption.targets).toEqual([{ type: 'itemUses', target: '', value: '1', scaling: { mode: '', formula: '' } }]);
+
+      const nearMiss = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' })
+        .generate(new YamlParser().parse(rechargeMarkdown('5 to 6')));
+      expect(nearMiss.items.find((entry: any) => entry.name === 'Recharge Breath').system.uses).toBeUndefined();
+    });
+
+    it('projects renderer-style recharge through the public Foundry 14.364 / dnd5e 5.3.3 workflow', async () => {
+      const response = await convertFinalActorSource(buildForgeActorRequest({
+        content: rechargeMarkdown('5-6'),
+        displayName: 'Recharge Fixture',
+        requestId: 'recharge-formal-workflow',
+        fvttVersion: '14.364',
+        systemVersion: '5.3.3',
+      }));
+      expect('result' in response).toBeTrue();
+      if (!('result' in response)) throw new Error('Expected a Forge Actor result.');
+      if (!('artifact' in response.result)) throw new Error('Expected a formal Actor artifact.');
+      const item = (response.result.artifact!.items as any[]).find((entry) => entry.name === 'Recharge Breath');
+      const activity = getActivities(item)[0];
+      expect(response.result.artifact!._stats).toMatchObject({ coreVersion: '14.364', systemVersion: '5.3.3' });
+      expect(item.system.uses).toEqual({
+        spent: 0,
+        max: '1',
+        recovery: [{ period: 'recharge', type: 'recoverAll', formula: '5' }],
+      });
+      expect(activity.consumption.targets).toEqual([{ type: 'itemUses', target: '', value: '1', scaling: { mode: '', formula: '' } }]);
+      expect(activity.target.template).toMatchObject({type:'cone',size:60,units:'ft'});
+    });
+    it.each(['9007199254740992-9007199254740993', `${'9'.repeat(400)}-${'9'.repeat(400)}`])('rejects unsafe recharge numbers %s', (recharge) => {
+      const actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(new YamlParser().parse(rechargeMarkdown(recharge)));
+      expect(actor.items.find((entry:any)=>entry.name==='Recharge Breath').system.uses).toBeUndefined();
     });
   });
 

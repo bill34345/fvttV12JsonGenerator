@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./encounter-automation": "./src/encounter-automation.ts",
     ".": "./src/index.ts",
     "./config": "./src/config.ts",
     "./doctor": "./src/doctor.ts",
@@ -30,7 +31,8 @@
     "./renderer": "./src/renderer.ts",
     "./types": "./src/types.ts",
     "./validator": "./src/validator.ts",
-    "./verifier": "./src/verifier.ts"
+    "./verifier": "./src/verifier.ts",
+    "./encounter-capabilities": "./src/encounter-capabilities.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

@@ -60,6 +60,7 @@ import {
   extractSwallowDamage as extractSwallowDamageExt,
   buildOverTimeFlag,
   statusIconPath,
+  suppressEncounterStagedInferredEffects,
 } from './actor-effects';
 import {
   createDailyUses as createDailyUsesExt,
@@ -554,6 +555,7 @@ export class ActorGenerator {
     actor.items = newItems;
     applyActorResourceSemantics(actor, parsed.resourceSemantics, this.fvttVersion);
     applyActorBehaviorSemantics(actor, parsed.behaviorSemantics, this.fvttVersion);
+    suppressEncounterStagedInferredEffects(actor);
     if (parsed.spellManifest) {
       buildActorSpellManifest(actor, parsed.spellManifest, this.fvttVersion);
     } else {
@@ -907,12 +909,16 @@ export class ActorGenerator {
       logicalPath,
     };
     const activities = this.activityGenerator.generate(activityData, activityContext);
+    const displaySection = sectionOverride ?? this.resolveDisplaySectionFixed(
+      activationType === 'passive' ? '' : activationType,
+      activationType === 'passive',
+    );
     const item = this.createItemFromAction(
       { ...activityData, name: action.name, englishName: action.englishName, type: action.type, desc: action.describe,
         usesPerLongRest: action.perLongRest } as any,
       activities,
       effectiveActivationType === 'passive' ? '' : effectiveActivationType,
-      sectionOverride,
+      displaySection,
     );
 
     const activationCost = effectiveActivationType === 'legendary'
@@ -939,8 +945,20 @@ export class ActorGenerator {
     }
 
     if (action.recharge) {
-      item.system.uses = { value: 0, max: '', per: 'recharge' };
-      item.system.activation.type = effectiveActivationType === 'legendary' ? 'legendary' : effectiveActivationType;
+      item.system.uses = {
+        spent: 0,
+        max: '1',
+        recovery: [{ period: 'recharge', type: 'recoverAll', formula: String(action.recharge[0]) }],
+      };
+      // Source-authored recharge must consume the same Item use that recovers.
+      const primaryActivity = Object.values(item.system.activities ?? {})[0] as any;
+      if (primaryActivity) {
+        primaryActivity.consumption = {
+          scaling: { allowed: false, max: '' },
+          spellSlot: false,
+          targets: [{ type: 'itemUses', target: '', value: '1', scaling: { mode: '', formula: '' } }],
+        };
+      }
     }
 
     if (action.concentration) {
@@ -953,6 +971,17 @@ export class ActorGenerator {
         max: String(action.perLongRest),
         recovery: [{ period: 'lr', type: 'recoverAll' }],
       };
+    }
+    if(action.uses){
+      // Source-derived: daily, rest and dawn recovery are distinct contracts.
+      const periods={day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'};
+      item.system.uses={spent:0,max:String(action.uses.max),recovery:[{period:periods[action.uses.period],type:'recoverAll'}]};
+      const primary=Object.values(item.system.activities??{})[0] as any;
+      if(primary){
+        primary.consumption??={scaling:{allowed:false,max:''},spellSlot:false,targets:[]};
+        primary.consumption.targets??=[];
+        if(!primary.consumption.targets.some((t:any)=>t.type==='itemUses'&&t.target===''))primary.consumption.targets.push({type:'itemUses',target:'',value:'1',scaling:{mode:'',formula:''}});
+      }
     }
 
     if (action.spellcastingFeatureKey) {
@@ -1713,7 +1742,7 @@ export class ActorGenerator {
       const range = this.extractNarrativeRangeFeetFixed(action.desc ?? '');
       if (range) {
         for (const activity of activities.filter((candidate) => candidate?.type === 'save')) {
-          if (!activity.range) {
+          if (!activity.range && !activity.target?.template?.type) {
             activity.range = this.createDistanceRange(range);
           }
         }
@@ -1919,7 +1948,7 @@ export class ActorGenerator {
       rules.targetCondition = action.targetCondition;
     }
 
-    if (this.hasHalfDamageOnSave(text)) {
+    if (this.hasHalfDamageOnSave(action.desc ?? '')) {
       rules.halfDamageOnSave = true;
     }
 
@@ -1928,7 +1957,8 @@ export class ActorGenerator {
       rules.thresholdEffects = thresholdEffects;
     }
 
-    const onHitRiders = this.extractOnHitRiders(text);
+    // Source-derived: an independently used save feature has no attack hit event.
+    const onHitRiders = action.type === 'attack' ? this.extractOnHitRiders(text) : [];
     if (onHitRiders.length > 0) {
       rules.onHitRiders = onHitRiders;
     }
@@ -1949,7 +1979,7 @@ export class ActorGenerator {
       }
     }
 
-    const allyEscapeSave = this.extractAllyEscapeSave(text);
+    const allyEscapeSave = this.extractAllyEscapeSave(action.desc ?? '');
     if (allyEscapeSave) {
       rules.allyEscapeSave = allyEscapeSave;
     }
@@ -1989,6 +2019,8 @@ export class ActorGenerator {
     if (!/\bDominated\b|\u652f\u914d/i.test(text) || !/\bAdvantage\b|\u4f18\u52bf/i.test(text)) {
       return null;
     }
+
+    if (!/(?:摆脱|结束|解除).{0,12}(?:控制|支配)|(?:end|escape|break).{0,24}(?:control|dominat)/iu.test(text)) return null;
 
     const saveMatch =
       text.match(/DC\s*(\d+)[^()]{0,20}\((Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\)/i) ??

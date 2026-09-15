@@ -1,0 +1,61 @@
+<section class="fvtt-json-forge-form forge-encounter-panel">
+  <h2>从人类写法MD生成战斗包</h2>
+  <p>在一份资料里写出主生物、召唤物的完整数据和召唤规则。AI提取生物与自动化配置，工具使用已实现的能力生成控制入口。AI不编写宏代码；资料缺项会显示出来，确认导入前不创建角色或启动自动化。</p>
+  <label>资料名称<input name="humanLabel" value="{{humanLabel}}" maxlength="160" {{#if busy}}disabled{{/if}}></label>
+  <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
+  <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
+  <p>默认使用Intake连接页的当前Provider、模型与凭据。原始资料最多24000字符，支持2至6种生物；按资料顺序展示主生物及配套生物。</p>
+  {{#if localPage}}<p>本地 AI Intake 使用 DeepSeek V4.1 Flash（deepseek-flash），请在 Intake 连接页配置 DS API。AI 仅提取规则，控制代码由工具提供。</p>{{/if}}
+  <button type="button" data-action="encounter-ai" {{#if busy}}disabled{{/if}}>AI生成并审核战斗包</button>
+  <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
+  {{#if aiRunning}}<button type="button" data-action="encounter-ai-stop">停止AI生成</button>{{/if}}
+  {{#if hasReport}}<button type="button" data-action="encounter-report">下载来源与审核记录</button>{{/if}}
+  {{#if hasPackage}}<button type="button" data-action="encounter-export">下载生成的战斗包</button>{{/if}}
+  <h2>角色、召唤物与配套宏</h2>
+  <p>选择 Forge 战斗包 JSON 或 ZIP。角色会从包内来源重新生成；预览不调用 AI，也不执行宏。现有 AI Intake 的 Provider 和模型配置保持原样。</p>
+  <label>战斗包文件（最多32 MiB）<input name="encounterFile" type="file" accept=".json,.zip,application/json,application/zip" {{#if busy}}disabled{{/if}}></label>
+  <p>{{fileName}}</p>
+  <button type="button" data-action="encounter-preview" {{#if busy}}disabled{{/if}}>预览战斗包</button>
+  <p role="status" aria-live="polite">{{status}}</p>
+  {{#if error}}<p class="forge-error" role="alert">{{error}}</p>{{/if}}
+  {{#if ready}}
+    <h3>{{label}}</h3>
+    {{#each actors}}<details class="forge-encounter-macro"><summary>{{#if isPrimary}}主角色{{else}}配套角色{{/if}}：<strong>{{name}}</strong>（{{key}}）— HP {{hp}} / AC {{ac}} / CR {{cr}}</summary>
+      {{#if assisted}}<p>有配套宏/GM辅助规则，详见下方逐项规则。</p>{{/if}}
+      <h4>来源 Markdown</h4><pre><code>{{source}}</code></pre>
+      <details><summary>生成 Actor JSON（只读）</summary><pre><code>{{artifact}}</code></pre></details>
+    </details>{{/each}}
+    <p>配套图片：{{assetCount}} 个</p>
+    <ul>{{#each assets}}<li>{{fileName}} → {{targetsText}}<details><summary>图片校验值</summary><code>{{sha256}}</code></details></li>{{/each}}</ul>
+    {{#each macros}}
+      <details class="forge-encounter-macro"><summary>宏：{{name}} — 查看代码与绑定</summary>
+        {{#if fixed}}<p>这是工具生成的固定控制入口，使用模块内已经实现的自动化能力。</p>
+        {{#each capabilities}}<h4>{{actor}}：{{name}}</h4><p>绑定能力：{{item}}</p><details><summary>规则参数</summary><pre><code>{{parameters}}</code></pre></details>{{/each}}{{/if}}
+        <p>{{notes}}</p><p>绑定：{{bindingsText}}</p><pre><code>{{command}}</code></pre>
+      </details>
+    {{/each}}
+    {{#if requirements}}<h3>需要核对的规则（来自正式生成结果）</h3>
+      {{#each requirements}}<article class="forge-encounter-macro">
+        <h4>{{actorName}}：{{name}}</h4><p>{{mode}} · {{mechanicId}}</p>
+        {{#if trigger}}<p>触发：{{trigger.event}}；频率：{{trigger.frequency}}；{{trigger.condition}}</p>{{/if}}
+        {{#if conditions}}<p>条件：</p><ul>{{#each conditions}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+        <p>GM操作与执行边界：</p><ul>{{#each gmSteps}}<li>{{this}}</li>{{/each}}</ul>
+        {{#if externalRule}}<p>外部规则：{{externalRule.name}}；{{#if externalRule.ability}}DC {{externalRule.dc}} {{externalRule.ability}}；{{/if}}结果：{{externalRule.result}}</p>{{/if}}
+        <details><summary>完整机制定义</summary><pre><code>{{detailJson}}</code></pre></details>
+      </article>{{/each}}
+    {{/if}}
+    <p>这是可执行宏代码。请确认包的来源和上述代码符合你的战斗规则；包内“已审核”的描述本身不构成执行证明。</p>
+    <label><input name="encounterReviewed" type="checkbox" {{#if reviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>我已核对角色、宏代码、绑定和保留的GM操作规则</label>
+    <button type="button" data-action="encounter-import" {{#unless canImport}}disabled{{/unless}}>一起导入角色与宏</button>
+    <p>只创建或复用相同且未改变的文档，不覆盖已有内容。导入宏不会启动宏。多文档操作不是跨浏览器事务，页面意外关闭后请重新预览检查。</p>
+    <details><summary>包身份</summary><code>{{packageHash}}</code></details>
+  {{/if}}
+  {{#if documents}}<h3>导入结果</h3><ul>{{#each documents}}<li>{{name}} — {{status}} — {{uuid}} {{#if isActor}}<button type="button" data-open-actor="{{id}}">打开角色</button>{{/if}}</li>{{/each}}</ul>{{/if}}
+  <h3>已导入的战斗控制</h3>
+  <p>固定自动化首次明确启动后，会在刷新世界时恢复；可在控制面板停用。旧式专用宏仍需手动重新启动。运行时只使用已导入角色的绑定。</p>
+  <button type="button" data-action="encounter-refresh" {{#if busy}}disabled{{/if}}>刷新列表</button>
+  <ul>{{#each installed}}<li><strong>{{name}}</strong>（{{packageId}}）
+    <button type="button" data-open-macro="{{id}}" {{#if ../busy}}disabled{{/if}}>查看宏</button>
+    <button type="button" data-start-macro="{{id}}" {{#if ../busy}}disabled{{/if}}>启动战斗控制</button>
+  </li>{{else}}<li>当前世界尚未通过这个入口导入战斗宏。</li>{{/each}}</ul>
+</section>

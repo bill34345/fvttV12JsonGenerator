@@ -55,6 +55,16 @@ export function readClientSettings(storage: Storage | undefined = browserStorage
   }
 }
 
+/** Local Lab uses DS Flash; never carry another provider's credential to its endpoint. */
+export function readLocalIntakeSettings(hostname:string,storage:Storage|undefined=browserStorage()):ForgeClientSettings{
+  const existing=readClientSettings(storage);
+  if(!['127.0.0.1','localhost','[::1]'].includes(hostname))return existing;
+  let isDeepSeek=false;try{isDeepSeek=new URL(existing.endpoint).origin==='https://api.deepseek.com';}catch{}
+  return {...existing,providerId:'deepseek',endpoint:'https://api.deepseek.com',model:'deepseek-flash',reviewModel:'deepseek-flash',
+    protocol:'openai-responses',authScheme:'bearer',structuredOutput:'json_object',reasoning:'low',useSeparateReviewModel:false,
+    apiKey:isDeepSeek?existing.apiKey:'',persistApiKey:false};
+}
+
 export function saveClientSettings(
   value: Partial<ForgeClientSettings>,
   storage: Storage | undefined = browserStorage(),

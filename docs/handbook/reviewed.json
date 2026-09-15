@@ -1,0 +1,132 @@
+{
+  "web-workbench": {
+    "fingerprint": "48bcc04dcc1ecea8b1a474f7b8e6773850e464c1c5becf108afd4088281f6827",
+    "reviewedOn": "2026-09-12",
+    "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
+  },
+  "markdown-convert": {
+    "fingerprint": "4495d201fcea90c072581072873e3aa66e16095661699eaaaa10e69747c581b2",
+    "reviewedOn": "2026-09-14",
+    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+  },
+  "monster-intake": {
+    "fingerprint": "bc2be1fd07ee2abb6e691ece56b86be881807de6f36bdb7433e8b192d6d882ce",
+    "reviewedOn": "2026-09-14",
+    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+  },
+  "item-intake": {
+    "fingerprint": "d8be6f75a1c84adb4c070059edcae117d9f117e214281171ea920307444b3306",
+    "reviewedOn": "2026-09-14",
+    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+  },
+  "species-intake": {
+    "fingerprint": "e15669d00ca984a314a21eb5cf2b19ca31a4a6b67922cbee2ee01e85de9781aa",
+    "reviewedOn": "2026-09-14",
+    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+  },
+  "document-extraction": {
+    "fingerprint": "861def0e059a9dbf948366ebc72ec6b293d1d298e25e8466b0bc0b02eb10e85f",
+    "reviewedOn": "2026-09-12",
+    "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
+  },
+  "vault-sync": {
+    "fingerprint": "f1adf7fac3afb168c26c4146801c00d476ca1e9a3679887ecdb98eb35fbddc11",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "goddessfantasy-crawl": {
+    "fingerprint": "64792117f98292b555e33d7a293818521c949a610bc549d5125bb0084bac1478",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "artwork-icons": {
+    "fingerprint": "9c6ae355c8ac665d6b95bb388661d257257a582f557c3b2c57d29907aa9e440f",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "legacy-text": {
+    "fingerprint": "8cab6a716854b28a7f1f6192c5ac336f50ece653ac2df847de842b1f8d0f9abf",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "json-translation": {
+    "fingerprint": "2ce05e584bc481c29671e2de3496a848bf76ecd7f0037f502525bc93bd5e1646",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "foundry-ops": {
+    "fingerprint": "421de4f4a5e046cf74dfd5e918b3864d4966f4e210c4aa58b0fe8587ee941700",
+    "reviewedOn": "2026-09-12",
+    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+  },
+  "verification-development": {
+    "fingerprint": "ad3f52fcff4a0b0e2b393bb9330164990a777002165d04ff5a0ca30105c69ce7",
+    "reviewedOn": "2026-09-14",
+    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+  },
+  "human-encounter-intake": {
+    "fingerprint": "b0576f104f6b5887d24444ff1b74e9a2de15eff1dc6618abaf2ccec8506cf19d",
+    "reviewedOn": "2026-09-15",
+    "note": "对照通用模板、受限能力库和当前验收，更新用户接受的腐化延期与运行边界"
+  },
+  "chat-memory-guard": {
+    "fingerprint": "584662ab88e9fc75b2792e3bf479164a184c5b53e34e4f18a02eda4bdb6d3d29",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-babele-rolltable-embed-translation": {
+    "fingerprint": "7d7c1cbd01409fd1b934ceb9601c90c8a640c6c55ca4d252bd4dbfac8134bd6d",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-battlefield-painter": {
+    "fingerprint": "7653ec3095486487dd8d50846a71daca01d55c26615afaecdf5c053bc74cd25c",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-blood-hunter-2024": {
+    "fingerprint": "57b8ef6076c68a1b5350a28a09b00ea03a134f07afef3678b4081825e9675755",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-homebrew-species": {
+    "fingerprint": "c4fa628ff15c2bc9697e2f2c36e6e5e274c6ff550aa27d64ee54f87e6d4da139",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-house-rules": {
+    "fingerprint": "b011475adf1b236225f1e7b07d256f215ca8b17c928edf88e4160e21882d212e",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-injury-fading-spirits": {
+    "fingerprint": "ad546fa270f4102a9a06b433524dafe8741dd7cde2e7adbfafea0bba090977e9",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "fvtt-json-forge": {
+    "fingerprint": "48af93588e4e576816aa487df26fc908aa7ad23ad4b85f575c26b380b83a3b56",
+    "reviewedOn": "2026-09-15",
+    "note": "已核对通用MD模板、固定能力边界及专项运行结果，腐化按用户决定保留PARTIAL，不将合并宣称生产部署"
+  },
+  "fvtt-selected-token-sync": {
+    "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "monster-spell-resolver": {
+    "fingerprint": "41d4d1ae3bf1c63ba339f8035ea88697e8d738eca216e63d5e933228037855c6",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "open-session-deck": {
+    "fingerprint": "94f3182e9733f9012127b6706a1e92e1610a628f78d00a6327c1846ced23d626",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  },
+  "session-monitor": {
+    "fingerprint": "f0acb4cd5891a6cf4f8ff9f3a126b3bf9a17b0e153cecb06aab8bd1c860f685e",
+    "reviewedOn": "2026-09-12",
+    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+  }
+}

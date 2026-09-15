@@ -211,7 +211,7 @@ function prepareWorldCreateData(
   return copy;
 }
 
-function prepareFoundryImportArtifact(artifact: JsonObject): JsonObject {
+export function prepareFoundryImportArtifact(artifact: JsonObject): JsonObject {
   const copy = JSON.parse(JSON.stringify(artifact)) as JsonObject;
   if (!Array.isArray(copy.items)) return copy;
 
@@ -308,7 +308,7 @@ function assertReadback(
   }
 }
 
-function assertActorSemantics(artifact: JsonObject, readback: unknown): void {
+export function assertActorSemantics(artifact: JsonObject, readback: unknown): void {
   const actual = actorSemantics(readback, 'readback');
   const expected = actorSemantics(artifact, 'artifact');
   const projected = projectReadbackToExpected(actual, expected);

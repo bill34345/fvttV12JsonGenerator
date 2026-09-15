@@ -1,6 +1,6 @@
 import type { ActionData, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { ActivityGenerator } from './activity';
-import { statusIconPath } from './actor-effects';
+import { extractExplicitlyInflictedStatuses, statusIconPath } from './actor-effects';
 import { createStableDocumentId } from './stableId';
 import { deriveExplicitSaveOutcome } from './save-outcome';
 
@@ -262,16 +262,40 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
   if (!embeddedEffects || !embeddedEffects.length) return;
   const effects = Array.isArray(item.effects) ? item.effects : (item.effects = []);
   const activities = item?.system?.activities;
-  const existingByStatus = new Map<string, any>();
+  const inferredByStatus = new Map<string, any>();
   for (const effect of effects) {
+    if (effect?.flags?.fvttJsonGenerator?.sourceDerivedEmbeddedEffect) continue;
     for (const status of effect?.statuses ?? []) {
-      existingByStatus.set(String(status), effect);
+      inferredByStatus.set(String(status), effect);
     }
   }
 
   for (const [index, embedded] of embeddedEffects.entries()) {
     const status = normalizeEmbeddedEffectStatus(embedded.type);
-    let effect = status ? existingByStatus.get(status) : undefined;
+    const inferredStatuses = [...new Set(status
+      ? [status]
+      : extractExplicitlyInflictedStatuses(embedded.describe ?? ''))];
+    let effect = inferredStatuses.length === 1
+      ? inferredByStatus.get(inferredStatuses[0]!)
+      : undefined;
+    if (effect && (!Array.isArray(effect.statuses) || effect.statuses.length !== 1 || effect.statuses[0] !== inferredStatuses[0])) {
+      effect = undefined;
+    }
+    if (effect) {
+      // A source-authored embedded effect is more precise than the generic
+      // condition inferred from prose. Preserve its explicit lifecycle too.
+      if (embedded.duration) effect.duration = embeddedEffectDuration(embedded.duration);
+      if (embedded.describe) effect.description = embedded.describe;
+      effect.flags ??= {};
+      effect.flags.fvttJsonGenerator = {
+        ...(effect.flags.fvttJsonGenerator ?? {}),
+        sourceDerivedEmbeddedEffect: true,
+        sourceDuration: embedded.duration ?? effect.flags.fvttJsonGenerator?.sourceDuration ?? null,
+      };
+      for (const [candidate, inferred] of inferredByStatus.entries()) {
+        if (inferred === effect) inferredByStatus.delete(candidate);
+      }
+    }
     if (!effect) {
       const id = createStableDocumentId({
         item: item.name,
@@ -303,12 +327,14 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         },
       };
       effects.push(effect);
-      if (status) existingByStatus.set(status, effect);
     }
 
     for (const activity of Object.values(activities ?? {}) as any[]) {
       if (!Array.isArray(activity.effects)) activity.effects = [];
-      if (!activity.effects.some((entry: any) => entry?._id === effect._id)) {
+      const existing = activity.effects.find((entry: any) => entry?._id === effect._id);
+      if (existing) {
+        existing.onSave = false;
+      } else {
         activity.effects.push({ _id: effect._id, onSave: false });
       }
     }
@@ -351,6 +377,7 @@ function normalizeEmbeddedEffectStatus(type: string): string | undefined {
     poisoned: 'poisoned',
     prone: 'prone',
     stunned: 'stunned',
+    dazed: 'dazed',
     unconscious: 'unconscious',
     擒抱: 'grappled',
     束缚: 'restrained',
@@ -363,9 +390,17 @@ function normalizeEmbeddedEffectStatus(type: string): string | undefined {
     中毒: 'poisoned',
     倒地: 'prone',
     震慑: 'stunned',
+    恍惚: 'dazed',
     昏迷: 'unconscious',
   };
-  return aliases[normalized];
+  const exact = aliases[normalized];
+  if (exact) return exact;
+  const candidates = new Set(
+    Object.entries(aliases)
+      .filter(([label]) => normalized.includes(label.toLowerCase()))
+      .map(([, canonical]) => canonical),
+  );
+  return candidates.size === 1 ? [...candidates][0] : undefined;
 }
 
 /**

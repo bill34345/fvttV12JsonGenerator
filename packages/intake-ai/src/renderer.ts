@@ -240,7 +240,7 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
     }));
   }
   if (feature.recharge) result.充能 = `${feature.recharge[0]}-${feature.recharge[1]}`;
-  if (feature.uses) result.每日 = feature.uses.max;
+  if (feature.uses) result.使用次数 = {max:feature.uses.max,period:feature.uses.period};
   if (feature.activationCondition && /concentration|专注/iu.test(feature.activationCondition)) result['\u9700\u4e13\u6ce8'] = true;
   if ((section === 'legendary' || section === 'mythic') && feature.legendaryCost) result.传奇动作消耗 = feature.legendaryCost;
   return result;
@@ -249,8 +249,10 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
 function renderBiography(creature: CanonicalMonster): string | undefined {
   const parts = creature.biography?.trim() ? [creature.biography.trim()] : [];
   if (creature.legendary?.preamble.trim()) parts.push(creature.legendary.preamble.trim());
-  if (creature.attributes.acNote?.trim()) {
-    const note = creature.attributes.acNote.trim();
+  const acNote = creature.attributes.acNote?.trim()
+    || (creature.attributes.acKind === 'natural' ? '天生护甲' : '');
+  if (acNote) {
+    const note = acNote;
     const literalNote = /^[（(]/u.test(note) ? note : `（${note}）`;
     parts.push(`护甲等级：${creature.attributes.ac}${literalNote}`);
   }

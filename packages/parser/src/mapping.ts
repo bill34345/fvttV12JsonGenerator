@@ -13,6 +13,7 @@ export interface FieldDefinition {
 export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "image": { key: "img", path: "img", type: "string" },
   "img": { key: "img", path: "img", type: "string" },
+  "tokenImg": { key: "tokenImg", path: "prototypeToken.texture.src", type: "string" },
   // Basic Info
   "名称": { key: "name", path: "name", type: "string", required: true },
   "类型": { key: "type", path: "type", type: "string", required: true },

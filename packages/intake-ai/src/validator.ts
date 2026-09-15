@@ -203,6 +203,15 @@ function validateCreature(
     }
     const names = new Set<string>();
     features.forEach((feature, index) => {
+      if(isRecord(feature)&&Object.hasOwn(feature,'use')){
+        finding('INVALID_FEATURE_USES_FIELD',`/creature/${section}/${index}/use`,'Feature use is unsupported; rename the source-backed counter to uses: { max, period }. Do not silently drop its mechanical value.','schema');
+      }
+      if(feature?.uses!==undefined){
+        const uses=feature.uses;
+        if(!isRecord(uses)||Object.keys(uses).some(key=>!['max','period'].includes(key))||!Number.isSafeInteger(uses.max)||uses.max<1||!['day','longRest','shortRest','dawn'].includes(uses.period)){
+          finding('INVALID_FEATURE_USES',`/creature/${section}/${index}/uses`,'Feature uses must contain a positive integer max and a supported period.','schema');
+        }
+      }
       if (typeof feature?.name !== 'string' || !feature.name.trim()) {
         finding('MISSING_FEATURE_NAME', `/creature/${section}/${index}/name`, 'Feature name is required.', 'schema');
       }

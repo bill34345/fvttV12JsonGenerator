@@ -299,7 +299,7 @@ function legacyWarning(message: string, index: number): GenerationDiagnostic {
 }
 
 function actorWarning(message: string, index: number): GenerationDiagnostic {
-  return { code: 'FORGE_ACTOR_VERIFICATION_WARNING', severity: 'warning', stage: 'semantic', path: `actor-verification/${index}`, message };
+  return { code: 'FORGE_ACTOR_VERIFICATION_WARNING', severity: 'warning', stage: 'semantic', path: `actor/verification/${index}`, message };
 }
 
 function buildLegacySpellMappings(): {

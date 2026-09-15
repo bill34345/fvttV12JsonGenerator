@@ -175,6 +175,9 @@ export class YamlParser {
       if (image) {
         result.img = image;
       }
+    } else if (path === 'prototypeToken.texture.src') {
+      const image = String(processedValue ?? '').trim();
+      if (image) result.tokenImg = image;
     } else if (path.startsWith('system.abilities')) {
       if (internalKey === 'saves') {
         this.parseSavingThrows(processedValue, result);

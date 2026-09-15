@@ -100,7 +100,7 @@ export const FORGE_PROVIDER_PRESETS: readonly ForgeProviderPreset[] = [
   {
     id: 'deepseek', label: 'DeepSeek', defaultBaseUrl: 'https://api.deepseek.com', defaultProtocol: 'openai-responses',
     protocols: ['openai-responses', 'openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://api-docs.deepseek.com', recommendedModels: ['deepseek-v4-flash'],
+    docsUrl: 'https://api-docs.deepseek.com', recommendedModels: ['deepseek-flash'],
   },
   {
     id: 'xai', label: 'xAI (Grok)', defaultBaseUrl: 'https://api.x.ai/v1', defaultProtocol: 'openai-responses',
@@ -158,8 +158,8 @@ export const FORGE_PROVIDER_CAPABILITY_REGISTRY: readonly {
   { providerId: 'openai', protocol: 'openai-chat', model: /^o[1345]/iu, reasoning: ['auto', 'low', 'medium', 'high'], structuredOutput: ['json_schema', 'json_object', 'prompt_fallback'] },
   { providerId: 'xai', protocol: 'openai-responses', model: /^grok-/iu, reasoning: ['auto', 'low', 'medium', 'high'], structuredOutput: ['json_schema', 'json_object', 'prompt_fallback'] },
   { providerId: 'openrouter', protocol: 'openai-responses', model: /^openai\//iu, reasoning: ['auto', 'low', 'medium', 'high'], structuredOutput: ['json_schema', 'json_object', 'prompt_fallback'] },
-  { providerId: 'deepseek', protocol: 'openai-responses', model: /^deepseek-v4-flash$/iu, reasoning: ['auto', 'low', 'high', 'max'], structuredOutput: ['json_object', 'prompt_fallback'] },
-  { providerId: 'deepseek', protocol: 'openai-chat', model: /^deepseek-v4-flash$/iu, reasoning: ['auto', 'low', 'high', 'max'], structuredOutput: ['json_object', 'prompt_fallback'] },
+  { providerId: 'deepseek', protocol: 'openai-responses', model: /^deepseek-(?:v4-)?flash$/iu, reasoning: ['auto', 'low', 'high', 'max'], structuredOutput: ['json_object', 'prompt_fallback'] },
+  { providerId: 'deepseek', protocol: 'openai-chat', model: /^deepseek-(?:v4-)?flash$/iu, reasoning: ['auto', 'low', 'high', 'max'], structuredOutput: ['json_object', 'prompt_fallback'] },
   { providerId: 'anthropic', protocol: 'anthropic-messages', model: /^claude-/iu, reasoning: ['auto', 'adaptive', 'low', 'medium', 'high'], structuredOutput: ['prompt_fallback'] },
 ];
 

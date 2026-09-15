@@ -383,6 +383,137 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect((scoped.senses as Record<string, unknown>).special).toBeUndefined();
   });
 
+  test('projects native weapon base damage only when includeBase is true and preserves additional activity damage', () => {
+    const actor = {
+      system: {
+        attributes: { prof: 5, ac: {}, hp: {}, movement: {}, senses: {}, init: {} },
+        details: { xp: {} },
+        abilities: Object.fromEntries(['str', 'dex', 'con', 'int', 'wis', 'cha'].map((key) => [key, { value: key === 'str' ? 23 : 10 }])),
+        traits: { languages: {} },
+        skills: {},
+      },
+      items: [{
+        name: 'Native Bite', type: 'weapon',
+        system: {
+          damage: { base: { number: 3, denomination: 10, bonus: '', types: ['piercing'] } },
+          activities: {
+            bite: {
+              type: 'attack',
+              attack: { ability: 'str', bonus: '', flat: false, type: { value: 'mwak' } },
+              damage: { includeBase: true, parts: [{ number: 2, denomination: 8, bonus: '', types: ['psychic'] }] },
+              range: { reach: 10 }, activation: { type: 'action' },
+            },
+          },
+        },
+      }],
+    };
+
+    const bite = (projectActor(actor).items as Array<Record<string, unknown>>)[0]!;
+    expect(bite).toMatchObject({
+      damageFormula: '3d10+6',
+      damageFormulas: ['3d10+6', '2d8'],
+      damageTypes: ['piercing', 'psychic'],
+    });
+
+    const nativeItem = actor.items[0]! as any;
+    nativeItem.system.activities.bite.damage.includeBase = false;
+    const noBase = (projectActor(actor).items as Array<Record<string, unknown>>)[0]!;
+    expect(noBase.damageFormulas).toEqual(['2d8']);
+    expect(noBase.damageTypes).toEqual(['psychic']);
+
+    nativeItem.system.activities.bite.damage.includeBase = true;
+    nativeItem.system.damage.base.bonus = '99';
+    const wrongBonus = (projectActor(actor).items as Array<Record<string, unknown>>)[0]!;
+    expect(wrongBonus.damageFormula).not.toBe('3d10+6');
+
+    nativeItem.system.damage.base.bonus = '';
+    nativeItem.system.damage.base.custom = { enabled: true, formula: '1d4' };
+    const customBase = (projectActor(actor).items as Array<Record<string, unknown>>)[0]!;
+    expect(customBase.damageFormula).toBeUndefined();
+
+    nativeItem.system.damage.base.custom = { enabled: false, formula: '' };
+    delete nativeItem.system.activities.bite.attack.ability;
+    const missingAbility = (projectActor(actor).items as Array<Record<string, unknown>>)[0]!;
+    expect(missingAbility.damageFormula).toBeUndefined();
+  });
+
+  test('keeps bare and custom native base damage unverified when the base cannot prove its full formula', async () => {
+    for (const [formula, mutate] of [
+      ['3d10', (activity: any, base: any) => { delete activity.attack.ability; base.custom = { enabled: false, formula: '' }; }],
+      ['1d4', (activity: any, base: any) => { activity.attack.ability = 'str'; base.custom = { enabled: true, formula: '1d4' }; }],
+    ] as const) {
+      const ir = buildValidLurkerIr() as any;
+      ir.creature.actions[0] = {
+        ...ir.creature.actions[0], name: 'Native Bite', englishName: undefined, description: '原生基础伤害测试。',
+        attack: { type: 'mwak', toHit: 6, reach: 5 }, damage: [{ formula, type: 'piercing', relationship: 'base' }],
+      };
+      const markdown = renderMonsterIntakeMarkdown(ir);
+      const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+      const actor = generated.rawJson as any;
+      const item = actor.items.find((entry: any) => entry.name === 'Native Bite');
+      const activity = Object.values(item.system.activities)[0] as any;
+      activity.damage = { includeBase: true, parts: [] };
+      activity.attack = { ability: 'str', bonus: '', flat: false, type: { value: 'mwak' } };
+      item.system.damage = { base: { number: formula === '1d4' ? 1 : 3, denomination: formula === '1d4' ? 4 : 10, bonus: '', types: ['piercing'], custom: { enabled: false, formula: '' } } };
+      mutate(activity, item.system.damage.base);
+      expect(verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor).findings).toContainEqual(expect.objectContaining({
+        code: 'ACTOR_DAMAGE_FORMULA_DRIFT', path: '/creature/actions/0/damage/0/formula',
+      }));
+    }
+  });
+
+  test('treats source usage annotations, standard bilingual languages, and standard bilingual statuses as equivalent while keeping a different feature name blocking', async () => {
+    const ir = buildValidLurkerIr() as any;
+    ir.creature.languages = { values: ['龙语'] };
+    ir.creature.traits = [{ name: '拒绝 [2/日]', englishName: 'Defiance', description: '该生物可以拒绝一次失败。' }];
+    ir.creature.actions = [{
+      name: '状态冲击', englishName: 'Status Burst', description: '目标进行豁免，失败时倒地。', activityType: 'save',
+      save: { dc: 13, ability: 'dex' }, appliedConditions: [{ statuses: ['倒地（prone）', '恐慌（frightened）', '恍惚（dazed）'], duration: '1 round' }],
+    }];
+    ir.creature.bonusActions = [];
+    ir.creature.reactions = [];
+    ir.creature.legendaryActions = [];
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    const actor = generated.rawJson as any;
+
+    const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    const codes = new Set(report.findings.map((finding) => finding.code));
+    expect(codes).not.toContain('ACTOR_LANGUAGE_DRIFT');
+    expect(codes).not.toContain('ACTOR_FEATURE_MISSING');
+    expect(codes).not.toContain('ACTOR_FEATURE_COUNT_DRIFT');
+    expect(codes).not.toContain('ACTOR_CONDITION_DRIFT');
+
+    const defiance = actor.items.find((item: any) => item.name.includes('Defiance'));
+    defiance.name = '拒绝 [3/日] (Defiance)';
+    const countDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(countDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+
+    defiance.name = '拒绝 (Defiance)';
+    defiance.system.uses.max = '3';
+    const usesDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(usesDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+
+    defiance.system.uses.max = '2';
+    defiance.system.uses.recovery = [];
+    const recoveryDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(recoveryDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+
+    defiance.name = '其他守卫 (Guard)';
+    const nameDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(nameDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+
+    const statusBurst = actor.items.find((item: any) => item.name.includes('Status Burst'));
+    const frightened = statusBurst.effects.find((effect: any) => effect.statuses.includes('frightened'));
+    frightened.statuses = ['Custom frightened curse'];
+    const customEnglish = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(customEnglish.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+
+    frightened.statuses = ['强化恐慌'];
+    const customLocalized = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(customLocalized.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+  });
+
   test('projects every activity damage part for multi-type effects', () => {
     const projection = projectActor({
       system: {

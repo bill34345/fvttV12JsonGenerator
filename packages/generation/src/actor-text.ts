@@ -343,7 +343,13 @@ export function extractNarrativeRangeFeetFixed(text: string): number | null {
  * Check if text indicates half damage on successful save.
  */
 export function hasHalfDamageOnSave(text: string): boolean {
-  return /(?:half\s+as\s+much\s+damage|half\s+damage|\u4f24\u5bb3\u51cf\u534a)/i.test(text);
+  if (!/saving\s+throw|\bsave\b|豁免/iu.test(text)) return false;
+  // A failed-half branch must never borrow the success marker from another clause.
+  const successThenHalf=/(?:successful\s+(?:saving\s+throw|save)|on\s+(?:a\s+)?success|save\s+succeeds|(?:豁免)?成功(?:时|则|[：:])?)(?:(?!failed|failure|失败|[.。;；\n]).){0,160}?(?:half\s+(?:as\s+much\s+)?damage|伤害减半|一半伤害)/giu;
+  for (const match of text.matchAll(successThenHalf)) {
+    if (!/no\s+damage|不受伤害|无伤害/iu.test(match[0])) return true;
+  }
+  return /half\s+(?:as\s+much\s+)?damage\s+(?:on|with)\s+(?:a\s+)?successful\s+(?:saving\s+throw|save|one)/iu.test(text);
 }
 
 /**

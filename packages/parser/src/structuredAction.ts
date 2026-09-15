@@ -118,12 +118,19 @@ export class StructuredActionParser {
     }
 
     const recharge = (entry as Record<string, unknown>)['充能'] ?? (entry as Record<string, unknown>)['recharge'];
-    if (recharge && Array.isArray(recharge) && recharge.length === 2) {
-      action.recharge = [this.parseNumber(recharge[0]), this.parseNumber(recharge[1])];
-    }
+    const rechargeRange = this.parseRechargeRange(recharge);
+    if (rechargeRange) action.recharge = rechargeRange;
 
-    if ((entry as Record<string, unknown>)['每日'] ?? (entry as Record<string, unknown>)['perLongRest']) {
-      action.perLongRest = this.parseNumber((entry as Record<string, unknown>)['每日'] ?? (entry as Record<string, unknown>)['perLongRest']);
+    if(record['perLongRest']!==undefined)action.perLongRest=this.parseNumber(record['perLongRest']);
+    const hasUses=Object.hasOwn(record,'使用次数'),hasDaily=Object.hasOwn(record,'每日');
+    if(hasUses&&hasDaily)throw new Error('ConflictingSourceUses: multiple counter fields require review.');
+    const rawUses=hasUses?record['使用次数']:hasDaily?{max:record['每日'],period:'day'}:undefined;
+    if(hasUses||hasDaily){
+      if(!rawUses||typeof rawUses!=='object'||Array.isArray(rawUses))throw new Error('InvalidSourceUses: expected max and period.');
+      const uses=rawUses as Record<string,unknown>;
+      if(Object.keys(uses).some(key=>!['max','period'].includes(key))||!Number.isSafeInteger(uses.max)||Number(uses.max)<1||typeof uses.period!=='string'||!['day','longRest','shortRest','dawn'].includes(uses.period))throw new Error('InvalidSourceUses: positive integer max and a supported period are required.');
+      if(action.recharge||action.perLongRest!==undefined)throw new Error('ConflictingSourceUses: multiple recovery mechanisms require review.');
+      action.uses={max:Number(uses.max),period:uses.period as NonNullable<StructuredActionData['uses']>['period']};
     }
 
     const legendaryCost = (entry as Record<string, unknown>)['传奇动作消耗'] ?? (entry as Record<string, unknown>)['legendaryCost'];
@@ -162,6 +169,19 @@ export class StructuredActionParser {
       throw new Error('InvalidSpellcastingFeatureKey: spellcastingFeatureKey must be a non-empty string.');
     }
     return value.trim();
+  }
+
+  private parseRechargeRange(value: unknown): [number, number] | undefined {
+    const parts = Array.isArray(value) && value.length === 2
+      ? value
+      : typeof value === 'string'
+        ? value.match(/^\s*(\d+)\s*(?:-|–|—|至|到)\s*(\d+)\s*$/u)?.slice(1)
+        : undefined;
+    if (!parts || parts.length !== 2) return undefined;
+    const minimum = this.parseNumber(parts[0]);
+    const maximum = this.parseNumber(parts[1]);
+    return Number.isSafeInteger(minimum) && Number.isSafeInteger(maximum)
+      && minimum >= 1 && maximum >= minimum ? [minimum, maximum] : undefined;
   }
 
   private inferActivationType(sectionName: string): ActivityActivationType | null {

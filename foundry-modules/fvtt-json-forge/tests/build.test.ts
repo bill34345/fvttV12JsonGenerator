@@ -11,6 +11,7 @@ describe('FVTT JSON Forge browser build', () => {
       'scripts/index.js',
       'styles/fvtt-json-forge.css',
       'templates/forge-actor.hbs',
+      'templates/forge-encounter.hbs',
       'templates/forge-intake.hbs',
       'templates/forge-item.hbs',
     ]);

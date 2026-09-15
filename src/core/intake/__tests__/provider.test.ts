@@ -180,7 +180,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v18');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v21');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
@@ -236,6 +236,11 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('Standard 2024 stat-block Initiative +4 (14)');
     expect(prompt).toContain('Multiattack is an action aggregator, not an attack roll');
     expect(prompt).toContain('omit legendary entirely');
+    expect(prompt).toContain('not creature.legendaryActions');
+    expect(prompt).toContain('legendaryActions are required IR fields');
+    expect(prompt).toContain('Never remove a required empty array in repair');
+    expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
+    expect(prompt).toContain('appliedConditions entry staged:true');
   });
 
   test('review prompt independently checks source action economy against IR and Actor activation', async () => {
@@ -249,7 +254,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v23');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v26');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
@@ -292,6 +297,15 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(prompt).toContain('Each finding must use exactly {id,code,path,message,blocking,evidence?}');
     expect(prompt).toContain('/creature/attributes/ac claim and its exact evidence jointly support base AC and acNote');
     expect(prompt).toContain('do not require a second acNote claim');
+    expect(prompt).toContain('not creature.legendaryActions');
+    expect(prompt).toContain('legendaryActions are required IR fields');
+    expect(prompt).toContain('ordinary entries under Actions use action');
+    expect(prompt).toContain('with no action expenditure, uses special');
+    expect(prompt).toContain('Actions section. An explicit action');
+    expect(prompt).toContain('expenditure still controls even when the body');
+    expect(prompt).toContain('legact/legres with max 0 and spent/value 0');
+    expect(prompt).toContain('Positive granted resources without source evidence');
+    expect(prompt).toContain('an explicit positive source resource, remain blocking defects');
   });
 
   test('repair prompt preserves the same source-evidenced spellcasting boundary', async () => {
@@ -305,7 +319,9 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v18');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v21');
+    expect(prompt).toContain('Never remove a required empty array in repair');
+    expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
     expect(prompt).toContain('Return a compact JSON Patch envelope only');
     expect(prompt).toContain('Do not repeat the complete MonsterIntakeIR');
     expect(prompt).toContain('at most 64 operations');

@@ -13,6 +13,9 @@
     "./batch-collection": "./src/batchCollection.ts",
     "./batch-queue": "./src/batchQueue.ts",
     "./batch-queue-indexed-db": "./src/batchQueueIndexedDb.ts",
+    "./encounter-package": "./src/encounterPackage.ts",
+    "./encounter-preparation": "./src/encounterPreparation.ts",
+    "./encounter-intake": "./src/encounterIntake.ts",
     "./item-intake": "./src/itemIntake.ts",
     "./plaintext": "./src/plaintext.ts",
     "./provider-connections": "./src/providerConnections.ts"

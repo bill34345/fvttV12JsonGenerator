@@ -1,6 +1,7 @@
 import { createForgeActorApplicationClass } from './application';
 import { createForgeItemApplicationClass } from './itemApplication';
 import { createForgeIntakeApplicationClass } from './intakeApplication';
+import {createEncounterAutomationLifecycle} from './encounterAutomationLifecycle';
 import {
   assertExactRuntime,
   assertGm,
@@ -47,6 +48,8 @@ export function openForgeIntake(): unknown {
 
 export function initializeForgeModule(globalEnvironment: any = globalThis): void {
   if (!globalEnvironment.Hooks) return;
+  const automation=createEncounterAutomationLifecycle(globalEnvironment);
+  globalEnvironment.Hooks.on?.('canvasReady',()=>void automation.resume());
   let actorMenuRegistered = false;
   let itemMenuRegistered = false;
   let intakeMenuRegistered = false;
@@ -123,10 +126,13 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
     registerForgeMenus();
     const game = globalEnvironment.game;
     const module = game?.modules?.get?.(MODULE_ID);
-    if (module) module.api = Object.freeze({ openForgeActor, openForgeItem, openForgeIntake });
+    if (module) module.api = Object.freeze({ openForgeActor, openForgeItem, openForgeIntake,
+      startEncounterAutomation:automation.start,stopEncounterAutomation:automation.stop,
+      encounterAutomationRuntimes:automation.runtimes });
     if (game?.user?.isGM !== true) return;
     try {
       assertExactRuntime(game);
+      await automation.resume();
     } catch (error) {
       globalEnvironment.ui?.notifications?.warn?.(error instanceof Error ? error.message : String(error));
       return;

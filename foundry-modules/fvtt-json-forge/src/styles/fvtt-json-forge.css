@@ -16,6 +16,14 @@
 .forge-connection-grid, .forge-advanced-grid, .forge-input-grid { display: grid; gap: 0.65rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .forge-import-card { display: grid; gap: 0.55rem; grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.55fr) auto; align-items: end; border: 1px solid var(--color-border-light-primary); padding: 0.65rem; margin-block: 0.65rem; }
 .forge-import-card h2, .forge-import-card p { margin: 0; }
+.forge-encounter-panel { display: flex; flex-direction: column; gap: 0.65rem; padding: 0.8rem; overflow: auto; }
+.forge-encounter-panel > p { margin: 0; }
+.forge-encounter-panel ul { margin: 0; padding-inline-start: 1.4rem; }
+.forge-encounter-panel li { margin-block: 0.35rem; }
+.forge-encounter-panel code { overflow-wrap: anywhere; }
+.forge-encounter-panel .forge-error { border-left: 3px solid var(--color-level-error); padding: 0.5rem; }
+.forge-encounter-macro { border: 1px solid var(--color-border-light-primary); padding: 0.55rem; }
+.forge-encounter-macro pre { max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .forge-source-library { border: 1px solid var(--color-border-light-primary); border-radius: 0.25rem; padding: 0.65rem; }
 .forge-source-library > summary { cursor: pointer; font-size: 1.1rem; font-weight: 700; }
 .forge-library-toolbar, .forge-library-import { display: grid; gap: 0.55rem; grid-template-columns: minmax(12rem, 1fr) auto auto auto; align-items: end; margin-top: 0.55rem; }

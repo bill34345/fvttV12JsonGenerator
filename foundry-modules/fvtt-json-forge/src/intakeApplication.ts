@@ -81,6 +81,7 @@ import {
 } from '@fvtt-json-generator/forge-gateway-protocol';
 import { buildForgeItemRequest, convertFinalItemSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
+import { createForgeEncounterApplicationClass } from './encounterApplication';
 import { createAcceptedForgeItem } from './itemRuntime';
 import {
   assertExactRuntime,
@@ -93,6 +94,7 @@ import {
   clearApiKey,
   clientSettingsProfileId,
   readClientSettings,
+  readLocalIntakeSettings,
   saveClientSettings,
   clearAllApiKeys,
   type ForgeClientSettings,
@@ -229,7 +231,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private activeBatchJobId?: string;
     private batchUnsubscribe?: () => void;
     private readonly batchResponses = new Map<string, { mode: ForgeIntakeMode; rawSourceHash: ForgeIntakeSnapshot['rawSourceHash']; response: IntakeResponse }>();
-    private settings: ForgeClientSettings = readClientSettings();
+    private settings: ForgeClientSettings = readLocalIntakeSettings((environment.window??(globalThis as any).window)?.location?.hostname??'');
     private connectionProbe?: Awaited<ReturnType<typeof testForgeProviderConnection>>;
     private connectionProbeRevision = -1;
     private connectionProbeIdentity = '';
@@ -374,6 +376,25 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const model = root.querySelector('[name="model"]') as HTMLInputElement | null;
       if (model) model.oninput = () => { invalidateConnection(); this.refreshProviderUi(root); };
       this.bind(root, 'analyze', () => void this.analyze(root));
+      this.bind(root, 'encounter-open', () => {
+        if (this.busy() || this.batchApplying) return;
+        try { assertGm(environment.game); assertExactRuntime(environment.game);
+          const Encounter = createForgeEncounterApplicationClass({ ...environment, foundry: foundryGlobal,
+            getAiOptions:controller=>{const currentRoot=this.element as HTMLElement|undefined;
+              if(!currentRoot||currentRoot.isConnected===false)throw new Error('请重新打开Intake连接页并确认当前AI配置。');
+              return this.aiProviderOptions(readForm(currentRoot),controller);},
+            getAiWaitPolicy:controller=>({
+              cycleMs:BROWSER_AI_WAIT_CYCLE_MS,
+              cyclesBeforeDecision:BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION,
+              onDecision:async(status: IntakeRequestWaitStatus)=>{
+                const decision=await this.promptAiWaitDecision(status);
+                if(decision==='stop')controller.abort();
+                return decision;
+              },
+            }) });
+          new Encounter().render(true);
+        } catch (error) { this.notify('error', messageOf(error)); }
+      });
       this.bind(root, 'repair', () => void this.repair(root));
       this.bind(root, 'generate', () => void this.generate(root));
       this.bind(root, 'regenerate', () => void this.regenerate(root));

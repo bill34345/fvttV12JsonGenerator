@@ -230,6 +230,8 @@ export interface StructuredActionData {
   target?: ActionTarget;
   recharge?: [number, number];
   perLongRest?: number;
+  /** Explicit source resource period, kept separate from legacy long-rest metadata. */
+  uses?: { max:number; period:'day'|'longRest'|'shortRest'|'dawn' };
   legendaryCost?: number;
   concentration?: boolean;
   describe?: string;

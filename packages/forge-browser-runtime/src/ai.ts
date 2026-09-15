@@ -50,6 +50,7 @@ import {
 } from './index';
 import { combineAbortSignals, guardResponseBodyForCallerAbort } from './abortSignal';
 import { resolveActorIntakeStatus } from './status';
+import type { EncounterRetryMetadata } from './encounterStageRetry';
 
 export type BrowserActorIntakeStage =
   | 'discover'
@@ -84,6 +85,8 @@ export interface BrowserActorIntakeInput {
   fvttVersion: string;
   systemVersion: string;
   sourceId?: ForgeSourceId;
+  /** Encounter-only source projection. Ordinary Actor Intake keeps the default renderer. */
+  renderMarkdown?: (ir: MonsterIntakeIR) => string;
   onStage?: (stage: BrowserActorIntakeStageResult) => void;
 }
 
@@ -125,6 +128,10 @@ export interface BrowserAiProviderOptions {
   audit?: OpenAICompatibleMonsterIntakeOptions['audit'];
   waitPolicy?: IntakeRequestWaitPolicy;
   onActivity?: (activity: IntakeProviderActivity) => void;
+  /** Local Encounter bridge only; ordinary provider calls ignore this callback. */
+  onRetry?: (metadata: EncounterRetryMetadata) => void;
+  /** Testable total budget shared by the two local Encounter bridge attempts. */
+  encounterRetryBudgetMs?: number;
 }
 
 export interface BrowserActorIntakeCalls {
@@ -330,6 +337,23 @@ const ABSENT_OPTIONAL_FEATURE_SECTION_SIGNALS = {
   legendaryActions: /(?:\blegendary\s+actions?\b|传奇动作)/iu,
 } as const;
 
+/** Re-check a prior proposal as a new attempt; historical statuses never grant acceptance. */
+export function analyzeBrowserActorIntakeDraft(
+  input:BrowserActorIntakeInput,proposal:MonsterIntakeIR,provider:MonsterIntakeAiProvider,
+):BrowserActorIntakeAnalysis{
+  assertInput(input.source);
+  const rawSourceHash=hashSource(input.source);
+  if(proposal.source?.sha256!==rawSourceHash||proposal.source?.length!==input.source.length)throw new Error('提取草稿与当前来源身份不符。');
+  const candidate:DiscoveryCandidate={id:'resumed-proposal',label:input.displayName??input.sourceName,start:0,end:input.source.length,quote:input.source};
+  const ir=normalizeBrowserMonsterIr(input.source,candidate,proposal);
+  const validation=validateMonsterIntakeIR(input.source,ir,{coverageRange:candidate});
+  const stages=freshStages();
+  markStage(stages,input.onStage,'validate',validation.blocking.length?'failed':'completed','重新校验原始提取草稿；尚未重新进行AI审阅。');
+  return {status:validation.blocking.length?'needs_review':'ready_to_generate',attemptId:`draft-attempt:${globalThis.crypto.randomUUID()}`,
+    rawSourceHash,candidates:[candidate],candidate,ir,validation,evidence:projectEvidence(ir,candidate),findings:validation.findings,stages,
+    provider:providerIdentity(provider),calls:freshCalls(),repairCount:0};
+}
+
 function normalizeBrowserMonsterIr(
   source: string,
   candidate: DiscoveryCandidate,
@@ -482,9 +506,16 @@ export async function generateAndReviewBrowserActorIntake(
   const counted = countProviderCalls(provider, calls);
   try {
     report('generate', 'running');
-    const rendered = await renderAndAttach(analysis.ir, input.sourceId);
+    const rendered = await renderAndAttach(analysis.ir, input.sourceId, input.renderMarkdown);
     const response = await convertRenderedActor(input, rendered.content, rendered.sourceId);
     throwIfAborted(signal);
+    if(responseStatus(response)==='failed'){
+      const diagnostics='result' in response?response.result.diagnostics:[];
+      const findings=diagnostics.map(d=>boundedFinding(d.code,d.message));
+      report('generate','failed','正式生成未完成，保留真实诊断；没有将空对象交给AI审阅。');
+      return {...failClosed(findings.length?findings:[boundedFinding('FORMAL_GENERATION_FAILED','Formal Actor generation failed.')]),
+        formalStatus:'failed',finalSource:rendered.content,finalSourceHash:hashSource(rendered.content),markdown:rendered.content};
+    }
     report('generate', 'completed');
     const actorProjection = actorFromResponse(response);
     const intakeVerification = verifyRenderedActor(input.source, analysis.ir, rendered.content, response, analysis.candidate);
@@ -798,8 +829,12 @@ async function runDiscovery(
   }
 }
 
-async function renderAndAttach(sourceIr: MonsterIntakeIR, sourceId?: ForgeSourceId) {
-  const markdown = renderMonsterIntakeMarkdown(sourceIr);
+async function renderAndAttach(
+  sourceIr: MonsterIntakeIR,
+  sourceId?: ForgeSourceId,
+  renderMarkdown?: BrowserActorIntakeInput['renderMarkdown'],
+) {
+  const markdown = renderMarkdown ? renderMarkdown(sourceIr) : renderMonsterIntakeMarkdown(sourceIr);
   return attachForgeSourceId(markdown, sourceId);
 }
 

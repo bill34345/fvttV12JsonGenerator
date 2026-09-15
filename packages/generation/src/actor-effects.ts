@@ -440,6 +440,87 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
   return effects;
 }
 
+/**
+ * Encounter staged-condition markers are emitted only by the companion source
+ * renderer after it has verified the IR evidence. Their carrier text may still
+ * pass through the legacy description inference earlier in generation, so
+ * remove only that carrier's plain inferred standard-status effects and links.
+ */
+export function suppressEncounterStagedInferredEffects(actor: any): void {
+  for (const item of Array.isArray(actor?.items) ? actor.items : []) {
+    const statuses = encounterStagedMarkerStatuses(item);
+    if (statuses.size === 0) continue;
+    const effects = Array.isArray(item?.effects) ? item.effects : [];
+    const removed = new Set(effects
+      .filter((effect: any) => isPlainInferredStagedEffect(effect, statuses))
+      .map((effect: any) => effect._id)
+      .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0));
+    if (removed.size === 0) continue;
+    item.effects = effects.filter((effect: any) => !removed.has(effect?._id));
+    for (const activity of Object.values(item?.system?.activities ?? {}) as any[]) {
+      if (Array.isArray(activity?.effects)) activity.effects = activity.effects.filter((effect: any) => !removed.has(effect?._id));
+    }
+  }
+}
+
+function encounterStagedMarkerStatuses(item: any): Set<string> {
+  const mechanics = item?.flags?.fvttJsonGenerator?.behaviorMechanics;
+  if (!Array.isArray(mechanics)) return new Set();
+  const statuses = new Set<string>();
+  for (const mechanic of mechanics) {
+    const conditions: string[] = Array.isArray(mechanic?.conditions) ? mechanic.conditions.map(String) : [];
+    if (!isCompleteEncounterStagedMarker(item, mechanic, conditions)) continue;
+    for (const condition of conditions) {
+      const match = condition.match(/^encounter-staged-status:([a-z-]+)$/u);
+      if (match?.[1]) statuses.add(match[1]);
+    }
+  }
+  return statuses;
+}
+
+function isCompleteEncounterStagedMarker(item: any, mechanic: any, conditions: readonly string[]): boolean {
+  const match = /^encounter-staged-(trait|action|bonus|reaction|legendary)-(\d+)$/u.exec(String(mechanic?.id ?? ''));
+  if (!match?.[1] || !match[2]) return false;
+  const index = Number.parseInt(match[2], 10) - 1;
+  const expected = ({
+    trait: { carrier: '特性', source: 'traits' }, action: { carrier: '动作', source: 'actions' },
+    bonus: { carrier: '附赠动作', source: 'bonusActions' }, reaction: { carrier: '反应', source: 'reactions' },
+    legendary: { carrier: '传奇动作', source: 'legendaryActions' },
+  } as Record<string, { carrier: string; source: string }>)[match[1]];
+  if (!expected || index < 0) return false;
+  const carrier = mechanic?.carrier;
+  const itemSection = item?.flags?.['tidy5e-sheet']?.section ?? item?.flags?.['tidy5e-sheet']?.actionSection;
+  const paths = conditions.filter((value) => value.startsWith('encounter-staged:/creature/'));
+  const coverage = conditions.filter((value) => value.startsWith('encounter-staged-coverage:'));
+  return mechanic.kind === 'lifecycle'
+    && mechanic.coverage === 'literal'
+    && mechanic.executionMode === 'gm-assisted'
+    && mechanic.ruleSource === 'source-derived'
+    && carrier?.section === expected.carrier
+    && carrier?.name === item?.name
+    && itemSection === expected.carrier
+    && paths.length > 0
+    && paths.every((path) => new RegExp(`^encounter-staged:/creature/${expected.source}/${index}/appliedConditions/(?:0|[1-9]\\d*)$`).test(path))
+    && coverage.length === 1
+    && coverage[0] === `encounter-staged-coverage:actor.${expected.source}`
+    && Array.isArray(mechanic?.gmSteps)
+    && mechanic.gmSteps.length >= 2
+    && mechanic.gmSteps.every((step: unknown) => typeof step === 'string' && step.trim().length > 0);
+}
+
+function isPlainInferredStagedEffect(effect: any, stagedStatuses: ReadonlySet<string>): boolean {
+  const statuses: string[] = Array.isArray(effect?.statuses) ? effect.statuses.map(String) : [];
+  const flags = effect?.flags?.fvttJsonGenerator ?? {};
+  return statuses.length > 0
+    && statuses.every((status) => stagedStatuses.has(status))
+    && effect?.disabled === false
+    && effect?.description === ''
+    && Array.isArray(effect?.changes) && effect.changes.length === 0
+    && !flags.sourceDerivedEmbeddedEffect
+    && !flags.behaviorState
+    && !flags.sourceDerivedAcEffect;
+}
+
 function extractUntilDamagedStatuses(
   desc: string,
   explicitlyInflicted: ReadonlySet<string>,
