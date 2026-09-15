@@ -63,6 +63,7 @@ export const requiredAgentsFiles = [
   'foundry-modules/open-session-deck/AGENTS.md',
   'tools/AGENTS.md',
   'tools/foundry-ops/AGENTS.md',
+  'tools/forge-encounter/AGENTS.md',
 ] as const;
 
 const ancestorAgentsFiles = new Set([

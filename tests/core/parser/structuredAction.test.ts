@@ -274,8 +274,8 @@ describe('StructuredActionParser', () => {
     });
   });
 
-  describe('perLongRest parsing', () => {
-    it('should parse perLongRest correctly', () => {
+  describe('source uses parsing', () => {
+    it('should preserve the daily source period', () => {
       const input = [
         {
           '名称': '医疗',
@@ -286,7 +286,8 @@ describe('StructuredActionParser', () => {
 
       const result = parser.parseStructuredSection(input, '特性');
 
-      expect(result[0]!.perLongRest).toBe(3);
+      expect(result[0]!.uses).toEqual({ max: 3, period: 'day' });
+      expect(result[0]!.perLongRest).toBeUndefined();
     });
   });
 

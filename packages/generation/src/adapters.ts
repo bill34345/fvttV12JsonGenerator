@@ -97,8 +97,8 @@ function collectActionMechanics(
       resource: 'itemUses',
     }));
   }
-  if (raw.useAction?.limitedUses || raw.perLongRest || raw.recharge) {
-    result.push(mechanic('uses', `${path}/uses`, raw.useAction?.limitedUses ?? raw.perLongRest ?? raw.recharge));
+  if (raw.useAction?.limitedUses || raw.uses || raw.perLongRest || raw.recharge) {
+    result.push(mechanic('uses', `${path}/uses`, raw.useAction?.limitedUses ?? raw.uses ?? raw.perLongRest ?? raw.recharge));
   }
   if (raw.range || attack?.range) result.push(mechanic('range', `${path}/range`, raw.range ?? attack.range));
   if (raw.passiveEffect) result.push(mechanic('effect', `${path}/passiveEffect`, raw));

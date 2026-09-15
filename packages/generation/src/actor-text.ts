@@ -340,6 +340,38 @@ export function extractNarrativeRangeFeetFixed(text: string): number | null {
 }
 
 /**
+ * Extract a range that controls where an area effect can be placed.
+ *
+ * An area template's size is already represented by its target data.  Only
+ * return a distance when the source explicitly attaches it to a placement
+ * phrase, such as "at a point within 60 feet" or "出现在60尺内".  This keeps a
+ * cone's length (or a creature's distance from the source) from becoming the
+ * Activity's placement range by accident.
+ */
+export function extractNarrativePlacementRangeFeet(text: string): number | null {
+  const patterns = [
+    /\b(?:at|from|on)\s+(?:a|an|the)\s+(?:point|location|space|spot|place)\s+within\s+(\d+)\s*(?:feet|foot|ft)\b/iu,
+    /\b(?:a|an|the)\s+(?:point|location|space|spot|place)\s+within\s+(\d+)\s*(?:feet|foot|ft)\b/iu,
+    /\b(?:appears?|is\s+(?:created|placed|centered|located|formed))\s+within\s+(\d+)\s*(?:feet|foot|ft)\b/iu,
+    /(?:出现在|放置在|形成于|产生于)[^。！？\n]{0,24}?(\d+)\s*(?:英)?尺内/iu,
+    /(?:从|在|位于)[^。！？\n]{0,36}?(\d+)\s*(?:英)?尺内[^。！？\n]{0,16}(?:的)?(?:地点|位置|空间)/iu,
+  ];
+
+  const matches: number[] = [];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const value = Number.parseInt(match[1], 10);
+      if (Number.isSafeInteger(value) && value > 0) {
+        matches.push(value);
+      }
+    }
+  }
+
+  return matches.length > 0 ? Math.max(...matches) : null;
+}
+
+/**
  * Check if text indicates half damage on successful save.
  */
 export function hasHalfDamageOnSave(text: string): boolean {

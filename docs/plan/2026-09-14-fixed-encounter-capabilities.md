@@ -92,3 +92,6 @@ E包目录为`obsidian/dnd数据转fvttjson/output/human-crystalbleed-ds-fixed-2
 用户明确授权 commit 并 merge master，同时更新工具说明，不包含 push 或生产部署。当前候选 b54f8c4399029788a6148ab776e12e35a68cfaef87592b6b06981479566be167 已安装本地 mirror。专项守护实际伤害和耗尽削弱 PASS；重复腐化因缺相邻快照收紧为 PARTIAL，用户明确同意留待独立状态设计再明确。窗口26分24秒，25分钟门禁FAIL、30分钟硬限PASS；清理报告通过。原证据在 .pui/chrome-ward-corruption-20260915/，不把忽略的本地证据目录加入发布。
 
 工具说明区分通用MD输入与有限固定能力库，保留Dazed专项、浏览器完整AI生成、生产和长时验收的未执行边界。本轮不为已接受的腐化缺口重启测试。
+
+
+合并门禁补充：全量回归发现旧每日/长休断言和旧Provider默认模型断言，已对照来源修正；原per-rest fixture改显式longRest以匹配文字。另修复区域模板投放距离误丢失（保留明确地点距离，不把锥长/目标距离误作投放距离），并将结构化uses纳入canonical verifier，拒绝错误max、恢复周期及缺失消耗，保留充能原处理。新增正反例和负变异回归；这些合并收尾修正不声称已经在Lab更新复验。

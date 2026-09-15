@@ -5,24 +5,24 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "4495d201fcea90c072581072873e3aa66e16095661699eaaaa10e69747c581b2",
-    "reviewedOn": "2026-09-14",
-    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+    "fingerprint": "a8ea314f524d95b3440273bfacf506c6bc35fed4e8f1de585943ed167deae1ae",
+    "reviewedOn": "2026-09-15",
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "monster-intake": {
     "fingerprint": "bc2be1fd07ee2abb6e691ece56b86be881807de6f36bdb7433e8b192d6d882ce",
-    "reviewedOn": "2026-09-14",
-    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+    "reviewedOn": "2026-09-15",
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "item-intake": {
     "fingerprint": "d8be6f75a1c84adb4c070059edcae117d9f117e214281171ea920307444b3306",
-    "reviewedOn": "2026-09-14",
-    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+    "reviewedOn": "2026-09-15",
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "species-intake": {
     "fingerprint": "e15669d00ca984a314a21eb5cf2b19ca31a4a6b67922cbee2ee01e85de9781aa",
-    "reviewedOn": "2026-09-14",
-    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+    "reviewedOn": "2026-09-15",
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "document-extraction": {
     "fingerprint": "861def0e059a9dbf948366ebc72ec6b293d1d298e25e8466b0bc0b02eb10e85f",
@@ -60,14 +60,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "verification-development": {
-    "fingerprint": "ad3f52fcff4a0b0e2b393bb9330164990a777002165d04ff5a0ca30105c69ce7",
-    "reviewedOn": "2026-09-14",
-    "note": "已复核uses拼写拒绝、每日/长休/短休/黎明来源周期分别投影，以及NPC缺图仅在导入副本补原生默认。DS E已重新通过来源与配置审核，C的图片导入失败保留原结论，下一次Luna有界复验未执行。"
+    "fingerprint": "cf7c7067ed7dce2a56e26dcb2cb1372995ee07f72d6877f829bd1178437682fd",
+    "reviewedOn": "2026-09-15",
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "human-encounter-intake": {
-    "fingerprint": "b0576f104f6b5887d24444ff1b74e9a2de15eff1dc6618abaf2ccec8506cf19d",
+    "fingerprint": "41c1630259b91bb9cdcd4af8be4de36f5b4af21262781e5eeb2f6d7d9dbbe2d8",
     "reviewedOn": "2026-09-15",
-    "note": "对照通用模板、受限能力库和当前验收，更新用户接受的腐化延期与运行边界"
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "chat-memory-guard": {
     "fingerprint": "584662ab88e9fc75b2792e3bf479164a184c5b53e34e4f18a02eda4bdb6d3d29",
@@ -107,7 +107,7 @@
   "fvtt-json-forge": {
     "fingerprint": "48af93588e4e576816aa487df26fc908aa7ad23ad4b85f575c26b380b83a3b56",
     "reviewedOn": "2026-09-15",
-    "note": "已核对通用MD模板、固定能力边界及专项运行结果，腐化按用户决定保留PARTIAL，不将合并宣称生产部署"
+    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",

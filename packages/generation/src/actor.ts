@@ -30,6 +30,7 @@ import {
   extractAreaRadiusFeet,
   extractNarrativeRangeFeet,
   extractNarrativeRangeFeetFixed,
+  extractNarrativePlacementRangeFeet,
   hasHalfDamageOnSave,
   extractThresholdEffects,
   extractOnHitRiders,
@@ -1739,10 +1740,17 @@ export class ActorGenerator {
     }
 
     if (!action.attack) {
-      const range = this.extractNarrativeRangeFeetFixed(action.desc ?? '');
+      const saveActivities = activities.filter((candidate) => candidate?.type === 'save');
+      const hasTemplate = saveActivities.some((activity) => (
+        typeof activity.target?.template?.type === 'string'
+        && activity.target.template.type.trim().length > 0
+      ));
+      const range = hasTemplate
+        ? this.extractNarrativePlacementRangeFeet(action.desc ?? '')
+        : this.extractNarrativeRangeFeetFixed(action.desc ?? '');
       if (range) {
-        for (const activity of activities.filter((candidate) => candidate?.type === 'save')) {
-          if (!activity.range && !activity.target?.template?.type) {
+        for (const activity of saveActivities) {
+          if (!activity.range) {
             activity.range = this.createDistanceRange(range);
           }
         }
@@ -2279,6 +2287,10 @@ export class ActorGenerator {
 
   private extractNarrativeRangeFeetFixed(text: string): number | null {
     return extractNarrativeRangeFeetFixed(text);
+  }
+
+  private extractNarrativePlacementRangeFeet(text: string): number | null {
+    return extractNarrativePlacementRangeFeet(text);
   }
 
   private hasHalfDamageOnSave(text: string): boolean {

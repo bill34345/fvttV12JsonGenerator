@@ -397,6 +397,22 @@ function verifyMechanicCoverage(
   for (const [documentIndex, document] of documents.entries()) {
     const allActivities = Object.values(document?.system?.activities ?? {}) as any[];
     const activities = activitiesForMechanic(mechanic, allActivities);
+    const structuredUses = mechanic.kind === 'uses' ? readStructuredUses(mechanic.value) : undefined;
+    if (mechanic.kind === 'uses' && mechanic.path.startsWith('actor/') && structuredUses) {
+      const uses = document?.system?.uses;
+      const primary = activities[0];
+      const costs = primary?.consumption?.targets ?? [];
+      const expectedPeriod = mapStructuredUsesPeriod(structuredUses.period);
+      if (String(uses?.max) === String(structuredUses.max)
+        && uses?.recovery?.length === 1
+        && uses.recovery[0]?.period === expectedPeriod
+        && uses.recovery[0]?.type === 'recoverAll'
+        && primary?.consumption?.spellSlot === false
+        && costs.length === 1 && costs[0]?.type === 'itemUses' && costs[0]?.target === '' && String(costs[0]?.value) === '1') {
+        outputPaths.push(`documents/${documentIndex}/system/uses`);
+      }
+      continue;
+    }
     if (mechanic.kind === 'uses' && typeof mechanic.value === 'number' && mechanic.path.startsWith('actor/')) {
       const uses = document?.system?.uses;
       const primary = activities[0];
@@ -826,6 +842,30 @@ function activitiesForMechanic(mechanic: CanonicalGenerationMechanic, activities
   const scoped = activities.filter((activity) =>
     String(activity?.flags?.fvttJsonGenerator?.sourceLogicalPath ?? '').includes(needle));
   return scoped;
+}
+
+type StructuredUsesPeriod = 'day' | 'longRest' | 'shortRest' | 'dawn';
+
+interface StructuredUsesValue {
+  max: number;
+  period: StructuredUsesPeriod;
+}
+
+function readStructuredUses(value: unknown): StructuredUsesValue | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (!Number.isSafeInteger(record.max) || typeof record.period !== 'string') return undefined;
+  if (!['day', 'longRest', 'shortRest', 'dawn'].includes(record.period)) return undefined;
+  return { max: record.max as number, period: record.period as StructuredUsesPeriod };
+}
+
+function mapStructuredUsesPeriod(period: StructuredUsesPeriod): string {
+  return {
+    day: 'day',
+    longRest: 'lr',
+    shortRest: 'sr',
+    dawn: 'dawn',
+  }[period];
 }
 
 function verifySaveOutcome(

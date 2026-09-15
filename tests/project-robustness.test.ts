@@ -76,7 +76,7 @@ describe('integrated Item save contract', () => {
 describe('project robustness source regressions', () => {
   test.each([1, 3, 5])('structured per-rest action spends its own %s-use resource', async maximum => {
     const source = readFileSync('tests/fixtures/robustness/daily-guard.md', 'utf8')
-      .replace('每日: 3', `每日: ${maximum}`);
+      .replace('使用次数: {max: 3, period: longRest}', `使用次数: {max: ${maximum}, period: longRest}`);
     for (const version of ['12', '14'] as const) {
       const result = await convertMarkdownContentToJson({ ...target, fvttVersion: version, content: source });
       expect(result.status).toBe('accepted');
@@ -90,11 +90,17 @@ describe('project robustness source regressions', () => {
       const tail = actor.items.find((i: any) => i.name === '手势');
       expect(tail.system.uses).toBeUndefined();
       expect((Object.values(tail.system.activities)[0] as any).consumption).toBeUndefined();
-      const copy = structuredClone(actor);
-      const broken = copy.items.find((i: any) => i.name === '日用警报');
-      delete (Object.values(broken.system.activities)[0] as any).consumption;
-      expect(verifyGeneratedDocument({ canonical: adaptParsedActorToCanonical(new ParserFactory().parse(source)),
-        output: copy, target: version, effectProfile: 'core' }).status).toBe('failed');
+      const canonical = adaptParsedActorToCanonical(new ParserFactory().parse(source));
+      for (const corrupt of [
+        (item: any) => { delete (Object.values(item.system.activities)[0] as any).consumption; },
+        (item: any) => { item.system.uses.max = String(maximum + 1); },
+        (item: any) => { item.system.uses.recovery[0].period = 'day'; },
+      ]) {
+        const copy = structuredClone(actor);
+        const broken = copy.items.find((i: any) => i.name === '日用警报');
+        corrupt(broken);
+        expect(verifyGeneratedDocument({ canonical, output: copy, target: version, effectProfile: 'core' }).status).toBe('failed');
+      }
     }
   });
   test.each(['珍稀', '稀有', 'rare'])('preserves exact rare label %s', async rarity => {

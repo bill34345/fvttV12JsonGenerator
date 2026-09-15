@@ -23,7 +23,7 @@ describe('Forge provider-first connections', () => {
     expect(JSON.stringify(FORGE_PROVIDER_PRESETS)).not.toMatch(/"apiKey"|authorization|deepseek-v4-pro/iu);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'anthropic')?.protocols).toEqual(['anthropic-messages']);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'openai')?.defaultProtocol).toBe('openai-responses');
-    expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'deepseek')?.recommendedModels).toEqual(['deepseek-v4-flash']);
+    expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'deepseek')?.recommendedModels).toEqual(['deepseek-flash']);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'custom')?.protocols).toHaveLength(3);
   });
 
