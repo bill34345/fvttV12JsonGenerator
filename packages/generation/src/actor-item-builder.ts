@@ -1,6 +1,8 @@
 import type { ActionData, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { ActivityGenerator } from './activity';
 import { extractExplicitlyInflictedStatuses, statusIconPath } from './actor-effects';
+import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
+import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { createStableDocumentId } from './stableId';
 import { deriveExplicitSaveOutcome } from './save-outcome';
 
@@ -272,6 +274,18 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
 
   for (const [index, embedded] of embeddedEffects.entries()) {
     const status = normalizeEmbeddedEffectStatus(embedded.type);
+    const bleedingSpec = status === 'bleeding'
+      ? extractBleedingSpec(embedded.describe ?? '', {
+        ...(embedded.damageFormula ? { formula: embedded.damageFormula } : {}),
+        ...(embedded.damageType !== undefined ? { damageType: embedded.damageType } : {}),
+      })
+      : undefined;
+    const customParams = status && isGeneratedConditionId(status)
+      ? conditionParamsForText(status, embedded.describe ?? '', {
+        ...(embedded.damageFormula ? { formula: embedded.damageFormula } : {}),
+        ...(embedded.damageType !== undefined ? { damageType: embedded.damageType } : {}),
+      })
+      : undefined;
     const inferredStatuses = [...new Set(status
       ? [status]
       : extractExplicitlyInflictedStatuses(embedded.describe ?? ''))];
@@ -292,6 +306,16 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         sourceDerivedEmbeddedEffect: true,
         sourceDuration: embedded.duration ?? effect.flags.fvttJsonGenerator?.sourceDuration ?? null,
       };
+      if (bleedingSpec) {
+        effect.description = bleedingSpec.endCondition || effect.description || '';
+        effect.showIcon = 2;
+        effect.flags = {
+          ...effect.flags,
+          ...buildBleedingFlag(bleedingSpec),
+        };
+      } else if (customParams !== undefined && status && isGeneratedConditionId(status)) {
+        effect.flags = { ...effect.flags, ...buildConditionTemplateFlag(status, customParams) };
+      }
       for (const [candidate, inferred] of inferredByStatus.entries()) {
         if (inferred === effect) inferredByStatus.delete(candidate);
       }
@@ -326,6 +350,16 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
           },
         },
       };
+      if (bleedingSpec) {
+        effect.description = bleedingSpec.endCondition;
+        effect.showIcon = 2;
+        effect.flags = {
+          ...effect.flags,
+          ...buildBleedingFlag(bleedingSpec),
+        };
+      } else if (customParams !== undefined && status && isGeneratedConditionId(status)) {
+        effect.flags = { ...effect.flags, ...buildConditionTemplateFlag(status, customParams) };
+      }
       effects.push(effect);
     }
 
@@ -379,6 +413,25 @@ function normalizeEmbeddedEffectStatus(type: string): string | undefined {
     stunned: 'stunned',
     dazed: 'dazed',
     unconscious: 'unconscious',
+    bleeding: 'bleeding',
+    bleed: 'bleeding',
+    addled: 'addled',
+    bewildered: 'bewildered',
+    burning: 'burning',
+    clumsy: 'clumsy',
+    defenseless: 'defenseless',
+    distracted: 'distracted',
+    enfeebled: 'enfeebled',
+    frozen: 'frozen',
+    helpless: 'helpless',
+    immobilized: 'immobilized',
+    jinxed: 'jinxed',
+    shocked: 'shocked',
+    sickened: 'sickened',
+    slowed: 'slowed',
+    staggered: 'staggered',
+    valor: 'valor',
+    weakened: 'weakened',
     擒抱: 'grappled',
     束缚: 'restrained',
     目盲: 'blinded',
@@ -392,6 +445,51 @@ function normalizeEmbeddedEffectStatus(type: string): string | undefined {
     震慑: 'stunned',
     恍惚: 'dazed',
     昏迷: 'unconscious',
+    流血: 'bleeding',
+    Addled: 'addled',
+    Bewildered: 'bewildered',
+    燃烧: 'burning',
+    燃燒: 'burning',
+    Clumsy: 'clumsy',
+    Defenseless: 'defenseless',
+    Distracted: 'distracted',
+    Enfeebled: 'enfeebled',
+    Frozen: 'frozen',
+    Helpless: 'helpless',
+    Immobilized: 'immobilized',
+    Jinxed: 'jinxed',
+    Shocked: 'shocked',
+    Sickened: 'sickened',
+    Slowed: 'slowed',
+    Staggered: 'staggered',
+    Valor: 'valor',
+    Weakened: 'weakened',
+    心智混乱: 'addled',
+    心智混亂: 'addled',
+    迷乱: 'bewildered',
+    迷亂: 'bewildered',
+    笨拙: 'clumsy',
+    无防备: 'defenseless',
+    無防備: 'defenseless',
+    分心: 'distracted',
+    衰弱: 'enfeebled',
+    冻结: 'frozen',
+    凍結: 'frozen',
+    无助: 'helpless',
+    無助: 'helpless',
+    定身: 'immobilized',
+    厄运: 'jinxed',
+    厄運: 'jinxed',
+    电击: 'shocked',
+    電擊: 'shocked',
+    病弱: 'sickened',
+    减速: 'slowed',
+    減速: 'slowed',
+    踉跄: 'staggered',
+    踉蹌: 'staggered',
+    英勇: 'valor',
+    虚弱: 'weakened',
+    虛弱: 'weakened',
   };
   const exact = aliases[normalized];
   if (exact) return exact;

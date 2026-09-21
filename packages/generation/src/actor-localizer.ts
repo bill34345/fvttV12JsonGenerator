@@ -28,12 +28,14 @@ const LOCAL_NAME_TRANSLATIONS: Record<string, string> = {
 
 const LOCAL_DESCRIPTION_REPLACEMENTS: Array<[RegExp, string]> = [
   [/Melee or Ranged Weapon Attack/gi, '近战或远程武器攻击'],
+  [/\bMelee Spell Attack\b/gi, '近战法术攻击'],
+  [/\bRanged Spell Attack\b/gi, '远程法术攻击'],
   [/Melee Weapon Attack/gi, '近战武器攻击'],
   [/Ranged Weapon Attack/gi, '远程武器攻击'],
   [/Hit:/gi, '命中：'],
   [/to hit/gi, '命中'],
   [/reach/gi, '触及'],
-  [/range/gi, '射程'],
+  [/\brange\b/gi, '射程'],
   [/one target/gi, '一个目标'],
   [/piercing damage/gi, '穿刺伤害'],
   [/slashing damage/gi, '挥砍伤害'],

@@ -1,0 +1,18 @@
+{
+  "FVTTTRIGGER.Settings.Triggers.Name": "Actor 触发器",
+  "FVTTTRIGGER.Settings.Triggers.Hint": "经过校验的仅 GM 文档更新触发器。",
+  "FVTTTRIGGER.Manager.Title": "触发器管理器",
+  "FVTTTRIGGER.Manager.MenuName": "触发器管理器",
+  "FVTTTRIGGER.Manager.MenuLabel": "打开触发器管理器",
+  "FVTTTRIGGER.Manager.MenuHint": "创建和维护 Actor 文档更新触发器。",
+  "FVTTTRIGGER.Manager.Create": "新建触发器",
+  "FVTTTRIGGER.Manager.Edit": "编辑",
+  "FVTTTRIGGER.Manager.Copy": "复制",
+  "FVTTTRIGGER.Manager.Toggle": "启用 / 禁用",
+  "FVTTTRIGGER.Manager.Delete": "删除",
+  "FVTTTRIGGER.Manager.Save": "保存",
+  "FVTTTRIGGER.Manager.Definition": "触发器 JSON 定义",
+  "FVTTTRIGGER.Manager.Empty": "尚未配置触发器。",
+  "FVTTTRIGGER.Manager.Enabled": "已启用",
+  "FVTTTRIGGER.Manager.Disabled": "已禁用"
+}

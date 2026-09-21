@@ -1,0 +1,18 @@
+{
+  "FVTTTRIGGER.Settings.Triggers.Name": "Actor triggers",
+  "FVTTTRIGGER.Settings.Triggers.Hint": "Validated GM-only document update triggers.",
+  "FVTTTRIGGER.Manager.Title": "Trigger Manager",
+  "FVTTTRIGGER.Manager.MenuName": "Trigger Manager",
+  "FVTTTRIGGER.Manager.MenuLabel": "Open Trigger Manager",
+  "FVTTTRIGGER.Manager.MenuHint": "Create and maintain Actor document update triggers.",
+  "FVTTTRIGGER.Manager.Create": "New trigger",
+  "FVTTTRIGGER.Manager.Edit": "Edit",
+  "FVTTTRIGGER.Manager.Copy": "Copy",
+  "FVTTTRIGGER.Manager.Toggle": "Enable / disable",
+  "FVTTTRIGGER.Manager.Delete": "Delete",
+  "FVTTTRIGGER.Manager.Save": "Save",
+  "FVTTTRIGGER.Manager.Definition": "Trigger JSON definition",
+  "FVTTTRIGGER.Manager.Empty": "No triggers have been configured.",
+  "FVTTTRIGGER.Manager.Enabled": "Enabled",
+  "FVTTTRIGGER.Manager.Disabled": "Disabled"
+}

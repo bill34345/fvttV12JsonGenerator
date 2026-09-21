@@ -275,7 +275,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
     expect(attackActivity.damage.parts).toHaveLength(0);
   });
 
-  it('keeps Heavy Hit branch effects as hints instead of auto-applying them on Tail Crash activities', () => {
+  it('links the Trigger Engine wound only to the optional Bleeding Wound branch', () => {
     const tailCrash = findItem(actor, 'Tail Crash');
     expect((tailCrash as any).flags?.fvttJsonGenerator?.effectHints).toEqual(
       expect.objectContaining({
@@ -284,10 +284,23 @@ describe('Slithering Bloodfin acceptance gate', () => {
         bleed: true,
       }),
     );
-    expect(tailCrash.effects ?? []).toHaveLength(0);
-    for (const activity of getActivities(tailCrash)) {
-      expect(activity.effects ?? []).toHaveLength(0);
-    }
+    const bleedingEffect = (tailCrash.effects ?? []).find((effect: any) => effect.statuses?.includes('bleeding')) as any;
+    expect(bleedingEffect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({
+        formula: '1d6',
+        mode: 'damage',
+        damageType: '',
+        timing: 'turnStart',
+        stacking: 'highest',
+        endOnHealing: true,
+      }),
+    );
+    const attackActivity = getActivities(tailCrash).find((activity) => activity.type === 'attack');
+    const bleedingBranch = getActivities(tailCrash).find(
+      (activity) => activity?.flags?.fvttJsonGenerator?.heavyHitBranch?.key === 'bleeding-wound',
+    );
+    expect(attackActivity?.effects ?? []).toHaveLength(0);
+    expect(bleedingBranch?.effects).toEqual([{ _id: bleedingEffect?._id }]);
   });
 
   it('emits random Heavy Hit automation metadata and branch linkage instead of only static prose', () => {
@@ -311,22 +324,15 @@ describe('Slithering Bloodfin acceptance gate', () => {
     expect((tailCrash as any).flags?.fvttJsonGenerator?.heavyHit?.branchActivityIds).toHaveLength(3);
   });
 
-  it('keeps the Bleeding Wound branch as a single follow-up damage roll instead of duplicating the bleed die', () => {
+  it('keeps the Bleeding Wound branch as a delayed wound instead of an immediate damage roll', () => {
     const tailCrash = findItem(actor, 'Tail Crash');
     const bleedBranch = getActivities(tailCrash).find(
       (activity) => activity?.flags?.fvttJsonGenerator?.heavyHitBranch?.key === 'bleeding-wound',
     );
 
     expect(bleedBranch).toBeDefined();
-    expect(bleedBranch.type).toBe('damage');
-    expect(bleedBranch.damage.parts).toHaveLength(1);
-    expect(bleedBranch.damage.parts[0]).toEqual(
-      expect.objectContaining({
-        number: 1,
-        denomination: 6,
-        types: ['bludgeoning'],
-      }),
-    );
+    expect(bleedBranch.type).toBe('utility');
+    expect(bleedBranch.damage?.parts ?? []).toHaveLength(0);
   });
 
   it('keeps Swallow as a bonus action', () => {

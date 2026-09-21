@@ -5,8 +5,11 @@ import {
   createCustomEffect as createCustomEffectFromText,
   createRandomId as createRandomIdFromText,
   extractDamagePartsFromText,
-  mapDamageType,
 } from './actor-text';
+import { createStableDocumentId } from './stableId';
+import { buildConditionFlag, createConditionInstance, getConditionDefinition, type ConditionId, type ConditionParams } from '@fvtt-json-generator/contracts/conditions';
+import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
+import { extractBurningSpec } from './burning';
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -15,25 +18,50 @@ type GeneratedActionData = ActionData & {
   targetCondition?: string;
 };
 
-export interface OverTimeSpec {
-  formula?: string;
-  damageType?: string;
-  label: string;
-  saveDc?: number;
-  saveAbility?: string;
-  saveRemove?: boolean;
-}
-
 const STATUS_ICON_OVERRIDES: Record<string, string> = {
   bleed: 'blood',
   bleeding: 'blood',
   blood: 'blood',
   dazed: 'daze',
+  addled: 'stunned',
+  bewildered: 'stunned',
+  burning: 'burning',
+  clumsy: 'encumbered',
+  defenseless: 'cursed',
+  distracted: 'cursed',
+  enfeebled: 'encumbered',
+  frozen: 'restrained',
+  helpless: 'incapacitated',
+  immobilized: 'restrained',
+  jinxed: 'cursed',
+  shocked: 'stunned',
+  sickened: 'poisoned',
+  slowed: 'encumbered',
+  staggered: 'prone',
+  valor: 'marked',
+  weakened: 'encumbered',
 };
 
 const CUSTOM_STATUS_ICON_NAMES = new Set(['blood', 'daze']);
 
 const EXPLICIT_STATUS_PATTERNS: Array<{ status: string; pattern: RegExp }> = [
+  { status: 'addled', pattern: /\baddled\b|心智混乱|心智混亂/i },
+  { status: 'bewildered', pattern: /\bbewildered\b|迷乱|迷亂/i },
+  { status: 'burning', pattern: /\bburning\b|燃烧|燃燒/i },
+  { status: 'clumsy', pattern: /\bclumsy\b|笨拙/i },
+  { status: 'defenseless', pattern: /\bdefenseless\b|无防备|無防備/i },
+  { status: 'distracted', pattern: /\bdistracted\b|分心/i },
+  { status: 'enfeebled', pattern: /\benfeebled\b|衰弱/i },
+  { status: 'frozen', pattern: /\bfrozen\b|冻结|凍結/i },
+  { status: 'helpless', pattern: /\bhelpless\b|无助|無助/i },
+  { status: 'immobilized', pattern: /\bimmobilized\b|定身/i },
+  { status: 'jinxed', pattern: /\bjinxed\b|厄运|厄運/i },
+  { status: 'shocked', pattern: /\bshocked\b|电击|電擊|震击|震擊/i },
+  { status: 'sickened', pattern: /\bsickened\b|病弱/i },
+  { status: 'slowed', pattern: /\bslowed\b|减速|減速/i },
+  { status: 'staggered', pattern: /\bstaggered\b|踉跄|踉蹌/i },
+  { status: 'valor', pattern: /\bvalor\b|英勇/i },
+  { status: 'weakened', pattern: /\bweakened\b|虚弱|虛弱/i },
   { status: 'poisoned', pattern: /\bpoisoned\b|\u4e2d\u6bd2/i },
   { status: 'paralyzed', pattern: /\bparaly[sz]ed\b|\u9ebb\u75f9/i },
   { status: 'stunned', pattern: /\bstunned\b|\u9707\u6151/i },
@@ -82,41 +110,56 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
 
     const clauses = sentence.split(/,|\uFF0C|\bbut\b/i).map((part) => part.trim()).filter(Boolean);
     for (const clause of clauses) {
-      const predicates: string[] = [];
+      const predicates: Array<{ text: string; allowedStatuses?: ReadonlySet<string> }> = [];
       const englishApplication = clause.match(
         /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i,
       );
       if (englishApplication?.[1]) {
-        predicates.push(englishApplication[1]);
+        predicates.push({ text: englishApplication[1] });
+      }
+
+      const gainedParameterizedCondition = clause.match(
+        /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:gains?|receives?|acquires?)\s+([\s\S]+)/i,
+      );
+      if (gainedParameterizedCondition?.[1]) {
+        predicates.push({ text: gainedParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning']) });
       }
 
       const saveFailureApplication = clause.match(
         /\bor\s+(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i,
       );
       if (saveFailureApplication?.[1]) {
-        predicates.push(saveFailureApplication[1]);
+        predicates.push({ text: saveFailureApplication[1] });
       }
 
       const chineseApplication = clause.match(
         /(?:\u9677\u5165|\u53d8\u4e3a|\u6210\u4e3a|\u53d7\u5230|\u5f00\u59cb)([\s\S]+)/,
       );
       if (chineseApplication?.[1]) {
-        predicates.push(chineseApplication[1]);
+        predicates.push({ text: chineseApplication[1] });
+      }
+
+      const gainedChineseParameterizedCondition = clause.match(
+        /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)?\s*(?:\u83b7\u5f97|\u7372\u5f97|\u9644\u52a0)\s*([\s\S]+)/,
+      );
+      if (gainedChineseParameterizedCondition?.[1]) {
+        predicates.push({ text: gainedChineseParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning']) });
       }
 
       const chinesePassiveApplication = clause.match(
         /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)\s*\u88ab(?:\u9b54\u6cd5)?([\s\S]+)/,
       );
       if (chinesePassiveApplication?.[1]) {
-        predicates.push(chinesePassiveApplication[1]);
+        predicates.push({ text: chinesePassiveApplication[1] });
       }
 
       for (const predicate of predicates) {
-        if (/^\s*(?:already|not|no\s+longer|immune\s+to|unaffected\s+by)\b/i.test(predicate)) {
+        if (/^\s*(?:already|not|no\s+longer|immune\s+to|unaffected\s+by)\b/i.test(predicate.text)) {
           continue;
         }
         for (const entry of EXPLICIT_STATUS_PATTERNS) {
-          if (entry.pattern.test(predicate)) {
+          if (predicate.allowedStatuses && !predicate.allowedStatuses.has(entry.status)) continue;
+          if (entry.pattern.test(predicate.text)) {
             statuses.add(entry.status);
           }
         }
@@ -173,54 +216,51 @@ export function createCustomEffect(options: {
   statuses?: string[];
   changes?: Array<Record<string, unknown>>;
   duration?: Record<string, unknown>;
+  description?: string;
+  showIcon?: number;
   flags?: Record<string, unknown>;
 }): any {
   return createCustomEffectFromText(options);
 }
 
-export function buildOverTimeFlag(spec: OverTimeSpec): Record<string, string> {
-  const formula = spec.formula?.replace(/\s+/g, '');
-  const damageType = spec.damageType?.trim();
-  if (!formula || !damageType) {
-    return {};
-  }
-
-  const parts = [
-    'turn=start',
-    `damageRoll=${formula}`,
-    `damageType=${damageType}`,
-    `label=${spec.label}`,
-  ];
-  if (typeof spec.saveDc === 'number' && spec.saveAbility) {
-    parts.push(`saveDC=${spec.saveDc}`);
-    parts.push(`saveAbility=${spec.saveAbility}`);
-    if (spec.saveRemove) {
-      parts.push('saveRemove=True');
-    }
-  }
-  return { 'midi-qol.OverTime': parts.join(',') };
+export function buildConditionTemplateFlag(conditionId: ConditionId, params: ConditionParams = {}): Record<string, Record<string, unknown>> {
+  return buildConditionFlag(createConditionInstance(conditionId, params, {
+    instanceId: `template-${conditionId}`,
+    template: true,
+  }));
 }
 
-function extractBleedingOverTimeSpec(text: string): OverTimeSpec | null {
-  const bleedingIndex = text.search(/bleed|bleeding|流血/i);
-  if (bleedingIndex === -1) {
-    return null;
-  }
+export function isGeneratedConditionId(value: string): value is ConditionId {
+  return Boolean(getConditionDefinition(value));
+}
 
-  const clause = text.slice(bleedingIndex, bleedingIndex + 180);
-  const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
-  const damageType =
-    clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
-    ?? mapDamageType(clause.match(/([一-龥]{2,4})伤害/)?.[1] ?? '');
-  if (!formula || !damageType) {
-    return null;
-  }
-
-  return {
-    formula,
-    damageType,
-    label: /流血/.test(clause) ? '流血 (Bleeding)' : 'Bleeding',
+export function conditionParamsForText(
+  conditionId: string,
+  text: string,
+  overrides: { formula?: string; damageType?: string } = {},
+): ConditionParams | undefined {
+  const source = String(text ?? '');
+  const markerPattern: Record<string, RegExp> = {
+    burning: /burning|燃烧|燃燒/iu,
+    frozen: /frozen|冻结|凍結/iu,
+    jinxed: /jinxed|厄运|厄運/iu,
+    valor: /valor|英勇/iu,
   };
+  const marker = source.search(markerPattern[conditionId] ?? new RegExp(conditionId, 'iu'));
+  const nearby = marker >= 0 ? source.slice(marker, marker + 240) : source;
+  const formula = nearby.match(/(?<![A-Za-z0-9])\d+d\d+(?:\s*[+-]\s*\d+)?/i)?.[0]?.replace(/\s+/g, '');
+  if (conditionId === 'bleeding') return undefined;
+  if (conditionId === 'jinxed' || conditionId === 'valor') return formula ? { formula } : undefined;
+  if (conditionId === 'burning') {
+    const spec = extractBurningSpec(source, overrides);
+    return spec ? { formula: spec.formula, damageType: spec.damageType, timing: spec.timing } : undefined;
+  }
+  if (conditionId === 'frozen') {
+    const dc = nearby.match(/\bDC\s*(\d+)\b/i)?.[1] ?? nearby.match(/DC\s*(\d+)/i)?.[1];
+    return dc ? { escapeDC: Number(dc) } : undefined;
+  }
+  if (isGeneratedConditionId(conditionId)) return {};
+  return undefined;
 }
 
 export function generateConditionEffects(desc: string, activities: any, actionName?: string): any[] {
@@ -228,6 +268,24 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
   if (!desc) return effects;
 
   const conditionMap: Record<string, { en: string; enLabel: string }> = {
+    'Addled':    { en: 'addled',     enLabel: 'Addled' },
+    'Bewildered':{ en: 'bewildered', enLabel: 'Bewildered' },
+    '燃烧':      { en: 'burning',   enLabel: 'Burning' },
+    '燃燒':      { en: 'burning',   enLabel: 'Burning' },
+    'Clumsy':    { en: 'clumsy',     enLabel: 'Clumsy' },
+    'Defenseless': { en: 'defenseless', enLabel: 'Defenseless' },
+    'Distracted': { en: 'distracted', enLabel: 'Distracted' },
+    'Enfeebled': { en: 'enfeebled', enLabel: 'Enfeebled' },
+    'Frozen':    { en: 'frozen',     enLabel: 'Frozen' },
+    'Helpless':  { en: 'helpless',   enLabel: 'Helpless' },
+    'Immobilized': { en: 'immobilized', enLabel: 'Immobilized' },
+    'Jinxed':    { en: 'jinxed',     enLabel: 'Jinxed' },
+    'Shocked':   { en: 'shocked',    enLabel: 'Shocked' },
+    'Sickened':  { en: 'sickened',   enLabel: 'Sickened' },
+    'Slowed':    { en: 'slowed',    enLabel: 'Slowed' },
+    'Staggered': { en: 'staggered', enLabel: 'Staggered' },
+    'Valor':     { en: 'valor',     enLabel: 'Valor' },
+    'Weakened':  { en: 'weakened',  enLabel: 'Weakened' },
     '中毒':     { en: 'poisoned',   enLabel: 'Poisoned' },
     '麻痹':     { en: 'paralyzed',  enLabel: 'Paralyzed' },
     '眩晕':     { en: 'stunned',    enLabel: 'Stunned' },
@@ -258,13 +316,18 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
   const isSwallow = actionName && (
     actionName.includes('吞咽') || actionName.includes('Swallow')
   );
-  const bleedingOverTime = extractBleedingOverTimeSpec(desc);
+  const bleedingSpec = extractBleedingSpec(desc);
   const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
 
   for (const [cn, info] of Object.entries(conditionMap)) {
     if (explicitlyInflicted.has(info.en)) {
       if (isSwallow && cn === '擒抱') continue;
-      const flags = cn === '流血' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {};
+      const customParams = conditionParamsForText(info.en, desc);
+      const flags = cn === '流血' && bleedingSpec
+        ? buildBleedingFlag(bleedingSpec)
+        : customParams !== undefined && isGeneratedConditionId(info.en)
+          ? buildConditionTemplateFlag(info.en, customParams)
+          : {};
       effects.push({
         _id: generateId(),
         name: `${cn} (${info.enLabel})`,
@@ -273,9 +336,10 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
         changes: [],
         disabled: false,
         duration: { startTime: null, seconds: null, combat: null, rounds: null, turns: null, startRound: null, startTurn: null },
-        description: '',
+        description: cn === '流血' && bleedingSpec ? bleedingSpec.endCondition : '',
         origin: null,
         tint: '#ffffff',
+        ...(isGeneratedConditionId(info.en) ? { showIcon: 2 } : {}),
         transfer: false,
         img: statusIconPath(info.en),
         statuses: [info.en],
@@ -297,21 +361,42 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
   return effects;
 }
 
-export function generateEnhancedConditionEffects(desc: string, activities: any, actionName?: string): any[] {
+export function generateEnhancedConditionEffects(
+  desc: string,
+  activities: any,
+  actionName?: string,
+  sourceLogicalPath?: string,
+): any[] {
   const effects: any[] = [];
   if (!desc) return effects;
 
-  const generateId = () => {
-    const chars = 'abcdef0123456789';
-    let res = '';
-    for (let i = 0; i < 16; i++) {
-      res += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return res;
-  };
+  const generateId = (conditionId: string) => createStableDocumentId({
+    path: 'generatedConditionEffects',
+    actionName: actionName ?? '',
+    sourceLogicalPath: sourceLogicalPath ?? null,
+    conditionId,
+    sourceDescription: desc,
+  });
 
   const isSwallow = Boolean(actionName && /Swallow|吞咽/.test(actionName));
   const conditionEntries = [
+    { cn: 'Addled', en: 'addled', label: 'Addled' },
+    { cn: 'Bewildered', en: 'bewildered', label: 'Bewildered' },
+    { cn: 'Burning', en: 'burning', label: 'Burning' },
+    { cn: 'Clumsy', en: 'clumsy', label: 'Clumsy' },
+    { cn: 'Defenseless', en: 'defenseless', label: 'Defenseless' },
+    { cn: 'Distracted', en: 'distracted', label: 'Distracted' },
+    { cn: 'Enfeebled', en: 'enfeebled', label: 'Enfeebled' },
+    { cn: 'Frozen', en: 'frozen', label: 'Frozen' },
+    { cn: 'Helpless', en: 'helpless', label: 'Helpless' },
+    { cn: 'Immobilized', en: 'immobilized', label: 'Immobilized' },
+    { cn: 'Jinxed', en: 'jinxed', label: 'Jinxed' },
+    { cn: 'Shocked', en: 'shocked', label: 'Shocked' },
+    { cn: 'Sickened', en: 'sickened', label: 'Sickened' },
+    { cn: 'Slowed', en: 'slowed', label: 'Slowed' },
+    { cn: 'Staggered', en: 'staggered', label: 'Staggered' },
+    { cn: 'Valor', en: 'valor', label: 'Valor' },
+    { cn: 'Weakened', en: 'weakened', label: 'Weakened' },
     { cn: '中毒', en: 'poisoned', label: 'Poisoned' },
     { cn: '麻痹', en: 'paralyzed', label: 'Paralyzed' },
     { cn: '震慑', en: 'stunned', label: 'Stunned' },
@@ -366,7 +451,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     dazed: '恍惚',
     bleeding: '流血',
   };
-  const bleedingOverTime = extractBleedingOverTimeSpec(desc);
+  const bleedingSpec = extractBleedingSpec(desc);
   const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
   const untilDamagedStatuses = extractUntilDamagedStatuses(desc, explicitlyInflicted);
 
@@ -386,7 +471,7 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
     generatedStatuses.add(entry.en);
 
     effects.push({
-      _id: generateId(),
+      _id: generateId(entry.en),
       name: `${hasEnglishStatus && !hasLocalizedLabel ? (englishOnlyStatusLabels[entry.en] ?? entry.cn) : entry.cn} (${entry.label})`,
       type: 'base',
       system: {},
@@ -401,14 +486,19 @@ export function generateEnhancedConditionEffects(desc: string, activities: any, 
         startRound: null,
         startTurn: null,
       },
-      description: '',
+      description: entry.en === 'bleeding' && bleedingSpec ? bleedingSpec.endCondition : '',
       origin: null,
       tint: '#ffffff',
+      ...(entry.en === 'bleeding' && bleedingSpec ? { showIcon: 2 } : {}),
       transfer: false,
       img: statusIconPath(entry.en),
       statuses: [entry.en],
       flags: {
-        ...(entry.en === 'bleeding' && bleedingOverTime ? buildOverTimeFlag(bleedingOverTime) : {}),
+        ...(entry.en === 'bleeding' && bleedingSpec
+          ? buildBleedingFlag(bleedingSpec)
+          : conditionParamsForText(entry.en, desc) !== undefined && isGeneratedConditionId(entry.en)
+            ? buildConditionTemplateFlag(entry.en, conditionParamsForText(entry.en, desc)!)
+            : {}),
         ...(untilDamagedStatuses.has(entry.en) ? {
           fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
         } : {}),

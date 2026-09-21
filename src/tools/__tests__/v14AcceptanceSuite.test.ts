@@ -150,18 +150,15 @@ describe('v14AcceptanceSuite', () => {
 
       expect(result.summary.failed).toBe(0);
       const actor = JSON.parse(readFileSync(join(outDir, 'bleeding-guardian.v14.json'), 'utf-8'));
-      const overtimeChanges = actor.items.flatMap((item: any) =>
-        (item.effects ?? []).flatMap((effect: any) => effect.system?.changes ?? []),
-      );
-      expect(overtimeChanges).toContainEqual({
-        key: 'flags.midi-qol.OverTime',
-        mode: 5,
-        value: 'turn=start,damageRoll=1d6,damageType=piercing,label=Bleeding',
-        priority: 20,
-      });
       expect(actor.items.flatMap((item: any) => item.effects ?? []).some(
-        (effect: any) => effect.flags?.['midi-qol.OverTime'],
-      )).toBe(false);
+        (effect: any) => effect.flags?.['fvtt-custom-conditions']?.condition?.conditionId === 'bleeding',
+      )).toBe(true);
+      const bleedingTemplate = actor.items.flatMap((item: any) => item.effects ?? []).find(
+        (effect: any) => effect.flags?.['fvtt-custom-conditions']?.condition?.conditionId === 'bleeding',
+      );
+      expect(bleedingTemplate?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+        expect.objectContaining({ formula: '1d6', damageType: 'piercing', timing: 'turnStart' }),
+      );
 
       const bleedingBite = actor.items.find((item: any) => item.name === 'Bleeding Bite');
       const activityDamageParts = Object.values(bleedingBite.system.activities).flatMap(

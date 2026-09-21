@@ -1,4 +1,5 @@
 import type { Damage } from '@fvtt-json-generator/models/action';
+import { extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 
 // These source-derived mechanics are consumed only by document generation.
 
@@ -235,10 +236,11 @@ function extractRider(
 ): ExtractedRider {
   const localSave = extractExplicitSave(segment.text);
   const save = localSave ?? inheritSave(context.sharedSave);
-  const damage = extractRiderDamage(segment.text, context.baseDamage);
+  const bleedingSpec = extractBleedingSpec(segment.text);
+  const damage = extractRiderDamage(segment.text, context.baseDamage, bleedingSpec);
   const statuses = extractStatuses(segment.text);
   const outcomes = extractHitDiceOutcomes(segment.text, Boolean(save));
-  const metadata = extractRiderMetadata(segment.text, outcomes);
+  const metadata = extractRiderMetadata(segment.text, outcomes, bleedingSpec);
 
   return {
     key: segment.key,
@@ -315,7 +317,11 @@ function extractSaveFromPatterns(text: string, patterns: RegExp[]): ExtractedSav
   return undefined;
 }
 
-function extractRiderDamage(text: string, baseDamage?: Damage): Damage[] {
+function extractRiderDamage(
+  text: string,
+  baseDamage?: Damage,
+  bleedingSpec?: ReturnType<typeof extractBleedingSpec>,
+): Damage[] {
   const extraDie = /(?:1\s*颗伤害骰|one\s+(?:additional\s+)?damage\s+die)/i.test(text);
   const baseDie = baseDamage?.formula.match(/\d+d(\d+)/i)?.[1];
   if (extraDie && baseDie && baseDamage?.type) {
@@ -323,6 +329,12 @@ function extractRiderDamage(text: string, baseDamage?: Damage): Damage[] {
   }
 
   const direct = extractFirstDamage(text);
+  if (direct && bleedingSpec
+    && direct.formula === bleedingSpec.formula
+    && hasDelayedBleedingFormula(text, bleedingSpec.formula)
+    && isBleedingFormulaBeforeDirectDamageContext(text, bleedingSpec.formula)) {
+    return [];
+  }
   return direct ? [direct] : [];
 }
 
@@ -366,12 +378,18 @@ function extractStatuses(text: string): string[] {
   return statuses;
 }
 
-function extractRiderMetadata(text: string, outcomes: HitDiceOutcome[]): Record<string, unknown> {
+function extractRiderMetadata(
+  text: string,
+  outcomes: HitDiceOutcome[],
+  bleedingSpec = extractBleedingSpec(text),
+): Record<string, unknown> {
   const metadata: Record<string, unknown> = {};
 
-  const bleedingMatch = text.match(/(?:流血|Bleeding|Bleed)[^。\n]*`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i);
-  if (bleedingMatch?.[1]) {
-    metadata.bleeding = { formula: bleedingMatch[1].replace(/\s+/g, '') };
+  if (bleedingSpec) {
+    metadata.bleeding = bleedingSpec;
+  } else {
+    const mention = text.match(/(?:流血|Bleeding|Bleed)[^。.!?\n]*?`?(\d+d\d+(?:\s*[+-]\s*\d+)?)`?/iu);
+    if (mention?.[1]) metadata.bleeding = { formula: mention[1].replace(/\s+/g, '') };
   }
 
   const hitDiceLoss = outcomes.find(
@@ -399,6 +417,17 @@ function extractRiderMetadata(text: string, outcomes: HitDiceOutcome[]): Record<
   }
 
   return metadata;
+}
+
+function isBleedingFormulaBeforeDirectDamageContext(text: string, formula: string): boolean {
+  const formulaPattern = new RegExp(`(?<![A-Za-z0-9])${escapeRegExp(formula)}(?![A-Za-z0-9])`, 'iu');
+  const sourceFormula = formulaPattern.exec(text);
+  const bleeding = /\bbleed(?:ing)?\b|流血/iu.exec(text);
+  return Boolean(sourceFormula && bleeding && sourceFormula.index >= bleeding.index!);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function extractHitDiceOutcomes(text: string, hasSave: boolean): HitDiceOutcome[] {

@@ -1,0 +1,22 @@
+{
+  "FVTTCONDITIONS.Manager.Title": "Custom Conditions",
+  "FVTTCONDITIONS.Manager.EscapeFrozen": "Break free (Action)",
+  "FVTTCONDITIONS.Manager.EscapeHint": "Frozen: Break free rolls Strength (Athletics) against the effect's DC. Control one other creature to help the marked target; otherwise the target rolls. In combat, it must be the roller's turn. The GM confirms reach and determines falling creatures' landing positions.",
+  "FVTTCONDITIONS.Manager.OneHelper": "Control at most one other creature to help break the ice.",
+  "FVTTCONDITIONS.Manager.Open": "Manage Custom Conditions",
+  "FVTTCONDITIONS.Manager.Hint": "Apply, edit, disable, and remove the custom conditions on selected Actors.",
+  "FVTTCONDITIONS.Manager.TargetHint": "Target tokens first. If no targets are marked, controlled tokens are used.",
+  "FVTTCONDITIONS.Manager.Condition": "Condition",
+  "FVTTCONDITIONS.Manager.Name": "Name",
+  "FVTTCONDITIONS.Manager.Origin": "Source / origin",
+  "FVTTCONDITIONS.Manager.Params": "Instance parameters (JSON)",
+  "FVTTCONDITIONS.Manager.Apply": "Apply condition",
+  "FVTTCONDITIONS.Manager.Refresh": "Refresh targets",
+  "FVTTCONDITIONS.Manager.Edit": "Edit",
+  "FVTTCONDITIONS.Manager.Toggle": "Enable / disable",
+  "FVTTCONDITIONS.Manager.Remove": "Remove",
+  "FVTTCONDITIONS.Manager.Enabled": "Enabled",
+  "FVTTCONDITIONS.Manager.Disabled": "Disabled",
+  "FVTTCONDITIONS.Manager.Empty": "No custom conditions.",
+  "FVTTCONDITIONS.Manager.NoTargets": "No targets selected."
+}

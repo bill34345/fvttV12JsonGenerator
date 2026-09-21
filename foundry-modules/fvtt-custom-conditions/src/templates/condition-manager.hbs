@@ -1,0 +1,40 @@
+<section class="custom-conditions-manager">
+  <p class="hint">{{localize "FVTTCONDITIONS.Manager.TargetHint"}}</p>
+  <p class="hint">{{localize "FVTTCONDITIONS.Manager.EscapeHint"}}</p>
+  <div class="condition-targets">
+    {{#each actors}}
+      <article data-actor-uuid="{{uuid}}">
+        <header><strong>{{name}}</strong></header>
+        {{#if conditions.length}}
+          <ul class="condition-list">
+            {{#each conditions}}
+              <li>
+                <span><strong>{{name}}</strong> · {{instance.conditionId}} · {{#if disabled}}{{localize "FVTTCONDITIONS.Manager.Disabled"}}{{else}}{{localize "FVTTCONDITIONS.Manager.Enabled"}}{{/if}}</span>
+                <span class="condition-actions">
+                  {{#if canEscapeFrozen}}<button type="button" data-action="escapeFrozen" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.EscapeFrozen"}}</button>{{/if}}
+                  <button type="button" data-action="edit" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Edit"}}</button>
+                  <button type="button" data-action="toggle" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Toggle"}}</button>
+                  <button type="button" data-action="remove" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Remove"}}</button>
+                </span>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="hint">{{localize "FVTTCONDITIONS.Manager.Empty"}}</p>
+        {{/if}}
+      </article>
+    {{else}}
+      <p>{{localize "FVTTCONDITIONS.Manager.NoTargets"}}</p>
+    {{/each}}
+  </div>
+  <div class="condition-form">
+    <div class="form-group">
+      <label>{{localize "FVTTCONDITIONS.Manager.Condition"}}</label>
+      <select name="conditionId">{{#each definitions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}} · {{description}}</option>{{/each}}</select>
+    </div>
+    <div class="form-group"><label>{{localize "FVTTCONDITIONS.Manager.Name"}}</label><input name="sourceName" value="{{sourceName}}" maxlength="120"></div>
+    <div class="form-group"><label>{{localize "FVTTCONDITIONS.Manager.Origin"}}</label><input name="origin" value="{{origin}}" maxlength="4000"></div>
+    <div class="form-group stacked"><label>{{localize "FVTTCONDITIONS.Manager.Params"}}</label><textarea name="paramsJson" rows="15" spellcheck="false">{{paramsJson}}</textarea></div>
+    <button type="button" data-action="refresh">{{localize "FVTTCONDITIONS.Manager.Refresh"}}</button>
+  </div>
+</section>

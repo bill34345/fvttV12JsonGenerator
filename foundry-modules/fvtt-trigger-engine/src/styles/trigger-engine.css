@@ -1,0 +1,36 @@
+#fvtt-trigger-engine-manager .trigger-engine-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 18rem;
+  overflow: auto;
+  margin-bottom: 0.75rem;
+}
+
+#fvtt-trigger-engine-manager .trigger-engine-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 0.25rem;
+}
+
+#fvtt-trigger-engine-manager .trigger-engine-row__actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#fvtt-trigger-engine-manager .trigger-engine-editor {
+  display: grid;
+  gap: 0.35rem;
+}
+
+#fvtt-trigger-engine-manager textarea[name="definition"] {
+  min-height: 18rem;
+  width: 100%;
+  font-family: var(--font-monospace);
+  resize: vertical;
+}

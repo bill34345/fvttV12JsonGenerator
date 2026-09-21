@@ -32,3 +32,28 @@ export {
   isForgeItemSourceId,
 } from './forgeItemSourceIdentity';
 export type { ForgeItemSourceId } from './forgeItemSourceIdentity';
+export {
+  CONDITION_DEFINITIONS,
+  CONDITION_FLAG,
+  CONDITION_SCHEMA_VERSION,
+  CUSTOM_CONDITION_IDS,
+  CUSTOM_CONDITIONS_MODULE_ID,
+  buildConditionFlag,
+  compareConditionFormulaStrength,
+  createConditionInstance,
+  expectedConditionFormulaValue,
+  getConditionDefinition,
+  isConditionId,
+  isSafeConditionFormula,
+  parseConditionInstance,
+  readConditionInstance,
+} from './conditions';
+export type {
+  ConditionDefinition,
+  ConditionId,
+  ConditionInstance,
+  ConditionParameterDefinition,
+  ConditionParams,
+  ConditionStacking,
+  ConditionTiming,
+} from './conditions';

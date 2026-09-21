@@ -1,0 +1,22 @@
+{
+  "FVTTCONDITIONS.Manager.Title": "自定义状态",
+  "FVTTCONDITIONS.Manager.EscapeFrozen": "破冰（动作）",
+  "FVTTCONDITIONS.Manager.EscapeHint": "Frozen：点击破冰，进行力量（运动）检定对抗该状态的 DC。标记目标，另选中一名生物即可由其协助；否则由目标自己检定。战斗中需轮到检定者的回合。接触范围及飞行目标的坠落落点由 GM 裁定。",
+  "FVTTCONDITIONS.Manager.OneHelper": "请至多选中一名其他生物作为破冰协助者。",
+  "FVTTCONDITIONS.Manager.Open": "管理自定义状态",
+  "FVTTCONDITIONS.Manager.Hint": "向选中的 Actor 施加、编辑、停用和解除自定义状态。",
+  "FVTTCONDITIONS.Manager.TargetHint": "请先标记 Token；没有标记目标时使用受控 Token。",
+  "FVTTCONDITIONS.Manager.Condition": "状态",
+  "FVTTCONDITIONS.Manager.Name": "名称",
+  "FVTTCONDITIONS.Manager.Origin": "来源 / Origin",
+  "FVTTCONDITIONS.Manager.Params": "实例参数（JSON）",
+  "FVTTCONDITIONS.Manager.Apply": "施加状态",
+  "FVTTCONDITIONS.Manager.Refresh": "重新读取目标",
+  "FVTTCONDITIONS.Manager.Edit": "编辑",
+  "FVTTCONDITIONS.Manager.Toggle": "启用 / 停用",
+  "FVTTCONDITIONS.Manager.Remove": "解除",
+  "FVTTCONDITIONS.Manager.Enabled": "已启用",
+  "FVTTCONDITIONS.Manager.Disabled": "已停用",
+  "FVTTCONDITIONS.Manager.Empty": "没有自定义状态。",
+  "FVTTCONDITIONS.Manager.NoTargets": "没有选中目标。"
+}

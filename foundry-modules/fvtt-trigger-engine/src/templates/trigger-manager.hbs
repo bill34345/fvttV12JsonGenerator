@@ -1,0 +1,27 @@
+<section class="trigger-engine-manager">
+  <div class="trigger-engine-list" aria-label="{{localize 'FVTTTRIGGER.Manager.Title'}}">
+    {{#if triggers.length}}
+      {{#each triggers}}
+        <article class="trigger-engine-row" data-trigger-id="{{id}}">
+          <div>
+            <strong>{{name}}</strong>
+            <small>{{id}} · {{#if enabled}}{{localize "FVTTTRIGGER.Manager.Enabled"}}{{else}}{{localize "FVTTTRIGGER.Manager.Disabled"}}{{/if}}</small>
+          </div>
+          <div class="trigger-engine-row__actions">
+            <button type="button" data-action="edit" data-trigger-id="{{id}}">{{localize "FVTTTRIGGER.Manager.Edit"}}</button>
+            <button type="button" data-action="copy" data-trigger-id="{{id}}">{{localize "FVTTTRIGGER.Manager.Copy"}}</button>
+            <button type="button" data-action="toggle" data-trigger-id="{{id}}">{{localize "FVTTTRIGGER.Manager.Toggle"}}</button>
+            <button type="button" data-action="delete" data-trigger-id="{{id}}">{{localize "FVTTTRIGGER.Manager.Delete"}}</button>
+          </div>
+        </article>
+      {{/each}}
+    {{else}}
+      <p>{{localize "FVTTTRIGGER.Manager.Empty"}}</p>
+    {{/if}}
+  </div>
+  <div class="trigger-engine-editor">
+    <label for="fvtt-trigger-engine-definition">{{localize "FVTTTRIGGER.Manager.Definition"}}</label>
+    <textarea id="fvtt-trigger-engine-definition" name="definition" spellcheck="false">{{editorJson}}</textarea>
+    <button type="button" data-action="create">{{localize "FVTTTRIGGER.Manager.Create"}}</button>
+  </div>
+</section>

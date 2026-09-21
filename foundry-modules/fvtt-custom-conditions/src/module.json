@@ -1,0 +1,19 @@
+{
+  "id": "fvtt-custom-conditions",
+  "title": "自定义状态 / Custom Conditions",
+  "description": "提供可在 Foundry 内直接施加和自动结算的 Monsters of Drakkenheim 自定义状态。 / GM-managed custom conditions for Foundry VTT.",
+  "version": "0.1.0",
+  "compatibility": { "minimum": "14.364", "verified": "14.364", "maximum": "14.364" },
+  "esmodules": ["scripts/index.js"],
+  "styles": [{ "src": "styles/custom-conditions.css" }],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "cn", "name": "简体中文（Foundry 中文包）", "path": "lang/zh-CN.json" },
+    { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
+  ],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3.3", "verified": "5.3.3", "maximum": "5.3.3" } }],
+    "requires": [{ "id": "fvtt-trigger-engine", "type": "module", "compatibility": { "minimum": "0.1.0", "verified": "0.1.0", "maximum": "0.1.x" } }]
+  },
+  "socket": false
+}

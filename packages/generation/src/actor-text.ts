@@ -1305,6 +1305,8 @@ export function createCustomEffect(options: {
   statuses?: string[];
   changes?: Array<Record<string, unknown>>;
   duration?: Record<string, unknown>;
+  description?: string;
+  showIcon?: number;
   flags?: Record<string, unknown>;
 }): any {
   return {
@@ -1323,9 +1325,10 @@ export function createCustomEffect(options: {
       startRound: null,
       startTurn: null,
     },
-    description: '',
+    description: options.description ?? '',
     origin: null,
     tint: '#ffffff',
+    ...(options.showIcon !== undefined ? { showIcon: options.showIcon } : {}),
     transfer: false,
     img: options.img,
     statuses: options.statuses ?? [],

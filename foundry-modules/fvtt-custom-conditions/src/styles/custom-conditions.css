@@ -1,0 +1,10 @@
+#fvtt-custom-conditions-manager .custom-conditions-manager { display: grid; gap: 0.75rem; }
+#fvtt-custom-conditions-manager .condition-targets { display: grid; gap: 0.5rem; max-height: 19rem; overflow: auto; }
+#fvtt-custom-conditions-manager article { border: 1px solid var(--color-border-light-2); border-radius: 0.25rem; padding: 0.55rem; }
+#fvtt-custom-conditions-manager article header { margin-bottom: 0.35rem; }
+#fvtt-custom-conditions-manager .condition-list { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.1rem; }
+#fvtt-custom-conditions-manager .condition-list li { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+#fvtt-custom-conditions-manager .condition-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+#fvtt-custom-conditions-manager button { width: auto; }
+#fvtt-custom-conditions-manager .condition-form { display: grid; gap: 0.45rem; }
+#fvtt-custom-conditions-manager textarea[name="paramsJson"] { width: 100%; font-family: var(--font-monospace); resize: vertical; }

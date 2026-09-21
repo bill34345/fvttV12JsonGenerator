@@ -430,6 +430,7 @@ export class ItemGenerator {
             action.desc ?? '',
             activities,
             action.name,
+            action.logicalPath,
           );
           for (const conditionEffect of conditionEffects) {
             conditionEffect.origin = `Item.${item._id}`;

@@ -23,7 +23,6 @@ import {
 import {
   extractDamagePartsFromText,
   extractPrimaryDamagePartsFromText,
-  mapDamageType,
   extractSavingThrowFromText,
   extractSavingThrowsWithInheritedDcFromText,
   extractSavingThrowsFromText,
@@ -59,10 +58,10 @@ import {
   createCustomEffect as createCustomEffectExt,
   createRandomId as createRandomIdExt,
   extractSwallowDamage as extractSwallowDamageExt,
-  buildOverTimeFlag,
   statusIconPath,
   suppressEncounterStagedInferredEffects,
 } from './actor-effects';
+import { buildBleedingFlag, extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 import {
   createDailyUses as createDailyUsesExt,
   resolveItemActivationCost as resolveItemActivationCostExt,
@@ -1148,6 +1147,7 @@ export class ActorGenerator {
     item.effects = resolvedActivationType
       ? this.generateEnhancedConditionEffects(semanticDesc, item.system.activities, itemName)
       : [];
+    this.removeDelayedBleedingDamageParts(item.system.activities, semanticDesc);
     this.applySpecializedActivityOverrides(item, action);
     this.applyActivityMetadata(
       item.system.activities,
@@ -1443,6 +1443,12 @@ export class ActorGenerator {
             label: branch.label,
             kind: branch.kind,
           },
+          ...(branch.key === 'bleeding-wound'
+            ? (() => {
+              const bleedingSpec = extractBleedingSpec(branch.action.desc ?? '');
+              return bleedingSpec ? { bleeding: bleedingSpec } : {};
+            })()
+            : {}),
         };
         ActivityGenerator.mergeUnique(activities, generated);
       }
@@ -1776,6 +1782,20 @@ export class ActorGenerator {
     this.removeConditionGatedEffects(item, rules);
     this.removeConditionalDamagePrerequisiteEffects(item, rules);
     this.applySummonActivityMetadata(item, rules);
+  }
+
+  private removeDelayedBleedingDamageParts(activities: Record<string, any>, text: string): void {
+    const bleedingSpec = extractBleedingSpec(text);
+    if (!bleedingSpec || !hasDelayedBleedingFormula(text, bleedingSpec.formula)) {
+      return;
+    }
+
+    for (const activity of Object.values(activities ?? {}) as any[]) {
+      const parts = activity?.damage?.parts;
+      if (!Array.isArray(parts)) continue;
+      const index = parts.findIndex((part: any) => this.formatActivityDamagePartFormula(part) === bleedingSpec.formula);
+      if (index >= 0) parts.splice(index, 1);
+    }
   }
 
   private applySummonActivityMetadata(item: any, rules: Record<string, unknown>): void {
@@ -2159,6 +2179,12 @@ export class ActorGenerator {
         ...damage,
         type: damage.type || primaryDamageType,
       }));
+      const bleedingSpec = extractBleedingSpec(segment.text);
+      if (segment.key === 'bleeding-wound' && bleedingSpec) {
+        // The branch creates a reusable turn-start wound. Its delayed die is
+        // not an immediate damage Activity.
+        damageParts = [];
+      }
       if (segment.key === 'bleeding-wound' && damageParts.length > 1) {
         damageParts = damageParts.slice(0, 1);
       }
@@ -2394,6 +2420,22 @@ export class ActorGenerator {
       item.effects = [];
       for (const [, activity] of activityEntries) {
         activity.effects = [];
+      }
+      const bleedingBranch = activityEntries.find(([, activity]) =>
+        activity?.flags?.fvttJsonGenerator?.heavyHitBranch?.key === 'bleeding-wound',
+      );
+      const bleedingSpec = bleedingBranch?.[1]?.flags?.fvttJsonGenerator?.bleeding;
+      if (bleedingBranch && bleedingSpec) {
+        const effect = this.createCustomEffect({
+          name: '流血 (Bleeding)',
+          img: statusIconPath('bleeding'),
+          statuses: ['bleeding'],
+          showIcon: 2,
+          description: bleedingSpec.endCondition,
+          flags: buildBleedingFlag(bleedingSpec),
+        });
+        item.effects.push(effect);
+        bleedingBranch[1].effects = [{ _id: effect._id }];
       }
       return;
     }
@@ -2705,33 +2747,20 @@ export class ActorGenerator {
     }
 
     if (/(?:流血|Bleeding|Bleed)/i.test(text)) {
-      const damage = this.extractBleedingDamageForOverTime(text);
+      const bleedingSpec = extractBleedingSpec(text);
       return this.createCustomEffect({
         name: '流血 (Bleeding)',
         statuses: ['bleeding'],
         img: statusIconPath('bleeding'),
-        flags: buildOverTimeFlag({
-          formula: damage?.formula,
-          damageType: damage?.type,
-          label: '流血 (Bleeding)',
-        }),
+        showIcon: 2,
+        ...(bleedingSpec ? {
+          description: bleedingSpec.endCondition,
+          flags: buildBleedingFlag(bleedingSpec),
+        } : {}),
       });
     }
 
     return null;
-  }
-
-  private extractBleedingDamageForOverTime(text: string): Damage | null {
-    const bleedingIndex = text.search(/流血|Bleeding|Bleed/i);
-    if (bleedingIndex === -1) {
-      return null;
-    }
-    const clause = text.slice(bleedingIndex, bleedingIndex + 180);
-    const formula = clause.match(/`?(\d+d\d+(?:\s*[+\-]\s*\d+)?)`?/i)?.[1]?.replace(/\s+/g, '');
-    const explicitType =
-      clause.match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage\b/i)?.[1]?.toLowerCase()
-      ?? mapDamageType(clause.match(/([一-龥]{2,4})伤害/)?.[1] ?? '');
-    return formula && explicitType ? { formula, type: explicitType } : null;
   }
 
   private applyParsedAcEffect(item: any, action: GeneratedActionData): void {
@@ -2834,6 +2863,8 @@ export class ActorGenerator {
     statuses?: string[];
     changes?: Array<Record<string, unknown>>;
     duration?: Record<string, unknown>;
+    description?: string;
+    showIcon?: number;
     flags?: Record<string, unknown>;
   }): any {
     const effect = createCustomEffectExt(options);
@@ -2940,10 +2971,6 @@ export class ActorGenerator {
 
   private extractPrimaryDamagePartsFromText(text: string): Damage[] {
     return extractPrimaryDamagePartsFromText(text);
-  }
-
-  private mapDamageType(raw: string): string {
-    return mapDamageType(raw);
   }
 
   private parseAttackRange(range: string | undefined): [number | null, number | null] {

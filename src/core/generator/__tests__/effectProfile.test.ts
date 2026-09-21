@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import {
+  compareConditionFormulaStrength,
+  createConditionInstance,
+  expectedConditionFormulaValue,
+} from '@fvtt-json-generator/contracts/conditions';
 import { ActorGenerator } from '../actor';
 import { generateEnhancedConditionEffects } from '../actor-effects';
 import { EffectProfileApplier } from '../effectProfileApplier';
@@ -88,7 +93,7 @@ describe('ActorGenerator effect profiles', () => {
     expect((swallow.effects ?? []).some((effect: any) => /Swallowed|吞咽中/i.test(String(effect?.name ?? '')))).toBe(false);
   });
 
-  it('modded-v12 preserves Heavy Hit and Dazed as structured hints instead of resolving branches', async () => {
+  it('modded-v12 preserves Heavy Hit and Dazed hints while linking only the optional bleeding branch', async () => {
     const actor = await loadActor('modded-v12');
     const hintedItem = actor.items.find(
       (item: any) =>
@@ -96,24 +101,199 @@ describe('ActorGenerator effect profiles', () => {
         item.flags?.fvttJsonGenerator?.effectHints?.dazed,
     );
     expect(hintedItem).toBeDefined();
-    expect(hintedItem.effects ?? []).toHaveLength(0);
-    for (const activity of Object.values(hintedItem.system.activities ?? {}) as any[]) {
-      expect(activity.effects ?? []).toHaveLength(0);
-    }
+    const bleedingEffect = (hintedItem.effects ?? []).find((effect: any) => effect.statuses?.includes('bleeding'));
+    const bleedingBranch = Object.values(hintedItem.system.activities ?? {}).find(
+      (activity: any) => activity.flags?.fvttJsonGenerator?.heavyHitBranch?.key === 'bleeding-wound',
+    ) as any;
+    expect(bleedingEffect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '1d6', stacking: 'highest', damageType: '' }),
+    );
+    expect(bleedingBranch?.effects).toEqual([{ _id: bleedingEffect?._id }]);
+    expect((Object.values(hintedItem.system.activities ?? {}) as any[])
+      .find((activity: any) => activity.type === 'attack')?.effects ?? []).toHaveLength(0);
+    expect(bleedingBranch?.damage?.parts ?? []).toHaveLength(0);
   });
 
-  it('creates over-time automation only when bleeding damage formula and type are explicit', () => {
+  it('uses an explicit bleeding shorthand with the Drakkenheim defaults, or keeps its explicit turn timing', () => {
     const implicit = generateEnhancedConditionEffects('目标开始流血 (Bleeding) `1d6`。', {}, 'Bleeding Bite');
     const explicit = generateEnhancedConditionEffects(
-      '目标开始流血 (Bleeding) `1d6` piercing damage。',
+      '目标开始流血 (Bleeding)，taking `1d6` piercing damage at the start of each turn。',
       {},
       'Bleeding Bite',
     );
 
-    expect(implicit[0]?.flags?.['midi-qol.OverTime']).toBeUndefined();
-    expect(explicit[0]?.flags?.['midi-qol.OverTime']).toBe(
-      'turn=start,damageRoll=1d6,damageType=piercing,label=流血 (Bleeding)',
+    expect(implicit[0]?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({
+        formula: '1d6',
+        mode: 'hpLoss',
+        damageType: '',
+        timing: 'turnEnd',
+        stacking: 'highest',
+      }),
     );
+    expect(explicit[0]?.flags?.['fvtt-custom-conditions']?.condition).toEqual(
+      expect.objectContaining({
+        schemaVersion: 1,
+        instanceId: 'template-bleeding',
+        conditionId: 'bleeding',
+        template: true,
+        params: expect.objectContaining({
+          formula: '1d6',
+          mode: 'damage',
+          damageType: 'piercing',
+          stacking: 'highest',
+          endOnHealing: true,
+          timing: 'turnStart',
+        }),
+      }),
+    );
+    expect(explicit[0]?.flags?.['midi-qol.OverTime']).toBeUndefined();
+  });
+
+  it('generates Bleeding X without borrowing the preceding hit formula or damage type', () => {
+    const generated = generateEnhancedConditionEffects(
+      'Hit: 2d8 slashing damage, and the target gains Bleeding `4d4`.',
+      {},
+      'Blood Thorn',
+    );
+    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(effect).toMatchObject({
+      statuses: ['bleeding'],
+      flags: {
+        'fvtt-custom-conditions': {
+          condition: {
+            conditionId: 'bleeding',
+            template: true,
+            params: {
+              formula: '4d4',
+              mode: 'hpLoss',
+              damageType: '',
+              timing: 'turnEnd',
+              stacking: 'highest',
+              endOnHealing: true,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('does not turn later direct-hit damage into Bleeding damage mode or type', () => {
+    const generated = generateEnhancedConditionEffects(
+      'The target gains Bleeding `1d6` and takes `2d6` fire damage.',
+      {},
+      'Rending Bite',
+    );
+    const bleeding = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(bleeding?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '1d6', mode: 'hpLoss', damageType: '', timing: 'turnEnd', stacking: 'highest' }),
+    );
+  });
+
+  it('extracts explicit turn-end HP loss across the Bleeding rule sentence', () => {
+    const generated = generateEnhancedConditionEffects(
+      'The target is bleeding. At the end of each of its turns, it loses `1d6` Hit Points.',
+      {},
+      'Rending Claw',
+    );
+    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(effect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '1d6', mode: 'hpLoss', damageType: '', timing: 'turnEnd', stacking: 'highest' }),
+    );
+  });
+
+  it('keeps timed Bleeding damage out of the hit damage while retaining an explicit turn-start source', () => {
+    const generated = generateEnhancedConditionEffects(
+      'Hit: 2d8 slashing damage, and the target starts bleeding, taking `1d6` piercing damage at the start of each turn.',
+      {},
+      'Raking Claw',
+    );
+    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(effect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '1d6', mode: 'damage', damageType: 'piercing', timing: 'turnStart', stacking: 'highest' }),
+    );
+  });
+
+  it('does not build Bleeding X from an unrelated direct-hit die or an unquantified bleed clause', () => {
+    const text = 'Hit: `2d8` slashing damage; the target starts bleeding but no recurring die is specified.';
+    const generated = generateEnhancedConditionEffects(text, {}, 'Rending Claw');
+    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(effect).toBeDefined();
+    expect(effect?.flags?.['fvtt-custom-conditions']?.condition).toBeUndefined();
+  });
+
+  it('extracts Burning formula, type, and timing from its own clause', () => {
+    const generated = generateEnhancedConditionEffects(
+      'The target gains Burning `1d4` Fire and Bleeding `2d6`.',
+      {},
+      'Scorching Bite',
+    );
+    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+    const bleeding = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+
+    expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '1d4', damageType: 'fire', timing: 'turnEnd', stacking: 'highest' }),
+    );
+    expect(bleeding?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '2d6', timing: 'turnEnd', stacking: 'highest' }),
+    );
+  });
+
+  it('does not borrow Burning timing or damage from a preceding unrelated clause', () => {
+    const generated = generateEnhancedConditionEffects(
+      'At the start of its turn the monster regenerates 10 hit points. The target becomes Burning `2d6` Fire.',
+      {},
+      'Firebrand',
+    );
+    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+
+    expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '2d6', damageType: 'fire', timing: 'turnEnd', stacking: 'highest' }),
+    );
+  });
+
+  it('does not borrow a later hit-damage type to complete a Burning formula', () => {
+    const generated = generateEnhancedConditionEffects(
+      'The target gains Burning `1d4` and takes `2d6` fire damage.',
+      {},
+      'Cinder Bite',
+    );
+    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+
+    expect(burning).toBeDefined();
+    expect(burning?.flags?.['fvtt-custom-conditions']?.condition).toBeUndefined();
+  });
+
+  it('uses explicit Burning turn-start timing and refuses to infer its type from earlier hit damage', () => {
+    const generated = generateEnhancedConditionEffects(
+      'Hit: 2d8 slashing damage; the target becomes Burning `2d4` Acid at the start of each turn.',
+      {},
+      'Ashen Bite',
+    );
+    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+
+    expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
+      expect.objectContaining({ formula: '2d4', damageType: 'acid', timing: 'turnStart', stacking: 'highest' }),
+    );
+  });
+
+  it('locks legacy Bleeding and Burning stacking values to highest and compares safe formula strength', () => {
+    const bleeding = createConditionInstance('bleeding', { formula: '4d4', stacking: 'stack' });
+    const burning = createConditionInstance('burning', { formula: '1d6', damageType: 'fire', stacking: 'replace' });
+
+    expect(bleeding.params).toMatchObject({ mode: 'hpLoss', timing: 'turnEnd', stacking: 'highest' });
+    expect(burning.params).toMatchObject({ timing: 'turnEnd', stacking: 'highest' });
+    expect(expectedConditionFormulaValue('1d8')).toBe(4.5);
+    expect(expectedConditionFormulaValue('2 * (1d4 + 1)')).toBe(7);
+    expect(compareConditionFormulaStrength('1d8', '1d6 + 1')).toBe(0);
+    expect(compareConditionFormulaStrength('1d12', '2d6')).toBe(-1);
+    expect(compareConditionFormulaStrength('2d4 + 1', '1d6')).toBe(1);
+    expect(compareConditionFormulaStrength('1d6 / 1d4', '1d6')).toBeUndefined();
   });
 
   it('creates condition effects only from explicit target-application clauses', () => {

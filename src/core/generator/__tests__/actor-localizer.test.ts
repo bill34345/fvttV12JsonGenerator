@@ -51,6 +51,20 @@ describe('ActorLocalizer', () => {
     expect(actor.items[0].system.description.value).toContain('穿刺伤害');
   });
 
+  it('localizes melee and ranged spell attacks without changing unrelated range substrings', async () => {
+    const actor = createActor();
+    actor.items[0].system.description.value =
+      '<p>Melee Spell Attack: +5 to hit. Ranged Spell Attack: +5 to hit. Spell attack range 60 ft. A strange effect follows.</p>';
+
+    const localized = await new ActorLocalizer({ route: 'english' }).localize(actor);
+    const description = localized.items[0].system.description.value;
+
+    expect(description).toContain('近战法术攻击');
+    expect(description).toContain('远程法术攻击');
+    expect(description).toContain('射程 60 ft.');
+    expect(description).toContain('A strange effect follows.');
+  });
+
   it('uses the injected service with the existing namespace contract', async () => {
     const namespaces: string[] = [];
     const service: TranslationServiceLike = {

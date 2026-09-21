@@ -77,7 +77,10 @@ describe('PlainTextActorWorkflow', () => {
       Object.values(item.system?.activities ?? {})
         .some((activity: any) => activity.activation?.type === 'reaction'))).toBe(true);
     expect((swallow?.effects ?? []).some((effect) => /Swallowed|吞咽中/i.test(String(effect?.name ?? '')))).toBe(false);
-    expect((tailCrash?.effects ?? []).length ?? 0).toBe(0);
+    expect((tailCrash?.effects ?? []).length ?? 0).toBe(1);
+    expect(tailCrash?.effects?.[0]?.flags?.['fvtt-custom-conditions']?.condition).toEqual(
+      expect.objectContaining({ conditionId: 'bleeding', template: true }),
+    );
     expect(tailCrash?.flags?.fvttJsonGenerator?.effectHints).toEqual(
       expect.objectContaining({
         heavyHit: true,
