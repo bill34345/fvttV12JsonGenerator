@@ -692,3 +692,9 @@ Effect稳定ID修复完成：实际Enhanced生成路径用既有createStableDocu
 使用说明、README、手册已人工核对并review/build/check通过28项。当前摘要docs/reviews/2026-09-21-custom-conditions-release-readiness.md为单一当前状态入口；原计划保留历史轨迹。没有commit/merge/push/生产部署，未碰无关injury dirty内容。未重新运行无关全仓测试，不假称当前树全仓全绿。
 
 本地候选可进入review/合并准备；保留已明确限制：KeyD真实长按工具未覆盖，Valor utility target/range需GM辅助，任意新状态规则不是无代码生成，serverNext6.0.2兼容性未测。浏览器核心收尾/reload/activeGM及exact-ID清理已过，不再留临时GM或CC-FINAL对象。
+
+## 2026-09-21 本地master整合准备
+
+用户授权合入master并更新说明手册，不含push或部署。已在原topic提交功能ec826a2，保留其未提交IFS代码与混合手册原字节；在独立集成worktree从该提交构建准确候选，手册IFS条目/review保持master已提交版，不把未合入的可选桥接功能写入master手册。
+
+干净候选验证：frozen lockfile安装通过；Trigger Engine与Custom Conditions测试通过；生成器/workflow/v14验收316测试1434断言通过；packages与Foundry模块类型检查通过；agents generate/check通过；handbook build/check28项通过。原主区索引为空，仅存在一个untracked常量文件foundry-modules/fvtt-trigger-engine/src/constants.ts，与候选247字节完全相同，SHA6623BCFB2F9E6177E2E0032AA2093A238EFF2875B5DD03EA611E89140077F4E0。按worktree-development第4节重叠门槛，实际master快进前单独确认将其同内容纳入跟踪，不删除/移动未知内容、不stash、不背后改master。

@@ -440,6 +440,142 @@
     "module": "fvtt-injury-fading-spirits"
   },
   {
+    "id": "fvtt-trigger-engine",
+    "title": "Trigger Engine / 通用触发器引擎",
+    "category": "play",
+    "summary": "由活动 GM 执行的通用 Actor 更新、回合开始和回合结束事件引擎；把稳定的 before/after 上下文交给宏或其他模块。",
+    "when": "需要把“什么时候触发”从具体规则模块中拆出来，用配置组合 Actor 更新、Combat 回合事件、结构化条件和现有宏时使用。具体状态规则由独立模块拥有。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3 测试目标",
+      "活动 GM",
+      "每个 Run Macro 动作对应的世界 Macro UUID",
+      "需要消费事件的模块通过 fvtt-trigger-engine.api.subscribe(listener) 接入"
+    ],
+    "steps": [
+      {
+        "title": "打开 Trigger Manager",
+        "text": "以 GM 启用模块后，在模块设置中打开 Trigger Manager。配置保存在 world setting 中，读取和写入都会校验 schema；无效触发器不会进入运行时。"
+      },
+      {
+        "title": "定义 Actor 或 Combat 事件",
+        "text": "新建触发器，选择 Document Update / Actor，并填写需要观察的 watched paths，例如 system.attributes.hp.value。路径匹配同时识别点路径、嵌套对象以及父子路径相关更新。"
+      },
+      {
+        "title": "选择回合生命周期",
+        "text": "Combat Turn Start 和 Combat Turn End 不需要 watched paths。它们只在正向 Combat 生命周期中发出，并以 Combat、回合和 combatant 上下文交给 active GM。"
+      },
+      {
+        "title": "组合结构化条件",
+        "text": "条件组选择 ALL 或 ANY；每项从 before 路径、after 路径或 literal 取值，再使用 eq、ne、gt、gte、lt、lte 比较。v1 不执行任意 JavaScript 条件。"
+      },
+      {
+        "title": "添加 Run Macro 动作",
+        "text": "为动作填写 Macro UUID。命中后活动 GM 按顺序执行宏，并通过 macro.execute({ triggerContext }) 传入触发器 ID、Actor、before、after、changes、userId、时间戳与安全回写入口 updateDocument(changes, options?)。宏若要回写当前 Actor，应使用这个入口保留因果链。单个触发器内动作失败会停止该触发器剩余动作，其他触发器仍可继续。"
+      },
+      {
+        "title": "接入其他模块",
+        "text": "需要消费通用事件的模块通过 fvtt-trigger-engine.api.subscribe(listener) 接入，按事件类型和文档类型筛选；Trigger Engine 不导入消费者的私有实现。"
+      }
+    ],
+    "outputs": [
+      "world setting 中经过校验的 TriggerDefinition 列表",
+      "Actor 更新时稳定的 before / after / changes TriggerContext",
+      "由确定性活动 GM 顺序执行的 Macro 动作"
+    ],
+    "limits": [
+      "当前 Document Update、Combat Turn Start 和 Combat Turn End 都只支持 Actor 文档；schema 保留 documentType 以便后续扩展",
+      "v1 只有结构化 ALL/ANY 比较条件与 Run Macro 动作，不提供任意 JavaScript 条件、Convenient Effects 或 Effect Macro 依赖",
+      "执行权限定为确定性活动 GM，避免多客户端重复写入；同一 Actor 的独立更新按观察顺序排队并保留各自 before/after；宏回写当前 Actor 时通过 triggerContext.updateDocument 显式携带完整祖先因果链，链上已出现的触发器会被跳过，且不会覆盖共享 Actor.update；world setting 广播会刷新各客户端运行时缓存",
+      "本地测试和构建只能证明配置、求值和调用契约；真实世界中的宏副作用仍需在精确 Foundry 版本中单独验收"
+    ],
+    "keywords": [
+      "Trigger",
+      "触发器",
+      "Document Update",
+      "Actor",
+      "Macro",
+      "before",
+      "after",
+      "自动化"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-trigger-engine/README.zh-CN.md",
+      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-trigger-engine/"
+    ],
+    "module": "fvtt-trigger-engine"
+  },
+  {
+    "id": "fvtt-custom-conditions",
+    "title": "Custom Conditions / 自定义状态",
+    "category": "play",
+    "summary": "在 Foundry 内直接施加、编辑、停用和解除 19 个自定义状态，并以统一实例参数自动结算流血、燃烧等动态规则。",
+    "when": "需要把 Monsters of Drakkenheim 的自定义状态放进 Actor 或物品模板，并希望日常调整骰式、DC、伤害类型和解除方式时使用。",
+    "requires": [
+      "Foundry VTT 14.364",
+      "dnd5e 5.3.3",
+      "GM / active GM",
+      "已安装并启用 fvtt-trigger-engine"
+    ],
+    "steps": [
+      {
+        "title": "启用两个模块",
+        "text": "在精确支持版本的世界启用 Trigger Engine 和 Custom Conditions。Custom Conditions 通过 Trigger Engine 的公开事件接口接收 Actor 更新、回合开始和回合结束。"
+      },
+      {
+        "title": "打开状态管理器",
+        "text": "以 GM 选中或标记 Token，从模块设置或 Token 控制栏打开“管理自定义状态”。面板可以对目标施加、编辑、停用和解除状态。"
+      },
+      {
+        "title": "填写状态实例参数",
+        "text": "骰式来自施加状态的特性。Bleeding 与 Burning 跨来源只采用较高值，以骰式平均值比较，平手保留现有值；Burning 的伤害类型跟随胜出者。两者默认在自身回合结束时结算。Frozen 使用 escapeDC；Jinxed 与 Valor 使用各自骰式。"
+      },
+      {
+        "title": "使用生成的物品模板",
+        "text": "生成器会在物品 ActiveEffect 中写入 flags.fvtt-custom-conditions.condition 模板。施加模板后模块生成新的 Actor 实例 ID，手工施加和生成来源使用同一套 schema。"
+      },
+      {
+        "title": "用动作尝试解除 Frozen",
+        "text": "点击 Frozen 行的“破冰（动作）”按该实例 DC 做力量（运动）检定。默认由目标自己尝试；标记目标并另选中一名生物即可协助，GM 确认接触范围。完成检定后消耗动作，成功解除；取消不消耗。"
+      }
+    ],
+    "outputs": [
+      "Actor 上带参数的 Custom Conditions ActiveEffect 实例",
+      "物品上的可重复使用 Condition 模板",
+      "由 active GM 和 Combat 事件驱动的流血、燃烧等结算"
+    ],
+    "limits": [
+      "本期包含 Addled、Bewildered、Bleeding、Burning、Clumsy、Dazed、Defenseless、Distracted、Enfeebled、Frozen、Helpless、Immobilized、Jinxed、Shocked、Sickened、Slowed、Staggered、Valor 和 Weakened",
+      "Bloodied 使用 dnd5e/FVTT 原生能力；Drakkenheim Madness 与 Contamination 不在本期目录",
+      "距离、环境和坠落落点由 GM 结合地图裁定；模块不会把不明确的来源规则猜成自动化",
+      "Immobilized/Frozen 拦截拖拽、方向键以及非 GM 的 HUD/配置位置编辑；GM 坐标编辑和 API 强制位移保留用于裁定，不消耗 Dazed 自主移动选择",
+      "E2E 复用常驻 server-mirror 的 fvtt-v14-module-matrix 世界、端口 30001。核心状态、生成模板、重载不重复结算与 active GM 切换已有对应实测证据；键盘长按受工具能力限制未验收",
+      "构建、单测和安装 hash 不能代替 Foundry v14.364 中的真实 UI、Combat、ActiveEffect 和骰式运行时验收"
+    ],
+    "keywords": [
+      "Custom Conditions",
+      "自定义状态",
+      "Bleeding",
+      "Burning",
+      "Frozen",
+      "Jinxed",
+      "Valor",
+      "ActiveEffect",
+      "参数化"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-custom-conditions/README.zh-CN.md",
+      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-custom-conditions/"
+    ],
+    "module": "fvtt-custom-conditions"
+  },
+  {
     "id": "fvtt-json-forge",
     "title": "FVTT JSON Forge",
     "category": "convert",

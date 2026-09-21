@@ -1,10 +1,10 @@
 # Custom Conditions 与 Trigger Engine：候选版本收尾
 
-更新时间：2026-09-21。当前为可供review的本地候选，核心规则与收尾门禁已有下述证据；保留键盘长按工具限制、Valor目标GM辅助和serverNext未验收边界，尚未提交/合并/发布。此页是当前验收摘要；旧计划中按日期追加的失败、未执行与暂停记录保留为历史证据，不代表当前所有项目仍未完成。
+更新时间：2026-09-21。当前为已获本地提交与master整合授权的候选，核心规则与收尾门禁已有下述证据；保留键盘长按工具限制、Valor目标GM辅助和serverNext未验收边界，不代表已经远程发布。此页是当前验收摘要；旧计划中按日期追加的失败、未执行与暂停记录保留为历史证据，不代表当前所有项目仍未完成。
 
 ## 候选与使用范围
 
-- 代码载体：`20260916-154837-trigger-engine` worktree，尚未提交、合并或发布。
+- 原开发载体：`20260916-154837-trigger-engine` worktree。本次功能已整理为提交 `ec826a2`；干净集成验证位于 `20260921-conditions-master-integration`，排除原worktree尚未提交的伤势模块桥接代码及其手册改动。
 - 两个独立模块：`fvtt-trigger-engine`、`fvtt-custom-conditions`，当前版本均为 `0.1.0`。
 - 验收目标：Foundry `14.364` / dnd5e `5.3.3`，现有 server-mirror / `fvtt-v14-module-matrix` / 30001。
 - server-mirror 按用户要求常驻至关机；E2E 不负责启停。serverNext / Foundry `14.368` / dnd5e `6.0.2` 的兼容性尚未验收，不修改其环境。
@@ -33,7 +33,7 @@
 | KeyD输入路径 | 工具能力限制，长按未执行 | 原生输入keydown/up仅约2ms，Foundry延迟50ms才处理；未验证真实>100ms hold，CDP路径被工具拒绝，不将短按失败判为状态bug |
 | 重复生成Effect ID稳定性 | PASS（离线生成回归） | 已用来源动作身份替代随机ID；Item内相同名称/描述的独立动作以logicalPath区分。重复CLI/兼容入口的Effect IDs及引用一致，原碰撞P2已修并复查 |
 | 交付文档 | PASS | 简明使用说明、模块README与当前结论已统一；handbook review/build/check通过（28项），历史检查点单独标注 |
-| 提交/合并/正式安装 | 未执行 | 需要用户明确发布授权；保留worktree内无关改动，不自动合并或部署 |
+| 本地整合与发布 | 用户已授权本地提交/master合并 | 本次不推送远端、不生产部署；实际master提交以Git记录为准。原worktree未提交伤势改动保留 |
 | 最终fixture清理 | PASS | 用户确认后清除全部精确测试IDs：3Actor/1Scene/3Macro/19Chat/2Trigger/2临时GM及关联数据。基线恢复，原GM未修改，常驻服务保留 |
 
 ## 自动化边界
@@ -54,7 +54,7 @@ API位置变更和GM坐标编辑保留给强制位移/裁定；自主移动限�
 
 ## 本地候选包
 
-两个ZIP已构建，尚未发布或合并。当前包内运行JavaScript与浏览器验收的Lab安装字节一致，README更新不改变运行行为；未为同步文档重启常驻服务。
+两个ZIP已构建，尚未对外发布。当前包内运行JavaScript与浏览器验收的Lab安装字节一致，README更新不改变运行行为；未为同步文档重启常驻服务。
 
 | 模块 | ZIP SHA-256 | 运行JS SHA-256（与已验收安装一致） |
 | --- | --- | --- |
