@@ -35,6 +35,13 @@
 - 整改任务读 `docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`；架构重组读 `docs/plans/2026-07-31-project-classification-and-architecture-reorganization.md` 和 `docs/remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md`，同步相关进度与剩余工作。
 - 旧 `src/`、`scripts/` 先定位真实 owner，不在兼容层新增实现。项目理解可维护本地 `.pui/` 缓存，不扩大源码修改授权；GitNexus 索引用 `gitnexus analyze --index-only`，不向 Ruler 根说明追加内容。
 
+## 外部调研与待判断本地化
+
+- 外部 Foundry 模块、系统版本或同类工具的调研结论必须落盘到 `docs/reviews/<yyyy-mm-dd>-<slug>.md`，写清分层结论、待判断本地化清单、新候选复查步骤和数据来源；不做只停留在对话里的一次性结论。
+- 用户问"还有什么值得引入或本地化的外部模块"时，先读该主题最新的 `docs/reviews/` 记录，再按记录里的复查步骤核实新候选；不重新调研已记录项。截至 2026-09-22 的基准是 `docs/reviews/2026-09-22-paid-module-evaluation.md`。
+- 记录中的"待判断本地化"项进入该文件待办清单；状态口径与 `docs/acceptance/foundry-v14-module-health.md` 绑定，`Untested` 不算可用，manifest 兼容声明和测试通过都不等于运行与语义验收。
+- 调研口径：避开最热门对象，取中等热度并用可量化信号分档；热门项只作一句话对照并说明取舍理由。
+
 ## 验证与维护
 
 用户可见功能或工具用法变化时，同步维护 `docs/handbook/`，人工核对后记录 review 并生成根 `工具手册.html`，与功能一起合并。合并前后运行 `bun run handbook:check`；不盲目刷新指纹代替语义核对。步骤见 `docs/runbooks/handbook-maintenance.md`。
