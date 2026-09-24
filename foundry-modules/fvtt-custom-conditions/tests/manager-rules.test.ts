@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createConditionManagerApplicationClass } from '../src/manager.ts';
+import { ConditionRuntime } from '../src/runtime.ts';
 
 function setup() {
   const actor = { uuid: 'Actor.frozen', name: 'Frozen target' };
@@ -23,6 +24,83 @@ function setup() {
 }
 
 describe('Condition manager rule controls', () => {
+  test('HUD shortcuts for every parameterized condition leave its required inputs invalid until submitted', async () => {
+    const target: any = { uuid: 'Actor.hud-param', documentName: 'Actor', effects: [] };
+    const unrelated: any = { uuid: 'Actor.other', documentName: 'Actor' };
+    const errors: string[] = [];
+    const globals: any = {
+      foundry: { applications: { api: { ApplicationV2: class { async render() {} } } } },
+      game: { user: { targets: new Set([{ actor: unrelated }]) } },
+      canvas: { tokens: { controlled: [] } },
+      ui: { notifications: { error: (message: string) => errors.push(message) } },
+    };
+    const api: any = { list: () => [], apply: async () => { throw new Error('Invalid HUD draft was applied'); } };
+    const Application = createConditionManagerApplicationClass(api, globals);
+    for (const conditionId of ['bleeding', 'burning', 'frozen', 'jinxed', 'valor'] as const) {
+      const manager = new Application({ context: { actor: target, conditionId } });
+      const params = JSON.parse(manager.paramsJson);
+      expect(manager.actors).toEqual([target]);
+      expect((await manager._prepareContext()).conditionId).toBe(conditionId);
+      if (conditionId === 'frozen') expect(params.escapeDC).toBe('');
+      else expect(params.formula).toBe('');
+      if (conditionId === 'burning') expect(params.damageType).toBe('');
+      await Application.onSubmit.call(manager, undefined, undefined, { object: { conditionId, paramsJson: manager.paramsJson } });
+    }
+    expect(errors).toHaveLength(5);
+    expect(target.effects).toEqual([]);
+    expect(unrelated).not.toHaveProperty('effects');
+  });
+
+  test('HUD Burning context pins one Actor, preselects blank required fields, and never applies invalid parameters', async () => {
+    const target: any = {
+      uuid: 'Actor.hud-burning', documentName: 'Actor', name: 'HUD target', effects: [],
+      async createEmbeddedDocuments(_type: string, data: any[]) {
+        const created = data.map((entry) => ({ ...entry, id: 'created-burning', parent: this }));
+        this.effects.push(...created);
+        return created;
+      },
+    };
+    const unrelated = { uuid: 'Actor.unrelated', documentName: 'Actor', name: 'Other target' };
+    const errors: string[] = [];
+    const globals: any = {
+      foundry: { applications: { api: { ApplicationV2: class { async render() {} } } } },
+      game: { user: { isGM: true, active: true, targets: new Set([{ actor: unrelated }]) }, users: { activeGM: null } },
+      canvas: { tokens: { controlled: [] } },
+      ui: { notifications: { error: (message: string) => errors.push(message) } },
+    };
+    globals.game.users.activeGM = globals.game.user;
+    const runtime = new ConditionRuntime(globals, () => true);
+    const api: any = {
+      list: (actor: any) => runtime.list(actor),
+      apply: (actor: any, conditionId: any, params: any) => runtime.apply(actor, conditionId, params),
+    };
+    const Application = createConditionManagerApplicationClass(api, globals);
+    expect(() => new Application({ context: { actor: unrelated as any, conditionId: 'burning' } })).not.toThrow();
+    expect(() => new Application({ context: { actor: {}, conditionId: 'burning' } })).toThrow('requires one Actor');
+    const manager = new Application({ context: { actor: target, conditionId: 'burning' } });
+    expect(manager.actors).toEqual([target]);
+    expect((await manager._prepareContext()).conditionId).toBe('burning');
+    expect(JSON.parse(manager.paramsJson)).toMatchObject({ formula: '', damageType: '' });
+    await Application.refresh.call(manager);
+    expect(manager.actors).toEqual([target]);
+
+    for (const params of [{}, { formula: '', damageType: '' }, { formula: '1d6', damageType: '' }]) {
+      await Application.onSubmit.call(manager, undefined, undefined, {
+        object: { conditionId: 'burning', paramsJson: JSON.stringify(params) },
+      });
+      expect(target.effects).toHaveLength(0);
+    }
+    expect(errors).toHaveLength(3);
+    await Application.onSubmit.call(manager, undefined, undefined, {
+      object: { conditionId: 'burning', paramsJson: JSON.stringify({ formula: '1d6', damageType: 'fire' }) },
+    });
+    expect(target.effects).toHaveLength(1);
+    expect(target.effects[0].flags['fvtt-custom-conditions'].condition).toMatchObject({
+      conditionId: 'burning', params: { formula: '1d6', damageType: 'fire' },
+    });
+    expect(unrelated).not.toHaveProperty('effects');
+  });
+
   test('uses highest bleeding defaults and exposes escape only on active Frozen', async () => {
     const { manager } = setup();
     expect(JSON.parse(manager.paramsJson)).toMatchObject({ stacking: 'highest', timing: 'turnEnd' });

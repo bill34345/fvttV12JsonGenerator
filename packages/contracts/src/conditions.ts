@@ -29,6 +29,16 @@ export const CUSTOM_CONDITION_IDS = [
 ] as const;
 
 export type ConditionId = (typeof CUSTOM_CONDITION_IDS)[number];
+
+/**
+ * Project a semantic custom condition ID to its Foundry status-effect ID.
+ * Every custom condition has its own status ID so native and third-party
+ * statuses with the same semantic name remain independent.
+ */
+export function projectedConditionStatusId(id: ConditionId): string {
+  return `${CUSTOM_CONDITIONS_MODULE_ID}.${id}`;
+}
+
 export type ConditionValue = string | number | boolean;
 export type ConditionParams = Record<string, ConditionValue>;
 export type ConditionStacking = 'highest' | 'stack' | 'replace' | 'ignore' | 'unspecified';
@@ -121,7 +131,7 @@ export const CONDITION_DEFINITIONS: Readonly<Record<ConditionId, ConditionDefini
   },
   dazed: {
     id: 'dazed', label: 'Dazed', icon: 'systems/dnd5e/icons/svg/statuses/stunned.svg',
-    description: '自己的回合中只能在移动和执行 Action 之间选择一个，且不能执行 Bonus Action。',
+    description: '自己的回合中只能在移动、执行 Action 或执行 Bonus Action 三者中选择一项。',
     timing: 'none', parameters: [], defaultStacking: 'replace', generatedTemplate: true,
   },
   defenseless: {
@@ -141,7 +151,7 @@ export const CONDITION_DEFINITIONS: Readonly<Record<ConditionId, ConditionDefini
   },
   frozen: {
     id: 'frozen', label: 'Frozen', icon: 'systems/dnd5e/icons/svg/statuses/restrained.svg',
-    description: '同时获得 Immobilized 与 Defenseless；对使用钝击伤害武器的攻击还视为 Helpless。',
+    description: '速度变为 0，不能受益于速度加值；飞行中会坠落。针对你的攻击检定具有优势。使用造成钝击伤害的武器攻击你时，任何命中都算重击。目标或另一生物可用 1 Action 进行力量（运动）检定，通过该状态标注的 DC 后解除；累计受到该状态指定阈值（默认 20 点）的钝击或火焰伤害也会解除。',
     timing: 'none', parameters: [
       { id: 'escapeDC', label: '解除 DC', type: 'number', required: true, min: 1, max: 50 },
       { id: 'breakDamage', label: '钝击或火焰累计伤害', type: 'number', required: true, default: 20, min: 1, max: 1000 },
@@ -166,7 +176,7 @@ export const CONDITION_DEFINITIONS: Readonly<Record<ConditionId, ConditionDefini
   },
   shocked: {
     id: 'shocked', label: 'Shocked', icon: 'systems/dnd5e/icons/svg/statuses/stunned.svg',
-    description: '同时视为 Dazed 与 Defenseless，并立刻掉落手中物品。拿取或拔出物品需要 1 Action。',
+    description: '自己的回合中只能在移动、执行 Action 或执行 Bonus Action 三者中选择一项。针对你的攻击检定具有优势。立刻掉落手中物品；拿取、拔出或收起物品均需 1 Action。',
     timing: 'none', parameters: [], defaultStacking: 'replace', composite: ['dazed', 'defenseless'], generatedTemplate: true,
   },
   sickened: {
@@ -181,17 +191,17 @@ export const CONDITION_DEFINITIONS: Readonly<Record<ConditionId, ConditionDefini
   },
   staggered: {
     id: 'staggered', label: 'Staggered', icon: 'systems/dnd5e/icons/svg/statuses/prone.svg',
-    description: '自己的回合内最多只能进行一次 weapon attack。',
+    description: '自己的回合内最多只能进行一次武器/徒手攻击。',
     timing: 'none', parameters: [], defaultStacking: 'replace', generatedTemplate: true,
   },
   valor: {
     id: 'valor', label: 'Valor', icon: 'systems/dnd5e/icons/svg/statuses/marked.svg',
-    description: '将条件指定的骰加入攻击检定与豁免检定。',
+    description: '每次进行攻击检定或豁免检定时，额外掷 X 并将该骰值加到结果中。',
     timing: 'none', parameters: [FORMULA_PARAMETER('formula', '加值骰式 X')], defaultStacking: 'replace', generatedTemplate: true,
   },
   weakened: {
     id: 'weakened', label: 'Weakened', icon: 'systems/dnd5e/icons/svg/statuses/encumbered.svg',
-    description: '武器攻击与法术造成的伤害减半。',
+    description: '武器攻击或法术造成的伤害总值减半，结果向下取整。',
     timing: 'none', parameters: [], defaultStacking: 'replace', generatedTemplate: true,
   },
 };
@@ -342,6 +352,9 @@ export function parseConditionInstance(input: unknown): ConditionInstance {
     const raw = fixedHighest ? 'highest' : supplied ?? parameter.default;
     if (raw === undefined && parameter.required) throw new TypeError(`Missing condition parameter: ${parameter.id}.`);
     if (raw === undefined) continue;
+    if (parameter.required && parameter.type === 'text' && typeof raw === 'string' && !raw.trim()) {
+      throw new TypeError(`Missing condition parameter: ${parameter.id}.`);
+    }
     validateParameter(parameter, raw);
     params[parameter.id] = raw;
   }

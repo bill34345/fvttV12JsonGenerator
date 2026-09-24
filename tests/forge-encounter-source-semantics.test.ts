@@ -68,7 +68,7 @@ describe('Crystalbleed approved source stages', () => {
     expect(actor.system.traits.languages.value).toEqual(['common', 'draconic', 'undercommon']);
     expect(actor.system.traits.ci.value).toEqual(['charmed', 'frightened', 'poisoned', 'stunned', 'transformed']);
     const salvo = actor.items.find((i: any) => i.name === '晶片齐射 (Shard Salvo)');
-    expect(salvo.effects.flatMap((e: any) => e.statuses)).toEqual(['dazed']);
+    expect(salvo.effects.flatMap((e: any) => e.statuses)).toEqual(['fvtt-custom-conditions.dazed']);
     const save: any = Object.values(salvo.system.activities)[0];
     expect(save.damage.parts).toHaveLength(1);
     expect(save.damage.parts[0]).toMatchObject({ number: 2, denomination: 8, types: ['psychic'] });
@@ -89,8 +89,8 @@ describe('generic structured lifecycle regressions', () => {
       const actor = new ActorGenerator({ fvttVersion, effectProfile: 'core' }).generate(new YamlParser().parse(fixture));
       for (const [name, threshold, shape, size, status, duration] of [
         ['冰雾', '5', 'cone', 30, 'frightened', { seconds: 60, rounds: null }],
-        ['Fire Wave', '4', 'sphere', 20, 'dazed', { seconds: null, rounds: 2 }],
-        ['压力脉冲', '6', 'line', 60, 'dazed', { seconds: null, rounds: 1 }],
+        ['Fire Wave', '4', 'sphere', 20, 'fvtt-custom-conditions.dazed', { seconds: null, rounds: 2 }],
+        ['压力脉冲', '6', 'line', 60, 'fvtt-custom-conditions.dazed', { seconds: null, rounds: 1 }],
       ] as const) {
         const item = actor.items.find((entry: any) => entry.name === name);
         const activity: any = Object.values(item.system.activities)[0];

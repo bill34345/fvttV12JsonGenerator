@@ -16,7 +16,7 @@ export async function openActorDashboard(actor: any): Promise<void> {
   const state = readActorState(actor);
   const html = `<div class="ifs-dashboard">
     <p><strong>${escapeHtml(actor.name)}</strong></p>
-    <p>${label('IFS.Status.Injury')}: <strong>${state.injury.stacks}</strong></p>
+    <p>${label('IFS.Status.Injury.Name')}: <strong>${state.injury.stacks}</strong></p>
     <p>${label('IFS.Fading.SuccessfulReturns')}: ${state.fadingSpirits.successfulReturns}; DC +${state.fadingSpirits.permanentDcPenalty}</p>
     <p>${label('IFS.Fading.ConventionalLock')}: ${state.fadingSpirits.conventionalResurrectionLocked ? '✓' : '—'}; ${label('IFS.Fading.FinalUsed')}: ${state.fadingSpirits.finalChanceUsed ? '✓' : '—'}</p>
   </div>`;
@@ -38,7 +38,7 @@ export async function openSetInjuryDialog(actor: any): Promise<void> {
   const state = readActorState(actor);
   const value = await dialogWait({
     window: { title: label('IFS.Actions.SetInjury') },
-    content: `<form><div class="form-group"><label>${label('IFS.Status.Injury')}</label><input type="number" name="stacks" min="0" max="${MAX_INJURY_STACKS}" step="1" value="${state.injury.stacks}"></div></form>`,
+    content: `<form><div class="form-group"><label>${label('IFS.Status.Injury.Name')}</label><input type="number" name="stacks" min="0" max="${MAX_INJURY_STACKS}" step="1" value="${state.injury.stacks}"></div></form>`,
     buttons: [
       { action: 'save', label: 'IFS.Actions.Save', callback: (_event: unknown, button: any) => formValues(button?.form) },
       { action: 'cancel', label: 'IFS.Actions.Cancel', callback: () => null },

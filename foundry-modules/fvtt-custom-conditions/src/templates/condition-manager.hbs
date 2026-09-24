@@ -1,6 +1,24 @@
 <section class="custom-conditions-manager">
   <p class="hint">{{localize "FVTTCONDITIONS.Manager.TargetHint"}}</p>
   <p class="hint">{{localize "FVTTCONDITIONS.Manager.EscapeHint"}}</p>
+  {{#if injury.enabled}}
+    <section class="injury-panel">
+      <header><h3><img src="{{injury.img}}" alt="{{injury.name}}"> {{injury.name}}</h3></header>
+      <p class="hint">{{injury.description}}</p>
+      {{#each injury.actors}}
+        <article class="injury-entry" data-actor-uuid="{{actorUuid}}">
+          <img src="{{img}}" alt="{{actorName}}">
+          <strong>{{actorName}}</strong>
+          <span>{{stacks}}/{{maxStacks}}</span>
+          {{#if canDecrease}}<button type="button" data-action="decreaseInjury" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryDecrease"}}</button>{{/if}}
+          {{#if canIncrease}}<button type="button" data-action="increaseInjury" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryIncrease"}}</button>{{/if}}
+          <button type="button" data-action="openInjuryWizard" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryResurrection"}}</button>
+        </article>
+      {{else}}
+        <p class="hint">{{localize "FVTTCONDITIONS.Manager.InjuryNoTargets"}}</p>
+      {{/each}}
+    </section>
+  {{/if}}
   <div class="condition-targets">
     {{#each actors}}
       <article data-actor-uuid="{{uuid}}">
@@ -9,7 +27,7 @@
           <ul class="condition-list">
             {{#each conditions}}
               <li>
-                <span><strong>{{name}}</strong> · {{instance.conditionId}} · {{#if disabled}}{{localize "FVTTCONDITIONS.Manager.Disabled"}}{{else}}{{localize "FVTTCONDITIONS.Manager.Enabled"}}{{/if}}</span>
+                <span><img class="condition-icon" src="{{img}}" alt="{{conditionLabel}}"><strong>{{name}}</strong> · {{conditionLabel}} · {{description}} · {{#if disabled}}{{localize "FVTTCONDITIONS.Manager.Disabled"}}{{else}}{{localize "FVTTCONDITIONS.Manager.Enabled"}}{{/if}}</span>
                 <span class="condition-actions">
                   {{#if canEscapeFrozen}}<button type="button" data-action="escapeFrozen" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.EscapeFrozen"}}</button>{{/if}}
                   <button type="button" data-action="edit" data-actor-uuid="{{actorUuid}}" data-effect-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Edit"}}</button>

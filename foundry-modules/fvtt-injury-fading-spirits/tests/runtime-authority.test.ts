@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MODULE_ID } from '../src/constants.ts';
-import { InjuryFadingRuntime } from '../src/runtime.ts';
+import { InjuryFadingRuntime, registerSettings, type HpTransitionTriggerContext } from '../src/runtime.ts';
 import { createActorModuleState } from '../src/state.ts';
 
 const originalGlobals = new Map<string, unknown>();
@@ -36,7 +36,10 @@ function fakeActor(stacks = 0) {
     async update(changes: Record<string, unknown>) {
       writes.push(changes);
       if (changes[`flags.${MODULE_ID}`]) this.flags[MODULE_ID] = structuredClone(changes[`flags.${MODULE_ID}`]);
+      const promptedEpisodePath = `flags.${MODULE_ID}.fadingSpirits.resurrectionPromptedForDeathEpisodeId`;
+      if (changes[promptedEpisodePath] !== undefined) this.flags[MODULE_ID].fadingSpirits.resurrectionPromptedForDeathEpisodeId = changes[promptedEpisodePath];
       if (changes['system.attributes.death.failure'] !== undefined) this.system.attributes.death.failure = changes['system.attributes.death.failure'];
+      this._stats.modifiedTime += 1;
     },
     async createEmbeddedDocuments() { return []; },
     async updateEmbeddedDocuments() { return []; },
@@ -46,7 +49,58 @@ function fakeActor(stacks = 0) {
   return { actor, writes };
 }
 
+function useExternalTriggerEngineSource(): void {
+  const currentGet = (globalThis as any).game.settings.get;
+  (globalThis as any).game.settings.get = (_scope: string, key: string) => key === 'enabled' || key === 'automationSource' ? (key === 'enabled' ? true : 'external') : currentGet(_scope, key);
+}
+
+function hpTrigger(actor: any, before: { value: number; max: number }, after: { value: number; max: number }, triggerId = 'actor-update-1'): HpTransitionTriggerContext {
+  return {
+    triggerId,
+    triggerName: 'Actor HP update',
+    event: { type: 'documentUpdate', documentType: 'Actor' },
+    document: actor,
+    documentUuid: actor.uuid,
+    before: { system: { attributes: { hp: before } } },
+    after: { system: { attributes: { hp: after } } },
+    changes: { 'system.attributes.hp.value': after.value, 'system.attributes.hp.max': after.max },
+    userId: 'player',
+    timestamp: 1000,
+  };
+}
+
+function configureSettings(values: Record<string, unknown>): void {
+  (globalThis as any).game.settings.get = (_scope: string, key: string) => values[key];
+}
+
+function genericTriggerEvent(actor: any, before: { value: number; max: number; failure?: number }, after: { value: number; max: number; failure?: number }, timestamp = 1000, revision?: number): Record<string, unknown> {
+  const revisionData = revision === undefined ? {} : { _stats: { modifiedTime: revision } };
+  return {
+    event: { type: 'documentUpdate', documentType: 'Actor' },
+    document: actor,
+    documentUuid: actor.uuid,
+    before: { _id: actor.id, documentName: 'Actor', ...revisionData, system: { attributes: { hp: { value: before.value, max: before.max }, death: { failure: before.failure ?? 0 } } } },
+    after: { _id: actor.id, documentName: 'Actor', ...revisionData, system: { attributes: { hp: { value: after.value, max: after.max }, death: { failure: after.failure ?? 0 } } } },
+    changes: { 'system.attributes.hp.value': after.value, 'system.attributes.death.failure': after.failure ?? 0 },
+    userId: 'player',
+    timestamp,
+  };
+}
+
 describe('active-GM runtime authority', () => {
+  test('registers world-scoped automation source with Internal Hooks as the default', () => {
+    const registrations: Array<{ key: string; config: Record<string, unknown> }> = [];
+    (globalThis as any).game.settings.register = (_scope: string, key: string, config: Record<string, unknown>) => {
+      registrations.push({ key, config });
+    };
+    registerSettings();
+    const automation = registrations.find((entry) => entry.key === 'automationSource');
+    expect(automation?.config).toMatchObject({
+      scope: 'world', config: true, type: String, default: 'internal',
+      choices: { internal: 'IFS.Settings.AutomationSource.Internal', external: 'IFS.Settings.AutomationSource.External' },
+    });
+  });
+
   test('pre-update snapshot catches the first positive-to-zero transition on an actor without module flags', async () => {
     const runtime = new InjuryFadingRuntime(); runtime.supported = true;
     const { actor, writes } = fakeActor(0);
@@ -265,5 +319,306 @@ describe('active-GM runtime authority', () => {
     await runtime.onSocket({ type: 'restCompleted', actorUuid: actor.uuid, restType: 'short', messageId: message.id, requesterId: player.id }, player.id);
     expect(writes).toHaveLength(0);
     expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
+  });
+
+  test('external source keeps internal HP hooks observational while retaining the after snapshot', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    actor.system.attributes.hp.value = 10;
+    runtime.onPreUpdateActor(actor, { system: { attributes: { hp: { value: 0 } } } }, {});
+    actor.system.attributes.hp.value = 0;
+    await runtime.onUpdateActor(actor, { system: { attributes: { hp: { value: 0 } } } }, {}, 'player');
+    expect(writes).toHaveLength(0);
+    expect(runtime.hpSnapshots.get(actor.uuid)).toEqual({ value: 0, max: 10 });
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBeFalse();
+  });
+
+  test('external HP processing matches the internal transition and is idempotent for the same Trigger Engine event', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(2);
+    await runtime.processHpTransition(actor, hpTrigger(actor, { value: 10, max: 10 }, { value: 0, max: 10 }));
+    expect(writes).toHaveLength(1);
+    expect(actor.system.attributes.death.failure).toBe(2);
+    expect(actor.flags[MODULE_ID].injury.episode).toMatchObject({ id: expect.stringContaining('trigger-engine:'), open: true });
+    const episodeId = actor.flags[MODULE_ID].injury.episode.id;
+    expect(actor._stats.modifiedTime).toBe(124);
+    expect(runtime.hpSnapshots.get(actor.uuid)).toEqual({ value: 0, max: 10 });
+    await runtime.processHpTransition(actor, hpTrigger(actor, { value: 10, max: 10 }, { value: 0, max: 10 }));
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].injury.episode.id).toBe(episodeId);
+  });
+
+  test('external transaction identity includes transition metadata when a trigger is reused', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    const down = hpTrigger(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 'reused-trigger');
+    await runtime.processHpTransition(actor, down);
+    const up = hpTrigger(actor, { value: 0, max: 10 }, { value: 1, max: 10 }, 'reused-trigger');
+    up.timestamp = 1001;
+    up.changes = { 'system.attributes.hp.value': 1 };
+    await runtime.processHpTransition(actor, up);
+    expect(writes).toHaveLength(2);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
+  });
+
+  test('external max-only transitions update observation without opening or clearing an injury episode', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(2);
+    await runtime.processHpTransition(actor, hpTrigger(actor, { value: 10, max: 10 }, { value: 10, max: 12 }, 'actor-max-update-1'));
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(2);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBeFalse();
+    expect(actor.flags[MODULE_ID].injury.lastObservedHp).toBe(10);
+    expect(actor.flags[MODULE_ID].injury.lastObservedMax).toBe(12);
+    expect(runtime.hpSnapshots.get(actor.uuid)).toEqual({ value: 10, max: 12 });
+  });
+
+  test('external processing preserves resurrection suppression on recovery', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(1);
+    actor.flags[MODULE_ID].injury.episode = { id: 'death-1', open: true, openedAt: 1 };
+    actor.flags[MODULE_ID].injury.suppressNextRecovery = { transactionId: 'resurrection-1', reason: 'resurrection' };
+    await runtime.processHpTransition(actor, hpTrigger(actor, { value: 0, max: 10 }, { value: 1, max: 10 }, 'resurrection-recovery-1'));
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBeFalse();
+    expect(actor.flags[MODULE_ID].injury.suppressNextRecovery).toBeNull();
+  });
+
+  test('external processing rejects a wrong event or document identity without writing or changing snapshots', async () => {
+    useExternalTriggerEngineSource();
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    const context = hpTrigger(actor, { value: 10, max: 10 }, { value: 0, max: 10 });
+    const invalidEventContext = {
+      ...context,
+      event: { type: 'preUpdate', documentType: 'Actor' },
+    } as unknown as typeof context;
+    await runtime.processHpTransition(actor, invalidEventContext);
+    await runtime.processHpTransition(actor, { ...context, documentUuid: 'Actor.other' });
+    expect(writes).toHaveLength(0);
+    expect(runtime.hpSnapshots.has(actor.uuid)).toBeFalse();
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBeFalse();
+  });
+
+  test('missing Trigger Engine warns the active GM without switching the external source', async () => {
+    useExternalTriggerEngineSource();
+    const warnings: string[] = [];
+    (globalThis as any).ui.notifications.warn = (message: string) => warnings.push(message);
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    actor.system.attributes.hp.value = 10;
+    runtime.onPreUpdateActor(actor, { 'system.attributes.hp.value': 0 }, {});
+    actor.system.attributes.hp.value = 0;
+    await runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 0 }, {}, 'player');
+    expect(writes).toHaveLength(0);
+    expect(warnings).toContain('IFS.Errors.TriggerEngineUnavailable');
+    expect((globalThis as any).game.settings.get('', 'automationSource')).toBe('external');
+  });
+
+  test('consumes the real Trigger Engine subscription shape without triggerId/name and deduplicates recovery', async () => {
+    configureSettings({ enabled: true, automationSource: 'external', resurrectionPrompt: false, manageNpcs: false });
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    actor.system.attributes.hp.value = 10;
+    const down = genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 1000);
+    await runtime.handleTriggerEvent(down);
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(true);
+    actor.system.attributes.hp.value = 1;
+    const up = genericTriggerEvent(actor, { value: 0, max: 10 }, { value: 1, max: 10 }, 1001);
+    await runtime.handleTriggerEvent(up);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(false);
+    const writeCount = writes.length;
+    await runtime.handleTriggerEvent(up);
+    expect(writes).toHaveLength(writeCount);
+  });
+
+  test('without snapshot modifiedTime, distinct Trigger Engine timestamps permit a later death episode while same timestamp replays dedupe', async () => {
+    configureSettings({ enabled: true, automationSource: 'external', resurrectionPrompt: false, manageNpcs: false });
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(0);
+    actor.system.attributes.hp.value = 10;
+    const down = genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 4000);
+    await runtime.handleTriggerEvent(down);
+    actor.system.attributes.hp.value = 1;
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 0, max: 10 }, { value: 1, max: 10 }, 4001));
+    actor.system.attributes.hp.value = 10;
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 1, max: 10 }, { value: 10, max: 10 }, 4002));
+    const beforeSecondDeath = writes.length;
+    actor.system.attributes.hp.value = 0;
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 4003));
+    expect(writes.length).toBe(beforeSecondDeath + 1);
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 4003));
+    expect(writes.length).toBe(beforeSecondDeath + 1);
+  });
+
+  test('public macro bridge and automatic subscription share one Actor revision transaction at three injury stacks', async () => {
+    configureSettings({ enabled: true, automationSource: 'external', resurrectionPrompt: false, manageNpcs: false });
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => 'defer' } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(3);
+    actor.system.attributes.hp.value = 0;
+    const event = genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 1000, 700);
+    const macroContext = {
+      ...event,
+      triggerId: 'approved-hp-macro',
+      triggerName: 'Approved HP bridge macro',
+      timestamp: 9999,
+    } as unknown as HpTransitionTriggerContext;
+    await Promise.all([runtime.handleTriggerEvent(event), runtime.processHpTransition(actor, macroContext)]);
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(true);
+    expect(actor.flags[MODULE_ID].injury.episode.id).toContain('fvtt-trigger-engine:');
+  });
+
+  test('three-stack GM ruling is detached from the Trigger Engine queue and is discarded after recovery', async () => {
+    configureSettings({ enabled: true, automationSource: 'external', resurrectionPrompt: false, manageNpcs: false });
+    let resolveDecision!: (value: unknown) => void;
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => new Promise((resolve) => { resolveDecision = resolve; }) } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(3);
+    actor.system.attributes.hp.value = 0;
+    const down = runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 10, max: 10 }, { value: 0, max: 10 }, 4500));
+    await Bun.sleep(2);
+    await down;
+    expect(typeof resolveDecision).toBe('function');
+    actor.system.attributes.hp.value = 1;
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 0, max: 10 }, { value: 1, max: 10 }, 4501));
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(false);
+    resolveDecision('dead');
+    await Bun.sleep(2);
+    expect(actor.system.attributes.death.failure).toBe(0);
+    expect(writes.length).toBe(2);
+  });
+
+  test('confirmed death prompts once, cancellation writes no ritual history, and a second GM sees the persistent episode guard', async () => {
+    configureSettings({ enabled: true, automationSource: 'internal', resurrectionPrompt: true, manageNpcs: false });
+    const waits: Array<(value: unknown) => void> = [];
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => new Promise((resolve) => waits.push(resolve)) } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(2);
+    actor.system.attributes.death.failure = 3;
+    actor.flags[MODULE_ID].injury.episode = { id: 'death-episode-1', open: true, openedAt: 1 };
+    actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId = 'death-episode-1';
+    const event = genericTriggerEvent(actor, { value: 0, max: 10, failure: 0 }, { value: 0, max: 10, failure: 3 }, 2000);
+    await runtime.handleTriggerEvent(event);
+    await Bun.sleep(2);
+    expect(waits).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].fadingSpirits.pendingRitual).toBeNull();
+    expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory).toEqual([]);
+    expect(actor.flags[MODULE_ID].fadingSpirits.resurrectionPromptedForDeathEpisodeId).toBe('death-episode-1');
+    const writeCount = writes.length;
+    waits[0]!(false);
+    await Bun.sleep(2);
+    const secondRuntime = new InjuryFadingRuntime(); secondRuntime.supported = true;
+    await secondRuntime.handleTriggerEvent(event);
+    await Bun.sleep(2);
+    expect(waits).toHaveLength(1);
+    expect(writes).toHaveLength(writeCount);
+  });
+
+  test('disabled automation and unmanaged NPCs never prompt or write a marker', async () => {
+    configureSettings({ enabled: false, automationSource: 'internal', resurrectionPrompt: true, manageNpcs: false });
+    const waits: unknown[] = [];
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => { waits.push(true); return false; } } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const first = fakeActor(2);
+    first.actor.system.attributes.death.failure = 3;
+    first.actor.flags[MODULE_ID].injury.episode = { id: 'disabled-death', open: true, openedAt: 1 };
+    first.actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId = 'disabled-death';
+    await runtime.handleTriggerEvent(genericTriggerEvent(first.actor, { value: 0, max: 10 }, { value: 0, max: 10, failure: 3 }));
+    first.actor.type = 'npc';
+    configureSettings({ enabled: true, automationSource: 'internal', resurrectionPrompt: true, manageNpcs: false });
+    await runtime.handleTriggerEvent(genericTriggerEvent(first.actor, { value: 0, max: 10 }, { value: 0, max: 10, failure: 3 }, 1001));
+    await Bun.sleep(2);
+    expect(waits).toEqual([]);
+    expect(first.writes).toHaveLength(0);
+    expect(first.actor.flags[MODULE_ID].fadingSpirits.resurrectionPromptedForDeathEpisodeId).toBeNull();
+  });
+
+  test('recovery while the prompt is open clears the episode before confirmation and never opens the wizard', async () => {
+    configureSettings({ enabled: true, automationSource: 'external', resurrectionPrompt: true, manageNpcs: false });
+    let resolvePrompt!: (value: unknown) => void;
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => new Promise((resolve) => { resolvePrompt = resolve; }) } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(2);
+    actor.system.attributes.death.failure = 3;
+    actor.flags[MODULE_ID].injury.episode = { id: 'recovery-death', open: true, openedAt: 1 };
+    actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId = 'recovery-death';
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 0, max: 10, failure: 0 }, { value: 0, max: 10, failure: 3 }, 3000));
+    await Bun.sleep(2);
+    expect(typeof resolvePrompt).toBe('function');
+    actor.system.attributes.hp.value = 1;
+    await runtime.handleTriggerEvent(genericTriggerEvent(actor, { value: 0, max: 10, failure: 3 }, { value: 1, max: 10, failure: 3 }, 3001));
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(false);
+    resolvePrompt(true);
+    await Bun.sleep(2);
+    expect(actor.flags[MODULE_ID].fadingSpirits.pendingRitual).toBeNull();
+    expect(writes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('a direct dead Active Effect enters the same guarded prompt path', async () => {
+    configureSettings({ enabled: true, automationSource: 'internal', resurrectionPrompt: true, manageNpcs: false });
+    const waits: unknown[] = [];
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => { waits.push(true); return false; } } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor } = fakeActor(3);
+    actor.system.attributes.death.failure = 3;
+    actor.flags[MODULE_ID].injury.episode = { id: 'direct-death', open: true, openedAt: 1 };
+    actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId = 'direct-death';
+    runtime.onActiveEffectDeath({ parent: actor, statuses: new Set(['dead']), disabled: true });
+    runtime.onActiveEffectDeath({ parent: actor, statuses: new Set(['dead']), isSuppressed: true });
+    await Bun.sleep(2);
+    expect(waits).toHaveLength(0);
+    runtime.onActiveEffectDeath({ parent: actor, statuses: new Set(['dead']) });
+    await Bun.sleep(2);
+    expect(waits).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory).toEqual([]);
+  });
+
+  test('delayed AE marker update shares the Actor queue with internal recovery and cannot reopen the old episode', async () => {
+    configureSettings({ enabled: true, automationSource: 'internal', resurrectionPrompt: true, manageNpcs: false });
+    const waits: unknown[] = [];
+    (globalThis as any).foundry.applications = { api: { DialogV2: { wait: () => { waits.push(true); return true; } } } };
+    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
+    const { actor, writes } = fakeActor(2);
+    actor.system.attributes.death.failure = 3;
+    actor.flags[MODULE_ID].injury.episode = { id: 'queued-death', open: true, openedAt: 1 };
+    actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId = 'queued-death';
+    const originalUpdate = actor.update.bind(actor);
+    let releaseMarker!: () => void;
+    let markerStarted = false;
+    const markerGate = new Promise<void>((resolve) => { releaseMarker = resolve; });
+    actor.update = async (changes: Record<string, unknown>, options: Record<string, unknown>) => {
+      if (Object.prototype.hasOwnProperty.call(changes, `flags.${MODULE_ID}.fadingSpirits.resurrectionPromptedForDeathEpisodeId`)) {
+        markerStarted = true;
+        await markerGate;
+      }
+      return originalUpdate(changes, options);
+    };
+
+    runtime.onActiveEffectDeath({ parent: actor, statuses: new Set(['dead']) });
+    await Bun.sleep(2);
+    expect(markerStarted).toBe(true);
+    actor.system.attributes.hp.value = 1;
+    runtime.hpSnapshots.set(actor.uuid, { value: 0, max: 10 });
+    const recovery = runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 1 }, {}, 'gm');
+    await Bun.sleep(2);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(true);
+    releaseMarker();
+    await recovery;
+    await Bun.sleep(2);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(3);
+    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(false);
+    expect(actor.flags[MODULE_ID].fadingSpirits.resurrectionPromptedForDeathEpisodeId).toBeNull();
+    expect(waits).toEqual([]);
+    expect(writes.length).toBeGreaterThanOrEqual(2);
   });
 });

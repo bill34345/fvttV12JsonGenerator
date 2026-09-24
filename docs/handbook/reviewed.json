@@ -5,9 +5,9 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "f19e5ecb3d7a14231d839f0b129cc4a7170c7e4426e73ec60147ea6b5219b974",
-    "reviewedOn": "2026-09-21",
-    "note": "对照来源Frozen/Jinxed/Valor模板、法术攻击短语修复及稳定Effect ID与logicalPath去碰撞回归；目标投影和生成时间戳边界如实保留。"
+    "fingerprint": "6d7717a78370fd4c91cb3af95b202c138978146ed3e98352981ebe1ef6cea3ce",
+    "reviewedOn": "2026-09-24",
+    "note": "已对照自定义恍惚/震愕三选一规则、生成模板说明及CoTN原组合边界：生成器只输出新描述和状态模板，Trigger Engine事件接口未变；Custom Conditions记录附赠动作并让震愕继承，攻击异步预约与未验收并发限制已写明。"
   },
   "monster-intake": {
     "fingerprint": "bc2be1fd07ee2abb6e691ece56b86be881807de6f36bdb7433e8b192d6d882ce",
@@ -100,19 +100,19 @@
     "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "ad546fa270f4102a9a06b433524dafe8741dd7cde2e7adbfafea0bba090977e9",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "8f754430f6cbe251c87431a7f04d72f574e0f93d464ff8d52d089f03896cd6cf",
+    "reviewedOn": "2026-09-24",
+    "note": "收尾核对了2026-09-22历史计划与审查的新状态指针：伤势归属、层数与仪式说明未变；Custom Conditions全19项入口及恍惚/震愕三选一的CoTN普通顺序证据与未执行并发边界仍与手册相符。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "759de7dac1ae87d6bb120d352ca9072f1976b233c5bb0f710c5d89412641b3a7",
-    "reviewedOn": "2026-09-21",
-    "note": "对照常驻server-mirror的owner约定、模块公开接口及最终E2E/cleanup证据；修正旧未安装/未验收描述，链接当前使用说明，保留KeyD长按和serverNext兼容边界。"
+    "fingerprint": "a90c6c18e9373e9f0d0b61a70132fd8fac8098e03f63b8027de317d93658e061",
+    "reviewedOn": "2026-09-24",
+    "note": "已对照自定义恍惚/震愕三选一规则、生成模板说明及CoTN原组合边界：生成器只输出新描述和状态模板，Trigger Engine事件接口未变；Custom Conditions记录附赠动作并让震愕继承，攻击异步预约与未验收并发限制已写明。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "4c8a57c79d003509bcaedc145cc624d76544f61824bc1496191810e44bfebe73",
-    "reviewedOn": "2026-09-21",
-    "note": "对照常驻server-mirror的owner约定、模块公开接口及最终E2E/cleanup证据；修正旧未安装/未验收描述，链接当前使用说明，保留KeyD长按和serverNext兼容边界。"
+    "fingerprint": "32426242e75b1cba7b729afbbe54de3b6fa0a65acd912118ea769b8642381107",
+    "reviewedOn": "2026-09-24",
+    "note": "收尾核对了2026-09-22历史计划与审查的新状态指针：伤势归属、层数与仪式说明未变；Custom Conditions全19项入口及恍惚/震愕三选一的CoTN普通顺序证据与未执行并发边界仍与手册相符。"
   },
   "fvtt-json-forge": {
     "fingerprint": "48af93588e4e576816aa487df26fc908aa7ad23ad4b85f575c26b380b83a3b56",

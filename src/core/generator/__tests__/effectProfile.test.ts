@@ -5,9 +5,10 @@ import {
   compareConditionFormulaStrength,
   createConditionInstance,
   expectedConditionFormulaValue,
+  projectedConditionStatusId,
 } from '@fvtt-json-generator/contracts/conditions';
 import { ActorGenerator } from '../actor';
-import { generateEnhancedConditionEffects } from '../actor-effects';
+import { generateConditionEffects, generateEnhancedConditionEffects } from '../actor-effects';
 import { EffectProfileApplier } from '../effectProfileApplier';
 import { prepareStructureForComparison } from '../../utils/assertEqualStructure';
 
@@ -101,7 +102,7 @@ describe('ActorGenerator effect profiles', () => {
         item.flags?.fvttJsonGenerator?.effectHints?.dazed,
     );
     expect(hintedItem).toBeDefined();
-    const bleedingEffect = (hintedItem.effects ?? []).find((effect: any) => effect.statuses?.includes('bleeding'));
+    const bleedingEffect = (hintedItem.effects ?? []).find((effect: any) => effect.statuses?.includes(projectedConditionStatusId('bleeding')));
     const bleedingBranch = Object.values(hintedItem.system.activities ?? {}).find(
       (activity: any) => activity.flags?.fvttJsonGenerator?.heavyHitBranch?.key === 'bleeding-wound',
     ) as any;
@@ -156,10 +157,10 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Blood Thorn',
     );
-    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const effect = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(effect).toMatchObject({
-      statuses: ['bleeding'],
+      statuses: [projectedConditionStatusId('bleeding')],
       flags: {
         'fvtt-custom-conditions': {
           condition: {
@@ -185,7 +186,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Rending Bite',
     );
-    const bleeding = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const bleeding = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(bleeding?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '1d6', mode: 'hpLoss', damageType: '', timing: 'turnEnd', stacking: 'highest' }),
@@ -198,7 +199,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Rending Claw',
     );
-    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const effect = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(effect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '1d6', mode: 'hpLoss', damageType: '', timing: 'turnEnd', stacking: 'highest' }),
@@ -211,7 +212,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Raking Claw',
     );
-    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const effect = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(effect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '1d6', mode: 'damage', damageType: 'piercing', timing: 'turnStart', stacking: 'highest' }),
@@ -221,7 +222,7 @@ describe('ActorGenerator effect profiles', () => {
   it('does not build Bleeding X from an unrelated direct-hit die or an unquantified bleed clause', () => {
     const text = 'Hit: `2d8` slashing damage; the target starts bleeding but no recurring die is specified.';
     const generated = generateEnhancedConditionEffects(text, {}, 'Rending Claw');
-    const effect = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const effect = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(effect).toBeDefined();
     expect(effect?.flags?.['fvtt-custom-conditions']?.condition).toBeUndefined();
@@ -233,8 +234,8 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Scorching Bite',
     );
-    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
-    const bleeding = generated.find((entry: any) => entry.statuses?.includes('bleeding'));
+    const burning = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('burning')));
+    const bleeding = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('bleeding')));
 
     expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '1d4', damageType: 'fire', timing: 'turnEnd', stacking: 'highest' }),
@@ -250,7 +251,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Firebrand',
     );
-    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+    const burning = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('burning')));
 
     expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '2d6', damageType: 'fire', timing: 'turnEnd', stacking: 'highest' }),
@@ -263,7 +264,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Cinder Bite',
     );
-    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+    const burning = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('burning')));
 
     expect(burning).toBeDefined();
     expect(burning?.flags?.['fvtt-custom-conditions']?.condition).toBeUndefined();
@@ -275,7 +276,7 @@ describe('ActorGenerator effect profiles', () => {
       {},
       'Ashen Bite',
     );
-    const burning = generated.find((entry: any) => entry.statuses?.includes('burning'));
+    const burning = generated.find((entry: any) => entry.statuses?.includes(projectedConditionStatusId('burning')));
 
     expect(burning?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({ formula: '2d4', damageType: 'acid', timing: 'turnStart', stacking: 'highest' }),
@@ -324,7 +325,7 @@ describe('ActorGenerator effect profiles', () => {
       },
       {
         text: '若目标免疫恐慌状态，改为受到伤害，且陷入眩晕 (Dazed)。',
-        statuses: ['dazed'],
+        statuses: ['fvtt-custom-conditions.dazed'],
       },
     ];
 
@@ -343,6 +344,53 @@ describe('ActorGenerator effect profiles', () => {
     for (const text of negatives) {
       expect(generateEnhancedConditionEffects(text, {}, 'Condition Fixture')).toEqual([]);
     }
+  });
+
+  it('projects custom Dazed under a distinct status ID and keeps its semantic condition flag', () => {
+    const effect = generateEnhancedConditionEffects(
+      'On a failed save, the target becomes dazed for 1 minute.',
+      {},
+      'Dazed Projection Fixture',
+    )[0];
+
+    expect(effect).toMatchObject({
+      statuses: ['fvtt-custom-conditions.dazed'],
+      flags: {
+        'fvtt-custom-conditions': {
+          condition: expect.objectContaining({ conditionId: 'dazed', template: true }),
+        },
+      },
+    });
+    expect(effect.img).toBe('icons/svg/daze.svg');
+  });
+
+  it('keeps an ordinary dnd5e status ID unchanged and ignores a defensive Dazed mention', () => {
+    const ordinary = generateEnhancedConditionEffects(
+      'On a failed save, the target becomes poisoned.',
+      {},
+      'Unrelated Status Fixture',
+    );
+    const defensiveMention = generateEnhancedConditionEffects(
+      'The creature has advantage on saving throws against being dazed.',
+      {},
+      'Dazed Near Negative Fixture',
+    );
+
+    expect(ordinary.map((effect: any) => effect.statuses?.[0])).toEqual(['poisoned']);
+    expect(defensiveMention).toEqual([]);
+  });
+
+  it('uses the projected status ID in the legacy generator while retaining the semantic condition flag', () => {
+    const effect = generateConditionEffects('目标陷入恍惚状态。', {})[0];
+
+    expect(effect).toMatchObject({
+      statuses: ['fvtt-custom-conditions.dazed'],
+      flags: {
+        'fvtt-custom-conditions': {
+          condition: expect.objectContaining({ conditionId: 'dazed', template: true }),
+        },
+      },
+    });
   });
 
   it.each([

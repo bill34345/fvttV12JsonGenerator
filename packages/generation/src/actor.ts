@@ -1,4 +1,5 @@
 import { ActionParser } from '@fvtt-json-generator/parser/action';
+import { isConditionId, projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { EnglishActionParser } from '@fvtt-json-generator/parser/english-action';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
@@ -2429,7 +2430,7 @@ export class ActorGenerator {
         const effect = this.createCustomEffect({
           name: '流血 (Bleeding)',
           img: statusIconPath('bleeding'),
-          statuses: ['bleeding'],
+          statuses: [projectedConditionStatusId('bleeding')],
           showIcon: 2,
           description: bleedingSpec.endCondition,
           flags: buildBleedingFlag(bleedingSpec),
@@ -2459,9 +2460,14 @@ export class ActorGenerator {
       .flatMap((entry) => Array.isArray(entry.statuses) ? entry.statuses : [])
       .filter((status): status is string => typeof status === 'string');
     if (thresholdStatuses.length > 0) {
+      // Threshold metadata keeps semantic IDs for source fidelity. Generated
+      // effects use projected IDs, so compare both forms when deduplicating.
+      const thresholdStatusIds = new Set(thresholdStatuses.flatMap((status) =>
+        isConditionId(status) ? [status, projectedConditionStatusId(status)] : [status],
+      ));
       item.effects = (item.effects ?? []).filter((effect: any) => {
         const statuses = effect?.statuses ?? [];
-        return !statuses.some((status: string) => thresholdStatuses.includes(status));
+        return !statuses.some((status: string) => thresholdStatusIds.has(status));
       });
 
       for (const [, activity] of activityEntries) {
@@ -2471,7 +2477,7 @@ export class ActorGenerator {
             return false;
           }
           const statuses = effect?.statuses ?? [];
-          return !statuses.some((status: string) => thresholdStatuses.includes(status));
+          return !statuses.some((status: string) => thresholdStatusIds.has(status));
         });
       }
     }
@@ -2750,7 +2756,7 @@ export class ActorGenerator {
       const bleedingSpec = extractBleedingSpec(text);
       return this.createCustomEffect({
         name: '流血 (Bleeding)',
-        statuses: ['bleeding'],
+        statuses: [projectedConditionStatusId('bleeding')],
         img: statusIconPath('bleeding'),
         showIcon: 2,
         ...(bleedingSpec ? {

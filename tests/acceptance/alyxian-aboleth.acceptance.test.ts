@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PlainTextActorWorkflow } from '../../src/core/workflow/plainTextActor';
+import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 
 setDefaultTimeout(30000);
 
@@ -217,6 +218,7 @@ describe('Alyxian Aboleth acceptance gate', () => {
       expect.arrayContaining(['charmed']),
     );
     expect((dominate.effects ?? []).flatMap((effect) => effect.statuses ?? [])).not.toContain('dazed');
+    expect((dominate.effects ?? []).flatMap((effect) => effect.statuses ?? [])).not.toContain(projectedConditionStatusId('dazed'));
   });
 
   it('models enslave as one recharge save with half-damage semantics and target gating metadata', () => {

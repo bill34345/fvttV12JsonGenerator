@@ -63,6 +63,7 @@ export interface FadingSpiritsState {
   conventionalResurrectionLocked: boolean;
   finalChanceUsed: boolean;
   currentDeathEpisodeId: string | null;
+  resurrectionPromptedForDeathEpisodeId: string | null;
   rapidResurrectionLockedForCurrentDeath: boolean;
   resurrectionConsumedForCurrentDeath: boolean;
   resolutionInProgress: ResurrectionResolutionLock | null;
@@ -95,6 +96,7 @@ export function createFadingSpiritsState(): FadingSpiritsState {
     conventionalResurrectionLocked: false,
     finalChanceUsed: false,
     currentDeathEpisodeId: null,
+    resurrectionPromptedForDeathEpisodeId: null,
     rapidResurrectionLockedForCurrentDeath: false,
     resurrectionConsumedForCurrentDeath: false,
     resolutionInProgress: null,
@@ -135,6 +137,7 @@ export function parseActorModuleState(raw: unknown, hp = 0, max = 0): ActorModul
     conventionalResurrectionLocked: fadingRaw.conventionalResurrectionLocked === true,
     finalChanceUsed: fadingRaw.finalChanceUsed === true,
     currentDeathEpisodeId: stringOrNull(fadingRaw.currentDeathEpisodeId),
+    resurrectionPromptedForDeathEpisodeId: stringOrNull(fadingRaw.resurrectionPromptedForDeathEpisodeId),
     rapidResurrectionLockedForCurrentDeath: fadingRaw.rapidResurrectionLockedForCurrentDeath === true,
     resurrectionConsumedForCurrentDeath: fadingRaw.resurrectionConsumedForCurrentDeath === true,
     resolutionInProgress: parseResolutionLock(fadingRaw.resolutionInProgress),

@@ -6,6 +6,7 @@ import {
   createConditionInstance,
   isSafeConditionFormula,
   parseConditionInstance,
+  projectedConditionStatusId,
 } from '@fvtt-json-generator/contracts/conditions';
 import { ConditionRuntime, changesFor, registerConditionMappings } from '../src/runtime.ts';
 
@@ -68,6 +69,16 @@ describe('custom condition contract', () => {
     expect(buildConditionFlag(instance)).toEqual({ 'fvtt-custom-conditions': { condition: instance } });
     expect(parseConditionInstance(instance)).toEqual(instance);
   });
+
+  test('does not create parameterless or malformed Burning instances from HUD manager input', () => {
+    expect(() => createConditionInstance('burning', {})).toThrow('formula');
+    expect(() => createConditionInstance('burning', { formula: '1d6' })).toThrow('damageType');
+    expect(() => createConditionInstance('burning', { formula: '1d6', damageType: ' ' })).toThrow('damageType');
+    expect(() => createConditionInstance('burning', { formula: 'game.foo()', damageType: 'fire' })).toThrow('formula');
+    expect(createConditionInstance('burning', { formula: '1d6', damageType: 'fire' }).params).toMatchObject({
+      formula: '1d6', damageType: 'fire', timing: 'turnEnd', stacking: 'highest',
+    });
+  });
 });
 
 describe('condition runtime', () => {
@@ -125,8 +136,54 @@ describe('condition runtime', () => {
     const runtime = new ConditionRuntime(globals, () => true);
     const effect = await runtime.apply(target, 'bleeding', { formula: '4d4', stacking: 'stack' }, { origin: 'Item.bloodmourne' });
     expect(effect.flags['fvtt-custom-conditions'].condition).toMatchObject({ conditionId: 'bleeding', params: { formula: '4d4', mode: 'hpLoss', timing: 'turnEnd', stacking: 'highest' } });
+    expect(effect.statuses).toEqual([projectedConditionStatusId('bleeding')]);
     expect(runtime.list(target)).toHaveLength(1);
     expect(runtime.list(target)[0]?.origin).toBe('Item.bloodmourne');
+  });
+
+  test('preserves native and foreign bare statuses while registering all custom statuses as module-owned', () => {
+    const foreign = [
+      { id: 'bleeding', label: 'Native Bleeding' },
+      { id: 'burning', label: 'Native Burning' },
+      { id: 'dazed', label: 'Foreign Dazed' },
+    ];
+    const statuses: any[] = [...foreign];
+    const globals = { CONFIG: { statusEffects: statuses } };
+    registerConditionMappings(globals);
+    registerConditionMappings(globals);
+    expect(statuses.slice(0, foreign.length)).toEqual(foreign);
+    expect(statuses).toHaveLength(foreign.length + CUSTOM_CONDITION_IDS.length);
+    for (const conditionId of CUSTOM_CONDITION_IDS) {
+      expect(statuses.filter((status) => status.id === projectedConditionStatusId(conditionId))).toEqual([
+        expect.objectContaining({ hud: false, flags: { 'fvtt-custom-conditions': { owned: true } } }),
+      ]);
+    }
+  });
+
+  test('continues to read flagged legacy effects with bare status IDs', () => {
+    const instance = createConditionInstance('bleeding', { formula: '1d6' });
+    const target = actor('legacy-bleeding', {
+      effects: [{ id: 'legacy-effect', statuses: ['bleeding'], flags: buildConditionFlag(instance), disabled: false }],
+    });
+    const runtime = new ConditionRuntime({ CONFIG: { statusEffects: [] } }, () => true);
+    expect(runtime.list(target)).toEqual([
+      expect.objectContaining({ id: 'legacy-effect', instance: expect.objectContaining({ conditionId: 'bleeding' }) }),
+    ]);
+  });
+
+  test('projects compound custom effects without reusing bare status IDs', async () => {
+    const target = actor('compound-target');
+    const runtime = new ConditionRuntime({
+      game: { user: { id: 'gm' }, users: { activeGM: { id: 'gm' } } },
+      CONFIG: { statusEffects: [] },
+    }, () => true);
+    const shocked = await runtime.apply(target, 'shocked', {});
+    expect(shocked.statuses).toEqual([
+      projectedConditionStatusId('shocked'),
+      projectedConditionStatusId('dazed'),
+      projectedConditionStatusId('defenseless'),
+    ]);
+    expect(shocked.flags['fvtt-custom-conditions'].condition.conditionId).toBe('shocked');
   });
 
   test('projects roll modes and registers every movement type through native dnd5e conditions', () => {
@@ -140,6 +197,9 @@ describe('condition runtime', () => {
     expect(effects.noMovement.has('immobilized')).toBeTrue();
     expect(effects.noMovement.has('frozen')).toBeTrue();
     expect(effects.halfMovement.has('slowed')).toBeTrue();
+    expect(effects.noMovement.has(projectedConditionStatusId('immobilized'))).toBeTrue();
+    expect(effects.noMovement.has(projectedConditionStatusId('frozen'))).toBeTrue();
+    expect(effects.halfMovement.has(projectedConditionStatusId('slowed'))).toBeTrue();
     for (const instance of [immobilized, frozen, slowed]) {
       expect(changesFor(instance).some((change) => String(change.key).startsWith('system.attributes.movement.'))).toBeFalse();
     }
@@ -213,6 +273,62 @@ describe('condition runtime', () => {
     expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeUndefined();
     handlers.get('dnd5e.postUseActivity')(action, {});
     expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+    runtime.stop();
+  });
+
+  test('Dazed permits one chosen category among movement, Action, and Bonus Action on each turn', async () => {
+    const target = actor('dazed-three-choices', { isOwner: true });
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(target);
+    await runtime.apply(target, 'dazed', {});
+    const token = { actor: target };
+    const movement = { method: 'dragging', passed: { waypoints: [{ x: 10, y: 10 }] } };
+    const action = { actor: target, type: 'utility', activation: { type: 'action' }, item: { type: 'feat' } };
+    const bonus = { actor: target, type: 'utility', activation: { type: 'bonus' }, item: { type: 'feat' } };
+    const reaction = { actor: target, type: 'utility', activation: { type: 'reaction' }, item: { type: 'feat' } };
+    const turn = async (round: number) => {
+      globals.game.combat.round = round;
+      globals.game.combat.current = { round, turn: 0, combatantId: 'combatant-1' };
+      await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target, combatUuid: 'Combat.test', round, turn: 0 });
+    };
+
+    await turn(1);
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonus, {});
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeTrue();
+    expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
+    expect(handlers.get('dnd5e.preUseActivity')(reaction, {})).toBeUndefined();
+
+    await turn(2);
+    expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeFalse();
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(action, {});
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeFalse();
+    expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+
+    await turn(3);
+    handlers.get('moveToken')(token, movement);
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeFalse();
+    runtime.stop();
+  });
+
+  test('reads old persisted turn flags without bonusActionUsed and merges a new bonus use', async () => {
+    const target = actor('old-dazed-flags', { isOwner: true, flags: { 'fvtt-custom-conditions': {
+      turnState: { combatKey: 'Combat.test:1:0', weaponAttacks: 0, actionUsed: false, movementUsed: false },
+    } } });
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(target);
+    await runtime.apply(target, 'dazed', {});
+    const bonus = { actor: target, type: 'utility', activation: { type: 'bonus' }, item: { type: 'feat' } };
+    const action = { actor: target, type: 'utility', activation: { type: 'action' }, item: { type: 'feat' } };
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonus, {});
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeTrue();
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
     runtime.stop();
   });
 
@@ -342,6 +458,190 @@ describe('condition runtime', () => {
     runtime.stop();
   });
 
+  test('Dazed charges Bonus Action attacks only after a non-empty roll on the same turn', async () => {
+    const target = actor('dazed-bonus-attack', { isOwner: true });
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(target);
+    await runtime.apply(target, 'dazed', {});
+    const action = { actor: target, type: 'utility', activation: { type: 'action' }, item: { type: 'feat' } };
+    const bonusAttack = { actor: target, type: 'attack', activation: { type: 'bonus' }, item: { type: 'weapon' } };
+    const token = { actor: target };
+    const movement = { method: 'dragging', passed: { waypoints: [{ x: 10, y: 10 }] } };
+    const turn = async (round: number) => {
+      globals.game.combat.round = round;
+      globals.game.combat.current = { round, turn: 0, combatantId: 'combatant-1' };
+      await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target, combatUuid: 'Combat.test', round, turn: 0 });
+    };
+    const configured = (rolls: any[]) => {
+      const config = { subject: bonusAttack, rolls: [{ parts: [] }] };
+      expect(handlers.get('dnd5e.preRollAttack')(config)).toBeUndefined();
+      handlers.get('dnd5e.postAttackRollConfiguration')(rolls, config);
+      return rolls;
+    };
+
+    await turn(1);
+    expect(handlers.get('dnd5e.preUseActivity')(bonusAttack, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonusAttack, {});
+    const canceled = configured([]);
+    handlers.get('dnd5e.rollAttack')(canceled, { subject: bonusAttack });
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeUndefined();
+    expect(handlers.get('preMoveToken')(token, movement, {})).toBeUndefined();
+
+    const stale = configured([{ total: 13 }]);
+    await turn(2);
+    handlers.get('dnd5e.rollAttack')(stale, { subject: bonusAttack });
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeUndefined();
+    const completed = configured([{ total: 15 }]);
+    handlers.get('dnd5e.rollAttack')(completed, { subject: bonusAttack });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeTrue();
+    expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
+    expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+    runtime.stop();
+  });
+
+  test('Dazed and Shocked cancel an attack dialog when another turn category finishes first', async () => {
+    for (const conditionId of ['dazed', 'shocked'] as const) {
+      const target = actor(`dialog-${conditionId}`, { isOwner: true });
+      const { globals, handlers, runtime } = runtimeFixture(target);
+      globals.game.combat = combatFor(target);
+      await runtime.apply(target, conditionId, {});
+      const token = { actor: target };
+      const movement = { method: 'dragging', passed: { waypoints: [{ x: 20, y: 20 }] } };
+      const activity = (type: 'action' | 'bonus', isAttack: boolean) => ({
+        actor: target, type: isAttack ? 'attack' : 'utility', activation: { type }, item: { type: 'feat' },
+      });
+      const startAttackDialog = (attack: any) => {
+        expect(handlers.get('dnd5e.preUseActivity')(attack, {})).toBeUndefined();
+        handlers.get('dnd5e.postUseActivity')(attack, {});
+        const config = { subject: attack, rolls: [{ parts: [] }] };
+        expect(handlers.get('dnd5e.preRollAttack')(config)).toBeUndefined();
+        return config;
+      };
+      const finishOtherActivity = (other: any) => {
+        expect(handlers.get('dnd5e.preUseActivity')(other, {})).toBeUndefined();
+        handlers.get('dnd5e.postUseActivity')(other, {});
+      };
+      const turn = async (round: number) => {
+        globals.game.combat.round = round;
+        globals.game.combat.current = { round, turn: 0, combatantId: 'combatant-1' };
+        await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target, combatUuid: 'Combat.test', round, turn: 0 });
+      };
+      await turn(1);
+      const bonusAttack = activity('bonus', true);
+      const pendingBonus = startAttackDialog(bonusAttack);
+      finishOtherActivity(activity('action', false));
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], pendingBonus)).toBeFalse();
+      expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeFalse();
+
+      await turn(2);
+      const pendingBonusAfterMove = startAttackDialog(bonusAttack);
+      handlers.get('moveToken')(token, movement);
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], pendingBonusAfterMove)).toBeFalse();
+
+      await turn(3);
+      const actionAttack = activity('action', true);
+      const pendingAction = startAttackDialog(actionAttack);
+      finishOtherActivity(activity('bonus', false));
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], pendingAction)).toBeFalse();
+      expect(target.flags['fvtt-custom-conditions'].turnState.actionUsed).toBeFalse();
+
+      await turn(4);
+      const pendingActionAfterMove = startAttackDialog(actionAttack);
+      handlers.get('moveToken')(token, movement);
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], pendingActionAfterMove)).toBeFalse();
+
+      await turn(5);
+      const pendingCanceled = startAttackDialog(bonusAttack);
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([], pendingCanceled)).toBeUndefined();
+      expect(handlers.get('dnd5e.preUseActivity')(activity('action', false), {})).toBeUndefined();
+
+      const pendingAcrossTurn = startAttackDialog(bonusAttack);
+      await turn(6);
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], pendingAcrossTurn)).toBeFalse();
+      expect(handlers.get('dnd5e.preUseActivity')(activity('action', false), {})).toBeUndefined();
+      runtime.stop();
+    }
+  });
+
+  test('Dazed and Shocked reserve an attack category during asynchronous roll evaluation', async () => {
+    for (const conditionId of ['dazed', 'shocked'] as const) {
+      const target = actor(`pending-${conditionId}`, { isOwner: true });
+      const heldItem = { id: `held-${conditionId}`, type: 'weapon', parent: target, system: { equipped: false } };
+      target.items.push(heldItem);
+      const { globals, handlers, runtime } = runtimeFixture(target);
+      const warnings: string[] = [];
+      globals.ui.notifications.warn = (message: string) => { warnings.push(message); };
+      globals.game.combat = combatFor(target);
+      await runtime.apply(target, conditionId, {});
+      const token = { actor: target };
+      const movement = { method: 'dragging', passed: { waypoints: [{ x: 30, y: 30 }] } };
+      const activity = (type: 'action' | 'bonus') => ({
+        actor: target, type: 'attack', activation: { type }, item: { type: 'weapon' },
+      });
+      const pending = (attack: any) => {
+        expect(handlers.get('dnd5e.preUseActivity')(attack, {})).toBeUndefined();
+        handlers.get('dnd5e.postUseActivity')(attack, {});
+        const config = { subject: attack, rolls: [{ parts: [] }] };
+        expect(handlers.get('dnd5e.preRollAttack')(config)).toBeUndefined();
+        const rolls = [{ total: 17 }];
+        expect(handlers.get('dnd5e.postAttackRollConfiguration')(rolls, config)).toBeUndefined();
+        return { attack, config, rolls };
+      };
+      const turn = async (round: number) => {
+        globals.game.combat.round = round;
+        globals.game.combat.current = { round, turn: 0, combatantId: 'combatant-1' };
+        await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target, combatUuid: 'Combat.test', round, turn: 0 });
+      };
+
+      await turn(1);
+      const bonus = pending(activity('bonus'));
+      const action = activity('action');
+      expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
+      expect(warnings.some((message) => message.includes('下回合自动重置'))).toBeTrue();
+      const otherActor = actor(`other-${conditionId}`);
+      await runtime.apply(otherActor, 'dazed', {});
+      expect(handlers.get('dnd5e.preUseActivity')({
+        actor: otherActor, type: 'utility', activation: { type: 'action' }, item: { type: 'feat' },
+      }, {})).toBeUndefined();
+      expect(handlers.get('dnd5e.preRollAttack')({ subject: action, rolls: [{ parts: [] }] })).toBeFalse();
+      expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+      expect(target.flags['fvtt-custom-conditions'].turnState.bonusActionUsed).toBeFalse();
+      handlers.get('dnd5e.rollAttack')(bonus.rolls, { subject: bonus.attack });
+      expect(handlers.get('dnd5e.preUseActivity')(action, {})).toBeFalse();
+
+      await turn(2);
+      const actionPending = pending(activity('action'));
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeFalse();
+      expect(handlers.get('preMoveToken')(token, movement, {})).toBeFalse();
+      if (conditionId === 'shocked') {
+        expect(handlers.get('preUpdateItem')(heldItem, { 'system.equipped': true }, {})).toBeFalse();
+      }
+      const effect = runtime.list(target)[0]!.effect;
+      effect.disabled = true;
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeUndefined();
+      effect.disabled = false;
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeFalse();
+      // An exceptional roll failure has no rollAttack hook. Fail closed for
+      // the rest of this turn rather than silently allowing another category.
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeFalse();
+      await turn(3);
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeUndefined();
+      handlers.get('dnd5e.rollAttack')(actionPending.rolls, { subject: actionPending.attack });
+      expect(handlers.get('dnd5e.preUseActivity')(activity('bonus'), {})).toBeUndefined();
+
+      const canceled = { subject: activity('bonus'), rolls: [{ parts: [] }] };
+      expect(handlers.get('dnd5e.preRollAttack')(canceled)).toBeUndefined();
+      expect(handlers.get('dnd5e.postAttackRollConfiguration')([], canceled)).toBeUndefined();
+      expect(handlers.get('dnd5e.preUseActivity')(activity('action'), {})).toBeUndefined();
+      pending(activity('bonus'));
+      runtime.stop();
+      runtime.start();
+      expect(handlers.get('dnd5e.preUseActivity')(activity('action'), {})).toBeUndefined();
+      runtime.stop();
+    }
+  });
+
   test('Bewildered restricts spells only; Distracted blocks Reaction while Shocked allows it', async () => {
     const target = actor('activity-target');
     const { handlers, runtime } = runtimeFixture(target);
@@ -391,6 +691,59 @@ describe('condition runtime', () => {
     runtime.stop();
   });
 
+  test('Staggered shares one completed attack across weapon and unarmed classifications', async () => {
+    const sequences = [
+      ['weapon', 'unarmed'],
+      ['unarmed', 'weapon'],
+      ['unarmed', 'unarmed'],
+    ] as const;
+    for (const [firstKind, secondKind] of sequences) {
+      const target = actor(`staggered-${firstKind}-${secondKind}`);
+      const { globals, handlers, runtime } = runtimeFixture(target);
+      globals.game.combat = combatFor(target);
+      await runtime.apply(target, 'staggered', {});
+      await runtime.handleTriggerEvent({
+        event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target,
+        combatUuid: 'Combat.test', round: 1, turn: 0,
+      });
+      const attack = (classification: string) => ({
+        actor: target, type: 'attack',
+        // A feat can own an unarmed Attack Activity; the item's type alone is not decisive.
+        item: { type: classification === 'unarmed' ? 'feat' : 'weapon' },
+        attack: { type: { classification } }, activation: { type: 'action' },
+      });
+      const first = attack(firstKind);
+      const second = attack(secondKind);
+      expect(handlers.get('dnd5e.preUseActivity')(first, {})).toBeUndefined();
+      const firstConfig = { subject: first, rolls: [{ parts: [] }] };
+      expect(handlers.get('dnd5e.preRollAttack')(firstConfig)).toBeUndefined();
+      handlers.get('dnd5e.rollAttack')([{ total: 14 }], { subject: first });
+      expect(handlers.get('dnd5e.preUseActivity')(second, {})).toBeFalse();
+      expect(handlers.get('dnd5e.preRollAttack')({ subject: second, rolls: [{ parts: [] }] })).toBeFalse();
+      runtime.stop();
+    }
+  });
+
+  test('Staggered ignores weapon utility and spell-classified weapon attacks', async () => {
+    const target = actor('staggered-classification-target');
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(target);
+    await runtime.apply(target, 'staggered', {});
+    await runtime.handleTriggerEvent({
+      event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target,
+      combatUuid: 'Combat.test', round: 1, turn: 0,
+    });
+    const utility = { actor: target, type: 'utility', item: { type: 'weapon' } };
+    const spell = { actor: target, type: 'attack', item: { type: 'weapon' }, attack: { type: { classification: 'spell' } } };
+    const unarmed = { actor: target, type: 'attack', item: { type: 'feat' }, system: { attack: { type: { classification: 'unarmed' } } } };
+    handlers.get('dnd5e.rollAttack')([{ total: 12 }], { subject: utility });
+    handlers.get('dnd5e.rollAttack')([{ total: 12 }], { subject: spell });
+    expect(handlers.get('dnd5e.preUseActivity')(unarmed, {})).toBeUndefined();
+    handlers.get('dnd5e.rollAttack')([{ total: 12 }], { subject: unarmed });
+    expect(handlers.get('dnd5e.preUseActivity')(unarmed, {})).toBeFalse();
+    runtime.stop();
+  });
+
   test('Shocked drops held items but keeps worn armor, spends an Action on equip, and leaves Reactions available', async () => {
     const target = actor('shocked-target', { isOwner: true });
     const weapon = { id: 'weapon-one', type: 'weapon', parent: target, system: { equipped: true } };
@@ -408,6 +761,24 @@ describe('condition runtime', () => {
     expect(handlers.get('preUpdateItem')(weapon, equip, {})).toBeUndefined();
     handlers.get('updateItem')(weapon, equip, {}, 'gm');
     expect(handlers.get('preUpdateItem')(weapon, equip, {})).toBeFalse();
+    runtime.stop();
+  });
+
+  test('Shocked inherits the three-way choice and blocks an item Action after a Bonus Action', async () => {
+    const target = actor('shocked-three-choices', { isOwner: true });
+    const weapon = { id: 'weapon', type: 'weapon', parent: target, system: { equipped: false } };
+    target.items.push(weapon);
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(target);
+    await runtime.apply(target, 'shocked', {});
+    await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: target, combatUuid: 'Combat.test', round: 1, turn: 0 });
+    const bonus = { actor: target, type: 'utility', activation: { type: 'bonus' }, item: { type: 'feat' } };
+    const reaction = { actor: target, type: 'utility', activation: { type: 'reaction' }, item: { type: 'feat' } };
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonus, {});
+    expect(handlers.get('preUpdateItem')(weapon, { 'system.equipped': true }, {})).toBeFalse();
+    expect(handlers.get('preCreateItem')({ type: 'weapon', parent: target }, {}, {})).toBeFalse();
+    expect(handlers.get('dnd5e.preUseActivity')(reaction, {})).toBeUndefined();
     runtime.stop();
   });
 
@@ -474,6 +845,45 @@ describe('condition runtime', () => {
     runtime.stop();
   });
 
+  test('Frozen escape refuses a Dazed helper who has chosen Bonus Action', async () => {
+    const target = actor('frozen-bonus-target');
+    const helper = actor('dazed-bonus-helper', { isOwner: true });
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(helper);
+    await runtime.apply(target, 'frozen', { escapeDC: 14 });
+    await runtime.apply(helper, 'dazed', {});
+    await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: helper, combatUuid: 'Combat.test', round: 1, turn: 0 });
+    const bonus = { actor: helper, type: 'utility', activation: { type: 'bonus' }, item: { type: 'feat' } };
+    expect(handlers.get('dnd5e.preUseActivity')(bonus, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonus, {});
+    let rollCalls = 0;
+    helper.rollSkill = async () => { rollCalls += 1; return [{ total: 20 }]; };
+    await expect(runtime.escapeFrozen(target, runtime.list(target)[0]!.id, helper)).rejects.toThrow('无法执行 Action');
+    expect(rollCalls).toBe(0);
+    runtime.stop();
+  });
+
+  test('Frozen escape refuses a Dazed helper while an attack is still evaluating', async () => {
+    const target = actor('frozen-pending-target');
+    const helper = actor('dazed-pending-helper', { isOwner: true });
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.game.combat = combatFor(helper);
+    await runtime.apply(target, 'frozen', { escapeDC: 14 });
+    await runtime.apply(helper, 'dazed', {});
+    await runtime.handleTriggerEvent({ event: { type: 'combatTurnStart', documentType: 'Actor' }, document: helper, combatUuid: 'Combat.test', round: 1, turn: 0 });
+    const bonusAttack = { actor: helper, type: 'attack', activation: { type: 'bonus' }, item: { type: 'weapon' } };
+    const config = { subject: bonusAttack, rolls: [{ parts: [] }] };
+    expect(handlers.get('dnd5e.preUseActivity')(bonusAttack, {})).toBeUndefined();
+    handlers.get('dnd5e.postUseActivity')(bonusAttack, {});
+    expect(handlers.get('dnd5e.preRollAttack')(config)).toBeUndefined();
+    expect(handlers.get('dnd5e.postAttackRollConfiguration')([{ total: 15 }], config)).toBeUndefined();
+    let rollCalls = 0;
+    helper.rollSkill = async () => { rollCalls += 1; return [{ total: 20 }]; };
+    await expect(runtime.escapeFrozen(target, runtime.list(target)[0]!.id, helper)).rejects.toThrow('攻击仍在结算');
+    expect(rollCalls).toBe(0);
+    runtime.stop();
+  });
+
   test('Helpless critical conversion uses the attack message target snapshot and never turns a miss into a hit', async () => {
     const target = actor('helpless-target');
     const currentButUnrelatedTarget = actor('unrelated');
@@ -508,6 +918,32 @@ describe('condition runtime', () => {
     message.getAssociatedActivity = () => ({ type: 'attack', item: { type: 'weapon', system: { damage: { base: { types: new Set(['bludgeoning']) } } } }, damage: { parts: [{ types: new Set(['slashing']) }] } });
     handlers.get('preCreateChatMessage')(message, { flags: { dnd5e: { roll: { type: 'attack' }, targets: [{ uuid: target.uuid, ac: 12 }] } } });
     expect(slashing.d20.options.criticalSuccess).toBeUndefined();
+    runtime.stop();
+  });
+
+  test('Frozen treats bludgeoning weapon-classified attacks as critical, including attacks on feat items', async () => {
+    const target = actor('frozen-classification-target');
+    const { globals, handlers, runtime } = runtimeFixture(target);
+    globals.fromUuidSync = (uuid: string) => uuid === target.uuid ? target : undefined;
+    await runtime.apply(target, 'frozen', { escapeDC: 14 });
+    const flags = { dnd5e: { roll: { type: 'attack' }, targets: [{ uuid: target.uuid, ac: 12 }] } };
+    const criticalFor = (classification: string | undefined, itemType: string, damageType = 'bludgeoning') => {
+      const roll: any = { total: 15, d20: { total: 8, options: {} }, options: {}, isFumble: false, toJSON: () => ({}) };
+      const activity = {
+        type: 'attack', item: { type: itemType },
+        ...(classification ? { attack: { type: { classification } } } : {}),
+        damage: { parts: [{ types: new Set([damageType]) }] },
+      };
+      const message = { rolls: [roll], getAssociatedActivity: () => activity, updateSource: () => {} };
+      handlers.get('preCreateChatMessage')(message, { flags });
+      return roll.d20.options.criticalSuccess;
+    };
+    expect(criticalFor('weapon', 'feat')).toBe(8);
+    expect(criticalFor('weapon', 'weapon')).toBe(8);
+    expect(criticalFor(undefined, 'weapon')).toBe(8);
+    expect(criticalFor('unarmed', 'weapon')).toBeUndefined();
+    expect(criticalFor('spell', 'weapon')).toBeUndefined();
+    expect(criticalFor('weapon', 'feat', 'slashing')).toBeUndefined();
     runtime.stop();
   });
 

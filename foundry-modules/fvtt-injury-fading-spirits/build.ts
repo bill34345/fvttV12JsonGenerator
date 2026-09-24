@@ -21,6 +21,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   await cp(resolve(source, 'icons'), resolve(moduleRoot, 'icons'), { recursive: true });
   await cp(resolve(source, 'styles'), resolve(moduleRoot, 'styles'), { recursive: true });
   await cp(resolve(root, 'README.zh-CN.md'), resolve(moduleRoot, 'README.zh-CN.md'));
+  await cp(resolve(root, 'CREDITS.md'), resolve(moduleRoot, 'CREDITS.md'));
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, any>;
   validateManifest(manifest);
   const browserText = await readFile(resolve(moduleRoot, 'scripts/index.js'), 'utf8');

@@ -400,7 +400,7 @@
       },
       {
         "title": "调整或观察伤势",
-        "text": "在面板设置 0–3 层伤势，或在 Token 状态列表中左键增加、右键减少。模块还会观察 HP 归零、首次恢复正 HP、成功短休/长休和死亡豁免事件，并把状态投影到 Actor flag、Active Effect 和 Token 图标。"
+        "text": "在面板设置 0–3 层伤势，或在 Token 状态列表中左键增加、右键减少。Token Action HUD 显示当前层数，例如 1/3。模块还会观察 HP 归零、首次恢复正 HP、成功短休/长休和死亡豁免事件，并把状态投影到 Actor flag、Active Effect 和 Token 图标。"
       },
       {
         "title": "开始复活仪式",
@@ -409,6 +409,10 @@
       {
         "title": "由 GM 结算",
         "text": "在待处理仪式卡片或面板中查看原生关联检定，逐项确认贡献成功/失败和灵魂是否愿意回归，再结算仪式。成功只记录回归和下一次恢复保护；实际 HP 恢复仍由对应法术或 Activity 完成。"
+      },
+      {
+        "title": "联动自定义状态与事件引擎",
+        "text": "启用 Custom Conditions 后可从其管理器查看或调整伤势。伤势名称、现成图标和层数角标统一显示；Token Action HUD 的完整悬停说明使用 dnd5e 规则卡布局，将倒地与叠层、第三层 GM 裁定、清除方式及死亡豁免自然 19/20 分为四段。图标作者和 CC BY 3.0 许可见模块包内 CREDITS.md。自动化来源可选择内部 Hooks 或外部 Trigger Engine；外部来源缺失时提示错误，不会双重执行或静默切回。仪式提醒只通知活动 GM 选择打开向导，不自动掷骰或认定灵魂意愿。"
       }
     ],
     "outputs": [
@@ -420,7 +424,8 @@
       "仅支持 Foundry 14.364 与 dnd5e 5.3.3；长期状态只有活动 GM 写入",
       "三层伤势时先让 GM 选择，不会预写死亡；直接死亡、环境例外、灵魂意愿和贡献结果都保留 GM 确认",
       "不依赖 MIDI-QOL、DAE 或其他村规模块；外部复活 Activity 若直接恢复 HP，应由活动 GM 使用公开 suppression API 包裹事务",
-      "ChatMessage 只是交互投影，不是历史事实来源；自动测试和本地 Lab 不能代替 GM/玩家多客户端或长期跑团验收"
+      "ChatMessage 只是交互投影，不是历史事实来源；自动测试和本地 Lab 不能代替 GM/玩家多客户端或长期跑团验收",
+      "HP 归零仅表示倒地；仪式提醒须额外满足明确死亡条件。Custom Conditions 不复制伤势 flags，不接管复活状态机。"
     ],
     "keywords": [
       "伤势",
@@ -432,7 +437,11 @@
       "活动 GM"
     ],
     "sources": [
-      "foundry-modules/fvtt-injury-fading-spirits/README.zh-CN.md"
+      "foundry-modules/fvtt-injury-fading-spirits/README.zh-CN.md",
+      "foundry-modules/fvtt-injury-fading-spirits/CREDITS.md",
+      "docs/reviews/2026-09-22-condition-hud-localization.md",
+      "docs/reviews/2026-09-23-existing-condition-icons.md",
+      "docs/reviews/2026-09-23-condition-tooltip-native-layout.md"
     ],
     "watch": [
       "foundry-modules/fvtt-injury-fading-spirits/"
@@ -512,7 +521,7 @@
     "id": "fvtt-custom-conditions",
     "title": "Custom Conditions / 自定义状态",
     "category": "play",
-    "summary": "在 Foundry 内直接施加、编辑、停用和解除 19 个自定义状态，并以统一实例参数自动结算流血、燃烧等动态规则。",
+    "summary": "在 Foundry 内直接施加、编辑、停用和解除 19 个自定义状态，并以统一实例参数自动结算流血、灼烧等动态规则。",
     "when": "需要把 Monsters of Drakkenheim 的自定义状态放进 Actor 或物品模板，并希望日常调整骰式、DC、伤害类型和解除方式时使用。",
     "requires": [
       "Foundry VTT 14.364",
@@ -531,7 +540,7 @@
       },
       {
         "title": "填写状态实例参数",
-        "text": "骰式来自施加状态的特性。Bleeding 与 Burning 跨来源只采用较高值，以骰式平均值比较，平手保留现有值；Burning 的伤害类型跟随胜出者。两者默认在自身回合结束时结算。Frozen 使用 escapeDC；Jinxed 与 Valor 使用各自骰式。"
+        "text": "骰式来自施加状态的特性。Bleeding 与 Burning 跨来源只采用较高值，以骰式平均值比较，平手保留现有值；Burning 的伤害类型跟随胜出者。两者默认在自身回合结束时结算。Frozen 使用 escapeDC；Jinxed 与 Valor 使用各自骰式；Token Action HUD 以 6、4 等数字显示 1d6、1d4 的骰子面数，复合骰式显示紧凑式，过长时角标截短，完整式在管理器可查，不代表掷骰结果。"
       },
       {
         "title": "使用生成的物品模板",
@@ -540,20 +549,34 @@
       {
         "title": "用动作尝试解除 Frozen",
         "text": "点击 Frozen 行的“破冰（动作）”按该实例 DC 做力量（运动）检定。默认由目标自己尝试；标记目标并另选中一名生物即可协助，GM 确认接触范围。完成检定后消耗动作，成功解除；取消不消耗。"
+      },
+      {
+        "title": "阅读状态说明与管理伤势",
+        "text": "状态名称和悬停说明随 Foundry 界面语言显示中文或英文。Token Action HUD 的完整提示采用 dnd5e 规则卡布局，标题、状态类别与分段正文分开，图标保留在 HUD 按钮；仅名称和无提示模式仍由 TAH 设置控制。十九种自定义实例各采用选定的 Game-icons.net SVG；笨拙用 Drop Weapon，踉跄用 Foot Trip，署名和 CC BY 3.0 许可见模块包内 CREDITS.md。全部 19 项使用 fvtt-custom-conditions.<条件 ID> 独立状态 ID；自定义 Dazed 的 HUD 标题只显示恍惚或 Dazed，仍与 MCDM 同名状态分开。五个必填参数状态点击后打开绑定当前 Actor、预选状态的管理器，其余十四项通过 Custom Conditions API 切换带模块 flag 的实例；Frozen 和 Shocked 的子状态由复合来源提供时不重复创建，多来源在管理器中处理。启用伤势模块时，可在同一管理器调整伤势层数或进入消逝的灵魂仪式，原有伤势与复活历史仍保存在伤势模块。"
+      },
+      {
+        "title": "判读几个容易混淆的状态",
+        "text": "本模块的恍惚在自己的回合可从自主移动、动作、附赠动作中选择一种；选定后不能再执行另两种，但不额外禁止反应。震愕继承恍惚的三选一规则，同时使针对目标的攻击检定有优势、掉落手持物品；拿取、拔出或收起物品仍需要动作。三选一是本项目按用户决定调整的规则，不宣称为 Drakkenheim 正式文本。Frozen 的特殊重击限于使用造成钝击伤害的武器命中目标；不是任意钝击法术或普通徒手打击。英勇在攻击检定或豁免检定时加上实例骰值，厄运减去骰值；虚弱使武器攻击或法术伤害总值减半，实际应用到 HP 时向下取整，聊天表达式仍可能出现小数。踉跄在自己的回合最多完成一次武器或徒手攻击；加入徒手是本项目相对可公开核对的 Beta 文本所作扩展，正式版 Appendix C 尚未逐条核对。"
+      },
+      {
+        "title": "区分原生状态与自定义入口",
+        "text": "选中单个 Token 后展开 Token Action HUD 的效应组：dnd5e 原生「失血」是裸 bleeding，本模块「流血」是 fvtt-custom-conditions.bleeding；原生「燃烧」是裸 burning，本模块「灼烧」是 fvtt-custom-conditions.burning。GM 点击流血、灼烧、冻结、厄运或英勇只会打开固定该 Actor、预选对应状态的管理器，不会直接施加空参数状态；填写必填骰式、伤害类型或解除 DC 后再施加。其余十四项使用模块 API 切换。本轮 CoTN 页面已确认十九个自定义入口各显示一次，也确认点击流血打开绑定 Actor、预选流血的空参数管理器；其余按钮尚未逐项点击或结算。旧 TAH 布局的 action ID 隐藏和排序偏好不保证自动迁移。"
       }
     ],
     "outputs": [
       "Actor 上带参数的 Custom Conditions ActiveEffect 实例",
       "物品上的可重复使用 Condition 模板",
-      "由 active GM 和 Combat 事件驱动的流血、燃烧等结算"
+      "由 active GM 和 Combat 事件驱动的流血、灼烧等结算"
     ],
     "limits": [
       "本期包含 Addled、Bewildered、Bleeding、Burning、Clumsy、Dazed、Defenseless、Distracted、Enfeebled、Frozen、Helpless、Immobilized、Jinxed、Shocked、Sickened、Slowed、Staggered、Valor 和 Weakened",
       "Bloodied 使用 dnd5e/FVTT 原生能力；Drakkenheim Madness 与 Contamination 不在本期目录",
       "距离、环境和坠落落点由 GM 结合地图裁定；模块不会把不明确的来源规则猜成自动化",
       "Immobilized/Frozen 拦截拖拽、方向键以及非 GM 的 HUD/配置位置编辑；GM 坐标编辑和 API 强制位移保留用于裁定，不消耗 Dazed 自主移动选择",
-      "E2E 复用常驻 server-mirror 的 fvtt-v14-module-matrix 世界、端口 30001。核心状态、生成模板、重载不重复结算与 active GM 切换已有对应实测证据；键盘长按受工具能力限制未验收",
-      "构建、单测和安装 hash 不能代替 Foundry v14.364 中的真实 UI、Combat、ActiveEffect 和骰式运行时验收"
+      "恍惚／震愕三选一的普通顺序行为由回合旗标拦截；攻击异常或后续 Hook 否决可能保守限制到回合结束。跨客户端同时控制同一 Actor、两个非攻击活动弹窗交错完成尚未保证严格互斥",
+      "CoTN 原模组组合验收复用常驻 server-mirror 的 cor-cotn 世界、端口 30001；历史 fvtt-v14-module-matrix 隔离 E2E 不能替代该组合验收。键盘长按受工具能力限制未验收",
+      "构建、单测和安装 hash 不能代替 Foundry v14.364 中的真实 UI、Combat、ActiveEffect 和骰式运行时验收",
+      "自定义名称保持原样；更改界面语言后重载。原生失血/燃烧按钮不等于已配置骰式的自定义流血/灼烧。CoTN 的全 19 项入口可见性已单独验收；其余 18 项点击及本轮逐项玩法结算未执行，构建或单测不替代该结果。"
     ],
     "keywords": [
       "Custom Conditions",
@@ -568,7 +591,15 @@
     ],
     "sources": [
       "foundry-modules/fvtt-custom-conditions/README.zh-CN.md",
-      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md"
+      "foundry-modules/fvtt-custom-conditions/CREDITS.md",
+      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md",
+      "docs/reviews/2026-09-22-condition-hud-localization.md",
+      "docs/reviews/2026-09-23-existing-condition-icons.md",
+      "docs/reviews/2026-09-23-condition-tooltip-native-layout.md",
+      "docs/reviews/2026-09-23-drakkenheim-condition-wording.md",
+      "docs/reviews/2026-09-23-cotn-burning-hud.md",
+      "docs/reviews/2026-09-24-custom-burning-hud.md",
+      "docs/reviews/2026-09-24-all-custom-condition-hud-audit.md"
     ],
     "watch": [
       "foundry-modules/fvtt-custom-conditions/"

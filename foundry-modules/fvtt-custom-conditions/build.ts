@@ -14,9 +14,10 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   const result = await Bun.build({ entrypoints: [resolve(source, 'index.ts')], outdir: resolve(moduleRoot, 'scripts'), naming: 'index.js', target: 'browser', format: 'esm', splitting: false, minify: false, sourcemap: 'none' });
   if (!result.success) throw new Error(`Browser build failed: ${result.logs.map(String).join('; ')}`);
   await cp(resolve(source, 'module.json'), resolve(moduleRoot, 'module.json'));
-  for (const directory of ['lang', 'styles', 'templates']) await cp(resolve(source, directory), resolve(moduleRoot, directory), { recursive: true });
+  for (const directory of ['icons', 'lang', 'styles', 'templates']) await cp(resolve(source, directory), resolve(moduleRoot, directory), { recursive: true });
   await cp(resolve(root, 'README.md'), resolve(moduleRoot, 'README.md'));
   await cp(resolve(root, 'README.zh-CN.md'), resolve(moduleRoot, 'README.zh-CN.md'));
+  await cp(resolve(root, 'CREDITS.md'), resolve(moduleRoot, 'CREDITS.md'));
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, any>;
   validateManifest(manifest);
   const browserText = await readFile(resolve(moduleRoot, 'scripts/index.js'), 'utf8');

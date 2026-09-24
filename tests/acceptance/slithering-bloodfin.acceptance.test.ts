@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PlainTextActorWorkflow } from '../../src/core/workflow/plainTextActor';
+import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 
 setDefaultTimeout(30000);
 
@@ -284,7 +285,7 @@ describe('Slithering Bloodfin acceptance gate', () => {
         bleed: true,
       }),
     );
-    const bleedingEffect = (tailCrash.effects ?? []).find((effect: any) => effect.statuses?.includes('bleeding')) as any;
+    const bleedingEffect = (tailCrash.effects ?? []).find((effect: any) => effect.statuses?.includes(projectedConditionStatusId('bleeding'))) as any;
     expect(bleedingEffect?.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual(
       expect.objectContaining({
         formula: '1d6',

@@ -1,6 +1,11 @@
 import type { ConditionId, ConditionInstance, ConditionParams } from '@fvtt-json-generator/contracts/conditions';
 import type { ConditionApplyOptions, ConditionEntry, ConditionRuntime } from './runtime.ts';
 
+export interface ConditionManagerOpenContext {
+  actor: any;
+  conditionId?: ConditionId;
+}
+
 export interface CustomConditionsApi {
   definitions(): ReturnType<ConditionRuntime['definitions']>;
   list(actor: any): ConditionEntry[];
@@ -10,10 +15,10 @@ export interface CustomConditionsApi {
   setEnabled(actor: any, id: string, enabled: boolean): Promise<void>;
   applyFromItem(item: any, actors: any[], effectId?: string, overrides?: ConditionParams): Promise<void>;
   escapeFrozen(actor: any, effectId: string, rollerActor?: any): ReturnType<ConditionRuntime['escapeFrozen']>;
-  openManager(): Promise<unknown>;
+  openManager(context?: ConditionManagerOpenContext): Promise<unknown>;
 }
 
-export function createConditionsApi(runtime: ConditionRuntime, openManager: () => Promise<unknown> | unknown): CustomConditionsApi {
+export function createConditionsApi(runtime: ConditionRuntime, openManager: (context?: ConditionManagerOpenContext) => Promise<unknown> | unknown): CustomConditionsApi {
   return Object.freeze({
     definitions: () => runtime.definitions(),
     list: (actor: any) => runtime.list(actor),
@@ -23,7 +28,7 @@ export function createConditionsApi(runtime: ConditionRuntime, openManager: () =
     setEnabled: (actor: any, id: string, enabled: boolean) => runtime.setEnabled(actor, id, enabled),
     applyFromItem: (item: any, actors: any[], effectId?: string, overrides?: ConditionParams) => runtime.applyFromItem(item, actors, effectId, overrides),
     escapeFrozen: (actor: any, effectId: string, rollerActor?: any) => runtime.escapeFrozen(actor, effectId, rollerActor),
-    openManager: async () => openManager(),
+    openManager: async (context?: ConditionManagerOpenContext) => openManager(context),
   });
 }
 

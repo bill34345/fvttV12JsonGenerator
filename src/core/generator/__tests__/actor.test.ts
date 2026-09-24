@@ -570,7 +570,7 @@ describe('ActorGenerator', () => {
         ],
       }),
     );
-    const dazedEffect = (pelagicScreech.effects ?? []).find((effect: any) => effect.statuses?.includes('dazed'));
+    const dazedEffect = (pelagicScreech.effects ?? []).find((effect: any) => effect.statuses?.includes('fvtt-custom-conditions.dazed'));
     expect(dazedEffect?.img).toBe('icons/svg/daze.svg');
 
     for (const item of [swallow, pelagicScreech]) {

@@ -5,7 +5,26 @@ import {
   type ConditionParams,
 } from '@fvtt-json-generator/contracts/conditions';
 import { CONDITION_MANAGER_CONTROL_NAME, MODULE_ID } from './constants.ts';
-import type { CustomConditionsApi } from './api.ts';
+import type { ConditionManagerOpenContext, CustomConditionsApi } from './api.ts';
+import { conditionIconPath, localizedConditionDefinitions, localize } from './localization.ts';
+
+const INJURY_MODULE_ID = 'fvtt-injury-fading-spirits' as const;
+const MAX_INJURY_STACKS = 3;
+const injuryChangeQueues = new Map<string, Promise<void>>();
+
+interface InjuryPresentation {
+  id: string;
+  name: string;
+  description: string;
+  img: string;
+}
+
+interface InjuryApi {
+  getState?: (actor: any) => unknown | Promise<unknown>;
+  setInjury?: (actor: any, stacks: number, reason: string) => Promise<unknown> | unknown;
+  openResurrectionWizard?: (actor: any) => Promise<unknown> | unknown;
+  statusPresentation?: () => InjuryPresentation;
+}
 
 export function createConditionManagerApplicationClass(api?: CustomConditionsApi, globals: any = globalThis): any {
   const foundryApi = globals.foundry?.applications?.api;
@@ -20,7 +39,16 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
       window: { title: 'FVTTCONDITIONS.Manager.Title', contentClasses: ['standard-form'], icon: 'fa-solid fa-flask' },
       position: { width: 820, height: 720 },
       form: { closeOnSubmit: false, handler: this.onSubmit },
-      actions: { refresh: this.refresh, remove: this.remove, toggle: this.toggle, edit: this.edit, escapeFrozen: this.escapeFrozen },
+      actions: {
+        refresh: this.refresh,
+        remove: this.remove,
+        toggle: this.toggle,
+        edit: this.edit,
+        escapeFrozen: this.escapeFrozen,
+        increaseInjury: this.increaseInjury,
+        decreaseInjury: this.decreaseInjury,
+        openInjuryWizard: this.openInjuryWizard,
+      },
     };
 
     static PARTS = {
@@ -29,6 +57,7 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
     };
 
     api: CustomConditionsApi;
+    fixedActor: any | undefined;
     actors = captureTargets(globals);
     conditionId: ConditionId = 'bleeding';
     paramsJson = JSON.stringify(createConditionInstance('bleeding', { formula: '1d6' }).params, null, 2);
@@ -37,37 +66,49 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
     origin = '';
     editing: { actorUuid: string; effectId: string } | null = null;
 
-    constructor(options?: { api?: CustomConditionsApi }) {
+    constructor(options?: { api?: CustomConditionsApi; context?: ConditionManagerOpenContext }) {
       super();
       this.api = options?.api ?? api ?? globals.game?.modules?.get?.(MODULE_ID)?.api;
       if (!this.api) throw new Error('Custom Conditions API is unavailable.');
+      if (options?.context) {
+        if (options.context.actor?.documentName !== 'Actor') throw new TypeError('Condition manager requires one Actor.');
+        this.fixedActor = options.context.actor;
+        this.actors = [this.fixedActor];
+        if (options.context.conditionId) this.conditionId = options.context.conditionId;
+        if (options.context.conditionId) this.paramsJson = JSON.stringify(hudParameterDraft(this.conditionId), null, 2);
+      }
     }
 
     async _prepareContext() {
-      const definitions = Object.values(CONDITION_DEFINITIONS).map((definition) => ({ ...definition, selected: definition.id === this.conditionId }));
+      const definitions = localizedConditionDefinitions(globals).map((definition) => ({ ...definition, selected: definition.id === this.conditionId }));
+      const actors = await Promise.all(this.actors.map(async (actor: any) => ({
+        uuid: actor.uuid,
+        name: actor.name,
+        conditions: this.api.list(actor).map((entry) => ({
+          ...entry,
+          actorUuid: actor.uuid,
+          conditionLabel: localizedConditionDefinitions(globals).find((definition) => definition.id === entry.instance.conditionId)?.label
+            ?? entry.instance.conditionId,
+          img: conditionIconPath(entry.instance.conditionId),
+          canEscapeFrozen: entry.instance.conditionId === 'frozen' && !entry.disabled,
+          instanceJson: JSON.stringify(entry.instance, null, 2),
+          paramsJson: JSON.stringify(entry.instance.params, null, 2),
+        })),
+      })));
       return {
         definitions,
         conditionId: this.conditionId,
         paramsJson: this.paramsJson,
         sourceName: this.sourceName,
         origin: this.origin,
-        actors: this.actors.map((actor: any) => ({
-          uuid: actor.uuid,
-          name: actor.name,
-          conditions: this.api.list(actor).map((entry) => ({
-            ...entry,
-            actorUuid: actor.uuid,
-            canEscapeFrozen: entry.instance.conditionId === 'frozen' && !entry.disabled,
-            instanceJson: JSON.stringify(entry.instance, null, 2),
-            paramsJson: JSON.stringify(entry.instance.params, null, 2),
-          })),
-        })),
+        actors,
+        injury: await prepareInjuryContext(globals, this.actors),
         buttons: [{ type: 'submit', icon: 'fa-solid fa-flask', label: 'FVTTCONDITIONS.Manager.Apply' }],
       };
     }
 
     static async refresh(this: any) {
-      this.actors = captureTargets(globals);
+      this.actors = this.fixedActor ? [this.fixedActor] : captureTargets(globals);
       this.editing = null;
       await this.render({ force: true });
     }
@@ -116,6 +157,24 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
       catch (error) { notify(globals, error); }
     }
 
+    static async increaseInjury(this: any, _event: unknown, target: any) {
+      await changeInjury(this, target, 1, globals);
+    }
+
+    static async decreaseInjury(this: any, _event: unknown, target: any) {
+      await changeInjury(this, target, -1, globals);
+    }
+
+    static async openInjuryWizard(this: any, _event: unknown, target: any) {
+      const actor = this.actors.find((candidate: any) => candidate.uuid === target.dataset.actorUuid);
+      const injuryApi = readInjuryApi(globals);
+      if (!actor || typeof injuryApi?.openResurrectionWizard !== 'function') return;
+      try {
+        await injuryApi.openResurrectionWizard(actor);
+        await this.render({ force: true });
+      } catch (error) { notify(globals, error); }
+    }
+
     static async onSubmit(this: any, _event: unknown, _form: unknown, formData: any) {
       try {
         const data = formData?.object ?? formData;
@@ -140,9 +199,116 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
   };
 }
 
-export async function openConditionManager(api: CustomConditionsApi, globals: any = globalThis): Promise<unknown> {
+/** A HUD shortcut never supplies a required parameter on the GM's behalf. */
+function hudParameterDraft(conditionId: ConditionId): ConditionParams {
+  const params: ConditionParams = {};
+  for (const parameter of CONDITION_DEFINITIONS[conditionId].parameters) {
+    if (parameter.required && parameter.default === undefined) params[parameter.id] = '';
+    else if (parameter.default !== undefined) params[parameter.id] = parameter.default;
+  }
+  return params;
+}
+
+export function readInjuryApi(globals: any = globalThis): InjuryApi | undefined {
+  const module = globals.game?.modules?.get?.(INJURY_MODULE_ID);
+  const injuryApi = module?.active === true ? module.api : undefined;
+  if (!injuryApi || typeof injuryApi !== 'object') return undefined;
+  if (typeof injuryApi.getState !== 'function'
+    || typeof injuryApi.setInjury !== 'function'
+    || typeof injuryApi.openResurrectionWizard !== 'function') return undefined;
+  return injuryApi as InjuryApi;
+}
+
+export async function prepareInjuryContext(globals: any, actors: any[]): Promise<any> {
+  const api = readInjuryApi(globals);
+  if (!api) return { enabled: false, actors: [] };
+  const presentation = injuryPresentation(globals, api);
+  const entries = await Promise.all(actors.map(async (actor: any) => {
+    const stacks = readInjuryStacks(await api.getState?.(actor), actor);
+    return {
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      stacks,
+      maxStacks: MAX_INJURY_STACKS,
+      canIncrease: stacks < MAX_INJURY_STACKS,
+      canDecrease: stacks > 0,
+      img: presentation.img,
+      description: formatInjuryDescription(globals, presentation.description, stacks),
+    };
+  }));
+  return {
+    enabled: true,
+    ...presentation,
+    actors: entries,
+  };
+}
+
+async function changeInjury(application: any, target: any, delta: number, globals: any): Promise<void> {
+  const actor = application.actors.find((candidate: any) => candidate.uuid === target?.dataset?.actorUuid);
+  if (!actor) return;
+  const actorKey = String(actor.uuid ?? actor.id ?? '');
+  if (!actorKey) return;
+  const previous = injuryChangeQueues.get(actorKey) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(async () => {
+    const injuryApi = readInjuryApi(globals);
+    if (typeof injuryApi?.getState !== 'function' || typeof injuryApi.setInjury !== 'function') return;
+    const stacks = readInjuryStacks(await injuryApi.getState(actor), actor);
+    const next = Math.max(0, Math.min(MAX_INJURY_STACKS, stacks + delta));
+    if (next !== stacks) await injuryApi.setInjury(actor, next, 'custom-conditions-manager');
+    await application.render({ force: true });
+  });
+  const tail = run.then(() => undefined, () => undefined);
+  injuryChangeQueues.set(actorKey, tail);
+  void tail.finally(() => {
+    if (injuryChangeQueues.get(actorKey) === tail) injuryChangeQueues.delete(actorKey);
+  });
+  try {
+    await run;
+  } catch (error) { notify(globals, error); }
+}
+
+function injuryPresentation(globals: any, api: InjuryApi): InjuryPresentation {
+  let provided: InjuryPresentation | undefined;
+  try { provided = typeof api.statusPresentation === 'function' ? api.statusPresentation() : undefined; }
+  catch { provided = undefined; }
+  if (provided && typeof provided === 'object' && provided.name && provided.description && provided.img) {
+    return {
+      id: String(provided.id ?? 'fvtt-injury'),
+      name: String(provided.name),
+      description: String(provided.description),
+      img: String(provided.img),
+    };
+  }
+  return {
+    id: 'fvtt-injury',
+    name: localize(globals, 'IFS.Status.Injury', 'Injury'),
+    description: localize(globals, 'IFS.Status.InjuryLevel', 'Injury {stacks}/{max}'),
+    img: 'modules/fvtt-injury-fading-spirits/icons/injury.svg',
+  };
+}
+
+function formatInjuryDescription(globals: any, description: string, stacks: number): string {
+  const format = globals?.game?.i18n?.format;
+  if (typeof format === 'function' && description.includes('{stacks}')) {
+    try { return format.call(globals.game.i18n, 'IFS.Status.InjuryLevel', { stacks, max: MAX_INJURY_STACKS }); }
+    catch { /* fall through to local placeholder replacement */ }
+  }
+  return description.replaceAll('{stacks}', String(stacks)).replaceAll('{max}', String(MAX_INJURY_STACKS));
+}
+
+function readInjuryStacks(state: any, actor: any): number {
+  const raw = state?.injury?.stacks ?? state?.stacks ?? actor?.flags?.[INJURY_MODULE_ID]?.injury?.stacks ?? 0;
+  const value = Number(raw);
+  return Number.isInteger(value) ? Math.max(0, Math.min(MAX_INJURY_STACKS, value)) : 0;
+}
+
+export async function openConditionManager(
+  api: CustomConditionsApi,
+  globals: any = globalThis,
+  context?: ConditionManagerOpenContext,
+): Promise<unknown> {
   const Application = createConditionManagerApplicationClass(api, globals);
-  return new Application({ api }).render({ force: true });
+  return new Application({ api, context }).render({ force: true });
 }
 
 export function captureTargets(globals: any): any[] {

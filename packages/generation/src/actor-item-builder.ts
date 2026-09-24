@@ -2,6 +2,7 @@ import type { ActionData, StructuredActionData } from '@fvtt-json-generator/mode
 import { ActivityGenerator } from './activity';
 import { extractExplicitlyInflictedStatuses, statusIconPath } from './actor-effects';
 import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
+import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { createStableDocumentId } from './stableId';
 import { deriveExplicitSaveOutcome } from './save-outcome';
@@ -288,7 +289,10 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
       : undefined;
     const inferredStatuses = [...new Set(status
       ? [status]
-      : extractExplicitlyInflictedStatuses(embedded.describe ?? ''))];
+      : extractExplicitlyInflictedStatuses(embedded.describe ?? ''))]
+      .map((inferredStatus) => isGeneratedConditionId(inferredStatus)
+        ? projectedConditionStatusId(inferredStatus)
+        : inferredStatus);
     let effect = inferredStatuses.length === 1
       ? inferredByStatus.get(inferredStatuses[0]!)
       : undefined;
@@ -342,7 +346,9 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         tint: '#ffffff',
         transfer: false,
         img: status ? statusIconPath(status) : 'icons/svg/aura.svg',
-        statuses: status ? [status] : [],
+        statuses: status
+          ? [isGeneratedConditionId(status) ? projectedConditionStatusId(status) : status]
+          : [],
         flags: {
           fvttJsonGenerator: {
             sourceDerivedEmbeddedEffect: true,

@@ -7,7 +7,7 @@ import {
   extractDamagePartsFromText,
 } from './actor-text';
 import { createStableDocumentId } from './stableId';
-import { buildConditionFlag, createConditionInstance, getConditionDefinition, type ConditionId, type ConditionParams } from '@fvtt-json-generator/contracts/conditions';
+import { buildConditionFlag, createConditionInstance, getConditionDefinition, projectedConditionStatusId, type ConditionId, type ConditionParams } from '@fvtt-json-generator/contracts/conditions';
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { extractBurningSpec } from './burning';
 
@@ -342,7 +342,7 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
         ...(isGeneratedConditionId(info.en) ? { showIcon: 2 } : {}),
         transfer: false,
         img: statusIconPath(info.en),
-        statuses: [info.en],
+        statuses: [isGeneratedConditionId(info.en) ? projectedConditionStatusId(info.en) : info.en],
         flags
       });
     }
@@ -492,7 +492,7 @@ export function generateEnhancedConditionEffects(
       ...(entry.en === 'bleeding' && bleedingSpec ? { showIcon: 2 } : {}),
       transfer: false,
       img: statusIconPath(entry.en),
-      statuses: [entry.en],
+      statuses: [isGeneratedConditionId(entry.en) ? projectedConditionStatusId(entry.en) : entry.en],
       flags: {
         ...(entry.en === 'bleeding' && bleedingSpec
           ? buildBleedingFlag(bleedingSpec)

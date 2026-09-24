@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PlainTextActorWorkflow } from '../../src/core/workflow/plainTextActor';
+import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 
 setDefaultTimeout(30000);
 
@@ -93,10 +94,10 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
 
     expect((activities[0]?.effects ?? [])).toHaveLength(0);
     expect((venomousBite.effects ?? []).flatMap((effect) => effect.statuses ?? []).sort()).toEqual([
-      'bleeding',
+      projectedConditionStatusId('bleeding'),
       'poisoned',
     ]);
-    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('bleeding'));
+    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes(projectedConditionStatusId('bleeding')));
     const poisonedEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('poisoned'));
     expect(bleedingEffect?.img).toBe('icons/svg/blood.svg');
     expect(poisonedEffect?.img).toBe('systems/dnd5e/icons/svg/statuses/poisoned.svg');
@@ -207,10 +208,10 @@ describe('Scuttling Serpentmaw acceptance gate', () => {
     expect(activities[1]?.effects ?? []).toHaveLength(1);
     expect(activities[2]?.effects ?? []).toHaveLength(1);
     expect(activities[3]?.effects ?? []).toHaveLength(0);
-    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes('bleeding'));
+    const bleedingEffect = (venomousBite.effects ?? []).find((effect) => effect.statuses?.includes(projectedConditionStatusId('bleeding')));
     expect(bleedingEffect?.flags?.['midi-qol.OverTime']).toBeUndefined();
     expect((venomousBite.effects ?? []).flatMap((effect) => effect.statuses ?? []).sort()).toEqual([
-      'bleeding',
+      projectedConditionStatusId('bleeding'),
       'poisoned',
     ]);
   });

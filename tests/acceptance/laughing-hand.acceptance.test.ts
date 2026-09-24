@@ -132,7 +132,7 @@ describe('Laughing Hand Obsidian acceptance gate', () => {
     const mouthsInWounds = findItem(actor, 'Mouths in Wounds');
     const horrifyingLaughter = findItem(actor, 'Horrifying Laughter');
     const horrifyingDazed = (horrifyingLaughter.effects ?? []).find((effect: any) =>
-      (effect.statuses ?? []).includes('dazed'),
+      (effect.statuses ?? []).includes('fvtt-custom-conditions.dazed'),
     );
     expect(horrifyingDazed?.img).toBe('icons/svg/daze.svg');
 
@@ -149,10 +149,10 @@ describe('Laughing Hand Obsidian acceptance gate', () => {
     expect(activities(mouthsInWounds).filter((activity: any) => activity.type === 'damage')).toHaveLength(0);
     expect(activities(mouthsInWounds).filter((activity: any) => activity.type === 'save')).toHaveLength(0);
     expect((mouthsInWounds.effects ?? []).flatMap((effect: any) => effect.statuses ?? []).sort()).toEqual([
-      'dazed',
       'frightened',
+      'fvtt-custom-conditions.dazed',
     ]);
-    const mouthsDazed = (mouthsInWounds.effects ?? []).find((effect: any) => (effect.statuses ?? []).includes('dazed'));
+    const mouthsDazed = (mouthsInWounds.effects ?? []).find((effect: any) => (effect.statuses ?? []).includes('fvtt-custom-conditions.dazed'));
     expect(mouthsDazed?.img).toBe('icons/svg/daze.svg');
 
     const summonShadowHounds = findItem(actor, 'Summon Shadow Hounds');

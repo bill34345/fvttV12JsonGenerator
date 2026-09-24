@@ -8,6 +8,20 @@
 
 GM 可以通过模块设置菜单或 Token 控制栏打开管理器。选中或标记 Token 后，在面板中选择状态并填写 JSON 参数即可施加、编辑、停用和解除。日常调整骰式、伤害类型、DC 和结束说明不需要修改代码。
 
+Token Action HUD 中，**全部 19 个自定义状态**使用 `fvtt-custom-conditions.<状态 ID>` 的独立按钮，系统与其他模组的裸 ID 状态保持原状。CoTN 中 dnd5e 原生 `bleeding` 显示「失血」，本模块 `fvtt-custom-conditions.bleeding` 显示「流血」；原生 `burning` 显示「燃烧」，本模块 `fvtt-custom-conditions.burning` 显示「灼烧」。GM 对一个明确 Actor 点击流血、灼烧、冻结、厄运、英勇中的任一项，会打开绑定该 Actor、预选该状态的管理器；点击本身不施加缺参数状态，须按表单填写必填骰式、伤害类型或解除 DC。其他 14 项由本模块 API 施加或启停带本模块 flag 的实例。原生按钮只执行其原有规则；旧版带 `flags.fvtt-custom-conditions.condition` 的自定义实例继续可读，用户自行命名的效果保持原样。旧默认名「燃烧」在自定义实例界面中显示为「灼烧」。
+
+本模块的 19 项不在 Foundry 原生 Token 状态 HUD 中提供普通切换，避免该路径绕过实例参数与规则；Token Action HUD 的自定义项由本模块拦截。若某子状态只由 Frozen 或 Shocked 提供，按钮会显示生效，但点击不会再建立重复的独立子状态；应在管理器中处理实际来源。多实例、目标不明确或非 active GM 时会提示，不回退到系统默认开关。既有 TAH 个人布局按 action ID 存储，新 ID 的隐藏与排序偏好不能保证自动继承旧裸 ID 的设置；不要清空他人的布局来处理单个入口。
+
+## 名称、悬停说明与图标
+
+状态名称和规则说明跟随 Foundry 当前界面语言；`cn` / `zh-CN` 显示中文，`en` 显示英文，其他语言使用英文回退。修改语言后重载世界。自定义状态使用独立的白色 SVG 图标，状态列表提供悬停说明；Token Action HUD 的完整提示采用 dnd5e 规则卡布局，复合状态的主要效果直接写在说明中。自定义 Dazed 的 HUD 标题为「恍惚」，不加「自定义状态」后缀，仍通过独立状态 ID 区分其他模块的同名项。与 dnd5e 原生状态重名的注册项保留原生含义和图标；通过本管理器施加的自定义实例使用本模块图标与参数规则。
+
+状态图标是所列来源 SVG 的原始字节副本。笨拙使用 Skoll 的 Drop Weapon，踉跄使用 Lorc 的 Foot Trip。作者署名、来源链接、许可声明和原文件 SHA-256 值见 [CREDITS.md](CREDITS.md)。
+
+如果同时启用“伤势与消逝的灵魂”，管理器提供伤势层数及仪式入口。伤势仍由该模块的公开 API 处理，原 Actor flags 和复活历史不迁移、不复制。它不会变成第 20 个可任意编辑 JSON 的状态。
+
+默认状态名称随界面语言显示；GM 自行填写的来源名称保持不变。规则参数中的英文 ID 用于稳定存储，不随翻译改名。
+
 流血的基本参数示例：
 
 ```json
@@ -22,7 +36,7 @@ GM 可以通过模块设置菜单或 Token 控制栏打开管理器。选中或�
 }
 ```
 
-流血与燃烧默认在自身回合结束时结算。相同 Actor 上同名状态只采用一个较高值，不因怪物、Item 或来源地址不同而分别扣血。Burning 的不同伤害类型也一起比较，采用胜出者的骰式和伤害类型。比较使用骰式的平均值，平手保留现有效果；不会先掷骰再选，也不会根据目标的抗性改变强度排序。已存在的旧多实例数据在结算前也需选出唯一有效值。
+流血与灼烧默认在自身回合结束时结算。相同 Actor 上同名状态只采用一个较高值，不因怪物、Item 或来源地址不同而分别扣血。灼烧（内部 ID `burning`）的不同伤害类型也一起比较，采用胜出者的骰式和伤害类型。比较使用骰式的平均值，平手保留现有效果；不会先掷骰再选，也不会根据目标的抗性改变强度排序。已存在的旧多实例数据在结算前也需选出唯一有效值。
 
 怪物特性中的数值是参数来源，例如 `Bleeding 4d4` 或 `Burning 2d6 Fire`。Generator 将其写入攻击 Item 的模板，施加时复制到目标，不能从 CR 或普通命中伤害猜出状态数值。来源没有写明的参数应由 GM 补齐。
 
@@ -32,10 +46,12 @@ GM 可以通过模块设置菜单或 Token 控制栏打开管理器。选中或�
 
 Frozen 的已启用实例提供“破冰（动作）”按钮，按实例 `escapeDC` 进行力量（运动）检定。默认由被冻结的目标检定；标记目标后另选中一名生物，可让该生物协助。GM 先确认协助者能够接触目标。取消检定不算尝试，完成检定后无论成败都花费动作，成功才解除 Frozen。
 
-Bewildered 只限制施法，不禁止普通攻击和其他非施法动作。Staggered 按实际完成的武器攻击计数，武器上的辅助 Activity 不算攻击。Shocked 不额外禁止 Reaction；禁止 Reaction 的状态是 Distracted。
+Bewildered 只限制施法，不禁止普通攻击和其他非施法动作。Staggered 在自己的回合最多完成一次武器或徒手攻击，武器上的辅助 Activity 不算攻击；纳入徒手攻击是本项目对可公开核对的 Drakkenheim Beta 文本的扩展，正式版 Appendix C 尚未逐条核对。本模块自定义 Dazed「恍惚」让目标在自己的回合从自主移动、动作、附赠动作中选择一种；选择后不能再执行另外两种。Shocked「震愕」继承这条规则，所以不会固定禁止附赠动作；但拿取、拔出或收起物品仍需动作。三选一是用户决定的本项目规则调整，不宣称为 Drakkenheim 正式文本。两种状态不额外禁止 Reaction，禁止 Reaction 的状态是 Distracted；震愕也并非只指闪电伤害。攻击掷骰进入求值后，会在本客户端临时锁住选定类别；异常或后续 Hook 否决而未完成时，冲突行为保守地限制至本回合结束。跨客户端同时操作同一 Actor 和两个非攻击活动弹窗交错完成尚未保证严格互斥。
+
+Frozen 的说明展开定身与无防备的效果；只有使用造成钝击伤害的**武器**命中被冻结目标，才满足特殊重击条件。单凭钝击伤害类型不能把法术或普通徒手打击算进去。Shocked 的说明展开恍惚与无防备，并列出掉落手持物品及拿取、拔出、收起物品各需动作。Valor 的骰值加到攻击检定或豁免检定，Jinxed 的骰值从结果中扣除；Weakened 的武器攻击或法术伤害总值减半并向下取整。来源与规则边界见 [Drakkenheim 状态文案核对](../../docs/reviews/2026-09-23-drakkenheim-condition-wording.md)和[本项目三选一变更](../../docs/reviews/2026-09-24-dazed-three-choice-rule.md)。
 
 Immobilized 与 Frozen 会拦截拖拽、方向键等自主移动，也会拦截非 GM 通过 Token HUD 或配置进行的位置变更。GM 的坐标编辑及 API 强制位移保留用于推拉、传送和坠落裁定；这些重定位不消耗 Dazed 的自主移动选择。停用或解除状态后恢复自主移动。
 
-E2E 默认使用 `F:\FoundryLab\foundry-v14\data\server-mirror` 中的 `fvtt-v14-module-matrix` 世界，地址 `127.0.0.1:30001`。状态核心规则、来源生成模板、真实结算与解除、页面重载后不重复扣血、Sickened/取消攻击/自主移动修复均已有对应路径的实测证据。键盘长按受当前浏览器工具能力限制，未完成该输入路径验收；鼠标拖拽与玩家 HUD 高度编辑有独立证据。当前结论见仓库 `docs/reviews/2026-09-21-custom-conditions-release-readiness.md`，日常操作见 `docs/runbooks/custom-conditions-and-trigger-engine-usage.md`。
+本地 E2E 使用 `F:\FoundryLab\foundry-v14\data\server-mirror`，地址 `127.0.0.1:30001`（外部 Chrome 用 `localhost:30001` 访问同一实例）。真实组合验收进入 `cor-cotn` 并保留原模组组合；历史隔离 E2E 使用 `fvtt-v14-module-matrix`。状态核心规则、来源生成模板、真实结算与解除、页面重载后不重复扣血、Sickened/取消攻击/自主移动修复均已有对应路径的实测证据。键盘长按受当前浏览器工具能力限制，未完成该输入路径验收；鼠标拖拽与玩家 HUD 高度编辑有独立证据。先前 HUD 和伤势联动验收记录于 `docs/reviews/2026-09-22-condition-hud-localization.md`。此后全 19 项在 CoTN 的 HUD 入口可见性已复验通过，自定义「流血」点击后只打开绑定 Actor 的空参数管理器；本轮其余按钮未逐项点击或结算。本轮 ID、点击路径审计及页面证据见 [全 19 项记录](../../docs/reviews/2026-09-24-all-custom-condition-hud-audit.md)，日常操作见 `docs/runbooks/custom-conditions-and-trigger-engine-usage.md`。
 
 构建、测试和类型检查使用仓库根目录的 `bun run build:custom-conditions`、`bun run test:custom-conditions` 与 `bun run typecheck:foundry-modules`。

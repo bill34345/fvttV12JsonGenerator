@@ -5,6 +5,7 @@ import {
   createConditionInstance,
   getConditionDefinition,
   parseConditionInstance,
+  projectedConditionStatusId,
   readConditionInstance,
   type ConditionId,
   type ConditionInstance,
@@ -12,10 +13,20 @@ import {
   type ConditionStacking,
 } from '@fvtt-json-generator/contracts/conditions';
 import { conditionFlagPath, MODULE_ID, TRIGGER_ENGINE_MODULE_ID } from './constants.ts';
+import { markConditionStatusOwned, registerConditionActionInterceptor, registerConditionHudHook } from './hud.ts';
+import {
+  conditionIconPath,
+  conditionNameOverride,
+  displayConditionDescription,
+  displayConditionName,
+  localizedConditionDefinition,
+  localizedConditionStatusLabel,
+} from './localization.ts';
 
 export interface ConditionEntry {
   id: string;
   name: string;
+  description: string;
   origin: string;
   disabled: boolean;
   instance: ConditionInstance;
@@ -24,9 +35,16 @@ export interface ConditionEntry {
 
 interface TurnState {
   combatKey: string;
+  // Persisted field name retained for existing turns; counts weapon and unarmed attacks.
   weaponAttacks: number;
   actionUsed: boolean;
+  bonusActionUsed: boolean;
   movementUsed: boolean;
+}
+
+interface PendingAttackChoice {
+  combatKey: string;
+  category: 'action' | 'bonus';
 }
 
 export interface ConditionApplyOptions {
@@ -62,6 +80,7 @@ export class ConditionRuntime {
   #triggerReadyHook: unknown;
   #rollHooks: Array<[string, unknown]> = [];
   #turnStates = new Map<string, TurnState>();
+  #pendingAttackChoices = new Map<string, PendingAttackChoice>();
   #pendingAttackTurnKeys = new WeakMap<object, string | undefined>();
   #configuredAttackTurnKeys = new WeakMap<object, string | undefined>();
   #pendingEscapeActors = new Set<string>();
@@ -79,10 +98,11 @@ export class ConditionRuntime {
   start(): void {
     if (this.#started) return;
     this.#started = true;
-    registerStatusEffects(this.globals);
+    registerConditionMappings(this.globals);
     const hooks = this.globals.Hooks;
     if (typeof hooks?.on === 'function') {
       this.#triggerReadyHook = hooks.on('fvtt-trigger-engine.ready', () => this.connectTriggerEngine());
+      this.#rollHooks.push(['tokenActionHudCorePreRender', registerConditionHudHook(this.globals)]);
       this.#rollHooks.push(['dnd5e.preRollAttack', hooks.on('dnd5e.preRollAttack', (config: any) => this.applyRollModifiers(config, 'attack'))]);
       this.#rollHooks.push(['dnd5e.preRollSavingThrow', hooks.on('dnd5e.preRollSavingThrow', (config: any) => this.applyRollModifiers(config, 'save'))]);
       this.#rollHooks.push(['dnd5e.preRollAbilityCheck', hooks.on('dnd5e.preRollAbilityCheck', (config: any) => this.applyRollModifiers(config, 'check'))]);
@@ -121,6 +141,7 @@ export class ConditionRuntime {
     this.#queues.clear();
     this.#processed.clear();
     this.#turnStates.clear();
+    this.#pendingAttackChoices.clear();
     this.#pendingAttackTurnKeys = new WeakMap<object, string | undefined>();
     this.#configuredAttackTurnKeys = new WeakMap<object, string | undefined>();
     this.#pendingEscapeActors.clear();
@@ -128,7 +149,7 @@ export class ConditionRuntime {
     this.#started = false;
   }
 
-  definitions() { return Object.values(CONDITION_DEFINITIONS); }
+  definitions() { return Object.values(CONDITION_DEFINITIONS).map((definition) => localizedConditionDefinition(definition, this.globals)); }
 
   list(actor: any): ConditionEntry[] {
     return collection(actor?.effects).flatMap((effect) => {
@@ -136,7 +157,8 @@ export class ConditionRuntime {
       if (!instance || instance.template === true) return [];
       return [{
         id: effectId(effect),
-        name: String(effect.name ?? getConditionDefinition(instance.conditionId)?.label ?? instance.conditionId),
+        name: displayConditionName(effect, instance, this.globals),
+        description: displayConditionDescription(effect, instance, this.globals),
         origin: String(effect.origin ?? instance.origin ?? ''),
         disabled: inactive(effect) || instance.enabled === false,
         instance,
@@ -223,7 +245,11 @@ export class ConditionRuntime {
     }
 
     if (shouldUpdate) {
-      const replacement = this.effectData(incoming, name);
+      const target = all.find((entry) => entry.id === targetId);
+      const replacement = this.effectData(
+        incoming,
+        name ?? conditionNameOverride(target?.effect ?? winner?.effect, incoming.conditionId, this.globals),
+      );
       replacement.disabled = incoming.enabled === false;
       await actor.updateEmbeddedDocuments?.('ActiveEffect', [{ _id: targetId, ...replacement }]);
     }
@@ -249,28 +275,23 @@ export class ConditionRuntime {
       this.requireGM(actor);
       if ((conditionId === 'bleeding' || conditionId === 'burning') && current.instance.conditionId === conditionId) {
         if (current.disabled) {
+          const replacement = this.effectData(next, conditionNameOverride(current.effect, conditionId, this.globals));
+          replacement.disabled = true;
           await actor.updateEmbeddedDocuments?.('ActiveEffect', [{
             _id: id,
-            name: getConditionDefinition(conditionId)?.label ?? conditionId,
-            statuses: [conditionId, ...(getConditionDefinition(conditionId)?.composite ?? [])],
-            changes: changesFor(next),
-            disabled: true,
-            [`flags.${MODULE_ID}.condition`]: next,
+            ...replacement,
           }]);
-        } else await this.applyHighestCondition(actor, next, current.name, id);
+        } else await this.applyHighestCondition(actor, next, conditionNameOverride(current.effect, conditionId, this.globals), id);
         return;
       }
       if ((conditionId === 'bleeding' || conditionId === 'burning') && !current.disabled) {
-        await this.applyHighestCondition(actor, next, current.name);
+        await this.applyHighestCondition(actor, next, conditionNameOverride(current.effect, conditionId, this.globals));
         await actor.deleteEmbeddedDocuments?.('ActiveEffect', [id]);
         return;
       }
       await actor.updateEmbeddedDocuments?.('ActiveEffect', [{
         _id: id,
-        name: getConditionDefinition(conditionId)?.label ?? conditionId,
-        statuses: [conditionId, ...(getConditionDefinition(conditionId)?.composite ?? [])],
-        changes: changesFor(next),
-        [`flags.${MODULE_ID}.condition`]: next,
+        ...this.effectData(next, conditionNameOverride(current.effect, current.instance.conditionId, this.globals)),
       }]);
     });
   }
@@ -297,7 +318,7 @@ export class ConditionRuntime {
           source: entry.instance.source,
           createdAt: entry.instance.createdAt,
         });
-        await this.applyHighestCondition(actor, instance, entry.name, entry.id);
+        await this.applyHighestCondition(actor, instance, conditionNameOverride(entry.effect, entry.instance.conditionId, this.globals), entry.id);
         return;
       }
       await actor.updateEmbeddedDocuments?.('ActiveEffect', [{
@@ -339,9 +360,13 @@ export class ConditionRuntime {
     const dc = Number(entry.instance.params.escapeDC);
     if (!Number.isFinite(dc)) throw new Error('Frozen 状态缺少有效的逃脱 DC。');
     const state = this.currentTurnState(rollerActor);
+    const pendingChoice = this.currentPendingAttackChoice(rollerActor);
     const rollerEntries = this.list(rollerActor).filter((candidate) => !candidate.disabled);
-    if (state?.actionUsed || (state?.movementUsed && hasCondition(rollerEntries, 'dazed'))) {
-      throw new Error('该 Actor 本回合已无法执行 Action。');
+    if (state?.actionUsed || ((state?.movementUsed || state?.bonusActionUsed || pendingChoice)
+      && hasCondition(rollerEntries, 'dazed'))) {
+      throw new Error(pendingChoice
+        ? '该 Actor 本回合已无法执行 Action：攻击仍在结算；若掷骰异常失败，下回合自动重置。'
+        : '该 Actor 本回合已无法执行 Action。');
     }
     const currentCombat = activeCombat(this.globals);
     if (combatHasActiveTurn(currentCombat) && !state) throw new Error('战斗中只能由当前回合的 Actor 尝试逃脱。');
@@ -354,10 +379,11 @@ export class ConditionRuntime {
       const roll = collection(rolls)[0];
       if (!roll) return { attempted: false, success: false, dc, conditionRemoved: false };
       const afterRollState = this.currentTurnState(rollerActor);
+      const afterPendingChoice = this.currentPendingAttackChoice(rollerActor);
       const afterCombat = activeCombat(this.globals);
       const nowDazed = hasCondition(this.list(rollerActor).filter((candidate) => !candidate.disabled), 'dazed');
       if ((state && (afterRollState?.combatKey !== state.combatKey || afterRollState.actionUsed
-        || (afterRollState.movementUsed && nowDazed)))
+        || ((afterRollState.movementUsed || afterRollState.bonusActionUsed || afterPendingChoice) && nowDazed)))
         || (!state && combatHasActiveTurn(afterCombat))) {
         throw new Error('检定完成时回合状态已变化，Frozen 未解除；请 GM 核对检定结果。');
       }
@@ -384,9 +410,10 @@ export class ConditionRuntime {
     }
     if (context.event.type !== 'combatTurnStart' && context.event.type !== 'combatTurnEnd') return;
     const turnStateKey = actorKey(actor);
+    this.#pendingAttackChoices.delete(turnStateKey);
     const combatKey = `${context.combatUuid ?? context.combat?.uuid ?? 'combat'}:${context.round ?? 0}:${context.turn ?? 0}`;
     if (context.event.type === 'combatTurnStart') {
-      await this.persistTurnState(actor, { combatKey, weaponAttacks: 0, actionUsed: false, movementUsed: false }, combatKey);
+      await this.persistTurnState(actor, { combatKey, weaponAttacks: 0, actionUsed: false, bonusActionUsed: false, movementUsed: false }, combatKey);
     } else {
       await this.clearTurnState(actor, combatKey);
     }
@@ -452,19 +479,23 @@ export class ConditionRuntime {
 
   private effectData(instance: ConditionInstance, name?: string): Record<string, unknown> {
     const definition = getConditionDefinition(instance.conditionId)!;
+    const localized = localizedConditionDefinition(definition, this.globals);
     return {
-      name: name || definition.label,
+      name: name || localized.label,
       type: 'base',
-      img: definition.icon,
-      disabled: false,
+      img: conditionIconPath(instance.conditionId),
+      disabled: instance.enabled === false,
       transfer: false,
       showIcon: 2,
-      statuses: [instance.conditionId, ...(definition.composite ?? [])],
+      statuses: [
+        projectedConditionStatusId(instance.conditionId),
+        ...(definition.composite ?? []).map((conditionId) => projectedConditionStatusId(conditionId)),
+      ],
       changes: changesFor(instance),
       origin: instance.origin || null,
       description: typeof instance.params.endCondition === 'string' && instance.params.endCondition
         ? instance.params.endCondition
-        : definition.description,
+        : localized.description,
       flags: buildConditionFlag(instance),
     };
   }
@@ -499,6 +530,15 @@ export class ConditionRuntime {
     return state;
   }
 
+  private currentPendingAttackChoice(actor: any): PendingAttackChoice | undefined {
+    const key = actorKey(actor);
+    const pending = this.#pendingAttackChoices.get(key);
+    if (!pending) return undefined;
+    if (this.currentTurnState(actor)?.combatKey === pending.combatKey) return pending;
+    this.#pendingAttackChoices.delete(key);
+    return undefined;
+  }
+
   private syncSharedTurnState(actor: any, changed: any): void {
     if (!actor || !turnStateWasUpdated(changed)) return;
     const key = actorKey(actor);
@@ -511,7 +551,7 @@ export class ConditionRuntime {
     const local = this.#turnStates.get(key);
     const state = local?.combatKey === incoming.combatKey ? mergeTurnState(local, incoming) : incoming;
     this.#turnStates.set(key, state);
-    if ((state.actionUsed !== incoming.actionUsed || state.movementUsed !== incoming.movementUsed
+    if ((state.actionUsed !== incoming.actionUsed || state.bonusActionUsed !== incoming.bonusActionUsed || state.movementUsed !== incoming.movementUsed
       || state.weaponAttacks !== incoming.weaponAttacks) && (this.isActiveGM() || actor.isOwner === true)) {
       void this.persistTurnState(actor, state, state.combatKey).catch((error) => this.report(error));
     }
@@ -548,6 +588,14 @@ export class ConditionRuntime {
     const state = this.currentTurnState(actor);
     if (!state || state.actionUsed) return Promise.resolve();
     const next = { ...state, actionUsed: true };
+    this.#turnStates.set(actorKey(actor), next);
+    return this.persistTurnState(actor, next, next.combatKey);
+  }
+
+  private markBonusActionUsed(actor: any): Promise<void> {
+    const state = this.currentTurnState(actor);
+    if (!state || state.bonusActionUsed) return Promise.resolve();
+    const next = { ...state, bonusActionUsed: true };
     this.#turnStates.set(actorKey(actor), next);
     return this.persistTurnState(actor, next, next.combatKey);
   }
@@ -609,12 +657,19 @@ export class ConditionRuntime {
     }
     const activation = String(subject?.activation?.type ?? subject?.system?.activation?.type ?? '');
     const turnState = kind === 'attack' ? this.currentTurnState(actor) : undefined;
-    if (kind === 'attack' && activation === 'action' && hasCondition(entries, 'dazed') && turnState?.movementUsed) {
-      return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已经移动，不能再执行 Action。`);
+    const pendingChoice = kind === 'attack' ? this.currentPendingAttackChoice(actor) : undefined;
+    if (kind === 'attack' && hasCondition(entries, 'dazed') && pendingChoice
+      && activation !== pendingChoice.category && ['action', 'bonus'].includes(activation)) {
+      return this.warnAndBlock(pendingAttackChoiceMessage(entries));
     }
-    if (kind === 'attack' && isWeaponAttackActivity(config?.subject)
+    if (kind === 'attack' && hasCondition(entries, 'dazed') && turnState
+      && ((activation === 'action' && (turnState.movementUsed || turnState.bonusActionUsed))
+        || (activation === 'bonus' && (turnState.movementUsed || turnState.actionUsed)))) {
+      return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已选择移动、Action 或 Bonus Action 中的另一项。`);
+    }
+    if (kind === 'attack' && isWeaponOrUnarmedAttackActivity(config?.subject)
       && hasCondition(entries, 'staggered') && (turnState?.weaponAttacks ?? 0) >= 1) {
-      return this.warnAndBlock('Staggered：本回合最多进行一次 weapon attack。');
+      return this.warnAndBlock('Staggered：本回合最多进行一次武器或徒手攻击。');
     }
     const ability = String(config.ability ?? config.subject?.ability ?? '');
     const jinx = entries.find((entry) => entry.instance.conditionId === 'jinxed');
@@ -698,11 +753,19 @@ export class ConditionRuntime {
       if (!isCantripAction) return this.warnAndBlock('Bewildered：只能施放施法时间为 1 Action 的 cantrip。');
     }
     const state = this.currentTurnState(actor);
-    if (hasCondition(entries, 'dazed') && activation === 'bonus') return this.warnAndBlock(`${dazedRuleLabel(entries)}：不能执行 Bonus Action。`);
-    if (hasCondition(entries, 'dazed') && activation === 'action' && state?.movementUsed) return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已经移动，不能再执行 Action。`);
+    const pendingChoice = this.currentPendingAttackChoice(actor);
+    if (hasCondition(entries, 'dazed') && pendingChoice
+      && activation !== pendingChoice.category && ['action', 'bonus'].includes(activation)) {
+      return this.warnAndBlock(pendingAttackChoiceMessage(entries));
+    }
+    if (hasCondition(entries, 'dazed') && state
+      && ((activation === 'bonus' && (state.movementUsed || state.actionUsed))
+        || (activation === 'action' && (state.movementUsed || state.bonusActionUsed)))) {
+      return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已选择移动、Action 或 Bonus Action 中的另一项。`);
+    }
     if (hasCondition(entries, 'distracted') && activation === 'reaction') return this.warnAndBlock('Distracted：不能执行 Reaction。');
-    if (hasCondition(entries, 'staggered') && isWeaponAttackActivity(activity)
-      && (state?.weaponAttacks ?? 0) >= 1) return this.warnAndBlock('Staggered：本回合最多进行一次 weapon attack。');
+    if (hasCondition(entries, 'staggered') && isWeaponOrUnarmedAttackActivity(activity)
+      && (state?.weaponAttacks ?? 0) >= 1) return this.warnAndBlock('Staggered：本回合最多进行一次武器或徒手攻击。');
   }
 
   private preMoveToken(token: any, movement: any, _options: any): boolean | void {
@@ -717,7 +780,10 @@ export class ConditionRuntime {
     if (!hasCondition(entries, 'dazed')) return;
     const state = this.currentTurnState(actor);
     if (!state) return;
-    if (state.actionUsed) return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已经执行 Action，不能再移动。`);
+    if (this.currentPendingAttackChoice(actor)) return this.warnAndBlock(pendingAttackChoiceMessage(entries));
+    if (state.actionUsed || state.bonusActionUsed) {
+      return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已执行或正在结算 Action 或 Bonus Action，不能再移动。`);
+    }
   }
 
   private postMoveToken(token: any, movement: any, user?: any): void {
@@ -734,18 +800,46 @@ export class ConditionRuntime {
     if (!actor || actor.documentName !== 'Actor') return;
     const activation = String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '');
     // dnd5e 5.3.3 fires postUseActivity before triggering an Attack Activity's
-    // roll dialog. Defer Action use until the non-empty dnd5e.rollAttack hook.
-    if (activation === 'action' && !isAttackActivity(activity)) {
-      void this.markActionUsed(actor).catch((error) => this.report(error));
+    // roll dialog. Defer either activity category until the non-empty rollAttack hook.
+    if (!isAttackActivity(activity)) {
+      if (activation === 'action') void this.markActionUsed(actor).catch((error) => this.report(error));
+      if (activation === 'bonus') void this.markBonusActionUsed(actor).catch((error) => this.report(error));
     }
     void usage;
   }
 
-  private captureAttackTurn(rolls: any[], config: any): void {
+  private captureAttackTurn(rolls: any[], config: any): boolean | void {
     if (!Array.isArray(rolls) || !config || (typeof config !== 'object' && typeof config !== 'function')
       || !this.#pendingAttackTurnKeys.has(config)) return;
     const combatKey = this.#pendingAttackTurnKeys.get(config);
     this.#pendingAttackTurnKeys.delete(config);
+    // dnd5e 5.3.3 calls this cancellable hook after its attack dialog but
+    // before evaluating the roll. Another choice can finish while it is open.
+    const activity = config.subject;
+    const actor = activity?.actor ?? activity?.item?.actor;
+    if (rolls.length && actor?.documentName === 'Actor') {
+      const entries = this.list(actor).filter((entry) => !entry.disabled);
+      if (hasCondition(entries, 'dazed')) {
+        const state = this.currentTurnState(actor);
+        if (combatKey !== state?.combatKey) {
+          return this.warnAndBlock(`${dazedRuleLabel(entries)}：攻击准备期间回合已变化，请重新发起攻击。`);
+        }
+        const activation = String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '');
+        const pendingChoice = this.currentPendingAttackChoice(actor);
+        if (pendingChoice && activation !== pendingChoice.category && ['action', 'bonus'].includes(activation)) {
+          return this.warnAndBlock(pendingAttackChoiceMessage(entries));
+        }
+        if (state && ((activation === 'action' && (state.movementUsed || state.bonusActionUsed))
+          || (activation === 'bonus' && (state.movementUsed || state.actionUsed)))) {
+          return this.warnAndBlock(`${dazedRuleLabel(entries)}：本回合已选择移动、Action 或 Bonus Action 中的另一项。`);
+        }
+        if (state && (activation === 'action' || activation === 'bonus')) {
+          // The roll still awaits evaluation and post-processing. A failed roll
+          // has no reliable cleanup hook, so retain this choice until turn reset.
+          this.#pendingAttackChoices.set(actorKey(actor), { combatKey: state.combatKey, category: activation });
+        }
+      }
+    }
     this.#configuredAttackTurnKeys.set(rolls, combatKey);
   }
 
@@ -764,9 +858,15 @@ export class ConditionRuntime {
       ...state,
       actionUsed: String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '') === 'action'
         || state.actionUsed,
-      weaponAttacks: state.weaponAttacks + (isWeaponAttackActivity(activity) ? 1 : 0),
+      bonusActionUsed: String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '') === 'bonus'
+        || state.bonusActionUsed,
+      weaponAttacks: state.weaponAttacks + (isWeaponOrUnarmedAttackActivity(activity) ? 1 : 0),
     };
     this.replaceLocalTurnState(actor, nextState, true);
+    const pendingChoice = this.currentPendingAttackChoice(actor);
+    if (pendingChoice && pendingChoice.category === String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '')) {
+      this.#pendingAttackChoices.delete(actorKey(actor));
+    }
   }
 
   private preUpdateItem(item: any, changed: any, options: any): boolean | void {
@@ -786,7 +886,11 @@ export class ConditionRuntime {
     if (!actor || !hasCondition(this.list(actor).filter((entry) => !entry.disabled), 'shocked')) return;
     const state = this.currentTurnState(actor);
     if (!state) return;
-    if (state.actionUsed || state.movementUsed && hasCondition(this.list(actor).filter((entry) => !entry.disabled), 'dazed')) {
+    if (this.currentPendingAttackChoice(actor)) {
+      return this.warnAndBlock('Shocked：攻击掷骰仍在结算；若掷骰异常失败，本回合保持限制，下回合自动重置。');
+    }
+    if (state.actionUsed || (state.movementUsed || state.bonusActionUsed)
+      && hasCondition(this.list(actor).filter((entry) => !entry.disabled), 'dazed')) {
       return this.warnAndBlock('Shocked：拿取、拔出或收起物品需要 1 Action，但本回合已无法执行 Action。');
     }
   }
@@ -915,18 +1019,54 @@ function registerStatusEffects(globals: any): void {
   const statuses = globals.CONFIG?.statusEffects;
   if (Array.isArray(statuses)) {
     for (const definition of Object.values(CONDITION_DEFINITIONS)) {
-      if (statuses.some((entry: any) => entry?.id === definition.id)) continue;
-      statuses.push({ id: definition.id, name: definition.label, img: definition.icon });
+      const statusId = projectedConditionStatusId(definition.id);
+      const existing = statuses.find((entry: any) => entry?.id === statusId);
+      if (existing) {
+        // A status with the same ID may belong to dnd5e or another module. Only
+        // refresh entries that this module registered itself.
+        if (existing.flags?.[MODULE_ID]?.owned !== true) continue;
+        const localized = localizedConditionDefinition(definition, globals);
+        const label = localizedConditionStatusLabel(definition.id, globals);
+        Object.assign(existing, {
+          label,
+          name: label,
+          description: localized.description,
+          tooltip: localized.description,
+          img: conditionIconPath(definition.id),
+          // The native toggle cannot create our module flag or collect
+          // parameters; TAH supplies the module-owned action instead.
+          hud: false,
+        });
+        markConditionStatusOwned(definition.id);
+        continue;
+      }
+      const localized = localizedConditionDefinition(definition, globals);
+      const label = localizedConditionStatusLabel(definition.id, globals);
+      statuses.push({
+        id: statusId,
+        label,
+        name: label,
+        description: localized.description,
+        tooltip: localized.description,
+        img: conditionIconPath(definition.id),
+        hud: false,
+        flags: { [MODULE_ID]: { owned: true } },
+      });
+      markConditionStatusOwned(definition.id);
     }
   }
   const effects = globals.CONFIG?.DND5E?.conditionEffects;
   effects?.noMovement?.add?.('immobilized');
   effects?.noMovement?.add?.('frozen');
   effects?.halfMovement?.add?.('slowed');
+  effects?.noMovement?.add?.(projectedConditionStatusId('immobilized'));
+  effects?.noMovement?.add?.(projectedConditionStatusId('frozen'));
+  effects?.halfMovement?.add?.(projectedConditionStatusId('slowed'));
 }
 
 export function registerConditionMappings(globals: any = globalThis): void {
   registerStatusEffects(globals);
+  registerConditionActionInterceptor(globals);
 }
 
 function readStacking(instance: ConditionInstance, fallback: ConditionStacking): ConditionStacking {
@@ -975,15 +1115,35 @@ function targetIsDefenseless(globals: any, config: any): boolean {
     const entries: ConditionEntry[] = actor ? collection(actor.effects).flatMap((effect) => {
       const instance = readConditionInstance(effect);
       if (!instance || instance.template || instance.enabled === false || inactive(effect)) return [];
-      return [{ id: effectId(effect), name: String(effect.name ?? instance.conditionId), origin: String(effect.origin ?? instance.origin ?? ''), disabled: false, instance, effect }];
+      return [{
+        id: effectId(effect),
+        name: displayConditionName(effect, instance, globals),
+        description: displayConditionDescription(effect, instance, globals),
+        origin: String(effect.origin ?? instance.origin ?? ''),
+        disabled: false,
+        instance,
+        effect,
+      }];
     }) : [];
     return actor && (hasCondition(entries, 'defenseless') || hasCondition(entries, 'frozen') || hasCondition(entries, 'shocked'));
   });
 }
 
-function isWeaponAttackActivity(activity: any): boolean {
+function isWeaponOrUnarmedAttackActivity(activity: any): boolean {
+  if (!isAttackActivity(activity)) return false;
+  // dnd5e 5.3.3 represents Unarmed Strike as a weapon Item with an
+  // attack.type.classification of "unarmed". Other items can also carry an
+  // unarmed Attack Activity, so the activity classification takes precedence.
+  const classification = attackClassification(activity);
+  if (classification) return classification === 'weapon' || classification === 'unarmed';
   const item = activity?.item ?? activity;
-  return item?.type === 'weapon' && isAttackActivity(activity);
+  return item?.type === 'weapon';
+}
+
+function attackClassification(activity: any): string {
+  return String(activity?.attack?.type?.classification
+    || activity?.system?.attack?.type?.classification
+    || activity?.item?.system?.attackClassification || '');
 }
 
 function isAttackActivity(activity: any): boolean {
@@ -992,7 +1152,9 @@ function isAttackActivity(activity: any): boolean {
 
 function isBludgeoningWeapon(activity: any): boolean {
   const item = activity?.item ?? activity;
-  if (item?.type !== 'weapon' || String(activity?.type ?? activity?.system?.type ?? '') !== 'attack') return false;
+  if (!isAttackActivity(activity)) return false;
+  const classification = attackClassification(activity);
+  if (classification ? classification !== 'weapon' : item?.type !== 'weapon') return false;
   const preparedParts = activity?.damage?.parts ?? activity?.system?.damage?.parts;
   if (preparedParts !== undefined) return collection(preparedParts).some((part) => {
     const types = part?.types ?? part?.damageTypes ?? [];
@@ -1006,6 +1168,10 @@ function isBludgeoningWeapon(activity: any): boolean {
 
 function dazedRuleLabel(entries: ConditionEntry[]): string {
   return hasCondition(entries, 'shocked') ? 'Shocked' : 'Dazed';
+}
+
+function pendingAttackChoiceMessage(entries: ConditionEntry[]): string {
+  return `${dazedRuleLabel(entries)}：攻击掷骰仍在结算，不能选择其他行动；若掷骰异常失败，本回合保持限制，下回合自动重置。`;
 }
 
 function isVoluntaryMovement(movement: any, user: any): boolean {
@@ -1090,6 +1256,7 @@ function readActorTurnState(actor: any): TurnState | undefined {
     combatKey: value.combatKey,
     weaponAttacks: Math.max(0, Math.floor(Number(value.weaponAttacks))),
     actionUsed: value.actionUsed,
+    bonusActionUsed: value.bonusActionUsed === true,
     movementUsed: value.movementUsed,
   };
 }
@@ -1099,6 +1266,7 @@ function mergeTurnState(left: TurnState, right: TurnState): TurnState {
     combatKey: left.combatKey,
     weaponAttacks: Math.max(left.weaponAttacks, right.weaponAttacks),
     actionUsed: left.actionUsed || right.actionUsed,
+    bonusActionUsed: left.bonusActionUsed || right.bonusActionUsed,
     movementUsed: left.movementUsed || right.movementUsed,
   };
 }

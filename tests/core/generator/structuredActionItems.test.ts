@@ -242,8 +242,13 @@ describe('appendStructuredActionItems', () => {
       const activity = getActivities(item)[0];
 
       expect(item.effects).toHaveLength(2);
-      expect(item.effects.map((effect: any) => effect.statuses[0]).sort()).toEqual(['dazed', 'frightened']);
+      expect(item.effects.map((effect: any) => effect.statuses[0]).sort()).toEqual([
+        'frightened',
+        'fvtt-custom-conditions.dazed',
+      ]);
       expect(item.effects.every((effect: any) => effect.flags?.fvttJsonGenerator?.sourceDerivedEmbeddedEffect)).toBeTrue();
+      const dazed = item.effects.find((effect: any) => effect.statuses[0] === 'fvtt-custom-conditions.dazed');
+      expect(dazed.flags['fvtt-custom-conditions'].condition).toMatchObject({ conditionId: 'dazed', template: true });
       expect(activity.effects).toEqual(item.effects.map((effect: any) => ({ _id: effect._id, onSave: false })));
     });
 

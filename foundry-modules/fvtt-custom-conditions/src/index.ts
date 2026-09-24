@@ -29,7 +29,7 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
   if (typeof hooks?.once !== 'function') return null;
   api = createConditionsApi(
     runtime ?? new ConditionRuntime(globals, () => isActiveGM(globals)),
-    () => api ? openConditionManager(api, globals) : undefined,
+    (context) => api ? openConditionManager(api, globals, context) : undefined,
   );
   hooks.once('init', () => {
     registerConditionMappings(globals);
@@ -52,7 +52,7 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
   hooks.once('ready', () => {
     runtime = new ConditionRuntime(globals, () => isActiveGM(globals));
     runtime.start();
-    api = createConditionsApi(runtime, () => api ? openConditionManager(api, globals) : undefined);
+    api = createConditionsApi(runtime, (context) => api ? openConditionManager(api, globals, context) : undefined);
     attachModuleApi(globals.game, api);
   });
   return { get runtime() { return runtime; }, api };
