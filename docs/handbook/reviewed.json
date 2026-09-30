@@ -55,9 +55,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "e6f2cff4299f974a4d71d71ec12f2094b429c3f67101c065533377b1636e9d2c",
+    "fingerprint": "a73359df88c469a695937e5051265849ded5d5e137b3529e045a2861f2fa6d94",
     "reviewedOn": "2026-09-30",
-    "note": "已对照源码、限定实机闭合原件与本轮命令往返：区分离线 NONE、自动 INCOMPLETE/PENDING 和独立父审；闭合批次不重放。PowerShell 原生2须显式传给外层，不由外层1判业务失败。仅说明修正，界面未变。"
+    "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
   },
   "verification-development": {
     "fingerprint": "8d7ed3691d20b117d50d91e99a2315d3346dbb7e6fa1907212d1418ca1e614b8",

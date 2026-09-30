@@ -99,7 +99,7 @@ capture 自动填写共用 run／dispatch／revision、源批次 ID 和两个合
 
 文件侧合同继续保持运行授权 NONE。用户明确恢复原批次后，可建立单独的运行合同；目前只支持已有 ServerNext 的这两个候选，不提供通用安装器、服务启动器或浏览器调度服务。
 
-先准备运行请求，包含 `offlineContractPath`、`authorityPath`、`executorPermissionsPath`、`serviceReceiptPath` 四个绝对路径。授权记录包含 `scope:"local-next-vm-runtime"`、`explicitUserResume:true`、实际授权引用 `source`、原 `resumeSourceDispatchId`、本轮 `parentThreadId`、原执行聊天 `childThreadId` 及与主控相同的 `model`／`reasoningEffort`。这是授权的记录，不是 JSON 文件自己授予权限。旧暂停合同只读保留，新回调目的地单独绑定。
+先准备运行请求，包含 `offlineContractPath`、`authorityPath`、`executorPermissionsPath`、`serviceReceiptPath` 四个绝对路径。授权记录包含 `scope:"local-next-vm-runtime"`、`explicitUserResume:true`、实际授权引用 `source`、原 `resumeSourceDispatchId`、本轮 `parentThreadId`、原执行聊天 `childThreadId` 及该执行器的期望 `model`／`reasoningEffort`。当前项目普通 Chrome 默认为 `gpt-6.1-sol / medium`，主控配置独立记录；工具核对执行器实际上下文与该授权记录相符，不要求与主控effort相同。这是授权的记录，不是 JSON 文件自己授予权限。旧暂停合同只读保留，新回调目的地单独绑定。
 
 执行聊天的权限收据必须来自自身实际 `turn_context`，包含 `threadId`、`model`、`reasoningEffort`、`sandboxMode`、`approvalPolicy`、`verifiedFromActualHostContext`、`actualContextPath`、`actualTurnId`。工具重新检查该精确聊天最新上下文；主控权限或提示词不能替代。服务收据包含本轮父／子 UUID、PID、完整命令行、OS owner、UTC ISO 格式 `processCreationDate` 与启动前 `mirrorBefore`。派发前再次核对 127.0.0.1:30002、既有 ServerNext 数据路径、Foundry 14.368、实际世界／系统与候选字节。失配不调用消息派发函数。
 

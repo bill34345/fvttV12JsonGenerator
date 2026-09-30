@@ -605,7 +605,7 @@
       },
       {
         "title": "领取明确恢复的实机批次",
-        "text": "仅支持已有 ServerNext 的 Vision5e + Item Macro。用户明确恢复后，按说明保存本轮授权、执行聊天实际上下文和服务收据，使用 prepare-runtime、ready-runtime、claim-runtime。工具检查源批次、实际权限、服务身份和候选字节，领取一次宿主派发；聊天消息仍由获准宿主发送。",
+        "text": "仅支持已有 ServerNext 的 Vision5e + Item Macro。用户明确恢复后，保存本轮授权、执行器实际上下文和服务收据，使用 prepare-runtime、ready-runtime、claim-runtime。普通 Chrome 默认 gpt-6.1-sol / medium，主控配置独立；授权记录中的模型／effort必须匹配执行器实际上下文。工具核对源批次、权限、服务和候选字节，领取一次宿主派发；聊天消息仍由获准宿主发送。",
         "command": "bun run foundry:ops acceptance prepare-runtime --input=\"<运行请求 JSON 的绝对路径>\""
       },
       {
