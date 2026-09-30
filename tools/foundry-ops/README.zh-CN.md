@@ -56,7 +56,7 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 摘要把 `behavior`、`evidence`、`cleanup` 和 `parentReview` 分开。本版不创建 Foundry 对象，因此 cleanup 是 `NOT_REQUIRED`；parentReview 一直是 `PENDING`，自动分类不能代替父审。收集退出码为 PASS=0、FAIL=1、INCOMPLETE／身份拒绝=2。`resume` 的退出码只表示状态读取结果，不是新的语义验收。
 
-所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同；本版尚未实现有据影响分析下的旧证据复用、Foundry 环境探针、模块 adapter、回调送达／去重或对象清理。完整任务合同模板仍用于计划这些后续边界，不能把本版的文件检查 PASS 升级为玩法通过。
+所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同。下述第二消费者已提供离线来源与参考数据 adapter；有据影响分析下的旧证据复用、实时 Foundry 环境探针、回调送达／去重与对象清理仍属后续。完整任务合同模板用于计划这些边界，不能把文件检查 PASS 升级为玩法通过。
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 

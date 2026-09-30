@@ -84,7 +84,7 @@ A 完成是规范进入授权基线并可被下一任务找到；每轮 B／C �
 - A：独立提交 `2bcf169d60e8acfc3d5a304125f7b7b60db06147` 已 fast-forward 合并到 master，未 push。规范、合同模板及其引用的审计依据可由新任务读到；原审计树和各业务树的未提交内容保留。
 - 首批 B／C：完成文件侧 `foundry:ops acceptance prepare|ready|execute|collect|resume`，复用路由、路径保护与子进程入口。自动固定身份，失败不调用派发回调，收据原件与摘要分离，拒绝旧／错收据，已领取操作不重放。40 项聚焦检查通过；不复制 WMP／ServerNext dirty 实现，共用层不判断 Vex 或物品迁移语义。
 - D（首个文件侧消费者）：既有 `runAgentsInstructionsCheck()` 已实际走完 prepare→一次检查→收据→collect／resume，原件为 `ok:true / 32 files`；主控独立读回及核对哈希。没有 Foundry 对象，清理为 NOT_REQUIRED。证据与边界见[第一版验收记录](../reviews/2026-09-30-development-feedback-tool-v1.md)。
-- 后续 D：模块／迁移消费者、Chrome 往返、环境与对象生命周期、跨线程送达／去重仍未执行；第二个不同真实消费者尚未验证共用 API。时间、token、三任务描述性比较和提速效果尚未测量，不以文件侧通过宣称这些完成。
+- 后续 D：第二消费者的离线接入已完成，详见下节；真实模块／迁移操作、Chrome 往返、环境与对象生命周期、跨线程送达／去重仍未执行，共用 API 尚未完成完整实机验证。时间、token、三任务描述性比较和提速效果尚未测量，不以文件侧通过宣称这些完成。
 
 ### 第二消费者的离线准备（2026-09-30）
 
