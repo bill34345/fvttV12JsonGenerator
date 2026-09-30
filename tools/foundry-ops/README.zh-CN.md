@@ -56,7 +56,7 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 摘要把 `behavior`、`evidence`、`cleanup` 和 `parentReview` 分开。本版不创建 Foundry 对象，因此 cleanup 是 `NOT_REQUIRED`；parentReview 一直是 `PENDING`，自动分类不能代替父审。收集退出码为 PASS=0、FAIL=1、INCOMPLETE／身份拒绝=2。`resume` 的退出码只表示状态读取结果，不是新的语义验收。
 
-所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同。下述第二消费者已提供离线来源与参考数据 adapter；有据影响分析下的旧证据复用、实时 Foundry 环境探针、回调送达／去重与对象清理仍属后续。完整任务合同模板用于计划这些边界，不能把文件检查 PASS 升级为玩法通过。
+所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同。下述第二消费者已提供离线来源与参考数据 adapter，以及明确恢复后的专属运行合同／服务核对；旧证据影响分析、通用回调调度和对象清理自动化仍属后续。完整任务合同模板用于计划这些边界，不能把文件检查 PASS 升级为玩法通过。
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
@@ -90,6 +90,30 @@ capture 自动填写共用 run／dispatch／revision、源批次 ID 和两个合
 本版导入一律为 `REFERENCE_ONLY`，成功保存后仍退出 2，整体 behavior／evidence 为 INCOMPLETE、runtime／cleanup 为 NOT_EXECUTED、父审为 PENDING。模块 adapter 可独立核对读回中 60→90→60、命令文本、单次手动／活动记录；忽略原件中的 `pass` 标签，数据判断不代表 UI、客户端加载哈希、角色／重载或完整清理已通过。原生清理读回缺少完整文件夹／Controls 删除证据，不能仅凭 phase=cleaned 接受清理。
 
 消费者聚焦回归：`bun run test:acceptance-next-vm`。真实安装、Chrome、跨线程送达和业务清理在原批次明确恢复后，按其当前授权与现场证据另行执行；工具的离线成功不恢复暂停状态。
+
+### 已明确恢复的 Vision5e + Item Macro 实机批次
+
+文件侧合同继续保持运行授权 NONE。用户明确恢复原批次后，可建立单独的运行合同；目前只支持已有 ServerNext 的这两个候选，不提供通用安装器、服务启动器或浏览器调度服务。
+
+先准备运行请求，包含 `offlineContractPath`、`authorityPath`、`executorPermissionsPath`、`serviceReceiptPath` 四个绝对路径。授权记录包含 `scope:"local-next-vm-runtime"`、`explicitUserResume:true`、实际授权引用 `source`、原 `resumeSourceDispatchId`、本轮 `parentThreadId`、原执行聊天 `childThreadId` 及与主控相同的 `model`／`reasoningEffort`。这是授权的记录，不是 JSON 文件自己授予权限。旧暂停合同只读保留，新回调目的地单独绑定。
+
+执行聊天的权限收据必须来自自身实际 `turn_context`，包含 `threadId`、`model`、`reasoningEffort`、`sandboxMode`、`approvalPolicy`、`verifiedFromActualHostContext`、`actualContextPath`、`actualTurnId`。工具重新检查该精确聊天最新上下文；主控权限或提示词不能替代。服务收据包含本轮父／子 UUID、PID、完整命令行、OS owner、UTC ISO 格式 `processCreationDate` 与启动前 `mirrorBefore`。派发前再次核对 127.0.0.1:30002、既有 ServerNext 数据路径、Foundry 14.368、实际世界／系统与候选字节。失配不调用消息派发函数。
+
+```powershell
+bun run foundry:ops acceptance prepare-runtime --input="<本轮运行请求绝对路径>"
+bun run foundry:ops acceptance ready-runtime --contract="<返回的运行合同>"
+bun run foundry:ops acceptance claim-runtime --contract="<同一运行合同>"
+```
+
+`claim-runtime` 在再次检查后原子领取一次派发；它自身不发送消息，返回 `transport:NOT_SENT`、`runtime:NOT_EXECUTED`。获准的宿主随后用原生聊天工具派发到合同子 UUID，并保存实际运输回执。若消息失败，保留领取状态并检查，不能自动重放；再次领取会被拒绝。执行聊天在第一项 E2E 前仍需核实自己新一轮的实际配置。派发后按 chrome-delegation-dev 等结果回调，不轮询。
+
+运行回执输入包含 `binding:{dispatchId,contractRevision,contractSha256,parentThreadId,childThreadId}`、`nativePath`、独立 `contextPath` 和非空 `evidencePaths`。使用本轮合同自动取得这些字段；原生宏仍使用旧 `sourceDispatchId`，两者分别核对。
+
+```powershell
+bun run foundry:ops acceptance collect-runtime --contract="<本轮运行合同>" --input="<已保存证据清单>"
+```
+
+工具固定原件和证据指纹、按实际数值／记录判断 API 数据观察，并幂等读回同一收据。成功收集仅为 `runtime:OBSERVED`，界面、玩家角色、刷新持久化、错误归因与完整归属清理仍需父任务查看实际证据；总体验收保持 INCOMPLETE／父审 PENDING，退出 2。截图存在、PASS 标签或 `phase:cleaned` 都不会自动变为完整接受。必要步骤完成后，由父任务另行记录语义判定及剩余范围。
 
 ## 本地资产只读盘点
 

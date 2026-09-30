@@ -9,6 +9,7 @@ import { readJson, sha256 } from './files';
 import { executeAcceptance, prepareAcceptance, requireReady } from './workflow';
 import { runAcceptanceCli } from './cli';
 import type { AcceptanceRequest } from './model';
+import { collectRuntimeBatch, dispatchRuntimeBatch, prepareRuntimeBatch, runtimeReadiness } from './runtime';
 
 const test = (name: string, run: () => void | Promise<void>) => bunTest(name, run, 20000);
 let sandbox: string, root: string, owner: string, sourcePath: string, inputPath: string, rawPath: string, contextPath: string;
@@ -204,4 +205,83 @@ test('CLI distinguishes local success from runtime ready and reference import ex
   const captured = captureExternalReceipt(path, rawPath, contextPath);
   expect(await runAcceptanceCli(['import-receipt', `--contract=${path}`, `--input=${captured.envelopePath}`], text => output.push(text))).toBe(2);
   expect(JSON.parse(output.at(-1)!).purpose).toBe('REFERENCE_ONLY');
+});
+
+async function runtimeFixture() {
+  const offline = await prepare();
+  const authorityPath = join(root, 'runtime-authority.json'), permissionPath = join(root, 'executor-permission.json');
+  const contextFile = join(sandbox, `rollout-${source.childThreadId}.jsonl`), servicePath = join(root, 'service.json');
+  const authority = { scope: 'local-next-vm-runtime', source: 'Synthetic user resume, never a live operation', explicitUserResume: true,
+    resumeSourceDispatchId: sourceDispatchId, parentThreadId: '33333333-3333-4333-8333-333333333333', childThreadId: source.childThreadId,
+    model: 'synthetic-model', reasoningEffort: 'max' };
+  const permission = { threadId: authority.childThreadId, model: authority.model, reasoningEffort: authority.reasoningEffort,
+    sandboxMode: 'danger-full-access', approvalPolicy: 'never', verifiedFromActualHostContext: true,
+    actualContextPath: contextFile, actualTurnId: 'synthetic-current-turn' };
+  json(authorityPath, authority); json(permissionPath, permission); json(servicePath, { synthetic: true });
+  writeFileSync(contextFile, `${JSON.stringify({ type: 'turn_context', payload: { turn_id: permission.actualTurnId, model: authority.model,
+    effort: authority.reasoningEffort, approval_policy: 'never', sandbox_policy: { type: 'danger-full-access' } } })}\n`);
+  const runtimeInput = join(root, 'runtime-request.json');
+  json(runtimeInput, { offlineContractPath: offline.contractAbsolutePath, authorityPath, executorPermissionsPath: permissionPath, serviceReceiptPath: servicePath });
+  // No real port, filesystem runtime, or Foundry operation is invoked by these protocol tests.
+  const probe = () => {};
+  return { offline, authorityPath, authority, permissionPath, permission, contextFile, servicePath, runtimeInput, probe };
+}
+
+test('explicit runtime resume preserves old paused source and creates a distinct current callback binding', async () => {
+  const fixture = await runtimeFixture(), before = readFileSync(sourcePath);
+  const contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe);
+  const ready = await runtimeReadiness(contract.contractAbsolutePath, fixture.probe);
+  expect(ready).toMatchObject({ dispatchable: true, parentThreadId: fixture.authority.parentThreadId, sourceDispatchId });
+  expect(ready.dispatchId).not.toBe(sourceDispatchId);
+  expect(externalReadiness(fixture.offline.contractAbsolutePath).dispatchable).toBe(false);
+  expect(readFileSync(sourcePath)).toEqual(before);
+});
+
+test('absent resume, wrong executor and fabricated Full Access are rejected before the service probe', async () => {
+  const fixture = await runtimeFixture(); let probes = 0;
+  const probe = () => { probes++; };
+  json(fixture.authorityPath, { ...fixture.authority, explicitUserResume: false });
+  await expect(prepareRuntimeBatch(fixture.runtimeInput, probe)).rejects.toThrow('Explicit current batch');
+  json(fixture.authorityPath, fixture.authority);
+  json(fixture.permissionPath, { ...fixture.permission, threadId: fixture.authority.parentThreadId });
+  await expect(prepareRuntimeBatch(fixture.runtimeInput, probe)).rejects.toThrow('Matching actual executor');
+  json(fixture.permissionPath, fixture.permission);
+  const event: any = JSON.parse(readFileSync(fixture.contextFile, 'utf8')); event.payload.sandbox_policy.type = 'workspace-write'; writeFileSync(fixture.contextFile, `${JSON.stringify(event)}\n`);
+  await expect(prepareRuntimeBatch(fixture.runtimeInput, probe)).rejects.toThrow('actual configuration changed');
+  expect(probes).toBe(0);
+});
+
+test('service failure, source drift and permission configuration changes cannot reach host dispatch', async () => {
+  const fixture = await runtimeFixture(); const contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe); let calls = 0;
+  const dispatch = async () => { calls++; };
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, dispatch, () => { throw new Error('Synthetic wrong live PID'); })).rejects.toThrow('wrong live PID');
+  expect(existsSync(join(dirname(contract.contractAbsolutePath), 'claim.json'))).toBe(false);
+  const bytes = readFileSync(sourcePath); source.stage = 'drift'; saveSource();
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, dispatch, fixture.probe)).rejects.toThrow('Read-only source changed'); writeFileSync(sourcePath, bytes);
+  const event: any = JSON.parse(readFileSync(fixture.contextFile, 'utf8')); event.payload.effort = 'low'; writeFileSync(fixture.contextFile, `${JSON.stringify(event)}\n`);
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, dispatch, fixture.probe)).rejects.toThrow('actual configuration changed');
+  expect(calls).toBe(0);
+});
+
+test('runtime claim prevents replay after accepted dispatch or transport failure', async () => {
+  const fixture = await runtimeFixture(); const contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe); let calls = 0;
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, async () => { calls++; throw new Error('transport failed'); }, fixture.probe)).rejects.toThrow('transport failed');
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, async () => { calls++; }, fixture.probe)).rejects.toThrow('already claimed');
+  expect(calls).toBe(1);
+});
+
+test('runtime originals collect idempotently but wrong callback/revision and PASS labels never become acceptance', async () => {
+  const fixture = await runtimeFixture(); const contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe);
+  await dispatchRuntimeBatch(contract.contractAbsolutePath, async () => {}, fixture.probe);
+  const input = join(root, 'runtime-evidence.json');
+  const report = { binding: { dispatchId: contract.dispatchId, contractRevision: 1, contractSha256: sha256(readFileSync(contract.contractAbsolutePath)),
+    parentThreadId: contract.parentThreadId, childThreadId: contract.childThreadId }, nativePath: rawPath, contextPath,
+    evidencePaths: [fixture.servicePath], PASS: true };
+  json(input, report); const receipt = collectRuntimeBatch(contract.contractAbsolutePath, input);
+  expect(receipt).toMatchObject({ runtime: 'OBSERVED', behavior: 'INCOMPLETE', cleanup: 'PENDING_PARENT_REVIEW', parentReview: 'PENDING' });
+  expect(collectRuntimeBatch(contract.contractAbsolutePath, input).receiptId).toBe(receipt.receiptId);
+  for (const key of ['parentThreadId', 'dispatchId', 'contractRevision', 'contractSha256']) {
+    json(input, { ...report, binding: { ...report.binding, [key]: 'old' } });
+    expect(() => collectRuntimeBatch(contract.contractAbsolutePath, input)).toThrow('Wrong runtime callback binding');
+  }
 });

@@ -55,9 +55,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "b9d77a66102237c28c0febb37714ecce57e9b05b2ea951fe1eaed1f266c98448",
+    "fingerprint": "c1b7d748c7f163dcbcb1395536430c0ede67310ecb0edcd137924d10dd5dec62",
     "reviewedOn": "2026-09-30",
-    "note": "核对README和计划的当前能力口径：第二消费者已有离线及参考数据adapter，实时环境、实机D、回调和对象生命周期仍未完成，消除旧未实现表述"
+    "note": "已核对独立运行合同、最新执行聊天实际上下文、精确Next服务/安装字节、一次领取及观察收据；宿主发送消息，UI和完整清理保留父审。未声明实机通过。"
   },
   "verification-development": {
     "fingerprint": "81846152592a035de388372e8de7328f63f502c50182eb9a4de87e4ab718ba32",

@@ -13,6 +13,13 @@ describe('Foundry Ops command catalog', () => {
     }
     expect(() => resolveFoundryOpsRoute(['acceptance', 'cleanup'])).toThrow('Unsupported');
   });
+  it('routes the separately authorized runtime boundary with explicit read/write scope', () => {
+    for (const action of ['prepare-runtime', 'ready-runtime', 'claim-runtime', 'collect-runtime']) {
+      const route = resolveFoundryOpsRoute(['acceptance', action, '--contract=I:/fixture/runtime.json']);
+      expect(route.command.effect).toBe(action === 'ready-runtime' ? 'read-only' : 'local-mutation');
+      expect(route.forwardedArgs).toEqual([action, '--contract=I:/fixture/runtime.json']);
+    }
+  });
   it('gives every command an explicit target, effect, owner, and Chinese explanation', () => {
     const commands = listFoundryOpsCommands();
     expect(commands.length).toBeGreaterThanOrEqual(18);

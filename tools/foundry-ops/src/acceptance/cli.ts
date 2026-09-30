@@ -2,15 +2,16 @@ import { AcceptanceError } from './model';
 import { collectAcceptance, executeAcceptance, loadContract, prepareAcceptance, requireReady, resumeAcceptance } from './workflow';
 import { captureExternalReceipt, externalReadiness, importExternalReceipt, prepareExternalBatch } from './external';
 import { inspectNextVmSource } from './adapters/next-vision-macro';
+import { collectRuntimeBatch, dispatchRuntimeBatch, prepareRuntimeBatch, runtimeReadiness } from './runtime';
 
 export async function runAcceptanceCli(args: string[], stdout = console.log): Promise<number> {
   try {
     const [action, ...flags] = args;
     if (!action || action === '--help') {
-      stdout('File-side acceptance: prepare|prepare-batch --input=<absolute-request.json>; ready|ready-batch|execute|resume --contract=<absolute-contract.json>; collect --contract=<...> --receipt=<...>; inspect-batch --source=<source-contract.json>; capture-receipt --contract=<...> --input=<native.json> --context=<observed-context.json>; import-receipt --contract=<...> --input=<envelope.json>. External batches remain offline; no runtime dispatch is provided.');
+      stdout('Acceptance: prepare|prepare-batch|prepare-runtime --input=<absolute-request.json>; ready|ready-batch|ready-runtime|claim-runtime|execute|resume --contract=<absolute-contract.json>; collect --contract=<...> --receipt=<...>; inspect-batch --source=<source-contract.json>; capture-receipt --contract=<...> --input=<native.json> --context=<observed-context.json>; import-receipt|collect-runtime --contract=<...> --input=<saved-evidence.json>. Runtime is a separate explicitly resumed local Next Vision/Macro scope; Chrome messaging remains with the authorized host.');
       return 0;
     }
-    const allowed: Record<string, string[]> = { prepare: ['input'], ready: ['contract'], execute: ['contract'], collect: ['contract', 'receipt'], resume: ['contract'], 'inspect-batch': ['source'], 'prepare-batch': ['input'], 'ready-batch': ['contract'], 'capture-receipt': ['contract', 'input', 'context'], 'import-receipt': ['contract', 'input'] };
+    const allowed: Record<string, string[]> = { prepare: ['input'], ready: ['contract'], execute: ['contract'], collect: ['contract', 'receipt'], resume: ['contract'], 'inspect-batch': ['source'], 'prepare-batch': ['input'], 'ready-batch': ['contract'], 'capture-receipt': ['contract', 'input', 'context'], 'import-receipt': ['contract', 'input'], 'prepare-runtime': ['input'], 'ready-runtime': ['contract'], 'claim-runtime': ['contract'], 'collect-runtime': ['contract', 'input'] };
     if (!allowed[action]) throw new AcceptanceError('precondition', `Unsupported acceptance action: ${action}`);
     const options: Record<string, string> = {};
     for (const flag of flags) {
@@ -22,6 +23,10 @@ export async function runAcceptanceCli(args: string[], stdout = console.log): Pr
     let result: unknown;
     let exitCode = 0;
     switch (action) {
+      case 'prepare-runtime': result = await prepareRuntimeBatch(options.input!); break;
+      case 'ready-runtime': result = await runtimeReadiness(options.contract!); break;
+      case 'claim-runtime': result = await dispatchRuntimeBatch(options.contract!, async ready => ({ ...ready, phase: 'CLAIMED', transport: 'NOT_SENT', runtime: 'NOT_EXECUTED' })); break;
+      case 'collect-runtime': result = collectRuntimeBatch(options.contract!, options.input!); exitCode = 2; break;
       case 'inspect-batch': result = inspectNextVmSource(options.source!); break;
       case 'prepare-batch': {
         const contract = await prepareExternalBatch(options.input!);
