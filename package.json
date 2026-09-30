@@ -63,6 +63,8 @@
     "foundry:ops": "bun run tools/foundry-ops/src/cli.ts",
     "foundry:lab": "bun run tools/foundry-ops/src/cli.ts lab",
     "test:foundry-ops": "bun run src/tools/runHermeticFoundryScript.ts test:foundry-ops:raw",
+    "test:acceptance-tools": "bun run src/tools/runHermeticFoundryScript.ts test:acceptance-tools:raw",
+    "test:acceptance-tools:raw": "bun test tools/foundry-ops/src/acceptance tools/foundry-ops/src/process.test.ts tools/foundry-ops/src/cli.test.ts tools/foundry-ops/src/commandCatalog.test.ts --max-concurrency 1",
     "test:foundry-ops:raw": "bun test tools/foundry-ops/src scripts/foundry-lab/__tests__ --max-concurrency 4",
     "test:foundry-lab": "bun run src/tools/runHermeticFoundryScript.ts test:foundry-lab:raw",
     "test:foundry-lab:raw": "bun test tools/foundry-ops/src/lab/__tests__ scripts/foundry-lab/__tests__",

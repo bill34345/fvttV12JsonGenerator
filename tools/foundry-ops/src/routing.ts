@@ -14,6 +14,9 @@ const LAB_MIGRATION_PLAN_ENTRYPOINT = 'tools/foundry-ops/src/labMigrationPlan.ts
 
 export function resolveFoundryOpsRoute(args: string[]): FoundryOpsRoute {
   const [area, action, ...rest] = args;
+  if (area === 'acceptance' && action && ['prepare', 'ready', 'execute', 'collect', 'resume'].includes(action)) {
+    return route(`acceptance.${action}`, 'tools/foundry-ops/src/acceptance/cli.ts', [action, ...rest]);
+  }
   if (area === 'production' && action === 'inventory') {
     return route('production.inventory', LAB_ENTRYPOINT, ['inventory', ...rest]);
   }

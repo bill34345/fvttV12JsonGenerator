@@ -26,12 +26,39 @@ bun run foundry:ops catalog
 | `src/cli.ts`、`src/routing.ts`、`src/commandCatalog.ts` | 统一命令入口、命令分类和权限检查 |
 | `src/config.ts` | 本地路径、生产连接配置和防止路径逃逸的安全检查 |
 | `src/process.ts` | 启动外部程序，并从命令、输出和错误中隐藏敏感值 |
+| `src/acceptance/` | 文件侧验收合同、预检、一次执行、收据读回和恢复提示；模块玩法由各消费者另行判断 |
 | `src/asset-inventory/`、`src/assetInventory.ts`、`src/localScope.ts` | 只读扫描本地 Foundry 资产，并登记整个 `.local` 顶层的所有权、隐私排除和待判断项 |
 | `src/lab/` | 本地 Foundry 实验环境、模组获取、诊断、补丁、启动和停止工具 |
 | `src/world-audit/`、`src/worldFootprintAudit.ts` | 对停止状态的本地世界建立只读快照并生成隐私安全的审计报告 |
 | `src/production-migration/`、两个 `productionMigration*.ts` | 比较三个本地世界副本并构建离线迁移候选；不会连接或修改生产服务器 |
 
 `spell-resolver` 命令仍经过 Foundry Ops 的统一权限入口，但浏览器源码、构建、本地安装生命周期和测试均由 `foundry-modules/monster-spell-resolver/` 自己维护；Foundry Ops 只负责把命令路由给该模块，不拥有解析器实现。
+
+## 共用验收工具：文件侧第一版
+
+本版用于已审核、已授权的本地文件检查，复用上述命令分类、路径保护和子进程入口。请求中声明 `local-file-checks` 不会授予新权限，也不会把被执行命令变成沙箱；命令不得启动服务、操作浏览器或读写 Foundry 世界。生产连接环境变量不会传给这些检查。
+
+准备一个请求 JSON，字段见 [请求示例](../../docs/templates/development-feedback-request.example.json)。`workspaceRoot` 必须是实际 Git worktree 根，`candidatePaths` 和 `argv[0]` 必须是存在的绝对文件路径；`argv` 是参数数组，不经过 shell 拼接。填写目标、验收含义、case 名称、授权来源、预检和一次正式检查。工具自动生成 run／dispatch／receipt ID，读取分支、HEAD、指令基线提交、适用 AGENTS 和候选／执行程序的 SHA-256。
+
+```powershell
+bun run foundry:ops acceptance prepare --input="I:\实际工作树\.local\request.json"
+bun run foundry:ops acceptance ready --contract="<prepare 返回的 contractAbsolutePath>"
+bun run foundry:ops acceptance execute --contract="<同一合同绝对路径>"
+bun run foundry:ops acceptance collect --contract="<同一合同绝对路径>" --receipt="<合同同目录的 receipt.json>"
+bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
+```
+
+每一步必须检查退出码和 JSON，成功后才继续。`prepare` 保存合同并做文件序列化读回；首个预检失败后停止余下检查并退出 1。`expectJsonOk:true` 的预检还要求一个 `ok:true` JSON。`ready` 再核对实际路径、分支、HEAD、候选、指令与执行程序；失败退出 2，不能派发。主宿主接入时应使用 `dispatchPrepared()`，它把检查和领取放在调用派发回调之前；本版没有自动发送聊天消息的命令。
+
+`execute` 原子领取一次 dispatch，运行合同中的检查并保存原始 stdout／stderr／退出码与 `receipt.json`。退出 0 只说明保存成功；行为结论由 `collect` 给出。超时或调用失败也保存收据；已领取的操作不能直接再执行。`resume` 提示检查现存状态，或读回已有收据，不自动重放、不重建 fixture。单个检查必须显式设置 1–120000 毫秒的超时；当前进程入口管理直接子进程，检查命令不得留下后台子进程或服务。
+
+`collect` 验证同一 worktree／run／dispatch／revision／case、合同指纹及原始文件指纹，拒绝旧收据、错路径和被改写的原件。摘要写入 `summary.<receiptId>.json`，重复收集读回同一结果，不覆盖不同摘要。`json-ok` adapter 只判断合同明确要求的本地 JSON 检查：`ok:true` 且退出 0 为 PASS，`ok:false` 为 FAIL，空输出、只有 PASS 标签或不支持的输出为 INCOMPLETE。`manual` 保留原件并返回 INCOMPLETE，交给独立审查。
+
+摘要把 `behavior`、`evidence`、`cleanup` 和 `parentReview` 分开。本版不创建 Foundry 对象，因此 cleanup 是 `NOT_REQUIRED`；parentReview 一直是 `PENDING`，自动分类不能代替父审。收集退出码为 PASS=0、FAIL=1、INCOMPLETE／身份拒绝=2。`resume` 的退出码只表示状态读取结果，不是新的语义验收。
+
+所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同；本版尚未实现有据影响分析下的旧证据复用、Foundry 环境探针、模块 adapter、回调送达／去重或对象清理。完整任务合同模板仍用于计划这些后续边界，不能把本版的文件检查 PASS 升级为玩法通过。
+
+安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
 ## 本地资产只读盘点
 
@@ -150,4 +177,4 @@ bun run foundry:ops production inventory --apply --allow-production-read
 
 ## 长时间验证边界
 
-代理不得启动、等待、轮询或用短测试拼接任何超过 30 分钟的 Chrome、Foundry、Session Monitor、性能或内存持续监测。四小时真实跑团验收由用户在真实使用时亲自运行；代理只做事前检查和事后证据分析。
+Foundry／Chrome 工作沿用根说明，不设固定总时长上限；单操作保留超时，不能用重复短测代替真实长时验收。四小时或其他长时测试只在用户明确要求相应验收时运行；真实会话仍需真实使用证据。工具回归或文件侧收据不能关闭这些门禁。

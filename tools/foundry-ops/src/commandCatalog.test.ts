@@ -3,6 +3,16 @@ import { listFoundryOpsCommands } from './commandCatalog';
 import { resolveFoundryOpsRoute } from './routing';
 
 describe('Foundry Ops command catalog', () => {
+  it('classifies each file-side acceptance action and forwards absolute paths unchanged', () => {
+    for (const action of ['prepare', 'ready', 'execute', 'collect', 'resume']) {
+      const route = resolveFoundryOpsRoute(['acceptance', action, '--contract=I:/fixture/contract.json']);
+      expect(route.command.target).toBe('local');
+      expect(route.command.effect).toBe(action === 'ready' ? 'read-only' : 'local-mutation');
+      expect(route.forwardedArgs).toEqual([action, '--contract=I:/fixture/contract.json']);
+      expect(route.entrypoint).toBe('tools/foundry-ops/src/acceptance/cli.ts');
+    }
+    expect(() => resolveFoundryOpsRoute(['acceptance', 'cleanup'])).toThrow('Unsupported');
+  });
   it('gives every command an explicit target, effect, owner, and Chinese explanation', () => {
     const commands = listFoundryOpsCommands();
     expect(commands.length).toBeGreaterThanOrEqual(18);

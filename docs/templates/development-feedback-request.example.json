@@ -1,0 +1,13 @@
+{
+  "goal": "检查本地工具返回的 JSON 结果",
+  "acceptance": ["正式检查输出 ok:true 且退出 0", "预检失败不得派发；空或不支持的输出保持 INCOMPLETE"],
+  "caseId": "local-tool-check",
+  "workspaceRoot": "<实际 Git worktree 绝对路径>",
+  "candidatePaths": ["<被检查源码的绝对路径>"],
+  "authority": { "source": "<本次用户授权或任务合同引用>", "scope": "local-file-checks" },
+  "preflight": [
+    { "id": "syntax", "argv": ["<node.exe 的绝对路径>", "--check", "<被检查 JS 的绝对路径>"], "timeoutMs": 10000 }
+  ],
+  "operation": { "id": "formal-check", "argv": ["<node.exe 的绝对路径>", "<正式检查入口的绝对路径>"], "timeoutMs": 30000 },
+  "adapter": "json-ok"
+}

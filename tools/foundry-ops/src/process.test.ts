@@ -2,6 +2,18 @@ import { describe, expect, it } from 'bun:test';
 import { runCommand } from './process';
 
 describe('Foundry lab process wrapper', () => {
+  it('records and reaps a timed-out direct child', async () => {
+    const result = await runCommand(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { cwd: process.cwd(), timeoutMs: 100 });
+    expect(result.timedOut).toBe(true);
+    expect(result.exitCode).not.toBe(0);
+  });
+
+  it('uses an explicit child environment when supplied', async () => {
+    const result = await runCommand(process.execPath, ['-e', 'console.log(process.env.FVTT_ACCEPTANCE_TEST_VALUE)'], {
+      cwd: process.cwd(), environment: { ...process.env, FVTT_ACCEPTANCE_TEST_VALUE: 'isolated-check' },
+    });
+    expect(result.stdout.trim()).toBe('isolated-check');
+  });
   it('redacts secrets from the complete dry-run result', async () => {
     const secret = 'dry-run-secret-value';
     const result = await runCommand('example-command', [`--token=${secret}`], {

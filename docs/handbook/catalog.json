@@ -592,16 +592,24 @@
         "title": "需要字节清单时盘点",
         "text": "读取注册的本地资产并写审计报告，包含相对路径和 SHA-256；清单不构成清理授权。",
         "command": "bun run foundry:ops assets inventory --hash-concurrency=4"
+      },
+      {
+        "title": "准备文件侧验收合同",
+        "text": "按 Foundry Ops 说明准备带绝对路径和已审核命令的请求 JSON。预检失败时停止；成功后使用返回的合同路径依次 ready、execute、collect，需要接续时 resume。run、dispatch、receipt ID 和候选／指令身份自动取得。",
+        "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
       }
     ],
     "outputs": [
-      ".local 中的本地资产或范围报告、完整性状态与待判断项。"
+      ".local 中的本地资产或范围报告、完整性状态与待判断项。",
+      "目标 worktree 的 .local/development-feedback/<runId>/ 内保存合同、一次执行原件、收据和独立摘要。"
     ],
     "limits": [
       "本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。",
       "server-mirror 按用户要求常驻至关机，E2E 只复用并清理自己的测试对象，不自行启停 Foundry；核对实际 dataPath、端口和活动世界，启动参数使用连续的 --key=value。",
       "不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。",
-      "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。"
+      "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
+      "共用验收第一版只做已授权的本地文件检查：保存成功与行为通过分开；空输出、仅有 PASS 标签和无 adapter 的语义保持 INCOMPLETE。已领取操作不能自动重放，父审保持待完成。",
+      "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。"
     ],
     "keywords": [
       "Lab",
@@ -611,10 +619,14 @@
       "资产",
       "诊断",
       "世界",
-      "性能"
+      "性能",
+      "共用验收",
+      "合同",
+      "收据"
     ],
     "sources": [
-      "tools/foundry-ops/README.zh-CN.md"
+      "tools/foundry-ops/README.zh-CN.md",
+      "docs/runbooks/development-feedback-loop.md"
     ],
     "watch": [
       "tools/foundry-ops/"
@@ -635,6 +647,11 @@
         "title": "选择必要检查",
         "text": "普通说明修改核对文义和链接；实现修改按 owner 规则运行受影响测试。完整工程门禁如下，耗时较长。",
         "command": "bun run ci:verify"
+      },
+      {
+        "title": "验证共用验收工具",
+        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。本版为文件侧检查，详细操作见 Foundry 环境与资产检查条目。",
+        "command": "bun run test:acceptance-tools"
       },
       {
         "title": "查阅锁定参考",

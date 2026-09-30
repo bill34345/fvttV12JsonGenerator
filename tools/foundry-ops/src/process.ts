@@ -6,6 +6,7 @@ export interface RunCommandOptions {
   timeoutMs?: number;
   dryRun?: boolean;
   redact?: string[];
+  environment?: NodeJS.ProcessEnv;
 }
 
 export async function runCommand(
@@ -27,7 +28,8 @@ export async function runCommand(
   if (options.dryRun) return { exitCode: 0, stdout: '', stderr: '', commandLine };
 
   return await new Promise((resolveResult, reject) => {
-    const child = spawn(command, args, { cwd: options.cwd, windowsHide: true });
+    const child = spawn(command, args, { cwd: options.cwd, windowsHide: true, env: options.environment });
+    let timedOut = false;
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf8').on('data', (chunk) => {
@@ -36,7 +38,7 @@ export async function runCommand(
     child.stderr.setEncoding('utf8').on('data', (chunk) => {
       stderr += chunk;
     });
-    const timer = setTimeout(() => child.kill(), options.timeoutMs ?? 30_000);
+    const timer = setTimeout(() => { timedOut = true; child.kill(); }, options.timeoutMs ?? 30_000);
     child.on('error', (error) => {
       clearTimeout(timer);
       error.message = redacted(error.message);
@@ -52,6 +54,7 @@ export async function runCommand(
         stdout: redacted(stdout),
         stderr: redacted(stderr),
         commandLine,
+        ...(timedOut ? { timedOut: true } : {}),
       });
     });
   });

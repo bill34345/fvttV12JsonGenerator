@@ -79,3 +79,9 @@
 新thread先读当前状态并校验身份；旧STOP/已取消门禁必须带superseded状态。产品使用说明不嵌入每次测试进度；文档与运行代码指纹分开设计。相关产物/环境未变是复用证据的充分条件之一；有据可审查的影响分析也可以说明旧结果仍适用，并列明需复验的受影响路径。身份检查防止混用构建，不代替语义影响判断；未知影响不擅自免测。
 
 规范/可复用工具改动尽量作为可独立审查的小增量集成。commit/合并/push仍遵既有明确授权；未合并的worktree规则不宣称全项目生效。全局skill或memory不在本次候选中修改。
+
+## 8. 文件侧工具第一版
+
+入口为 `bun run foundry:ops acceptance <prepare|ready|execute|collect|resume>`。它只实现已授权的本地文件检查、合同身份绑定、失败阻止派发、一次执行与收据往返。请求格式、退出码和具体步骤见 [Foundry Ops 说明](../../tools/foundry-ops/README.zh-CN.md#共用验收工具文件侧第一版)与[请求示例](../templates/development-feedback-request.example.json)。
+
+完整任务合同的 runtime、fixture、callback 和人工介入计量仍是后续能力；本版不执行 Chrome、不修改世界、不替模块判定玩法。父宿主可通过 `dispatchPrepared()` 接入实际派发，在失败时回调调用次数为零。只运行 `ready` 再自行派发的宿主仍需自己处理两步之间的身份变化，不能宣称已完成该集成。

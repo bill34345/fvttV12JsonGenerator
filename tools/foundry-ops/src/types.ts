@@ -34,4 +34,5 @@ export interface CommandResult {
   stdout: string;
   stderr: string;
   commandLine: string;
+  timedOut?: boolean;
 }

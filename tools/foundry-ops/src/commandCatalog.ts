@@ -14,6 +14,11 @@ export interface FoundryOpsCommand {
 
 const COMMANDS: readonly FoundryOpsCommand[] = [
   { id: 'catalog', syntax: 'catalog', target: 'local', effect: 'read-only', summary: '列出全部命令及其权限，不执行项目操作。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.prepare', syntax: 'acceptance prepare --input=<absolute-request.json>', target: 'local', effect: 'local-mutation', summary: '执行已审核的本地文件预检，固定合同、候选及指令身份；失败阻止派发。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.ready', syntax: 'acceptance ready --contract=<absolute-contract.json>', target: 'local', effect: 'read-only', summary: '只读核对预检、绝对路径及当前身份，给出可派发状态。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.execute', syntax: 'acceptance execute --contract=<absolute-contract.json>', target: 'local', effect: 'local-mutation', summary: '领取一次执行并运行合同内已审核的本地文件检查，保存原始输出及收据。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.collect', syntax: 'acceptance collect --contract=<absolute-contract.json> --receipt=<absolute-receipt.json>', target: 'local', effect: 'local-mutation', summary: '拒绝陈旧或错误收据，读回原件并写独立的文件检查摘要；不判断玩法。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.resume', syntax: 'acceptance resume --contract=<absolute-contract.json>', target: 'local', effect: 'local-mutation', summary: '恢复当前合同和证据状态，必要时写摘要；不会自动重放已领取操作。', owner: 'foundry-ops', availability: 'available' },
   { id: 'assets.inventory', syntax: 'assets inventory [--output-root=...] [--hash-concurrency=4]', target: 'local', effect: 'local-mutation', summary: '只读扫描本地 Foundry 资产并写入 manifest 与精确重复项报告；不复制、移动或删除资产。', owner: 'foundry-ops', availability: 'available' },
   { id: 'assets.scope', syntax: 'assets scope [--output-root=...]', target: 'local', effect: 'local-mutation', summary: '登记 `.local` 顶层全部内容的所有权、隐私边界和待判断项；只写报告，不读取隐私内容或迁移资产。', owner: 'foundry-ops', availability: 'available' },
   { id: 'assets.migration-plan', syntax: 'assets migration-plan [--target-lab-root=...] [--inventory-summary=...]', target: 'local', effect: 'local-mutation', summary: '根据已验收资产清单生成外置迁移、逐批对账、兼容窗口和回滚方案；只写报告，绝不复制、切换、移动或删除资产。', owner: 'foundry-ops', availability: 'available' },

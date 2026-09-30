@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "e16f51d9ba7c95be780412db1fccd9fc34513f4dc3bf49afad28a7867253893d",
-    "reviewedOn": "2026-09-21",
-    "note": "对照常驻server-mirror的owner约定、模块公开接口及最终E2E/cleanup证据；修正旧未安装/未验收描述，链接当前使用说明，保留KeyD长按和serverNext兼容边界。"
+    "fingerprint": "eba8e89e01b5d3aac42f652f53995c7f5397fbb3f38420b0e6d2f28c805663c1",
+    "reviewedOn": "2026-09-30",
+    "note": "已核对共用验收五个入口、权限、状态和恢复出口；最终40项聚焦检查通过，生产环境键大小写处理有实测回归，实际AGENTS检查32文件通过；手册仅描述文件侧能力及未实现边界"
   },
   "verification-development": {
-    "fingerprint": "fc1555d7bd20c6132e887696ba4d26e234af78b9b5386729630de01f22aba44b",
-    "reviewedOn": "2026-09-18",
-    "note": "已人工核对本次生成器、Trigger Engine 与 Custom Conditions 的职责、入口、参数化状态模板、测试构建和 Foundry 运行时边界；运行时验收仍单独报告。"
+    "fingerprint": "9cc56d4ea6e509ed66dcdb4290ab3a455e752785e1f1723949ee4a6af9ea0bbf",
+    "reviewedOn": "2026-09-30",
+    "note": "已核对共用验收五个入口、权限、状态和恢复出口；最终40项聚焦检查通过，生产环境键大小写处理有实测回归，实际AGENTS检查32文件通过；手册仅描述文件侧能力及未实现边界"
   },
   "human-encounter-intake": {
     "fingerprint": "41c1630259b91bb9cdcd4af8be4de36f5b4af21262781e5eeb2f6d7d9dbbe2d8",
