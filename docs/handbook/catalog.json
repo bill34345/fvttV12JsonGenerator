@@ -661,7 +661,7 @@
       },
       {
         "title": "验证共用验收工具",
-        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。第二消费者的只读来源、参考回执与暂停门禁可用 test:acceptance-next-vm 聚焦验证；按变化选择入口。详细操作见 Foundry 环境与资产检查条目。",
+        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。第二消费者的只读来源与运行边界可用 test:acceptance-next-vm 聚焦验证；test:acceptance-cleanup 核对限定自动后代归属，手动/未知对象仍拒绝，纯检查不执行删除。按变化选择入口，详细操作见 Foundry 环境与资产检查条目。",
         "command": "bun run test:acceptance-tools"
       },
       {

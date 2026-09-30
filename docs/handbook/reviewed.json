@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "dae3549e674741d7dad7ac3188784be2d380d71cd5566e6ad6985e629d146c02",
+    "fingerprint": "f41e8b2fb0dbb6c848e35deca60ad2367127870ea4beaa6132e56edaf9570cc0",
     "reviewedOn": "2026-09-30",
-    "note": "已核对进程创建时间在PowerShell自动日期解析后仍严格比较UTC ticks；真实原收据通过、错时间拒绝。用法与权限范围不变，UI和完整清理仍待父审。"
+    "note": "最终核对新增纯归属检查、实际编译入口与本机Bun包装退出码限制：同时读JSON状态，不把收集成功当父审。限定实机及清理已闭合，手册渲染政策拒绝保留。"
   },
   "verification-development": {
-    "fingerprint": "81846152592a035de388372e8de7328f63f502c50182eb9a4de87e4ab718ba32",
+    "fingerprint": "8d7ed3691d20b117d50d91e99a2315d3346dbb7e6fa1907212d1418ca1e614b8",
     "reviewedOn": "2026-09-30",
-    "note": "已对照新批次五个入口、来源只读与字节/文本哈希口径、离线与运行门禁、参考回执退出码和恢复限制；55项通用检查及17项最终消费者聚焦检查通过，47个真实源文件链仅接受离线结果"
+    "note": "最终核对新增纯归属检查、实际编译入口与本机Bun包装退出码限制：同时读JSON状态，不把收集成功当父审。限定实机及清理已闭合，手册渲染政策拒绝保留。"
   },
   "human-encounter-intake": {
     "fingerprint": "41c1630259b91bb9cdcd4af8be4de36f5b4af21262781e5eeb2f6d7d9dbbe2d8",

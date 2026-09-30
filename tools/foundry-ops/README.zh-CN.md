@@ -60,6 +60,8 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
+退出码说明指 acceptance 子入口；本机 Bun1.3.8 的多层 `bun run` 包装可能把非零退出归一为1。接续脚本必须同时检查非零退出和输出 JSON 的 `layer`／`behavior`／`parentReview`，不能把包装后的1直接认作业务 FAIL，也不能因为原件保存成功而继续派发。最终实际收集直接入口返回2、JSON保持INCOMPLETE／PENDING，父审另存结论。
+
 ### 第二个消费者：Vision5e + Item Macro 离线接入
 
 `prepare-batch` 读取已有 ServerNext 批次合同，复用当前文件侧内核，自动生成本任务合同与机器字段。请求只需 `workspaceRoot`、`sourceContractPath` 和 `authority:{source,scope:"offline-batch-preparation"}`，格式见[批次请求示例](../../docs/templates/development-feedback-batch-request.example.json)。原业务树、候选、旧合同及其回调父／子 UUID 都只读；新合同不会替代原当前状态源。
@@ -90,6 +92,8 @@ capture 自动填写共用 run／dispatch／revision、源批次 ID 和两个合
 本版导入一律为 `REFERENCE_ONLY`，成功保存后仍退出 2，整体 behavior／evidence 为 INCOMPLETE、runtime／cleanup 为 NOT_EXECUTED、父审为 PENDING。模块 adapter 可独立核对读回中 60→90→60、命令文本、单次手动／活动记录；忽略原件中的 `pass` 标签，数据判断不代表 UI、客户端加载哈希、角色／重载或完整清理已通过。原生清理读回缺少完整文件夹／Controls 删除证据，不能仅凭 phase=cleaned 接受清理。
 
 消费者聚焦回归：`bun run test:acceptance-next-vm`。真实安装、Chrome、跨线程送达和业务清理在原批次明确恢复后，按其当前授权与现场证据另行执行；工具的离线成功不恢复暂停状态。
+
+实际批次曾遇到 DAE 自动生成的标准 Condition 没有本任务标记，原 fixture 清理因此保守停止。专属纯检查 `requireNextVmCleanupOwnership()` 只有在新建 Actor 的缺席／出生证据、完整持久化集合、已归属状态输入、精确 DAE 版本、实际 `dae.autoCreated` 与其源记录、固定父／ID／状态／创建时间都匹配时，才确认这一自动后代的限定归属。它不修改或删除文档，不替未知对象补标记，不能凭名称、类、静态 ID 或 `isTemporary` 放行。手动条件、缺失标记、额外对象和身份变化均拒绝；使用 `bun run test:acceptance-cleanup` 验证这些边界及实际编译入口。`buildNextVmCleanupGuard()` 显式绑定本地导出并检查调用函数存在；编译／语法成功不能替代这个入口往返。实际恢复仍由父任务准备并审核后通过正常应用入口执行。
 
 ### 已明确恢复的 Vision5e + Item Macro 实机批次
 
