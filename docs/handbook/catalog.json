@@ -607,6 +607,10 @@
         "title": "领取明确恢复的实机批次",
         "text": "仅支持已有 ServerNext 的 Vision5e + Item Macro。用户明确恢复后，按说明保存本轮授权、执行聊天实际上下文和服务收据，使用 prepare-runtime、ready-runtime、claim-runtime。工具检查源批次、实际权限、服务身份和候选字节，领取一次宿主派发；聊天消息仍由获准宿主发送。",
         "command": "bun run foundry:ops acceptance prepare-runtime --input=\"<运行请求 JSON 的绝对路径>\""
+      },
+      {
+        "title": "接续前核对当前状态与独立验收记录",
+        "text": "先读任务当前状态和对应验收记录。共用收据的 INCOMPLETE／PENDING 保留人工判定出口，主控可另行接受已核对的限定行为、恢复和清理；原收据保持不变。已闭合批次不重放，新候选、范围变化或实际缺陷另立任务边界。"
       }
     ],
     "outputs": [

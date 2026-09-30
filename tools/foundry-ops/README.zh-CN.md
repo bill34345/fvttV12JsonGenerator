@@ -60,7 +60,7 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
-退出码说明指 acceptance 子入口；本机 Bun1.3.8 的多层 `bun run` 包装可能把非零退出归一为1。接续脚本必须同时检查非零退出和输出 JSON 的 `layer`／`behavior`／`parentReview`，不能把包装后的1直接认作业务 FAIL，也不能因为原件保存成功而继续派发。最终实际收集直接入口返回2、JSON保持INCOMPLETE／PENDING，父审另存结论。
+上述退出码指 acceptance 子入口的原生值；本机 Bun1.3.8 的多层 `bun run` 包装可能把非零退出归一为1。PowerShell 外层脚本没有显式传递原生退出码时也可能只报告1；需要保留该值时，先保存原生命令的 `$LASTEXITCODE`，再用 `exit` 传给调用者。接续脚本必须同时检查非零退出和输出 JSON 的 `exitCode`（若有）／`layer`／`behavior`／`parentReview`，不能把外层1直接认作业务 FAIL，也不能因为原件保存成功而继续派发。INCOMPLETE／PENDING 的人工出口由独立父审另存结论。
 
 ### 第二个消费者：Vision5e + Item Macro 离线接入
 
@@ -79,7 +79,7 @@ bun run foundry:ops acceptance ready-batch --contract="<同一合同>"
 
 共用合同的 `readonlySources` 支持明确选择的跨工作树文件，用绝对路径与字节指纹防止混用；不复制业务源码。业务树分支／HEAD、源合同或任一绑定文件变化时拒绝继续，重新准备合同。`ready` 的 `executionScope:local-file-checks` 只允许合同内的离线检查；`ready-batch` 报告 `dispatchable:false` 并退出 2。本增量的运行授权固定为 NONE，即使源合同以后恢复，也不自动发消息、安装、启停或执行 Chrome。
 
-已有原生读回需要另存为 UTF-8 JSON，并提供独立观察的目标上下文 JSON：`origin`、`dataPath`、`world`、`foundry`、`system`、`systemVersion`。不要用期待值充当观察；当前离线阶段没有实机上下文或读回，不制作一个“通过”样本。
+导入已有原生读回时，另存为 UTF-8 JSON，并提供独立观察的目标上下文 JSON：`origin`、`dataPath`、`world`、`foundry`、`system`、`systemVersion`。如果尚无实际上下文或读回，就保持未执行；不要用期待值制作一个“通过”样本。离线参考导入与下述明确恢复的实机收集是两个接受边界。
 
 ```powershell
 bun run foundry:ops acceptance capture-receipt --contract="<合同>" --input="<已保存原生读回>" --context="<独立目标上下文>"
@@ -89,7 +89,7 @@ bun run foundry:ops acceptance resume --contract="<合同>"
 
 capture 自动填写共用 run／dispatch／revision、源批次 ID 和两个合同指纹，保留原生字节，不要求手填已知 ID。import 拒绝错 run、revision、源合同、目标、版本、fixture 或原件哈希；重复回执保持同一 receiptId。部分文件已写但摘要未完成时，只读核对已有字节再补齐，不覆盖不同原件，也不重放业务操作。
 
-本版导入一律为 `REFERENCE_ONLY`，成功保存后仍退出 2，整体 behavior／evidence 为 INCOMPLETE、runtime／cleanup 为 NOT_EXECUTED、父审为 PENDING。模块 adapter 可独立核对读回中 60→90→60、命令文本、单次手动／活动记录；忽略原件中的 `pass` 标签，数据判断不代表 UI、客户端加载哈希、角色／重载或完整清理已通过。原生清理读回缺少完整文件夹／Controls 删除证据，不能仅凭 phase=cleaned 接受清理。
+本版导入一律为 `REFERENCE_ONLY`，成功保存后仍退出 2，整体 behavior／evidence 为 INCOMPLETE、runtime／cleanup 为 NOT_EXECUTED、父审为 PENDING。模块 adapter 可独立核对读回中 60→90→60、命令文本、单次手动／活动记录；忽略原件中的 `pass` 标签，数据判断不代表 UI、客户端加载哈希、角色／重载或完整清理已通过。完整清理还需要对象、文件夹和辅助宏缺席的独立证据，不能仅凭 phase=cleaned 接受。
 
 消费者聚焦回归：`bun run test:acceptance-next-vm`。真实安装、Chrome、跨线程送达和业务清理在原批次明确恢复后，按其当前授权与现场证据另行执行；工具的离线成功不恢复暂停状态。
 
@@ -118,6 +118,12 @@ bun run foundry:ops acceptance collect-runtime --contract="<本轮运行合同>"
 ```
 
 工具固定原件和证据指纹、按实际数值／记录判断 API 数据观察，并幂等读回同一收据。成功收集仅为 `runtime:OBSERVED`，界面、玩家角色、刷新持久化、错误归因与完整归属清理仍需父任务查看实际证据；总体验收保持 INCOMPLETE／父审 PENDING，退出 2。截图存在、PASS 标签或 `phase:cleaned` 都不会自动变为完整接受。必要步骤完成后，由父任务另行记录语义判定及剩余范围。
+
+### 接续时怎样读验收结果
+
+先读任务的当前状态和对应独立验收记录，再决定是否执行下一步。共用工具保存的 INCOMPLETE／PENDING 表示还有人工语义出口，不等于实际任务一直未完成。独立父审可以接受已核对的限定行为、恢复和清理；原收据保持不变，两个层级分别留证。已经闭合的批次不重放，新候选、范围变化或实际缺陷另立任务边界。
+
+Vision5e + Item Macro 的限定实机链已完成父审和精确清理，见 [实机闭合记录](../../docs/reviews/2026-09-30-development-feedback-next-vm-runtime.md)。这份记录证明该批次的限定接受；旧离线合同仍是 NONE，其他迁移批次仍暂停，不能由本次接受推导全部模块兼容或世界零错误。
 
 ## 本地资产只读盘点
 

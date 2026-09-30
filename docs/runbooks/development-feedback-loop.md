@@ -86,6 +86,8 @@
 
 完整任务合同的 runtime、fixture、callback 和人工介入计量仍是后续能力；本版不执行 Chrome、不修改世界、不替模块判定玩法。父宿主可通过 `dispatchPrepared()` 接入实际派发，在失败时回调调用次数为零。只运行 `ready` 再自行派发的宿主仍需自己处理两步之间的身份变化，不能宣称已完成该集成。
 
-后续增量已有 Vision5e + Item Macro 的离线批次 adapter、跨工作树只读来源绑定及参考收据导入。具体步骤见 [第二个消费者](../../tools/foundry-ops/README.zh-CN.md#第二个消费者vision5e--item-macro-离线接入)。`ready` 表示文件检查可运行；`ready-batch` 的运行派发门禁单独报告。源批次暂停、运行授权与回调归属保留，不能把离线准备或数据标签升级为真实批次接受。完整第二消费者 D 仍等获准的实机链路。
+后续增量已有 Vision5e + Item Macro 的离线批次 adapter、跨工作树只读来源绑定及参考收据导入。具体步骤见 [第二个消费者](../../tools/foundry-ops/README.zh-CN.md#第二个消费者vision5e--item-macro-离线接入)。`ready` 表示文件检查可运行；`ready-batch` 的运行派发门禁单独报告。离线合同保留原暂停状态、运行授权 NONE 与回调归属，不能把离线准备或数据标签升级为真实批次接受。明确恢复后的限定实机链、独立父审和精确清理已完成，证据与剩余范围见 [实机闭合记录](../reviews/2026-09-30-development-feedback-next-vm-runtime.md)；其他迁移批次仍暂停。
 
 已明确恢复的同一批次可用 `prepare-runtime`／`ready-runtime`／`claim-runtime` 建立独立运行合同，核对最新执行聊天配置及现存服务身份后领取一次宿主派发；旧文件侧合同不会升级权限。`collect-runtime` 保存原生观察与实际证据指纹，保持父审待完成，界面和完整清理由父任务独立核对。说明见 [已恢复的实机批次](../../tools/foundry-ops/README.zh-CN.md#已明确恢复的-vision5e--item-macro-实机批次)。该增量不安装、不启停服务、不直接操作 Chrome，也不替代跨线程运输回执。
+
+接续前先读任务的当前状态，再对照对应独立验收记录。共用收据的 INCOMPLETE／PENDING 是自动层的判定边界；父审可以另行接受已核对的限定行为、恢复和清理，而无需改写原收据。已闭合批次不因自动层仍待人工判定而重放；历史合同、失败包和原件继续只读保留。新的候选、范围或实际缺陷按新的任务边界处理。

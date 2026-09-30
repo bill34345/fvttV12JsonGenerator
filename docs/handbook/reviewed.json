@@ -55,9 +55,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "f41e8b2fb0dbb6c848e35deca60ad2367127870ea4beaa6132e56edaf9570cc0",
+    "fingerprint": "e6f2cff4299f974a4d71d71ec12f2094b429c3f67101c065533377b1636e9d2c",
     "reviewedOn": "2026-09-30",
-    "note": "最终核对新增纯归属检查、实际编译入口与本机Bun包装退出码限制：同时读JSON状态，不把收集成功当父审。限定实机及清理已闭合，手册渲染政策拒绝保留。"
+    "note": "已对照源码、限定实机闭合原件与本轮命令往返：区分离线 NONE、自动 INCOMPLETE/PENDING 和独立父审；闭合批次不重放。PowerShell 原生2须显式传给外层，不由外层1判业务失败。仅说明修正，界面未变。"
   },
   "verification-development": {
     "fingerprint": "8d7ed3691d20b117d50d91e99a2315d3346dbb7e6fa1907212d1418ca1e614b8",
