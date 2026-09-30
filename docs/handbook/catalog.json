@@ -597,6 +597,11 @@
         "title": "准备文件侧验收合同",
         "text": "按 Foundry Ops 说明准备带绝对路径和已审核命令的请求 JSON。预检失败时停止；成功后使用返回的合同路径依次 ready、execute、collect，需要接续时 resume。run、dispatch、receipt ID 和候选／指令身份自动取得。",
         "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
+      },
+      {
+        "title": "接入已准备的 ServerNext 批次",
+        "text": "按说明填写本任务工作树、旧批次合同和离线授权引用。工具固定跨工作树只读来源并自动绑定回执；ready 只代表文件检查可运行，ready-batch 独立报告运行门禁。源批次暂停和回调归属保留。",
+        "command": "bun run foundry:ops acceptance prepare-batch --input=\"<批次请求 JSON 的绝对路径>\""
       }
     ],
     "outputs": [
@@ -609,7 +614,8 @@
       "不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。",
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
       "共用验收第一版只做已授权的本地文件检查：保存成功与行为通过分开；空输出、仅有 PASS 标签和无 adapter 的语义保持 INCOMPLETE。已领取操作不能自动重放，父审保持待完成。",
-      "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。"
+      "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。",
+      "Vision5e + Item Macro 收据导入仅作参考：原件保存成功仍保持 INCOMPLETE；数据判断不替代 UI、加载哈希、角色/重载和完整清理，不恢复暂停状态。"
     ],
     "keywords": [
       "Lab",
@@ -650,7 +656,7 @@
       },
       {
         "title": "验证共用验收工具",
-        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。本版为文件侧检查，详细操作见 Foundry 环境与资产检查条目。",
+        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。第二消费者的只读来源、参考回执与暂停门禁可用 test:acceptance-next-vm 聚焦验证；按变化选择入口。详细操作见 Foundry 环境与资产检查条目。",
         "command": "bun run test:acceptance-tools"
       },
       {

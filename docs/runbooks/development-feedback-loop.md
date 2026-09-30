@@ -85,3 +85,5 @@
 入口为 `bun run foundry:ops acceptance <prepare|ready|execute|collect|resume>`。它只实现已授权的本地文件检查、合同身份绑定、失败阻止派发、一次执行与收据往返。请求格式、退出码和具体步骤见 [Foundry Ops 说明](../../tools/foundry-ops/README.zh-CN.md#共用验收工具文件侧第一版)与[请求示例](../templates/development-feedback-request.example.json)。
 
 完整任务合同的 runtime、fixture、callback 和人工介入计量仍是后续能力；本版不执行 Chrome、不修改世界、不替模块判定玩法。父宿主可通过 `dispatchPrepared()` 接入实际派发，在失败时回调调用次数为零。只运行 `ready` 再自行派发的宿主仍需自己处理两步之间的身份变化，不能宣称已完成该集成。
+
+后续增量已有 Vision5e + Item Macro 的离线批次 adapter、跨工作树只读来源绑定及参考收据导入。具体步骤见 [第二个消费者](../../tools/foundry-ops/README.zh-CN.md#第二个消费者vision5e--item-macro-离线接入)。`ready` 表示文件检查可运行；`ready-batch` 的运行派发门禁单独报告。源批次暂停、运行授权与回调归属保留，不能把离线准备或数据标签升级为真实批次接受。完整第二消费者 D 仍等获准的实机链路。

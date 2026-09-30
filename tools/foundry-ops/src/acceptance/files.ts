@@ -77,4 +77,10 @@ export function assertCurrent(contract: AcceptanceContract): void {
   for (const identity of contract.executables) {
     if (fileIdentity(identity.absolutePath).sha256 !== identity.sha256) throw new AcceptanceError('precondition', `Check executable changed: ${identity.absolutePath}`);
   }
+  for (const identity of contract.readonlySources ?? []) {
+    if (fileIdentity(identity.absolutePath).sha256 !== identity.sha256) throw new AcceptanceError('precondition', `Read-only source changed: ${identity.absolutePath}`);
+  }
+  const batch = contract.request.externalBatch;
+  if (batch && JSON.stringify(workspaceIdentity(batch.sourceWorkspace.absoluteRoot)) !== JSON.stringify(batch.sourceWorkspace)) throw new AcceptanceError('precondition', 'Source worktree identity changed. Prepare a new contract.');
+  if (batch && (!contract.readonlySources?.some(source => source.absolutePath === batch.sourceContract.absolutePath && source.sha256 === batch.sourceContract.sha256))) throw new AcceptanceError('precondition', 'Source batch contract is not bound to the read-only source list.');
 }

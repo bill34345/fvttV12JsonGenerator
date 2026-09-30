@@ -31,6 +31,13 @@ function validateRequest(value: unknown): AcceptanceRequest {
     throw new AcceptanceError('precondition', 'Expected goal, acceptance, caseId, absolute workspace/candidates, local-file-checks authority, preflight and adapter.');
   }
   const checks = [...request.preflight.map(validateCommand), validateCommand(request.operation)];
+  if (request.readonlySourcePaths !== undefined && !strings(request.readonlySourcePaths)) throw new AcceptanceError('precondition', 'readonlySourcePaths must be a nonempty absolute file list.');
+  if (Array.isArray(request.readonlySourcePaths) && new Set(request.readonlySourcePaths.map(path => fileIdentity(path).absolutePath)).size !== request.readonlySourcePaths.length) throw new AcceptanceError('precondition', 'Read-only source paths must be unique.');
+  if (request.externalBatch !== undefined) {
+    const batch = record(request.externalBatch);
+    if (batch.consumer !== 'server-next-vision-macro' || batch.runtimeAuthority !== 'NONE'
+      || !strings(request.readonlySourcePaths)) throw new AcceptanceError('precondition', 'External batches require read-only sources and NONE runtime authority.');
+  }
   if (new Set(checks.map(check => check.id)).size !== checks.length) throw new AcceptanceError('precondition', 'Check ids must be unique.');
   return request as unknown as AcceptanceRequest;
 }
@@ -63,6 +70,7 @@ export async function prepareAcceptance(inputPath: string): Promise<AcceptanceCo
     contractAbsolutePath: join(directory, 'contract.json'), createdAt: new Date().toISOString(),
     request, workspace, candidates, instructions,
     executables: [...new Set([...request.preflight, request.operation].map(command => command.argv[0]!))].map(path => fileIdentity(path)),
+    ...(request.readonlySourcePaths ? { readonlySources: [...new Set(request.readonlySourcePaths)].map(path => fileIdentity(path)) } : {}),
     preflight: [],
   };
   for (const check of request.preflight) {
@@ -86,9 +94,11 @@ export function loadContract(path: string): AcceptanceContract {
     || !uuid.test(String(value.dispatchId)) || value.contractAbsolutePath !== absolute
     || !Array.isArray(value.candidates) || value.candidates.length === 0 || !Array.isArray(value.instructions)
     || !Array.isArray(value.executables) || value.executables.length === 0
+    || (value.readonlySources !== undefined && !Array.isArray(value.readonlySources))
     || !Array.isArray(value.preflight)) throw new AcceptanceError('precondition', 'Invalid contract identity or absolute path.');
   validateRequest(value.request);
   const contract = value as unknown as AcceptanceContract;
+  if (contract.request.readonlySourcePaths && JSON.stringify(contract.request.readonlySourcePaths.map(path => fileIdentity(path).absolutePath)) !== JSON.stringify(contract.readonlySources?.map(source => source.absolutePath))) throw new AcceptanceError('precondition', 'Read-only source list does not match its contract.');
   const expected = join(contract.workspace.absoluteRoot, '.local/development-feedback', contract.runId, 'contract.json');
   if (relative(resolve(expected), absolute)) throw new AcceptanceError('precondition', 'Contract belongs to another worktree or run.');
   if (record(readJson(join(dirname(absolute), 'contract-integrity.json'))).sha256 !== fileIdentity(absolute).sha256) throw new AcceptanceError('evidence', 'Contract bytes changed.');
@@ -96,7 +106,7 @@ export function loadContract(path: string): AcceptanceContract {
   return contract;
 }
 
-function assertPreflight(contract: AcceptanceContract): void {
+export function assertPreflight(contract: AcceptanceContract): void {
   if (contract.preflight.length !== contract.request.preflight.length || contract.preflight.some((check, index) =>
     check.id !== contract.request.preflight[index]!.id || !check.ok || check.exitCode !== 0 || check.timedOut
     || (contract.request.preflight[index]!.expectJsonOk && !jsonOk(check.stdout)))) {

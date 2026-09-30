@@ -1,0 +1,8 @@
+{
+  "workspaceRoot": "<本任务 Git worktree 绝对路径>",
+  "sourceContractPath": "<已有 Vision5e + Item Macro current-chrome-dispatch.json 绝对路径>",
+  "authority": {
+    "source": "<本次离线接入授权引用>",
+    "scope": "offline-batch-preparation"
+  }
+}

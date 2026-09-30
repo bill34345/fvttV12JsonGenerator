@@ -60,6 +60,37 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
+### 第二个消费者：Vision5e + Item Macro 离线接入
+
+`prepare-batch` 读取已有 ServerNext 批次合同，复用当前文件侧内核，自动生成本任务合同与机器字段。请求只需 `workspaceRoot`、`sourceContractPath` 和 `authority:{source,scope:"offline-batch-preparation"}`，格式见[批次请求示例](../../docs/templates/development-feedback-batch-request.example.json)。原业务树、候选、旧合同及其回调父／子 UUID 都只读；新合同不会替代原当前状态源。
+
+```powershell
+bun run foundry:ops acceptance inspect-batch --source="<旧批次合同绝对路径>"
+bun run foundry:ops acceptance prepare-batch --input="<本任务请求绝对路径>"
+bun run foundry:ops acceptance ready --contract="<生成的本任务合同>"
+bun run foundry:ops acceptance execute --contract="<同一合同>"
+bun run foundry:ops acceptance collect --contract="<同一合同>" --receipt="<同目录 receipt.json>"
+bun run foundry:ops acceptance ready-batch --contract="<同一合同>"
+```
+
+`inspect-batch` 只读核对候选 ID／版本、声明资源全集及 SHA-256、ZIP 指纹、宏 JSON 的命令往返、固定目标门禁和 fixture／清理清单一致性。旧合同的“9项测试PASS”文字作为历史声明保留，不当成此次重新运行的测试结果。既有 Python 生产者的 Item Macro 哈希按 `read_text()` 规范化换行后的文本计算；工具分别校验该文本哈希与实际文件字节指纹，不能混为一个值或忽略差异。
+
+共用合同的 `readonlySources` 支持明确选择的跨工作树文件，用绝对路径与字节指纹防止混用；不复制业务源码。业务树分支／HEAD、源合同或任一绑定文件变化时拒绝继续，重新准备合同。`ready` 的 `executionScope:local-file-checks` 只允许合同内的离线检查；`ready-batch` 报告 `dispatchable:false` 并退出 2。本增量的运行授权固定为 NONE，即使源合同以后恢复，也不自动发消息、安装、启停或执行 Chrome。
+
+已有原生读回需要另存为 UTF-8 JSON，并提供独立观察的目标上下文 JSON：`origin`、`dataPath`、`world`、`foundry`、`system`、`systemVersion`。不要用期待值充当观察；当前离线阶段没有实机上下文或读回，不制作一个“通过”样本。
+
+```powershell
+bun run foundry:ops acceptance capture-receipt --contract="<合同>" --input="<已保存原生读回>" --context="<独立目标上下文>"
+bun run foundry:ops acceptance import-receipt --contract="<合同>" --input="<capture 返回的 envelopePath>"
+bun run foundry:ops acceptance resume --contract="<合同>"
+```
+
+capture 自动填写共用 run／dispatch／revision、源批次 ID 和两个合同指纹，保留原生字节，不要求手填已知 ID。import 拒绝错 run、revision、源合同、目标、版本、fixture 或原件哈希；重复回执保持同一 receiptId。部分文件已写但摘要未完成时，只读核对已有字节再补齐，不覆盖不同原件，也不重放业务操作。
+
+本版导入一律为 `REFERENCE_ONLY`，成功保存后仍退出 2，整体 behavior／evidence 为 INCOMPLETE、runtime／cleanup 为 NOT_EXECUTED、父审为 PENDING。模块 adapter 可独立核对读回中 60→90→60、命令文本、单次手动／活动记录；忽略原件中的 `pass` 标签，数据判断不代表 UI、客户端加载哈希、角色／重载或完整清理已通过。原生清理读回缺少完整文件夹／Controls 删除证据，不能仅凭 phase=cleaned 接受清理。
+
+消费者聚焦回归：`bun run test:acceptance-next-vm`。真实安装、Chrome、跨线程送达和业务清理在原批次明确恢复后，按其当前授权与现场证据另行执行；工具的离线成功不恢复暂停状态。
+
 ## 本地资产只读盘点
 
 运行：

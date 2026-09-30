@@ -18,6 +18,24 @@ export interface AcceptanceRequest {
   preflight: CheckCommand[];
   operation: CheckCommand;
   adapter: 'json-ok' | 'manual';
+  readonlySourcePaths?: string[];
+  externalBatch?: ExternalBatchBinding;
+}
+
+export interface ExternalBatchBinding {
+  consumer: 'server-next-vision-macro';
+  sourceContract: FileIdentity;
+  sourceDispatchId: string;
+  sourceWorkspace: AcceptanceContract['workspace'];
+  parentThreadId: string;
+  childThreadId: string;
+  sourceStage: string;
+  parentContinuation: string;
+  runtimeAuthority: 'NONE';
+  target: { origin: string; dataPath: string; world: string; foundry: string; system: string; systemVersion: string };
+  candidates: Array<{ id: string; version: string }>;
+  fixtureIds: Record<string, string>;
+  itemCommandSha256: string;
 }
 
 export interface FileIdentity { absolutePath: string; sha256: string }
@@ -34,6 +52,7 @@ export interface AcceptanceContract {
   candidates: FileIdentity[];
   instructions: FileIdentity[];
   executables: FileIdentity[];
+  readonlySources?: FileIdentity[];
   preflight: CheckResult[];
 }
 
