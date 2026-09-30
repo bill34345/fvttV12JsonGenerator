@@ -14,7 +14,7 @@ $listeners=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | 
 if ($listeners.Count -ne 1 -or $listeners[0].LocalAddress -ne '127.0.0.1' -or $listeners[0].OwningProcess -ne $receipt.pid) {throw 'Listener or PID changed'}
 $live=Get-CimInstance Win32_Process -Filter "ProcessId=$($listeners[0].OwningProcess)"
 if (-not $live -or $live.CommandLine -ne $receipt.commandLine) {throw 'Service command line changed'}
-if ($live.CreationDate.ToUniversalTime().ToString('o') -ne $receipt.processCreationDate) {throw 'Service creation time changed'}
+if ($live.CreationDate.ToUniversalTime().Ticks -ne ([datetime]$receipt.processCreationDate).ToUniversalTime().Ticks) {throw 'Service creation time changed'}
 $node='F:\FoundryLab\foundry-v14\runtime\node-v24.17.0-win-x64\node.exe'
 $app='F:\FoundryLab\foundry-v14\app\14.368\main.js'
 if ($live.ExecutablePath -ne $node -or $live.CommandLine -notmatch [regex]::Escape($app) -or $live.CommandLine -notmatch [regex]::Escape("--dataPath=$($target.dataPath.Replace('/','\'))") -or $live.CommandLine -notmatch '--port=30002(?:\s|$)' -or $live.CommandLine -notmatch '--noBackups(?:\s|$)') {throw 'Exact application/data/port/no-backup process identity required'}

@@ -55,9 +55,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "c1b7d748c7f163dcbcb1395536430c0ede67310ecb0edcd137924d10dd5dec62",
+    "fingerprint": "dae3549e674741d7dad7ac3188784be2d380d71cd5566e6ad6985e629d146c02",
     "reviewedOn": "2026-09-30",
-    "note": "已核对独立运行合同、最新执行聊天实际上下文、精确Next服务/安装字节、一次领取及观察收据；宿主发送消息，UI和完整清理保留父审。未声明实机通过。"
+    "note": "已核对进程创建时间在PowerShell自动日期解析后仍严格比较UTC ticks；真实原收据通过、错时间拒绝。用法与权限范围不变，UI和完整清理仍待父审。"
   },
   "verification-development": {
     "fingerprint": "81846152592a035de388372e8de7328f63f502c50182eb9a4de87e4ab718ba32",
