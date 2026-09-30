@@ -1,0 +1,97 @@
+{
+  "template": true,
+  "protocolVersion": 1,
+  "usage": "仅跨接口/跨版本/迁移/重复失败任务使用；小修改不要求填完整表。待实现工具应自动填机器字段。此文件不是已可运行的派发工具。",
+  "task": {
+    "id": "<task-id>",
+    "goal": "<可观察行为>",
+    "acceptance": [
+      "<成功例>",
+      "<关键反例>"
+    ],
+    "nonGoals": [
+      "<保留的边界>"
+    ],
+    "intentDecisions": [],
+    "userQuestions": []
+  },
+  "workspace": {
+    "absoluteRoot": "<verified-absolute-worktree>",
+    "branch": "<branch>",
+    "head": "<sha>",
+    "instructionBaseline": "<committed-policy-version>"
+  },
+  "research": {
+    "needed": true,
+    "sources": [
+      {
+        "url": "<source>",
+        "versionOrCommit": "<fixed-version>",
+        "license": "<license>",
+        "relevantFact": "<interface-fact>",
+        "probe": "<evidence-or-command>",
+        "adoption": "<adapt-or-reject-reason>"
+      }
+    ],
+    "unresolvedHypotheses": []
+  },
+  "runtime": {
+    "profile": "<server-mirror-or-server-next>",
+    "world": "<world>",
+    "foundry": "<exact-version>",
+    "system": "<exact-version>",
+    "owner": "<verified-service-owner>",
+    "buildOrInstallIdentity": "<fingerprint>",
+    "baselineRef": "<evidence-file>"
+  },
+  "execution": {
+    "contractRevision": 1,
+    "parentThreadId": "<uuid>",
+    "executorThreadId": "<uuid-or-null>",
+    "model": "<explicit-user-choice-or-effective-default>",
+    "reasoningEffort": "<effective>",
+    "transport": "<authorized-tool-surface>",
+    "dispatchId": "<unique>",
+    "contractAbsolutePath": "<absolute-path>",
+    "parentPreflightEvidence": null,
+    "executorPreflightEvidence": null
+  },
+  "authority": {
+    "userInstructionRef": "<message-reference>",
+    "allowed": [
+      "<exact-scope>"
+    ],
+    "prohibited": [
+      "<scope>"
+    ]
+  },
+  "case": {
+    "id": "<case>",
+    "phase": "NOT_STARTED",
+    "fixtureRef": "<run-owned-resources>",
+    "preflightEvidence": null,
+    "latestReceiptId": null,
+    "lastFailure": null,
+    "retriesWithoutNewEvidence": 0
+  },
+  "result": {
+    "receiptId": null,
+    "contractRevision": null,
+    "behavior": "NOT_EXECUTED",
+    "evidence": "MISSING",
+    "cleanup": "NOT_EXECUTED",
+    "summaryPath": null,
+    "rawEvidencePath": null,
+    "rawSha256": null
+  },
+  "resume": {
+    "nextAction": "<single-current-action>",
+    "supersedes": [],
+    "callback": {
+      "sendReceiptRef": null,
+      "recipientThreadId": null,
+      "parentReceivedEvidenceRef": null,
+      "parentAcceptedEvidenceRef": null
+    }
+  }
+}

@@ -1,0 +1,724 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-09-29",
+  "read_at": "2026-09-29T14:31:34.776779+00:00",
+  "scope": "Ten exact ServerNext history files, not all project history. Historical dates are UTC in this JSON. No browser or runtime access. No raw conversation content stored.",
+  "method": {
+    "tokens": "Sum token_usage_record.payload.usage once per response_id across selected files. Do not sum event_msg.token_count cumulative totals or last snapshots. Input includes cached input; reasoning output is a subset of output, not added again.",
+    "limits": [
+      "This is observed inference usage, not billed dollars or account quota consumption.",
+      "Scope excludes other executor histories, deleted/unavailable files and activity after snapshot; it is not the whole project total.",
+      "Model and effort data are observed historical turn_context values, not a performance comparison.",
+      "Wall-clock spans include user waits, quotas, tool setup, explicit pauses and unrelated idle periods; no time-attribution percentage is derived.",
+      "Raw tool calls count wrapper records, not nested executions or error rate.",
+      "Per-file event cumulative counters differ from summed unique response usage; resumed segment may carry prior totals. Both raw figures are preserved, not combined. No invoice or quota conversion is inferred."
+    ]
+  },
+  "files": [
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\19\\rollout-2026-09-19T16-39-19-01a0b8d1-e8db-70f2-9662-fd9beb035162.jsonl",
+      "sha256": "1c3e7378e9105dbafecad903ee4a47bb03c14408281c2cf4db354b4bfc6b48c4",
+      "bytes": 26483824,
+      "lines": 6853,
+      "thread_id": "01a0b8d1-e8db-70f2-9662-fd9beb035162",
+      "session_id": "01a0b8d1-e8db-70f2-9662-fd9beb035162",
+      "first_timestamp": "2026-09-19T08:39:20.614Z",
+      "last_timestamp": "2026-09-21T23:55:24.113Z",
+      "turn_context_unique": 45,
+      "models_by_unique_turn": {
+        "gpt-6-astra/medium": 21,
+        "gpt-6-astra/high": 17,
+        "gpt-5.6-sol/high": 5,
+        "gpt-6-astra/low": 2
+      },
+      "task_started": 45,
+      "task_complete": 45,
+      "compactions": [
+        {
+          "line": 2002,
+          "timestamp": "2026-09-20T03:21:44.114Z"
+        },
+        {
+          "line": 4020,
+          "timestamp": "2026-09-20T18:33:55.380Z"
+        },
+        {
+          "line": 6256,
+          "timestamp": "2026-09-21T10:08:28.058Z"
+        }
+      ],
+      "token_usage_records": 816,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 203097612,
+        "cached_input_tokens": 197095424,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 557104,
+        "reasoning_output_tokens": 203653,
+        "total_tokens": 203654716
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 201581300,
+        "cached_input_tokens": 195587200,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 536010,
+        "reasoning_output_tokens": 203653,
+        "total_tokens": 202117310
+      },
+      "raw_tool_call_records": 768
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\22\\rollout-2026-09-22T07-56-26-01a0c666-44c3-7010-8d64-7eb1582a5d7f.jsonl",
+      "sha256": "a420692797bf46abb54f0f9aaa8b65f291813f136279028c2a38e4a33a130cea",
+      "bytes": 9526124,
+      "lines": 2362,
+      "thread_id": "01a0c666-44c3-7010-8d64-7eb1582a5d7f",
+      "session_id": "01a0c666-44c3-7010-8d64-7eb1582a5d7f",
+      "first_timestamp": "2026-09-21T23:56:30.914Z",
+      "last_timestamp": "2026-09-22T23:41:14.694Z",
+      "turn_context_unique": 18,
+      "models_by_unique_turn": {
+        "gpt-6-astra/medium": 8,
+        "gpt-6-astra/high": 10
+      },
+      "task_started": 18,
+      "task_complete": 18,
+      "compactions": [
+        {
+          "line": 1885,
+          "timestamp": "2026-09-22T04:06:23.424Z"
+        }
+      ],
+      "token_usage_records": 274,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 61997456,
+        "cached_input_tokens": 60388992,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 200612,
+        "reasoning_output_tokens": 84022,
+        "total_tokens": 62198068
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 61527102,
+        "cached_input_tokens": 59919616,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 193789,
+        "reasoning_output_tokens": 84022,
+        "total_tokens": 61720891
+      },
+      "raw_tool_call_records": 256
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\22\\rollout-2026-09-22T14-21-08-01a0c7c6-7a6d-7b41-9928-8046cab1de36.jsonl",
+      "sha256": "a662af35b6d405e6e35d40a26a8967c62692ef851bd28bac5cb0ff92b6e6fff5",
+      "bytes": 18111410,
+      "lines": 6138,
+      "thread_id": "01a0c7c6-7a6d-7b41-9928-8046cab1de36",
+      "session_id": "01a0c7c6-7a6d-7b41-9928-8046cab1de36",
+      "first_timestamp": "2026-09-22T06:21:09.340Z",
+      "last_timestamp": "2026-09-23T10:33:11.654Z",
+      "turn_context_unique": 31,
+      "models_by_unique_turn": {
+        "gpt-6-astra/high": 2,
+        "gpt-6-astra/medium": 1,
+        "gpt-6-astra/minimal": 1,
+        "gpt-6-sol/high": 27
+      },
+      "task_started": 31,
+      "task_complete": 29,
+      "compactions": [
+        {
+          "line": 2589,
+          "timestamp": "2026-09-23T04:58:58.076Z"
+        },
+        {
+          "line": 4656,
+          "timestamp": "2026-09-23T08:20:18.050Z"
+        }
+      ],
+      "token_usage_records": 738,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 204259284,
+        "cached_input_tokens": 200866816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 382192,
+        "reasoning_output_tokens": 135384,
+        "total_tokens": 204641476
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 203242241,
+        "cached_input_tokens": 199851904,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 373904,
+        "reasoning_output_tokens": 135384,
+        "total_tokens": 203616145
+      },
+      "raw_tool_call_records": 708
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-34-07-01a0c7c6-7a6d-7b41-9928-8046cab1de36_01a0cdd4-74a0-75f2-bbbe-960ff9949ddc.jsonl",
+      "sha256": "6e4803ab8138096026178b0b6b96a8ffa6f3bea83371af4e3293b48cc8a3a1c1",
+      "bytes": 30212761,
+      "lines": 15761,
+      "thread_id": "01a0c7c6-7a6d-7b41-9928-8046cab1de36",
+      "session_id": "01a0c7c6-7a6d-7b41-9928-8046cab1de36",
+      "first_timestamp": "2026-09-23T10:34:07.976Z",
+      "last_timestamp": "2026-09-25T02:28:09.365Z",
+      "turn_context_unique": 23,
+      "models_by_unique_turn": {
+        "gpt-6-sol/high": 23
+      },
+      "task_started": 23,
+      "task_complete": 22,
+      "compactions": [
+        {
+          "line": 1300,
+          "timestamp": "2026-09-24T01:45:58.525Z"
+        },
+        {
+          "line": 5806,
+          "timestamp": "2026-09-24T04:49:52.283Z"
+        },
+        {
+          "line": 10520,
+          "timestamp": "2026-09-24T09:26:23.441Z"
+        },
+        {
+          "line": 14452,
+          "timestamp": "2026-09-24T11:53:41.505Z"
+        }
+      ],
+      "token_usage_records": 1966,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 560741522,
+        "cached_input_tokens": 556793984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 774034,
+        "reasoning_output_tokens": 319248,
+        "total_tokens": 561515556
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 761831541,
+        "cached_input_tokens": 754505344,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1128337,
+        "reasoning_output_tokens": 454063,
+        "total_tokens": 762959878
+      },
+      "raw_tool_call_records": 1940
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\25\\rollout-2026-09-25T10-28-45-01a0d664-ce0d-7711-bfcc-736ab7262ee7.jsonl",
+      "sha256": "967dcf1efaa4ec567db606bddba6af8b1ac31cb73603060815da50aa928fd38f",
+      "bytes": 183456028,
+      "lines": 20669,
+      "thread_id": "01a0d664-ce0d-7711-bfcc-736ab7262ee7",
+      "session_id": "01a0d664-ce0d-7711-bfcc-736ab7262ee7",
+      "first_timestamp": "2026-09-25T02:30:03.867Z",
+      "last_timestamp": "2026-09-27T02:23:42.382Z",
+      "turn_context_unique": 36,
+      "models_by_unique_turn": {
+        "gpt-6-sol/high": 35,
+        "gpt-6-astra/high": 1
+      },
+      "task_started": 36,
+      "task_complete": 35,
+      "compactions": [
+        {
+          "line": 2257,
+          "timestamp": "2026-09-25T08:13:21.551Z"
+        },
+        {
+          "line": 7766,
+          "timestamp": "2026-09-25T11:28:22.734Z"
+        },
+        {
+          "line": 10043,
+          "timestamp": "2026-09-25T13:03:01.845Z"
+        },
+        {
+          "line": 13617,
+          "timestamp": "2026-09-25T16:27:55.384Z"
+        },
+        {
+          "line": 15736,
+          "timestamp": "2026-09-26T05:30:53.590Z"
+        },
+        {
+          "line": 18835,
+          "timestamp": "2026-09-26T07:21:23.732Z"
+        }
+      ],
+      "token_usage_records": 2799,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 836013738,
+        "cached_input_tokens": 830461440,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1115423,
+        "reasoning_output_tokens": 413517,
+        "total_tokens": 837129161
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 832839115,
+        "cached_input_tokens": 827881984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1092228,
+        "reasoning_output_tokens": 413517,
+        "total_tokens": 833931343
+      },
+      "raw_tool_call_records": 2757
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\27\\rollout-2026-09-27T10-26-40-01a0e0af-9d17-7bc3-a02a-391e051355a1.jsonl",
+      "sha256": "fa0d65cb6e219299cca2edc0d4304511cb0ed9d18f37deb04e4610755885e84f",
+      "bytes": 89675445,
+      "lines": 9083,
+      "thread_id": "01a0e0af-9d17-7bc3-a02a-391e051355a1",
+      "session_id": "01a0e0af-9d17-7bc3-a02a-391e051355a1",
+      "first_timestamp": "2026-09-27T02:28:58.394Z",
+      "last_timestamp": "2026-09-29T08:12:11.242Z",
+      "turn_context_unique": 49,
+      "models_by_unique_turn": {
+        "gpt-6-sol/high": 31,
+        "gpt-6-astra/high": 15,
+        "gpt-6-astra/low": 2,
+        "gpt-6-astra/xhigh": 1
+      },
+      "task_started": 49,
+      "task_complete": 47,
+      "compactions": [
+        {
+          "line": 2520,
+          "timestamp": "2026-09-28T02:30:31.785Z"
+        },
+        {
+          "line": 5695,
+          "timestamp": "2026-09-28T09:55:03.472Z"
+        },
+        {
+          "line": 7273,
+          "timestamp": "2026-09-29T02:14:56.492Z"
+        },
+        {
+          "line": 8837,
+          "timestamp": "2026-09-29T07:11:05.620Z"
+        }
+      ],
+      "token_usage_records": 1125,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 321363502,
+        "cached_input_tokens": 315839232,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 713994,
+        "reasoning_output_tokens": 270578,
+        "total_tokens": 322077496
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 319273112,
+        "cached_input_tokens": 314292480,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 692449,
+        "reasoning_output_tokens": 270578,
+        "total_tokens": 319965561
+      },
+      "raw_tool_call_records": 1073
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\27\\rollout-2026-09-27T10-55-43-01a0e0ca-3412-7c12-9d82-11b42fa1092c.jsonl",
+      "sha256": "dac9c44d4cc3d694ede1acb907278bb660255575fdb96c78a1c69ee24ece3517",
+      "bytes": 59629533,
+      "lines": 2834,
+      "thread_id": "01a0e0ca-3412-7c12-9d82-11b42fa1092c",
+      "session_id": "01a0e0ca-3412-7c12-9d82-11b42fa1092c",
+      "first_timestamp": "2026-09-27T02:55:43.884Z",
+      "last_timestamp": "2026-09-28T01:33:58.423Z",
+      "turn_context_unique": 11,
+      "models_by_unique_turn": {
+        "gpt-6-luna/max": 11
+      },
+      "task_started": 11,
+      "task_complete": 10,
+      "compactions": [
+        {
+          "line": 1643,
+          "timestamp": "2026-09-27T13:08:58.264Z"
+        }
+      ],
+      "token_usage_records": 290,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 95475681,
+        "cached_input_tokens": 92740992,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 323828,
+        "reasoning_output_tokens": 222177,
+        "total_tokens": 95799509
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 94799417,
+        "cached_input_tokens": 92702336,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 322886,
+        "reasoning_output_tokens": 222177,
+        "total_tokens": 95122303
+      },
+      "raw_tool_call_records": 278
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\28\\rollout-2026-09-28T14-07-19-01a0e69f-fac9-7931-aa4c-7771c2236ba6.jsonl",
+      "sha256": "52054356a43c10b485db8373812de35306c02ce4f1843417a109b6eaa3293988",
+      "bytes": 225552398,
+      "lines": 7731,
+      "thread_id": "01a0e69f-fac9-7931-aa4c-7771c2236ba6",
+      "session_id": "01a0e69f-fac9-7931-aa4c-7771c2236ba6",
+      "first_timestamp": "2026-09-28T06:07:20.041Z",
+      "last_timestamp": "2026-09-29T06:40:41.233Z",
+      "turn_context_unique": 19,
+      "models_by_unique_turn": {
+        "gpt-6-luna/max": 19
+      },
+      "task_started": 19,
+      "task_complete": 19,
+      "compactions": [
+        {
+          "line": 3059,
+          "timestamp": "2026-09-28T14:06:47.486Z"
+        },
+        {
+          "line": 5356,
+          "timestamp": "2026-09-29T03:46:16.799Z"
+        }
+      ],
+      "token_usage_records": 914,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 283537858,
+        "cached_input_tokens": 279485184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 678539,
+        "reasoning_output_tokens": 434425,
+        "total_tokens": 284216397
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 282331978,
+        "cached_input_tokens": 279283584,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 674619,
+        "reasoning_output_tokens": 434425,
+        "total_tokens": 283006597
+      },
+      "raw_tool_call_records": 893
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\29\\rollout-2026-09-29T16-15-25-01a0ec3b-9fad-72a0-9869-c6f58a0220b6.jsonl",
+      "sha256": "0929b56d279a0f3444e62ca61e27b48f9b73972db7eb47a8270477f06154a2ce",
+      "bytes": 9321996,
+      "lines": 1160,
+      "thread_id": "01a0ec3b-9fad-72a0-9869-c6f58a0220b6",
+      "session_id": "01a0ec3b-9fad-72a0-9869-c6f58a0220b6",
+      "first_timestamp": "2026-09-29T08:15:26.610Z",
+      "last_timestamp": "2026-09-29T13:50:07.577Z",
+      "turn_context_unique": 5,
+      "models_by_unique_turn": {
+        "gpt-6-astra/low": 5
+      },
+      "task_started": 5,
+      "task_complete": 5,
+      "compactions": [],
+      "token_usage_records": 120,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 31175202,
+        "cached_input_tokens": 30566912,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 184087,
+        "reasoning_output_tokens": 79444,
+        "total_tokens": 31359289
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 31175202,
+        "cached_input_tokens": 30566912,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 184087,
+        "reasoning_output_tokens": 79444,
+        "total_tokens": 31359289
+      },
+      "raw_tool_call_records": 115
+    },
+    {
+      "path": "H:\\CodexData\\sessions\\2026\\09\\29\\rollout-2026-09-29T16-32-51-01a0ec4b-9484-7dc0-a727-e8d4b9b347b5.jsonl",
+      "sha256": "d787bc7b5fe92b4ac88456fe2bc2fcfc06b0dedef073be8e47a5c63764a95b33",
+      "bytes": 209502793,
+      "lines": 7995,
+      "thread_id": "01a0ec4b-9484-7dc0-a727-e8d4b9b347b5",
+      "session_id": "01a0ec4b-9484-7dc0-a727-e8d4b9b347b5",
+      "first_timestamp": "2026-09-29T08:32:52.048Z",
+      "last_timestamp": "2026-09-29T14:31:24.489Z",
+      "turn_context_unique": 6,
+      "models_by_unique_turn": {
+        "gpt-6-luna/max": 6
+      },
+      "task_started": 6,
+      "task_complete": 5,
+      "compactions": [
+        {
+          "line": 2368,
+          "timestamp": "2026-09-29T09:40:49.078Z"
+        },
+        {
+          "line": 4402,
+          "timestamp": "2026-09-29T11:22:40.410Z"
+        },
+        {
+          "line": 7024,
+          "timestamp": "2026-09-29T13:35:19.275Z"
+        }
+      ],
+      "token_usage_records": 876,
+      "duplicate_response_records_omitted": 0,
+      "deduplicated_usage": {
+        "input_tokens": 283190388,
+        "cached_input_tokens": 279631360,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 744312,
+        "reasoning_output_tokens": 510516,
+        "total_tokens": 283934700
+      },
+      "event_token_counter_resets": [],
+      "last_event_counter_not_used_for_aggregate": {
+        "input_tokens": 281308301,
+        "cached_input_tokens": 278164224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 733146,
+        "reasoning_output_tokens": 510516,
+        "total_tokens": 282041447
+      },
+      "raw_tool_call_records": 867
+    }
+  ],
+  "deduplicated_response_count": 9918,
+  "deduplicated_usage": {
+    "input_tokens": 2880852243,
+    "cached_input_tokens": 2843870336,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 5674125,
+    "reasoning_output_tokens": 2672964,
+    "total_tokens": 2886526368
+  },
+  "compaction_count": 26,
+  "event_counter_reset_count": 0,
+  "evidence_files": [
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\docs\\plan\\server-next-migration-handoff-20260927.md",
+      "bytes": 14449,
+      "sha256": "21ef936a3dd935e17eea22a811a18c1da358418b931087c41bbf985e675e0d4e"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\docs\\plan\\midi-qol-ag-acceptance-checklist.md",
+      "bytes": 32027,
+      "sha256": "b710aa5ec090c8fc74328a73b689aa422793498b1140c799460d8d81f2fb0d80"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\docs\\reviews\\2026-09-28-server-next-three-dnd-module-support-refresh.md",
+      "bytes": 3507,
+      "sha256": "0849129caf8ce0019ee6ca19b46cbd68ba125530c87c6acca7d644df23630df2"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\upstream-lock.json",
+      "bytes": 6696,
+      "sha256": "7fd0d4fdd96dceb7f866bf921cf02fa3d12a19ed5944bd8dee0b68906f2034d6"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\tests.mjs",
+      "bytes": 5367,
+      "sha256": "9c7334236813364a0dc78cdacd3d1f0b8d552ef444d3d03ec324a24d7398e842"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\registration.test.mjs",
+      "bytes": 3546,
+      "sha256": "55a5d3dcbc8cd978ab09a1fea02001f5fa684b3b811dd42b08284149392dcf4c"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\sources\\base\\src\\module.js",
+      "bytes": 6407,
+      "sha256": "3beb9eb135dbd876409b40d9f1b2947fea74d52a44e122d0dd3cc18f497d9354"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\sources\\base\\src\\systems.js",
+      "bytes": 2091,
+      "sha256": "b3197ec5b626bc468a0d6bbc3897266b0628932ef6e51eec1685f598096186fa"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\sources\\base\\src\\libwrapper.js",
+      "bytes": 4164,
+      "sha256": "5204fe6357e386d4d4446c26c2b185fa1bcc30f6fa442973e8bb2eeb695e8893"
+    },
+    {
+      "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\dist-local1\\itempilesdnd5e\\dist\\module.js",
+      "bytes": 14242,
+      "sha256": "84d08798928a35641627f2e0674974ecebf18d97388d274701b63705814bc536"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\app\\14.368\\client\\helpers\\hooks.mjs",
+      "bytes": 6980,
+      "sha256": "d026527620f2b03aa1924948129629e43e2626ed6a7c591816bf64013f928904"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\all-mod-upstream-audit-20260923\\build-current-ledger.ps1",
+      "bytes": 7534,
+      "sha256": "cb19aca11e9d8ad9b19562adfc60decf4d12b80363802418aa6ea5e7777fed39"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\all-mod-upstream-audit-20260923\\installed-modules-live-manifests-corrected.json",
+      "bytes": 39073,
+      "sha256": "e15e747a1728b903e11d561f0e6a24b2741749c159d21f2900258ba2b80f359f"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\all-mod-upstream-audit-20260923\\planned-modules-live-manifests.json",
+      "bytes": 5696,
+      "sha256": "426c9ce22c9318a41a7d39f44d8d99eb0c8d5e2b50037647b51f41b25e4a86c7"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\module-activation-20260926\\mirror-persisted-module-setting.json",
+      "bytes": 3192,
+      "sha256": "99defc6b1f78bd4877ba32c9b2ffe59fa6c5ead8c9cb643b77d773ba156d6e59"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\module-activation-20260926\\next-live-client-startup.json",
+      "bytes": 85432,
+      "sha256": "1d81622f2c22571c2e546ff2557c0b7b35a5f9a903abcbe6c8f26ac991702842"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\item-piles-20260929\\bag-container-v2-readback.json",
+      "bytes": 23987,
+      "sha256": "f76a53abf6d23b80d4fd4fa022527ec17bfb43bc3ba0ac8f653f8e43ebbdf9d8"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\item-piles-20260929\\report-recovery-v2.json",
+      "bytes": 10299,
+      "sha256": "d71b770ee459fb234c15438a1a4a265a048c43f3b2dc4f16da97207510fd570d"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\calendar-chain-20260927\\calendar-chain-normal-client-acceptance-20260927.json",
+      "bytes": 11226,
+      "sha256": "62c5239044756988767a7c9269b5e7567ebb7e41cae3a7d092f59195a34b691c"
+    },
+    {
+      "path": "F:\\FoundryLab\\foundry-v14\\evidence\\server-next-migration\\player-item-repair-20260928\\player-item-repair-final-receipt-20260929.json",
+      "bytes": 11669,
+      "sha256": "c5083170e19afa643df0810c6ef48a9605387c6314e654d51da6a3a380d1c139"
+    }
+  ],
+  "independent_inventory_recalculation": {
+    "ledger_ids": 85,
+    "mirror_saved_enabled": 78,
+    "next_client_active": 74,
+    "shared": 52,
+    "mirror_only": 26,
+    "next_only": 22,
+    "gap_in_old_ledger": [
+      "fvtt-json-forge",
+      "plutonium-cn"
+    ],
+    "gap_missing_from_old_ledger": [
+      "3ds-atlas",
+      "5e-dlc-monster",
+      "calendaria",
+      "chat-memory-guard",
+      "color-picker",
+      "dfreds-convenient-effects",
+      "dfreds-droppables",
+      "dungeon-strugglers-collection",
+      "fvtt-babele-rolltable-embed-translation",
+      "fvtt-custom-conditions",
+      "fvtt-trigger-engine",
+      "fvtt-weapon-mastery-properties",
+      "global-progress-clocks",
+      "item-piles",
+      "itemacro",
+      "itempilesdnd5e",
+      "multiple-document-selection",
+      "psfx",
+      "quickscale",
+      "share-media",
+      "simplecover5e",
+      "sync-token-actor",
+      "vision-5e",
+      "z-scatter"
+    ],
+    "formula": "L=installed.ids union planned.ids; M=mirror.enabledIds; N=next.state.activeIds; omitted=(M-N)-L"
+  },
+  "source_worktree": {
+    "path": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration",
+    "head": "b0396c3b6f3950d0dfdc5ec88de2bf558c1bff6d",
+    "branch": "codex/20260919-151319-server-next-migration",
+    "tracked_dirty_paths": 132,
+    "untracked_paths": 234,
+    "status_sha256": "e25dea9738bea454b474d52515fea876dc9ec77006bf5792a0ac90da018bb121",
+    "no_mutation_performed": true
+  },
+  "derived_usage": {
+    "noncached_input_tokens": 36981907,
+    "noncached_input_plus_output_tokens": 42656032,
+    "cached_input_share_of_input": 0.9871628588068478,
+    "invoice_or_quota_cost": null
+  },
+  "explicit_event_anchors": [
+    {
+      "topic": "wrong_callback_route",
+      "path": "H:/CodexData/sessions/2026/09/28/rollout-2026-09-28T14-07-19-01a0e69f-fac9-7931-aa4c-7771c2236ba6.jsonl",
+      "line": 3639,
+      "timestamp": "2026-09-28T14:25:41.414Z",
+      "call_id": "call_sf2X2c7VThWgxNAo9cdIRGGK",
+      "observed_tool": "collaboration.send_message",
+      "target": "/root"
+    },
+    {
+      "topic": "v7_compaction",
+      "line": 5356,
+      "timestamp": "2026-09-29T03:46:16.799Z",
+      "path": "H:/CodexData/sessions/2026/09/28/rollout-2026-09-28T14-07-19-01a0e69f-fac9-7931-aa4c-7771c2236ba6.jsonl"
+    },
+    {
+      "topic": "v7_wrong_task_final",
+      "line": 5435,
+      "timestamp": "2026-09-29T03:49:57.995Z",
+      "path": "H:/CodexData/sessions/2026/09/28/rollout-2026-09-28T14-07-19-01a0e69f-fac9-7931-aa4c-7771c2236ba6.jsonl"
+    },
+    {
+      "topic": "item_piles_six_pass",
+      "line": 498,
+      "timestamp": "2026-09-29T09:58:40.831Z",
+      "call_id": "call_38LUoUQatLmzPBoplAzGk64y",
+      "path": "H:/CodexData/sessions/2026/09/29/rollout-2026-09-29T16-15-25-01a0ec3b-9fad-72a0-9869-c6f58a0220b6.jsonl"
+    },
+    {
+      "topic": "item_piles_registration_failure",
+      "line": 895,
+      "timestamp": "2026-09-29T12:07:42.240Z",
+      "call_id": "call_I7y8Wj7RBhwKjzsRRw2OB6Re",
+      "path": "H:/CodexData/sessions/2026/09/29/rollout-2026-09-29T16-15-25-01a0ec3b-9fad-72a0-9869-c6f58a0220b6.jsonl"
+    },
+    {
+      "topic": "item_piles_twelve_pass",
+      "line": 1016,
+      "timestamp": "2026-09-29T12:21:05.442Z",
+      "call_id": "call_qEltIheXuSjz3Q6hqidHK68e",
+      "path": "H:/CodexData/sessions/2026/09/29/rollout-2026-09-29T16-15-25-01a0ec3b-9fad-72a0-9869-c6f58a0220b6.jsonl"
+    }
+  ]
+}

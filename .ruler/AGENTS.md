@@ -16,7 +16,7 @@
 - 本机和线上不创建备份，不以副本、隐藏目录或回滚目录绕过。已授权生产操作不以在线人数为零作门槛；记录目标、前后清单、SHA-256、进程、端口与日志。失败时停止并报告，等待新的修复授权。
 - 本地 v14 Lab 使用 `F:\FoundryLab\foundry-v14\data\server-mirror`；核对 PID、端口、路径和运行者后可自主测试。被他人占用则协调等待，不停止其进程，不复制另一套 Lab。世界选择与恢复见 `tools/foundry-ops/AGENTS.md`。
 - 生产只允许已授权的远程 `8080`，`51020` 只读。生产 inventory/acquire 无需逐次询问，但须核对目标并使用 `--apply`、`--allow-production-read` 和外部 `FVTT_OPS_PRODUCTION_*` 配置。生产写入需当次明确授权；不得直接编辑运行中世界 LevelDB、升级 Foundry/dnd5e 或触碰未授权实例。
-- 不自主启动、等待或拼接超过 30 分钟的 Chrome、Foundry、性能或 soak；四小时会话由用户运行。破坏性 fixture 的可写 app/data/world/backup/evidence 仅在本次随机临时根，不能使用持久 Lab 或 reference cache。
+- Foundry、Chrome 工作不设固定总时长上限；单操作仍有超时，无新证据不重复尝试。四小时或其他长时测试仅在用户明确要求相应长时验收时运行。破坏性 fixture 的可写 app/data/world/backup/evidence 仅在本次随机临时根，不能使用持久 Lab 或 reference cache。
 - 凭据、Cookie、浏览器 profile、私钥、真实生产目标和未脱敏日志不进入仓库、fixture 或报告。
 
 ## 按任务找资料
@@ -29,6 +29,11 @@
 | CLI / Web | `apps/AGENTS.md`、`apps/cli/AGENTS.md`、`apps/web/AGENTS.md` |
 | Foundry 模块 | `foundry-modules/AGENTS.md` 与模块自己的 AGENTS |
 | Lab、资产和运维 | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
+| 新外部接口、跨模块/版本/客户端、迁移、重复失败 | `docs/runbooks/development-feedback-loop.md` |
+
+- 影响产品含义、验收出口、功能归属或写入授权的歧义先向用户澄清，之后才执行依赖该选择的工作；可查的技术事实先调查，可逆实现细节自行决定。已有明确授权不重复索取。
+- 陌生集成接口及用户指定借鉴的方向，先把精确版本来源转成接口事实、适配差异和最小反证检查；已有证据可复用，不以列链接代替验证。外部来源缺失时从最小真实链与竞争假设开始，不无限猜测。
+- 同一失败连续两次无新证据时，停止原路重试，先区分工具、前置、协议、业务、证据与授权问题。复杂任务派发前核对绝对路径、候选身份、前置检查结果和工具最小往返；失败检查不能被后续命令的成功退出掩盖。
 
 - 当前支持范围：`docs/acceptance/current-support-matrix.md`。
 - 版本相关开发：`docs/runbooks/foundry-v14-development-source-routing.md`；结论对照 tracked provenance、完整 reference cache 或精确版本源码。Context7、官方 API、CLI、模板和 MCP 按需要选用，不要求全套调用，也不凭“最新版”推断行为。
