@@ -1,8 +1,10 @@
-# Battlefield Painter P2 Alpha · `0.3.0-alpha.1`
+# Battlefield Painter P2 Alpha · `0.3.0-alpha.2`
 
 这是一个自用的 Foundry VTT v14 战场地形画笔原型。它不复制 Tile Arsenal 的代码、配置或素材，只实现相近的高层工作流：GM 从工具盘选择地形、在地图上涂抹，并由模组创建一组可以追踪和回滚的场景文档。
 
 当前版本是 P2 alpha：浏览器 bundle 已在模拟 Foundry 全局环境中完成加载、生命周期注册、ApplicationV2 打开和版本/权限门禁测试。Frost B14 的薄冰/寒气视觉已获用户认可，Fire B13 的完整真实 Canvas 验收仍保持独立未完成；其他运行时结论以各 micro-batch 记录为准，不能由静态测试一并推定。新版本不再生成或创建 Battlefield Painter 音频；旧版本残留 AmbientSound 只能由 GM 显式清理。
+
+`0.3.0-alpha.2` 允许三组精确运行配对：原 Foundry `14.364` / dnd5e `5.3.3`，历史 ServerNext `14.368` / `6.0.2`，以及 `14.368` / `6.0.5`。manifest 的 `verified` 仍保留旧版本，运行时拒绝交叉配对和未列明版本。2026-09-24 的真实 Canvas 定点验收针对 `14.368` / `6.0.2`，通过方格 Fire 笔画→原生 Region 移动消耗/光源→重载视觉→自有对象清理。2026-10-01 在 `6.0.5` 独立修正行列坐标与视频加载后，原两格 Square Fire I 的可见动画、Region／light、正常GM重载及精确清理通过；六角格、其它地形／阶段、模块Undo与玩家权限未扩大验收，见[本轮限定恢复](../../docs/reviews/2026-10-01-next-605-custom-module-restoration.md)与[历史候选记录](docs/server-next-candidate.md)。
 
 ## 当前范围
 
@@ -45,7 +47,7 @@ game.modules.get("fvtt-battlefield-painter").api.auditEffects()
 game.modules.get("fvtt-battlefield-painter").api.auditFrostEffects()
 ```
 
-`auditEffects()` 与 `auditFrostEffects()` 分别只读返回 Fire/Frost 的 mesh、格位、顶点、三角形、ticker、媒体、重建次数和最近错误。API 同时公开 `compatibility` 与 `canMutate`。仅当版本精确为 Foundry `14.364` / dnd5e `5.3.3` 且当前用户是 GM 时，才暴露 `open`、`activate` 和 `deactivate`；其他环境只保留诊断能力。
+`auditEffects()` 与 `auditFrostEffects()` 分别只读返回 Fire/Frost 的 mesh、格位、顶点、三角形、ticker、媒体、重建次数和最近错误。API 同时公开 `compatibility` 与 `canMutate`。仅当版本精确为 Foundry `14.364` / dnd5e `5.3.3`，或 Foundry `14.368` / dnd5e `6.0.2`、`6.0.5`，且当前用户是 GM 时，才暴露 `open`、`activate` 和 `deactivate`；其他环境只保留诊断能力。
 
 Alpha 还提供仅供开发、测试和修复使用的内部阶段开关：
 
@@ -90,7 +92,8 @@ bun run verify-install
 - [P0 真实验收清单](docs/acceptance-checklist.md)
 - [原创素材来源与完整提示词](docs/asset-provenance.md)
 - [后续路线](docs/roadmap.md)
-- [Alpha 发布说明](docs/alpha-release-notes.md)
+- [0.3.0-alpha.1 发布说明（历史）](docs/alpha-release-notes.md)
+- [ServerNext 静态兼容候选与待验收项](docs/server-next-candidate.md)
 - [P1 开发 checkpoint 与异机验收交接](docs/p1-development-checkpoint.md)
 - [P2 执行计划](docs/p2-execution-plan.md)
 - [B13 连续火焰场视觉验收](docs/runtime-acceptance-micro-batches/B13-art-style-square.md)

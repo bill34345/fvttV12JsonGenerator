@@ -1,5 +1,7 @@
 import { asArray, asRecord, clone, htmlFromEntries, normalizeName, sha256, stableId, stringValue } from './internals';
 import { BLOOD_HUNTER_MODULE_ID, BLOOD_HUNTER_MODULE_VERSION } from './constants';
+import { projectDnd6Advancements } from './dnd6-projection';
+import { refreshNativeBloodHunterItemLogicalHash } from './item-hash';
 import {
   BLOOD_HUNTER_CLASS_NAME,
   BLOOD_HUNTER_SOURCE,
@@ -37,6 +39,11 @@ export { BLOOD_HUNTER_MODULE_ID, BLOOD_HUNTER_MODULE_VERSION } from './constants
 export const BLOOD_HUNTER_V14_TARGET: BloodHunterV14CompileTarget = {
   foundry: '14.364',
   dnd5e: '5.3.3',
+  effectProfile: 'modded-v14',
+};
+export const BLOOD_HUNTER_DND6_TARGET: BloodHunterV14CompileTarget = {
+  foundry: '14.368',
+  dnd5e: '6.0.2',
   effectProfile: 'modded-v14',
 };
 
@@ -80,7 +87,7 @@ interface AdvanceOptions {
 export function compileBloodHunterV14Package(source: BloodHunterEnrichedSource): NativeBloodHunterPackage;
 export function compileBloodHunterV14Package(options: BloodHunterV14CompileOptions): NativeBloodHunterPackage;
 export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | BloodHunterV14CompileOptions): NativeBloodHunterPackage {
-  const { source, sourceSha256 } = resolveCompileInput(input);
+  const { source, sourceSha256, target } = resolveCompileInput(input);
   const sourceValidation = validateBloodHunterEnrichedSource(source);
   if (!sourceValidation.ok) throw new Error(`BloodHunter2024 source 被拒绝: ${sourceValidation.findings.map((finding) => finding.code).join(', ')}`);
 
@@ -322,7 +329,7 @@ export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | 
   const packageWithoutHash: Omit<NativeBloodHunterPackage, 'logicalHash'> = {
     moduleId: BLOOD_HUNTER_MODULE_ID,
     version: BLOOD_HUNTER_MODULE_VERSION,
-    target: { foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' },
+    target: { ...target, rules: '2024' },
     classes: [classItem],
     subclasses: subclassItems,
     features: canonicalFeatures.sort((left, right) => left._id.localeCompare(right._id, 'en')),
@@ -332,19 +339,24 @@ export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | 
     activitySummary,
     ...(sourceSha256 ? { sourceSha256 } : {}),
   };
+  if (target.dnd5e === '6.0.2') {
+    addDnd6FightingStyleEligibility(packageWithoutHash, source);
+    projectDnd6Advancements(packageWithoutHash);
+  }
   const output: NativeBloodHunterPackage = { ...packageWithoutHash, logicalHash: sha256(packageWithoutHash) };
   const validation = validateNativeBloodHunterPackage(output);
   if (!validation.ok) throw new Error(`native package compiler postcondition failed: ${validation.findings.map((finding) => finding.code).join(', ')}`);
   return output;
 }
 
-function resolveCompileInput(input: BloodHunterEnrichedSource | BloodHunterV14CompileOptions): { source: BloodHunterEnrichedSource; sourceSha256?: string } {
-  if (!asRecord(input) || !('target' in input) || !('source' in input)) return { source: input as BloodHunterEnrichedSource };
+function resolveCompileInput(input: BloodHunterEnrichedSource | BloodHunterV14CompileOptions): { source: BloodHunterEnrichedSource; sourceSha256?: string; target: BloodHunterV14CompileTarget } {
+  if (!asRecord(input) || !('target' in input) || !('source' in input)) return { source: input as BloodHunterEnrichedSource, target: BLOOD_HUNTER_V14_TARGET };
   const options = input as BloodHunterV14CompileOptions;
-  if (options.target?.foundry !== BLOOD_HUNTER_V14_TARGET.foundry
-    || options.target?.dnd5e !== BLOOD_HUNTER_V14_TARGET.dnd5e
-    || options.target?.effectProfile !== BLOOD_HUNTER_V14_TARGET.effectProfile) {
-    throw new Error('Blood Hunter compiler target 必须精确为 Foundry 14.364 / dnd5e 5.3.3 / modded-v14。');
+  const target = options.target;
+  const supported = [BLOOD_HUNTER_V14_TARGET, BLOOD_HUNTER_DND6_TARGET].some((candidate) =>
+    target?.foundry === candidate.foundry && target?.dnd5e === candidate.dnd5e && target?.effectProfile === candidate.effectProfile);
+  if (!supported) {
+    throw new Error('Blood Hunter compiler target 必须精确为 Foundry 14.364 / dnd5e 5.3.3 或 Foundry 14.368 / dnd5e 6.0.2。');
   }
   assertBloodHunterSourceBytes(options.source);
   const text = typeof options.source === 'string' ? options.source : new TextDecoder('utf-8', { fatal: true }).decode(options.source);
@@ -354,7 +366,7 @@ function resolveCompileInput(input: BloodHunterEnrichedSource | BloodHunterV14Co
   } catch (error) {
     throw new Error(`锁定 BloodHunter2024 source 不是有效 JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return { source: parsed as BloodHunterEnrichedSource, sourceSha256: EXPECTED_BLOOD_HUNTER_SOURCE_SHA256 };
+  return { source: parsed as BloodHunterEnrichedSource, sourceSha256: EXPECTED_BLOOD_HUNTER_SOURCE_SHA256, target };
 }
 
 function buildClassDocument(entry: BloodHunterEnrichedSource['class'][number], id: string, source: BloodHunterEnrichedSource): NativeItemSource {
@@ -519,6 +531,63 @@ function buildMutagenicWarriorDocument(): NativeItemSource {
     boundary: '诱变剂公式学习、配制和替换为 GM-assisted。',
   };
   return document;
+}
+
+/** D&D 6 checks for this granted class feature before showing the four official Fighting Style feats. */
+function buildFightingStyleEligibilityDocument(feature: CollectedBloodHunterFeature): NativeItemSource {
+  const sourceKey = `${BLOOD_HUNTER_SOURCE}|synthetic|${CLASS_IDENTIFIER}|fighting-style-eligibility`;
+  const id = itemIdForSourceKey('synthetic-feat', sourceKey);
+  const document: NativeItemSource = {
+    _id: id,
+    name: feature.entry.name,
+    type: 'feat',
+    img: ITEM_ICON,
+    system: {
+      identifier: 'fighting-style',
+      type: { value: 'class', subtype: '' },
+      description: { value: htmlFromEntries(feature.entry.entries), chat: '' },
+      source: { custom: BLOOD_HUNTER_SOURCE, rules: '2024' },
+      activities: {},
+      prerequisites: { items: [], level: null, repeatable: false },
+      uses: { spent: 0, max: '', recovery: [] },
+    },
+    effects: [],
+    flags: {},
+  };
+  attachMetadata(document, sourceKey, {
+    source: BLOOD_HUNTER_SOURCE,
+    group: 'classFeature',
+    className: BLOOD_HUNTER_CLASS_NAME,
+    level: 2,
+    normalizedName: 'fighting-style-eligibility',
+  }, 'native');
+  bloodHunterMetadata(document).synthetic = {
+    origin: '血猎手「战斗风格」源文本；D&D 6 官方风格专长需要先有 fighting-style 职业特性。',
+    boundary: '此特性只满足先决条件；实际风格仍由原 ItemChoice 在 2 级选择。',
+  };
+  return document;
+}
+
+/** Extend the source-backed level 2 grant only for the dnd5e 6.0.2 prerequisite contract. */
+export function addDnd6FightingStyleEligibility(pkg: Omit<NativeBloodHunterPackage, 'logicalHash'>, source: BloodHunterEnrichedSource): void {
+  if (pkg.target.dnd5e !== '6.0.2') throw new Error('Fighting Style eligibility projection requires dnd5e 6.0.2.');
+  const feature = collectBloodHunterFeatures(source).find((candidate) => candidate.group === 'classFeature' && isFightingStyle(candidate));
+  if (!feature) throw new Error('BloodHunter2024 缺少战斗风格来源，无法生成 D&D 6 先决条件特性。');
+  const marker = buildFightingStyleEligibilityDocument(feature);
+  if (pkg.features.some((item) => item._id === marker._id || item.system.identifier === 'fighting-style')) throw new Error('战斗风格先决条件特性重复。');
+  const classItem = pkg.classes[0];
+  const grant = Object.values(asRecord(classItem?.system.advancement)).map(asRecord)
+    .find((advancement) => advancement.type === 'ItemGrant' && advancement.level === 2);
+  const choice = Object.values(asRecord(classItem?.system.advancement)).map(asRecord)
+    .find((advancement) => advancement.type === 'ItemChoice' && advancement.level === 2 && (advancement.title === '战斗风格' || advancement.name === '战斗风格'));
+  if (!grant || !choice) throw new Error('BloodHunter2024 的2级职业授予或战斗风格选择缺失。');
+  const grantNode = pkg.grantGraph.find((node) => node.id === grant._id);
+  if (!grantNode || grantNode.type !== 'ItemGrant') throw new Error('BloodHunter2024 的2级授予图缺失。');
+  const reference = nativeReference(marker, 'Blood Hunter Fighting Style prerequisite before level 2 choice');
+  asArray<JsonObject>(asRecord(grant.configuration).items).push({ uuid: reference.uuid, optional: false });
+  grantNode.references.push(reference);
+  pkg.features.push(marker);
+  pkg.features.sort((left, right) => left._id.localeCompare(right._id, 'en'));
 }
 
 function projectFeaturePrerequisites(
@@ -855,10 +924,10 @@ function attachMetadata(document: NativeItemSource, sourceKey: string, sourceIde
     canonicalId: document._id,
     moduleVersion: BLOOD_HUNTER_MODULE_VERSION,
     automation,
-    logicalHash: sha256({ name: document.name, type: document.type, system: document.system, effects: document.effects, sourceKey, automation }),
   };
   flags.fvttJsonGenerator = generator;
   document.flags = flags;
+  refreshNativeBloodHunterItemLogicalHash(document);
 }
 
 function bloodHunterMetadata(document: NativeItemSource): JsonObject {

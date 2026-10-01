@@ -30,6 +30,10 @@ async function assertOwned(path: string): Promise<void> {
 }
 
 export async function installLocal(config = createLabConfig(), apply = false): Promise<Record<string, unknown>> {
+  const sourceManifest = JSON.parse(await readFile(resolve(config.repoRoot, 'foundry-modules', MODULE_ID, 'src/module.json'), 'utf8')) as { version?: string };
+  if (sourceManifest.version !== MODULE_VERSION) {
+    throw new Error('Legacy Server Mirror installer only accepts the original 0.1.0 source; use the ServerNext migration procedure for the 0.2.0 candidate.');
+  }
   const target = paths(config);
   assertDestination(config, target.destination);
   assertInsideLabRoot(config, target.staging);

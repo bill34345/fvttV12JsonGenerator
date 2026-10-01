@@ -1,10 +1,10 @@
-# Foundry v14 / dnd5e 5.3.3 开发资料与工具路由
+# Foundry v14 / dnd5e 双版本线开发资料与工具路由
 
 ## 目的
 
 本指南帮助后续 thread 按任务类型选择最短且可信的资料来源和工具。它不是一条必须逐项执行的固定流水线，也不要求每个任务同时查询所有来源。
 
-代理默认目标仍是 Foundry `14.364` / dnd5e `5.3.3` / `core`。用户明确指定其他已支持目标时，以用户目标和当前 support matrix 为准。
+正式生成器未指定目标时仍显式使用 Foundry `14.364` / dnd5e `5.3.3` / `core`。系统相关开发区分 5.x 固定 5.3.3 与 Next 跟随官方稳定 6.x，先按[双版本线流程](dnd5e-version-following.md)比较官方发布、本地实装和资料身份；6.x 的实际 Core／系统目标以当次核对为准，不永久卡在 6.0.2，也不把所有 6.x 宣称已支持。
 
 选择资料时始终区分三种证据：
 
@@ -18,9 +18,9 @@
 
 | 来源或工具 | 最适合 | 不能单独证明 |
 |---|---|---|
-| `references/` 与 `.local/references/` | 锁定 dnd5e `5.3.3` schema、实现、发布证据和已有模板 | Foundry UI、Hook 或 Activity 在真实世界中已正确工作 |
+| `references/` 与配置的共享 reference cache | 锁定 dnd5e `5.3.3` 及当前取得的稳定 `6.x` 源码／发布证据；正式生成模板仍按各自已有支持边界 | Foundry UI、Hook 或 Activity 在真实世界中已正确工作 |
 | Context7 `/websites/foundryvtt_api_v14` | 快速定位 Foundry v14 `Document`、`ApplicationV2`、Hooks、Canvas 等 API | 页面对应的具体 minor build 一定是 `14.364` |
-| Context7 `/foundryvtt/dnd5e` | 搜索 dnd5e 概念、Hook、DataModel、Activity 与 Wiki/源码方向 | 返回内容一定锁到 `5.3.3`；若结果来自其他分支必须停止外推 |
+| Context7 `/foundryvtt/dnd5e` | 5.x 查询指定 `release-5.3.3`；6.x 先由官方确定稳定 tag，再带 tag 查询概念／接口 | 查询里指定版本不保证结果固定；Wiki、master、6.0.x 返回只作导航，不能当目标静态证据或最新版探测器 |
 | [Foundry v14 官方 API](https://foundryvtt.com/api/v14/) | 核对 public/protected/private 边界、签名和官方说明 | 未标明 minor build 的页面等于 `14.364` 精确实现 |
 | [Foundry 14.364 发布说明](https://foundryvtt.com/releases/14.364) 与本机安装源码 | 核对 `14.364` 差异、实现细节和实际可用 namespace | 模块在目标世界中的最终行为已经通过 |
 | [dnd5e 官方源码](https://github.com/foundryvtt/dnd5e) 与锁定提交 | 核对 `5.3.3` Actor/Item/Activity/Hook/migration 实现 | Wiki 或新分支内容可无条件回推到 `5.3.3` |
@@ -43,11 +43,11 @@
 
 ### dnd5e Actor、Item、Activity、Advancement、Hook 或迁移
 
-优先使用锁定的 `.local/references/dnd5e/5.3.3/repo`。Context7 和 Wiki 可帮助发现概念与候选文件，但若没有明确证明是 `5.3.3`，不得作为最终字段、Hook 参数或行为依据。
+优先使用版本清单指向的源码：5.x 为 `.local/references/dnd5e/5.3.3/repo`；6.x 为 `dnd5e-current-6` 对应的本次稳定版本 checkout，实际路径按 `FVTT_REFERENCE_CACHE_ROOT` 解析。Context7 和 Wiki 用于发现概念／文件；引用没有对应精确版本时，回到本地固定提交确认。资料与系统哪个较旧分别处理，不能仅凭搜索片段触发安装。
 
-开始前运行 `bun run references verify`。新的 topic worktree 不一定包含 Git 忽略的默认 `.local/references`；此时使用已配置的 `FVTT_REFERENCE_CACHE_ROOT`，或按 `docs/REFERENCE_INDEX.md` 安全 bootstrap。不得为了让路径出现而复制另一整套 reference cache，也不得把缺失缓存静默降级成“最新版”资料。
+开始前运行 `bun run references verify`。新的 topic worktree 不一定包含 Git 忽略的默认 `.local/references`；此时使用已配置的 `FVTT_REFERENCE_CACHE_ROOT`，或按 `docs/REFERENCE_INDEX.md` 核对首次获取条件；已有有效缓存不走会移动旧目录的 bootstrap 更新路径。不得为了让路径出现而复制另一整套 reference cache，也不得把缺失缓存静默降级成“最新版”资料。
 
-生成数据还必须经过项目 projector/verifier 和来源语义核对；模块行为必须在 Foundry `14.364` / dnd5e `5.3.3` Lab 验收。
+生成数据还必须经过项目 projector/verifier 和来源语义核对；模块行为分别在该任务确定的 5.x／6.x 目标验收；5.3.3 已有证据不自动证明升级后的 6.x。
 
 ### Parser、Intake、生成器或 verifier 新功能
 

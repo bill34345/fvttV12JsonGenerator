@@ -13,11 +13,48 @@ export interface RollTableResultData {
 
 interface TranslationFacade {
   init?: () => Promise<boolean> | boolean;
+  sessionFor?: (options: {language: string}) => Promise<TranslationSession>;
   rollbackDocument?: (documentType: string, data: Record<string, unknown>, options?: Record<string, unknown>) => Record<string, unknown> | null;
-  translatedCompendiumFor?: (pack: string) => {
-    translate?: (data: Record<string, unknown>) => Record<string, unknown>;
-    translationsFor?: (data: Record<string, unknown>) => Record<string, unknown>;
-  } | null;
+  translatedCompendiumFor?: (pack: string) => TranslatedCompendium | null;
+}
+
+interface TranslatedCompendium {
+  translate?: (data: Record<string, unknown>) => Record<string, unknown>;
+  translationsFor?: (data: Record<string, unknown>) => Record<string, unknown>;
+}
+
+interface TranslationSession {
+  translatedCompendiumFor?: (pack: string) => TranslatedCompendium | null;
+}
+
+let cnSessionCache = new WeakMap<TranslationFacade, Promise<TranslationSession>>();
+
+/** Use the registered `cn` source for embeds under Foundry's `zh-CN` locale. */
+export async function translatedCompendiumForPack(
+  babele: TranslationFacade,
+  pack: string,
+  language: string | null | undefined,
+): Promise<TranslatedCompendium | null> {
+  const current = babele.translatedCompendiumFor?.(pack) ?? null;
+  if (current || language !== 'zh-CN' || !babele.sessionFor) return current;
+
+  let pending = cnSessionCache.get(babele);
+  if (!pending) {
+    pending = babele.sessionFor({language: 'cn'});
+    cnSessionCache.set(babele, pending);
+    void pending.catch(() => cnSessionCache.delete(babele));
+  }
+  return (await pending).translatedCompendiumFor?.(pack) ?? null;
+}
+
+export function clearTranslationSessionCache(): void {
+  cnSessionCache = new WeakMap<TranslationFacade, Promise<TranslationSession>>();
+}
+
+function activeLanguage(): string | null {
+  const settings = (globalThis as {game?: {settings?: {get?: (scope: string, key: string) => unknown}}}).game?.settings;
+  const language = settings?.get?.('core', 'language');
+  return typeof language === 'string' ? language : null;
 }
 
 interface FoundryDocumentLike {
@@ -151,9 +188,9 @@ async function translateTableData(table: FoundryDocumentLike): Promise<Record<st
   if (babele.init && !(await babele.init())) return null;
 
   const pack = table.pack ?? table.compendium?.collection ?? null;
-  if (!pack || !table.toObject || !babele.translatedCompendiumFor) return null;
+  if (!pack || !table.toObject) return null;
 
-  const compendium = babele.translatedCompendiumFor(pack);
+  const compendium = await translatedCompendiumForPack(babele, pack, activeLanguage());
   if (!compendium?.translate) return null;
 
   const materialized = table.toObject();
@@ -218,8 +255,8 @@ async function documentAnchor(table: FoundryDocumentLike, result: RollTableResul
     let name = result.name || null;
     const babele = (globalThis as {game?: {babele?: TranslationFacade}}).game?.babele;
     const pack = document.pack ?? document.compendium?.collection ?? null;
-    if (babele?.translatedCompendiumFor && pack && document.toObject) {
-      const compendium = babele.translatedCompendiumFor(pack);
+    if (babele && pack && document.toObject) {
+      const compendium = await translatedCompendiumForPack(babele, pack, activeLanguage());
       const materialized = document.toObject();
       const source = babele.rollbackDocument
         ? babele.rollbackDocument(document.documentName ?? 'RollTable', materialized, {pack})
@@ -326,3 +363,4 @@ export function registerRollTableEmbedWrapper(): void {
 
 const hooks = (globalThis as { Hooks?: { once?: (event: string, callback: () => void) => void } }).Hooks;
 hooks?.once?.('init', registerRollTableEmbedWrapper);
+(globalThis as {Hooks?: {on?: (event: string, callback: () => void) => void}}).Hooks?.on?.('babele.reinitialized', clearTranslationSessionCache);

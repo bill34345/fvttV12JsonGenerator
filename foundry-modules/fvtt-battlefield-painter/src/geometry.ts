@@ -4,7 +4,9 @@ export interface Point {
 }
 
 export interface GridOffset {
+  /** Foundry row index (Y). */
   i: number;
+  /** Foundry column index (X). */
   j: number;
 }
 

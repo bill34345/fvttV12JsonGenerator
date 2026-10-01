@@ -102,17 +102,43 @@ describe('death-save retained face', () => {
     const roll = { d20: { results: [{ result: 20, active: false, discarded: true }, { result: 19, active: true }] } };
     expect(retainedD20Face(roll)).toBe(19);
     const details: Record<string, unknown> = { updates: { old: true } };
-    expect(applyNineteenCritical(details, 19)).toBe(true);
+    expect(applyNineteenCritical(details, 19, '5.3.3')).toBe(true);
     expect(details.updates).toEqual({
       'system.attributes.death.success': 0,
       'system.attributes.death.failure': 0,
       'system.attributes.hp.value': 1,
     });
+    expect(details.chatString).toBe('DND5E.DeathSaveCriticalSuccess');
+    expect(details).not.toHaveProperty('outcome');
+  });
+
+  test('dnd5e 6.0.2 natural 19 revives the Actor and marks the native save card as revive', async () => {
+    for (const initialOutcome of [null, 'stable']) {
+      const details: Record<string, unknown> = { outcome: initialOutcome };
+      expect(applyNineteenCritical(details, 19, '6.0.2')).toBe(true);
+
+      const actor = { death: { success: 2, failure: 1 }, hp: 0 };
+      const updates = details.updates as Record<string, number>;
+      actor.death.success = updates['system.attributes.death.success']!;
+      actor.death.failure = updates['system.attributes.death.failure']!;
+      actor.hp = updates['system.attributes.hp.value']!;
+      const card = { outcome: details.outcome ?? null };
+
+      expect(actor).toEqual({ death: { success: 0, failure: 0 }, hp: 1 });
+      expect(card.outcome).toBe('revive');
+      expect(details.chatString).toBe('DND5E.DeathSaveCriticalSuccess');
+    }
+  });
+
+  test('dnd5e 6.0.5 keeps the exact 6.x death-save outcome contract', () => {
+    const details: Record<string, unknown> = {};
+    expect(applyNineteenCritical(details, 19, '6.0.5')).toBe(true);
+    expect(details).toMatchObject({ outcome: 'revive', chatString: 'DND5E.DeathSaveCriticalSuccess' });
   });
 
   test('discarded 19 does not count', () => {
     const roll = { dice: [{ faces: 20, results: [{ result: 19, active: false, discarded: true }, { result: 5, active: true }] }] };
     expect(retainedD20Face(roll)).toBe(5);
-    expect(applyNineteenCritical({}, 5)).toBe(false);
+    expect(applyNineteenCritical({}, 5, '6.0.2')).toBe(false);
   });
 });

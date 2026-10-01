@@ -1,4 +1,4 @@
-import { DND5E_VERSION, FLAG, FOUNDRY_VERSION, MAX_LEDGER_ENTRIES, MODULE_ID, SETTING } from "./constants";
+import { FLAG, MAX_LEDGER_ENTRIES, MODULE_ID, SETTING, SUPPORTED_RUNTIMES } from "./constants";
 import { isAuthority, type ActiveUser } from "./core/authority";
 import { createAmmoShot, confirmAmmoRecovery, extractAmmoSnapshotFromChatFlags, parseAmmoTier, recordAmmoShot, type AmmoLedger, type AmmoSnapshot } from "./core/ammo";
 import { installCriticalMaxDieIntegration, installCriticalMaxModifier } from "./core/critical-die";
@@ -104,7 +104,31 @@ function currentIsAuthority(): boolean {
 function lockedRuntime(): boolean {
   const current = game();
   const foundryVersion = current?.version ?? current?.release?.version;
-  return foundryVersion === FOUNDRY_VERSION && current?.system?.id === "dnd5e" && current?.system?.version === DND5E_VERSION;
+  return current?.system?.id === "dnd5e" && SUPPORTED_RUNTIMES.some(pair =>
+    pair.foundry === foundryVersion && pair.dnd5e === current?.system?.version);
+}
+
+function dnd5eSix(): boolean {
+  const current = game();
+  return lockedRuntime()
+    && (current?.system?.version === "6.0.2" || current?.system?.version === "6.0.5");
+}
+
+function nativeAmmunitionId(message: AnyRecord): string | null {
+  const value = dnd5eSix() ? message?.system?.ammunition : message?.flags?.dnd5e?.roll?.ammunition;
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function nativeDeletedAmmoSnapshot(message: AnyRecord, ammunitionId: string): AmmoSnapshot | null {
+  if (!dnd5eSix()) return extractAmmoSnapshotFromChatFlags(message?.flags);
+  const deleted = message?.system?.deltas?.deleted;
+  if (!Array.isArray(deleted)) return null;
+  const matching = deleted.filter((source: AnyRecord) => source?._id === ammunitionId);
+  if (matching.length !== 1) return null;
+  const source = matching[0];
+  if (typeof source?.name !== "string" || typeof source?.type !== "string" || !source.system || !source.flags) return null;
+  return { name: source.name, img: source.img, type: source.type,
+    system: structuredClone(source.system), flags: structuredClone(source.flags) };
 }
 
 function enabled(key: string): boolean {
@@ -122,7 +146,7 @@ function criticalMaxLocalize(key: string, fallback: string): string {
 }
 
 function criticalMaxDependenciesSupported(): boolean {
-  return inspectMidiAdapter(game()?.modules).supported;
+  return inspectMidiAdapter(game()?.modules, game()?.version ?? game()?.release?.version, game()?.system?.version).supported;
 }
 
 function explicitFlag(document: AnyRecord, key: string): AnyRecord | null {
@@ -229,7 +253,7 @@ function queueAmmoStage(packet: AmmoPacket, senderId?: unknown): void {
 function captureNativeAmmoMessage(message: AnyRecord): void {
   if (!enabled(SETTING.ammo) || !currentIsAuthority() || typeof message?.id !== "string") return;
   const actor = message.getAssociatedActor?.() ?? message.actor;
-  const ammunitionId = message.flags?.["dnd5e"]?.roll?.ammunition;
+  const ammunitionId = nativeAmmunitionId(message);
   if (!actor || typeof ammunitionId !== "string" || message.speaker?.actor !== actor.id) return;
   const actorDocument = actor as AnyRecord;
   const activity = associatedAttackActivity(message, actorDocument);
@@ -271,9 +295,9 @@ function associatedAttackActivity(message: AnyRecord, actor: AnyRecord, expected
   }
   if (!associated || associated.type !== "attack" || associated.actor?.id !== actor?.id) return null;
   if (expected && stableDocumentUuid(associated) !== stableDocumentUuid(expected)) return null;
-  const activityFlag = message.flags?.["dnd5e"]?.activity;
-  if (!activityFlag || activityFlag.type !== associated.type || activityFlag.id !== associated.id
-    || activityFlag.uuid !== stableDocumentUuid(associated)) return null;
+  const activitySource = dnd5eSix() ? message.system?.activity : message.flags?.dnd5e?.activity;
+  if (!activitySource || activitySource.type !== associated.type || activitySource.id !== associated.id
+    || activitySource.uuid !== stableDocumentUuid(associated)) return null;
   const activityItem = associated.item;
   let associatedItem: AnyRecord | null = activityItem ?? null;
   try {
@@ -283,17 +307,19 @@ function associatedAttackActivity(message: AnyRecord, actor: AnyRecord, expected
     return null;
   }
   if (!activityItem || !associatedItem || stableDocumentUuid(activityItem) !== stableDocumentUuid(associatedItem)) return null;
-  const itemFlag = message.flags?.["dnd5e"]?.item;
-  if (!itemFlag || itemFlag.type !== associatedItem.type || itemFlag.id !== associatedItem.id
-    || itemFlag.uuid !== stableDocumentUuid(associatedItem)) return null;
+  const itemSource = dnd5eSix() ? message.system?.item : message.flags?.dnd5e?.item;
+  if (!itemSource || itemSource.type !== associatedItem.type || itemSource.id !== associatedItem.id
+    || itemSource.uuid !== stableDocumentUuid(associatedItem)) return null;
   return associated;
 }
 
 function isNativeAttackMessage(message: AnyRecord, actor: AnyRecord, eventId?: string, ammunitionId?: string, activity?: AnyRecord): boolean {
   if (!message?.id || message.speaker?.actor !== actor?.id) return false;
-  if (message.flags?.["dnd5e"]?.messageType !== "roll" || message.flags?.["dnd5e"]?.roll?.type !== "attack") return false;
+  const nativeType = dnd5eSix() ? message.type === "attack"
+    : message.flags?.dnd5e?.messageType === "roll" && message.flags?.dnd5e?.roll?.type === "attack";
+  if (!nativeType) return false;
   if (!Array.isArray(message.rolls) || message.rolls.length === 0) return false;
-  if (typeof ammunitionId === "string" && message.flags?.["dnd5e"]?.roll?.ammunition !== ammunitionId) return false;
+  if (typeof ammunitionId === "string" && nativeAmmunitionId(message) !== ammunitionId) return false;
   if (!associatedAttackActivity(message, actor, activity)) return false;
   // dnd5e 5.3.3 exposes the ChatMessage parent during the attack hooks, but
   // the Roll id is not retained when the message is rehydrated. The packet
@@ -335,7 +361,7 @@ async function stageAmmoPacket(packet: AmmoPacket, senderId?: unknown): Promise<
     if (!currentSnapshot || !sameAmmoSnapshotFacts(native.snapshot, currentSnapshot, true)) return false;
   } else {
     if (!native.destroy) return false;
-    const deletedSnapshot = extractAmmoSnapshotFromChatFlags(message?.flags);
+    const deletedSnapshot = nativeDeletedAmmoSnapshot(message, packet.ammunitionId);
     if (deletedSnapshot && !sameAmmoSnapshotFacts(native.snapshot, deletedSnapshot)) return false;
     snapshot = native.snapshot;
   }
@@ -414,20 +440,20 @@ async function processDeletedAmmoFallback(message: AnyRecord): Promise<void> {
   if (!enabled(SETTING.ammo) || !currentIsAuthority()) return;
   const actor = message.getAssociatedActor?.() ?? message.actor;
   if (!actor || !isMutableDocument(actor) || message.speaker?.actor !== actor.id) return;
-  const nativeAmmunitionId = message.flags?.["dnd5e"]?.roll?.ammunition;
-  const snapshot = extractAmmoSnapshotFromChatFlags(message?.flags);
+  const ammunitionId = nativeAmmunitionId(message);
+  const snapshot = ammunitionId ? nativeDeletedAmmoSnapshot(message, ammunitionId) : null;
   const activity = associatedAttackActivity(message, actor);
   const native = nativeAmmoObservations.get(message.id);
-  if (!snapshot || typeof nativeAmmunitionId !== "string" || !activity
-    || !isNativeAttackMessage(message, actor, undefined, nativeAmmunitionId, activity)
+  if (!snapshot || typeof ammunitionId !== "string" || !activity
+    || !isNativeAttackMessage(message, actor, undefined, ammunitionId, activity)
     || !native || native.actorUuid !== stableDocumentUuid(actor)
-    || native.activityUuid !== stableDocumentUuid(activity) || native.ammunitionId !== nativeAmmunitionId
+    || native.activityUuid !== stableDocumentUuid(activity) || native.ammunitionId !== ammunitionId
     || !native.destroy || !sameAmmoSnapshotFacts(native.snapshot, snapshot)) return;
   const matching = Array.from(pendingAmmo.entries()).filter(([, pending]) => pending.postSeen
     && pending.destroy
     && pending.packet.actorUuid === stableDocumentUuid(actor)
     && pending.packet.messageId === message.id
-    && pending.packet.ammunitionId === nativeAmmunitionId
+    && pending.packet.ammunitionId === ammunitionId
     && pending.packet.activityUuid === stableDocumentUuid(activity)
     && sameAmmoSnapshotFacts(pending.snapshot, snapshot));
   if (matching.length !== 1) return;
@@ -479,6 +505,14 @@ function d20Terms(roll: AnyRecord): Array<{ faces: number; results: Array<{ resu
       active: result.active,
       discarded: result.discarded
     })) }));
+}
+
+function nativeTargetActorUuids(message: AnyRecord): string[] {
+  const targets = dnd5eSix() ? message?.system?.targets : message?.getFlag?.("dnd5e", "targets");
+  return Array.isArray(targets)
+    ? targets.map((target: AnyRecord) => dnd5eSix() ? target?.actor : target?.uuid)
+      .filter((uuid: unknown): uuid is string => typeof uuid === "string" && uuid.length > 0)
+    : [];
 }
 
 function criticalTargetRollIndex(config: AnyRecord, rolls: AnyRecord[]): number | null {
@@ -600,9 +634,11 @@ async function postNaturalCard(request: NaturalRequest): Promise<void> {
 
 async function processAttackChat(message: AnyRecord): Promise<void> {
   if (!currentIsAuthority() || (!enabled(SETTING.naturalOne) && !enabled(SETTING.naturalTwenty))) return;
-  if (message?.flags?.dnd5e?.roll?.type !== "attack" || !message?.id) return;
   const activity = message.getAssociatedActivity?.();
   const actor = activity?.actor ?? message.getAssociatedActor?.();
+  const senderId = message?.user?.id ?? message?.user ?? message?.author?.id;
+  if (!actor || !isNativeAttackMessage(message, actor, undefined, undefined, activity)
+    || !isTrustedSender(senderId, actor)) return;
   const actorUuid = stableDocumentUuid(actor);
   const activityUuid = stableDocumentUuid(activity);
   const actionType = activity?.getActionType?.() ?? activity?.actionType;
@@ -612,10 +648,7 @@ async function processAttackChat(message: AnyRecord): Promise<void> {
   if (enabled(SETTING.naturalOne) && retainedNatural(terms, 1)) {
     const tableUuid = setting<string>(SETTING.consequenceOtherTable) ?? "";
     const table = tableUuid ? await fromUuidSafe(tableUuid) : null;
-    const targets = message.getFlag?.("dnd5e", "targets");
-    const targetActorUuids = Array.isArray(targets)
-      ? targets.map((target: AnyRecord) => target?.uuid).filter((uuid: unknown): uuid is string => typeof uuid === "string")
-      : [];
+    const targetActorUuids = nativeTargetActorUuids(message);
     const draft: NaturalRequest = { kind: "nat1", actorUuid, activityUuid, messageId: message.id, attackClass, targetActorUuids };
     const pool = naturalOnePool(attackClass, activity?.item?.type, table?.documentName === "RollTable");
     const available: NaturalOneConsequence[] = [];
@@ -773,6 +806,17 @@ async function setWeaponPenalty(item: AnyRecord, targetPenalty: number): Promise
   return true;
 }
 
+function persistedPotionActivities(value: unknown): AnyRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  try {
+    // Item.toObject() may retain undefined schema fields; module flags persist as JSON and omit them.
+    const persisted = JSON.parse(JSON.stringify(value));
+    return persisted && typeof persisted === "object" && !Array.isArray(persisted) ? persisted : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function configurePotion(item: AnyRecord, mode: "preview" | "apply" | "restore"): Promise<AnyRecord | null> {
   if (!currentIsAuthority() || !enabled(SETTING.potion)) return null;
   const tag = explicitFlag(item, FLAG.potion);
@@ -787,15 +831,41 @@ export async function configurePotion(item: AnyRecord, mode: "preview" | "apply"
   if (!isMutableDocument(item)) return null;
   if (mode === "restore") {
     const snapshot = explicitFlag(item, FLAG.potionSnapshot);
-    if (!snapshot || snapshot.schema !== 1) return null;
-    await item.update({ "system.activities": structuredClone(snapshot.activities) });
+    if (!snapshot || snapshot.schema !== 2) return null;
+    const original = persistedPotionActivities(snapshot.activities);
+    const applied = persistedPotionActivities(snapshot.appliedActivities);
+    const current = persistedPotionActivities(item.toObject?.()?.system?.activities);
+    const replacement = runtime().foundry?.data?.operators?.ForcedReplacement;
+    const equals = runtime().foundry?.utils?.equals;
+    if (!original || !applied || !current
+      || typeof replacement?.create !== "function" || typeof equals !== "function") return null;
+    // A generated activity may have been edited after apply, even if its module flag remains.
+    if (!equals(current, applied)) return null;
+    const updated = await item.update({ "system.activities": replacement.create(structuredClone(original)) });
+    if (!updated || !equals(persistedPotionActivities(item.toObject?.()?.system?.activities), original)) return null;
     await item.unsetFlag(MODULE_ID, FLAG.potionSnapshot);
     return { restored: true };
   }
-  if (!explicitFlag(item, FLAG.potionSnapshot)) {
-    await item.setFlag(MODULE_ID, FLAG.potionSnapshot, potionSnapshot(item.toObject().system.activities));
-  }
-  await item.update({ "system.activities": activities });
+  if (explicitFlag(item, FLAG.potionSnapshot)) return null;
+  const source = item.toObject?.()?.system?.activities;
+  const original = persistedPotionActivities(source);
+  if (!original || Object.keys(activities).some(key => Object.hasOwn(source, key))) return null;
+  // A schema 1 snapshot remains available if the update fails, but is not safe to restore automatically.
+  await item.setFlag(MODULE_ID, FLAG.potionSnapshot, potionSnapshot(original));
+  const pending = explicitFlag(item, FLAG.potionSnapshot);
+  const equals = runtime().foundry?.utils?.equals;
+  if (pending?.schema !== 1 || typeof equals !== "function" || !equals(pending.activities, original)) return null;
+  const updated = await item.update({ "system.activities": activities });
+  const applied = persistedPotionActivities(item.toObject?.()?.system?.activities);
+  if (!updated || !applied
+    || Object.keys(activities).some(key => !Object.hasOwn(applied, key))) return null;
+  await item.setFlag(MODULE_ID, FLAG.potionSnapshot, {
+    schema: 2, activities: structuredClone(original), appliedActivities: structuredClone(applied)
+  });
+  const saved = explicitFlag(item, FLAG.potionSnapshot);
+  if (saved?.schema !== 2 || typeof equals !== "function"
+    || !equals(persistedPotionActivities(saved.activities), original)
+    || !equals(persistedPotionActivities(saved.appliedActivities), applied)) return null;
   return { applied: true, activities };
 }
 
@@ -1083,7 +1153,7 @@ export function installHouseRulesRuntime(): void {
   const terms = runtime().foundry?.dice?.terms;
   const criticalMaxReady = typeof terms?.Die === "function"
     && installCriticalMaxDieIntegration(terms.Die, criticalMaxLocalize);
-  const midi = inspectMidiAdapter(game()?.modules);
+  const midi = inspectMidiAdapter(game()?.modules, game()?.version ?? game()?.release?.version, game()?.system?.version);
   if (!criticalMaxReady) notification("CriticalMax.Unavailable", "error");
   else if (!midi.supported) notification("Midi.Unsupported", "warn");
   else if (midi.enabled) notification("Midi.ExactVersionActive", "info");
@@ -1142,4 +1212,6 @@ export const __testing = Object.freeze({
     localAmmoPackets.clear();
   },
   captureNativeAmmoMessage,
+  nativeTargetActorUuids,
+  processAttackChat,
 });

@@ -1,6 +1,7 @@
 # FVTT 跑团会话监测器
 
-这是一个面向 Foundry VTT 14.364 / dnd5e 5.3.3 的轻量排障工具。它把
+这是一个面向 Foundry VTT 14.364 / dnd5e 5.3.3 的轻量排障工具，manifest 也允许
+Foundry VTT 14.368 / dnd5e 6.0.2–6.0.5（manifest `verified` 为 6.0.2、`maximum` 为 6.0.5）作为 ServerNext 兼容范围；6.0.5 的新启用和短时握手仍需目标运行时读回。它把
 浏览器内的会话指标和浏览器外的 Chrome/Windows 进程指标分开记录，再在
 结束时合并成一条时间线。
 

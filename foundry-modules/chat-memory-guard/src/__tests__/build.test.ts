@@ -82,7 +82,7 @@ describe('chat memory guard installation safeguards', () => {
     const destination = resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard');
     await mkdir(build, { recursive: true });
     await mkdir(destination, { recursive: true });
-    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard' }));
+    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.0.0' }));
     await writeFile(resolve(destination, 'module.json'), JSON.stringify({ id: 'foreign-module' }));
     const before = await readFile(resolve(destination, 'module.json'), 'utf8');
     await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/foreign|unknown/i);
@@ -101,5 +101,16 @@ describe('chat memory guard installation safeguards', () => {
     expect(result.backupPath).toBeTruthy();
     expect(JSON.parse(await readFile(resolve(result.backupPath!, 'module.json'), 'utf8')).version).toBe('0.9.0');
     expect(JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')).version).toBe('1.0.0');
+  });
+
+  test('rejects the ServerNext candidate before writing to the legacy Mirror target', async () => {
+    const root = await makeRoot();
+    const build = resolve(root, 'dist/chat-memory-guard/module');
+    const destination = resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard');
+    await mkdir(build, { recursive: true });
+    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.1.0' }));
+
+    await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/Legacy Server Mirror installer/);
+    expect(await Bun.file(resolve(destination, 'module.json')).exists()).toBeFalse();
   });
 });

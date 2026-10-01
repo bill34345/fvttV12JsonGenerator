@@ -202,8 +202,8 @@ export interface NativeBloodHunterPackage {
   moduleId: 'fvtt-blood-hunter-2024';
   version: '1.0.0';
   target: {
-    foundry: '14.364';
-    dnd5e: '5.3.3';
+    foundry: '14.364' | '14.368';
+    dnd5e: '5.3.3' | '6.0.2';
     rules: '2024';
     effectProfile: 'modded-v14';
   };
@@ -220,8 +220,8 @@ export interface NativeBloodHunterPackage {
 }
 
 export interface BloodHunterV14CompileTarget {
-  foundry: '14.364';
-  dnd5e: '5.3.3';
+  foundry: '14.364' | '14.368';
+  dnd5e: '5.3.3' | '6.0.2';
   effectProfile: 'modded-v14';
 }
 

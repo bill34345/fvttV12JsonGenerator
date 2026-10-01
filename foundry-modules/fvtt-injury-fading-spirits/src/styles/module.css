@@ -3,26 +3,3 @@
 .ifs-contributor { display: grid; grid-template-columns: 2fr 0.8fr 0.8fr 0.55fr 1fr; gap: 0.35rem; margin: 0.35rem 0; }
 .ifs-contribution { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 0.5rem; align-items: center; border-bottom: 1px solid var(--color-border-light-2); padding: 0.4rem 0; }
 .ifs-card button { margin-top: 0.4rem; }
-.tah-info1 .ifs-injury-stack-badge {
-  display: inline-block;
-  min-width: 2.25em;
-  padding: 0.05rem 0.25rem;
-  border: 1px solid #f0d9a5;
-  border-radius: 0.25rem;
-  background: #26313e;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  pointer-events: none;
-}
-
-:is(#tooltip, .locked-tooltip).ifs-injury-rule-tooltip {
-  --dnd5e-application-background: var(--dnd5e-background-texture-paper-gray);
-  --dnd5e-background-card: var(--dnd5e-color-card);
-  --dnd5e-border-gold: 1px solid var(--dnd5e-color-gold);
-  --color-text-primary: var(--color-text-dark-primary);
-  --pill-border: 1px solid var(--dnd5e-color-tan);
-  color: var(--color-text-primary);
-}

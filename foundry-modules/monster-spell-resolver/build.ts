@@ -116,8 +116,15 @@ async function validateBuiltManifest(outputDir: string): Promise<void> {
     esmodules?: string[];
     styles?: Array<string | { src?: string }>;
     languages?: Array<{ path?: string }>;
+    compatibility?: { minimum?: string; verified?: string; maximum?: string };
+    relationships?: { systems?: Array<{ id?: string; compatibility?: { minimum?: string; verified?: string; maximum?: string } }> };
   };
   if (manifest.id !== MODULE_ID) throw new Error(`Built module ID must be ${MODULE_ID}.`);
+  const systemCompatibility = manifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility;
+  if (manifest.compatibility?.minimum !== '14.364' || manifest.compatibility?.verified !== '14.364' || manifest.compatibility?.maximum !== '14.368'
+    || systemCompatibility?.minimum !== '5.3.3' || systemCompatibility?.verified !== '5.3.3' || systemCompatibility?.maximum !== '6.0.5') {
+    throw new Error('Built manifest must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.5 candidate range.');
+  }
   const referenced = [
     ...(manifest.esmodules ?? []),
     ...(manifest.styles ?? []).map((style) => typeof style === 'string' ? style : (style.src ?? '')),

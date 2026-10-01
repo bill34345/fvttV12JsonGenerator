@@ -5,15 +5,17 @@
 
 ## 支持范围
 
-- Foundry VTT 14.364
-- dnd5e 5.3.3
-- MIDI-QOL 14.0.11
+- ServerNext manifest 兼容范围：Foundry VTT 14.368 / dnd5e 6.0.2–6.0.5（`verified` 保持 6.0.2）
+- 原 Server Mirror 1.0.0：Foundry VTT 14.364 / dnd5e 5.3.3，仅作历史对照
 - 模块 ID：`chat-memory-guard`
-- 当前 release：`1.0.0`
+- 当前候选：`1.1.0`；6.0.2 上的安装、启用、重载与代表性 DOM 上限证据保留；6.0.5 的启用、重载和运行时读回待本次恢复验收。世界聊天记录保留、滚动阅读暂停及头像路径仍待补证
 
 模块只裁剪当前浏览器已经渲染的聊天卡片。它调用 Foundry 公开的
 `ChatLog.deleteMessage()`，不会调用 `ChatMessage.delete()`，不会修改世界中的聊天数据库记录，
 也不会修改 Foundry、dnd5e、MIDI-QOL 或其他模块源码。
+
+6.0.2 与 6.0.5 锁定 dnd5e 源码都在 `module/documents/chat-message.mjs` 中以相同签名触发
+`dnd5e.renderChatMessage`；本次只扩展 manifest 上限，原 hook 与消息处理逻辑保持不变。
 
 ## 独立构建与测试
 
@@ -42,8 +44,7 @@ bun run test:chat-memory-guard
 bun run build:chat-memory-guard
 ```
 
-`install:chat-memory-guard` 只允许写入项目本地 Foundry mirror 的精确目录，并在替换已有同 ID
-模块前创建备份。它不是生产部署命令。
+旧 `install:chat-memory-guard` 只指向本地 Server Mirror，且包含与当前无备份规则冲突的历史替换逻辑；`1.1.0` 构建在任何写入前会被此入口拒绝。ServerNext 只按迁移交接的离线定点安装流程处理，不创建备份，不运行旧安装入口。
 
 ## 设置
 
@@ -74,5 +75,7 @@ game.modules.get("chat-memory-guard").api.getStats()
   发起首次原图请求。
 - 自动化和短时 A/B 运行时证据不能证明长时间跑团内存永不增长。
 - 完整第三方聊天卡矩阵和少见动画头像仍需在真实跑团中持续抽查。
-- workspace 物理迁移不会升级历史运行时验收结论；真实运行时证据仍以
+- 精确目标源码已核对 `ChatLog.deleteMessage()`、聊天 DOM、Core 与 dnd5e 渲染 Hook；这些静态依据不代替下面分项记录的真实客户端验收。
+- ServerNext 的独立 Chrome 批次已核对模块正常启用、重载保持、临时客户端上限20下的聊天 DOM 25→20及新消息21→20；临时客户端设置已恢复。世界 ChatMessage 存储计数、滚动阅读暂停、头像缩略图/失败回退与 `getStats()` 未取得充分证据，因此仍是部分验收。
+- workspace 物理迁移不会升级历史运行时验收结论；旧目标的真实运行时证据仍以
   `docs/acceptance/chat-memory-guard-runtime-report.zh-CN.md` 为准。

@@ -1,6 +1,8 @@
 # @fvtt-json-generator/blood-hunter-v14
 
-这是 `BloodHunter2024` 的独立原生编译边界，目标严格锁定为 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`、`modded-v14`。包本身只编译、校验和规划迁移；不读取或写入 Foundry World、Compendium、LevelDB，也不启动浏览器。
+这是 `BloodHunter2024` 的独立原生编译边界。正式模块构建仍锁定 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`、`modded-v14`。包本身只编译、校验和规划迁移；不读取或写入 Foundry World、Compendium、LevelDB，也不启动浏览器。
+
+ServerNext 的 `14.368` / dnd5e `6.0.2` 有独立构建候选：`title/icon` 转为 `name/img`，ItemChoice `pool` 从 UUID 字符串转为 `{uuid}` 对象，保留已有文档、Advancement 和 grant ID。锁定原始 `BloodHunter2024` enriched source 与 6.0.2 reference cache 已用于构建和静态语义校验；真实 Foundry 数据模型与角色迁移行为仍须在 ServerNext 验收。
 
 ## 锁定源与入口
 

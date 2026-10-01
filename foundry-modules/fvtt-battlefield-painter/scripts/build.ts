@@ -10,7 +10,7 @@ import {
 import { relative, resolve } from "node:path";
 
 export const MODULE_ID = "fvtt-battlefield-painter" as const;
-export const MODULE_VERSION = "0.3.0-alpha.1" as const;
+export const MODULE_VERSION = "0.3.0-alpha.2" as const;
 
 const root = resolve(import.meta.dir, "..");
 const dist = resolve(root, "dist");
@@ -25,9 +25,9 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   if (
     core.minimum !== "14.364" ||
     core.verified !== "14.364" ||
-    core.maximum !== "14.364"
+    core.maximum !== "14.368"
   ) {
-    throw new Error("Foundry compatibility must be exactly 14.364");
+    throw new Error("Foundry compatibility range must be 14.364–14.368 with 14.364 verified");
   }
 
   const dnd5e = (manifest.relationships?.systems ?? []).find(
@@ -37,9 +37,9 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   if (
     compatibility.minimum !== "5.3.3" ||
     compatibility.verified !== "5.3.3" ||
-    compatibility.maximum !== "5.3.3"
+    compatibility.maximum !== "6.0.5"
   ) {
-    throw new Error("dnd5e compatibility must be exactly 5.3.3");
+    throw new Error("dnd5e compatibility range must be 5.3.3–6.0.5 with 5.3.3 verified");
   }
 
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(["scripts/main.js"])) {

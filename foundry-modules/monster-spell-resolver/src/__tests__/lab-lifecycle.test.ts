@@ -1006,13 +1006,13 @@ async function writeModuleManifest(directory: string, overrides: Record<string, 
   await writeFile(join(directory, 'module.json'), JSON.stringify({
     id: SPELL_RESOLVER_MODULE_ID,
     title: 'Spell Resolver',
-    version: '0.1.0',
-    compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.364' },
+    version: '0.1.4',
+    compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.368' },
     relationships: {
       systems: [{
         id: 'dnd5e',
         type: 'system',
-        compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '5.3.3' },
+        compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' },
       }],
     },
     esmodules: ['scripts/index.js'],

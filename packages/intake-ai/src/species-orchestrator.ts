@@ -4,6 +4,9 @@ import { dirname, join, resolve } from 'node:path';
 import {
   compileSpeciesMarkdown,
   parseAndCompileSpeciesMarkdown,
+  SPECIES_V12_TARGET,
+  SPECIES_V14_TARGET,
+  SPECIES_V14_368_TARGET,
   validateNativeSpeciesPackage,
   type NativeSpeciesPackage,
   type SpeciesTargetVersion,
@@ -34,7 +37,7 @@ interface SpeciesRunManifest {
   fvttVersion: SpeciesTargetVersion;
   effectProfile: 'core';
   rules: '2024';
-  target: { foundry: '12.331' | '14.364'; dnd5e: '4.3.9' | '5.3.3'; effectProfile: 'core'; rules: '2024' };
+  target: ReturnType<typeof speciesRunTarget>;
   status: SpeciesIntakeRunResult['status'];
   createdAt: string;
   completedAt?: string;
@@ -183,11 +186,12 @@ function promote(options: SpeciesIntakeOptions, runId: string, projection: Nativ
   const vault = resolve(options.vaultPath ?? 'obsidian/dnd数据转fvttjson');
   const identifier = projection.species.system.identifier as string;
   const fvttVersion = options.fvttVersion ?? '14';
-  const markdownPath = fvttVersion === '12'
-    ? join(vault, 'input', 'species', 'v12', `${identifier}.md`)
+  const targetSubdirectory = fvttVersion === '12' ? 'v12' : fvttVersion === '14.368' ? 'v14-368' : undefined;
+  const markdownPath = targetSubdirectory
+    ? join(vault, 'input', 'species', targetSubdirectory, `${identifier}.md`)
     : join(vault, 'input', 'species', `${identifier}.md`);
-  const packagePath = fvttVersion === '12'
-    ? join(vault, 'output', 'species', 'v12', `${identifier}.json`)
+  const packagePath = targetSubdirectory
+    ? join(vault, 'output', 'species', targetSubdirectory, `${identifier}.json`)
     : join(vault, 'output', 'species', `${identifier}.json`);
   const ledgerPath = join(vault, 'output', 'species', 'accepted-ledger.json');
   const ledger = readLedger(ledgerPath);
@@ -212,7 +216,7 @@ function irFromMarkdown(markdown: string, canonical: ReturnType<typeof parseAndC
 
 function validateOptions(options: SpeciesIntakeOptions): void {
   if (!options.source || options.source.length > SPECIES_INTAKE_LIMITS.maxSourceLength) throw new Error(`Species Intake source must contain 1-${SPECIES_INTAKE_LIMITS.maxSourceLength} characters.`);
-  if (!['12', '14'].includes(options.fvttVersion ?? '14') || (options.effectProfile ?? 'core') !== 'core') throw new Error('Species Intake only supports --fvtt-version 12|14 --effect-profile core with 2024 rules.');
+  if (!['12', '14', '14.368'].includes(options.fvttVersion ?? '14') || (options.effectProfile ?? 'core') !== 'core') throw new Error('Species Intake only supports target 12|14|14.368 with core / 2024 rules.');
 }
 function normalizeCandidates(source: string, candidates: SpeciesDiscoveryCandidate[]): SpeciesDiscoveryCandidate[] {
   const sorted = candidates
@@ -244,24 +248,30 @@ function readLedger(path: string): SpeciesAcceptedLedger {
   const ledger = readJson<any>(path);
   if (ledger.moduleId !== 'fvtt-homebrew-species' || !Array.isArray(ledger.entries) || ![1, 2].includes(ledger.schemaVersion)) throw new Error('Species accepted ledger is invalid.');
   if (ledger.schemaVersion === 1) {
+    if (ledger.entries.some((entry: any) => entry?.fvttVersion !== undefined || entry?.effectProfile !== undefined || entry?.rules !== undefined)) {
+      throw new Error('Schema v1 Species ledger cannot contain explicit target identities.');
+    }
     return {
       schemaVersion: 2,
       moduleId: 'fvtt-homebrew-species',
       entries: ledger.entries.map((entry: any) => ({ ...entry, fvttVersion: '14', effectProfile: 'core', rules: '2024' })),
     };
   }
-  for (const entry of ledger.entries) if (!['12', '14'].includes(entry.fvttVersion) || entry.effectProfile !== 'core' || entry.rules !== '2024') throw new Error('Species accepted ledger target identity is invalid.');
+  for (const entry of ledger.entries) if (!['12', '14', '14.368'].includes(entry.fvttVersion) || entry.effectProfile !== 'core' || entry.rules !== '2024') throw new Error('Species accepted ledger target identity is invalid.');
   return ledger as SpeciesAcceptedLedger;
 }
 function sameLedgerTarget(entry: SpeciesAcceptedLedger['entries'][number], identifier: string, fvttVersion: SpeciesTargetVersion): boolean { return entry.identifier === identifier && entry.fvttVersion === fvttVersion && entry.effectProfile === 'core' && entry.rules === '2024'; }
 function ledgerIdentity(entry: SpeciesAcceptedLedger['entries'][number]): string { return `${entry.identifier}\0${entry.fvttVersion}\0${entry.effectProfile}\0${entry.rules}`; }
 function speciesResumeTarget(manifest: SpeciesRunManifest): { fvttVersion: SpeciesTargetVersion; effectProfile: 'core' } {
-  return {
-    fvttVersion: manifest.fvttVersion ?? (manifest.target?.foundry === '12.331' ? '12' : '14'),
-    effectProfile: manifest.effectProfile ?? 'core',
-  };
+  const fvttVersion = manifest.fvttVersion ?? (manifest.target?.foundry === '12.331' ? '12' : manifest.target?.foundry === '14.368' ? '14.368' : '14');
+  const expected = speciesRunTarget(fvttVersion);
+  if (!['12', '14', '14.368'].includes(fvttVersion) || manifest.target?.foundry !== expected.foundry || manifest.target?.dnd5e !== expected.dnd5e
+    || manifest.target?.effectProfile !== expected.effectProfile || manifest.target?.rules !== expected.rules) throw new Error('Species Intake run target identity is invalid.');
+  return { fvttVersion, effectProfile: manifest.effectProfile ?? 'core' };
 }
-function speciesRunTarget(fvttVersion: SpeciesTargetVersion): SpeciesRunManifest['target'] { return fvttVersion === '12' ? { foundry: '12.331', dnd5e: '4.3.9', effectProfile: 'core', rules: '2024' } : { foundry: '14.364', dnd5e: '5.3.3', effectProfile: 'core', rules: '2024' }; }
+function speciesRunTarget(fvttVersion: SpeciesTargetVersion): typeof SPECIES_V12_TARGET | typeof SPECIES_V14_TARGET | typeof SPECIES_V14_368_TARGET {
+  return fvttVersion === '12' ? SPECIES_V12_TARGET : fvttVersion === '14.368' ? SPECIES_V14_368_TARGET : SPECIES_V14_TARGET;
+}
 function writeJson(path: string, value: unknown): void { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8'); }
 function writeJsonAtomic(path: string, value: unknown): void { const temp = `${path}.${process.pid}.tmp`; writeJson(temp, value); renameSync(temp, path); }
 function readJson<T>(path: string): T { return JSON.parse(readFileSync(path, 'utf8')) as T; }

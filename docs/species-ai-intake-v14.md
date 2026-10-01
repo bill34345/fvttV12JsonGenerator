@@ -121,3 +121,15 @@ V12 当前只通过静态候选层：锁定 4.3.9 模型的 Race、Size、ItemGr
 - 为清除无进程占用的启动锁，删除了 `E:\Bill\fvtt_v13\data\Config\options.json.lock`；没有直接编辑世界 LevelDB。
 - 生产模块文件已安装并可由 Foundry 服务提供，但未取得 `Gamemaster` 密码，不能通过 UI 证明 `cor-cotn` 已启用该模块；因此“已安装/服务已恢复”为 Pass，“世界已启用/食人魔已在生产界面可用”保持未验收，不把文件落盘冒充启用。
 - 线上部署使用的 ZIP SHA-256 是 `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`。master 集成前的 Markdown revision review 只更新 accepted Markdown hash/run 证据，Foundry documents 与 module logical hash 未变；当前本地重建 ZIP SHA-256 为 `77281eac8e0c5e3f7bd6f2ec3d44603da53b9d2eb0845b450bf4721cd9466e11`，本轮合并没有重新部署线上模块。
+## ServerNext 内容目标与运行兼容（2026-10-01）
+
+接续既有 Next 来源链时，Species Intake／resume 和内容构建可显式使用 `--fvtt-version 14.368 --effect-profile core`。这个内容目标仍绑定 dnd5e **6.0.2** 的来源投影、接受记录和 logical hash；它只属于 Species 路径，不扩大 Actor／Item CLI 的版本集合。5.3.3 与 V12 的原有目标、默认值及拒绝门保持。
+
+ServerNext 当前系统已升级6.0.5，模块兼容候选可另加 `--dnd5e-runtime-maximum 6.0.5`：
+
+```text
+bun run build:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5
+bun run verify:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5
+```
+
+运行兼容上限不重标接受来源，不代表已完成6.0.5种族玩法验收；本次模块恢复保留已安装合集数据。入口、记录和当前接受边界见[十模块恢复记录](reviews/2026-10-01-next-605-custom-module-restoration.md)。

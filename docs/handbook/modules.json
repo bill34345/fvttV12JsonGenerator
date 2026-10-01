@@ -6,8 +6,7 @@
     "summary": "限制当前浏览器中已渲染聊天卡片和头像媒体的占用，保留世界聊天记录。",
     "when": "聊天栏长时间堆积卡片或头像媒体造成浏览器压力时，按世界默认值或当前客户端覆盖进行限制。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM（修改世界默认值时）"
     ],
     "steps": [
@@ -42,7 +41,8 @@
       "只限制当前浏览器里已渲染的聊天卡片，不删除世界聊天记录。",
       "缩略图只存在于当前页面会话，不能阻止 dnd5e 创建头像前的首次原图请求",
       "短时 A/B、单元测试和构建不能证明长时间跑团内存永不增长",
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3"
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片",
+      "Next 14.368／6.0.5 本轮只验证公开聊天统计 API 与模块启用；未做长时内存或完整裁剪矩阵。"
     ],
     "keywords": [
       "聊天",
@@ -53,7 +53,8 @@
       "Chat Memory Guard"
     ],
     "sources": [
-      "foundry-modules/chat-memory-guard/README.zh-CN.md"
+      "foundry-modules/chat-memory-guard/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/chat-memory-guard/"
@@ -67,8 +68,7 @@
     "summary": "在 Babele 翻译已经存在时，修复 Foundry v14 的 @Embed 随机表结果仍显示英文的渲染缺口。",
     "when": "Journal、聊天或其他文本中的 Compendium RollTable 使用 @Embed 后，表名已翻译但结果行仍为英文时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "Babele 2.9.1",
       "libWrapper 1.13.5.1",
       "可读取的 Babele 随机表翻译文件"
@@ -104,8 +104,9 @@
     "limits": [
       "只修正随机表嵌入的显示，不改写随机表、角色、物品、日志或世界设置。",
       "Babele 或 libWrapper 不可用、翻译失败或数据无法对齐时会保持原生输出或停用覆盖",
-      "依赖版本锁定为 Foundry 14.364、dnd5e 5.3.3、Babele 2.9.1 和 libWrapper 1.13.5.1",
-      "单测、构建和安装校验不等于实际 UI 中的 25 行、5 行和文档链接验收"
+      "历史依赖验收为 14.364／5.3.3；本轮 Next 14.368／6.0.5 两表切片另验，Babele 2.9.1／libWrapper 1.13.5.1 不随系统升级而自动获得新接受。",
+      "单测、构建和安装校验不等于实际 UI 中的 25 行、5 行和文档链接验收",
+      "Next 14.368／6.0.5 本轮两表 25／5 行中文嵌入、原始 UUID、可见界面和来源未写入均通过；不代表任意翻译文件都可对齐。"
     ],
     "keywords": [
       "Babele",
@@ -116,7 +117,8 @@
       "content-link"
     ],
     "sources": [
-      "foundry-modules/fvtt-babele-rolltable-embed-translation/README.zh-CN.md"
+      "foundry-modules/fvtt-babele-rolltable-embed-translation/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-babele-rolltable-embed-translation/"
@@ -130,10 +132,9 @@
     "summary": "GM 在 Foundry v14 画布上绘制可追踪、可擦除和可回滚的火焰、冰霜与荆棘地形。",
     "when": "跑团中需要快速铺设地形、改变阶段、表达移动代价或清理本模块地形文档时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM",
-      "已打开并激活的场景和可用画布网格"
+      "已在画布查看的场景和可用网格"
     ],
     "steps": [
       {
@@ -163,10 +164,11 @@
       "Region 移动消耗、P2 火焰/冰霜画布效果，以及本模块笔画历史和回滚能力"
     ],
     "limits": [
-      "版本锁定为 Foundry 14.364 与 dnd5e 5.3.3，只有 GM 能修改场景",
-      "当前是 0.3.0-alpha.1 P2 alpha；Fire B13 的完整真实 Canvas 验收仍待完成，其他运行时结论以对应 micro-batch 记录为准",
+      "历史版本为 Foundry 14.364 / dnd5e 5.3.3；本轮 Next 目标为 14.368 / 6.0.5，只有 GM 能修改场景",
+      "当前 Next 候选为 0.3.0-alpha.2 P2 alpha；Fire B13 的完整真实 Canvas 验收仍待完成，其他运行时结论以对应 micro-batch 记录为准",
       "不提供伤害自动结算、12 色变体、跨客户端并发锁或第三方自动化集成",
-      "新版本不创建 AmbientSound；旧环境音清理不可撤销，静态测试和构建不等于真实画布验收"
+      "新版本不创建 AmbientSound；旧环境音清理不可撤销，静态测试和构建不等于真实画布验收",
+      "Next 14.368／6.0.5 本轮 Square Fire I 两相邻格的可见动画、Region、灯光和重载保持通过；其他地形／阶段、Hex、Undo／Redo和玩家矩阵未执行。"
     ],
     "keywords": [
       "战场",
@@ -180,7 +182,8 @@
     ],
     "sources": [
       "foundry-modules/fvtt-battlefield-painter/README.zh-CN.md",
-      "foundry-modules/fvtt-battlefield-painter/docs/acceptance-checklist.md"
+      "foundry-modules/fvtt-battlefield-painter/docs/acceptance-checklist.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-battlefield-painter/"
@@ -194,8 +197,7 @@
     "summary": "提供血猎手 2024 的职业、结社和特性合集，使用 dnd5e 原生升级流程。",
     "when": "给新角色添加血猎手职业、查看结社特性，或只读检查旧角色与当前内容差异时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM",
       "可被 canonical flags 或严格 legacy 条件唯一匹配的 Blood Hunter Actor（迁移时）"
     ],
@@ -227,10 +229,12 @@
       "仅更新模块拥有 Blood Hunter Item 的原 Actor 投影，以及模块要求的 JSON backup"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；MIDI-QOL 14.0.11 和 DAE 14.0.12 是推荐依赖而非硬依赖",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；MIDI-QOL 14.0.11 和 DAE 14.0.12 是推荐依赖而非硬依赖",
       "不会自动 ready 扫描 Actor；不修改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags",
       "旧安装替换及角色迁移包含备份行为，与本项目无备份规则冲突。当前仅介绍已安装内容的使用和只读 Preview；执行这些旧写入流程前须先处理冲突，不能用隐藏副本绕过。",
-      "这是构建快照，不实时同步远程 homebrew、旧 side-data 或 Actor 变化；本地静态检查不等于真实游戏性验收"
+      "这是构建快照，不实时同步远程 homebrew、旧 side-data 或 Actor 变化；本地静态检查不等于真实游戏性验收",
+      "内容投影身份保持原已接受的 dnd5e 6.0.2，6.0.5 是本轮运行兼容目标；更新保留现有合集数据库，不重复生成或迁移。",
+      "Next 14.368／6.0.5 本轮只验证来源／内容身份、启用和现有三合集读取；四子职完整 Core／Modded 游戏性矩阵未执行。"
     ],
     "keywords": [
       "Blood Hunter",
@@ -244,7 +248,8 @@
     ],
     "sources": [
       "foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md",
-      "README.md"
+      "README.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-blood-hunter-2024/"
@@ -258,6 +263,7 @@
     "summary": "提供 accepted homebrew Species 的纯内容 Item 合集；V14 是运行目标，V12 产物只作为明确标记的静态候选。",
     "when": "需要在精确 dnd5e v14 世界浏览或使用已接受的自制种族与种族特性时使用；V12 仅用于静态审阅。",
     "requires": [
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "Foundry VTT 14.364 + dnd5e 5.3.3（运行包）",
       "Foundry VTT 12.331 + dnd5e 4.3.9 + 2024 规则（仅 V12 static candidate）"
     ],
@@ -294,7 +300,9 @@
       "V14 产物精确绑定 Foundry 14.364 / dnd5e 5.3.3；V12 候选精确绑定 Foundry 12.331 / dnd5e 4.3.9 / Core / 2024",
       "V12 candidate build/verify 不调用安装器，也不证明 Add Species、升级、HP/AC、次数、Long Rest 或重开读回",
       "没有浏览器运行时、socket、自动迁移和世界扫描；ItemGrant 依赖本模块 features pack，已嵌入 Actor 的 Feature 不会自动更新",
-      "ledger、Markdown、package 或 target hash 过期时拒绝构建；静态构建与 LevelDB 校验不等于 Foundry runtime、生产或长期跑团验收"
+      "ledger、Markdown、package 或 target hash 过期时拒绝构建；静态构建与 LevelDB 校验不等于 Foundry runtime、生产或长期跑团验收",
+      "内容投影身份保持原已接受的 dnd5e 6.0.2，6.0.5 是本轮运行兼容目标；更新保留现有合集数据库，不重复生成或迁移。",
+      "Next 14.368／6.0.5 本轮只验证来源／内容身份和现有两合集读取；Add Species、升级和全部玩法未扩大验收。"
     ],
     "keywords": [
       "自制种族",
@@ -306,7 +314,8 @@
       "V12 candidate"
     ],
     "sources": [
-      "foundry-modules/fvtt-homebrew-species/README.zh-CN.md"
+      "foundry-modules/fvtt-homebrew-species/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-homebrew-species/"
@@ -320,8 +329,7 @@
     "summary": "以显式标签和 GM 权威为前提，提供治疗药水、生命骰、弹药、隐匿和自然 1/重击等村规辅助。",
     "when": "希望把本团约定接入 dnd5e 原生骰子、Activity、状态和 Document API，同时保留 GM 裁定时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "活动 GM",
       "药水和弹药上的显式 fvtt-house-rules flags（使用对应功能时）"
     ],
@@ -354,10 +362,12 @@
       "GM 确认的自然 1 后果卡和支持路径中的重击首颗伤害骰按满值投影"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；所有修改由确定性的活动 GM 执行",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；所有修改由确定性的活动 GM 执行",
       "缺少显式标签、来源不唯一、对象无权限或版本不精确时失败关闭；不会按名称猜测或扫描全世界",
       "MIDI-QOL 14.0.11、DAE 14.0.12 和 Die So Nice 6.2.9 的扩展路径只在精确版本组合下使用，其他组合保持原生或失败关闭",
-      "弹药找回、自然 1 后果、武器修复和重击适配都不自动代替 GM 裁定；盲骰原始面值不写入模块 flags、消息或审计摘要"
+      "弹药找回、自然 1 后果、武器修复和重击适配都不自动代替 GM 裁定；盲骰原始面值不写入模块 flags、消息或审计摘要",
+      "Next 14.368／6.0.5 本轮药水 Preview／Apply、手改保护／恢复和正常重载通过；不代表全部村规、可选 Midi／DAE 组合或多客户端玩法通过。",
+      "本轮额外修复 Midi local.10 的 Check／Save 请求来源加值，两次真实结果为 +4；这不把 House 的可选 Midi／DAE 兼容门改成全量放行。"
     ],
     "keywords": [
       "村规",
@@ -370,7 +380,8 @@
       "GM"
     ],
     "sources": [
-      "foundry-modules/fvtt-house-rules/README.zh-CN.md"
+      "foundry-modules/fvtt-house-rules/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-house-rules/"
@@ -384,8 +395,7 @@
     "summary": "以活动 GM 为权威管理 0–3 层伤势、死亡豁免扩展和 Critical Role 风格的消逝灵魂复活流程。",
     "when": "跑团需要把倒地、恢复、伤势、复活仪式和 GM 裁定记录到 Actor 长期状态时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "活动 GM",
       "要管理的 character Actor 或其 Token"
     ],
@@ -421,11 +431,12 @@
       "复活贡献请求、GM-only 结算卡和不含盲骰原始面的审计摘要"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；长期状态只有活动 GM 写入",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；长期状态只有活动 GM 写入",
       "三层伤势时先让 GM 选择，不会预写死亡；直接死亡、环境例外、灵魂意愿和贡献结果都保留 GM 确认",
       "不依赖 MIDI-QOL、DAE 或其他村规模块；外部复活 Activity 若直接恢复 HP，应由活动 GM 使用公开 suppression API 包裹事务",
       "ChatMessage 只是交互投影，不是历史事实来源；自动测试和本地 Lab 不能代替 GM/玩家多客户端或长期跑团验收",
-      "HP 归零仅表示倒地；仪式提醒须额外满足明确死亡条件。Custom Conditions 不复制伤势 flags，不接管复活状态机。"
+      "HP 归零仅表示倒地；仪式提醒须额外满足明确死亡条件。Custom Conditions 不复制伤势 flags，不接管复活状态机。",
+      "Next 14.368／6.0.5 本轮公开伤势状态 API、设置／恢复和重载通过；天然 19 与完整死亡／伤势矩阵未执行。"
     ],
     "keywords": [
       "伤势",
@@ -441,7 +452,8 @@
       "foundry-modules/fvtt-injury-fading-spirits/CREDITS.md",
       "docs/reviews/2026-09-22-condition-hud-localization.md",
       "docs/reviews/2026-09-23-existing-condition-icons.md",
-      "docs/reviews/2026-09-23-condition-tooltip-native-layout.md"
+      "docs/reviews/2026-09-23-condition-tooltip-native-layout.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/fvtt-injury-fading-spirits/"
@@ -750,8 +762,7 @@
     "summary": "读取生成 Actor 的可移植法术清单，在目标世界可读的 dnd5e Item pack 中选择法术，并安全水合模块拥有的 Spell 与 Cast Activity。",
     "when": "生成 Actor 已携带有效 spell manifest，需要把便携法术引用解析到当前世界的具体法术资料包时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM/活动 GM 权威",
       "带有效 spellManifest 的生成 Actor",
       "至少一个已启用且可读取的目标世界 dnd5e Item 法术包"
@@ -784,10 +795,11 @@
       "目标世界来源索引的包信息、规则计数、哈希和阻断诊断"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；只有有效便携 manifest 的 Actor 才有资格处理",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；只有有效便携 manifest 的 Actor 才有资格处理",
       "只修改模块拥有的 embedded Spells 和明确关联的 Cast Activities，不按名称扫描全世界，不修改 Compendium、Foundry/dnd5e 原型或生成阶段 manifest",
       "水合按 Actor 全有或全无执行，中途失败尝试补偿回滚；人工 Keep/Overwrite/Cancel 未完成时不会 Apply",
-      "portable/static manifest、目标世界 hydration、native Cast runtime 和生产接受是不同层级；单测、build 或 hydration 成功不能替代后两层"
+      "portable/static manifest、目标世界 hydration、native Cast runtime 和生产接受是不同层级；单测、build 或 hydration 成功不能替代后两层",
+      "Next 14.368／6.0.5 本轮十法术自动水合的完整归属及正常 UI Undo／重载后 pending／零缓存通过；本轮没有 Review／Apply 点击，完整原生 Cast 矩阵未执行。"
     ],
     "keywords": [
       "怪物",
@@ -800,7 +812,8 @@
       "来源索引"
     ],
     "sources": [
-      "foundry-modules/monster-spell-resolver/README.zh-CN.md"
+      "foundry-modules/monster-spell-resolver/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/monster-spell-resolver/"
@@ -814,8 +827,7 @@
     "summary": "GM-only 的队伍与遭遇工作台，可在 Foundry 主窗口或同会话浏览器副屏查看并处理跑团状态。",
     "when": "GM 需要第二块显示器上的队伍、遭遇、先攻和回合操作，同时不想启动第二个 Foundry 客户端时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM",
       "用于队伍来源的世界级 Actor 文件夹",
       "允许浏览器打开同会话弹窗（使用副屏时）"
@@ -848,10 +860,11 @@
       "通过原生 dnd5e Actor、Token 和 Combat API 完成的 GM 状态更新"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3，所有 UI 入口和命令都重新检查 GM 权限",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片，所有 UI 入口和命令都重新检查 GM 权限",
       "玩家先攻隐藏只是界面呈现，不保证对检查客户端文档数据的玩家保密",
       "副屏不加载第二个 Foundry world URL、Canvas、登录页或模块 socket；不提供独立玩家面板、行动自动化、第二张地图、AI 或自定义网络协议",
-      "构建、安装 hash 和单测是机械证据；真实 GM/玩家运行与视觉验收仍需在精确版本中单独完成"
+      "构建、安装 hash 和单测是机械证据；真实 GM/玩家运行与视觉验收仍需在精确版本中单独完成",
+      "Next 14.368／6.0.5 本轮原生力竭效果 ID 与面板 3→4→3、普通重载通过；其余命令、副屏和完整 GM／玩家矩阵未扩大验收。"
     ],
     "keywords": [
       "跑团副屏",
@@ -863,7 +876,8 @@
       "GM"
     ],
     "sources": [
-      "foundry-modules/open-session-deck/README.zh-CN.md"
+      "foundry-modules/open-session-deck/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/open-session-deck/"
@@ -877,8 +891,7 @@
     "summary": "由 GM-only Foundry 模块和 Windows/Chrome companion 共同记录隐私过滤的浏览器、进程和生命周期排障时间线。",
     "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，先做短时或由用户亲自进行长时记录。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM",
       "正常登录的 Foundry 世界",
       "专用 Chrome profile 和可运行的 companion"
@@ -912,10 +925,11 @@
       "合并后的 session-combined.json、隐私过滤 report.md 和 heap-timeline.svg"
     ],
     "limits": [
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3，v1 只在 GM 客户端运行；模块和 companion 只观察，不清缓存、不改设置、不删文档、不写 LevelDB",
+      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片，v1 只在 GM 客户端运行；模块和 companion 只观察，不清缓存、不改设置、不删文档、不写 LevelDB",
       "companion 只管理专用 Chrome profile，不接管日常 Chrome，不读取 Cookie、密码或浏览器凭据；GM 必须正常登录",
       "单次会话最多 12 小时、4,320 个浏览器采样、10,000 个事件和 1,000 个错误，达到上限会标记 truncated 并安全停止",
-      "代理不启动、等待或拼接超过 30 分钟的监测；四小时真实跑团和非 GM 设备证据由用户完成，指标相关性不等于因果证明"
+      "本轮只执行短会话；长时 Foundry／Chrome 验收需明确任务授权，指标相关性不等于因果证明。",
+      "Next 14.368／6.0.5 本轮短会话 start／mark／stop、重载和既有历史保护通过；不代表长时采样、companion 或四小时跑团接受。"
     ],
     "keywords": [
       "跑团",
@@ -928,7 +942,8 @@
       "隐私"
     ],
     "sources": [
-      "foundry-modules/session-monitor/README.zh-CN.md"
+      "foundry-modules/session-monitor/README.zh-CN.md",
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
     ],
     "watch": [
       "foundry-modules/session-monitor/"

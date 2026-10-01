@@ -1,6 +1,6 @@
 # 伤势与消逝的灵魂
 
-适用版本仅为 Foundry VTT `14.364` 与 dnd5e `5.3.3`。模块不依赖 MIDI-QOL、DAE 或其他村规模块。
+运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、历史候选 `14.368` / `6.0.2`，或新增候选 `14.368` / `6.0.5` 三组精确配对；交叉和未列版本会失败关闭。6.0.5 目前通过固定源确认与离线门禁测试，仍须在 ServerNext 本地 Lab 做 GM/玩家多客户端语义验收。模块不依赖 MIDI-QOL、DAE 或其他村规模块。
 
 ## 语言
 
@@ -10,10 +10,6 @@
 - Foundry 核心语言为 `en` 时加载 `lang/en.json`。
 - 修改 Foundry 核心语言后请重新加载世界；当前已经打开的 Dialog 不会被动态重绘。
 - 模块的 manifest 标题使用中英双语，避免在管理模块页面中出现不可识别的纯英文标题。
-
-状态列表和 Token Action HUD 显示本地化的“伤势”及规则说明，使用原始绷带 SVG；有伤势时在该图标上显示 1–3 层徽标。HUD 的完整提示按 dnd5e 规则卡布局，将倒地与叠层、第三层 GM 裁定、清除方式、死亡豁免自然 19/20 分成四段；只显示名称和关闭提示偏好继续有效。启用 Custom Conditions 后，也可从其管理器的伤势区域调整层数或进入仪式，仍由本模块公开 API 保存同一份状态，不复制或迁移战役数据。新换段的实际 CoTN 浏览器显示须单独复验。
-
-绷带图标的作者署名、来源链接、许可声明和原始 SVG SHA-256 值见 [CREDITS.md](CREDITS.md)。四个兼容路径（`injury.svg`、`injury-1.svg`、`injury-2.svg`、`injury-3.svg`）均为同一份来源 SVG 的原始字节副本；1–3 数字由界面徽标叠加显示，属于 UI 数据，不是分别绘制或嵌入 SVG 的数字图案。
 
 ## 使用
 
@@ -26,10 +22,6 @@
 - 0–2 层再次倒地会写入对应死亡失败；3 层时先让 GM 选择，选择前不会预写死亡。
 - 死亡豁免最终保留的裸 d20 为 19 或 20 时按大成功处理。
 - 真实治疗增加到满血、成功短休或成功长休会清除伤势。
-
-在模块设置中，“自动化来源”（Automation Source）默认是“内部 Hooks”。选择“外部 Trigger Engine”后，模块仍保留死亡豁免、休息、复活、抑制、状态投影和 GM/UI 功能，但不会从自身的 Actor HP Hook 启动伤势自动化；启用可选的 `fvtt-trigger-engine` 后，模块通过它公开的 `subscribe` 接口自动消费 `documentUpdate` 的 Actor `before`/`after` 快照，不需要另建宏或手动调用 `processHpTransition`。Trigger Engine 缺失或未启用时，活动 GM 会收到提示，设置不会自动切回内部来源；经批准的宏仍可调用公开 API，事务身份会按同一 Actor 更新快照去重。
-
-Trigger Engine 可用时，“确认死亡后提示消逝的灵魂仪式”默认开启。只有 0 HP 且死亡豁免失败已明确达到 3 次或已进入明确的 dead/defeated 状态时，活动 GM 才会看到一次打开仪式向导的邀请；取消邀请、恢复 HP、切换活动 GM 或已有待处理/已消耗仪式都不会自动开始仪式、投骰或写入仪式历史。
 
 GM 可以在 Actor 目录右键选择 `Injury & Fading Spirits`，或选择一个 Token 后在聊天输入 `/ifs`，打开伤势/复活面板。
 
@@ -48,22 +40,9 @@ GM 可以在 Actor 目录右键选择 `Injury & Fading Spirits`，或选择一�
 ```js
 const api = game.modules.get("fvtt-injury-fading-spirits").api;
 api.getState(actor);
-api.statusPresentation(); // { id, name, description, img }
 await api.setInjury(actor, 2, "GM correction");
 await api.openResurrectionWizard(actor);
 api.getResurrectionState(actor);
-await api.processHpTransition(actor, {
-  triggerId: "actor-hp-update-1",
-  triggerName: "Actor HP update",
-  event: { type: "documentUpdate", documentType: "Actor" },
-  document: actor,
-  documentUuid: actor.uuid,
-  before: { system: { attributes: { hp: { value: 10, max: 10 } } } },
-  after: { system: { attributes: { hp: { value: 0, max: 10 } } } },
-  changes: { "system.attributes.hp.value": 0 },
-  userId: game.user.id,
-  timestamp: Date.now(),
-});
 await api.withInjurySuppressed(actor, "resurrection activity", async () => {
   await actor.update({"system.attributes.hp.value": 1});
 });

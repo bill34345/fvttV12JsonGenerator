@@ -16,7 +16,7 @@ export async function openActorDashboard(actor: any): Promise<void> {
   const state = readActorState(actor);
   const html = `<div class="ifs-dashboard">
     <p><strong>${escapeHtml(actor.name)}</strong></p>
-    <p>${label('IFS.Status.Injury.Name')}: <strong>${state.injury.stacks}</strong></p>
+    <p>${label('IFS.Status.Injury')}: <strong>${state.injury.stacks}</strong></p>
     <p>${label('IFS.Fading.SuccessfulReturns')}: ${state.fadingSpirits.successfulReturns}; DC +${state.fadingSpirits.permanentDcPenalty}</p>
     <p>${label('IFS.Fading.ConventionalLock')}: ${state.fadingSpirits.conventionalResurrectionLocked ? '✓' : '—'}; ${label('IFS.Fading.FinalUsed')}: ${state.fadingSpirits.finalChanceUsed ? '✓' : '—'}</p>
   </div>`;
@@ -38,7 +38,7 @@ export async function openSetInjuryDialog(actor: any): Promise<void> {
   const state = readActorState(actor);
   const value = await dialogWait({
     window: { title: label('IFS.Actions.SetInjury') },
-    content: `<form><div class="form-group"><label>${label('IFS.Status.Injury.Name')}</label><input type="number" name="stacks" min="0" max="${MAX_INJURY_STACKS}" step="1" value="${state.injury.stacks}"></div></form>`,
+    content: `<form><div class="form-group"><label>${label('IFS.Status.Injury')}</label><input type="number" name="stacks" min="0" max="${MAX_INJURY_STACKS}" step="1" value="${state.injury.stacks}"></div></form>`,
     buttons: [
       { action: 'save', label: 'IFS.Actions.Save', callback: (_event: unknown, button: any) => formValues(button?.form) },
       { action: 'cancel', label: 'IFS.Actions.Cancel', callback: () => null },
@@ -495,8 +495,8 @@ async function parseContributors(values: FormValues): Promise<RitualContributor[
     const mode = String(values[`advantage${index}`]);
     const check = String(values[`check${index}`] ?? '').trim() || 'prc';
     const ability = String(values[`ability${index}`] ?? '').trim() || null;
-    if (!CONFIG.DND5E?.skills?.[check]) throw new Error(`Unknown dnd5e 5.3.3 skill id: ${check}`);
-    if (ability && !CONFIG.DND5E?.abilities?.[ability]) throw new Error(`Unknown dnd5e 5.3.3 ability id: ${ability}`);
+    if (!CONFIG.DND5E?.skills?.[check]) throw new Error(`Unknown dnd5e skill id: ${check}`);
+    if (ability && !CONFIG.DND5E?.abilities?.[ability]) throw new Error(`Unknown dnd5e ability id: ${ability}`);
     result.push({
       actorUuid,
       check,
@@ -631,8 +631,8 @@ function notifyException(error: unknown): void {
   if (exact[message]) return notify('error', exact[message]!);
   const prefixed: Array<[string, string]> = [
     ['Contributor Actor UUID cannot be resolved: ', 'IFS.Errors.ContributorActorInvalid'],
-    ['Unknown dnd5e 5.3.3 skill id: ', 'IFS.Errors.UnknownSkill'],
-    ['Unknown dnd5e 5.3.3 ability id: ', 'IFS.Errors.UnknownAbility'],
+    ['Unknown dnd5e skill id: ', 'IFS.Errors.UnknownSkill'],
+    ['Unknown dnd5e ability id: ', 'IFS.Errors.UnknownAbility'],
   ];
   const match = prefixed.find(([prefix]) => message.startsWith(prefix));
   if (match) return notify('error', `${label(match[1])}: ${message.slice(match[0].length)}`);

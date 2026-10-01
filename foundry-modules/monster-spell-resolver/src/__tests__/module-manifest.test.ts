@@ -7,6 +7,9 @@ import { buildSpellResolverPackage } from '../../build';
 import {
   EXACT_DND5E_VERSION,
   EXACT_FOUNDRY_VERSION,
+  SERVER_NEXT_DND5E_VERSION,
+  SERVER_NEXT_DND5E_CANDIDATE_VERSION,
+  SERVER_NEXT_FOUNDRY_VERSION,
   evaluateRuntimeCompatibility,
   createFoundryAdapter,
   registerResolverLifecycle,
@@ -14,15 +17,18 @@ import {
 } from '../foundry-adapter';
 import { RESOLVER_SETTING_DEFINITIONS, registerResolverSettings } from '../settings';
 import { buildResolverSettingsContext, parseResolverSettingsForm, rebuildResolverIndexFromSettings } from '../settings-app';
-import { ITEM_INDEX_FIELDS } from '../source-index';
+import { ITEM_INDEX_FIELDS, buildSpellSourceIndex } from '../source-index';
 
 const moduleRoot = resolve(import.meta.dir, '..');
 
 describe('Foundry companion module contract', () => {
-  test('declares only the exact verified runtime and required assets', async () => {
+  test('declares both candidate runtime bounds but only the previously verified pair as verified', async () => {
     const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, any>;
+    const packageMetadata = JSON.parse(await readFile(resolve(moduleRoot, '../package.json'), 'utf8')) as Record<string, any>;
     expect(manifest.id).toBe(RESOLVER_MODULE_ID);
-    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.364' });
+    expect(manifest.version).toBe('0.1.7');
+    expect(manifest.version).toBe(packageMetadata.version);
+    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.368' });
     expect(manifest.esmodules).toEqual(['scripts/index.js']);
     expect(manifest.styles).toEqual([{ src: 'styles/resolver.css' }]);
     expect(manifest.languages).toEqual([
@@ -30,7 +36,7 @@ describe('Foundry companion module contract', () => {
       { lang: 'zh-CN', name: '简体中文', path: 'lang/zh-CN.json' },
     ]);
     expect(manifest.relationships).toEqual({
-      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '5.3.3' } }],
+      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' } }],
     });
     expect(manifest.socket).toBe(false);
     expect(manifest.scripts ?? []).toEqual([]);
@@ -261,6 +267,11 @@ describe('Foundry companion module contract', () => {
     [{ foundry: '14.365', dnd5e: '5.3.3' }, 'UNSUPPORTED_FOUNDRY_VERSION'],
     [{ foundry: '14.364', dnd5e: '5.3.2' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '5.4.0' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '14.364', dnd5e: '6.0.2' }, 'UNSUPPORTED_RUNTIME_PAIR'],
+    [{ foundry: '14.368', dnd5e: '5.3.3' }, 'UNSUPPORTED_RUNTIME_PAIR'],
+    [{ foundry: '14.368', dnd5e: '6.0.3' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '14.368', dnd5e: '6.0.4' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '14.364', dnd5e: '6.0.5' }, 'UNSUPPORTED_RUNTIME_PAIR'],
     [{ foundry: '', dnd5e: '5.3.3' }, 'MISSING_RUNTIME_VERSION'],
     [{ foundry: '14.364', dnd5e: '' }, 'MISSING_RUNTIME_VERSION'],
   ] as const)('fails closed for runtime %j', async (versions, code) => {
@@ -270,6 +281,19 @@ describe('Foundry companion module contract', () => {
     await adapter.hooks.get('ready')!();
     expect(adapter.api?.canMutate).toBe(false);
     expect(adapter.indexCalls).toBe(0);
+  });
+
+  test.each([
+    { foundry: '14.364', dnd5e: '5.3.3' },
+    { foundry: '14.368', dnd5e: '6.0.2' },
+    { foundry: '14.368', dnd5e: '6.0.5' },
+  ] as const)('permits only the exact source-reviewed runtime pair %j', async (versions) => {
+    expect(evaluateRuntimeCompatibility(versions)).toEqual({ ...versions, supported: true, diagnostics: [] });
+    const adapter = new FakeRuntimeAdapter(versions);
+    registerResolverLifecycle(adapter);
+    await adapter.hooks.get('ready')!();
+    expect(adapter.api?.compatibility.supported).toBe(true);
+    expect(adapter.api?.canMutate).toBe(true);
   });
 
   test('exposes a partial diagnostic index but prohibits mutation when an eligible pack fails', async () => {
@@ -319,6 +343,57 @@ describe('Foundry companion module contract', () => {
       expect(fullDocumentCalls).toEqual(['Compendium.dnd5e.spells24.Item.aaaaaaaaaaaaaaaa']);
     } finally {
       restoreFoundry();
+      restoreGame();
+    }
+  });
+
+  test.each([
+    ['5.3.3', false],
+    ['6.0.2', true],
+    ['6.0.5', true],
+  ] as const)('merges exact dnd5e %s Item defaults without conflicting source paths or losing rules', async (dnd5eVersion, hasSourceDefault) => {
+    // Item core defaults: common/documents/item.mjs; dnd5e additions:
+    // 5.3.3 dnd5e.mjs:82397, 6.0.2 dnd5e.mjs:95916. Foundry 14.368
+    // CompendiumCollection.getIndex merges pack.indexFields with caller fields.
+    const defaults = [
+      '_id', 'name', 'img', 'type', 'sort', 'folder',
+      'system.container', 'system.identifier',
+      ...(hasSourceDefault ? ['system.source'] : []),
+    ];
+    const requested: string[][] = [];
+    const mergedFields: string[][] = [];
+    const fullRows = [
+      { _id: 'aaaaaaaaaaaaaaaa', name: 'Shared Name', type: 'spell', system: { identifier: 'shared-name', source: { rules: '2024', book: 'PHB' }, level: 1, school: 'evo' } },
+      { _id: 'bbbbbbbbbbbbbbbb', name: 'Shared Name', type: 'spell', system: { identifier: 'shared-name', source: { rules: '2014', book: 'PHB' }, level: 1, school: 'evo' } },
+    ];
+    const runtime = {
+      collection: 'dnd5e.spells24', documentName: 'Item', visible: true,
+      metadata: { name: 'spells24', packageType: 'system', packageName: 'dnd5e', type: 'Item', flags: {} },
+      indexFields: new Set(defaults),
+      async getIndex({ fields }: { fields: string[] }) {
+        requested.push(fields);
+        const merged = [...new Set([...this.indexFields, ...fields])];
+        mergedFields.push(merged);
+        assertNoAncestorDescendantIndexFields(merged);
+        return { contents: fullRows.map((row) => projectIndexRow(row, merged)) };
+      },
+    };
+    const packs = Object.assign([runtime], { get: (id: string) => id === runtime.collection ? runtime : undefined });
+    const restoreGame = installGlobal('game', {
+      version: hasSourceDefault ? '14.368' : '14.364',
+      system: { id: 'dnd5e', version: dnd5eVersion },
+      packs, modules: { get: () => undefined }, user: { isGM: true },
+    });
+    try {
+      const result = await buildSpellSourceIndex(createFoundryAdapter());
+      expect(requested).toEqual([hasSourceDefault
+        ? ITEM_INDEX_FIELDS.filter((field) => !field.startsWith('system.source.'))
+        : [...ITEM_INDEX_FIELDS]]);
+      expect(mergedFields).toEqual([[...new Set([...defaults, ...requested[0]!])]]);
+      expect(result.diagnostics).toEqual([]);
+      expect(result.candidates.map((candidate) => [candidate.name, candidate.rules, candidate.sourceBook]))
+        .toEqual([['Shared Name', '2014', 'PHB'], ['Shared Name', '2024', 'PHB']]);
+    } finally {
       restoreGame();
     }
   });
@@ -405,8 +480,31 @@ function runtimePack(
     documentName,
     visible,
     metadata: { name, packageType, packageName, type: documentName, flags: {} },
+    indexFields: new Set(['_id', 'name', 'img', 'type', 'sort', 'folder', 'system.container', 'system.identifier']),
     async getIndex({ fields }: { fields: string[] }) { calls.push(fields); return { contents: [] }; },
   };
+}
+
+function assertNoAncestorDescendantIndexFields(fields: string[]): void {
+  for (const parent of fields) {
+    if (fields.some((child) => child.startsWith(`${parent}.`))) {
+      throw new Error(`Conflicting index projection: ${parent}`);
+    }
+  }
+}
+
+function projectIndexRow(source: Record<string, any>, fields: string[]): Record<string, any> {
+  const row: Record<string, any> = {};
+  for (const field of fields) {
+    const parts = field.split('.');
+    let sourceValue: any = source;
+    for (const part of parts) sourceValue = sourceValue?.[part];
+    if (sourceValue === undefined) continue;
+    let target: Record<string, any> = row;
+    for (const part of parts.slice(0, -1)) target = target[part] ??= {};
+    target[parts.at(-1)!] = structuredClone(sourceValue);
+  }
+  return row;
 }
 
 function installGlobal(name: string, value: unknown): () => void {
@@ -420,3 +518,6 @@ function installGlobal(name: string, value: unknown): () => void {
 
 expect(EXACT_FOUNDRY_VERSION).toBe('14.364');
 expect(EXACT_DND5E_VERSION).toBe('5.3.3');
+expect(SERVER_NEXT_FOUNDRY_VERSION).toBe('14.368');
+expect(SERVER_NEXT_DND5E_VERSION).toBe('6.0.2');
+expect(SERVER_NEXT_DND5E_CANDIDATE_VERSION).toBe('6.0.5');

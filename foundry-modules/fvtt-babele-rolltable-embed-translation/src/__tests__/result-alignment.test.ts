@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { alignTranslatedResults, applyResultTranslation, resultRangeKey, translateResultEntries } from '../index';
+import { alignTranslatedResults, applyResultTranslation, clearTranslationSessionCache, resultRangeKey, translateResultEntries, translatedCompendiumForPack } from '../index';
 
 describe('Babele RollTable result alignment', () => {
   test('uses _id first and range as the compatibility fallback', () => {
@@ -60,5 +60,45 @@ describe('Babele RollTable result alignment', () => {
     expect(translated.description).toBe('文档结果说明');
     expect(translated.documentUuid).toBe(source.documentUuid);
     expect(translated._id).toBe(source._id);
+  });
+});
+
+describe('Babele language-scoped embed lookup', () => {
+  test('uses the cn source under zh-CN and reuses the headless session', async () => {
+    clearTranslationSessionCache();
+    const translated = {translate: (data: Record<string, unknown>) => data};
+    const requested: string[] = [];
+    const babele = {
+      translatedCompendiumFor: () => null,
+      sessionFor: async ({language}: {language: string}) => {
+        requested.push(language);
+        return {translatedCompendiumFor: (pack: string) => pack === 'dnd-players-handbook.tables' ? translated : null};
+      },
+    };
+
+    expect(await translatedCompendiumForPack(babele, 'dnd-players-handbook.tables', 'zh-CN')).toBe(translated);
+    expect(await translatedCompendiumForPack(babele, 'other.tables', 'zh-CN')).toBeNull();
+    expect(requested).toEqual(['cn']);
+
+    clearTranslationSessionCache();
+    expect(await translatedCompendiumForPack(babele, 'dnd-players-handbook.tables', 'zh-CN')).toBe(translated);
+    expect(requested).toEqual(['cn', 'cn']);
+  });
+
+  test('preserves an active translation and does not switch unrelated languages', async () => {
+    clearTranslationSessionCache();
+    const active = {translate: (data: Record<string, unknown>) => data};
+    let loads = 0;
+    const babele = {
+      translatedCompendiumFor: () => active,
+      sessionFor: async () => {
+        loads++;
+        return {translatedCompendiumFor: () => null};
+      },
+    };
+
+    expect(await translatedCompendiumForPack(babele, 'some.tables', 'zh-CN')).toBe(active);
+    expect(await translatedCompendiumForPack({...babele, translatedCompendiumFor: () => null}, 'some.tables', 'en')).toBeNull();
+    expect(loads).toBe(0);
   });
 });

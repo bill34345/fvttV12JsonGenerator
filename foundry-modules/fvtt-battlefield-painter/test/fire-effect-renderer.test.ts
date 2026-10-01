@@ -32,6 +32,24 @@ const cell = (
 });
 
 describe("fire field geometry", () => {
+  test("uses Foundry row i and column j for adjacent persisted cells away from the diagonal", () => {
+    // Core 14.368 SquareGrid.getOffset: i=floor(y/size), j=floor(x/size).
+    const cells = [5, 6].map((column) => ({
+      ...cell(column, 2),
+      key: `2:${column}`,
+      offset: { i: 2, j: column },
+    }));
+    const geometry = buildFireFieldGeometry(cells, 100);
+    expect(geometry).toMatchObject({cellCount:2,emitterCount:8,vertexCount:32,triangleCount:16,meshCount:1});
+    const xs = [...geometry.positions].filter((_, index) => index % 2 === 0);
+    const ys = [...geometry.positions].filter((_, index) => index % 2 === 1);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(500);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(700);
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(200);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(300);
+    const inferred = buildFireFieldGeometry(cells.map(({offset,...withoutOffset})=>withoutOffset),100);
+    expect(inferred).toMatchObject({cellCount:2,emitterCount:8,vertexCount:32,triangleCount:16});
+  });
   test("uses the planned stage weights", () => {
     expect(fireStageIntensity(0)).toBe(0.55);
     expect(fireStageIntensity(1)).toBe(1);
@@ -182,6 +200,10 @@ class FakeVideo {
   preload = "";
   crossOrigin = "";
   readyState = 3;
+  videoWidth = 768;
+  videoHeight = 768;
+  loadCount = 0;
+  playCount = 0;
   duration = 4;
   currentTime = 0;
   style: Record<string, string> = {};
@@ -198,8 +220,11 @@ class FakeVideo {
     if (!callback) return;
     this.#listeners.get(name)?.delete(callback);
   }
-  load() {}
+  emit(name: string) { for (const callback of this.#listeners.get(name) ?? []) callback(); }
+  load() { this.loadCount += 1; }
   play() {
+    if (!(this.videoWidth > 0 && this.videoHeight > 0)) throw new Error("play while media dimensions are invalid");
+    this.playCount += 1;
     return Promise.resolve();
   }
   pause() {}
@@ -221,9 +246,12 @@ class FakeBody {
 
 class FakeDocument {
   body = new FakeBody();
+  constructor(private mediaReady = true) {}
   createElement(name: string) {
     if (name !== "video") throw new Error(`Unexpected element: ${name}`);
-    return new FakeVideo();
+    const video = new FakeVideo();
+    if (!this.mediaReady) {video.readyState=1;video.videoWidth=0;video.videoHeight=0;}
+    return video;
   }
 }
 
@@ -265,7 +293,7 @@ class FakeTicker {
   }
 }
 
-const runtimeRoot = (options: { square?: boolean } = {}) => {
+const runtimeRoot = (options: { square?: boolean; mediaReady?: boolean } = {}) => {
   const ticker = new FakeTicker();
   const primary = new FakeContainer();
   const scene = { id: "scene-fire", tiles: [] as any[], grid: { size: 100 } };
@@ -273,17 +301,18 @@ const runtimeRoot = (options: { square?: boolean } = {}) => {
     size: 100,
     isSquare: options.square ?? true,
     getCenterPoint: ({ i, j }: { i: number; j: number }) => ({
-      x: i * 100 + 50,
-      y: j * 100 + 50,
+      x: j * 100 + 50,
+      y: i * 100 + 50,
     }),
     getVertices: ({ i, j }: { i: number; j: number }) => [
-      { x: i * 100, y: j * 100 },
-      { x: i * 100 + 100, y: j * 100 },
-      { x: i * 100 + 100, y: j * 100 + 100 },
-      { x: i * 100, y: j * 100 + 100 },
+      { x: j * 100, y: i * 100 },
+      { x: j * 100 + 100, y: i * 100 },
+      { x: j * 100 + 100, y: i * 100 + 100 },
+      { x: j * 100, y: i * 100 + 100 },
     ],
   };
   const errors: string[] = [];
+  const textureOptions: any[] = [];
   const root = {
     canvas: { scene, grid, primary, app: { ticker } },
     foundry: {
@@ -296,17 +325,17 @@ const runtimeRoot = (options: { square?: boolean } = {}) => {
     PIXI: {
       Geometry: FakeGeometry,
       Mesh: FakeMesh,
-      Texture: { from: (video: FakeVideo) => new FakeTexture(video) },
+      Texture: { from: (video: FakeVideo, options: any) => {textureOptions.push(options);return new FakeTexture(video);} },
       Ticker: { shared: ticker },
     },
-    document: new FakeDocument(),
+    document: new FakeDocument(options.mediaReady),
     console: { error: (message: string) => errors.push(message) },
   };
   Object.defineProperty(globalThis, "CONST", {
     configurable: true,
     value: { GRID_TYPES: { SQUARE: 1 } },
   });
-  return { root, scene, ticker, primary, errors };
+  return { root, scene, ticker, primary, errors, textureOptions };
 };
 
 const fireTile = (scene: any, cellKey: string, offset: { i: number; j: number }) => ({
@@ -325,6 +354,41 @@ const fireTile = (scene: any, cellKey: string, offset: { i: number; j: number })
 });
 
 describe("fire effect lifecycle", () => {
+  test("waits for decoded dimensions before playback and ignores duplicate readiness events", () => {
+    const runtime=runtimeRoot({mediaReady:false});
+    const renderer=new FireEffectRenderer(runtime.root);
+    renderer.onCanvasReady();
+    expect(renderer.auditEffects().atlasLoaded).toBeFalse();
+    for(const video of runtime.root.document.body.children){
+      expect(video.playCount).toBe(0);
+      video.emit("loadeddata");
+      expect(video.playCount).toBe(0);
+      video.readyState=3;video.videoWidth=768;
+      video.emit("canplay");
+      expect(video.playCount).toBe(0);
+      video.videoHeight=768;
+      video.emit("loadeddata");video.emit("canplay");
+      expect(video.playCount).toBe(1);
+      expect(video.loadCount).toBe(0);
+    }
+    expect(renderer.auditEffects().atlasLoaded).toBeTrue();
+    renderer.onCanvasTearDown();
+  });
+  test("keeps Pixi autoplay disabled and starts each ready video without reloading it", () => {
+    const runtime = runtimeRoot();
+    const renderer = new FireEffectRenderer(runtime.root);
+    renderer.onCanvasReady();
+    expect(runtime.textureOptions).toEqual([{resourceOptions:{autoPlay:false}},{resourceOptions:{autoPlay:false}}]);
+    for (const video of runtime.root.document.body.children) {
+      expect(video.autoplay).toBeFalse();
+      expect(video.loadCount).toBe(0);
+      expect(video.playCount).toBe(1);
+      video.emit("loadeddata");
+      video.emit("canplay");
+      expect(video.playCount).toBe(1);
+    }
+    renderer.onCanvasTearDown();
+  });
   test("mounts one mesh, debounces Tile events, and tears down cleanly", async () => {
     const runtime = runtimeRoot();
     runtime.scene.tiles.push(fireTile(runtime.scene, "0:0", { i: 0, j: 0 }));

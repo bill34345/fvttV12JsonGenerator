@@ -148,6 +148,30 @@ describe('Actor-local atomic hydration transaction', () => {
     expect(actor.flags[RESOLVER_MODULE_ID]).toEqual(resolverFlagsBefore);
   });
 
+  test('6.0.2 same-UUID failed Overwrite restores the exact system.changes cache snapshot', async () => {
+    const actor = new TransactionActor(false, 'system');
+    await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
+    const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+    const activity = actor.managedActivities().find((entry) => entry.flags[RESOLVER_MODULE_ID].logicalRefKey === lightKey)!;
+    const cache = actor.items.find((item) => item.type === 'spell'
+      && item.flags?.[RESOLVER_MODULE_ID]?.logicalRefKey === lightKey)!;
+    activity.spell.challenge.attack = '9';
+    const manualChanges = [{ key: 'flags.user.manual', mode: 5, value: 'restore-after-failure' }];
+    cache.effects.find((effect: any) => effect.type === 'enchantment').system.changes = structuredClone(manualChanges);
+    const before = actor.fullProjection();
+    const rawBefore = actor.rawItemProjection();
+
+    await expect(executeHydrationTransaction({
+      actor, manifest: manifest(), plan: readyPlan(actor, 'overwrite'),
+      failureInjector(stage) { if (stage === 'after-partial-cache-creation') throw new Error('force 6.0.2 rollback'); },
+    })).rejects.toMatchObject({ rollbackSucceeded: true, residualDifferences: [] });
+
+    expect(actor.fullProjection()).toEqual(before);
+    expect(actor.rawItemProjection()).toEqual(rawBefore);
+    const restored = actor.items.find((item) => item.id === cache.id)!;
+    expect(restored.effects.find((effect: any) => effect.type === 'enchantment').system.changes).toEqual(manualChanges);
+  });
+
   test.each([[false], [true]] as const)(
     'overwrites destination UUID A to B by deleting the old cache and leaving one new cache with native auto-cache=%s',
     async (autoCache) => {
@@ -283,7 +307,31 @@ describe('Actor-local atomic hydration transaction', () => {
       expect(transactionError.residualDifferences.every((entry) => entry.path.startsWith('/managed/')
         || entry.path.startsWith('/flags/') || entry.path.startsWith('/items/')
         || entry.path === '/rollback/errors')).toBe(true);
+      expect(transactionError.diagnostic!.phase).toBe('cleanup');
+      expect(transactionError.diagnostic).toMatchObject({ selectionIndex: null, selectionCount: null, ownership: null });
+      expect(transactionError.diagnostic!.residualPaths).toEqual([...new Set(transactionError.residualDifferences.map((entry) => entry.path))]);
+      expect(transactionError.message).toContain('residual paths:');
       expect(transactionError.message).toContain('cleanup failed');
+    }
+  });
+
+  test('reports the selection and missing ownership shape while safely rolling back the exact native cache', async () => {
+    const actor = new TransactionActor(true, 'system');
+    actor.stripNextSpellOwnership = true;
+    try {
+      await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() });
+      throw new Error('Expected ownership failure.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HydrationTransactionError);
+      const failure = error as HydrationTransactionError;
+      expect(failure.diagnostic).toMatchObject({
+        phase: 'selection', selectionIndex: 1, selectionCount: 2,
+        ownership: { code: 'RESOLVER_OWNERSHIP_MISSING', expectedType: 'spell', namespacePresent: false,
+          managed: false, documentType: '<missing>' },
+      });
+      expect(failure.rollbackSucceeded).toBe(true);
+      expect(failure.diagnostic!.residualPaths).toEqual([...new Set(failure.residualDifferences.map((entry) => entry.path))]);
+      expect(actor.items.some((item) => item.type === 'spell' && item.flags?.dnd5e?.cachedFor)).toBe(false);
     }
   });
 
@@ -676,11 +724,12 @@ class TransactionActor {
   sourcedItems = new Map<string, any[]>();
   maxConcurrentMutations = 0;
   failSnapshotRecreate = false;
+  stripNextSpellOwnership = false;
   lifecycleHooks?: TransactionHookBus;
   nativeCreateDelayMs = 0;
   private activeMutations = 0;
   private nativeCacheSequence = 0;
-  constructor(private readonly autoCache = false) {
+  constructor(private readonly autoCache = false, private readonly nativeEffectLayout: 'legacy' | 'system' = 'legacy') {
     const feature: any = {
       id: 'FeatureTransact1', _id: 'FeatureTransact1', type: 'feat', parent: this, actor: this, name: 'Same Display Name',
       flags: {
@@ -755,7 +804,10 @@ class TransactionActor {
           this.mutateCachedEnchantment(activity);
         }
         const resolverFlags = update[`flags.${RESOLVER_MODULE_ID}`];
-        if (resolverFlags) item.flags[RESOLVER_MODULE_ID] = structuredClone(resolverFlags);
+        if (resolverFlags) {
+          if (this.stripNextSpellOwnership && item.type === 'spell') this.stripNextSpellOwnership = false;
+          else item.flags[RESOLVER_MODULE_ID] = structuredClone(resolverFlags);
+        }
         const preparedHash = update[`flags.${RESOLVER_MODULE_ID}.generatedContentHash`];
         if (preparedHash) item.flags[RESOLVER_MODULE_ID].generatedContentHash = preparedHash;
         const fullItemKeys = Object.keys(update).filter((key) => key !== '_id'
@@ -878,12 +930,15 @@ class TransactionActor {
             featureId: feature.id,
           }, 'spell'),
           name: source.name, type: 'spell', system: { sourceItem: 'feat:innate-feature', uses: { spent: 0 } },
-          effects: [{ _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] }],
+          effects: [actor.nativeEffectLayout === 'system'
+            ? { _id: 'dnd5espellchang', type: 'enchantment', system: { origin: { activity: activity.relativeUUID }, changes: [] }, transfer: true }
+            : { _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] }],
           flags: { dnd5e: { cachedFor: activity.relativeUUID } }, _stats: { compendiumSource: source.spell.uuid },
         };
       },
     };
     Object.defineProperties(activity, {
+      constructor: { value: { ENCHANTMENT_ID: 'dnd5espellchang' } },
       item: { get: () => activity.parent?.parent },
       actor: { get: () => activity.item?.parent ?? null },
     });
@@ -905,11 +960,15 @@ class TransactionActor {
     const cache = this.items.find((item) => item.flags?.dnd5e?.cachedFor === activity.relativeUUID);
     const enchantment = cache?.effects?.find((effect: any) => effect._id === 'dnd5espellchang');
     if (!cache || !enchantment) return;
-    enchantment.changes = [];
+    if (this.nativeEffectLayout === 'system') enchantment.system.changes = [];
+    else enchantment.changes = [];
+    const changes = this.nativeEffectLayout === 'system' ? enchantment.system.changes : enchantment.changes;
     this.calls.push(['nativeRefreshCachedEnchantment', cache.id]);
     this.lifecycleHooks?.emit('updateActiveEffect', {
       ...structuredClone(enchantment), id: enchantment._id, parent: cache,
-    }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
+    }, this.nativeEffectLayout === 'system'
+      ? { system: { changes: structuredClone(changes) } }
+      : { changes: structuredClone(changes) }, {}, 'CurrentUser00001');
   }
 
   private nextNativeCacheId() {

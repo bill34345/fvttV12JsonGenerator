@@ -30,11 +30,14 @@ describe('Blood Hunter Lab safety boundary', () => {
   test('CLI modes require exact source/apply syntax', () => {
     expect(parseBloodHunterLabCliArgs(['dry-run'])).toEqual({ action: 'dry-run', apply: false });
     expect(parseBloodHunterLabCliArgs(['build', '--source=C:\\source.json'])).toEqual({ action: 'build', apply: false, sourcePath: 'C:\\source.json' });
+    expect(parseBloodHunterLabCliArgs(['build', '--source=C:\\source.json', '--target=server-next'])).toEqual({ action: 'build', apply: false, sourcePath: 'C:\\source.json', target: 'server-next' });
     expect(parseBloodHunterLabCliArgs(['install', '--apply'])).toEqual({ action: 'install', apply: true });
     expect(parseBloodHunterLabCliArgs(['verify-install'])).toEqual({ action: 'verify-install', apply: false });
     expect(() => parseBloodHunterLabCliArgs(['install', '--apply', '--apply'])).toThrow();
     expect(() => parseBloodHunterLabCliArgs(['build'])).toThrow(/source/);
     expect(() => parseBloodHunterLabCliArgs(['verify-install', '--source=C:\\source.json'])).toThrow();
+    expect(() => parseBloodHunterLabCliArgs(['install', '--target=server-next'])).toThrow(/target/);
+    expect(() => parseBloodHunterLabCliArgs(['build', '--source=C:\\source.json', '--target=unknown'])).toThrow(/target/);
   });
 
   test('production, 8080, and lexical path escapes are rejected before Lab operations', async () => {

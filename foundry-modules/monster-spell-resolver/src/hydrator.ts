@@ -25,6 +25,8 @@ import {
   captureNativeCacheProjection,
   NativeCacheLifecycleCapture,
   nativeEffectChangesEqual,
+  nativeEffectChangesLocation,
+  readNativeEffectChanges,
   resolverDocumentHooks,
   type ResolverDocumentHookBus,
 } from './native-cache-lifecycle';
@@ -617,28 +619,45 @@ async function waitForActivityCacheLifecycle(
     }
     const expectedEffects = Array.isArray(nativeCacheSource?.effects) ? nativeCacheSource.effects : [];
     const beforeEffects = Array.isArray(documentSource(beforeCache).effects) ? documentSource(beforeCache).effects : [];
-    const enchantment = expectedEffects.find((effect: any) => effect?.type === 'enchantment'
-      && beforeEffects.some((prior: any) => prior?._id === effect?._id));
-    if (enchantment?._id) {
-      const currentCache = findItem(input.actor, documentId(beforeCache));
-      const currentEffects = Array.isArray(documentSource(currentCache).effects)
-        ? documentSource(currentCache).effects
-        : [];
-      const currentEnchantment = currentEffects.find((effect: any) => effect?._id === enchantment._id);
-      // Document.update() is a no-op when dnd5e's computed changes already
-      // equal the persisted enchantment. Foundry emits no updateActiveEffect
-      // hook in that case, and no delayed semantic mutation remains to await.
-      if (currentEnchantment && nativeEffectChangesEqual(currentEnchantment.changes, enchantment.changes)) return;
-      const currentUserId = typeof (globalThis as any).game?.user?.id === 'string'
-        ? (globalThis as any).game.user.id
-        : undefined;
-      await lifecycle.waitForUpdatedEffect(
-        input.actor,
-        documentId(beforeCache),
-        enchantment._id,
-        enchantment.changes,
-        currentUserId,
-      );
+    const castEnchantmentId = activity?.constructor?.ENCHANTMENT_ID;
+    if (typeof castEnchantmentId !== 'string' || !castEnchantmentId) {
+      throw new Error('Prepared Cast Activity exposes no native enchantment ID.');
+    }
+    // getCachedSpellData copies every source Spell effect before appending the
+    // Cast-owned enchantment. Other enchantments are valid and must be ignored.
+    const castEffects = expectedEffects.filter((effect: any) => effect?._id === castEnchantmentId);
+    const priorCastEffects = beforeEffects.filter((effect: any) => effect?._id === castEnchantmentId);
+    if (castEffects.length !== 1 || castEffects[0]?.type !== 'enchantment'
+      || priorCastEffects.length !== 1 || priorCastEffects[0]?.type !== 'enchantment') {
+      throw new Error('Same-UUID native cache requires exactly one existing Cast-owned enchantment.');
+    }
+    const enchantment = castEffects[0];
+    const location = nativeEffectChangesLocation(enchantment);
+    const expectedChanges = readNativeEffectChanges(enchantment, location);
+    const currentCache = findItem(input.actor, documentId(beforeCache));
+    const currentEffects = Array.isArray(documentSource(currentCache).effects)
+      ? documentSource(currentCache).effects
+      : [];
+    const currentEnchantment = currentEffects.find((effect: any) => effect?._id === enchantment._id);
+    // Document.update() is a no-op when dnd5e's computed changes already
+    // equal the persisted enchantment. Foundry emits no updateActiveEffect
+    // hook in that case, and no delayed semantic mutation remains to await.
+    if (currentEnchantment && nativeEffectChangesEqual(readNativeEffectChanges(currentEnchantment, location), expectedChanges)) return;
+    const currentUserId = typeof (globalThis as any).game?.user?.id === 'string'
+      ? (globalThis as any).game.user.id
+      : undefined;
+    await lifecycle.waitForUpdatedEffect(
+      input.actor,
+      documentId(beforeCache),
+      enchantment._id,
+      expectedChanges,
+      location,
+      currentUserId,
+    );
+    const completedCache = findItem(input.actor, documentId(beforeCache));
+    const completedEffect = documentSource(completedCache).effects?.find((effect: any) => effect?._id === enchantment._id);
+    if (!nativeEffectChangesEqual(readNativeEffectChanges(completedEffect, location), expectedChanges)) {
+      throw new Error('Native Cast enchantment update hook did not persist the expected changes.');
     }
   } catch (error) {
     input.journal.lifecycleFailures.push(error instanceof Error ? error.message : String(error));

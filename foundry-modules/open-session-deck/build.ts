@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/prom
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'open-session-deck' as const;
-export const MODULE_VERSION = '0.1.0' as const;
+export const MODULE_VERSION = '0.1.1' as const;
 const root = resolve(import.meta.dir);
 const source = resolve(root, 'src');
 const dist = resolve(root, 'dist');
@@ -51,13 +51,13 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.364') {
-    throw new Error('Foundry compatibility must be exactly 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') {
+    throw new Error('Foundry compatibility bounds must be 14.364–14.368, verified at 14.364.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '5.3.3') {
-    throw new Error('dnd5e compatibility must be exactly 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.5') {
+    throw new Error('dnd5e compatibility bounds must be 5.3.3–6.0.5, verified at 5.3.3.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (manifest.socket !== false) throw new Error('Open Session Deck must explicitly declare socket: false.');

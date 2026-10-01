@@ -25,7 +25,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 
   await cp(resolve(sourceRoot, 'module.json'), resolve(moduleRoot, 'module.json'));
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;
-  if (manifest.id !== MODULE_ID || manifest.version !== '0.1.0') throw new Error('Built module manifest identity drifted.');
+  if (manifest.id !== MODULE_ID || manifest.version !== '0.2.1') throw new Error('Built module manifest identity drifted.');
 
   const files = await collectFiles(moduleRoot);
   const entries = await Promise.all(files.map(async (path) => ({

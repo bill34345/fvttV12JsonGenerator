@@ -214,4 +214,36 @@ describe('resolver review model and dialog semantics', () => {
     expect(calls).toHaveLength(1);
     expect(templateCalls).toHaveLength(1);
   });
+
+  test('Overwrite radio change enables Apply and the same Apply callback returns that decision', async () => {
+    const logicalRefKey = model().spells[0]!.logicalRefKey;
+    let checked = false;
+    let change!: () => void;
+    const radio = { name: `manual:${logicalRefKey}`, value: 'keep' };
+    const form = {
+      querySelectorAll(selector: string) {
+        return selector === 'input[type="radio"]:checked' && checked
+          ? [radio] : [];
+      },
+      addEventListener(event: string, callback: () => void) {
+        if (event === 'change') change = callback;
+      },
+    };
+    const apply = { disabled: true, form };
+    const result = await openResolverReviewDialog(model(), {
+      renderTemplate: async (_path, context) => String(context.content),
+      wait: async (config) => {
+        config.render({}, { element: { querySelector: (selector: string) => selector === 'form' ? form : apply } });
+        expect(apply.disabled).toBe(true);
+        checked = true;
+        change();
+        expect(apply.disabled).toBe(false);
+        radio.value = 'overwrite'; // Same-click callback must reread, even without another change event.
+        return config.buttons[0].callback({}, apply);
+      },
+    });
+    expect(result).toEqual({
+      action: 'apply', manualDecisions: [{ logicalRefKey, decision: 'overwrite' }], candidateSelections: [],
+    });
+  });
 });

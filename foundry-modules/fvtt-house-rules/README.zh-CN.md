@@ -1,6 +1,6 @@
 # 本团村规（`fvtt-house-rules`）
 
-这是一个独立的 Foundry VTT 模块，严格锁定 Foundry VTT `14.364` 和 dnd5e `5.3.3`。它不依赖 `fvtt-injury-fading-spirits`，也不导入项目其他模块的私有实现。
+这是一个独立的 Foundry VTT 模块。既有完整运行验收针对 Foundry VTT `14.364` / dnd5e `5.3.3`；`0.1.3` 在历史 ServerNext `14.368` / `6.0.2` 上通过了药水预览、应用、手改保护、恢复和整页重载读回。新增的精确配对 `14.368` / `6.0.5` 是待运行验收候选；此结果不自动覆盖其它村规功能或 Midi 暴击联动。6.0.5 的 optional Midi-QOL、DAE、Dice So Nice 组合未作版本确认时会失败关闭。运行时仅接受这三组精确 Foundry／dnd5e 版本对，交叉和未列版本被拒绝。它不依赖 `fvtt-injury-fading-spirits`，也不导入项目其他模块的私有实现。
 
 ## 语言
 
@@ -45,10 +45,10 @@
 
 | 规则 | 已实现的模块边界 |
 |---|---|
-| HR-02 药水 | `potion.configure(item, "preview" | "apply" | "restore")`。`apply` 保存可恢复快照并生成三个 dnd5e `heal` Activity：附赠动作自饮、动作自饮且仅治疗骰最大化、动作喂服他人。固定调整值保留。Compendium 物品拒绝直接修改。 |
+| HR-02 药水 | `potion.configure(item, "preview" | "apply" | "restore")`。`apply` 先保存原始活动、读回确认后生成三个 dnd5e `heal` Activity，再保存实际规范化的应用后基线：附赠动作自饮、动作自饮且仅治疗骰最大化、动作喂服他人。`restore` 仅在当前活动完整等于应用后基线时强制恢复原图；GM后来修改或增加 Activity、旧schema1快照缺少基线时失败关闭并保留快照供人工处理。固定调整值保留。Compendium 物品拒绝直接修改。 |
 | HR-02 生命骰 | `hitPoints.gamble(actor, classItem, level)` 调用原生 `actor.rollClassHitPoints` 和 `HitPointsAdvancement.apply`。第一级不介入；第一次掷出 1 才重掷一次，第二次无论结果都接受；锁为 Actor + Class + Level。 |
 | HR-02 低属性 | 选中 Token 时仅作上下文提醒；`lowAbility.reminder(actor)` 也可供 GM 面板调用。它绝不扫描世界或修改 Actor。 |
-| HR-03 弹药 | 原生 `dnd5e.rollAttackV2` 的 `ammoUpdate` 产生事务；自动删除时以 dnd5e `flags.dnd5e.roll.ammunitionData` 作为聊天快照回退。`ammo.recover(actor, shotId)` 需要 GM 明确确认，重复确认无效。 |
+| HR-03 弹药 | 原生 `dnd5e.rollAttackV2` 的 `ammoUpdate` 产生事务；自动删除时，5.3.3 从 `flags.dnd5e.roll.ammunitionData`，6.0.2 与 6.0.5 从同一攻击消息的 `system.deltas.deleted` 取快照并核对弹药 ID。`ammo.recover(actor, shotId)` 需要 GM 明确确认，重复确认无效。 |
 | HR-03 隐匿 | `stealth.set(actor, state)` 建立显式状态；`stealth.previewMove` 只警告不回滚移动。正常半速、专精减 10 尺、游荡者总等级 7+ 或 GM override 全速；`stealth.dash(actor)` 结束隐匿，`ignoreNextMovement` 可用于传送/GM 调整。非战斗使用 `nonCombatSuggestion`。 |
 | HR-04 自然 1 | 保留的自然 1 只创建 GM 后果请求，确认前零副作用。模块按当前确实可用的候选等权随机：近战反击、符合条件的队友误伤、武器损坏、法术自爆，及可选的精确 RollTable。近战队友必须相邻；远程/法术可选路径外队友。GM 确认伤害后调用原生 `Actor.applyDamage`，世界倍率 `0.5`/`1`、抗性和免疫继续由 dnd5e 处理；不投命中、不消耗反应或原 Activity。`repairWeapon` 可修复损坏。 |
 | HR-04 重击首骰最大化 | 只要武器攻击或攻击检定法术的伤害 Roll 被 dnd5e 标记为重击（包括手动点重击），不要求自然 20；模块先按 dnd5e 原生规则保留完整重击骰池，再把第一伤害部分的第一颗骰拆成 `1dXminX`，因此原始骰面仍会投出而最终按满值结算：`1d8` 重击显示为 `1d8min8 + 1d8`，`2d6` 重击显示为 `1d6min6 + 3d6`。其他骰、其他伤害部分和 rider 继续使用原生重击；目标伤害部分不唯一或骰子结构无法安全识别时失败关闭。自然 20 仍会生成原有 GM 提示卡。 |
@@ -71,9 +71,13 @@
 - `module/documents/advancement/hit-points.mjs` 与 `applications/advancement/hit-points-flow.mjs`：`HitPointsAdvancement.apply(level, { [level]: value })` 是原生 HP 选择路径。
 - `module/data/activity/heal-data.mjs`：治疗 Activity 是 `type: "heal"`，使用结构化 `healing` `DamageField`。
 
-Lab 中已安装 MIDI-QOL `14.0.11` 与 DAE `14.0.12` 的发布源码。模块核对了 MIDI 对 dnd5e `preRollDamage` 的精确调用路径，并只在该精确版本组合下读取 workflow 的保留攻击骰；core 与 MIDI 共用同一个本次 roll-config 变换，不注册推测性的私有 MIDI hook。其他 MIDI/DAE 版本失败关闭。
+旧 Lab 中已安装 MIDI-QOL `14.0.11` 与 DAE `14.0.12` 的发布源码，旧组合已有运行验收。ServerNext 精确检查已安装的 MIDI-QOL `14.6.0-beta.4338eeab.local.9`、DAE `14.0.14` 和 Dice So Nice `6.3.1`；House Rules 与此组合的关键行为仍须目标世界验收。其他组合失败关闭。
 
-Foundry core 源码快照只有 `14.361`，所以模块不依赖未核实的 core 私有 API；聊天卡使用 dnd5e 5.3.3 自己公开触发的 `dnd5e.renderChatMessage`。本地矩阵已经对锁定的 Foundry `14.364` / dnd5e `5.3.3` 完成安装、聊天卡、Token 移动和多客户端路径回放；具体结果见仓库的[本地 E2E 报告](../../docs/remediation/2026-08-07-fvtt-v14-house-rules/evidence/local-e2e-20260808/LOCAL-E2E-REPORT.zh-CN.md)。这不等同于生产安装或真实跑团中的长期验收。
+对照 ServerNext 安装的 dnd5e `6.0.2` 源码：攻击消息改用 `type: "attack"` 和 `system.activity/item/ammunition/targets`，被删除弹药保存在 `system.deltas.deleted`；`rollAttackV2` / `postRollAttack` 仍分别在消费前后触发。模块对两代消息分别检查发送者所有权、speaker、Activity 与 Item 身份、弹药 ID、GM 侧库存快照和事务去重。`rollClassHitPoints` 与 `HitPointsAdvancement.apply` 在 6.0.2 中仍存在，但实际等级提升中的持久化链和所有村规语义尚未在目标世界验收。
+
+对照固定 dnd5e `6.0.2` 与 `6.0.5` 源码，House Rules 所依赖的 `system.deltas.deleted` 仍保存删除物品的序列化文档；6.0.5 改为只在 `system.deltas.created` 保存创建物品 ID。House Rules 使用删除快照而不读取 `created`，因此该差异不改变当前恢复路径。`14.368/6.0.5` 仍需目标世界验证，旧 6.0.2 运行记录不替代它。
+
+旧版验收所用 Foundry core 源码快照为 `14.361`，模块不依赖未核实的 core 私有 API；旧版聊天卡使用 dnd5e 5.3.3 公开触发的 `dnd5e.renderChatMessage`。本地矩阵已经对 Foundry `14.364` / dnd5e `5.3.3` 完成安装、聊天卡、Token 移动和多客户端路径回放；具体结果见仓库的[本地 E2E 报告](../../docs/remediation/2026-08-07-fvtt-v14-house-rules/evidence/local-e2e-20260808/LOCAL-E2E-REPORT.zh-CN.md)。这不等同于 14.368 / 6.0.2、生产或真实跑团验收。
 
 ## 构建、归档与受保护 Lab 工具
 
@@ -86,6 +90,6 @@ bun run build
 bun run verify:artifact
 ```
 
-`build` 生成 browser-targeted `dist/scripts/module.js`，同步 manifest/语言/样式，并生成固定排序、固定时间戳的 `release/fvtt-house-rules-0.1.0.zip`。`verify:artifact` 核对 package、源 manifest、构建 manifest、必要文件和 ZIP 内容。
+`build` 生成 browser-targeted `dist/scripts/module.js`，同步 manifest/语言/样式，并生成固定排序、固定时间戳的 `release/fvtt-house-rules-0.1.3.zip`。`verify:artifact` 核对 package、源 manifest、构建 manifest、必要文件和 ZIP 内容。
 
 `install:local-lab` 与 `verify:local-lab` 仅接受精确 `FVTT_OPS_LAB_ROOT=F:\FoundryLab\foundry-v14`。安装还要求显式 `HOUSE_RULES_LOCAL_LAB_INSTALL=1`，拒绝远程/生产环境变量、链接目标和已有模块目录，且从不覆盖安装。它们只证明文件安装，不等于真实 E2E。

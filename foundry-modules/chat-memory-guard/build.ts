@@ -130,6 +130,10 @@ export async function installChatMemoryGuardRelease({
     throw new Error(`Chat Memory Guard installation destination must end in ${MODULE_ID}.`);
   }
   await assertOwnedModule(buildDirectory);
+  const buildManifest = JSON.parse(await readFile(resolve(buildDirectory, 'module.json'), 'utf8')) as { version?: string };
+  if (buildManifest.version !== '1.0.0') {
+    throw new Error('Legacy Server Mirror installer only accepts the original 1.0.0 release; use the ServerNext migration procedure for the 1.1.0 candidate.');
+  }
 
   let backupPath: string | undefined;
   if (await exists(destination)) {

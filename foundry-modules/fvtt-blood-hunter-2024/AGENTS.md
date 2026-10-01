@@ -2,7 +2,7 @@
 
 ## 范围
 
-- 本目录是 Foundry VTT 14.364 / dnd5e 5.3.3 的独立 Blood Hunter 2024 模块。
+- 本目录保留 Foundry VTT 14.364 / dnd5e 5.3.3 的旧构建入口。显式 `--target=server-next` 仍按固定 14.368 / dnd5e 6.0.2 编译内容，并生成 `minimum/verified=6.0.2, maximum=6.0.5` 的运行时兼容 manifest；构建通过不能宣称 6.0.5 运行时已验收，旧 Lab 安装器仍只指向 server-mirror。
 - 模块只消费冻结的 `packages/blood-hunter-v14/src/index.ts` 公共接口；不得复制、改写或在浏览器端重建编译器匹配规则。
 - 所有构建、安装、迁移和测试代码必须留在本模块目录；根 `scripts/`、`package.json`、`tools/` 和 `docs/` 不属于本模块 worker 的写入范围。
 

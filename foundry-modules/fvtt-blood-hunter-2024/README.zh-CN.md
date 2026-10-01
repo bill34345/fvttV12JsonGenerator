@@ -1,6 +1,6 @@
 # 血猎手 2024 独立 Foundry 模块
 
-`fvtt-blood-hunter-2024` 是 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3` 的独立模块，版本为 `1.0.0`。它提供三个 Item compendium pack：`classes`、`subclasses`、`features`。模块不依赖 Plutonium 或 classpack；MIDI-QOL `14.0.11` 与 DAE `14.0.12` 只是推荐依赖，不是硬依赖。
+`fvtt-blood-hunter-2024` 是独立模块，版本为 `1.0.0`：默认构建精确对应 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`；显式 `--target=server-next` 仍以 Foundry `14.368`、dnd5e `6.0.2` 作为编译内容身份，生成的 manifest 则记录 `minimum/verified=6.0.2`、`maximum=6.0.5`，用于当前 ServerNext 兼容检查。它提供三个 Item compendium pack：`classes`、`subclasses`、`features`。模块不依赖 Plutonium 或 classpack；MIDI-QOL `14.0.11` 与 DAE `14.0.12` 是旧目标推荐版本，不是硬依赖，不能据此推断 ServerNext 本机版本的额外自动化已经验收。
 
 ## 构建
 
@@ -22,6 +22,14 @@ bun run build:blood-hunter-v14 --source="C:\absolute\path\BloodHunter2024.json"
 - `dist/module/data/migration-contract.json`：浏览器迁移使用的 canonical/migration 契约。
 
 `dist` 不是运行中 Lab 的 pack；构建不会原地写 Lab 世界或运行中的 compendium。
+
+ServerNext 的独立候选使用同一锁定原始 source，加 `--target=server-next`：
+
+```powershell
+bun run build:blood-hunter-v14 --source="F:\FoundryLab\foundry-v14\data\server-mirror\Data\assets\homebrew\blood-hunter-2024.activities.json" --target=server-next
+```
+
+这一选项使用 Foundry `14.368` / dnd5e `6.0.2` 编译身份及 Advancement 形状，核对 `dnd5e/6.0.2/repo/packs/_source` 中的 12 个外部引用；输出 manifest 的兼容上限为 dnd5e `6.0.5`，而 `verified` 和内容身份保持 `6.0.2`。对这一编译目标，还从原文生成 2 级先授予的“战斗风格”基础特性，使四个官方战斗风格通过目标系统的先决条件；因此该目标有 77 项特性，旧目标仍有 76 项。省略选项仍构建旧目标。`dist` 一次只保存最后一次构建；旧 Lab 安装命令仍只允许 server-mirror，**不能用于安装 ServerNext 候选**。6.0.5 上的模块启用与人物行为读回应另行验收。
 
 ## Lab 安装与验证
 
@@ -62,7 +70,7 @@ bun run foundry:ops lab blood-hunter-v14 verify-actor --input="C:\absolute\actor
 3. 点击 `Create migrated copy`，模块通过 Foundry 公共 Actor Document API 创建迁移副本，并生成 Actor JSON backup；副本通过非血猎手投影、选择/消耗、重复和 Activity/Effect 引用检查后，才允许下一步。
 4. `Apply original` 需要已有副本、通过副本验证、JSON backup，以及输入与 Actor 名称完全相同的确认文字。冲突逐项选择 `Keep`、`Overwrite` 或 `Cancel`；关闭窗口等同 `Cancel`。任何未决冲突都不能 Apply。
 
-迁移只原位更新唯一匹配的 Blood Hunter Item，并补充编译契约明确的固定授予；不按名称批量删除，不改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags。Activity/Effect/说明冲突默认暂停。Apply 通过公共 Document API 完成；失败会用 Apply 前 JSON/Actor snapshot 补偿回滚，禁止直接写 LevelDB。
+迁移只原位更新唯一匹配的 Blood Hunter Item；没有现有对应项时不会自动补充特性，因为仅凭全包清单不能判定人物当前职业、子职与等级。缺少的特性须在正常升级流程中授予或由 GM 单独核对；不按名称批量删除，不改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags。Activity/Effect/说明冲突默认暂停。Apply 通过公共 Document API 完成；失败会用 Apply 前 JSON/Actor snapshot 补偿回滚，禁止直接写 LevelDB。
 
 Callum 的旧“破晓血仪” fixture（0 Activity、0 Effect）覆盖 Preview、迁移副本、Apply 和 rollback：原 Actor 在 Preview/副本阶段保持不变，副本应得到 5 Activity、2 Effect。
 

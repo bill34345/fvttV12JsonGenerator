@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resumeSpeciesIntake, runSpeciesIntake } from '@fvtt-json-generator/intake-ai/species-orchestrator';
@@ -67,6 +67,48 @@ describe('Species Intake deterministic gates', () => {
       expect(sha(readFileSync(join(vaultPath, entry.markdownPath), 'utf8'))).toBe(entry.markdownSha256);
       expect(JSON.parse(readFileSync(join(vaultPath, entry.packagePath), 'utf8')).logicalHash).toBe(entry.logicalHash);
     }
+  });
+
+  test('keeps Foundry 14.368 acceptance separate from the old V14 target', async () => {
+    const source = '种族：阿尔法\n特性：甲';
+    const candidate = { id: 'alpha', label: '阿尔法', start: 0, end: source.length, quote: source };
+    const root = mkdtempSync(join(tmpdir(), 'species-next-target-'));
+    const vaultPath = join(root, 'vault');
+    const base = { source, sourceName: 'alpha.txt', runRoot: join(root, 'runs'), vaultPath, effectProfile: 'core' as const };
+    const old = await runSpeciesIntake({ ...base, fvttVersion: '14' }, new Provider(source, [candidate]));
+    expect(old.status).toBe('succeeded');
+    const oldMarkdown = readFileSync(old.species[0]!.markdownPath!, 'utf8');
+    const oldPackage = readFileSync(old.species[0]!.packagePath!, 'utf8');
+    const next = await runSpeciesIntake({ ...base, fvttVersion: '14.368' }, new Provider(source, [candidate]));
+    expect(next.status).toBe('succeeded');
+    expect(next.species[0]!.packagePath).toBe(join(vaultPath, 'output/species/v14-368/alpha.json'));
+    expect(readFileSync(old.species[0]!.markdownPath!, 'utf8')).toBe(oldMarkdown);
+    expect(readFileSync(old.species[0]!.packagePath!, 'utf8')).toBe(oldPackage);
+    const ledger = JSON.parse(readFileSync(join(vaultPath, 'output/species/accepted-ledger.json'), 'utf8'));
+    expect(ledger.entries.map((entry: any) => [entry.fvttVersion, entry.logicalHash]).sort((a: string[], b: string[]) => a[0]!.localeCompare(b[0]!, 'en'))).toEqual([
+      ['14.368', JSON.parse(readFileSync(next.species[0]!.packagePath!, 'utf8')).logicalHash],
+      ['14', JSON.parse(oldPackage).logicalHash],
+    ].sort((a, b) => a[0]!.localeCompare(b[0]!, 'en')));
+    expect(ledger.entries[0].logicalHash).not.toBe(ledger.entries[1].logicalHash);
+    const manifest = JSON.parse(readFileSync(join(next.runPath, 'manifest.json'), 'utf8'));
+    expect(manifest).toMatchObject({ fvttVersion: '14.368', target: { foundry: '14.368', dnd5e: '6.0.2', effectProfile: 'core', rules: '2024' } });
+  });
+
+  test('rejects a schema v1 ledger with forged explicit target before formal promotion', async () => {
+    const source = '种族：阿尔法\n特性：甲';
+    const candidate = { id: 'alpha', label: '阿尔法', start: 0, end: source.length, quote: source };
+    const root = mkdtempSync(join(tmpdir(), 'species-forged-v1-'));
+    const vaultPath = join(root, 'vault');
+    const ledgerPath = join(vaultPath, 'output/species/accepted-ledger.json');
+    mkdirSync(join(vaultPath, 'output/species'), { recursive: true });
+    const ledgerBytes = `${JSON.stringify({ schemaVersion: 1, moduleId: 'fvtt-homebrew-species', entries: [{ identifier: 'alpha', fvttVersion: '14.368', effectProfile: 'core', rules: '2024' }] }, null, 2)}\n`;
+    writeFileSync(ledgerPath, ledgerBytes);
+    const result = await runSpeciesIntake({ source, sourceName: 'alpha.txt', runRoot: join(root, 'runs'), vaultPath, fvttVersion: '14.368', effectProfile: 'core' }, new Provider(source, [candidate]));
+    expect(result.status).toBe('failed');
+    expect(result.species[0]!.findings[0]!.message).toContain('Schema v1 Species ledger cannot contain explicit target identities');
+    expect(readFileSync(ledgerPath, 'utf8')).toBe(ledgerBytes);
+    expect(existsSync(join(vaultPath, 'output/species/v14-368/alpha.json'))).toBeFalse();
+    expect(existsSync(join(vaultPath, 'input/species/v14-368/alpha.md'))).toBeFalse();
   });
   test('aggregates multi-Species accepted plus review as partial', async () => {
     const source = '种族：阿尔法\r\n特性：甲\r\n\r\n种族：贝塔\r\n特性：乙'; const candidates = splitCandidates(source);

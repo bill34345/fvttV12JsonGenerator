@@ -1,7 +1,20 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "moduleId": "fvtt-homebrew-species",
   "entries": [
+    {
+      "identifier": "ogre",
+      "fvttVersion": "14.368",
+      "effectProfile": "core",
+      "rules": "2024",
+      "markdownPath": "input/species/v14-368/ogre.md",
+      "packagePath": "output/species/v14-368/ogre.json",
+      "markdownSha256": "7243c8e4470efa2830d40c1e0e29b64155f6e8f7066d0121c387891f9871dfb7",
+      "sourceSha256": "6b2374257353ee7d013d826c31ef57b9aca6c5a15677356a228ed12b1bd76d94",
+      "irRevision": 1,
+      "logicalHash": "ce06c1c503b2c0e69416414449467655e0299a9c27ccecbfbe9a85e67d7aad41",
+      "acceptedRunId": "species-20260925132446-5bf870e5"
+    },
     {
       "identifier": "ogre",
       "markdownPath": "input/species/ogre.md",
@@ -10,7 +23,10 @@
       "sourceSha256": "6b2374257353ee7d013d826c31ef57b9aca6c5a15677356a228ed12b1bd76d94",
       "irRevision": 1,
       "logicalHash": "78496f642fdde960bc590947ebd0d4b3dde0c79ff149ebc4ef1faadb74788e0e",
-      "acceptedRunId": "species-20260813002011-221e40df"
+      "acceptedRunId": "species-20260813002011-221e40df",
+      "fvttVersion": "14",
+      "effectProfile": "core",
+      "rules": "2024"
     }
   ]
 }

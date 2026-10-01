@@ -3,6 +3,7 @@ import {
   hashResolutionConfiguration,
   isValidManualReviewCandidate,
   isSpellResolutionConfiguration,
+  logicalSpellRefKey,
   normalizeSpellIdentity,
   planSpellHydration,
   RESOLVER_MODULE_ID,
@@ -30,6 +31,7 @@ import { fetchSelectedSpellDocument } from './source-index';
 import { createFoundryAdapter } from './foundry-adapter';
 import { projectResolverRuntimeDiagnostics } from './runtime-api';
 import { assertAdoptableNativeCache, assertResolverDocumentOwnership, documentId } from './ownership';
+import { assertNativeCacheProjectionMatches, captureNativeCacheProjection, NativeCacheLifecycleCapture } from './native-cache-lifecycle';
 import {
   openResolverReviewDialog,
   renderResolverReviewHtml,
@@ -451,24 +453,54 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     },
     async viewReport(actor) {
       let report: unknown;
+      const resolution = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
       const runtime = dependencies.getRuntime();
       const validation = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+      const committed = validation.ok ? validCommittedHydrationReport(resolution, validation.value) : undefined;
+      const persistedHydrated = resolution?.status === 'hydrated';
+      const currentStatus = persistedHydrated ? currentCommittedViewStatus(actor, runtime, service) : undefined;
       if (validation.ok && runtime?.compatibility.supported && runtime.sourceIndex) {
         const current = createPreflight(actor, validation.value, runtime as ResolverRuntimeApi & {
           sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']>;
         }, dependencies, true);
         reports.set(actor, current.report);
-        const committed = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report;
-        report = {
-          ...(isRecord(committed) ? committed : {}),
-          ...current.report,
-          ...(Array.isArray(committed?.selections) ? { selections: committed.selections } : {}),
-          ...(Array.isArray(committed?.literalRestrictions) ? { literalRestrictions: committed.literalRestrictions } : {}),
-        };
+        report = committed
+          ? {
+              status: currentStatus, lastCommittedOutcome: committed,
+              currentPreflightWithoutDecisions: { status: current.status, report: current.report },
+            }
+          : persistedHydrated
+            ? {
+                status: currentStatus,
+                persistedReportBinding: 'invalid-for-current-manifest',
+                currentPreflightWithoutDecisions: { status: current.status, report: current.report },
+              }
+          : {
+              ...(isRecord(resolution?.report) ? resolution.report : {}),
+              ...current.report,
+              ...(Array.isArray(resolution?.report?.selections) ? { selections: resolution.report.selections } : {}),
+              ...(Array.isArray(resolution?.report?.literalRestrictions) ? { literalRestrictions: resolution.report.literalRestrictions } : {}),
+            };
       } else if (!validation.ok && isResolverFlaggedActor(actor)) {
-        report = { status: 'incompatible', manifestFindings: validation.findings };
+        report = {
+          status: 'incompatible', manifestFindings: validation.findings,
+        };
       } else {
-        report = reports.get(actor) ?? actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.report;
+        report = committed ? {
+          status: currentStatus,
+          ...(currentStatus === 'incompatible' ? { currentIncompatibility: {
+            reason: runtime ? 'unsupported-runtime' : 'runtime-unavailable',
+            compatibility: runtime?.compatibility ?? null,
+            diagnostics: projectResolverRuntimeDiagnostics(runtime),
+          } } : {}),
+          lastCommittedOutcome: committed,
+        }
+          : persistedHydrated ? { status: currentStatus, persistedReportBinding: 'invalid-for-current-manifest' }
+            : reports.get(actor) ?? resolution?.report;
+      }
+      if ((resolution?.status === 'failed' || resolution?.status === 'failed-recovery-required')
+        && isRecord(resolution.failureDiagnostic)) {
+        report = { ...(isRecord(report) ? report : {}), failureDiagnostic: resolution.failureDiagnostic };
       }
       await dependencies.showDocument('FVTTJSONSPELL.Action.ViewReport', await renderReportDocument(dependencies, report));
     },
@@ -526,6 +558,42 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     },
   };
   return service;
+}
+
+function validCommittedHydrationReport(
+  resolution: any,
+  manifest: PortableSpellManifest,
+): Record<string, unknown> | undefined {
+  const report = resolution?.report;
+  if (resolution?.status !== 'hydrated' || !isRecord(report)
+    || resolution.manifestHash !== hashManifest(manifest)
+    || typeof resolution.planHash !== 'string' || !resolution.planHash
+    || report.planHash !== resolution.planHash || !Array.isArray(report.selections)) return undefined;
+  const expected = new Set(manifest.spellcastingGroups.flatMap((group) => group.spellRefs.map((ref) =>
+    logicalSpellRefKey(manifest.manifestId, group.groupId, ref.refId))));
+  const seen = new Set<string>();
+  if (report.selections.length !== expected.size) return undefined;
+  for (const selection of report.selections) {
+    if (!isRecord(selection) || typeof selection.logicalRefKey !== 'string'
+      || !expected.has(selection.logicalRefKey) || seen.has(selection.logicalRefKey)
+      || !isCompendiumItemUuid(selection.selectedUuid)
+      || (selection.manualDecision !== undefined
+        && selection.manualDecision !== 'keep' && selection.manualDecision !== 'overwrite')) return undefined;
+    seen.add(selection.logicalRefKey);
+  }
+  return report;
+}
+
+function currentCommittedViewStatus(
+  actor: any,
+  runtime: ResolverRuntimeApi | undefined,
+  service: ResolverActorService,
+): ResolverStatus {
+  const status = service.status(actor);
+  if (status !== 'hydrated' || service.isAlreadyApplied(actor)) return status;
+  // A persisted successful plan is historical evidence. Missing runtime or a
+  // changed manifest/owned pair cannot be presented as currently hydrated.
+  return runtime?.compatibility.supported === true ? 'stale' : 'incompatible';
 }
 
 function hasStaleHydratedResolutionInputs(
@@ -1033,6 +1101,8 @@ async function writeFailureStatus(actor: any, status: ResolverStatus, error: unk
   try {
     await writeStatus(actor, status, {
       error: errorMessage(error),
+      failureDiagnostic: error instanceof HydrationTransactionError && error.diagnostic ? error.diagnostic : null,
+      residualDifferences: [],
       ...(error instanceof HydrationTransactionError || error instanceof UndoTransactionError
         ? { residualDifferences: error.residualDifferences }
         : {}),
@@ -1055,15 +1125,26 @@ export async function restoreLastHydration(actor: any): Promise<void> {
     const snapshot = actor.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.undoSnapshot;
     if (!isUndoSnapshot(snapshot)) throw new Error('No valid last hydration snapshot is available.');
     validateUndoSnapshot(actor, validation.value, snapshot);
+    const replacement = (globalThis as any).foundry?.data?.operators?.ForcedReplacement;
+    if (typeof replacement?.create !== 'function') throw new Error('Undo requires public Foundry ForcedReplacement.');
     const before = captureUndoSnapshot(actor, validation.value.manifestId, actor.flags?.[RESOLVER_MODULE_ID]);
     try {
-      await restoreSnapshot(actor, validation.value.manifestId, snapshot);
+      await restoreSnapshot(actor, validation.value.manifestId, snapshot, replacement);
     } catch (cause) {
+      let cleanupCause: unknown;
       try {
-        await restoreSnapshot(actor, validation.value.manifestId, before);
+        // The failed restore may have created a cache for the target snapshot's
+        // selection. Prove and remove it while that Activity is still prepared;
+        // compensation may replace the Activity with a different selection.
+        await removeNewNativeCachesForSnapshot(actor, snapshot, new Set(before.itemIds));
+      } catch (error) {
+        cleanupCause = error;
+      }
+      try {
+        await restoreSnapshot(actor, validation.value.manifestId, before, replacement);
       } catch (rollbackCause) {
         const error = new UndoTransactionError(
-          `Undo failed and compensation failed: ${errorMessage(cause)}; ${errorMessage(rollbackCause)}.`,
+          `Undo failed and compensation failed: ${errorMessage(cause)}; ${cleanupCause ? `target-cache cleanup: ${errorMessage(cleanupCause)}; ` : ''}${errorMessage(rollbackCause)}.`,
           true,
           diffUndoSnapshots(before, captureUndoSnapshot(actor, validation.value.manifestId, actor.flags?.[RESOLVER_MODULE_ID])),
           { cause },
@@ -1081,6 +1162,23 @@ export async function restoreLastHydration(actor: any): Promise<void> {
       throw error;
     }
   });
+}
+
+async function removeNewNativeCachesForSnapshot(actor: any, snapshot: UndoSnapshot, priorItemIds: ReadonlySet<string>): Promise<void> {
+  for (const saved of snapshot.activities) {
+    const feature = findItem(actor, saved.featureId);
+    const activity = getActivity(feature, String(saved.source._id));
+    const identity = readManagedIdentity(saved.source.flags?.[RESOLVER_MODULE_ID]);
+    if (!feature || !activity || !identity || activity.spell?.uuid !== identity.selectedUuid) continue;
+    const nativeSource = typeof activity.getCachedSpellData === 'function'
+      ? await activity.getCachedSpellData() : undefined;
+    for (const cache of iterate(actor.items).filter((item) => !priorItemIds.has(documentId(item))
+      && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID)) {
+      assertAdoptableNativeCache(actor, feature, activity, cache, identity, priorItemIds);
+      if (nativeSource) assertNativeCacheProjectionMatches(nativeSource, cache);
+      await requireActorApi(actor, 'deleteEmbeddedDocuments')('Item', [documentId(cache)]);
+    }
+  }
 }
 
 export class UndoTransactionError extends Error {
@@ -1119,9 +1217,10 @@ function captureUndoSnapshot(actor: any, manifestId: string, resolverFlags: unkn
   };
 }
 
-async function restoreSnapshot(actor: any, manifestId: string, snapshot: UndoSnapshot): Promise<void> {
+async function restoreSnapshot(actor: any, manifestId: string, snapshot: UndoSnapshot, replacement: { create(value: unknown): unknown }): Promise<void> {
   const managed = managedDocuments(actor, manifestId);
   const activities = managed.filter((entry) => entry.kind === 'activity');
+  const removedCachedFors = new Set(activities.map((entry) => entry.value.relativeUUID).filter((value) => typeof value === 'string'));
   for (const spell of managed.filter((entry) => entry.kind === 'spell')) {
     const flags = spell.value.flags[RESOLVER_MODULE_ID];
     const activity = activities.find((entry) => entry.value.flags?.[RESOLVER_MODULE_ID]?.logicalRefKey === flags.logicalRefKey
@@ -1137,27 +1236,97 @@ async function restoreSnapshot(actor: any, manifestId: string, snapshot: UndoSna
     if (typeof activity.feature?.deleteActivity !== 'function') throw new Error('Undo requires feature.deleteActivity(id).');
     await activity.feature.deleteActivity(documentId(activity.value));
   }
+  const snapshotItemIds = new Set(snapshot.itemIds);
   for (const saved of snapshot.activities) {
     const feature = findItem(actor, saved.featureId);
     if (!feature) throw new Error(`Undo snapshot feature ${saved.featureId} is missing.`);
-    const beforeIds = new Set(iterate(actor.items).map(documentId));
-    await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [{
-      _id: saved.featureId, [`system.activities.${saved.source._id}`]: structuredClone(saved.source),
-    }]);
-    const preparedFeature = findItem(actor, saved.featureId);
-    const activity = getActivity(preparedFeature, String(saved.source._id));
+    const hooks = (globalThis as any).Hooks;
+    const lifecycle = new NativeCacheLifecycleCapture(
+      typeof hooks?.on === 'function' && typeof hooks?.off === 'function' ? hooks : undefined,
+    );
+    try {
+      await requireActorApi(actor, 'updateEmbeddedDocuments')('Item', [{
+        _id: saved.featureId, [`system.activities.${saved.source._id}`]: structuredClone(saved.source),
+      }]);
+      const preparedFeature = findItem(actor, saved.featureId);
+      const activity = getActivity(preparedFeature, String(saved.source._id));
+      const identity = readManagedIdentity(saved.source.flags?.[RESOLVER_MODULE_ID]);
+      if (!activity || !identity) throw new Error('Undo restored Activity did not prepare with strict resolver ownership.');
+      const nativeSource = typeof activity.getCachedSpellData === 'function'
+        ? await activity.getCachedSpellData() : undefined;
+      const matchingNow = iterate(actor.items).filter((item) => !snapshotItemIds.has(documentId(item))
+        && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID);
+      if (lifecycle.active && nativeSource && matchingNow.length === 0) {
+        await lifecycle.waitForCreatedCache({ actor, cachedFor: activity.relativeUUID,
+          selectedUuid: identity.selectedUuid, projection: captureNativeCacheProjection(nativeSource) });
+      }
+      for (const cache of iterate(actor.items).filter((item) => !snapshotItemIds.has(documentId(item))
+        && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID)) {
+        assertAdoptableNativeCache(actor, preparedFeature, activity, cache, identity, snapshotItemIds);
+        if (nativeSource) assertNativeCacheProjectionMatches(nativeSource, cache);
+        await requireActorApi(actor, 'deleteEmbeddedDocuments')('Item', [documentId(cache)]);
+      }
+    } finally {
+      lifecycle.dispose();
+    }
+  }
+  // A failed first Undo can leave native caches before compensation starts. They
+  // were absent from this snapshot's item inventory and are removed only after
+  // exact Activity ownership and complete public cache provenance are proven.
+  for (const saved of snapshot.activities) {
+    const feature = findItem(actor, saved.featureId);
+    const activity = getActivity(feature, String(saved.source._id));
     const identity = readManagedIdentity(saved.source.flags?.[RESOLVER_MODULE_ID]);
-    if (!activity || !identity) throw new Error('Undo restored Activity did not prepare with strict resolver ownership.');
-    for (const cache of iterate(actor.items).filter((item) => !beforeIds.has(documentId(item))
-      && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID)) {
-      assertAdoptableNativeCache(actor, preparedFeature, activity, cache, identity, beforeIds);
+    if (!feature || !activity || !identity) throw new Error('Undo compensation Activity disappeared before cache cleanup.');
+    const nativeSource = typeof activity.getCachedSpellData === 'function'
+      ? await activity.getCachedSpellData() : undefined;
+    for (const cache of iterate(actor.items).filter((item) => !snapshotItemIds.has(documentId(item))
+      && item?.flags?.dnd5e?.cachedFor === activity.relativeUUID
+      && item?.flags?.[RESOLVER_MODULE_ID]?.managed !== true)) {
+      assertAdoptableNativeCache(actor, feature, activity, cache, identity, snapshotItemIds);
+      if (nativeSource) assertNativeCacheProjectionMatches(nativeSource, cache);
       await requireActorApi(actor, 'deleteEmbeddedDocuments')('Item', [documentId(cache)]);
     }
   }
-  if (snapshot.spells.length) await requireActorApi(actor, 'createEmbeddedDocuments')('Item', structuredClone(snapshot.spells), { keepId: true });
-  await requireActorApi(actor, 'update')({ [`flags.${RESOLVER_MODULE_ID}`]: structuredClone(snapshot.resolverFlags) }, { [RESOLVER_MODULE_ID]: { owned: true } });
+  if (snapshot.spells.length) {
+    await requireActorApi(actor, 'createEmbeddedDocuments')('Item', structuredClone(snapshot.spells), { keepId: true });
+    for (const source of snapshot.spells) {
+      const spell = findItem(actor, String(source._id));
+      const identity = readManagedIdentity(source.flags?.[RESOLVER_MODULE_ID]);
+      const feature = identity ? findItem(actor, identity.featureId) : undefined;
+      const activity = identity ? getActivity(feature, identity.activityId) : undefined;
+      if (!spell || !identity || !feature || !activity) throw new Error('Undo recreated Spell ownership pair is unavailable.');
+      assertResolverDocumentOwnership(actor, feature, spell, identity, 'spell', activity.relativeUUID);
+      const updates: Array<{ _id: string; origin: string }> = [];
+      for (const savedEffect of Array.isArray(source.effects) ? source.effects : []) {
+        if (!isRecord(savedEffect) || typeof savedEffect._id !== 'string' || typeof savedEffect.origin !== 'string') continue;
+        const currentEffect = spell.effects?.get?.(savedEffect._id);
+        if (!currentEffect) throw new Error('Undo recreated Spell lost a saved ActiveEffect.');
+        if (currentEffect.origin !== savedEffect.origin) updates.push({ _id: savedEffect._id, origin: savedEffect.origin });
+      }
+      if (updates.length) {
+        if (typeof spell.updateEmbeddedDocuments !== 'function') throw new Error('Undo requires public Spell ActiveEffect update API.');
+        await spell.updateEmbeddedDocuments('ActiveEffect', updates);
+        const readback = findItem(actor, String(source._id));
+        if (updates.some((entry) => readback?.effects?.get?.(entry._id)?.origin !== entry.origin)) {
+          throw new Error('Undo did not restore the saved ActiveEffect origin.');
+        }
+      }
+    }
+  }
+  await requireActorApi(actor, 'update')({
+    [`flags.${RESOLVER_MODULE_ID}`]: replacement.create(structuredClone(snapshot.resolverFlags)),
+  }, { [RESOLVER_MODULE_ID]: { owned: true } });
+  for (const item of iterate(actor.items)) {
+    if (!snapshotItemIds.has(documentId(item)) && removedCachedFors.has(item?.flags?.dnd5e?.cachedFor)
+      && item?.flags?.[RESOLVER_MODULE_ID]?.managed !== true) {
+      throw new Error('Undo left a new unowned native cache for a removed Activity.');
+    }
+  }
   const after = captureUndoSnapshot(actor, manifestId, actor.flags?.[RESOLVER_MODULE_ID]);
-  if (!sameManagedSnapshot(after, snapshot)) throw new Error('Undo snapshot restoration left residual differences.');
+  if (!sameManagedSnapshot(after, snapshot)) {
+    throw new Error('Undo snapshot restoration left residual differences.');
+  }
 }
 
 function isUndoSnapshot(value: unknown): value is UndoSnapshot {
@@ -1259,9 +1428,25 @@ function sameManagedSnapshot(actual: UndoSnapshot, expected: UndoSnapshot): bool
   const project = (snapshot: UndoSnapshot) => ({
     resolverFlags: snapshot.resolverFlags,
     activities: [...snapshot.activities].sort((left, right) => `${left.featureId}:${left.source._id}`.localeCompare(`${right.featureId}:${right.source._id}`, 'en')),
-    spells: [...snapshot.spells].sort((left, right) => String(left._id).localeCompare(String(right._id), 'en')),
+    spells: [...snapshot.spells].sort((left, right) => String(left._id).localeCompare(String(right._id), 'en'))
+      .map(comparableRestoredSpellSource),
   });
   return canonicalStringify(project(actual)) === canonicalStringify(project(expected));
+}
+
+function comparableRestoredSpellSource(source: Record<string, any>): Record<string, any> {
+  const comparable = structuredClone(source);
+  const normalizeStats = (value: unknown): void => {
+    if (Array.isArray(value)) { value.forEach(normalizeStats); return; }
+    if (!isRecord(value)) return;
+    if (isRecord(value._stats)) {
+      delete value._stats.createdTime;
+      delete value._stats.modifiedTime;
+    }
+    Object.values(value).forEach(normalizeStats);
+  };
+  normalizeStats(comparable);
+  return comparable;
 }
 
 function diffUndoSnapshots(expected: UndoSnapshot, actual: UndoSnapshot): Array<{ path: string; before?: unknown; after?: unknown }> {

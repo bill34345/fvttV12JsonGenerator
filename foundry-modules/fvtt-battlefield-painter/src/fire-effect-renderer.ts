@@ -108,10 +108,10 @@ const inferWorldOrigin = (
   if (withOffsets.length) {
     return {
       x: Math.min(
-        ...withOffsets.map(({ bounds, offset }) => bounds.minX - offset!.i * gridSize),
+        ...withOffsets.map(({ bounds, offset }) => bounds.minX - offset!.j * gridSize),
       ),
       y: Math.min(
-        ...withOffsets.map(({ bounds, offset }) => bounds.minY - offset!.j * gridSize),
+        ...withOffsets.map(({ bounds, offset }) => bounds.minY - offset!.i * gridSize),
       ),
     };
   }
@@ -131,8 +131,8 @@ const cellGridIndex = (
   gridSize: number,
 ): GridOffset =>
   cell.offset ?? {
-    i: Math.floor((cell.bounds.minX - origin.x) / gridSize),
-    j: Math.floor((cell.bounds.minY - origin.y) / gridSize),
+    i: Math.floor((cell.bounds.minY - origin.y) / gridSize),
+    j: Math.floor((cell.bounds.minX - origin.x) / gridSize),
   };
 
 const pushQuad = (
@@ -235,8 +235,8 @@ export const buildFireFieldGeometry = (
     for (let layer = 0; layer < offsets.length; layer += 1) {
       const [offsetX, offsetY] = offsets[layer]!;
       const anchor = {
-        x: origin.x + (index.i + offsetX) * gridSize,
-        y: origin.y + (index.j + offsetY) * gridSize,
+        x: origin.x + (index.j + offsetX) * gridSize,
+        y: origin.y + (index.i + offsetY) * gridSize,
       };
       const epsilon = gridSize * 0.0001;
       if (
@@ -405,6 +405,7 @@ interface FireVideoResource {
   video: any;
   texture: any;
   ready: boolean;
+  playRequested?: boolean;
   onReady?: () => void;
   onError?: () => void;
 }
@@ -697,7 +698,8 @@ export class FireEffectRenderer {
         if (!video) throw new Error("Could not create fire field video element");
         video.muted = true;
         video.loop = true;
-        video.autoplay = true;
+        // Pixi owns loading; playback starts only after decoded dimensions exist.
+        video.autoplay = false;
         video.playsInline = true;
         video.preload = "auto";
         video.crossOrigin = "anonymous";
@@ -716,13 +718,26 @@ export class FireEffectRenderer {
         video.src = source;
         const resource: FireVideoResource = {
           video,
-          texture: this.#root.PIXI.Texture.from(video),
-          ready: Number(video.readyState) >= 2,
+          texture: this.#root.PIXI.Texture.from(video, { resourceOptions: { autoPlay: false } }),
+          ready: false,
         };
         const generation = this.#lifecycleGeneration;
         resource.onReady = () => {
           if (generation !== this.#lifecycleGeneration || !this.#mounted) return;
+          if (Number(video.readyState) < 2 || !(video.videoWidth > 0 && video.videoHeight > 0)) return;
+          // A play event on a zero-sized Pixi VideoResource recursively enters
+          // _onCanPlay/_onPlayStart in Pixi 7.4.3. Update before requesting play.
+          resource.texture.baseTexture?.resource?.update?.();
           resource.ready = true;
+          if (!resource.playRequested) {
+            resource.playRequested = true;
+            const playResult = video.play?.();
+            if (playResult && typeof playResult.catch === "function") {
+              playResult.catch(() => {
+                // Keep the muted resource available for a later user gesture.
+              });
+            }
+          }
         };
         resource.onError = () => {
           if (generation !== this.#lifecycleGeneration || !this.#mounted) return;
@@ -732,14 +747,7 @@ export class FireEffectRenderer {
         video.addEventListener?.("canplay", resource.onReady);
         video.addEventListener?.("error", resource.onError);
         document.body?.appendChild?.(video);
-        video.load?.();
-        const playResult = video.play?.();
-        if (playResult && typeof playResult.catch === "function") {
-          playResult.catch(() => {
-            // Muted autoplay is allowed in the target browser. Keep the
-            // resource alive here so a later user gesture can resume it.
-          });
-        }
+        resource.onReady();
         created.push(resource);
       }
       this.#media = created;

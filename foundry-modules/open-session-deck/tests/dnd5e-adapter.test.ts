@@ -15,9 +15,10 @@ function actor(id: string, options: Record<string, any> = {}) {
         hp: { value: options.hp ?? 10, max: options.max ?? 20, tempmax: options.tempmax ?? 0, temp: options.temp ?? 0 },
         ac: { value: options.ac ?? 15 },
         inspiration: options.inspiration ?? 0,
-        exhaustion: options.exhaustion ?? 0,
+        exhaustion: options.legacyExhaustion ?? options.exhaustion ?? 0,
         death: { success: 1, failure: 2 },
       },
+      conditions: Object.hasOwn(options, 'conditions') ? options.conditions : { exhaustion: options.exhaustion ?? 0 },
     },
     concentration: { effects: new Set(options.concentrating ? [{}] : []) },
     statuses: new Set(options.statuses ?? []),
@@ -28,7 +29,10 @@ function actor(id: string, options: Record<string, any> = {}) {
     update: async (value: unknown) => { options.calls?.push(['update', value]); },
     createEmbeddedDocuments: async (type: string, value: unknown) => { options.calls?.push(['createEmbeddedDocuments', type, value]); },
     deleteEmbeddedDocuments: async (type: string, value: unknown) => { options.calls?.push(['deleteEmbeddedDocuments', type, value]); },
-    toggleStatusEffect: async (value: string) => { options.calls?.push(['toggleStatusEffect', value]); },
+    toggleStatusEffect: async (...args: unknown[]) => {
+      options.calls?.push(['toggleStatusEffect', ...args]);
+      options.onToggleStatusEffect?.(...args);
+    },
     sheet: { render: (value: boolean) => options.calls?.push(['sheet', value]) },
   };
 }
@@ -78,8 +82,15 @@ function runtime(options: Record<string, any> = {}): Dnd5eRuntime {
 describe('Dnd5eAdapter snapshots', () => {
   test('requires exact Foundry and dnd5e versions', () => {
     expect(supportError(runtime())).toBeUndefined();
+    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.2' }))).toBeUndefined();
+    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.5' }))).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.365' }))).toContain('14.364');
     expect(supportError(runtime({ systemVersion: '5.4.0' }))).toContain('5.3.3');
+    expect(supportError(runtime({ foundryVersion: '14.368' }))).toContain('6.0.2');
+    expect(supportError(runtime({ systemVersion: '6.0.2' }))).toContain('6.0.2');
+    expect(supportError(runtime({ foundryVersion: '14.369', systemVersion: '6.0.2' }))).toContain('14.368');
+    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.4' }))).toContain('6.0.5');
+    expect(supportError(runtime({ foundryVersion: '14.364', systemVersion: '6.0.5' }))).toContain('6.0.2 or 6.0.5');
     expect(supportError(runtime({ systemId: 'daggerheart' }))).toContain('dnd5e');
   });
 
@@ -248,6 +259,79 @@ describe('Dnd5eAdapter commands', () => {
     expect(calls).toEqual([]);
   });
 
+  test('uses the dnd5e 6 condition level and native status delta without writing the derived attribute', async () => {
+    const calls: unknown[] = [];
+    const hero = actor('hero', { calls, exhaustion: 2, legacyExhaustion: 5 });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.2' }));
+    const card = adapter.buildSnapshot().party[0]!;
+    expect(card.exhaustion).toBe(2);
+    expect(card.commands.exhaustionDown.enabled).toBeTrue();
+    expect(card.commands.exhaustionUp.enabled).toBeTrue();
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 });
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: -1 });
+    expect(calls).toEqual([
+      ['toggleStatusEffect', 'exhaustion', { levels: 1 }],
+      ['toggleStatusEffect', 'exhaustion', { levels: -1 }],
+    ]);
+  });
+
+  test('reads dnd5e 6.0.5 exhaustion from its native effect and writes through the system status API', async () => {
+    const calls: unknown[] = [];
+    // Match 6.0.5 ActiveEffect5e.ID.EXHAUSTION = staticID("dnd5eexhaustion").
+    const exhaustionEffect = { id: 'dnd5eexhaustion0', system: { level: 2 } };
+    const effects = { get: (id: string) => id === 'dnd5eexhaustion0' ? exhaustionEffect : undefined };
+    const hero = actor('hero', {
+      calls,
+      effects,
+      conditions: {},
+      legacyExhaustion: 0,
+      onToggleStatusEffect: (_statusId: string, options: { levels: number }) => { exhaustionEffect.system.level += options.levels; },
+    });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.5' }));
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(2);
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 });
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(3);
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: -1 });
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(2);
+    expect(calls).toEqual([
+      ['toggleStatusEffect', 'exhaustion', { levels: 1 }],
+      ['toggleStatusEffect', 'exhaustion', { levels: -1 }],
+    ]);
+  });
+
+  test('disables dnd5e 6.0.5 exhaustion commands when the native effect level is malformed', async () => {
+    const calls: unknown[] = [];
+    const hero = actor('invalid', { calls, effects: { get: () => ({ system: { level: '2' } }) } });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.5' }));
+    expect(adapter.buildSnapshot().party[0]!.commands.exhaustionUp.enabled).toBeFalse();
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('unavailable');
+    expect(calls).toEqual([]);
+  });
+
+  test('dnd5e 6 treats an empty condition map as level zero while enforcing native boundaries', async () => {
+    const calls: unknown[] = [];
+    const rested = actor('rested', { calls, conditions: {}, legacyExhaustion: 3 });
+    const exhausted = actor('exhausted', { calls, exhaustion: 6, legacyExhaustion: 0 });
+    const missing = actor('missing', { calls, conditions: undefined });
+    const invalid = actor('invalid', { calls, conditions: { exhaustion: '2' } });
+    const next = runtime({ actors: [rested, exhausted, missing, invalid], foundryVersion: '14.368', systemVersion: '6.0.2' });
+    const adapter = new Dnd5eAdapter(next);
+    const cards = adapter.buildSnapshot().party;
+    expect(cards.find((card) => card.uuid === rested.uuid)!.exhaustion).toBe(0);
+    expect(cards.find((card) => card.uuid === rested.uuid)!.commands.exhaustionDown.enabled).toBeFalse();
+    expect(cards.find((card) => card.uuid === rested.uuid)!.commands.exhaustionUp.enabled).toBeTrue();
+    expect(cards.find((card) => card.uuid === exhausted.uuid)!.commands.exhaustionUp.enabled).toBeFalse();
+    expect(cards.find((card) => card.uuid === missing.uuid)!.commands.exhaustionUp.enabled).toBeFalse();
+    expect(cards.find((card) => card.uuid === invalid.uuid)!.commands.exhaustionUp.enabled).toBeFalse();
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: rested.uuid, delta: -1 })).rejects.toThrow('minimum');
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: exhausted.uuid, delta: 1 })).rejects.toThrow('maximum');
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: missing.uuid, delta: 1 })).rejects.toThrow('unavailable');
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: invalid.uuid, delta: 1 })).rejects.toThrow('unavailable');
+    expect(calls).toEqual([]);
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: rested.uuid, delta: 1 });
+    expect(calls).toEqual([['toggleStatusEffect', 'exhaustion', { levels: 1 }]]);
+  });
+
   test('rechecks GM permission after asynchronous UUID resolution before writing', async () => {
     const calls: unknown[] = [];
     const hero = actor('hero', { calls });
@@ -286,8 +370,8 @@ describe('Dnd5eAdapter commands', () => {
       ['applyDamage', 6],
       ['update', { 'system.attributes.hp.temp': 1 }],
       ['update', { 'system.attributes.hp.tempmax': -15, 'system.attributes.hp.value': 5 }],
-      ['toggleStatusEffect', 'poisoned'],
-      ['toggleStatusEffect', 'concentrating'],
+      ['toggleStatusEffect', 'poisoned', { active: false }],
+      ['toggleStatusEffect', 'concentrating', { active: true }],
       ['createEmbeddedDocuments', 'ActiveEffect', [{
         name: 'Open Session Deck: AC Modifier', img: 'icons/svg/shield.svg',
         changes: [{ key: 'system.attributes.ac.bonus', mode: 2, value: '2', priority: 20 }],

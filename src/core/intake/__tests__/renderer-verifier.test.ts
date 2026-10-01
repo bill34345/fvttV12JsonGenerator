@@ -1,10 +1,27 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  buildConditionFlag,
+  createConditionInstance,
+  projectedConditionStatusId,
+  readConditionInstance,
+  type ConditionId,
+} from '@fvtt-json-generator/contracts/conditions';
 import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
 import { anchorIrEvidence } from '../orchestrator';
 import { renderMonsterIntakeMarkdown } from '../renderer';
 import { projectActor, renderIntakeVerificationMarkdown, verifyMonsterIntake } from '../verifier';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
+
+function templateConditionEffect(conditionId: ConditionId) {
+  return {
+    statuses: [projectedConditionStatusId(conditionId)],
+    flags: buildConditionFlag(createConditionInstance(conditionId, {}, {
+      instanceId: `template-${conditionId}`,
+      template: true,
+    })),
+  };
+}
 
 async function generatedRatWarlock() {
   const ir = buildRatWarlockIr();
@@ -77,6 +94,49 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect((projection.items as Array<Record<string, unknown>>)[0]).toMatchObject({
       activation: 'legendary', section: '\u795e\u8bdd\u52a8\u4f5c',
     });
+  });
+
+  test('projects custom condition IDs only when the same effect has its exact enabled template contract', () => {
+    const exactDazed = templateConditionEffect('dazed');
+    const exactAddled = templateConditionEffect('addled');
+    const exactBewildered = templateConditionEffect('bewildered');
+    const forgedSuffix = {
+      ...exactDazed,
+      statuses: ['fvtt-custom-conditions.dazed-shadow'],
+    };
+    const missingFlag = { statuses: [projectedConditionStatusId('dazed')] };
+    const mismatchedFlag = {
+      ...templateConditionEffect('addled'),
+      statuses: [projectedConditionStatusId('dazed')],
+    };
+    const nonTemplateFlag = {
+      statuses: [projectedConditionStatusId('dazed')],
+      flags: buildConditionFlag(createConditionInstance('dazed', {}, { instanceId: 'instance-dazed' })),
+    };
+    const unrelatedFeatureEffect = templateConditionEffect('dazed');
+
+    const projection = projectActor({
+      system: { abilities: {}, attributes: {}, traits: {}, details: {} },
+      items: [
+        {
+          name: 'Source Feature', type: 'feat', system: {},
+          effects: [exactDazed, exactAddled, exactBewildered, forgedSuffix, missingFlag, mismatchedFlag, nonTemplateFlag],
+        },
+        { name: 'Unrelated Feature', type: 'feat', system: {}, effects: [unrelatedFeatureEffect] },
+      ],
+    });
+    const projectedItems = projection.items as Array<Record<string, unknown>>;
+
+    expect(projectedItems[0]!.statuses).toEqual([
+      'dazed',
+      'addled',
+      'bewildered',
+      'fvtt-custom-conditions.dazed-shadow',
+      'fvtt-custom-conditions.dazed',
+      'fvtt-custom-conditions.dazed',
+      'fvtt-custom-conditions.dazed',
+    ]);
+    expect(projectedItems[1]!.statuses).toEqual(['dazed']);
   });
 
   test('renders explicit hover through standard Markdown into the v14 Actor movement object', async () => {
@@ -476,6 +536,12 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const actor = generated.rawJson as any;
+    const generatedStatusBurst = actor.items.find((item: any) => item.name.includes('Status Burst'));
+    const generatedDazed = generatedStatusBurst.effects.find((effect: any) => effect.statuses.includes(projectedConditionStatusId('dazed')));
+    expect(readConditionInstance(generatedDazed)).toEqual(createConditionInstance('dazed', {}, {
+      instanceId: 'template-dazed',
+      template: true,
+    }));
 
     const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
     const codes = new Set(report.findings.map((finding) => finding.code));

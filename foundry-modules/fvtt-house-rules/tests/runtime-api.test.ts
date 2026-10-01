@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { isDeepStrictEqual } from "node:util";
 import { FLAG, MODULE_ID, SCHEMA_VERSION, SETTING } from "../src/constants";
 import {
   configurePotion,
@@ -22,7 +23,7 @@ let notifications: string[];
 let hooks: Map<string, (...args: any[]) => unknown>;
 
 beforeEach(() => {
-  for (const key of ["game", "ui", "Hooks", "document", "fromUuid", "canvas"]) {
+  for (const key of ["game", "ui", "Hooks", "document", "fromUuid", "canvas", "foundry"]) {
     originalGlobals.set(key, globals[key]);
   }
   values = new Map<string, unknown>([
@@ -74,6 +75,10 @@ beforeEach(() => {
   globals.document = { addEventListener() {} };
   globals.canvas = { grid: { measurePath: () => ({ distance: 20 }) } };
   globals.fromUuid = async () => null;
+  globals.foundry = {
+    data: { operators: { ForcedReplacement: { create: (value: unknown) => ({ __forcedReplacement: value }) } } },
+    utils: { equals: isDeepStrictEqual },
+  };
 });
 
 afterEach(() => {
@@ -90,7 +95,13 @@ function flaggedDocument(type: string, flags: AnyRecord, activities: AnyRecord =
     getFlag: (_module: string, key: string) => document.flags[MODULE_ID]?.[key],
     async setFlag(_module: string, key: string, value: unknown) { document.flags[MODULE_ID][key] = structuredClone(value); flagWrites.push([key, value]); },
     async unsetFlag(_module: string, key: string) { delete document.flags[MODULE_ID][key]; },
-    async update(change: AnyRecord) { writes.push(change); if (change["system.activities"]) document.system.activities = structuredClone(change["system.activities"]); },
+    async update(change: AnyRecord) {
+      writes.push(change);
+      const next = change["system.activities"];
+      if (next?.__forcedReplacement) document.system.activities = structuredClone(next.__forcedReplacement);
+      else if (next) document.system.activities = { ...document.system.activities, ...structuredClone(next) };
+      return document;
+    },
     toObject: () => ({ system: { activities: structuredClone(document.system.activities) } }),
   };
   return { document, writes, flagWrites };
@@ -124,13 +135,152 @@ describe("house-rules runtime and settings integration", () => {
     const preview = await configurePotion(potion, "preview");
     expect(Object.keys(preview!.activities)).toEqual(["hrPotionQuick", "hrPotionMax", "hrPotionFeed"]);
     expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
-    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toMatchObject({ schema: 1 });
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toMatchObject({ schema: 2 });
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot].activities).toEqual({ original: { type: "heal" } });
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot].appliedActivities).toEqual(potion.system.activities);
     expect(writes.at(-1)!["system.activities"].hrPotionMax.healing.custom.formula).toBe("8 + 2");
     expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
     expect(potion.system.activities).toEqual({ original: { type: "heal" } });
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toBeUndefined();
 
     const { document: untagged } = flaggedDocument("consumable", {});
     expect(await configurePotion(untagged, "apply")).toBeNull();
+  });
+
+  test("restores an empty Activity map by forced replacement rather than Foundry's recursive merge", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    expect(Object.keys(potion.system.activities)).toEqual(["hrPotionQuick", "hrPotionMax", "hrPotionFeed"]);
+    expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
+    expect(writes.at(-1)!["system.activities"]).toEqual({ __forcedReplacement: {} });
+    expect(potion.system.activities).toEqual({});
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toBeUndefined();
+  });
+
+  test("treats undefined schema fields as absent in persisted potion flags while still rejecting a GM edit", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      for (const activity of Object.values(potion.system.activities) as AnyRecord[]) {
+        activity.healing.scaling = { formula: undefined };
+      }
+      return result;
+    };
+    const setFlag = potion.setFlag;
+    potion.setFlag = async (module: string, key: string, value: unknown) =>
+      setFlag(module, key, JSON.parse(JSON.stringify(value)));
+
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const saved = potion.getFlag(MODULE_ID, FLAG.potionSnapshot);
+    expect(saved.schema).toBe(2);
+    expect(isDeepStrictEqual(saved.appliedActivities, potion.system.activities)).toBeFalse();
+    expect(JSON.stringify(saved.appliedActivities)).toBe(JSON.stringify(potion.system.activities));
+
+    potion.system.activities.hrPotionFeed.healing.scaling.formula = "GM edit";
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toBeDefined();
+    potion.system.activities.hrPotionFeed.healing.scaling.formula = undefined;
+    expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
+    expect(potion.system.activities).toEqual({});
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toBeUndefined();
+  });
+
+  test("refuses to discard an Activity added after apply and retains the recovery snapshot", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, { original: { type: "heal" } });
+    await configurePotion(potion, "apply");
+    potion.system.activities.manual = { type: "heal" };
+    const before = writes.length;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(writes).toHaveLength(before);
+    expect(potion.system.activities.manual).toEqual({ type: "heal" });
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toBeDefined();
+  });
+
+  test("refuses to discard edits to a generated Activity even when its module flag remains", async () => {
+    for (const edit of [
+      (activity: AnyRecord) => { activity.name = "GM custom name"; },
+      (activity: AnyRecord) => { activity.healing.custom.formula = "100"; },
+      (activity: AnyRecord) => { activity.effects.push({ name: "Third-party effect" }); },
+      (activity: AnyRecord) => { activity.flags.thirdParty = { edited: true }; },
+    ]) {
+      const { document: potion, writes } = flaggedDocument("consumable", {
+        [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+      }, {});
+      await configurePotion(potion, "apply");
+      edit(potion.system.activities.hrPotionMax);
+      const before = structuredClone(potion.system.activities);
+      const writeCount = writes.length;
+      expect(await configurePotion(potion, "restore")).toBeNull();
+      expect(writes).toHaveLength(writeCount);
+      expect(potion.system.activities).toEqual(before);
+      expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toMatchObject({ schema: 2 });
+    }
+  });
+
+  test("rejects a generated Activity ID collision before any potion write", async () => {
+    const existing = { hrPotionMax: { type: "heal", name: "GM original" } };
+    const { document: potion, writes, flagWrites } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, existing);
+    expect(await configurePotion(potion, "apply")).toBeNull();
+    expect(writes).toHaveLength(0);
+    expect(flagWrites).toHaveLength(0);
+    expect(potion.system.activities).toEqual(existing);
+  });
+
+  test("does not update Activities if Foundry cancels the initial snapshot write", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    potion.setFlag = async () => undefined;
+    expect(await configurePotion(potion, "apply")).toBeNull();
+    expect(writes).toHaveLength(0);
+    expect(potion.system.activities).toEqual({});
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toBeUndefined();
+  });
+
+  test("rejects a legacy snapshot without a post-apply baseline", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+      [FLAG.potionSnapshot]: { schema: 1, activities: {} },
+    }, { hrPotionMax: { flags: { [MODULE_ID]: { generatedPotionActivity: true } } } });
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(await configurePotion(potion, "apply")).toBeNull();
+    expect(writes).toHaveLength(0);
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toMatchObject({ schema: 1 });
+  });
+
+  test("does not report apply success when its post-apply snapshot is not persisted", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const setFlag = potion.setFlag;
+    let calls = 0;
+    potion.setFlag = async (...args: unknown[]) => {
+      if (++calls === 2) return;
+      return setFlag(...args);
+    };
+    expect(await configurePotion(potion, "apply")).toBeNull();
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toMatchObject({ schema: 1 });
+    expect(await configurePotion(potion, "restore")).toBeNull();
+  });
+
+  test("keeps the potion snapshot when a restore update is not persisted", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    await configurePotion(potion, "apply");
+    potion.update = async () => potion;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(potion.flags[MODULE_ID][FLAG.potionSnapshot]).toBeDefined();
+    expect(Object.keys(potion.system.activities)).toHaveLength(3);
   });
 
   test("rerolls a one once, persists the accepted class HP, and rejects a replay", async () => {
@@ -180,6 +330,23 @@ describe("house-rules runtime and settings integration", () => {
     globals.game.user = globals.game.users[1];
     expect(await globals.game.fvttHouseRules.setup.setFeature(SETTING.stealth, true)).toBeFalse();
     expect(await setStealth(actor, { enabled: false })).toBeNull();
+  });
+
+  test("accepts only exact paired Foundry and dnd5e versions", () => {
+    installHouseRulesApi();
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.version = "14.368";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
+    globals.game.system.version = "6.0.2";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.system.version = "6.0.5";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.system.version = "6.0.4";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
+    globals.game.version = "14.364";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
+    globals.game.version = "14.369";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
   });
 
   test("records a validated natural-one dismissal exactly once", async () => {

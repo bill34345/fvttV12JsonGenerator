@@ -5,24 +5,24 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "6d7717a78370fd4c91cb3af95b202c138978146ed3e98352981ebe1ef6cea3ce",
-    "reviewedOn": "2026-09-24",
-    "note": "已对照自定义恍惚/震愕三选一规则、生成模板说明及CoTN原组合边界：生成器只输出新描述和状态模板，Trigger Engine事件接口未变；Custom Conditions记录附赠动作并让震愕继承，攻击异步预约与未验收并发限制已写明。"
+    "fingerprint": "06780404dc10f67560be7dede378d7971dde3778990ed55f9a8c78f959d0b443",
+    "reviewedOn": "2026-10-01",
+    "note": "已核对CLI仅Species支持14.368且保留6.0.2内容投影，Actor/Item默认与精确支持不扩大；版本跟随记录、来源路由和本轮限定接受已对照，未把运行PASS提升为正式生成通用支持。"
   },
   "monster-intake": {
-    "fingerprint": "bc2be1fd07ee2abb6e691ece56b86be881807de6f36bdb7433e8b192d6d882ce",
-    "reviewedOn": "2026-09-15",
-    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
+    "fingerprint": "4411ac96949c91a97fd03bb1f64d0f4db267a350360832edcb0fc0806582f50d",
+    "reviewedOn": "2026-10-01",
+    "note": "对照共享verifier实际调用：只为同Effect合法enabled模板flags及精确projected status还原条件；负例继续漂移，来源匹配和Item/Encounter流程未放宽。"
   },
   "item-intake": {
-    "fingerprint": "d8be6f75a1c84adb4c070059edcae117d9f117e214281171ea920307444b3306",
-    "reviewedOn": "2026-09-15",
-    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
+    "fingerprint": "315882bdc7cf3b7ace0f9306cbcc1d7f0cfa26d2226a998b4b7669e8afa2bc4a",
+    "reviewedOn": "2026-10-01",
+    "note": "对照共享verifier实际调用：只为同Effect合法enabled模板flags及精确projected status还原条件；负例继续漂移，来源匹配和Item/Encounter流程未放宽。"
   },
   "species-intake": {
-    "fingerprint": "e15669d00ca984a314a21eb5cf2b19ca31a4a6b67922cbee2ee01e85de9781aa",
-    "reviewedOn": "2026-09-15",
-    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
+    "fingerprint": "c610294a1fc937c088c2e49574410319c4269cb4ec67cec3e52f556462409ded",
+    "reviewedOn": "2026-10-01",
+    "note": "对照CLI目标门与Species构建：14.368仅Species候选，运行6.0.5与内容6.0.2身份区分；CI显式测试依赖入口不放开真实路径拒绝。"
   },
   "document-extraction": {
     "fingerprint": "861def0e059a9dbf948366ebc72ec6b293d1d298e25e8466b0bc0b02eb10e85f",
@@ -60,49 +60,49 @@
     "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
   },
   "verification-development": {
-    "fingerprint": "8d7ed3691d20b117d50d91e99a2315d3346dbb7e6fa1907212d1418ca1e614b8",
-    "reviewedOn": "2026-09-30",
-    "note": "最终核对新增纯归属检查、实际编译入口与本机Bun包装退出码限制：同时读JSON状态，不把收集成功当父审。限定实机及清理已闭合，手册渲染政策拒绝保留。"
+    "fingerprint": "acb07c9b089c24e8c3d0b23734c1d709803c0c1ad25241e5508ef0e36fc03d9c",
+    "reviewedOn": "2026-10-01",
+    "note": "最终对照CI整合记录：Bun1.3.14完整319文件覆盖率及阈值通过，随后Species目标目录卫生规则80项局部回归通过；明确复用全清单快照，未删测试或放宽阈值，准确Midi patch空context保留原SHA。"
   },
   "human-encounter-intake": {
-    "fingerprint": "41c1630259b91bb9cdcd4af8be4de36f5b4af21262781e5eeb2f6d7d9dbbe2d8",
-    "reviewedOn": "2026-09-15",
-    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
+    "fingerprint": "bd27e23d185aed651c0bf6e8c5cbe8ebc849e91bf36e2ded17e913e7a979b346",
+    "reviewedOn": "2026-10-01",
+    "note": "对照共享verifier实际调用：只为同Effect合法enabled模板flags及精确projected status还原条件；负例继续漂移，来源匹配和Item/Encounter流程未放宽。"
   },
   "chat-memory-guard": {
-    "fingerprint": "584662ab88e9fc75b2792e3bf479164a184c5b53e34e4f18a02eda4bdb6d3d29",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-babele-rolltable-embed-translation": {
-    "fingerprint": "7d7c1cbd01409fd1b934ceb9601c90c8a640c6c55ca4d252bd4dbfac8134bd6d",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "2b56cb4132bf2b9d273b3fc82f7f3d98bcd37d3babcb80fd5858d2c0ad89c6f6",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "7653ec3095486487dd8d50846a71daca01d55c26615afaecdf5c053bc74cd25c",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "dbbf13e5c7b7628b2dc4d615e0c0a536440c2dc526b271450e0f582f76f31aee",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "57b8ef6076c68a1b5350a28a09b00ea03a134f07afef3678b4081825e9675755",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-homebrew-species": {
-    "fingerprint": "c4fa628ff15c2bc9697e2f2c36e6e5e274c6ff550aa27d64ee54f87e6d4da139",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "08762ebdbb4655ad01354079c0b8f46cace4181c7cfebb184ec9e41ee48c9701",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-house-rules": {
-    "fingerprint": "b011475adf1b236225f1e7b07d256f215ca8b17c928edf88e4160e21882d212e",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "264e8f962be6f3325df5a7a97ebd878811a47102d8771c75d2fa05ad43873bbd",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "8f754430f6cbe251c87431a7f04d72f574e0f93d464ff8d52d089f03896cd6cf",
-    "reviewedOn": "2026-09-24",
-    "note": "收尾核对了2026-09-22历史计划与审查的新状态指针：伤势归属、层数与仪式说明未变；Custom Conditions全19项入口及恍惚/震愕三选一的CoTN普通顺序证据与未执行并发边界仍与手册相符。"
+    "fingerprint": "6d20051ef4590cad46b4ec8fc72d51546fe738462bbed938cd86a9d22f7c3aff",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-trigger-engine": {
     "fingerprint": "a90c6c18e9373e9f0d0b61a70132fd8fac8098e03f63b8027de317d93658e061",
@@ -125,18 +125,18 @@
     "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
   },
   "monster-spell-resolver": {
-    "fingerprint": "41d4d1ae3bf1c63ba339f8035ea88697e8d738eca216e63d5e933228037855c6",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "e0eae9be17789e853e9b3100cd975fd944a5c85c3f2480c69b36ea917a1a82ab",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "open-session-deck": {
-    "fingerprint": "94f3182e9733f9012127b6706a1e92e1610a628f78d00a6327c1846ced23d626",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "363a6be1e6cfc6dd25d06ccbf049a2a7ed1d425f20cf053367e9a75a06b101e5",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "session-monitor": {
-    "fingerprint": "f0acb4cd5891a6cf4f8ff9f3a126b3bf9a17b0e153cecb06aab8bd1c860f685e",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "4f48a8cf76463769a3ba3b016bbe80176e76dd951f4c62fff6237ebe9739ac4c",
+    "reviewedOn": "2026-10-01",
+    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   }
 }

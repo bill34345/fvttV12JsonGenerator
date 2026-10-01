@@ -4,10 +4,13 @@ Open Session Deck is a GM-only Foundry VTT dashboard for a second display. It re
 
 ## Supported runtime
 
-- Foundry VTT `14.364`
-- dnd5e `5.3.3`
+- Foundry VTT `14.364` with dnd5e `5.3.3` (runtime accepted)
+- Foundry VTT `14.368` with dnd5e `6.0.2` (historical static migration candidate; in-world acceptance pending)
+- Foundry VTT `14.368` with dnd5e `6.0.5` (native exhaustion panel slice accepted; remaining commands and GM/player matrix untested)
 
-Other versions and systems fail closed. Daggerheart support is planned for a later release and is not claimed by v0.1.
+Other versions, crossed version pairs, and systems fail closed. Daggerheart support is planned for a later release and is not claimed by this release.
+
+The 6.0.5 adapter reads exhaustion from dnd5e's `dnd5eexhaustion0` Active Effect (the 16-character ID produced by `staticID`) and adjusts it with the native `toggleStatusEffect` API. On 2026-10-01 the same owned Actor's panel and native readback passed 3→4→3, normal GM reload and exact fixture cleanup. This does not accept the other commands, popout or full GM/player matrix; see the [bounded restoration review](../../docs/reviews/2026-10-01-next-605-custom-module-restoration.md).
 
 ## Features
 

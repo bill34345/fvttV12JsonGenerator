@@ -1,7 +1,6 @@
 # Blood Hunter v14 package
 
-本包只负责把锁定的 `BloodHunter2024` enriched source 编译成 Foundry VTT
-14.364 / dnd5e 5.3.3 所需的原生文档契约，并生成**纯**迁移计划。
+本包只负责把锁定的 `BloodHunter2024` enriched source 编译成原生文档契约，并生成**纯**迁移计划。保留 Foundry VTT 14.364 / dnd5e 5.3.3 目标；14.368 / dnd5e 6.0.2 已有独立构建候选，运行时仍须另行验收。
 
 - 修改入口是 `src/index.ts` 公开的 compiler、validator 与 migration planner；不得在此包启动 Foundry、访问 World/LevelDB 或执行任何写入迁移。
 - 输入身份、22/30/42 形状、四个子职和 side-data 关联必须 fail closed。外部规则只可用稳定 reference key 表达，不能猜测世界 UUID。

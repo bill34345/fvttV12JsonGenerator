@@ -274,7 +274,11 @@ describe('runtime lifecycle', () => {
     await expect(runtime.startSession()).rejects.toThrow('GM-only');
   });
 
-  test('records a GM start, sample, marker, and stop without gameplay writes', async () => {
+  test.each([
+    ['14.364', '5.3.3'],
+    ['14.368', '6.0.2'],
+    ['14.368', '6.0.5'],
+  ])('records a GM start, sample, marker, and stop on Foundry %s / dnd5e %s without gameplay writes', async (foundryVersion, systemVersion) => {
     const store = new MemorySessionStore();
     const hooks = fakeHooks();
     const runtime = new SessionMonitorRuntime(
@@ -282,8 +286,8 @@ describe('runtime lifecycle', () => {
         game: {
           user: { isGM: true },
           world: { id: 'world-private' },
-          version: '14.364',
-          system: { id: 'dnd5e', version: '5.3.3' },
+          version: foundryVersion,
+          system: { id: 'dnd5e', version: systemVersion },
           modules: new Map(),
           messages: { size: 1 },
           combat: null,
@@ -305,6 +309,8 @@ describe('runtime lifecycle', () => {
     await runtime.markJank();
     const exported = await runtime.stopSession({ download: false });
     expect(exported?.session.state).toBe('stopped');
+    expect(exported?.session.environment.foundryVersion).toBe(foundryVersion);
+    expect(exported?.session.environment.systemVersion).toBe(systemVersion);
     expect(exported?.samples.length).toBeGreaterThanOrEqual(2);
     expect(exported?.events.map((event) => event.kind)).toEqual([
       'session-start',

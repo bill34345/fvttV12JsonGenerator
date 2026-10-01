@@ -5,7 +5,8 @@ Large upstream source trees, generated indexes, API mirrors, fonts, icons, and t
 ## Tracked evidence
 
 - `references/reference-cache-manifest.json` pins each automatically acquired component to an immutable revision and records its license.
-- `references/dnd5e-5.3.3/system.json` records the published dnd5e package metadata.
+- `references/dnd5e-5.3.3/system.json` records fixed-line published metadata.
+- `references/dnd5e-6-current/system.json` records the current acquired stable 6.x metadata; the `dnd5e-current-6` manifest revision/target follows reviewed official releases, not a permanent minor-version cap. Installation/runtime acceptance is separate; see [version-following workflow](runbooks/dnd5e-version-following.md).
 - `references/dnd5e-5.3.3/release-5.3.3.html` and `release-5.3.0.html` preserve the small release-note evidence used by the v14 work.
 - `references/foundry-v14-api-notes/` preserves the small official Foundry release-note snapshots and their acceptance hashes.
 - Generated v14 Item JSON uses the small locked templates under `references/item-templates/dnd5e-5.3.3`; it does not read the full upstream source tree.
@@ -18,7 +19,8 @@ dedicated directory without moving the Foundry Lab or tracked provenance.
 
 | Path | Purpose |
 | --- | --- |
-| `.local/references/dnd5e/5.3.3/repo` | Immutable dnd5e source checkout pinned by the manifest |
+| `.local/references/dnd5e/5.3.3/repo` | Fixed 5.x source checkout pinned by the manifest |
+| `.local/references/dnd5e/6.0.5/repo` | Current acquired stable 6.x source checkout; advance manifest revision/target on the next reviewed release |
 | `.local/references/foundry/14.361/api-core` | Curated Foundry v14 API pages retained for local review |
 | `.local/references/foundry/14.361/api-core-text` | Text extracts retained from the previous local snapshot |
 | `.local/references/indexes` | Rebuildable file and token indexes |
@@ -37,7 +39,7 @@ local reference inputs must not change v12 or v13 output.
 # Show the immutable acquisition plan without writing files
 bun run references bootstrap --dry-run
 
-# Acquire into a staging directory, verify the exact revision, then atomically install
+# First acquisition only: all targets must be absent. Existing-cache updates follow the runbook.
 bun run references bootstrap
 
 # Offline validation; never modifies the cache
@@ -60,7 +62,7 @@ as a portable tracked identifier. The tools map that prefix under the configured
 cache root, reject absolute or escaping manifest targets, and keep dry-run
 bootstrap read-only.
 
-The bootstrap command never replaces a valid existing cache until the staged clone has checked out the exact revision. A failed clone, checkout, or revision check leaves the existing target untouched.
+The current bootstrap implementation moves an existing target aside before replacement. It must not be used to refresh an existing shared cache under this project’s no-backup rule. First acquisition into absent targets remains distinct. For an existing source repository, fetch the fixed official tag and add a new versioned checkout using its Git objects; preserve the old checkout HEAD. See the version-following workflow above.
 
 `references verify` reports four distinct states: `ok`, `missing`, `mismatch`, and `git-error`. `mismatch` is used only when Git successfully reads `HEAD` and the revision differs. Missing Git, unsafe-directory/ownership failures, access errors, and other unreadable-checkout failures are reported as `git-error` with the Git command, exit status, and diagnostic text; they never masquerade as a revision mismatch.
 

@@ -20,12 +20,13 @@ export const MIGRATION_CONTRACT_URL = `modules/${MODULE_ID}/data/migration-contr
 
 export interface FoundryActorDocument extends ActorLike {
   toObject?: (source?: boolean) => ActorLike;
-  update?: (data: JsonUpdate) => Promise<FoundryActorDocument>;
+  update?: (data: JsonUpdate) => Promise<FoundryActorDocument | undefined>;
   delete?: () => Promise<void>;
 }
 
 export interface JsonUpdate {
-  items: unknown[];
+  items?: unknown[];
+  'system.identifier'?: string;
 }
 
 export interface MigrationProof {
@@ -67,7 +68,7 @@ export async function loadMigrationContract(url = MIGRATION_CONTRACT_URL, fetche
 }
 
 export function actorToData(actor: FoundryActorDocument | ActorLike): ActorLike {
-  if (typeof actor.toObject === 'function') return clone(actor.toObject(false));
+  if (typeof actor.toObject === 'function') return clone(actor.toObject(true));
   return clone(actor);
 }
 
@@ -86,6 +87,12 @@ export function migrationConflictsResolved(
   });
 }
 
+function validationSummary(validation: ProjectionValidation): string {
+  return validation.findings.map((finding) => finding.code === 'ACTOR_SYSTEM_CHANGED'
+    ? `${finding.code}@${finding.path} (${finding.message})`
+    : finding.code).join(', ');
+}
+
 export async function createMigratedCopy(
   actor: FoundryActorDocument,
   contract: MigrationContract,
@@ -100,7 +107,9 @@ export async function createMigratedCopy(
   if (canonicalJson(before) !== plan.actorSnapshot) throw new Error('Preview 后 Actor 内容已变化，必须重新 Preview。');
   const migratedData = applyActorMigrationPlan(before, plan, decisions);
   const validation = validateMigratedActorProjection(before, migratedData, contract);
-  if (!validation.ok) throw new Error(`迁移副本验证失败：${validation.findings.map((finding) => finding.code).join(', ')}`);
+  if (!validation.ok) throw new Error(`迁移副本验证失败：${validationSummary(validation)}`);
+  const actorClass = dependencies.createActor ? undefined : root.game?.actors?.documentClass;
+  if (!dependencies.createActor && typeof actorClass?.create !== 'function') throw new Error('Foundry Actor Document API 不可用，不能创建迁移副本。');
   const actorId = String(before._id ?? before.id ?? 'unknown');
   const actorName = String(before.name ?? 'Actor');
   const backup = clone(before);
@@ -111,14 +120,31 @@ export async function createMigratedCopy(
   delete copyData.id;
   copyData.name = `${actorName}（血猎手迁移副本）`;
   const createActor = dependencies.createActor ?? (async (data: ActorLike) => {
-    const created = await root.game?.actors?.create(data);
+    const created = await actorClass.create(data);
     if (!created) throw new Error('Foundry Actor Document API 未创建迁移副本。');
     return created as FoundryActorDocument;
   });
-  const copy = await createActor(copyData);
-  const copyDataAfterCreate = actorToData(copy);
-  const copyValidation = validateMigratedActorProjection(before, copyDataAfterCreate, contract);
-  if (!copyValidation.ok) throw new Error(`迁移副本写入后验证失败：${copyValidation.findings.map((finding) => finding.code).join(', ')}`);
+  let copy = await createActor(copyData);
+  let copyDataAfterCreate = actorToData(copy);
+  let copyValidation = validateMigratedActorProjection(before, copyDataAfterCreate, contract);
+  const sourceIdentifier = (before.system as Record<string, unknown> | undefined)?.identifier;
+  const createdIdentifier = (copyDataAfterCreate.system as Record<string, unknown> | undefined)?.identifier;
+  if (sourceIdentifier === '' && typeof createdIdentifier === 'string' && createdIdentifier !== ''
+    && copyValidation.findings.length === 1
+    && copyValidation.findings[0]?.code === 'ACTOR_SYSTEM_CHANGED'
+    && copyValidation.findings[0]?.path === 'system.identifier') {
+    if (typeof copy.update !== 'function') throw new Error('迁移副本缺少 Actor 更新接口，无法恢复原始 identifier。');
+    try {
+      const updated = await copy.update({ 'system.identifier': '' });
+      if (!updated) throw new Error('Actor 更新没有返回已保存副本。');
+      copy = updated;
+    } catch (error) {
+      throw new Error('迁移副本 identifier 恢复失败；原人物未更新。', { cause: error });
+    }
+    copyDataAfterCreate = actorToData(copy);
+    copyValidation = validateMigratedActorProjection(before, copyDataAfterCreate, contract);
+  }
+  if (!copyValidation.ok) throw new Error(`迁移副本写入后验证失败：${validationSummary(copyValidation)}`);
   return {
     actorId,
     actorName,
@@ -151,7 +177,7 @@ export async function applyOriginalMigration(
   const latestPlan = planActorMigration(before, contract);
   const migratedData = applyActorMigrationPlan(before, latestPlan, decisions);
   const expectedProjection = validateMigratedActorProjection(before, migratedData, contract);
-  if (!expectedProjection.ok) throw new Error(`Apply 前投影验证失败：${expectedProjection.findings.map((finding) => finding.code).join(', ')}`);
+  if (!expectedProjection.ok) throw new Error(`Apply 前投影验证失败：${validationSummary(expectedProjection)}`);
   const backup = clone(before);
   await (dependencies.saveJsonBackup ?? ((data, fileName) => saveJsonBackup(data, fileName, root)))(backup, `blood-hunter-2024-${actorId}-apply-backup.json`);
   if (typeof actor.update !== 'function') throw new Error('Foundry Actor Document API 不可用，不能 Apply original。');
@@ -159,7 +185,7 @@ export async function applyOriginalMigration(
     await actor.update({ items: migratedData.items ?? [] });
     const after = actorToData(actor);
     const validation = validateMigratedActorProjection(before, after, contract);
-    if (!validation.ok) throw new Error(`Apply 后验证失败：${validation.findings.map((finding) => finding.code).join(', ')}`);
+    if (!validation.ok) throw new Error(`Apply 后验证失败：${validationSummary(validation)}`);
     return { actor, validation, rolledBack: false };
   } catch (error) {
     try {
@@ -176,8 +202,9 @@ export async function applyOriginalMigration(
 
 async function saveJsonBackup(data: ActorLike, fileName: string, root: Record<string, any>): Promise<void> {
   const serialized = JSON.stringify(data, null, 2);
-  if (typeof root.saveDataToFile === 'function') {
-    await root.saveDataToFile(serialized, 'application/json', fileName);
+  const save = root.foundry?.utils?.saveDataToFile ?? root.saveDataToFile;
+  if (typeof save === 'function') {
+    await save(serialized, 'application/json', fileName);
     return;
   }
   if (!root.document?.createElement || !root.URL?.createObjectURL || typeof root.Blob !== 'function') throw new Error('Foundry/browser JSON backup API 不可用；Apply original 已停止。');
@@ -188,6 +215,7 @@ async function saveJsonBackup(data: ActorLike, fileName: string, root: Record<st
     link.href = url;
     link.download = fileName;
     link.click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
   } finally {
     root.URL.revokeObjectURL(url);
   }

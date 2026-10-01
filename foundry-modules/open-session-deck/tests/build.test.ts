@@ -15,7 +15,8 @@ describe('Open Session Deck build', () => {
 
   test('rejects compatibility and networking drift', async () => {
     const manifest = JSON.parse(await readFile(resolve(import.meta.dir, '../src/module.json'), 'utf8'));
-    expect(() => validateManifest({ ...manifest, compatibility: { ...manifest.compatibility, maximum: '14.365' } })).toThrow('14.364');
+    expect(() => validateManifest({ ...manifest, compatibility: { ...manifest.compatibility, maximum: '14.365' } })).toThrow('14.368');
+    expect(() => validateManifest({ ...manifest, relationships: { systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '6.0.2', maximum: '6.0.5' } }] } })).toThrow('5.3.3');
     expect(() => validateManifest({ ...manifest, socket: true })).toThrow('socket');
   });
 

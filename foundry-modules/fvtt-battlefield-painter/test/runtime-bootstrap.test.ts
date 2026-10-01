@@ -29,9 +29,13 @@ afterEach(() => {
 });
 
 describe("runtime compatibility", () => {
-  test("accepts only exact Foundry 14.364 and dnd5e 5.3.3", () => {
+  test.each([
+    { foundry: "14.364", dnd5e: "5.3.3" },
+    { foundry: "14.368", dnd5e: "6.0.2" },
+    { foundry: "14.368", dnd5e: "6.0.5" },
+  ])("accepts exact runtime pair %j", (versions) => {
     expect(
-      evaluateRuntimeCompatibility({ foundry: "14.364", dnd5e: "5.3.3" }),
+      evaluateRuntimeCompatibility(versions),
     ).toEqual({ supported: true, diagnostics: [] });
   });
 
@@ -69,6 +73,12 @@ describe("runtime compatibility", () => {
     [{ foundry: "14.365", dnd5e: "5.3.3" }, "UNSUPPORTED_FOUNDRY_VERSION"],
     [{ foundry: "14.364", dnd5e: "5.3.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.364", dnd5e: "5.4.0" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.364", dnd5e: "6.0.2" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.368", dnd5e: "5.3.3" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.367", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
+    [{ foundry: "14.369", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
+    [{ foundry: "14.368", dnd5e: "6.0.1" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.368", dnd5e: "6.0.4" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "", dnd5e: "5.3.3" }, "MISSING_RUNTIME_VERSION"],
   ] as const)("fails closed for runtime %j", (versions, code) => {
     expect(evaluateRuntimeCompatibility(versions)).toMatchObject({

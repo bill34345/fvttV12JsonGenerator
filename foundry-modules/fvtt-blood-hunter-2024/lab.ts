@@ -27,6 +27,7 @@ export interface LabCliRequest {
   action: LabCliAction;
   apply: boolean;
   sourcePath?: string;
+  target?: 'server-next';
 }
 
 export interface BloodHunterLabPaths {
@@ -74,14 +75,17 @@ export function parseBloodHunterLabCliArgs(args: readonly string[]): LabCliReque
   if (applyCount > 1) throw new Error('--apply may be supplied at most once.');
   const sourceArguments = rest.filter((argument) => argument.startsWith('--source='));
   if (sourceArguments.length > 1) throw new Error('--source may be supplied at most once.');
-  const unsupported = rest.filter((argument) => argument !== '--apply' && !argument.startsWith('--source='));
+  const targetArguments = rest.filter((argument) => argument.startsWith('--target='));
+  if (targetArguments.length > 1) throw new Error('--target may be supplied at most once.');
+  const unsupported = rest.filter((argument) => argument !== '--apply' && !argument.startsWith('--source=') && !argument.startsWith('--target='));
   if (unsupported.length > 0) throw new Error(`Unsupported Blood Hunter labCli argument: ${unsupported[0]}`);
+  if (targetArguments.length > 0 && (action !== 'build' || targetArguments[0] !== '--target=server-next')) throw new Error('--target=server-next is only valid for Blood Hunter build.');
   if (action === 'build' && sourceArguments.length !== 1) throw new Error('Blood Hunter build requires exactly one --source=<absolute-json> argument.');
   if (action !== 'build' && sourceArguments.length > 0) throw new Error(`--source is only valid for Blood Hunter build, not ${action}.`);
   if (action !== 'install' && applyCount > 0) throw new Error('--apply is only valid for Blood Hunter install.');
   const sourcePath = sourceArguments[0]?.slice('--source='.length);
   if (sourcePath !== undefined && !sourcePath) throw new Error('--source must not be empty.');
-  return { action, apply: applyCount === 1, ...(sourcePath ? { sourcePath } : {}) };
+  return { action, apply: applyCount === 1, ...(sourcePath ? { sourcePath } : {}), ...(targetArguments.length ? { target: 'server-next' as const } : {}) };
 }
 
 export function bloodHunterLabPaths(config: BloodHunterLabConfig): BloodHunterLabPaths {
@@ -119,12 +123,12 @@ function assertBloodHunterLabPaths(config: BloodHunterLabConfig, paths: BloodHun
   assertInsideRoot(config.labRoot, paths.backupRoot, 'Blood Hunter backup root');
 }
 
-export async function buildBloodHunterForLab(config: BloodHunterLabConfig, sourcePath: string): Promise<BuildResult> {
+export async function buildBloodHunterForLab(config: BloodHunterLabConfig, sourcePath: string, target?: 'server-next'): Promise<BuildResult> {
   const paths = bloodHunterLabPaths(config);
   assertBloodHunterBuildPaths(config, paths);
   if (!sourcePath) throw new Error('Blood Hunter source path is required.');
   if (!isAbsolute(sourcePath)) throw new Error('Blood Hunter source path must be absolute.');
-  return buildBloodHunterModule({ sourcePath, config });
+  return buildBloodHunterModule({ sourcePath, config, target });
 }
 
 export async function dryRunBloodHunterInstall(config: BloodHunterLabConfig): Promise<InstallResult> {

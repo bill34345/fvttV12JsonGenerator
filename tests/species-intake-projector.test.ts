@@ -98,7 +98,7 @@ describe('Species TXT Intake and Ogre v14 projection', () => {
     expect(validateNativeSpeciesPackage(arbitraryPackage).findings.some((finding) => finding.code === 'EFFECT_KEY')).toBeTrue();
   });
 
-  test('is deterministic and accepts only V12/V14 core targets before provider work', async () => {
+  test('is deterministic and rejects unsupported core targets before provider work', async () => {
     const root = mkdtempSync(join(tmpdir(), 'species-intake-'));
     const provider = new FakeProvider();
     const result = await runSpeciesIntake({ source, sourceName: 'ogre.txt', runRoot: join(root, 'runs'), vaultPath: join(root, 'vault'), fvttVersion: '14', effectProfile: 'core' }, provider);

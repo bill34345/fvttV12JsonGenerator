@@ -2,9 +2,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Command } from 'commander';
+import { assertSpeciesResumeTarget, createSpeciesIntakeProvider, resumeSpeciesIntake, runSpeciesIntake } from '@fvtt-json-generator/intake-ai';
 import {
   assertEffectProfileForTarget,
-  assertSpeciesResumeTarget,
   buildImageAssetOptionsFromCli,
   canonicalSourcesFromMarkdown,
   convertMarkdownContentToJson,
@@ -18,17 +18,14 @@ import {
   ObsidianSyncWorkflow,
   createItemIntakeProvider,
   createMonsterIntakeProvider,
-  createSpeciesIntakeProvider,
   PlainTextIngestionWorkflow,
   parseFvttTargetVersion,
   parseIconMode,
   resumeItemIntake,
   resumeMonsterIntake,
-  resumeSpeciesIntake,
   runDocumentConversion,
   runItemIntake,
   runMonsterIntake,
-  runSpeciesIntake,
   isDocumentInputPath,
   type IntakeProviderAuditEvent,
 } from '../../../src/core/application/cli';
@@ -53,7 +50,7 @@ program
   .option('--resume-intake <run-dir>', 'Resume an AI monster intake review bundle')
   .option('--intake-items <source>', 'AI-first Item intake from TXT or irregular Markdown (Foundry V14/core)')
   .option('--resume-item-intake <run-dir>', 'Resume an AI Item Intake review bundle')
-  .option('--intake-species <source>', 'AI-first Species intake from TXT or canonical Species Markdown (Foundry V12/V14 core, 2024 rules)')
+  .option('--intake-species <source>', 'AI-first Species intake from TXT or canonical Species Markdown (Foundry 12, 14, or 14.368/dnd5e 6; core, 2024 rules)')
   .option('--resume-species-intake <run-dir>', 'Resume a Species Intake review bundle')
   .option('--decisions <path>', 'Decision JSON file for --resume-intake')
   .option('--ingest-plaintext <source>', '[deprecated legacy rule-based] Split a plain-text creature collection into project markdown files')
@@ -64,7 +61,7 @@ program
   .option('--enable-ai-normalize', '[legacy strict Item Markdown only] Enable optional compatibility normalization; failures preserve source parsing')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
-  .option('--fvtt-version <version>', 'Target Foundry major version (12, 13, or 14)', '12')
+  .option('--fvtt-version <version>', 'Target Foundry version (12, 13, or 14; Species also accepts exact 14.368)', '12')
   .option('--icon-mode <mode>', 'v14 Item artwork mode: off or safe', 'off')
   .option('--icon-overrides <path>', 'v14 icon override JSON path')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
@@ -97,6 +94,37 @@ program
         if (!report.configured || (report.authMode === 'codex-oauth' && !report.bridge?.reachable)) {
           process.exitCode = 1;
         }
+        return;
+      }
+      if ((options.intakeSpecies || options.resumeSpeciesIntake)
+        && !options.intakeMonsters && !options.resumeIntake && !options.intakeItems && !options.resumeItemIntake) {
+        const speciesVersion = parseSpeciesTargetVersion(options.fvttVersion ?? '12');
+        if ((options.effectProfile ?? 'core') !== 'core') throw new Error('Species Intake only supports --effect-profile core with 2024 rules.');
+        const speciesIconMode = parseIconMode(options.iconMode);
+        if (speciesIconMode === 'safe' && speciesVersion !== '14') throw new Error(`--icon-mode safe requires --fvtt-version 14, not ${speciesVersion}.`);
+        buildImageAssetOptionsFromCli(options);
+        if (options.intakeSpecies) {
+          const source = readFileSync(resolve(options.intakeSpecies), 'utf-8');
+          const audit: IntakeProviderAuditEvent[] = [];
+          const provider = options.dryRun ? undefined : createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
+          const result = await runSpeciesIntake({
+            source, sourceName: options.intakeSpecies, vaultPath: options.vault,
+            dryRun: Boolean(options.dryRun), fvttVersion: speciesVersion, effectProfile: 'core',
+          }, provider);
+          if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
+          printSpeciesIntakeResult(result);
+          process.exitCode = intakeExitCode(result.status);
+          return;
+        }
+        if (!options.decisions) throw new Error('--resume-species-intake requires --decisions <path>.');
+        const requestedTarget = { fvttVersion: speciesVersion, effectProfile: 'core' as const };
+        assertSpeciesResumeTarget(options.resumeSpeciesIntake, requestedTarget);
+        const audit: IntakeProviderAuditEvent[] = [];
+        const provider = createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
+        const result = await resumeSpeciesIntake(options.resumeSpeciesIntake, options.decisions, provider, options.vault, requestedTarget);
+        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
+        printSpeciesIntakeResult(result);
+        process.exitCode = intakeExitCode(result.status);
         return;
       }
       const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
@@ -180,42 +208,6 @@ program
         const result = await resumeItemIntake(options.resumeItemIntake, options.decisions, provider, options.vault);
         writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
         printItemIntakeResult(result);
-        process.exitCode = intakeExitCode(result.status);
-        return;
-      }
-
-      if (options.intakeSpecies) {
-        if (!['12', '14'].includes(fvttVersion) || effectProfile !== 'core') {
-          throw new Error('Species Intake only supports --fvtt-version 12|14 --effect-profile core with 2024 rules.');
-        }
-        const source = readFileSync(resolve(options.intakeSpecies), 'utf-8');
-        const audit: IntakeProviderAuditEvent[] = [];
-        const provider = options.dryRun ? undefined : createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
-        const result = await runSpeciesIntake({
-          source,
-          sourceName: options.intakeSpecies,
-          vaultPath: options.vault,
-          dryRun: Boolean(options.dryRun),
-          fvttVersion: fvttVersion as '12' | '14',
-          effectProfile: effectProfile as 'core',
-        }, provider);
-        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.json'), JSON.stringify(audit, null, 2));
-        printSpeciesIntakeResult(result);
-        process.exitCode = intakeExitCode(result.status);
-        return;
-      }
-
-      if (options.resumeSpeciesIntake) {
-        if (!['12', '14'].includes(fvttVersion) || effectProfile !== 'core') {
-          throw new Error('Species Intake only supports --fvtt-version 12|14 --effect-profile core with 2024 rules.');
-        }
-        if (!options.decisions) throw new Error('--resume-species-intake requires --decisions <path>.');
-        assertSpeciesResumeTarget(options.resumeSpeciesIntake, { fvttVersion: fvttVersion as '12' | '14', effectProfile: 'core' });
-        const audit: IntakeProviderAuditEvent[] = [];
-        const provider = createSpeciesIntakeProvider({ audit: (event) => audit.push(event) });
-        const result = await resumeSpeciesIntake(options.resumeSpeciesIntake, options.decisions, provider, options.vault, { fvttVersion: fvttVersion as '12' | '14', effectProfile: 'core' });
-        if (result.runPath) writeFileSync(join(result.runPath, 'provider-audit.resume.json'), JSON.stringify(audit, null, 2));
-        printSpeciesIntakeResult(result);
         process.exitCode = intakeExitCode(result.status);
         return;
       }
@@ -556,6 +548,11 @@ function printSpeciesIntakeResult(result: Awaited<ReturnType<typeof runSpeciesIn
 
 function collectOption(value: string, previous: string[] = []): string[] {
   return [...previous, value];
+}
+
+function parseSpeciesTargetVersion(value: string): '12' | '14' | '14.368' {
+  if (value === '12' || value === '14' || value === '14.368') return value;
+  throw new Error('Species Intake only supports --fvtt-version 12|14|14.368 --effect-profile core with 2024 rules.');
 }
 
 function normalizeDocumentEngine(value: unknown): 'auto' | 'native' | 'paddleocr' {

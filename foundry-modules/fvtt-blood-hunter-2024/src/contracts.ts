@@ -27,9 +27,7 @@ export interface MigrationContract {
   schemaVersion: 1;
   moduleId: 'fvtt-blood-hunter-2024';
   version: '1.0.0';
-  target: {
-    foundry: '14.364';
-    dnd5e: '5.3.3';
+  target: ({ foundry: '14.364'; dnd5e: '5.3.3' } | { foundry: '14.368'; dnd5e: '6.0.2' }) & {
     rules: '2024';
     effectProfile: 'modded-v14';
   };

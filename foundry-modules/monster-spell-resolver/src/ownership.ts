@@ -14,7 +14,13 @@ export interface ResolverDocumentIdentity {
 }
 
 export class ResolverOwnershipError extends Error {
-  constructor(message: string) {
+  constructor(message: string, public readonly diagnostic?: {
+    code: 'RESOLVER_OWNERSHIP_MISSING';
+    expectedType: 'activity' | 'spell';
+    namespacePresent: boolean;
+    managed: boolean;
+    documentType: string;
+  }) {
     super(message);
     this.name = 'ResolverOwnershipError';
   }
@@ -68,7 +74,12 @@ export function assertResolverDocumentOwnership(
   if (!document || !FOUNDRY_ID.test(documentId(document))) fail(`Managed ${expectedType} has an invalid Foundry Document ID.`);
   const flags = document.flags?.[RESOLVER_MODULE_ID] as Partial<ResolverManagedFlags> | undefined;
   if (!flags || flags.managed !== true || flags.documentType !== expectedType) {
-    fail(`Document lacks resolver ${expectedType} ownership.`);
+    throw new ResolverOwnershipError(`Document lacks resolver ${expectedType} ownership.`, {
+      code: 'RESOLVER_OWNERSHIP_MISSING', expectedType,
+      namespacePresent: document.flags?.[RESOLVER_MODULE_ID] !== undefined,
+      managed: flags?.managed === true,
+      documentType: typeof flags?.documentType === 'string' ? flags.documentType : '<missing>',
+    });
   }
   for (const key of ['manifestId', 'groupId', 'refId', 'featureId', 'logicalRefKey', 'selectedUuid', 'activityId'] as const) {
     if (flags[key] !== identity[key]) fail(`Managed ${expectedType} ownership mismatch at ${key}.`);

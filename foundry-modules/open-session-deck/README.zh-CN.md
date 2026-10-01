@@ -4,10 +4,13 @@ Open Session Deck 是一个仅供 GM 使用的 Foundry VTT 队伍与遭遇工作
 
 ## 精确支持范围
 
-- Foundry VTT `14.364`
-- dnd5e `5.3.3`
+- Foundry VTT `14.364` / dnd5e `5.3.3`（已完成运行时验收）
+- Foundry VTT `14.368` / dnd5e `6.0.2`（历史静态迁移候选，尚待世界内验收）
+- Foundry VTT `14.368` / dnd5e `6.0.5`（原生力竭面板切片已验，其余命令和完整GM／玩家矩阵未验）
 
-其他版本和系统会 fail-closed。Daggerheart 计划在后续版本接入，v0.1 不声明支持。
+其他版本、交叉组合和系统会 fail-closed。Daggerheart 计划在后续版本接入，本版不声明支持。
+
+6.0.5 适配从 dnd5e 的 `dnd5eexhaustion0` Active Effect（由 `staticID` 补齐为 16 字符的 ID）读取力竭等级，并通过原生 `toggleStatusEffect` API 调整。2026-10-01 同一自有 Actor 的面板与原生读回通过3→4→3、普通GM重载及精确清理；其余命令、副屏及完整GM／玩家矩阵未由本轮接受，见[限定恢复记录](../../docs/reviews/2026-10-01-next-605-custom-module-restoration.md)。
 
 ## 功能
 

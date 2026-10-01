@@ -20,9 +20,14 @@ export function resolveSpeciesInstallTarget(config: SpeciesInstallConfig): { lab
 export async function installHomebrewSpeciesToLab(config: SpeciesInstallConfig, apply = false): Promise<{ target: string; applied: boolean; backupPath?: string }> {
   const paths = resolveSpeciesInstallTarget(config);
   await assertNoLinkedComponents(paths.labRoot, paths.target);
-  await verifyHomebrewSpeciesArtifact(resolve(paths.source, '..'));
   const sourceManifest = JSON.parse(await readFile(resolve(paths.source, 'module.json'), 'utf8'));
   if (sourceManifest.id !== MODULE_ID || sourceManifest.version !== MODULE_VERSION) throw new Error('Species build source has the wrong module identity.');
+  const sourceIdentity = JSON.parse(await readFile(resolve(paths.source, 'data/identity-manifest.json'), 'utf8'));
+  const dnd5eRuntimeMaximum = sourceIdentity.target?.foundry === '14.368'
+    ? sourceManifest.relationships?.systems?.[0]?.compatibility?.maximum as '6.0.2' | '6.0.5'
+    : '6.0.2';
+  await verifyHomebrewSpeciesArtifact(resolve(paths.source, '..'), dnd5eRuntimeMaximum);
+  if (sourceIdentity.supportStatus === 'static-candidate') throw new Error('Species static candidates cannot use the V14 Mirror installer.');
   let backupPath: string | undefined;
   if (existsSync(paths.target)) {
     await assertNoLinkedComponents(paths.labRoot, paths.target);

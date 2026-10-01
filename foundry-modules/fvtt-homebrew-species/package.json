@@ -7,8 +7,12 @@
     "typecheck": "tsc -p tsconfig.json --pretty false",
     "build": "bun run build.ts",
     "build:v12-candidate": "bun run build.ts --fvtt-version 12",
+    "build:v14-368-candidate": "bun run build.ts --fvtt-version 14.368",
+    "build:v14-368-605-candidate": "bun run build.ts --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5",
     "verify": "bun run verify.ts",
     "verify:v12-candidate": "bun run verify.ts --fvtt-version 12",
+    "verify:v14-368-candidate": "bun run verify.ts --fvtt-version 14.368",
+    "verify:v14-368-605-candidate": "bun run verify.ts --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5",
     "test": "bun test tests --max-concurrency 1"
   },
   "dependencies": {

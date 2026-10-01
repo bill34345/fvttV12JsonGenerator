@@ -1,0 +1,91 @@
+diff --git a/src/module/activities/CheckActivity.ts b/src/module/activities/CheckActivity.ts
+index acc7a37..723f9fd 100644
+--- a/src/module/activities/CheckActivity.ts
++++ b/src/module/activities/CheckActivity.ts
+@@ -7,6 +7,11 @@ import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.j
+ import { MidiSaveActivity } from "./SaveActivity.js";
+ import { getSceneTargets } from "./activityHelpers.js";
+ 
++type Dnd5eBasicRollBonusApi = {
++  replaceFormulaData(formula: string, data: object, options: { missing: number }): string;
++  constructParts(parts: { activityBonus: string }): { parts: string[] };
++};
++
+ export let MidiCheckActivity: ReturnType<typeof defineMidiCheckActivityClass>;
+ export let MidiCheckSheet: ReturnType<typeof defineMidiCheckSheetClass>;
+ 
+@@ -100,7 +105,23 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
+       const check = this.check;
+       const item = this.item;
+       const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
+-      if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
++      // Preserve native 6.0.5 owner-derived request bonus in the MIDI override.
++      const ownerData = this.getRollData();
++      const activity = this as unknown as {
++        ability?: string;
++        spellcastingAbility?: string;
++        actor?: { system?: { abilities?: Record<string, { mod?: number } | undefined> } };
++      };
++      if (activity.ability === "spellcasting") {
++        const ability = activity.spellcastingAbility;
++        ownerData.mod = ability ? activity.actor?.system?.abilities?.[ability]?.mod ?? 0 : 0;
++      }
++      const basicRoll = (CONFIG.Dice as unknown as { BasicRoll: Dnd5eBasicRollBonusApi }).BasicRoll;
++      const checkBonus = (check as unknown as { bonus?: string } | undefined)?.bonus ?? "";
++      const bonus = basicRoll.replaceFormulaData(checkBonus, ownerData, { missing: 0 });
++      const bonusData = basicRoll.constructParts({ activityBonus: bonus });
++      if (bonusData.parts.length) rollData.rolls = [bonusData];
++      if (ability && (ability in globalThis.dnd5e.config.abilities || ability === "spellcasting")) rollData.ability = ability;
+ 
+       for (const token of targets) {
+         const actor = token instanceof Actor ? token : token.actor;
+@@ -245,4 +266,4 @@ export function defineMidiCheckSheetClass(baseClass: any) {
+       return context;
+     }
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/src/module/activities/SaveActivity.ts b/src/module/activities/SaveActivity.ts
+index 39aeabb..e9aeb24 100644
+--- a/src/module/activities/SaveActivity.ts
++++ b/src/module/activities/SaveActivity.ts
+@@ -7,6 +7,11 @@ import { isAutoFastForward } from "../utils.js";
+ import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
+ import { getSceneTargets } from "./activityHelpers.js";
+ 
++type Dnd5eBasicRollBonusApi = {
++  replaceFormulaData(formula: string, data: object, options: { missing: number }): string;
++  constructParts(parts: { activityBonus: string }): { parts: string[] };
++};
++
+ export let MidiSaveActivity: ReturnType<typeof defineMidiSaveActivityClass>;
+ export let MidiSaveSheet: ReturnType<typeof defineMidiSaveSheetClass>;
+ 
+@@ -102,6 +107,11 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
+       if (!targets.length && game.user?.character) targets.push(game.user?.character);
+       if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
+       const dc = parseInt(target.dataset.dc ?? "0");
++      // Match native 6.0.5 formula resolution; preserve workflow/privacy branches.
++      const save = this as unknown as { save?: { bonus?: string } };
++      const basicRoll = (CONFIG.Dice as unknown as { BasicRoll: Dnd5eBasicRollBonusApi }).BasicRoll;
++      const bonus = basicRoll.replaceFormulaData(save.save?.bonus ?? "", this.getRollData(), { missing: 0 });
++      const bonusData = basicRoll.constructParts({ activityBonus: bonus });
+       for (const token of targets) {
+         const actor = token instanceof Actor ? token : token.actor;
+         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
+@@ -123,6 +133,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
+ 
+         //@ts-expect-error no dnd5e types
+         await actor?.rollSavingThrow({
++          ...(bonusData.parts.length ? { rolls: [bonusData] } : {}),
+           event,
+           workflow,
+           //@ts-expect-error this has been bound to an activity
+@@ -198,4 +209,4 @@ let defineMidiSaveSheetClass = (baseClass: any) => {
+       return context;
+     }
+   }
+-}
+\ No newline at end of file
++}

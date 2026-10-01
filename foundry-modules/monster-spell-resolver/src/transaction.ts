@@ -23,6 +23,7 @@ import {
   assertResolverDocumentOwnership,
   documentId,
   resolverOwnershipFlags,
+  ResolverOwnershipError,
   type ResolverDocumentIdentity,
 } from './ownership';
 
@@ -40,10 +41,19 @@ export class HydrationTransactionError extends Error {
     public readonly rollbackSucceeded: boolean,
     public readonly residualDifferences: ResidualDifference[],
     options?: ErrorOptions,
+    public readonly diagnostic?: HydrationFailureDiagnostic,
   ) {
     super(message, options);
     this.name = 'HydrationTransactionError';
   }
+}
+
+export interface HydrationFailureDiagnostic {
+  phase: 'selection' | 'cleanup' | 'validation' | 'commit';
+  selectionIndex?: number | null;
+  selectionCount?: number | null;
+  ownership?: ResolverOwnershipError['diagnostic'] | null;
+  residualPaths: string[];
 }
 
 export interface ExecuteHydrationTransactionInput {
@@ -118,8 +128,11 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
   const journal = createHydrationJournal(input.actor);
   const transactionId = nextTransactionId(input.actor, input.plan.planHash);
   const literalRestrictions: LiteralRestrictionReport[] = [];
+  let phase: HydrationFailureDiagnostic['phase'] = 'selection';
+  let selectionIndex = 0;
   try {
     for (let index = 0; index < input.plan.selections.length; index++) {
+      selectionIndex = index + 1;
       const selection = input.plan.selections[index]!;
       const hydrated = await hydrateManagedSelection({
         actor: input.actor,
@@ -137,7 +150,9 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
       }
     }
 
+    phase = 'cleanup';
     await cleanupStaleManagedContent(input, journal);
+    phase = 'validation';
     validateHydratedState(input.actor, input.manifest, input.plan);
     const managedProjectionHash = hashProjectionList(projectCurrentManagedContent(input.actor, input.manifest.manifestId));
     const generatedProjection = mergeGeneratedProjectionForCommit(
@@ -171,6 +186,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
       generatedProjection,
       undoSnapshot: snapshot,
     };
+    phase = 'commit';
     await requireApi(input.actor, 'update')({
       [`flags.${RESOLVER_MODULE_ID}.spellResolution`]: committedResolution,
     });
@@ -178,8 +194,20 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
   } catch (cause) {
     const residualDifferences = await rollback(input, snapshot, journal, rollbackResolverFlags);
     const rollbackSucceeded = residualDifferences.length === 0;
-    const message = `Spell hydration failed: ${errorMessage(cause)}; rollback ${rollbackSucceeded ? 'restored the managed snapshot' : 'left residual differences'}.`;
-    throw new HydrationTransactionError(message, rollbackSucceeded, residualDifferences, { cause });
+    const diagnostic: HydrationFailureDiagnostic = {
+      phase,
+      selectionIndex: phase === 'selection' ? selectionIndex : null,
+      selectionCount: phase === 'selection' ? input.plan.selections.length : null,
+      ownership: cause instanceof ResolverOwnershipError ? cause.diagnostic ?? null : null,
+      residualPaths: [...new Set(residualDifferences.map((entry) => entry.path))],
+    };
+    const phaseLabel = phase === 'selection' ? `selection ${selectionIndex}/${input.plan.selections.length}` : phase;
+    const ownershipLabel = diagnostic.ownership
+      ? ` [${diagnostic.ownership.code}: ${diagnostic.ownership.expectedType}, namespace=${diagnostic.ownership.namespacePresent}, managed=${diagnostic.ownership.managed}, type=${diagnostic.ownership.documentType}]`
+      : '';
+    const residualLabel = diagnostic.residualPaths.length ? `; residual paths: ${diagnostic.residualPaths.join(', ')}` : '';
+    const message = `Spell hydration failed at ${phaseLabel}: ${errorMessage(cause)}${ownershipLabel}; rollback ${rollbackSucceeded ? 'restored the managed snapshot' : 'left residual differences'}${residualLabel}.`;
+    throw new HydrationTransactionError(message, rollbackSucceeded, residualDifferences, { cause }, diagnostic);
   }
 }
 

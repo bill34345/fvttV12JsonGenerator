@@ -283,6 +283,117 @@ describe('prepared Activity eager cache hydration', () => {
     expect(overwritten.cache.flags[RESOLVER_MODULE_ID].managed).toBe(true);
   });
 
+  test('6.0.2 same-UUID Overwrite waits for nested effect changes and preserves one cache', async () => {
+    const actor = new FakeActor(false, false, undefined, 'system');
+    await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    const cache = actor.items.find((item) => item.type === 'spell')!;
+    const enchantment = cache.effects.find((effect: any) => effect.type === 'enchantment');
+    enchantment.system.changes = [{ key: 'system.description.value', mode: 5, value: 'stale prior projection' }];
+    const hooks = new FakeHookBus();
+    actor.lifecycleHooks = hooks;
+    actor.delayedEffectUpdateMs = 100;
+    const startedAt = Date.now();
+
+    const overwritten = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal: createHydrationJournal(actor), lifecycleHooks: hooks,
+    });
+
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(80);
+    expect(overwritten.cache.id).toBe(cache.id);
+    expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+    expect(overwritten.cache.effects.find((effect: any) => effect.type === 'enchantment').system.changes).toEqual([]);
+    expect(overwritten.cache.effects.find((effect: any) => effect.type === 'enchantment').changes).toBeUndefined();
+  });
+
+  test('6.0.2 Keep waits for delayed effect update before restoring the manual cache snapshot', async () => {
+    const actor = new FakeActor(false, false, undefined, 'system');
+    const initial = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    initial.activity.name = 'Keep the manual name';
+    const manualChanges = [{ key: 'flags.user.manual', mode: 5, value: 'keep-me' }];
+    initial.cache.effects.find((effect: any) => effect.type === 'enchantment').system.changes = structuredClone(manualChanges);
+    const hooks = new FakeHookBus();
+    actor.lifecycleHooks = hooks;
+    actor.delayedEffectUpdateMs = 100;
+    actor.emitConflictingEffectUpdateBeforeReal = true;
+    const startedAt = Date.now();
+
+    const kept = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal: createHydrationJournal(actor), preserveExisting: true, lifecycleHooks: hooks,
+    });
+
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(80);
+    expect(kept.activity.name).toBe('Keep the manual name');
+    expect(kept.cache.effects.find((effect: any) => effect.type === 'enchantment').system.changes).toEqual(manualChanges);
+    expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+  });
+
+  test('6.0.2 exact existing enchantment is a true no-op without an effect update hook', async () => {
+    const actor = new FakeActor(false, false, undefined, 'system');
+    await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    const hooks = new FakeHookBus();
+    const overwritten = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+      journal: createHydrationJournal(actor), lifecycleHooks: hooks,
+    });
+    expect(overwritten.cache.effects.find((effect: any) => effect.type === 'enchantment').system.changes).toEqual([]);
+    expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+  });
+
+  test.each([false, true])('6.0.2 first hydration preserves another source Spell enchantment with native auto-cache=%s', async (autoCache) => {
+    const actor = new FakeActor(autoCache, false, undefined, 'system', true);
+    const hydrated = await hydrateManagedSelection({
+      actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+      journal: createHydrationJournal(actor),
+    });
+    expect(hydrated.cache.effects.map((effect: any) => effect._id))
+      .toEqual(['SourceEffect0001', 'SourceEnchant001', 'dnd5espellchang']);
+    expect(hydrated.cache.effects.find((effect: any) => effect._id === 'SourceEnchant001').system.changes)
+      .toEqual([{ key: 'flags.source.owned', mode: 5, value: 'source' }]);
+    expect(hydrated.cache.effects.find((effect: any) => effect._id === 'dnd5espellchang').system.changes).toEqual([]);
+  });
+
+  test.each(['overwrite', 'keep'] as const)(
+    '6.0.2 same-UUID %s targets only the Cast enchantment when the source Spell has its own enchantment',
+    async (decision) => {
+      const actor = new FakeActor(false, false, undefined, 'system', true);
+      const initial = await hydrateManagedSelection({
+        actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00001',
+        journal: createHydrationJournal(actor),
+      });
+      const sourceEffectBefore = structuredClone(initial.cache.effects.find((effect: any) => effect._id === 'SourceEnchant001'));
+      const manualChanges = [{ key: 'flags.user.manual', mode: 5, value: 'manual Cast enchantment' }];
+      initial.cache.effects.find((effect: any) => effect._id === 'dnd5espellchang').system.changes = structuredClone(manualChanges);
+      if (decision === 'keep') initial.activity.name = 'Manual Cast name';
+      const hooks = new FakeHookBus();
+      actor.lifecycleHooks = hooks;
+      actor.delayedEffectUpdateMs = 90;
+      const startedAt = Date.now();
+
+      const result = await hydrateManagedSelection({
+        actor, manifest: oneSpellManifest(), selection: selection(), transactionId: 'Transaction00002',
+        journal: createHydrationJournal(actor), preserveExisting: decision === 'keep', lifecycleHooks: hooks,
+      });
+
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(70);
+      expect(result.cache.effects.find((effect: any) => effect._id === 'SourceEnchant001')).toEqual(sourceEffectBefore);
+      expect(result.cache.effects.find((effect: any) => effect._id === 'dnd5espellchang').system.changes)
+        .toEqual(decision === 'keep' ? manualChanges : []);
+      expect(result.activity.name).toBe(decision === 'keep' ? 'Manual Cast name' : 'Light');
+      expect(actor.items.filter((item) => item.type === 'spell')).toHaveLength(1);
+    },
+  );
+
   test('does not return before an exact createItem lifecycle event that arrives beyond the old stability window', async () => {
     const hooks = new FakeHookBus();
     const actor = new FakeActor(false, false, hooks);
@@ -344,6 +455,8 @@ class FakeActor {
     private readonly autoCache: boolean,
     private readonly corruptNativeCache = false,
     public lifecycleHooks?: FakeHookBus,
+    private readonly nativeEffectLayout: 'legacy' | 'system' = 'legacy',
+    private readonly withSourceEnchantment = false,
   ) {
     const manifest = oneSpellManifest();
     this.flags = { [RESOLVER_MODULE_ID]: { spellManifest: manifest } };
@@ -523,6 +636,7 @@ class FakeActor {
       },
     };
     Object.defineProperties(activity, {
+      constructor: { value: { ENCHANTMENT_ID: 'dnd5espellchang' } },
       item: { get: () => activity.parent?.parent },
       actor: { get: () => activity.item?.parent ?? null },
     });
@@ -536,7 +650,12 @@ class FakeActor {
       system: { sourceItem: 'feat:innate-feature', properties: ['vocal', 'somatic', 'material'] },
       effects: [
         { _id: 'SourceEffect0001', name: 'Source effect' },
-        { _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] },
+        ...(this.withSourceEnchantment ? [this.nativeEffectLayout === 'system'
+          ? { _id: 'SourceEnchant001', type: 'enchantment', system: { changes: [{ key: 'flags.source.owned', mode: 5, value: 'source' }] } }
+          : { _id: 'SourceEnchant001', type: 'enchantment', changes: [{ key: 'flags.source.owned', mode: 5, value: 'source' }] }] : []),
+        this.nativeEffectLayout === 'system'
+          ? { _id: 'dnd5espellchang', type: 'enchantment', system: { origin: { activity: activity.relativeUUID }, changes: [] }, transfer: true }
+          : { _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] },
       ],
       flags: { foreign: { preserve: { exactly: true } }, dnd5e: { cachedFor: activity.relativeUUID } },
       _stats: { compendiumSource: activity.spell.uuid },
@@ -549,13 +668,17 @@ class FakeActor {
 
   private emitEnchantmentUpdate(activity: any): void {
     const currentCache = this.findCache(activity.relativeUUID);
-    const enchantment = currentCache?.effects?.find((effect: any) => effect.type === 'enchantment');
+    const enchantment = currentCache?.effects?.find((effect: any) => effect._id === 'dnd5espellchang');
     if (!enchantment || !this.lifecycleHooks) return;
     const emit = () => {
-      enchantment.changes = [];
+      if (this.nativeEffectLayout === 'system') enchantment.system.changes = [];
+      else enchantment.changes = [];
+      const changes = this.nativeEffectLayout === 'system' ? enchantment.system.changes : enchantment.changes;
       this.lifecycleHooks?.emit('updateActiveEffect', {
         ...structuredClone(enchantment), id: enchantment._id, parent: currentCache,
-      }, { changes: structuredClone(enchantment.changes) }, {}, 'CurrentUser00001');
+      }, this.nativeEffectLayout === 'system'
+        ? { system: { changes: structuredClone(changes) } }
+        : { changes: structuredClone(changes) }, {}, 'CurrentUser00001');
     };
     if (this.delayedEffectUpdateMs > 0) {
       const delay = this.delayedEffectUpdateMs;

@@ -12,7 +12,7 @@ import {
 } from "../scripts/build";
 
 describe("module manifest", () => {
-  test("pins the authorized Foundry and dnd5e targets exactly", async () => {
+  test("declares the candidate range while retaining the prior verified targets", async () => {
     const manifest = JSON.parse(
       await readFile(resolve(import.meta.dir, "../module.json"), "utf8"),
     );
@@ -20,7 +20,17 @@ describe("module manifest", () => {
     expect(() => validateManifest(manifest)).not.toThrow();
     expect(manifest.id).toBe(MODULE_ID);
     expect(manifest.version).toBe(MODULE_VERSION);
-    expect(manifest.version).toBe("0.3.0-alpha.1");
+    expect(manifest.version).toBe("0.3.0-alpha.2");
+    expect(manifest.compatibility).toEqual({
+      minimum: "14.364",
+      verified: "14.364",
+      maximum: "14.368",
+    });
+    expect(manifest.relationships.systems[0].compatibility).toEqual({
+      minimum: "5.3.3",
+      verified: "5.3.3",
+      maximum: "6.0.5",
+    });
     expect(manifest.description).toContain("clustered lights");
     expect(manifest.description).not.toContain("ambience");
   });

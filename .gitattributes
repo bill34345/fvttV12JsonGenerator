@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Unified diff blank context lines contain one required space; preserve patch bytes.
+references/third-party/midi-qol/patches/2026-10-01-request-bonus.patch whitespace=-blank-at-eol

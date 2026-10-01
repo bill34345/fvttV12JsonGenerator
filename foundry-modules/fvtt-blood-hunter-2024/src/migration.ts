@@ -32,6 +32,37 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
+function safeDifferencePath(base: string, key: string): string {
+  return /^[A-Za-z_][A-Za-z0-9_-]{0,39}$/.test(key) ? `${base}.${key}` : `${base}.[key]`;
+}
+
+function valueType(value: unknown): string {
+  if (value === undefined) return 'missing';
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function firstDifference(before: unknown, after: unknown, path: string, depth = 0): { path: string; beforeType: string; afterType: string } | undefined {
+  if (canonicalJson(before) === canonicalJson(after)) return undefined;
+  if (depth < 12 && Array.isArray(before) && Array.isArray(after)) {
+    for (let index = 0; index < Math.max(before.length, after.length); index++) {
+      const nested = firstDifference(before[index], after[index], `${path}[${index}]`, depth + 1);
+      if (nested) return nested;
+    }
+    if (before.length !== after.length) return { path: `${path}.length`.slice(0, 160), beforeType: 'number', afterType: 'number' };
+  }
+  if (depth < 12 && before && after && typeof before === 'object' && typeof after === 'object' && !Array.isArray(before) && !Array.isArray(after)) {
+    const left = before as Record<string, unknown>;
+    const right = after as Record<string, unknown>;
+    for (const key of [...new Set([...Object.keys(left), ...Object.keys(right)])].sort()) {
+      const nested = firstDifference(left[key], right[key], safeDifferencePath(path, key), depth + 1);
+      if (nested) return nested;
+    }
+  }
+  return { path: path.slice(0, 160), beforeType: valueType(before), afterType: valueType(after) };
+}
+
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (!value || typeof value !== 'object') return value;
@@ -216,7 +247,6 @@ export function planActorMigration(actor: ActorLike, contract: MigrationContract
     legacyByTarget.set(targetId, existing);
   }
 
-  const fixedIds = new Set(contract.fixedGrantDocumentIds);
   const actions: MigrationAction[] = [];
   const allConflicts: MigrationConflict[] = [];
   for (const target of targets) {
@@ -230,11 +260,11 @@ export function planActorMigration(actor: ActorLike, contract: MigrationContract
     }
     if (candidates.length === 0) {
       actions.push({
-        action: fixedIds.has(target._id) ? 'add' : 'skip',
+        action: 'skip',
         canonicalId: target._id,
         targetItem: clone(target),
         existingItemIds: [],
-        reason: fixedIds.has(target._id) ? '只补充编译契约明确固定授予的 Item。' : '没有唯一 flags/legacy composite match；非固定选项不自动添加。',
+        reason: '未找到唯一对应的现有 Item；缺少当前职业、子职和等级授予来源时不自动添加。',
         legacy: false,
         conflicts: [],
       });
@@ -394,7 +424,13 @@ function collectActivityReferenceFindings(item: ExistingItem, findings: Array<{ 
 
 export function validateMigratedActorProjection(before: ActorLike, after: ActorLike, contract: MigrationContract): ProjectionValidation {
   const findings: ProjectionValidation['findings'] = [];
-  if (canonicalJson(before.system ?? {}) !== canonicalJson(after.system ?? {})) findings.push({ code: 'ACTOR_SYSTEM_CHANGED', path: 'system', message: '迁移不得改变 Actor 的 HP、职业等级或其他 Actor system 字段。' });
+  if (canonicalJson(before.system ?? {}) !== canonicalJson(after.system ?? {})) {
+    const difference = firstDifference(before.system ?? {}, after.system ?? {}, 'system')!;
+    findings.push({
+      code: 'ACTOR_SYSTEM_CHANGED', path: difference.path,
+      message: `Actor system 原始保存值必须完全一致；首个差异的类型为 ${difference.beforeType} → ${difference.afterType}。`,
+    });
+  }
   const beforeItems = asArray<ExistingItem>(before.items);
   const afterItems = asArray<ExistingItem>(after.items);
   const targetIds = new Set(contract.documents.map((document) => document._id));

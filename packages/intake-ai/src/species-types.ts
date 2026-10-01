@@ -1,5 +1,6 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { CanonicalSpecies } from '@fvtt-json-generator/models/species';
+import type { SpeciesTargetVersion } from '@fvtt-json-generator/generation/species';
 
 export type SpeciesIntakeStatus = 'accepted' | 'needs_review' | 'failed';
 
@@ -75,7 +76,7 @@ export interface SpeciesIntakeOptions {
   runRoot?: string;
   vaultPath?: string;
   dryRun?: boolean;
-  fvttVersion?: '12' | '14';
+  fvttVersion?: SpeciesTargetVersion;
   effectProfile?: 'core';
   replaceConflicts?: Set<string>;
   resumeContext?: { resumedFromRunId: string; decisionsSha256: string };
@@ -104,7 +105,7 @@ export interface SpeciesIntakeRunResult {
 
 export interface SpeciesAcceptedLedgerEntry {
   identifier: string;
-  fvttVersion: '12' | '14';
+  fvttVersion: SpeciesTargetVersion;
   effectProfile: 'core';
   rules: '2024';
   markdownPath: string;

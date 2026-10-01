@@ -19,5 +19,5 @@
 
 - Run `bun run test:coverage`, `bun run typecheck`, and `bun run build` from this directory.
 - Static checks do not establish Foundry runtime compatibility.
-- Runtime acceptance must use exact Foundry `14.364`; the repository default system target is dnd5e `5.3.3`.
-- Square-grid and hex-grid painting, stage changes, erase/rollback, movement-cost Regions, fire light, and bramble walls require real-canvas verification before being reported as accepted.
+- The original target is Foundry `14.364` / dnd5e `5.3.3`. A 2026-09-24 real-canvas square Fire stroke, movement-cost Region, light, visual reload, and task-owned cleanup passed on the historical ServerNext pair `14.368` / `6.0.2`. On 2026-10-01 exact pair `14.368` / `6.0.5` independently passed the existing two-cell Square Fire I visible-animation/Region/light slice and normal GM reload after row/column and media-start fixes; exact task-owned cleanup is reported separately in the restoration review.
+- Hex-grid painting, other terrain/stages, module Undo/Redo, mature bramble walls, player permissions, and exact Region collection persistence still require separate real-canvas verification before being reported as accepted. Native UI deletion in the Fire test is not module Undo.

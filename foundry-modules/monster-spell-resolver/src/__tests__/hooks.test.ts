@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { hashManifest, logicalSpellRefKey, RESOLVER_MODULE_ID } from '../../../../src/core/spell-resolution';
 import { buildSpellResolverPackage } from '../../build';
 import {
@@ -17,6 +17,7 @@ import {
 import { RESOLVER_STATUS_VALUES, readResolverStatus } from '../status';
 import { computeManagedSourceHash } from '../cast-activity';
 import { createResolverReviewSession } from '../review-app';
+import { HydrationTransactionError } from '../transaction';
 
 const validManifest = {
   schemaVersion: 1 as const,
@@ -226,6 +227,21 @@ describe('Actor-level resolve pipeline', () => {
     return { target, feature, activity, spell, logicalRefKey: selection.logicalRefKey };
   }
 
+  async function installCommittedOverwrite(fixture: ReturnType<typeof serviceFixture>) {
+    const hydrated = await installHydratedPair(fixture);
+    const resolution = hydrated.target.flags[RESOLVER_MODULE_ID].spellResolution;
+    resolution.report.planHash = resolution.planHash;
+    resolution.report.selections[0].manualDecision = 'overwrite';
+    return hydrated;
+  }
+
+  function readLastRenderedReport(fixture: ReturnType<typeof serviceFixture>): any {
+    const content = fixture.calls.templates.at(-1)![1].content as string;
+    const escaped = content.replace(/^<pre[^>]*>/, '').replace(/<\/pre>$/, '');
+    return JSON.parse(escaped.replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  }
+
   test('pending Actor validates every selected full Spell before one transaction and never persists resolving', async () => {
     const { target, calls, service } = serviceFixture();
     expect(service.status(target)).toBe('pending');
@@ -237,6 +253,82 @@ describe('Actor-level resolve pipeline', () => {
     expect(target.flags[RESOLVER_MODULE_ID].spellResolution.status).toBe('pending');
     expect(calls.review).toBe(0);
     expect(calls.notifications).toContainEqual(['info', 'FVTTJSONSPELL.Notification.HydrationComplete (1)']);
+  });
+
+  test('failed hydration diagnostic stays visible in View Report after a fresh preflight', async () => {
+    const diagnostic = {
+      phase: 'selection' as const, selectionIndex: 1, selectionCount: 1,
+      ownership: { code: 'RESOLVER_OWNERSHIP_MISSING' as const, expectedType: 'spell' as const,
+        namespacePresent: false, managed: false, documentType: '<missing>' },
+      residualPaths: ['/items/NewCache00000001'],
+    };
+    const failure = new HydrationTransactionError('hydration failed at selection 1/1', false,
+      [{ path: '/items/NewCache00000001' }], undefined, diagnostic);
+    const fixture = serviceFixture({ execute: async () => { throw failure; } });
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.failureDiagnostic).toEqual(diagnostic);
+    expect(fixture.calls.notifications).toContainEqual(['error', failure.message]);
+    await fixture.service.viewReport(fixture.target);
+    expect(readLastRenderedReport(fixture).failureDiagnostic).toEqual(diagnostic);
+    const runtime = fixture.dependencies.getRuntime();
+    fixture.dependencies.getRuntime = () => ({ ...runtime, sourceIndex: undefined });
+    await createResolverActorService(fixture.dependencies).viewReport(fixture.target);
+    expect(readLastRenderedReport(fixture).failureDiagnostic).toEqual(diagnostic);
+    fixture.dependencies.getRuntime = () => undefined;
+    await createResolverActorService(fixture.dependencies).viewReport(fixture.target);
+    expect(readLastRenderedReport(fixture).failureDiagnostic).toEqual(diagnostic);
+  });
+
+  test('a later ordinary failure clears the earlier transaction ownership and residual diagnostics', async () => {
+    const diagnostic = { phase: 'selection' as const, selectionIndex: 1, selectionCount: 1,
+      residualPaths: ['/items/NewCache00000001'] };
+    const fixture = serviceFixture({ execute: async () => {
+      throw new HydrationTransactionError('first failure', false,
+        [{ path: '/items/NewCache00000001' }], undefined, diagnostic);
+    } });
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.failureDiagnostic).toEqual(diagnostic);
+    fixture.dependencies.execute = async () => { throw new Error('later ordinary failure'); };
+    await createResolverActorService(fixture.dependencies).processActor(fixture.target, { explicit: true });
+    const resolution = fixture.target.flags[RESOLVER_MODULE_ID].spellResolution;
+    expect(resolution.error).toContain('later ordinary failure');
+    expect(resolution.failureDiagnostic).toBeNull();
+    expect(resolution.residualDifferences).toEqual([]);
+    await createResolverActorService(fixture.dependencies).viewReport(fixture.target);
+    expect(readLastRenderedReport(fixture).failureDiagnostic).toBeUndefined();
+  });
+
+  test('a later transaction phase clears nested prior ownership under Foundry-style recursive merge', async () => {
+    const first = { phase: 'selection' as const, selectionIndex: 1, selectionCount: 2,
+      ownership: { code: 'RESOLVER_OWNERSHIP_MISSING' as const, expectedType: 'spell' as const,
+        namespacePresent: false, managed: false, documentType: '<missing>' }, residualPaths: [] };
+    const second = { phase: 'cleanup' as const, selectionIndex: null, selectionCount: null,
+      ownership: null, residualPaths: ['/rollback/errors'] };
+    let attempt = 0;
+    const fixture = serviceFixture({ execute: async () => {
+      const diagnostic = ++attempt === 1 ? first : second;
+      throw new HydrationTransactionError('transaction failure', false,
+        diagnostic.residualPaths.map((path) => ({ path })), undefined, diagnostic);
+    } });
+    const merge = (before: any, after: any): any => {
+      if (before && after && typeof before === 'object' && typeof after === 'object'
+        && !Array.isArray(before) && !Array.isArray(after)) {
+        const result = structuredClone(before);
+        for (const [key, value] of Object.entries(after)) result[key] = merge(result[key], value);
+        return result;
+      }
+      return structuredClone(after);
+    };
+    fixture.target.update = async (changes: Record<string, any>) => {
+      const key = `flags.${RESOLVER_MODULE_ID}.spellResolution`;
+      fixture.target.flags[RESOLVER_MODULE_ID].spellResolution = merge(
+        fixture.target.flags[RESOLVER_MODULE_ID].spellResolution, changes[key]);
+    };
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.failureDiagnostic).toEqual(first);
+    await createResolverActorService(fixture.dependencies).processActor(fixture.target, { explicit: true });
+    expect(attempt).toBe(2);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.failureDiagnostic).toEqual(second);
   });
 
   test.each([
@@ -929,6 +1021,96 @@ describe('Actor-level resolve pipeline', () => {
     expect(fixture.target.updateCalls).toEqual([]);
   });
 
+  test('View Report keeps a committed Overwrite primary when fresh no-decision preflight finds a manual conflict', async () => {
+    const fixture = serviceFixture();
+    const { target, activity } = await installCommittedOverwrite(fixture);
+    const resolution = target.flags[RESOLVER_MODULE_ID].spellResolution;
+    activity.spell.manualEdit = 'drift after commit';
+    const before = structuredClone(resolution);
+
+    await fixture.service.viewReport(target);
+
+    const view = readLastRenderedReport(fixture);
+    expect(Object.keys(view)).toEqual(['status', 'lastCommittedOutcome', 'currentPreflightWithoutDecisions']);
+    expect(view.status).toBe('needs_review');
+    expect(view.lastCommittedOutcome.planHash).toBe(resolution.planHash);
+    expect(view.lastCommittedOutcome.selections[0].manualDecision).toBe('overwrite');
+    expect(view.lastCommittedOutcome.manualDecisionsHash).toBeUndefined();
+    expect(view.currentPreflightWithoutDecisions.report.manualDecisionsHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(view.currentPreflightWithoutDecisions.report.findings)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'MANUAL_CONFLICT_UNDECIDED' })]));
+    expect(target.flags[RESOLVER_MODULE_ID].spellResolution).toEqual(before);
+    expect(target.updateCalls).toEqual([]);
+  });
+
+  test('View Report shows current hydrated only while the committed pair and manifest remain applied', async () => {
+    const fixture = serviceFixture();
+    const { target } = await installCommittedOverwrite(fixture);
+    await fixture.service.viewReport(target);
+    const view = readLastRenderedReport(fixture);
+    expect(view.status).toBe('hydrated');
+    expect(view.lastCommittedOutcome.selections[0].manualDecision).toBe('overwrite');
+    expect(fixture.service.isAlreadyApplied(target)).toBe(true);
+    expect(target.updateCalls).toEqual([]);
+  });
+
+  test('View Report marks a replaced manifest stale and does not bind the old report to it', async () => {
+    const fixture = serviceFixture();
+    const { target } = await installCommittedOverwrite(fixture);
+    target.flags[RESOLVER_MODULE_ID].spellManifest.sourceSha256 = 'd'.repeat(64);
+    await fixture.service.viewReport(target);
+    const view = readLastRenderedReport(fixture);
+    expect(view.status).toBe('stale');
+    expect(view.persistedReportBinding).toBe('invalid-for-current-manifest');
+    expect(view.lastCommittedOutcome).toBeUndefined();
+    expect(target.updateCalls).toEqual([]);
+  });
+
+  test('View Report marks a missing owned cached Spell as needing review while retaining valid committed history', async () => {
+    const fixture = serviceFixture();
+    const { target, spell } = await installCommittedOverwrite(fixture);
+    target.items = target.items.filter((item: any) => item !== spell);
+    await fixture.service.viewReport(target);
+    const view = readLastRenderedReport(fixture);
+    expect(view.status).toBe('needs_review');
+    expect(view.lastCommittedOutcome.selections[0].manualDecision).toBe('overwrite');
+    expect(target.updateCalls).toEqual([]);
+  });
+
+  test('View Report shows unsupported runtime as incompatible with the prior commit labeled historical', async () => {
+    const fixture = serviceFixture();
+    const { target } = await installCommittedOverwrite(fixture);
+    const runtime = fixture.dependencies.getRuntime();
+    runtime.compatibility.supported = false;
+    fixture.dependencies.getRuntime = () => runtime;
+    await fixture.service.viewReport(target);
+    const view = readLastRenderedReport(fixture);
+    expect(view.status).toBe('incompatible');
+    expect(view.currentIncompatibility).toMatchObject({
+      reason: 'unsupported-runtime', compatibility: { supported: false },
+    });
+    expect(view.lastCommittedOutcome.selections[0].manualDecision).toBe('overwrite');
+    expect(view.currentPreflightWithoutDecisions).toBeUndefined();
+    expect(target.updateCalls).toEqual([]);
+  });
+
+  test.each([
+    ['empty', () => []],
+    ['duplicate', (selection: any) => [selection, structuredClone(selection)]],
+    ['wrong ref', (selection: any) => [{ ...selection, logicalRefKey: 'wrong-manifest/ref' }]],
+  ] as const)('View Report rejects a %s persisted selection set as current committed evidence', async (_label, selections) => {
+    const fixture = serviceFixture();
+    const { target } = await installCommittedOverwrite(fixture);
+    const report = target.flags[RESOLVER_MODULE_ID].spellResolution.report;
+    report.selections = selections(report.selections[0]);
+    await fixture.service.viewReport(target);
+    const view = readLastRenderedReport(fixture);
+    expect(view.status).not.toBe('hydrated');
+    expect(view.persistedReportBinding).toBe('invalid-for-current-manifest');
+    expect(view.lastCommittedOutcome).toBeUndefined();
+    expect(target.updateCalls).toEqual([]);
+  });
+
   test('serializes two-Actor mapping decisions so failed compensation cannot erase the later success', async () => {
     const first = serviceFixture();
     const second = serviceFixture();
@@ -1206,6 +1388,14 @@ describe('public Foundry hook and GM control registration', () => {
 });
 
 describe('Undo Last Hydration transaction boundary', () => {
+  const priorFoundry = (globalThis as any).foundry;
+  beforeEach(() => {
+    (globalThis as any).foundry = {
+      data: { operators: { ForcedReplacement: { create: (value: unknown) => ({ __forcedReplacement: value }) } } },
+    };
+  });
+  afterEach(() => { (globalThis as any).foundry = priorFoundry; });
+
   test('GM Undo prevalidation failure is visible, mutates no managed document, and releases the active lock', async () => {
     const fixture = createUndoActor();
     delete fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot.activities[0].source.flags[RESOLVER_MODULE_ID].logicalRefKey;
@@ -1234,6 +1424,107 @@ describe('Undo Last Hydration transaction boundary', () => {
     expect(managedSpells).toHaveLength(1);
     expect(managedSpells[0]._stats.compendiumSource).toContain('aaaaaaaaaaaaaaaa');
     expect(fixture.actor.items.some((item: any) => item.id.startsWith('AUTO'))).toBe(false);
+  });
+
+  test('replaces the full resolver flag namespace when undoing a first hydration', async () => {
+    const fixture = createUndoActor();
+    const snapshot = fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot;
+    snapshot.activities = [];
+    snapshot.spells = [];
+    snapshot.resolverFlags.spellResolution = { status: 'pending', manifestHash: hashManifest(validManifest) };
+    const oldUpdate = fixture.actor.update;
+    fixture.actor.update = async (changes: Record<string, any>) => {
+      const flags = changes[`flags.${RESOLVER_MODULE_ID}`];
+      if (flags && !flags.__forcedReplacement) {
+        fixture.actor.flags[RESOLVER_MODULE_ID] = { ...fixture.actor.flags[RESOLVER_MODULE_ID], ...flags,
+          spellResolution: { ...fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution, ...flags.spellResolution } };
+        return;
+      }
+      return oldUpdate(changes);
+    };
+    await restoreLastHydration(fixture.actor);
+    expect(fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution).toEqual({
+      status: 'pending', manifestHash: hashManifest(validManifest),
+    });
+    expect(fixture.actor.items.filter((item: any) => item.type === 'spell')).toHaveLength(0);
+  });
+
+  test('restores a saved Compendium effect origin and ignores only regenerated bookkeeping times', async () => {
+    const fixture = createUndoActor();
+    const saved = fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot.spells[0];
+    const effectId = 'EFFE000000000001';
+    const origin = saved._stats.compendiumSource;
+    saved.effects = [{ _id: effectId, origin, name: 'Source effect', _stats: { createdTime: 10, modifiedTime: 10 } }];
+    saved._stats.createdTime = 10;
+    saved._stats.modifiedTime = 10;
+    saved.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(saved);
+    const create = fixture.actor.createEmbeddedDocuments;
+    fixture.actor.createEmbeddedDocuments = async (...args: any[]) => {
+      await create(...args);
+      const spell = fixture.actor.items.find((item: any) => item.id === saved._id);
+      const changedOrigin = `Actor.${fixture.actor.id}.Item.${saved._id}`;
+      spell.effects = new Map([[effectId, { id: effectId, origin: changedOrigin }]]);
+      spell._stats.createdTime = 20;
+      spell._stats.modifiedTime = 20;
+      spell.toObject = () => ({ _id: spell.id, type: spell.type, flags: structuredClone(spell.flags),
+        _stats: structuredClone(spell._stats), effects: [{ _id: effectId, origin: spell.effects.get(effectId).origin,
+          name: 'Source effect', _stats: { createdTime: 20, modifiedTime: 20 } }] });
+      spell.updateEmbeddedDocuments = async (_name: string, updates: any[]) => {
+        for (const update of updates) spell.effects.get(update._id).origin = update.origin;
+      };
+    };
+    await restoreLastHydration(fixture.actor);
+    const restored = fixture.actor.items.find((item: any) => item.id === saved._id);
+    expect(restored.effects.get(effectId).origin).toBe(origin);
+    expect(fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.planHash).toBe('plan-a');
+  });
+
+  test('compensation removes only a new, exactly-proven native cache that predates Activity re-creation', async () => {
+    const fixture = createUndoActor();
+    const create = fixture.actor.createEmbeddedDocuments;
+    let failOnce = true;
+    fixture.actor.createEmbeddedDocuments = async (...args: any[]) => {
+      if (failOnce) {
+        failOnce = false;
+        const targetSnapshot = fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot;
+        const selectedUuid = targetSnapshot.spells[0]._stats.compendiumSource;
+        fixture.actor.items.push({
+          id: 'NATV000000000001', _id: 'NATV000000000001', type: 'spell',
+          parent: fixture.actor, actor: fixture.actor,
+          flags: { dnd5e: { cachedFor: '.Item.FEAT000000000001.Activity.ACTV000000000001' } },
+          _stats: { compendiumSource: selectedUuid },
+        });
+        throw new Error('injected Undo create failure after native cache creation');
+      }
+      return create(...args);
+    };
+    await expect(restoreLastHydration(fixture.actor)).rejects.toThrow(/compensation restored/i);
+    expect(fixture.actor.items.some((item: any) => item.id === 'NATV000000000001')).toBe(false);
+    expect(fixture.actor.items.filter((item: any) => item.flags?.[RESOLVER_MODULE_ID]?.documentType === 'spell')).toHaveLength(1);
+  });
+
+  test('never reports a first Undo successful while deletion leaves a new unowned native cache', async () => {
+    const fixture = createUndoActor();
+    const snapshot = fixture.actor.flags[RESOLVER_MODULE_ID].spellResolution.undoSnapshot;
+    snapshot.activities = [];
+    snapshot.spells = [];
+    snapshot.resolverFlags.spellResolution = { status: 'pending', manifestHash: hashManifest(validManifest) };
+    const feature = fixture.actor.items.find((item: any) => item.type === 'feat');
+    const activity = feature.system.activities.get('ACTV000000000001');
+    const cachedFor = activity.relativeUUID;
+    const selectedUuid = activity.spell.uuid;
+    const oldDelete = feature.deleteActivity;
+    feature.deleteActivity = async (id: string) => {
+      await oldDelete.call(feature, id);
+      fixture.actor.items.push({
+        id: 'NATV000000000002', _id: 'NATV000000000002', type: 'spell',
+        parent: fixture.actor, actor: fixture.actor,
+        flags: { dnd5e: { cachedFor } }, _stats: { compendiumSource: selectedUuid },
+      });
+    };
+    await expect(restoreLastHydration(fixture.actor)).rejects.toThrow(/compensation restored/i);
+    expect(fixture.actor.items.some((item: any) => item.id === 'NATV000000000002')).toBe(false);
+    expect(fixture.actor.items.filter((item: any) => item.flags?.[RESOLVER_MODULE_ID]?.documentType === 'spell')).toHaveLength(1);
   });
 
   test('validates every snapshot source before the first write', async () => {
@@ -1452,7 +1743,7 @@ function createUndoActor() {
   actor.update = async (changes: Record<string, any>) => {
     mutations.count++;
     const flags = changes[`flags.${RESOLVER_MODULE_ID}`];
-    if (flags) actor.flags[RESOLVER_MODULE_ID] = structuredClone(flags);
+    if (flags) actor.flags[RESOLVER_MODULE_ID] = structuredClone(flags.__forcedReplacement ?? flags);
     const resolution = changes[`flags.${RESOLVER_MODULE_ID}.spellResolution`];
     if (resolution) actor.flags[RESOLVER_MODULE_ID].spellResolution = structuredClone(resolution);
   };

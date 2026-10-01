@@ -109,3 +109,10 @@ The 2026-07-17 Rat Warlock AI Intake acceptance remains valid for its reviewed n
 The preceding qualification is superseded for the exact accepted local target. The current project workflow produces a source-evidenced ten-spell portable manifest with status `pending`, no placeholder Spell, and no destination UUID. In the project-local Foundry `14.364` / dnd5e `5.3.3` disposable world, the resolver hydrated the Rat Warlock to ten native Cast Activities and ten one-to-one cached Spells, exercised attack/save/utility and limited/at-will use, preserved native use after module disable, proved 2024-first plus isolated 2014 fallback behavior, and passed Keep/Overwrite/Cancel, exact rollback/residual, idempotency, and unrelated-Actor checks. The full evidence and limitations are recorded in [Rat Warlock Target-World Spell Resolver Acceptance](./2026-07-18-rat-warlock-spell-resolver.md).
 
 `SPELL-001` is closed only for Foundry `14.364` / dnd5e `5.3.3`. This amendment does not claim a v12 resolver, OCR/PDF intake, production installation, bulk migration, compatibility with later runtime versions, or complete automation of literal source-specific restrictions.
+## ServerNext 6.0.5 本地恢复切片（2026-10-01）
+
+原十个自有模块因 maximum6.0.2而停用，现已从独立候选更新并恢复原94启用ID／版本集合。80个非packs文件逐项SHA核对通过、全部安装packs保持；后续限定修正 Deck 的力竭效果 ID 和 Painter 火焰几何／视频加载。49DLC来源字段和无关ID／场景状态保留，十项正常 GM 重载读回全部通过。
+
+本轮接受代表切片：House 药水手改保护／恢复，Deck 力竭3→4→3，Resolver 自动十法术水合及一次普通UI Undo 后 pending／0缓存，Painter 原两格可见动画火焰／Region／light及重载保持，Babele 可见25／5行中文嵌入与原UUID，Injury 公共状态API与恢复，Monitor 短会话start／mark／stop／历史持久；Blood Hunter／Species 为既有内容身份和合集读取，Chat Guard 为公开诊断统计。它不提升为所有玩法／所有模块组合通过；天然19、完整Cast矩阵、长测和生产未执行。精确清理已通过，原90 Macro、两条 Monitor 历史及设置／视图状态恢复。额外获准 Midi local.10 的三文件与四语言文件限定安装、packs保持、正常Check／Save各+4及其精确清理通过；当前94启用ID相同，唯一版本变化为Midi local.9→local.10。详见[本轮限定接受记录](../reviews/2026-10-01-next-605-custom-module-restoration.md)和[Midi请求修复接受](../reviews/2026-10-01-next-605-midi-request-bonus-gap.md)。
+
+5.x固定5.3.3与6.x稳定跟随的长期方向见[版本流程](../runbooks/dnd5e-version-following.md)。这不扩大既有生成器Actor／Item默认或6.x通用接受，也不改写旧14.364/5.3.3及14.368/6.0.2证据。

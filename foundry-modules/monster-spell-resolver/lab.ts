@@ -18,7 +18,7 @@ import {
 
 export const SPELL_RESOLVER_MODULE_ID = 'fvtt-json-generator-spell-resolver' as const;
 const APPROVED_WORLD_ID = 'fvtt-v14-module-matrix' as const;
-const MODULE_VERSION = '0.1.0' as const;
+const MODULE_VERSION = '0.1.4' as const;
 
 export interface SpellResolverPaths {
   buildDir: string;
@@ -884,8 +884,8 @@ function validateModuleManifest(manifest: Record<string, unknown>, requireCurren
   if (!requireCurrentVersion) return;
   if (manifest.version !== MODULE_VERSION) throw new Error(`Spell resolver module version must be exactly ${MODULE_VERSION}.`);
   const compatibility = record(manifest.compatibility);
-  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.364') {
-    throw new Error('Spell resolver manifest must pin Foundry compatibility to exact 14.364.');
+  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.368') {
+    throw new Error('Spell resolver manifest must declare Foundry 14.364 through 14.368, verified at 14.364.');
   }
   const systems = Array.isArray(record(manifest.relationships).systems)
     ? record(manifest.relationships).systems as unknown[]
@@ -894,8 +894,8 @@ function validateModuleManifest(manifest: Record<string, unknown>, requireCurren
   const dnd5eCompatibility = record(dnd5e?.compatibility);
   if (!dnd5e || dnd5eCompatibility.minimum !== '5.3.3'
     || dnd5eCompatibility.verified !== '5.3.3'
-    || dnd5eCompatibility.maximum !== '5.3.3') {
-    throw new Error('Spell resolver manifest must pin dnd5e compatibility to exact 5.3.3.');
+    || dnd5eCompatibility.maximum !== '6.0.5') {
+    throw new Error('Spell resolver manifest must declare dnd5e 5.3.3 through 6.0.5, verified at 5.3.3.');
   }
   if (!Array.isArray(manifest.esmodules) || !manifest.esmodules.includes('scripts/index.js')) {
     throw new Error('Spell resolver manifest must load the validated scripts/index.js browser build.');

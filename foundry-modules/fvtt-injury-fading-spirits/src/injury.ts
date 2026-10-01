@@ -45,7 +45,6 @@ export function transitionInjury(injuryInput: InjuryState, fadingInput: FadingSp
     if (injury.stacks > 0) actions.push({ type: 'injuryCleared', reason: 'rest' });
     injury.stacks = 0;
     injury.episode = { id: null, open: false, openedAt: null };
-    fading.resurrectionPromptedForDeathEpisodeId = null;
     injury.suppressNextRecovery = null;
     return { injury, fading, actions, duplicate: false };
   }
@@ -60,7 +59,6 @@ export function transitionInjury(injuryInput: InjuryState, fadingInput: FadingSp
   if (enteredZero) {
     injury.episode = { id: event.transactionId, open: true, openedAt: event.at };
     fading.currentDeathEpisodeId = event.transactionId;
-    fading.resurrectionPromptedForDeathEpisodeId = null;
     fading.rapidResurrectionLockedForCurrentDeath = false;
     fading.resurrectionConsumedForCurrentDeath = false;
     fading.resolutionInProgress = null;
@@ -72,7 +70,6 @@ export function transitionInjury(injuryInput: InjuryState, fadingInput: FadingSp
   if (recoveredFromZero && injury.episode.open) {
     const suppressed = event.suppressed === true || injury.suppressNextRecovery !== null;
     injury.episode = { id: null, open: false, openedAt: null };
-    fading.resurrectionPromptedForDeathEpisodeId = null;
     if (suppressed) injury.suppressNextRecovery = null;
     else {
       const nextStacks = normalizeInjuryStacks(injury.stacks + 1);
@@ -86,7 +83,6 @@ export function transitionInjury(injuryInput: InjuryState, fadingInput: FadingSp
     if (injury.stacks > 0) actions.push({ type: 'injuryCleared', reason: 'fullHealing' });
     injury.stacks = 0;
     injury.episode = { id: null, open: false, openedAt: null };
-    fading.resurrectionPromptedForDeathEpisodeId = null;
     injury.suppressNextRecovery = null;
   }
 
@@ -109,7 +105,7 @@ export function retainedD20Face(roll: unknown): number | null {
   return Number.isFinite(result?.result) ? Number(result!.result) : null;
 }
 
-export function applyNineteenCritical(details: Record<string, unknown>, face: number | null): boolean {
+export function applyNineteenCritical(details: Record<string, unknown>, face: number | null, systemVersion: string): boolean {
   if (face === null || face < 19) return false;
   details.updates = {
     'system.attributes.death.success': 0,
@@ -117,5 +113,6 @@ export function applyNineteenCritical(details: Record<string, unknown>, face: nu
     'system.attributes.hp.value': 1,
   };
   details.chatString = 'DND5E.DeathSaveCriticalSuccess';
+  if (systemVersion === '6.0.2' || systemVersion === '6.0.5') details.outcome = 'revive';
   return true;
 }

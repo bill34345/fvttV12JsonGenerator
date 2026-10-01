@@ -26,6 +26,8 @@ interface UpdatedEffectEvent {
   userId: unknown;
 }
 
+export type NativeEffectChangesLocation = 'changes' | 'system.changes';
+
 export class NativeCacheLifecycleCapture {
   private readonly createdItems: any[] = [];
   private readonly updatedEffects: UpdatedEffectEvent[] = [];
@@ -67,6 +69,7 @@ export class NativeCacheLifecycleCapture {
     itemId: string,
     effectId: string,
     expectedChanges: unknown,
+    location: NativeEffectChangesLocation,
     expectedUserId?: string,
     timeoutMs = 5_000,
   ): Promise<any> {
@@ -75,7 +78,8 @@ export class NativeCacheLifecycleCapture {
         && documentId(effect?.parent) === itemId
         && (effect?.parent?.actor === actor || effect?.parent?.parent === actor)
         && (expectedUserId === undefined || userId === expectedUserId)
-        && nativeEffectChangesEqual(changed?.changes, expectedChanges))?.effect,
+        && nativeEffectChangesEqual(normalizeNativeEffectHookChanges(changed), expectedChanges)
+        && nativeEffectChangesEqual(readNativeEffectChanges(effect, location), expectedChanges))?.effect,
       `updateActiveEffect for ${itemId}/${effectId}`,
       timeoutMs,
     );
@@ -138,12 +142,37 @@ export function captureNativeCacheProjection(source: any): Record<string, any> {
   delete projection.id;
   if (isRecord(projection.flags)) delete projection.flags[RESOLVER_MODULE_ID];
   normalizeNativeCacheRichText(projection);
+  normalizeNativeCacheEffectChangeIds(projection);
   return projection;
 }
 
 export function nativeEffectChangesEqual(actual: unknown, expected: unknown): boolean {
-  return computeManagedSourceHash({ effects: [{ changes: actual }] })
-    === computeManagedSourceHash({ effects: [{ changes: expected }] });
+  if (!Array.isArray(actual) || !Array.isArray(expected)) return false;
+  return computeManagedSourceHash({ effects: [{ changes: withoutNativeChangeRowIds(actual) }] })
+    === computeManagedSourceHash({ effects: [{ changes: withoutNativeChangeRowIds(expected) }] });
+}
+
+/** The public cached source identifies the exact dnd5e effect schema in use. */
+export function nativeEffectChangesLocation(effect: unknown): NativeEffectChangesLocation {
+  const source = documentSource(effect);
+  const legacy = Array.isArray(source.changes);
+  const system = Array.isArray(source.system?.changes);
+  if (legacy === system) throw new Error('Native Cast enchantment must have exactly one supported changes field.');
+  return system ? 'system.changes' : 'changes';
+}
+
+export function readNativeEffectChanges(effect: unknown, location: NativeEffectChangesLocation): unknown {
+  const source = documentSource(effect);
+  return location === 'system.changes' ? source.system?.changes : source.changes;
+}
+
+/** Foundry update hooks may report a nested, dotted, or legacy update key. */
+export function normalizeNativeEffectHookChanges(changed: unknown): unknown {
+  if (!isRecord(changed)) return undefined;
+  const candidates = [changed.system?.changes, changed['system.changes'], changed.changes]
+    .filter((value) => value !== undefined);
+  if (!candidates.length || !candidates.every((value) => nativeEffectChangesEqual(value, candidates[0]))) return undefined;
+  return candidates[0];
 }
 
 export function assertNativeCacheProjectionMatches(expectedProjection: unknown, actualDocument: any): void {
@@ -193,6 +222,27 @@ function normalizeNativeCacheRichText(projection: Record<string, any>): void {
       effect.description = normalizeHtmlAmpersands(effect.description);
     }
   }
+}
+
+function normalizeNativeCacheEffectChangeIds(projection: Record<string, any>): void {
+  if (!Array.isArray(projection.effects)) return;
+  for (const effect of projection.effects) {
+    // Foundry assigns fresh row IDs while materializing the public Cast getter's
+    // effect changes as an embedded Spell. Their order and mechanics must still match.
+    for (const changes of [effect?.changes, effect?.system?.changes]) {
+      if (!Array.isArray(changes)) continue;
+      for (const change of changes) if (isRecord(change)) delete change._id;
+    }
+  }
+}
+
+function withoutNativeChangeRowIds(changes: unknown[]): unknown[] {
+  return changes.map((change) => {
+    if (!isRecord(change)) return change;
+    const source = structuredClone(change);
+    delete source._id;
+    return source;
+  });
 }
 
 function normalizeHtmlAmpersands(value: string): string {

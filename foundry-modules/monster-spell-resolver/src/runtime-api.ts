@@ -7,7 +7,7 @@ export interface ResolverRuntimeVersions {
 }
 
 export interface ResolverCompatibilityDiagnostic {
-  code: 'MISSING_RUNTIME_VERSION' | 'UNSUPPORTED_FOUNDRY_VERSION' | 'UNSUPPORTED_DND5E_VERSION' | 'SOURCE_INDEX_FAILED';
+  code: 'MISSING_RUNTIME_VERSION' | 'UNSUPPORTED_FOUNDRY_VERSION' | 'UNSUPPORTED_DND5E_VERSION' | 'UNSUPPORTED_RUNTIME_PAIR' | 'SOURCE_INDEX_FAILED';
   message: string;
 }
 

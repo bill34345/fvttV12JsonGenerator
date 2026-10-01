@@ -5,10 +5,12 @@ import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 
 import {
+  BLOOD_HUNTER_DND6_TARGET,
   BLOOD_HUNTER_V14_TARGET,
   EXPECTED_BLOOD_HUNTER_SOURCE_SHA256,
   compileBloodHunterV14Package,
   planNativeBloodHunterMigration,
+  refreshNativeBloodHunterItemLogicalHash,
   validateNativeBloodHunterPackage,
   type NativeBloodHunterPackage,
   type NativeItemSource,
@@ -23,6 +25,7 @@ import {
 
 export const MODULE_ID = 'fvtt-blood-hunter-2024' as const;
 export const MODULE_VERSION = '1.0.0' as const;
+const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.0.5' as const;
 export const EXPECTED_ACTIVITY_COUNT = 117;
 export const EXPECTED_LEDGER_COUNT = 94;
 export const EXPECTED_EFFECT_CHANGE_COUNT = 72;
@@ -71,6 +74,7 @@ interface ClassicLevelModule {
 
 export interface BuildOptions {
   sourcePath: string;
+  target?: 'legacy' | 'server-next';
   config?: BloodHunterLabConfig;
   publish?: boolean;
   temporaryParent?: string;
@@ -101,11 +105,12 @@ export interface ModuleInspection {
 
 export async function buildBloodHunterModule(options: BuildOptions): Promise<BuildResult> {
   const config = options.config ?? createLabConfig();
+  const target = options.target === 'server-next' ? BLOOD_HUNTER_DND6_TARGET : BLOOD_HUNTER_V14_TARGET;
   const sourcePath = resolve(options.sourcePath);
   if (!isAbsolute(options.sourcePath)) throw new Error('--source must be an absolute JSON file path.');
   const raw = await readFile(sourcePath);
-  const first = compileNative(raw);
-  const second = compileNative(raw);
+  const first = compileNative(raw, target);
+  const second = compileNative(raw, target);
   assertNativePackage(first);
   assertNativePackage(second);
   assertRepeatableCompilerOutput(first, second);
@@ -156,16 +161,19 @@ export async function buildBloodHunterModule(options: BuildOptions): Promise<Bui
   }
 }
 
-export function compileNative(raw: Uint8Array): NativeBloodHunterPackage {
-  return compileBloodHunterV14Package({ source: raw, target: BLOOD_HUNTER_V14_TARGET });
+export function compileNative(raw: Uint8Array, target = BLOOD_HUNTER_V14_TARGET): NativeBloodHunterPackage {
+  return compileBloodHunterV14Package({ source: raw, target });
 }
 
 export function assertNativePackage(pkg: NativeBloodHunterPackage): void {
   const validation = validateNativeBloodHunterPackage(pkg);
   if (!validation.ok) throw new Error(`Blood Hunter compiler validator rejected the package: ${validation.findings.map((finding) => `${finding.code}@${finding.path}`).join(', ')}`);
   if (pkg.moduleId !== MODULE_ID || pkg.version !== MODULE_VERSION) throw new Error('Blood Hunter package module identity is not the exact release identity.');
-  if (pkg.target.foundry !== '14.364' || pkg.target.dnd5e !== '5.3.3' || pkg.target.effectProfile !== 'modded-v14') throw new Error('Blood Hunter package target is not Foundry 14.364 / dnd5e 5.3.3 / modded-v14.');
-  if (pkg.classes.length !== 1 || pkg.subclasses.length !== 4 || pkg.features.length !== 76) throw new Error('Blood Hunter package document counts drifted from the module release contract.');
+  const supported = [BLOOD_HUNTER_V14_TARGET, BLOOD_HUNTER_DND6_TARGET].some((target) =>
+    pkg.target.foundry === target.foundry && pkg.target.dnd5e === target.dnd5e && pkg.target.effectProfile === target.effectProfile);
+  if (!supported) throw new Error('Blood Hunter package target is not an exact supported Foundry/dnd5e pair.');
+  const expectedFeatures = pkg.target.dnd5e === '6.0.2' ? 77 : 76;
+  if (pkg.classes.length !== 1 || pkg.subclasses.length !== 4 || pkg.features.length !== expectedFeatures) throw new Error('Blood Hunter package document counts drifted from the module release contract.');
   if (pkg.coverageLedger.length !== EXPECTED_LEDGER_COUNT) throw new Error(`Blood Hunter coverage ledger must contain ${EXPECTED_LEDGER_COUNT} entries.`);
   if (countActivities(pkg) !== EXPECTED_ACTIVITY_COUNT) throw new Error(`Blood Hunter compiler output must contain ${EXPECTED_ACTIVITY_COUNT} Activities.`);
   const effectChanges = countAndValidateEffectChanges(pkg);
@@ -198,7 +206,7 @@ export async function assertExternalReferenceCompleteness(pkg: NativeBloodHunter
   const missing = [...EXPECTED_EXTERNAL_UUIDS].filter((uuid) => !actual.includes(uuid));
   const unexpected = actual.filter((uuid) => !EXPECTED_EXTERNAL_UUIDS.has(uuid));
   if (missing.length > 0 || unexpected.length > 0) throw new Error(`Recursive dnd5e external UUID set mismatch. Missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'}.`);
-  const referenceRoot = resolve(config.referenceCacheRoot, 'dnd5e/5.3.3/repo/packs/_source');
+  const referenceRoot = resolve(config.referenceCacheRoot, `dnd5e/${pkg.target.dnd5e}/repo/packs/_source`);
   const referenceIds = await collectReferenceDocumentIds(referenceRoot);
   const absentFromReference = actual.filter((uuid) => !referenceIds.has(uuid.split('.').at(-1)!));
   if (absentFromReference.length > 0) throw new Error(`dnd5e reference cache is missing external Item UUIDs: ${absentFromReference.join(', ')}`);
@@ -207,7 +215,7 @@ export async function assertExternalReferenceCompleteness(pkg: NativeBloodHunter
 
 async function collectReferenceDocumentIds(root: string): Promise<Set<string>> {
   const stats = await lstat(root).catch(() => undefined);
-  if (!stats?.isDirectory() || stats.isSymbolicLink()) throw new Error(`Locked dnd5e 5.3.3 reference cache is missing or unsafe: ${root}`);
+  if (!stats?.isDirectory() || stats.isSymbolicLink()) throw new Error(`Locked dnd5e reference cache is missing or unsafe: ${root}`);
   assertNoReparsePathComponents(parse(root).root, root, 'dnd5e reference cache');
   const ids = new Set<string>();
   async function visit(directory: string): Promise<void> {
@@ -295,6 +303,15 @@ async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, confi
   await mkdir(moduleRoot, { recursive: true });
   const sourceManifest = resolve(config.moduleRoot, 'src/module.json');
   await cp(sourceManifest, resolve(moduleRoot, 'module.json'), { force: false, errorOnExist: true });
+  if (pkg.target.dnd5e === BLOOD_HUNTER_DND6_TARGET.dnd5e) {
+    const manifest = await readJson(resolve(moduleRoot, 'module.json'));
+    validateManifest(manifest);
+    manifest.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
+    const dnd5e = asArray<Record<string, any>>(asRecord(manifest.relationships).systems).find((system) => system.id === 'dnd5e');
+    if (!dnd5e) throw new Error('Blood Hunter source manifest lacks its dnd5e system dependency.');
+    dnd5e.compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM };
+    await writeJson(resolve(moduleRoot, 'module.json'), manifest);
+  }
   await mkdir(resolve(moduleRoot, 'scripts'), { recursive: true });
   const bundle = await Bun.build({
     entrypoints: [resolve(config.moduleRoot, 'src/index.ts')],
@@ -316,6 +333,7 @@ async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, confi
     await writeLevelDbPack(resolve(moduleRoot, 'packs', packName), documents, config);
   }
   const documents = [...pkg.classes, ...pkg.subclasses, ...pkg.features].sort((left, right) => left._id.localeCompare(right._id, 'en'));
+  const runtimeDocuments = projectRuntimeDocuments(documents);
   const emptyMigrationPlan = planNativeBloodHunterMigration(pkg, []);
   const fixedGrantDocumentIds = [...new Set(pkg.grantGraph.filter((node) => node.type === 'ItemGrant').flatMap((node) => node.references.map((reference) => reference.targetDocumentId)))].sort();
   const rootDocumentIds = documents.filter((document) => document.type === 'class' || document.type === 'subclass').map((document) => document._id).sort();
@@ -343,7 +361,7 @@ async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, confi
     version: MODULE_VERSION,
     target: pkg.target,
     logicalHash: pkg.logicalHash,
-    documents,
+    documents: runtimeDocuments,
     fixedGrantDocumentIds,
     rootDocumentIds,
     mergePolicy: emptyMigrationPlan.mergePolicy,
@@ -412,14 +430,14 @@ export async function writeLevelDbPack(path: string, documents: readonly NativeI
   const database = new ClassicLevel(path, { createIfMissing: true, errorIfExists: true, keyEncoding: 'utf8', valueEncoding: 'json' });
   await database.open();
   try {
-    const sorted = [...documents].sort((left, right) => left._id.localeCompare(right._id, 'en'));
+    const sorted = projectRuntimeDocuments(documents).sort((left, right) => left._id.localeCompare(right._id, 'en'));
     // Foundry 14.364 reads Item packs from the Item document collection
     // sublevel. A root-level document (or legacy !index pseudo-index) is
     // invisible to the runtime Compendium index.
     const items = database.sublevel(ITEM_SUBLEVEL, { keyEncoding: 'utf8', valueEncoding: 'json' });
     const embeddedEffects = database.sublevel(ITEM_EFFECT_SUBLEVEL, { keyEncoding: 'utf8', valueEncoding: 'json' });
     for (const document of sorted) {
-      const effects = document.effects.map((effect) => projectEffectForFoundryV14Pack(effect));
+      const effects = document.effects;
       const item = {
         ...document,
         // Foundry 14 stores embedded collections as parent IDs plus records in
@@ -458,6 +476,9 @@ export async function inspectModuleTree(root: string, config: BloodHunterLabConf
   if (requireOwnedMarker && (marker.owned !== true || marker.moduleId !== MODULE_ID || marker.version !== MODULE_VERSION)) throw new Error(`Blood Hunter tree lacks its owned marker: ${root}`);
   const identity = await readJson(resolve(root, 'data/identity-manifest.json'));
   if (identity.moduleId !== MODULE_ID || identity.version !== MODULE_VERSION || typeof identity.logicalHash !== 'string') throw new Error('Blood Hunter identity manifest is incomplete.');
+  const manifestFoundry = asRecord(manifest.compatibility).verified;
+  const manifestDnd5e = asRecord(asArray<Record<string, unknown>>(asRecord(manifest.relationships).systems).find((system) => system.id === 'dnd5e')?.compatibility).verified;
+  if (asRecord(identity.target).foundry !== manifestFoundry || asRecord(identity.target).dnd5e !== manifestDnd5e) throw new Error('Blood Hunter manifest target differs from the compiled identity target.');
   const packs: Record<string, Array<Record<string, unknown>>> = {};
   for (const packName of PACK_NAMES) packs[packName] = await inspectLevelDbPack(resolve(root, 'packs', packName), config);
   assertIdentityMatchesPacks(identity, packs);
@@ -511,6 +532,7 @@ function validateActivityStructure(document: Record<string, unknown>, path: stri
 }
 
 export function projectEffectForFoundryV14Pack(effect: Record<string, unknown>): Record<string, unknown> {
+  if (!Object.prototype.hasOwnProperty.call(effect, 'changes') && Array.isArray(asRecord(effect.system).changes)) return structuredClone(effect);
   const changes = asArray<Record<string, unknown>>(effect.changes).map((change) => {
     const type = typeof change.type === 'string'
       ? change.type
@@ -539,6 +561,16 @@ export function projectEffectForFoundryV14Pack(effect: Record<string, unknown>):
   };
   delete projected.changes;
   return projected;
+}
+
+/** Actor migration uses the same Effect shape as the installed Item packs. */
+export function projectRuntimeDocuments(documents: readonly NativeItemSource[]): NativeItemSource[] {
+  return documents.map((document) => {
+    const projected = structuredClone(document);
+    projected.effects = projected.effects.map((effect) => projectEffectForFoundryV14Pack(effect));
+    refreshNativeBloodHunterItemLogicalHash(projected);
+    return projected;
+  });
 }
 
 function parseEffectChangeValue(value: unknown): unknown {
@@ -630,14 +662,17 @@ function isItemSublevelStorageKey(key: string): boolean {
 export function validateManifest(manifest: Record<string, unknown>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Blood Hunter module manifest ID/version mismatch.');
   const compatibility = asRecord(manifest.compatibility);
-  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.364') throw new Error('Blood Hunter module manifest must pin Foundry to exact 14.364.');
+  const foundry = compatibility.verified;
+  if (!['14.364', '14.368'].includes(foundry) || compatibility.minimum !== foundry || compatibility.maximum !== foundry) throw new Error('Blood Hunter module manifest must pin an exact supported Foundry version.');
   if (!Array.isArray(manifest.esmodules) || canonicalJson(manifest.esmodules) !== canonicalJson(['scripts/index.js'])) throw new Error('Blood Hunter module manifest must load scripts/index.js.');
   const relationships = asRecord(manifest.relationships);
   if (Object.prototype.hasOwnProperty.call(relationships, 'requires')) throw new Error('Blood Hunter module must not have hard module dependencies.');
   const systems = asArray<Record<string, unknown>>(relationships.systems);
   const dnd5e = systems.find((system) => system.id === 'dnd5e');
   const systemCompatibility = asRecord(dnd5e?.compatibility);
-  if (!dnd5e || systemCompatibility.minimum !== '5.3.3' || systemCompatibility.verified !== '5.3.3' || systemCompatibility.maximum !== '5.3.3') throw new Error('Blood Hunter module manifest must pin dnd5e to exact 5.3.3.');
+  const dnd5eVersion = foundry === '14.368' ? '6.0.2' : '5.3.3';
+  const maximumDnd5eVersions = foundry === '14.368' ? [dnd5eVersion, SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM] : [dnd5eVersion];
+  if (!dnd5e || systemCompatibility.minimum !== dnd5eVersion || systemCompatibility.verified !== dnd5eVersion || !maximumDnd5eVersions.includes(systemCompatibility.maximum)) throw new Error('Blood Hunter module manifest must preserve its exact projection version and reviewed runtime maximum.');
   const recommends = asArray<Record<string, unknown>>(relationships.recommends);
   const recommendedIds = recommends.map((entry) => entry.id).sort();
   if (canonicalJson(recommendedIds) !== canonicalJson(['dae', 'midi-qol'].sort())) throw new Error('Blood Hunter module must recommend exactly MIDI-QOL and DAE.');

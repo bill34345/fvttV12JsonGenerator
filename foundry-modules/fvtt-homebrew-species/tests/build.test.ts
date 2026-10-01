@@ -48,6 +48,23 @@ function prepareDualTargetVault(root: string): string {
   return vault;
 }
 
+function prepareNextTargetVault(root: string): string {
+  const vault = prepareVault(root);
+  const markdownPath = join(vault, 'input/species/test-species.md');
+  const markdown = readFileSync(markdownPath, 'utf8');
+  const next = compileSpeciesMarkdown(markdown, { fvttVersion: '14.368' });
+  const packagePath = join(vault, 'output/species/v14-368/test-species.json');
+  mkdirSync(resolve(packagePath, '..'), { recursive: true });
+  writeFileSync(packagePath, `${JSON.stringify(next, null, 2)}\n`);
+  const old = JSON.parse(readFileSync(join(vault, 'output/species/accepted-ledger.json'), 'utf8'));
+  const existing = old.entries[0];
+  writeFileSync(join(vault, 'output/species/accepted-ledger.json'), `${JSON.stringify({ schemaVersion: 2, moduleId: 'fvtt-homebrew-species', entries: [
+    { ...existing, fvttVersion: '14', effectProfile: 'core', rules: '2024' },
+    { ...existing, fvttVersion: '14.368', effectProfile: 'core', rules: '2024', packagePath: 'output/species/v14-368/test-species.json', logicalHash: next.logicalHash },
+  ] }, null, 2)}\n`);
+  return vault;
+}
+
 describe('fvtt-homebrew-species deterministic artifact', () => {
   test('builds two closed content packs and rejects stale Markdown', async () => {
     const root = mkdtempSync(join(tmpdir(), 'homebrew-species-build-')); const vault = prepareVault(root);
@@ -105,6 +122,66 @@ describe('fvtt-homebrew-species deterministic artifact', () => {
       if (previous === undefined) delete process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY;
       else process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY = previous;
     }
+  });
+
+  test('requires independent acceptance and builds a deterministic Foundry 14.368 static candidate', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'homebrew-species-next-build-'));
+    const vault = prepareVault(root);
+    const previousTestEntry = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY;
+    const injectedClassicLevelEntry = previousTestEntry?.trim();
+    const classicLevelEntry = injectedClassicLevelEntry
+      ? resolve(injectedClassicLevelEntry)
+      : resolve(process.env.FVTT_OPS_LAB_ROOT!, 'app/14.368/node_modules/classic-level/index.js');
+    await expect(buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'blocked'), classicLevelEntry, fvttVersion: '14.368' })).rejects.toThrow('requires accepted 14.368/core/2024 packages');
+    const ledgerPath = join(vault, 'output/species/accepted-ledger.json');
+    const v1 = JSON.parse(readFileSync(ledgerPath, 'utf8'));
+    writeFileSync(ledgerPath, `${JSON.stringify({ ...v1, entries: v1.entries.map((entry: any) => ({ ...entry, fvttVersion: '14.368' })) }, null, 2)}\n`);
+    await expect(buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'forged'), classicLevelEntry, fvttVersion: '14.368' })).rejects.toThrow('Schema v1 Species ledger cannot contain explicit target identities');
+    prepareNextTargetVault(root);
+    const first = await buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'dist-next-a'), classicLevelEntry, fvttVersion: '14.368', dnd5eRuntimeMaximum: '6.0.5' });
+    const second = await buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'dist-next-b'), classicLevelEntry, fvttVersion: '14.368', dnd5eRuntimeMaximum: '6.0.5' });
+    const oldClassicLevelEntry = injectedClassicLevelEntry
+      ? resolve(injectedClassicLevelEntry)
+      : resolve(process.env.FVTT_OPS_LAB_ROOT!, 'app/14.364/node_modules/classic-level/index.js');
+    const old = await buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'dist-old'), classicLevelEntry: oldClassicLevelEntry, fvttVersion: '14' });
+    expect(first.zipSha256).toBe(second.zipSha256);
+    expect(first.logicalHash).toBe(second.logicalHash);
+    expect(first.logicalHash).not.toBe(old.logicalHash);
+    expect(first.uuids).toEqual(old.uuids);
+    const verified = await verifyHomebrewSpeciesArtifact(first.distRoot, '6.0.5');
+    expect(verified).toMatchObject({ zipSha256: first.zipSha256, logicalHash: first.logicalHash, counts: { species: 1, features: 1 } });
+    await expect(verifyHomebrewSpeciesArtifact(first.distRoot)).rejects.toThrow(/exact requested runtime maximum 6\.0\.2/);
+    if (injectedClassicLevelEntry) {
+      const previousLabRoot = process.env.FVTT_OPS_LAB_ROOT;
+      const labWithoutNextRuntime = join(root, 'lab-without-14.368');
+      mkdirSync(labWithoutNextRuntime, { recursive: true });
+      delete process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY;
+      process.env.FVTT_OPS_LAB_ROOT = labWithoutNextRuntime;
+      try {
+        await expect(buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'reject-unversioned-entry'), classicLevelEntry, fvttVersion: '14.368', dnd5eRuntimeMaximum: '6.0.5' }))
+          .rejects.toThrow('requires the read-only Foundry 14.368 classic-level entry');
+        await expect(verifyHomebrewSpeciesArtifact(first.distRoot, '6.0.5'))
+          .rejects.toThrow('A read-only Foundry 14.368 classic-level entry is required.');
+      } finally {
+        if (previousTestEntry === undefined) delete process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY;
+        else process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY = previousTestEntry;
+        if (previousLabRoot === undefined) delete process.env.FVTT_OPS_LAB_ROOT;
+        else process.env.FVTT_OPS_LAB_ROOT = previousLabRoot;
+      }
+    }
+    const manifest = JSON.parse(readFileSync(join(first.moduleRoot, 'module.json'), 'utf8'));
+    const identity = JSON.parse(readFileSync(join(first.moduleRoot, 'data/identity-manifest.json'), 'utf8'));
+    expect(manifest.compatibility).toEqual({ minimum: '14.368', verified: '14.368', maximum: '14.368' });
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' });
+    expect(identity).toMatchObject({ supportStatus: 'static-candidate', target: { foundry: '14.368', dnd5e: '6.0.2', effectProfile: 'core', rules: '2024' } });
+    expect(JSON.parse(readFileSync(join(first.moduleRoot, 'data/accepted-packages.json'), 'utf8'))[0].target.dnd5e).toBe('6.0.2');
+    const labRoot = mkdtempSync(join(tmpdir(), 'homebrew-species-next-install-'));
+    await expect(installHomebrewSpeciesToLab({ labRoot, distRoot: first.distRoot }, false)).rejects.toThrow('static candidates cannot use');
+    const acceptedPath = join(first.moduleRoot, 'data/accepted-packages.json');
+    const accepted = JSON.parse(readFileSync(acceptedPath, 'utf8'));
+    accepted[0].target.dnd5e = '5.3.3';
+    writeFileSync(acceptedPath, `${JSON.stringify(accepted, null, 2)}\n`);
+    await expect(verifyHomebrewSpeciesArtifact(first.distRoot, '6.0.5')).rejects.toThrow('accepted packages do not match the exact target');
   });
 
   test('install target is exact and cannot escape the configured local Lab', () => {

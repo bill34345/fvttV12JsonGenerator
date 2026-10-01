@@ -9,17 +9,23 @@ export const SPECIES_V14_TARGET = Object.freeze({
   effectProfile: 'core',
   rules: '2024',
 } as const);
+export const SPECIES_V14_368_TARGET = Object.freeze({
+  foundry: '14.368',
+  dnd5e: '6.0.2',
+  effectProfile: 'core',
+  rules: '2024',
+} as const);
 export const SPECIES_V12_TARGET = Object.freeze({
   foundry: '12.331',
   dnd5e: '4.3.9',
   effectProfile: 'core',
   rules: '2024',
 } as const);
-export type SpeciesTargetVersion = '12' | '14';
-export type SpeciesTarget = typeof SPECIES_V12_TARGET | typeof SPECIES_V14_TARGET;
+export type SpeciesTargetVersion = '12' | '14' | '14.368';
+export type SpeciesTarget = typeof SPECIES_V12_TARGET | typeof SPECIES_V14_TARGET | typeof SPECIES_V14_368_TARGET;
 export type SpeciesTargetForVersion<TVersion extends SpeciesTargetVersion> = TVersion extends '12'
   ? typeof SPECIES_V12_TARGET
-  : typeof SPECIES_V14_TARGET;
+  : TVersion extends '14.368' ? typeof SPECIES_V14_368_TARGET : typeof SPECIES_V14_TARGET;
 export interface SpeciesCompileOptions<TVersion extends SpeciesTargetVersion = SpeciesTargetVersion> { fvttVersion: TVersion }
 export const HOMEBREW_SPECIES_MODULE_ID = 'fvtt-homebrew-species' as const;
 export const SPECIES_FALLBACK_ICON = 'icons/svg/mystery-man.svg';
@@ -48,6 +54,7 @@ export interface NativeSpeciesPackage<TTarget extends SpeciesTarget = SpeciesTar
 export type NativeSpeciesPackageForVersion<TVersion extends SpeciesTargetVersion> = NativeSpeciesPackage<SpeciesTargetForVersion<TVersion>>;
 export type NativeSpeciesPackageV12 = NativeSpeciesPackageForVersion<'12'>;
 export type NativeSpeciesPackageV14 = NativeSpeciesPackageForVersion<'14'>;
+export type NativeSpeciesPackageV14_368 = NativeSpeciesPackageForVersion<'14.368'>;
 
 export interface SpeciesPackageFinding {
   code: string;
@@ -116,7 +123,7 @@ export function compileCanonicalSpecies(
     type: 'Size',
     configuration: { sizes: species.size.options },
     level: 0,
-    title: '',
+    ...(options.fvttVersion === '14.368' ? { name: '' } : { title: '' }),
     hint: species.size.hint,
     value: options.fvttVersion === '12' ? { size: '' } : {},
   }];
@@ -127,7 +134,7 @@ export function compileCanonicalSpecies(
       configuration: { items, optional: false, spell: null },
       value: {},
       level,
-      title: `${species.displayName}特性`,
+      ...(options.fvttVersion === '14.368' ? { name: `${species.displayName}特性` } : { title: `${species.displayName}特性` }),
       hint: '',
     });
   }
@@ -140,8 +147,13 @@ export function compileCanonicalSpecies(
       description: { value: speciesDescription(species), chat: '' },
       source: { custom: 'Private homebrew', rules: '2024', revision: species.source.irRevision, book: '', license: '' },
       advancement,
-      movement: { burrow: null, climb: null, fly: null, swim: null, walk: species.movement.walk, units: 'ft', hover: false },
-      senses: {
+      movement: options.fvttVersion === '14.368'
+        ? { speeds: { burrow: null, climb: null, fly: null, swim: null, walk: species.movement.walk }, units: 'ft', hover: false }
+        : { burrow: null, climb: null, fly: null, swim: null, walk: species.movement.walk, units: 'ft', hover: false },
+      senses: options.fvttVersion === '14.368' ? {
+        ranges: { darkvision: species.senses.darkvision ?? null, blindsight: null, tremorsense: null, truesight: null },
+        units: 'ft', special: '',
+      } : {
         darkvision: species.senses.darkvision ?? null,
         blindsight: null,
         tremorsense: null,
@@ -172,7 +184,7 @@ export function compileCanonicalSpecies(
 function projectFeature(species: CanonicalSpecies, feature: SpeciesFeature, fvttVersion: SpeciesTargetVersion): Record<string, any> {
   const id = createStableDocumentId(['species', species.identifier, 'feature', feature.id]);
   const mechanics = feature.parts.flatMap((part) => part.mechanics);
-  const effects = mechanics.flatMap((mechanic, index) => projectEffect(species, feature, mechanic, index));
+  const effects = mechanics.flatMap((mechanic, index) => projectEffect(species, feature, mechanic, index, fvttVersion));
   const limited = mechanics.find((mechanic): mechanic is Extract<SpeciesMechanic, { kind: 'limited-utility' }> => mechanic.kind === 'limited-utility');
   const activityId = limited ? createStableDocumentId(['species', species.identifier, 'feature', feature.id, 'activity']) : undefined;
   const activities = limited && activityId ? {
@@ -219,7 +231,7 @@ function projectFeature(species: CanonicalSpecies, feature: SpeciesFeature, fvtt
       uses: { spent: 0, recovery: [], max: '' },
       roll: { prompt: false, visible: false, name: '', formula: '' },
       img: SPECIES_FALLBACK_ICON,
-      appliedEffects: [],
+      ...(fvttVersion === '14.368' ? {} : { appliedEffects: [] }),
     },
   } : {};
   const level = Math.min(...feature.parts.map((part) => part.level));
@@ -248,24 +260,36 @@ function projectFeature(species: CanonicalSpecies, feature: SpeciesFeature, fvtt
   };
 }
 
-function projectEffect(species: CanonicalSpecies, feature: SpeciesFeature, mechanic: SpeciesMechanic, index: number): Record<string, any>[] {
+function projectEffect(species: CanonicalSpecies, feature: SpeciesFeature, mechanic: SpeciesMechanic, index: number, fvttVersion: SpeciesTargetVersion): Record<string, any>[] {
   const key = EFFECT_ALLOWLIST.get(mechanic.kind);
   if (!key || (mechanic.kind !== 'hp-per-level' && mechanic.kind !== 'ac-bonus')) return [];
   const effectId = createStableDocumentId(['species', species.identifier, 'feature', feature.id, 'effect', index]);
+  const dnd6 = fvttVersion === '14.368';
   return [{
     name: feature.name,
     img: SPECIES_FALLBACK_ICON,
     _id: effectId,
     type: 'base',
-    system: {},
-    changes: [{ key, mode: 2, value: String(mechanic.value), priority: null }],
+    ...(dnd6 ? {
+      system: {
+        changes: [{
+          _id: createStableDocumentId(['species', species.identifier, 'feature', feature.id, 'effect', index, 'change']),
+          key, type: 'add', value: String(mechanic.value), phase: 'initial', priority: null,
+          conditions: '{}', replacement: '',
+        }],
+        origin: {}, conditions: '{}', magical: false, rider: { statuses: [] },
+      },
+    } : { system: {}, changes: [{ key, mode: 2, value: String(mechanic.value), priority: null }] }),
     disabled: false,
-    duration: { startTime: null, seconds: null, combat: null, rounds: null, turns: null, startRound: null, startTurn: null },
+    ...(dnd6
+      ? { start: null, duration: { value: null, units: 'seconds', expiry: null, expired: false } }
+      : { duration: { startTime: null, seconds: null, combat: null, rounds: null, turns: null, startRound: null, startTurn: null } }),
     description: '',
     origin: `Compendium.${HOMEBREW_SPECIES_MODULE_ID}.features.Item.${createStableDocumentId(['species', species.identifier, 'feature', feature.id])}`,
     tint: '#ffffff',
     transfer: true,
     statuses: [],
+    ...(dnd6 ? { showIcon: 1, folder: null } : {}),
     sort: 0,
     flags: {},
   }];
@@ -279,8 +303,8 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
   const fvttVersion = identifySpeciesTarget(pkg.target);
   if (!fvttVersion || (expectedVersion && fvttVersion !== expectedVersion)) {
     add('TARGET', '/target', expectedVersion
-      ? `Species package must target Foundry ${expectedVersion === '12' ? '12.331 / dnd5e 4.3.9' : '14.364 / dnd5e 5.3.3'}, with core / 2024.`
-      : 'Species package must target Foundry 12.331 / dnd5e 4.3.9 or Foundry 14.364 / dnd5e 5.3.3, with core / 2024.');
+      ? `Species package must target ${speciesTarget(expectedVersion).foundry} / dnd5e ${speciesTarget(expectedVersion).dnd5e}, with core / 2024.`
+      : 'Species package must target a supported exact Foundry / dnd5e pair, with core / 2024.');
   }
   const ids = new Set<string>();
   const documents = [pkg.species, ...pkg.features];
@@ -304,13 +328,43 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
         if (Object.keys(effect.system ?? {}).length || Object.keys(effect.flags ?? {}).length) add('V12_EFFECT_EXTENSION', `/documents/${index}/effects/${effectIndex}`, 'V12 Core Species effects must not carry extension system data or flags.');
       }
       if (effect.transfer !== true) add('EFFECT_TRANSFER', `/documents/${index}/effects/${effectIndex}/transfer`, 'Species permanent effects must transfer.');
-      for (const [changeIndex, change] of (Array.isArray(effect.changes) ? effect.changes : []).entries()) {
+      if (fvttVersion === '14.368') {
+        const effectPath = `/documents/${index}/effects/${effectIndex}`;
+        rejectUnexpectedFields(effect, ['name', 'img', '_id', 'type', 'system', 'disabled', 'start', 'duration', 'description', 'origin', 'tint', 'transfer', 'statuses', 'showIcon', 'folder', 'sort', 'flags'], effectPath, add, 'V14_368');
+        rejectUnexpectedFields(effect.system, ['changes', 'conditions', 'magical', 'rider', 'origin'], `${effectPath}/system`, add, 'V14_368');
+        if (effect.type !== 'base' || !Array.isArray(effect.system?.changes) || effect.system.changes.length !== 1
+          || canonicalJson(effect.system.origin) !== canonicalJson({}) || effect.system.conditions !== '{}' || effect.system.magical !== false
+          || canonicalJson(effect.system.rider) !== canonicalJson({ statuses: [] })) {
+          add('V14_368_EFFECT_SYSTEM', `${effectPath}/system`, 'dnd5e 6 base effects require one native system change and base system fields.');
+        }
+        if (effect.start !== null || canonicalJson(effect.duration) !== canonicalJson({ value: null, units: 'seconds', expiry: null, expired: false })
+          || effect.showIcon !== 1 || effect.folder !== null) {
+          add('V14_368_EFFECT_DOCUMENT', effectPath, 'Foundry 14 effects require native start, duration, icon, and folder fields.');
+        }
+      }
+      const changes = fvttVersion === '14.368' ? effect.system?.changes : effect.changes;
+      for (const [changeIndex, change] of (Array.isArray(changes) ? changes : []).entries()) {
         if (![...EFFECT_ALLOWLIST.values()].includes(change.key)) add('EFFECT_KEY', `/documents/${index}/effects/${effectIndex}/changes/${changeIndex}/key`, `Effect key ${String(change.key)} is not allowlisted.`);
-        if (change.mode !== 2) add('EFFECT_MODE', `/documents/${index}/effects/${effectIndex}/changes/${changeIndex}/mode`, 'Species effect changes must use ADD mode 2.');
+        if (fvttVersion === '14.368') {
+          rejectUnexpectedFields(change, ['_id', 'key', 'type', 'value', 'phase', 'priority', 'conditions', 'replacement'], `/documents/${index}/effects/${effectIndex}/system/changes/${changeIndex}`, add, 'V14_368');
+          if (!/^[a-f0-9]{16}$/u.test(String(change._id ?? '')) || change.type !== 'add' || change.phase !== 'initial'
+            || change.priority !== null || change.conditions !== '{}' || change.replacement !== '') {
+            add('V14_368_EFFECT_CHANGE', `/documents/${index}/effects/${effectIndex}/system/changes/${changeIndex}`, 'dnd5e 6 Species changes must use stable IDs and native add/initial fields.');
+          }
+        } else if (change.mode !== 2) add('EFFECT_MODE', `/documents/${index}/effects/${effectIndex}/changes/${changeIndex}/mode`, 'Species effect changes must use ADD mode 2.');
       }
     }
   }
   if (pkg.species?.type !== 'race' || pkg.species?.system?.source?.rules !== '2024') add('RACE_STRUCTURE', '/species', 'Species document must be a 2024 race Item.');
+  if (fvttVersion === '14.368') {
+    const movement = pkg.species?.system?.movement;
+    const senses = pkg.species?.system?.senses;
+    if (movement?.speeds?.walk == null || Object.hasOwn(movement ?? {}, 'walk')) add('V14_368_MOVEMENT', '/species/system/movement', 'dnd5e 6 movement must use speeds.walk without a flat walk field.');
+    if (!senses?.ranges || Object.hasOwn(senses, 'darkvision')) add('V14_368_SENSES', '/species/system/senses', 'dnd5e 6 senses must use ranges without flat sense fields.');
+    for (const [index, advancement] of (pkg.species?.system?.advancement ?? []).entries()) {
+      if (!Object.hasOwn(advancement, 'name') || Object.hasOwn(advancement, 'title')) add('V14_368_ADVANCEMENT', `/species/system/advancement/${index}`, 'dnd5e 6 advancements must use name, not title.');
+    }
+  }
   const sizeAdvancement = (pkg.species?.system?.advancement ?? []).find((entry: any) => entry.type === 'Size');
   if (fvttVersion === '12' && (sizeAdvancement?.level !== 0 || canonicalJson(sizeAdvancement?.value) !== canonicalJson({ size: '' }))) {
     add('V12_SIZE_VALUE', '/species/system/advancement', 'V12 Size advancement must be level 0 with value.size initialized to an empty string.');
@@ -352,7 +406,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
     if (new Set(coverage.map((entry) => entry.level)).size > 1) add('MIXED_FEATURE_GRANT_LEVEL', `${featurePath}/coverage`, 'All parts of one granted Feature must use the same level.');
     const kinds = coverage.flatMap((entry) => entry.mechanicKinds);
     const expectedEffectKeys = kinds.flatMap((kind) => EFFECT_ALLOWLIST.has(kind) ? [EFFECT_ALLOWLIST.get(kind)!] : []);
-    const actualEffectKeys = (feature.effects ?? []).flatMap((effect: any) => (effect.changes ?? []).map((change: any) => change.key));
+    const actualEffectKeys = (feature.effects ?? []).flatMap((effect: any) => (fvttVersion === '14.368' ? effect.system?.changes ?? [] : effect.changes ?? []).map((change: any) => change.key));
     for (const key of actualEffectKeys) if (!expectedEffectKeys.includes(key)) add('UNDECLARED_EFFECT', `${featurePath}/effects`, `Effect ${String(key)} is not declared by the coverage ledger.`);
     if (actualEffectKeys.length !== expectedEffectKeys.length || expectedEffectKeys.some((key) => !actualEffectKeys.includes(key))) add('EFFECT_COVERAGE_MISMATCH', `${featurePath}/effects`, 'Native Effect mechanics and coverage must be bidirectionally complete.');
     const activities = Object.values(feature.system?.activities ?? {}) as any[];
@@ -361,6 +415,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
     for (const [activityIndex, activity] of activities.entries()) {
       if (activity.type !== 'utility' || activity.consumption?.spellSlot !== false || !activity.consumption?.targets?.some((target: any) => target.type === 'itemUses' && Number(target.value) >= 1)) add('INVALID_LIMITED_UTILITY', `${featurePath}/system/activities/${activityIndex}`, 'Limited Utility must consume item uses without consuming a spell slot.');
       if (activity.target?.affects?.type !== 'self' || activity.target?.template?.type) add('INVALID_UTILITY_TARGET', `${featurePath}/system/activities/${activityIndex}/target`, 'Species Limited Utility must target only the owning character and must not create a template.');
+      if (fvttVersion === '14.368' && Object.hasOwn(activity, 'appliedEffects')) add('V14_368_ACTIVITY_FIELD', `${featurePath}/system/activities/${activityIndex}/appliedEffects`, 'dnd5e 6 activities use effects and cannot contain appliedEffects.');
       if (fvttVersion === '12') {
         if (Object.hasOwn(activity, 'appliedEffects')) add('V14_ACTIVITY_FIELD', `${featurePath}/system/activities/${activityIndex}/appliedEffects`, 'V12 activities must use effects and cannot contain appliedEffects.');
         const allowedActivityFields = new Set(['type', 'name', '_id', 'sort', 'activation', 'consumption', 'description', 'duration', 'effects', 'range', 'target', 'uses', 'roll', 'img']);
@@ -387,7 +442,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
 }
 
 function speciesTarget(fvttVersion: SpeciesTargetVersion): SpeciesTarget {
-  return fvttVersion === '12' ? SPECIES_V12_TARGET : SPECIES_V14_TARGET;
+  return fvttVersion === '12' ? SPECIES_V12_TARGET : fvttVersion === '14.368' ? SPECIES_V14_368_TARGET : SPECIES_V14_TARGET;
 }
 
 function identifySpeciesTarget(target: SpeciesTarget): SpeciesTargetVersion | null {
@@ -395,13 +450,15 @@ function identifySpeciesTarget(target: SpeciesTarget): SpeciesTargetVersion | nu
     && target?.effectProfile === 'core' && target?.rules === '2024') return '12';
   if (target?.foundry === SPECIES_V14_TARGET.foundry && target?.dnd5e === SPECIES_V14_TARGET.dnd5e
     && target?.effectProfile === 'core' && target?.rules === '2024') return '14';
+  if (target?.foundry === SPECIES_V14_368_TARGET.foundry && target?.dnd5e === SPECIES_V14_368_TARGET.dnd5e
+    && target?.effectProfile === 'core' && target?.rules === '2024') return '14.368';
   return null;
 }
 
-function rejectUnexpectedFields(value: unknown, allowed: string[], path: string, add: (code: string, path: string, message: string) => void): void {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) { add('V12_FIELD_SHAPE', path, 'V12 projected data must use an object at this path.'); return; }
+function rejectUnexpectedFields(value: unknown, allowed: string[], path: string, add: (code: string, path: string, message: string) => void, prefix = 'V12'): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) { add(`${prefix}_FIELD_SHAPE`, path, `${prefix} projected data must use an object at this path.`); return; }
   const allowlist = new Set(allowed);
-  for (const field of Object.keys(value as Record<string, unknown>)) if (!allowlist.has(field)) add('V12_FIELD', `${path}/${field}`, `Unsupported V12 field ${field}.`);
+  for (const field of Object.keys(value as Record<string, unknown>)) if (!allowlist.has(field)) add(`${prefix}_FIELD`, `${path}/${field}`, `Unsupported ${prefix} field ${field}.`);
 }
 
 function validateV12ActivityShape(activity: any, path: string, add: (code: string, path: string, message: string) => void): void {

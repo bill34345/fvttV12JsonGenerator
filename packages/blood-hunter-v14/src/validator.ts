@@ -26,11 +26,14 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
   }
   const pkg = value as NativeBloodHunterPackage;
   if (pkg.moduleId !== BLOOD_HUNTER_MODULE_ID || pkg.version !== BLOOD_HUNTER_MODULE_VERSION) add('MODULE_IDENTITY_MISMATCH', '/', 'moduleId/version 必须锁定为 fvtt-blood-hunter-2024@1.0.0。');
-  if (pkg.target?.foundry !== '14.364' || pkg.target?.dnd5e !== '5.3.3' || pkg.target?.rules !== '2024' || pkg.target?.effectProfile !== 'modded-v14') add('TARGET_VERSION_MISMATCH', '/target', '目标必须锁定 Foundry 14.364 / dnd5e 5.3.3 / 2024 / modded-v14。');
+  const dnd6 = pkg.target?.foundry === '14.368' && pkg.target?.dnd5e === '6.0.2';
+  if ((!dnd6 && (pkg.target?.foundry !== '14.364' || pkg.target?.dnd5e !== '5.3.3')) || pkg.target?.rules !== '2024' || pkg.target?.effectProfile !== 'modded-v14') add('TARGET_VERSION_MISMATCH', '/target', '目标必须是精确的 14.364/5.3.3 或 14.368/6.0.2 配对。');
   if (pkg.sourceSha256 !== undefined && pkg.sourceSha256 !== EXPECTED_BLOOD_HUNTER_SOURCE_SHA256) add('SOURCE_HASH_MISMATCH', '/sourceSha256', 'byte-verified package 必须记录锁定 BloodHunter2024 SHA-256。');
   if (!Array.isArray(pkg.classes) || pkg.classes.length !== 1) add('CLASS_COUNT_MISMATCH', '/classes', '必须只有一个 class document。');
   if (!Array.isArray(pkg.subclasses) || pkg.subclasses.length !== 4) add('SUBCLASS_COUNT_MISMATCH', '/subclasses', '必须恰有四个 subclass documents。');
-  if (!Array.isArray(pkg.features) || pkg.features.length !== 76) add('FEATURE_COUNT_MISMATCH', '/features', '必须为 75 个源 canonical feat 加 synthetic「诱变武者」，共 76 项。');
+  if (!Array.isArray(pkg.features) || pkg.features.length !== (dnd6 ? 77 : 76)) add('FEATURE_COUNT_MISMATCH', '/features', dnd6
+    ? 'D&D 6 目标必须为 75 个源 canonical feat 加「诱变武者」和战斗风格先决条件两项 synthetic feat，共 77 项。'
+    : '旧目标必须为 75 个源 canonical feat 加 synthetic「诱变武者」，共 76 项。');
   if (!Array.isArray(pkg.coverageLedger) || pkg.coverageLedger.length !== 94) add('COVERAGE_LEDGER_COUNT_MISMATCH', '/coverageLedger', 'coverage ledger 必须恰有 94 项。');
 
   const documents = [...asArray<NativeItemSource>(pkg.classes), ...asArray<NativeItemSource>(pkg.subclasses), ...asArray<NativeItemSource>(pkg.features)];
@@ -38,7 +41,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
   const documentById = new Map<string, NativeItemSource>();
   const advancementById = new Map<string, { item: NativeItemSource; advancement: JsonObject }>();
   for (const [index, item] of documents.entries()) {
-    validateItem(item, `/documents/${index}`, ids, documentById, advancementById, add);
+    validateItem(item, `/documents/${index}`, ids, documentById, advancementById, dnd6, add);
   }
   validateClassDocument(pkg.classes?.[0], '/classes/0', add);
   for (const [index, item] of asArray<NativeItemSource>(pkg.subclasses).entries()) validateSubclassDocument(item, `/subclasses/${index}`, add);
@@ -58,7 +61,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
     for (const [referenceIndex, reference] of asArray<NativeReferenceContract>(node.references).entries()) {
       validateReference(reference, `${path}/references/${referenceIndex}`, documentById, add);
     }
-    if (persisted) validateGraphPersistence(node, persisted.advancement, path, add);
+    if (persisted) validateGraphPersistence(node, persisted.advancement, path, dnd6, add);
   }
   for (const [id, persisted] of advancementById) {
     const type = stringValue(persisted.advancement.type);
@@ -73,7 +76,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
 
   validateExpectedPools(pkg, graph, add);
   validateSubclassGrants(pkg, graph, advancementById, add);
-  validateSemanticAdvancements(pkg, advancementById, add);
+  validateSemanticAdvancements(pkg, advancementById, dnd6, add);
   validateCoverageLedger(pkg, ids, graphIds, advancementById, documentById, add);
   validateActivitySummary(pkg, documents, add);
 
@@ -83,7 +86,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
   return { ok: findings.length === 0, findings };
 }
 
-function validateItem(item: NativeItemSource, path: string, ids: Set<string>, documentById: Map<string, NativeItemSource>, advancementById: Map<string, { item: NativeItemSource; advancement: JsonObject }>, add: AddFinding): void {
+function validateItem(item: NativeItemSource, path: string, ids: Set<string>, documentById: Map<string, NativeItemSource>, advancementById: Map<string, { item: NativeItemSource; advancement: JsonObject }>, dnd6: boolean, add: AddFinding): void {
   if (!isStrictId(item?._id) || ids.has(item._id)) add('INVALID_DOCUMENT_ID', `${path}/_id`, 'Item _id 必须唯一且为严格16位 ASCII 字母数字。');
   if (item?._id) {
     ids.add(item._id);
@@ -105,7 +108,7 @@ function validateItem(item: NativeItemSource, path: string, ids: Set<string>, do
     if (advancementObject._id !== id || !isStrictId(id)) add('INVALID_ADVANCEMENT_ID', `${path}/system/advancement/${id}`, 'advancement key 和 _id 必须相等，并且为严格16位 ASCII 字母数字。');
     if (advancementById.has(id)) add('DUPLICATE_ADVANCEMENT_ID', `${path}/system/advancement/${id}`, '所有持久 advancement id 必须全包唯一。');
     advancementById.set(id, { item, advancement: advancementObject });
-    validateAdvancement(advancementObject, `${path}/system/advancement/${id}`, add);
+    validateAdvancement(advancementObject, `${path}/system/advancement/${id}`, dnd6, add);
   }
 
   const activities = item?.system?.activities;
@@ -126,10 +129,12 @@ function validateItem(item: NativeItemSource, path: string, ids: Set<string>, do
   }
 }
 
-function validateAdvancement(advancement: JsonObject, path: string, add: AddFinding): void {
+function validateAdvancement(advancement: JsonObject, path: string, dnd6: boolean, add: AddFinding): void {
   const type = stringValue(advancement.type);
   const configuration = asRecord(advancement.configuration);
-  if (!type || !Number.isInteger(advancement.level) || !stringValue(advancement.title) && advancement.title !== '') add('INCOMPLETE_ADVANCEMENT', path, '持久 advancement 必须有 type、integer level、configuration、title 和 value。');
+  const name = dnd6 ? advancement.name : advancement.title;
+  if (!type || !Number.isInteger(advancement.level) || (!stringValue(name) && name !== '')) add('INCOMPLETE_ADVANCEMENT', path, '持久 advancement 必须有 type、integer level、configuration、目标版本名称和 value。');
+  if ((dnd6 && ('title' in advancement || 'icon' in advancement)) || (!dnd6 && ('name' in advancement || 'img' in advancement))) add('ADVANCEMENT_VERSION_SHAPE_MISMATCH', path, 'Advancement name/img 与 title/icon 必须符合目标 dnd5e 版本。');
   if (!asRecord(advancement.value)) add('INCOMPLETE_ADVANCEMENT_VALUE', `${path}/value`, '持久 advancement value 必须是对象。');
   if (type === 'ItemGrant') {
     const items = asArray<JsonObject>(configuration.items);
@@ -139,10 +144,12 @@ function validateAdvancement(advancement: JsonObject, path: string, add: AddFind
     }
   }
   if (type === 'ItemChoice') {
-    const pool = asArray<string>(configuration.pool);
+    const pool = asArray<unknown>(configuration.pool);
     const choices = asRecord(configuration.choices);
     if (pool.length === 0 || Object.keys(choices).length === 0) add('EMPTY_OR_INVALID_ITEM_CHOICE', `${path}/configuration`, '每个持久 ItemChoice 必须有非空 pool 和 choices。');
-    for (const [index, uuid] of pool.entries()) {
+    for (const [index, entry] of pool.entries()) {
+      const uuid = dnd6 ? stringValue(asRecord(entry).uuid) : stringValue(entry);
+      if ((dnd6 && (typeof entry !== 'object' || entry === null)) || (!dnd6 && typeof entry !== 'string')) add('ITEM_CHOICE_POOL_SHAPE_MISMATCH', `${path}/configuration/pool/${index}`, 'ItemChoice pool 条目形状与目标版本不符。');
       if (!isDirectItemUuid(uuid)) add('INVALID_ITEM_CHOICE_UUID', `${path}/configuration/pool/${index}`, 'ItemChoice configuration.pool 必须直接使用模块或 dnd5e Compendium Item UUID，且终端 ID 为严格16位。');
     }
     for (const [level, choice] of Object.entries(choices)) {
@@ -237,7 +244,7 @@ function validateReference(reference: NativeReferenceContract, path: string, doc
   if (reference.source === 'dnd5e' && !dnd5eMatch) add('DND5E_REFERENCE_MISMATCH', path, 'dnd5e reference 必须使用 Compendium.dnd5e.*.Item.<16-id>。');
 }
 
-function validateGraphPersistence(node: GrantGraphNode, advancement: JsonObject, path: string, add: AddFinding): void {
+function validateGraphPersistence(node: GrantGraphNode, advancement: JsonObject, path: string, dnd6: boolean, add: AddFinding): void {
   const configuration = asRecord(advancement.configuration);
   const referenced = node.references.map((reference) => reference.uuid).sort();
   if (node.type === 'ItemGrant') {
@@ -245,7 +252,7 @@ function validateGraphPersistence(node: GrantGraphNode, advancement: JsonObject,
     if (!sameArray(persisted, referenced)) add('ITEM_GRANT_GRAPH_MISMATCH', path, 'ItemGrant configuration.items 必须与 graph 的直接 UUID references 完全一致。');
   }
   if (node.type === 'ItemChoice') {
-    const persisted = asArray<string>(configuration.pool).map(String).sort();
+    const persisted = asArray<unknown>(configuration.pool).map((entry) => dnd6 ? String(asRecord(entry).uuid) : String(entry)).sort();
     if (!sameArray(persisted, referenced)) add('ITEM_CHOICE_GRAPH_MISMATCH', path, 'ItemChoice configuration.pool 必须与 graph 的直接 UUID references 完全一致。');
   }
   if (node.type === 'AbilityScoreImprovement' && node.references.length > 0 && asRecord(advancement.configuration).recommendation !== node.references[0]?.uuid) add('ASI_GRAPH_MISMATCH', path, 'Epic Boon 的 recommendation 必须与其直接 dnd5e UUID reference 一致。');
@@ -276,18 +283,30 @@ function validateSubclassGrants(pkg: NativeBloodHunterPackage, graph: GrantGraph
   }
 }
 
-function validateSemanticAdvancements(pkg: NativeBloodHunterPackage, advancements: ReadonlyMap<string, { item: NativeItemSource; advancement: JsonObject }>, add: AddFinding): void {
+function validateSemanticAdvancements(pkg: NativeBloodHunterPackage, advancements: ReadonlyMap<string, { item: NativeItemSource; advancement: JsonObject }>, dnd6: boolean, add: AddFinding): void {
   const classItem = pkg.classes[0];
   if (!classItem) return;
   const classAdvancements = Object.values(asRecord(classItem.system.advancement)).map(asRecord);
   for (const advancement of classAdvancements.filter((candidate) => candidate.type === 'AbilityScoreImprovement')) validateAsiConfiguration(asRecord(advancement.configuration), '/classes/0/system/advancement', add);
-  const mastery = classAdvancements.find((candidate) => candidate.type === 'Trait' && candidate.title === '武器精通');
+  const mastery = classAdvancements.find((candidate) => candidate.type === 'Trait' && advancementName(candidate, dnd6) === '武器精通');
   const masteryConfiguration = asRecord(mastery?.configuration);
   if (!mastery || masteryConfiguration.mode !== 'mastery' || asArray<JsonObject>(masteryConfiguration.choices)[0]?.count !== 2 || !asArray<string>(asArray<JsonObject>(masteryConfiguration.choices)[0]?.pool).includes('weapon:*')) add('WEAPON_MASTERY_SCHEMA_MISMATCH', '/classes/0/system/advancement', '武器精通必须是 Trait/mastery，count 2，pool weapon:*。');
-  const fighting = classAdvancements.find((candidate) => candidate.type === 'ItemChoice' && candidate.title === '战斗风格');
-  const fightingPool = asArray<string>(asRecord(fighting?.configuration).pool);
-  if (!fighting || FIGHTING_STYLE_UUIDS.some((uuid) => !fightingPool.includes(uuid)) || !fightingPool.some((uuid) => MODULE_UUID.test(uuid))) add('FIGHTING_STYLE_SCHEMA_MISMATCH', '/classes/0/system/advancement', '战斗风格必须有四个锁定 official UUID 和 synthetic 模块 feat。');
-  const boon = classAdvancements.find((candidate) => candidate.type === 'AbilityScoreImprovement' && candidate.title === '传奇恩惠');
+  const fighting = classAdvancements.find((candidate) => candidate.type === 'ItemChoice' && advancementName(candidate, dnd6) === '战斗风格');
+  const fightingPool = asArray<unknown>(asRecord(fighting?.configuration).pool).map((entry) => dnd6 ? stringValue(asRecord(entry).uuid) : stringValue(entry));
+  if (!fighting || FIGHTING_STYLE_UUIDS.some((uuid) => !fightingPool.includes(uuid)) || !fightingPool.some((uuid) => MODULE_UUID.test(uuid ?? ''))) add('FIGHTING_STYLE_SCHEMA_MISMATCH', '/classes/0/system/advancement', '战斗风格必须有四个锁定 official UUID 和 synthetic 模块 feat。');
+  if (dnd6) {
+    const marker = pkg.features.find((item) => item.system.identifier === 'fighting-style');
+    const grant = classAdvancements.find((candidate) => candidate.type === 'ItemGrant' && candidate.level === 2);
+    const markerUuid = marker ? moduleUuidFor(marker) : undefined;
+    const grantItems = asArray<JsonObject>(asRecord(grant?.configuration).items).map((item) => stringValue(item.uuid));
+    const grantNode = pkg.grantGraph.find((node) => node.id === grant?._id);
+    if (!marker || asRecord(marker.system.type).value !== 'class' || !stringValue(asRecord(bloodHunterMetadata(marker).synthetic).origin)
+      || !markerUuid || !grantItems.includes(markerUuid) || !grantNode?.references.some((reference) => reference.uuid === markerUuid)
+      || !fighting || classAdvancements.indexOf(grant!) >= classAdvancements.indexOf(fighting)) {
+      add('FIGHTING_STYLE_ELIGIBILITY_MISSING', '/classes/0/system/advancement', 'D&D 6 目标必须先在2级授予本团战斗风格基础特性，再提供四个官方风格与诱变武者的选择。');
+    }
+  }
+  const boon = classAdvancements.find((candidate) => candidate.type === 'AbilityScoreImprovement' && advancementName(candidate, dnd6) === '传奇恩惠');
   const boonConfiguration = asRecord(boon?.configuration);
   if (!boon || boonConfiguration.recommendation !== EPIC_BOON_UUID || boonConfiguration.points !== 2 || boonConfiguration.cap !== 2 || boonConfiguration.max !== null) add('EPIC_BOON_SCHEMA_MISMATCH', '/classes/0/system/advancement', '传奇恩惠必须使用 points2/cap2/max null 和精确推荐 UUID。');
   const synthetic = pkg.features.find((item) => item.name === '诱变武者');
@@ -411,7 +430,11 @@ function validateAsiConfiguration(configuration: JsonObject, path: string, add: 
 
 function advancementTitle(pkg: NativeBloodHunterPackage, node: GrantGraphNode): string | undefined {
   const item = [...pkg.classes, ...pkg.subclasses].find((candidate) => candidate._id === node.ownerDocumentId);
-  return stringValue(asRecord(asRecord(asRecord(item?.system).advancement)[node.id]).title);
+  return advancementName(asRecord(asRecord(asRecord(item?.system).advancement)[node.id]), pkg.target.dnd5e === '6.0.2');
+}
+
+function advancementName(advancement: JsonObject, dnd6: boolean): string | undefined {
+  return stringValue(dnd6 ? advancement.name : advancement.title);
 }
 
 function moduleUuidFor(item: NativeItemSource): string {

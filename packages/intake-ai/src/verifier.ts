@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import {
   findForbiddenTargetWorldIdentifiers,
   hashManifest,
@@ -528,7 +529,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       damageTypes: [...new Set(parts.flatMap((part) => arrayValues(part.types)))],
     };
   });
-  const effects = Array.isArray(item.effects) ? item.effects.flatMap((effect) => arrayValues(asRecord(effect).statuses)) : [];
+  const effects = Array.isArray(item.effects) ? item.effects.flatMap(projectConditionEffectStatuses) : [];
   const rawBehaviorMechanics = asRecord(itemFlags.fvttJsonGenerator).behaviorMechanics;
   const behaviorMechanics = Array.isArray(rawBehaviorMechanics)
     ? rawBehaviorMechanics.map(asRecord)
@@ -557,6 +558,16 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     behaviorMechanics,
     uses: projectItemUses(asRecord(system.uses)),
   };
+}
+
+function projectConditionEffectStatuses(value: unknown): string[] {
+  const effect = asRecord(value);
+  const statuses = arrayValues(effect.statuses);
+  const condition = readConditionInstance(effect);
+  if (effect.disabled === true || !condition?.enabled || condition.template !== true) return statuses;
+
+  const contractStatusId = projectedConditionStatusId(condition.conditionId);
+  return statuses.map((status) => status === contractStatusId ? condition.conditionId : status);
 }
 
 function nativeBaseDamageFormula(

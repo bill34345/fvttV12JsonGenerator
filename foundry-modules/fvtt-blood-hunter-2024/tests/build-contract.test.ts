@@ -15,11 +15,14 @@ import {
   collectExternalDnd5eUuids,
   createDeterministicZip,
   projectEffectForFoundryV14Pack,
+  projectRuntimeDocuments,
+  validateManifest,
   writeLevelDbPack,
 } from '../build.ts';
 import { MIGRATION_APP_TITLE } from '../src/runtime.ts';
 import {
   compileBloodHunterV14Package,
+  BLOOD_HUNTER_DND6_TARGET,
   type NativeBloodHunterPackage,
 } from '../../../packages/blood-hunter-v14/src/index.ts';
 import { makeBloodHunter2024Fixture } from '../../../packages/blood-hunter-v14/tests/fixture.ts';
@@ -56,6 +59,20 @@ describe('module release contract', () => {
     expect(JSON.stringify(manifest).toLocaleLowerCase('en-US')).not.toContain('plutonium');
     expect(JSON.stringify(manifest).toLocaleLowerCase('en-US')).not.toContain('classpack');
     expect(MIGRATION_APP_TITLE).toBe('血猎手 2024：角色迁移');
+    validateManifest(manifest);
+    const serverNext = structuredClone(manifest);
+    serverNext.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
+    serverNext.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' };
+    validateManifest(serverNext);
+    expect(serverNext.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' });
+    const priorServerNext = structuredClone(serverNext);
+    priorServerNext.relationships.systems[0].compatibility.maximum = '6.0.2';
+    validateManifest(priorServerNext);
+    serverNext.relationships.systems[0].compatibility.maximum = '6.0.6';
+    expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
+    serverNext.relationships.systems[0].compatibility.maximum = '6.0.5';
+    serverNext.relationships.systems[0].compatibility.verified = '5.3.3';
+    expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
   });
 
   test('release count constants reflect the frozen public compiler output without pinning logicalHash', () => {
@@ -70,7 +87,7 @@ describe('module release contract', () => {
     temporaryRoots.push(root);
     const sourceRoot = join(root, 'dnd5e', '5.3.3', 'repo', 'packs', '_source');
     await mkdir(sourceRoot, { recursive: true });
-    const packageValue = { nested: EXPECTED_DND5E_EXTERNAL_UUIDS.map((uuid) => ({ uuid, deep: [uuid] })) } as unknown as NativeBloodHunterPackage;
+    const packageValue = { target: { dnd5e: '5.3.3' }, nested: EXPECTED_DND5E_EXTERNAL_UUIDS.map((uuid) => ({ uuid, deep: [uuid] })) } as unknown as NativeBloodHunterPackage;
     expect(collectExternalDnd5eUuids(packageValue)).toEqual([...EXPECTED_DND5E_EXTERNAL_UUIDS].sort());
     for (const [index, uuid] of EXPECTED_DND5E_EXTERNAL_UUIDS.entries()) {
       const id = uuid.split('.').at(-1)!;
@@ -80,6 +97,13 @@ describe('module release contract', () => {
     expect(await assertExternalReferenceCompleteness(packageValue, config)).toEqual([...EXPECTED_DND5E_EXTERNAL_UUIDS].sort());
     await unlink(join(sourceRoot, 'document-0.yml'));
     await expect(assertExternalReferenceCompleteness(packageValue, config)).rejects.toThrow(/missing external Item UUIDs/);
+    const dnd6SourceRoot = join(root, 'dnd5e', '6.0.2', 'repo', 'packs', '_source');
+    await mkdir(dnd6SourceRoot, { recursive: true });
+    for (const [index, uuid] of EXPECTED_DND5E_EXTERNAL_UUIDS.entries()) {
+      await writeFile(join(dnd6SourceRoot, `document-${index}.yml`), `_id: ${uuid.split('.').at(-1)!}\nname: test\n`, 'utf8');
+    }
+    packageValue.target = { ...BLOOD_HUNTER_DND6_TARGET, rules: '2024' };
+    expect(await assertExternalReferenceCompleteness(packageValue, config)).toHaveLength(12);
   });
 
   test('deterministic ZIP is complete and is independently checked against module files', async () => {
@@ -153,6 +177,28 @@ describe('module release contract', () => {
     } finally {
       await database.close();
     }
+  });
+
+  test('migration contract receives the same Effect shape as Item packs without changing Activities', () => {
+    const pkg = compileBloodHunterV14Package(makeBloodHunter2024Fixture());
+    const originals = [...pkg.classes, ...pkg.subclasses, ...pkg.features];
+    const runtime = projectRuntimeDocuments(originals);
+    expect(runtime.map((item) => item._id)).toEqual(originals.map((item) => item._id));
+    let changes = 0;
+    for (const [index, item] of runtime.entries()) {
+      const before = originals[index]!;
+      expect(item.system.activities).toEqual(before.system.activities);
+      expect(item.effects.map((effect) => effect._id)).toEqual(before.effects.map((effect) => effect._id));
+      for (const effect of item.effects) {
+        expect(effect).not.toHaveProperty('changes');
+        expect(Array.isArray((effect.system as Record<string, unknown>).changes)).toBe(true);
+        changes += ((effect.system as Record<string, unknown>).changes as unknown[]).length;
+      }
+    }
+    const originalChanges = originals.reduce((total, item) => total + item.effects.reduce((sum, effect) => sum + (Array.isArray(effect.changes) ? effect.changes.length : 0), 0), 0);
+    expect(changes).toBe(originalChanges);
+    expect(changes).toBeGreaterThan(0);
+    expect(originals.some((item) => item.effects.some((effect) => 'changes' in effect))).toBe(true);
   });
 });
 

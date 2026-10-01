@@ -9,6 +9,7 @@ interface ResolverFoundryPack {
     type?: string;
     flags?: Record<string, unknown>;
   };
+  indexFields: Set<string>;
   getIndex(options: { fields: string[] }): Promise<unknown>;
 }
 

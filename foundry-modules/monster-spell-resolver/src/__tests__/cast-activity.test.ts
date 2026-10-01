@@ -148,3 +148,66 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
     expect(() => generatedResolverDocumentId({ ...identity, featureId: 'short' }, 'activity')).toThrow(/16-character/i);
   });
 });
+
+// Locked ServerNext dnd5e 6.0.2 Cast schema; the 6.0.5 release diff leaves
+// this schema unchanged and retains its type contract. It uses
+// deterministic FormulaField for challenge attack/save; FormulaField is a
+// StringField (4548-4566). Base Activity consumption 19979-19985, UsesField
+// 14245-14260, ConsumptionTargetData 4665-4676, and TargetField 16659-16664
+// retain the raw fields emitted below. This tests source projection only;
+// prepared-model hydration and native spell use require a separate live gate.
+describe('source-shaped dnd5e 6.0.2/6.0.5 Cast candidate', () => {
+  test('retains deterministic challenge formulas and at-will/innate consumption', () => {
+    const cases = ratCases();
+    const atWill = cases.find(({ ref }) => ref.method === 'at-will')!;
+    const innate = cases.find(({ ref }) => ref.method === 'innate')!;
+
+    for (const { built } of [atWill, innate]) {
+      expect(built.activity.spell).toMatchObject({
+        uuid: expect.stringMatching(/^Compendium\.dnd5e\.spells24\.Item\.[A-Za-z0-9]{16}$/),
+        ability: 'cha',
+        challenge: { override: true, attack: '4', save: '12' },
+        spellbook: true,
+      });
+      expect(typeof built.activity.spell.challenge.attack).toBe('string');
+      expect(typeof built.activity.spell.challenge.save).toBe('string');
+      expect(built.activity.spell.properties).toEqual(['material']);
+      expect(built.activity.consumption.spellSlot).toBe(false);
+      expect(built.activity.spell.level).toBeUndefined();
+    }
+    expect(atWill.built.activity.consumption.targets).toEqual([]);
+    expect(atWill.built.activity.uses).toBeUndefined();
+    expect(innate.built.activity.consumption.targets).toEqual([{ type: 'activityUses', value: '1' }]);
+    expect(innate.built.activity.uses).toEqual({
+      spent: 0, max: '1', recovery: [{ period: 'day', type: 'recoverAll' }],
+    });
+  });
+
+  test('prepared casting keeps source level and native spell-slot consumption', () => {
+    const base = structuredClone(ratCases()[0]!.ref);
+    const ref: PortableSpellRef = {
+      ...base,
+      refId: 'server-next-prepared',
+      method: 'prepared',
+      castingLevel: 3,
+      restrictions: [],
+    };
+    delete ref.uses;
+    const { activity } = buildCastActivitySource({
+      manifestId: 'server-next-source-shaped',
+      featureId: 'PreparedFeature1',
+      group: { groupId: 'prepared', featureItemKey: 'prepared', ability: 'wis', attackBonus: 7, saveDc: 15, spellRefs: [ref] },
+      ref,
+      selectedUuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',
+    });
+
+    expect(activity.consumption).toEqual({ spellSlot: true, targets: [] });
+    expect(activity.uses).toBeUndefined();
+    expect(activity.spell).toMatchObject({
+      uuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',
+      ability: 'wis', level: 3,
+      challenge: { override: true, attack: '7', save: '15' },
+      spellbook: true,
+    });
+  });
+});

@@ -100,6 +100,11 @@ export const evaluateRuntimeCompatibility = ({
   foundry,
   dnd5e,
 }: RuntimeVersions): RuntimeCompatibility => {
+  const supportedPairs = [
+    { foundry: "14.364", dnd5e: "5.3.3" },
+    { foundry: "14.368", dnd5e: "6.0.2" },
+    { foundry: "14.368", dnd5e: "6.0.5" },
+  ] as const;
   const diagnostics: CompatibilityDiagnostic[] = [];
   if (!foundry || !dnd5e) {
     diagnostics.push({
@@ -108,18 +113,18 @@ export const evaluateRuntimeCompatibility = ({
       message: "Foundry or dnd5e runtime version is unavailable",
     });
   } else {
-    if (foundry !== "14.364") {
+    const foundryPairs = supportedPairs.filter((pair) => pair.foundry === foundry);
+    if (foundryPairs.length === 0) {
       diagnostics.push({
         code: "UNSUPPORTED_FOUNDRY_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires Foundry 14.364; received ${foundry}`,
+        message: `Battlefield Painter alpha requires Foundry 14.364 or 14.368; received ${foundry}`,
       });
-    }
-    if (dnd5e !== "5.3.3") {
+    } else if (!foundryPairs.some((pair) => pair.dnd5e === dnd5e)) {
       diagnostics.push({
         code: "UNSUPPORTED_DND5E_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires dnd5e 5.3.3; received ${dnd5e}`,
+        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 6.0.2 or 6.0.5; received ${foundry}/dnd5e ${dnd5e}`,
       });
     }
   }

@@ -5,7 +5,7 @@ const request = parseBloodHunterLabCliArgs(process.argv.slice(2));
 const config = createLabConfig();
 
 if (request.action === 'build') {
-  const result = await buildBloodHunterForLab(config, request.sourcePath!);
+  const result = await buildBloodHunterForLab(config, request.sourcePath!, request.target);
   console.log(JSON.stringify({ ok: true, action: request.action, ...result }, null, 2));
 } else if (request.action === 'dry-run') {
   const result = await dryRunBloodHunterInstall(config);

@@ -280,6 +280,23 @@ test("MIDI adapter is isolated to exactly 14.0.11 and tolerates matching DAE onl
   expect(inspectMidiAdapter(new Map([
     ["dice-so-nice", { active: true, version: "6.2.8" }]
   ]))).toEqual({ enabled: false, supported: false, reason: "unsupported-dice-so-nice-version" });
+  const next = new Map([
+    ["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }],
+    ["dae", { active: true, version: "14.0.14" }],
+    ["dice-so-nice", { active: true, version: "6.3.1" }],
+  ]);
+  expect(inspectMidiAdapter(next, "14.368", "6.0.2")).toEqual({
+    enabled: true, supported: true, reason: "ready-for-runtime-validation"
+  });
+  expect(inspectMidiAdapter(new Map(), "14.368", "6.0.5")).toEqual({
+    enabled: false, supported: true, reason: "absent"
+  });
+  expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }]]), "14.368", "6.0.5").reason)
+    .toBe("unsupported-midi-version");
+  next.set("midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.8" });
+  expect(inspectMidiAdapter(next, "14.368", "6.0.2").reason).toBe("unsupported-midi-version");
+  expect(inspectMidiAdapter(next, "14.364", "5.3.3").supported).toBeFalse();
+  expect(inspectMidiAdapter(new Map(), "14.368", "5.3.3").reason).toBe("unsupported-runtime");
 });
 
 describe("critical first-die display contract", () => {
@@ -350,7 +367,7 @@ describe("critical first-die display contract", () => {
   });
 });
 
-function ammoRuntimeFixture({ destroy = false } = {}): { actor: any; item: any; activity: any; message: any; packet: any; restore: () => void } {
+function ammoRuntimeFixture({ destroy = false, dnd6 = false } = {}): { actor: any; item: any; activity: any; message: any; packet: any; restore: () => void } {
   const priorGame = (globalThis as any).game;
   const priorFromUuid = (globalThis as any).fromUuid;
   const users = new Map([
@@ -389,10 +406,12 @@ function ammoRuntimeFixture({ destroy = false } = {}): { actor: any; item: any; 
     testUserPermission: (user: any) => user?.id === "player" || user?.isGM === true,
   };
   const weapon: any = { id: "weapon", uuid: "Actor.actor.Item.weapon", type: "weapon" };
-  const activity: any = { id: "activity", uuid: "Actor.actor.Item.weapon.Activity.attack", type: "attack", actor, item: weapon };
+  const activity: any = { id: "activity", uuid: "Actor.actor.Item.weapon.Activity.attack", type: "attack", actor, item: weapon,
+    getActionType: () => "rwak" };
   const message: any = {
     id: "message-1",
-    type: "roll",
+    type: dnd6 ? "attack" : "roll",
+    user: "player",
     speaker: { actor: actor.id },
     flags: {
       dnd5e: {
@@ -403,17 +422,25 @@ function ammoRuntimeFixture({ destroy = false } = {}): { actor: any; item: any; 
       }
     },
     rolls: [{ id: "roll-1" }],
+    ...(dnd6 ? { system: {
+      activity: { type: "attack", id: activity.id, uuid: activity.uuid },
+      item: { type: weapon.type, id: weapon.id, uuid: weapon.uuid },
+      ammunition: item.id,
+      targets: [{ actor: actor.uuid, token: "Scene.scene.Token.token" }],
+      deltas: null,
+    } } : {}),
     getAssociatedActor: () => actor,
     getAssociatedActivity: () => activity,
     getAssociatedItem: () => weapon,
   };
+  if (dnd6) message.flags = {};
   const documents = new Map([
     [actor.uuid, actor],
     [activity.uuid, activity],
   ]);
   (globalThis as any).game = {
-    version: "14.364",
-    system: { id: "dnd5e", version: "5.3.3" },
+    version: dnd6 ? "14.368" : "14.364",
+    system: { id: "dnd5e", version: dnd6 ? "6.0.2" : "5.3.3" },
     user: users.get("gm"),
     users: userCollection,
     messages: new Map([[message.id, message]]),
@@ -446,6 +473,90 @@ function ammoRuntimeFixture({ destroy = false } = {}): { actor: any; item: any; 
 }
 
 describe("runtime ammunition trust and fallback", () => {
+  test("dnd5e 6 reads target actor UUIDs and honors the message sender for natural cards", async () => {
+    const fixture = ammoRuntimeFixture({ dnd6: true });
+    const priorChatMessage = (globalThis as any).ChatMessage;
+    const cards: any[] = [];
+    try {
+      expect(__testing.nativeTargetActorUuids(fixture.message)).toEqual([fixture.actor.uuid]);
+      fixture.message.system.targets = [{ token: "Scene.scene.Token.token" }];
+      expect(__testing.nativeTargetActorUuids(fixture.message)).toEqual([]);
+      fixture.message.rolls[0].terms = [{ faces: 20, results: [{ result: 20, active: true }] }];
+      (globalThis as any).game.settings.get = (_scope: string, key: string) => key === "featureNaturalTwenty";
+      (globalThis as any).ChatMessage = { create: async (data: any) => cards.push(data) };
+      fixture.message.user = "unknown";
+      await __testing.processAttackChat(fixture.message);
+      expect(cards).toHaveLength(0);
+      fixture.message.user = "player";
+      await __testing.processAttackChat(fixture.message);
+      expect(cards).toHaveLength(1);
+      expect(cards[0].flags[MODULE_ID].naturalRequest).toMatchObject({
+        actorUuid: fixture.actor.uuid, activityUuid: fixture.activity.uuid, kind: "nat20"
+      });
+    } finally {
+      (globalThis as any).ChatMessage = priorChatMessage;
+      fixture.restore();
+    }
+  });
+
+  test("dnd5e 5 keeps legacy attack flags and target UUIDs", async () => {
+    const fixture = ammoRuntimeFixture();
+    const priorChatMessage = (globalThis as any).ChatMessage;
+    const cards: any[] = [];
+    try {
+      fixture.message.getFlag = (_scope: string, key: string) => key === "targets" ? [{ uuid: fixture.actor.uuid }] : undefined;
+      expect(__testing.nativeTargetActorUuids(fixture.message)).toEqual([fixture.actor.uuid]);
+      fixture.message.rolls[0].terms = [{ faces: 20, results: [{ result: 20, active: true }] }];
+      (globalThis as any).game.settings.get = (_scope: string, key: string) => key === "featureNaturalTwenty";
+      (globalThis as any).ChatMessage = { create: async (data: any) => cards.push(data) };
+      await __testing.processAttackChat(fixture.message);
+      expect(cards).toHaveLength(1);
+    } finally {
+      (globalThis as any).ChatMessage = priorChatMessage;
+      fixture.restore();
+    }
+  });
+
+  test("dnd5e 6 records a consumed shot from the typed attack card and rejects mismatched sources", async () => {
+    const fixture = ammoRuntimeFixture({ dnd6: true });
+    try {
+      expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);
+      fixture.item.system.quantity = 1;
+      expect(await __testing.commitAmmoPacket({ ...fixture.packet, type: "ammo-commit" }, "player")).toBe(true);
+      expect(Object.keys(fixture.actor.flags[MODULE_ID].ammoLedger.shots)).toHaveLength(1);
+      const other = ammoRuntimeFixture({ dnd6: true });
+      try {
+        other.message.system.activity.uuid = "Actor.actor.Item.other.Activity.attack";
+        expect(await __testing.stageAmmoPacket(other.packet, "player")).toBe(false);
+        other.message.system.activity.uuid = other.activity.uuid;
+        other.message.system.item.id = "other";
+        expect(await __testing.stageAmmoPacket(other.packet, "player")).toBe(false);
+        other.message.system.item.id = "weapon";
+        other.message.system.ammunition = "other";
+        expect(await __testing.stageAmmoPacket(other.packet, "player")).toBe(false);
+        other.message.system.ammunition = "ammo";
+        other.message.type = "other";
+        expect(await __testing.stageAmmoPacket(other.packet, "player")).toBe(false);
+      } finally { other.restore(); }
+    } finally { fixture.restore(); }
+  });
+
+  test("dnd5e 6 deleted ammunition requires the exact matching system delta", async () => {
+    const fixture = ammoRuntimeFixture({ dnd6: true, destroy: true });
+    try {
+      expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);
+      fixture.actor.items.delete("ammo");
+      expect(await __testing.commitAmmoPacket({ ...fixture.packet, type: "ammo-commit" }, "player")).toBe(false);
+      expect(Object.keys(fixture.actor.flags[MODULE_ID]?.ammoLedger?.shots ?? {})).toHaveLength(0);
+      fixture.message.system.deltas = { deleted: [{ ...fixture.item.toObject(), _id: "wrong" }] };
+      await __testing.processDeletedAmmoFallback(fixture.message);
+      expect(Object.keys(fixture.actor.flags[MODULE_ID]?.ammoLedger?.shots ?? {})).toHaveLength(0);
+      fixture.message.system.deltas.deleted[0]._id = "ammo";
+      await __testing.processDeletedAmmoFallback(fixture.message);
+      expect(Object.keys(fixture.actor.flags[MODULE_ID].ammoLedger.shots)).toHaveLength(1);
+    } finally { fixture.restore(); }
+  });
+
   test("queues a post-consumption commit that arrives before asynchronous staging", async () => {
     const fixture = ammoRuntimeFixture();
     try {

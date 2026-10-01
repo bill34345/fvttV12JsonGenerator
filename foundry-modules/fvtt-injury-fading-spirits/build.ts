@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/prom
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-injury-fading-spirits' as const;
-export const MODULE_VERSION = '1.0.0' as const;
+export const MODULE_VERSION = '1.0.1' as const;
 const root = resolve(import.meta.dir);
 const source = resolve(root, 'src');
 const dist = resolve(root, 'dist');
@@ -21,7 +21,6 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   await cp(resolve(source, 'icons'), resolve(moduleRoot, 'icons'), { recursive: true });
   await cp(resolve(source, 'styles'), resolve(moduleRoot, 'styles'), { recursive: true });
   await cp(resolve(root, 'README.zh-CN.md'), resolve(moduleRoot, 'README.zh-CN.md'));
-  await cp(resolve(root, 'CREDITS.md'), resolve(moduleRoot, 'CREDITS.md'));
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, any>;
   validateManifest(manifest);
   const browserText = await readFile(resolve(moduleRoot, 'scripts/index.js'), 'utf8');
@@ -40,10 +39,10 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.364') throw new Error('Foundry compatibility must be exactly 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') throw new Error('Foundry compatibility must span 14.364 through 14.368 while verification remains at 14.364.');
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '5.3.3') throw new Error('dnd5e compatibility must be exactly 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.5') throw new Error('dnd5e compatibility must span 5.3.3 through 6.0.5 while verification remains at 5.3.3.');
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js']) || manifest.socket !== true) throw new Error('Manifest browser/socket contract drifted.');
   if (manifest.relationships?.requires) throw new Error('This module must not have hard module dependencies.');
 }

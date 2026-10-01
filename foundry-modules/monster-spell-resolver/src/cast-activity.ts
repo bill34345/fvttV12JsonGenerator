@@ -105,8 +105,9 @@ export function generatedResolverDocumentId(identity: ResolverGeneratedIdentity,
 }
 
 /**
- * Build the raw dnd5e 5.3.3 Cast Activity source. challenge attack/save stay
- * strings here; Foundry NumberField normalizes them only on the prepared model.
+ * Build a raw Cast Activity source for the exact 5.3.3, 6.0.2, and 6.0.5 candidates.
+ * challenge attack/save stay strings: 5.3.3 NumberField casts them on the
+ * prepared model, while both 6.0.2 and 6.0.5 deterministic FormulaField retain formulas.
  */
 export function buildCastActivitySource(input: BuildCastActivitySourceInput): BuiltCastActivitySource {
   if (!input || typeof input !== 'object') throw new TypeError('Cast Activity input is required.');

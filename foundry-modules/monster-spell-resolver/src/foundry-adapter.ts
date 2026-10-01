@@ -27,6 +27,15 @@ export type {
 
 export const EXACT_FOUNDRY_VERSION = '14.364' as const;
 export const EXACT_DND5E_VERSION = '5.3.3' as const;
+export const SERVER_NEXT_FOUNDRY_VERSION = '14.368' as const;
+export const SERVER_NEXT_DND5E_VERSION = '6.0.2' as const;
+export const SERVER_NEXT_DND5E_CANDIDATE_VERSION = '6.0.5' as const;
+
+const SUPPORTED_RUNTIME_PAIRS = [
+  { foundry: EXACT_FOUNDRY_VERSION, dnd5e: EXACT_DND5E_VERSION },
+  { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_VERSION },
+  { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_CANDIDATE_VERSION },
+] as const;
 
 export interface ResolverFoundryAdapter extends FoundrySpellSourceAdapter {
   registerSetting(definition: ResolverSettingDefinition): void;
@@ -44,16 +53,24 @@ export function evaluateRuntimeCompatibility(versions: ResolverRuntimeVersions):
   if (!versions.foundry || !versions.dnd5e) {
     diagnostics.push({ code: 'MISSING_RUNTIME_VERSION', message: 'Foundry and dnd5e runtime versions are required.' });
   } else {
-    if (versions.foundry !== EXACT_FOUNDRY_VERSION) {
+    const supportedFoundry = SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry);
+    const supportedDnd5e = SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.dnd5e === versions.dnd5e);
+    if (!supportedFoundry) {
       diagnostics.push({
         code: 'UNSUPPORTED_FOUNDRY_VERSION',
-        message: `Foundry ${versions.foundry} is unsupported; exact version ${EXACT_FOUNDRY_VERSION} is required.`,
+        message: `Foundry ${versions.foundry} is unsupported; only exact versions ${EXACT_FOUNDRY_VERSION} and ${SERVER_NEXT_FOUNDRY_VERSION} are allowed.`,
       });
     }
-    if (versions.dnd5e !== EXACT_DND5E_VERSION) {
+    if (!supportedDnd5e) {
       diagnostics.push({
         code: 'UNSUPPORTED_DND5E_VERSION',
-        message: `dnd5e ${versions.dnd5e} is unsupported; exact version ${EXACT_DND5E_VERSION} is required.`,
+        message: `dnd5e ${versions.dnd5e} is unsupported; only exact versions ${EXACT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
+      });
+    }
+    if (supportedFoundry && supportedDnd5e && !SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry && pair.dnd5e === versions.dnd5e)) {
+      diagnostics.push({
+        code: 'UNSUPPORTED_RUNTIME_PAIR',
+        message: `Foundry ${versions.foundry} with dnd5e ${versions.dnd5e} is unsupported; only ${EXACT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
       });
     }
   }
@@ -156,7 +173,13 @@ export function createFoundryAdapter(): ResolverFoundryAdapter {
       if (!runtimePack || runtimePack.documentName !== 'Item' || runtimePack.visible !== true) {
         throw new Error(`Item pack ${pack.collection} is unavailable or unreadable.`);
       }
-      const index = await runtimePack.getIndex({ fields });
+      const defaults = runtimePack.indexFields;
+      if (!(defaults instanceof Set)) throw new Error(`Item pack ${pack.collection} exposes no default index fields.`);
+      // CompendiumCollection.getIndex merges defaults with requested fields.
+      // dnd5e 6.0.2 defaults include system.source, which conflicts with
+      // requesting system.source.rules/book as descendants in one projection.
+      const safeFields = fields.filter((field) => ![...defaults].some((parent) => field.startsWith(`${parent}.`)));
+      const index = await runtimePack.getIndex({ fields: safeFields });
       if (isRecord(index) && Array.isArray(index.contents)) return index.contents;
       if (isIterable(index)) return [...index];
       throw new TypeError(`Item pack ${pack.collection} returned an unreadable index.`);

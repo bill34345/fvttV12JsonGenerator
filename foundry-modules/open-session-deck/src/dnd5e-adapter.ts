@@ -1,5 +1,8 @@
 import {
   MODULE_ID,
+  SERVER_NEXT_FOUNDRY_VERSION,
+  SERVER_NEXT_EXHAUSTION_EFFECT_ID,
+  SERVER_NEXT_SYSTEM_VERSIONS,
   SETTINGS,
   SUPPORTED_FOUNDRY_VERSION,
   SUPPORTED_SYSTEM_ID,
@@ -45,10 +48,37 @@ export function supportError(runtime: Dnd5eRuntime): string | undefined {
   const foundryVersion = String(runtime.game.version ?? runtime.game.release?.version ?? '');
   const systemId = String(runtime.game.system?.id ?? '');
   const systemVersion = String(runtime.game.system?.version ?? '');
-  if (foundryVersion !== SUPPORTED_FOUNDRY_VERSION) return `Foundry ${foundryVersion || 'unknown'} is unsupported; required ${SUPPORTED_FOUNDRY_VERSION}.`;
   if (systemId !== SUPPORTED_SYSTEM_ID) return `System ${systemId || 'unknown'} is unsupported; required ${SUPPORTED_SYSTEM_ID}.`;
-  if (systemVersion !== SUPPORTED_SYSTEM_VERSION) return `dnd5e ${systemVersion || 'unknown'} is unsupported; required ${SUPPORTED_SYSTEM_VERSION}.`;
-  return undefined;
+  if (isLegacyRuntime(runtime) || isServerNextRuntime(runtime)) return undefined;
+  if (foundryVersion !== SUPPORTED_FOUNDRY_VERSION && foundryVersion !== SERVER_NEXT_FOUNDRY_VERSION) return `Foundry ${foundryVersion || 'unknown'} is unsupported; required ${SUPPORTED_FOUNDRY_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}.`;
+  return `dnd5e ${systemVersion || 'unknown'} is unsupported with Foundry ${foundryVersion}; required ${SUPPORTED_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_SYSTEM_VERSIONS.join(' or ')}.`;
+}
+
+function isLegacyRuntime(runtime: Dnd5eRuntime): boolean {
+  return String(runtime.game.version ?? runtime.game.release?.version ?? '') === SUPPORTED_FOUNDRY_VERSION
+    && String(runtime.game.system?.version ?? '') === SUPPORTED_SYSTEM_VERSION;
+}
+
+function isServerNextRuntime(runtime: Dnd5eRuntime): boolean {
+  return String(runtime.game.version ?? runtime.game.release?.version ?? '') === SERVER_NEXT_FOUNDRY_VERSION
+    && SERVER_NEXT_SYSTEM_VERSIONS.some((version) => version === String(runtime.game.system?.version ?? ''));
+}
+
+function serverNextExhaustion(actor: any, dnd5eVersion: string): number | undefined {
+  if (dnd5eVersion === '6.0.5') {
+    const effects = actor.effects;
+    if (!effects || typeof effects.get !== 'function') return undefined;
+    const effect = effects.get(SERVER_NEXT_EXHAUSTION_EFFECT_ID);
+    if (!effect) return 0;
+    const level = effect.system?.level;
+    return Number.isInteger(level) && level >= 0 ? level : undefined;
+  }
+  if (dnd5eVersion !== '6.0.2') return undefined;
+  const conditions = actor.system?.conditions;
+  if (!conditions || typeof conditions !== 'object' || Array.isArray(conditions)) return undefined;
+  if (!Object.hasOwn(conditions, 'exhaustion')) return 0;
+  const level = conditions.exhaustion;
+  return Number.isInteger(level) && level >= 0 ? level : undefined;
 }
 
 export class Dnd5eAdapter {
@@ -177,12 +207,17 @@ export class Dnd5eAdapter {
     const players = users.filter((user) => !user.isGM && (String(user.character?.uuid ?? '') === String(actor.uuid) || Number(actor.ownership?.[user.id] ?? 0) >= 3))
       .map((user) => ({ id: String(user.id), name: String(user.name ?? ''), active: Boolean(user.active) }));
     const death = actor.system?.attributes?.death;
-    const exhaustion = finiteNumber(actor.system?.attributes?.exhaustion);
+    const serverNext = isServerNextRuntime(this.runtime);
+    const nativeExhaustion = serverNext ? serverNextExhaustion(actor, String(this.runtime.game.system?.version ?? '')) : undefined;
+    const exhaustion = serverNext ? nativeExhaustion ?? 0 : finiteNumber(actor.system?.attributes?.exhaustion);
     const exhaustionMax = Number(this.runtime.config.DND5E?.conditionTypes?.exhaustion?.levels);
     const canLocate = Boolean(options.canLocate);
     const combat = this.runtime.game.combat;
     const commands: DeckActorCommands = {
-      ...actorCommands(actor, exhaustion, exhaustionMax, statusOptions.length > 0, canLocate),
+      ...actorCommands(actor, exhaustion, exhaustionMax, statusOptions.length > 0, canLocate,
+        serverNext
+          ? typeof actor.toggleStatusEffect === 'function' && nativeExhaustion !== undefined
+          : typeof actor.update === 'function'),
       ...(options.combatantId ? {
         setInitiative: available(typeof combat?.setInitiative === 'function', 'OSD.Actions.SetInitiative', 'OSD.Errors.NativeApiUnavailable'),
         rollInitiative: available(typeof combat?.rollInitiative === 'function', 'OSD.Actions.RollInitiative', 'OSD.Errors.NativeApiUnavailable'),
@@ -281,11 +316,17 @@ export class Dnd5eAdapter {
         if (!Number.isFinite(delta)) throw new Error('Exhaustion delta must be -1 or 1.');
         const max = Number(this.runtime.config.DND5E?.conditionTypes?.exhaustion?.levels);
         if (!Number.isFinite(max)) throw new Error('dnd5e exhaustion limit is unavailable.');
-        const current = finiteNumber(actor.system?.attributes?.exhaustion);
+        const serverNext = isServerNextRuntime(this.runtime);
+        const nativeExhaustion = serverNext ? serverNextExhaustion(actor, String(this.runtime.game.system?.version ?? '')) : undefined;
+        if (serverNext && nativeExhaustion === undefined) throw new Error('dnd5e exhaustion state is unavailable.');
+        const current = serverNext ? nativeExhaustion! : finiteNumber(actor.system?.attributes?.exhaustion);
         const next = current + delta;
         if (next < 0) throw new Error('Exhaustion is already at its minimum.');
         if (next > max) throw new Error('Exhaustion is already at its maximum.');
-        await actor.update({ 'system.attributes.exhaustion': next });
+        if (serverNext) {
+          if (typeof actor.toggleStatusEffect !== 'function') throw new Error('dnd5e exhaustion status API is unavailable.');
+          await actor.toggleStatusEffect('exhaustion', { levels: delta });
+        } else await actor.update({ 'system.attributes.exhaustion': next });
       } else if (command.id === 'actor.toggle-status') {
         const allowed = new Set(this.statusOptions().map((option) => option.id));
         if (!command.statusId || !allowed.has(command.statusId)) throw new Error('The selected status is not available for Deck control.');
@@ -425,11 +466,11 @@ function available(enabled: boolean, actionKey: string, unavailableKey: string):
   return { enabled, tooltipKey: enabled ? actionKey : unavailableKey };
 }
 
-function actorCommands(actor: any, exhaustion: number, exhaustionMax: number, hasStatuses: boolean, canLocate: boolean): DeckActorCommands {
+function actorCommands(actor: any, exhaustion: number, exhaustionMax: number, hasStatuses: boolean, canLocate: boolean, canManageExhaustion: boolean): DeckActorCommands {
   const canApplyDamage = typeof actor.applyDamage === 'function';
   const canApplyTempHp = typeof actor.applyTempHP === 'function';
   const canUpdate = typeof actor.update === 'function';
-  const hasExhaustionModel = canUpdate && Number.isFinite(exhaustionMax);
+  const hasExhaustionModel = canManageExhaustion && Number.isFinite(exhaustionMax);
   const canToggleStatus = typeof actor.toggleStatusEffect === 'function' && hasStatuses;
   const canOpenSheet = typeof actor.sheet?.render === 'function';
   const canEditEmbedded = typeof actor.createEmbeddedDocuments === 'function' && typeof actor.deleteEmbeddedDocuments === 'function';

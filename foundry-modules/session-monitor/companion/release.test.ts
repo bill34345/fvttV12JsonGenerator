@@ -18,13 +18,24 @@ describe('session monitor release contract', () => {
     ) as { version?: string; dependencies?: Record<string, string> };
     const moduleManifest = JSON.parse(
       await readFile(resolve(packageRoot, 'src/module.json'), 'utf8'),
-    ) as { id?: string; version?: string };
+    ) as {
+      id?: string;
+      version?: string;
+      compatibility?: Record<string, string>;
+      relationships?: { systems?: Array<{ id?: string; compatibility?: Record<string, string> }> };
+    };
 
     expect(moduleManifest.id).toBe(MODULE_ID);
     expect(packageManifest.version).toBe(PRODUCT_VERSION);
     expect(moduleManifest.version).toBe(PRODUCT_VERSION);
     expect(SCHEMA_VERSION).toBe(1);
     expect(packageManifest.dependencies?.['@fvtt-json-generator/contracts']).toBe('workspace:*');
+    expect(moduleManifest.compatibility).toEqual({
+      minimum: '14.364', verified: '14.364', maximum: '14.368',
+    });
+    expect(moduleManifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility).toEqual({
+      minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5',
+    });
   });
 
   test('accepts only the exact project-local Foundry destination', () => {

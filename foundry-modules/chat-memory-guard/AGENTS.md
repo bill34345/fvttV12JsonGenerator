@@ -18,10 +18,10 @@
 - `bun run test:chat-memory-guard`
 - `bun run build:chat-memory-guard`
 - `bun run typecheck:foundry-modules`
-- 运行时变化需在项目本地 Foundry 14.364 / dnd5e 5.3.3 中检查设置、聊天渲染、裁剪和 `game.modules.get("chat-memory-guard").api.getStats()`。
+- 当前 1.1.0 候选的 manifest 范围为 ServerNext Foundry 14.368 / dnd5e 6.0.2–6.0.5，`verified` 保持 6.0.2；在 6.0.5 还需检查设置、聊天渲染、裁剪和 `game.modules.get("chat-memory-guard").api.getStats()`。旧 Mirror 或 6.0.2 验收不替代 6.0.5 读回。
 
 ## 完成标准
 
 - 世界聊天文档未被删除，浏览器 DOM/缩略图限制按设置生效。
-- manifest、1.0.0 版本、构建目录和 ZIP 一致。
+- manifest、1.1.0 版本、构建目录和 ZIP 一致。
 - 短时 A/B 只能证明被测场景；不得据此声称长时间跑团内存永不增长。
