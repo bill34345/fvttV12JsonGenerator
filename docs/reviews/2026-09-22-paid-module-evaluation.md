@@ -1,9 +1,18 @@
 # 外部付费 Foundry 模块评估与引入候选
 
 - 记录日期：2026-09-22
-- 评估目标环境：Foundry `14.364` / dnd5e `5.3.3`（当前锁定）；server-next 迁移目标 Foundry `14.368` / dnd5e `6.0.2` 仍 `IN_PROGRESS`
-- 记录载体：worktree `20260922-102836-paid-module-evaluation`，未提交、未合并、未发布
+- 评估目标环境：Foundry `14.364` / dnd5e `5.3.3`（原调研锁定）；server-next 迁移目标 Foundry `14.368` / dnd5e `6.0.2` 仍 `IN_PROGRESS`
+- 原调研载体：worktree `20260922-102836-paid-module-evaluation`；当时记录的“未提交、未合并、未发布”只描述原调研状态
 - 本文件中"本地化"指**纳入本项目本地 Foundry Lab 并通过离线验收**（含必要的中文本地化工作），与商业发行无关
+
+## 2026-10-01 整理说明与后续记录
+
+本文件保留 9/22 调研快照；价格、热度、版本、“已装/未装”和未勾选待办不代表今天的情况。本次只整理既有文档，没有重新联网调研、安装模块或验收玩法。
+
+- **武器精通方向已校正**：最终由自有 mod 实现八种精通及已约定额外特性，上游只作参考。旧“装 wm5e、官方八种不自建”是代理误解，按[ADR-0006](../decisions/0006-weapon-mastery-scope.md)和[交付审计](2026-09-28-custom-module-delivery-adversarial-audit.md)修正；不是用户改变了目标。
+- **掩护采购理由已校正**：`levelsautocover` 有 Midi-QOL 正式集成，不能再把“必然抢层”当拒绝理由。原 no-buy 保留为当时选择；中文覆盖也不足以单独构成订阅理由，详见[掩护调研与后续对账](2026-09-22-cover-automation-module-research.md)。
+- **Vision5e 有后续限定验收**：Next 上 Vision5e＋Item Macro 的选定运行链已接受，见[第一版验收状态](2026-10-01-development-feedback-v1-verification-status.md)。这不自动改写 Mirror 健康矩阵，也不代表全光照、全感官或其他版本已验收；旧 A/B 待办不应整项重复执行。
+- 其他采购、安装和旧待办仍需按精确目标对账；本次不把它们转成新的执行授权。
 
 ## 记录目的与复用方式
 
@@ -62,6 +71,8 @@ R8 **中文本地化成本**：en-only 意味着 lang 文件 + handbook 双语�
 
 ## 4. 分层结论
 
+以下保留原调研快照；武器精通与掩护按页首纠错。
+
 ### 4.1 A 层：零成本，只差验收（优先级最高）
 
 | 模块 | 来源 | 填补的空白 | 备注 |
@@ -106,16 +117,34 @@ R8 **中文本地化成本**：en-only 意味着 lang 文件 + handbook 双语�
 - 附加价值：同档一次拿到 Tenacity / Minstrel / Peddler / Bondsmith，只需其中一个也划得来。
 
 **B4. TheRipper93 premium（€10/月）— 有条件**
-- 发布者是最主流大户（约 18.5k patrons），按"避开大热"原则本应排除；**唯一理由是免费 zh-hans 翻译层覆盖其 59 个模块**，是唯一能中文化跑起来的一批付费模块。
+- 发布者是最主流大户（约 18.5k patrons），按"避开大热"原则本应排除；**原调研把 zh-hans 覆盖作为候选理由**；中文层本身不能证明功能可用，也不足以单独支持订阅。掩护类已有其他中文来源，见[掩护调研](2026-09-22-cover-automation-module-research.md)。
 - 若重视中文桌面，取 `mastercrafted`（合成）、`token-notes`、`gatherer`、`dynamic-soundscapes`、`progress-tracker`。
 - `combat-tracker-dock` / `party-monitor-dock` 与自有 `open-session-deck` 重叠，不取。
 
 ### 4.3 C 层：小成本试错 / 观察
 
-**C1. Weapon Mastery Effects Reminder（FutureHax，$3/月起，74 patrons）**
-唯一实现 2024 武器精通（Sap/Slow/Vex 挂 AE、Graze 伤害、Cleave/Nick 额外攻击、命中门控）的付费模块，`13 - 14 (Verified 14)`，明写 dnd5e only。
-- 风险：作者体量全场最小（74 patrons），单点弃管风险最高。
-- 决策选项：**buy**（最低档试一季度）或 **build**（并入 `fvtt-house-rules` / `fvtt-custom-conditions`——你们有 trigger-engine 底座，build 更符合"core 不依赖第三方"原则）。
+**C1. Weapon Mastery Effects Reminder（FutureHax，$3/月起，74 patrons）— 已判定不 buy**
+2024 武器精通效果的付费模块（Sap/Slow/Vex 挂 AE、Graze 伤害、Cleave/Nick 额外攻击、命中门控），Forge 标记 `premium: protected`，入口是 Patreon early access 帖；`13 - 14 (Verified 14)`，明写 dnd5e only，仅英语，v1.3.2，2026-08-18 首次发布，Forge 安装记录 0。
+- 设计取向：**不自动结算**。它把掌握面板注入发起的骰卡（或跟发一张独立卡），用原生 Apply/Effects 托盘执行，命中/未命中只做门控。
+- 2026-09-22 复核修正：原文"唯一实现 2024 武器精通"**只对付费模块成立**。免费替代品 `wm5e` 在原补录前未被本文件评估（“零命中”是当时扫描，不是当前仓库状态），见下方 C1-附。
+- 项目选择：**不 buy，保留自有实现方向**。下方免费替代调研提供参考，不代表改装 wm5e 就完成交付；当前方向见 [ADR-0006](../decisions/0006-weapon-mastery-scope.md)。
+
+### C1-附：免费替代 `wm5e` 与版本咬合（2026-09-22 补录）
+
+| 项 | `wm5e`（Automated Masteries 5e，thatlonelybugbear） |
+| --- | --- |
+| 价格 | **免费开源**（GitHub + Forge，无 premium 标记） |
+| 覆盖 | 官方 8 种全实现，且**默认可自动结算**：Graze 未命中即触发、Push/Sap/Topple 命中即挂、Cleave/Slow/Vex 走伤害阶段；另有命中门控、Shift+左键绕过、NPC 开关、自定义武器 key → compendium UUID 映射 |
+| 硬依赖 | `automated-conditions-5e`（同一作者，manifest `requires` 写死） |
+| 热度 | GitHub 43 个 release 累计下载 153,992；Forge 安装份额 **0.4339**（同期 `dae` 34.15 / `midi-qol` 28.39 / `automated-conditions-5e` 3.22）→ **小众模块，不能假设用户已装** |
+| 版本 | `v14.533.6`：Foundry ≥14（verified 14.365）、dnd5e 5.3.0–6.0.0（verified **5.3.3**）、requires AC5E ≥14.533.1 |
+
+**版本咬合**：本地 Lab 已装的 `automated-conditions-5e 14.533.7.2` manifest 写着 minimum 14 / **verified 14.364** / dnd5e 5.3.0–6.0 / **verified 5.3.3**，与本文件锁定的 `14.364 + 5.3.3` 逐字命中。这只说明原目标下有安装候选，不能证明玩法可用或准确估算验收成本，也不改变本项目自有实现方向。
+
+**两条必须一起记住的校正：**
+
+1. "依赖第三方违反 core profile 原则"**用错了地方**。D 层最后一条禁的是"生成内容必须带某模块 flag 才能生效"；`wm5e` 读的是官方原生 `system.mastery` / `system.traits.weaponProf.mastery`，生成物零改动即可被驱动。该原则不反对 `wm5e`，也不反对 FutureHax。
+2. `wm5e` **写不进 v12**（最低 Foundry 13 / dnd5e 5.1.0），而 v12 是本仓库 README 的默认目标，且 dnd5e 4.3.9 的攻击卡不显示掌握名。这只能说明该第三方候选不覆盖原 v12 目标；本项目支持状态需另查当前矩阵和业务验收，不能据此宣布全部精通自动化零覆盖。
 
 **C2. Archive Creature Brewer（Shadowdrake Creations，$4.25/月起，494 patrons）**
 Foundry 原生怪物编辑器，分步工作流 + 实时 statblock 预览，Feature/spell 库覆盖 SRD 2014 + 2024，产物存为 blueprint 可导出 actor。
@@ -130,7 +159,8 @@ Foundry 原生怪物编辑器，分步工作流 + 实时 statblock 预览，Feat
 | --- | --- |
 | DFreds Status Effects / Triggers 作为运行时依赖 | 与自有 trigger-engine + custom-conditions 三重重叠；与 Midi-QOL/DAE 同层胶水，同装会重复触发。免费版 Convenient Effects 只配作 A/B 基准 |
 | Monk's Little Details | 2026-09-11 未解决的 `[V14][dnd5e] Cannot create Effects or Enchantments` bug，正踩条件系统语义域 |
-| Situational Shortcuts / Volumetric Templates / Automatic Cover Calculator（TheRipper93） | 抢 Midi-QOL/DAE 已占的 situational bonus 字段与模板目标选择，冲突概率最高 |
+| Situational Shortcuts / Volumetric Templates（TheRipper93） | 原调研记录的 situational bonus／模板选择重叠风险；需要具体接口与运行证据，不能仅凭同层就宣布冲突 |
+| Automatic Cover Calculator（`levelsautocover`） | 保留原 no-buy，但撤回“与 Midi-QOL 必然抢层”理由；它有正式集成，免费候选已满足当时重点需求。额外能力与版本边界见[掩护调研](2026-09-22-cover-automation-module-research.md) |
 | Enhanced Terrain Layer（IronMonk v10.09，2023-05） | 已死；改用核心 Regions（v12+）+ movement cost 行为 |
 | Monk's Combat Marker / Chat Timer | 停留 v12 / 依赖停更库 |
 | `combat-tracker-dock` / `party-monitor-dock` / Archive GM Drawer | 与自有 `open-session-deck` 重叠 |
@@ -141,6 +171,8 @@ Foundry 原生怪物编辑器，分步工作流 + 实时 statblock 预览，Feat
 ---
 
 ## 5. 待办清单
+
+以下是原待办；执行前对账，不是本轮新任务。
 
 > 状态口径与 [foundry-v14-module-health.md](../acceptance/foundry-v14-module-health.md) 一致：只有跑过本地 E2E 且人工核对过语义，才能把 `Untested` 改掉。
 
@@ -154,7 +186,7 @@ Foundry 原生怪物编辑器，分步工作流 + 实时 statblock 预览，Feat
 - [ ] `scene-packer` 与 JSON 生成器管线咬合验证
 - [ ] `item-piles` + `itempilesdnd5e` 与 `swipe-vtt` 的 `_onClickLeft2` 重叠 A/B
 - [ ] `fxmaster` / `psfx` / `dnd5e-animations` 氛围栈三选一定责，避免叠加
-- [ ] `vision-5e` 光照/视野 A/B
+- [ ] `vision-5e` 原光照/视野 A/B：Next 已有后续限定验收，见上方整理说明；只核仍缺的目标或行为，不重跑已成立的运行链
 - [ ] `monks-active-tiles` 验收；记录"对原生 Regions 集成为 0"作为自研 trigger-engine 的机会证据
 - [ ] `ripper-mod-localizations` 安装 + 抽查 zh 字符串质量（母语者核对前不得声称中文可用）
 - [ ] `jb2a_patreon` 补验收（已付费未验收是纯浪费）
@@ -166,8 +198,8 @@ Foundry 原生怪物编辑器，分步工作流 + 实时 statblock 预览，Feat
 
 ### 5.3 需用户决策
 
-- [ ] 武器精通能力：buy（Weapon Mastery Effects Reminder 最低档试一季）vs build（并入自有模块）
-- [ ] 是否订阅 TheRipper93 premium（唯一理由是 zh-hans 覆盖）
+- [x] 武器精通实现归属：**已明确八种精通及已约定额外特性由自有 mod 实现，上游只作参考**，见 [ADR-0006](../decisions/0006-weapon-mastery-scope.md)。勾选表示方向已定，不表示全部功能已完成或已进入 master；不再重新询问 buy vs build。
+- [ ] 是否订阅 TheRipper93 premium：仅当有已确认的独特功能需求时再决定；zh-hans 覆盖不能单独作为理由
 - [ ] 若引入 en-only 模块，是否由本项目承担其 zh lang 与 handbook 双语文案
 
 ---
