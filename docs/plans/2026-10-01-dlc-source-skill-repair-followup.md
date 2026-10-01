@@ -1,10 +1,10 @@
 # DLC 两个合集：来源技能加值修复后续任务
 
-日期：2026-10-01。状态：**待执行，独立业务任务；本轮未授权执行数据修复。** 用户确认先收尾共用验收工具第一版，DLC修复不再作为该工具交付前置条件。
+日期：2026-10-01。状态：**已完成，ACCEPTED_SOURCE_SKILL_REPAIR_LIMITED_SCOPE。** 49字段来源／重载、三个代表技能UI与实际API、精确自有资源清理均由父审接受。共用验收工具第一版及其评估已先收尾，本任务独立处理11 Actor／49来源技能加值，不扩大其他迁移。当前记录见[修复验收](../reviews/2026-10-01-dlc-source-skill-repair.md)。
 
 ## 已发生的事实
 
-两个声明Actor合集的strict系统迁移已经执行，不是等待开始迁移：`5e-dlc-monster.monster-heji` 为969 Actor，`5e-dlc-monster.modengken-duoyuanguaiwu` 为278 Actor。全量身份／文本／图片对照及两个样本UI／一次GM重载已有证据；完整来源语义为FAIL，首包10 Actor／48字段、次包1 Actor／1字段的原技能检查额外加值未保留在正确的 `system.skills.<id>.roll.bonus`。
+两个声明Actor合集的strict系统迁移此前已经执行：`5e-dlc-monster.monster-heji` 为969 Actor，`5e-dlc-monster.modengken-duoyuanguaiwu` 为278 Actor。全量身份／文本／图片对照及两个样本UI／一次GM重载已有证据；原迁移来源语义曾为FAIL，首包10 Actor／48字段、次包1 Actor／1字段的原技能检查额外加值未保留。此次仅恢复到正确的 `system.skills.<id>.roll.bonus`，没有重跑系统迁移。
 
 现有精确版本dnd5e6.0.2源码显示技能旧 `bonuses.check` 被映射至 `check.roll.bonus`，而技能的RollConfigField使用直接 `roll`。结论、版本映射和限制见[追加实机记录](../reviews/2026-10-01-development-feedback-dlc-runtime.md)。不得把系统调用完成、数量一致或样本页面正常称为整个合集验收通过。
 
@@ -20,4 +20,6 @@
 
 Other AC Bonus的Change Inactive和来源遗留图标缺失仍为不同问题，本拟定修复不包含它们。修完49字段只能接受相应来源字段与受影响行为，不能自动宣布全部1247 Actor玩法或所有效果通过。临时资源另按本次新创建的精确归属清理，旧V1工具证据与原迁移操作不重放。
 
-本记录是待办及验收范围，不是数据写入授权。工具第一版已按限定范围交付，参见[正式验证结论](../reviews/2026-10-01-development-feedback-v1-verification-status.md)；效果测量／公共运行适配仍另行选择，不随此业务待办自动启动。
+最初记录只是待办；随后用户对上述限定修复明确回复“可以开始处理”，构成本任务写入与验收授权。新任务候选 `20261001-110849-dlc-skill-repair / 0c72981`，业务run为 `557ddb6e-bc9d-48e6-9b2e-d80245e88ec8`，私有证据根为 `F:\FoundryLab\foundry-v14\evidence\server-next-migration\dlc-skill-repair-20261001-557ddb6e`。新授权、当前状态、共用本地准备收据与每步原生claim分别记录；旧PROPOSED_NOT_EXECUTED清单仍是历史来源，不用改写它冒充当前结果。
+
+共用文件侧复用prepare／ready／execute／collect，初版收据 `92dc2841-0524-445b-80d9-af4355c73e6a` 只接受准备。实机暴露flags基线带点key表示变化后，独立只读诊断与精确Core复现定位，采用字符串snapshot codec，最新11项检查与收据 `97be6053-1837-4d11-946c-1b7abcf3459f` 仍只接受准备；真实写入／重载／技能及清理由另外原件和父审接受。旧失败与初版／修正版检查数量不混合。工具第一版结论继续有效，参见[正式验证结论](../reviews/2026-10-01-development-feedback-v1-verification-status.md)，不重新制造全平台前置条件。
