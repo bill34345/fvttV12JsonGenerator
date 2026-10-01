@@ -6,7 +6,7 @@
 
 候选为 `20261001-000036-acceptance-dlc-trial / 072b50a`，运行原有 Next 的 `cor-cotn / 14.368 / dnd5e6.0.2`，只处理 `5e-dlc-monster.monster-heji` 和 `5e-dlc-monster.modengken-duoyuanguaiwu`。原 Mirror 未写、其他批次未恢复、无生产／版本升级／备份／世界复制。代码及原始Actor来源只作私有证据，不把完整付费内容或世界数据提交到仓库。
 
-Chrome实际执行配置为 `gpt-6.1-sol / medium / danger-full-access / never`，各阶段有执行器自己的新上下文回执；后台模型未独立观测。主控仍为 max。独立回调明确路由当前父UUID，原件含dispatchId/revision/nonce；发送、收到及父审分别记录。
+Chrome实际执行配置为 `gpt-6.1-sol / medium / danger-full-access / never`，各阶段有执行器自己的新上下文回执；后台模型未独立观测。主控迁移阶段为max，收尾阶段的实际上下文记录为high，配置分段详见[最终评估](2026-10-01-development-feedback-final-evaluation.md)，不能沿用旧期望值或当统一配置比较。独立回调明确路由当前父UUID，原件含dispatchId/revision/nonce；发送、收到及父审分别记录。
 
 | 层级 | 实际证据 | 当前结论 |
 | --- | --- | --- |
@@ -47,4 +47,4 @@ Chrome收尾dispatch `27e3d341-a1c5-463b-b47f-32fdaef89b7b` 在最新实际mediu
 
 父审收据 `runtime-owned-cleanup-8/parent-cleanup-acceptance.json` 为 ACCEPTED_EXACT_OWNED_CLEANUP；10条合成删除guard只作准备检查，不代替浏览器原件。源语义仍FAIL、49条修复未执行。既有服务及安装保留，不因完成工具交付停止共享服务或撤掉迁移成果。
 
-不得新增另一个迁移目标。三件可比任务、主动／等待、父子token归账及提速效果仍未完成，不影响工具第一版最低交付结论。
+不得新增另一个迁移目标。三件可比任务、主动／等待及提速效果仍未完成；随后已完成记录窗口的父／Chrome／只读复核token回溯基线，不能把这些观察量当收益比较。上述限制不影响工具第一版最低交付结论。

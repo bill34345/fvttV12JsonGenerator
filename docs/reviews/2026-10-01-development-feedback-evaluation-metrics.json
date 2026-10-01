@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-01",
+  "functionalVerdict": "VERIFIED_LIMITED_SCOPE",
+  "adoptionDecision": "KEEP_CURRENT_MINIMUM_SIMPLIFY_PREPARATION_NO_PLATFORM_EXPANSION",
+  "efficacyVerdict": "NO_COMPARABLE_CONTROL_GROUP_SPEED_AND_TOKEN_SAVINGS_NOT_ESTABLISHED",
+  "usage": {
+    "interval": {
+      "start": "2026-09-30T02:39:17.401Z",
+      "endExclusive": "2026-10-01T02:16:10.000Z",
+      "note": "From first parent context to immediately before the post-closure status question; excludes this evaluation task. Covers preparation/implementation/review/runtime/closure, not runtime-only cost."
+    },
+    "method": "Use only token_usage_record.payload.usage; global response_id dedup. Never sum event cumulative snapshots. Cached input remains subset of input; reasoning remains subset of output.",
+    "scopeStatus": "OBSERVED_THREE_KNOWN_SESSION_SOURCES_NOT_ACCOUNT_BILLING",
+    "totals": {
+      "responses": 765,
+      "input_tokens": 212154023,
+      "cached_input_tokens": 196860672,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1387437,
+      "reasoning_output_tokens": 845540,
+      "total_tokens": 213541460,
+      "uncached_input_plus_output": 16680788,
+      "reasoningIsOutputSubset": true
+    },
+    "byRole": {
+      "parent": {
+        "responses": 364,
+        "input_tokens": 80113096,
+        "cached_input_tokens": 70602752,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 894650,
+        "reasoning_output_tokens": 545105,
+        "total_tokens": 81007746,
+        "uncached_input_plus_output": 10404994,
+        "reasoningIsOutputSubset": true
+      },
+      "chrome": {
+        "responses": 392,
+        "input_tokens": 131392992,
+        "cached_input_tokens": 125713920,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 484745,
+        "reasoning_output_tokens": 296527,
+        "total_tokens": 131877737,
+        "uncached_input_plus_output": 6163817,
+        "reasoningIsOutputSubset": true
+      },
+      "coverage-review": {
+        "responses": 9,
+        "input_tokens": 647935,
+        "cached_input_tokens": 544000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8042,
+        "reasoning_output_tokens": 3908,
+        "total_tokens": 655977,
+        "uncached_input_plus_output": 111977,
+        "reasoningIsOutputSubset": true
+      }
+    },
+    "byConfiguration": {
+      "parent:gpt-6.1-sol/max": {
+        "responses": 337,
+        "input_tokens": 76865271,
+        "cached_input_tokens": 68241152,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 861838,
+        "reasoning_output_tokens": 540902,
+        "total_tokens": 77727109,
+        "uncached_input_plus_output": 9485957,
+        "reasoningIsOutputSubset": true
+      },
+      "parent:gpt-6.1-sol/high": {
+        "responses": 27,
+        "input_tokens": 3247825,
+        "cached_input_tokens": 2361600,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32812,
+        "reasoning_output_tokens": 4203,
+        "total_tokens": 3280637,
+        "uncached_input_plus_output": 919037,
+        "reasoningIsOutputSubset": true
+      },
+      "chrome:gpt-6.1-sol/max": {
+        "responses": 212,
+        "input_tokens": 66664544,
+        "cached_input_tokens": 64560896,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 333240,
+        "reasoning_output_tokens": 235895,
+        "total_tokens": 66997784,
+        "uncached_input_plus_output": 2436888,
+        "reasoningIsOutputSubset": true
+      },
+      "chrome:gpt-6.1-sol/medium": {
+        "responses": 180,
+        "input_tokens": 64728448,
+        "cached_input_tokens": 61153024,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 151505,
+        "reasoning_output_tokens": 60632,
+        "total_tokens": 64879953,
+        "uncached_input_plus_output": 3726929,
+        "reasoningIsOutputSubset": true
+      },
+      "coverage-review:gpt-6.1-sol/max": {
+        "responses": 9,
+        "input_tokens": 647935,
+        "cached_input_tokens": 544000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8042,
+        "reasoning_output_tokens": 3908,
+        "total_tokens": 655977,
+        "uncached_input_plus_output": 111977,
+        "reasoningIsOutputSubset": true
+      }
+    },
+    "subwindows": [
+      {
+        "id": "handoff-documentation",
+        "start": "2026-09-30T14:23:22Z",
+        "endExclusive": "2026-09-30T14:38:44.887Z",
+        "boundary": "Partial explicit measurement through documentation parent review",
+        "observedUsage": {
+          "responses": 17,
+          "input_tokens": 1708963,
+          "cached_input_tokens": 1665152,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 16776,
+          "reasoning_output_tokens": 6988,
+          "total_tokens": 1725739,
+          "uncached_input_plus_output": 60587,
+          "reasoningIsOutputSubset": true
+        }
+      },
+      {
+        "id": "dlc-offline-preparation",
+        "start": "2026-09-30T14:52:26Z",
+        "endExclusive": "2026-09-30T15:16:24.771Z",
+        "boundary": "Partial explicit measurement through offline parent review",
+        "observedUsage": {
+          "responses": 16,
+          "input_tokens": 2642800,
+          "cached_input_tokens": 2467840,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 23129,
+          "reasoning_output_tokens": 13913,
+          "total_tokens": 2665929,
+          "uncached_input_plus_output": 198089,
+          "reasoningIsOutputSubset": true
+        }
+      },
+      {
+        "id": "dlc-runtime-and-closure",
+        "start": "2026-09-30T16:00:41.918Z",
+        "endExclusive": "2026-10-01T02:09:08.442Z",
+        "boundary": "From trial worktree creation through delivery receipt; includes concurrent report work, user waits, Chrome recovery and closure. Not active labor or exact business-only cost.",
+        "observedUsage": {
+          "responses": 359,
+          "input_tokens": 106543130,
+          "cached_input_tokens": 99598464,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 571790,
+          "reasoning_output_tokens": 328308,
+          "total_tokens": 107114920,
+          "uncached_input_plus_output": 7516456,
+          "reasoningIsOutputSubset": true
+        }
+      }
+    ],
+    "independentlyVerified": true,
+    "sourcePrefixes": [
+      {
+        "role": "parent",
+        "filename": "rollout-2026-09-30T10-39-07-01a0f02e-063d-7fc1-b3ed-d4647e55f218.jsonl",
+        "prefixBytes": 28948771,
+        "prefixSha256": "577dc5163c70d8d8ef4fc40bde5dca2f48443d888f7335b0b8029b73c0b8bc0f",
+        "invalidOrPartialLines": 0,
+        "duplicateResponses": 0,
+        "cumulativeSnapshotsIgnored": 382
+      },
+      {
+        "role": "chrome",
+        "filename": "rollout-2026-09-29T16-32-51-01a0ec4b-9484-7dc0-a727-e8d4b9b347b5.jsonl",
+        "prefixBytes": 353748491,
+        "prefixSha256": "8bf36c45ad5b064c9f250f25341e40383ef2e2b4da812fc830193df19bfaced7",
+        "invalidOrPartialLines": 0,
+        "duplicateResponses": 0,
+        "cumulativeSnapshotsIgnored": 1488
+      },
+      {
+        "role": "coverage-review",
+        "filename": "rollout-2026-10-01T01-47-27-01a0f36d-af84-7841-93dd-7c040b10b76f.jsonl",
+        "prefixBytes": 1595745,
+        "prefixSha256": "c706c5e88c12d7bffa8aefcfbdaebb426885f3f9ba0dc2cd1470d12cec8851b0",
+        "invalidOrPartialLines": 0,
+        "duplicateResponses": 0,
+        "cumulativeSnapshotsIgnored": 9
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "first-file-consumer",
+      "kind": "file-check",
+      "accepted": "PASS_DECLARED_32_FILE_INSTRUCTION_CHECK",
+      "controlFlowChecks": 40,
+      "wallSeconds": null,
+      "windowNote": "No equivalent complete per-case active/wait timing. Control-flow checks are not business-task samples."
+    },
+    {
+      "id": "vision-macro-runtime",
+      "kind": "real-runtime",
+      "accepted": "ACCEPTED_LIMITED_SCOPE",
+      "fixtureGroups": 1,
+      "completedBehaviorReplays": 0,
+      "ownershipRefusals": 1,
+      "namespaceFailureEpisodes": 1,
+      "redundantImportGateEpisodes": 1,
+      "finalCleanupRecoveries": 1,
+      "cleanup": "PASS",
+      "parentAcceptedAt": "2026-09-30T21:24:25.2315488+08:00",
+      "completedLedgerOperations": 8,
+      "nativePrepareToGmReloadSeconds": 2612.675,
+      "timingBoundary": "Native prepare through GM reload only, excludes preparation and cleanup/recovery; not total or active labor.",
+      "controlsRegressionChecks": 63,
+      "additionalOwnershipEntryChecks": 7
+    },
+    {
+      "id": "handoff-documentation",
+      "kind": "documentation",
+      "accepted": "ACCEPTED_DOCUMENTATION_SCOPE",
+      "measuredWallSeconds": 922.886,
+      "timingBoundary": "First explicit timestamp after task selection. Earlier task discovery is not timed.",
+      "preparationIssueEpisodes": 4,
+      "formalContractPreparations": 2,
+      "formalLocalChecks": 2,
+      "businessRework": 0,
+      "fixtureRebuilds": 0,
+      "humanInterventions": 0,
+      "cleanup": "NOT_REQUIRED",
+      "comparableToRuntime": false
+    },
+    {
+      "id": "dlc-offline-preparation",
+      "kind": "offline-integration-preparation",
+      "accepted": "ACCEPTED_OFFLINE_PREPARATION_ONLY",
+      "measuredWallSeconds": 1438.77,
+      "timingBoundary": "Earlier initial intake and question creation are not timed. User/environment waiting was not separately timed.",
+      "preparationIssueEpisodes": 8,
+      "formalContractPreparations": 1,
+      "formalLocalChecks": 1,
+      "formalCheckFailures": 0,
+      "businessRework": 0,
+      "fixtureRebuilds": 0,
+      "necessaryHumanScopeDecisions": 1,
+      "agentCorrectionRequestsToHuman": 0,
+      "comparableToFullRuntime": false
+    },
+    {
+      "id": "dlc-runtime-and-closure",
+      "kind": "real-runtime",
+      "accepted": "SOURCE_SEMANTICS_FAIL_REPAIR_DEFERRED",
+      "toolConclusion": "VERIFIED_LIMITED_SCOPE",
+      "measuredWallSeconds": 36506.523,
+      "timingBoundary": "Trial worktree creation through closure delivery; includes parallel report work, pauses, user decisions and recovery. Not active work.",
+      "systemMigrationCalls": 2,
+      "systemMigrationReplays": 0,
+      "actors": 1247,
+      "sourceSkillIssues": 49,
+      "affectedActors": 11,
+      "repairApplied": false,
+      "afterParts": 236,
+      "cleanupOwnedFiles": 238,
+      "cleanupOwnedBytes": 74055014,
+      "cleanup": "ACCEPTED_EXACT_OWNED_CLEANUP",
+      "sourceSemanticsCheckedBy": "Independent parent source comparison, not an automatic shared semantic adapter",
+      "failureCategories": [
+        "wrong-interpreter-path-stopped-install",
+        "incorrect-task-ID-order-comparison",
+        "native-download-event-not-captured",
+        "inner-outer-timeout-mismatch",
+        "monolithic-large-output-not-captured",
+        "legacy-page-deadline-and-supported-recovery"
+      ],
+      "failureCountNote": "Six documented categories, not six total failed tool calls."
+    }
+  ],
+  "dispatchIntervals": [
+    {
+      "phase": "runtime-file-output-probe-5",
+      "begin": "2026-09-30T21:48:00.869Z",
+      "end": "2026-09-30T21:50:39.774Z",
+      "elapsedSeconds": 158.905,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-full-baseline-3",
+      "begin": "2026-09-30T20:27:48.545Z",
+      "end": "2026-09-30T20:42:55.290Z",
+      "elapsedSeconds": 906.745,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-inspection-1",
+      "status": "MISSING_EXPLICIT_BINDING_OR_TIME",
+      "begin": null,
+      "end": "2026-09-30T19:05:53.167Z",
+      "note": "An unwrapped host transport result is insufficient for an elapsed-time envelope; no timestamp is inferred from filesystem metadata."
+    },
+    {
+      "phase": "runtime-ledger-recovery-1",
+      "status": "MISSING_EXPLICIT_BINDING_OR_TIME",
+      "begin": null,
+      "end": "2026-09-30T19:32:58.176Z",
+      "note": "An unwrapped host transport result is insufficient for an elapsed-time envelope; no timestamp is inferred from filesystem metadata."
+    },
+    {
+      "phase": "runtime-owned-cleanup-8",
+      "begin": "2026-10-01T02:00:51.181Z",
+      "end": "2026-10-01T02:04:42.225Z",
+      "elapsedSeconds": 231.044,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-page-recovery-4",
+      "begin": "2026-09-30T21:08:02.371Z",
+      "end": "2026-09-30T21:20:33.920Z",
+      "elapsedSeconds": 751.549,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-readonly-recovery-2",
+      "begin": "2026-09-30T19:53:06.638Z",
+      "end": "2026-09-30T20:06:05.017Z",
+      "elapsedSeconds": 778.379,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-sample-ui-reload-7",
+      "begin": "2026-09-30T22:43:47.792Z",
+      "end": "2026-09-30T22:56:10.568Z",
+      "elapsedSeconds": 742.776,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    },
+    {
+      "phase": "runtime-strict-migration-6",
+      "begin": "2026-09-30T22:05:00.945Z",
+      "end": "2026-09-30T22:19:01.816Z",
+      "elapsedSeconds": 840.871,
+      "status": "OBSERVED_DISPATCH_TO_CALLBACK_ENVELOPE",
+      "note": "Includes executor work and transport, may overlap independent parent work; never subtract to derive active labor."
+    }
+  ],
+  "currentPreparation": {
+    "scope": "This retrospective evaluation itself, excluded from historical usage window",
+    "observedProblemCategories": [
+      "literal-Windows-rg-glob",
+      "overwide-or-mixed-PowerShell-table-output",
+      "guessed-measurement-filename",
+      "unwrapped-transport-receipt-schema-assumption",
+      "Windows-path-separator-provenance-classification"
+    ],
+    "categoryCount": 5,
+    "details": "These are identified preparation categories, not a complete failed-call count; discovered by actual rejected search/missing file/truncated output and audit assertions. An unwrapped old transport result has no explicit dispatch/timestamp, so its elapsed interval remains missing. A verifier first misclassified its own changed helper as raw input because of separators; fixed by exact normalized owned-root comparison. None caused runtime work or altered old evidence."
+  },
+  "limitations": [
+    "No billed dollars/account quota conversion",
+    "No active-work/user-wait/environment-wait attribution inferred",
+    "Subwindows overlap the overall interval; do not add their totals to overall",
+    "Subwindow response processing can include parallel documentation or other goal work",
+    "No comparable pre-tool control group; no speed/token savings claim",
+    "Model/effort varied; configuration groups are descriptive, not an A/B test"
+  ],
+  "activeWaitSplit": "NOT_RECONSTRUCTABLE_FROM_AVAILABLE_ATOMIC_EVENTS",
+  "comparableThreeTaskStudy": "NOT_COMPLETE_NO_FAKE_CASES_ADDED",
+  "modelExperiment": "NOT_EXECUTED_DESCRIPTIVE_CONFIGURATION_GROUPS_ONLY",
+  "evaluationOverheadPartial": {
+    "schemaVersion": 1,
+    "scope": "Partial evaluation overhead from new authorized turn through first final document/data verification; excludes later publishing/merge/final-response work, not complete assessment cost.",
+    "start": "2026-10-01T02:18:25.461Z",
+    "endExclusive": "2026-10-01T02:41:25.954Z",
+    "wallSeconds": 1380.493,
+    "model": "gpt-6.1-sol",
+    "efforts": [
+      "high"
+    ],
+    "observedUsage": {
+      "responses": 19,
+      "input_tokens": 3607681,
+      "cached_input_tokens": 3462016,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 33527,
+      "reasoning_output_tokens": 14221,
+      "total_tokens": 3641208,
+      "uncached_input_plus_output": 179192,
+      "reasoningIsOutputSubset": true
+    },
+    "source": {
+      "filename": "rollout-2026-09-30T10-39-07-01a0f02e-063d-7fc1-b3ed-d4647e55f218.jsonl",
+      "prefixBytes": 29281282,
+      "prefixSha256": "1c31d3791948323b218ee0abecd491b9856105564d9a8d0d7af80995d82c9398"
+    },
+    "includedInHistorical765ResponseBaseline": false
+  }
+}
