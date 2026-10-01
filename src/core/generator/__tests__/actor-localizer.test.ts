@@ -53,7 +53,9 @@ describe('ActorLocalizer', () => {
 
   it('localizes melee and ranged spell attacks without changing unrelated range substrings', async () => {
     const actor = createActor();
-    actor.items[0].system.description.value =
+    const firstItem = actor.items[0];
+    if (!firstItem) throw new Error('Expected the Bite fixture Item');
+    firstItem.system.description.value =
       '<p>Melee Spell Attack: +5 to hit. Ranged Spell Attack: +5 to hit. Spell attack range 60 ft. A strange effect follows.</p>';
 
     const localized = await new ActorLocalizer({ route: 'english' }).localize(actor);

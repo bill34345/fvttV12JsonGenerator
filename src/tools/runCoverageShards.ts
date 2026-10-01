@@ -66,7 +66,9 @@ export async function runCoverageShards(): Promise<void> {
       await runCoverageProcess(process.execPath, [
         'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
         '--test-name-pattern', COVERAGE_TEST_PATTERN, ...files.map(file => `./${file}`),
-      ], 120_000);
+      // One process now owns the complete inventory, including real temporary
+      // database/lock checks. Keep a deadline without truncating its final files.
+      ], 300_000);
       report = await readFile(join(directory, 'lcov.info'), 'utf8');
     }
     await writeFile('coverage/lcov.info', report);

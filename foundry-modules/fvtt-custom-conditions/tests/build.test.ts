@@ -1,12 +1,16 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { buildModule, validateManifest } from '../build.ts';
 
 describe('custom conditions release artifact', () => {
+  let result: Awaited<ReturnType<typeof buildModule>>;
+  beforeAll(async () => {
+    result = await buildModule();
+  });
+
   test('copies all independent condition icons into the module ZIP tree', async () => {
-    const result = await buildModule();
     for (const id of [
       'addled', 'bewildered', 'bleeding', 'burning', 'clumsy', 'dazed', 'defenseless',
       'distracted', 'enfeebled', 'frozen', 'helpless', 'immobilized', 'jinxed', 'shocked',
@@ -15,7 +19,6 @@ describe('custom conditions release artifact', () => {
   });
 
   test('packages creator attribution and source hashes for every condition icon', async () => {
-    const result = await buildModule();
     expect(result.files).toContain('CREDITS.md');
     expect(result.files).toContain('README.md');
     expect(result.files).toContain('README.zh-CN.md');

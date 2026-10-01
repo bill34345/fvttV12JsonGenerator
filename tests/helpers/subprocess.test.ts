@@ -16,3 +16,10 @@ test('CLI subprocess deadline reaps a child before reporting its timeout', async
   const childId = Number(failure!.message.match(/process (\d+)/)![1]);
   expect(() => process.kill(childId, 0)).toThrow();
 });
+
+test('CLI subprocess preserves Unicode output and reports a failed spawn', async () => {
+  const result = await runTestProcess({cmd:['bun','-e',"process.stdout.write('中文角色');process.stderr.write('错误信息')"]});
+  expect(result.stdout).toBe('中文角色');
+  expect(result.stderr).toBe('错误信息');
+  await expect(runTestProcess({cmd:['fvtt-nonexistent-test-executable-4863dddb']})).rejects.toThrow();
+});

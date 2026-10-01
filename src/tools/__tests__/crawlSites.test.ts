@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { runTestProcess } from '../../../tests/helpers/subprocess';
 
 describe('crawl-sites CLI', () => {
   test('goddessfantasy-board --mode incremental reports reuse and record totals', async () => {
@@ -196,26 +197,8 @@ describe('crawl-sites CLI', () => {
 });
 
 async function runCli(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const proc = Bun.spawn(['bun', 'run', 'src/tools/crawlSites.ts', ...args], {
-    cwd: resolve(process.cwd()),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const timeout = setTimeout(() => proc.kill(), 60_000);
-  try {
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    return { exitCode, stdout, stderr };
-  } finally {
-    clearTimeout(timeout);
-    if (proc.exitCode === null) {
-      proc.kill();
-      await proc.exited;
-    }
-  }
+  // Reap the owned child before Bun's outer 60-second test deadline expires.
+  return await runTestProcess({cmd:['bun','run','src/tools/crawlSites.ts',...args],cwd:resolve(process.cwd())},50_000);
 }
 
 function createCliCrawlFixtureServer(

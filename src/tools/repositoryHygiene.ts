@@ -53,6 +53,9 @@ const TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS = new Set([
 // module build inputs rather than disposable CLI output. Keep this exception
 // constrained to stable lowercase identifiers and the one ledger filename.
 const TRACKED_SPECIES_ACCEPTANCE_ARTIFACT = /^obsidian\/[^/]+\/output\/species\/(?:accepted-ledger|[a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
+// The accepted ServerNext Species projection is a module build input at its
+// explicit target directory. Do not allow arbitrary versions or nested output.
+const TRACKED_NEXT_SPECIES_ACCEPTANCE_ARTIFACT = /^obsidian\/[^/]+\/output\/species\/v14-368\/(?!accepted-ledger\.json$)[a-z0-9]+(?:-[a-z0-9]+)*\.json$/;
 
 export function inspectTrackedArtifactPaths(paths: string[]): RepositoryHygieneFinding[] {
   const findings: RepositoryHygieneFinding[] = [];
@@ -116,6 +119,7 @@ function classifyProhibitedPath(path: string): RepositoryHygieneRule | null {
   if (/^obsidian\/[^/]+\/output_backup\//i.test(path)) return 'generated-backup';
   if (TRACKED_GENERATED_ACCEPTANCE_ARTIFACTS.has(path)) return null;
   if (TRACKED_SPECIES_ACCEPTANCE_ARTIFACT.test(path)) return null;
+  if (TRACKED_NEXT_SPECIES_ACCEPTANCE_ARTIFACT.test(path)) return null;
   if (/^obsidian\/[^/]+\/output\//i.test(path)) return 'disposable-generated-output';
   if (/(?:^|\/)\.fvtt-sync-manifest\.json$/i.test(path)) return 'runtime-manifest';
   if (/(?:^|\/)\.obsidian(?:\/|$)/i.test(path)) return 'local-workspace-state';

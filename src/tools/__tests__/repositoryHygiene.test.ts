@@ -101,12 +101,21 @@ describe('repository hygiene gate', () => {
     const findings = inspectTrackedArtifactPaths([
       'obsidian/dnd数据转fvttjson/output/species/accepted-ledger.json',
       'obsidian/dnd数据转fvttjson/output/species/ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/v14-368/ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/v14-368/Ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/v14-369/ogre.json',
+      'obsidian/dnd数据转fvttjson/output/species/v14-368/ogre/review.json',
+      'obsidian/dnd数据转fvttjson/output/species/v14-368/accepted-ledger.json',
       'obsidian/dnd数据转fvttjson/output/species/Ogre.json',
       'obsidian/dnd数据转fvttjson/output/species/ogre/review.json',
       'obsidian/dnd数据转fvttjson/output/items/ogre.json',
     ]);
 
     expect(findings.map((finding) => [finding.path, finding.rule])).toEqual([
+      ['obsidian/dnd数据转fvttjson/output/species/v14-368/Ogre.json', 'disposable-generated-output'],
+      ['obsidian/dnd数据转fvttjson/output/species/v14-369/ogre.json', 'disposable-generated-output'],
+      ['obsidian/dnd数据转fvttjson/output/species/v14-368/ogre/review.json', 'disposable-generated-output'],
+      ['obsidian/dnd数据转fvttjson/output/species/v14-368/accepted-ledger.json', 'disposable-generated-output'],
       ['obsidian/dnd数据转fvttjson/output/species/Ogre.json', 'disposable-generated-output'],
       ['obsidian/dnd数据转fvttjson/output/species/ogre/review.json', 'disposable-generated-output'],
       ['obsidian/dnd数据转fvttjson/output/items/ogre.json', 'disposable-generated-output'],
