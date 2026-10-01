@@ -16,7 +16,7 @@ Chrome实际执行配置为 `gpt-6.1-sol / medium / danger-full-access / never`�
 | 完整after | 236个API上传原片，最大323614字节；整体64,888,210字节，原生SHA-256 `8b4466925a3433db95287e2648de853174f402f18d0bd0396789332beb4ef1ce`。父逐片复算、连续UTF16重组／Unicode／长度／整体摘要均一致。 | PASS完整原件。 |
 | 来源对照 | Actor／Item／Effect／Folder ID、名字、描述、图片、所属关系均保持；HP／能力值／原AC字段无数值差异。移动、感官、roll bonus、rarity、advancement和effect origin按精确版本新路径检查。 | 49项技能加值不符合来源；FAIL，不接受完整语义。 |
 | 样本UI／GM重载 | 有翼晶角兽HP93／AC17／STR19／walk40＋fly40、6物品；火巨人HP187／AC21／STR27／walk30、7物品＋1效果。头像实际加载，Bite的Midi Attack活动、装备页可见；一次正常重载前后样本／包锁／102模块94启用及版本／scene／pause／art／Token覆盖设置一致。 | PASS限定UI／持久化，不证明全部玩法。 |
-| 清理 | 所属Macro、私有文件暂存目录及替代页面保留待接续；原巨大输出页面关闭未确认。 | NOT_COMPLETE。 |
+| 清理 | 精确自有Macro删除一次，91→90且其他Macro集合完全一致；238暂存文件及空目录清理，完整证据保留；替代页面正常关闭，最终一次原生tab清单中两个自有页面均缺席。 | PASS限定自有资源；未改数据、模块或服务。 |
 
 ## 真实失败与缩小工具
 
@@ -29,9 +29,9 @@ Chrome实际执行配置为 `gpt-6.1-sol / medium / danger-full-access / never`�
 
 这些是私有DLC案例适配器的恢复经验，没有追加公共DSL／调度服务，也没有把VM运行adapter冒充DLC通用接口。操作及输出分层、真实来源复核和独立父审有实际价值；这些事实不能宣称耗时／token节省。
 
-## 语义失败及尚待决定的修复归属
+## 语义失败及独立后续任务
 
-精确dnd5e6.0.2的 `CommonTemplate.#SKILL_TOOL_BONUS_FIELD_PATHS` 把技能的 `bonuses.check` 指向 `check.roll.bonus`；`RollConfigField` 定义的是直接 `roll`。实际after的49条非零原值未出现在 `system.skills.<id>.roll.bonus`。涉及首合集10个Actor／48字段、次合集1个Actor／1字段。父任务已准备逐Actor／字段／原值／当前值的私有清单，尚未应用；是否进行这项额外第三方数据修正待用户决定，不自动改系统源码或重复迁移。
+精确dnd5e6.0.2的 `CommonTemplate.#SKILL_TOOL_BONUS_FIELD_PATHS` 把技能的 `bonuses.check` 指向 `check.roll.bonus`；`RollConfigField` 定义的是直接 `roll`。实际after的49条非零原值未出现在 `system.skills.<id>.roll.bonus`。涉及首合集10个Actor／48字段、次合集1个Actor／1字段。父任务已准备逐Actor／字段／原值／当前值的私有清单，尚未应用。用户确认先收尾工具第一版，把额外第三方数据修正列为[独立后续任务](../plans/2026-10-01-dlc-source-skill-repair-followup.md)；本轮不改系统源码、不修Actor、不重复迁移。
 
 其余旧字段变化有实值检查：移动移至formula字符串 `movement.speeds`、感官移至 `senses.ranges`；AC和roll bonus位置按源码映射；20条common rarity进入 `rarities`，空advancement进入ID对象；712条旧effect origin保留在结构化 `system.origin`。原型Token显示／阵营／视野变化与该世界既有 `core.prototypeTokenOverrides` 一致，没有改变世界设置。
 
@@ -41,4 +41,10 @@ Chrome实际执行配置为 `gpt-6.1-sol / medium / danger-full-access / never`�
 
 完整私有证据根为 `F:\FoundryLab\foundry-v14\evidence\server-next-migration\dlc-tool-trial-20261001`；权威状态为其中 `current-case.json`。关键层级为原始source-records、runtime-page-recovery-4、runtime-file-output-probe-5、runtime-strict-migration-6、runtime-sample-ui-reload-7以及after-source-comparison／semantic-mapping／proposed-source-skill-repair。父审依原件和源代码，不只读取执行器标签。
 
-下一步由本次数据修正范围决定：限定恢复49条来源值后复核受影响字段，或保留迁移语义待修状态先收尾原工具验证。随后精确清理自有Macro／暂存文件，保留必要证据。不得新增另一个迁移目标。三件可比任务、主动／等待、父子token归账及提速效果仍未完成。
+用户已选择保留迁移语义待修状态，先收尾原工具验证。本轮专用Data暂存238文件／74,055,014字节及空目录已按完整清单与SHA-256清理；来源、完整after、manifest、对照结果及拟修清单均在私有证据目录保留。父清理收据为 `runtime-owned-cleanup-8/parent-file-cleanup-receipt.json`，同级目录清单保持一致。专用Macro／页面清理另由Chrome执行器读回，不用文件清理成功代替浏览器清理。
+
+Chrome收尾dispatch `27e3d341-a1c5-463b-b47f-32fdaef89b7b` 在最新实际medium／Full Access上下文运行。正常Macro UI核旧command及marker后，仅保存冻结清理command，重开核对再一次执行；只删除 `4Izen96tFYrmJzxx`，原完成ledger留在实际结果中。43,402字节原生清理读回SHA-256为 `46fb860e0bd70cebb9c3dc3a15bb39af81a07cb3e58687b65ab2fb699adffb1b`。主控独立解析、复算摘要、核领取时点及完整Macro集合，packs／modules／scene／pause／art既与清理前一致，也与上一轮已接受重载原件一致。自有替代页面正常关闭；最终一次原生tab列表为空，旧巨大输出页也实际缺席，历史未确认状态由本轮当前证据闭合。
+
+父审收据 `runtime-owned-cleanup-8/parent-cleanup-acceptance.json` 为 ACCEPTED_EXACT_OWNED_CLEANUP；10条合成删除guard只作准备检查，不代替浏览器原件。源语义仍FAIL、49条修复未执行。既有服务及安装保留，不因完成工具交付停止共享服务或撤掉迁移成果。
+
+不得新增另一个迁移目标。三件可比任务、主动／等待、父子token归账及提速效果仍未完成，不影响工具第一版最低交付结论。
