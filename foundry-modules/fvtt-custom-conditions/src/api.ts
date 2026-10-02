@@ -1,5 +1,25 @@
 import type { ConditionId, ConditionInstance, ConditionParams } from '@fvtt-json-generator/contracts/conditions';
+import type {
+  WeaponEffectInput,
+  WeaponEffectInstance,
+  WeaponEffectReservationInput,
+  WeaponEffectReservationTicket,
+} from '@fvtt-json-generator/contracts/weapon-effects';
 import type { ConditionApplyOptions, ConditionEntry, ConditionRuntime } from './runtime.ts';
+import type { WeaponEffectEntry, WeaponEffectRuntime } from './weapon-effects.ts';
+import type { InjuryState } from './injury.ts';
+
+export interface WeaponEffectsApi {
+  readonly version: 1;
+  list(actor: any): WeaponEffectEntry[];
+  apply(actor: any, input: WeaponEffectInput): Promise<any>;
+  remove(actor: any, id: string): Promise<void>;
+  setEnabled(actor: any, id: string, enabled: boolean): Promise<void>;
+  reserve(actor: any, input: WeaponEffectReservationInput): Promise<WeaponEffectReservationTicket | undefined>;
+  start(actor: any, ticket: WeaponEffectReservationTicket): Promise<WeaponEffectReservationTicket>;
+  commit(actor: any, ticket: WeaponEffectReservationTicket): Promise<void>;
+  cancel(actor: any, ticket: WeaponEffectReservationTicket): Promise<void>;
+}
 
 export interface ConditionManagerOpenContext {
   actor: any;
@@ -16,9 +36,21 @@ export interface CustomConditionsApi {
   applyFromItem(item: any, actors: any[], effectId?: string, overrides?: ConditionParams): Promise<void>;
   escapeFrozen(actor: any, effectId: string, rollerActor?: any): ReturnType<ConditionRuntime['escapeFrozen']>;
   openManager(context?: ConditionManagerOpenContext): Promise<unknown>;
+  weaponEffects: WeaponEffectsApi;
+  injury: {
+    readonly owner: 'fvtt-custom-conditions';
+    isEnabled(): boolean;
+    getState(actor: any): InjuryState;
+    setStacks(actor: any, stacks: number, reason?: string): Promise<void>;
+    migrate(actor: any): Promise<InjuryState>;
+    applyRest(actor: any, restType: 'short' | 'long', id: string): Promise<void>;
+    suppressNextRecovery(actor: any, transactionId: string, reason: string): Promise<void>;
+    withSuppressed<T>(actor: any, reason: string, callback: () => Promise<T> | T): Promise<T>;
+  };
 }
 
 export function createConditionsApi(runtime: ConditionRuntime, openManager: (context?: ConditionManagerOpenContext) => Promise<unknown> | unknown): CustomConditionsApi {
+  const weaponEffects = createWeaponEffectsApi(runtime.weaponEffects);
   return Object.freeze({
     definitions: () => runtime.definitions(),
     list: (actor: any) => runtime.list(actor),
@@ -29,8 +61,35 @@ export function createConditionsApi(runtime: ConditionRuntime, openManager: (con
     applyFromItem: (item: any, actors: any[], effectId?: string, overrides?: ConditionParams) => runtime.applyFromItem(item, actors, effectId, overrides),
     escapeFrozen: (actor: any, effectId: string, rollerActor?: any) => runtime.escapeFrozen(actor, effectId, rollerActor),
     openManager: async (context?: ConditionManagerOpenContext) => openManager(context),
+    weaponEffects,
+    injury: Object.freeze({
+      owner: 'fvtt-custom-conditions' as const,
+      isEnabled: () => runtime.injury.enabled(),
+      getState: (actor: any) => runtime.injury.getState(actor),
+      setStacks: (actor: any, stacks: number, reason?: string) => runtime.injury.setStacks(actor, stacks, reason),
+      migrate: (actor: any) => runtime.injury.migrate(actor),
+      applyRest: (actor: any, restType: 'short' | 'long', id: string) => runtime.injury.applyRest(actor, restType, id),
+      suppressNextRecovery: (actor: any, transactionId: string, reason: string) => runtime.injury.suppressNextRecovery(actor, transactionId, reason),
+      withSuppressed: <T>(actor: any, reason: string, callback: () => Promise<T> | T) => runtime.injury.withSuppressed(actor, reason, callback),
+    }),
+  });
+}
+
+export function createWeaponEffectsApi(runtime: WeaponEffectRuntime): WeaponEffectsApi {
+  return Object.freeze({
+    version: 1 as const,
+    list: (actor: any) => runtime.list(actor),
+    apply: (actor: any, input: WeaponEffectInput) => runtime.apply(actor, input),
+    remove: (actor: any, id: string) => runtime.remove(actor, id),
+    setEnabled: (actor: any, id: string, enabled: boolean) => runtime.setEnabled(actor, id, enabled),
+    reserve: (actor: any, input: WeaponEffectReservationInput) => runtime.reserve(actor, input),
+    start: (actor: any, ticket: WeaponEffectReservationTicket) => runtime.start(actor, ticket),
+    commit: (actor: any, ticket: WeaponEffectReservationTicket) => runtime.commit(actor, ticket),
+    cancel: (actor: any, ticket: WeaponEffectReservationTicket) => runtime.cancel(actor, ticket),
   });
 }
 
 export type { ConditionApplyOptions, ConditionEntry, ConditionRuntime } from './runtime.ts';
+export type { WeaponEffectEntry, WeaponEffectRuntime } from './weapon-effects.ts';
 export type { ConditionInstance, ConditionParams } from '@fvtt-json-generator/contracts/conditions';
+export type { WeaponEffectInput, WeaponEffectInstance, WeaponEffectReservationInput, WeaponEffectReservationTicket } from '@fvtt-json-generator/contracts/weapon-effects';

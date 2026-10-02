@@ -1,11 +1,14 @@
-import { MAX_INJURY_STACKS, MODULE_ID } from './constants.ts';
+import { MODULE_ID } from './constants.ts';
 import { beginRitual, cancelPendingRitual, rapidResurrectionDc, resurrectionDc, resurrectionTransactionId, resolveAttempt } from './fading.ts';
-import { setInjuryStacks } from './injury.ts';
 import { isActiveGmWriter, readActorState, writeActorState } from './persistence.ts';
-import { projectInjuryStatus } from './projection.ts';
 import type { RitualContributor } from './state.ts';
 
 interface FormValues { [key: string]: FormDataEntryValue }
+
+async function suppressNextRecovery(actor: any, id: string, reason: string): Promise<void> {
+  const injury = game.modules?.get?.('fvtt-custom-conditions')?.api?.injury;
+  if (typeof injury?.suppressNextRecovery === 'function') await injury.suppressNextRecovery(actor, id, reason);
+}
 
 const ritualStartLocks = new Set<string>();
 const resolutionLocks = new Set<string>();
@@ -16,40 +19,30 @@ export async function openActorDashboard(actor: any): Promise<void> {
   const state = readActorState(actor);
   const html = `<div class="ifs-dashboard">
     <p><strong>${escapeHtml(actor.name)}</strong></p>
-    <p>${label('IFS.Status.Injury')}: <strong>${state.injury.stacks}</strong></p>
     <p>${label('IFS.Fading.SuccessfulReturns')}: ${state.fadingSpirits.successfulReturns}; DC +${state.fadingSpirits.permanentDcPenalty}</p>
     <p>${label('IFS.Fading.ConventionalLock')}: ${state.fadingSpirits.conventionalResurrectionLocked ? '✓' : '—'}; ${label('IFS.Fading.FinalUsed')}: ${state.fadingSpirits.finalChanceUsed ? '✓' : '—'}</p>
   </div>`;
+  const injuryEnabled = game.modules?.get?.('fvtt-custom-conditions')?.api?.injury?.isEnabled?.() === true;
+  const canBeginEpisode = !injuryEnabled && Number(actor.system?.attributes?.hp?.value) === 0 && isActiveGmWriter();
   const action = await dialogWait({
     window: { title: label('IFS.Title') },
     content: html,
     buttons: [
-      { action: 'injury', label: 'IFS.Actions.SetInjury', callback: () => 'injury' },
+      ...(canBeginEpisode ? [{ action: 'beginEpisode', label: 'IFS.Actions.BeginDeathEpisode', callback: () => 'beginEpisode' }] : []),
       { action: 'resurrection', label: 'IFS.Actions.Resurrection', callback: () => 'resurrection' },
       { action: 'close', label: 'IFS.Actions.Close', callback: () => 'close' },
     ],
   });
-  if (action === 'injury') await openSetInjuryDialog(actor);
-  else if (action === 'resurrection') await openResurrectionWizard(actor);
+  if (action === 'beginEpisode') {
+    try { await game.modules?.get?.(MODULE_ID)?.api?.beginDeathEpisode?.(actor, `gm:${actor.uuid}:${Date.now()}`); }
+    catch (error) { notifyException(error); }
+  } else if (action === 'resurrection') await openResurrectionWizard(actor);
 }
 
 export async function openSetInjuryDialog(actor: any): Promise<void> {
-  if (!isActiveGmWriter()) return notify('warn', 'IFS.Errors.ActiveGmOnly');
-  const state = readActorState(actor);
-  const value = await dialogWait({
-    window: { title: label('IFS.Actions.SetInjury') },
-    content: `<form><div class="form-group"><label>${label('IFS.Status.Injury')}</label><input type="number" name="stacks" min="0" max="${MAX_INJURY_STACKS}" step="1" value="${state.injury.stacks}"></div></form>`,
-    buttons: [
-      { action: 'save', label: 'IFS.Actions.Save', callback: (_event: unknown, button: any) => formValues(button?.form) },
-      { action: 'cancel', label: 'IFS.Actions.Cancel', callback: () => null },
-    ],
-  }) as FormValues | null;
-  if (!value) return;
-  const stacks = Number(value.stacks);
-  if (!Number.isInteger(stacks) || stacks < 0 || stacks > MAX_INJURY_STACKS) return notify('error', 'IFS.Errors.InvalidStacks');
-  state.injury = setInjuryStacks(state.injury, stacks);
-  await writeActorState(actor, state, `manual-injury:${actor.uuid}:${Date.now()}`);
-  await projectInjuryStatus(actor, stacks);
+  const api = game.modules?.get?.('fvtt-custom-conditions')?.api;
+  if (typeof api?.openManager !== 'function') return notify('warn', 'IFS.Errors.InjuryMoved');
+  await api.openManager({ actor });
 }
 
 export async function openResurrectionWizard(actor: any, forcedMode?: 'final'): Promise<void> {
@@ -182,7 +175,7 @@ export async function openResolveRitualDialog(actor: any, ritualId: string): Pro
     dieSucceeded: Number(roll.total) >= dc, soulWilling: values.soulWilling === 'on',
   });
   beforeResolve.fadingSpirits = resolved.state;
-  if (resolved.returned) beforeResolve.injury.suppressNextRecovery = { transactionId: pending.id, reason: 'fading-spirits-success' };
+  if (resolved.returned) await suppressNextRecovery(actor, pending.id, 'fading-spirits-success');
   await writeActorState(actor, beforeResolve, `${pending.id}:resolution-write`);
   await createAuditSummary(actor, pending.mode, dc, successes, failures, resolved.result);
   } finally {
@@ -285,7 +278,7 @@ async function resolveRapid(actor: any, modifier: number, soulWilling: boolean):
     dieSucceeded: Number(roll.total) >= dc, soulWilling,
   });
   beforeResolve.fadingSpirits = resolved.state;
-  if (resolved.returned) beforeResolve.injury.suppressNextRecovery = { transactionId: id, reason: 'rapid-resurrection-success' };
+  if (resolved.returned) await suppressNextRecovery(actor, id, 'rapid-resurrection-success');
   await writeActorState(actor, beforeResolve, `${id}:write`);
   await createAuditSummary(actor, 'rapid', dc, 0, 0, resolved.result);
   } catch (error) {
@@ -320,7 +313,7 @@ async function resolveMiracle(actor: any, soulWilling: boolean): Promise<void> {
     dieSucceeded: true, soulWilling,
   });
   current.fadingSpirits = resolved.state;
-  if (resolved.returned) current.injury.suppressNextRecovery = { transactionId: id, reason: 'miracle-success' };
+  if (resolved.returned) await suppressNextRecovery(actor, id, 'miracle-success');
   await writeActorState(actor, current, `${id}:write`);
   await createAuditSummary(actor, 'miracle', 0, 0, 0, resolved.result);
   } catch (error) {
@@ -448,6 +441,8 @@ async function acquireResolutionDocumentLock(actor: any, id: string, mode: 'norm
     }
   }
   try {
+    // The deterministic world document ID is the cross-client winner gate.
+    // Core otherwise assigns a new ID even when data already contains _id.
     const created = await chatMessageClass.create({
       _id: lockId,
       content: '',
@@ -457,7 +452,7 @@ async function acquireResolutionDocumentLock(actor: any, id: string, mode: 'norm
           resolutionLock: { actorUuid: actor.uuid, attemptId: id, mode, token, startedBy: game.user.id },
         },
       },
-    });
+    }, { keepId: true });
     if (!created || created.id !== lockId) {
       try { await created?.delete?.({ [MODULE_ID]: { internal: true, resolutionLock: true } }); } catch { /* fail closed */ }
       return false;

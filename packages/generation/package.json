@@ -38,6 +38,7 @@
     "./stable-id": "./src/stableId.ts",
     "./target": "./src/target.ts",
     "./v14-spell-catalog": "./src/v14SpellCatalog.ts",
+    "./weapon-properties": "./src/weapon-properties.ts",
     "./types": "./src/types.ts",
     "./validator": "./src/validator.ts",
     "./verification": "./src/verification.ts"

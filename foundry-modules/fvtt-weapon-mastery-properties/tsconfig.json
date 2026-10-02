@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true
+  },
+  "include": ["build.ts", "labCli.ts", "src/**/*.ts", "e2e/**/*.ts", "e2e/**/*.js", "tests/**/*.ts", "../lab-owned-upgrade.ts", "../../tools/foundry-ops/src/config.ts"]
+}

@@ -1,8 +1,8 @@
 # FVTT Trigger Engine
 
-`fvtt-trigger-engine` 是 Foundry VTT 14.364 / dnd5e 5.3.3 的通用触发器基础模块。它监听 Actor 文档更新、Combat 回合开始和 Combat 回合结束，按世界设置中的定义调用宏，并向其他模块公开稳定的事件订阅接口。
+`fvtt-trigger-engine` 在 Foundry VTT 14.364 / dnd5e 5.3.3 运行，新增 Foundry 14.368 / dnd5e 6.0.5 精确候选。它监听 Actor 文档更新、Combat 回合开始和回合结束，按世界设置中的定义调用宏，并向其他模块公开事件订阅接口；6.0.5 仍待本地运行时验收。
 
-这个模块不拥有任何具体状态规则。Bleeding、Burning、Frozen 等状态由独立的 `fvtt-custom-conditions` 模块管理；Trigger Engine 只负责事件、active GM 单执行者、Actor 队列、重复保护、因果链和宏调用。
+这个模块不拥有任何具体状态规则。Bleeding、Burning、Frozen 和伤势由独立的 `fvtt-custom-conditions` 模块管理；Trigger Engine 只负责事件、active GM 单执行者、Actor 队列、重复保护、因果链和宏调用。Actor 事件额外携带原生更新 Hook 时捕获的 `capturedModifiedTime`，供订阅者与 before/after HP 一起形成可持久去重的事务身份；旧订阅接口与 WMP external API 不变。
 
 ## 触发器定义
 

@@ -9,6 +9,8 @@
 
 ## Status vocabulary
 
+**2026-10-02 integration candidate amendment:** [The independent retirement/integration ledger](../reviews/2026-10-02-retirement-and-integration-ledger.md) separates the retained 14.364 / 5.3.3 WMP and Trigger Manager evidence, historical 12.331 / 4.3.9 Crystalbleed evidence, current candidate static checks, and unexecuted runtime gates. These uncommitted candidates do not broaden ServerNext 6.0.5 or production support. Existing dated rows below retain their own scope.
+
 - **Pass:** the named layer has current mechanical and semantic evidence for the bounded scope stated in that row.
 - **Partial:** some named workflows pass, but material behavior in the same layer is unaccepted or failing.
 - **Fail:** a required behavior was reproduced as failing.
@@ -116,3 +118,11 @@ The preceding qualification is superseded for the exact accepted local target. T
 本轮接受代表切片：House 药水手改保护／恢复，Deck 力竭3→4→3，Resolver 自动十法术水合及一次普通UI Undo 后 pending／0缓存，Painter 原两格可见动画火焰／Region／light及重载保持，Babele 可见25／5行中文嵌入与原UUID，Injury 公共状态API与恢复，Monitor 短会话start／mark／stop／历史持久；Blood Hunter／Species 为既有内容身份和合集读取，Chat Guard 为公开诊断统计。它不提升为所有玩法／所有模块组合通过；天然19、完整Cast矩阵、长测和生产未执行。精确清理已通过，原90 Macro、两条 Monitor 历史及设置／视图状态恢复。额外获准 Midi local.10 的三文件与四语言文件限定安装、packs保持、正常Check／Save各+4及其精确清理通过；当前94启用ID相同，唯一版本变化为Midi local.9→local.10。详见[本轮限定接受记录](../reviews/2026-10-01-next-605-custom-module-restoration.md)和[Midi请求修复接受](../reviews/2026-10-01-next-605-midi-request-bonus-gap.md)。
 
 5.x固定5.3.3与6.x稳定跟随的长期方向见[版本流程](../runbooks/dnd5e-version-following.md)。这不扩大既有生成器Actor／Item默认或6.x通用接受，也不改写旧14.364/5.3.3及14.368/6.0.2证据。
+
+## 伤势所有权迁移候选（2026-10-02）
+
+Custom Conditions 0.2.0 候选拥有 0–3 层伤势、HP／休息与死亡豁免 19／20；Trigger Engine 0.2.0 提供事件，消逝灵魂 1.1.0 保留独立复活。新伤势版本门为 14.364／5.3.3 和 14.368／6.0.5；十九种通用状态、生成器的 ConditionId 和武器专精支持边界不扩大。
+
+当前状态为 **Mirror 14.364／5.3.3 本轮代表行为与恢复PASS；Next OUT_OF_SCOPE**。旧IFS原件、未知字段和复活历史保留，新IFS只写fadingSpirits；没有CC也能独立复活并开始下一死亡episode。实际接受涵盖迁移、HP／原生休息／控制输入19–20、HUD／重载、DAE清除与外部内容保留、独立及联合仪式、原贡献按钮、玩家blind可见性、authenticated sender验权及双GM唯一结算。原十Actor／三flags／两投影、原用户／模块／设置及本轮Foundry对象清理经重载读回。正常Core审计字段未伪造为旧值；旧CU空白窗口单独NOT_CLEANED。前一节Next公共状态API PASS仍仅属于旧所有者，6.0.5不因本轮Mirror结果升级为接受。完整复活分支、并发压力、生产和长时未宣称通过。详见[计划](../plans/2026-10-02-injury-condition-ownership.md)及[实际整合证据](../reviews/2026-10-02-injury-condition-integration.md)。
+
+首批WMP依赖适配精确加入CC／TE0.2.0，继续拒绝0.2.1或不完整API，WMP自身仍只支持14.364／5.3.3。旧WMP原件与本次依赖组合接受分开，最终组合门禁和该接通实机检查按整合记录闭合。

@@ -1,29 +1,21 @@
-# 伤势与消逝的灵魂
+# 消逝的灵魂（兼容模块 ID：fvtt-injury-fading-spirits）
 
-运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、历史候选 `14.368` / `6.0.2`，或新增候选 `14.368` / `6.0.5` 三组精确配对；交叉和未列版本会失败关闭。6.0.5 目前通过固定源确认与离线门禁测试，仍须在 ServerNext 本地 Lab 做 GM/玩家多客户端语义验收。模块不依赖 MIDI-QOL、DAE 或其他村规模块。
+运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、历史候选 `14.368` / `6.0.2`，或新增候选 `14.368` / `6.0.5` 三组精确配对；交叉和未列版本会失败关闭。6.0.5 仍须在 ServerNext 本地 Lab 做 GM/玩家多客户端语义验收。本模块保留独立复活仪式、历史、锁与 blind 结果保密；伤势规则、状态、死亡豁免 19/20 扩展和管理入口现由 `fvtt-custom-conditions` 负责。未安装 Custom Conditions 时，复活仪式仍可独立使用。
 
 ## 语言
 
 模块跟随 Foundry 世界的核心语言设置，不根据操作系统或模块安装路径猜测语言：
 
-- Foundry 核心语言为 `zh-CN`，或使用 Foundry 中文翻译包的 `cn` 时加载 `lang/zh-CN.json`，伤势、消逝的灵魂、复活模式、设置向导和 GM 裁定界面显示中文。
+- Foundry 核心语言为 `zh-CN`，或使用 Foundry 中文翻译包的 `cn` 时加载 `lang/zh-CN.json`，消逝的灵魂、复活模式与 GM 裁定界面显示中文。
 - Foundry 核心语言为 `en` 时加载 `lang/en.json`。
 - 修改 Foundry 核心语言后请重新加载世界；当前已经打开的 Dialog 不会被动态重绘。
 - 模块的 manifest 标题使用中英双语，避免在管理模块页面中出现不可识别的纯英文标题。
 
 ## 使用
 
-模块首次启用时，活动 GM 会看到设置提示；所有自动修改默认关闭。启用后：
+GM 可以在 Actor 目录右键选择“消逝的灵魂”，或选择一个 Token 后在聊天输入 `/ifs`，打开复活面板。`enabled` 和 `manageNpcs` 旧世界设置只留给 Custom Conditions 迁移，不再在本模块启用伤势 Hook。已有 `flags.fvtt-injury-fading-spirits.injury` 和 `fadingSpirits` 保留；本模块后续只写 `fadingSpirits` 子路径。Custom Conditions 开始新死亡 episode 时，可调用本模块公开的 `beginDeathEpisode`；复活成功则通过 Custom Conditions 公开接口设置下一次恢复抑制。
 
-- character Actor 从正 HP 第一次进入 0 HP 时开启倒地 episode；同一 episode 首次恢复正 HP 叠一层伤势。
-- 伤势层数固定为 `0–3`；任何自动、手动、API 或玩家请求入口都不能写入第 4 层，旧的 4+ 层数据会由活动 GM 归一并写回 3 层。
-- 伤势层数由 Actor flag 保存；角色上的“伤势（X/3）”效果只是显示投影。Token 左上显示带层数的图标，Token 状态列表也会显示并框选“伤势”。
-- Token 状态列表中的“伤势”采用与力竭相同的分层操作：左键增加一层、右键减少一层；到达 3 层后继续左键仍保持 3 层。
-- 0–2 层再次倒地会写入对应死亡失败；3 层时先让 GM 选择，选择前不会预写死亡。
-- 死亡豁免最终保留的裸 d20 为 19 或 20 时按大成功处理。
-- 真实治疗增加到满血、成功短休或成功长休会清除伤势。
-
-GM 可以在 Actor 目录右键选择 `Injury & Fading Spirits`，或选择一个 Token 后在聊天输入 `/ifs`，打开伤势/复活面板。
+不安装 Custom Conditions 时，本模块仍观察 Actor 从正 HP 降到 0 的事件，开启新的复活死亡阶段并重置仅限本次死亡的锁；它不计算伤势、不改死亡豁免。若事件未被观察到，GM 可在 0 HP Actor 的复活面板明确选择“开启新的死亡阶段”，不会自动清除正在结算的旧仪式。
 
 ## 复活仪式
 
@@ -33,7 +25,7 @@ GM 可以在 Actor 目录右键选择 `Injury & Fading Spirits`，或选择一�
 
 快速复活失败会增加永久 DC 惩罚并锁定本次死亡的快速复活；普通失败会锁定常规复活。常规锁存在时，“奇迹”入口只允许开启一次最终仪式。
 
-复活成功只记录回归历史并设置“下一次 0→正 HP 不叠伤势”；实际 HP 恢复仍由对应法术/Activity 处理。
+复活成功记录回归历史；若 Custom Conditions 在运行，调用其公开接口使下一次 0→正 HP 不叠伤势。实际 HP 恢复仍由对应法术/Activity 处理。
 
 ## 公开 API v1
 
@@ -48,11 +40,11 @@ await api.withInjurySuppressed(actor, "resurrection activity", async () => {
 });
 ```
 
-外部复活 Activity 或宏若会直接恢复 HP，应由活动 GM 通过 `withInjurySuppressed` 包裹恢复事务。模块不会从物品名称猜测复活能力。
+旧 `setInjury` / `withInjurySuppressed` 调用会转发到 Custom Conditions 公开 API；未启用 Custom Conditions 时返回明确错误。外部复活 Activity 或宏若会直接恢复 HP，可由活动 GM通过 `withInjurySuppressed` 包裹恢复事务。模块不会从物品名称猜测复活能力。
 
 ## 安全与限制
 
 - 长期状态仅由 Foundry 的确定性活动 GM 写入；无活动 GM 时不会偷偷改 Actor。
 - 模块只在精确目标版本启用自动化；版本不符会失败关闭。
-- ChatMessage 不是历史事实来源，聊天被清理不会丢失伤势或复活历史。
+- ChatMessage 不是历史事实来源，聊天被清理不会丢失复活历史。
 - 本地 Lab 验收不代表生产部署或真实跑团长期验收。

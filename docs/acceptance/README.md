@@ -7,6 +7,7 @@
 - [Current Support Matrix](current-support-matrix.md)：当前版本、环境和功能支持边界；
 - [Current Acceptance Corpus Matrix](current-corpus-matrix.md)：已经人工核对过的代表性输入；
 - [Generated Actor / Item Verification](../generated-actor-verification.md)：Actor/Item JSON 应怎样对照源资料验收。
+- [退役取证与遗留整合候选](../reviews/2026-10-02-retirement-and-integration-ledger.md)：36 个删除对象的证据边界、首批未发布候选及后续窄门。
 - [Species TXT Intake 与累计模块](../species-ai-intake-v14.md)：Species Evidence IR、规范 Markdown、V14 race/feat package、accepted ledger 与模块构建边界。
 
 ## Actor 和转换结果
@@ -23,6 +24,9 @@
 - [Foundry v14 Live Runtime Smoke Test](v14-live-runtime-smoke-test.md)
 - [Foundry v14 Module Compatibility](foundry-v14-module-compatibility.md)
 - [Foundry v14 Module Health](foundry-v14-module-health.md)
+- [WMP 本地交付终审（14.364 / 5.3.3 历史接受）](../reviews/2026-09-25-weapon-mastery-user-report.md)
+- [Trigger Manager 完整重载专项（14.364 / 5.3.3）](../reviews/2026-09-22-trigger-manager-reload-acceptance.md)
+- [Crystalbleed V12 历史运行接受（12.331 / 4.3.9）](2026-09-09-crystalbleed-v12-runtime.md)
 - [Foundry v14 Module Parity](foundry-v14-module-parity.md)
 - [Chat Memory Guard 人工验收清单](chat-memory-guard-manual-checklist.zh-CN.md)
 - [Chat Memory Guard 运行时验收报告](chat-memory-guard-runtime-report.zh-CN.md)
@@ -33,4 +37,4 @@
 - [Foundry v14 本地优化与生产端操作记录](foundry-v14-local-optimization-log.zh-CN.md)
 - [Foundry v14 操作累积诊断报告](foundry-v14-operation-accumulation.md)
 
-超过 30 分钟的 Chrome、Foundry 或 Session Monitor 持续监测不由代理执行；四小时真实跑团验收由用户在实际使用时运行。
+Foundry、Chrome 和 Session Monitor 工作沿用根说明，不设固定总时长上限，单操作仍保留超时。四小时或其他长时测试仅在用户明确要求相应验收时运行；真实会话及所需设备证据不能由模拟或多个短测试替代。

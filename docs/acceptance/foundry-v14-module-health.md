@@ -119,3 +119,17 @@ Foundry 14.364; dnd5e 5.3.3.
 | dd-import | 6.1.1 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | vision-5e | 3.1.3 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
 | z-scatter | 2.2.4 | Untested | manifest metadata is compatible; runtime behavior not yet accepted | requires runtime and semantic acceptance |
+
+## 首批遗留整合候选（2026-10-02，未发布）
+
+这些增量不计入上方历史模块库存，也不改写 ServerNext 的后续接受记录。
+
+- WMP 的 2026-09-29 本地交付终审与原件已核对。原生／Midi 主链、流血生命周期、正式生成导入／刷新、真实玩家伤害应用／在线 GM 结算，以及任务对象精确清理与恢复均保留实际构建和覆盖边界。精确目标为 Foundry 14.364 / dnd5e 5.3.3；部分原件仍带 INCOMPLETE 分类，终审按原始消息、HP 和效果关系给出行为结论，未改写原件。
+- 本轮将 WMP 与必要的 Custom Conditions／Trigger／生成契约增量适配至当前 master，保留后续 HUD 与 6.0.5 适配。新组合只获得本轮静态与生成层检查，不自动继承全部历史实机接受；WMP 不因此支持 6.0.5。详见[独立台账](../reviews/2026-10-02-retirement-and-integration-ledger.md)及[历史终审](../reviews/2026-09-25-weapon-mastery-user-report.md)。
+- Trigger Manager 完整页面重载门已在 2026-09-22 的 14.364 / 5.3.3 CoTN 环境闭合。本轮核对保存的实际脚本、读回计数与原始 AX 摘录，补入[专项记录](../reviews/2026-09-22-trigger-manager-reload-acceptance.md)，不重跑 Combat 或其他状态、不外推 Next。
+
+## 伤势所有权的Mirror代表接受（2026-10-02）
+
+CC0.2.0／TE0.2.0／IFS1.1.0在同一个Mirror 14.364／5.3.3／matrix的迁移、HP／休息／控制输入死亡豁免、管理器与HUD、重载、DAE清除及混合字段保留、独立两次复活、联合成功复活抑制、原贡献按钮、玩家blind和authenticated sender、双GM代表唯一结算均PASS。原十Actor、三旧flags、两原投影、用户／模块／设置与本轮Foundry fixture恢复后重载读回PASS；正常审计_stats除外，旧CU空白窗口单独NOT_CLEANED。Next OUT_OF_SCOPE，不推广通用状态／完整模式分支／压力／生产。构建身份与失败后闭合证据在[整合记录](../reviews/2026-10-02-injury-condition-integration.md)。
+
+WMP仍锁14.364／5.3.3；其依赖门本次精确接受CC／TE0.2.0，并保留API版本／能力检查。新包在Mirror实际ready=true，代表原生攻击／伤害→TE事件→CC Vex建立／预留／取消／消费链及原值恢复PASS，和9/29其他属性历史接受分开。没有推广全属性矩阵、6.0.5或生产；证据见同一整合记录。

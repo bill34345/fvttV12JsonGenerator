@@ -10,9 +10,14 @@ import {
 import { DEFAULT_TRIGGER_STORE } from './schema.ts';
 import type { TriggerStorage } from './storage.ts';
 import { FoundryTriggerStorage } from './storage.ts';
+import { EXTERNAL_EVENT_SETTING_KEY, MODULE_ID } from './constants.ts';
 import type {
   CombatTurnContext,
   CombatUpdateReport,
+  ExternalEvent,
+  ExternalEventData,
+  ExternalEventListener,
+  ExternalEventPublishResult,
   DocumentUpdateReport,
   MacroAction,
   TriggerActionResult,
@@ -23,14 +28,26 @@ import type {
   TriggerExecutionResult,
   TriggerStore,
 } from './types.ts';
+import {
+  EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION,
+  EXTERNAL_EVENT_LIMITS,
+  EXTERNAL_EVENT_SCHEMA_VERSION,
+} from './types.ts';
 
 export interface TriggerEngineRuntimeOptions {
   globals?: any;
   storage?: TriggerStorage;
+  externalEventStorage?: ExternalEventLedgerStorage;
   /** A test/embedding seam. The default resolver uses foundry.utils.fromUuid. */
   macroResolver?: (uuid: string) => unknown | Promise<unknown>;
   logger?: Pick<Console, 'error' | 'warn'>;
   onCombatTurnStart?: (context: CombatTurnContext) => Promise<void>;
+}
+
+/** Storage seam for the serialized, bounded external-event ledger. */
+export interface ExternalEventLedgerStorage {
+  load(): unknown | Promise<unknown>;
+  save(serializedLedger: string): void | Promise<void>;
 }
 
 interface CombatStateSnapshot {
@@ -52,6 +69,7 @@ interface CapturedCombatTurn {
 export class TriggerEngineRuntime {
   readonly globals: any;
   readonly storage: TriggerStorage;
+  readonly externalEventStorage?: ExternalEventLedgerStorage;
   readonly logger: Pick<Console, 'error' | 'warn'>;
   readonly macroResolver?: (uuid: string) => unknown | Promise<unknown>;
   readonly onCombatTurnStart?: (context: CombatTurnContext) => Promise<void>;
@@ -65,6 +83,14 @@ export class TriggerEngineRuntime {
   #seenCombatTurnKeys = new Set<string>();
   #activeExecutions = new Map<string, { triggerId: string; documentUuid: string }>();
   #eventListeners = new Set<TriggerEventListener>();
+  #externalEventListeners = new Set<ExternalEventListener>();
+  #externalEvents: ExternalEvent[] = [];
+  #externalEventKeys = new Set<string>();
+  #externalLedgerLoaded = false;
+  #externalLedgerQueue: Promise<void> = Promise.resolve();
+  #externalPublishQueue: Promise<void> = Promise.resolve();
+  #externalDeliveryQueue: Promise<void> = Promise.resolve();
+  #externalSettingRegistered = false;
   #executionSequence = 0;
   #hookId: unknown;
   #combatHookId: unknown;
@@ -80,6 +106,7 @@ export class TriggerEngineRuntime {
       : { globals: options, storage: storageOverride };
     this.globals = normalized.globals ?? globalThis;
     this.storage = normalized.storage ?? new FoundryTriggerStorage(this.globals.game);
+    this.externalEventStorage = normalized.externalEventStorage ?? createFoundryExternalEventStorage(this.globals.game);
     this.logger = normalized.logger ?? console;
     this.macroResolver = normalized.macroResolver;
     this.onCombatTurnStart = normalized.onCombatTurnStart;
@@ -96,10 +123,36 @@ export class TriggerEngineRuntime {
     return () => { this.#eventListeners.delete(listener); };
   }
 
+  /** Subscribe to sanitized external events without requiring GM access. */
+  subscribeExternal(listener: ExternalEventListener): () => void {
+    if (typeof listener !== 'function') throw new TypeError('External event listener must be a function.');
+    this.#externalEventListeners.add(listener);
+    return () => { this.#externalEventListeners.delete(listener); };
+  }
+
+  /**
+   * Publish one validated external event from the active GM. This bridge only
+   * transports a bounded envelope; the caller owns GM reparse, permissions,
+   * and proof that the attack actually reached the named phase. The returned
+   * promise completes after persistence/deduplication; subscribers receive
+   * events in order through a separate delivery queue.
+   */
+  async publishExternal(input: ExternalEvent): Promise<ExternalEventPublishResult> {
+    if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
+    const event = validateExternalEvent(input);
+    const run = this.#externalPublishQueue
+      .catch(() => undefined)
+      .then(async () => this.publishExternalInQueue(event));
+    this.#externalPublishQueue = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
   /** Load validated world data, seed ready snapshots, and bind lifecycle hooks. */
   async start(): Promise<void> {
     if (this.#started) return;
+    this.registerExternalEventSetting();
     await this.reload();
+    await this.loadExternalEventLedger();
     this.captureReadySnapshots();
     this.captureReadyCombatSnapshots();
     this.bindUpdateHook();
@@ -192,6 +245,13 @@ export class TriggerEngineRuntime {
     this.#seenCombatTurnKeys.clear();
     this.#started = false;
     this.#eventListeners.clear();
+    this.#externalEventListeners.clear();
+    this.#externalEvents = [];
+    this.#externalEventKeys.clear();
+    this.#externalLedgerLoaded = false;
+    this.#externalLedgerQueue = Promise.resolve();
+    this.#externalPublishQueue = Promise.resolve();
+    this.#externalDeliveryQueue = Promise.resolve();
   }
 
   async reload(): Promise<TriggerStore> {
@@ -314,7 +374,9 @@ export class TriggerEngineRuntime {
     const before = this.#snapshots.get(documentUuidValue);
     this.#snapshots.set(documentUuidValue, cloneUnknown(after));
 
-    const event = { document, changed, options, userId, documentUuidValue, before, after };
+    const nativeModified = Number(document?._stats?.modifiedTime);
+    const event = { document, changed, options, userId, documentUuidValue, before, after,
+      capturedModifiedTime: Number.isFinite(nativeModified) ? nativeModified : undefined };
     const causalChain = causalExecutions(options);
     const isReentrantCausalUpdate = causalChain.some((entry) => {
       const active = this.#activeExecutions.get(entry.executionId);
@@ -483,6 +545,7 @@ export class TriggerEngineRuntime {
       documentUuidValue: string;
       before: unknown;
       after: unknown;
+      capturedModifiedTime?: number;
     },
     suppressedTriggerIds: ReadonlySet<string> = new Set(),
     causalChain: readonly CausalExecution[] = [],
@@ -505,6 +568,7 @@ export class TriggerEngineRuntime {
       changes: cloneUnknown(changed),
       userId,
       timestamp: Date.now(),
+      capturedModifiedTime: event.capturedModifiedTime,
     });
 
     const results: TriggerExecutionResult[] = [];
@@ -537,6 +601,122 @@ export class TriggerEngineRuntime {
     if (!activeGM) return false;
     if (activeGM === user) return true;
     return user?.id !== undefined && activeGM.id !== undefined && activeGM.id === user.id;
+  }
+
+  private async publishExternalInQueue(event: ExternalEvent): Promise<ExternalEventPublishResult> {
+    if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
+    await this.ensureExternalEventLedgerLoaded();
+    if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
+    const key = externalEventKey(event);
+    if (this.#externalEventKeys.has(key)) {
+      return { status: 'duplicate', event: cloneExternalEvent(event) };
+    }
+
+    const previousEvents = this.#externalEvents;
+    const previousKeys = this.#externalEventKeys;
+    const nextEvents = trimExternalEvents([...previousEvents, event]);
+    this.#externalEvents = nextEvents;
+    this.#externalEventKeys = new Set(nextEvents.map(externalEventKey));
+    try {
+      if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
+      await this.saveExternalEventLedger();
+    } catch (error) {
+      this.#externalEvents = previousEvents;
+      this.#externalEventKeys = previousKeys;
+      throw error;
+    }
+
+    this.enqueueExternalEventDelivery(event);
+    return { status: 'published', event: cloneExternalEvent(event) };
+  }
+
+  private async ensureExternalEventLedgerLoaded(): Promise<void> {
+    if (this.#externalLedgerLoaded) return;
+    await this.loadExternalEventLedger();
+  }
+
+  private async loadExternalEventLedger(): Promise<void> {
+    if (this.#externalLedgerLoaded) return;
+    this.#externalLedgerLoaded = true;
+    if (!this.externalEventStorage) return;
+    try {
+      const raw = await this.externalEventStorage.load();
+      const events = parseExternalEventLedger(raw);
+      this.#externalEvents = events;
+      this.#externalEventKeys = new Set(events.map(externalEventKey));
+    } catch (error) {
+      this.#externalEvents = [];
+      this.#externalEventKeys.clear();
+      this.logger.warn('[fvtt-trigger-engine] external event ledger load failed', error);
+    }
+  }
+
+  private async saveExternalEventLedger(): Promise<void> {
+    if (!this.externalEventStorage) return;
+    await this.externalEventStorage.save(serializeExternalEventLedger(this.#externalEvents));
+  }
+
+  private registerExternalEventSetting(): void {
+    if (this.#externalSettingRegistered || this.externalEventStorage === undefined) return;
+    const settings = this.globals.game?.settings;
+    if (typeof settings?.register !== 'function') return;
+    this.#externalSettingRegistered = true;
+    try {
+      settings.register(MODULE_ID, EXTERNAL_EVENT_SETTING_KEY, {
+        name: 'FVTTTRIGGER.Settings.ExternalEvents.Name',
+        hint: 'FVTTTRIGGER.Settings.ExternalEvents.Hint',
+        scope: 'world',
+        config: false,
+        type: String,
+        default: serializeExternalEventLedger([]),
+        onChange: (value: unknown) => { void this.handleExternalEventSettingChange(value); },
+      });
+    } catch (error) {
+      // A second registration can occur in embedding/test environments. The
+      // setting remains readable and writable when Foundry already registered it.
+      this.logger.warn('[fvtt-trigger-engine] external event setting registration skipped', error);
+    }
+  }
+
+  private async handleExternalEventSettingChange(raw: unknown): Promise<void> {
+    const run = this.#externalLedgerQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const events = parseExternalEventLedger(raw);
+        const seenBefore = this.#externalEventKeys;
+        this.#externalEvents = events;
+        this.#externalEventKeys = new Set(events.map(externalEventKey));
+        this.#externalLedgerLoaded = true;
+        for (const event of events) {
+          if (seenBefore.has(externalEventKey(event))) continue;
+          this.enqueueExternalEventDelivery(event);
+        }
+      });
+    this.#externalLedgerQueue = run.then(() => undefined, () => undefined);
+    await run;
+  }
+
+  private enqueueExternalEventDelivery(event: ExternalEvent): void {
+    const run = this.#externalDeliveryQueue
+      .catch(() => undefined)
+      .then(async () => this.emitExternalEvent(event));
+    this.#externalDeliveryQueue = run.then(() => undefined, () => undefined);
+    void run.catch((error) => {
+      this.logger.error('[fvtt-trigger-engine] external event delivery failed', error);
+    });
+  }
+
+  private async emitExternalEvent(event: ExternalEvent): Promise<void> {
+    const listeners = [...this.#externalEventListeners];
+    for (const listener of listeners) {
+      try { await listener(cloneExternalEvent(event)); }
+      catch (error) { this.logger.error('[fvtt-trigger-engine] external event listener failed', error); }
+    }
+    try {
+      this.globals.Hooks?.callAll?.('fvtt-trigger-engine.external-event', cloneExternalEvent(event));
+    } catch (error) {
+      this.logger.error('[fvtt-trigger-engine] external event hook failed', error);
+    }
   }
 
   private async persist(store: TriggerStore): Promise<void> {
@@ -930,13 +1110,203 @@ function cloneUnknown<T>(value: T): T {
   try { return JSON.parse(JSON.stringify(value)) as T; } catch { return value; }
 }
 
+function createFoundryExternalEventStorage(game: any): ExternalEventLedgerStorage | undefined {
+  const settings = game?.settings;
+  if (typeof settings?.get !== 'function' || typeof settings?.set !== 'function') return undefined;
+  return {
+    load: () => settings.get(MODULE_ID, EXTERNAL_EVENT_SETTING_KEY),
+    save: (serializedLedger: string) => settings.set(MODULE_ID, EXTERNAL_EVENT_SETTING_KEY, serializedLedger),
+  };
+}
+
+function validateExternalEvent(input: unknown): ExternalEvent {
+  if (!isSafePlainRecord(input)) throw new TypeError('External event must be a plain data object.');
+  const value = input as Record<string, unknown>;
+  const allowedKeys = new Set([
+    'schemaVersion', 'namespace', 'eventId', 'type', 'sourceActorUuid',
+    'targetActorUuid', 'activityUuid', 'attackId', 'timestamp', 'data',
+  ]);
+  for (const key of safeOwnKeys(value)) {
+    if (typeof key !== 'string' || !allowedKeys.has(key)) throw new TypeError(`External event contains unsupported field: ${String(key)}.`);
+  }
+
+  const schemaVersion = ownValue(value, 'schemaVersion');
+  if (schemaVersion !== EXTERNAL_EVENT_SCHEMA_VERSION) throw new TypeError('External event schemaVersion must be 1.');
+  const namespace = readExternalIdentifier(ownValue(value, 'namespace'), 'namespace', EXTERNAL_EVENT_LIMITS.maxNamespaceOrTypeLength);
+  const type = readExternalIdentifier(ownValue(value, 'type'), 'type', EXTERNAL_EVENT_LIMITS.maxNamespaceOrTypeLength);
+  if (!/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(namespace)) throw new TypeError('External event namespace is unsafe.');
+  if (!/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(type)) throw new TypeError('External event type is unsafe.');
+
+  const eventId = readExternalIdentifier(ownValue(value, 'eventId'), 'eventId');
+  const sourceActorUuid = readExternalIdentifier(ownValue(value, 'sourceActorUuid'), 'sourceActorUuid');
+  const targetActorUuidValue = optionalOwnValue(value, 'targetActorUuid');
+  const targetActorUuid = targetActorUuidValue === undefined
+    ? undefined
+    : readExternalIdentifier(targetActorUuidValue, 'targetActorUuid');
+  const activityUuid = readExternalIdentifier(ownValue(value, 'activityUuid'), 'activityUuid');
+  const attackId = readExternalIdentifier(ownValue(value, 'attackId'), 'attackId');
+  const timestamp = ownValue(value, 'timestamp');
+  if (typeof timestamp !== 'number' || !Number.isSafeInteger(timestamp) || timestamp < 0) {
+    throw new TypeError('External event timestamp must be a non-negative safe integer.');
+  }
+
+  const dataValue = optionalOwnValue(value, 'data');
+  const data = dataValue === undefined ? undefined : validateExternalData(dataValue);
+  const normalized: ExternalEvent = {
+    schemaVersion: EXTERNAL_EVENT_SCHEMA_VERSION,
+    namespace,
+    eventId,
+    type,
+    sourceActorUuid,
+    ...(targetActorUuid === undefined ? {} : { targetActorUuid }),
+    activityUuid,
+    attackId,
+    timestamp,
+    ...(data === undefined ? {} : { data }),
+  };
+  const serialized = JSON.stringify(normalized);
+  if (byteLength(serialized) > EXTERNAL_EVENT_LIMITS.maxEnvelopeBytes) {
+    throw new TypeError(`External event exceeds ${EXTERNAL_EVENT_LIMITS.maxEnvelopeBytes} bytes.`);
+  }
+  return normalized;
+}
+
+function validateExternalData(input: unknown): ExternalEventData {
+  if (!isSafePlainRecord(input)) throw new TypeError('External event data must be a plain record.');
+  const data = input as Record<string, unknown>;
+  const keys = safeOwnKeys(data);
+  if (keys.some((key) => typeof key !== 'string')) throw new TypeError('External event data keys must be strings.');
+  if (keys.length > EXTERNAL_EVENT_LIMITS.maxDataKeys) throw new TypeError(`External event data may contain at most ${EXTERNAL_EVENT_LIMITS.maxDataKeys} fields.`);
+
+  const normalized: ExternalEventData = {};
+  for (const key of keys as string[]) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') throw new TypeError(`External event data key is unsafe: ${key}.`);
+    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u.test(key) || key.length > EXTERNAL_EVENT_LIMITS.maxDataKeyLength) {
+      throw new TypeError(`External event data key is unsafe: ${key}.`);
+    }
+    if (/(?:blind|secret|hidden|raw|roll|dice?|formula)/iu.test(key)) {
+      throw new TypeError(`External event data cannot contain raw roll field: ${key}.`);
+    }
+    const value = ownValue(data, key);
+    if (value === null || typeof value === 'boolean') {
+      normalized[key] = value;
+      continue;
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) throw new TypeError(`External event data field is not finite: ${key}.`);
+      normalized[key] = value;
+      continue;
+    }
+    if (typeof value === 'string') {
+      if (value.length > EXTERNAL_EVENT_LIMITS.maxDataStringLength || /[\u0000-\u001f\u007f]/u.test(value)) {
+        throw new TypeError(`External event data string is unsafe or oversized: ${key}.`);
+      }
+      normalized[key] = value;
+      continue;
+    }
+    throw new TypeError(`External event data must contain primitive values: ${key}.`);
+  }
+  return normalized;
+}
+
+function readExternalIdentifier(value: unknown, path: string, maxLength: number = EXTERNAL_EVENT_LIMITS.maxIdentifierLength): string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
+    throw new TypeError(`External event ${path} must be a non-empty bounded string.`);
+  }
+  if (/[\u0000-\u001f\u007f]/u.test(value)) throw new TypeError(`External event ${path} contains unsafe control characters.`);
+  return value;
+}
+
+function parseExternalEventLedger(raw: unknown): ExternalEvent[] {
+  let candidate = raw;
+  if (typeof candidate === 'string') {
+    try { candidate = JSON.parse(candidate) as unknown; }
+    catch { return []; }
+  }
+  if (!isSafePlainRecord(candidate)) return [];
+  try {
+    if (ownValue(candidate, 'schemaVersion') !== EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION) return [];
+    const rawEvents = ownValue(candidate, 'events');
+    if (!Array.isArray(rawEvents)) return [];
+
+    const byKey = new Map<string, ExternalEvent>();
+    for (const rawEvent of rawEvents) {
+      try {
+        const event = validateExternalEvent(rawEvent);
+        const key = externalEventKey(event);
+        byKey.delete(key);
+        byKey.set(key, event);
+      } catch {
+        // World settings are untrusted input; invalid ledger entries are ignored.
+      }
+    }
+    return trimExternalEvents([...byKey.values()]);
+  } catch {
+    return [];
+  }
+}
+
+function serializeExternalEventLedger(events: readonly ExternalEvent[]): string {
+  const bounded = trimExternalEvents(events);
+  return JSON.stringify({ schemaVersion: EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION, events: bounded });
+}
+
+function trimExternalEvents(events: readonly ExternalEvent[]): ExternalEvent[] {
+  const bounded = events.slice(-EXTERNAL_EVENT_LIMITS.maxLedgerEntries).map(cloneExternalEvent);
+  while (bounded.length > 0 && byteLength(JSON.stringify({ schemaVersion: EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION, events: bounded })) > EXTERNAL_EVENT_LIMITS.maxLedgerBytes) {
+    bounded.shift();
+  }
+  return bounded;
+}
+
+function cloneExternalEvent(event: ExternalEvent): ExternalEvent {
+  return JSON.parse(JSON.stringify(event)) as ExternalEvent;
+}
+
+function externalEventKey(event: ExternalEvent): string {
+  return `${event.namespace}\u001f${event.eventId}`;
+}
+
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+function safeOwnKeys(value: object): (string | symbol)[] {
+  try { return Reflect.ownKeys(value); }
+  catch { throw new TypeError('External event contains an unreadable object.'); }
+}
+
+function ownValue(value: Record<string, unknown>, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor || !('value' in descriptor)) throw new TypeError(`External event field must be a data property: ${key}.`);
+  return descriptor.value;
+}
+
+function optionalOwnValue(value: Record<string, unknown>, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if (!('value' in descriptor)) throw new TypeError(`External event field must be a data property: ${key}.`);
+  return descriptor.value;
+}
+
+function isSafePlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isRuntimeOptions(value: unknown): value is TriggerEngineRuntimeOptions {
   if (!isRecord(value)) return false;
-  return 'globals' in value || 'storage' in value || 'macroResolver' in value || 'logger' in value || 'onCombatTurnStart' in value;
+  return 'globals' in value || 'storage' in value || 'externalEventStorage' in value
+    || 'macroResolver' in value || 'logger' in value || 'onCombatTurnStart' in value;
 }
 
 const CAUSAL_OPTION_KEY = 'fvtt-trigger-engine' as const;

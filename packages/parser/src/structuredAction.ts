@@ -11,6 +11,11 @@ import type {
   SaveAbility,
   TriggerType,
 } from '@fvtt-json-generator/models/action';
+import {
+  isWeaponMasteryId,
+  parseWeaponConfiguration,
+  type WeaponConfiguration,
+} from '@fvtt-json-generator/contracts/weapon-properties';
 
 const ABILITY_MAP: Record<string, string> = {
   '力量': 'str',
@@ -63,6 +68,12 @@ export class StructuredActionParser {
     const explicitActivationType = this.normalizeActivationType(record['激活'] ?? record['activationType'] ?? activationRecord?.['type']);
     const activationType = explicitActivationType ?? this.inferActivationType(sectionName);
     const spellcastingFeatureKey = this.parseSpellcastingFeatureKey(record['spellcastingFeatureKey']);
+    const weaponConfiguration = this.parseWeaponConfiguration(
+      record['weapon-properties'] ?? record.weaponProperties ?? record['武器特性'],
+    );
+    const nativeMastery = this.parseNativeMastery(
+      record['native-mastery'] ?? record.nativeMastery ?? record['原生精通'],
+    );
     if (spellcastingFeatureKey && sectionName !== '特性') {
       throw new Error('InvalidSpellcastingFeatureLinkSection: spellcastingFeatureKey is allowed only in the 特性 section.');
     }
@@ -76,6 +87,8 @@ export class StructuredActionParser {
       name: this.extractName(String(name)),
       englishName: this.extractEnglishName(String(name)),
       spellcastingFeatureKey,
+      ...(weaponConfiguration ? { weaponConfiguration } : {}),
+      ...(nativeMastery ? { nativeMastery } : {}),
       type: this.normalizeType(String(type)),
       activation: activationType ? {
         type: activationType,
@@ -169,6 +182,24 @@ export class StructuredActionParser {
       throw new Error('InvalidSpellcastingFeatureKey: spellcastingFeatureKey must be a non-empty string.');
     }
     return value.trim();
+  }
+
+  private parseWeaponConfiguration(value: unknown): WeaponConfiguration | undefined {
+    if (value === undefined) return undefined;
+    const parsed = parseWeaponConfiguration(value);
+    if (!parsed) {
+      throw new Error('InvalidWeaponConfiguration: weapon-properties must be a valid WeaponConfiguration.');
+    }
+    return parsed;
+  }
+
+  private parseNativeMastery(value: unknown): StructuredActionData['nativeMastery'] {
+    if (value === undefined || value === null || value === '') return undefined;
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    if (!isWeaponMasteryId(normalized)) {
+      throw new Error('InvalidNativeWeaponMastery: native-mastery must name one official dnd2024 mastery.');
+    }
+    return normalized;
   }
 
   private parseRechargeRange(value: unknown): [number, number] | undefined {

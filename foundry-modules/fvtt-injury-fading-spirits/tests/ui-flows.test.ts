@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MODULE_ID } from '../src/constants.ts';
 import { createActorModuleState } from '../src/state.ts';
 import {
+  __testing as uiTesting,
   activateChatCard,
   openActorDashboard,
   openResolveRitualDialog,
@@ -55,10 +56,14 @@ beforeEach(() => {
     return dialogResults.shift() ?? null;
   } } } } };
   globals.ChatMessage = {
-    create: async (data: AnyRecord) => {
-      const id = data._id ?? `message-${++messageSequence}`;
+    create: async (data: AnyRecord, operation: AnyRecord = {}) => {
+      // Core changes the caller's ID unless keepId is requested. World document
+      // IDs are unique even if two callers reach create before either resolves.
+      await Promise.resolve();
+      const id = operation.keepId === true && data._id ? data._id : `message-${++messageSequence}`;
+      if (messages.has(id)) throw new Error('World document ID already exists');
       const message: AnyRecord = {
-        ...structuredClone(data), id,
+        ...structuredClone(data), _id: id, id,
         async delete() { messages.delete(id); },
       };
       messages.set(id, message);
@@ -95,8 +100,9 @@ function actorFixture(uuid = 'Actor.hero') {
     system: { attributes: { hp: { value: 0, max: 10 } } }, flags: { [MODULE_ID]: state }, effects,
     async update(changes: AnyRecord) {
       writes.push(structuredClone(changes));
-      const next = changes[`flags.${MODULE_ID}`];
-      if (next) actor.flags[MODULE_ID] = structuredClone(next);
+      if (changes[`flags.${MODULE_ID}.schemaVersion`] !== undefined) actor.flags[MODULE_ID].schemaVersion = changes[`flags.${MODULE_ID}.schemaVersion`];
+      const next = changes[`flags.${MODULE_ID}.fadingSpirits`];
+      if (next) actor.flags[MODULE_ID].fadingSpirits = structuredClone(next);
     },
     async createEmbeddedDocuments(_type: string, entries: AnyRecord[]) {
       effects.push(...entries.map((entry, index) => ({ ...structuredClone(entry), id: `effect-${index + 1}`, statuses: new Set(entry.statuses) })));
@@ -115,29 +121,74 @@ function actorFixture(uuid = 'Actor.hero') {
 }
 
 describe('Injury/Fading Spirits Foundry UI flows', () => {
-  test('renders a safe dashboard and routes to the injury editor', async () => {
+  test('world-document lock admits one concurrent claim and releases only its owner', async () => {
+    const { actor, writes } = actorFixture();
+    const attemptId = 'resurrection:Actor.hero:death-1:normal:1';
+    const claims = await Promise.all([
+      uiTesting.acquireResolutionDocumentLock(actor, attemptId, 'normal', 'first-token'),
+      uiTesting.acquireResolutionDocumentLock(actor, attemptId, 'normal', 'second-token'),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    const lockId = uiTesting.resolutionLockDocumentId(actor.uuid, attemptId);
+    const lock = messages.get(lockId);
+    expect(lock).toBeDefined();
+    expect(messages.size).toBe(1);
+    expect(lock!.flags[MODULE_ID].resolutionLock).toMatchObject({ actorUuid: actor.uuid, attemptId, mode: 'normal', startedBy: 'gm' });
+    const token = lock!.flags[MODULE_ID].resolutionLock.token;
+    expect(await uiTesting.acquireResolutionDocumentLock(actor, attemptId, 'normal', token)).toBeTrue();
+    expect(await uiTesting.acquireResolutionDocumentLock(actor, attemptId, 'normal', 'third-token')).toBeFalse();
+    await uiTesting.releaseResolutionDocumentLock(actor, attemptId, 'not-the-owner');
+    expect(messages.get(lockId)).toBe(lock);
+    await uiTesting.releaseResolutionDocumentLock(actor, attemptId, token);
+    expect(messages.size).toBe(0);
+    expect(writes).toHaveLength(0);
+  });
+
+  test('world-document lock preserves a foreign message collision without an Actor write', async () => {
+    const { actor, writes } = actorFixture();
+    const attemptId = 'resurrection:Actor.hero:death-1:normal:1';
+    const lockId = uiTesting.resolutionLockDocumentId(actor.uuid, attemptId);
+    const foreign = { id: lockId, content: 'Existing message', flags: { anotherModule: { enabled: false } } };
+    messages.set(lockId, foreign);
+    expect(await uiTesting.acquireResolutionDocumentLock(actor, attemptId, 'normal', 'token')).toBeFalse();
+    expect(messages.get(lockId)).toBe(foreign);
+    expect(createdMessages).toHaveLength(0);
+    expect(writes).toHaveLength(0);
+  });
+
+  test('renders a safe resurrection dashboard without injury controls', async () => {
     await openActorDashboard(null);
     expect(notifications).toContain('warn:IFS.Errors.ActorRequired');
 
     const { actor, effects } = actorFixture();
-    dialogResults.push('injury', { stacks: '2' });
+    dialogResults.push('close');
     await openActorDashboard(actor);
     expect(dialogConfigs[0]!.content).toContain('&lt;Hero &amp; Friend&gt;');
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(2);
-    expect(effects).toHaveLength(1);
-    expect(effects[0]!.flags[MODULE_ID]).toEqual({ injuryProjection: true, stacks: 2 });
+    expect(dialogConfigs[0]!.buttons.map((button: AnyRecord) => button.action)).toEqual(['beginEpisode', 'resurrection', 'close']);
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(0);
+    expect(effects).toHaveLength(0);
   });
 
-  test('rejects invalid/manual non-GM injury edits without writing', async () => {
+  test('legacy injury editor routes to Custom Conditions', async () => {
     const { actor, writes } = actorFixture();
-    dialogResults.push({ stacks: '9' });
     await openSetInjuryDialog(actor);
-    expect(notifications).toContain('error:IFS.Errors.InvalidStacks');
+    expect(notifications).toContain('warn:IFS.Errors.InjuryMoved');
     expect(writes).toHaveLength(0);
-
-    globals.game.users.activeGM = { id: 'other-gm' };
+    let target: any;
+    globals.game.modules = new Map([['fvtt-custom-conditions', { api: { openManager: async (context: any) => { target = context.actor; } } }]]);
     await openSetInjuryDialog(actor);
-    expect(notifications).toContain('warn:IFS.Errors.ActiveGmOnly');
+    expect(target).toBe(actor);
+  });
+
+  test('offers an explicit GM death-episode recovery action without Custom Conditions', async () => {
+    const { actor } = actorFixture();
+    const received: any[] = [];
+    globals.game.modules = new Map([[MODULE_ID, { api: { beginDeathEpisode: async (...args: any[]) => received.push(args) } }]]);
+    dialogResults.push('beginEpisode');
+    await openActorDashboard(actor);
+    expect(received).toHaveLength(1);
+    expect(received[0][0]).toBe(actor);
+    expect(received[0][1]).toStartWith(`gm:${actor.uuid}:`);
   });
 
   test('executes a rapid blind resurrection with a single persistent claim and sanitized audit', async () => {
@@ -149,7 +200,7 @@ describe('Injury/Fading Spirits Foundry UI flows', () => {
     expect(state.fadingSpirits.successfulReturns).toBe(1);
     expect(state.fadingSpirits.resurrectionConsumedForCurrentDeath).toBeTrue();
     expect(state.fadingSpirits.resolutionInProgress).toBeNull();
-    expect(state.injury.suppressNextRecovery.reason).toBe('rapid-resurrection-success');
+    expect(state.injury.suppressNextRecovery).toBeNull();
     expect(createdMessages.some((message) => message.roll && message.options.rollMode === 'blindroll')).toBeTrue();
     const audit = createdMessages.find((message) => message.flags?.[MODULE_ID]?.card === 'audit');
     expect(audit!.content).toContain('IFS.Fading.BlindDieNotice');

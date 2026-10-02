@@ -1,0 +1,853 @@
+{
+  "schemaVersion": 2,
+  "runId": "WMP-E2E-RECORDED",
+  "scenario": "vex",
+  "buildIdentity": {
+    "expectedBuildId": "76195852942e16bab42bc39ba7e1d7b30aeabf665b93e7d2dd1d9ba5481add24",
+    "observedBuildId": "76195852942e16bab42bc39ba7e1d7b30aeabf665b93e7d2dd1d9ba5481add24",
+    "settings": [],
+    "status": "PASS"
+  },
+  "classifiedInput": {
+    "environment": {
+      "expected": {
+        "worldId": "cor-cotn",
+        "foundryVersion": "14.364",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3",
+        "enabledModules": [
+          {
+            "id": "fvtt-custom-conditions",
+            "version": "0.1.1"
+          },
+          {
+            "id": "fvtt-trigger-engine",
+            "version": "0.1.1"
+          },
+          {
+            "id": "fvtt-weapon-mastery-properties",
+            "version": "0.1.0"
+          },
+          {
+            "id": "midi-qol",
+            "version": "14.0.11"
+          }
+        ]
+      },
+      "observed": {
+        "worldId": "cor-cotn",
+        "foundryVersion": "14.364",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3",
+        "enabledModules": [
+          {
+            "id": "fvtt-custom-conditions",
+            "version": "0.1.1"
+          },
+          {
+            "id": "fvtt-trigger-engine",
+            "version": "0.1.1"
+          },
+          {
+            "id": "fvtt-weapon-mastery-properties",
+            "version": "0.1.0"
+          },
+          {
+            "id": "midi-qol",
+            "version": "14.0.11"
+          }
+        ],
+        "enabledModuleIds": [
+          "_chatcommands",
+          "3ds-atlas",
+          "5e_chn",
+          "5e-dlc-monster",
+          "auraeffects",
+          "autoanimations",
+          "automated-conditions-5e",
+          "automated-evocations",
+          "babele",
+          "calendaria",
+          "chat-memory-guard",
+          "color-picker",
+          "custom-css",
+          "dae",
+          "dfreds-convenient-effects",
+          "dfreds-droppables",
+          "dice-calculator",
+          "dice-so-nice",
+          "dnd-adventures-faerun",
+          "dnd-dungeon-masters-guide",
+          "dnd-forge-artificer",
+          "dnd-heroes-faerun",
+          "dnd-monster-manual",
+          "dnd-players-handbook",
+          "dnd-ravenloft-horrors-within",
+          "dnd-simplified-chinese-babele-patch",
+          "dnd5e-animations",
+          "dungeon-strugglers-collection",
+          "filepicker-plus",
+          "foundry_chn",
+          "fvtt-babele-rolltable-embed-translation",
+          "fvtt-battlefield-painter",
+          "fvtt-custom-conditions",
+          "fvtt-house-rules",
+          "fvtt-injury-fading-spirits",
+          "fvtt-json-forge",
+          "fvtt-json-generator-spell-resolver",
+          "fvtt-trigger-engine",
+          "fvtt-weapon-mastery-properties",
+          "fxmaster",
+          "global-progress-clocks",
+          "hide-npc-names",
+          "item-piles",
+          "itemacro",
+          "itempilesdnd5e",
+          "jb2a_patreon",
+          "lib-dfreds-migrations",
+          "lib-dfreds-ui-extender",
+          "lib-wrapper",
+          "mcdm-flee-mortals-where-evil-lives",
+          "midi-qol",
+          "monks-active-tiles",
+          "monks-bloodsplats",
+          "monks-chat-timer",
+          "monks-combat-details",
+          "monks-little-details",
+          "monks-scene-navigation",
+          "monks-tokenbar",
+          "monks-wall-enhancement",
+          "multiple-document-selection",
+          "open-session-deck",
+          "plutonium-cn",
+          "portal-lib",
+          "psfx",
+          "quick-insert",
+          "quickscale",
+          "Ravenloft-babele",
+          "sequencer",
+          "share-media",
+          "simplecover5e",
+          "socketlib",
+          "sync-token-actor",
+          "tidy5e-sheet",
+          "token-action-hud-core",
+          "token-action-hud-dnd5e",
+          "vision-5e",
+          "z-scatter",
+          "zzz_mod_chn"
+        ],
+        "enabledModuleVersions": {
+          "_chatcommands": "2.0.6",
+          "3ds-atlas": "1.0",
+          "5e_chn": "5.3.0",
+          "5e-dlc-monster": "1.2.0",
+          "auraeffects": "2.1.1",
+          "autoanimations": "7.0.17",
+          "automated-conditions-5e": "14.533.8",
+          "automated-evocations": "6.0.0",
+          "babele": "2.9.1",
+          "calendaria": "1.2.0",
+          "chat-memory-guard": "1.0.0",
+          "color-picker": "1.7",
+          "custom-css": "2.4.4",
+          "dae": "14.0.12",
+          "dfreds-convenient-effects": "9.1.0",
+          "dfreds-droppables": "6.1.2",
+          "dice-calculator": "3.7.1",
+          "dice-so-nice": "6.2.9",
+          "dnd-adventures-faerun": "1.2.1",
+          "dnd-dungeon-masters-guide": "2.0.0",
+          "dnd-forge-artificer": "1.1.0",
+          "dnd-heroes-faerun": "1.1.0",
+          "dnd-monster-manual": "1.3.0",
+          "dnd-players-handbook": "2.1.0",
+          "dnd-ravenloft-horrors-within": "1.0.1",
+          "dnd-simplified-chinese-babele-patch": "1.0.89",
+          "dnd5e-animations": "3.3.0",
+          "dungeon-strugglers-collection": "1.1.1",
+          "filepicker-plus": "6.0.1",
+          "foundry_chn": "14.364",
+          "fvtt-babele-rolltable-embed-translation": "0.1.0",
+          "fvtt-battlefield-painter": "0.3.0-alpha.1",
+          "fvtt-custom-conditions": "0.1.1",
+          "fvtt-house-rules": "0.1.0",
+          "fvtt-injury-fading-spirits": "1.0.0",
+          "fvtt-json-forge": "0.4.0",
+          "fvtt-json-generator-spell-resolver": "0.1.0",
+          "fvtt-trigger-engine": "0.1.1",
+          "fvtt-weapon-mastery-properties": "0.1.0",
+          "fxmaster": "8.2.4",
+          "global-progress-clocks": "1.3.2",
+          "hide-npc-names": "1.3.4",
+          "item-piles": "3.3.4",
+          "itemacro": "3.0.1",
+          "itempilesdnd5e": "1.1.0",
+          "jb2a_patreon": "0.8.7",
+          "lib-dfreds-migrations": "1.0.3",
+          "lib-dfreds-ui-extender": "2.3.0",
+          "lib-wrapper": "1.13.5.1",
+          "mcdm-flee-mortals-where-evil-lives": "2.0.1",
+          "midi-qol": "14.0.11",
+          "monks-active-tiles": "14.01",
+          "monks-bloodsplats": "14.01",
+          "monks-chat-timer": "14.01",
+          "monks-combat-details": "14.02",
+          "monks-little-details": "14.01",
+          "monks-scene-navigation": "14.02",
+          "monks-tokenbar": "14.01",
+          "monks-wall-enhancement": "14.01",
+          "multiple-document-selection": "14.01",
+          "open-session-deck": "0.1.0",
+          "plutonium-cn": "2.15.6",
+          "portal-lib": "4.0.0",
+          "psfx": "0.15.0",
+          "quick-insert": "3.7.7",
+          "quickscale": "1.7.0",
+          "Ravenloft-babele": "1.0.0",
+          "sequencer": "4.2.3",
+          "share-media": "3.14.2",
+          "simplecover5e": "2.2.0-cor-cotn.1",
+          "socketlib": "v1.1.4",
+          "sync-token-actor": "3.1.0",
+          "tidy5e-sheet": "13.5.0",
+          "token-action-hud-core": "2.1.1",
+          "token-action-hud-dnd5e": "2.1.0",
+          "vision-5e": "3.1.3",
+          "z-scatter": "2.2.4",
+          "zzz_mod_chn": "13.93"
+        },
+        "userId": "FixtureUser00001",
+        "activeSceneId": "FixtureScene0001",
+        "combatId": "FixtureCombat001",
+        "combatSceneId": "FixtureScene0001",
+        "paused": true,
+        "activeTurnKey": "Combat.FixtureCombat001:2:1"
+      }
+    },
+    "buildIdentity": {
+      "expectedBuildId": "76195852942e16bab42bc39ba7e1d7b30aeabf665b93e7d2dd1d9ba5481add24",
+      "observedBuildId": "76195852942e16bab42bc39ba7e1d7b30aeabf665b93e7d2dd1d9ba5481add24",
+      "settings": [],
+      "status": "PASS"
+    },
+    "rules": {
+      "vex": {
+        "attempted": true,
+        "source": "ui-activity",
+        "attackerActorId": "FixtureSource001",
+        "itemId": "FixtureWeapon001",
+        "activityId": "FixtureAttack001",
+        "targetActorId": "FixtureTarget001",
+        "targetTokenId": "FixtureToken0001",
+        "qualification": {
+          "actorType": "npc",
+          "selectedMasteryRuleId": "dnd2024.vex",
+          "grantMastery": true,
+          "nativeMasteryUnlocked": false
+        },
+        "activeTurnKey": "Combat.FixtureCombat001:2:1",
+        "attack": {
+          "attackId": "ChatMessage.FixtureCard00001:0",
+          "messageId": "FixtureRoll00001",
+          "timestamp": 1790578860324,
+          "total": 14,
+          "targetAc": 1,
+          "outcome": "hit",
+          "natural1": false,
+          "natural20": false,
+          "critical": false
+        },
+        "sourceLedger": {
+          "schemaVersion": 1,
+          "attackId": "ChatMessage.FixtureCard00001:0",
+          "sourceActorUuid": "Actor.FixtureSource001",
+          "itemUuid": "Actor.FixtureSource001.Item.FixtureWeapon001",
+          "activityUuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001",
+          "targetActorUuid": "Actor.FixtureTarget001",
+          "targetTokenUuid": "Scene.FixtureScene0001.Token.FixtureToken0001",
+          "turnKey": "Combat.FixtureCombat001:2:1",
+          "step": "committed",
+          "steps": {
+            "prepared": "prepared",
+            "started": "started",
+            "attack": "attack",
+            "consumption": "settled",
+            "damage": "damage",
+            "dnd2024": {
+              "vex": "settled"
+            },
+            "committed": "committed"
+          },
+          "reservations": [],
+          "usedRuleIds": [],
+          "createdAt": 1790578633498,
+          "updatedAt": 1790579158628,
+          "requesterId": "FixtureUser00001",
+          "lightAttack": true,
+          "lightExtraAttack": false,
+          "attackMode": "oneHanded",
+          "selectedMasteryRuleId": "dnd2024.vex",
+          "nativeMasteryUnlocked": false,
+          "configuration": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "mastery": "dnd2024.vex",
+            "grantMastery": true,
+            "rules": [
+              {
+                "ruleId": "dnd2024.vex",
+                "kind": "vex",
+                "label": "Vex",
+                "params": {},
+                "stackingGroup": "dnd2024.vex"
+              }
+            ]
+          },
+          "attackMessageId": "FixtureRoll00001",
+          "messageId": "FixtureRoll00001",
+          "outcome": "hit",
+          "critical": false,
+          "damageDealt": 7,
+          "damageProofNonce": "damage-EkeMhleaQByTM2HP-1790579153039"
+        },
+        "damage": {
+          "accepted": true,
+          "amount": 7,
+          "hpBefore": 200,
+          "hpAfter": 193,
+          "tempHpBefore": 0,
+          "tempHpAfter": 0
+        },
+        "beforeEffectIds": [],
+        "effectReadback": {
+          "complete": true,
+          "instance": {
+            "id": "FixtureEffect001",
+            "kind": "vex",
+            "holderActorId": "FixtureSource001",
+            "sourceActorId": "FixtureSource001",
+            "targetActorId": "FixtureTarget001",
+            "itemUuid": "Actor.FixtureSource001.Item.FixtureWeapon001",
+            "createdAt": 1790579156241
+          }
+        },
+        "speed": {
+          "before": 30,
+          "after": 30
+        }
+      }
+    }
+  },
+  "vexCheckpoint": {
+    "status": "SAVED",
+    "capturedAt": 1790579161505,
+    "reasons": [],
+    "attackId": "ChatMessage.FixtureCard00001:0",
+    "attackMessageId": "FixtureRoll00001",
+    "damage": {
+      "accepted": true,
+      "amount": 7,
+      "hpBefore": 200,
+      "hpAfter": 193,
+      "tempHpBefore": 0,
+      "tempHpAfter": 0
+    },
+    "effectId": "FixtureEffect001",
+    "attackerActorId": "FixtureSource001",
+    "targetActorId": "FixtureTarget001"
+  },
+  "vexPreRoll": {
+    "targetActorId": "FixtureTarget001",
+    "effectId": "FixtureEffect001",
+    "offeredAdvantage": true,
+    "sourceLabel": "MidiQOL 优势: Weapon mastery effect",
+    "selectedMode": "advantage",
+    "recordedAt": 1790579453654,
+    "status": "READY"
+  },
+  "provenance": {
+    "sourceSha256": "4ffa668116d80817b45f74481e0c15dc0b7647d516bc72ba6a9c84b4e5f92df7",
+    "projection": "Recorded Vex receipt reduced to classifier inputs, message identities/rolls, and actor proof/effect readback; local fixture identifiers anonymized."
+  },
+  "before": {
+    "runId": "WMP-E2E-RECORDED",
+    "activeTurnKey": "Combat.FixtureCombat001:2:1"
+  },
+  "after": {
+    "runId": "WMP-E2E-RECORDED",
+    "activeTurnKey": "Combat.FixtureCombat001:2:1",
+    "source": {
+      "actorUuid": "Actor.FixtureSource001",
+      "moduleLedger": [
+        {
+          "schemaVersion": 1,
+          "attackId": "ChatMessage.FixtureCard00001:0",
+          "sourceActorUuid": "Actor.FixtureSource001",
+          "itemUuid": "Actor.FixtureSource001.Item.FixtureWeapon001",
+          "activityUuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001",
+          "targetActorUuid": "Actor.FixtureTarget001",
+          "targetTokenUuid": "Scene.FixtureScene0001.Token.FixtureToken0001",
+          "turnKey": "Combat.FixtureCombat001:2:1",
+          "step": "committed",
+          "steps": {
+            "prepared": "prepared",
+            "started": "started",
+            "attack": "attack",
+            "consumption": "settled",
+            "damage": "damage",
+            "dnd2024": {
+              "vex": "settled"
+            },
+            "committed": "committed"
+          },
+          "reservations": [],
+          "usedRuleIds": [],
+          "createdAt": 1790578633498,
+          "updatedAt": 1790579158628,
+          "requesterId": "FixtureUser00001",
+          "lightAttack": true,
+          "lightExtraAttack": false,
+          "attackMode": "oneHanded",
+          "selectedMasteryRuleId": "dnd2024.vex",
+          "nativeMasteryUnlocked": false,
+          "configuration": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "mastery": "dnd2024.vex",
+            "grantMastery": true,
+            "rules": [
+              {
+                "ruleId": "dnd2024.vex",
+                "kind": "vex",
+                "label": "Vex",
+                "params": {},
+                "stackingGroup": "dnd2024.vex"
+              }
+            ]
+          },
+          "attackMessageId": "FixtureRoll00001",
+          "messageId": "FixtureRoll00001",
+          "outcome": "hit",
+          "critical": false,
+          "damageDealt": 7,
+          "damageProofNonce": "damage-EkeMhleaQByTM2HP-1790579153039"
+        },
+        {
+          "schemaVersion": 1,
+          "attackId": "ChatMessage.FixtureCard00002:0",
+          "sourceActorUuid": "Actor.FixtureSource001",
+          "itemUuid": "Actor.FixtureSource001.Item.FixtureWeapon001",
+          "activityUuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001",
+          "targetActorUuid": "Actor.FixtureTarget001",
+          "targetTokenUuid": "Scene.FixtureScene0001.Token.FixtureToken0001",
+          "turnKey": "Combat.FixtureCombat001:2:1",
+          "step": "committed",
+          "steps": {
+            "prepared": "prepared",
+            "started": "started",
+            "attack": "attack",
+            "consumption": "settled",
+            "damage": "damage",
+            "dnd2024": {
+              "vex": "settled"
+            },
+            "committed": "committed"
+          },
+          "reservations": [
+            {
+              "actorUuid": "Actor.FixtureSource001",
+              "ticket": {
+                "effectId": "FixtureEffect001",
+                "attackId": "ChatMessage.FixtureCard00002:0",
+                "instanceId": "6a784bf2-8dc3-4036-ae8d-4fc9e5cf96a4",
+                "revision": 2,
+                "targetActorUuid": "Actor.FixtureTarget001",
+                "targetTokenUuid": "Scene.FixtureScene0001.Token.FixtureToken0001",
+                "state": "started",
+                "reservedAt": 1790579369157,
+                "startedAt": 1790579575998
+              },
+              "kind": "vex",
+              "targetActorUuid": "Actor.FixtureTarget001"
+            }
+          ],
+          "usedRuleIds": [],
+          "createdAt": 1790579369366,
+          "updatedAt": 1790579891607,
+          "requesterId": "FixtureUser00001",
+          "lightAttack": true,
+          "lightExtraAttack": false,
+          "attackMode": "oneHanded",
+          "selectedMasteryRuleId": "dnd2024.vex",
+          "nativeMasteryUnlocked": false,
+          "configuration": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "mastery": "dnd2024.vex",
+            "grantMastery": true,
+            "rules": [
+              {
+                "ruleId": "dnd2024.vex",
+                "kind": "vex",
+                "label": "Vex",
+                "params": {},
+                "stackingGroup": "dnd2024.vex"
+              }
+            ]
+          },
+          "attackMessageId": "FixtureRoll00002",
+          "messageId": "FixtureRoll00002",
+          "outcome": "hit",
+          "critical": true,
+          "damageDealt": 15,
+          "damageProofNonce": "damage-B5m3HIn9JYXUZsoJ-1790579887304"
+        }
+      ],
+      "effects": [
+        {
+          "id": "FixtureEffect002",
+          "name": "Vex",
+          "img": "modules/fvtt-custom-conditions/icons/jinxed.svg",
+          "disabled": false,
+          "origin": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001",
+          "flags": {
+            "fvtt-custom-conditions": {
+              "weaponEffect": {
+                "schemaVersion": 1,
+                "instanceId": "6ed28e9d-d87c-47e0-a823-e5cf83e59fb0",
+                "revision": 0,
+                "effectKind": "vex",
+                "ruleId": "dnd2024.vex",
+                "stackingGroup": "dnd2024.vex",
+                "params": {},
+                "source": {
+                  "actorUuid": "Actor.FixtureSource001",
+                  "itemUuid": "Actor.FixtureSource001.Item.FixtureWeapon001",
+                  "activityUuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+                },
+                "target": {
+                  "actorUuid": "Actor.FixtureTarget001",
+                  "tokenUuid": "Scene.FixtureScene0001.Token.FixtureToken0001"
+                },
+                "enabled": true,
+                "consumeOn": "nextCompletedAttack",
+                "expires": {
+                  "reference": "source",
+                  "phase": "end",
+                  "turns": 1,
+                  "anchor": {
+                    "combatUuid": "Combat.FixtureCombat001",
+                    "round": 2,
+                    "turn": 1
+                  }
+                },
+                "createdAt": 1790579889530
+              }
+            },
+            "core": {
+              "originText": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+            },
+            "dae": {
+              "specialDuration": []
+            }
+          },
+          "statuses": [],
+          "changes": []
+        }
+      ]
+    },
+    "target": {
+      "actorUuid": "Actor.FixtureTarget001",
+      "hpValue": 178,
+      "tempHp": 0,
+      "damageProof": {
+        "schemaVersion": 1,
+        "attackId": "ChatMessage.FixtureCard00002:0",
+        "attackMessageId": "FixtureRoll00002",
+        "damageMessageId": "FixtureCard00002",
+        "actorUuid": "Actor.FixtureSource001",
+        "targetActorUuid": "Actor.FixtureTarget001",
+        "requesterId": "FixtureUser00001",
+        "before": {
+          "hp": 193,
+          "tempHp": 0
+        },
+        "after": {
+          "hp": 178,
+          "tempHp": 0
+        },
+        "nonce": "damage-B5m3HIn9JYXUZsoJ-1790579887304"
+      }
+    }
+  },
+  "newMessages": [
+    {
+      "id": "FixtureCard00001",
+      "timestamp": 1790578633073,
+      "dnd5eFlags": {
+        "activity": {
+          "type": "attack",
+          "id": "FixtureAttack001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+        },
+        "item": {
+          "type": "weapon",
+          "id": "FixtureWeapon001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001"
+        },
+        "targets": [
+          {
+            "uuid": "Actor.FixtureTarget001",
+            "ac": 1
+          }
+        ]
+      },
+      "moduleFlags": {
+        "e2eFixture": {
+          "runId": "WMP-E2E-RECORDED",
+          "role": "attack-message"
+        }
+      },
+      "rolls": [
+        {
+          "total": 14,
+          "formula": "1d20 + 3 + 2",
+          "type": "attack",
+          "dice": [
+            {
+              "faces": 20,
+              "results": [
+                {
+                  "result": 9,
+                  "active": true,
+                  "hidden": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "total": 7,
+          "formula": "1d6 + 3",
+          "type": "slashing",
+          "dice": [
+            {
+              "faces": 6,
+              "results": [
+                {
+                  "result": 4,
+                  "active": true,
+                  "hidden": true
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "midiFlags": {
+        "attackRoll": {
+          "options": {
+            "__fvttWeaponMasteryUse": "ChatMessage.FixtureCard00001:0",
+            "advantage": true
+          }
+        }
+      }
+    },
+    {
+      "id": "FixtureRoll00001",
+      "timestamp": 1790578860324,
+      "dnd5eFlags": {
+        "activity": {
+          "type": "attack",
+          "id": "FixtureAttack001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+        },
+        "item": {
+          "type": "weapon",
+          "id": "FixtureWeapon001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001"
+        },
+        "targets": [
+          {
+            "uuid": "Actor.FixtureTarget001",
+            "ac": 1
+          }
+        ],
+        "messageType": "roll",
+        "roll": {
+          "type": "attack",
+          "attackMode": "oneHanded"
+        }
+      },
+      "moduleFlags": {
+        "attackId": "ChatMessage.FixtureCard00001:0",
+        "midiCardId": "FixtureCard00001",
+        "e2eFixture": {
+          "runId": "WMP-E2E-RECORDED",
+          "role": "attack-message"
+        }
+      },
+      "rolls": [
+        {
+          "total": 14,
+          "formula": "1d20 + 3 + 2",
+          "type": "attack",
+          "dice": [
+            {
+              "faces": 20,
+              "results": [
+                {
+                  "result": 9,
+                  "active": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FixtureCard00002",
+      "timestamp": 1790579369004,
+      "dnd5eFlags": {
+        "activity": {
+          "type": "attack",
+          "id": "FixtureAttack001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+        },
+        "item": {
+          "type": "weapon",
+          "id": "FixtureWeapon001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001"
+        },
+        "targets": [
+          {
+            "uuid": "Actor.FixtureTarget001",
+            "ac": 1
+          }
+        ]
+      },
+      "moduleFlags": {
+        "e2eFixture": {
+          "runId": "WMP-E2E-RECORDED",
+          "role": "attack-message"
+        }
+      },
+      "rolls": [
+        {
+          "total": 25,
+          "formula": "2d20adv + 3 + 2",
+          "type": "attack",
+          "dice": [
+            {
+              "faces": 20,
+              "results": [
+                {
+                  "result": 20,
+                  "active": true,
+                  "hidden": true
+                },
+                {
+                  "result": 8,
+                  "active": false,
+                  "discarded": true,
+                  "hidden": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "total": 15,
+          "formula": "2d6critmax6 + 3",
+          "type": "slashing",
+          "dice": [
+            {
+              "faces": 6,
+              "results": [
+                {
+                  "result": 2,
+                  "active": true,
+                  "count": 6,
+                  "hidden": true
+                },
+                {
+                  "result": 6,
+                  "active": true,
+                  "hidden": true
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "midiFlags": {
+        "attackRoll": {
+          "options": {
+            "__fvttWeaponMasteryUse": "ChatMessage.FixtureCard00002:0",
+            "advantage": true
+          }
+        }
+      }
+    },
+    {
+      "id": "FixtureRoll00002",
+      "timestamp": 1790579578428,
+      "dnd5eFlags": {
+        "activity": {
+          "type": "attack",
+          "id": "FixtureAttack001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001.Activity.FixtureAttack001"
+        },
+        "item": {
+          "type": "weapon",
+          "id": "FixtureWeapon001",
+          "uuid": "Actor.FixtureSource001.Item.FixtureWeapon001"
+        },
+        "targets": [
+          {
+            "uuid": "Actor.FixtureTarget001",
+            "ac": 1
+          }
+        ],
+        "messageType": "roll",
+        "roll": {
+          "type": "attack",
+          "attackMode": "oneHanded"
+        }
+      },
+      "moduleFlags": {
+        "attackId": "ChatMessage.FixtureCard00002:0",
+        "midiCardId": "FixtureCard00002",
+        "e2eFixture": {
+          "runId": "WMP-E2E-RECORDED",
+          "role": "attack-message"
+        }
+      },
+      "rolls": [
+        {
+          "total": 25,
+          "formula": "2d20adv + 3 + 2",
+          "type": "attack",
+          "dice": [
+            {
+              "faces": 20,
+              "results": [
+                {
+                  "result": 20,
+                  "active": true
+                },
+                {
+                  "result": 8,
+                  "active": false,
+                  "discarded": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

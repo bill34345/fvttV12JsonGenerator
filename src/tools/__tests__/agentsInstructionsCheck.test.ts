@@ -68,6 +68,26 @@ describe('AGENTS/Ruler governance checker', () => {
     expect(check(root).ok).toBeTrue();
   });
 
+  test('accepts explicit English Scope and Acceptance sections', () => {
+    const root = createFixture();
+    const leaf = 'feature/AGENTS.md';
+    mkdirSync(join(root, 'feature'), { recursive: true });
+    writeFileSync(
+      join(root, leaf),
+      '# Feature rules\n\n## Scope\n\nOwns the feature.\n\n## Acceptance\n\nRun tests.\n',
+    );
+    const result = runAgentsInstructionsCheck({
+      workspaceRoot: root,
+      requiredFiles: [leaf],
+      requiredLeafFiles: [],
+      routedFiles: [],
+      verifyTracked: false,
+      applyRuler: stableApply,
+    });
+
+    expect(result.ok).toBeTrue();
+  });
+
   test.each([
     'packages/ingest-documents/AGENTS.md',
     'packages/blood-hunter-v14/AGENTS.md',

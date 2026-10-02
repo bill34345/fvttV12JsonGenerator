@@ -13,6 +13,8 @@ import {
   type ConditionStacking,
 } from '@fvtt-json-generator/contracts/conditions';
 import { conditionFlagPath, MODULE_ID, TRIGGER_ENGINE_MODULE_ID } from './constants.ts';
+import { WeaponEffectRuntime } from './weapon-effects.ts';
+import { InjuryRuntime, injurySupported } from './injury.ts';
 import { markConditionStatusOwned, registerConditionActionInterceptor, registerConditionHudHook } from './hud.ts';
 import {
   conditionIconPath,
@@ -61,6 +63,9 @@ export interface TriggerEventContextLike {
   changes?: unknown;
   before?: unknown;
   after?: unknown;
+  userId?: string;
+  timestamp?: number;
+  capturedModifiedTime?: number;
   combat?: any;
   combatUuid?: string;
   combatant?: any;
@@ -71,9 +76,16 @@ export interface TriggerEventContextLike {
   phase?: 'start' | 'end';
 }
 
+function genericSupported(globals: any): boolean {
+  return globals.game?.version === undefined
+    || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3');
+}
+
 export class ConditionRuntime {
   readonly globals: any;
   readonly isActiveGM: () => boolean;
+  readonly weaponEffects: WeaponEffectRuntime;
+  readonly injury: InjuryRuntime;
   #queues = new Map<string, Promise<unknown>>();
   #processed = new Set<string>();
   #unsubscribe: (() => void) | undefined;
@@ -90,6 +102,8 @@ export class ConditionRuntime {
   constructor(globals: any = globalThis, isActiveGM: () => boolean = () => isActiveGMFrom(globals)) {
     this.globals = globals;
     this.isActiveGM = isActiveGM;
+    this.weaponEffects = new WeaponEffectRuntime(globals, isActiveGM);
+    this.injury = new InjuryRuntime(globals, isActiveGM);
     this.#triggerReadyHook = undefined;
   }
 
@@ -98,6 +112,15 @@ export class ConditionRuntime {
   start(): void {
     if (this.#started) return;
     this.#started = true;
+    if (this.globals.game?.version !== undefined && !genericSupported(this.globals)
+      && !injurySupported(this.globals)) return;
+    this.injury.start();
+    if (!genericSupported(this.globals)) {
+      const hooks = this.globals.Hooks;
+      if (typeof hooks?.on === 'function') this.#triggerReadyHook = hooks.on('fvtt-trigger-engine.ready', () => this.connectTriggerEngine());
+      this.connectTriggerEngine();
+      return;
+    }
     registerConditionMappings(this.globals);
     const hooks = this.globals.Hooks;
     if (typeof hooks?.on === 'function') {
@@ -132,6 +155,8 @@ export class ConditionRuntime {
   }
 
   stop(): void {
+    this.injury.stop();
+    this.weaponEffects.stop?.();
     if (this.#unsubscribe) this.#unsubscribe();
     this.#unsubscribe = undefined;
     for (const [name, id] of this.#rollHooks) this.globals.Hooks?.off?.(name, id);
@@ -149,9 +174,11 @@ export class ConditionRuntime {
     this.#started = false;
   }
 
-  definitions() { return Object.values(CONDITION_DEFINITIONS).map((definition) => localizedConditionDefinition(definition, this.globals)); }
+  definitions() { return !genericSupported(this.globals) ? []
+    : Object.values(CONDITION_DEFINITIONS).map((definition) => localizedConditionDefinition(definition, this.globals)); }
 
   list(actor: any): ConditionEntry[] {
+    if (!genericSupported(this.globals)) return [];
     return collection(actor?.effects).flatMap((effect) => {
       const instance = readConditionInstance(effect);
       if (!instance || instance.template === true) return [];
@@ -404,6 +431,10 @@ export class ConditionRuntime {
     if (!this.isActiveGM() || context.event?.documentType !== 'Actor') return;
     const actor = context.document;
     if (!actor || actor.documentName !== 'Actor') return;
+    try { await this.injury.handleEvent(context); }
+    catch (error) { this.report(error); }
+    if (!genericSupported(this.globals)) return;
+    await this.weaponEffects.handleTriggerEvent(context);
     if (context.event.type === 'documentUpdate') {
       await this.handleHealing(actor, context);
       return;
@@ -501,6 +532,7 @@ export class ConditionRuntime {
   }
 
   private requireGM(actor: any): void {
+    if (!genericSupported(this.globals)) throw new Error('Only Injury is enabled on dnd5e 6.0.5; other Custom Conditions require 5.3.3.');
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作自定义 Condition。');
     if (!actor || actor.documentName !== 'Actor') throw new Error('请选择一个 Actor。');
   }

@@ -41,6 +41,7 @@
 - 陌生集成接口及用户指定借鉴的方向，先把精确版本来源转成接口事实、适配差异和最小反证检查；已有证据可复用，不以列链接代替验证。外部来源缺失时从最小真实链与竞争假设开始，不无限猜测。
 - 同一失败连续两次无新证据时，停止原路重试，先区分工具、前置、协议、业务、证据与授权问题。复杂任务派发前核对绝对路径、候选身份、前置检查结果和工具最小往返；失败检查不能被后续命令的成功退出掩盖。
 - 本项目普通 Chrome 操作按 `chrome-delegation-dev` 复用独立执行任务，默认 `gpt-6.1-sol` / `medium`。这项用户选择只调整 Chrome 执行角色；主控和其他委派仍按本次用户配置。派发后由执行器读取最新实际 `turn_context` 核对模型、effort 与权限，配置变更后保存新收据；完成的浏览器证据在客户端与目标未变时可复用。不同配置的耗时/token记录标明比较边界，不预先宣称提速；用户后续明确指定时遵从。
+- 在 Chrome 页面进行的测试直接使用当前官方 Chrome 连接器创建和操作拥有的 tab。会话未显示 Chrome 技能项或只有通用执行工具时，先核对当前官方组件、配置及标准连接能力，不据此自动改用 Computer Use；独立执行任务不改变工具选择。保留 URL／网站许可及安全检查，明确拒绝时停止对应动作，按正式接口排障，不换通道绕过。
 
 - 当前支持范围：`docs/acceptance/current-support-matrix.md`。
 - 版本相关开发：`docs/runbooks/foundry-v14-development-source-routing.md`；结论对照 tracked provenance、完整 reference cache 或精确版本源码。Context7、官方 API、CLI、模板和 MCP 按需要选用，不要求全套调用，也不凭“最新版”推断行为。
@@ -56,7 +57,7 @@
 
 ## 验证与维护
 
-用户可见功能或工具用法变化时，同步维护 `docs/handbook/`，人工核对后记录 review 并生成根 `工具手册.html`，与功能一起合并。合并前后运行 `bun run handbook:check`；不盲目刷新指纹代替语义核对。步骤见 `docs/runbooks/handbook-maintenance.md`。
+变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，同步维护 `docs/handbook/`，人工核对后记录 review 并生成根 `工具手册.html`，与功能一起合并。仅内部实现、测试或重构先核对这些用户信息是否改变并记录具体结论；若既有 `watch` 在本次必需的 `handbook:check` 或 CI 中报 stale，仍须人工核对受影响条目、更新 review 并生成页面，不要求改写已经正确的说明。保留现有目录覆盖和合并前后的 `bun run handbook:check`，不缩小 watch 或盲目刷新指纹绕过核对。步骤见 `docs/runbooks/handbook-maintenance.md`。
 
 授权范围内的本地安全测试可直接运行、修复本次失败并重跑受影响检查。按改动选择检查，纯文档/指令只核对文义、引用、作用域和生成一致性；不因此启动 Foundry 或跑无关全仓测试。
 

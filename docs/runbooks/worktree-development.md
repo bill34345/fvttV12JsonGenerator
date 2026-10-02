@@ -66,7 +66,7 @@ git worktree add -b $branch $worktreePath master
 6. 重新采集主工作区 status/diff/untracked，证明发布前用户基线逐字节保持不变。
 7. `git push origin master` 后比较 `master`、`origin/master` 与预期 commit。
 
-功能或工具说明变化时，topic 必须包含同步更新的中文工具条目、人工核对记录与生成的根 `工具手册.html`。合并前通过 `bun run handbook:check`；合并后在 master 再次运行同一检查，打开受影响条目核对本次功能。若合并引入新的实现组合，回到 topic 核对并重新生成，不在主工作区即兴修补手册。完整维护步骤见 [手册维护流程](handbook-maintenance.md)。
+变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，topic 必须包含同步更新的中文工具条目、人工核对记录与生成的根 `工具手册.html`。内部实现、测试或重构先核对这些用户信息并记录结论；既有 watch 在本次必需的手册检查或 CI 中报 stale 时，仍须人工核对受影响条目、更新 review 和页面，不要求改写正确的说明，也不缩小目录覆盖。合并前通过 `bun run handbook:check`；合并后在 master 再次运行同一检查，打开受影响条目核对本次功能。若合并引入新的实现组合，回到 topic 核对并重新生成，不在主工作区即兴修补手册。完整维护步骤见 [手册维护流程](handbook-maintenance.md)。
 
 `<topic-branch>` 是本任务创建的完整 `codex/<timestamp>-<task-slug>` 名称，不得用模糊分支名替代。
 

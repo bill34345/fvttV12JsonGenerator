@@ -20,10 +20,8 @@ interface InjuryPresentation {
 }
 
 interface InjuryApi {
-  getState?: (actor: any) => unknown | Promise<unknown>;
-  setInjury?: (actor: any, stacks: number, reason: string) => Promise<unknown> | unknown;
-  openResurrectionWizard?: (actor: any) => Promise<unknown> | unknown;
-  statusPresentation?: () => InjuryPresentation;
+  getState: (actor: any) => unknown | Promise<unknown>;
+  setStacks: (actor: any, stacks: number, reason: string) => Promise<unknown> | unknown;
 }
 
 export function createConditionManagerApplicationClass(api?: CustomConditionsApi, globals: any = globalThis): any {
@@ -96,6 +94,8 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
         })),
       })));
       return {
+        genericAvailable: globals.game?.version === undefined
+          || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3'),
         definitions,
         conditionId: this.conditionId,
         paramsJson: this.paramsJson,
@@ -167,15 +167,18 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
 
     static async openInjuryWizard(this: any, _event: unknown, target: any) {
       const actor = this.actors.find((candidate: any) => candidate.uuid === target.dataset.actorUuid);
-      const injuryApi = readInjuryApi(globals);
-      if (!actor || typeof injuryApi?.openResurrectionWizard !== 'function') return;
+      const fadingModule = globals.game?.modules?.get?.(INJURY_MODULE_ID);
+      const openResurrectionWizard = fadingModule?.active === true ? fadingModule.api?.openResurrectionWizard : undefined;
+      if (!actor || typeof openResurrectionWizard !== 'function') return;
       try {
-        await injuryApi.openResurrectionWizard(actor);
+        await openResurrectionWizard(actor);
         await this.render({ force: true });
       } catch (error) { notify(globals, error); }
     }
 
     static async onSubmit(this: any, _event: unknown, _form: unknown, formData: any) {
+      if (globals.game?.version !== undefined
+        && (globals.game.version !== '14.364' || globals.game.system?.version !== '5.3.3')) return;
       try {
         const data = formData?.object ?? formData;
         const conditionId = String(data.conditionId) as ConditionId;
@@ -210,22 +213,22 @@ function hudParameterDraft(conditionId: ConditionId): ConditionParams {
 }
 
 export function readInjuryApi(globals: any = globalThis): InjuryApi | undefined {
-  const module = globals.game?.modules?.get?.(INJURY_MODULE_ID);
-  const injuryApi = module?.active === true ? module.api : undefined;
+  const module = globals.game?.modules?.get?.(MODULE_ID);
+  const injuryApi = module?.active === true ? module.api?.injury : undefined;
   if (!injuryApi || typeof injuryApi !== 'object') return undefined;
   if (typeof injuryApi.getState !== 'function'
-    || typeof injuryApi.setInjury !== 'function'
-    || typeof injuryApi.openResurrectionWizard !== 'function') return undefined;
+    || typeof injuryApi.setStacks !== 'function') return undefined;
   return injuryApi as InjuryApi;
 }
 
 export async function prepareInjuryContext(globals: any, actors: any[]): Promise<any> {
   const api = readInjuryApi(globals);
   if (!api) return { enabled: false, actors: [] };
-  const presentation = injuryPresentation(globals, api);
+  const presentation = injuryPresentation(globals);
   const entries = await Promise.all(actors.map(async (actor: any) => {
-    const stacks = readInjuryStacks(await api.getState?.(actor), actor);
-    return {
+    try {
+      const stacks = readInjuryStacks(await api.getState(actor), actor);
+      return {
       actorUuid: actor.uuid,
       actorName: actor.name,
       stacks,
@@ -233,12 +236,18 @@ export async function prepareInjuryContext(globals: any, actors: any[]): Promise
       canIncrease: stacks < MAX_INJURY_STACKS,
       canDecrease: stacks > 0,
       img: presentation.img,
-      description: formatInjuryDescription(globals, presentation.description, stacks),
-    };
+      description: formatInjuryDescription(globals, stacks),
+      };
+    } catch (error) {
+      return { actorUuid: actor.uuid, actorName: actor.name,
+        error: error instanceof Error ? error.message : String(error) };
+    }
   }));
   return {
     enabled: true,
     ...presentation,
+    resurrectionAvailable: globals.game?.modules?.get?.(INJURY_MODULE_ID)?.active === true
+      && typeof globals.game?.modules?.get?.(INJURY_MODULE_ID)?.api?.openResurrectionWizard === 'function',
     actors: entries,
   };
 }
@@ -251,10 +260,10 @@ async function changeInjury(application: any, target: any, delta: number, global
   const previous = injuryChangeQueues.get(actorKey) ?? Promise.resolve();
   const run = previous.catch(() => undefined).then(async () => {
     const injuryApi = readInjuryApi(globals);
-    if (typeof injuryApi?.getState !== 'function' || typeof injuryApi.setInjury !== 'function') return;
+    if (typeof injuryApi?.getState !== 'function' || typeof injuryApi.setStacks !== 'function') return;
     const stacks = readInjuryStacks(await injuryApi.getState(actor), actor);
     const next = Math.max(0, Math.min(MAX_INJURY_STACKS, stacks + delta));
-    if (next !== stacks) await injuryApi.setInjury(actor, next, 'custom-conditions-manager');
+    if (next !== stacks) await injuryApi.setStacks(actor, next, 'custom-conditions-manager');
     await application.render({ force: true });
   });
   const tail = run.then(() => undefined, () => undefined);
@@ -267,37 +276,28 @@ async function changeInjury(application: any, target: any, delta: number, global
   } catch (error) { notify(globals, error); }
 }
 
-function injuryPresentation(globals: any, api: InjuryApi): InjuryPresentation {
-  let provided: InjuryPresentation | undefined;
-  try { provided = typeof api.statusPresentation === 'function' ? api.statusPresentation() : undefined; }
-  catch { provided = undefined; }
-  if (provided && typeof provided === 'object' && provided.name && provided.description && provided.img) {
-    return {
-      id: String(provided.id ?? 'fvtt-injury'),
-      name: String(provided.name),
-      description: String(provided.description),
-      img: String(provided.img),
-    };
-  }
+function injuryPresentation(globals: any): InjuryPresentation {
   return {
     id: 'fvtt-injury',
-    name: localize(globals, 'IFS.Status.Injury', 'Injury'),
-    description: localize(globals, 'IFS.Status.InjuryLevel', 'Injury {stacks}/{max}'),
-    img: 'modules/fvtt-injury-fading-spirits/icons/injury.svg',
+    name: localize(globals, 'FVTTCONDITIONS.Injury.Name', 'Injury'),
+    description: localize(globals, 'FVTTCONDITIONS.Injury.ManagerSummary',
+      'Injury has 0–3 levels. Current levels are shown separately for each Actor below; the GM decides a third-level fall.'),
+    img: `modules/${MODULE_ID}/icons/injury/injury-1.svg`,
   };
 }
 
-function formatInjuryDescription(globals: any, description: string, stacks: number): string {
+function formatInjuryDescription(globals: any, stacks: number): string {
+  const description = localize(globals, 'FVTTCONDITIONS.Injury.Level', 'Injury {stacks}/{max}');
   const format = globals?.game?.i18n?.format;
   if (typeof format === 'function' && description.includes('{stacks}')) {
-    try { return format.call(globals.game.i18n, 'IFS.Status.InjuryLevel', { stacks, max: MAX_INJURY_STACKS }); }
+    try { return format.call(globals.game.i18n, 'FVTTCONDITIONS.Injury.Level', { stacks, max: MAX_INJURY_STACKS }); }
     catch { /* fall through to local placeholder replacement */ }
   }
   return description.replaceAll('{stacks}', String(stacks)).replaceAll('{max}', String(MAX_INJURY_STACKS));
 }
 
 function readInjuryStacks(state: any, actor: any): number {
-  const raw = state?.injury?.stacks ?? state?.stacks ?? actor?.flags?.[INJURY_MODULE_ID]?.injury?.stacks ?? 0;
+  const raw = state?.stacks ?? actor?.flags?.[MODULE_ID]?.injury?.state?.stacks ?? 0;
   const value = Number(raw);
   return Number.isInteger(value) ? Math.max(0, Math.min(MAX_INJURY_STACKS, value)) : 0;
 }

@@ -1,8 +1,8 @@
 {
   "id": "fvtt-injury-fading-spirits",
-  "title": "伤势与消逝的灵魂 / Injury & The Fading Spirits",
-  "description": "由 GM 主导的伤势与 Critical Role 消逝的灵魂复活自动化（已验收 Foundry 14.364 / dnd5e 5.3.3；6.0.2 历史候选；6.0.5 候选待验收）。 / GM-authoritative Injury and Critical Role Fading Spirits automation (accepted on Foundry 14.364 / dnd5e 5.3.3; 6.0.2 historical candidate; 6.0.5 candidate acceptance pending).",
-  "version": "1.0.1",
+  "title": "消逝的灵魂 / The Fading Spirits",
+  "description": "独立的 GM 主导复活仪式；旧伤势 API 转发给 Custom Conditions。6.0.5 仍待本地验收。 / GM-authoritative resurrection rituals; legacy Injury API forwards to Custom Conditions. 6.0.5 awaits local acceptance.",
+  "version": "1.1.0",
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",

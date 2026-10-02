@@ -133,6 +133,22 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     expect(again.documents.every(d=>d.status==='existing')).toBe(true);
     await startForgeEncounterMacro(env.game,macro.id);expect(env.executions).toBe(1);
   });
+  test('binds the reviewed dragon ID while preserving an unowned Actor with the same name',async()=>{
+    const env=runtime(),prepared=await prepareForgeEncounter(JSON.stringify(assistedEncounterFixture()));
+    const name=prepared.actors.find(actor=>actor.key==='dragon')!.name;
+    const legacy=await env.game.actors.documentClass.create({_id:'2222222222222222',name,type:'npc',flags:{},system:{attributes:{hp:{value:93}}}});
+    const before=JSON.stringify(legacy!.toObject());
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    const dragon=result.documents.find(document=>document.kind==='Actor'&&document.key==='dragon')!;
+    const macro=env.game.macros.get(result.documents.find(document=>document.kind==='Macro')!.id)!;
+    expect(dragon.id).not.toBe(legacy!.id);
+    expect(macro.toObject().flags['fvtt-json-forge'].encounter.bindings.dragon).toBe(dragon.uuid);
+    expect(macro.toObject().command).toContain(dragon.uuid);
+    expect(macro.toObject().command).not.toContain(legacy!.uuid);
+    await startForgeEncounterMacro(env.game,macro.id);
+    expect(env.executions).toBe(1);
+    expect(JSON.stringify(legacy!.toObject())).toBe(before);
+  });
   test('requires GM, exact runtime, current sealed preparation and explicit review',async()=>{
     const env=runtime(),prepared=await ready();
     await expect(importForgeEncounter({...env,prepared,reviewed:false})).rejects.toThrow();

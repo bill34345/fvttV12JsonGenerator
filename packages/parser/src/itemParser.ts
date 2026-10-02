@@ -4,6 +4,11 @@ import type { ItemParserStrategy } from './itemStrategy';
 import type { ParsedItem, ItemRarity, AttunementType, ItemType, UsesData, ItemStage } from '@fvtt-json-generator/models/item';
 import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 import { i18n } from './i18n';
+import {
+  isWeaponMasteryId,
+  parseWeaponConfiguration,
+  type WeaponConfiguration,
+} from '@fvtt-json-generator/contracts/weapon-properties';
 
 // source-derived: explicit AC gains must not disappear merely because "additional" is absent.
 function unresolvedArmorClauses(body: string): string[] {
@@ -33,6 +38,11 @@ export class ItemParser implements ItemParserStrategy {
     const englishName = this.parseEnglishName(rawData);
     const type = this.parseType(rawData);
     const img = this.parseImage(rawData);
+    const nativeMastery = this.parseNativeMastery(rawData);
+    const weaponConfiguration = this.parseWeaponConfiguration(
+      rawData['weapon-properties'] ?? rawData.weaponProperties ?? rawData['武器特性'],
+      'weapon-properties',
+    );
     const rarity = this.parseRarity(rawData);
     const attunement = this.parseAttunement(rawData);
 
@@ -55,6 +65,9 @@ export class ItemParser implements ItemParserStrategy {
       // both define the base shield as 6 lb.
       ? { value: 6, units: 'lb' as const }
       : weapon?.weight;
+    const parsedWeapon = weapon?.weapon
+      ? { ...weapon.weapon, ...(nativeMastery ? { mastery: nativeMastery } : {}) }
+      : undefined;
 
     let stages: ItemStage[];
     let structuredActions: ParsedItem['structuredActions'];
@@ -98,9 +111,11 @@ export class ItemParser implements ItemParserStrategy {
         : typeof rawData['来源'] === 'string' ? rawData['来源'] : undefined,
       unresolvedMechanics: armor && armor.magicalBonus === null
         ? unresolvedArmorClauses(body) : undefined,
-      ...(weapon?.weapon ? { weapon: weapon.weapon } : {}),
+      ...(parsedWeapon ? { weapon: parsedWeapon } : {}),
+      ...(nativeMastery ? { nativeMastery } : {}),
       ...(weapon?.damage ? { damage: weapon.damage } : {}),
       ...(weapon?.range ? { range: weapon.range } : {}),
+      ...(weaponConfiguration ? { weaponConfiguration } : {}),
       armor,
       properties,
       weight,
@@ -168,6 +183,7 @@ export class ItemParser implements ItemParserStrategy {
     const usesActions: ActionData[] = [];
     const spells: ActionData[] = [];
     const saves: ActionData[] = [];
+    const attacks: ActionData[] = [];
     for (const [index, entry] of contract.abilities.entries()) {
       if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
         throw new Error(`item-mechanics.abilities[${index}] must be a mapping.`);
@@ -177,6 +193,46 @@ export class ItemParser implements ItemParserStrategy {
         ? ability.id.trim()
         : `ability-${index + 1}`;
       const kind = ability.kind;
+      if (kind === 'attack') {
+        const attackType = ability.attackType ?? ability['攻击类型'];
+        const toHit = ability.toHit ?? ability['命中'];
+        const range = ability.range ?? ability['范围'];
+        if (typeof attackType !== 'string' || !['mwak', 'rwak', 'msak', 'rsak'].includes(attackType.trim().toLowerCase())) {
+          throw new Error(`item-mechanics.abilities[${index}].attackType must be a supported attack type.`);
+        }
+        if (typeof toHit !== 'number' || !Number.isFinite(toHit)) {
+          throw new Error(`item-mechanics.abilities[${index}].toHit must be numeric.`);
+        }
+        if (typeof range !== 'string' || !range.trim()) {
+          throw new Error(`item-mechanics.abilities[${index}].range must be explicit.`);
+        }
+        const damage = this.parseItemMechanicsDamage(ability.damage, index);
+        if (damage.length === 0) {
+          throw new Error(`item-mechanics.abilities[${index}].damage must contain at least one damage part.`);
+        }
+        const name = typeof ability.name === 'string' && ability.name.trim()
+          ? ability.name.trim()
+          : id;
+        const englishName = typeof ability.englishName === 'string' && ability.englishName.trim()
+          ? ability.englishName.trim()
+          : undefined;
+        const normalizedAttackType = attackType.trim().toLowerCase() as NonNullable<ActionData['attack']>['type'];
+        attacks.push({
+          name,
+          ...(englishName ? { englishName } : {}),
+          logicalPath: `item-mechanics/${id}`,
+          type: 'attack',
+          attack: {
+            type: normalizedAttackType,
+            ...(typeof ability.ability === 'string' ? { ability: ability.ability.trim() as NonNullable<ActionData['attack']>['ability'] } : {}),
+            toHit,
+            range: range.trim(),
+            damage,
+          },
+          ...(typeof ability.description === 'string' ? { desc: ability.description } : {}),
+        });
+        continue;
+      }
       if (kind === 'passive-ac') {
         if (typeof ability.value !== 'number' || !Number.isFinite(ability.value)) {
           throw new Error(`item-mechanics.abilities[${index}].value must be a numeric AC bonus.`);
@@ -310,6 +366,7 @@ export class ItemParser implements ItemParserStrategy {
     }
 
     const structuredActions: ParsedItem['structuredActions'] = {
+      ...(attacks.length > 0 ? { attacks } : {}),
       ...(effects.length > 0 ? { effects } : {}),
       ...(usesActions.length > 0 ? { uses: usesActions } : {}),
       ...(saves.length > 0 ? { saves } : {}),
@@ -700,6 +757,30 @@ export class ItemParser implements ItemParserStrategy {
       return image.trim();
     }
     return undefined;
+  }
+
+  /**
+   * Read native mastery only from the explicit source field.  A weapon name,
+   * prose label, or inferred base item must never select a mastery.
+   */
+  private parseNativeMastery(rawData: Record<string, unknown>): NonNullable<ParsedItem['weapon']>['mastery'] {
+    const value = rawData['native-mastery'] ?? rawData.nativeMastery ?? rawData['原生精通'];
+    if (value === undefined || value === null || value === '') return undefined;
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    if (!isWeaponMasteryId(normalized)) {
+      throw new Error('InvalidNativeWeaponMastery: native-mastery must name one official dnd2024 mastery.');
+    }
+    return normalized;
+  }
+
+  /** Parse the shared versioned weapon configuration without guessing defaults. */
+  private parseWeaponConfiguration(value: unknown, path: string): WeaponConfiguration | undefined {
+    if (value === undefined) return undefined;
+    const parsed = parseWeaponConfiguration(value);
+    if (!parsed) {
+      throw new Error(`InvalidWeaponConfiguration: ${path} must be a valid WeaponConfiguration.`);
+    }
+    return parsed;
   }
 
   /**

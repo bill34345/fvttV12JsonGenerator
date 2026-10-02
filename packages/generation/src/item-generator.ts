@@ -14,6 +14,8 @@ import { mapSourceItemTypeToFoundry } from './item-type-mapping';
 import { createStableDocumentId } from './stableId';
 import type { GenerationIconResolver } from './ports';
 import { renderFoundryItemDescriptionHtml } from './item-description';
+import { projectWeaponProperties } from './weapon-properties';
+import type { WeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -94,8 +96,15 @@ export class ItemGenerator {
     if (parsed.activities) {
       this.generateActivities(item, parsed.activities);
     } else if (parsed.structuredActions) {
-      this.generateStructuredActivities(item, parsed.structuredActions);
+      this.generateStructuredActivities(item, parsed.structuredActions, parsed.weaponConfiguration);
     }
+
+    projectWeaponProperties(item, {
+      configuration: parsed.weaponConfiguration,
+      nativeMastery: parsed.nativeMastery ?? parsed.weapon?.mastery,
+      effectProfile: this.effectProfile,
+      targetVersion: this.fvttVersion,
+    });
 
     // 6. Return the item document
     this.effectProfileApplier.apply({ items: [item] }, this.effectProfile);
@@ -303,6 +312,9 @@ export class ItemGenerator {
         value: parsed.weapon.value,
         baseItem: parsed.weapon.baseItem,
       };
+      if (parsed.nativeMastery ?? parsed.weapon.mastery) {
+        item.system.mastery = parsed.nativeMastery ?? parsed.weapon.mastery;
+      }
     }
 
     // Range (for weapons/ranged items)
@@ -361,10 +373,10 @@ export class ItemGenerator {
 
     for (const [key, activity] of Object.entries(activities)) {
       const newId = createStableDocumentId({ item: item.name, path: `activities/${key}`, activity });
-      const activityWithId = {
+      const activityWithId = JSON.parse(JSON.stringify({
         ...activity,
         _id: newId,
-      };
+      })) as ActivityData & { _id: string };
       ActivityGenerator.mergeUnique(item.system.activities, { [newId]: activityWithId });
     }
   }
@@ -382,7 +394,8 @@ export class ItemGenerator {
       effects?: any[];
       uses?: any[];
       spells?: any[];
-    }
+    },
+    weaponConfiguration?: WeaponConfiguration,
   ): void {
     if (!item.system) {
       item.system = {};
@@ -409,8 +422,16 @@ export class ItemGenerator {
         if (lightEffect) {
           lightEffect.origin = `Item.${item._id}`;
           item.effects.push(lightEffect);
-          const activities = this.activityGenerator.generate(action, { appliedEffectId: lightEffect._id });
+          const activities = this.activityGenerator.generate(action, {
+            appliedEffectId: lightEffect._id,
+            weaponConfiguration: action.weaponConfiguration ?? weaponConfiguration,
+          });
           for (const [id, activity] of Object.entries(activities)) {
+            const activityFlags = (activity.flags ??= {});
+            activityFlags.fvttJsonGenerator = {
+              ...(activityFlags.fvttJsonGenerator ?? {}),
+              sourceLogicalPath: action.logicalPath,
+            };
             ActivityGenerator.mergeUnique(item.system.activities, { [id]: {
               ...activity,
               name: (activity as ActivityData).name || action.name,
@@ -425,7 +446,16 @@ export class ItemGenerator {
           passiveEffect.origin = `Item.${item._id}`;
           item.effects.push(passiveEffect);
         } else {
-          const activities = this.activityGenerator.generate(action);
+          const activities = this.activityGenerator.generate(action, {
+            weaponConfiguration: action.weaponConfiguration ?? weaponConfiguration,
+          });
+          for (const activity of Object.values(activities) as any[]) {
+            const activityFlags = (activity.flags ??= {});
+            activityFlags.fvttJsonGenerator = {
+              ...(activityFlags.fvttJsonGenerator ?? {}),
+              sourceLogicalPath: action.logicalPath,
+            };
+          }
           const conditionEffects = generateEnhancedConditionEffects(
             action.desc ?? '',
             activities,

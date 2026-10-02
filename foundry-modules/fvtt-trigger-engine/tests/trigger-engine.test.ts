@@ -113,6 +113,33 @@ describe('Actor documentUpdate runtime', () => {
   const runtimes: TriggerEngineRuntime[] = [];
   afterEach(async () => { for (const runtime of runtimes.splice(0)) await runtime.stop(); });
 
+  test('captures native revision before queued subscriber delivery', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target: any = actor(10);
+    target._stats = { modifiedTime: 100 };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm, [target]),
+      storage: new MemoryTriggerStorage({ schemaVersion: 1, triggers: [] }) });
+    runtimes.push(runtime);
+    await runtime.start();
+    const seen: Array<{ revision: number | undefined; before: number; after: number }> = [];
+    runtime.subscribe((context) => { if (context.event.type === 'documentUpdate') seen.push({
+      revision: context.capturedModifiedTime,
+      before: (context.before as any).system.attributes.hp.value,
+      after: (context.after as any).system.attributes.hp.value,
+    }); });
+    target.set('system.attributes.hp.value', 0);
+    const first = runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 0 });
+    target._stats.modifiedTime = 101;
+    target.set('system.attributes.hp.value', 5);
+    const second = runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 5 });
+    target._stats.modifiedTime = 102;
+    await Promise.all([first, second]);
+    expect(seen).toEqual([
+      { revision: 100, before: 10, after: 0 },
+      { revision: 101, before: 0, after: 5 },
+    ]);
+  });
+
   test('uses ready shadow snapshots, ignores unrelated and disabled updates, and carries consecutive before/after values', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
     const target = actor(10);

@@ -390,53 +390,48 @@
   },
   {
     "id": "fvtt-injury-fading-spirits",
-    "title": "伤势与消逝的灵魂",
+    "title": "消逝的灵魂／独立复活",
     "category": "play",
-    "summary": "以活动 GM 为权威管理 0–3 层伤势、死亡豁免扩展和 Critical Role 风格的消逝灵魂复活流程。",
-    "when": "跑团需要把倒地、恢复、伤势、复活仪式和 GM 裁定记录到 Actor 长期状态时使用。",
+    "summary": "以活动 GM 为权威管理独立复活仪式、快速复活锁和回归历史；伤势由 Custom Conditions 管理。",
+    "when": "需要 Critical Role 风格的复活仪式、参与者贡献和 GM 裁定记录时使用。",
     "requires": [
-      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
-      "活动 GM",
-      "要管理的 character Actor 或其 Token"
+      "独立复活版本门：Foundry 14.364 / dnd5e 5.3.3，或历史候选 14.368 / 6.0.2、当前候选 14.368 / 6.0.5",
+      "活动 GM；玩家通过原生贡献检定参与",
+      "如需伤势，另外启用配套的新 Custom Conditions 和 Trigger Engine；复活自身不依赖这两个模块"
     ],
     "steps": [
       {
-        "title": "启用并配置",
-        "text": "在精确支持版本的世界启用模块；在“配置设置 → 模块设置”中启用“伤势与消逝灵魂自动化”，按需选择是否管理 NPC。首次设置提示不会自动打开修改功能。"
+        "title": "启用独立复活模块",
+        "text": "在精确支持的版本中启用“消逝的灵魂”。兼容模块 ID 仍为 fvtt-injury-fading-spirits；旧 enabled/manageNpcs 设置只供伤势设置迁移，不再在本模块打开伤势规则。"
       },
       {
-        "title": "打开 Actor 面板",
-        "text": "GM 可在 Actor 目录条目上右键选择“伤势与消逝的灵魂”，或先选中 Token 后在聊天输入 /ifs；模块只读取明确选择的 Actor，玩家入口会转交活动 GM 验权。"
+        "title": "选择 Actor 并打开复活面板",
+        "text": "GM 在 Actor 目录条目右键选择“消逝的灵魂”，或先选中 Token 后在聊天输入 /ifs。核对 Actor 后选择快速、普通或最终仪式。没有 Custom Conditions 时仍可独立复活。"
       },
       {
-        "title": "调整或观察伤势",
-        "text": "在面板设置 0–3 层伤势，或在 Token 状态列表中左键增加、右键减少。Token Action HUD 显示当前层数，例如 1/3。模块还会观察 HP 归零、首次恢复正 HP、成功短休/长休和死亡豁免事件，并把状态投影到 Actor flag、Active Effect 和 Token 图标。"
+        "title": "填写并确认仪式",
+        "text": "普通或最终仪式最多填写三名不同参与者及其技能、DC 和优势。模块创建原生贡献请求；GM 确认每项贡献、灵魂意愿和最终结算。最终和快速检定使用 blindroll；长期历史不保存盲骰原始值。"
       },
       {
-        "title": "开始复活仪式",
-        "text": "在复活仪式向导选择普通、最终、快速或 9 环/奇迹模式；普通/最终仪式最多填写三名不同参与者的 Actor UUID、技能、可选属性覆盖、DC 10–20 和优势状态，快速复活填写施法关键属性调整值。"
+        "title": "处理回归与下一次死亡",
+        "text": "成功复活记录回归历史，实际 HP 由对应法术或 Activity 恢复。Custom Conditions 正在管理伤势时，经公开接口抑制该次恢复计层。新死亡 episode 重置本次快速复活锁和消费标记，使后续死亡仍能开始新的复活。"
       },
       {
-        "title": "由 GM 结算",
-        "text": "在待处理仪式卡片或面板中查看原生关联检定，逐项确认贡献成功/失败和灵魂是否愿意回归，再结算仪式。成功只记录回归和下一次恢复保护；实际 HP 恢复仍由对应法术或 Activity 完成。"
-      },
-      {
-        "title": "联动自定义状态与事件引擎",
-        "text": "启用 Custom Conditions 后可从其管理器查看或调整伤势。伤势名称、现成图标和层数角标统一显示；Token Action HUD 的完整悬停说明使用 dnd5e 规则卡布局，将倒地与叠层、第三层 GM 裁定、清除方式及死亡豁免自然 19/20 分为四段。图标作者和 CC BY 3.0 许可见模块包内 CREDITS.md。自动化来源可选择内部 Hooks 或外部 Trigger Engine；外部来源缺失时提示错误，不会双重执行或静默切回。仪式提醒只通知活动 GM 选择打开向导，不自动掷骰或认定灵魂意愿。"
+        "title": "核对历史及兼容入口",
+        "text": "原有伤势 flags 和复活历史保留；复活模块后续只写 fadingSpirits 子路径。旧 setInjury/withInjurySuppressed 接口转交 Custom Conditions；缺少该模块时明确报错，独立复活入口仍可用。"
       }
     ],
     "outputs": [
-      "Actor flags 中的伤势、复活尝试、锁定和历史状态",
-      "伤势 Active Effect、Token HUD 分层状态、死亡豁免自然 19/20 处理",
-      "复活贡献请求、GM-only 结算卡和不含盲骰原始面的审计摘要"
+      "Actor fadingSpirits 中的复活尝试、锁定和历史",
+      "原生贡献请求与盲骰结算消息",
+      "供可选 Custom Conditions 调用的死亡 episode 和恢复抑制桥接"
     ],
     "limits": [
-      "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；长期状态只有活动 GM 写入",
-      "三层伤势时先让 GM 选择，不会预写死亡；直接死亡、环境例外、灵魂意愿和贡献结果都保留 GM 确认",
-      "不依赖 MIDI-QOL、DAE 或其他村规模块；外部复活 Activity 若直接恢复 HP，应由活动 GM 使用公开 suppression API 包裹事务",
-      "ChatMessage 只是交互投影，不是历史事实来源；自动测试和本地 Lab 不能代替 GM/玩家多客户端或长期跑团验收",
-      "HP 归零仅表示倒地；仪式提醒须额外满足明确死亡条件。Custom Conditions 不复制伤势 flags，不接管复活状态机。",
-      "Next 14.368／6.0.5 本轮公开伤势状态 API、设置／恢复和重载通过；天然 19 与完整死亡／伤势矩阵未执行。"
+      "伤势的 0–3 层、HP／休息规则、自然 19/20 和状态管理入口现属于 Custom Conditions；本模块的旧 injury flags 只保留兼容数据。",
+      "灵魂意愿、贡献是否成功、环境例外和复活 HP 仍由 GM 与对应法术或 Activity 决定。",
+      "未安装 Custom Conditions 时，独立复活不会增加或清除伤势；伤势旧 API 需要配套模块。",
+      "本轮迁移候选的构建／单测不能代替真实复活、玩家贡献、重载及两个系统版本的玩法接受；旧 Next 公共伤势 API PASS 不推广到新所有者。",
+      "本地 Lab 接受不代表生产部署或长时跑团接受。"
     ],
     "keywords": [
       "伤势",
@@ -453,7 +448,8 @@
       "docs/reviews/2026-09-22-condition-hud-localization.md",
       "docs/reviews/2026-09-23-existing-condition-icons.md",
       "docs/reviews/2026-09-23-condition-tooltip-native-layout.md",
-      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md",
+      "docs/plans/2026-10-02-injury-condition-ownership.md"
     ],
     "watch": [
       "foundry-modules/fvtt-injury-fading-spirits/"
@@ -467,11 +463,10 @@
     "summary": "由活动 GM 执行的通用 Actor 更新、回合开始和回合结束事件引擎；把稳定的 before/after 上下文交给宏或其他模块。",
     "when": "需要把“什么时候触发”从具体规则模块中拆出来，用配置组合 Actor 更新、Combat 回合事件、结构化条件和现有宏时使用。具体状态规则由独立模块拥有。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3 测试目标",
+      "精确版本门：Foundry 14.364 / dnd5e 5.3.3，或伤势接入候选 14.368 / 6.0.5",
       "活动 GM",
       "每个 Run Macro 动作对应的世界 Macro UUID",
-      "需要消费事件的模块通过 fvtt-trigger-engine.api.subscribe(listener) 接入"
+      "消费模块通过 api.subscribe 接收通用事件；伤势规则由 Custom Conditions 拥有"
     ],
     "steps": [
       {
@@ -496,7 +491,7 @@
       },
       {
         "title": "接入其他模块",
-        "text": "需要消费通用事件的模块通过 fvtt-trigger-engine.api.subscribe(listener) 接入，按事件类型和文档类型筛选；Trigger Engine 不导入消费者的私有实现。"
+        "text": "其他模块通过 api.subscribe(listener) 筛选通用事件；伤势的 HP 更新由 Custom Conditions 消费。外部武器事件使用独立 publishExternal/subscribeExternal 公开接口，版本与能力可查询。Trigger Engine 不导入消费者私有实现，也不替消费者裁定伤势或复活。"
       }
     ],
     "outputs": [
@@ -508,7 +503,8 @@
       "当前 Document Update、Combat Turn Start 和 Combat Turn End 都只支持 Actor 文档；schema 保留 documentType 以便后续扩展",
       "v1 只有结构化 ALL/ANY 比较条件与 Run Macro 动作，不提供任意 JavaScript 条件、Convenient Effects 或 Effect Macro 依赖",
       "执行权限定为确定性活动 GM，避免多客户端重复写入；同一 Actor 的独立更新按观察顺序排队并保留各自 before/after；宏回写当前 Actor 时通过 triggerContext.updateDocument 显式携带完整祖先因果链，链上已出现的触发器会被跳过，且不会覆盖共享 Actor.update；world setting 广播会刷新各客户端运行时缓存",
-      "本地测试和构建只能证明配置、求值和调用契约；真实世界中的宏副作用仍需在精确 Foundry 版本中单独验收"
+      "本地测试和构建只能证明配置、求值和调用契约；真实世界中的宏副作用仍需在精确 Foundry 版本中单独验收",
+      "6.0.5 本轮只为伤势路径扩展精确运行门；Combat、宏副作用及十九种通用状态仍需各自精确版本接受，不按 manifest 区间推断通过。"
     ],
     "keywords": [
       "Trigger",
@@ -522,7 +518,8 @@
     ],
     "sources": [
       "foundry-modules/fvtt-trigger-engine/README.zh-CN.md",
-      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md"
+      "docs/runbooks/custom-conditions-and-trigger-engine-usage.md",
+      "docs/plans/2026-10-02-injury-condition-ownership.md"
     ],
     "watch": [
       "foundry-modules/fvtt-trigger-engine/"
@@ -533,13 +530,13 @@
     "id": "fvtt-custom-conditions",
     "title": "Custom Conditions / 自定义状态",
     "category": "play",
-    "summary": "在 Foundry 内直接施加、编辑、停用和解除 19 个自定义状态，并以统一实例参数自动结算流血、灼烧等动态规则。",
-    "when": "需要把 Monsters of Drakkenheim 的自定义状态放进 Actor 或物品模板，并希望日常调整骰式、DC、伤害类型和解除方式时使用。",
+    "summary": "集中管理十九种带参数的自定义状态，以及独立的 0–3 层伤势；通过 Trigger Engine 接收 Actor 和 Combat 事件。",
+    "when": "需要 Drakkenheim 自定义状态或伤势规则时使用；复活仪式由可选的消逝灵魂模块独立提供。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "十九种通用状态：Foundry 14.364 / dnd5e 5.3.3",
+      "伤势候选：14.364 / 5.3.3 或 ServerNext 14.368 / 6.0.5；6.0.5 不开放十九种通用规则",
       "GM / active GM",
-      "已安装并启用 fvtt-trigger-engine"
+      "已安装并启用配套 Trigger Engine；伤势不要求消逝的灵魂"
     ],
     "steps": [
       {
@@ -549,6 +546,10 @@
       {
         "title": "打开状态管理器",
         "text": "以 GM 选中或标记 Token，从模块设置或 Token 控制栏打开“管理自定义状态”。面板可以对目标施加、编辑、停用和解除状态。"
+      },
+      {
+        "title": "启用并管理伤势",
+        "text": "在 Custom Conditions 的模块设置中打开“启用伤势自动化”，按需打开“管理 NPC 伤势”；新世界默认关闭。升级时沿用旧模块已有开关，不自动扩大管理范围。在管理器伤势区域调整 0–3 层，或在 Token HUD 左键增加、右键减少；Token Action HUD 显示当前层数。倒地后第一次恢复正 HP 增加一层，恢复满血或成功短休／长休清除，保留的自然 19／20 清零死亡计数并恢复 1 HP；第三层倒地仍由 GM 裁定。"
       },
       {
         "title": "填写状态实例参数",
@@ -564,7 +565,7 @@
       },
       {
         "title": "阅读状态说明与管理伤势",
-        "text": "状态名称和悬停说明随 Foundry 界面语言显示中文或英文。Token Action HUD 的完整提示采用 dnd5e 规则卡布局，标题、状态类别与分段正文分开，图标保留在 HUD 按钮；仅名称和无提示模式仍由 TAH 设置控制。十九种自定义实例各采用选定的 Game-icons.net SVG；笨拙用 Drop Weapon，踉跄用 Foot Trip，署名和 CC BY 3.0 许可见模块包内 CREDITS.md。全部 19 项使用 fvtt-custom-conditions.<条件 ID> 独立状态 ID；自定义 Dazed 的 HUD 标题只显示恍惚或 Dazed，仍与 MCDM 同名状态分开。五个必填参数状态点击后打开绑定当前 Actor、预选状态的管理器，其余十四项通过 Custom Conditions API 切换带模块 flag 的实例；Frozen 和 Shocked 的子状态由复合来源提供时不重复创建，多来源在管理器中处理。启用伤势模块时，可在同一管理器调整伤势层数或进入消逝的灵魂仪式，原有伤势与复活历史仍保存在伤势模块。"
+        "text": "状态名称和悬停说明随 Foundry 界面语言显示中文或英文。Token Action HUD 的完整提示采用 dnd5e 规则卡布局，标题、状态类别与分段正文分开，图标保留在 HUD 按钮；仅名称和无提示模式仍由 TAH 设置控制。十九种自定义实例各采用选定的 Game-icons.net SVG；笨拙用 Drop Weapon，踉跄用 Foot Trip，署名和 CC BY 3.0 许可见模块包内 CREDITS.md。全部 19 项使用 fvtt-custom-conditions.<条件 ID> 独立状态 ID；自定义 Dazed 的 HUD 标题只显示恍惚或 Dazed，仍与 MCDM 同名状态分开。五个必填参数状态点击后打开绑定当前 Actor、预选状态的管理器，其余十四项通过 Custom Conditions API 切换带模块 flag 的实例；Frozen 和 Shocked 的子状态由复合来源提供时不重复创建，多来源在管理器中处理。伤势由本模块的独立分层区域管理，不要求复活模块；启用可选的消逝灵魂模块后，区域另提供复活仪式入口。旧伤势数据原件保留，新伤势写入本模块 flags；复活历史继续归复活模块。伤势使用此前选定的 Bandaged 原图，层数由状态标签显示。"
       },
       {
         "title": "判读几个容易混淆的状态",
@@ -578,7 +579,8 @@
     "outputs": [
       "Actor 上带参数的 Custom Conditions ActiveEffect 实例",
       "物品上的可重复使用 Condition 模板",
-      "由 active GM 和 Combat 事件驱动的流血、灼烧等结算"
+      "由 active GM 和 Combat 事件驱动的流血、灼烧等结算",
+      "本模块 injury flags 与分层伤势投影；保留旧伤势原件"
     ],
     "limits": [
       "本期包含 Addled、Bewildered、Bleeding、Burning、Clumsy、Dazed、Defenseless、Distracted、Enfeebled、Frozen、Helpless、Immobilized、Jinxed、Shocked、Sickened、Slowed、Staggered、Valor 和 Weakened",
@@ -588,7 +590,11 @@
       "恍惚／震愕三选一的普通顺序行为由回合旗标拦截；攻击异常或后续 Hook 否决可能保守限制到回合结束。跨客户端同时控制同一 Actor、两个非攻击活动弹窗交错完成尚未保证严格互斥",
       "CoTN 原模组组合验收复用常驻 server-mirror 的 cor-cotn 世界、端口 30001；历史 fvtt-v14-module-matrix 隔离 E2E 不能替代该组合验收。键盘长按受工具能力限制未验收",
       "构建、单测和安装 hash 不能代替 Foundry v14.364 中的真实 UI、Combat、ActiveEffect 和骰式运行时验收",
-      "自定义名称保持原样；更改界面语言后重载。原生失血/燃烧按钮不等于已配置骰式的自定义流血/灼烧。CoTN 的全 19 项入口可见性已单独验收；其余 18 项点击及本轮逐项玩法结算未执行，构建或单测不替代该结果。"
+      "自定义名称保持原样；更改界面语言后重载。原生失血/燃烧按钮不等于已配置骰式的自定义流血/灼烧。CoTN 的全 19 项入口可见性已单独验收；其余 18 项点击及本轮逐项玩法结算未执行，构建或单测不替代该结果。",
+      "伤势为运行时分层 condition，未加入生成器的十九种 ConditionId；本轮不新增伤势 Actor JSON 生成功能。",
+      "旧数据冲突、未知 schema 或重复伤势投影会停止自动迁移并提示；先由 GM 核对，模块不会任意删除或选择一个值。",
+      "新 Custom Conditions 与仍写伤势的旧复活模块同时启用时，伤势自动化拒绝运行；须使用配套新版本。",
+      "6.0.5 候选只开放伤势；十九种通用状态与既有武器专精 API 的 5.3.3 支持边界不扩大。本轮新所有权尚需真实客户端、HP／休息／死亡豁免与 HUD 接受，历史证据不自动推广。"
     ],
     "keywords": [
       "Custom Conditions",
@@ -599,7 +605,10 @@
       "Jinxed",
       "Valor",
       "ActiveEffect",
-      "参数化"
+      "参数化",
+      "伤势",
+      "Injury",
+      "分层状态"
     ],
     "sources": [
       "foundry-modules/fvtt-custom-conditions/README.zh-CN.md",
@@ -611,7 +620,8 @@
       "docs/reviews/2026-09-23-drakkenheim-condition-wording.md",
       "docs/reviews/2026-09-23-cotn-burning-hud.md",
       "docs/reviews/2026-09-24-custom-burning-hud.md",
-      "docs/reviews/2026-09-24-all-custom-condition-hud-audit.md"
+      "docs/reviews/2026-09-24-all-custom-condition-hud-audit.md",
+      "docs/plans/2026-10-02-injury-condition-ownership.md"
     ],
     "watch": [
       "foundry-modules/fvtt-custom-conditions/"
@@ -889,7 +899,7 @@
     "title": "跑团会话监测器",
     "category": "maintain",
     "summary": "由 GM-only Foundry 模块和 Windows/Chrome companion 共同记录隐私过滤的浏览器、进程和生命周期排障时间线。",
-    "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，先做短时或由用户亲自进行长时记录。",
+    "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，按任务范围记录；长时验收须有明确要求及真实会话证据。",
     "requires": [
       "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
       "GM",
@@ -902,8 +912,8 @@
         "text": "在精确支持版本的世界启用模块并以 GM 进入；世界 ready 后页面会出现“跑团会话监测器”面板。玩家客户端不会启动监测运行时。"
       },
       {
-        "title": "由用户启动 companion",
-        "text": "需要同时记录 Chrome/Windows 信号时，由用户从仓库根目录启动 companion；它只创建和管理自己的专用 Chrome profile，并等待 GM 正常登录，不读取日常浏览器凭据。",
+        "title": "启动 companion",
+        "text": "需要同时记录 Chrome/Windows 信号时，在已授权的监测范围内从仓库根目录启动 companion；它只创建和管理自己的专用 Chrome profile，并等待 GM 正常登录，不读取日常浏览器凭据。",
         "command": "bun run monitor:session -- record"
       },
       {
@@ -949,5 +959,79 @@
       "foundry-modules/session-monitor/"
     ],
     "module": "session-monitor"
+  },
+  {
+    "id": "fvtt-weapon-mastery-properties",
+    "title": "Weapon Mastery & Properties / 武器精通与特性",
+    "category": "play",
+    "summary": "独立配置官方武器精通与家规武器特性，记录效果来源、目标关系和持续规则；已完成锁定版本的本地验收，交付候选尚未发布。",
+    "when": "需要在 dnd5e 中配置官方八种精通，或增加 Deadly、Fatal、重击流血并区分同类规则的来源与叠加时使用。",
+    "requires": [
+      "Foundry 14.364 / dnd5e 5.3.3",
+      "fvtt-custom-conditions 与 fvtt-trigger-engine：0.1.1起的旧0.1.x或精确0.2.0，且公开API版本1／所需能力与方法完整",
+      "当前活动 GM；明确授予角色掌握资格或来源/GM 指定的 NPC 资格"
+    ],
+    "steps": [
+      {
+        "title": "构建并核对候选",
+        "text": "显式构建固定源码及产物身份；安装和校验读取同一固定产物，不隐式重建。源码改变后重新构建。协调共享 Lab 后再安装；字节一致不等于玩法通过。",
+        "command": "bun run test:weapon-mastery-properties\nbun run build:weapon-mastery-properties"
+      },
+      {
+        "title": "配置武器",
+        "text": "在模块设置中打开武器精通与特性管理器，选择角色或世界中的武器，明确启用。选择原生精通或独立的自定义预设，并配置一项首批家规特性；已有武器默认不启用。"
+      },
+      {
+        "title": "区分规则和来源",
+        "text": "复制官方预设会建立独立规则 ID。检查生效目标、来源、持续时间和叠加分组；Vex 只对相应攻击者与目标关系提供效果，官方 Slow 与既有 Slowed 状态不同。"
+      },
+      {
+        "title": "按实际结果验收",
+        "text": "检查命中/未命中、额外攻击额度、豁免、位移、持续效果和取消攻击。Nick 提醒卡不代表动作额度已验证；只出现伤害数字不代表目标已经受伤。"
+      },
+      {
+        "title": "复核保存的接受证据",
+        "text": "本地接受原件、构建身份和覆盖边界见终审记录。已关闭批次的对象已清理；需要新的受影响验收时，先核对目标版本和服务 owner，准备独立批次。"
+      }
+    ],
+    "outputs": [
+      "经过版本化校验的武器配置与官方/家规规则身份",
+      "带来源、目标和叠加组的效果实例",
+      "可复查的攻击与一次性效果消费记录"
+    ],
+    "limits": [
+      "本次精确接受CC／TE0.2.0，0.2.1或不完整API仍拒绝。新组合在14.364／5.3.3的实际ready、原生攻击／伤害、TE事件及CC Vex建立／消费和原值恢复通过；和9/29其他属性原身份分开，不推广6.0.5、生产或全部并发情形。",
+      "已完成Foundry14.364/dnd5e5.3.3本地交付候选验收。官方八种精通与三项家规采用已保存真实运行及受影响自动化组合覆盖；原生Vex/流血、当前SY玩家伤害应用与在线GM结算、正式生成导入/持久化均有对应证据。11个已审查测试批次已清理，原场景、Combat、暂停和模块配置恢复。各收据保留实际构建，不宣称全部角色/棋子组合、生产或其他版本均已验收",
+      "Midi 14.0.11 的卡片内 Apply 使用精确消息、目标和实际HP变化校验；已修复连续更新省略未变化字段造成的证明拒绝。没有来源消息的右键应用路径仍失败关闭；若缺少有效预检，阻止掷骰并提示错误，不另开原生骰窗",
+      "同武器Midi Vex收据可从已保存检查点、第二击消息/卡片和效果读回自动关联；Cleave父子伤害也有只读关联。原生或换武器收据不能套用Midi关联规则，部分原件保留INCOMPLETE标签，需按原始消息、HP与效果独立判断。主进度终审记录这些边界及文档打包与实测构建的等价证明",
+      "不支持 PF2e 系统，不移植三行动制、连续攻击减值或 AC+10 重击",
+      "默认最多一项新增家规特性，Deadly 与 Fatal 互斥；不自动按武器名称或魔法加值授予效果",
+      "精确 Fatal 和状态生命周期依赖运行模块；core 原生数据不等于完整武器自动化",
+      "显式配置WMP的v14固定来源伤害保留原骰式，不另加属性伤害；生成器绑定基础骰用于Fatal等规则。修改或重排伤害段会使绑定失效，需重新生成并验证。原生基础伤害武器继续使用原生路径；正式JSON校验通过不等于游戏内导入及攻击已验收",
+      "house-rules 保留原有弹药与重击规则，仅作为可选兼容对象；不允许其他精通模块重复结算同一效果"
+    ],
+    "keywords": [
+      "武器",
+      "精通",
+      "Mastery",
+      "Properties",
+      "Deadly",
+      "Fatal",
+      "Sap",
+      "Vex",
+      "Nick"
+    ],
+    "sources": [
+      "foundry-modules/fvtt-weapon-mastery-properties/README.zh-CN.md",
+      "docs/plans/weapon-mastery-active-case.md",
+      "docs/runbooks/weapon-mastery-cotn-e2e.md",
+      "docs/reviews/2026-09-25-weapon-mastery-user-report.md"
+    ],
+    "watch": [
+      "foundry-modules/fvtt-weapon-mastery-properties/",
+      "packages/contracts/src/weapon-properties.ts",
+      "packages/contracts/src/weapon-effects.ts"
+    ],
+    "module": "fvtt-weapon-mastery-properties"
   }
 ]

@@ -67,6 +67,53 @@ export interface TriggerStore {
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
+/** Versioned, data-only events published by runtime adapters. */
+export const EXTERNAL_EVENT_SCHEMA_VERSION = 1 as const;
+export const EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION = 1 as const;
+export const EXTERNAL_EVENT_TYPES = ['attack.prepared', 'attack.committed', 'attack.cancelled'] as const;
+export const EXTERNAL_EVENT_NAMESPACE = 'fvtt-weapon-mastery-properties' as const;
+export const EXTERNAL_EVENT_LIMITS = Object.freeze({
+  maxLedgerEntries: 64,
+  maxEnvelopeBytes: 4096,
+  maxLedgerBytes: 262144,
+  maxDataKeys: 16,
+  maxDataKeyLength: 64,
+  maxDataStringLength: 256,
+  maxIdentifierLength: 256,
+  maxNamespaceOrTypeLength: 64,
+});
+
+export type ExternalEventType = string;
+export type ExternalEventPrimitive = JsonPrimitive;
+export type ExternalEventData = Record<string, ExternalEventPrimitive>;
+
+/**
+ * A browser-safe event envelope. Namespace and type are intentionally plain
+ * strings so future producers can use the same bridge after validation; the
+ * runtime applies a conservative identifier grammar and size limits.
+ */
+export interface ExternalEvent {
+  schemaVersion: typeof EXTERNAL_EVENT_SCHEMA_VERSION;
+  namespace: string;
+  eventId: string;
+  type: ExternalEventType;
+  sourceActorUuid: string;
+  targetActorUuid?: string;
+  activityUuid: string;
+  attackId: string;
+  timestamp: number;
+  data?: ExternalEventData;
+}
+
+export type ExternalEventListener = (event: ExternalEvent) => Promise<void> | void;
+
+export type ExternalEventPublishStatus = 'published' | 'duplicate';
+
+export interface ExternalEventPublishResult {
+  status: ExternalEventPublishStatus;
+  event: ExternalEvent;
+}
+
 export interface CombatTurnContext {
   actor: any;
   combat: any;
@@ -93,6 +140,8 @@ export interface TriggerEventContext {
   changes: unknown;
   userId: string | undefined;
   timestamp: number;
+  /** Native document revision captured at the post-update hook, before queued delivery. */
+  capturedModifiedTime?: number;
   combat?: any;
   combatUuid?: string;
   combatant?: any;

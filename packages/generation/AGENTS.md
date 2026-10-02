@@ -15,7 +15,7 @@
 
 ## 测试要求
 
-- 新生成规则至少检查三个正例、一个接近反例，以及一个不相关 Actor/Item 不变检查。
+- 新生成规则至少检查三个有意义的正例、一个接近反例，以及一个不相关 Actor/Item 不变检查。正例应覆盖不同来源形态、目标类型或逻辑分支，不用重复相同分支的断言凑数量；来源语义与版本门禁不因减少重复检查而放宽。
 - 结构变化必须断言完整生成 JSON 形状，而不只是内部 helper 返回值。
 - 目标版本相关行为必须对照锁定的 Foundry/dnd5e/module 资料；不能用 v12 结果证明 v14。
 - Species V12 投影只绑定 Foundry `12.331` / dnd5e `4.3.9` / `core` / 2024，并保持 `static-candidate` 支持声明；`effects`、Size value、Activity 空字段和 Advancement 必须按 4.3.9 模型输出，禁止把 V14 `appliedEffects` 带入 V12。

@@ -93,6 +93,7 @@
       "结构化来源的分区决定 Item 显示分区；动作分区中回合开始自动触发的 special Activity 仍显示在动作分区，特性分区中显式 action 也不迁移分区。",
       "Bleeding / Burning 模板从特性明确给出的骰式、伤害类型和时机取值，默认回合结束，重复施加统一采用较高值。19 种 Custom Conditions 的生成状态 ID 统一使用 fvtt-custom-conditions.<条件 ID>，与 dnd5e 的 bleeding/burning 及其他模块的 dazed 分开；flags 中的规则参数条件 ID 仍是 bleeding、burning 等语义 ID。自定义 Dazed / Shocked 模板采用本项目的移动、动作、附赠动作三选一说明；生成的文本和状态 ID 不代替 Foundry 内的实际回合限制。普通命中伤害和相邻其他状态不能代替缺失参数；在 FVTT 中自动执行需要 Custom Conditions 与 Trigger Engine，JSON 导入不等于状态自动命中或 E2E 通过。",
       "状态模板 Effect ID 使用稳定的来源动作身份；重复生成保持本地引用一致，同一 Item 内的独立动作也有不同身份。生成时间戳可变化，不保证整份 JSON 字节完全相同。",
+      "武器来源可显式提供原生精通与 weapon-properties 配置；core 仅投影可原生表达的 Deadly 等字段，精确 Fatal／重击流血保持需复核说明，modded-v14 才输出武器模块配置。独立 Item 使用 workflow 的值级 verifier；verify:actor 仅用于 Actor。",
       "不可手工修补最终 JSON 来绕过生成或审查。"
     ],
     "keywords": [
@@ -148,6 +149,11 @@
         "title": "恢复需要审查的任务",
         "text": "使用真实 run-id 和人工填写的 decisions.json；恢复会重新验证，不是手改候选 JSON。",
         "command": "bun run src/index.ts --resume-intake \".local/intake-runs/<run-id>\" --decisions \".local/intake-runs/<run-id>/decisions.json\" --vault \"obsidian/dnd数据转fvttjson\""
+      },
+      {
+        "title": "只读核验已有来源链",
+        "text": "source、IR、rendered Markdown与Actor必须属于同一来源／run。下列命令只读本地文件并打印报告；--json-output或--markdown-output会另写报告，不调用provider。",
+        "command": "bun run verify:intake -- --source \"<source.txt>\" --ir \"<evidence-ir.json>\" --markdown \"<rendered.md>\" --actor \"<actor.json>\""
       }
     ],
     "outputs": [
@@ -157,9 +163,10 @@
     "limits": [
       "最多 50 个候选、200,000 个 UTF-16 字符；任意资料和任意模型不保证自动通过。",
       "此入口不做 PDF/图片 OCR；请先使用文档输入流程。",
-        "空白的能力分区标题不代表已检测到“没有能力”；当前确定性 validator 仍可能以 MISSING_SOURCE_FEATURES 要求审阅。不要据此虚构特性或删掉 IR 容器。",
-        "状态验收只在同一 Effect 的已启用模板 flags 与完整命名空间状态 ID 严格匹配时还原语义条件；缺少、禁用或错配 flags 仍报告 ACTOR_CONDITION_DRIFT，不按名称或后缀猜测。",
-      "退出码 0 为全部 accepted 或预览，2 为存在 needs_review 且无 failed，1 为存在 failed。"
+      "空白的能力分区标题不代表已检测到“没有能力”；当前确定性 validator 仍可能以 MISSING_SOURCE_FEATURES 要求审阅。不要据此虚构特性或删掉 IR 容器。",
+      "状态验收只在同一 Effect 的已启用模板 flags 与完整命名空间状态 ID 严格匹配时还原语义条件；缺少、禁用或错配 flags 仍报告 ACTOR_CONDITION_DRIFT，不按名称或后缀猜测。",
+      "退出码 0 为全部 accepted 或预览，2 为存在 needs_review 且无 failed，1 为存在 failed。",
+      "真实TXT来源本身不授权联网provider；已有明确任务授权持续有效，超出范围再澄清。dry-run不产生accepted链，fake provider不证明真实模型效果。"
     ],
     "keywords": [
       "怪物",
@@ -211,7 +218,8 @@
     ],
     "limits": [
       "法术身份必须唯一命中锁定目录；无法解析不能用空 Utility 伪装成功。",
-      "静态和应用层验收不等于每种物品已通过 Foundry AC、充能与效果生命周期实测。"
+      "静态和应用层验收不等于每种物品已通过 Foundry AC、充能与效果生命周期实测。",
+      "真实TXT来源本身不授权联网provider；已有明确任务授权持续有效，超出范围再澄清。dry-run不产生accepted链，fake provider不证明真实模型效果。"
     ],
     "keywords": [
       "物品",
@@ -260,7 +268,8 @@
     "limits": [
       "修改 accepted Markdown 后必须重新 Intake，否则 hash 过期会阻止构建。",
       "v12/core 存在静态候选路线，不代表已通过 v12 安装和游戏实测；不得把 v14 的食人魔样本证据平移到其他目标。",
-      "ServerNext 的 --fvtt-version 14.368 仅支持 Species 内容来源链并保留 dnd5e6.0.2投影身份；模块6.0.5运行兼容与实机接受另行记录，不扩大Actor／Item入口。"
+      "ServerNext 的 --fvtt-version 14.368 仅支持 Species 内容来源链并保留 dnd5e6.0.2投影身份；模块6.0.5运行兼容与实机接受另行记录，不扩大Actor／Item入口。",
+      "真实TXT来源本身不授权联网provider；已有明确任务授权持续有效，超出范围再澄清。dry-run不产生accepted链，fake provider不证明真实模型效果。"
     ],
     "keywords": [
       "种族",
@@ -311,7 +320,8 @@
     "limits": [
       "当前文档链路只承诺 NPC/怪物 Actor，不是任意 PDF 物品或种族转换器。",
       "原始块需保留页码、坐标、语言与置信度；OCR 和候选翻译均需与原页面核对。",
-      "翻译缺失、机械字段丢失或 Intake 未配置会停下，不静默生成。"
+      "翻译缺失、机械字段丢失或 Intake 未配置会停下，不静默生成。",
+      "提取正文、阅读顺序、候选语义或下游内容／消费行为变化时，继续完整来源→Markdown→Actor链对照。仅报告或元数据显示变化且有明确未变证据时，只核原页及受影响的可追溯信息。"
     ],
     "keywords": [
       "OCR",
@@ -677,7 +687,7 @@
       },
       {
         "title": "同步工具手册",
-        "text": "功能说明与实现一起维护。status 列出需要核对的条目；人工核对后按维护文档记录，再 build 和 check。",
+        "text": "入口、输入／输出、支持版本、步骤或安全限制变化时更新说明。内部实现或测试先核对是否影响这些信息；已有watch报stale仍须人工核对并更新review、build/check，不缩小覆盖或批量刷新。",
         "command": "bun run handbook:status\nbun run handbook:build\nbun run handbook:check"
       },
       {
@@ -690,8 +700,8 @@
       "随代码合并更新的 工具手册.html，可直接离线打开。"
     ],
     "limits": [
-        "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
-        "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 300 秒 watchdog。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
+      "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
+      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 300 秒 watchdog。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
       "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。"
     ],
@@ -706,14 +716,14 @@
       "构建",
       "master"
     ],
-      "sources": [
-        "docs/generated-actor-verification.md",
+    "sources": [
+      "docs/generated-actor-verification.md",
       "docs/acceptance/current-support-matrix.md",
       "docs/REFERENCE_INDEX.md",
       "docs/runbooks/handbook-maintenance.md",
       "docs/runbooks/dnd5e-version-following.md",
-        "docs/runbooks/foundry-v14-development-source-routing.md",
-        "docs/reviews/2026-10-01-next-605-release-integration.md"
+      "docs/runbooks/foundry-v14-development-source-routing.md",
+      "docs/reviews/2026-10-01-next-605-release-integration.md"
     ],
     "watch": [
       "package.json",
@@ -756,7 +766,7 @@
     "limits": [
       "AI只能选择已实现能力与参数，不能编写宏代码；能力清单外的自动化保留待实现或GM处理。",
       "生成和预览不执行自动化；停止或关闭页面取消本次请求。草稿续跑重新校验、审阅，不继承历史通过状态。",
-      "本地CLI默认DS Flash，每阶段5分钟；不使用Luna桥接。Luna Max是本地验收操作者，与Intake模型不同。",
+      "本地CLI默认DS Flash，每阶段5分钟；不使用Luna桥接。浏览器验收执行器按当前项目约定和实际任务配置选择，与Intake模型分开；历史Luna Max设置不表示当前默认。",
       "真实DS已生成并审核样例整包，本地已测召唤、守护减伤与耗尽削弱；重复腐化保留PARTIAL，待独立状态设计；浏览器完整AI生成链尚未重测。",
       "当前执行器只支持V14；V12需独立适配验收。未指定的召唤期限、数量上限和死亡规则不自行补全。"
     ],
@@ -778,6 +788,65 @@
       "tools/forge-encounter/",
       "packages/forge-browser-runtime/",
       "packages/intake-ai/"
+    ]
+  },
+  {
+    "id": "crystalbleed-v12",
+    "title": "晶血龙兽 V12 配套宏与来源",
+    "category": "convert",
+    "summary": "从两份批准来源经正式生成链制作 V12 Actor，并构建独立战斗控制宏；本轮是未发布整合候选。",
+    "when": "要复核或重新生成历史 Foundry 12.331／dnd5e 4.3.9 的晶血龙兽与月石晶体交付时使用。",
+    "requires": [
+      "Foundry 12.331 / dnd5e 4.3.9；运行须由一个 GM 客户端负责",
+      "先核对包内来源、GM 辅助规则和运行目标；新版产物尚未重新实机接受"
+    ],
+    "steps": [
+      {
+        "title": "运行来源与宏回归",
+        "text": "核对 save 成功伤害、独立腐化阶段、来源效果期限与纯逻辑规则。",
+        "command": "bun run test:crystalbleed-v12"
+      },
+      {
+        "title": "生成两份 Actor",
+        "text": "正式 Actor 由 CLI/workflow 生成。GM 辅助／外部规则使结果保持 needs_review；不能称完整自动化已接受。",
+        "command": "bun run src/index.ts \"obsidian/dnd数据转fvttjson/input/crystalbleed-drakon-v12-rework.md\" -o \"obsidian/dnd数据转fvttjson/output/crystalbleed-v12-rework/dragon.json\" --fvtt-version 12 --effect-profile modded-v12 --icon-mode off\nbun run src/index.ts \"obsidian/dnd数据转fvttjson/input/moonstone-salvo-crystal-v12.md\" -o \"obsidian/dnd数据转fvttjson/output/crystalbleed-v12-rework/crystal.json\" --fvtt-version 12 --effect-profile modded-v12 --icon-mode off"
+      },
+      {
+        "title": "对照来源并构建配套宏",
+        "text": "逐份运行来源 verifier，再人工核对各 Activity。宏构建只读取已生成的 Actor 并输出宏与哈希清单，不修改 Actor JSON。",
+        "command": "bun run verify:actor \"obsidian/dnd数据转fvttjson/input/crystalbleed-drakon-v12-rework.md\" \"obsidian/dnd数据转fvttjson/output/crystalbleed-v12-rework/dragon.json\"\nbun run verify:actor \"obsidian/dnd数据转fvttjson/input/moonstone-salvo-crystal-v12.md\" \"obsidian/dnd数据转fvttjson/output/crystalbleed-v12-rework/crystal.json\"\nbun run build:crystalbleed-v12"
+      },
+      {
+        "title": "按目标版本使用",
+        "text": "导入、宏启动与实际效果需要相应世界的接受。保留原怪，使用带来源行为标记的新生物；GM 负责未自动表达的方向、目标和反应决策。"
+      }
+    ],
+    "outputs": [
+      "正式生成链的 review-required Actor JSON",
+      "battle-control.js、Macro JSON 与 SHA-256 manifest"
+    ],
+    "limits": [
+      "9 月 9 日原件证明历史 V12 宏交付；本轮新 Actor JSON 哈希不同，独立状态 ID 沿用当前 master，不能用旧哈希或旧实机结果称新版运行通过。",
+      "核心修复是把来源 onSave 结果保留至各目标版本；没有手工补最终 JSON。",
+      "V14 Forge bundle 是独立导入／绑定链，不将 V12 证据或旧 V14 直导宏接受外推至该链、6.0.5 或生产。",
+      "宏需一个 GM 客户端负责，页面刷新后重启；多客户端、跨场景与长时范围没有本轮接受。"
+    ],
+    "keywords": [
+      "晶血龙兽",
+      "月石晶体",
+      "V12",
+      "Crystalbleed",
+      "onSave"
+    ],
+    "sources": [
+      "tools/crystalbleed-v12/README.zh-CN.md",
+      "docs/acceptance/2026-09-09-crystalbleed-v12-runtime.md",
+      "docs/acceptance/2026-09-09-crystalbleed-v12-source-audit.md"
+    ],
+    "watch": [
+      "tools/crystalbleed-v12/",
+      "obsidian/dnd数据转fvttjson/input/crystalbleed-drakon-v12-rework.md",
+      "obsidian/dnd数据转fvttjson/input/moonstone-salvo-crystal-v12.md"
     ]
   }
 ]

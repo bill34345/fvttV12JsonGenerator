@@ -1,6 +1,8 @@
 # FVTT Custom Conditions
 
-`fvtt-custom-conditions` is a GM-managed custom status module for Foundry VTT 14.364 and dnd5e 5.3.3. It depends on `fvtt-trigger-engine` for generic Actor and Combat lifecycle events.
+`fvtt-custom-conditions` provides nineteen GM-managed custom statuses and Injury on Foundry VTT 14.364 / dnd5e 5.3.3. On Foundry 14.368 / dnd5e 6.0.5, only Injury is enabled as a candidate pending local runtime acceptance. It depends on `fvtt-trigger-engine` for Actor and Combat events.
+
+Injury state now belongs to `flags.fvtt-custom-conditions.injury`, with the 0–3 stack rules, death-save 19/20 extension, rest handling, manager, and Token status HUD in this module. A valid former `flags.fvtt-injury-fading-spirits.injury` state is copied to the new subtree after schema and readback checks; the original is retained. Unknown schemas, conflicting flags, and multiple prior owned effects stop migration. The optional Fading Spirits module retains resurrection rituals and exposes them from the manager when present. Injury is a runtime layered status, outside the shared nineteen-condition generator contract. Old Injury settings are imported without expanding the default managed-Actor scope. The Injury SVGs restore the user-selected Game-icons.net Bandaged original by lorc from commit `e8604d64`; [CREDITS.md](CREDITS.md) records CC BY 3.0 attribution and verified hashes. Numeric levels are shown by the status UI.
 
 The module registers nineteen custom conditions. Parameterized instances store their formula, damage type, DC, timing, stacking policy, and end rules in `flags.fvtt-custom-conditions.condition`. Generated Item ActiveEffects are templates; applying one creates a new Actor instance so manual operation and generated monster data use the same schema.
 

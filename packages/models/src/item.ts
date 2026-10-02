@@ -1,4 +1,5 @@
 import type { StructuredActionData, ActionData } from './action';
+import type { WeaponConfiguration, WeaponMasteryId } from '@fvtt-json-generator/contracts/weapon-properties';
 
 /**
  * Item type values in dnd5e system
@@ -305,7 +306,13 @@ export interface ParsedItem {
   weapon?: {
     value: string;
     baseItem: string;
+    /** Explicit native dnd5e mastery from the source, projected to system.mastery. */
+    mastery?: WeaponMasteryId;
   };
+  /** Explicit native dnd5e mastery source field, independent of module rule selection. */
+  nativeMastery?: WeaponMasteryId;
+  /** Explicit weapon mastery/properties configuration from the source. */
+  weaponConfiguration?: WeaponConfiguration;
   damage?: DamageData;
   range?: RangeData;
   properties?: string[];

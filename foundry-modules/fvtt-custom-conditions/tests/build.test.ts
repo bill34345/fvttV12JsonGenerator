@@ -57,13 +57,13 @@ describe('custom conditions release artifact', () => {
   test('keeps the exact Foundry and dnd5e release contract', () => {
     expect(() => validateManifest({
       id: 'fvtt-custom-conditions',
-      version: '0.1.0',
-      compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.364' },
+      version: '0.2.0',
+      compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.368' },
       esmodules: ['scripts/index.js'],
-      socket: false,
+      socket: true,
       relationships: {
         requires: [{ id: 'fvtt-trigger-engine' }],
-        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '5.3.3' } }],
+        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' } }],
       },
     })).not.toThrow();
   });

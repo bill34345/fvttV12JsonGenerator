@@ -1,5 +1,5 @@
 export const MODULE_ID = 'fvtt-injury-fading-spirits' as const;
-export const MODULE_VERSION = '1.0.1' as const;
+export const MODULE_VERSION = '1.1.0' as const;
 export const SCHEMA_VERSION = 1 as const;
 export const INJURY_STATUS_ID = 'fvtt-injury' as const;
 export const MAX_INJURY_STACKS = 3 as const;

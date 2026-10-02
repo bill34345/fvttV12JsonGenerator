@@ -1,6 +1,6 @@
 # FVTT Trigger Engine
 
-`fvtt-trigger-engine` is the generic event and macro-dispatch layer for Foundry VTT 14.364 and dnd5e 5.3.3. It handles Actor document updates, Combat turn start and Combat turn end events, GM-only execution, per-Actor queues, causal recursion guards, and validated world trigger definitions.
+`fvtt-trigger-engine` is the generic event and macro-dispatch layer for Foundry VTT 14.364 / dnd5e 5.3.3, with an exact 14.368 / 6.0.5 candidate pending local runtime acceptance. It handles Actor document updates, Combat turn start and Combat turn end events, GM-only execution, per-Actor queues, causal recursion guards, and validated world trigger definitions. Actor update events include `capturedModifiedTime` from the native post-update Hook so subscribers can identify persisted HP transitions without trusting queue-delivery time.
 
 The module does not implement individual conditions. Install `fvtt-custom-conditions` for the Drakkenheim condition definitions and their parameterized runtime behavior.
 

@@ -1,0 +1,22 @@
+{
+  "name": "@fvtt-json-generator/fvtt-weapon-mastery-properties",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "test": "bun test tests --max-concurrency 4",
+    "typecheck": "tsc -p tsconfig.json --pretty false",
+    "lab": "bun run labCli.ts",
+    "install:local": "bun run labCli.ts install --apply",
+    "verify-install": "bun run labCli.ts verify-install",
+    "verify:artifact": "bun run labCli.ts verify-artifact"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

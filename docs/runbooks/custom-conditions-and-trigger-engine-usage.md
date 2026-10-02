@@ -1,6 +1,8 @@
 # Custom Conditions 与 Trigger Engine 使用说明
 
-本说明对应当前本地候选版本：Foundry14.364 / dnd5e5.3.3。基础发布边界见[候选收尾表](../reviews/2026-09-21-custom-conditions-release-readiness.md)；状态文案的来源边界见[规则核对](../reviews/2026-09-23-drakkenheim-condition-wording.md)，全 19 项的 ID、点击路径与 CoTN 页面复验见[本轮审计](../reviews/2026-09-24-all-custom-condition-hud-audit.md)。全 19 项入口可见已在 CoTN 页面通过；这不代表逐项施加与结算已复验，也不代表serverNext的dnd5e6版本已兼容。
+十九种通用状态仍对应 Foundry14.364 / dnd5e5.3.3。2026-10-02 候选把独立的分层伤势迁入 Custom Conditions，并为伤势路径加入 ServerNext14.368 / dnd5e6.0.5 精确版本门；这不开放 6.0.5 的十九种通用规则，也不把旧接受推广到新所有者。迁移目标与验收出口见[伤势所有权计划](../plans/2026-10-02-injury-condition-ownership.md)。
+
+基础发布边界见[候选收尾表](../reviews/2026-09-21-custom-conditions-release-readiness.md)；状态文案的来源边界见[规则核对](../reviews/2026-09-23-drakkenheim-condition-wording.md)，全 19 项的 ID、点击路径与 CoTN 页面复验见[入口审计](../reviews/2026-09-24-all-custom-condition-hud-audit.md)。历史全 19 项入口可见通过，不代表逐项施加、结算或本轮新组合已复验。
 
 ## 启用与打开
 
@@ -14,7 +16,13 @@
 
 名称和悬停规则说明跟随 Foundry 的核心界面语言：`cn` / `zh-CN` 为中文，`en` 或没有对应翻译的语言回退英文。改语言后重载世界。系统与模块没有两套彼此独立的语言选择。十九种自定义实例各使用一张选定的 Game-icons.net 原始 SVG，作者、作品、来源和 CC BY 3.0 许可见模块包内 `CREDITS.md`。笨拙使用 Drop Weapon，踉跄使用 Foot Trip。Token Action HUD 的完整提示使用 dnd5e 规则卡布局：左侧双语标题、右侧状态类别和分段正文；状态图标只留在 HUD 按钮，不放大到提示框内。仅名称和无提示模式仍按 TAH 设置生效。**所有 19 个自定义状态**使用 `fvtt-custom-conditions.<语义 ID>` 的独立状态 ID；dnd5e 原生与其他模组的裸 ID 按钮保留其原有规则。CoTN 中系统原生 `bleeding` 的中文按钮是「失血」，本模块自定义 `fvtt-custom-conditions.bleeding` 是「流血」；原生 `burning` 为「燃烧」，自定义 `fvtt-custom-conditions.burning` 为「灼烧」。自定义 Dazed 标题只显示「恍惚」或 Dazed，不显示辨识用后缀，仍与 MCDM 的裸 `dazed` 分立。不能把原生按钮当作已配置自定义骰式的实例。
 
-如同时启用伤势模块，可以在本管理器的伤势区域查看和调整 0–3 层伤势，或打开“消逝的灵魂”仪式。Token Action HUD 中伤势项显示当前层数，例如 `1/3`；完整悬停说明也按 dnd5e 规则卡布局显示，将倒地与叠层、第三层 GM 裁定、清除方式、死亡豁免自然 19/20 分段列出。伤势仍通过其公开 API 写入原有 Actor flags；关闭 Custom Conditions 不会丢失伤势及复活历史。伤势图标亦取自 Game-icons.net，署名与许可随伤势模块包内的 `CREDITS.md` 提供。
+伤势由 Custom Conditions 自身管理。在模块设置打开“启用伤势自动化”，按需打开“管理 NPC 伤势”；新世界两项默认关闭，升级沿用旧伤势模块已有意图。在管理器的伤势区域查看或调整 0–3 层，不要求安装复活模块。Token HUD 左键增加、右键减少；状态标签显示层数。伤势采用此前选定的 Game-icons Bandaged 原 SVG，作者、来源和许可见 Custom Conditions 包内的 `CREDITS.md`。
+
+HP 归零开启倒地 episode；第一次恢复正 HP 增加一层，恢复满血或成功短休／长休清除。死亡豁免只认保留的自然 d20 面值：19／20 清零成功与失败并恢复 1 HP，修正值和被丢弃的骰不算。第三层倒地先由 GM 裁定直接死亡、环境例外或稍后处理，不提前写入死亡。
+
+升级时，新伤势写入 `flags.fvtt-custom-conditions.injury`；旧伤势原件及复活历史保留。复活模块后续只写自己的 `fadingSpirits` 状态。未知 schema、重复投影或相互矛盾的数据会停止自动迁移并提示，不能靠重新点按钮绕过。仍写伤势的旧复活模块与新 Custom Conditions 同时启用时，伤势自动化拒绝运行，须使用配套的新版本。
+
+可选的“消逝的灵魂”继续提供独立复活，兼容模块 ID 为 `fvtt-injury-fading-spirits`。启用后，伤势区域提供复活仪式入口；没有它也能管理伤势，没有 Custom Conditions 也能使用其独立复活。成功复活经公开接口抑制相应 HP 恢复计层，实际 HP 由法术或 Activity 处理。两模块的 UI、HP、休息、自然19／20与重载联合行为仍按本轮候选单独接受。
 
 选择状态，在参数JSON框中填写该状态的参数，再施加。切换到另一种状态时应按新状态填写参数，不要沿用上一种状态的无关字段。没有参数的状态使用 `{}`。
 
@@ -55,6 +63,8 @@ Frozen实例的“破冰（动作）”按钮会进行力量（运动）检定�
 ## 通用触发器
 
 从模块设置或Token控制栏打开Trigger Manager。当前编辑器接受JSON定义，支持Actor文档更新、Combat回合开始、Combat回合结束。可以新建、复制、编辑、启停和删除Trigger，并选择已有Macro UUID作为动作。
+
+伤势的生命值事件通过 Custom Conditions 对 Trigger Engine 的公开订阅接收，无须另建一个调用旧伤势私有实现的 Macro。系统休息和死亡豁免由 Custom Conditions 接收原生事件。外部武器事件继续使用独立的 `publishExternal`／`subscribeExternal` 接口；既有武器专精支持仍限定 5.3.3，不因本轮 6.0.5 伤势路径扩大。
 
 Trigger只由active GM执行。宏收到 `triggerContext`，可读取变更前后数据、Actor及回合信息。宏要回写同一Actor时，使用 `triggerContext.updateDocument()` 保留防递归信息。
 

@@ -1,325 +1,141 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MODULE_ID } from '../src/constants.ts';
-import { InjuryFadingRuntime } from '../src/runtime.ts';
+import { InjuryFadingRuntime, publicApi } from '../src/runtime.ts';
 import { createActorModuleState } from '../src/state.ts';
 
-const originalGlobals = new Map<string, unknown>();
+const original = new Map<string, unknown>();
+let handlers: string[];
+let actor: any;
+let writes: Record<string, unknown>[];
 
 beforeEach(() => {
-  for (const key of ['game', 'ui', 'CONFIG', 'foundry', 'canvas', 'fromUuid']) originalGlobals.set(key, (globalThis as any)[key]);
-  (globalThis as any).game = {
-    user: { id: 'gm', isGM: true },
-    users: { activeGM: { id: 'gm' }, get: () => null },
-    settings: { get: (_scope: string, key: string) => key === 'enabled' },
-    i18n: { localize: (key: string) => key, format: (key: string) => key },
-  };
-  (globalThis as any).ui = { notifications: { info() {}, warn() {}, error() {} } };
-  (globalThis as any).CONFIG = { statusEffects: [], specialStatusEffects: { DEFEATED: 'dead' } };
-  (globalThis as any).foundry = { utils: { hasProperty: (value: any, path: string) => path.split('.').reduce((entry, key) => entry?.[key], value) !== undefined } };
-  (globalThis as any).canvas = { tokens: { placeables: [] } };
-  (globalThis as any).fromUuid = async () => null;
-});
-
-afterEach(() => {
-  for (const [key, value] of originalGlobals) (globalThis as any)[key] = value;
-  originalGlobals.clear();
-});
-
-function fakeActor(stacks = 0) {
+  for (const key of ['game', 'Hooks', 'ui', 'fromUuid']) original.set(key, (globalThis as any)[key]);
+  handlers = [];
+  writes = [];
   const state = createActorModuleState(10, 10);
-  state.injury.stacks = stacks;
-  const writes: Array<Record<string, unknown>> = [];
-  const actor: any = {
-    id: 'actor', uuid: 'Actor.actor', name: 'Hero', type: 'character', documentName: 'Actor', pack: null,
-    system: { attributes: { hp: { value: 0, max: 10 }, death: { failure: 0, success: 0 } } },
-    flags: { [MODULE_ID]: state }, effects: [], _stats: { modifiedTime: 123 },
+  state.injury.stacks = 2;
+  actor = {
+    id: 'hero', uuid: 'Actor.hero', type: 'character', documentName: 'Actor',
+    system: { attributes: { hp: { value: 10, max: 10 } } }, flags: { [MODULE_ID]: state }, _stats: { modifiedTime: 100 },
     async update(changes: Record<string, unknown>) {
       writes.push(changes);
-      if (changes[`flags.${MODULE_ID}`]) this.flags[MODULE_ID] = structuredClone(changes[`flags.${MODULE_ID}`]);
-      if (changes['system.attributes.death.failure'] !== undefined) this.system.attributes.death.failure = changes['system.attributes.death.failure'];
+      for (const [path, value] of Object.entries(changes)) {
+        if (path === `flags.${MODULE_ID}.schemaVersion`) (this.flags[MODULE_ID] ??= {}).schemaVersion = value;
+        if (path === `flags.${MODULE_ID}.fadingSpirits`) (this.flags[MODULE_ID] ??= {}).fadingSpirits = structuredClone(value);
+      }
     },
-    async createEmbeddedDocuments() { return []; },
-    async updateEmbeddedDocuments() { return []; },
-    async deleteEmbeddedDocuments() { return []; },
-    testUserPermission(user: any) { return user?.id === 'player' || user?.isGM === true; },
   };
-  return { actor, writes };
-}
+  (globalThis as any).Hooks = { on: (name: string) => { handlers.push(name); } };
+  (globalThis as any).game = {
+    version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
+    user: { id: 'gm', active: true, isGM: true }, users: { activeGM: { id: 'gm' } },
+    modules: new Map(), settings: { register() {} },
+    i18n: { localize: (key: string) => key },
+  };
+  (globalThis as any).ui = { notifications: { error() {}, warn() {} } };
+  (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
+});
 
-describe('active-GM runtime authority', () => {
-  test('death-save hook maps a retained natural 19 to the 6.0.2 card outcome', () => {
-    const gameRef = (globalThis as any).game;
-    gameRef.system = { id: 'dnd5e', version: '6.0.2' };
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    for (const initialOutcome of [null, 'stable']) {
-      const details: Record<string, unknown> = { outcome: initialOutcome };
-      runtime.onDeathSave([{ d20: { results: [{ result: 19, active: true }] } }], details);
-      expect(details.outcome).toBe('revive');
-      expect(details.updates).toEqual({
-        'system.attributes.death.success': 0,
-        'system.attributes.death.failure': 0,
-        'system.attributes.hp.value': 1,
-      });
-    }
-  });
+afterEach(() => { for (const [key, value] of original) (globalThis as any)[key] = value; original.clear(); });
 
-  test('onReady accepts only the exact Foundry and dnd5e pairs', async () => {
-    const gameRef = (globalThis as any).game;
-    const notifications: string[] = [];
-    let socketRegistrations = 0;
-    gameRef.actors = [];
-    gameRef.socket = { on: () => { socketRegistrations += 1; } };
-    gameRef.settings.get = (_scope: string, key: string) => key === 'setupComplete' || key === 'enabled';
-    (globalThis as any).ui.notifications.error = (message: string) => notifications.push(message);
-
-    for (const [foundryVersion, systemVersion] of [['14.364', '5.3.3'], ['14.368', '6.0.2'], ['14.368', '6.0.5']]) {
-      gameRef.version = foundryVersion;
-      gameRef.system = { id: 'dnd5e', version: systemVersion };
-      const runtime = new InjuryFadingRuntime();
-      await runtime.onReady();
-      expect(runtime.supported).toBe(true);
-    }
-    expect(socketRegistrations).toBe(3);
-    expect((globalThis as any).CONFIG.statusEffects).toHaveLength(1);
-    expect(notifications).toEqual([]);
-
-    for (const [foundryVersion, systemId, systemVersion] of [
-      ['14.364', 'dnd5e', '6.0.2'],
-      ['14.368', 'dnd5e', '5.3.3'],
-      ['14.365', 'dnd5e', '5.3.3'],
-      ['14.368', 'dnd5e', '6.0.1'],
-      ['14.368', 'dnd5e', '6.0.4'],
-      ['14.364', 'dnd5e', '6.0.5'],
-      ['14.368', 'pf2e', '6.0.2'],
-    ]) {
-      gameRef.version = foundryVersion;
-      gameRef.system = { id: systemId, version: systemVersion };
-      const runtime = new InjuryFadingRuntime();
-      await runtime.onReady();
-      expect(runtime.supported).toBe(false);
-    }
-    expect(socketRegistrations).toBe(3);
-    expect((globalThis as any).CONFIG.statusEffects).toHaveLength(1);
-    expect(notifications).toEqual(Array(7).fill('IFS.Errors.UnsupportedRuntime'));
-  });
-
-  test('pre-update snapshot catches the first positive-to-zero transition on an actor without module flags', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(0);
-    delete actor.flags[MODULE_ID];
-    actor.system.attributes.hp.value = 10;
-    const changes = { system: { attributes: { hp: { value: 0 } } } };
-    runtime.onPreUpdateActor(actor, changes, {});
-    actor.system.attributes.hp.value = 0;
-    await runtime.onUpdateActor(actor, changes, {}, 'player');
-    expect(writes).toHaveLength(1);
-    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(true);
-    expect(actor.flags[MODULE_ID].injury.lastObservedHp).toBe(0);
-  });
-
-  test('one observed HP transition produces one state write and exact starting failures', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(2);
-    runtime.hpSnapshots.set(actor.uuid, { value: 10, max: 10 });
-    await runtime.onUpdateActor(actor, { system: { attributes: { hp: { value: 0 } } } }, {}, 'player');
-    expect(writes).toHaveLength(1);
-    expect(actor.system.attributes.death.failure).toBe(2);
-    expect(actor.flags[MODULE_ID].injury.episode.open).toBe(true);
-    await runtime.onUpdateActor(actor, { system: { attributes: { hp: { value: 0 } } } }, {}, 'player');
-    expect(writes).toHaveLength(1);
-  });
-
-  test('a non-active GM observes but does not persist', async () => {
-    (globalThis as any).game.users.activeGM = { id: 'other-gm' };
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    runtime.hpSnapshots.set(actor.uuid, { value: 10, max: 10 });
-    await runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 0 }, {}, 'player');
-    expect(writes).toHaveLength(0);
-  });
-
-  test('unknown schema fails closed without writes', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    actor.flags[MODULE_ID].schemaVersion = 999;
-    runtime.hpSnapshots.set(actor.uuid, { value: 10, max: 10 });
-    await runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 0 }, {}, 'player');
-    expect(writes).toHaveLength(0);
-  });
-
-  test('rest socket requires the native actor message and ignores the client transaction id', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    const player = { id: 'player', active: true, isGM: false };
-    const message = { id: 'rest-message', type: 'rest', speaker: { actor: actor.id }, system: { type: 'short' }, getAssociatedActor: () => actor };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).game.messages = { get: (id: string) => id === message.id ? message : null };
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    const payload = {
-      type: 'restCompleted', actorUuid: actor.uuid, restType: 'short', messageId: message.id,
-      transactionId: 'forged-client-transaction', requesterId: player.id,
-    };
-    await runtime.onSocket(payload);
-    expect(writes).toHaveLength(0);
-    await runtime.onSocket(payload, player.id);
-    expect(writes).toHaveLength(1);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(0);
-    expect(actor.flags[MODULE_ID].injury.processedTransactionIds).toContain(`rest:${actor.uuid}:${message.id}:short`);
-    await runtime.onSocket({ ...payload, transactionId: 'different-replay-id' }, player.id);
-    expect(writes).toHaveLength(1);
-  });
-
-  test('rest socket rejects a message without an exact actor association', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    const player = { id: 'player', active: true, isGM: false };
-    const message = { id: 'wrong-rest-message', type: 'rest', speaker: { actor: 'other-actor' }, system: { type: 'short' }, getAssociatedActor: () => actor };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).game.messages = { get: (id: string) => id === message.id ? message : null };
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    await runtime.onSocket({ type: 'restCompleted', actorUuid: actor.uuid, restType: 'short', messageId: message.id, requesterId: player.id }, player.id);
-    expect(writes).toHaveLength(0);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
-  });
-
-  test('socket mutations fail closed when unsupported, disabled, or requested by an inactive user', async () => {
+describe('Fading Spirits owns resurrection without injury automation', () => {
+  test('registers only resurrection UI hooks and works without Custom Conditions', async () => {
     const runtime = new InjuryFadingRuntime();
-    const { actor, writes } = fakeActor(1);
-    const player = { id: 'player', active: true, isGM: false };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    const payload = { type: 'setInjury', actorUuid: actor.uuid, stacks: 2, requesterId: player.id };
-
-    runtime.supported = false;
-    await runtime.onSocket(payload, player.id);
-    runtime.supported = true;
-    (globalThis as any).game.settings.get = () => false;
-    await runtime.onSocket(payload, player.id);
-    (globalThis as any).game.settings.get = (_scope: string, key: string) => key === 'enabled';
-    player.active = false;
-    await runtime.onSocket(payload, player.id);
-
-    expect(writes).toHaveLength(0);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
-  });
-
-  test('socket mutations reject non-managed, compendium, and non-writable actors', async () => {
-    const variants = [
-      (actor: any) => { actor.type = 'npc'; },
-      (actor: any) => { actor.pack = 'Compendium.dnd5e.monsters'; },
-      (actor: any) => { actor.isOwner = false; },
-      (actor: any) => { actor.update = undefined; },
-    ];
-    for (const mutate of variants) {
-      const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-      const { actor, writes } = fakeActor(1);
-      mutate(actor);
-      const player = { id: 'player', active: true, isGM: false };
-      (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-      (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-      await runtime.onSocket({ type: 'setInjury', actorUuid: actor.uuid, stacks: 2, requesterId: player.id }, player.id);
-      expect(writes).toHaveLength(0);
-      expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
-    }
-  });
-
-  test('valid setInjury socket packets are applied by the active GM', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    const player = { id: 'player', active: true, isGM: false };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    await runtime.onSocket({
-      type: 'setInjury', actorUuid: actor.uuid, stacks: 2, reason: 'GM-approved correction',
-      requesterId: player.id, transactionId: 'client-value-is-not-authoritative',
-    }, player.id);
+    runtime.initialize();
+    await runtime.onReady();
+    expect(runtime.supported).toBe(true);
+    expect(handlers).toContain('preUpdateActor');
+    expect(handlers).toContain('updateActor');
+    expect(handlers).not.toContain('dnd5e.rollDeathSave');
+    expect(handlers).not.toContain('dnd5e.restCompleted');
+    expect(handlers).not.toContain('renderTokenHUD');
+    await runtime.beginDeathEpisode(actor, 'episode-1');
+    expect(actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId).toBe('episode-1');
+    expect(actor.flags[MODULE_ID].injury.stacks).toBe(2);
+    expect(writes[0]).not.toHaveProperty(`flags.${MODULE_ID}`);
+    expect(writes[0]![`flags.${MODULE_ID}.fadingSpirits`]).toBeDefined();
+    await runtime.beginDeathEpisode(actor, 'episode-1');
     expect(writes).toHaveLength(1);
+  });
+
+  test('fails closed for non-active GM and unsupported runtime', async () => {
+    const runtime = new InjuryFadingRuntime();
+    await runtime.onReady();
+    (globalThis as any).game.users.activeGM = { id: 'another-gm' };
+    await expect(runtime.beginDeathEpisode(actor, 'episode-2')).rejects.toThrow('active GM');
+    expect(writes).toHaveLength(0);
+    (globalThis as any).game.users.activeGM = { id: 'gm' };
+    (globalThis as any).game.system.version = '6.0.4';
+    await runtime.onReady();
+    expect(runtime.supported).toBe(false);
+    await expect(runtime.beginDeathEpisode(actor, 'episode-2')).rejects.toThrow('active GM');
+  });
+
+  test('legacy injury API delegates only to Custom Conditions public API', async () => {
+    await expect(publicApi.setInjury(actor, 1, 'test')).rejects.toThrow('unavailable');
+    const calls: unknown[][] = [];
+    (globalThis as any).game.modules.set('fvtt-custom-conditions', { active: true, api: { injury: {
+      getState: () => ({ ...actor.flags[MODULE_ID].injury, stacks: 1 }),
+      setStacks: async (...args: unknown[]) => { calls.push(args); },
+      withSuppressed: async (_actor: any, _reason: string, callback: () => unknown) => callback(),
+    } } });
+    await publicApi.setInjury(actor, 3, 'legacy-caller');
+    expect(calls).toEqual([[actor, 3, 'legacy-caller']]);
+    expect(publicApi.getState(actor).injury.stacks).toBe(1);
+    expect(await publicApi.withInjurySuppressed(actor, 'ritual', async () => 7)).toBe(7);
+  });
+
+  test('without Custom Conditions, two separate deaths reset only current resurrection locks', async () => {
+    const runtime = new InjuryFadingRuntime();
+    await runtime.onReady();
+    const change = { system: { attributes: { hp: { value: 0 } } } };
+    runtime.onPreUpdateActor(actor, change);
+    actor.system.attributes.hp.value = 0;
+    actor._stats.modifiedTime = 101;
+    await runtime.onUpdateActor(actor, change);
+    const first = actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId;
+    expect(first).toBe('death:Actor.hero:101');
+    actor.flags[MODULE_ID].fadingSpirits.resurrectionConsumedForCurrentDeath = true;
+    actor.flags[MODULE_ID].fadingSpirits.successfulReturns = 1;
+    runtime.onPreUpdateActor(actor, { 'system.attributes.hp.value': 1 });
+    actor.system.attributes.hp.value = 1;
+    actor._stats.modifiedTime = 102;
+    await runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 1 });
+    runtime.onPreUpdateActor(actor, change);
+    actor.system.attributes.hp.value = 0;
+    actor._stats.modifiedTime = 103;
+    await runtime.onUpdateActor(actor, change);
+    expect(actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId).toBe('death:Actor.hero:103');
+    expect(actor.flags[MODULE_ID].fadingSpirits.resurrectionConsumedForCurrentDeath).toBe(false);
+    expect(actor.flags[MODULE_ID].fadingSpirits.successfulReturns).toBe(1);
     expect(actor.flags[MODULE_ID].injury.stacks).toBe(2);
   });
 
-  test('manual and socket writes reject a fourth injury stack', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(3);
-    await expect(runtime.setInjury(actor, 4, 'invalid')).rejects.toThrow(/0 to 3/);
-    const player = { id: 'player', active: true, isGM: false };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    await runtime.onSocket({ type: 'setInjury', actorUuid: actor.uuid, stacks: 4, requesterId: player.id }, player.id);
-    expect(writes).toHaveLength(0);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(3);
+  test('a fresh Actor can start an independent IFS death episode without an injury subtree', async () => {
+    delete actor.flags[MODULE_ID];
+    const runtime = new InjuryFadingRuntime();
+    await runtime.onReady();
+    const change = { 'system.attributes.hp.value': 0 };
+    runtime.onPreUpdateActor(actor, change);
+    actor.system.attributes.hp.value = 0;
+    actor._stats.modifiedTime = 101;
+    await runtime.onUpdateActor(actor, change);
+    expect(actor.flags[MODULE_ID].schemaVersion).toBe(1);
+    expect(actor.flags[MODULE_ID].injury).toBeUndefined();
+    expect(actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId).toBe('death:Actor.hero:101');
+    runtime.onPreUpdateActor(actor, { 'system.attributes.hp.value': 5 });
+    actor.system.attributes.hp.value = 5;
+    await runtime.onUpdateActor(actor, { 'system.attributes.hp.value': 5 });
+    expect(actor.flags[MODULE_ID].fadingSpirits.currentDeathEpisodeId).toBe('death:Actor.hero:101');
   });
 
-  test('Token HUD capture handles click and the complete contextmenu plus auxclick sequence exactly once', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(0);
-    (globalThis as any).canvas.hud = { token: { object: { actor } } };
-    const makeEvent = (type: 'click' | 'contextmenu' | 'auxclick', button: number) => {
-      const state = { prevented: false, stopped: false };
-      const target = { classList: { contains: () => true }, dataset: { statusId: 'fvtt-injury' }, closest: () => target };
-      return {
-        state,
-        event: {
-          type, button, target,
-          preventDefault: () => { state.prevented = true; },
-          stopPropagation: () => { state.stopped = true; },
-        },
-      };
-    };
-
-    for (const expected of [1, 2, 3, 3]) {
-      const click = makeEvent('click', 0);
-      runtime.onClickTokenHud(click.event);
-      await Bun.sleep(2);
-      expect(click.state).toEqual({ prevented: true, stopped: true });
-      expect(actor.flags[MODULE_ID].injury.stacks).toBe(expected);
-    }
-    expect(writes).toHaveLength(3);
-
-    const menu = makeEvent('contextmenu', 2);
-    runtime.onClickTokenHud(menu.event);
-    await Bun.sleep(2);
-    expect(menu.state).toEqual({ prevented: true, stopped: true });
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(3);
-    const auxiliary = makeEvent('auxclick', 2);
-    runtime.onClickTokenHud(auxiliary.event);
-    await Bun.sleep(2);
-    expect(auxiliary.state).toEqual({ prevented: true, stopped: true });
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(2);
-    expect(writes).toHaveLength(4);
-
-    await runtime.setInjury(actor, 0, 'test reset');
-    writes.length = 0;
-    runtime.onClickTokenHud(makeEvent('contextmenu', 2).event);
-    runtime.onClickTokenHud(makeEvent('auxclick', 2).event);
-    await Bun.sleep(2);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(0);
-    expect(writes).toHaveLength(0);
-  });
-
-  test('socket writes an unlinked synthetic Actor UUID without touching its base Actor', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor: synthetic, writes } = fakeActor(0);
-    const { actor: base } = fakeActor(0);
-    synthetic.uuid = 'Scene.scene.Token.token.Actor.actor';
-    const player = { id: 'player', active: true, isGM: false };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === synthetic.uuid ? synthetic : null;
-    await runtime.onSocket({ type: 'setInjury', actorUuid: synthetic.uuid, stacks: 2, requesterId: player.id }, player.id);
-    expect(writes).toHaveLength(1);
-    expect(synthetic.flags[MODULE_ID].injury.stacks).toBe(2);
-    expect(base.flags[MODULE_ID].injury.stacks).toBe(0);
-  });
-
-  test('rest socket rejects a correctly spoken but non-native chat message', async () => {
-    const runtime = new InjuryFadingRuntime(); runtime.supported = true;
-    const { actor, writes } = fakeActor(1);
-    const player = { id: 'player', active: true, isGM: false };
-    const message = { id: 'forged-rest-message', type: 'message', speaker: { actor: actor.id }, system: { type: 'short' }, getAssociatedActor: () => actor };
-    (globalThis as any).game.users.get = (id: string) => id === player.id ? player : null;
-    (globalThis as any).game.messages = { get: (id: string) => id === message.id ? message : null };
-    (globalThis as any).fromUuid = async (uuid: string) => uuid === actor.uuid ? actor : null;
-    await runtime.onSocket({ type: 'restCompleted', actorUuid: actor.uuid, restType: 'short', messageId: message.id, requesterId: player.id }, player.id);
-    expect(writes).toHaveLength(0);
-    expect(actor.flags[MODULE_ID].injury.stacks).toBe(1);
+  test('resurrection state remains readable when CC injury state is malformed', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.successfulReturns = 3;
+    (globalThis as any).game.modules.set('fvtt-custom-conditions', { active: true, api: { injury: {
+      getState: () => { throw new Error('broken CC injury'); }, isEnabled: () => true,
+    } } });
+    expect(publicApi.getResurrectionState(actor).successfulReturns).toBe(3);
+    await expect(new InjuryFadingRuntime().onReady()).resolves.toBeUndefined();
+    expect(() => publicApi.getState(actor)).toThrow('broken CC injury');
   });
 });

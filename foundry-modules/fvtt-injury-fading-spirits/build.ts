@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/prom
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-injury-fading-spirits' as const;
-export const MODULE_VERSION = '1.0.1' as const;
+export const MODULE_VERSION = '1.1.0' as const;
 const root = resolve(import.meta.dir);
 const source = resolve(root, 'src');
 const dist = resolve(root, 'dist');
@@ -21,6 +21,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   await cp(resolve(source, 'icons'), resolve(moduleRoot, 'icons'), { recursive: true });
   await cp(resolve(source, 'styles'), resolve(moduleRoot, 'styles'), { recursive: true });
   await cp(resolve(root, 'README.zh-CN.md'), resolve(moduleRoot, 'README.zh-CN.md'));
+  await cp(resolve(root, 'CREDITS.md'), resolve(moduleRoot, 'CREDITS.md'));
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, any>;
   validateManifest(manifest);
   const browserText = await readFile(resolve(moduleRoot, 'scripts/index.js'), 'utf8');

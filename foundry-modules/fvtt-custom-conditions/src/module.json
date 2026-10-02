@@ -1,9 +1,9 @@
 {
   "id": "fvtt-custom-conditions",
   "title": "自定义状态 / Custom Conditions",
-  "description": "提供可在 Foundry 内直接施加和自动结算的 Monsters of Drakkenheim 自定义状态。 / GM-managed custom conditions for Foundry VTT.",
-  "version": "0.1.0",
-  "compatibility": { "minimum": "14.364", "verified": "14.364", "maximum": "14.364" },
+  "description": "5.3.3 提供 19 种自定义状态和伤势；6.0.5 仅开放伤势候选。 / Nineteen conditions and Injury on 5.3.3; Injury-only candidate on 6.0.5.",
+  "version": "0.2.0",
+  "compatibility": { "minimum": "14.364", "verified": "14.364", "maximum": "14.368" },
   "esmodules": ["scripts/index.js"],
   "styles": [{ "src": "styles/custom-conditions.css" }],
   "languages": [
@@ -12,8 +12,8 @@
     { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
   ],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3.3", "verified": "5.3.3", "maximum": "5.3.3" } }],
-    "requires": [{ "id": "fvtt-trigger-engine", "type": "module", "compatibility": { "minimum": "0.1.0", "verified": "0.1.0", "maximum": "0.1.x" } }]
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3.3", "verified": "5.3.3", "maximum": "6.0.5" } }],
+    "requires": [{ "id": "fvtt-trigger-engine", "type": "module", "compatibility": { "minimum": "0.2.0", "verified": "0.2.0", "maximum": "0.2.x" } }]
   },
-  "socket": false
+  "socket": true
 }

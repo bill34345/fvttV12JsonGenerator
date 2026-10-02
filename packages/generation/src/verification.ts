@@ -2,6 +2,14 @@ import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
+import {
+  WEAPON_PROPERTIES_MODULE_ID,
+  parseWeaponConfiguration,
+  readWeaponConfiguration,
+  weaponCriticalBonus,
+  readLiteralWeaponBaseIndex,
+  type WeaponConfiguration,
+} from '@fvtt-json-generator/contracts/weapon-properties';
 import type {
   CanonicalGenerationDocument,
   CanonicalGenerationMechanic,
@@ -68,7 +76,7 @@ export function verifyGeneratedDocument(
   }
 
   const mechanicsCoverage = options.canonical.mechanics.map((mechanic) =>
-    verifyMechanicCoverage(mechanic, documents, diagnostics, options.target));
+    verifyMechanicCoverage(mechanic, documents, diagnostics, options.target, options.effectProfile));
 
   verifyTargetMetadata(options.output, options.target, diagnostics);
 
@@ -331,6 +339,7 @@ function verifyMechanicCoverage(
   documents: any[],
   diagnostics: GenerationDiagnostic[],
   target: FvttTargetVersion,
+  effectProfile: EffectProfile,
 ): MechanicsCoverageEntry {
   const behavior = mechanic.kind.startsWith('behavior-')
     ? mechanic.value as {
@@ -365,8 +374,34 @@ function verifyMechanicCoverage(
     };
   }
 
+  if (mechanic.kind === 'weapon-properties' && mechanic.path.startsWith('actor/')) {
+    const outputPaths = verifyActorWeaponMechanic(mechanic, documents, diagnostics, effectProfile, target);
+    if (outputPaths.length === 0) {
+      diagnostics.push(error(
+        'GEN_MECHANIC_NOT_PROJECTED',
+        'semantic',
+        mechanic.path,
+        'Source weapon-properties mechanic was not projected to an embedded Actor weapon Item.',
+      ));
+      return {
+        mechanicId: mechanic.id,
+        kind: mechanic.kind,
+        sourcePath: mechanic.path,
+        status: 'missing',
+        outputPaths: [],
+      };
+    }
+    return {
+      mechanicId: mechanic.id,
+      kind: mechanic.kind,
+      sourcePath: mechanic.path,
+      status: 'projected',
+      outputPaths,
+    };
+  }
+
   const itemSpecificPaths = documents.length === 1 && mechanic.path.startsWith('item/')
-    ? verifyItemSpecificMechanic(mechanic, documents[0], diagnostics, target)
+    ? verifyItemSpecificMechanic(mechanic, documents[0], diagnostics, target, effectProfile)
     : undefined;
   if (itemSpecificPaths !== undefined) {
     if (itemSpecificPaths.length === 0) {
@@ -548,7 +583,18 @@ function verifyItemSpecificMechanic(
   document: any,
   diagnostics: GenerationDiagnostic[],
   target: FvttTargetVersion,
+  effectProfile: EffectProfile,
 ): string[] | undefined {
+  if (mechanic.kind === 'weapon-properties') {
+    return verifyWeaponPropertiesDocument(
+      mechanic,
+      document,
+      diagnostics,
+      effectProfile,
+      target,
+      'documents/0',
+    );
+  }
   if (mechanic.kind === 'armor') {
     const expected = mechanic.value as { value: number; dex?: number | null; magicalBonus?: number | null; type?: string; baseItem?: string };
     const actual = document?.system?.armor;
@@ -831,6 +877,208 @@ function verifyItemSpecificMechanic(
   }
 
   return undefined;
+}
+
+interface WeaponMechanicValue {
+  configuration?: WeaponConfiguration;
+  nativeMastery?: string;
+  criticalBaseline?: string;
+  criticalBaselinesByActivityId?: Record<string, string>;
+}
+
+function verifyActorWeaponMechanic(
+  mechanic: CanonicalGenerationMechanic,
+  documents: any[],
+  diagnostics: GenerationDiagnostic[],
+  effectProfile: EffectProfile,
+  target: FvttTargetVersion,
+): string[] {
+  const expected = mechanic.value as WeaponMechanicValue | undefined;
+  const sourcePrefix = actorWeaponSourcePrefix(mechanic.path);
+  const candidates = documents
+    .map((item: any, index: number) => ({ item, index }))
+    .filter((candidate: { item: any; index: number }) => {
+      const sourcePath = candidate.item?.flags?.fvttJsonGenerator?.weaponPropertiesSource?.logicalPath;
+      if (typeof sourcePath !== 'string' || !sourcePrefix) return false;
+      return sourcePath === sourcePrefix || sourcePath.startsWith(`${sourcePrefix}/`);
+    });
+  const outputPaths: string[] = [];
+  for (const { item, index } of candidates) {
+    outputPaths.push(...verifyWeaponPropertiesDocument(
+      mechanic,
+      item,
+      diagnostics,
+      effectProfile,
+      target,
+      `documents/${index}`,
+    ));
+  }
+  return outputPaths;
+}
+
+function actorWeaponSourcePrefix(path: string): string | undefined {
+  const match = path.match(/^actor\/(structuredActions\/[^/]+\/\d+)\/weapon-properties$/u);
+  return match?.[1];
+}
+
+function verifyWeaponPropertiesDocument(
+  mechanic: CanonicalGenerationMechanic,
+  document: any,
+  diagnostics: GenerationDiagnostic[],
+  effectProfile: EffectProfile,
+  target: FvttTargetVersion,
+  pathPrefix: string,
+): string[] {
+  const expected = mechanic.value as WeaponMechanicValue | undefined;
+  const expectedConfiguration = expected?.configuration;
+  const outputPaths: string[] = [];
+
+  if (document?.type !== 'weapon') {
+    diagnostics.push(error(
+      'GEN_WEAPON_ITEM_TYPE_MISMATCH',
+      'semantic',
+      `${pathPrefix}/type`,
+      'Weapon mastery/properties configuration must be projected onto a Foundry weapon Item.',
+    ));
+  }
+
+  if (expected?.nativeMastery && document?.system?.mastery !== expected.nativeMastery) {
+    diagnostics.push(error(
+      'GEN_WEAPON_NATIVE_MASTERY_MISMATCH',
+      'semantic',
+      `${pathPrefix}/system/mastery`,
+      `Expected source native mastery "${expected.nativeMastery}", received "${String(document?.system?.mastery ?? '')}".`,
+    ));
+  } else if (expected?.nativeMastery) {
+    outputPaths.push(`${pathPrefix}/system/mastery`);
+  }
+
+  if (!expectedConfiguration) return outputPaths;
+  const parsedExpected = parseWeaponConfiguration(expectedConfiguration);
+  if (!parsedExpected) {
+    diagnostics.push(error(
+      'GEN_WEAPON_CONFIGURATION_INVALID',
+      'schema',
+      mechanic.path,
+      'Canonical weapon configuration is invalid and cannot be projected.',
+    ));
+    return outputPaths;
+  }
+
+  const projectedConfiguration = effectProfile === 'modded-v14'
+    ? readWeaponConfiguration(document)
+    : parseWeaponConfiguration(document?.flags?.fvttJsonGenerator?.weaponProperties);
+  if (!projectedConfiguration) {
+    diagnostics.push(error(
+      'GEN_WEAPON_CONFIGURATION_MISSING',
+      'semantic',
+      `${pathPrefix}/flags`,
+      effectProfile === 'modded-v14'
+        ? `Expected ${WEAPON_PROPERTIES_MODULE_ID}.weapon configuration.`
+        : 'Expected source weapon configuration under flags.fvttJsonGenerator.weaponProperties.',
+    ));
+  } else if (!sameWeaponConfiguration(projectedConfiguration, parsedExpected)) {
+    diagnostics.push(error(
+      'GEN_WEAPON_CONFIGURATION_MISMATCH',
+      'semantic',
+      `${pathPrefix}/flags`,
+      'Projected weapon configuration differs from the validated source configuration.',
+    ));
+  } else {
+    const flagPath = effectProfile === 'modded-v14'
+      ? `${pathPrefix}/flags/${WEAPON_PROPERTIES_MODULE_ID}/weapon`
+      : `${pathPrefix}/flags/fvttJsonGenerator/weaponProperties`;
+    outputPaths.push(flagPath);
+  }
+
+  if (!parsedExpected.enabled) return outputPaths;
+  if (target === '14') {
+    for (const [activityId, activity] of Object.entries(document?.system?.activities ?? {}) as Array<[string, any]>) {
+      if (activity?.type !== 'attack') continue;
+      const literalIndex = readLiteralWeaponBaseIndex(activity);
+      const nativeBase = activity.damage?.includeBase === true && activity.attack?.flat !== true
+        && document.system?.damage?.base;
+      if (literalIndex === null && !nativeBase) {
+        diagnostics.push(error('GEN_WEAPON_BASE_DAMAGE_UNBOUND', 'semantic',
+          `${pathPrefix}/system/activities/${activityId}/damage`,
+          'Configured weapons need one native base or a matching literal source-part binding; do not duplicate Item base damage.'));
+      }
+    }
+  }
+  const criticalBonus = weaponCriticalBonus(parsedExpected);
+  if (criticalBonus) {
+    const attacks = Object.entries(document?.system?.activities ?? {}) as Array<[string, any]>;
+    const weaponAttacks = attacks.filter(([, activity]) => activity?.type === 'attack');
+    if (weaponAttacks.length === 0) {
+      diagnostics.push(error(
+        'GEN_WEAPON_ACTIVITY_MISSING',
+        'semantic',
+        `${pathPrefix}/system/activities`,
+        'Deadly requires at least one weapon Attack Activity to own its critical bonus.',
+      ));
+    } else {
+      for (const [activityId, activity] of weaponAttacks) {
+        const actual = String(activity?.damage?.critical?.bonus ?? '');
+        const contribution = activity?.flags?.fvttJsonGenerator?.weaponPropertyContributions?.deadly;
+        const baselines = expected?.criticalBaselinesByActivityId;
+        const sourceActivityMatches = !baselines || Object.prototype.hasOwnProperty.call(baselines, activityId);
+        const baseline = baselines?.[activityId] ?? expected?.criticalBaseline ?? '';
+        const expectedTerms = [...diceTerms(baseline), criticalBonus];
+        const actualTerms = diceTerms(actual);
+        const provenanceMatches = contribution?.ruleId === parsedExpected.rules.find((rule) => rule.kind === 'deadly')?.ruleId
+          && contribution?.bonus === criticalBonus;
+        if (!sourceActivityMatches || !provenanceMatches || !sameDiceTerms(actualTerms, expectedTerms)) {
+          diagnostics.push(error(
+            'GEN_WEAPON_CRITICAL_BONUS_MISMATCH',
+            'semantic',
+            `${pathPrefix}/system/activities/${activityId}/damage/critical/bonus`,
+            `Expected source critical bonus plus exactly one owned ${criticalBonus} contribution.`,
+          ));
+        } else {
+          outputPaths.push(`${pathPrefix}/system/activities/${activityId}/damage/critical/bonus`);
+        }
+      }
+    }
+  }
+
+  if (effectProfile === 'core') {
+    for (const rule of parsedExpected.rules) {
+      if (rule.kind !== 'fatal' && rule.kind !== 'criticalBleeding') continue;
+      diagnostics.push({
+        code: 'GEN_WEAPON_RULE_REVIEW_REQUIRED',
+        severity: 'warning',
+        stage: 'semantic',
+        path: mechanic.path,
+        message: `${rule.label} requires ${WEAPON_PROPERTIES_MODULE_ID}; core output preserves its semantics for GM review.`,
+        evidence: mechanic.evidence,
+      });
+    }
+  }
+
+  return outputPaths;
+}
+
+function sameWeaponConfiguration(left: WeaponConfiguration, right: WeaponConfiguration): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function diceTerms(formula: string): string[] {
+  return formula
+    .split(/\s*\+\s*/u)
+    .map((term) => term.trim())
+    .filter(Boolean);
+}
+
+function sameDiceTerms(actual: string[], expected: string[]): boolean {
+  if (actual.length !== expected.length) return false;
+  const counts = (terms: string[]) => terms.reduce<Record<string, number>>((result, term) => {
+    result[term] = (result[term] ?? 0) + 1;
+    return result;
+  }, {});
+  const stable = (value: Record<string, number>) => Object.fromEntries(
+    Object.entries(value).sort(([left], [right]) => left.localeCompare(right)),
+  );
+  return JSON.stringify(stable(counts(actual))) === JSON.stringify(stable(counts(expected)));
 }
 
 function activitiesForMechanic(mechanic: CanonicalGenerationMechanic, activities: any[]): any[] {

@@ -328,23 +328,23 @@ describe('optional injury manager integration', () => {
     const target = actor('injured');
     const calls: any[] = [];
     let stacks = initialStacks;
-    const api = {
-      getState: () => ({ injury: { stacks } }),
-      setInjury: (...args: any[]) => {
+    const injury = {
+      getState: () => ({ stacks }),
+      setStacks: (...args: any[]) => {
         calls.push(['set', ...args]);
         const apply = () => { stacks = Number(args[1]); };
         return setInjuryBehavior ? setInjuryBehavior(args, apply) : apply();
       },
-      openResurrectionWizard: (...args: any[]) => { calls.push(['wizard', ...args]); },
-      statusPresentation: () => ({ id: 'fvtt-injury', name: '伤势', description: '伤势 {stacks}/{max}', img: 'modules/fvtt-injury-fading-spirits/icons/injury.svg' }),
     };
+    const fading = { openResurrectionWizard: (...args: any[]) => { calls.push(['wizard', ...args]); } };
     const gm = { id: 'gm', isGM: true, active: true, targets: new Set([{ actor: target }]) };
     const globals: any = {
       foundry: { applications: { api: { ApplicationV2: class { async render() {} } } } },
       game: {
         user: gm,
-        i18n: i18n({ 'IFS.Status.InjuryLevel': '伤势 {stacks}/{max}' }, 'cn'),
-        modules: { get: (id: string) => id === 'fvtt-injury-fading-spirits' ? { active, api } : undefined },
+        i18n: i18n({ 'FVTTCONDITIONS.Injury.Name': '伤势', 'FVTTCONDITIONS.Injury.Level': '伤势 {stacks}/{max}' }, 'cn'),
+        modules: { get: (id: string) => id === 'fvtt-injury-fading-spirits' ? { active, api: fading }
+          : id === 'fvtt-custom-conditions' ? { active, api: { injury } } : undefined },
       },
       canvas: { tokens: { controlled: [] } },
       ui: { notifications: { error: () => {} } },
@@ -363,9 +363,38 @@ describe('optional injury manager integration', () => {
     expect(calls[1]).toEqual(['wizard', target]);
   });
 
+  test('uses actor-independent manager guidance while two Actors retain distinct localized levels', async () => {
+    const { manager, target, globals } = setup(true);
+    const other = actor('second-injured');
+    manager.actors = [target, other];
+    globals.game.modules.get = (id: string) => id === 'fvtt-custom-conditions'
+      ? { active: true, api: { injury: { getState: (selected: any) => ({ stacks: selected.uuid === target.uuid ? 1 : 3 }),
+        setStacks: async () => {} } } } : undefined;
+    for (const [lang, expected] of [['zh-CN', '伤势'], ['en', 'Injury']] as const) {
+      const translations = await Bun.file(new URL(`../src/lang/${lang}.json`, import.meta.url)).json();
+      globals.game.i18n = i18n(translations, lang);
+      const injury = (await manager._prepareContext()).injury;
+      expect(injury.description).toContain('0–3');
+      expect(injury.description).not.toMatch(/\{(?:stacks|max)\}/);
+      expect(injury.actors.map((entry: any) => entry.stacks)).toEqual([1, 3]);
+      expect(injury.actors.map((entry: any) => entry.description)).toEqual([`${expected} 1/3`, `${expected} 3/3`]);
+    }
+  });
+
   test('hides the optional injury area when its module is inactive', async () => {
     const { manager } = setup(false);
     expect((await manager._prepareContext()).injury).toMatchObject({ enabled: false });
+  });
+
+  test('one malformed injury Actor leaves the manager renderable', async () => {
+    const { manager, globals } = setup(true);
+    globals.game.modules.get = (id: string) => id === 'fvtt-custom-conditions'
+      ? { active: true, api: { injury: { getState: () => { throw new Error('Unknown injury schema'); }, setStacks: async () => {} } } }
+      : undefined;
+    const context = await manager._prepareContext();
+    expect(context.injury.enabled).toBeTrue();
+    expect(context.injury.actors[0].error).toBe('Unknown injury schema');
+    expect(context.definitions.length).toBeGreaterThan(0);
   });
 
   test('serializes rapid injury changes after the prior write resolves', async () => {

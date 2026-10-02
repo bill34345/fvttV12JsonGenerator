@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/prom
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-custom-conditions' as const;
-export const MODULE_VERSION = '0.1.0' as const;
+export const MODULE_VERSION = '0.2.0' as const;
 const root = resolve(import.meta.dir);
 const source = resolve(root, 'src');
 const dist = resolve(root, 'dist');
@@ -13,6 +13,18 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   await mkdir(resolve(moduleRoot, 'scripts'), { recursive: true });
   const result = await Bun.build({ entrypoints: [resolve(source, 'index.ts')], outdir: resolve(moduleRoot, 'scripts'), naming: 'index.js', target: 'browser', format: 'esm', splitting: false, minify: false, sourcemap: 'none' });
   if (!result.success) throw new Error(`Browser build failed: ${result.logs.map(String).join('; ')}`);
+  // Bun source banners otherwise depend on the caller's cwd. Keep the same
+  // module-relative paths whether the build is invoked here or from the repo.
+  const bundlePath = resolve(moduleRoot, 'scripts/index.js');
+  const bundle = await readFile(bundlePath, 'utf8');
+  const contracts = resolve(root, '../../packages/contracts/src');
+  const normalized = bundle.replace(/^\/\/ (.+\.(?:ts|js))\r?$/gm, (banner, path: string) => {
+    const absolute = resolve(process.cwd(), path);
+    if (!absolute.startsWith(`${source}/`) && !absolute.startsWith(`${source}\\`)
+      && !absolute.startsWith(`${contracts}/`) && !absolute.startsWith(`${contracts}\\`)) return banner;
+    return `// ${relative(root, absolute).replace(/\\/g, '/')}`;
+  });
+  if (normalized !== bundle) await writeFile(bundlePath, normalized);
   await cp(resolve(source, 'module.json'), resolve(moduleRoot, 'module.json'));
   for (const directory of ['icons', 'lang', 'styles', 'templates']) await cp(resolve(source, directory), resolve(moduleRoot, directory), { recursive: true });
   await cp(resolve(root, 'README.md'), resolve(moduleRoot, 'README.md'));
@@ -32,11 +44,11 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.364') throw new Error('Foundry compatibility must be exactly 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') throw new Error('Foundry compatibility must span 14.364 to 14.368 with verification at 14.364.');
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '5.3.3') throw new Error('dnd5e compatibility must be exactly 5.3.3.');
-  if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js']) || manifest.socket !== false) throw new Error('Manifest browser contract drifted.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.5') throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.5 with verification at 5.3.3.');
+  if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js']) || manifest.socket !== true) throw new Error('Manifest browser/socket contract drifted.');
   if (!manifest.relationships?.requires?.some((entry: any) => entry.id === 'fvtt-trigger-engine')) throw new Error('Trigger Engine dependency is missing.');
 }
 

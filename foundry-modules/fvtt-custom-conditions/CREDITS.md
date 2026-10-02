@@ -1,8 +1,8 @@
 # Icon credits
 
-This module bundles original SVG icons from [Game-icons.net](https://game-icons.net/). The pinned upstream source tree is [game-icons/icons at `82d948812bfe3f269ef8f731dcdb07b08160edc4`](https://github.com/game-icons/icons/tree/82d948812bfe3f269ef8f731dcdb07b08160edc4).
+The nineteen core condition icons below are original SVG icons from [Game-icons.net](https://game-icons.net/). The pinned upstream source tree is [game-icons/icons at `82d948812bfe3f269ef8f731dcdb07b08160edc4`](https://github.com/game-icons/icons/tree/82d948812bfe3f269ef8f731dcdb07b08160edc4). The layered Injury icons are documented separately after the table.
 
-Each SVG is copied byte-for-byte from the listed original download. Only the bundled filename and path differ; the artwork was not edited or traced. The SHA-256 values below identify the original downloaded SVG bytes. Paths in the table are relative to the built module; repository source stores these files under `src/`.
+Each core condition SVG is copied byte-for-byte from the listed original download. Only the bundled filename and path differ; the artwork was not edited or traced. The SHA-256 values below identify the original downloaded SVG bytes. Paths in the table are relative to the built module; repository source stores these files under `src/`.
 
 License notice: the listed artworks are licensed by their respective creators under [Creative Commons Attribution 3.0 Unported (CC BY 3.0)](https://creativecommons.org/licenses/by/3.0/). Reuse is subject to that license; retain creator attribution and the license notice. Read the [full license legal code](https://creativecommons.org/licenses/by/3.0/legalcode).
 
@@ -27,3 +27,11 @@ License notice: the listed artworks are licensed by their respective creators un
 | `icons/staggered.svg` | Foot Trip | lorc | [lorc/foot-trip](https://game-icons.net/1x1/lorc/foot-trip.html) | [download](https://game-icons.net/icons/ffffff/transparent/1x1/lorc/foot-trip.svg) | `1e4553c2321284c0f12047ea64914ec862879e2b7b0dabfe61ef6fed86db2da5` |
 | `icons/valor.svg` | Winged Sword | lorc | [lorc/winged-sword](https://game-icons.net/1x1/lorc/winged-sword.html) | [download](https://game-icons.net/icons/ffffff/transparent/1x1/lorc/winged-sword.svg) | `430f92df91565fde56a4c6d297cd2936bbd3967a40b8297d2ad62e578575a649` |
 | `icons/weakened.svg` | Sword Break | lorc | [lorc/sword-break](https://game-icons.net/1x1/lorc/sword-break.html) | [download](https://game-icons.net/icons/ffffff/transparent/1x1/lorc/sword-break.svg) | `cd9a27e5dd58a3cd907fe4231f1da4cb0e358035be4a81bc93c78e281674b0d3` |
+
+The layered Injury files below were restored byte-for-byte from repository commit `e8604d64e48b354b2954210f2959ce8cf734ecc9`, where the user-selected Game-icons.net Bandaged SVG was introduced. The worktree's prior heart/badge files had replaced those bytes without updating the attribution. Bandaged is by **lorc** under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); the [source page](https://game-icons.net/1x1/lorc/bandaged.html) and [original SVG download](https://game-icons.net/icons/ffffff/transparent/1x1/lorc/bandaged.svg) identify the selected artwork. All three names contain the same original SVG bytes; the numeric injury level is shown by the module's status UI, not embedded in this SVG.
+
+| Bundled path | Artwork | Creator | Source | SHA-256 |
+| --- | --- | --- | --- | --- |
+| `icons/injury/injury-1.svg` | Bandaged | lorc | [Game-icons.net](https://game-icons.net/1x1/lorc/bandaged.html) | `0bbf9c29d30da4e1fbfa55e612adad767282cd8d4c66beefc806fa81d9b832b1` |
+| `icons/injury/injury-2.svg` | Bandaged | lorc | [Game-icons.net](https://game-icons.net/1x1/lorc/bandaged.html) | `0bbf9c29d30da4e1fbfa55e612adad767282cd8d4c66beefc806fa81d9b832b1` |
+| `icons/injury/injury-3.svg` | Bandaged | lorc | [Game-icons.net](https://game-icons.net/1x1/lorc/bandaged.html) | `0bbf9c29d30da4e1fbfa55e612adad767282cd8d4c66beefc806fa81d9b832b1` |

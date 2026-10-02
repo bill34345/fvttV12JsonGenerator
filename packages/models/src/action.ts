@@ -1,3 +1,5 @@
+import type { WeaponConfiguration, WeaponMasteryId } from '@fvtt-json-generator/contracts/weapon-properties';
+
 /** Source-derived action intermediate representation shared by parsing and generation. */
 export interface Damage {
   formula: string;
@@ -24,6 +26,11 @@ export interface ActionData {
   englishName?: string;
   type: "attack" | "save" | "damage" | "heal" | "utility" | "effect" | "use" | "spell";
   desc?: string;
+
+  /** Explicit source configuration for a weapon action; never inferred from its label. */
+  weaponConfiguration?: WeaponConfiguration;
+  /** Native dnd5e mastery written by the source and projected to system.mastery. */
+  nativeMastery?: WeaponMasteryId;
 
   attack?: {
     type: "mwak" | "rwak" | "msak" | "rsak";
@@ -235,6 +242,10 @@ export interface StructuredActionData {
   legendaryCost?: number;
   concentration?: boolean;
   describe?: string;
+  /** Explicit source configuration for a weapon action; never inferred from its label. */
+  weaponConfiguration?: WeaponConfiguration;
+  /** Native dnd5e mastery written by the source and projected to system.mastery. */
+  nativeMastery?: WeaponMasteryId;
   failEffects?: SaveEffect[];
   successEffects?: SaveEffect[];
   lowValueThreshold?: number;

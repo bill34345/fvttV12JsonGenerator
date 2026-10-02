@@ -1,0 +1,128 @@
+<section class="weapon-mastery-manager">
+  <p class="hint">{{localize "FVTTWMP.Manager.Hint"}}</p>
+
+  <section class="weapon-mastery-manager__dependencies" aria-label="{{localize 'FVTTWMP.Manager.Dependencies'}}">
+    <strong>{{localize "FVTTWMP.Manager.Dependencies"}}</strong>
+    {{#if dependency.ready}}
+      <span class="weapon-mastery-manager__ready">{{localize "FVTTWMP.Manager.DependencyReady"}}</span>
+    {{else}}
+      <span class="weapon-mastery-manager__error">{{localize "FVTTWMP.Manager.DependencyMissing"}}</span>
+      {{#each dependency.issues}}<p class="weapon-mastery-manager__error">{{this}}</p>{{/each}}
+    {{/if}}
+  </section>
+
+  <div class="weapon-mastery-manager__toolbar">
+    <label for="fvtt-wmp-item">{{localize "FVTTWMP.Manager.Item"}}</label>
+    <select id="fvtt-wmp-item" name="itemUuid" aria-label="{{localize 'FVTTWMP.Manager.Item'}}">
+      {{#each items}}
+        <option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{group}} · {{name}}{{#if enabled}} · {{localize "FVTTWMP.Manager.Enabled"}}{{/if}}</option>
+      {{/each}}
+    </select>
+    <button type="button" data-action="loadItem">{{localize "FVTTWMP.Manager.Load"}}</button>
+    <button type="button" data-action="refresh">{{localize "FVTTWMP.Manager.Refresh"}}</button>
+  </div>
+
+  {{#if items.length}}
+    <section class="weapon-mastery-manager__editor">
+      <fieldset>
+        <legend>{{localize "FVTTWMP.Manager.Configuration"}}</legend>
+        <label class="checkbox-row"><input type="checkbox" name="enabled" {{#if configuration.enabled}}checked{{/if}}> {{localize "FVTTWMP.Manager.Enabled"}}</label>
+        <label for="fvtt-wmp-mastery">{{localize "FVTTWMP.Manager.Mastery"}}</label>
+        <select id="fvtt-wmp-mastery" name="mastery">
+          {{#each masteryOptions}}
+            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}{{#if custom}} · {{localize "FVTTWMP.Manager.Copied"}}{{/if}}</option>
+          {{/each}}
+        </select>
+        <label class="checkbox-row"><input type="checkbox" name="grantMastery" {{#if configuration.grantMastery}}checked{{/if}}> {{localize "FVTTWMP.Manager.GrantMastery"}}</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{localize "FVTTWMP.Manager.Properties"}}</legend>
+        <label for="fvtt-wmp-property">{{localize "FVTTWMP.Manager.Property"}}</label>
+        <select id="fvtt-wmp-property" name="propertyKind">
+          {{#each propertyChoices}}
+            <option value="{{kind}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+
+        {{#if property.isDice}}
+          {{#if property.isDeadly}}
+            <label for="fvtt-wmp-dice">{{localize "FVTTWMP.Manager.DiceCount"}}</label>
+            <input id="fvtt-wmp-dice" name="propertyDice" type="number" min="1" max="20" step="1" value="{{property.dice}}">
+          {{/if}}
+          <label for="fvtt-wmp-die">{{localize "FVTTWMP.Manager.Die"}}</label>
+          <select id="fvtt-wmp-die" name="propertyDie">
+            {{#each property.dieOptions}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>d{{value}}</option>
+            {{/each}}
+          </select>
+        {{/if}}
+
+        {{#if property.isBleeding}}
+          <label for="fvtt-wmp-formula">{{localize "FVTTWMP.Manager.Formula"}}</label>
+          <input id="fvtt-wmp-formula" name="propertyFormula" type="text" maxlength="400" value="{{property.formula}}" spellcheck="false">
+          <label for="fvtt-wmp-mode">{{localize "FVTTWMP.Manager.Mode"}}</label>
+          <select id="fvtt-wmp-mode" name="propertyMode">
+            <option value="damage" {{#if property.modeDamage}}selected{{/if}}>{{localize "FVTTWMP.Manager.ModeDamage"}}</option>
+            <option value="hpLoss" {{#if property.modeHpLoss}}selected{{/if}}>{{localize "FVTTWMP.Manager.ModeHpLoss"}}</option>
+          </select>
+          {{#if property.modeDamage}}
+            <label for="fvtt-wmp-damage-type">{{localize "FVTTWMP.Manager.DamageType"}}</label>
+            <input id="fvtt-wmp-damage-type" name="propertyDamageType" type="text" maxlength="32" value="{{property.damageType}}">
+          {{/if}}
+          <label class="checkbox-row"><input type="checkbox" name="propertyEndOnHealing" {{#if property.endOnHealing}}checked{{/if}}> {{localize "FVTTWMP.Manager.EndOnHealing"}}</label>
+        {{/if}}
+      </fieldset>
+
+      <section class="weapon-mastery-manager__preview" aria-label="{{localize 'FVTTWMP.Manager.Preview'}}">
+        <h3>{{localize "FVTTWMP.Manager.Preview"}}</h3>
+        <p><strong>{{localize "FVTTWMP.Manager.Ordinary"}}</strong> {{preview.ordinary}}</p>
+        <p><strong>{{localize "FVTTWMP.Manager.Critical"}}</strong> {{preview.critical}}</p>
+      </section>
+
+      <fieldset>
+        <legend>{{localize "FVTTWMP.Manager.CopyPreset"}}</legend>
+        <p class="hint">{{localize "FVTTWMP.Manager.CopyPresetHint"}}</p>
+        <label for="fvtt-wmp-copy-kind">{{localize "FVTTWMP.Manager.Preset"}}</label>
+        <select id="fvtt-wmp-copy-kind" name="copyPresetKind">
+          {{#each officialPresets}}
+            <option value="{{kind}}" {{#if selected}}selected{{/if}}>{{label}} · {{ruleId}}</option>
+          {{/each}}
+        </select>
+        <label for="fvtt-wmp-copy-label">{{localize "FVTTWMP.Manager.CopyLabel"}}</label>
+        <input id="fvtt-wmp-copy-label" name="copyLabel" type="text" maxlength="160" value="{{copyLabel}}">
+        <button type="button" data-action="copyPreset">{{localize "FVTTWMP.Manager.Copy"}}</button>
+        <p class="hint">{{localize "FVTTWMP.Manager.Immutable"}}</p>
+      </fieldset>
+
+      {{#if configurationError}}<p class="weapon-mastery-manager__error">{{configurationError}}</p>{{/if}}
+    </section>
+  {{else}}
+    <p class="weapon-mastery-manager__empty">{{localize "FVTTWMP.Manager.NoWeapons"}}</p>
+  {{/if}}
+
+  <section class="weapon-mastery-manager__readback" aria-label="{{localize 'FVTTWMP.Manager.Readback'}}">
+    <h3>{{localize "FVTTWMP.Manager.Readback"}}</h3>
+    {{#if readbackUnavailable}}
+      <p class="hint">{{localize "FVTTWMP.Manager.ReadbackUnavailable"}}</p>
+    {{else if actors.length}}
+      {{#each actors}}
+        <article>
+          <header><strong>{{name}}</strong></header>
+          {{#if effects.length}}
+            <ul>
+              {{#each effects}}
+                <li><strong>{{label}}</strong>{{#if summary}} · {{summary}}{{/if}}{{#if source}} · {{localize "FVTTWMP.Manager.Source"}}: {{source}}{{/if}}</li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <p class="hint">{{localize "FVTTWMP.Manager.ReadbackEmpty"}}</p>
+          {{/if}}
+        </article>
+      {{/each}}
+    {{else}}
+      <p class="hint">{{localize "FVTTWMP.Manager.NoActors"}}</p>
+    {{/if}}
+    {{#each readbackErrors}}<p class="weapon-mastery-manager__error">{{this}}</p>{{/each}}
+  </section>
+</section>

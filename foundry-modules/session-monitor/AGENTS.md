@@ -13,10 +13,10 @@
 - Foundry runtime 不导入 companion；companion 不导入 generator、workflow、Web 或 Foundry Ops 私有实现。
 - 报告不得包含聊天正文、场景名称、Actor 名称、用户身份等游戏内容；新增字段先通过隐私/schema 检查。
 
-## 长时间验收硬门禁
+## 长时间验收
 
-- 代理不得启动、持续、看守、轮询或用多个短测试拼接任何超过 30 分钟的监测。
-- 四小时真实跑团和非 GM 设备证据仍由用户亲自运行；代理只准备 preflight，并在用户结束后分析导出文件。
+- Foundry／Chrome 工作沿用根说明，不设固定总时长上限；单操作保留超时，运行前核对目标、服务 owner、存储与隐私边界，结束后核对导出证据及环境。
+- 四小时或其他长时测试仅在用户明确要求相应验收时运行。真实玩家活动和非 GM 设备证据来自实际参与者及设备；代理可负责已授权监测与证据分析，不以模拟或多个短测试拼接替代真实会话。
 - build、单测、短握手、冷重启 smoke 或本地 start/mark/stop 都不能关闭四小时验收。
 
 ## 验证
@@ -25,7 +25,7 @@
 - `bun run test:session-monitor:build`
 - `bun run build:session-monitor`
 - `bun run typecheck:foundry-modules`
-- 运行时变化可以执行不超过 30 分钟、目的明确的项目本地 smoke；完成后恢复模块、世界、端口、专用 Chrome 和临时 evidence 状态。
+- 运行时变化可以执行目的明确的项目本地 smoke；完成后恢复本轮拥有的模块配置、世界配置、专用 Chrome 和临时对象，保留可复用服务及验收原件。
 
 ## 完成标准
 

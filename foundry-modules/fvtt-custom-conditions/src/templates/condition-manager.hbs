@@ -7,18 +7,21 @@
       <p class="hint">{{injury.description}}</p>
       {{#each injury.actors}}
         <article class="injury-entry" data-actor-uuid="{{actorUuid}}">
+          {{#if error}}<strong>{{actorName}}</strong><span class="error">{{error}}</span>{{else}}
           <img src="{{img}}" alt="{{actorName}}">
           <strong>{{actorName}}</strong>
           <span>{{stacks}}/{{maxStacks}}</span>
           {{#if canDecrease}}<button type="button" data-action="decreaseInjury" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryDecrease"}}</button>{{/if}}
           {{#if canIncrease}}<button type="button" data-action="increaseInjury" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryIncrease"}}</button>{{/if}}
-          <button type="button" data-action="openInjuryWizard" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryResurrection"}}</button>
+          {{#if ../injury.resurrectionAvailable}}<button type="button" data-action="openInjuryWizard" data-actor-uuid="{{actorUuid}}">{{localize "FVTTCONDITIONS.Manager.InjuryResurrection"}}</button>{{/if}}
+          {{/if}}
         </article>
       {{else}}
         <p class="hint">{{localize "FVTTCONDITIONS.Manager.InjuryNoTargets"}}</p>
       {{/each}}
     </section>
   {{/if}}
+  {{#if genericAvailable}}
   <div class="condition-targets">
     {{#each actors}}
       <article data-actor-uuid="{{uuid}}">
@@ -55,4 +58,5 @@
     <div class="form-group stacked"><label>{{localize "FVTTCONDITIONS.Manager.Params"}}</label><textarea name="paramsJson" rows="15" spellcheck="false">{{paramsJson}}</textarea></div>
     <button type="button" data-action="refresh">{{localize "FVTTCONDITIONS.Manager.Refresh"}}</button>
   </div>
+  {{/if}}
 </section>

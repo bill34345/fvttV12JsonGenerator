@@ -25,7 +25,12 @@ export async function writeActorState(actor: any, state: ActorModuleState, trans
   if (!isActiveGmWriter()) throw new Error('Only the active GM may write Injury/Fading Spirits state.');
   if (!actor?.uuid || typeof actor.update !== 'function') throw new Error('A valid Actor is required.');
   if (state.schemaVersion !== SCHEMA_VERSION) throw new Error('Refusing to write an unknown schema version.');
-  await actor.update({ ...extra, [`flags.${MODULE_ID}`]: structuredClone(state) }, {
+  // Resurrection owns only its subtree. Preserve the historical injury bytes
+  // and any unknown legacy fields for a later, separately reviewed migration.
+  await actor.update({ ...extra,
+    [`flags.${MODULE_ID}.schemaVersion`]: SCHEMA_VERSION,
+    [`flags.${MODULE_ID}.fadingSpirits`]: structuredClone(state.fadingSpirits),
+  }, {
     [MODULE_ID]: { internal: true, transactionId },
   });
 }

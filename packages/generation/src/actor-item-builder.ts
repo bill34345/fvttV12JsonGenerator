@@ -165,6 +165,8 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     englishName: action.englishName,
     type: action.type,
     desc: action.describe || '',
+    ...(action.weaponConfiguration ? { weaponConfiguration: action.weaponConfiguration } : {}),
+    ...(action.nativeMastery ? { nativeMastery: action.nativeMastery } : {}),
   };
 
   if (action.type === 'attack' && action.attackType) {

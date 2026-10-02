@@ -16,6 +16,7 @@ For each generated Actor JSON, manually compare the generated output against the
 - Description fidelity: important source text is preserved or intentionally transformed.
 - Source coverage: every mechanically relevant source markdown section is represented or intentionally excluded.
 - No false effects: prerequisite-only text does not create on-hit effects unless the source explicitly applies that effect.
+- Configured WMP weapons on v14: literal source damage must not also include the Item base. Check `damage.includeBase=false` and the matching `flags.fvttJsonGenerator.weaponPropertyBase` binding for that primary part. A native inferred weapon retains `includeBase=true` and its Item base. Roundtrip-test both paths; a valid JSON shape alone does not prove Fatal can identify the base die or that damage is not duplicated.
 - Output provenance: final JSON came from the project CLI or workflow, not manual construction or repair.
 
 When the source entered through document extraction, plaintext ingestion, or AI Intake, also trace the exact source identity through its source-scoped evidence/run artifacts, evidence IR where applicable, rendered Markdown, portable manifest evidence where applicable, and final JSON. Confirm that page/coordinate/language/confidence/line-order evidence for documents, and per-entity/aggregate equivalence for plaintext collections, were not replaced by an unrelated source or run.

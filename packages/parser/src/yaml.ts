@@ -396,6 +396,12 @@ export class YamlParser {
       '特殊效果',
       'specialEffects',
       'spellcastingFeatureKey',
+      'weapon-properties',
+      'weaponProperties',
+      '武器特性',
+      'native-mastery',
+      'nativeMastery',
+      '原生精通',
     ]);
 
     return value.some((entry) => {

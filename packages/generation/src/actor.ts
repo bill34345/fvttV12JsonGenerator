@@ -110,6 +110,7 @@ import { createStableDocumentId } from './stableId';
 import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
 import type { GenerationIconResolver } from './ports';
+import { projectWeaponProperties } from './weapon-properties';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -909,7 +910,10 @@ export class ActorGenerator {
       ...this.structuredActionToActivityData(action),
       logicalPath,
     };
-    const activities = this.activityGenerator.generate(activityData, activityContext);
+    const activities = this.activityGenerator.generate(activityData, {
+      ...activityContext,
+      weaponConfiguration: action.weaponConfiguration ?? activityContext.weaponConfiguration,
+    });
     const displaySection = sectionOverride ?? this.resolveDisplaySectionFixed(
       activationType === 'passive' ? '' : activationType,
       activationType === 'passive',
@@ -1093,7 +1097,8 @@ export class ActorGenerator {
     const passiveTraits = ['两栖', '感知魔法', '反魔场光环', 'Amphibious', 'Sense Magic', 'Antimagic Aura'];
     const isPassive = activationType === '' || passiveTraits.some(t => action.name.includes(t));
     const isNonWeaponActivation = activationType === 'bonus' || activationType === 'reaction';
-    const isWeapon = !!action.attack && !isNonWeaponActivation && !isPassive;
+    const isWeapon = !!action.attack && ((!isNonWeaponActivation && !isPassive)
+      || Boolean(action.weaponConfiguration || action.nativeMastery));
     const semanticDesc = this.extractSemanticDescription(action);
     const activationCondition = this.extractActivationCondition(semanticDesc);
 
@@ -1162,6 +1167,15 @@ export class ActorGenerator {
     this.applyNarrativeActivityTargeting(item, action);
     this.applyHeavyHitAutomation(item, action);
     this.applyRuleMetadata(item, action);
+    if (isWeapon || action.weaponConfiguration || action.nativeMastery) {
+      projectWeaponProperties(item, {
+        configuration: action.weaponConfiguration,
+        nativeMastery: action.nativeMastery,
+        sourceLogicalPath: action.logicalPath,
+        effectProfile: this.effectProfile,
+        targetVersion: this.fvttVersion,
+      });
+    }
     return item;
   }
 

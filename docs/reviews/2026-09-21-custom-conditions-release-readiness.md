@@ -31,7 +31,7 @@
 | Jinxed / Valor来源完整链路 | PASS（显式选目标的公开API路径） | Jinxed1d6与Valor1d4实际攻击公式为1d20-(1d6)+(1d4)+5；Valor utility target/range仍未结构化，需GM显式选目标 |
 | 世界页面重载后持久化 | Bleeding启用实例与checkpoint PASS；未覆盖全部停用状态 | 同GM reload/rejoin后HP21、Chat78、instanceID/参数/origin/turnState/checkpoint不变，0次结算；真实Next Turn后仅1次roll3、HP21→18、Chat79，新key完成 |
 | active GM切换 | PASS | 两临时GM在线：A处理真实HP18→19一次、combatTurnStart一次；A正常退出后B接管，HP19→20也只执行一次。临时用户已清理 |
-| 通用Trigger手工配置 | UI与真实事件PASS；完整reload门待补 | Manager创建/编辑/停用/重开读回；匹配HP29→28调用一次，停用及无关Actor调用0次；真实Combat start调用一次 |
+| 通用Trigger手工配置 | UI与真实事件PASS；完整reload门于2026-09-22补齐 | 同版本server-mirror的cor-cotn中，Manager创建/编辑后的ID、条件、Macro和启停跨完整刷新保持；仅刷新0次、匹配HP1次、无关字段及其他Actor各0次、停用刷新后真实HP更新0次、重新启用1次。见[重载专项验收](2026-09-22-trigger-manager-reload-acceptance.md)；此前Combat start证据不重跑 |
 | KeyD输入路径 | 工具能力限制，长按未执行 | 原生输入keydown/up仅约2ms，Foundry延迟50ms才处理；未验证真实>100ms hold，CDP路径被工具拒绝，不将短按失败判为状态bug |
 | 重复生成Effect ID稳定性 | PASS（离线生成回归） | 已用来源动作身份替代随机ID；Item内相同名称/描述的独立动作以logicalPath区分。重复CLI/兼容入口的Effect IDs及引用一致，原碰撞P2已修并复查 |
 | 交付文档 | PASS | 简明使用说明、模块README与当前结论已统一；handbook review/build/check通过（28项），历史检查点单独标注 |

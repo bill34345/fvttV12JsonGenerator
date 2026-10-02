@@ -1,4 +1,12 @@
-import type { TriggerDefinition, TriggerEventListener, TriggerStore } from './types.ts';
+import { TRIGGER_ENGINE_API_VERSION, TRIGGER_ENGINE_CAPABILITIES } from './constants.ts';
+import type {
+  ExternalEvent,
+  ExternalEventListener,
+  ExternalEventPublishResult,
+  TriggerDefinition,
+  TriggerEventListener,
+  TriggerStore,
+} from './types.ts';
 
 export interface TriggerEngineController {
   listTriggers(): TriggerDefinition[];
@@ -10,10 +18,22 @@ export interface TriggerEngineController {
   deleteTrigger(id: string): Promise<void>;
   reload(): Promise<TriggerStore>;
   subscribe?(listener: TriggerEventListener): () => void;
+  subscribeExternal?(listener: ExternalEventListener): () => void;
+  publishExternal?(event: ExternalEvent): Promise<ExternalEventPublishResult>;
 }
 
 export interface TriggerEngineApi {
+  readonly apiVersion: typeof TRIGGER_ENGINE_API_VERSION;
+  readonly capabilities: typeof TRIGGER_ENGINE_CAPABILITIES;
   subscribe(listener: TriggerEventListener): () => void;
+  subscribeExternal(listener: ExternalEventListener): () => void;
+  /**
+   * Publish a validated data-only event. The caller must perform any
+   * GM-side reparse, permission, and attack-truth checks before publishing.
+   * Resolves after persistence/deduplication. Subscriber delivery is ordered
+   * and asynchronous; await this method does not await subscriber side effects.
+   */
+  publishExternal(event: ExternalEvent): Promise<ExternalEventPublishResult>;
   list(): TriggerDefinition[];
   listTriggers(): TriggerDefinition[];
   getStore(): TriggerStore;
@@ -46,11 +66,24 @@ export function createTriggerApi(
   }
 
   return Object.freeze({
+    apiVersion: TRIGGER_ENGINE_API_VERSION,
+    capabilities: TRIGGER_ENGINE_CAPABILITIES,
     subscribe: (listener: TriggerEventListener) => {
       const controller = resolveController();
       if (!controller) throw new Error('FVTT Trigger Engine is not ready.');
       if (!controller.subscribe) throw new Error('Trigger event subscriptions are unavailable.');
       return controller.subscribe(listener);
+    },
+    subscribeExternal: (listener: ExternalEventListener) => {
+      const controller = resolveController();
+      if (!controller) throw new Error('FVTT Trigger Engine is not ready.');
+      if (!controller.subscribeExternal) throw new Error('External event subscriptions are unavailable.');
+      return controller.subscribeExternal(listener);
+    },
+    publishExternal: async (event: ExternalEvent) => {
+      const controller = requireController();
+      if (!controller.publishExternal) throw new Error('External event publishing is unavailable.');
+      return controller.publishExternal(event);
     },
     list: () => requireController().listTriggers(),
     listTriggers: () => requireController().listTriggers(),

@@ -1,6 +1,6 @@
 # FVTT Custom Conditions
 
-这是一个面向 Foundry VTT 14.364 / dnd5e 5.3.3 的自定义状态模块。它依赖 `fvtt-trigger-engine` 提供的通用 Actor 更新、回合开始和回合结束事件。
+本模块在 Foundry VTT 14.364 / dnd5e 5.3.3 提供 19 种自定义状态与伤势；在 Foundry VTT 14.368 / dnd5e 6.0.5 **仅提供伤势候选能力**，19 种通用状态不在 6.0.5 开放。它依赖 `fvtt-trigger-engine` 的 Actor 更新事件。6.0.5 尚需本地 Lab 语义验收。
 
 模块内置 Monsters of Drakkenheim 条件目录中的 19 个状态。Bloodied 使用 dnd5e 原生能力；Drakkenheim Madness 与 Contamination 本期不加入目录。
 
@@ -18,7 +18,11 @@ Token Action HUD 中，**全部 19 个自定义状态**使用 `fvtt-custom-condi
 
 状态图标是所列来源 SVG 的原始字节副本。笨拙使用 Skoll 的 Drop Weapon，踉跄使用 Lorc 的 Foot Trip。作者署名、来源链接、许可声明和原文件 SHA-256 值见 [CREDITS.md](CREDITS.md)。
 
-如果同时启用“伤势与消逝的灵魂”，管理器提供伤势层数及仪式入口。伤势仍由该模块的公开 API 处理，原 Actor flags 和复活历史不迁移、不复制。它不会变成第 20 个可任意编辑 JSON 的状态。
+伤势由本模块自己的 `flags.fvtt-custom-conditions.injury` 保存、结算和显示。GM 在本管理器或 Token 状态 HUD 调整 0–3 层；旧 `flags.fvtt-injury-fading-spirits.injury` 原值保留，合法数据经字段级迁移和读回验证后才启用新权威。多个旧伤势效果、未知 schema 或两处 flag 冲突时停止迁移并提示 GM。伤势是运行时分层状态，不属于共享 19 项 ConditionId，也不会自动加入生成器正式 JSON 支持。只有同时启用兼容新版“消逝的灵魂”模块时才显示复活仪式入口；不启用它仍可使用伤势规则。
+
+伤势设置默认关闭，NPC 默认不纳入；首次迁移会读取旧模块的启用与 NPC 管理设置，保持既有自动化范围。正 HP 首次到 0 开启 episode；从该 episode 首次恢复正 HP 增加一层，0–2 层再次倒地设置对应死亡失败，3 层需 GM 先裁定。裸 d20 19/20 的死亡豁免大成功、真实治疗到满血与成功短/长休清伤势也由本模块处理。Actor flags 是权威，Active Effect 只作为显示投影。仅当前活动 GM 写入；若检测到仍运行旧伤势 hooks 的 IFS 版本，伤势自动化失败关闭，需先配对升级。
+
+伤势 SVG 从 `e8604d64` 恢复用户已选定的 Game-icons.net Bandaged 原件，作者 lorc、许可 CC BY 3.0，字节哈希与原提交及 [CREDITS.md](CREDITS.md) 一致。层数由状态界面的数字和标签呈现，不依赖图标 SVG 自带数字。
 
 默认状态名称随界面语言显示；GM 自行填写的来源名称保持不变。规则参数中的英文 ID 用于稳定存储，不随翻译改名。
 

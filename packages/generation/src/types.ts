@@ -40,7 +40,8 @@ export type GenerationMechanicKind =
   | 'behavior-capacity'
   | 'behavior-choice-pool'
   | 'behavior-area'
-  | 'behavior-external-rule';
+  | 'behavior-external-rule'
+  | 'weapon-properties';
 export type MechanicProjectionState = 'projected' | 'literal-only' | 'unsupported';
 
 export interface CanonicalGenerationSource {

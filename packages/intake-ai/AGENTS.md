@@ -27,7 +27,9 @@
 
 - `bun run typecheck:packages`
 - `bun test src/core/intake/__tests__ tests/cli-ai-intake.test.ts --max-concurrency 4`
-- 对普通真实 TXT 跑 CLI Intake、`bun run verify:intake <source> <run-dir>`；确认 verifier 的 source 与 run 中 rendered Markdown/manifest 是同一来源。若继续生成 Actor，再执行 Actor 验证和语义核对。
+- 真实 TXT 指来源内容，不自动授权联网 provider。CLI 的 `--dry-run` 只做参数、预检和调用估算，不产生 accepted source chain；fake provider 只用于注入式测试，不证明真实模型效果。
+- 对已有 Monster Intake 来源链运行 `bun run verify:intake -- --source <source> --ir <ir> --markdown <markdown> --actor <actor>`；四个输入必须属于同一来源／run。该命令接受 MonsterIntakeIR，不代替 Item／Species 各自的 verifier。未传 `--json-output` 或 `--markdown-output` 时只读本地文件并打印报告，不调用 provider；传这两个可选参数会写指定报告文件。
+- 创建或 resume 来源链需要真实 provider 时，遵守用户已明确授权的任务、目标、数据与调用范围；已有会话授权持续有效，不逐次重新索取。超出原范围或尚无授权时先澄清。若继续生成 Actor，再执行 Actor 验证和来源语义核对。
 
 ## 完成标准
 

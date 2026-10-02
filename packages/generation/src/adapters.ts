@@ -12,6 +12,7 @@ import type {
   MechanicProjectionState,
 } from './types';
 import { deriveExplicitSaveOutcome } from './save-outcome';
+import { parseWeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 
 interface AdapterSource {
   sourcePath?: string;
@@ -53,6 +54,26 @@ function collectActionMechanics(
     range: raw.range,
     damage: raw.damage,
   } : undefined);
+  if (raw.weaponConfiguration !== undefined || raw.nativeMastery !== undefined) {
+    const configuration = raw.weaponConfiguration === undefined
+      ? undefined
+      : parseWeaponConfiguration(raw.weaponConfiguration);
+    const rawCriticalBonus = raw.criticalBonus
+      ?? raw.attack?.critical?.bonus
+      ?? raw.damage?.critical?.bonus;
+    result.push(mechanic(
+      'weapon-properties',
+      `${path}/weapon-properties`,
+      {
+        configuration: configuration ?? raw.weaponConfiguration,
+        ...(typeof raw.nativeMastery === 'string' ? { nativeMastery: raw.nativeMastery } : {}),
+        ...(typeof rawCriticalBonus === 'string' && rawCriticalBonus.trim()
+          ? { criticalBaseline: rawCriticalBonus.trim() }
+          : {}),
+      },
+      configuration || raw.nativeMastery !== undefined ? 'projected' : 'unsupported',
+    ));
+  }
   if (attack) result.push(mechanic('attack', `${path}/attack`, attack));
   if (raw.damage?.length || attack?.damage?.length) {
     result.push(mechanic('damage', `${path}/damage`, raw.damage ?? attack.damage));
@@ -174,6 +195,36 @@ export function adaptParsedItemToCanonical(
   options: AdapterSource = {},
 ): CanonicalItemDocument {
   const mechanics: CanonicalGenerationMechanic[] = [];
+  if (parsed.weaponConfiguration !== undefined) {
+    const configuration = parseWeaponConfiguration(parsed.weaponConfiguration);
+    const itemName = parsed.englishName ? `${parsed.name} (${parsed.englishName})` : parsed.name;
+    const criticalBaselinesByActivityId = Object.fromEntries(
+      Object.entries(parsed.activities ?? {})
+        .filter(([, activity]) => activity.type === 'attack')
+        .map(([key, activity]) => [
+          createStableDocumentId({ item: itemName, path: `activities/${key}`, activity }),
+          typeof activity.damage?.critical?.bonus === 'string' ? activity.damage.critical.bonus.trim() : '',
+        ]),
+    );
+    mechanics.push(mechanic(
+      'weapon-properties',
+      'item/weapon-properties',
+      {
+        configuration: configuration ?? parsed.weaponConfiguration,
+        ...(parsed.nativeMastery ?? parsed.weapon?.mastery
+          ? { nativeMastery: parsed.nativeMastery ?? parsed.weapon?.mastery }
+          : {}),
+        ...(Object.keys(criticalBaselinesByActivityId).length > 0 ? { criticalBaselinesByActivityId } : {}),
+      },
+      configuration ? 'projected' : 'unsupported',
+    ));
+  } else if (parsed.nativeMastery ?? parsed.weapon?.mastery) {
+    mechanics.push(mechanic(
+      'weapon-properties',
+      'item/weapon-properties',
+      { configuration: undefined, nativeMastery: parsed.nativeMastery ?? parsed.weapon?.mastery },
+    ));
+  }
   if (parsed.armor) mechanics.push(mechanic('armor', 'item/armor', parsed.armor));
   for (const [index, text] of (parsed.unresolvedMechanics ?? []).entries()) {
     mechanics.push(mechanic('armor', `item/armor/unresolved/${index}`, { text }, 'literal-only'));

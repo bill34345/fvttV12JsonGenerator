@@ -6,6 +6,7 @@ import { mapDamageType } from './actor-text';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { createStableDocumentId } from './stableId';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
+import { weaponCriticalBonus, weaponDamagePartSignature, type WeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 
 /** Compatibility-only fixed UUID lookup used by pre-Intake Item Markdown. */
 const LEGACY_SPELL_UUIDS: Record<string, string> = {
@@ -20,6 +21,8 @@ export interface ActivityGenerationContext {
   preferNativeWeaponRolls?: boolean;
   /** Source Item Effect to be applied by an Activity (for example, token light). */
   appliedEffectId?: string;
+  /** Explicit weapon configuration supplied by the source. */
+  weaponConfiguration?: WeaponConfiguration;
 }
 
 export class ActivityGenerator {
@@ -73,6 +76,13 @@ export class ActivityGenerator {
       const nativeRoll = this.inferNativeWeaponRoll(action, context);
       const explicitAbility = action.attack.ability;
       const primaryDamage = nativeRoll ? action.attack.damage[0] : undefined;
+      // Source-derived: fixed damage stays literal. Including the Item base as
+      // well would duplicate it and could silently add a native ability modifier.
+      const literalWeaponBase = this.isV14() && context.weaponConfiguration?.enabled === true && !nativeRoll
+        ? action.attack.damage[0] : undefined;
+      const criticalBonus = context.weaponConfiguration?.enabled
+        ? weaponCriticalBonus(context.weaponConfiguration)
+        : null;
       activities[id] = {
         _id: id,
         type: 'attack',
@@ -81,13 +91,16 @@ export class ActivityGenerator {
           bonus: nativeRoll || explicitAbility ? '' : `${action.attack.toHit}`,
           flat: !(nativeRoll || explicitAbility),
           type: {
-            value: action.attack.type,
+            value: this.isV14() && context.weaponConfiguration?.enabled
+              ? action.attack.type.startsWith('r') ? 'ranged' : 'melee'
+              : action.attack.type,
             classification: action.attack.type.endsWith('sak') ? 'spell' : 'weapon'
           }
         },
         damage: {
           parts: (nativeRoll ? action.attack.damage.slice(1) : action.attack.damage).map(d => this.formatDamage(d)),
-          includeBase: true,
+          includeBase: !literalWeaponBase,
+          ...(criticalBonus ? { critical: { bonus: criticalBonus } } : {}),
           ...(action.attack.versatile ? { versatile: this.formatDamage({ formula: action.attack.versatile.formula, type: action.attack.damage[0]?.type || '' }) } : {})
         },
         ...(nativeRoll && primaryDamage ? {
@@ -99,8 +112,26 @@ export class ActivityGenerator {
               }
             }
           }
+        } : literalWeaponBase ? {
+          flags: { fvttJsonGenerator: { weaponPropertyBase: { schemaVersion: 1, partIndex: 0,
+            signature: weaponDamagePartSignature(this.formatDamage(literalWeaponBase)) } } },
         } : {})
       };
+      if (criticalBonus) {
+        const deadly = context.weaponConfiguration?.rules.find((rule) => rule.kind === 'deadly');
+        if (deadly) {
+          activities[id].flags = {
+            ...(activities[id].flags ?? {}),
+            fvttJsonGenerator: {
+              ...(activities[id].flags?.fvttJsonGenerator ?? {}),
+              weaponPropertyContributions: {
+                ...(activities[id].flags?.fvttJsonGenerator?.weaponPropertyContributions ?? {}),
+                deadly: { ruleId: deadly.ruleId, bonus: criticalBonus },
+              },
+            },
+          };
+        }
+      }
       activities[id].range = this.buildAttackRange(action.attack);
       activities[id].target = this.buildTargetSchema();
     } else if (action.save) {
@@ -163,11 +194,10 @@ export class ActivityGenerator {
           dc: this.buildSaveDc(action.save.dc, nativeSaveDc?.calculation)
         },
         damage: {
-          ...(this.isV14() ? {
-            onSave: (action.damage?.length ?? 0) > 0
-              ? this.resolveSaveDamageResult(action.save.outcome, action.save.onSave)
-              : 'none',
-          } : {}),
+          // The locked dnd5e 4.3.9 and 5.3.3 save models both use onSave.
+          onSave: (action.damage?.length ?? 0) > 0
+            ? this.resolveSaveDamageResult(action.save.outcome, action.save.onSave)
+            : 'none',
           parts: (action.damage || []).map(d => this.formatDamage(d))
         },
         ...(action.aoe?.template ? {

@@ -1,5 +1,5 @@
 {
-  "IFS.Title": "Injury & The Fading Spirits",
+  "IFS.Title": "The Fading Spirits",
   "IFS.Status.Injury": "Injury",
   "IFS.Status.InjuryLevel": "Injury {stacks}/{max} (left-click to increase, right-click to decrease)",
   "IFS.Actions.SetInjury": "Set Injury",
@@ -48,7 +48,7 @@
   "IFS.Injury.EnvironmentException": "Environment exception",
   "IFS.Injury.Defer": "Defer",
   "IFS.Injury.StartingFailures": "Starting failures (0–2)",
-  "IFS.FirstRun.Title": "Injury & The Fading Spirits",
+  "IFS.FirstRun.Title": "The Fading Spirits",
   "IFS.FirstRun.Content": "Automation is off by default. Enable it for character Actors now?",
   "IFS.FirstRun.Enable": "Enable",
   "IFS.FirstRun.KeepDisabled": "Keep disabled",
@@ -56,7 +56,7 @@
   "IFS.Messages.InjuryCleared": "Injury cleared",
   "IFS.Errors.ActorRequired": "Select an Actor first.",
   "IFS.Errors.ActiveGmOnly": "Only the active GM can perform this action.",
-  "IFS.Errors.UnsupportedRuntime": "Injury & Fading Spirits requires Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 6.0.2 or 6.0.5; automation is disabled.",
+  "IFS.Errors.UnsupportedRuntime": "The Fading Spirits requires Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 6.0.2 or 6.0.5; resurrection automation is disabled.",
   "IFS.Errors.ResurrectionAlreadyConsumed": "The soul has already returned for the current death episode.",
   "IFS.Errors.RitualPending": "A ritual is already pending.",
   "IFS.Errors.ConventionalLocked": "Conventional resurrection is permanently locked.",
@@ -79,9 +79,11 @@
   "IFS.Errors.InvalidMode": "Unknown resurrection mode.",
   "IFS.Errors.InvalidModifier": "The caster ability modifier is invalid.",
   "IFS.Errors.RitualMissing": "The pending ritual no longer exists.",
-  "IFS.Settings.Enabled.Name": "Enable Injury & Fading Spirits automation",
-  "IFS.Settings.Enabled.Hint": "Off by default. When enabled, character Actor HP and rest events are processed by the active GM.",
+  "IFS.Settings.Enabled.Name": "Legacy Injury automation setting (migration only)",
+  "IFS.Settings.Enabled.Hint": "Preserved for Custom Conditions migration; does not enable Injury hooks here.",
   "IFS.Settings.ManageNpcs.Name": "Manage NPC Actors",
   "IFS.Settings.ManageNpcs.Hint": "Opt NPC Actors into the same Injury rules. Character Actors are managed when automation is enabled.",
-  "IFS.Settings.SetupComplete.Name": "First-run setup completed"
+  "IFS.Settings.SetupComplete.Name": "First-run setup completed",
+  "IFS.Actions.BeginDeathEpisode": "Begin a new death episode (GM)",
+  "IFS.Errors.InjuryMoved": "Manage Injury in Custom Conditions."
 }

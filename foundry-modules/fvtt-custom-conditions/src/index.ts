@@ -14,6 +14,19 @@ export function isActiveGM(globals: any = globalThis): boolean {
 
 export function registerCustomConditionsSettings(globals: any = globalThis): void {
   const settings = globals.game?.settings;
+  if (typeof settings?.register === 'function') {
+    settings.register(MODULE_ID, 'injuryEnabled', {
+      name: 'FVTTCONDITIONS.Injury.Enabled', hint: 'FVTTCONDITIONS.Injury.EnabledHint',
+      scope: 'world', config: true, type: Boolean, default: false,
+    });
+    settings.register(MODULE_ID, 'injuryManageNpcs', {
+      name: 'FVTTCONDITIONS.Injury.ManageNpcs', hint: 'FVTTCONDITIONS.Injury.ManageNpcsHint',
+      scope: 'world', config: true, type: Boolean, default: false,
+    });
+    settings.register(MODULE_ID, 'injurySettingsImported', {
+      name: 'FVTTCONDITIONS.Injury.Imported', scope: 'world', config: false, type: Boolean, default: false,
+    });
+  }
   if (typeof settings?.registerMenu !== 'function') return;
   try {
     const Application = createConditionManagerApplicationClass(undefined, globals);
@@ -32,7 +45,10 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
     (context) => api ? openConditionManager(api, globals, context) : undefined,
   );
   hooks.once('init', () => {
-    registerConditionMappings(globals);
+    if (globals.game?.version === undefined
+      || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3')) {
+      registerConditionMappings(globals);
+    }
     registerCustomConditionsSettings(globals);
     attachModuleApi(globals.game, api);
   });
@@ -65,6 +81,9 @@ export function attachModuleApi(gameLike: any, moduleApi: CustomConditionsApi | 
 
 export { createConditionsApi } from './api.ts';
 export { ConditionRuntime } from './runtime.ts';
+export { createWeaponEffectsApi } from './api.ts';
+export { WeaponEffectRuntime, changesForWeaponEffect } from './weapon-effects.ts';
 export * from '@fvtt-json-generator/contracts/conditions';
+export * from '@fvtt-json-generator/contracts/weapon-effects';
 
 if (typeof (globalThis as any).Hooks?.once === 'function') initializeCustomConditions(globalThis);
