@@ -159,3 +159,9 @@ owned官方Rapier副本通过公开configure明确授予Vex；公开attack进入
 重载后的 `wmp-final-persistent-cleanup.json` pass=true：原十Actor全flags／HP／全部AE含审计字段相同、原Items／Scene／Macro／messages／User role／character／flags准确，无owned残留；原Combat active=false／round2／turn0恢复，正常审计_stats更新未伪造。两个sentinel与本批TE ledger删除，原trigger setting ID／值保持，模块／语言／view／paused／controlled恢复。两Actor／embedded武器、一Scene／两Token、一Combat、四消息、两Macro和拥有tab已清。Core删除owned Combat自动激活原Combat的首次FAIL保留，正常恢复active后再重载接受。
 
 关键证据：`wmp-cs020-final-report.md`、`wmp-client-identity.json`、`wmp-first-chain-readback.json`、`wmp-native-chain-final.json`、`wmp-final-persistent-cleanup.json`及完整source。最后服务40952／30001继续运行、users0，旧CU596192继续单独保留。此项关闭WMP＋CC／TE0.2.0代表接通；旧WMP其余属性保留原身份，Next／生产／长时／并发压力均未推广。
+
+### 本地master整合（2026-10-03）
+
+主工作区在合并前为master `61974058…dd99a8f`、tracked／untracked与索引均空，topic仅暂存187条任务路径且没有tracked文件删除。依据用户认可首批清单、要求Trigger／伤势合入master及后续Scope处理授权，topic提交 `d477ef7c9f52610070f4c09a76a8e407cc7dd3b4`；00:05在主工作区正常fast-forward至该提交。主区status／索引仍空，用户基线保持，frozen install和30项手册check通过。未push、生产写入或清理旧工作树。
+
+合并后的AGENTS检查实际发现两个新tracked说明未在显式目录清单中：WMP与Crystalbleed V12。初轮CI在它们尚未tracked时只查到原32项，不能用那次PASS掩盖该集成失败。已在topic明确登记两路径，并仅为对应说明添加Scope／Verification标题；业务内容、版本、权限和运行代码未改，WMP build输入也不含这些说明或检查器。修复后的实际34项Ruler／目录链检查、19项检查器／save回归和production typecheck通过，手册受影响三项按纯规则登记变化复核。最终主线收尾与检查以 `local-master-merge-receipt.json` 和后续 `local-master-final-receipt.json` 为准。

@@ -1,5 +1,7 @@
 # Weapon Mastery & Properties module
 
+## Scope
+
 This directory is the owner of the standalone `fvtt-weapon-mastery-properties`
 module. Its supported runtime is Foundry `14.364` with dnd5e `5.3.3` exactly.
 
@@ -21,6 +23,8 @@ Official mastery IDs and parameters come from the locked dnd5e 5.3.3
 text or a weapon name. House properties use their configured rule ID and keep
 their identity separate from official masteries and the existing `slowed`
 condition.
+
+## Verification
 
 Use the package scripts for focused tests, typecheck, deterministic build, and
 artifact verification. Do not install, start, stop, or modify a Foundry Lab

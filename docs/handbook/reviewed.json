@@ -60,9 +60,9 @@
     "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
   },
   "verification-development": {
-    "fingerprint": "48e6d3ba2bb88f99111678574189416d3c90a40837a678a8abfb061e00afb0e7",
+    "fingerprint": "4510599d4218023f07cc9ba26d578bbedcc0ec35a5a27954b8fcc9d813adfafa",
     "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "human-encounter-intake": {
     "fingerprint": "e1019c690a48fa118d19a286a3567c0ef162667e95acda5d0aa991c9cd2bc86f",
@@ -70,9 +70,9 @@
     "note": "已核对共享Intake规则与当前项目Chrome角色：真实provider范围/既有授权及来源链保持，历史Luna Max称呼改为按实际任务配置；产品能力与既有接受不扩大。"
   },
   "crystalbleed-v12": {
-    "fingerprint": "9374e693eaedfcddf366ac1ea054b31d4d3f4394be60b8324ab9d4412802077b",
+    "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
     "reviewedOn": "2026-10-02",
-    "note": "逐份对照批准来源、宏构建与历史接受；新版JSON为needs_review及独立状态ID，旧宏hash一致不代替新版运行接受"
+    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "chat-memory-guard": {
     "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
@@ -145,8 +145,8 @@
     "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "d647a7c411e395d5df275973b9cc74f9ab71d4cf3723986ebbdc5094f74ec55d",
+    "fingerprint": "8169c1c8e9df573fab50a1a1cc07602fe68f47cdd8274f6715cd8db1bf5d0af9",
     "reviewedOn": "2026-10-02",
-    "note": "已人工核对新0.2.0依赖实机ready及公开/原生攻击伤害→TE→CC Vex生命周期、重载原值恢复PASS；旧属性历史接受保持原身份，Next/生产/完整矩阵不推广。"
+    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   }
 }

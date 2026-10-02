@@ -60,10 +60,12 @@ export const requiredAgentsFiles = [
   'foundry-modules/fvtt-injury-fading-spirits/AGENTS.md',
   'foundry-modules/fvtt-json-forge/AGENTS.md',
   'foundry-modules/fvtt-selected-token-sync/AGENTS.md',
+  'foundry-modules/fvtt-weapon-mastery-properties/AGENTS.md',
   'foundry-modules/open-session-deck/AGENTS.md',
   'tools/AGENTS.md',
   'tools/foundry-ops/AGENTS.md',
   'tools/forge-encounter/AGENTS.md',
+  'tools/crystalbleed-v12/AGENTS.md',
 ] as const;
 
 const ancestorAgentsFiles = new Set([
