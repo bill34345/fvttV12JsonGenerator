@@ -2,7 +2,9 @@
  * No server installation, global settings changes or Actor definition patches.
  * All Actor/Item definitions are imported from the project CLI artifacts.
  */
-export const RUNTIME_VERSION = '2.1.0';
+import { buildConditionFlag, createConditionInstance, isConditionId, projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
+
+export const RUNTIME_VERSION = '2.1.1';
 const FLAG = 'crystalbleedV14';
 const DRAGON_MARKER = 'crystalbleed-eclipse-ward';
 const CRYSTAL_MARKER = 'salvo-crystal-pulse';
@@ -48,6 +50,28 @@ export function shouldOfferDefiance(success, managedDragon, remaining) {
 
 export function permittedStatuses(statuses, immunities) {
   return statuses.filter(status => !immunities.has(status));
+}
+
+export function findCompanionEffect(item, key) {
+  const statusIds = isConditionId(key) ? [key, projectedConditionStatusId(key)] : [key];
+  return Array.from(item?.effects?.contents ?? item?.effects ?? []).find(effect =>
+    effect.flags?.fvttJsonGenerator?.behaviorState?.stateId === key
+    || Array.from(effect.statuses ?? []).some(status => statusIds.includes(status)));
+}
+
+export function createCompanionEffectData(template, sourceUuid, worldTime, existing) {
+  const data = template.toObject ? template.toObject() : structuredClone(template);
+  delete data._id;
+  delete data._stats;
+  const condition = readConditionInstance(template);
+  if (condition?.template) {
+    const current = readConditionInstance(existing);
+    data.flags = { ...(data.flags ?? {}), ...buildConditionFlag(createConditionInstance(condition.conditionId, condition.params, {
+      ...(current && !current.template && current.conditionId === condition.conditionId ? { instanceId: current.instanceId } : {}),
+      source: sourceUuid, origin: sourceUuid, createdAt: worldTime,
+    })) };
+  }
+  return data;
 }
 
 export function legendarySpendUpdate(resource, amount) {
@@ -211,8 +235,7 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
     return Number(item.system.uses.spent) >= Number(item.system.uses.max) ? 'weakened' : 'full';
   }
   function effectTemplate(item, key) {
-    const effect = list(item.effects).find(effect => effect.flags?.fvttJsonGenerator?.behaviorState?.stateId === key
-      || Array.from(effect.statuses ?? []).includes(key));
+    const effect = findCompanionEffect(item, key);
     if (!effect) throw new Error(`正式生成产物缺少效果：${item.name} / ${key}`);
     return effect;
   }
@@ -233,9 +256,7 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
     }
     const existing = list(actor.effects).find(effect => flag(effect).role === role
       && (['ward', 'ward-broken', 'corrupted'].includes(role) || flag(effect).source === item.parent.uuid));
-    const data = template.toObject();
-    delete data._id;
-    delete data._stats;
+    const data = createCompanionEffectData(template, item.uuid, game.time.worldTime, existing);
     data.disabled = false;
     // Core has no dazed status. Preserve the source-authored named effect and
     // expiry without registering a global condition or substituting stunned.

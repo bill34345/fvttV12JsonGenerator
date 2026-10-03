@@ -60,14 +60,14 @@
     "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
   },
   "verification-development": {
-    "fingerprint": "4510599d4218023f07cc9ba26d578bbedcc0ec35a5a27954b8fcc9d813adfafa",
-    "reviewedOn": "2026-10-02",
-    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
+    "fingerprint": "7e1d2c5eb46a944aad7287d7335d8a9fd56b2cb6e0b25c7155fdc7cc7d761f0a",
+    "reviewedOn": "2026-10-03",
+    "note": "核对安全测试入口新增样本宏回归；Bun1.3.8循环检查未返回结果，改用同一Knip包的Node官方入口，参数与检查范围不变，Node入口已退出0。正式生成目标与verifier入口不变。"
   },
   "human-encounter-intake": {
-    "fingerprint": "e1019c690a48fa118d19a286a3567c0ef162667e95acda5d0aa991c9cd2bc86f",
-    "reviewedOn": "2026-10-02",
-    "note": "已核对共享Intake规则与当前项目Chrome角色：真实provider范围/既有授权及来源链保持，历史Luna Max称呼改为按实际任务配置；产品能力与既有接受不扩大。"
+    "fingerprint": "d3b1804e9bb6b677892b0e824a560eb6a6e9b336a6f2311c00c5b22955dc8f3b",
+    "reviewedOn": "2026-10-03",
+    "note": "核对样本专用宏与AI固定配置分工；补充单独启动、刷新重启和Custom Conditions恍惚边界，当前候选静态通过而实机仍待验收。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -120,9 +120,9 @@
     "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "48af93588e4e576816aa487df26fc908aa7ad23ad4b85f575c26b380b83a3b56",
-    "reviewedOn": "2026-09-15",
-    "note": "最终合并核对：区域模板仅保留来源明确投放距离；结构化uses验证次数周期消费且不误伤充能。共享入口及版本未变；工具说明保留通用能力边界和腐化延期，未宣称新的Lab验收"
+    "fingerprint": "ef6cecd27e47c8ff8f3f5fd89d1ea585fcd6c2361297b5661410f807f46e4d3c",
+    "reviewedOn": "2026-10-03",
+    "note": "核对Forge官方预览、create-only导入、UUID绑定与单独启动步骤；说明样本恍惚的独立状态与core具名回退，不提升当前候选实机状态。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
