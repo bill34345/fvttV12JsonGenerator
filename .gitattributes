@@ -3,5 +3,7 @@
 references/third-party/midi-qol/patches/2026-10-01-request-bonus.patch whitespace=-blank-at-eol
 # Retained migration patches use the same required unified-diff context spaces.
 foundry-modules/midi-qol/patches/*.patch whitespace=-blank-at-eol
-foundry-modules/server-next-external-candidates/**/*.patch whitespace=-blank-at-eol
-foundry-modules/server-next-external-candidates/*.patch whitespace=-blank-at-eol
+foundry-modules/server-next-external-candidates/**/*.patch whitespace=-blank-at-eol,-space-before-tab
+foundry-modules/server-next-external-candidates/*.patch whitespace=-blank-at-eol,-space-before-tab
+# Keep the accepted registration input's existing terminal blank line byte-faithful.
+foundry-modules/server-next-external-candidates/item-piles/register-target-first.js whitespace=-blank-at-eof

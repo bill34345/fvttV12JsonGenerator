@@ -1,0 +1,11 @@
+--- sources\macro\scripts\ItemMacroConfig.mjs
++++ sources\macro\scripts\ItemMacroConfig.mjs
+@@ -78,7 +78,7 @@
+ 
+   static async _onExecute(event) {
+     await this.submit();
+-    this.#item.executeMacro(event);
++    return await this.#item.executeMacro({event});
+   }
+ 
+   async updateMacro({command, type}) {

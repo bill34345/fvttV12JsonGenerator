@@ -1,0 +1,8 @@
+--- sources\drop\src\ts\constants.ts
++++ sources\drop\src\ts\constants.ts
+@@ -1,3 +1,2 @@
+-import moduleData from "@static/module.json" with { type: "json" };
+-
+-export const MODULE_ID = moduleData.id;
++// Fixed namespace: the upstream release bundled the JSON object as MODULE_ID.
++export const MODULE_ID = "dfreds-droppables";

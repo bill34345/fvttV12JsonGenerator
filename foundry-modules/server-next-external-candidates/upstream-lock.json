@@ -1,0 +1,136 @@
+[
+  {
+    "id": "dfreds-convenient-effects",
+    "repo": "DFreds/dfreds-convenient-effects",
+    "tag": "v9.2.7",
+    "publishedAt": "2026-09-21T17:09:28Z",
+    "releaseUrl": "https://github.com/DFreds/dfreds-convenient-effects/releases/tag/v9.2.7",
+    "releaseBody": "- Add handlers for leveled effects for better integration with dnd5e 6\r\n- Migrate to leveled effects for dnd5e 6.0 and later\r\n\r\n**Full Changelog**: https://github.com/DFreds/dfreds-convenient-effects/compare/v9.2.6...v9.2.7",
+    "assets": [
+      {
+        "name": "dfreds-convenient-effects.zip",
+        "url": "https://github.com/DFreds/dfreds-convenient-effects/releases/download/v9.2.7/dfreds-convenient-effects.zip",
+        "sha256": "1e661eb06e26d43910131805a5d10222b57dfbbf6a5e1abc0a4489fec0141226"
+      },
+      {
+        "name": "module.json",
+        "url": "https://github.com/DFreds/dfreds-convenient-effects/releases/download/v9.2.7/module.json",
+        "sha256": "717afcb068cceff471ee60438aa7304ddc5e889567c434fef086a9c51ab6658f"
+      }
+    ],
+    "source": null
+  },
+  {
+    "id": "dfreds-droppables",
+    "repo": "DFreds/dfreds-droppables",
+    "tag": "v6.2.1",
+    "publishedAt": "2026-08-17T18:43:45Z",
+    "releaseUrl": "https://github.com/DFreds/dfreds-droppables/releases/tag/v6.2.1",
+    "releaseBody": "- Correctly handle levels when dropping\r\n\r\n**Full Changelog**: https://github.com/DFreds/dfreds-droppables/compare/v6.2.0...v6.2.1",
+    "assets": [
+      {
+        "name": "dfreds-droppables.zip",
+        "url": "https://github.com/DFreds/dfreds-droppables/releases/download/v6.2.1/dfreds-droppables.zip",
+        "sha256": "d67e9813496e8186a167d821713fb881b003ba5aecba3465ebf3caa80d4893f1"
+      },
+      {
+        "name": "module.json",
+        "url": "https://github.com/DFreds/dfreds-droppables/releases/download/v6.2.1/module.json",
+        "sha256": "fc0366b855a46faded1b3d65258a693ba5958792d5766f22d0521448647a90bf"
+      }
+    ],
+    "source": {
+      "commit": "fcfd446f11d2f22d01911e6b83901349fcb102b1",
+      "url": "https://codeload.github.com/DFreds/dfreds-droppables/zip/fcfd446f11d2f22d01911e6b83901349fcb102b1",
+      "sha256": "071d35bfd4e620438c47824de764cca4ab80937663ad505c116f2d927b71b303"
+    }
+  },
+  {
+    "id": "global-progress-clocks",
+    "repo": "CarlosFdez/global-progress-clocks",
+    "tag": "v1.3.3",
+    "publishedAt": "2026-07-23T06:02:43Z",
+    "releaseUrl": "https://github.com/CarlosFdez/global-progress-clocks/releases/tag/v1.3.3",
+    "releaseBody": "Narrow selectors for offset compatiblity for better performance",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/CarlosFdez/global-progress-clocks/releases/download/v1.3.3/module.json",
+        "sha256": "4d7c11704060c5d0df3c16c8d86eaf0d8791d28409796e839c8d341dc5d348d2"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/CarlosFdez/global-progress-clocks/releases/download/v1.3.3/module.zip",
+        "sha256": "cb498adab49ee2b0bf9714b24f86c467aec0fe23d802af7453773690d7781c8e"
+      }
+    ],
+    "source": {
+      "commit": "c11303f4f1dbf14aa13e2ec6aab1ab9fcdfd17cd",
+      "url": "https://codeload.github.com/CarlosFdez/global-progress-clocks/zip/c11303f4f1dbf14aa13e2ec6aab1ab9fcdfd17cd",
+      "sha256": "e55a393af8afb1c130908ea5bc67e5ff0f066a1c59d76a55fe92caaaf5f0a9a1"
+    }
+  },
+  {
+    "id": "socketlib",
+    "repo": "farling42/foundryvtt-socketlib",
+    "tag": "v1.1.4",
+    "publishedAt": "2026-04-04T10:35:49Z",
+    "releaseUrl": "https://github.com/farling42/foundryvtt-socketlib/releases/tag/v1.1.4",
+    "releaseBody": "## What's Changed\r\n* Master by @farling42 in https://github.com/farling42/foundryvtt-socketlib/pull/28\r\n* v1.1.4 by @farling42 in https://github.com/farling42/foundryvtt-socketlib/pull/30\r\n\r\n\r\n**Full Changelog**: https://github.com/farling42/foundryvtt-socketlib/compare/v1.1.3...v1.1.4",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/farling42/foundryvtt-socketlib/releases/download/v1.1.4/module.json",
+        "sha256": "685935eda53b89cac5f73ea9b706640aab4e4504085f0fb75b5aa443eae1b75f"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/farling42/foundryvtt-socketlib/releases/download/v1.1.4/module.zip",
+        "sha256": "28c9cbf6714b730bb85f1f6eb959475cea788ebde9be39f8915edc04cec85378"
+      }
+    ],
+    "source": null
+  },
+  {
+    "id": "lib-dfreds-ui-extender",
+    "repo": "DFreds/lib-dfreds-ui-extender",
+    "tag": "v2.5.0",
+    "publishedAt": "2026-08-17T16:54:21Z",
+    "releaseUrl": "https://github.com/DFreds/lib-dfreds-ui-extender/releases/tag/v2.5.0",
+    "releaseBody": "**New Features**\r\n- Add API for registering settings buttons\r\n  - Allows developers to surface their module's settings directly in the settings sidebar tab\r\n\r\n**Fixes**\r\n- Fix issue with registration config not localizing directory names\r\n\r\n**Full Changelog**: https://github.com/DFreds/lib-dfreds-ui-extender/compare/v2.4.0...v2.5.0",
+    "assets": [
+      {
+        "name": "lib-dfreds-ui-extender.zip",
+        "url": "https://github.com/DFreds/lib-dfreds-ui-extender/releases/download/v2.5.0/lib-dfreds-ui-extender.zip",
+        "sha256": "6e7a941091daf3918f971019d4a90cdbddbb56d24e23174ee0faea48cdf18366"
+      },
+      {
+        "name": "module.json",
+        "url": "https://github.com/DFreds/lib-dfreds-ui-extender/releases/download/v2.5.0/module.json",
+        "sha256": "1868bf8206716db34fc10de7bc636f5ba78310beba12870cc8c29ee1b0ec5f72"
+      }
+    ],
+    "source": null
+  },
+  {
+    "id": "lib-dfreds-migrations",
+    "repo": "DFreds/lib-dfreds-migrations",
+    "tag": "v1.0.4",
+    "publishedAt": "2026-08-04T20:33:35Z",
+    "releaseUrl": "https://github.com/DFreds/lib-dfreds-migrations/releases/tag/v1.0.4",
+    "releaseBody": "- Fix error when a module registers migrations but doesn't add any\r\n\r\n**Full Changelog**: https://github.com/DFreds/lib-dfreds-migrations/compare/v1.0.3...v1.0.4",
+    "assets": [
+      {
+        "name": "lib-dfreds-migrations.zip",
+        "url": "https://github.com/DFreds/lib-dfreds-migrations/releases/download/v1.0.4/lib-dfreds-migrations.zip",
+        "sha256": "4c4ad1717d83fec8c1eaf6468cb4abeab0ceb119cfb52796fcfdb41e24228fdd"
+      },
+      {
+        "name": "module.json",
+        "url": "https://github.com/DFreds/lib-dfreds-migrations/releases/download/v1.0.4/module.json",
+        "sha256": "315a752d0dfefa11a6e389048b59cdec7f6cd145aa3dcaae02ad31bb3ef96f90"
+      }
+    ],
+    "source": null
+  }
+]

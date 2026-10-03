@@ -1,0 +1,188 @@
+[
+  {
+    "id": "vision-5e",
+    "version": "3.2.2+servernext.1",
+    "kind": "local-source-build",
+    "source": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\vision-macro\\dist\\vision-5e",
+    "archiveSha256": "228e237a24d1ea9d003cbc324bb3ca46c6c22c1c9096cb4d3782439cf3a7c901",
+    "files": [
+      {
+        "path": "icons/inaudible.svg",
+        "sha256": "420dabfa5bc710dc2aa73f3f338587c4c5793b3588d341e3473d077c2c3ea323"
+      },
+      {
+        "path": "lang/cs.json",
+        "sha256": "d210babb9cc43f18ac1fc7b610d6d73b2668d17eb22e2f9672737522e6a459cd"
+      },
+      {
+        "path": "lang/de.json",
+        "sha256": "54f2023ac301ee304930f5ade7efdfb5a54c69257d423756819600c4a932893b"
+      },
+      {
+        "path": "lang/en.json",
+        "sha256": "134e0755bad481a10b97dc0027e3e1ebae81ca5de0f3f3edfa53404aee553d06"
+      },
+      {
+        "path": "lang/es.json",
+        "sha256": "a85dca8f709c78e54f72c1d65fff8f4bda742b2ceb245cdeafabf9bd85d4f0ed"
+      },
+      {
+        "path": "lang/fr.json",
+        "sha256": "262a56fbc046e425fe47a1cdd515a999b90a1f67fe5ff3945af9f57bff6c905c"
+      },
+      {
+        "path": "lang/pl.json",
+        "sha256": "7a227cbead4744bd02c6413c746f748c90ff30b5d5ae0671767e0fd9abbac3c2"
+      },
+      {
+        "path": "lang/pt-BR.json",
+        "sha256": "8f54cfc161289fec9c4d1cf8972a41d6c5fabb0d3f0c74b69714bafc5a6e2d4e"
+      },
+      {
+        "path": "LICENSE",
+        "sha256": "7b1c4108213ff6b585619501bc3ab3fdbbe78d5998c7fa35ac0db181aba3bfc1"
+      },
+      {
+        "path": "module.json",
+        "sha256": "746a8453854ef0cad0cccf1aeee858fa2f207b46463c99983fabce3781154dfa"
+      },
+      {
+        "path": "script.js",
+        "sha256": "986c551b1a7cec2b191e436f2dfc26ba9c6074bb3488e64e91a7a5522ecd9d37"
+      },
+      {
+        "path": "script.js.map",
+        "sha256": "290546a7f6162cf26aa354ace2f134b9cda2650668af6ee6e2e38c045128aecf"
+      },
+      {
+        "path": "style.css",
+        "sha256": "f22b0bc910c14a8a8ab5cc3c4f7c36009924c4111c96f3cab7cb74dfef6cb963"
+      }
+    ]
+  },
+  {
+    "id": "itemacro",
+    "version": "3.0.1+servernext.1",
+    "kind": "local-source-build",
+    "source": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\vision-macro\\dist\\itemacro",
+    "archiveSha256": "56c4148e69e750beafe5e768d8bd8cd681379cbcdcf18ee25941432bc81a5b80",
+    "files": [
+      {
+        "path": "CHANGELOG.md",
+        "sha256": "dd8445324eaf919a28da181d1a14af58d9c0446fb0df0357f7f974491ed6f8ca"
+      },
+      {
+        "path": "lang/en.json",
+        "sha256": "5511871a75e1f1977d5be13accdf800ab0e2d08caa48b8f22d94daa0a850e684"
+      },
+      {
+        "path": "LICENSE",
+        "sha256": "63c807b1a08c784d3581cf4424122208893fa5fa3539caf9a566e10800e64aa9"
+      },
+      {
+        "path": "module.json",
+        "sha256": "c1cf0d019269ea7e790d97d73f5f72cd5a8bb8d69ccd7655abe8cd11e4aac30f"
+      },
+      {
+        "path": "README.md",
+        "sha256": "91dea70d491e9b0b28e94ba21bae89149e64e8bf2df37faea76c13fd020976b8"
+      },
+      {
+        "path": "scripts/helper.mjs",
+        "sha256": "aa35aebd088b02da5264919bb073e1fdfda27736d14aa01e3cf75ac590705e3a"
+      },
+      {
+        "path": "scripts/hooks.mjs",
+        "sha256": "948d48adf59cc4d0d4f0008c5170df9fa81022cbf53888b648f4d965cab56c0d"
+      },
+      {
+        "path": "scripts/ItemMacro.mjs",
+        "sha256": "61f074bd3af4abda6e653887a8780ae05299c3e02a624e41ceffb351fcaa6846"
+      },
+      {
+        "path": "scripts/ItemMacroConfig.mjs",
+        "sha256": "2b1784c9c56591857edbd59b8f78bb003e4a1bb0200cf1faf1fb16574f0a8142"
+      },
+      {
+        "path": "scripts/logger.mjs",
+        "sha256": "36ad5ac1f09aaffd005fb01eec2ba8478efb07af4a9dc50c4023d7f932abeec7"
+      },
+      {
+        "path": "scripts/settings.mjs",
+        "sha256": "df84e5054fd934c3199ea0b9ef131a4c36fa1b482a3aeda3c134c85cb41b71e9"
+      },
+      {
+        "path": "scripts/systems/BaseSystem.mjs",
+        "sha256": "d47778d1838d63b103a1e0d90a12d01e521063f835e1af4ff4e2c981275dcdd0"
+      },
+      {
+        "path": "scripts/systems/handlers/CyberpunkRedCore.mjs",
+        "sha256": "53aa25926de35916d5a4a594ebb0f9a5330eb94c04de0e656ed9db98f016f43f"
+      },
+      {
+        "path": "scripts/systems/handlers/Demonlord.mjs",
+        "sha256": "fb1ca32aa78a05c2792fc353acec328857535be9cdcf1884c6ac97b979654af3"
+      },
+      {
+        "path": "scripts/systems/handlers/DND5e.mjs",
+        "sha256": "8ecc48484650059d13ff68b49a37ce7071aa8ff43dec33231871e566b430220d"
+      },
+      {
+        "path": "scripts/systems/handlers/Dragonbane.mjs",
+        "sha256": "d46be1097283df782bb651f962a1e6b3ec692ce522084b6243e828877cc3dc73"
+      },
+      {
+        "path": "scripts/systems/handlers/DungeonCrawlClassics.mjs",
+        "sha256": "9e71fbfb5aaf86dae168f59235359acb33aa98896a1990d16ee46312ff81368c"
+      },
+      {
+        "path": "scripts/systems/handlers/Dungeonworld.mjs",
+        "sha256": "fda3f357860d83a7310734b6d5b8edfa133fd4c88993274db98099dbae288c9f"
+      },
+      {
+        "path": "scripts/systems/handlers/OldSchoolEssentials.mjs",
+        "sha256": "fce6cd6aee0cc21bcd6aed360669d9220c2d7c9816d3c44993f4e550abeb9f16"
+      },
+      {
+        "path": "scripts/systems/handlers/Pathfinder2e.mjs",
+        "sha256": "22f07f3a135f65bf990f5db2307754be975d69c2bb7363cdd87de440b9cc6086"
+      },
+      {
+        "path": "scripts/systems/handlers/Shadowrun5e.mjs",
+        "sha256": "071cacb11cf678354590d146297d5d06757f97f898949260a0a8ded7b1f08a5b"
+      },
+      {
+        "path": "scripts/systems/handlers/Starfinder.mjs",
+        "sha256": "596f5a65bca29a7f228c53edb0f283c9303aa1d01d440f59695aa86753bf9b4e"
+      },
+      {
+        "path": "scripts/systems/handlers/SWADE.mjs",
+        "sha256": "1926b9c015d81d92d0ecb0368b3f61b4041916e844d57caaa608bd256f11758f"
+      },
+      {
+        "path": "scripts/systems/handlers/Symbaroum.mjs",
+        "sha256": "f59ec94190e86b468c56afb7786e9db7f8a7aacc6c61db06894956431fc92765"
+      },
+      {
+        "path": "scripts/systems/handlers/WFRP4e.mjs",
+        "sha256": "2000196ecf113acdb1da29388004c80a47447c29f6b5a009b4e4079e1ea6e363"
+      },
+      {
+        "path": "scripts/systems/handlers/Worldbuilding.mjs",
+        "sha256": "949113d5ecad8abf06bda8bf7d6131d72d96ff9faa55536b672ecf8c02af76a5"
+      },
+      {
+        "path": "scripts/systems/handlers/WorldOfDarkness.mjs",
+        "sha256": "04f61ca01bc3fc24db822a4fc41aaeefe5276ff6a7bd8bc097fab07c6f7e2449"
+      },
+      {
+        "path": "scripts/systems/handlers/WorldsWithoutNumber.mjs",
+        "sha256": "c2fb4154d15ddf9abe564f9d2244b76ead9e496bca4ff3667103b22a7c91e2e4"
+      },
+      {
+        "path": "scripts/systems/SystemManager.mjs",
+        "sha256": "586546270c44fa44041f7509d2a6a6a9a8928889af4875517327665155bd9c0f"
+      }
+    ]
+  }
+]

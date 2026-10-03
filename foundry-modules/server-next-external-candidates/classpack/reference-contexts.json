@@ -1,0 +1,1152 @@
+{
+  "release": "v4.3.4",
+  "candidate": "4.3.4-next.1",
+  "sourceAudit": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\classpack\\dist\\dnd5e_classpack\\source-reference-audit.json",
+  "activeReferenceCount": 16,
+  "entries": [
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.AmuFE4xAoWlzjjQU",
+      "reason": "top-level-document-id-missing",
+      "location": "classes-new:!items!vIeHGZ1GdlXINSP8.system.advancement.25.configuration.items.9.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.AmuFE4xAoWlzjjQU",
+      "parent": {
+        "pack": "classes-new",
+        "key": "!items!vIeHGZ1GdlXINSP8",
+        "id": "vIeHGZ1GdlXINSP8",
+        "name": "德鲁伊 Druid",
+        "type": "class",
+        "sourceDataSha256": "0361ae5b9d1a63eb73f592eebe9afc1b2c6b93105ed92d71fbd794449c12f751"
+      },
+      "advancement": {
+        "_id": "vjFrZtzEk1WzB23Z",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.t09Fa4kTkkIgMoDu"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.QFBZcGORjnBRgAYo"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.V843ppI7fUmc5Gd6"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.a5wqDP53A5UvGvSK"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.cGO3m3Xu4mtPegr4"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.V3BKvj7g0q2XO0cg"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.NZ4JOGBMJzeCKT5O"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.sLkNbDcU39qcVt14"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.rKLSWNBCS8eqGUll"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.AmuFE4xAoWlzjjQU"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.L6dK0A5IfpiXRhdm"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.1B8U6kl0egesx3FK"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.7z0VrhVv7IBe3mVJ"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.IuzXxwP3EhWGhtXC"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.UJ58LsXL4X8MTKJO"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.3JUEqJSbgArlUBR5"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.8GM6YBgYFPIcFXKg"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.UQuDHLKUVMyZIiTn"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.I6yVljCLoGOdIjon"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.dADmhYuYM063hyy2"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.7axIawhUyP8PVJPV"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.AxOyPyPMswoy1UPZ"
+            }
+          ],
+          "optional": true,
+          "spell": {
+            "ability": [
+              "wis"
+            ],
+            "preparation": "prepared",
+            "uses": {
+              "max": "",
+              "per": "",
+              "requireSlot": false
+            }
+          }
+        },
+        "value": {},
+        "level": 1,
+        "title": "一环德鲁伊法术",
+        "hint": "",
+        "classRestriction": "primary"
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<h1>德鲁伊Druid</h1><p>装饰着冬青的多节杖高高举起，精灵召唤出风暴之怒，并降下惊雷电矢摧毁那群手握火把意图摧毁其森林的兽人们。<br />某个维持着猎豹形态的人潜伏在视野难及的参天树顶，凝视着丛林之外的邪恶气元素神殿，密切关注着邪教徒们的动静。<br />那些利刃形态的舞动火焰，是一名冲进骷髅士兵群中的半精灵正奋力劈散这些邪恶生物。<br />德鲁伊呼唤自然界的元素之力，模仿动物界的生物形态。他们体现了自然的变化——狡猾而凶暴。他们对自然无欲无求，却将自己化身为自然不屈意志的延伸。</p><div><h2>自然之力Power of Nature</h2></div><p>德鲁伊视自然高于一切，他们从自然本身或者从自然神祇处获得法术和其他魔法力量。与那些服务于荒野，动物或元素之神的人不同，德鲁伊更喜欢继续追求自身与自然界的精神链接。古老的德鲁伊传统有时被称为上古誓约Old Faith，其与神庙或圣地中崇拜神祇不尽相同。<br />德鲁伊的法术源于自然和动物——尖牙与利爪，太阳与月亮，或者火焰与风暴的力量。德鲁伊还拥有变身为动物形态的能力，甚至有些德鲁伊非常精于此道，以至于其中的某些个体喜欢维持动物形态更甚于恢复原形。</p><div><h2>维持平衡Preserve the Balance</h2></div><p>对德鲁伊来讲，自然界存在着一个不稳定的平衡。构成世界的四大元素（气、土、火、水）必须保持平衡，如果其中一某元素的力量大于其他，则世界的结构将被摧毁，并退化成相应的元素位面进而分崩离析。所以，德鲁伊反对崇拜邪恶元素和那些只提升一种元素力量而排挤其他元素的人。<br />德鲁伊也会关注维护动植物生命的生态平衡，以及保证文明社会需求与自然的和谐共处而不是针锋相对。德鲁伊承认自然的残酷，且讨厌异怪（如眼魔和夺心魔）和不死生物（如僵尸和吸血鬼）等非自然的生物。有时候，德鲁伊们会在这类怪物入侵其领地时领头抵御入侵。<br />德鲁伊经常自发性的前去守护圣地或监视破坏自然的行为。不过当有威胁到自然平衡的迹象在某个地区或其保护的领地浮现时，德鲁伊会在面对此威胁时担当更主动的角色，比如冒险者。</p><div><h2>创建德鲁伊 Creating a Druid</h2></div><p>创建一个德鲁伊时，可以先考虑为何你的角色如此接近自然。也许你的角色生活于一个依然信奉上古誓约的社会中，或是生活于某个依靠一位德鲁伊才得以在荒废森林深处发展起来的社会。也许你的角色有一个与自然之魂有关，戏剧性的遭遇，跟巨型老鹰或凶暴狼相遇，却奇迹生还的经历。也许你的角色出生时遭遇了史诗级的风暴或火山爆发，这些事情都可以为你展示你的角色之所以成为德鲁伊的命运。<br />你成为德鲁伊后是否一直都是一名冒险者，或者你是第一次花时间成为圣泉或圣园的看守者？也许你的家园被邪恶玷污，之后你踏上了冒险的旅途以求寻找一片新的家园。<br /><br /></p><h2>快速建卡 Quick Build</h2><p>你可以按以下建议快速创建一名德鲁伊。首先，你将最高属性分配给感知，次高分配给体质。其次选择@UUID[Compendium.dnd5e_classpack.BackgroundList.Item.qdmvKCuxTYBvzWbI]{隐士背景}。</p><h2>德鲁伊职业表</h2><p>@UUID[Compendium.dnd5e_classpack.class-table.fZkjhvhgksoHQO4n]{德鲁伊职业表}@UUID[Compendium.dnd5e_classpack.spell-table.VkCAjMpSgvgRIEDA]{德鲁伊法术表}</p><h2>职业特性Class Features</h2><p>作为一名德鲁伊，你获得以下职业特性。</p><h3>生命值Hit Points</h3><p><strong>生命骰</strong>：每德鲁伊等级1d8<br /><strong>首级生命值</strong>：8＋你的体质调整值<br /><strong>升级生命值</strong>：首级生命值之外，对应每德鲁伊等级5（1d8）＋你的体质调整值</p><h3>熟练项Proficiencies</h3><p><strong>护甲</strong>：轻甲、中甲、盾牌（德鲁伊不能装备或使用金属质的护甲和盾）<br /><strong>武器</strong>：短棒、匕首、飞镖、标枪、硬头锤、长棍、弯刀、镰刀、投石索、矛<br /><strong>工具</strong>：草药工具<br /><strong>豁免</strong>：智力、感知<br /><strong>技能</strong>：从奥秘、驯兽、洞悉、医药、自然、察觉、宗教和求生中选择两项</p><h3>装备Equipment</h3><p>你带着以下装备开始游戏，此外该角色还可以从其背景项中获得额外的启始装备：</p><ul><li>（a）一个@UUID[Compendium.dnd5e_classpack.itempack.0FFBA161B7765569]{木盾}或（b）任意@UUID[Compendium.dnd5e_classpack.itempack.Item.47CL2KHBYl10r3aR]{简易武器}</li><li>（a）一把@UUID[Compendium.dnd5e_classpack.itempack.AEEA1D7FC790B0B5]{弯刀}或（b）任意@UUID[Compendium.dnd5e_classpack.itempack.Item.yBUcudyGXrlZIOuh]{简易近战武器}</li><li>@UUID[Compendium.dnd5e_classpack.itempack.81278767023C4C8D]{皮甲}，一个@UUID[Compendium.dnd5e_classpack.itempack.gEWUlWthAzKg2394]{探索套组}和一件@UUID[Compendium.dnd5e_classpack.itempack.lHNXs2W0UrXyZ07i]{德鲁伊法器}</li></ul><h2>角色选项</h2><blockquote><p>即使是在死亡之中，每个生物也都在扮演着它们的角色以维持巨大的平衡。但是现在失衡的因素在增长，一种力量在试图支配自然。这对于凡人种族而言是毁灭性的影响。他们所采取的行为远离了自然，由于他们，更多的腐化即将到来。作为德鲁伊，我们主要通过保护和教育，来维持巨大的平衡，但有些时候我们也不得不奋发图强，对抗危险并将其消灭。</p><p style=\"text-align:right\"><em>——萨芙兰，大德鲁伊</em></p></blockquote><p>德鲁伊是自然世界的守护者，这也同时意味着他们必须成为自然的声音，说出那些对一般人而言太过于微妙以至于无法听见的真相。许多人因为发现了他们亲近自然的本质而成为了德鲁伊；自然的力量、循环和流动通过惊叹和顿悟填充了他们的内心和灵魂。一些民间的智者和贤者都曾学习过自然，并写下记录它的力量与神秘的卷册，但区别于他们，德鲁伊是一种特殊存在：从某一刻开始，他们能表现出这种自然力量，产生魔法般的现象从而将他们与自然的精魂、与生命的流动联系在了一起。由于他们的这种力量太过于强大和诡秘，德鲁伊通常会被他们周围的人尊敬、回避或者是恐惧。 <br />你的德鲁伊角色或许会成为自然真正的崇敬者，或许是由于蔑视文明而只能从荒野中寻求藉慰。或者你的角色也可以成为一个想要努力将文明世界带入旷野之中，致使它们和谐相处的城市之子。你可以使用以下部分来充实你的德鲁伊，无论你的角色如何进入这个职业之中。</p><h2>珍视的物品</h2><p>一些德鲁伊会带着一个或更多的圣物，或者是对于他而言有深刻个人意义的物品。这些物品不一定是魔法的，不过一定在概念性或精神性上存有与德鲁伊的内心相联系的重要意义。<br />&gt; 当你决定你的角色珍视的物品是什么时，想一想关于它的起源故事：你如何得到这个物品，它为何而言对你重要？</p><table><tbody><tr><th><p>[[/r d6]]</p></th><th><p>物品</p></th></tr><tr><td><p>1</p></td><td><p>矗立在你村子中心的相遇树上的一条枝丫。</p></td></tr><tr><td><p>2</p></td><td><p>从神圣之河的源头采集的一小瓶河水。</p></td></tr><tr><td><p>3</p></td><td><p>被捆束在一起的特殊草木。</p></td></tr><tr><td><p>4</p></td><td><p>一个刻画着动物图案的青铜碗。</p></td></tr><tr><td><p>5</p></td><td><p>由干葫芦和冬青浆果做成的拨浪鼓。</p></td></tr><tr><td><p>6</p></td><td><p>由你的导师亲手继承给你的一把小小的金色镰刀。</p></td></tr></tbody></table><h2>精神向导</h2><p>许多德鲁伊会感觉到与自然中某种具体存在之间强烈的联系，例如一种水体，一种动物，一种树木，或者是一种其他植物。你认同这由你选择的向导；通过它的行为或者是它的本质，它树立了一种使你愿意效仿的榜样。</p><table><tbody><tr><th><p>[[/r d6]]</p></th><th><p>精神向导</p></th></tr><tr><td><p>1</p></td><td><p>紫杉树提醒着你不断更新自己的思想和灵魂，让旧的死去，新的生长。</p></td></tr><tr><td><p>2</p></td><td><p>橡树象征了力量和活力。在橡树之下冥想让你的身体和心灵重新坚韧且不被动摇。</p></td></tr><tr><td><p>3</p></td><td><p>河流的永恒流动让你联想到世界的伟大跨度。你提醒自己在行动时要考虑到自然的长远利益。</p></td></tr><tr><td><p>4</p></td><td><p>海洋仿佛一个持续搅动着混沌力量的锅炉。它令你接受，变化是维持自我在世界中继续存在的必要因素。</p></td></tr><tr><td><p>5</p></td><td><p>飞鸟是最好的证明，即使最渺小的生物也能存活下来，只要它们远离争端。</p></td></tr><tr><td><p>6</p></td><td><p>狼的习性展示了个人力量在集群面前的微不足道。</p></td></tr></tbody></table><h2>导师</h2><p>对于未来的德鲁伊而言，寻求一名长老或指导者（或者被发现）来教导它们魔法艺术的基础并非不同寻常。大多数德鲁伊从青年时期就开始跟随导师进行训练，并且导师在塑造学生的态度和信仰时也扮演了重要的角色。<br />如果你的角色从其他人那儿接受了训练，他会是怎样的个体？你们之间关系的本质是什么？你的导师是否灌输给你一个独特的前景，或者是影响了你选择道路去实现你的目标？</p><table><tbody><tr><th><p>[[/r d6]]</p></th><th><p>导师</p></th></tr><tr><td><p>1</p></td><td><p>你的导师是一个智慧的树人，它在以年为单位的时间跨度中教育着你，而非几天或几个月。</p></td></tr><tr><td><p>2</p></td><td><p>你被一个树妖所教导，她同时也是一扇通往无底深渊的休眠传送门的守望者。在训练期间，你被托付了从隐藏的威胁中守卫这个世界的责任。</p></td></tr><tr><td><p>3</p></td><td><p>你的导师总是用猎鹰的形态与你交流。你从来没见过导师的人形样貌。</p></td></tr><tr><td><p>4</p></td><td><p>你和其他几个年轻人被同一个老德鲁伊教导，直到其中有一个人背叛了你的小组并且杀死了你的导师。</p></td></tr><tr><td><p>5</p></td><td><p>你的导师只用幻象与你见面。你从来没有见过这个人，你甚至不能确定是否它真的以凡人的形态存在过。</p></td></tr><tr><td><p>6</p></td><td><p>你的导师是一个熊人，他教导你要对所有活物一视同仁。</p></td></tr></tbody></table>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.monsterspack.Actor.BXIr2v67pAg3A49z",
+      "reason": "top-level-document-id-missing",
+      "location": "new-icon:!items!QHD9S9sWWIpPnykD.system.activities.dnd5eactivity000.profiles.0.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.monsterspack.Actor.BXIr2v67pAg3A49z",
+      "parent": {
+        "pack": "new-icon",
+        "key": "!items!QHD9S9sWWIpPnykD",
+        "id": "QHD9S9sWWIpPnykD",
+        "name": "龙卷尘暴 Dust Devil",
+        "type": "spell",
+        "sourceDataSha256": "2cbdfe1ca41608cf1f808a4bb9f8af787e875426207673bb09a36c0c4ce27b84"
+      },
+      "advancement": null,
+      "activity": {
+        "_id": "dnd5eactivity000",
+        "type": "summon",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "bonuses": {
+          "ac": "",
+          "hp": "",
+          "attackDamage": "",
+          "saveDamage": "",
+          "healing": ""
+        },
+        "creatureSizes": [],
+        "creatureTypes": [],
+        "match": {
+          "proficiency": true,
+          "attacks": false,
+          "saves": true,
+          "ability": ""
+        },
+        "profiles": [
+          {
+            "name": "",
+            "_id": "E8Y81N5x8bIg4jI2",
+            "uuid": "Compendium.dnd5e_classpack.monsterspack.Actor.BXIr2v67pAg3A49z",
+            "level": {
+              "min": null,
+              "max": null
+            },
+            "types": []
+          }
+        ],
+        "summon": {
+          "identifier": "",
+          "mode": "",
+          "prompt": true
+        },
+        "sort": 0,
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "sourceDescriptionExcerpt": "<p>选择距离之内，你能看见的一个5英尺立方的，未被占据的空气。一股元素，外观如同尘卷风，出现在那里，并在法术的持续时间内持续存在。<br />任何在尘卷风周围5英尺范围内结束其回合的生物必须进行一次力量豁免检定。若检定失败，该生物受到1d8点钝击伤害并被推离10英尺。若检定成功，该生物只受到上述伤害的一半，并不会被推离。<br />以一个附赠动作，你可以让尘卷风向任意方向移动至多30英尺。若尘卷风移动时经过了沙子，尘土，松软的土壤或小砂砾，它将会卷起这些物质，在自身周围形成10英尺半径的残骸云，持续到你下个回合的开始。残骸云重度遮蔽了所在区域。</p>\n<p><strong>升环效果：</strong>当你使用3环或更高的法术位施放该法术时，使用的法术位每高一环，伤害便增加1d8。</p>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.neAO6rDgsBeQ8bWb",
+      "reason": "top-level-document-id-missing",
+      "location": "itempack:!items!BC04F7BE90F193C0.system.activities.8xeSfAR1Fa7nQv4c.spell.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.neAO6rDgsBeQ8bWb",
+      "parent": {
+        "pack": "itempack",
+        "key": "!items!BC04F7BE90F193C0",
+        "id": "BC04F7BE90F193C0",
+        "name": "传送头盔 Helm of Teleportation",
+        "type": "equipment",
+        "sourceDataSha256": "fa7592b11c67c520bd642f64af6b99e449f1714aab26282758ff1b44a2ba57e0"
+      },
+      "advancement": null,
+      "activity": {
+        "type": "cast",
+        "spell": {
+          "uuid": "Compendium.dnd5e_classpack.new-icon.Item.neAO6rDgsBeQ8bWb",
+          "challenge": {
+            "attack": null,
+            "save": null,
+            "override": false
+          },
+          "level": "7",
+          "properties": [
+            "vocal",
+            "somatic",
+            "material"
+          ],
+          "spellbook": true,
+          "ability": ""
+        },
+        "_id": "8xeSfAR1Fa7nQv4c",
+        "sort": 0,
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1"
+            }
+          ]
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "name": "",
+        "img": ""
+      },
+      "sourceDescriptionExcerpt": "<p><em>奇物（需同调）</em></p>\n<p>这顶头盔有3发充能。戴着这顶头盔时，你可以用一个动作并消耗1发充能施展@UUID[Compendium.dnd5e_classpack.new-icon.7wAk7D98B8gAgKzX]{传送术 Teleport}。每天黎明时头盔将恢复[[/r 1d3]]发已消耗的充能。</p>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.9v0Bzr3qFEEuEvnk",
+      "reason": "top-level-document-id-missing",
+      "location": "spell-table:!journal.pages!NfpC7UnUn2qtsO2L.GVunZOQL0p8YVzxQ.system.spells.147",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.9v0Bzr3qFEEuEvnk",
+      "parent": {
+        "pack": "spell-table",
+        "key": "!journal.pages!NfpC7UnUn2qtsO2L.GVunZOQL0p8YVzxQ",
+        "id": "GVunZOQL0p8YVzxQ",
+        "name": "术士法术列表",
+        "type": "spells",
+        "sourceDataSha256": "e2a9041c5ae10ced41831393f8e57866ac6db12315b916ea0b2d561683aec7e3"
+      },
+      "advancement": null,
+      "activity": null,
+      "sourceDescriptionExcerpt": "",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.0JNPscs02eBdxlBZ",
+      "reason": "top-level-document-id-missing",
+      "location": "subclass:!items!UdiF2PfBvmVstQ01.system.advancement.2.configuration.items.1.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.0JNPscs02eBdxlBZ",
+      "parent": {
+        "pack": "subclass",
+        "key": "!items!UdiF2PfBvmVstQ01",
+        "id": "UdiF2PfBvmVstQ01",
+        "name": "散打宗 Way of the Open Hand",
+        "type": "subclass",
+        "sourceDataSha256": "c6d40fc4ef9983b59fbdefdef4a7d1380a272eed512ba7f5a908885535cab407"
+      },
+      "advancement": {
+        "_id": "itghiv65p8swreh0",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.class-abilityphb.Y3yZcHJQTw2VMf0R"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.0JNPscs02eBdxlBZ"
+            }
+          ],
+          "optional": false,
+          "spell": {
+            "preparation": "innate",
+            "uses": {
+              "max": "1",
+              "per": "lr",
+              "requireSlot": false
+            },
+            "ability": []
+          }
+        },
+        "value": {},
+        "level": 11,
+        "title": "职业特性",
+        "icon": null,
+        "hint": ""
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>无论是用运用拳头还是兵刃，散打宗的武僧都是终极的战技大师。他们精通击退和绊倒敌人，运用气治疗己身，并通过深入冥想来杜绝灾厄。</p>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.h7seYAD7IwBxnozX",
+      "reason": "top-level-document-id-missing",
+      "location": "subclass:!items!UdiF2PfBvmVstQ04.system.advancement.1.configuration.items.1.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.h7seYAD7IwBxnozX",
+      "parent": {
+        "pack": "subclass",
+        "key": "!items!UdiF2PfBvmVstQ04",
+        "id": "UdiF2PfBvmVstQ04",
+        "name": "日魂宗 Way of the Sun Soul（XGE）",
+        "type": "subclass",
+        "sourceDataSha256": "43026f2f7fb5973086269f92e8c8847e80c32dad82ef52767df896cf08fbf604"
+      },
+      "advancement": {
+        "_id": "ya6uqp8hw4r54zsx",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.extra-ability.8fO6wjfLt8LT8lg7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.h7seYAD7IwBxnozX",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": {
+            "preparation": "innate",
+            "uses": {
+              "max": "",
+              "per": "",
+              "requireSlot": false
+            },
+            "ability": [
+              "wis"
+            ]
+          }
+        },
+        "value": {},
+        "level": 6,
+        "title": "职业特性",
+        "icon": null,
+        "hint": ""
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>日魂宗的武僧学习如何引导出自己的生命能量并将它们转换为炽热的光芒。他们相信在每一个活着的生物的灵魂中都有这样不熄的光芒存在，并且教导他们以一种特殊的冥想方式去解锁。</p>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.new-icon.Item.v1ebNToOvU3u8dkm",
+      "reason": "top-level-document-id-missing",
+      "location": "subclass:!items!UdiF2PfBvmVstQ04.system.advancement.2.configuration.items.1.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.new-icon.Item.v1ebNToOvU3u8dkm",
+      "parent": {
+        "pack": "subclass",
+        "key": "!items!UdiF2PfBvmVstQ04",
+        "id": "UdiF2PfBvmVstQ04",
+        "name": "日魂宗 Way of the Sun Soul（XGE）",
+        "type": "subclass",
+        "sourceDataSha256": "43026f2f7fb5973086269f92e8c8847e80c32dad82ef52767df896cf08fbf604"
+      },
+      "advancement": {
+        "_id": "itghiv65p8swreh0",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.extra-ability.5xnWV6pqjvB7lgls"
+            },
+            {
+              "optional": false,
+              "uuid": "Compendium.dnd5e_classpack.new-icon.Item.v1ebNToOvU3u8dkm"
+            }
+          ],
+          "optional": false,
+          "spell": {
+            "preparation": "innate",
+            "uses": {
+              "max": "",
+              "per": "",
+              "requireSlot": false
+            },
+            "ability": [
+              "wis"
+            ]
+          }
+        },
+        "value": {},
+        "level": 11,
+        "title": "职业特性",
+        "icon": null,
+        "hint": ""
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>日魂宗的武僧学习如何引导出自己的生命能量并将它们转换为炽热的光芒。他们相信在每一个活着的生物的灵魂中都有这样不熄的光芒存在，并且教导他们以一种特殊的冥想方式去解锁。</p>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.Ccz6h13ZVz3TYdBd",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!0S3IVFzcr9KUbzUn.system.advancement.4.configuration.items.8.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.Ccz6h13ZVz3TYdBd",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!0S3IVFzcr9KUbzUn",
+        "id": "0S3IVFzcr9KUbzUn",
+        "name": "拉铎斯邪教徒 Rakdos Cultist",
+        "type": "background",
+        "sourceDataSha256": "2ecc9b7153ad171885c535b148630d2e091ab2c13b2f6c2b6cb676f335e9fff0"
+      },
+      "advancement": {
+        "_id": "KtJt36VOI1jKBZYE",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.BfXf59a1jb1jxLQ1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.FE5CA6991FFE9495",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.5164034FF89D4D25",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.38FAF22884C04056",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.738C3DEAB8666329",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.759CA0D4ADA4E281",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.C825E97F6F43AA54",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Ccz6h13ZVz3TYdBd",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.nslfBf0NVTaTy8Wl",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>你本质上是一个艺人，一个有戏剧天赋和对聚光灯的热爱的表演者。你已经花了多年时间磨练你的技艺，掌握了一套要求很高的技能，这样你就可以华丽地表演它们，让它们看起来很容易。疯狂的掌声，人群的尖叫，混乱和恐怖蔓延到大街上——这就是你活着的目的。</p><p>你也是一个崇拜一个喜欢暴力和混乱的古老恶魔的信徒。正因如此你的最高愿望就是用自己的表演取悦亵渎者、暴动之王。</p><hr /><p><strong>技能熟练项</strong>：体操，表演<br /><strong>工具熟练项</strong>：一种@UUID[Compendium.dnd5e_classpack.itempack.FE5CA6991FFE9495]{乐器}<br /><strong>语言</strong>：深渊语与巨人语中选择一个<br /><strong>装备</strong>：一个拉铎斯@UUID[Compendium.dnd5e_classpack.itempack.Item.C825E97F6F43AA54]{徽章}，一把@UUID[Compendium.dnd5e_classpack.itempack.FE5CA6991FFE9495]{乐器}（你选择的），一套@UUID[Compendium.dnd5e_classpack.itempack.5164034FF89D4D25]{表演服装}，一个由铸铁制成的@UUID[Compendium.dnd5e_classpack.itempack.Ccz6h13ZVz3TYdBd]{附盖提灯}，10尺长的满是钉刺的@UUID[Compendium.dnd5e_classpack.itempack.38FAF22884C04056]{链条}，一个@UUID[Compendium.dnd5e_classpack.itempack.738C3DEAB8666329]{火绒盒}，10个@UUID[Compendium.dnd5e_classpack.itempack.759CA0D4ADA4E281]{火把}，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一个包含10gp的@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{钱包}（俄佐立1-zion硬币），一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.nslfBf0NVTaTy8Wl]{红色的甜果汁}。<br /><strong>特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.kTttcbaBudHBV0p5]{劣迹昭著 Fearsome Reputation}</p><hr /><p><strong>戏剧天赋</strong></p><p>拉铎斯的表演风格通常是标准的马戏团式杂技与火、铁钉和钩子以及怪物融合在一起。您可以投掷d8骰子或从类型选项表进行选择，以确定您喜欢的类型。</p><table><caption>表演选择</caption><thead><tr><th>[[/r d8]]</th><th>表演类型</th></tr></thead><tbody><tr><td>1</td><td>钉轮杂技演员</td></tr><tr><td>2</td><td>讽刺演员</td></tr><tr><td>3</td><td>戏火者</td></tr><tr><td>4</td><td>木偶戏演员</td></tr><tr><td>5</td><td>痛苦艺术家</td></tr><tr><td>6</td><td>噪音音乐家</td></tr><tr><td>7</td><td>梦魇骑士</td></tr><tr><td>8</td><td>祭祀大师</td></tr></tbody></table><hr /><p><strong>拉铎斯教派法术</strong></p><blockquote><p>先决条件：施法职业或契约魔法专长</p></blockquote><p>对你而言，拉铎斯教派魔法表中的法术将加入到你的施法职业法术列表中。（如果你有兼职职业拥有法术列表，这些法术 也将全部加入该法术列表。）</p><table><caption>拉铎斯公会法术</caption><thead><tr><th>施法等级</th><th>法术</th></tr></thead><tbody><tr><td>戏法</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.Oa5hMlxdpwLNtLWp]{火焰箭}@UUID[Compendium.dnd5e_classpack.new-icon.ZP65lHUVsQAd2NCc]{恶言相加}</td></tr><tr><td>1st</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.CB9z74KJLWMplGuz]{燃烧之手}@UUID[Compendium.dnd5e_classpack.new-icon.j8wwbcc1tlY9hLRf]{不谐低语}@UUID[Compendium.dnd5e_classpack.new-icon.Qh8PTvCxR44isqVO]{炼狱叱喝}</td></tr><tr><td>2nd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.otAaRLMc7OfxRYAw]{疯狂冠冕}@UUID[Compendium.dnd5e_classpack.new-icon.YfT8hNtZ4Qt8aLKc]{注目术}@UUID[Compendium.dnd5e_classpack.new-icon.TEZY0aYJtnuU4FlW]{炽焰法球}</td></tr><tr><td>3rd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.wnJNHkm5kThiJixx]{恐惧术}@UUID[Compendium.dnd5e_classpack.new-icon.YLYeCtTmbjIZsPvN]{加速术}</td></tr><tr><td>4th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.MZ1jwLEJukFjSv1a]{困惑术}@UUID[Compendium.dnd5e_classpack.new-icon.agTzLRmgNSVghaGk]{火墙术}</td></tr><tr><td>5th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.JudswpO6E5GBlyfQ]{支配人类}</td></tr></tbody></table><p>你的魔法通常会产生一种闪光效果，将你或你的目标包围在无害的火焰和阴影之中。当你操纵对手的思想时，一个燃烧着的拉铎斯符号可能会暂时出现在目标的脸上，就像一个面具。</p><hr /><p><strong>建议特征</strong></p><p>恶魔崇拜的成员通常不是以仁慈或者精神正常而著称,所以你可能会有一些天然区别与普通的守法公民。</p><table><thead><tr><th>[[/r d8]]</th><th>个人特点</th></tr></thead><tbody><tr><td>1</td><td>我于毁灭之中汲取快乐，他们越痛苦，我就越快乐。</td></tr><tr><td>2</td><td>我于暴力之中释放本我，在愤怒中迷失，无法停止。</td></tr><tr><td>3</td><td>我于凡事之中悟得欢笑，为其滑稽而笑，以其酷虐而乐。</td></tr><tr><td>4</td><td>我于痛苦之中获取欢愉，痛在他身，乐在我心。</td></tr><tr><td>5</td><td>我乐于挑战别人的耐心（我真的不知道怎么翻译成以上的句式，如果有人能翻译成，请回帖）</td></tr><tr><td>6</td><td>我无法忍受预言，既然说已被预言，那我就要在其中加入混乱，看看着预言是否成真。</td></tr><tr><td>7</td><td>我施以权力来保证我得到我所要的。</td></tr><tr><td>8</td><td>我乐于打碎那些精美的艺术品，手指也是一样的，他们同样是精美的艺术品。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td>公会。我的公会重于一切（任意）</td></tr><tr><td>2</td><td>享乐。死亡终将到来，故而及时行乐。（中立）</td></tr><tr><td>3</td><td>创造。我努力的寻找各式各样的形式来从痛苦之中展现我的艺术，不论是我的痛苦还是他人的（混乱）</td></tr><tr><td>4</td><td>自由。没人能告诉我该做什么，不该做什么。（混乱）</td></tr><tr><td>5</td><td>平等。我希望看到一个没有阶级区分，没有公会限制的新拉尼卡。（混乱）</td></tr><tr><td>6</td><td>奇观。人们因他们所见艺术品中的伟大而鼓舞。（任意）</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>羁绊</th></tr></thead><tbody><tr><td>1</td><td>我是某个剧团中的一员，这些人对我来说就是一切。</td></tr><tr><td>2</td><td>一个血祭司告诉我，我有一个特殊的命运要完成，我正在试图弄明白它是什么。</td></tr><tr><td>3</td><td>我私下里认为我能从内部改变邪教，利用我的影响力来帮助控制肆意的暴力。</td></tr><tr><td>4</td><td>我拥有拉铎斯曾经触碰过的东西(当场被烧焦)，我很珍惜。</td></tr><tr><td>5</td><td>我想在我选择的表演形式上比我剧团的其他成员做得更好。</td></tr><tr><td>6</td><td>我热爱拉铎斯，我活着就是为了给他留下深刻的印象。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺陷</th></tr></thead><tbody><tr><td>1</td><td>我的家庭是其他公会的杰出成员，虽然我享受我狂野的生活但是我不想让他们难堪</td></tr><tr><td>2</td><td>我难以掩饰自己的情感与意愿，即便我想要主动掩饰也无法做到。</td></tr><tr><td>3</td><td>我忽视了他人的警告。</td></tr><tr><td>4</td><td>我憎恨那些富有的或者有权力的人</td></tr><tr><td>5</td><td>当我愤怒时，我将以暴力的形式将其发泄出来。</td></tr><tr><td>6</td><td>世上没有太多的快乐。</td></tr></tbody></table><hr /><p><strong>人际关系</strong></p><p>拉铎斯教派是有组织的，个体演员经常从一个表演剧团到另一个表演剧团。几乎所有的教派成员都认识即便现在在不同剧团的演员，这使得广泛的联系网络成为可能。</p><p>在拉铎斯人际关系表上投掷两次骰子(用于盟友和对手)，在非Rakdos人际关系表上投掷一次骰子。</p><table><caption>拉铎斯人际关系</caption><thead><tr><th>[[/r d8]]</th><th>人际关系</th></tr></thead><tbody><tr><td>1</td><td>在我的前搭档搬到另一个剧团之前，我是一个双人剧团的成员。</td></tr><tr><td>2</td><td>我和我的兄弟姐妹离家出走，一起崇拜拉铎斯。我们关系很近。</td></tr><tr><td>3</td><td>我儿时的一个朋友是拉铎斯总工会厅——锐兹玛第中的一个侍从。</td></tr><tr><td>4</td><td>我父母把我带进公会，并教我做生意的技巧。</td></tr><tr><td>5</td><td>在邪教里有一个不太厉害的恶魔，他认为他欠我一个人情，我还有啥好说的呢?</td></tr><tr><td>6</td><td>我们剧团的司仪和其他剧团关系很好。</td></tr><tr><td>7</td><td>我和另一个剧团的一位痛苦艺术家有过一段罗曼史。</td></tr><tr><td>8</td><td>拉铎斯亲眼目睹了我的表演。</td></tr></tbody></table><table><caption>非拉铎斯人际关系</caption><thead><tr><th>[[/r d10]]</th><th>人际关系</th></tr></thead><tbody><tr><td>1</td><td>我认识一个俄佐立朗诵人他有很有趣的黑暗面。</td></tr><tr><td>2</td><td>一个波洛斯队长真的想“救赎”我。</td></tr><tr><td>3</td><td>我想我们剧团的一个成员是迪米尔密探。</td></tr><tr><td>4</td><td>曾经有一次，我请一位葛加理美杜莎参加一场表演。从那以后我们的关系一直很好。</td></tr><tr><td>5</td><td>我来自古鲁，在那里还有亲戚。</td></tr><tr><td>6</td><td>一名依捷技术人员为我的表演提供烟火。</td></tr><tr><td>7</td><t",
+      "sourceDescriptionTruncated": true
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.SAL7B2r3RiCcjpta",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!6iu4tXhiVXPYCQpg.system.advancement.3.configuration.items.2.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.SAL7B2r3RiCcjpta",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!6iu4tXhiVXPYCQpg",
+        "id": "6iu4tXhiVXPYCQpg",
+        "name": "受难者 Ruined",
+        "type": "background",
+        "sourceDataSha256": "22ae562ae6f0c956caec7370b1ce571d475872fcc4470f9fe6083b71282aacd8"
+      },
+      "advancement": {
+        "_id": "f1MysfZXTYXSkBod",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.E5A64EEB31BCE7BC",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.618CDDEF8D5438F2",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.SAL7B2r3RiCcjpta",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.368E0E5BE59CE2F7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.018199C228C3FC13",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.ktunsY2SJcj80sfU",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<div class=\"rd__b  rd__b--1\"><p>一切都曾进行得很顺利！当你突然失去一切时，你曾有过一个奢侈，爱与舒适的生活。也许你被诬陷为犯下了你所未犯过的罪名并且失去了名誉，财富与事业。又也许一只狂暴的龙或某只其他怪物在一个灾难的下午抹消了你所拥有的一切。又或者你前去寻找万象无常牌，希望让你的成功人生更加辉煌——不料却抽到了一张永远改变了你命运的毁灭性的卡牌。<br />你的绝望驱使你投入冒险者的事业。你并非为了兴趣与荣耀而去探访黑暗的地牢与其中的怪物居民；你这么做只是因为别无他路。但你曾经在命运之轮其上崛起过，而凭着机遇与坚韧，你又何尝不能东山再起？</p></div><hr /><div class=\"rd__b  rd__b--1\"><ul class=\"rd__list rd__list-hang-notitle\"><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>技能熟练项：</strong>隐匿，生存</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>语言：</strong>一项你自选的语言</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>工具熟练项：</strong>一套你自选的赌具（比如纸牌或三龙牌）</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>装备：</strong>一个有裂缝的沙漏，一副生锈的镣铐，一个半空的玻璃瓶，一套狩猎陷阱，一套赌具（与你所选熟练项一致），一套旅行者服装，以及一个装着13gp的小包</p><p></p></li></ul><div data-roll-name-ancestor=\"Feature: Still Standing\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"1\"><span class=\"entry-title-inner\">特性：屹立不倒</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>你已经受住了难以忍受的不幸，而你拥有着他人想象不到的隐藏储备。你获得@UUID[Compendium.dnd5e_classpack.feats-all.Item.ZSjxby9CMumX5Fex]{警觉}，@UUID[Compendium.dnd5e_classpack.feats-all.Item.sYRjltuR7nYyIMOg]{熟习}或@UUID[Compendium.dnd5e_classpack.feats-all.Item.1qPQNtq5EQwEa7OC]{健壮}专长（由你选择）。你所选择的专长反映了你是如何处理永久改变了你命运的可怕损失。如果你对每个机会都保持着敏锐的感官并通过抓住最微小的希望以逃离痛苦深渊，则选择警觉专长。如果你加倍努力以夺回曾属于你的东西，则选择熟习专长。如果你硬生生地挺过了自己的厄运，则选择健壮专长。</p><p></p></div><div data-roll-name-ancestor=\"Suggested Characteristics\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"2\"><span class=\"entry-title-inner\">建议特征</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>从苦难中崛起会塑造一个人的观点。受难者个人特征表向你建议了你的角色可能会采用的特征（以及万象无常牌中可能导致了该特征的灾难性的卡牌）。</p><p></p><table class=\"w-100 rd__table  stripe-odd-table\"><thead><tr><th class=\"ve-col-2 ve-text-center\" data-rd-isroller=\"true\">[[/r d6]]</th><th class=\"ve-col-10\" data-rd-isroller=\"false\">个人特征</th></tr></thead><tbody><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"1\" data-roll-max=\"1\">1</td><td class=\"ve-col-10\">我已从过往中转变，而我努力在自己的新道路上过上好日子。（平衡，王座）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"2\" data-roll-max=\"2\">2</td><td class=\"ve-col-10\">每一寸光阴我都拒绝浪费。（尤瑞艾莉，头骨）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"3\" data-roll-max=\"3\">3</td><td class=\"ve-col-10\">既然我已战胜了一无所有，那我便可以从任何困境中存活。（愚者，废墟，鹰爪）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"4\" data-roll-max=\"4\">4</td><td class=\"ve-col-10\">我明白敌人们在与我抗衡，而我总是做好了最坏的准备。（火焰，浪客）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"5\" data-roll-max=\"5\">5</td><td class=\"ve-col-10\">我将每件事情都理解为我仍未弄清的一个更大的谜图的其中一部分。（谜题，星辰）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"6\" data-roll-max=\"6\">6</td><td class=\"ve-col-10\">我必须加倍弥补我已失去的如此多的时间。（城堡，虚空）</td></tr></tbody></table></div><div data-roll-name-ancestor=\"Building a Ruined Character\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"3\"><span class=\"entry-title-inner\">创建一位受难者角色</span></h3><p>受难者角色在厄运临头之前曾在世界的巅峰。其中许多人都很富有。其他的虽出身于中等背景，但朋友，家人与爱人也曾围绕在他们身边。他们可能非常出名，又或者以前从未遇到过严重的困难。有些生来便享有特权又或者通过欺骗或虚假身份从而声名鹊起。现在一副万象无常牌——或者其他的灾难——便将他们像摧毁纸牌屋一般击溃了。<br />如果你角色的人生因@UUID[Compendium.dnd5e_classpack.itempack.Item.05C8E2BFDDA00558]{万象无常牌}而沦落，考虑一下是哪张牌引起的。也许你的角色因城堡牌或虚空牌而被常年监禁，而现在其认识的所有人均已死去。也许你的角色抽到了浪客牌，而与其最亲密的人——配偶，孩子或者父母——转而背叛了其。一只由火焰牌所释放出来的魔鬼也可能会毁掉其的人生。而废墟牌或鹰爪牌也可能会偷走角色的物资或让其背负巨额债务。</p><p></p></div><div data-roll-name-ancestor=\"Ruined Trinkets\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"4\"><span class=\"entry-title-inner\">受难者饰品</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>当你创建角色时，可以根据受难者饰品表掷骰以替代玩家手册中的饰品表作为你的起始饰品。</p><table class=\"w-100 rd__table  stripe-odd-table\"><thead><tr><th class=\"ve-col-2 ve-text-center\" data-rd-isroller=\"true\">[[/r d6]]</th><th class=\"ve-col-10\" data-rd-isroller=\"false\">饰品</th></tr></thead><tbody><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"1\" data-roll-max=\"1\">1</td><td class=\"ve-col-10\">一块曾受宠爱的传家宝的生锈碎片</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"2\" data-roll-max=\"2\">2</td><td class=\"ve-col-10\">一张地契，但所有能够把它和你联系起来的所有名字及记录皆已模糊褪色。</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"3\" data-roll-max=\"3\">3</td><td class=\"ve-col-10\">一个曾经充满了强大魔法的小玩意</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"4\" data-roll-max=\"4\">4</td><td class=\"ve-col-10\">一张破损的有穿洞的卡牌，其正面描绘着影响了你的那张卡牌。</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"5\" data-roll-max=\"5\">5</td><td class=\"ve-col-10\">一颗发黄的类人生物的牙齿，当其放置于枕头底下时，会发出神秘而恐惧的低语。</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"6\" data-roll-max=\"6\">6</td><td class=\"ve-col-10\">一个来自曾经亲密但现在是敌人的某人的纪念品</td></tr></tbody></table></div></div>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.vXvgokemaTFPuoWT",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!7zan1L3blaQUHWDp.system.advancement.3.configuration.items.5.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.vXvgokemaTFPuoWT",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!7zan1L3blaQUHWDp",
+        "id": "7zan1L3blaQUHWDp",
+        "name": "析米克科学家 Simic Scientist",
+        "type": "background",
+        "sourceDataSha256": "171780d15539c83a1f993af1c710f275b98383eed7f242ff34845293f094ef89"
+      },
+      "advancement": {
+        "_id": "KtJt36VOI1jKBZYE",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.BfXf59a1jb1jxLQ1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.C825E97F6F43AA54",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.A9740DF03AF65121",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.vXvgokemaTFPuoWT",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "title": "",
+        "hint": "一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶鱼鳞，一瓶海藻，一瓶水母刺，一瓶不明黏液，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。",
+        "icon": null
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>想象一个完美的世界:自然与文明和谐共存，相互适应;生命与环境被塑造得和谐相称。这就是你一直试图在析米克联合的实验室中塑造的世界。自然是关于适应、进化和平衡的——但是为了跟上文明的发展脚步，自然需要生机师和地貌塑师的帮助。如果在这个过程中，你碰巧创造了超级士兵和变异怪物，使得它们可以增强析米克联合对其他公会的计划和野心的防御，那就更好不过了。</p><hr /><p><strong>技能熟练项</strong>：奥秘，医疗<br /><strong>语言</strong>：任选两门语言<br /><strong>装备</strong>：一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh]{鱼鳞}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi]{海藻}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw]{水母刺}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy]{不明黏液}，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。<br /><strong>特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.Ys762Dpu5dUjR4Jt]{研究者 Researcher（GGR）}</p><hr /><p><strong>分支与项目</strong></p><p>作为析米克的研究人员，你是某个分支clade的一员，或者是一个专注于解决当前需求的专项、短期项目的研究人员。分支是一个由不同的个体组成的团队，他们将各自的才能结合在一起，以追求一个共同的目标。投掷1d6或从研究选项表中选择一项，以确定你的研究领域。</p><table><thead><tr><th>[[/r D6]]</th><th>分支/项目</th></tr></thead><tbody><tr><td>1</td><td>甲壳分支，注重保护与耐用性</td></tr><tr><td>2</td><td>鳍类分支，注重移动力</td></tr><tr><td>3</td><td>涡流分支，注重周期性变化与超魔</td></tr><tr><td>4</td><td>守护者项目，注重创造守卫怪物和超级士兵</td></tr><tr><td>5</td><td>隐匿项目，情报与反情报</td></tr><tr><td>6</td><td>新领域的独立研究</td></tr></tbody></table><hr /><p><strong>析米克公会法术</strong></p><blockquote><p>先决条件：施法能力或契约魔法特性</p></blockquote><p>对你来说，析米克公会法术表上的法术将被添加到你的施法者职业的法术列表中。(如果你是一个拥有多个法术列表的多职业角色，这些法术会被添加到你所有的法术列表中。)</p><table><caption>析米克公会法术表</caption><thead><tr><th>施法等级</th><th>法术</th></tr></thead><tbody><tr><td>戏法</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.E7wFpzV30sX2e7t6]{酸液飞溅}@UUID[Compendium.dnd5e_classpack.new-icon.Q6muyDarRcXMcuKv]{德鲁伊伎俩}</td></tr><tr><td>1st</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.V3BKvj7g0q2XO0cg]{侦测毒性和疾病}@UUID[Compendium.dnd5e_classpack.new-icon.JaxkuxSdKN1Weybr]{脚底抹油}@UUID[Compendium.dnd5e_classpack.new-icon.1B8U6kl0egesx3FK]{跳跃术}</td></tr><tr><td>2nd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.RzU9orr1mmUeZOcl]{变身术}@UUID[Compendium.dnd5e_classpack.new-icon.SCmGEYM6V880rfaW]{强化属性}@UUID[Compendium.dnd5e_classpack.new-icon.1bUnNgI45qffE1P9]{变巨/缩小术 Enlarge/Reduce}</td></tr><tr><td>3rd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.gjE6zBmfdUOwXiae]{气化形体}@UUID[Compendium.dnd5e_classpack.new-icon.cNIfr5CzsBZIPwHs]{水中呼吸}@UUID[Compendium.dnd5e_classpack.new-icon.WLWSZA4pZSGb0Mku]{风墙术}</td></tr><tr><td>4th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.OZMc9g7XaWuRc36J]{行动自如}@UUID[Compendium.dnd5e_classpack.new-icon.IXs3Neqbl8xaT3yk]{变形术}</td></tr><tr><td>5th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.Zwe287Drdl1TkG8e]{造物术}</td></tr></tbody></table><p>当你的魔法使你自己或他人的身体发生变化时，结果往往显示出鱼、两栖动物或其他水生生物的特征。有时伴随着你的施法，会产生带有魔法能量的蓝绿色漩涡，其反映了自然精确完美的螺旋。</p><hr /><p><strong>建议特征</strong></p><p>析米克联合的奇异科学吸引了某种类型的个人崇拜，并包含了一套关于生命本质的信仰。Simic成员的牵绊和缺陷来自他们的科学研究——包括他们创造的新生命形式，他们可能变得非常依恋于此。</p><table><thead><tr><th>[[/r d8]]</th><th>特点</th></tr></thead><tbody><tr><td>1</td><td>我迫不及待地想看看我接下来会变成什么样子!</td></tr><tr><td>2</td><td>我相信一切都有不断改进的趋势。</td></tr><tr><td>3</td><td>我渴望向那些对我最复杂的实验和理论不感兴趣的人解释每一个细节。</td></tr><tr><td>4</td><td>我认为需要向每个人解释最基本的概念。</td></tr><tr><td>5</td><td>我描述的每一件事都像是在写我的研究笔记（事实往往如此）。</td></tr><tr><td>6</td><td>我对生活中似乎无尽的状态和变化充满了的好奇。</td></tr><tr><td>7</td><td>我忍不住要窥探任何被禁止的东西，因为那一定非常有趣。</td></tr><tr><td>8</td><td>我使用非常专业的词汇来避免交流中的不精确和模糊。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td>公会。我的公会才是最重要的。(任何)</td></tr><tr><td>2</td><td>改变。所有的生命都是为了追求完美，而我们的工作就是要让它快点完成——不管过程中会发生什么。(混乱)</td></tr><tr><td>3</td><td>知识。理解这个世界比你用你的知识做什么更重要。(中立)</td></tr><tr><td>4</td><td>进步。我想把这个世界改造成更高级的生命形式，让所有人都能享受进化。(善良)</td></tr><tr><td>5</td><td>逻辑。让感情和原则干扰逻辑的结论是愚蠢的。(守序)</td></tr><tr><td>6</td><td>傲慢。我巨大的智慧和力量使我能轻易对他人施加影响。(邪恶)</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>牵绊</th></tr></thead><tbody><tr><td>1</td><td>我协助创造了一个融合体，我像爱宠物一样爱它，它会带我去任何地方……但它有一栋楼那么大，甚至可能会吃掉我。</td></tr><tr><td>2</td><td>在我的实验室里，我发现了一种东西，我觉得它可以消灭拉尼卡一半的生物。</td></tr><tr><td>3</td><td>我分支中的其他研究人员是我的家人——一个古怪的大家庭，包括许多公会成员和其他物种。</td></tr><tr><td>4</td><td>我曾经的实验室包含了对我来说珍贵的一切。</td></tr><tr><td>5</td><td>我要报复那个杀了我宝贵的融合体造物的目光短浅的傻瓜。</td></tr><tr><td>6</td><td>我做的每件事都是为了给我爱的人留下深刻的印象。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺点</th></tr></thead><tbody><tr><td>1</td><td>我有一个相当尴尬的突变，我会尽我所能不让别人发现它。</td></tr><tr><td>2</td><td>比起和怪兽战斗，我更感兴趣的是记录怪兽的解剖结构。</td></tr><tr><td>3</td><td>我似乎会在每一个社交场合问一些粗鲁的私人问题。</td></tr><tr><td>4</td><td>我坚信我有能力适应任何情况和处理任何危险。</td></tr><tr><td>5</td><td>为获得对我的科学才华的肯定我愿意冒任何风险。</td></tr><tr><td>6</td><td>在我的研究和其他必须完成的任务中，我倾向于寻找捷径。</td></tr></tbody></table><hr /><p><strong>人际关系</strong></p><p>The fluid nature of clades, whose rosters span different laboratories and change as researchers discover new interests, creates abundant connections among the Simic. The guild members live in watery sinkholes called zonots, and their isolation shelters them from much contact with outsiders. Nonetheless, a fair number of Simic members are former members of other guilds.</p><p>在析米克人际关系表上投掷两次骰子(用于盟友和对手)，在非析米克人际关系表上投掷一次骰子。</p><table><caption>析米克人际关系</caption><thead><tr><th>[[/r d8]]</th><th>人际关系</th></tr></thead><tbody><tr><td>1</td><td>My research builds on my parents' work and takes it in interesting new directions.</td></tr><tr><td>2</td><td>If a serious problem confounds me, I can count on my mentor to provide clarity of thought.</td></tr><tr><td>3</td><td>A former laboratory colleague went on to work on the Guardian Project.</td></tr><tr><td>4</td><td>A former colleague has ventured into fields of research that are possibly immoral and almost certainly illegal.</td></tr><tr><td>5</td><",
+      "sourceDescriptionTruncated": true
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!7zan1L3blaQUHWDp.system.advancement.3.configuration.items.6.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!7zan1L3blaQUHWDp",
+        "id": "7zan1L3blaQUHWDp",
+        "name": "析米克科学家 Simic Scientist",
+        "type": "background",
+        "sourceDataSha256": "171780d15539c83a1f993af1c710f275b98383eed7f242ff34845293f094ef89"
+      },
+      "advancement": {
+        "_id": "KtJt36VOI1jKBZYE",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.BfXf59a1jb1jxLQ1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.C825E97F6F43AA54",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.A9740DF03AF65121",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.vXvgokemaTFPuoWT",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "title": "",
+        "hint": "一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶鱼鳞，一瓶海藻，一瓶水母刺，一瓶不明黏液，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。",
+        "icon": null
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>想象一个完美的世界:自然与文明和谐共存，相互适应;生命与环境被塑造得和谐相称。这就是你一直试图在析米克联合的实验室中塑造的世界。自然是关于适应、进化和平衡的——但是为了跟上文明的发展脚步，自然需要生机师和地貌塑师的帮助。如果在这个过程中，你碰巧创造了超级士兵和变异怪物，使得它们可以增强析米克联合对其他公会的计划和野心的防御，那就更好不过了。</p><hr /><p><strong>技能熟练项</strong>：奥秘，医疗<br /><strong>语言</strong>：任选两门语言<br /><strong>装备</strong>：一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh]{鱼鳞}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi]{海藻}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw]{水母刺}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy]{不明黏液}，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。<br /><strong>特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.Ys762Dpu5dUjR4Jt]{研究者 Researcher（GGR）}</p><hr /><p><strong>分支与项目</strong></p><p>作为析米克的研究人员，你是某个分支clade的一员，或者是一个专注于解决当前需求的专项、短期项目的研究人员。分支是一个由不同的个体组成的团队，他们将各自的才能结合在一起，以追求一个共同的目标。投掷1d6或从研究选项表中选择一项，以确定你的研究领域。</p><table><thead><tr><th>[[/r D6]]</th><th>分支/项目</th></tr></thead><tbody><tr><td>1</td><td>甲壳分支，注重保护与耐用性</td></tr><tr><td>2</td><td>鳍类分支，注重移动力</td></tr><tr><td>3</td><td>涡流分支，注重周期性变化与超魔</td></tr><tr><td>4</td><td>守护者项目，注重创造守卫怪物和超级士兵</td></tr><tr><td>5</td><td>隐匿项目，情报与反情报</td></tr><tr><td>6</td><td>新领域的独立研究</td></tr></tbody></table><hr /><p><strong>析米克公会法术</strong></p><blockquote><p>先决条件：施法能力或契约魔法特性</p></blockquote><p>对你来说，析米克公会法术表上的法术将被添加到你的施法者职业的法术列表中。(如果你是一个拥有多个法术列表的多职业角色，这些法术会被添加到你所有的法术列表中。)</p><table><caption>析米克公会法术表</caption><thead><tr><th>施法等级</th><th>法术</th></tr></thead><tbody><tr><td>戏法</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.E7wFpzV30sX2e7t6]{酸液飞溅}@UUID[Compendium.dnd5e_classpack.new-icon.Q6muyDarRcXMcuKv]{德鲁伊伎俩}</td></tr><tr><td>1st</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.V3BKvj7g0q2XO0cg]{侦测毒性和疾病}@UUID[Compendium.dnd5e_classpack.new-icon.JaxkuxSdKN1Weybr]{脚底抹油}@UUID[Compendium.dnd5e_classpack.new-icon.1B8U6kl0egesx3FK]{跳跃术}</td></tr><tr><td>2nd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.RzU9orr1mmUeZOcl]{变身术}@UUID[Compendium.dnd5e_classpack.new-icon.SCmGEYM6V880rfaW]{强化属性}@UUID[Compendium.dnd5e_classpack.new-icon.1bUnNgI45qffE1P9]{变巨/缩小术 Enlarge/Reduce}</td></tr><tr><td>3rd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.gjE6zBmfdUOwXiae]{气化形体}@UUID[Compendium.dnd5e_classpack.new-icon.cNIfr5CzsBZIPwHs]{水中呼吸}@UUID[Compendium.dnd5e_classpack.new-icon.WLWSZA4pZSGb0Mku]{风墙术}</td></tr><tr><td>4th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.OZMc9g7XaWuRc36J]{行动自如}@UUID[Compendium.dnd5e_classpack.new-icon.IXs3Neqbl8xaT3yk]{变形术}</td></tr><tr><td>5th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.Zwe287Drdl1TkG8e]{造物术}</td></tr></tbody></table><p>当你的魔法使你自己或他人的身体发生变化时，结果往往显示出鱼、两栖动物或其他水生生物的特征。有时伴随着你的施法，会产生带有魔法能量的蓝绿色漩涡，其反映了自然精确完美的螺旋。</p><hr /><p><strong>建议特征</strong></p><p>析米克联合的奇异科学吸引了某种类型的个人崇拜，并包含了一套关于生命本质的信仰。Simic成员的牵绊和缺陷来自他们的科学研究——包括他们创造的新生命形式，他们可能变得非常依恋于此。</p><table><thead><tr><th>[[/r d8]]</th><th>特点</th></tr></thead><tbody><tr><td>1</td><td>我迫不及待地想看看我接下来会变成什么样子!</td></tr><tr><td>2</td><td>我相信一切都有不断改进的趋势。</td></tr><tr><td>3</td><td>我渴望向那些对我最复杂的实验和理论不感兴趣的人解释每一个细节。</td></tr><tr><td>4</td><td>我认为需要向每个人解释最基本的概念。</td></tr><tr><td>5</td><td>我描述的每一件事都像是在写我的研究笔记（事实往往如此）。</td></tr><tr><td>6</td><td>我对生活中似乎无尽的状态和变化充满了的好奇。</td></tr><tr><td>7</td><td>我忍不住要窥探任何被禁止的东西，因为那一定非常有趣。</td></tr><tr><td>8</td><td>我使用非常专业的词汇来避免交流中的不精确和模糊。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td>公会。我的公会才是最重要的。(任何)</td></tr><tr><td>2</td><td>改变。所有的生命都是为了追求完美，而我们的工作就是要让它快点完成——不管过程中会发生什么。(混乱)</td></tr><tr><td>3</td><td>知识。理解这个世界比你用你的知识做什么更重要。(中立)</td></tr><tr><td>4</td><td>进步。我想把这个世界改造成更高级的生命形式，让所有人都能享受进化。(善良)</td></tr><tr><td>5</td><td>逻辑。让感情和原则干扰逻辑的结论是愚蠢的。(守序)</td></tr><tr><td>6</td><td>傲慢。我巨大的智慧和力量使我能轻易对他人施加影响。(邪恶)</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>牵绊</th></tr></thead><tbody><tr><td>1</td><td>我协助创造了一个融合体，我像爱宠物一样爱它，它会带我去任何地方……但它有一栋楼那么大，甚至可能会吃掉我。</td></tr><tr><td>2</td><td>在我的实验室里，我发现了一种东西，我觉得它可以消灭拉尼卡一半的生物。</td></tr><tr><td>3</td><td>我分支中的其他研究人员是我的家人——一个古怪的大家庭，包括许多公会成员和其他物种。</td></tr><tr><td>4</td><td>我曾经的实验室包含了对我来说珍贵的一切。</td></tr><tr><td>5</td><td>我要报复那个杀了我宝贵的融合体造物的目光短浅的傻瓜。</td></tr><tr><td>6</td><td>我做的每件事都是为了给我爱的人留下深刻的印象。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺点</th></tr></thead><tbody><tr><td>1</td><td>我有一个相当尴尬的突变，我会尽我所能不让别人发现它。</td></tr><tr><td>2</td><td>比起和怪兽战斗，我更感兴趣的是记录怪兽的解剖结构。</td></tr><tr><td>3</td><td>我似乎会在每一个社交场合问一些粗鲁的私人问题。</td></tr><tr><td>4</td><td>我坚信我有能力适应任何情况和处理任何危险。</td></tr><tr><td>5</td><td>为获得对我的科学才华的肯定我愿意冒任何风险。</td></tr><tr><td>6</td><td>在我的研究和其他必须完成的任务中，我倾向于寻找捷径。</td></tr></tbody></table><hr /><p><strong>人际关系</strong></p><p>The fluid nature of clades, whose rosters span different laboratories and change as researchers discover new interests, creates abundant connections among the Simic. The guild members live in watery sinkholes called zonots, and their isolation shelters them from much contact with outsiders. Nonetheless, a fair number of Simic members are former members of other guilds.</p><p>在析米克人际关系表上投掷两次骰子(用于盟友和对手)，在非析米克人际关系表上投掷一次骰子。</p><table><caption>析米克人际关系</caption><thead><tr><th>[[/r d8]]</th><th>人际关系</th></tr></thead><tbody><tr><td>1</td><td>My research builds on my parents' work and takes it in interesting new directions.</td></tr><tr><td>2</td><td>If a serious problem confounds me, I can count on my mentor to provide clarity of thought.</td></tr><tr><td>3</td><td>A former laboratory colleague went on to work on the Guardian Project.</td></tr><tr><td>4</td><td>A former colleague has ventured into fields of research that are possibly immoral and almost certainly illegal.</td></tr><tr><td>5</td><",
+      "sourceDescriptionTruncated": true
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!7zan1L3blaQUHWDp.system.advancement.3.configuration.items.7.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!7zan1L3blaQUHWDp",
+        "id": "7zan1L3blaQUHWDp",
+        "name": "析米克科学家 Simic Scientist",
+        "type": "background",
+        "sourceDataSha256": "171780d15539c83a1f993af1c710f275b98383eed7f242ff34845293f094ef89"
+      },
+      "advancement": {
+        "_id": "KtJt36VOI1jKBZYE",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.BfXf59a1jb1jxLQ1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.C825E97F6F43AA54",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.A9740DF03AF65121",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.vXvgokemaTFPuoWT",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "title": "",
+        "hint": "一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶鱼鳞，一瓶海藻，一瓶水母刺，一瓶不明黏液，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。",
+        "icon": null
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>想象一个完美的世界:自然与文明和谐共存，相互适应;生命与环境被塑造得和谐相称。这就是你一直试图在析米克联合的实验室中塑造的世界。自然是关于适应、进化和平衡的——但是为了跟上文明的发展脚步，自然需要生机师和地貌塑师的帮助。如果在这个过程中，你碰巧创造了超级士兵和变异怪物，使得它们可以增强析米克联合对其他公会的计划和野心的防御，那就更好不过了。</p><hr /><p><strong>技能熟练项</strong>：奥秘，医疗<br /><strong>语言</strong>：任选两门语言<br /><strong>装备</strong>：一枚析米克徽章，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，一本研究笔记，一支@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一瓶乌贼墨汁，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.H3MuYMhHC8ouyp2x]{灯油 Oil（扁瓶 Flask）}(由鲸脂制成)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.A9740DF03AF65121]{酸}(从消化液中提取)，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.Hp24WQhIImHaoCUh]{鱼鳞}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.lyZHjqu5crnaXsoi]{海藻}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.ZmC380tExH7JcXZw]{水母刺}，一瓶@UUID[Compendium.dnd5e_classpack.itempack.Item.f8qbAXZvEFAAsGSy]{不明黏液}，一个装有10gp (或俄佐立发行的1 基诺zino硬币)的钱@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{包}。<br /><strong>特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.Ys762Dpu5dUjR4Jt]{研究者 Researcher（GGR）}</p><hr /><p><strong>分支与项目</strong></p><p>作为析米克的研究人员，你是某个分支clade的一员，或者是一个专注于解决当前需求的专项、短期项目的研究人员。分支是一个由不同的个体组成的团队，他们将各自的才能结合在一起，以追求一个共同的目标。投掷1d6或从研究选项表中选择一项，以确定你的研究领域。</p><table><thead><tr><th>[[/r D6]]</th><th>分支/项目</th></tr></thead><tbody><tr><td>1</td><td>甲壳分支，注重保护与耐用性</td></tr><tr><td>2</td><td>鳍类分支，注重移动力</td></tr><tr><td>3</td><td>涡流分支，注重周期性变化与超魔</td></tr><tr><td>4</td><td>守护者项目，注重创造守卫怪物和超级士兵</td></tr><tr><td>5</td><td>隐匿项目，情报与反情报</td></tr><tr><td>6</td><td>新领域的独立研究</td></tr></tbody></table><hr /><p><strong>析米克公会法术</strong></p><blockquote><p>先决条件：施法能力或契约魔法特性</p></blockquote><p>对你来说，析米克公会法术表上的法术将被添加到你的施法者职业的法术列表中。(如果你是一个拥有多个法术列表的多职业角色，这些法术会被添加到你所有的法术列表中。)</p><table><caption>析米克公会法术表</caption><thead><tr><th>施法等级</th><th>法术</th></tr></thead><tbody><tr><td>戏法</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.E7wFpzV30sX2e7t6]{酸液飞溅}@UUID[Compendium.dnd5e_classpack.new-icon.Q6muyDarRcXMcuKv]{德鲁伊伎俩}</td></tr><tr><td>1st</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.V3BKvj7g0q2XO0cg]{侦测毒性和疾病}@UUID[Compendium.dnd5e_classpack.new-icon.JaxkuxSdKN1Weybr]{脚底抹油}@UUID[Compendium.dnd5e_classpack.new-icon.1B8U6kl0egesx3FK]{跳跃术}</td></tr><tr><td>2nd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.RzU9orr1mmUeZOcl]{变身术}@UUID[Compendium.dnd5e_classpack.new-icon.SCmGEYM6V880rfaW]{强化属性}@UUID[Compendium.dnd5e_classpack.new-icon.1bUnNgI45qffE1P9]{变巨/缩小术 Enlarge/Reduce}</td></tr><tr><td>3rd</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.gjE6zBmfdUOwXiae]{气化形体}@UUID[Compendium.dnd5e_classpack.new-icon.cNIfr5CzsBZIPwHs]{水中呼吸}@UUID[Compendium.dnd5e_classpack.new-icon.WLWSZA4pZSGb0Mku]{风墙术}</td></tr><tr><td>4th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.OZMc9g7XaWuRc36J]{行动自如}@UUID[Compendium.dnd5e_classpack.new-icon.IXs3Neqbl8xaT3yk]{变形术}</td></tr><tr><td>5th</td><td>@UUID[Compendium.dnd5e_classpack.new-icon.Zwe287Drdl1TkG8e]{造物术}</td></tr></tbody></table><p>当你的魔法使你自己或他人的身体发生变化时，结果往往显示出鱼、两栖动物或其他水生生物的特征。有时伴随着你的施法，会产生带有魔法能量的蓝绿色漩涡，其反映了自然精确完美的螺旋。</p><hr /><p><strong>建议特征</strong></p><p>析米克联合的奇异科学吸引了某种类型的个人崇拜，并包含了一套关于生命本质的信仰。Simic成员的牵绊和缺陷来自他们的科学研究——包括他们创造的新生命形式，他们可能变得非常依恋于此。</p><table><thead><tr><th>[[/r d8]]</th><th>特点</th></tr></thead><tbody><tr><td>1</td><td>我迫不及待地想看看我接下来会变成什么样子!</td></tr><tr><td>2</td><td>我相信一切都有不断改进的趋势。</td></tr><tr><td>3</td><td>我渴望向那些对我最复杂的实验和理论不感兴趣的人解释每一个细节。</td></tr><tr><td>4</td><td>我认为需要向每个人解释最基本的概念。</td></tr><tr><td>5</td><td>我描述的每一件事都像是在写我的研究笔记（事实往往如此）。</td></tr><tr><td>6</td><td>我对生活中似乎无尽的状态和变化充满了的好奇。</td></tr><tr><td>7</td><td>我忍不住要窥探任何被禁止的东西，因为那一定非常有趣。</td></tr><tr><td>8</td><td>我使用非常专业的词汇来避免交流中的不精确和模糊。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td>公会。我的公会才是最重要的。(任何)</td></tr><tr><td>2</td><td>改变。所有的生命都是为了追求完美，而我们的工作就是要让它快点完成——不管过程中会发生什么。(混乱)</td></tr><tr><td>3</td><td>知识。理解这个世界比你用你的知识做什么更重要。(中立)</td></tr><tr><td>4</td><td>进步。我想把这个世界改造成更高级的生命形式，让所有人都能享受进化。(善良)</td></tr><tr><td>5</td><td>逻辑。让感情和原则干扰逻辑的结论是愚蠢的。(守序)</td></tr><tr><td>6</td><td>傲慢。我巨大的智慧和力量使我能轻易对他人施加影响。(邪恶)</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>牵绊</th></tr></thead><tbody><tr><td>1</td><td>我协助创造了一个融合体，我像爱宠物一样爱它，它会带我去任何地方……但它有一栋楼那么大，甚至可能会吃掉我。</td></tr><tr><td>2</td><td>在我的实验室里，我发现了一种东西，我觉得它可以消灭拉尼卡一半的生物。</td></tr><tr><td>3</td><td>我分支中的其他研究人员是我的家人——一个古怪的大家庭，包括许多公会成员和其他物种。</td></tr><tr><td>4</td><td>我曾经的实验室包含了对我来说珍贵的一切。</td></tr><tr><td>5</td><td>我要报复那个杀了我宝贵的融合体造物的目光短浅的傻瓜。</td></tr><tr><td>6</td><td>我做的每件事都是为了给我爱的人留下深刻的印象。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺点</th></tr></thead><tbody><tr><td>1</td><td>我有一个相当尴尬的突变，我会尽我所能不让别人发现它。</td></tr><tr><td>2</td><td>比起和怪兽战斗，我更感兴趣的是记录怪兽的解剖结构。</td></tr><tr><td>3</td><td>我似乎会在每一个社交场合问一些粗鲁的私人问题。</td></tr><tr><td>4</td><td>我坚信我有能力适应任何情况和处理任何危险。</td></tr><tr><td>5</td><td>为获得对我的科学才华的肯定我愿意冒任何风险。</td></tr><tr><td>6</td><td>在我的研究和其他必须完成的任务中，我倾向于寻找捷径。</td></tr></tbody></table><hr /><p><strong>人际关系</strong></p><p>The fluid nature of clades, whose rosters span different laboratories and change as researchers discover new interests, creates abundant connections among the Simic. The guild members live in watery sinkholes called zonots, and their isolation shelters them from much contact with outsiders. Nonetheless, a fair number of Simic members are former members of other guilds.</p><p>在析米克人际关系表上投掷两次骰子(用于盟友和对手)，在非析米克人际关系表上投掷一次骰子。</p><table><caption>析米克人际关系</caption><thead><tr><th>[[/r d8]]</th><th>人际关系</th></tr></thead><tbody><tr><td>1</td><td>My research builds on my parents' work and takes it in interesting new directions.</td></tr><tr><td>2</td><td>If a serious problem confounds me, I can count on my mentor to provide clarity of thought.</td></tr><tr><td>3</td><td>A former laboratory colleague went on to work on the Guardian Project.</td></tr><tr><td>4</td><td>A former colleague has ventured into fields of research that are possibly immoral and almost certainly illegal.</td></tr><tr><td>5</td><",
+      "sourceDescriptionTruncated": true
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.41CD35967DA45554",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!K0GybwvRn1KefUmp.system.advancement.1.configuration.items.3.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.41CD35967DA45554",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!K0GybwvRn1KefUmp",
+        "id": "K0GybwvRn1KefUmp",
+        "name": "衡鉴学生 Lorehold Student",
+        "type": "background",
+        "sourceDataSha256": "78b021e197b101d53744fd96aeeb8b3fb74d73fe543a358a59fff837c5646e7b"
+      },
+      "advancement": {
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.XWpNUOziZU7Jznqx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.1B08608A7AF77C85",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.A32E3C5845F5A20C",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.41CD35967DA45554",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Ccz6h13ZVz3TYdBd",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.738C3DEAB8666329",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.SzB2tPKLYh58Frt4",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "_id": "KSwC0cUM0wAQGBfe"
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>你的青年时光花费在为进入衡鉴学院的准备上，把为预备学生提供的推荐书单上的书全都读了一遍。你的学术热情聚焦于宽广的历史领域。你可能梦想着使用魔法与历史伟人或你的先祖进行沟通，也可能是想要重现远古时代的强大魔法。</p><hr /><p><strong>技能熟练项</strong>：历史，宗教<br /><strong>语言</strong>：两项你选择的语言<br /><strong>装备</strong>：一瓶黑色@UUID[Compendium.dnd5e_classpack.itempack.1B08608A7AF77C85]{墨水}，一根@UUID[Compendium.dnd5e_classpack.itempack.A32E3C5845F5A20C]{墨水笔}，一把@UUID[Compendium.dnd5e_classpack.itempack.41CD35967DA45554]{锤子}，一盏@UUID[Compendium.dnd5e_classpack.itempack.Item.Ccz6h13ZVz3TYdBd]{附盖提灯 Hooded Lantern}，一个@UUID[Compendium.dnd5e_classpack.itempack.738C3DEAB8666329]{火绒盒}，一本历史册，一套校服，一个装有15gp的@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{小包}。<br /><strong>特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.aNaAaqeSDz6HFt7U]{衡鉴学徒}</p><hr /><p><strong>构建衡鉴角色 Building a Lorehold Character</strong></p><p>任何与过去的知识打交道的职业或子职都适合衡鉴。吟游诗人们在衡鉴茁壮成长，法师们（特别是预言学派）在学生中数量众多。牧师（通常是知识和光明领域）也十分常见。</p><p>对于不寻常的衡鉴学生，你能考虑扮演一名与往昔有原初连接的野蛮人（可以采用珊娜萨的万事指南中的先祖守卫道途），或一位选择古贤之誓的圣武士，与历史有着实在的关联。</p><hr /><p><strong>建议特征</strong></p><p>在衡鉴学院的队列之中，能找到有条不紊的历史学家和勇敢无畏的冒险者。衡鉴个性特点表提供了多样的特点建议，你可以为你的角色选用。</p><table><thead><tr><th>[[/r D6]]</th><th>个性特点</th></tr></thead><tbody><tr><td>1</td><td>我靠着深奥的学问过活。我在日常对话中引用的历史典故越晦涩约好。</td></tr><tr><td>2</td><td>我希望能在搜寻这些失落的神器的旅途上发现真正的自己。</td></tr><tr><td>3</td><td>我每时每刻都在讨论我的研究。我脑子里装了那么多知识，得有地方倾泻出来。</td></tr><tr><td>4</td><td>和死去的魂灵交谈比起和活人同学讲话有意思多啦。</td></tr><tr><td>5</td><td>我说起历史的影响时雄辩有力。但是问我两位数的加法我头就晕了。</td></tr><tr><td>6</td><td>到最后，只会剩下混乱无序。事物终有一天溃灭。</td></tr></tbody></table><hr /><p><strong>衡鉴饰品 Lorehold Trinkets</strong></p><p>当你创建角色投掷起始饰品时，你能投掷衡鉴饰品表而不是玩家手册中的饰品表。</p><table><caption>衡鉴饰品 Lorehold Trinkets</caption><thead><tr><th>[[/r D6]]</th><th>饰品</th></tr></thead><tbody><tr><td>1</td><td>一张带有多个同心圆的地图，这些同心圆能在页面上转动</td></tr><tr><td>2</td><td>一个装饰着琥珀的谜笼</td></tr><tr><td>3</td><td>一个有凹痕的黄铜罗盘，里面有一根红色指针</td></tr><tr><td>4</td><td>一个破损塑像的头，其中寄宿着一位尖刻的智者的意识</td></tr><tr><td>5</td><td>一张羊皮纸，压印着浮凸的可触文字，散发着红光</td></tr><tr><td>6</td><td>一柄破匕首，有着波浪形剑刃，蛇一样弯曲的剑柄</td></tr></tbody></table>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.yu63LBsZJHOM35sJ",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!WoeOXJsgG5eKLCi3.system.advancement.4.configuration.items.4.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.yu63LBsZJHOM35sJ",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!WoeOXJsgG5eKLCi3",
+        "id": "WoeOXJsgG5eKLCi3",
+        "name": "博德之门侍僧 Baldur's Gate Acolyte",
+        "type": "background",
+        "sourceDataSha256": "d7f38ada6df683df648c4525cf3be4b3a9d8e7f8b195e09bad4ad9068c4c3930"
+      },
+      "advancement": {
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.XWpNUOziZU7Jznqx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.TJi1q6Bm8IGoJJVL",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.bGQf2iePBF9LJnjn",
+              "optional": true
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.MnXDYBHLiM6veazR",
+              "optional": true
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.yu63LBsZJHOM35sJ",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.v6BsK48n582dUdd1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            }
+          ],
+          "optional": true,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "_id": "KSwC0cUM0wAQGBfe",
+        "title": "",
+        "hint": "",
+        "icon": null
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>据说博德之门拥有世界上每一种信仰的信徒。不仅大多数已扎根的信仰得到容忍——即使其中一些信仰被划入了低端的外城区孪歌街区中，包括大多数公然的邪恶信仰——而且新信仰不断涌现，由来自遥远之国的旅行者和劝信者带来。拥有该背景的角色可能会追求更伟大之事，不是为了他们自己，而是为了他们的信仰。</p><hr /><p><strong>技能熟练项：</strong>洞悉，宗教<br /><strong>语言：</strong>任选两门语言<br /><strong>装备：</strong>一枚@UUID[Compendium.dnd5e_classpack.itempack.TJi1q6Bm8IGoJJVL]{圣徽}（出任神职时的礼物），一本@UUID[Compendium.dnd5e_classpack.itempack.bGQf2iePBF9LJnjn]{祷告经书}或@UUID[Compendium.dnd5e_classpack.itempack.MnXDYBHLiM6veazR]{经轮}，5根@UUID[Compendium.dnd5e_classpack.itempack.yu63LBsZJHOM35sJ]{熏香}，@UUID[Compendium.dnd5e_classpack.itempack.3rOsaVORVaiX0Do7]{祭袍}，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，以及一个装着15 gp的@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{小包}。<br /><strong>特性：</strong>@UUID[Compendium.dnd5e_classpack.BackgroundFeature.D3K6MwUJf7Pfj9S3]{信仰庇护 Shelter of the Faithful}<br /><strong>博德之门特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.uuRfFeYpZw0BpLYq]{宗教团体 Religious Community}</p><hr /><h4><strong>建议特征Suggested Characteristics</strong></h4><p> 侍僧们的个性特点由其所在神庙或其他宗教社团的经历所塑造。他们对历史与教义的学习，以及与神庙，圣坛或是教团的关系影响着他们的行为与理想。他们的缺点可能是隐藏的虚伪或异端观点，甚至可以是某种偏激的理想或牵绊。</p><table><thead><tr><th>[[/r d8]]</th><th>特点</th></tr></thead><tbody><tr><td>1</td><td>我崇拜某个英雄，并时刻以其事迹作为榜样。</td></tr><tr><td>2</td><td>我能在最狂乱的敌人间寻找共鸣，然后感化他们一同为和平而努力。</td></tr><tr><td>3</td><td>我在每个事件和行动中看到预兆。神试图对我们说话，我们只需要听即可。</td></tr><tr><td>4</td><td>没有什么能动摇我的乐观态度。</td></tr><tr><td>5</td><td>我任何情况下都喜欢引用（或错引）圣典和格言。</td></tr><tr><td>6</td><td>我能容忍（或无法容忍）其它信仰并且尊重（或谴责）对其他神祇的崇拜。</td></tr><tr><td>7</td><td>我喜爱美食、饮料以及同信仰神庙中的精英分子们的高层圈子。粗野的生活令我烦躁。</td></tr><tr><td>8</td><td>我在神庙中生活的太久了，以至于我在与外面世界的人们打交道时缺乏实际经验。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td><strong>传统Traditions。</strong>古代崇拜与献祭的传统必须被保护并维持。(守序)</td></tr><tr><td>2</td><td><strong>仁爱Charity。</strong>我总是试图帮助那些需要帮助的人，无论个人的花费如何。（善良）</td></tr><tr><td>3</td><td><strong>改变Change。</strong>我们必须协助引发神在世界中一直为之工作的改变。（混乱）</td></tr><tr><td>4</td><td><strong>权力Power。</strong>我希望有一天能够升格到所信仰宗教中等级的最高点。（守序）</td></tr><tr><td>5</td><td><strong>信仰Faith。</strong>我信任神祇能指引我的行为。我信奉如果自己努力工作，事情就会变得顺利。（守序）</td></tr><tr><td>6</td><td><strong>抱负Aspiration。</strong>我将自己的行动与他或她的教导相较，求证明自己配得上吾主的喜爱。（任何）</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>牵绊</th></tr></thead><tbody><tr><td>1</td><td>为了找回很久前丢失的与我信仰相关的一件古代遗物，我可以付出生命。</td></tr><tr><td>2</td><td>终有一天我会对谴责我为异端的罪恶神庙组织复仇。</td></tr><tr><td>3</td><td>我欠那位在我的双亲死亡时收养我的教士一条命。</td></tr><tr><td>4</td><td>我做的每一件事情都是为了普罗大众。</td></tr><tr><td>5</td><td>为了保卫我曾服务的神庙我可以做任何事情。</td></tr><tr><td>6</td><td>我试图去保护一部神圣典籍，而我的敌人认为它是异端的并寻求摧毁它。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺点</th></tr></thead><tbody><tr><td>1</td><td>我评价他人十分严苛，并且对自己更加苛刻。</td></tr><tr><td>2</td><td>我过于信任那些在我神庙的阶级中控制权势的人。</td></tr><tr><td>3</td><td>我的虔诚有时令我盲目信任那些声称与我信仰相同的人。</td></tr><tr><td>4</td><td>我思想呆板僵化，不懂变通。</td></tr><tr><td>5</td><td>我会怀疑陌生人并将他们想成最坏的情况。</td></tr><tr><td>6</td><td>一旦我选择了一个目标，就会变得执迷于它以至于因此损害自己生命中的所有其它事物。</td></tr></tbody></table>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.v6BsK48n582dUdd1",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!WoeOXJsgG5eKLCi3.system.advancement.4.configuration.items.5.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.v6BsK48n582dUdd1",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!WoeOXJsgG5eKLCi3",
+        "id": "WoeOXJsgG5eKLCi3",
+        "name": "博德之门侍僧 Baldur's Gate Acolyte",
+        "type": "background",
+        "sourceDataSha256": "d7f38ada6df683df648c4525cf3be4b3a9d8e7f8b195e09bad4ad9068c4c3930"
+      },
+      "advancement": {
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.XWpNUOziZU7Jznqx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.TJi1q6Bm8IGoJJVL",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.bGQf2iePBF9LJnjn",
+              "optional": true
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.MnXDYBHLiM6veazR",
+              "optional": true
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.yu63LBsZJHOM35sJ",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.v6BsK48n582dUdd1",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.10F92CBBA91150E7",
+              "optional": false
+            }
+          ],
+          "optional": true,
+          "spell": null
+        },
+        "value": {},
+        "level": 0,
+        "_id": "KSwC0cUM0wAQGBfe",
+        "title": "",
+        "hint": "",
+        "icon": null
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<p>据说博德之门拥有世界上每一种信仰的信徒。不仅大多数已扎根的信仰得到容忍——即使其中一些信仰被划入了低端的外城区孪歌街区中，包括大多数公然的邪恶信仰——而且新信仰不断涌现，由来自遥远之国的旅行者和劝信者带来。拥有该背景的角色可能会追求更伟大之事，不是为了他们自己，而是为了他们的信仰。</p><hr /><p><strong>技能熟练项：</strong>洞悉，宗教<br /><strong>语言：</strong>任选两门语言<br /><strong>装备：</strong>一枚@UUID[Compendium.dnd5e_classpack.itempack.TJi1q6Bm8IGoJJVL]{圣徽}（出任神职时的礼物），一本@UUID[Compendium.dnd5e_classpack.itempack.bGQf2iePBF9LJnjn]{祷告经书}或@UUID[Compendium.dnd5e_classpack.itempack.MnXDYBHLiM6veazR]{经轮}，5根@UUID[Compendium.dnd5e_classpack.itempack.yu63LBsZJHOM35sJ]{熏香}，@UUID[Compendium.dnd5e_classpack.itempack.3rOsaVORVaiX0Do7]{祭袍}，一套@UUID[Compendium.dnd5e_classpack.itempack.10F92CBBA91150E7]{普通服装}，以及一个装着15 gp的@UUID[Compendium.dnd5e_classpack.itempack.2C22C4FE00679D76]{小包}。<br /><strong>特性：</strong>@UUID[Compendium.dnd5e_classpack.BackgroundFeature.D3K6MwUJf7Pfj9S3]{信仰庇护 Shelter of the Faithful}<br /><strong>博德之门特性</strong>：@UUID[Compendium.dnd5e_classpack.BackgroundFeature.uuRfFeYpZw0BpLYq]{宗教团体 Religious Community}</p><hr /><h4><strong>建议特征Suggested Characteristics</strong></h4><p> 侍僧们的个性特点由其所在神庙或其他宗教社团的经历所塑造。他们对历史与教义的学习，以及与神庙，圣坛或是教团的关系影响着他们的行为与理想。他们的缺点可能是隐藏的虚伪或异端观点，甚至可以是某种偏激的理想或牵绊。</p><table><thead><tr><th>[[/r d8]]</th><th>特点</th></tr></thead><tbody><tr><td>1</td><td>我崇拜某个英雄，并时刻以其事迹作为榜样。</td></tr><tr><td>2</td><td>我能在最狂乱的敌人间寻找共鸣，然后感化他们一同为和平而努力。</td></tr><tr><td>3</td><td>我在每个事件和行动中看到预兆。神试图对我们说话，我们只需要听即可。</td></tr><tr><td>4</td><td>没有什么能动摇我的乐观态度。</td></tr><tr><td>5</td><td>我任何情况下都喜欢引用（或错引）圣典和格言。</td></tr><tr><td>6</td><td>我能容忍（或无法容忍）其它信仰并且尊重（或谴责）对其他神祇的崇拜。</td></tr><tr><td>7</td><td>我喜爱美食、饮料以及同信仰神庙中的精英分子们的高层圈子。粗野的生活令我烦躁。</td></tr><tr><td>8</td><td>我在神庙中生活的太久了，以至于我在与外面世界的人们打交道时缺乏实际经验。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>理想</th></tr></thead><tbody><tr><td>1</td><td><strong>传统Traditions。</strong>古代崇拜与献祭的传统必须被保护并维持。(守序)</td></tr><tr><td>2</td><td><strong>仁爱Charity。</strong>我总是试图帮助那些需要帮助的人，无论个人的花费如何。（善良）</td></tr><tr><td>3</td><td><strong>改变Change。</strong>我们必须协助引发神在世界中一直为之工作的改变。（混乱）</td></tr><tr><td>4</td><td><strong>权力Power。</strong>我希望有一天能够升格到所信仰宗教中等级的最高点。（守序）</td></tr><tr><td>5</td><td><strong>信仰Faith。</strong>我信任神祇能指引我的行为。我信奉如果自己努力工作，事情就会变得顺利。（守序）</td></tr><tr><td>6</td><td><strong>抱负Aspiration。</strong>我将自己的行动与他或她的教导相较，求证明自己配得上吾主的喜爱。（任何）</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>牵绊</th></tr></thead><tbody><tr><td>1</td><td>为了找回很久前丢失的与我信仰相关的一件古代遗物，我可以付出生命。</td></tr><tr><td>2</td><td>终有一天我会对谴责我为异端的罪恶神庙组织复仇。</td></tr><tr><td>3</td><td>我欠那位在我的双亲死亡时收养我的教士一条命。</td></tr><tr><td>4</td><td>我做的每一件事情都是为了普罗大众。</td></tr><tr><td>5</td><td>为了保卫我曾服务的神庙我可以做任何事情。</td></tr><tr><td>6</td><td>我试图去保护一部神圣典籍，而我的敌人认为它是异端的并寻求摧毁它。</td></tr></tbody></table><table><thead><tr><th>[[/r d6]]</th><th>缺点</th></tr></thead><tbody><tr><td>1</td><td>我评价他人十分严苛，并且对自己更加苛刻。</td></tr><tr><td>2</td><td>我过于信任那些在我神庙的阶级中控制权势的人。</td></tr><tr><td>3</td><td>我的虔诚有时令我盲目信任那些声称与我信仰相同的人。</td></tr><tr><td>4</td><td>我思想呆板僵化，不懂变通。</td></tr><tr><td>5</td><td>我会怀疑陌生人并将他们想成最坏的情况。</td></tr><tr><td>6</td><td>一旦我选择了一个目标，就会变得执迷于它以至于因此损害自己生命中的所有其它事物。</td></tr></tbody></table>",
+      "sourceDescriptionTruncated": false
+    },
+    {
+      "reference": "Compendium.dnd5e_classpack.itempack.Item.WyGyl1aVBS3hb7DT",
+      "reason": "top-level-document-id-missing",
+      "location": "BackgroundList:!items!rWyox0FybJ2vGZvZ.system.advancement.3.configuration.items.5.uuid",
+      "fieldValue": "Compendium.dnd5e_classpack.itempack.Item.WyGyl1aVBS3hb7DT",
+      "parent": {
+        "pack": "BackgroundList",
+        "key": "!items!rWyox0FybJ2vGZvZ",
+        "id": "rWyox0FybJ2vGZvZ",
+        "name": "受宠者 Rewarded",
+        "type": "background",
+        "sourceDataSha256": "98f260251a0f1146108523b7b3d2356608921a55ef6b6401ff98ebd47c4029cb"
+      },
+      "advancement": {
+        "_id": "NmlMJcWEKxQEes4c",
+        "type": "ItemGrant",
+        "configuration": {
+          "items": [
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.EHRyPCwiS8LJafQY",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.Uv06Rh1KoZ3F8SEA",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.HoyehbA7GikQmSkx",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.A6EPWFpKbesYxNIz",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.537CAFD7FE064306",
+              "optional": false
+            },
+            {
+              "uuid": "Compendium.dnd5e_classpack.itempack.Item.WyGyl1aVBS3hb7DT",
+              "optional": false
+            }
+          ],
+          "optional": false,
+          "spell": null
+        },
+        "value": {},
+        "level": 0
+      },
+      "activity": null,
+      "sourceDescriptionExcerpt": "<div class=\"rd__b  rd__b--1\"><p>在你的命运突然奇迹般地变成好运气之前，你曾过着艰难的生活。或许是一位慈悲的神明正好给了你最想要的东西。或许你偶然发现了一副万象无常牌并抽出了一张强大的，具有正面效果的牌。又或许你从一位你不知道的远房亲戚那里继承了一笔小小财富。<br />不管怎么说，你抛下了往日生活日复一日的痛苦，代之以兴奋与奇遇的人生。是你的旧债已被偿还，是你认为无法避免的责任已成为过去，或是你突然拥有了常人所未知晓的罕见与独特的技能。</p></div><hr /><div class=\"rd__b  rd__b--1\"><ul class=\"rd__list rd__list-hang-notitle\"><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>技能熟练项：</strong>洞悉，游说</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>语言：</strong>一项你自选的语言</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>工具熟练项：</strong>一套你自选的赌具（比如纸牌或三龙牌）</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\"><strong>装备：</strong>一瓶黑色墨水，一支墨水笔，五卷纸，一套赌具（与你所选熟练项一致），一</p></li><li class=\"rd__li \"><p class=\"rd__p-list-item\" data-roll-name-ancestor=\"Skill Proficiencies:\">个玺戒，一套高档服装，以及一个装着18gp的小包</p><p></p></li></ul><div data-roll-name-ancestor=\"Feature: Fortune's Favor\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"1\"><span class=\"entry-title-inner\">特性：命运宠幸Feature: Fortune's Favor</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>一个微小的益处反映出你那出人意料的好运。你获得@UUID[Compendium.dnd5e_classpack.feats-all.Item.Zxh8VEiQwezfcnvk]{幸运}，@UUID[Compendium.dnd5e_classpack.feats-all.Item.MhLJXPly0B8FEuFW]{魔法学徒}，或者@UUID[Compendium.dnd5e_classpack.feats-all.Item.sYRjltuR7nYyIMOg]{熟习}专长（由你选择）。你所选择的专长即反映了改变了你生活的变化。与某位给予你三个愿望的巨灵的邂逅可能导致了由魔法学徒专长所展现的魔法力量。如果你以一次偶然的三龙牌局偿清了你所有的家庭债务，则可能代之以幸运专长。要不然就是，你可以用熟习专长来反映出你为争取到崭新命运，以及塑造由改变了你生活的力量所赐予的知识与能力而经受的各种考验。</p></div><div data-roll-name-ancestor=\"Suggested Characteristics\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"2\"><span class=\"entry-title-inner\">建议特征</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>由于其的崭新命运，你的角色对生活的看法发生了改变。受宠者个人特征表向你建议你的角色可能会采用的特征以及万象无常牌中可能导致了该特征的卡牌。</p><table class=\"w-100 rd__table  stripe-odd-table\"><thead><tr><th class=\"ve-col-2 ve-text-center\" data-rd-isroller=\"true\">[[/r d6]]</th><th class=\"ve-col-10\" data-rd-isroller=\"false\">个人特征</th></tr></thead><tbody><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"1\" data-roll-max=\"1\">1</td><td class=\"ve-col-10\">一个安全的家是其他任何事物得以建立的基础。（钥匙，王座）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"2\" data-roll-max=\"2\">2</td><td class=\"ve-col-10\">我被提升到了我以其他任何方式都无法达到的高度，而我不会滥用自己的运气（星辰，太阳）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"3\" data-roll-max=\"3\">3</td><td class=\"ve-col-10\">我被提升到了我以其他任何方式都无法达到的高度，而我不会滥用自己的运气（星辰，太阳）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"4\" data-roll-max=\"4\">4</td><td class=\"ve-col-10\">当其他的一切都失败了的那天，勇气与魄力仍可挑起大梁。（彗星，骑士）</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"5\" data-roll-max=\"5\">5</td><td class=\"ve-col-10\">我的好运意味着我也还可以帮助其他人。（宝石，月亮）My good fortune means I can lift others up as well. (Gem, Moon)</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"6\" data-roll-max=\"6\">6</td><td class=\"ve-col-10\">解决问题的第一步便是拥有正确答案，无论问题多么可怕。（命运，贤者）</td></tr></tbody></table></div><div data-roll-name-ancestor=\"Building a Rewarded Character\" class=\"rd__b  rd__b--2\"><h3 class=\"rd__h rd__h--2\" data-title-index=\"3\"><span class=\"entry-title-inner\">创建一位受宠者角色</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></h3><p>受宠者角色们有着各不相同的过去，但他们有一点是共同的：在生活突然转向之前，他们都因自己的运气而感到悲哀。他们可能已经放弃了获得更快乐生活的所有希望，却又突然间获得了第二次机会。某位受宠者角色往往曾花数年时间以努力逃脱困苦的境遇。现在，逃脱了先前生活的监牢（有时是字面意义上的），他们将所要考虑的事情抛到了九霄云外然后成为了冒险者。</p><p>如果你角色的人生因@UUID[Compendium.dnd5e_classpack.itempack.Item.05C8E2BFDDA00558]{万象无常牌}而改变，考虑一下是哪张牌引起的。或许是命运牌解开了你角色在年轻时铸成的悲剧错误。宝石牌也可能会抹去纠缠一生的债务。也许是贤者牌提供了逃离绝望境地所需的建议，星辰牌则将其的某项属性值提升到了当前值，或者在抽出月亮牌后施放的一道@UUID[Compendium.dnd5e_classpack.new-icon.Item.xjn6gjItpWpldE53]{祈愿术}Wish将你的角色从一位小贩变为浸染了魔法，新学识与新技能的新生术士。如果你在高于1级时创建角色，则其所拥有的魔法物品可以通过钥匙牌或太阳牌授予。</p><h3 class=\"rd__h rd__h--2\" data-title-index=\"4\"></h3><p><span class=\"entry-title-inner\">受宠者饰品</span><span class=\"rd__h-toggle ml-2 clickable no-select no-print lst-is-exporting-image__hidden\" data-rd-h-toggle-button=\"true\" title=\"Toggle Visibility (CTRL to Toggle All)\">[–]</span></p><p></p><p>当你创建角色时，可以根据受宠者饰品表掷骰以替代玩家手册中的饰品表作为你的起始饰品。</p><div data-roll-name-ancestor=\"Rewarded Trinkets\" class=\"rd__b  rd__b--2\"><table class=\"w-100 rd__table  stripe-odd-table\"><thead><tr><th class=\"ve-col-2 ve-text-center\" data-rd-isroller=\"true\">[[/r d6]]</th><th class=\"ve-col-10\" data-rd-isroller=\"false\">饰品</th></tr></thead><tbody><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"1\" data-roll-max=\"1\">1</td><td class=\"ve-col-10\">一个来自仰慕者的带香味的丝质头巾</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"2\" data-roll-max=\"2\">2</td><td class=\"ve-col-10\">像蜡烛一样在黑暗中发光的水晶宝珠</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"3\" data-roll-max=\"3\">3</td><td class=\"ve-col-10\">来自远方城市一位有影响力的人物的一封介绍与邀请函</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"4\" data-roll-max=\"4\">4</td><td class=\"ve-col-10\">你未能恪守的一条格言或一个标志，刻在你装备的某处。</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"5\" data-roll-max=\"5\">5</td><td class=\"ve-col-10\">一张平展的未见撕破与染污的纸牌，其上描绘着影响了你的那张卡牌。</td></tr><tr><td class=\"ve-col-2 ve-text-center\" data-roll-min=\"6\" data-roll-max=\"6\">6</td><td class=\"ve-col-10\">一个被设计为能与其另一半重新拼合的奖章的一半。</td></tr></tbody></table></div></div></div>",
+      "sourceDescriptionTruncated": false
+    }
+  ]
+}

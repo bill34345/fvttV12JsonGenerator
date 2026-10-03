@@ -1,0 +1,14 @@
+--- sources\clocks\module\clock-panel.mjs
++++ sources\clocks\module\clock-panel.mjs
+@@ -110,7 +110,10 @@
+         const rendered = [...html.querySelectorAll("[data-id]")].map((el) => el.dataset.id);
+         const newlyRendered = rendered.filter((r) => !this.lastRendered.includes(r));
+         for (const newId of newlyRendered) {
+-            gsap.fromTo(html.querySelector(`[data-id="${newId}"]`), { opacity: 0 }, { opacity: 1, duration: 0.25 });
++            html.querySelector(`[data-id="${newId}"]`).animate(
++                [{ opacity: 0 }, { opacity: 1 }],
++                { duration: 250, easing: "ease-out" }
++            );
+         }
+ 
+         // Update the last rendered list (to get ready for next cycle)
