@@ -2,9 +2,9 @@
  * No server installation, global settings changes or Actor definition patches.
  * All Actor/Item definitions are imported from the project CLI artifacts.
  */
-import { buildConditionFlag, createConditionInstance, isConditionId, projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
+import { CUSTOM_CONDITIONS_MODULE_ID, buildConditionFlag, createConditionInstance, isConditionId, projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 
-export const RUNTIME_VERSION = '2.1.1';
+export const RUNTIME_VERSION = '2.1.2';
 const FLAG = 'crystalbleedV14';
 const DRAGON_MARKER = 'crystalbleed-eclipse-ward';
 const CRYSTAL_MARKER = 'salvo-crystal-pulse';
@@ -49,7 +49,11 @@ export function shouldOfferDefiance(success, managedDragon, remaining) {
 }
 
 export function permittedStatuses(statuses, immunities) {
-  return statuses.filter(status => !immunities.has(status));
+  const prefix = `${CUSTOM_CONDITIONS_MODULE_ID}.`;
+  return statuses.filter(status => {
+    const semantic = status.startsWith(prefix) ? status.slice(prefix.length) : status;
+    return !immunities.has(status) && !(isConditionId(semantic) && immunities.has(semantic));
+  });
 }
 
 export function findCompanionEffect(item, key) {
@@ -64,6 +68,15 @@ export function createCompanionEffectData(template, sourceUuid, worldTime, exist
   delete data._id;
   delete data._stats;
   const condition = readConditionInstance(template);
+  if (condition) {
+    // Older Forge builds regenerate flagged templates with the semantic status
+    // ID. Project the applied instance using the current public contract, so a
+    // native/third-party same-name status cannot create a second expiry owner.
+    const projected = projectedConditionStatusId(condition.conditionId);
+    data.statuses = [...new Set(Array.from(data.statuses ?? []).map(status =>
+      status === condition.conditionId ? projected : status))];
+    if (!data.statuses.includes(projected)) data.statuses.push(projected);
+  }
   if (condition?.template) {
     const current = readConditionInstance(existing);
     data.flags = { ...(data.flags ?? {}), ...buildConditionFlag(createConditionInstance(condition.conditionId, condition.params, {
@@ -248,18 +261,18 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
   }
   async function applyEffect(actor, item, key, role, extra = {}) {
     const template = effectTemplate(item, key);
-    const statuses = Array.from(template.statuses ?? []);
+    const existing = list(actor.effects).find(effect => flag(effect).role === role
+      && (['ward', 'ward-broken', 'corrupted'].includes(role) || flag(effect).source === item.parent.uuid));
+    const data = createCompanionEffectData(template, item.uuid, game.time.worldTime, existing);
+    const statuses = Array.from(data.statuses ?? []);
     const allowed = permittedStatuses(statuses, actor.system.traits.ci.value);
     if (statuses.length && !allowed.length) {
       log('condition-immune', { actor: actor.name, statuses, role });
       return null;
     }
-    const existing = list(actor.effects).find(effect => flag(effect).role === role
-      && (['ward', 'ward-broken', 'corrupted'].includes(role) || flag(effect).source === item.parent.uuid));
-    const data = createCompanionEffectData(template, item.uuid, game.time.worldTime, existing);
     data.disabled = false;
-    // Core has no dazed status. Preserve the source-authored named effect and
-    // expiry without registering a global condition or substituting stunned.
+    // Without the custom module's registered projection, retain the named
+    // effect and expiry; do not substitute a same-name third-party status.
     data.statuses = allowed.filter(status => CONFIG.statusEffects.some(effect => effect.id === status));
     data.origin = item.uuid;
     data.duration = { ...data.duration, startTime: game.time.worldTime };

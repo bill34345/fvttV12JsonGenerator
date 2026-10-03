@@ -65,9 +65,9 @@
     "note": "核对安全测试入口新增样本宏回归；Bun1.3.8循环检查未返回结果，改用同一Knip包的Node官方入口，参数与检查范围不变，Node入口已退出0。正式生成目标与verifier入口不变。"
   },
   "human-encounter-intake": {
-    "fingerprint": "d3b1804e9bb6b677892b0e824a560eb6a6e9b336a6f2311c00c5b22955dc8f3b",
+    "fingerprint": "738c0428aa96f6dccaf74165c0bed5bd0591a8f17542d12e4a1b1d95aa4a1a04",
     "reviewedOn": "2026-10-03",
-    "note": "核对样本专用宏与AI固定配置分工；补充单独启动、刷新重启和Custom Conditions恍惚边界，当前候选静态通过而实机仍待验收。"
+    "note": "已对照晶血样本2.1.2与正式来源：应用实例按有效条件标记投影独立恍惚、保留语义免疫和目标下回合结束期限；当前Forge0.4接收端原生模板兼容已回归，r4真实失败原件保留，r5实机仍待复验。样本单独启动及固定配置路径分工保持。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -120,9 +120,9 @@
     "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "ef6cecd27e47c8ff8f3f5fd89d1ea585fcd6c2361297b5661410f807f46e4d3c",
+    "fingerprint": "6e39a6914bdfa2496ed937e193e43c51d92f700ccf66d84ab4bf97e95cb57f3a",
     "reviewedOn": "2026-10-03",
-    "note": "核对Forge官方预览、create-only导入、UUID绑定与单独启动步骤；说明样本恍惚的独立状态与core具名回退，不提升当前候选实机状态。"
+    "note": "已对照晶血样本2.1.2与正式来源：应用实例按有效条件标记投影独立恍惚、保留语义免疫和目标下回合结束期限；当前Forge0.4接收端原生模板兼容已回归，r4真实失败原件保留，r5实机仍待复验。样本单独启动及固定配置路径分工保持。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",

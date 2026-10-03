@@ -1,112 +1,72 @@
 # 晶血龙兽 V14 当前战斗包收尾
 
-2026-10-03。整体 **INCOMPLETE**：本轮完成候选生成、来源核对和两处恍惚桥接修复；正式 Chrome 连接已在会话刷新后恢复，独立执行器已建立。Mirror 启动被工具策略拒绝，实际 Foundry 导入、绑定、隔离与恢复门仍 **NOT_EXECUTED**。没有把历史战斗接受或模拟回归推广为本轮实机 PASS。
+2026-10-03。整体 **INCOMPLETE**：r4 已在 Server Mirror 的 cor-cotn 完成正式预览、导入、UUID绑定、守护和旧对象隔离，但独立恍惚及完整到期 **FAIL**。失败原件保留；样本宏已修复为2.1.2并正式重新生成包，r5受影响路径的Chrome复验仍待执行。当前记录取代首次启动受拒、重启前暂停及强制切换matrix的旧接续说明。
 
-## 候选与权限
+## 当前候选与权限
 
-- 干净 master 基线 `a6cbd37dcaaf367ce11bd8e999a4d1445d8ce4ce`；候选分支 `codex/20261003-031024-crystalbleed-v14-close`，sibling worktree `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261003-031024-crystalbleed-v14-close`。
-- 旧树 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20260912-130943-crystalbleed-v14` 只读；19 个未提交文件已记录路径与 SHA-256，没有覆盖、提交或清理。
-- 用户已有授权涵盖本项开发、本地 Server Mirror 验收及本地提交；本轮不 push、不操作生产、不停止或重启常驻 Mirror。
-- 首次接手的真实 `turn_context`：`gpt-6.1-sol / xhigh / never / danger-full-access`；会话刷新后最新记录为 `gpt-6-astra / high / never / danger-full-access`，分别保存原件，没有覆盖宿主当前配置。独立 Chrome 执行角色仍遵当前项目 `gpt-6.1-sol / medium`。
+- master基线 a6cbd37dcaaf367ce11bd8e999a4d1445d8ce4ce；候选分支 codex/20261003-031024-crystalbleed-v14-close；工作树 I:/OpenCode/fvttV12JsonGenerator-worktrees/20261003-031024-crystalbleed-v14-close。
+- 用户授权本项开发、本地Server Mirror验收、本地提交及满足门禁后的本地集成；不push、不操作生产、不启停常驻Mirror。
+- 旧树20260912-130943-crystalbleed-v14的19个未提交文件保持只读，不覆盖、不自动提交、不清理。
+- 继续复用Chrome执行聊天01a0ff82-8040-73f3-9d43-8f5bea6dc556，gpt-6.1-sol/medium。原生回调到父聊天01a0fdf7-35f6-79c3-b1c5-4812d1a8f54d；不轮询。
+- 仅使用F:/FoundryLab/foundry-v14/data/server-mirror、127.0.0.1:30001、cor-cotn、Foundry14.364/dnd5e5.3.3。r4进程PID45740由父任务拥有；复验前刷新身份，不切世界，不要求用户处理Setup密码。
 
-## 已选择的路径
+## 正式来源和包身份
 
-明确使用 `tools/forge-encounter/build-example.ts` 的**已整理来源与受审核样本专用宏**路径。没有调用 Provider，没有把它当成人类 MD → DS → 固定能力配置全链。
+选择已整理来源及受审核样本宏路径：build-example.ts携带来源，prepareForgeEncounter经过正式browser workflow→parser/generation→verifier。目标14.364/5.3.3/core/icon off；没有调用Provider或手工修补Actor JSON。
 
-打包器携带来源；`prepareForgeEncounter` 调用正式 browser workflow → parser/generation → verifier，目标明确 `14.364 / dnd5e 5.3.3 / core / icon-mode off`。Actor artifact 未手写或修补，审核 artifact 仅保存于外部 evidence，未作为 accepted 单 Actor 发布。
-
-最终候选：
-
-| 对象 | 身份 |
+| 对象 | r5身份 |
 | --- | --- |
-| 包 JSON SHA-256 | `3d6f5473aff7f9164c60f9b3f6b11362875e2f96698ad45c3362186fa4290c9d` |
-| ZIP SHA-256 | `05b1767322b439ea01edaa1c0041e76e8b42afecfb12aa3d15f41d26d4a68312` |
-| 未绑定样本宏 commandHash | `f44cb05a4c510e91e5fdab41ba678aefe151400fe188c0b4c4bb450bd215820d` |
-| 龙兽确定性 UUID | `Actor.4ffe914190ff8157` |
-| 晶体确定性 UUID | `Actor.a8139b242e679eef` |
-| 控制宏确定性 ID | `9dcb48629e517e2a` |
-| 样本运行时版本 | `2.1.1` |
-| 龙兽 canonical artifactHash | `b740b84cdb92ea73556eac9b3b4e1be3334a8bde080c551ecb49e2bc2188452c` |
-| 晶体 canonical artifactHash | `e33d16d7f98b513c1c3c63f1dd5eb17c009e0723a2c738613a9d5cf4cb83d848` |
+| 包JSON与packageHash | ea9b257ec123fc5086ae3b740e0deeb66cea23cb4dbe2350ee0cfc8e2bccf1a2 |
+| ZIP SHA-256 | 2754d398d016a28141720cdb930dab961b88a1cdbb2a3b6ff21ca7a20ae30bd9 |
+| 未绑定样本宏commandHash | 51e2f9292464927b02887328bf4fc57bbc0d1de391484a5e7daebb59d816c9f3 |
+| 预期绑定宏commandHash | 25c9cc90c94299795b2a33c3ced218a79b6a7625b19acc8a9ecdc6189fc49781 |
+| 龙兽UUID | Actor.4ffe914190ff8157 |
+| 晶体UUID | Actor.a8139b242e679eef |
+| 控制宏ID | 9dcb48629e517e2a |
+| 样本运行时 | 2.1.2 |
+| 龙兽artifactHash | b740b84cdb92ea73556eac9b3b4e1be3334a8bde080c551ecb49e2bc2188452c |
+| 晶体artifactHash | e33d16d7f98b513c1c3c63f1dd5eb17c009e0723a2c738613a9d5cf4cb83d848 |
 
-上述 UUID/ID 是当前导入器推导的预期值，**不是 Foundry 创建读回证据**。原交接包 `ebf1a8bb…e14dd` 被新宏候选替代；同一 packageId 的旧文档不能用改 flags/hash 的方式覆盖。
+r4已实际创建并读回上述Document ID；r5包及绑定宏哈希仍是正式流程加内存Document port推导的预期值，不代替新包实机读回。两Actor仍needs_review，五条配套要求未变，须包级GM确认和单独启动。
 
-两 Actor 仍为 `needs_review`，五条明确配套要求继续由唯一绑定宏承担；包级 GM 确认和单独启动边界保留。
+r5两artifact与首次候选canonical hash相同，来源原文件字节与候选HEAD一致，复用原来源人工核对和两份verifier退出0、warnings/sourceIntegrityErrors为空的证据。旧candidate-receipt.json的sourceHash属于注入sourceId后的workflow请求；新candidate-receipt-r5.json明确区分rawSourceHash和workflowRequestSourceHash。随机sourceId使后者随准备变化，不能冒充原文件哈希。
 
-## 旧树与 master 后继比较
+## 恍惚修复及精确来源
 
-| 旧增量 | 当前归属与结论 |
+1. 通过公共condition契约查找当前独立fvtt-custom-conditions.dazed效果，同时兼容旧dazed和来源behaviorState，拒绝其他模块同后缀状态。
+2. Item的template=true不能原样作为Actor实例；应用时创建enabled实际条件、独立instanceId及来源，刷新同来源实例保留instanceId。
+3. r4实际导入的齐射模板634026d2d16c240f保留custom-condition标记，但statuses为[dazed]。已加载Forge0.4.0 bundle的actor-effects生成代码直接输出statuses:[info.en]，与保存的Creator源码一致；没有把该差异误归因于CC或DAE预创建Hook。宏2.1.1复制它后，DAE14.0.12按原生status补出autoCreated的dnd5edazed000000，源实例到期后这份额外效果仍启用。
+4. 样本宏2.1.2按有效condition标记投影应用实例；applyEffect使用投影后的状态做免疫和注册检查，避免再次用模板原生状态覆盖。语义ID和独立ID的免疫均生效，其他模块同名状态保持独立。没有改写正式模板、更换已安装Forge、禁用DAE或删除其他来源效果。没有注册独立状态时保留具名效果和期限，由GM裁定行动。
+
+回归由r4真实status/flag模式驱动，并覆盖完整salvo应用出口、目标回合结束到期、免疫及未注册独立状态的具名回退。先红：513pass/3fail；其中一次初始测试替身缺Foundry DamageField的formula计算属性，已修正并记录第二次同症状失败。修复后518pass/0fail/2202 assertions，40文件。工具typecheck通过。它们是非浏览器证据，r5实机仍待复验。
+
+## r4实际行为及恢复
+
+| 门 | 结果与边界 |
 | --- | --- |
-| parser 的 tokenImg mapping/YAML 两文件 | 当前 parser 已包含；来源与 token-image 正负回归已存在，不回迁旧实现。 |
-| generation 的 recharge、源效果期限、恍惚与范围两文件 | 当前 generation 已含后继实现。范围改为区分 AoE 与投放距离；现有跨版本 fixture 验证，不覆盖为旧 hunk。 |
-| package.json、structuredActionItems 测试 | 由 Forge 安全测试入口及当前更严格回归承接；不新增旧独立构建路线。 |
-| 两正式来源 | 晶体逐字节相同；龙兽仅末尾空白不同，trimEnd 后相同。使用当前样本来源。 |
-| 源语义测试与 structured-save-outcomes fixture | 当前 `tests/forge-encounter-source-semantics.test.ts` 已承接；fixture 字节相同，状态断言随当前独立状态 ID 更新。 |
-| 独立宏与图像 | 宏后继在 `tools/forge-encounter/examples/crystalbleed/`，显式使用本包 UUID；图像字节相同。保留旧宏历史身份，不回迁整棵目录。 |
-| 旧 README、构建、两 dummy、局部规则、历史接受与单元测试 | 保留在未退役的旧树；旧生成/导入说明不能作为当前包的推荐入口。退休须待实机门和独有材料保存闭合。 |
+| 有界业务基线 | PASS：14parts/53858bytes；原286Actors、65Scenes、10Combats、93Macros、1089消息ID。边界是world ready后、测试写入前。 |
+| 正式ZIP预览和确认导入 | PASS：两Actor及控制Macro；导入前后未自动启动控制器。两needs_review复用正式准备收据，UI和flags未独立暴露。 |
+| 独立启动和绑定 | PASS：runtime2.1.1及精确bindingSignature；读回UUID、版本marker、绑定flags，整段command字节hash尚未独立计算。 |
+| 新龙兽守护 | PASS：实际40伤害，HP176→156。 |
+| 旧对象隔离 | PASS：明确归属的同名legacy fixtures在导入前创建，Actor完整hash不变，无新效果；旧晶体TokenDocument.move完成true且managed=false。 |
+| 真实齐射失败分支 | PASS：实际按钮、CON总值-16/DC18、HP200→188、传奇动作spent2、召唤Token绑定新晶体Actor。 |
+| 恍惚实例 | PASS：CC.list识别唯一非template实例。 |
+| 独立状态及完整到期 | FAIL：状态为原生dazed；源实例到目标回合结束禁用，但DAE额外原生效果仍启用。 |
+| 清理及重载恢复 | PASS：精确owned Actors/Scene/Combat/Macro和消息清理；原文档hash、相关settings、完整module清单、消息ID集、paused/view/active/controlled/targets/combat/viewport恢复。 |
+| 最终退出 | PASS：helper原生删除后再次登录证实宏93、helper/controller皆不存在，最后登出0/7并关闭自有tab，无剩余owned tabs；Node保持运行。 |
 
-## 本次确认并修复的恍惚桥接
+Actor/Macro保存完整原生source哈希；Scene/Combat仅排除顶层_stats.modifiedTime与lastModifiedBy，嵌入Token仍严格。基线不是启动前字节证明。额外Monks回合标记经移除该确切ID后的消息集hash等于原集，才按归属清理；没有按“所有新消息”删除。
 
-1. 当前正式齐射效果的 status 是 `fvtt-custom-conditions.dazed`。原宏只匹配 `dazed`，在当前 artifact 上返回缺失。使用共享 condition contract 的独立 status 投影查找，继续接受旧 `dazed`、原生效果和 behaviorState；不接受其他模块同后缀状态。
-2. 正式 Item 效果是 `template=true`。原样复制到 Actor 后，Custom Conditions 的 `ConditionRuntime.list()` 明确跳过模板。宏现在通过共享契约建立实际 enabled 实例，保留来源与期限，生成独立 instanceId；刷新已有同来源效果时保留其 instanceId。正式 Item 模板和 Actor JSON 不改写。
+保留r4内容寻址素材fvtt-json-forge/encounters/3d6f5473aff7f9164c60f9b3f6b11362875e2f96698ad45c3362186fa4290c9d/dragon-art-dragon.png，没有删除共享资产。r3巨型导出导致tab失去响应的失败证据保留，后续同一执行器完成tab/helper/logout恢复；不声称该次未完成基线能证明全业务无漂移。
 
-`candidate-receipt.json` 保留原查找失败、修复后命中，以及原复制仍为模板、修复后不是模板的机械证据。这是非浏览器复现；齐射实际失败分支及状态到期仍待实机。
+## 静态门及剩余范围
 
-新增回归使用当前正式 workflow artifact，检查独立恍惚、模板实例化、错误状态拒绝、相同名称和相同机制标记的旧 Actor 不被接管、伤害 Hook 仅减免绑定龙兽、移动 Hook 仅限制绑定晶体、缺绑定前置拒绝及 stop 清理。模拟环境结果不代表真实 Token/Document 保存。
+原完整ci:verify退出0：3346pass/1skip/0fail，432来源anti-overfit，类型、架构、coverage、hygiene、references、Web build及离线smoke通过。Bun Knip未返回及一次Species CLI超时的原件保留，Node同一Knip入口和最终CI已通过。此为a9f91fa候选证据，不能直接推广为本次新增修改的完整CI；r5聚焦测试和typecheck已通过，最终集成门仍待执行。
 
-## 来源语义与已有证据复用
+r5完整CI实际退出1：未修改的crawl-sites v14 dry-run子进程50秒无输出，随后单进程coverage达到300秒上限；原件ci-verify-r5.log保留。安全入口test:robustness复查为79pass/1fail：前次失败的v14 target通过，另一个modded profile子进程出现同样50秒无输出。没有扩大超时、降低coverage或把此运行器失败记为绿色。浏览器受影响路径的正式构建、宏回归、类型及手册前置均通过，可继续窄验收；本地集成仍须解决当前CI门。
 
-当前重新生成的两 artifact 已人工对照来源：龙兽巨型龙、AC19/HP176/14d12+42、六维23/14/20/16/19/18、先攻敏捷2加bonus10为12、四种速度、指定熟练与三语言、五状态免疫、15能力；晶体中型构装体、AC17/HP15、六维10/10/10/1/10/1、全速度0、3能力。
+下一步只在同一cor-cotn复验新包导入、完整bound-command哈希、runtime2.1.2绑定，以及失败齐射的独立恍惚实例、目标回合结束后无残留原生恍惚；保存新业务基线并精确清理、恢复、重载读回。核对正式预览中两条“有配套宏/GM辅助规则”提示及五要求；该提示经已加载Application源码的assisted=status===needs_review映射推导，UI没有直接status字段，不使用flags猜测或要求不存在的准备API。既有40→20、legacy隔离及历史战斗矩阵按受影响分析复用，不重跑无关路径。实机门关闭后完成文档、最终集成检查和已授权本地集成。
 
-三原生攻击仍以武器 base 与 `includeBase=true` 表达来源主伤害，附加心灵伤害分别2d8/1d8/1d6；力量6加熟练5为+11。吐息WIS18/6d10力场/60尺锥形/成功半伤/恐慌60秒/充能5–6；齐射CON18/2d8心灵/2传奇动作/失败恍惚，恍惚按目标下回合结束移除；晶体DEX18失败2d6穿刺，独立CHA18腐化，成功不触发后续。来源的首次腐化与重复失败分支、守护严格超过20的阈值、碎裂至自身下一回合及耗尽削弱均保留。
+生产、Next/其他版本、长时及全部战斗矩阵均NOT_EXECUTED。旧dirty树不退役；其parser/generation增量已由master后继承接，来源和图片的对比证据保留，独有历史材料尚在原树。
 
-两份 `verify:actor` 均退出0，warnings/sourceIntegrityErrors 空。最后一次修改只影响宏，Actor artifactHash 与已通过 verifier 的版本相同，复用其证据。Source raw bytes/hash 与 workflow 注入 sourceId 后的 request hash 分开解释，后者不作为原文件字节 hash。
-
-2026-09-12 独立宏2.0.2与2026-09-15固定配置路径的历史战斗证据只保留各自身份。当前改变了 UUID 绑定及恍惚桥接，不能沿用历史完整 PASS；不重跑未受影响的完整战斗矩阵。
-
-## 本地 runtime 与工具层
-
-只读核对：Node PID40952、127.0.0.1:30001、app `F:/FoundryLab/foundry-v14/app/14.364/main.js`、dataPath `F:/FoundryLab/foundry-v14/data/server-mirror`、当前世界 `fvtt-v14-module-matrix`、Core14.364/dnd5e5.3.3，HTTP status users=0。
-
-磁盘安装为 Forge0.4.0、Custom Conditions0.2.0、Trigger Engine0.2.0、Injury1.1.0；候选 master 内 Forge 仍0.3.0。当前 importer/runtime/preparation/browser入口四文件与保留的Creator源码相同，但源码相同不能证明安装或当前客户端源码归属。实机前仍需核客户端 API/版本/载入字节及已启用模块。没有降级、替换安装或触碰其他任务的Creator功能。
-
-首次会话的可调用工具清单451项中没有 `node_repl` js、`create_thread`、`send_message_to_thread`、`wait_threads` 或工具发现入口。配置 enabled、组件存在、独立 MCP 探测均不能替代可调用能力。没有手动 MCP、raw CDP、Computer Use 或其他通道代替 Chrome。
-
-同版本官方 Chrome/Browser 缓存缺少技能文件，已先核 source/cache manifest 相同，再仅补回三个缺失文件并核 SHA-256。Chrome 正在运行、扩展已启用、官方 native-host检查 correct=true。没有修改策略、可信服务或权限配置。
-
-会话刷新后，官方组件为26.930.31428，浏览器与原生任务接口实际可调用。父任务已在拥有的tab651338541完成Example Domain打开/正文读取→真实点击→IANA正文读取，并关闭该tab；收据 `chrome-capability-recovered.json` 取代旧的工具缺失结论，不代表Foundry业务接受。
-
-此时旧PID40952与30001监听均已消失，未发现其他Foundry进程。只读核对cor-cotn world manifest与安装system均为14.364/5.3.3。恢复这一本地实例的 `Start-Process` 请求在执行前被自动审批审查拒绝，返回只有 `blocked by policy`，未提供更具体理由。`mirror-start-policy-rejection.json`记录该命令没有启动服务；没有改通道重试。
-
-用户明确选择新建独立验收聊天；执行器 `01a0ff82-8040-73f3-9d43-8f5bea6dc556` 已创建。回调 `READY_FOR_SERVICE`：自身turn_context为gpt-6.1-sol/medium、never、danger-full-access，JSON/ZIP哈希匹配，官方Chrome打开/读取/关闭拥有tab651338548通过，remainingOwnedTabs为空；原生回调已发到正确父UUID并由父任务读取收据。服务端实际模型未独立观察。首次合同仅核前置，未启动服务或修改世界；服务由用户/owner恢复且父任务发送新执行指令后才进行E2E。不轮询执行器。
-
-完整CI首次被会话中断在Bun1.3.8的Knip循环检查，不能当作CI通过。相同Knip安装包的Node官方入口独立退出0；仅将`architecture:cycles`调用器改为Node，保留全部参数与检查范围。恢复CI通过环境、手册、类型、架构和Session Monitor构建，随后Species CLI的一个子进程15秒无输出超时：23通过/1失败。没有扩大Species支持范围或放宽超时；同输入安全入口 `test:cli` 聚焦复查24通过/0失败，原失败保留在 `ci-verify-recovered.log`。
-
-最终 `bun run ci:verify` 实际退出0（`ci-verify-final.log`）：全部类型与架构检查、测试与coverage门、432来源anti-overfit、仓库hygiene、5.3.3/current-6参考、Web build及White Tusk Shaman离线smoke均通过；smoke为6来源物品、0 verifier警告、0网络调用。此CI PASS不关闭Foundry业务门。
-
-## 分层门与接续
-
-| 门 | 结果 |
-| --- | --- |
-| 当前来源→workflow→artifact 与人工语义 | PASS，仍 needs_review |
-| 两份 source verifier | PASS |
-| Forge 聚焦回归 | PASS：513 tests / 2176 assertions / 0 failures |
-| typecheck:tools / typecheck:packages / architecture:verify | PASS |
-| 最终完整 ci:verify | PASS，退出0；原中断和一次CLI超时单独保留 |
-| 手册、指令、diff与本地提交 | 手册30项、指令34项及diff检查PASS；提交见最终收据 |
-| 官方 Chrome 最小往返与独立执行器 | PASS：父连接与执行器配置/连接/包身份；执行器READY_FOR_SERVICE |
-| 实际包预览/导入、确定性 ID、宏 UUID绑定读回 | NOT_EXECUTED |
-| 新 UUID 的代表守护链、同名旧 Actor/Token 数据不变 | NOT_EXECUTED |
-| 修复后的实际齐射恍惚/到期和 Custom Conditions 识别 | NOT_EXECUTED |
-| 本轮 owned对象清理、原view/active/paused与设置重载恢复 | NOT_EXECUTED；没有创建世界对象或改原状态 |
-| 生产、其他版本、长时及全部战斗矩阵 | NOT_EXECUTED |
-
-接续只从工具最小往返和本包真实导入门开始。普通玩法使用 `cor-cotn`；只读确认服务占用后按 Foundry Ops 世界规则协调切换并恢复原matrix，不停止常驻进程。先保存现有 Actor/Token/Scene/Combat/Macro、view/active/paused与设置的业务基线；同名旧样本若需要新建，由测试拥有且单独记录，既有文档不改写。通过正式 Forge UI 导入本候选、读回表中 ID与绑定、启动宏，证明新龙兽40伤害→20而同名旧龙兽不减免，旧晶体移动不被拦截。仅增加受修复影响的一次齐射失败、状态实例识别与到期检查；不重跑整个矩阵。
-
-按精确 owned清单停止本客户端宏、清理新文档和消息、恢复世界与本轮设置/模块开关并重新登录读回，保持用户/owner恢复后新核实的服务进程。PID40952仅为历史身份。完成后再更新本记录、执行合并门；未实机验收前本 topic 不合入master。
-
-外部证据根：`H:/CodexData/visualizations/2026/10/02/01a0fdf7-35f6-79c3-b1c5-4812d1a8f54d/crystalbleed-v14-close-20261003`。关键文件为 `candidate-receipt.json`、`semantic-source-readback.json`、两个verifier log、`forge-encounter-tests.log`、`runtime-identity-readonly.json`、`official-skill-file-restoration.json`、`self-turn-context-receipt.json` 与 `installed-forge-source-comparison.json`。机器证据没有进入仓库。
-
-## 用户要求重启前暂停
-
-用户于2026-10-03要求在合适检查点停止，重启电脑后再继续。当前源码与证据已冻结，最终CI已完成；独立Chrome执行器完成前置后已结束回合，没有监听或轮询。本轮没有启动Foundry或写世界对象。保存本地topic提交后暂停，不合入master、不push、不清理候选或旧树。重启后从服务身份与实机导入门接续，复用已有执行器和本包，不重做已充分的静态检查。
+外部证据根：H:/CodexData/visualizations/2026/10/02/01a0fdf7-35f6-79c3-b1c5-4812d1a8f54d/crystalbleed-v14-close-20261003。当前主要文件：candidate-receipt-r5.json、prepare-r5-receipt.ts、r5-candidate-generation.log、runtime-r4/runtime-receipt.json、condition-expiry-readback.json、comparison-after-reload.json、final-helper-persistence.json、macro-projection-regression-red-callsite.log、macro-projection-regression-final.log。机器证据不进入仓库。

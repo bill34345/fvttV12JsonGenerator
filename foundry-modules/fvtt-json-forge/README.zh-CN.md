@@ -89,7 +89,7 @@ Macro创建与执行是两个动作。脚本仍在GM客户端权限下运行；�
 
 样本制作：在仓库运行`bun run tools/forge-encounter/build-example.ts`，产生`crystalbleed.forge-encounter.json`和`crystalbleed.forge-encounter.zip`。包携带来源和绑定宏；Actor JSON由接收端正式生成。样本宏使用`forgeEncounter.actors.dragon`与`forgeEncounter.actors.crystal`，不会按同名任意选择世界角色。
 
-晶血样本的专用宏读取正式生成的恍惚效果，并保留目标下一个回合结束的期限。启用 Custom Conditions 时使用其独立恍惚状态；未启用时以具名效果表示，行动选择仍由 GM 裁定。样本需要单独启动，刷新后重新启动；其修复版本须按具体候选完成导入、绑定和效果结算验收。
+晶血样本的专用宏 2.1.2 读取正式生成的恍惚效果和自定义条件标记，并保留目标下一个回合结束的期限。启用 Custom Conditions 时应用其独立恍惚状态，并遵守既有恍惚免疫；未启用时以具名效果表示，行动选择仍由 GM 裁定。样本需要单独启动，刷新后重新启动；其修复版本须按具体候选完成导入、绑定和效果结算验收。
 
 人类 MD 路径支持 2 至 6 种生物、最多 24000 字符。AI 提取并审核生物数据，再选择已实现的固定能力和参数；工具校验并编译控制入口，AI 不写 JavaScript。明确启用的固定配置会在刷新时重验身份后恢复，停用按钮持久生效。未知或不支持的规则保留审阅，不会现场生成代码补齐。完整步骤见[原始MD战斗包指南](../../tools/forge-encounter/README.md)。
 
