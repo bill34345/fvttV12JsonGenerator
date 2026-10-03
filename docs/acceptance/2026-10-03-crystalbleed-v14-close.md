@@ -1,6 +1,6 @@
 # 晶血龙兽 V14 当前战斗包收尾
 
-2026-10-03。整体 **INCOMPLETE**：r4 已在 Server Mirror 的 cor-cotn 完成正式预览、导入、UUID绑定、守护和旧对象隔离，但独立恍惚及完整到期 **FAIL**。失败原件保留；样本宏已修复为2.1.2并正式重新生成包，r5受影响路径的Chrome复验仍待执行。当前记录取代首次启动受拒、重启前暂停及强制切换matrix的旧接续说明。
+2026-10-03。实机业务与原世界保持 **PASS**：r5正式导入并启动2.1.2，独立恍惚与完整到期通过；r6通过完整场景哈希的唯一反事实证明，精确恢复测试工具引发的Monks TokenBar原Token flag副作用，重载后原R5基线全部匹配。整体仍 **INCOMPLETE**：完整CI出现未改CLI子进程启动零输出超时，当前未合入master。r4/r5原失败记录保留，不倒改为PASS。
 
 ## 当前候选与权限
 
@@ -27,7 +27,7 @@
 | 龙兽artifactHash | b740b84cdb92ea73556eac9b3b4e1be3334a8bde080c551ecb49e2bc2188452c |
 | 晶体artifactHash | e33d16d7f98b513c1c3c63f1dd5eb17c009e0723a2c738613a9d5cf4cb83d848 |
 
-r4已实际创建并读回上述Document ID；r5包及绑定宏哈希仍是正式流程加内存Document port推导的预期值，不代替新包实机读回。两Actor仍needs_review，五条配套要求未变，须包级GM确认和单独启动。
+r5已通过当前正式ZIP预览、GM确认和实际导入读回上述Document ID；native Macro command字节SHA-256等于flags.commandHash和表中预期值，packageHash及bindings正确。runtimeBefore=null，正式单独启动后为2.1.2及精确bindingSignature。两Actor的needs_review由实际两个GM辅助提示及已核实Application映射推导，UI未直接暴露status字段；五配套要求均展示，未提升为单Actor accepted。
 
 r5两artifact与首次候选canonical hash相同，来源原文件字节与候选HEAD一致，复用原来源人工核对和两份verifier退出0、warnings/sourceIntegrityErrors为空的证据。旧candidate-receipt.json的sourceHash属于注入sourceId后的workflow请求；新candidate-receipt-r5.json明确区分rawSourceHash和workflowRequestSourceHash。随机sourceId使后者随准备变化，不能冒充原文件哈希。
 
@@ -65,7 +65,15 @@ Actor/Macro保存完整原生source哈希；Scene/Combat仅排除顶层_stats.mo
 
 r5完整CI实际退出1：未修改的crawl-sites v14 dry-run子进程50秒无输出，随后单进程coverage达到300秒上限；原件ci-verify-r5.log保留。安全入口test:robustness复查为79pass/1fail：前次失败的v14 target通过，另一个modded profile子进程出现同样50秒无输出。没有扩大超时、降低coverage或把此运行器失败记为绿色。浏览器受影响路径的正式构建、宏回归、类型及手册前置均通过，可继续窄验收；本地集成仍须解决当前CI门。
 
-下一步只在同一cor-cotn复验新包导入、完整bound-command哈希、runtime2.1.2绑定，以及失败齐射的独立恍惚实例、目标回合结束后无残留原生恍惚；保存新业务基线并精确清理、恢复、重载读回。核对正式预览中两条“有配套宏/GM辅助规则”提示及五要求；该提示经已加载Application源码的assisted=status===needs_review映射推导，UI没有直接status字段，不使用flags猜测或要求不存在的准备API。既有40→20、legacy隔离及历史战斗矩阵按受影响分析复用，不重跑无关路径。实机门关闭后完成文档、最终集成检查和已授权本地集成。
+r5实际齐射按钮完成CON-32/DC18失败、HP200→194、传奇动作spent2、召唤Token nnmKG4p3EgM4Y90I绑定新晶体Actor。effect gYu89yW6KYby1d9r的instance8230874bcee04af5a3e6ad107c5a7ba5唯一非template，只有fvtt-custom-conditions.dazed；目标回合开始active，回合结束disabled=true/active=false，Actor.statuses为空，CC active=false，六个独立check均true。此为真实按钮加owned Combat update/settle证据，不扩展为完整战斗矩阵。
+
+r5清理首次检测原landing Scene哈希不同，严格保留FAIL。父只读物理WAL发现原Token cLkAllpE1o3tUJNi新增monks-tokenbar.movement:null；Monks14.01在round1/turn0将当前TokenBar条目的单独移动设置清空，r5测试工具先启动Combat才view自有Scene，因而命中原场景条目。WAL未核CRC，只作为线索；r6真正证明来自live完整Scene反事实哈希：五变体仅删除新增的单键monks-tokenbar命名空间精确复现原冻结hash ba608ea8c54401a0e4a235cba046c29091a02242e1a13f96b16f6cd401914a0b。执行一次原生TokenDocument.update({'flags.-=monks-tokenbar':null})后，实际及重载hash均精确匹配，Token.flags={}。
+
+r6恢复后，286原Actors、65Scenes、10Combats、93Macros完整原hash一致、无新增，捕获的相关settings、完整module表、1089消息ID集以及paused/view/active/controlled/targets/combat/viewport均匹配原R5冻结基线；只按确切ID排除本轮owned helper，未重采baseline或放宽Token边界。helper原生删除后再登入确认absence/Macros93，最后登出0/7并关闭owned tab，Node与用户tab保留。未重复业务案例。
+
+已保存future fixture修正fixture-view-order-corrected.mjs：先view自有Scene，并通过Monks公开TokenBar API刷新和守护entries只指向自有Scene，之后才启动Combat；保留本次执行失败的原工具源码。此为工具修正，不改变包或主宏；没有凭修正源码重标历史Scene FAIL。Monks全局movement的指定world SettingDocument f41fK82gx9y7kqRm实际value为combat，原生modifiedTime1788247412268对应北京时间2026-09-01 15:23:32，早于本项；这项历史配置未由本轮修改，不猜默认free或回写设置。原生systemVersion2.3.1作为历史文档元数据保存，不误当当前runtime5.3.3版本。读取后helper删除、再登入Macro93及登出tab关闭均通过。相关settings白名单不冒充全部world设置。
+
+CI最新独立安全入口test:cli在诊断preload下24pass/0fail；trace捕获10次真实Bun子进程的spawn、stdout、exit、close，最长477ms，无零输出deadline样本。没有据此确认先前间歇启动问题的根因。原未修改完整CI再执行仍退出1（ci-verify-after-cli-trace-exit.json）：不同的未改plaintext dry-run子进程15秒零输出超时。独立早drain探针在另一item CLI发生同样超时，不能归因为输出读取顺序；生命周期探针观察到一个safe-icon子进程在2441ms仍存在、CPU2.40625秒/29线程，4023ms被原watchdog终止。它确实执行但未产生输出，不能说成仅丢exit事件；精确运行器根因仍未确认，已交独立只读诊断。没有扩大deadline、缩检查或合入master。业务、包及已闭合世界恢复不需重跑。
 
 生产、Next/其他版本、长时及全部战斗矩阵均NOT_EXECUTED。旧dirty树不退役；其parser/generation增量已由master后继承接，来源和图片的对比证据保留，独有历史材料尚在原树。
 
