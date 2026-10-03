@@ -55,9 +55,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "a73359df88c469a695937e5051265849ded5d5e137b3529e045a2861f2fa6d94",
-    "reviewedOn": "2026-09-30",
-    "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
+    "fingerprint": "7eaaa536bd549443704c03a032f0b9cea9b9225ec4b916cef8be089d95993847",
+    "reviewedOn": "2026-10-03",
+    "note": "已对照P2修正：新增暂存000000到100755必须保持INCOMPLETE并要求独立模式/意图审查，100644普通新文件仍按字节读回。既有命令、输出层级、无删除授权和模式差异需另核的说明仍准确，仅更新实现指纹。"
   },
   "verification-development": {
     "fingerprint": "4510599d4218023f07cc9ba26d578bbedcc0ec35a5a27954b8fcc9d813adfafa",

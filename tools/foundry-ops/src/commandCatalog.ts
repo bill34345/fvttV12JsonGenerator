@@ -13,6 +13,8 @@ export interface FoundryOpsCommand {
 }
 
 const COMMANDS: readonly FoundryOpsCommand[] = [
+  { id: 'acceptance.inspect-state', syntax: 'acceptance inspect-state --input=<absolute-current-task-contract.json>', target: 'local', effect: 'read-only', summary: '核对当前任务owner、候选、明确接续与父审引用；报告完成、父审和集成分开，不按时间戳授予权限。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'acceptance.inspect-preservation', syntax: 'acceptance inspect-preservation --input=<absolute-preservation-request.json>', target: 'local', effect: 'read-only', summary: '分别读回提交、暂存、工作区、未跟踪和ignored内容的保留证据；未知项保持未完成，不授予删除权限。', owner: 'foundry-ops', availability: 'available' },
   { id: 'catalog', syntax: 'catalog', target: 'local', effect: 'read-only', summary: '列出全部命令及其权限，不执行项目操作。', owner: 'foundry-ops', availability: 'available' },
   { id: 'acceptance.prepare', syntax: 'acceptance prepare --input=<absolute-request.json>', target: 'local', effect: 'local-mutation', summary: '执行已审核的本地文件预检，固定合同、候选及指令身份；失败阻止派发。', owner: 'foundry-ops', availability: 'available' },
   { id: 'acceptance.ready', syntax: 'acceptance ready --contract=<absolute-contract.json>', target: 'local', effect: 'read-only', summary: '只读核对预检、绝对路径及当前身份，给出可派发状态。', owner: 'foundry-ops', availability: 'available' },

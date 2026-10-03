@@ -622,7 +622,13 @@
       },
       {
         "title": "接续前核对当前状态与独立验收记录",
-        "text": "先读任务当前状态和对应验收记录。共用收据的 INCOMPLETE／PENDING 保留人工判定出口，主控可另行接受已核对的限定行为、恢复和清理；原收据保持不变。已闭合批次不重放，新候选、范围变化或实际缺陷另立任务边界。"
+        "text": "同一任务由一个 owner 维护当前入口，跨项目台账只指向它。按任务合同记录候选和唯一下一步，inspect-state 只读核对身份、旧 STOP 的显式替代及父审引用。报告完成、父审、集成和发布分开；自动收据仍 PENDING 不触发已接受行为重放，较晚时间戳不产生权限。",
+        "command": "bun run foundry:ops acceptance inspect-state --input=\"<当前任务合同绝对路径>\""
+      },
+      {
+        "title": "清理前读回内容保留证据",
+        "text": "按 worktree runbook 列明已提交、暂存、工作区、untracked 和 ignored 内容。inspect-preservation 只读匹配保留范围外的现存文件或可达 Git 文件；未知、缺件和字节失配保持 INCOMPLETE。Git clean、类似主线实现与检查通过均不授予删除权限，不自动复制或清理。",
+        "command": "bun run foundry:ops acceptance inspect-preservation --input=\"<保留请求绝对路径>\""
       }
     ],
     "outputs": [
@@ -653,7 +659,8 @@
     ],
     "sources": [
       "tools/foundry-ops/README.zh-CN.md",
-      "docs/runbooks/development-feedback-loop.md"
+      "docs/runbooks/development-feedback-loop.md",
+      "docs/runbooks/worktree-development.md"
     ],
     "watch": [
       "tools/foundry-ops/"

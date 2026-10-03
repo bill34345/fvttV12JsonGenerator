@@ -60,6 +60,12 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
 
+### 跨聊天状态与清理前内容核对
+
+沿用项目当前任务合同与既有保留位置：`acceptance inspect-state --input=<当前任务合同绝对路径>` 核对 owner、候选、显式接续和独立父审引用；`acceptance inspect-preservation --input=<保留请求绝对路径>` 分别核对已提交、暂存区、工作区、untracked 与 ignored 内容。二者均只输出 JSON，退出 0 表示机械核对一致，缺件／失配／未知退出 2，不执行合同命令、不保存副本、不赋予接受或删除权限。
+
+字段、决定引用和旧收据继承见[状态和继承](../../docs/runbooks/development-feedback-loop.md#7-状态和继承)，保留范围、读回与清理门禁见[worktree 清理](../../docs/runbooks/worktree-development.md#5-清理)。单次执行的 `resume` 保持原收据层级；报告完成、父审、集成和发布分别判断。旧格式原件可人工只读核验，模板不构成新授权。聚焦回归已纳入现有 `test:acceptance-tools`。
+
 上述退出码指 acceptance 子入口的原生值；本机 Bun1.3.8 的多层 `bun run` 包装可能把非零退出归一为1。PowerShell 外层脚本没有显式传递原生退出码时也可能只报告1；需要保留该值时，先保存原生命令的 `$LASTEXITCODE`，再用 `exit` 传给调用者。接续脚本必须同时检查非零退出和输出 JSON 的 `exitCode`（若有）／`layer`／`behavior`／`parentReview`，不能把外层1直接认作业务 FAIL，也不能因为原件保存成功而继续派发。INCOMPLETE／PENDING 的人工出口由独立父审另存结论。
 
 ### 第二个消费者：Vision5e + Item Macro 离线接入

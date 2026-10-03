@@ -1,9 +1,11 @@
 {
   "template": true,
   "protocolVersion": 1,
-  "usage": "仅跨接口/跨版本/迁移/重复失败任务使用；小修改不要求填完整表。这是完整任务的字段参考，尚非共用工具第一版的输入 schema。文件侧第一版使用 development-feedback-request.example.json，自动填已支持的机器字段；runtime/fixture/callback 保留为后续能力。",
+  "usage": "仅复杂任务或跨聊天接手需要结构化当前状态时使用；小修改保留简短说明。此文件是任务当前状态，唯一owner维护；每次运行合同仍使用development-feedback-request.example.json。inspect-state只核对task/workspace/candidates/authority/case/result.reportStatus/resume/integration及其引用，不执行runtime/fixture/callback。机器字段从现有合同或Git/文件读取；template:true的示例会被拒绝。",
   "task": {
     "id": "<task-id>",
+    "ownerThreadId": "<project-executor-uuid>",
+    "reviewerThreadId": "<authorized-reviewer-uuid>",
     "goal": "<可观察行为>",
     "acceptance": [
       "<成功例>",
@@ -21,6 +23,9 @@
     "head": "<sha>",
     "instructionBaseline": "<committed-policy-version>"
   },
+  "candidates": [
+    { "absolutePath": "<candidate-file>", "sha256": "<read-from-file-or-existing-contract>" }
+  ],
   "research": {
     "needed": true,
     "sources": [
@@ -75,6 +80,7 @@
     "retriesWithoutNewEvidence": 0
   },
   "result": {
+    "reportStatus": "NOT_REPORTED",
     "receiptId": null,
     "contractRevision": null,
     "behavior": "NOT_EXECUTED",
@@ -87,11 +93,13 @@
   "resume": {
     "nextAction": "<single-current-action>",
     "supersedes": [],
+    "decision": null,
     "callback": {
       "sendReceiptRef": null,
       "recipientThreadId": null,
       "parentReceivedEvidenceRef": null,
       "parentAcceptedEvidenceRef": null
     }
-  }
+  },
+  "integration": { "status": "NOT_INTEGRATED", "target": null }
 }
