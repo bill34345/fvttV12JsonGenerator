@@ -55,19 +55,24 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "a73359df88c469a695937e5051265849ded5d5e137b3529e045a2861f2fa6d94",
-    "reviewedOn": "2026-09-30",
-    "note": "已对照运行权限检查源码与用户2026-10-01新配置：普通Chrome默认为gpt-6.1-sol/medium，授权中的模型effort匹配执行器自身，主控配置独立。配置变更须新权限原件；旧已通过浏览器证明可按身份复用。"
+    "fingerprint": "c848a3f0eb92cdd4aa0093463d261019793693b1e6e7b77d778cde6a6d093837",
+    "reviewedOn": "2026-10-02",
+    "note": "已核对本轮雅灵6.0.5限定API恢复、失败原件、普通GM重載/UI和清理；仅任务内部投影与唯一总表/专题变化，Foundry Ops命令目录、V1文件侧范围、VM旧6.0.2专属入口和外部候选说明不变，不把雅灵私有适配器推广为通用运行功能。"
   },
   "verification-development": {
-    "fingerprint": "acb07c9b089c24e8c3d0b23734c1d709803c0c1ad25241e5508ef0e36fc03d9c",
-    "reviewedOn": "2026-10-01",
-    "note": "最终对照CI整合记录：Bun1.3.14完整319文件覆盖率及阈值通过，随后Species目标目录卫生规则80项局部回归通过；明确复用全清单快照，未删测试或放宽阈值，准确Midi patch空context保留原SHA。"
+    "fingerprint": "92c45e9e5e02e910582c1527b8e22c85988fdcf3e5da0e602d4feb34aa1b5fbb",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本地提交范围、当前/历史版本边界、固定Midi6.0.2测试输入以及classpack新报告路径。源码已分组本地提交，未合并/push；原运行接受和用户延期的手册视觉状态保持。测试入口、输入前置与候选/历史证据说明已同步，未缩小watch。"
   },
   "human-encounter-intake": {
     "fingerprint": "bd27e23d185aed651c0bf6e8c5cbe8ebc849e91bf36e2ded17e913e7a979b346",
     "reviewedOn": "2026-10-01",
     "note": "对照共享verifier实际调用：只为同Effect合法enabled模板flags及精确projected status还原条件；负例继续漂移，来源匹配和Item/Encounter流程未放宽。"
+  },
+  "midi-qol-server-next-patch": {
+    "fingerprint": "f3d780c1bd7f4f9bfe328c7118c9bf9c33feab5e509541916e170b7d970a018a",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本地提交范围、当前/历史版本边界、固定Midi6.0.2测试输入以及classpack新报告路径。源码已分组本地提交，未合并/push；原运行接受和用户延期的手册视觉状态保持。测试入口、输入前置与候选/历史证据说明已同步，未缩小watch。"
   },
   "chat-memory-guard": {
     "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
@@ -138,5 +143,15 @@
     "fingerprint": "4f48a8cf76463769a3ba3b016bbe80176e76dd951f4c62fff6237ebe9739ac4c",
     "reviewedOn": "2026-10-01",
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+  },
+  "midi-qol": {
+    "fingerprint": "ac502b76a7a564798bc441b69b7be8658a99cf35a491867f8fd623bec9907fc6",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本地提交范围、当前/历史版本边界、固定Midi6.0.2测试输入以及classpack新报告路径。源码已分组本地提交，未合并/push；原运行接受和用户延期的手册视觉状态保持。测试入口、输入前置与候选/历史证据说明已同步，未缩小watch。"
+  },
+  "server-next-external-candidates": {
+    "fingerprint": "55b6ab8a7964124395574c961cc46ebd8f7d6da395be0352675c0a1c2155dc16",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本地提交范围、当前/历史版本边界、固定Midi6.0.2测试输入以及classpack新报告路径。源码已分组本地提交，未合并/push；原运行接受和用户延期的手册视觉状态保持。测试入口、输入前置与候选/历史证据说明已同步，未缩小watch。"
   }
 }

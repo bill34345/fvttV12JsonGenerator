@@ -949,5 +949,127 @@
       "foundry-modules/session-monitor/"
     ],
     "module": "session-monitor"
+  },
+  {
+    "id": "midi-qol",
+    "title": "Midi-QOL ServerNext 本地兼容候选",
+    "category": "play",
+    "summary": "查阅当前ServerNext 6.0.5／local.10限定接受，以及原6.0.2源码工具的独立适用边界。",
+    "when": "完整 ServerNext 迁移需要 Midi-QOL 战斗自动化，而官方稳定包尚未声明支持 dnd5e 6 时使用当前本地候选。",
+    "requires": [
+      "Foundry VTT 14.368",
+      "当前dnd5e6.0.5／Midi local.10；源码工具锁定6.0.2，不用于覆盖当前安装。",
+      "DAE实际候选与客户端版本以唯一总表为准。",
+      "libWrapper 与 socketlib",
+      "world cor-cotn、server-next 与 GM"
+    ],
+    "steps": [
+      {
+        "title": "区分当前安装与历史工具",
+        "text": "当前安装local.10，在6.0.5下Check／Save请求来源加值各+4已限定接受。原源码工具、local.7的A–G/Z35项及local.9手动APPLY场景属于6.0.2历史证据；旧构建／安装和local.7→local.8资源更新脚本不能覆盖当前候选。模块ID始终为midi-qol。"
+      },
+      {
+        "title": "核对运行身份和加载代码",
+        "text": "确认精确app/data/world/port、资源哈希和当前客户端方法指纹。读取唯一总表与当前版本收据；local.9三资源离线更新仅作历史操作证据，服务器包版本与实际客户端候选分开记录。"
+      },
+      {
+        "title": "只补相关接受缺口",
+        "text": "先复用仍适用的已接受证据。当前非付费模块按正常加载／必要入口无新增错误接受；只有新改动、真实失败或具体缺口才补对应检查，不把历史NOT_EXECUTED自动扩展为所有玩法重测。"
+      },
+      {
+        "title": "核对模板清理链",
+        "text": "模板依赖链等历史专项保留当时版本边界；相关行为再次变化时才按对应合同补验，不能用看到模板或没有toast代替完整链证据。"
+      }
+    ],
+    "outputs": [
+      "保持 midi-qol ID 的本地候选模块",
+      "分层的构建、服务器 smoke 和 A–G 玩法证据",
+      "可在官方修复后删除的独立补丁"
+    ],
+    "limits": [
+      "历史local.7的A–G/Z35项及local.9基础isDamaged手动APPLY接受保留原6.0.2范围。当前ServerNext安装local.10；6.0.5下Check／Save两个请求来源加值各+4、94启用ID和49来源值保留、精确清理已接受，其他权限／隐私／workflow分支不由此扩大。",
+      "只声明固定 ServerNext 目标，不代表其他 Foundry、dnd5e 或世界兼容。",
+      "server-mirror 始终只读；30002 永久常驻，E2E 只清理自身临时文档，结束不得停服或改动其他任务对象。",
+      "本轮local.10增量补丁和验收记录已进入master；原迁移树的完整Midi源码工具现已本地提交，仍未整体合并或推送。旧工具目标与当前安装分开，后续构建、安装或发布按具体范围处理。"
+    ],
+    "keywords": [
+      "Midi-QOL",
+      "ServerNext",
+      "dnd5e 6",
+      "ActiveEffect",
+      "模板",
+      "战斗自动化"
+    ],
+    "sources": [
+      "foundry-modules/midi-qol/README.md",
+      "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md",
+      "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
+    ],
+    "watch": [
+      "foundry-modules/midi-qol/",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md"
+    ],
+    "module": "midi-qol"
+  },
+  {
+    "id": "server-next-external-candidates",
+    "title": "ServerNext 外部模块候选与验收资料",
+    "category": "maintain",
+    "summary": "查阅原迁移树保留的外部模块锁定来源、本地补丁、候选文件及分项验收输入。",
+    "when": "继续ServerNext外部模块工作或核对历史候选时，先从总进度和固定来源判断是否需要新工作。",
+    "requires": [
+      "明确当前Core14.368／dnd5e6.0.5；候选目录中的6.0.2目标和旧运行合同属于历史范围。",
+      "先查唯一迁移总表与独立父审，不重跑已接受的行为，不自动恢复暂停项目。"
+    ],
+    "steps": [
+      {
+        "title": "先看唯一总进度",
+        "text": "打开迁移当前清单，区分已完成限定验收、源码尚未发布、开放问题与暂停项目。"
+      },
+      {
+        "title": "核对固定候选",
+        "text": "对照README、upstream-lock和candidate-inventory；原包的版本、提交和SHA保持历史身份，不改标签冒充6.0.5接受。"
+      },
+      {
+        "title": "按实际新任务准备检查",
+        "text": "复用文件侧共用工具；安装、服务和运行合同需核当前目标与授权。旧install/launch脚本及6.0.2合同不能直接重放已完成批次。"
+      },
+      {
+        "title": "处理本轮DAE与图片修补",
+        "text": "DAE目录保存14.0.14的最小阶段链候选、锁定上游来源与精确版本方法测试；icons目录保存图片引用修复和许可。正常文档API修改图片，保持角色规则来源；文件检查不代替客户端接受，运行结果以唯一总表及分项收据为准。"
+      },
+      {
+        "title": "核对不全包6.0.5适配",
+        "text": "classpack目录保留官方4.3.4的21合集及原文档身份，包含来源明确的链接、MPMM石之坚韧熟练加值次数修复和显式正常API迁移入口。写前及后端均保护进阶、效果、正文和规则版本；缺失自定义召唤／辅助法术单列后续。下面的根目录命令只运行离线检查；运行操作先核唯一总表的来源、迁移、重载、代表UI和清理各门，严格按当前一次性合同执行。失败收据不能清空后重放；代表行为不等于27个宏或完整施法、伤害反应链全部接受。 新构建报告写入dist/candidate-report.json，历史报告保持。",
+        "command": "bun run test:classpack-next"
+      }
+    ],
+    "outputs": [
+      "锁定来源、补丁与候选文件身份；各批次独立验收、恢复和清理证据。"
+    ],
+    "limits": [
+      "这些本地工具和补丁已在原迁移分支形成本地提交；尚未整体合并到master或推送。",
+      "构建或文件检查不替代正常UI、玩家／GM重载、来源语义或精确清理；未接受项保留原边界。",
+      "付费包不由本任务验证；原来未启用项确认后排除，明确暂停项保持暂停。图片明确替代不等于找回原图，也不恢复Plutonium。"
+    ],
+    "keywords": [
+      "ServerNext",
+      "外部模块",
+      "Item Piles",
+      "Vision",
+      "Item Macro",
+      "迁移",
+      "候选"
+    ],
+    "sources": [
+      "foundry-modules/server-next-external-candidates/README.md",
+      "foundry-modules/server-next-external-candidates/classpack/README.md",
+      "docs/plan/server-next-migration-handoff-20260927.md"
+    ],
+    "watch": [
+      "foundry-modules/server-next-external-candidates/"
+    ],
+    "module": "server-next-external-candidates"
   }
 ]

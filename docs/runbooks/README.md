@@ -19,6 +19,11 @@
 - [不使用系统文件对话框传输 JSON](foundry-json-transfer-without-file-dialog.md)；
 - [Foundry v14 原生 Adventure 制作与恢复](foundry-v14-native-adventure-workflow.md)。
 
+## ServerNext 迁移与第三方模块
+
+- [全模块实时上游审计与安装包来源](server-next-module-upstream-and-package-source.md)：官方最新版本与用户实际取得的包分开核对；付费包不假定可通过 Foundry 更新器取得。
+- [Midi-QOL 锁定源码、补丁、构建与 ServerNext 安装](midi-qol-source-patch-build-install.md)：先查官方更新，按锁定 SHA 重建候选，并用 fail-closed 门禁只安装到 ServerNext。
+
 ## 相关入口
 
 - Actor JSON 的正式验证方法：[Generated Actor / Item Verification](../generated-actor-verification.md)

@@ -157,8 +157,8 @@
     "limits": [
       "最多 50 个候选、200,000 个 UTF-16 字符；任意资料和任意模型不保证自动通过。",
       "此入口不做 PDF/图片 OCR；请先使用文档输入流程。",
-        "空白的能力分区标题不代表已检测到“没有能力”；当前确定性 validator 仍可能以 MISSING_SOURCE_FEATURES 要求审阅。不要据此虚构特性或删掉 IR 容器。",
-        "状态验收只在同一 Effect 的已启用模板 flags 与完整命名空间状态 ID 严格匹配时还原语义条件；缺少、禁用或错配 flags 仍报告 ACTOR_CONDITION_DRIFT，不按名称或后缀猜测。",
+      "空白的能力分区标题不代表已检测到“没有能力”；当前确定性 validator 仍可能以 MISSING_SOURCE_FEATURES 要求审阅。不要据此虚构特性或删掉 IR 容器。",
+      "状态验收只在同一 Effect 的已启用模板 flags 与完整命名空间状态 ID 严格匹配时还原语义条件；缺少、禁用或错配 flags 仍报告 ACTOR_CONDITION_DRIFT，不按名称或后缀猜测。",
       "退出码 0 为全部 accepted 或预览，2 为存在 needs_review 且无 failed，1 为存在 failed。"
     ],
     "keywords": [
@@ -613,11 +613,17 @@
       {
         "title": "接续前核对当前状态与独立验收记录",
         "text": "先读任务当前状态和对应验收记录。共用收据的 INCOMPLETE／PENDING 保留人工判定出口，主控可另行接受已核对的限定行为、恢复和清理；原收据保持不变。已闭合批次不重放，新候选、范围变化或实际缺陷另立任务边界。"
+      },
+      {
+        "title": "首次安装 ServerNext 自有模块",
+        "text": "仅对工具白名单中的仓库自有模块使用。先在模块目录构建，再将 FVTT_OPS_LAB_ROOT 设为 F:\\FoundryLab\\foundry-v14；命令默认干跑，核对来源、版本、目标、文件数量和 SHA-256 后才加 --apply。目标已存在时拒绝，不备份、不替换，也不启停服务或修改世界；安装后仍须单独做世界内验收。下面以 Injury 1.0.1 为例。",
+        "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-injury-fading-spirits --version=1.0.1"
       }
     ],
     "outputs": [
       ".local 中的本地资产或范围报告、完整性状态与待判断项。",
-      "目标 worktree 的 .local/development-feedback/<runId>/ 内保存合同、一次执行原件、收据和独立摘要。"
+      "目标 worktree 的 .local/development-feedback/<runId>/ 内保存合同、一次执行原件、收据和独立摘要。",
+      "白名单自有模块首次安装的干跑/安装路径和逐文件 SHA-256 对账结果。"
     ],
     "limits": [
       "本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。",
@@ -626,7 +632,8 @@
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
       "共用验收第一版只做已授权的本地文件检查：保存成功与行为通过分开；空输出、仅有 PASS 标签和无 adapter 的语义保持 INCOMPLETE。已领取操作不能自动重放，父审保持待完成。",
       "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。",
-      "Vision5e + Item Macro 离线收据导入仅作参考，不恢复暂停状态；单独运行合同必须有明确恢复授权与实际权限/服务证据。collect-runtime 只收集观察，仍保持父审待完成；数据判断不替代 UI、加载哈希、角色/重载和完整清理。"
+      "Vision5e + Item Macro 离线收据导入仅作参考，不恢复暂停状态；单独运行合同必须有明确恢复授权与实际权限/服务证据。collect-runtime 只收集观察，仍保持父审待完成；数据判断不替代 UI、加载哈希、角色/重载和完整清理。",
+      "原迁移树的首次安装入口保留；本轮已装模块不能用首次安装命令更新。新版本更新须另核候选、当前安装与授权；旧固定版本示例不代表当前6.0.5已装版本。"
     ],
     "keywords": [
       "Lab",
@@ -690,10 +697,11 @@
       "随代码合并更新的 工具手册.html，可直接离线打开。"
     ],
     "limits": [
-        "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
-        "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 300 秒 watchdog。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
+      "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
+      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 300 秒 watchdog。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
-      "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。"
+      "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
+      "ServerNext总进度以迁移工作树的唯一当前清单为准。master已发布的工具和本轮成果，不代表迁移分支上的本地提交已合并或推送；6.0.2专属运行合同不能直接用于6.0.5。"
     ],
     "keywords": [
       "测试",
@@ -706,14 +714,15 @@
       "构建",
       "master"
     ],
-      "sources": [
-        "docs/generated-actor-verification.md",
+    "sources": [
+      "docs/generated-actor-verification.md",
       "docs/acceptance/current-support-matrix.md",
       "docs/REFERENCE_INDEX.md",
       "docs/runbooks/handbook-maintenance.md",
       "docs/runbooks/dnd5e-version-following.md",
-        "docs/runbooks/foundry-v14-development-source-routing.md",
-        "docs/reviews/2026-10-01-next-605-release-integration.md"
+      "docs/runbooks/foundry-v14-development-source-routing.md",
+      "docs/reviews/2026-10-01-next-605-release-integration.md",
+      "docs/plan/server-next-migration-handoff-20260927.md"
     ],
     "watch": [
       "package.json",
@@ -778,6 +787,73 @@
       "tools/forge-encounter/",
       "packages/forge-browser-runtime/",
       "packages/intake-ai/"
+    ]
+  },
+  {
+    "id": "midi-qol-server-next-patch",
+    "title": "Midi-QOL ServerNext 兼容候选",
+    "category": "maintain",
+    "summary": "查阅原6.0.2版本的锁定源码构建／补丁工具，核对它与当前6.0.5／local.10安装的边界。",
+    "when": "维护原锁定源码或评估新适配时使用；当前6.0.5不能直接运行旧安装路径覆盖已接受候选。",
+    "requires": [
+      "工具锁定历史Foundry14.368／dnd5e6.0.2；当前服务是6.0.5／local.10，须按唯一总表核对。",
+      "ServerNext应保持运行；完整安装器保持停止门禁。local.7的A–G/Z35项和local.9基础isDamaged手动APPLY为历史6.0.2证据，不推广到当前版本。server-mirror始终只读。"
+    ],
+    "steps": [
+      {
+        "title": "检查官方更新",
+        "text": "查询官方 release、分支和开放 MR。检查只给出建议，构建仍使用来源锁定中的完整提交 SHA。",
+        "command": "bun run midi-qol:upstream-check"
+      },
+      {
+        "title": "测试并构建历史锁定候选",
+        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；已有同一候选源码时直接测试。不得使用外部dirty checkout产物，也不得用结果覆盖当前6.0.5安装。 历史测试还需按README取得并校验固定6.0.2分发源，存于忽略的test-sources缓存；测试不读取现行系统文件。",
+        "command": "bun run midi-qol:build\nbun run midi-qol:test"
+      },
+      {
+        "title": "区分旧资源更新与 local.9 精确离线更新",
+        "text": "browser-update.ts 只锁定历史 local.7→local.8。local.9 与上一安装包只有三个非pack资源不同，但已安装pack数据库布局不同；专用runbook记录了正常关闭世界、确认锁释放后精确替换三项并保留pack的实际操作，不能用整目录安装器或旧脚本覆盖。"
+      },
+      {
+        "title": "准备 C/F 运行时夹具",
+        "text": "生成可导入的测试宏；通过正常 API 创建标记临时对象，读回 1 分钟、Circle 30 ft、creature 和模板提示后才允许走实际 activity.use。核对 effect 类型与依赖删除，不以缺少 toast 判通过。",
+        "command": "bun run midi-qol:prepare-cf"
+      },
+      {
+        "title": "分层验收",
+        "text": "核对精确版本、安装文件/HTTP哈希，再读取实际客户端代码和原生伤害结果；local.9基础isDamaged手动APPLY的9月25日代表场景已有真实HP40→28、效果移除和测试对象清理证据。临时HP、取消/重复操作和带类型效果未随这一场景自动通过。local.7历史35项不冒充local.9全量新测。"
+      }
+    ],
+    "outputs": [
+      "锁定来源、独立补丁和上游核查证据。",
+      "本地候选 ZIP、构建结果和安装哈希。",
+      "ServerNext A–G 的 PASS / FAIL / NOT_EXECUTED 报告。"
+    ],
+    "limits": [
+      "当前候选只声明支持固定的 ServerNext 目标，不代表 dnd5e 5.x 或其他版本兼容。",
+      "安装不创建备份、不修改世界数据库，也不授权 commit、push、公开发布或生产回迁。",
+      "ServerNext/30002 应保持常驻；E2E 使用现有服务与自己标记的临时文档，结束不得停服。本次local.9仅在正常关闭世界、确认锁释放后替换三项已核对资源并恢复服务，保留已安装pack；不得使用整目录安装器或旧浏览器更新脚本。",
+      "local.9的手动带类型isDamaged.<type>效果尚无实际伤害类型贡献证明，暂不自动到期；静态测试和代码复审不等于目标世界运行通过。",
+      "手动伤害按钮存在本身不是 natural 1 失败；失败依据是错误自动命中、自动伤害或 HP 应用。",
+      "本条保留原6.0.2／local.9源码工具。当前服务为6.0.5／local.10；本轮只发布两请求handler增量及限定验收，旧构建／安装入口不能视为完整local.10构建路线，不能用旧包覆盖已接受安装。"
+    ],
+    "keywords": [
+      "Midi-QOL",
+      "ServerNext",
+      "dnd5e 6",
+      "ActiveEffect",
+      "第三方补丁",
+      "迁移"
+    ],
+    "sources": [
+      "foundry-modules/midi-qol/README.md",
+      "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md",
+      "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
+    ],
+    "watch": [
+      "foundry-modules/midi-qol/",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md"
     ]
   }
 ]
