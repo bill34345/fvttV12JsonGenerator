@@ -1,0 +1,24 @@
+// Build the task-owned Macro import artifact; never connects to Foundry.
+import { mkdir, writeFile } from 'node:fs/promises';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { createLabConfig } from '../config.ts';
+import { APPROVAL } from './approval.mjs';
+const here = dirname(fileURLToPath(import.meta.url));
+if (process.argv[3] && process.argv[3] !== '--drift-only') throw new Error('Unknown build mode');
+const driftOnly = process.argv[3] === '--drift-only';
+const version = driftOnly ? 'v7' : 'v11';
+const output = resolve(process.argv[2] ?? '');
+const expected = resolve(createLabConfig().evidenceRoot, 'server-next-migration', 'player-item-repair-20260928');
+if (!process.argv[2] || output.toLowerCase() !== expected.toLowerCase()) throw new Error('Exact task evidence destination required');
+const result = await Bun.build({ entrypoints: [resolve(here, driftOnly ? 'drift-runtime.mjs' : 'runtime.mjs')], target: 'browser', format: 'esm', minify: false });
+if (!result.success) throw new AggregateError(result.logs, 'Macro build failed');
+const command = await result.outputs[0].text();
+const macro = { name: 'NEXT-ITEM-REPAIR-20260928', type: 'script', img: 'icons/svg/book.svg', scope: 'global', command: `{\n${command}\n}` };
+await mkdir(output, { recursive: true });
+await writeFile(resolve(output, `repair-macro-${version}.js`), macro.command, { encoding: 'utf8', flag: 'wx' });
+await writeFile(resolve(output, `repair-macro-${version}.json`), JSON.stringify(macro, null, 2), { encoding: 'utf8', flag: 'wx' });
+const sha256 = createHash('sha256').update(macro.command).digest('hex');
+await writeFile(resolve(output, `build-receipt-${version}.json`), JSON.stringify({ createdAt: new Date().toISOString(), sha256, characters: macro.command.length, inspectionOnly: driftOnly || APPROVAL.actors.length === 0 }, null, 2), { flag: 'wx' });
+console.log(JSON.stringify({ output, sha256, characters: macro.command.length }));

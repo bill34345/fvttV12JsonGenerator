@@ -42,6 +42,7 @@ export function resolveFoundryOpsRoute(args: string[]): FoundryOpsRoute {
     return route('assets.migration-plan', LAB_MIGRATION_PLAN_ENTRYPOINT, rest);
   }
   if (area === 'lab' && action) {
+    if (action === 'install-server-next-owned-module') return route('lab.install-server-next-owned-module', 'tools/foundry-ops/src/serverNextOwnedModuleInstall.ts', rest);
     if (action === 'inventory') return route('production.inventory', LAB_ENTRYPOINT, [action, ...rest]);
     if (action === 'acquire') return route('production.acquire', LAB_ENTRYPOINT, [action, ...rest]);
     if (action === 'spell-resolver') return route('lab.spell-resolver', SPELL_RESOLVER_ENTRYPOINT, rest);

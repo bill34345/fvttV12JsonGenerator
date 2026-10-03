@@ -41,6 +41,7 @@ const COMMANDS: readonly FoundryOpsCommand[] = [
   { id: 'lab.diagnose', syntax: 'lab diagnose <动作> [选项]', target: 'local', effect: 'local-mutation', summary: '从已有短时证据生成本地诊断清单或报告。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.classify', syntax: 'lab classify', target: 'local', effect: 'local-mutation', summary: '根据已有清单生成模块获取计划。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.acquire-local', syntax: 'lab acquire-local [--apply]', target: 'local', effect: 'local-mutation', applyMakesEffective: true, summary: '从本机已配置来源复制模块到本地缓存。', owner: 'foundry-ops', availability: 'available' },
+  { id: 'lab.install-server-next-owned-module', syntax: 'lab install-server-next-owned-module --module-id=<id> --version=<version> [--apply]', target: 'local', effect: 'local-mutation', applyMakesEffective: true, summary: '预览或仅首次安装仓库自有模块到明确配置的本地 ServerNext；拒绝已有目标，不备份、不替换。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.parity', syntax: 'lab parity', target: 'local', effect: 'local-mutation', summary: '比较本地镜像与已保存清单并写验收报告。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.launch', syntax: 'lab launch <core-test|server-mirror>', target: 'local', effect: 'local-mutation', summary: '启动一个明确的本地 Foundry 测试配置。', owner: 'foundry-ops', availability: 'available' },
   { id: 'lab.stop', syntax: 'lab stop <core-test|server-mirror>', target: 'local', effect: 'local-mutation', summary: '停止一个明确的本地 Foundry 测试配置。', owner: 'foundry-ops', availability: 'available' },

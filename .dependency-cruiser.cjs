@@ -309,8 +309,21 @@ module.exports = {
       name: 'foundry-ops-product-boundary',
       severity: 'error',
       comment: 'Foundry Ops uses explicit CLI or package contracts and cannot import generator, application, Web, or Foundry-module internals.',
-      from: { path: '^tools/foundry-ops/' },
+      from: {
+        path: '^tools/foundry-ops/',
+        pathNot: '^tools/foundry-ops/src/player-item-repair/recover-blood-hunter[.]mjs$',
+      },
       to: { path: '^(src/|scripts/|apps/|foundry-modules/|packages/)' },
+    },
+    {
+      name: 'blood-hunter-recovery-public-metadata-only',
+      severity: 'error',
+      comment: 'The historical recovery adapter may consume only the explicit read-only Blood Hunter source metadata contract.',
+      from: { path: '^tools/foundry-ops/src/player-item-repair/recover-blood-hunter[.]mjs$' },
+      to: {
+        path: '^(src/|scripts/|apps/|foundry-modules/|packages/)',
+        pathNot: '^packages/blood-hunter-v14/src/source-metadata[.]ts$',
+      },
     },
     {
       name: 'no-crawl-to-main-cli',
@@ -369,7 +382,12 @@ module.exports = {
     },
   ],
   options: {
-    doNotFollow: { path: '^node_modules/' },
+    doNotFollow: { path: '(^|/)node_modules/' },
+    // These Git-ignored directories hold fixed upstream inputs and build output,
+    // not project implementations. Keep owned adapters, patches and tests in scope.
+    exclude: {
+      path: '(^|/)node_modules(/|$)|^foundry-modules/server-next-external-candidates/(?:upstream|sources|dist|item-piles/(?:upstream|sources|dist(?:-local[12])?)|vision-macro/(?:upstream|sources|dist))(/|$)',
+    },
     includeOnly: ['^(src|packages|apps|foundry-modules|tools|scripts|tests)/'],
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,

@@ -34,6 +34,19 @@ bun run foundry:ops catalog
 
 `spell-resolver` 命令仍经过 Foundry Ops 的统一权限入口，但浏览器源码、构建、本地安装生命周期和测试均由 `foundry-modules/monster-spell-resolver/` 自己维护；Foundry Ops 只负责把命令路由给该模块，不拥有解析器实现。
 
+## ServerNext 仓库自有模块首次安装
+
+先在对应 `foundry-modules/<owner>/` 构建 `dist/module`，再从仓库根目录预览：
+
+```powershell
+$env:FVTT_OPS_LAB_ROOT = 'F:\FoundryLab\foundry-v14'
+bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-injury-fading-spirits --version=1.0.1
+```
+
+白名单还包括 `fvtt-json-generator-spell-resolver` 0.1.1，对应源码目录 `foundry-modules/monster-spell-resolver`。先构建并核对预览，再用实际模块 ID `--module-id=fvtt-json-generator-spell-resolver --version=0.1.1 --apply` 做首次安装；面向 server-mirror 的旧解析器安装命令不适用于 ServerNext。
+
+核对预览输出的来源、`data/server-next/Data/modules/<id>` 目标、文件数量和 SHA-256 后，在同一命令末尾加 `--apply` 才会写入。CLI 要求 `FVTT_OPS_LAB_ROOT` 精确指向 `F:\FoundryLab\foundry-v14`，只接受代码内列明的仓库自有模块；构建目录按模块固定为 `dist/module`（House Rules 为 `dist`），构建 manifest 与仓库 manifest 的完整 JSON 内容须一致，且 ID、版本符合参数、所声明的脚本、样式、语言和合集资源确实存在。目标必须不存在；已有包（即使为空目录）一律拒绝替换。安装先暂存在同卷但不被 Foundry 模块扫描的 `evidence/server-next-module-install-staging/installing-<id>-<uuid>`，核对后重命名到目标；成功后逐文件比较 SHA-256，失败时报告并保留暂存目录供核查，不自动清理或修改旧包。这个命令不启停 Foundry、不修改世界数据库，也不处理付费模块。
+
 ## 共用验收工具：文件侧第一版
 
 本版用于已审核、已授权的本地文件检查，复用上述命令分类、路径保护和子进程入口。请求中声明 `local-file-checks` 不会授予新权限，也不会把被执行命令变成沙箱；命令不得启动服务、操作浏览器或读写 Foundry 世界。生产连接环境变量不会传给这些检查。
