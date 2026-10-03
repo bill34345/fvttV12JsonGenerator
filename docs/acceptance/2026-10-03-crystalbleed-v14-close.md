@@ -1,6 +1,6 @@
 # 晶血龙兽 V14 当前战斗包收尾
 
-2026-10-03。实机业务与原世界保持 **PASS**：r5正式导入并启动2.1.2，独立恍惚与完整到期通过；r6通过完整场景哈希的唯一反事实证明，精确恢复测试工具引发的Monks TokenBar原Token flag副作用，重载后原R5基线全部匹配。整体仍 **INCOMPLETE**：完整CI出现未改CLI子进程启动零输出超时，当前未合入master。r4/r5原失败记录保留，不倒改为PASS。
+2026-10-03。实机业务与原世界保持 **PASS**：r5正式导入并启动2.1.2，独立恍惚与完整到期通过；r6通过完整场景哈希的唯一反事实证明，精确恢复测试工具引发的Monks TokenBar原Token flag副作用，重载后原R5基线全部匹配。当前候选的本地验收整体 **PASS**：按仓库CI固定Bun1.3.14完成完整CI退出0；本地Git集成按最终收据核实。r4/r5原失败记录保留，不倒改为PASS。
 
 ## 当前候选与权限
 
@@ -61,9 +61,9 @@ Actor/Macro保存完整原生source哈希；Scene/Combat仅排除顶层_stats.mo
 
 ## 静态门及剩余范围
 
-原完整ci:verify退出0：3346pass/1skip/0fail，432来源anti-overfit，类型、架构、coverage、hygiene、references、Web build及离线smoke通过。Bun Knip未返回及一次Species CLI超时的原件保留，Node同一Knip入口和最终CI已通过。此为a9f91fa候选证据，不能直接推广为本次新增修改的完整CI；r5聚焦测试和typecheck已通过，最终集成门仍待执行。
+原完整ci:verify退出0：3346pass/1skip/0fail，432来源anti-overfit，类型、架构、coverage、hygiene、references、Web build及离线smoke通过。Bun Knip未返回及一次Species CLI超时的原件保留，Node同一Knip入口和最终CI已通过。此为a9f91fa历史候选证据，未直接推广为本次新增修改的完整CI；下文的Bun1.3.14完整门覆盖本次修改和吸收后的主线组合。
 
-r5完整CI实际退出1：未修改的crawl-sites v14 dry-run子进程50秒无输出，随后单进程coverage达到300秒上限；原件ci-verify-r5.log保留。安全入口test:robustness复查为79pass/1fail：前次失败的v14 target通过，另一个modded profile子进程出现同样50秒无输出。没有扩大超时、降低coverage或把此运行器失败记为绿色。浏览器受影响路径的正式构建、宏回归、类型及手册前置均通过，可继续窄验收；本地集成仍须解决当前CI门。
+r5完整CI实际退出1：未修改的crawl-sites v14 dry-run子进程50秒无输出，随后单进程coverage达到300秒上限；原件ci-verify-r5.log保留。安全入口test:robustness复查为79pass/1fail：前次失败的v14 target通过，另一个modded profile子进程出现同样50秒无输出。没有扩大超时、降低coverage或把此运行器失败记为绿色。浏览器受影响路径的正式构建、宏回归、类型及手册前置均通过，可继续窄验收；当时本地集成门保持未关闭，随后按固定CI版本校准后完成新完整检查。
 
 r5实际齐射按钮完成CON-32/DC18失败、HP200→194、传奇动作spent2、召唤Token nnmKG4p3EgM4Y90I绑定新晶体Actor。effect gYu89yW6KYby1d9r的instance8230874bcee04af5a3e6ad107c5a7ba5唯一非template，只有fvtt-custom-conditions.dazed；目标回合开始active，回合结束disabled=true/active=false，Actor.statuses为空，CC active=false，六个独立check均true。此为真实按钮加owned Combat update/settle证据，不扩展为完整战斗矩阵。
 
@@ -73,8 +73,18 @@ r6恢复后，286原Actors、65Scenes、10Combats、93Macros完整原hash一致�
 
 已保存future fixture修正fixture-view-order-corrected.mjs：先view自有Scene，并通过Monks公开TokenBar API刷新和守护entries只指向自有Scene，之后才启动Combat；保留本次执行失败的原工具源码。此为工具修正，不改变包或主宏；没有凭修正源码重标历史Scene FAIL。Monks全局movement的指定world SettingDocument f41fK82gx9y7kqRm实际value为combat，原生modifiedTime1788247412268对应北京时间2026-09-01 15:23:32，早于本项；这项历史配置未由本轮修改，不猜默认free或回写设置。原生systemVersion2.3.1作为历史文档元数据保存，不误当当前runtime5.3.3版本。读取后helper删除、再登入Macro93及登出tab关闭均通过。相关settings白名单不冒充全部world设置。
 
-CI最新独立安全入口test:cli在诊断preload下24pass/0fail；trace捕获10次真实Bun子进程的spawn、stdout、exit、close，最长477ms，无零输出deadline样本。没有据此确认先前间歇启动问题的根因。原未修改完整CI再执行仍退出1（ci-verify-after-cli-trace-exit.json）：不同的未改plaintext dry-run子进程15秒零输出超时。独立早drain探针在另一item CLI发生同样超时，不能归因为输出读取顺序；生命周期探针观察到一个safe-icon子进程在2441ms仍存在、CPU2.40625秒/29线程，4023ms被原watchdog终止。它确实执行但未产生输出，不能说成仅丢exit事件；精确运行器根因仍未确认，已交独立只读诊断。没有扩大deadline、缩检查或合入master。业务、包及已闭合世界恢复不需重跑。
+CI最新独立安全入口test:cli在诊断preload下24pass/0fail；trace捕获10次真实Bun子进程的spawn、stdout、exit、close，最长477ms，无零输出deadline样本。没有据此确认先前间歇启动问题的根因。原未修改完整CI再执行仍退出1（ci-verify-after-cli-trace-exit.json）：不同的未改plaintext dry-run子进程15秒零输出超时。独立早drain探针在另一item CLI发生同样超时，不能归因为输出读取顺序；生命周期探针观察到一个safe-icon子进程在2441ms仍存在、CPU2.40625秒/29线程，4023ms被原watchdog终止。它确实执行但未产生输出，不能说成仅丢exit事件；精确运行器根因仍未确认，已交独立只读诊断。当时未扩大deadline、缩检查或合入master。业务、包及已闭合世界恢复不重复执行。
 
 生产、Next/其他版本、长时及全部战斗矩阵均NOT_EXECUTED。旧dirty树不退役；其parser/generation增量已由master后继承接，来源和图片的对比证据保留，独有历史材料尚在原树。
 
 外部证据根：H:/CodexData/visualizations/2026/10/02/01a0fdf7-35f6-79c3-b1c5-4812d1a8f54d/crystalbleed-v14-close-20261003。当前主要文件：candidate-receipt-r5.json、prepare-r5-receipt.ts、r5-candidate-generation.log、runtime-r4/runtime-receipt.json、condition-expiry-readback.json、comparison-after-reload.json、final-helper-persistence.json、macro-projection-regression-red-callsite.log、macro-projection-regression-final.log。机器证据不进入仓库。
+
+## 最终整合检查
+
+主线在本任务期间推进到721fb6f（只读任务交接和内容保留工具）。候选在topic worktree吸收该提交，生成HTML冲突通过合并后的catalog/review来源重新构建，30项覆盖与说明一致；没有从其他worktree移动master。组合commit0d15af9的actor/macro代码及测试包未改变，复用已闭合r5/r6运行证据。
+
+实际.github/workflows/ci.yml钉Bun1.3.14，而本机默认1.3.8。独立诊断确认超时跨native Bun.spawn/Node.spawn，未证明精确卡顿阶段；公开Bun1.3.14 issue32011涉及另一类compiled-binary/Rust执行，不能归因或作为升级保证。Root从官方bun-v1.3.14 release下载到任务目录，ZIP SHA-256为0a0620930b6675d7ba440e81f4e0e00d3cfbe096c4b140d3fff02205e9e18922，exe SHA-256为0187f68d843f825a72ada4a7eca60db896ed753759a7f8252edcd31ac1bf1b9c，--version读回1.3.14。只在该命令进程设置PATH，未改变系统安装或仓库测试门。
+
+Bun1.3.14的公开test:cli为24pass/0fail。随后原公开ci:verify在组合0d15af9实际退出0：3372pass/1skip/0fail，3373tests/352files，coverage门、全部类型/架构、Session Monitor构建、432来源anti-overfit、1762tracked路径hygiene、34项指令、30项手册、精确references、Web build及White Tusk Shaman离线smoke全部通过；smoke为6来源物品、0 verifier警告、0网络。日志ci-verify-pinned-1.3.14.log及退出收据保留。它证明按仓库规定版本完成本轮门，不将版本差异强行定义为所有旧超时的根因。
+
+最后只更新本验收记录；功能源码、正式包身份与已通过CI组合不变，复用完整检查，文档/指令/手册另作一致性核对。本地master集成及其前后clean/index/祖先证明保存于最终Git收据；没有push、生产操作或删除旧dirty树。候选/旧树的清理继续遵精确授权、内容读回和推送门，不因本地集成宣称可整棵删除。
