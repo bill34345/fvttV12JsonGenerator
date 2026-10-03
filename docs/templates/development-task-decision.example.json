@@ -1,0 +1,16 @@
+{
+  "template": true,
+  "usage": "独立父审或明确接续的引用格式。原始旧收据保持不变；旧格式父审可继续人工读回，不要求改写。新decision由有权审查者确认，工具只检查引用绑定，文件中的身份声明不自证权限。",
+  "taskId": "<same-task-id>",
+  "caseId": "<same-case-id>",
+  "reviewerThreadId": "<authorized-reviewer-uuid>",
+  "authorityRef": "<same-user-instruction-reference>",
+  "workspace": { "absoluteRoot": "<candidate-worktree>", "head": "<baseline-sha>" },
+  "candidates": [{ "absolutePath": "<candidate-file>", "sha256": "<read-from-file>" }],
+  "status": "CONTINUE",
+  "scope": "<exact-resumed-or-accepted-scope>",
+  "receiptId": null,
+  "acceptedEvidence": [],
+  "supersedes": [{ "absolutePath": "<old-stop-record>", "sha256": "<read-from-file>" }],
+  "nextAction": "<same-single-current-action>"
+}

@@ -72,7 +72,28 @@ git worktree add -b $branch $worktreePath master
 
 ## 5. 清理
 
-只有同时满足以下条件才可清理：topic 已集成并按授权推送；worktree clean；路径和分支确为本任务创建；没有其他参与者使用。
+先建立内容保留证据，再应用清理权限和归属门禁。`git status` clean 只覆盖 Git 工作状态；主线有类似实现只说明后继能力存在，两者均不能证明整棵目录的内容可删。
+
+对精确 worktree 范围分别判断四类内容：
+
+| 内容 | 必要证据 |
+| --- | --- |
+| 已提交内容 | 固定 HEAD、保留仓库／branch 或 tag／目标 commit，核实对象可读及祖先关系。保留分支只证明提交仍在，不等于已经集成或推送。 |
+| tracked dirty | 暂存区与工作区分别列出路径和版本，逐项写处置、可恢复位置并读回原字节；暂存版本不能被工作区新版本替代。删除、冲突、文件模式／链接等差异另保留意图证据，未解决则保持未知。 |
+| untracked | 清点精确文件；需保留的内容逐项读回外部现存位置或可达 Git 文件，不能因未跟踪就判废。 |
+| ignored | 包括 `.local` 中的合同、原始收据、手工产物和输入。需保留的内容同样逐项证明；可重建缓存须明确理由，规则命中本身不是无价值证明。未清点范围保持未知。 |
+
+复用既有资产范围盘点定位所有权，再用[保留请求示例](../templates/worktree-preservation.example.json)核对内容。`entries` 的 kind 为 `index`、`worktree`、`untracked` 或 `ignored`，路径为精确仓库相对文件名；与实时 Git 清单逐项对齐。`retain` 的 recovery 指向删除范围外已经存在的文件，或有固定 branch/tag 与 commit 的 Git 文件；工具读回源和目标 SHA-256。`regenerable` 仅接受未跟踪／ignored 文件及具体理由，这是人工声明，不是工具证明可重建。原件没有可核保留位置时保留原工作树；本项目不为凑证据自动制作副本或备份。
+
+```powershell
+bun run foundry:ops acceptance inspect-preservation --input="<保留请求绝对路径>"
+```
+
+检查直接列出 Git 暂存、工作区、untracked 和 ignored 文件，不保存内容、不执行清理。缺失、失配、未分类、输入 `unknowns` 非空或未集成提交均为 `INCOMPLETE`／退出 2；已读回且声明齐全才是 `EVIDENCE_COMPLETE`／退出 0。删除意图、冲突、链接／子模块和权限／模式变化需单独核对，此最小入口不为它们制造字节 PASS。大目录枚举失败也保留未知。`deletionAuthorized` 始终为 false，本地 ref 不是远端推送证明。检查是时点证据；执行前重核 owner、内容变化与授权。
+
+既有历史取证沿用[退役台账](../reviews/2026-10-02-retirement-and-integration-ledger.md)的口径：50 项原版本尚未完整重建仍为未知，既不写永久丢失，也不写全部恢复；未作库存的 ignored 内容不作 PASS。
+
+只有同时满足以下条件才可清理：已取得针对精确对象的清理授权；topic 已集成并按授权推送；worktree clean；需保留内容有独立读回证据且范围无未知项；路径和分支确为本任务创建；没有其他参与者使用。上述检查结果本身不构成清理授权。满足后才执行下面的既有流程：
 
 ```powershell
 git worktree list --porcelain

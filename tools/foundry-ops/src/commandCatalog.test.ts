@@ -3,6 +3,13 @@ import { listFoundryOpsCommands } from './commandCatalog';
 import { resolveFoundryOpsRoute } from './routing';
 
 describe('Foundry Ops command catalog', () => {
+  it('routes both task inspections as read-only checks', () => {
+    for (const action of ['inspect-state', 'inspect-preservation']) {
+      const route = resolveFoundryOpsRoute(['acceptance', action, '--input=I:/fixture/current.json']);
+      expect(route.command).toMatchObject({ target: 'local', effect: 'read-only', owner: 'foundry-ops' });
+      expect(route.forwardedArgs).toEqual([action, '--input=I:/fixture/current.json']);
+    }
+  });
   it('classifies each file-side acceptance action and forwards absolute paths unchanged', () => {
     for (const action of ['prepare', 'ready', 'execute', 'collect', 'resume']) {
       const route = resolveFoundryOpsRoute(['acceptance', action, '--contract=I:/fixture/contract.json']);

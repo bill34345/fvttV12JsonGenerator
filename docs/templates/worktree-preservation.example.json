@@ -1,0 +1,13 @@
+{
+  "template": true,
+  "protocolVersion": 1,
+  "taskId": "<task-id>",
+  "ownerThreadId": "<owner-thread-uuid>",
+  "workspace": { "absoluteRoot": "<exact-worktree-to-inspect>", "branch": "<branch>", "head": "<full-head-sha>" },
+  "integration": { "repositoryRoot": "<retained-main-workspace>", "ref": "refs/heads/master", "commit": "<full-target-sha>" },
+  "entries": [
+    { "kind": "ignored", "path": ".local/evidence.json", "disposition": "retain", "reason": "唯一行为原件", "recovery": { "kind": "file", "absolutePath": "<existing-file-outside-removal-scope>" } },
+    { "kind": "worktree", "path": "docs/note.md", "disposition": "retain", "reason": "未提交原版本", "recovery": { "kind": "git", "repositoryRoot": "<retained-workspace>", "ref": "refs/heads/master", "commit": "<full-retained-sha>", "path": "docs/note.md" } }
+  ],
+  "unknowns": ["<尚未清点或读回的范围；只有真实解决后才能移除>"]
+}
