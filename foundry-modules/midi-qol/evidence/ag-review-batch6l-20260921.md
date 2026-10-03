@@ -1,0 +1,16 @@
+# Batch6L parent review
+
+Runtime identity is local.6, with matching disk/served bundle and five client function hashes. ServerNext PID 11188 remained running. Preserve earlier case versions rather than relabeling carried-forward evidence.
+
+- B: successful-save/no-damage and ordinary slot-5 Fireball scaling have evidence. The latter demonstrates a fresh cast produced 10d6 and left the stored source at 8d6; it does **not** demonstrate a subsequent restored workflow or a later chat-card damage action. That specific regression coverage remains open.
+- C: Magic Weapon application failed with `system.type may not be undefined`. The stack enters native dnd5e `applyEnchantment`; Midi's subclass names alone do not establish Midi causation. Capture source effect, clone, `dnd5e.preApplyEnchantment` payload and missing-ID status entries before selecting a repair. No global prototype or data-normalizing hook is authorized as a workaround.
+- C: short-rest readback retained the effect, but a later snapshot reports expired. Verify the actual rest result, dependency flag, expiry predicate and settled actor state before concluding the removal implementation failed. A present expired/inactive document is not automatically an active effect.
+- E: acceptance and cancellation/resources are supported. Reaction tracking remains unverified because Midi's pre-use path requires `actor.inCombat`. Core `Actor.inCombat` reads `game.combat`; that getter uses the rendered CombatTracker's locally viewed encounter. Use an owned inactive encounter and normal `ui.combat.render({force:true, combat: ownedCombat})`, confirm the actual viewed encounter and `actor.inCombat`, and restore the previous tracker view. Do not change the shared active encounter or clock, or force reaction state through a test-only result mutation.
+- F: initial-use summon tracker and normal deletion cascade passed. The case actually used instantaneous Find Familiar; this supports permanent tracker cleanup, not timed expiration. Preserve the exact duration in the report.
+- G: unavailable target rendering is supported, but valid-target Apply/HP regression was not exercised. Selected raw errors are preserved; a full final ring export is not. Capture incremental raw deltas for remaining cases to avoid another rolling-buffer evidence loss. Existing Battlefield Painter asset 404 and Calendaria errors stay recorded separately from the new enchant failure; they are not silently ignored or repaired in an unrelated module.
+
+The executor incorrectly requested another action-time confirmation for exact owned fixture deletion. The user already authorized creation and cleanup; the applicable Chrome delegation skill explicitly says not to re-request it. Preserve the failure fixture only while needed for the next diagnostic, then delete its exact inventoried documents through normal APIs and verify absence. Do not delete ambiguous objects.
+
+Upstream check at 2026-09-20T22:18:08.606Z: locked and advisory dnd6 HEAD remain `4338eeab85041cd71b76ede36818e2265cbf06ae`, latest release `v14.0.12`; 10 branches and 12 open MRs examined. No source change or installation was performed during this review.
+
+Overall A–G remains incomplete. Continue the authorized diagnosis, minimal repairs if evidenced, and focused acceptance without a new overall time limit or service restart.

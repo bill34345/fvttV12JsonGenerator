@@ -1,0 +1,25 @@
+diff --git a/src/module/ChatClasses/DamageApplicationElementMidi.ts b/src/module/ChatClasses/DamageApplicationElementMidi.ts
+--- a/src/module/ChatClasses/DamageApplicationElementMidi.ts
++++ b/src/module/ChatClasses/DamageApplicationElementMidi.ts
+@@ -64,4 +64,21 @@
+    * exist.
+    */
+   buildTargetListEntry(targetList: HTMLElement, { uuid, name }: { uuid: string, name?: string }): HTMLLIElement | void {
++    // dnd5e 6's parent resolves each UUID and calculates its damage before Midi-QOL can inspect it.
++    // Recorded targets can include an Actor UUID or a TokenDocument without an Actor, neither of
++    // which is actionable by the native damage application. Return a visible, non-interactive row
++    // before the parent calculation so one stale target cannot abort the whole damage tray.
++    if (Number.parseInt(game.system.version, 10) >= 6) {
++      const resolved = fromUuidSync(uuid);
++      if (!(resolved instanceof TokenDocument) || !(resolved.actor instanceof Actor)) {
++        const li = document.createElement("li");
++        li.classList.add("pill", "target", "midi-unavailable-target");
++        li.setAttribute("aria-disabled", "true");
++        li.dataset.midiUnavailableTarget = uuid;
++        li.textContent = `${name ?? resolved?.name ?? uuid} (${game.i18n?.localize("DOCUMENT.Token") ?? "Token"}: ${game.i18n?.localize("DND5E.EFFECT.Status.Unavailable") ?? "Unavailable"})`;
++        li.title = "A token with a valid Actor is required to apply damage.";
++        return li;
++      }
++    }
++
+     // Let parent build the base entry
