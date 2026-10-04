@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { runCommand } from '../process';
 import { assertCurrent, exactPath, fileIdentity, instructionFiles, readJson, record, sha256, workspaceIdentity, writeNewJson } from './files';
 import { AcceptanceError, type AcceptanceContract, type AcceptanceReceipt, type AcceptanceRequest, type AcceptanceSummary, type CheckCommand, type CheckResult } from './model';
+import { assertFileExecutionCases, assertValidationSelection, validateValidationSelection } from './selection';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -31,6 +32,8 @@ function validateRequest(value: unknown): AcceptanceRequest {
     throw new AcceptanceError('precondition', 'Expected goal, acceptance, caseId, absolute workspace/candidates, local-file-checks authority, preflight and adapter.');
   }
   const checks = [...request.preflight.map(validateCommand), validateCommand(request.operation)];
+  const selection = validateValidationSelection(request.validationSelection);
+  assertFileExecutionCases(selection, checks.slice(0, -1), checks.at(-1)!);
   if (request.readonlySourcePaths !== undefined && !strings(request.readonlySourcePaths)) throw new AcceptanceError('precondition', 'readonlySourcePaths must be a nonempty absolute file list.');
   if (Array.isArray(request.readonlySourcePaths) && new Set(request.readonlySourcePaths.map(path => fileIdentity(path).absolutePath)).size !== request.readonlySourcePaths.length) throw new AcceptanceError('precondition', 'Read-only source paths must be unique.');
   if (request.externalBatch !== undefined) {
@@ -59,6 +62,7 @@ async function runCheck(command: CheckCommand, root: string): Promise<CheckResul
 
 export async function prepareAcceptance(inputPath: string): Promise<AcceptanceContract> {
   const request = validateRequest(readJson(inputPath));
+  assertValidationSelection(request.validationSelection, true);
   const workspace = workspaceIdentity(request.workspaceRoot);
   fileIdentity(inputPath, workspace.absoluteRoot);
   const candidates = [...new Set(request.candidatePaths)].map(path => fileIdentity(path, workspace.absoluteRoot));
@@ -117,6 +121,7 @@ export function assertPreflight(contract: AcceptanceContract): void {
 export function requireReady(path: string): AcceptanceContract {
   const contract = loadContract(path);
   assertPreflight(contract);
+  assertValidationSelection(contract.request.validationSelection, true);
   if (existsSync(join(dirname(path), 'dispatch-claim.json'))) throw new AcceptanceError('precondition', 'This dispatch was already claimed. Read resume; do not replay it.');
   return contract;
 }
