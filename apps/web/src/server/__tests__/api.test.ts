@@ -956,7 +956,9 @@ describe('web API', () => {
         },
       });
       const created = await create.json();
-      const job = await waitForJob(created.data.id);
+      // A cold real crawler can outlive the short in-memory job polling window.
+      // Keep its fixture server alive until terminal readback, within the 30s test deadline.
+      const job = await waitForJob(created.data.id, 10_000);
 
       expect(job.status).toBe('succeeded');
       expect(job.summary.mode).toBe('incremental');
@@ -997,7 +999,7 @@ describe('web API', () => {
         },
       });
       const created = await create.json();
-      const job = await waitForJob(created.data.id);
+      const job = await waitForJob(created.data.id, 10_000);
 
       expect(job.status).toBe('succeeded');
       expect(job.summary.mode).toBe('full');
@@ -1043,8 +1045,8 @@ function post(path: string, body: unknown): Promise<Response> {
   );
 }
 
-async function waitForJob(id: string): Promise<any> {
-  for (let i = 0; i < 30; i++) {
+async function waitForJob(id: string, timeoutMs = 1_500): Promise<any> {
+  for (let i = 0; i < Math.ceil(timeoutMs / 50); i++) {
     const response = await handleApiRequest(new Request(`http://localhost/api/jobs/${id}`));
     const body = await response.json();
     if (

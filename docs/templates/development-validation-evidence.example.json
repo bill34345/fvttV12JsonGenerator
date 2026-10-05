@@ -1,0 +1,13 @@
+{
+  "caseId": "drawing",
+  "layer": "behavior",
+  "outcome": "PASS",
+  "context": {
+    "target": "<旧证据的精确目标及相关客户端>",
+    "interface": "<相关接口版本>",
+    "sourceSha256": "<被接受的相关源码指纹>"
+  },
+  "evidence": [
+    { "absolutePath": "<旧分项原件或独立审查记录绝对路径>", "sha256": "<原件实际SHA-256>" }
+  ]
+}

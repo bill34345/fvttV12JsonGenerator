@@ -129,10 +129,10 @@
     "id": "fvtt-battlefield-painter",
     "title": "战场地形画笔",
     "category": "play",
-    "summary": "GM 在 Foundry v14 画布上绘制可追踪、可擦除和可回滚的火焰、冰霜与荆棘地形。",
+    "summary": "GM在网格场景绘制42种可追踪地形选项，并使用阶段、颜色、光、可选声音、Region铺设及擦除/历史。",
     "when": "跑团中需要快速铺设地形、改变阶段、表达移动代价或清理本模块地形文档时使用。",
     "requires": [
-      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+      "代码精确支持14.364/5.3.3、Mirror14.368/5.3.3及既有Next14.368/6.0.2或6.0.5；实际接受按版本和案例区分",
       "GM",
       "已在画布查看的场景和可用网格"
     ],
@@ -147,11 +147,11 @@
       },
       {
         "title": "选择地形与画笔",
-        "text": "选择火焰、冰霜或荆棘，选择阶段 I 或 II，再选择绘制、擦除或切换阶段。P1 开启时还可选择自由、直线或填充形状，以及 0–4 格笔刷半径。"
+        "text": "从42选项选择地形及其1至4阶段；支持换色的13类有原色加12色，环境音默认关闭。选择自由、直线或填充，以及0至4格半径。"
       },
       {
         "title": "在画布上操作",
-        "text": "点击“启用画笔”后，在地图上按住左键拖动，松开时一次创建该笔画；擦除只处理本模块拥有的文档，切换阶段作用于命中的完整笔画批次。P1 提供撤销和重做。"
+        "text": "启用后左键拖动并松开提交；擦除/阶段只改命中格位，撤销重做核对当前笔画。选中Region后可点铺设入口或Shift+P；Shift选地形收起面板，落笔后恢复。"
       },
       {
         "title": "处理清除与旧声音",
@@ -159,16 +159,17 @@
       }
     ],
     "outputs": [
-      "带 fvtt-battlefield-painter 所有权标记的 Tile、Region、Wall 和火焰 AmbientLight 场景文档",
-      "火焰、冰霜和荆棘的两个阶段；成熟荆棘阶段可形成 Wall 边界",
-      "Region 移动消耗、P2 火焰/冰霜画布效果，以及本模块笔画历史和回滚能力"
+      "模块拥有的Tile、Region、Wall、AmbientLight及可选AmbientSound文档",
+      "36地形配置加6月蚀矿图案；各配置1至4阶段、部分颜色和本模块历史",
+      "移动/阻挡按各配置说明；整张素材擦除保持原图框和选图"
     ],
     "limits": [
-      "历史版本为 Foundry 14.364 / dnd5e 5.3.3；本轮 Next 目标为 14.368 / 6.0.5，只有 GM 能修改场景",
-      "当前 Next 候选为 0.3.0-alpha.2 P2 alpha；Fire B13 的完整真实 Canvas 验收仍待完成，其他运行时结论以对应 micro-batch 记录为准",
-      "不提供伤害自动结算、12 色变体、跨客户端并发锁或第三方自动化集成",
-      "新版本不创建 AmbientSound；旧环境音清理不可撤销，静态测试和构建不等于真实画布验收",
-      "Next 14.368／6.0.5 本轮 Square Fire I 两相邻格的可见动画、Region、灯光和重载保持通过；其他地形／阶段、Hex、Undo／Redo和玩家矩阵未执行。"
+      "42项已整合为0.3.0-alpha.2候选；Mirror14.368/5.3.3的新Core接受按本轮原件记录，既有14.364代表样本和Next Fire切片不互相替代",
+      "13类换色和9类可选声音已实现；V3含7音源，GM七源技术播放/长短循环/近远/音量参数和Fire历史刷新擦除通过，SY七源近处播放和Energy代表近远返回也取得实际证据。能量原字节保持，其他6条约180秒立体声；旧场景音量不自动修改，主观音色仍单独保留。",
+      "复现音效时输入、输出目录必须互不包含，校验报告放在两个目录树外；输出音频文件不能通过软链接指向其他文件",
+      "Mirror14.368/5.3.3的HexCols26项/36阶段视觉、三格型代表交互及SY密地2倍/清地正常成本已取得实际证据；HexRows这次清地与Energy远返由真人操作。未扩大为全部42项/所有动作接受，也未宣称当前自动拖动接口的时序问题已修复。",
+      "不自动伤害、传送、滑倒或施法；狂野魔法/裂隙深入功能和完整长时/生产接受继续排除",
+      "旧白噪声声音单独显式清理；清除只处理拥有标记的文档。安装器拒绝覆盖现有目标，共享安装升级按运维记录进行"
     ],
     "keywords": [
       "战场",
@@ -183,7 +184,13 @@
     "sources": [
       "foundry-modules/fvtt-battlefield-painter/README.zh-CN.md",
       "foundry-modules/fvtt-battlefield-painter/docs/acceptance-checklist.md",
-      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+      "docs/reviews/2026-10-01-next-605-custom-module-restoration.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/CONTINUATION.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/audio-v3-integration-2026-10-04.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/PAUSED-PROGRESS-2026-10-04.md",
+      "docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/completion-2026-10-05.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/local-integration-scope-2026-10-05.md"
     ],
     "watch": [
       "foundry-modules/fvtt-battlefield-painter/"
@@ -329,7 +336,7 @@
     "summary": "以显式标签和 GM 权威为前提，提供治疗药水、生命骰、弹药、隐匿和自然 1/重击等村规辅助。",
     "when": "希望把本团约定接入 dnd5e 原生骰子、Activity、状态和 Document API，同时保留 GM 裁定时使用。",
     "requires": [
-      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+      "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2或6.0.5；具体接受范围见限制",
       "活动 GM",
       "药水和弹药上的显式 fvtt-house-rules flags（使用对应功能时）"
     ],
@@ -362,6 +369,7 @@
       "GM 确认的自然 1 后果卡和支持路径中的重击首颗伤害骰按满值投影"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；所有修改由确定性的活动 GM 执行",
       "缺少显式标签、来源不唯一、对象无权限或版本不精确时失败关闭；不会按名称猜测或扫描全世界",
       "MIDI-QOL 14.0.11、DAE 14.0.12 和 Die So Nice 6.2.9 的扩展路径只在精确版本组合下使用，其他组合保持原生或失败关闭",
@@ -395,7 +403,7 @@
     "summary": "以活动 GM 为权威管理独立复活仪式、快速复活锁和回归历史；伤势由 Custom Conditions 管理。",
     "when": "需要 Critical Role 风格的复活仪式、参与者贡献和 GM 裁定记录时使用。",
     "requires": [
-      "独立复活版本门：Foundry 14.364 / dnd5e 5.3.3，或历史候选 14.368 / 6.0.2、当前候选 14.368 / 6.0.5",
+      "独立复活精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2或6.0.5",
       "活动 GM；玩家通过原生贡献检定参与",
       "如需伤势，另外启用配套的新 Custom Conditions 和 Trigger Engine；复活自身不依赖这两个模块"
     ],
@@ -427,6 +435,7 @@
       "供可选 Custom Conditions 调用的死亡 episode 和恢复抑制桥接"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "伤势的 0–3 层、HP／休息规则、自然 19/20 和状态管理入口现属于 Custom Conditions；本模块的旧 injury flags 只保留兼容数据。",
       "灵魂意愿、贡献是否成功、环境例外和复活 HP 仍由 GM 与对应法术或 Activity 决定。",
       "未安装 Custom Conditions 时，独立复活不会增加或清除伤势；伤势旧 API 需要配套模块。",
@@ -463,7 +472,7 @@
     "summary": "由活动 GM 执行的通用 Actor 更新、回合开始和回合结束事件引擎；把稳定的 before/after 上下文交给宏或其他模块。",
     "when": "需要把“什么时候触发”从具体规则模块中拆出来，用配置组合 Actor 更新、Combat 回合事件、结构化条件和现有宏时使用。具体状态规则由独立模块拥有。",
     "requires": [
-      "精确版本门：Foundry 14.364 / dnd5e 5.3.3，或伤势接入候选 14.368 / 6.0.5",
+      "精确配对14.364/5.3.3、14.368/5.3.3或14.368/6.0.5",
       "活动 GM",
       "每个 Run Macro 动作对应的世界 Macro UUID",
       "消费模块通过 api.subscribe 接收通用事件；伤势规则由 Custom Conditions 拥有"
@@ -500,6 +509,7 @@
       "由确定性活动 GM 顺序执行的 Macro 动作"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "当前 Document Update、Combat Turn Start 和 Combat Turn End 都只支持 Actor 文档；schema 保留 documentType 以便后续扩展",
       "v1 只有结构化 ALL/ANY 比较条件与 Run Macro 动作，不提供任意 JavaScript 条件、Convenient Effects 或 Effect Macro 依赖",
       "执行权限定为当前活动 GM；等待订阅者、回合回调或宏解析后重新验权，失去执行权即停止后续分发或动作。updateDocument 回写时也重新验权；已经开始执行的用户宏无法被中断，直接文档写入仍须自行验权。同一 Actor 的更新按观察顺序排队并保留 before/after；updateDocument 携带祖先因果链以阻止递归，不覆盖 Actor.update；world setting 广播刷新客户端缓存",
@@ -533,8 +543,8 @@
     "summary": "集中管理十九种带参数的自定义状态，以及独立的 0–3 层伤势；通过 Trigger Engine 接收 Actor 和 Combat 事件。",
     "when": "需要 Drakkenheim 自定义状态或伤势规则时使用；复活仪式由可选的消逝灵魂模块独立提供。",
     "requires": [
-      "十九种通用状态与伤势：Foundry 14.364 / dnd5e 5.3.3，或精确 ServerNext 14.368 / 6.0.5 限定本地候选",
-      "交叉配对、其他版本和其他系统拒绝；Next 原生武器 Slow 写入已有与 WMP 联合的限定实机证据",
+      "十九状态、伤势与武器效果精确配对：Foundry 14.364 / dnd5e 5.3.3，Mirror 14.368 / 5.3.3，或 ServerNext 14.368 / 6.0.5 限定本地候选",
+      "交叉配对、其他版本和其他系统拒绝；按 dnd5e 系统版本选择原生武器效果写入，不能仅凭 Core 14.368 判断为 6.x。Next 原生 Slow 写入已有与 WMP 联合的限定实机证据",
       "GM / active GM",
       "已安装并启用配套 Trigger Engine；伤势不要求消逝的灵魂"
     ],
@@ -583,6 +593,7 @@
       "本模块 injury flags 与分层伤势投影；保留旧伤势原件"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "本期包含 Addled、Bewildered、Bleeding、Burning、Clumsy、Dazed、Defenseless、Distracted、Enfeebled、Frozen、Helpless、Immobilized、Jinxed、Shocked、Sickened、Slowed、Staggered、Valor 和 Weakened",
       "Bloodied 使用 dnd5e/FVTT 原生能力；Drakkenheim Madness 与 Contamination 不在本期目录",
       "距离、环境和坠落落点由 GM 结合地图裁定；模块不会把不明确的来源规则猜成自动化",
@@ -635,7 +646,7 @@
     "summary": "在Foundry内生成并审核Actor/Item，或由人类MD提取多生物与固定自动化配置，导入后明确启用。",
     "when": "已经打开 Foundry，希望直接把结构化资料或原始文本整理成世界中的 Actor/Item 时使用。",
     "requires": [
-      "Foundry VTT 14.364",
+      "Foundry14.364或14.368/dnd5e5.3.3/core；创建前绑定真实当前版本、GM和来源/产物身份",
       "dnd5e 5.3.3",
       "GM",
       "结构化 Actor/Item 来源，或已完成审阅的 Intake 结果",
@@ -674,15 +685,17 @@
       "人类MD路径可生成多个独立Actor、一份绑定宏及来源审核记录；每次召唤在场景中创建独立指示物。"
     ],
     "limits": [
-      "只支持 Foundry 14.364 / dnd5e 5.3.3 / core profile，且所有创建入口只允许 GM",
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
+      "本轮兼容候选只允许精确 Foundry 14.364 或 14.368 / dnd5e 5.3.3 / core profile，且所有创建入口只允许 GM；manifest 区间不表示中间 Core 版本均受支持。",
       "不支持 OCR、PDF、图片 Intake、update/overwrite、按名称合并、embedded Item 产品入口或跨 Document 原子事务",
       "API Key 默认只在当前页面内存，显式持久化时也只写当前浏览器 local storage；不会进入世界 Document、Chat、review bundle、Collection、日志或响应",
       "页面关闭后不会继续 AI/HTTP；本地构建或 Lab 结果不等于目标世界 runtime、生产或四小时真实会话验收",
       "AI不编写宏代码。固定入口仅调用模块内已实现能力；旧式脚本包仍需独立代码审核。导入不自动启用，关闭控制面板也不等于停用。",
-      "0.3.0为未发布候选。本地Intake默认DS API deepseek-flash（V4.1 Flash），不转送其他Provider凭据；非本地保留原连接选择。",
+      "当前仓库源码仍为未发布的0.3.0候选，Mirror已装0.4.0来自另一个Forge任务；本轮只交付Core兼容补丁，不将蓝图业务源纳入Painter集成。本地Intake默认DS API deepseek-flash（V4.1 Flash），不转送其他Provider凭据；非本地保留原连接选择。",
       "本地已测守护真实减伤和耗尽削弱；重复腐化证据部分通过，按用户决定留待独立状态设计。Dazed修复专项和浏览器完整AI生成链尚未复验。",
       "人类MD模板可用于不同生物；自动化仅限已实现能力形态，不保证任意召唤数量、触发或机制均支持。",
-      "Actor蓝图保留来源HP；场上NPC Token重掷HP遵从世界设置，控制器不覆盖。已有其他来源的启用状态不由控制器接管或提前结束。"
+      "Actor蓝图保留来源HP；场上NPC Token重掷HP遵从世界设置，控制器不覆盖。已有其他来源的启用状态不由控制器接管或提前结束。",
+      "当前Mirror保留既有0.4.0蓝图UI，以其准确来源重建的受限Core兼容产物安装；0.3.0普通构建不能覆盖它。统一0.4.0源码/普通构建需先按原Forge任务集成业务源，再接本轮兼容补丁；本轮未执行新Core完整Generate/Create或AI自动化链验收。"
     ],
     "keywords": [
       "Forge",
@@ -696,7 +709,8 @@
     ],
     "sources": [
       "foundry-modules/fvtt-json-forge/README.zh-CN.md",
-      "tools/forge-encounter/README.md"
+      "tools/forge-encounter/README.md",
+      "foundry-modules/fvtt-battlefield-painter/docs/local-integration-scope-2026-10-05.md"
     ],
     "watch": [
       "foundry-modules/fvtt-json-forge/"
@@ -772,7 +786,7 @@
     "summary": "读取生成 Actor 的可移植法术清单，在目标世界可读的 dnd5e Item pack 中选择法术，并安全水合模块拥有的 Spell 与 Cast Activity。",
     "when": "生成 Actor 已携带有效 spell manifest，需要把便携法术引用解析到当前世界的具体法术资料包时使用。",
     "requires": [
-      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+      "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2或6.0.5",
       "GM/活动 GM 权威",
       "带有效 spellManifest 的生成 Actor",
       "至少一个已启用且可读取的目标世界 dnd5e Item 法术包"
@@ -805,6 +819,7 @@
       "目标世界来源索引的包信息、规则计数、哈希和阻断诊断"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；只有有效便携 manifest 的 Actor 才有资格处理",
       "只修改模块拥有的 embedded Spells 和明确关联的 Cast Activities，不按名称扫描全世界，不修改 Compendium、Foundry/dnd5e 原型或生成阶段 manifest",
       "水合按 Actor 全有或全无执行，中途失败尝试补偿回滚；人工 Keep/Overwrite/Cancel 未完成时不会 Apply",
@@ -837,7 +852,7 @@
     "summary": "GM-only 的队伍与遭遇工作台，可在 Foundry 主窗口或同会话浏览器副屏查看并处理跑团状态。",
     "when": "GM 需要第二块显示器上的队伍、遭遇、先攻和回合操作，同时不想启动第二个 Foundry 客户端时使用。",
     "requires": [
-      "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+      "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2或6.0.5",
       "GM",
       "用于队伍来源的世界级 Actor 文件夹",
       "允许浏览器打开同会话弹窗（使用副屏时）"
@@ -870,6 +885,7 @@
       "通过原生 dnd5e Actor、Token 和 Combat API 完成的 GM 状态更新"
     ],
     "limits": [
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
       "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片，所有 UI 入口和命令都重新检查 GM 权限",
       "玩家先攻隐藏只是界面呈现，不保证对检查客户端文档数据的玩家保密",
       "副屏不加载第二个 Foundry world URL、Canvas、登录页或模块 socket；不提供独立玩家面板、行动自动化、第二张地图、AI 或自定义网络协议",
@@ -967,7 +983,7 @@
     "summary": "独立配置官方武器精通与家规武器特性，记录效果来源、目标关系和持续规则；已完成锁定版本的本地验收，交付候选尚未发布。",
     "when": "需要在 dnd5e 中配置官方八种精通，或增加 Deadly、Fatal、重击流血并区分同类规则的来源与叠加时使用。",
     "requires": [
-      "Foundry 14.364 / dnd5e 5.3.3",
+      "精确配对：Foundry 14.364 / dnd5e 5.3.3、Mirror 14.368 / 5.3.3，或 ServerNext 14.368 / 6.0.5 限定本地候选",
       "fvtt-custom-conditions 与 fvtt-trigger-engine：0.1.1起的旧0.1.x或精确0.2.0，且公开API版本1／所需能力与方法完整",
       "当前活动 GM；明确授予角色掌握资格或来源/GM 指定的 NPC 资格",
       "ServerNext候选精确14.368／6.0.5；CC原生武器效果能力，启用Midi时须精确14.6.0-beta.4338eeab.local.10；新版实机范围见当前迁移进度"
@@ -1001,7 +1017,8 @@
       "可复查的攻击与一次性效果消费记录"
     ],
     "limits": [
-      "本次精确接受CC／TE0.2.0，0.2.1或不完整API仍拒绝。新组合在14.364／5.3.3的实际ready、原生攻击／伤害、TE事件及CC Vex建立／消费和原值恢复通过；和9/29其他属性原身份分开，不推广6.0.5、生产或全部并发情形。",
+      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
+    "本次精确接受CC／TE0.2.0，0.2.1或不完整API仍拒绝。新组合在14.364／5.3.3的实际ready、原生攻击／伤害、TE事件及CC Vex建立／消费和原值恢复通过；这份旧目标收据本身不推广到6.0.5，Next另按下文限定实机证据判断，也不推广生产或全部并发情形。",
       "已完成Foundry14.364/dnd5e5.3.3本地交付候选验收。官方八种精通与三项家规采用已保存真实运行及受影响自动化组合覆盖；原生Vex/流血、当前SY玩家伤害应用与在线GM结算、正式生成导入/持久化均有对应证据。11个已审查测试批次已清理，原场景、Combat、暂停和模块配置恢复。各收据保留实际构建，不宣称全部角色/棋子组合、生产或其他版本均已验收",
       "Midi 14.0.11 的卡片内 Apply 使用精确消息、目标和实际HP变化校验；已修复连续更新省略未变化字段造成的证明拒绝。没有来源消息的右键应用路径仍失败关闭；若缺少有效预检，阻止掷骰并提示错误，不另开原生骰窗",
       "同武器Midi Vex收据可从已保存检查点、第二击消息/卡片和效果读回自动关联；Cleave父子伤害也有只读关联。原生或换武器收据不能套用Midi关联规则，部分原件保留INCOMPLETE标签，需按原始消息、HP与效果独立判断。主进度终审记录这些边界及文档打包与实测构建的等价证明",

@@ -3,8 +3,9 @@
 ## Scope
 
 This directory is the owner of the standalone `fvtt-weapon-mastery-properties`
-module. Runtime gates accept only Foundry `14.364` / dnd5e `5.3.3` or
-`14.368` / `6.0.5`; the Next candidate still requires its own real acceptance.
+module. Runtime gates accept only Foundry `14.364` / dnd5e `5.3.3`, Mirror
+`14.368` / `5.3.3`, or Next `14.368` / `6.0.5`. Core `14.368` alone does not
+select native6 adapters. Each pair retains its own bounded acceptance evidence.
 Next requires CC's positive `weaponEffects.capabilities.native6Effects === 1`.
 Native6 identities come from message `system`, and Midi support is pinned to
 `14.6.0-beta.4338eeab.local.10`; incomplete or unreviewed cards fail closed.
@@ -34,3 +35,7 @@ Use the package scripts for focused tests, typecheck, deterministic build, and
 artifact verification. Do not install, start, stop, or modify a Foundry Lab
 while working on pure core code unless the parent task explicitly coordinates
 that operation.
+
+## Mirror Core patch continuation (2026-10-03)
+
+The user authorized Mirror Foundry `14.368` with dnd5e `5.3.3`. Runtime gates now include this exact pair while preserving the previous supported pairs; this does not accept other Core/system combinations. Record actual new-Core behavior separately from legacy tests and historical Next evidence. Current maintenance and acceptance: [Mirror patch review](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md). The new pair overrides older exact-364-only wording for this scoped continuation; existing authority and data protections remain applicable.

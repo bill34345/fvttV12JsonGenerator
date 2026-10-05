@@ -595,13 +595,14 @@ function installQueryTransport(
 describe('weapon mastery runtime integration', () => {
   for (const version of [
     { core: '14.364', system: '5.3.3', midi: '14.0.11' },
+    { core: '14.368', system: '5.3.3', midi: '14.0.11' },
     { core: '14.368', system: '6.0.5', midi: '14.6.0-beta.4338eeab.local.10' },
-  ]) test('public Midi use owns one attack and one prepared nonce through cleanup on ' + version.system, async () => {
+  ]) test('public Midi use owns one attack and one prepared nonce through cleanup on ' + version.core + '/' + version.system, async () => {
     const world = createWorld();
     world.globals.game.version = version.core;
     world.globals.game.system.version = version.system;
     const originalGet = world.globals.game.modules.get.bind(world.globals.game.modules);
-    originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    if (version.system === '6.0.5') originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     world.globals.game.modules.get = (id: string) => id === 'midi-qol'
       ? { active: true, version: version.midi } : originalGet(id);
     const attacker = makeActor('public-midi-attacker');
@@ -1611,8 +1612,15 @@ describe('weapon mastery runtime integration', () => {
     runtime.stop();
   });
 
-  test('Cleave uses an independent child attack and rolls damage without a positive ability modifier', async () => {
+  test.each([
+    ['14.364', '5.3.3'],
+    ['14.368', '6.0.5'],
+  ])('Cleave binds secondary attack and damage while preserving the primary selection on %s/%s', async (core, system) => {
     const world = createWorld();
+    world.globals.game.version = core;
+    world.globals.game.system.version = system;
+    const native6 = system === '6.0.5';
+    if (native6) world.globals.game.modules.get('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     const attacker = makeActor('attacker', 'player', ['longsword']);
     const primary = makeActor('primary');
     const secondary = makeActor('secondary');
@@ -1620,6 +1628,7 @@ describe('weapon mastery runtime integration', () => {
     const sourceToken = makeToken(world, attacker);
     const primaryToken = makeToken(world, primary);
     const secondaryToken = makeToken(world, secondary);
+    world.user.targets.add(primaryToken);
     Object.assign(sourceToken, { x: 0, y: 0 });
     Object.assign(primaryToken, { x: 100, y: 0 });
     Object.assign(secondaryToken, { x: 100, y: 100 });
@@ -1633,22 +1642,42 @@ describe('weapon mastery runtime integration', () => {
     item.system.range.reach = 10;
     const activity = makeActivity(world, item, 'cleave-activity');
     activity.token = sourceToken;
+    const descriptors = (target: any, token: any) => [{ actor: target.uuid, token: token.uuid, ac: target.system.attributes.ac.value, name: target.name, img: target.img }];
+    const canonicalAttack = (message: any, targets: any[]) => {
+      message.type = 'attack';
+      message.system = { activity: { uuid: activity.uuid }, item: { uuid: item.uuid }, targets };
+      delete message.flags.dnd5e;
+      return message;
+    };
     activity.rollAttack = async (usage: AnyRecord = {}, _dialog: AnyRecord = {}, messageOptions: AnyRecord = {}) => {
       activity.calls.rollAttack += 1;
       const childId = String(usage[PRIVATE_USE_KEY]);
       const message = makeMessage(world, 'cleave-child-message', attacker.uuid, activity.uuid, item.uuid, { total: 17, isSuccess: true }, childId);
-      message.flags.dnd5e.targets = messageOptions.data?.flags?.dnd5e?.targets;
+      if (native6) {
+        // 6.0.5 defaults to current user targets, then merges caller message.data.
+        canonicalAttack(message, messageOptions.data?.system?.targets ?? descriptors(primary, primaryToken));
+        expect(message.system.targets).toEqual(descriptors(secondary, secondaryToken));
+      } else message.flags.dnd5e.targets = messageOptions.data?.flags?.dnd5e?.targets;
       await world.globals.Hooks.callAll('createChatMessage', message);
       await world.globals.Hooks.callAll('dnd5e.rollAttackV2', message.rolls, { subject: activity });
       return message.rolls;
     };
-    activity.rollDamage = async (config: AnyRecord) => {
+    activity.rollDamage = async (config: AnyRecord, _dialog: AnyRecord, messageOptions: AnyRecord) => {
       const rollConfig: AnyRecord = {
         ...config, subject: activity,
         rolls: [{ base: true, data: { mod: 3 }, parts: ['1d8', '@mod'], options: { type: 'slashing' } }],
       };
       expect(await world.globals.Hooks.call('dnd5e.preRollDamage', rollConfig)).not.toBeFalse();
-      const damageMessage = { id: 'cleave-child-damage-message', flags: { dnd5e: { originatingMessage: 'cleave-child-message' } } };
+      const damageMessage = native6
+        ? { id: 'cleave-child-damage-message', type: 'damage', system: {
+          ...messageOptions.data?.system,
+          targets: messageOptions.data?.system?.targets ?? descriptors(primary, primaryToken),
+        } }
+        : { id: 'cleave-child-damage-message', flags: { dnd5e: { originatingMessage: 'cleave-child-message' } } };
+      if (native6) {
+        expect(damageMessage.system?.targets).toEqual(descriptors(secondary, secondaryToken));
+        expect(damageMessage.system?.origin).toBe('cleave-child-message');
+      }
       const roll = { total: 4 + rollConfig.rolls[0].data.mod, data: { ...rollConfig.rolls[0].data }, options: { type: 'slashing' }, parent: damageMessage };
       expect(await world.globals.Hooks.call('dnd5e.postDamageRollConfiguration', [roll], rollConfig, {})).not.toBeFalse();
       return [roll];
@@ -1658,7 +1687,8 @@ describe('weapon mastery runtime integration', () => {
 
     const prepared = await runtime.prepareUse(activity, { targetActor: primary, targetToken: primaryToken, attackId: 'cleave-parent' });
     await runtime.startUse(prepared!);
-    putMessage(world, activity, 'cleave-parent-message', { attackId: prepared!.attackId });
+    const parentMessage = putMessage(world, activity, 'cleave-parent-message', { attackId: prepared!.attackId });
+    if (native6) canonicalAttack(parentMessage, descriptors(primary, primaryToken));
     await linkRollMessage(world, activity, 'cleave-parent-message');
     const result = await runtime.commitUse(prepared!, { messageId: 'cleave-parent-message' });
 
@@ -1670,6 +1700,8 @@ describe('weapon mastery runtime integration', () => {
     const child = ledger.find((entry: any) => entry.parentAttackId === 'cleave-parent');
     expect(child).toMatchObject({ attackId: `cleave-parent:cleave:${secondary.uuid}`, targetActorUuid: secondary.uuid, step: 'committed' });
     expect(ledger.find((entry: any) => entry.attackId === 'cleave-parent').usedRuleIds).toContain('dnd2024.cleave');
+    expect([...world.user.targets]).toEqual([primaryToken]);
+    expect(ledger.filter((entry: any) => entry.parentAttackId)).toHaveLength(1);
 
     world.globals.game.combat.turn = 1;
     world.globals.game.combat.current.turn = 1;
@@ -1677,7 +1709,8 @@ describe('weapon mastery runtime integration', () => {
     activity.rollAttack = async (_usage: AnyRecord, dialog: AnyRecord) => dialog.applicationClass.configure({ activity });
     const cancelledParent = await runtime.prepareUse(activity, { targetActor: primary, targetToken: primaryToken, attackId: 'cleave-cancel-parent' });
     await runtime.startUse(cancelledParent!);
-    putMessage(world, activity, 'cleave-cancel-parent-message', { attackId: cancelledParent!.attackId });
+    const cancelledParentMessage = putMessage(world, activity, 'cleave-cancel-parent-message', { attackId: cancelledParent!.attackId });
+    if (native6) canonicalAttack(cancelledParentMessage, descriptors(primary, primaryToken));
     await linkRollMessage(world, activity, 'cleave-cancel-parent-message');
     const cancelled = await runtime.commitUse(cancelledParent!, { messageId: 'cleave-cancel-parent-message' });
     expect(cancelled.status).toBe('committed');

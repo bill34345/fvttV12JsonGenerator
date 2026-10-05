@@ -1574,9 +1574,13 @@ export class WeaponMasteryRuntime {
       }
       return true;
     }
+    const native6 = this.globals.game?.system?.version === '6.0.5';
+    // Both native attack and damage messages default to game.user.targets.
+    // Bind the selected child explicitly without changing that user selection.
+    const nativeTargets = [{ name: target.name, img: target.img, actor: actorUuid(target), token: documentUuid(token), ac: targetAc }];
     const attackMessage = {
-      data: { flags: {
-        dnd5e: { targets: [{ name: target.name, img: target.img, uuid: actorUuid(target), ac: targetAc }] },
+      data: { ...(native6 ? { system: { targets: nativeTargets } } : {}), flags: {
+        ...(!native6 ? { dnd5e: { targets: [{ name: target.name, img: target.img, uuid: actorUuid(target), ac: targetAc }] } } : {}),
         [MODULE_ID]: { attackId: prepared.attackId, parentAttackId: state.prepared.attackId },
       } },
     };
@@ -1595,12 +1599,13 @@ export class WeaponMasteryRuntime {
     const childState = await this.resolveState(prepared);
     if (!childState) throw new Error('Cleave child ledger is unavailable.');
     if (typeof childState.ledger.attackMessageId !== 'string') throw new Error('Cleave child attack message is unavailable.');
-    const childOrigin = originatingMessageData(childState.ledger.attackMessageId, this.globals.game?.system?.version === '6.0.5');
+    const childOrigin = originatingMessageData(childState.ledger.attackMessageId, native6);
     const damageRolls = await activity.rollDamage({
       attackMode: state.prepared.attackMode,
       isCritical: childResult.results?.rolls?.[0]?.isCritical === true,
       [PRIVATE_USE_KEY]: prepared.attackId,
-    }, { configure: false }, { data: { ...childOrigin, flags: {
+    }, { configure: false }, { data: { ...childOrigin,
+      ...(native6 ? { system: { ...childOrigin.system, targets: nativeTargets } } : {}), flags: {
       ...childOrigin.flags,
       [MODULE_ID]: { attackId: prepared.attackId },
     } } });

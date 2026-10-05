@@ -32,6 +32,7 @@ export interface InjuryEventContext {
 export function injurySupported(globals: any): boolean {
   return globals.game?.system?.id === 'dnd5e' && (
     (globals.game?.version === '14.364' && globals.game?.system?.version === '5.3.3')
+    || (globals.game?.version === '14.368' && globals.game?.system?.version === '5.3.3')
     || (globals.game?.version === '14.368' && globals.game?.system?.version === '6.0.5')
   );
 }

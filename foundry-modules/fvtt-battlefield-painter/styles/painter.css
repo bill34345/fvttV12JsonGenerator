@@ -51,12 +51,17 @@
 
 .battlefield-painter__terrains {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.terrain-card {
+.battlefield-painter .terrain-card {
   display: grid;
+  height: auto;
+  min-height: 96px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  white-space: normal;
   min-width: 0;
   padding: 0;
   overflow: hidden;
@@ -71,7 +76,7 @@
 
 .terrain-card__art {
   display: block;
-  aspect-ratio: 1.65;
+  aspect-ratio: 1;
   background-color: #29251f;
   background-position: center;
   background-repeat: no-repeat;
@@ -264,3 +269,15 @@
     transition: none !important;
   }
 }
+
+/* Keep stage and brush controls reachable with the complete 36-effect catalog. */
+.battlefield-painter__terrains {
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+/* Compact palette keeps the complete catalog usable on short viewports. */
+.battlefield-painter__colors { display: flex; flex-wrap: wrap; gap: 4px; }
+.battlefield-painter__colors button { flex: 1 0 42px; min-height: 28px; }
+.battlefield-painter__colors button[aria-pressed="true"] { outline: 2px solid #e7c578; outline-offset: 1px; }

@@ -1,3 +1,4 @@
+import { genericConditionsSupported } from './runtime-compatibility.ts';
 import {
   CONDITION_DEFINITIONS,
   buildConditionFlag,
@@ -77,12 +78,8 @@ export interface TriggerEventContextLike {
   phase?: 'start' | 'end';
 }
 
-export function genericSupported(globals: any): boolean {
-  return globals.game?.version === undefined
-    || (globals.game.system?.id === 'dnd5e' && (
-      (globals.game.version === '14.364' && globals.game.system.version === '5.3.3')
-      || (globals.game.version === '14.368' && globals.game.system.version === '6.0.5')
-    ));
+function genericSupported(globals: any): boolean {
+  return genericConditionsSupported(globals.game);
 }
 
 export class ConditionRuntime {

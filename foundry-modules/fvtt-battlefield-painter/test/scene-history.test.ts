@@ -8,9 +8,14 @@ class FakeScene implements HistorySceneLike {
   lights: Record<string, unknown>[] = [];
   sounds: Record<string, unknown>[] = [];
   walls: Record<string, unknown>[] = [];
+  failCreateType: string | undefined;
   #nextId = 1;
 
   async createEmbeddedDocuments(name: string, data: Record<string, unknown>[]) {
+    if (name === this.failCreateType) {
+      this.failCreateType = undefined;
+      throw new Error("injected history creation failure");
+    }
     const collection = this.#collection(name);
     for (const source of data) {
       collection.push({ ...structuredClone(source), _id: `doc-${this.#nextId++}` });
@@ -70,6 +75,34 @@ function ownedSound() {
 }
 
 describe("SceneHistory", () => {
+  test("rejects stale undo without deleting another operation's terrain", async () => {
+    const scene = new FakeScene();
+    const history = new SceneHistory(scene);
+    await history.execute("paint", () => scene.createEmbeddedDocuments("Tile", [ownedTile("0:0")]));
+    await scene.createEmbeddedDocuments("Tile", [ownedTile("0:1")]);
+    await expect(history.undo()).rejects.toThrow("其他操作");
+    expect(scene.tiles).toHaveLength(2);
+    expect(history.state.canUndo).toBe(true);
+  });
+
+  test("restores failed mutations and preserves history when redo creation fails", async () => {
+    const scene = new FakeScene();
+    const history = new SceneHistory(scene);
+    await history.execute("paint", () => scene.createEmbeddedDocuments("Tile", [ownedTile("0:0")]));
+    await expect(history.execute("failed clear", async () => {
+      await scene.deleteEmbeddedDocuments("Tile", scene.tiles.map(tile => String(tile._id)));
+      throw new Error("injected clear failure");
+    })).rejects.toThrow("injected clear failure");
+    expect(scene.tiles).toHaveLength(1);
+    await history.undo();
+    scene.failCreateType = "Tile";
+    await expect(history.redo()).rejects.toThrow("injected history creation failure");
+    expect(scene.tiles).toHaveLength(0);
+    expect(history.state).toEqual({canUndo:false,canRedo:true});
+    await history.redo();
+    expect(scene.tiles).toHaveLength(1);
+  });
+
   test("undoes and redoes only module-owned scene documents", async () => {
     const scene = new FakeScene();
     scene.tiles.push({ _id: "foreign", name: "Keep me" });

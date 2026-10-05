@@ -268,7 +268,7 @@ describe('Foundry companion module contract', () => {
     [{ foundry: '14.364', dnd5e: '5.3.2' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '5.4.0' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '6.0.2' }, 'UNSUPPORTED_RUNTIME_PAIR'],
-    [{ foundry: '14.368', dnd5e: '5.3.3' }, 'UNSUPPORTED_RUNTIME_PAIR'],
+    [{ foundry: '14.367', dnd5e: '5.3.3' }, 'UNSUPPORTED_FOUNDRY_VERSION'],
     [{ foundry: '14.368', dnd5e: '6.0.3' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.368', dnd5e: '6.0.4' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '6.0.5' }, 'UNSUPPORTED_RUNTIME_PAIR'],
@@ -285,6 +285,7 @@ describe('Foundry companion module contract', () => {
 
   test.each([
     { foundry: '14.364', dnd5e: '5.3.3' },
+    { foundry: '14.368', dnd5e: '5.3.3' },
     { foundry: '14.368', dnd5e: '6.0.2' },
     { foundry: '14.368', dnd5e: '6.0.5' },
   ] as const)('permits only the exact source-reviewed runtime pair %j', async (versions) => {
@@ -303,6 +304,15 @@ describe('Foundry companion module contract', () => {
     expect(adapter.api?.sourceIndex?.candidates).toEqual([]);
     expect(adapter.api?.diagnostics).toMatchObject([{ code: 'PACK_INDEX_FAILED', blocking: true }]);
     expect(adapter.api?.canMutate).toBe(false);
+  });
+
+  test('rejects another system even when its version happens to match dnd5e', () => {
+    const restoreGame = installGlobal('game', { version: '14.368', system: { id: 'other-system', version: '5.3.3' } });
+    try {
+      const observed = createFoundryAdapter().getRuntimeVersions();
+      expect(observed).toEqual({ foundry: '14.368', dnd5e: '' });
+      expect(evaluateRuntimeCompatibility(observed).supported).toBeFalse();
+    } finally { restoreGame(); }
   });
 
   test('adapts the exact v14 pack, index, version, and document APIs without leaking them into core', async () => {

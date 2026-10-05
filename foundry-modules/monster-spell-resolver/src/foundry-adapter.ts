@@ -33,6 +33,7 @@ export const SERVER_NEXT_DND5E_CANDIDATE_VERSION = '6.0.5' as const;
 
 const SUPPORTED_RUNTIME_PAIRS = [
   { foundry: EXACT_FOUNDRY_VERSION, dnd5e: EXACT_DND5E_VERSION },
+  { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: EXACT_DND5E_VERSION },
   { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_VERSION },
   { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_CANDIDATE_VERSION },
 ] as const;
@@ -70,7 +71,7 @@ export function evaluateRuntimeCompatibility(versions: ResolverRuntimeVersions):
     if (supportedFoundry && supportedDnd5e && !SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry && pair.dnd5e === versions.dnd5e)) {
       diagnostics.push({
         code: 'UNSUPPORTED_RUNTIME_PAIR',
-        message: `Foundry ${versions.foundry} with dnd5e ${versions.dnd5e} is unsupported; only ${EXACT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
+        message: `Foundry ${versions.foundry} with dnd5e ${versions.dnd5e} is unsupported; only ${EXACT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
       });
     }
   }
@@ -143,7 +144,7 @@ export function createFoundryAdapter(): ResolverFoundryAdapter {
     getRuntimeVersions() {
       return {
         foundry: typeof game?.version === 'string' ? game.version : '',
-        dnd5e: typeof game?.system?.version === 'string' ? game.system.version : '',
+        dnd5e: game?.system?.id === 'dnd5e' && typeof game.system.version === 'string' ? game.system.version : '',
       };
     },
     async listEnabledReadableItemPacks() {

@@ -64,3 +64,13 @@ The earlier audio decision is resolved in the opposite direction: new Battlefiel
 # Historical note: audio retirement
 
 The AmbientSound research and design decision below document the original P2 experiment. New Battlefield Painter builds no longer generate, reference, or create audio because runtime playback produced unacceptable white noise. The remaining ownership and cleanup references describe compatibility for old scenes only.
+
+## 2026-09-07 用户认可轻量基线与 Tile Arsenal 复查
+
+用户看过当前Fire/Frost实景图后明确认可保留当前版本，用作轻量效果方向；希望高画质参考最初的收费模块Tile Arsenal。此次只补充荆棘实景展示与公开资料研究，不改渲染器或素材，不宣称两档切换已经实现。
+
+重新读取官方商店 https://www.foundryvtt.store/products/tile-arsenal ，并在浏览器查看公开71秒演示的20、34、40秒画面和阶段对照图。官方确认36种配置、300多幅素材、阶段变化及部分专用六角素材；未找到官方对自动拼接算法的说明。画面中可观察到规则铺设、阶段素材差异及部分重复纹样，不能据此断言使用邻接自动选图、特定shader或无缝融合算法。高画质路线可研究邻接边缘/角落处理、减少周期重复、独立阶段形态，但这些是本项目建议，不是Tile Arsenal已证实的内部实现。官方当前商店标示1.1.0最低Foundry14.365，本Lab仍锁定14.364，未安装或升级第三方模块。
+
+荆棘补图：本地Foundry14.364/dnd5e5.3.3实际画笔各绘制9格阶段I/II，18Tiles、2Regions、阶段II外周12Walls。手工看图确认藤蔓可见，但纹样重复、格缝明显，阶段差异主要深浅，尚不具明显棘墙形态。两张432x432未修图截图保存于本任务visualizations的battlefield-painter-review/brambles-stage-i.png和brambles-stage-ii.png。此轮未重复移动阻挡测试，不把截图当成低配硬件性能验证。
+
+预览Scene FhEusvWAiEybiG7C（BP-BRAMBLES-20260907-Preview）已通过Scene API删除；恢复原视图k0tDQjWqrbvHbjdu及paused=true，server active Scene未改变。仅本轮启动的Lab PID60852已停止。

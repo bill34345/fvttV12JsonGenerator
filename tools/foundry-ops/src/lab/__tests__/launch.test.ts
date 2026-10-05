@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { createHermeticLabConfig as createLabConfig } from '../../config';
-import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOptionsLock, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
+import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOptionsLock, isExpectedFoundryProcess, loopbackPreloadSource, otherProfileId, rejectRunningPeer, stopProfile, validateListenerAddresses, validateListenerOwnership, withLaunchReservation } from '../launch';
 
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
@@ -14,6 +14,15 @@ describe('Foundry profile launcher', () => {
     const command = buildLaunchCommand(config, 'server-mirror');
     expect(command.args).toContain('30001');
     expect(command.args).toContain(config.profiles.serverMirror.dataPath);
+  });
+  it('binds process ownership and executable arguments to the explicitly selected Mirror Core', () => {
+    const upgraded = createLabConfig('I:/fixture/repo', { FVTT_OPS_MIRROR_FOUNDRY_VERSION: '14.368' });
+    const mirror = buildLaunchCommand(upgraded, 'server-mirror');
+    expect(mirror.args[0]).toBe(resolve(upgraded.labRoot, 'app/14.368/main.js'));
+    expect(buildLaunchCommand(upgraded, 'core-test').args[0]).toBe(resolve(upgraded.appRoot, 'main.js'));
+    const commandLine = `"${mirror.command}" "${mirror.args[0]}" --dataPath=${upgraded.profiles.serverMirror.dataPath} --port=30001 --world=cor-cotn`;
+    expect(isExpectedFoundryProcess(upgraded, 'server-mirror', mirror.command, commandLine)).toBeTrue();
+    expect(isExpectedFoundryProcess(config, 'server-mirror', mirror.command, commandLine)).toBeFalse();
   });
   it('adapts the public command shape to Foundry 14.364 equals-style parsing', () => {
     expect(buildRuntimeArgs(buildLaunchCommand(config, 'core-test').args)).toEqual([
@@ -55,6 +64,25 @@ describe('Foundry profile launcher', () => {
   it('maps each profile to the mutually exclusive peer', () => {
     expect(otherProfileId('core-test')).toBe('server-mirror');
     expect(otherProfileId('server-mirror')).toBe('core-test');
+  });
+  it('retains and refuses a live 368 Mirror peer when the new command uses default 364', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'fvtt-peer-core-version-'));
+    const isolated = createLabConfig(root);
+    const record = join(isolated.evidenceRoot, 'server-mirror', 'server.pid');
+    await mkdir(join(isolated.evidenceRoot, 'server-mirror'), { recursive: true });
+    await writeFile(record, '{"foundry":42}');
+    const node = resolve(isolated.nodeRoot, 'node.exe');
+    const commandLine = `"${node}" "${resolve(isolated.labRoot, 'app/14.368/main.js')}" --dataPath=${isolated.profiles.serverMirror.dataPath} --port=30001 --world=cor-cotn`;
+    try {
+      await expect(rejectRunningPeer(isolated, 'core-test', {
+        queryProcess: () => ({ executable: node, commandLine }), isProcessAlive: () => true,
+      })).rejects.toThrow('server-mirror is running');
+      expect(await Bun.file(record).text()).toBe('{"foundry":42}');
+      await expect(rejectRunningPeer(isolated, 'core-test', {
+        queryProcess: () => ({ executable: 'C:/unknown.exe', commandLine: 'unknown' }), isProcessAlive: () => true,
+      })).rejects.toThrow('identity is unknown');
+      expect(await Bun.file(record).text()).toBe('{"foundry":42}');
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
   it('refuses a cross-profile PID file without killing the mirror process', async () => {
     const root = await mkdtemp(join(tmpdir(), 'fvtt-stop-profile-'));

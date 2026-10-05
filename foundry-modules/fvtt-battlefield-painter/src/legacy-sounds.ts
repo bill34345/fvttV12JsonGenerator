@@ -1,6 +1,7 @@
 import type { PlannedDocumentName } from "./constants";
 import {
   collectOwnedBundles,
+  terrainDocumentFlag,
   type OwnedDocumentLike,
   type OwnedSceneLike,
 } from "./scene-ownership";
@@ -17,6 +18,7 @@ const idOf = (document: OwnedDocumentLike): string | undefined =>
 export const ownedLegacySoundIds = (scene: OwnedSceneLike): string[] =>
   [...collectOwnedBundles(scene).values()]
     .flatMap((bundle) => bundle.AmbientSound)
+    .filter(document => terrainDocumentFlag(document)?.functionalityVersion !== 1)
     .map(idOf)
     .filter((id): id is string => Boolean(id))
     .sort();

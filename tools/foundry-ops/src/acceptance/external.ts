@@ -5,6 +5,7 @@ import { assessNextVmReadback, inspectNextVmSource } from './adapters/next-visio
 import { exactPath, fileIdentity, readJson, record, sha256, writeNewJson } from './files';
 import { AcceptanceError, type AcceptanceContract, type AcceptanceRequest } from './model';
 import { assertPreflight, loadContract, prepareAcceptance } from './workflow';
+import { assertValidationSelection, validateValidationSelection } from './selection';
 
 export async function prepareExternalBatch(inputPath: string): Promise<AcceptanceContract> {
   const input = record(readJson(inputPath));
@@ -14,6 +15,7 @@ export async function prepareExternalBatch(inputPath: string): Promise<Acceptanc
   const root = exactPath(input.workspaceRoot);
   fileIdentity(inputPath, root);
   const inspected = inspectNextVmSource(input.sourceContractPath);
+  const validationSelection = validateValidationSelection(input.validationSelection);
   const cli = resolve(import.meta.dir, 'cli.ts');
   const inspectArgs = [process.execPath, 'run', cli, 'inspect-batch', `--source=${inspected.binding.sourceContract.absolutePath}`];
   const request: AcceptanceRequest = {
@@ -22,9 +24,10 @@ export async function prepareExternalBatch(inputPath: string): Promise<Acceptanc
     caseId: `${inspected.binding.sourceDispatchId}:offline-preparation`, workspaceRoot: root,
     candidatePaths: [fileIdentity(inputPath, root).absolutePath],
     authority: { source: authority.source, scope: 'local-file-checks' },
-    preflight: [{ id: 'source-inspection', argv: inspectArgs, timeoutMs: 30000, expectJsonOk: true }],
-    operation: { id: 'offline-source-readback', argv: inspectArgs, timeoutMs: 30000 }, adapter: 'json-ok',
-    readonlySourcePaths: [...new Set([...inspected.files.map(file => file.absolutePath), ...['model.ts', 'files.ts', 'workflow.ts', 'external.ts', 'cli.ts', 'adapters/next-vision-macro.ts'].map(path => fileIdentity(resolve(import.meta.dir, path)).absolutePath)])], externalBatch: inspected.binding,
+    preflight: [{ id: 'source-inspection', argv: inspectArgs, timeoutMs: 30000, expectJsonOk: true, ...(validationSelection ? { validationCases: [] } : {}) }],
+    operation: { id: 'offline-source-readback', argv: inspectArgs, timeoutMs: 30000, ...(validationSelection ? { validationCases: [{ id: 'offline-source-readback', layer: 'evidence' as const }] } : {}) }, adapter: 'json-ok',
+    readonlySourcePaths: [...new Set([...inspected.files.map(file => file.absolutePath), ...['model.ts', 'files.ts', 'workflow.ts', 'external.ts', 'selection.ts', 'cli.ts', 'adapters/next-vision-macro.ts'].map(path => fileIdentity(resolve(import.meta.dir, path)).absolutePath)])], externalBatch: inspected.binding,
+    ...(validationSelection ? { validationSelection } : {}),
   };
   const directory = exactPath(join(root, '.local/development-feedback/requests'), root);
   mkdirSync(directory, { recursive: true });
@@ -43,8 +46,9 @@ function batchContract(path: string) {
 
 export function externalReadiness(path: string) {
   const { contract, batch } = batchContract(path);
+  const validation = assertValidationSelection(contract.request.validationSelection);
   const offlineReady = contract.preflight.length === contract.request.preflight.length && contract.preflight.every(check => check.ok && check.exitCode === 0 && !check.timedOut);
-  return { offlineReady, dispatchable: false as const, executionScope: 'offline-batch-preparation' as const,
+  return { offlineReady, dispatchable: false as const, executionScope: 'offline-batch-preparation' as const, ...(validation ? { validation } : {}),
     sourceDispatchId: batch.sourceDispatchId, sourceStage: batch.sourceStage, parentContinuation: batch.parentContinuation,
     parentThreadId: batch.parentThreadId, childThreadId: batch.childThreadId,
     reason: 'Current scope has no runtime authority; source owner, pause/resume, fresh runtime identity and executor permission must be resolved before a real dispatch.' };

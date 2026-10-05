@@ -157,8 +157,10 @@ describe('weapon effect contract and lifecycle', () => {
     }
   });
 
-  test('keeps weapon flags separate from legacy conditions and preserves multiple Slow sources', async () => {
+  test.each(['14.364', '14.368'])('keeps legacy Slow writes and strongest-source lifecycle on %s/5.3.3', async (core) => {
     const { globals, runtime, source, target } = fixture();
+    globals.game.version = core;
+    globals.game.system = { id: 'dnd5e', version: '5.3.3' };
     const first = await runtime.apply(target, { effectKind: 'slow', source: sourceRef(source), target: { actorUuid: target.uuid }, params: { speedReduction: 10 }, stackingGroup: 'dnd2024.slow' });
     const secondSource = actor('second-source');
     const second = await runtime.apply(target, { effectKind: 'slow', source: sourceRef(secondSource), target: { actorUuid: target.uuid }, params: { speedReduction: 5 }, stackingGroup: 'dnd2024.slow' });
@@ -167,6 +169,7 @@ describe('weapon effect contract and lifecycle', () => {
     expect(first?.flags?.['fvtt-custom-conditions']?.condition).toBeUndefined();
     expect(second?.flags?.['fvtt-custom-conditions']?.weaponEffect?.stackingGroup).toBe('dnd2024.slow');
     expect(first?.changes).toHaveLength(5);
+    expect(first?.system).toBeUndefined();
     expect(first?.changes).toContainEqual(expect.objectContaining({ key: 'system.attributes.movement.walk', value: '-10' }));
     expect(second?.changes).toEqual([]);
     expect(target.system.attributes.movement.walk).toBe(20);

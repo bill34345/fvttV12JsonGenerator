@@ -98,7 +98,7 @@ describe('reviewed native6 weapon writer', () => {
       ['14.364', '5.3.3', 'dnd5e', true, false],
       ['14.368', '6.0.5', 'dnd5e', true, true],
       ['14.364', '6.0.5', 'dnd5e', false, false],
-      ['14.368', '5.3.3', 'dnd5e', false, false],
+      ['14.368', '5.3.3', 'dnd5e', true, false],
       ['14.368', '6.0.6', 'dnd5e', false, false],
       ['14.368', '6.0.5', 'pf2e', false, false],
     ] as const) {

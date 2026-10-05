@@ -15,6 +15,9 @@ import {
   FrostEffectRenderer,
   type FrostEffectDiagnostics,
 } from "./frost-effect-renderer";
+import { auditNativeBrambles } from "./bramble-static";
+import { SpiderwebSheet } from "./spiderweb-sheet";
+import { AcidMotion, FLOODING_MOTION_PROFILE, LAVA_MOTION_PROFILE } from "./acid-motion";
 
 export type CompatibilityDiagnosticCode =
   | "MISSING_RUNTIME_VERSION"
@@ -47,6 +50,7 @@ interface RuntimeController {
     enabled: boolean,
   ): DevelopmentPhaseSnapshot;
   warnLegacySoundsOnce?(): void;
+  paintSelectedRegions?(): Promise<void>;
 }
 
 interface FireEffectRuntime {
@@ -102,6 +106,7 @@ export const evaluateRuntimeCompatibility = ({
 }: RuntimeVersions): RuntimeCompatibility => {
   const supportedPairs = [
     { foundry: "14.364", dnd5e: "5.3.3" },
+    { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.2" },
     { foundry: "14.368", dnd5e: "6.0.5" },
   ] as const;
@@ -124,7 +129,7 @@ export const evaluateRuntimeCompatibility = ({
       diagnostics.push({
         code: "UNSUPPORTED_DND5E_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 6.0.2 or 6.0.5; received ${foundry}/dnd5e ${dnd5e}`,
+        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 5.3.3, 6.0.2 or 6.0.5; received ${foundry}/dnd5e ${dnd5e}`,
       });
     }
   }
@@ -156,6 +161,10 @@ export const registerBattlefieldPainterRuntime = ({
   const controller = createController();
   const fireEffects = createFireEffectRenderer(root);
   const frostEffects = createFrostEffectRenderer(root);
+  const acidMotion = new AcidMotion(root);
+  const spiderwebSheet = new SpiderwebSheet(root);
+  const floodingMotion = new AcidMotion(root, FLOODING_MOTION_PROFILE);
+  const lavaMotion = new AcidMotion(root, LAVA_MOTION_PROFILE);
   let painterApplication:
     | { render(options?: Record<string, unknown>): unknown }
     | undefined;
@@ -183,6 +192,11 @@ export const registerBattlefieldPainterRuntime = ({
 
   hooks.once("init", () => {
     refreshCompatibility();
+    root.game?.keybindings?.register(MODULE_ID, "paintRegions", {
+      name: "在选中区域铺设地形", hint: "使用画笔当前地形、阶段与颜色，按格心落在区域内的位置铺设。",
+      restricted: true, editable: [{ key: "KeyP", modifiers: ["SHIFT"] }],
+      onDown: () => { if (!refreshCompatibility().supported) return false; void controller.paintSelectedRegions?.(); return true; },
+    });
     hooks.on("getSceneControlButtons", (controls: unknown) => {
       const supported = refreshCompatibility().supported;
       addPainterSceneControl(
@@ -205,6 +219,12 @@ export const registerBattlefieldPainterRuntime = ({
       auditScene: () => controller.auditScene(),
       auditEffects: () => fireEffects.auditEffects(),
       auditFrostEffects: () => frostEffects.auditFrostEffects(),
+      auditBrambleEffects: () => auditNativeBrambles(root),
+      auditAcidMotion: () => acidMotion.audit(),
+      auditSpiderwebSheet: () => spiderwebSheet.audit("spiderweb"),
+      auditTerrainSheets: () => spiderwebSheet.audit(),
+      auditFloodingMotion: () => floodingMotion.audit(),
+      auditLavaMotion: () => lavaMotion.audit(),
       developmentPhases: () => controller.developmentPhases(),
     };
     module.api = diagnosticApi.canMutate
@@ -229,16 +249,28 @@ export const registerBattlefieldPainterRuntime = ({
     controller.deactivate();
     fireEffects.onCanvasTearDown();
     frostEffects.onCanvasTearDown();
+    acidMotion.onCanvasTearDown();
+    spiderwebSheet.onCanvasTearDown();
+    floodingMotion.onCanvasTearDown();
+    lavaMotion.onCanvasTearDown();
   });
   hooks.on("canvasReady", () => {
     const evaluated = refreshCompatibility();
     if (evaluated.supported) {
       fireEffects.onCanvasReady();
       frostEffects.onCanvasReady();
+      acidMotion.onCanvasReady();
+      spiderwebSheet.onCanvasReady();
+      floodingMotion.onCanvasReady();
+      lavaMotion.onCanvasReady();
       controller.warnLegacySoundsOnce?.();
     } else {
       fireEffects.onCanvasTearDown();
       frostEffects.onCanvasTearDown();
+      acidMotion.onCanvasTearDown();
+      spiderwebSheet.onCanvasTearDown();
+      floodingMotion.onCanvasTearDown();
+      lavaMotion.onCanvasTearDown();
     }
   });
   const onTileDocumentEvent = (document: unknown): void => {
@@ -248,5 +280,21 @@ export const registerBattlefieldPainterRuntime = ({
   hooks.on("createTile", onTileDocumentEvent);
   hooks.on("updateTile", onTileDocumentEvent);
   hooks.on("deleteTile", onTileDocumentEvent);
+  const onTileDrawn = (tile: unknown): void => {
+    if (refreshCompatibility().supported) {
+      acidMotion.onTileDrawn(tile);
+      spiderwebSheet.onTileDrawn(tile);
+      floodingMotion.onTileDrawn(tile);
+      lavaMotion.onTileDrawn(tile);
+    }
+  };
+  hooks.on("drawTile", onTileDrawn);
+  hooks.on("refreshTile", onTileDrawn);
+  hooks.on("destroyTile", (tile: unknown) => {
+    acidMotion.onTileDestroyed(tile);
+    spiderwebSheet.onTileDestroyed(tile);
+    floodingMotion.onTileDestroyed(tile);
+    lavaMotion.onTileDestroyed(tile);
+  });
   return true;
 };

@@ -38,3 +38,7 @@
 - 只触及明确 owned 文档，失败后 Actor 恢复到操作前状态。
 - manifest producer、contract、resolver 和目标版本结构一致。
 - portable/static manifest、目标世界 hydration、native Cast runtime 是三个不同层级。单测/build 通过不等于 hydration；hydration 成功也不等于原生施法或生产接受已验收。
+
+## Mirror Core patch continuation (2026-10-03)
+
+The user authorized Mirror Foundry `14.368` with dnd5e `5.3.3`. Runtime gates now include this exact pair while preserving the previous supported pairs; this does not accept other Core/system combinations. Record actual new-Core behavior separately from legacy tests and historical Next evidence. Current maintenance and acceptance: [Mirror patch review](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md). The new pair overrides older exact-364-only wording for this scoped continuation; existing authority and data protections remain applicable.

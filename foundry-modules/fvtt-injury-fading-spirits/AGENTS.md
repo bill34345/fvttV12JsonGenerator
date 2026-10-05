@@ -2,7 +2,7 @@
 
 ## 范围
 
-本目录是 `fvtt-injury-fading-spirits` 复活仪式的唯一实现 owner。模块运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、历史候选 `14.368` / `6.0.2` 或新增候选 `14.368` / `6.0.5` 精确配对；6.0.5 仍需本地 Lab 多客户端语义验收。伤势规则、死亡豁免扩展与管理界面现由 `fvtt-custom-conditions` 负责，旧伤势 API 只经该模块的公开 API 转发。
+本目录是 `fvtt-injury-fading-spirits` 复活仪式的唯一实现 owner。模块运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、Mirror `14.368` / `5.3.3`、历史候选 `14.368` / `6.0.2` 或新增候选 `14.368` / `6.0.5` 精确配对；6.0.5 仍需本地 Lab 多客户端语义验收。伤势规则、死亡豁免扩展与管理界面现由 `fvtt-custom-conditions` 负责，旧伤势 API 只经该模块的公开 API 转发。
 
 ## 硬边界
 
@@ -23,3 +23,7 @@
 ## 完成标准
 
 复活事务在重复操作、双 GM、断线和 GM 切换下只写一次；复活历史完整但不泄露 blind 骰；本地 Lab 回放与自动测试都通过后才可称本地完成。伤势三层裁定属于 Custom Conditions 的验收范围。
+
+## Mirror Core patch continuation (2026-10-03)
+
+The user authorized Mirror Foundry `14.368` with dnd5e `5.3.3`. Runtime gates now include this exact pair while preserving the previous supported pairs; this does not accept other Core/system combinations. Record actual new-Core behavior separately from legacy tests and historical Next evidence. Current maintenance and acceptance: [Mirror patch review](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md). The new pair overrides older exact-364-only wording for this scoped continuation; existing authority and data protections remain applicable.

@@ -30,6 +30,24 @@ beforeAll(async () => {
 });
 
 describe('Foundry Forge Actor creation boundary', () => {
+  test('creates a formally generated 368 artifact only in the matching reviewed Mirror runtime', async () => {
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
+    const response = await convertFinalActorSource(buildForgeActorRequest({
+      content: source, displayName: 'Mirror 368 Actor', requestId: 'mirror-core368-runtime',
+      fvttVersion: '14.368', systemVersion: '5.3.3',
+    }));
+    if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Formal 368 source generation failed');
+    expect(response.result.target.fvttRuntimeVersion).toBe('14.368');
+    const collection = new FakeActorCollection();
+    const game = { ...supportedGame(collection), version: '14.368' };
+    expect((await createAcceptedForgeActor({ game, response })).status).toBe('created');
+    const crossed = new FakeActorCollection();
+    await expect(createAcceptedForgeActor({ game: supportedGame(crossed), response })).rejects.toThrow('response target');
+    expect(crossed.createCount).toBe(0);
+    const stale = new FakeActorCollection();
+    await expect(createAcceptedForgeActor({ game: { ...supportedGame(stale), version: '14.368' }, response: acceptedResponse })).rejects.toThrow('response target');
+    expect(stale.createCount).toBe(0);
+  });
   test('uses one final world write for the complete identified Actor and verifies readback', async () => {
     const collection = new FakeActorCollection();
     const game = supportedGame(collection);

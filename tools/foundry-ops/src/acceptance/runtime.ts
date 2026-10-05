@@ -5,8 +5,9 @@ import { dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { assessNextVmReadback } from './adapters/next-vision-macro';
 import { exactPath, fileIdentity, readJson, record, writeNewJson } from './files';
-import { AcceptanceError, type AcceptanceContract, type FileIdentity } from './model';
+import { AcceptanceError, type AcceptanceContract, type FileIdentity, type ValidationCaseRef, type ValidationSelection } from './model';
 import { assertPreflight, loadContract } from './workflow';
+import { assertExecutionCases, assertValidationSelection, validateValidationSelection } from './selection';
 
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -14,6 +15,8 @@ export interface RuntimeBatchContract {
   protocolVersion: 1; dispatchId: string; contractRevision: 1; createdAt: string; contractAbsolutePath: string;
   offlineContract: FileIdentity; authority: FileIdentity; permissions: FileIdentity; service: FileIdentity;
   implementation: FileIdentity[]; parentThreadId: string; childThreadId: string; model: string; reasoningEffort: string;
+  validationSelection?: ValidationSelection;
+  executionCases?: ValidationCaseRef[];
 }
 type RuntimeProbe = (contract: RuntimeBatchContract, offline: AcceptanceContract) => void;
 
@@ -88,6 +91,9 @@ function probeService(contract: RuntimeBatchContract, offline: AcceptanceContrac
 
 export async function prepareRuntimeBatch(inputPath: string, probe: RuntimeProbe = probeService) {
   const input = record(readJson(inputPath));
+  const validationSelection = validateValidationSelection(input.validationSelection);
+  assertValidationSelection(validationSelection, true);
+  assertExecutionCases(validationSelection, input.executionCases);
   for (const key of ['offlineContractPath', 'authorityPath', 'executorPermissionsPath', 'serviceReceiptPath']) if (!text(input[key])) throw new AcceptanceError('precondition', `Missing runtime ${key}.`);
   const offline = offlineContract(String(input.offlineContractPath));
   fileIdentity(inputPath, offline.workspace.absoluteRoot);
@@ -98,8 +104,9 @@ export async function prepareRuntimeBatch(inputPath: string, probe: RuntimeProbe
     createdAt: new Date().toISOString(), contractAbsolutePath: join(directory, 'contract.json'),
     offlineContract: fileIdentity(offline.contractAbsolutePath), authority: fileIdentity(String(input.authorityPath)),
     permissions: fileIdentity(String(input.executorPermissionsPath)), service: fileIdentity(String(input.serviceReceiptPath)),
-    implementation: ['runtime.ts', 'runtime-service-check.ps1'].map(path => fileIdentity(resolve(import.meta.dir, path))),
-    parentThreadId: String(authority.parentThreadId), childThreadId: String(authority.childThreadId), model: String(authority.model), reasoningEffort: String(authority.reasoningEffort) };
+    implementation: ['runtime.ts', 'selection.ts', 'runtime-service-check.ps1'].map(path => fileIdentity(resolve(import.meta.dir, path))),
+    parentThreadId: String(authority.parentThreadId), childThreadId: String(authority.childThreadId), model: String(authority.model), reasoningEffort: String(authority.reasoningEffort),
+    ...(validationSelection ? { validationSelection, executionCases: input.executionCases as ValidationCaseRef[] } : {}) };
   probe(contract, offline);
   mkdirSync(directory, { recursive: true }); writeNewJson(contract.contractAbsolutePath, contract);
   writeNewJson(join(directory, 'integrity.json'), fileIdentity(contract.contractAbsolutePath));
@@ -111,6 +118,8 @@ function loadRuntime(path: string) {
   if (record(readJson(join(dirname(path), 'integrity.json'))).sha256 !== identity.sha256 || value.contractAbsolutePath !== identity.absolutePath
     || value.protocolVersion !== 1 || value.contractRevision !== 1 || !uuid.test(String(value.dispatchId))) throw new AcceptanceError('evidence', 'Runtime contract identity or bytes changed.');
   const contract = value as unknown as RuntimeBatchContract;
+  validateValidationSelection(contract.validationSelection);
+  assertExecutionCases(contract.validationSelection, contract.executionCases);
   const offline = offlineContract(contract.offlineContract.absolutePath);
   exactPath(path, offline.workspace.absoluteRoot);
   for (const identity of [contract.offlineContract, contract.authority, contract.permissions, contract.service, ...contract.implementation]) {
@@ -123,9 +132,10 @@ function loadRuntime(path: string) {
 
 export async function runtimeReadiness(path: string, probe: RuntimeProbe = probeService) {
   const { contract, offline, authority } = loadRuntime(path);
+  const validation = assertValidationSelection(contract.validationSelection, true);
   await checkPermissions(contract.permissions.absolutePath, authority); probe(contract, offline);
   if (existsSync(join(dirname(path), 'claim.json'))) throw new AcceptanceError('precondition', 'Runtime dispatch already claimed; inspect results, do not replay.');
-  return { dispatchable: true, executionScope: 'local-next-vm-runtime', ...contract,
+  return { dispatchable: true, executionScope: 'local-next-vm-runtime', ...contract, ...(validation ? { validation } : {}),
     sourceDispatchId: offline.request.externalBatch!.sourceDispatchId, target: offline.request.externalBatch!.target,
     fixtureIds: offline.request.externalBatch!.fixtureIds, sourceContract: offline.request.externalBatch!.sourceContract,
     parentReview: 'PENDING', cleanup: 'NOT_EXECUTED' };

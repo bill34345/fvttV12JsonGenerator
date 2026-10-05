@@ -12,6 +12,16 @@ import {
 } from './config';
 
 describe('Foundry lab configuration', () => {
+  it('selects 14.368 only for Mirror without changing Core Test or the pinned system', () => {
+    const config = createLabConfig('I:/fixture/repo', { FVTT_OPS_MIRROR_FOUNDRY_VERSION: '14.368' });
+    expect(config.profiles.serverMirror.appRoot).toBe(resolve(config.labRoot, 'app/14.368'));
+    expect(config.profiles.serverMirror.foundryVersion).toBe('14.368');
+    expect(config.appRoot).toBe(resolve(config.labRoot, 'app/14.364'));
+    expect(config.versions.dnd5e).toBe('5.3.3');
+    for (const unsupported of ['14.365', '14.369', '../14.368']) {
+      expect(() => createLabConfig('I:/fixture/repo', { FVTT_OPS_MIRROR_FOUNDRY_VERSION: unsupported })).toThrow('exact');
+    }
+  });
   it('pins the repository fallback layout when no machine configuration is supplied', () => {
     const repo = resolve('I:/OpenCode/fvttV12JsonGenerator');
     const config = createLabConfig(repo, {});

@@ -606,15 +606,25 @@
         "command": "bun run foundry:ops assets inventory --hash-concurrency=4"
       },
       {
-      "title": "准备文件侧验收合同",
-        "text": "按 Foundry Ops 说明准备带绝对路径和已审核命令的请求 JSON。预检失败时停止；成功后使用返回的合同路径依次 ready、execute、collect，需要接续时 resume。run、dispatch、receipt ID 和候选／指令身份自动取得。",
-      "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
-    },
-    {
-      "title": "预览 ServerNext 自有模块首次安装",
-      "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。本批支持 TE/CC 首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
-      "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0"
-    },
+        "title": "准备文件侧验收合同",
+        "text": "已有安全测试命令足够时直接使用；需要固定执行身份与收据时，按说明填写绝对路径及已审核命令，run 一次完成文件侧 prepare、execute、collect。ID 和候选／指令指纹自动取得。新 input 表示新执行；已有合同使用 run --contract 读回已完成收据，已领取却无结果时保持检查状态，不自动重跑。需分阶段审查仍用原分步入口。",
+        "command": "bun run foundry:ops acceptance run --input=\"<请求 JSON 的绝对路径>\""
+      },
+      {
+        "title": "分阶段准备验收合同",
+        "text": "需要保留逐步审核时，按说明准备带绝对路径和已审核命令的请求 JSON。预检失败即停止；成功后使用返回的合同路径依次 ready、execute、collect，需要接续时 resume。run、dispatch、receipt ID 和候选／指令身份自动取得。",
+        "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
+      },
+      {
+        "title": "批次先选复用、补测与不做项",
+        "text": "复杂批次显式启用 validationSelection，引用旧分项证据、相关上下文及具体失效理由，并让每条命令的 validationCases 对应本批 check 清单；专属 runtime 使用 executionCases。准备阶段先阻止无理由重复和覆盖 reuse/defer 的命令，ready/领取前复核证据。旧小请求仍兼容；此检查不证明人工影响分析或任意脚本内部语义正确。",
+        "command": "bun run foundry:ops acceptance ready --contract=\"<已准备的本批合同绝对路径>\""
+      },
+      {
+        "title": "预览 ServerNext 自有模块首次安装",
+        "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。本批白名单支持 TE、CC、WMP 首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
+        "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0"
+      },
       {
         "title": "接入已准备的 ServerNext 批次",
         "text": "按说明填写本任务工作树、旧批次合同和离线授权引用。工具固定跨工作树只读来源并自动绑定回执；ready 只代表文件检查可运行，ready-batch 独立报告运行门禁。源批次暂停和回调归属保留。",
@@ -631,9 +641,17 @@
         "command": "bun run foundry:ops acceptance inspect-state --input=\"<当前任务合同绝对路径>\""
       },
       {
+        "title": "先确定实机批次的最终读回方式",
+        "text": "在既有合同和授权内安排恢复、精确清理及最终读回。删除唯一审计宏或关闭唯一证据入口前，确认完整数据与入口自身删除的最终核对方式；目录当前显示数量不能代替完整集合，清理前快照不能冒充清理后结果。仅合并已授权连续执行的收尾步骤，既有分阶段父审和停止点继续遵守；真实失败或权限、用户输入缺口也应中断。公共文件检查不会自动执行这些步骤。"
+      },
+      {
         "title": "清理前读回内容保留证据",
         "text": "按 worktree runbook 列明已提交、暂存、工作区、untracked 和 ignored 内容。inspect-preservation 只读匹配保留范围外的现存文件或可达 Git 文件；未知、缺件和字节失配保持 INCOMPLETE。Git clean、类似主线实现与检查通过均不授予删除权限，不自动复制或清理。",
         "command": "bun run foundry:ops acceptance inspect-preservation --input=\"<保留请求绝对路径>\""
+      },
+      {
+        "title": "选择Mirror Core程序",
+        "text": "此轮Mirror目标14.368/dnd5e5.3.3。需要启动已核对的Mirror时，显式设置FVTT_OPS_MIRROR_FOUNDRY_VERSION=14.368，再运行bun run foundry:lab launch server-mirror；Core Test仍使用14.364。仅接受明确的364/368，不影响Next或生产。维护先核真实PID和共享占用，旧PID记录不能代替进程身份。"
       }
     ],
     "outputs": [
@@ -647,7 +665,9 @@
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
       "共用验收第一版只做已授权的本地文件检查：保存成功与行为通过分开；空输出、仅有 PASS 标签和无 adapter 的语义保持 INCOMPLETE。已领取操作不能自动重放，父审保持待完成。",
       "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。",
-      "Vision5e + Item Macro 离线收据导入仅作参考，不恢复暂停状态；单独运行合同必须有明确恢复授权与实际权限/服务证据。collect-runtime 只收集观察，仍保持父审待完成；数据判断不替代 UI、加载哈希、角色/重载和完整清理。"
+      "run 只接受普通文件侧合同；外部批次和 runtime 使用原专用入口。新模块可使用已有测试命令或小型专用检查，缺少公共 adapter 不要求先扩建平台；manual 结果仍需人工语义判断，不能当作业务 PASS。",
+      "Vision5e + Item Macro 离线收据导入仅作参考，不恢复暂停状态；单独运行合同必须有明确恢复授权与实际权限/服务证据。collect-runtime 只收集观察，仍保持父审待完成；数据判断不替代 UI、加载哈希、角色/重载和完整清理。",
+      "新版peer检查识别两个允许的Mirror程序目录；未知活PID拒绝继续并保留记录。正常E2E仍不停止常驻服务，授权维护后恢复30001。"
     ],
     "keywords": [
       "Lab",
@@ -684,12 +704,16 @@
     "steps": [
       {
         "title": "选择必要检查",
-        "text": "普通说明修改核对文义和链接；实现修改按 owner 规则运行受影响测试。完整工程门禁如下，耗时较长。",
+        "text": "普通说明修改核对文义、链接及受影响生成一致性；实现先用已有安全入口验证变化与已知失败，真实接口变化补代表运行链。增加或重跑检查要对应具体变更、失败、证据缺口或既定集成门禁；报告、记录器或恢复器修复只处理受影响层，保留有效业务结果。"
+      },
+      {
+        "title": "到整合边界运行完整门禁",
+        "text": "明确要求全仓整合检查，或变化的共享依赖／接口需要该覆盖时运行。保留已有相关通过结果；局部修复先完成同类定点检查，再运行所需整合门禁。",
         "command": "bun run ci:verify"
       },
       {
         "title": "验证共用验收工具",
-        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。第二消费者的只读来源与运行边界可用 test:acceptance-next-vm 聚焦验证；test:acceptance-cleanup 核对限定自动后代归属，手动/未知对象仍拒绝，纯检查不执行删除。按变化选择入口，详细操作见 Foundry 环境与资产检查条目。",
+        "text": "先核对CI锁定的Bun运行时并供本批子进程复用。安全包装入口覆盖选择声明/执行范围、旧证据、旧请求兼容及路径/超时边界。test:acceptance-workflow 定点验证文件侧执行、收据读回和未知执行不重放；test:acceptance-inspection 只跑状态与保留检查，三个慢Git用例各有15秒预算。先修同类定点问题，再按必要整合边界运行相关组；Next批次和清理归属仍可分别使用原聚焦入口，均不因此执行真实清理。",
         "command": "bun run test:acceptance-tools"
       },
       {
@@ -713,7 +737,7 @@
     ],
     "limits": [
       "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
-      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 300 秒 watchdog。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
+      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 450 秒 watchdog，单案与子操作限额继续保留。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
       "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。"
     ],
@@ -754,7 +778,7 @@
     "when": "需要生成龙兽和晶体、召唤者和红龙等多个关联生物，并携带配套自动化时。",
     "requires": [
       "每种生物的完整规则与明确召唤关系；未知规则保留给GM。",
-      "本地默认DS API deepseek-flash（V4.1 Flash）；当前固定执行层仅支持Foundry14.364/dnd5e5.3.3/core。"
+      "本地默认DS API deepseek-flash（V4.1 Flash）；生成/IR仍遵现有目标契约，固定执行控制器已准备Core14.364或14.368/dnd5e5.3.3/core。"
     ],
     "steps": [
       {
@@ -781,7 +805,8 @@
       "本地CLI默认DS Flash，每阶段5分钟；不使用Luna桥接。浏览器验收执行器按当前项目约定和实际任务配置选择，与Intake模型分开；历史Luna Max设置不表示当前默认。",
       "真实DS已生成并审核样例整包，本地已测召唤、守护减伤与耗尽削弱；重复腐化保留PARTIAL，待独立状态设计；浏览器完整AI生成链尚未重测。",
       "预先审核的晶血样本使用专用宏2.1.2，导入后单独启动，刷新后重新启动；启用Custom Conditions时按正式效果中的条件标记应用独立恍惚，遵守免疫并在目标下回合结束到期，未启用时行动限制由GM裁定。候选回归不等于实机接受。",
-      "当前执行器只支持V14；V12需独立适配验收。未指定的召唤期限、数量上限和死亡规则不自行补全。"
+      "当前执行器只支持V14；V12需独立适配验收。未指定的召唤期限、数量上限和死亡规则不自行补全。",
+      "本轮只扩精确Mirror Core控制器配对；没有扩大AI能力、IR promotion、V12或旧包自动启用权限。"
     ],
     "keywords": [
       "召唤",

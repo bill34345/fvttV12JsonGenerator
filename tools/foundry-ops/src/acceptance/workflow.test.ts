@@ -231,8 +231,138 @@ test('direct CLI preserves prepare failures and separates save success from sema
   expect(JSON.parse(ready.stdout).reason).toContain('Preflight failed');
 });
 
+test('run CLI executes once, then reads the same receipt without rerunning checks or rewriting originals', async () => {
+  const preflightMarker = join(root, 'preflight.marker');
+  const operationMarker = join(root, 'operation.marker');
+  request.preflight = [{ id: 'marker-preflight', argv: [node!, '-e', `require('fs').appendFileSync(${JSON.stringify(preflightMarker)}, 'p')`], timeoutMs: 5000 }];
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(operationMarker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  saveRequest();
+  const invoke = (args: string[]) => runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', ...args], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  const first = await invoke([`--input=${input}`]);
+  expect(first.exitCode).toBe(0);
+  const result = JSON.parse(first.stdout);
+  expect(result).toMatchObject({ executionStatus: 'EXECUTED', phase: 'REVIEW', summary: { behavior: 'PASS', evidence: 'COMPLETE', parentReview: 'PENDING' } });
+  const directory = dirname(result.contractAbsolutePath);
+  const original = ['contract.json', 'dispatch-claim.json', 'raw.json', 'receipt.json', `summary.${result.summary.receiptId}.json`].map(name => readFileSync(join(directory, name)));
+  const second = await invoke([`--contract=${result.contractAbsolutePath}`]);
+  expect(second.exitCode).toBe(0);
+  expect(JSON.parse(second.stdout)).toMatchObject({ executionStatus: 'REUSED_RECEIPT', contractAbsolutePath: result.contractAbsolutePath, summary: result.summary });
+  expect(readFileSync(preflightMarker, 'utf8')).toBe('p');
+  expect(readFileSync(operationMarker, 'utf8')).toBe('o');
+  expect(['contract.json', 'dispatch-claim.json', 'raw.json', 'receipt.json', `summary.${result.summary.receiptId}.json`].map(name => readFileSync(join(directory, name)))).toEqual(original);
+});
+
+test('run CLI keeps a claimed contract incomplete and does not replay its operation', async () => {
+  const marker = join(root, 'operation.marker');
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(marker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  const contract = await prepare();
+  await expect(dispatchPrepared(contract.contractAbsolutePath, async () => { throw new Error('delivery unknown'); })).rejects.toThrow('delivery unknown');
+  const result = await runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', `--contract=${contract.contractAbsolutePath}`], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  expect(result.exitCode).toBe(2);
+  expect(JSON.parse(result.stdout)).toMatchObject({ contractAbsolutePath: contract.contractAbsolutePath, executionStatus: 'CLAIMED_NO_RECEIPT', phase: 'INSPECT', behavior: 'INCOMPLETE', exitCode: 2 });
+  expect(existsSync(marker)).toBe(false);
+});
+
+test('run CLI returns the contract path when receipt persistence fails after the operation', async () => {
+  const marker = join(root, 'operation.marker');
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(marker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  const contract = await prepare();
+  const rawPath = join(dirname(contract.contractAbsolutePath), 'raw.json');
+  writeFileSync(rawPath, 'occupied');
+  const invoke = () => runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', `--contract=${contract.contractAbsolutePath}`], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  const first = await invoke();
+  expect(first.exitCode).toBe(2);
+  expect(JSON.parse(first.stdout)).toMatchObject({ contractAbsolutePath: contract.contractAbsolutePath, executionStatus: 'CLAIMED_NO_RECEIPT', phase: 'INSPECT', behavior: 'INCOMPLETE', exitCode: 2 });
+  expect(readFileSync(rawPath, 'utf8')).toBe('occupied');
+  const second = await invoke();
+  expect(JSON.parse(second.stdout)).toMatchObject({ contractAbsolutePath: contract.contractAbsolutePath, executionStatus: 'CLAIMED_NO_RECEIPT', phase: 'INSPECT' });
+  expect(readFileSync(marker, 'utf8')).toBe('o');
+});
+
+test('run CLI reports unknown history after candidate drift and never replays a completed operation', async () => {
+  const marker = join(root, 'operation.marker');
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(marker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  saveRequest();
+  const invoke = (args: string[]) => runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', ...args], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  const first = JSON.parse((await invoke([`--input=${input}`])).stdout);
+  expect(first.executionStatus).toBe('EXECUTED');
+  const receiptPath = join(dirname(first.contractAbsolutePath), 'receipt.json');
+  const receiptBytes = readFileSync(receiptPath);
+  writeFileSync(source, 'console.log(JSON.stringify({ok:true, changed:true}));');
+  const second = await invoke([`--contract=${first.contractAbsolutePath}`]);
+  expect(second.exitCode).toBe(2);
+  expect(JSON.parse(second.stdout)).toMatchObject({ contractAbsolutePath: first.contractAbsolutePath, executionStatus: 'UNKNOWN', phase: 'INSPECT', behavior: 'INCOMPLETE', exitCode: 2 });
+  expect(readFileSync(marker, 'utf8')).toBe('o');
+  expect(readFileSync(receiptPath)).toEqual(receiptBytes);
+});
+
+test('run CLI reports invalid existing raw or receipt bytes without replaying or rewriting them', async () => {
+  const marker = join(root, 'operation.marker');
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(marker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  const invoke = (args: string[]) => runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', ...args], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  for (const filename of ['raw.json', 'receipt.json']) {
+    saveRequest();
+    const first = JSON.parse((await invoke([`--input=${input}`])).stdout);
+    expect(first.executionStatus).toBe('EXECUTED');
+    const damagedPath = join(dirname(first.contractAbsolutePath), filename);
+    writeFileSync(damagedPath, '{}');
+    const damagedBytes = readFileSync(damagedPath);
+    const before = readFileSync(marker, 'utf8');
+    const second = await invoke([`--contract=${first.contractAbsolutePath}`]);
+    expect(second.exitCode).toBe(2);
+    expect(JSON.parse(second.stdout)).toMatchObject({ contractAbsolutePath: first.contractAbsolutePath, executionStatus: 'RECEIPT_INVALID', phase: 'INSPECT', behavior: 'INCOMPLETE', exitCode: 2 });
+    expect(readFileSync(marker, 'utf8')).toBe(before);
+    expect(readFileSync(damagedPath)).toEqual(damagedBytes);
+  }
+});
+
+test('run CLI blocks failed preflight and rejects unsupported scope or selection before any check', async () => {
+  const marker = join(root, 'preflight.marker');
+  const operationMarker = join(root, 'operation.marker');
+  request.preflight = [{ id: 'failing', argv: [node!, '-e', `require('fs').appendFileSync(${JSON.stringify(marker)}, 'p'); process.exit(1)`], timeoutMs: 5000 }];
+  writeFileSync(source, `require('fs').appendFileSync(${JSON.stringify(operationMarker)}, 'o'); console.log(JSON.stringify({ok:true}));`);
+  const invoke = async () => runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', `--input=${input}`], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  saveRequest();
+  const failed = await invoke();
+  expect(failed.exitCode).toBe(2);
+  expect(JSON.parse(failed.stdout)).toMatchObject({ executionStatus: 'NOT_EXECUTED', phase: 'BLOCKED', behavior: 'INCOMPLETE', exitCode: 2 });
+  expect(JSON.parse(failed.stdout).contractAbsolutePath).toBeTruthy();
+  expect(readFileSync(marker, 'utf8')).toBe('p');
+  expect(existsSync(operationMarker)).toBe(false);
+  unlinkSync(marker);
+  (request as unknown as Record<string, unknown>).externalBatch = {};
+  saveRequest();
+  const unsupported = await invoke();
+  expect(unsupported.exitCode).toBe(2);
+  expect(JSON.parse(unsupported.stdout).reason).toContain('ordinary local-file-checks');
+  expect(existsSync(marker)).toBe(false);
+  delete (request as unknown as Record<string, unknown>).externalBatch;
+  (request as unknown as Record<string, unknown>).runtime = {};
+  saveRequest();
+  const runtime = await invoke();
+  expect(runtime.exitCode).toBe(2);
+  expect(JSON.parse(runtime.stdout).reason).toContain('ordinary local-file-checks');
+  expect(existsSync(marker)).toBe(false);
+  delete (request as unknown as Record<string, unknown>).runtime;
+  request.validationSelection = { cases: [{ id: 'case', layer: 'behavior', decision: 'defer', reason: 'Unchanged', context: { revision: 'same' } }] };
+  saveRequest();
+  const selection = await invoke();
+  expect(selection.exitCode).toBe(2);
+  expect(JSON.parse(selection.stdout).reason).toContain('Validation selection');
+  expect(existsSync(marker)).toBe(false);
+});
+
+test('run CLI accepts a module-specific local check and leaves manual semantics incomplete', async () => {
+  request.caseId = 'unregistered-module';
+  request.adapter = 'manual';
+  saveRequest();
+  const result = await runCommand(process.execPath, ['run', cliPath, 'acceptance', 'run', `--input=${input}`], { cwd: resolve(import.meta.dir, '../../../..'), timeoutMs: 15000 });
+  expect(result.exitCode).toBe(2);
+  expect(JSON.parse(result.stdout)).toMatchObject({ executionStatus: 'EXECUTED', summary: { behavior: 'INCOMPLETE', evidence: 'COMPLETE', parentReview: 'PENDING' }, exitCode: 2 });
+});
+
 test('CLI rejects typo, duplicate and missing options instead of guessing a target', async () => {
-  for (const args of [['collect'], ['prepare', '--input=a', '--input=b'], ['ready', '--receipt=x'], ['unknown']]) {
+  for (const args of [['collect'], ['prepare', '--input=a', '--input=b'], ['ready', '--receipt=x'], ['run'], ['run', '--input=a', '--contract=b'], ['run', '--input=a', '--input=b'], ['unknown']]) {
     const output: string[] = [];
     expect(await runAcceptanceCli(args, text => output.push(text))).toBe(2);
     expect(JSON.parse(output[0]!).ok).toBe(false);

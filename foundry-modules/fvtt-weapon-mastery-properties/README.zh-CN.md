@@ -2,7 +2,7 @@
 
 `fvtt-weapon-mastery-properties` 是独立的武器精通与特性模块，负责 D&D 2024 官方八种精通及明确配置的家规特性。它依赖 `fvtt-custom-conditions` 管理临时效果，依赖 `fvtt-trigger-engine` 协调事件；不依赖 house-rules。
 
-历史实机接受绑定 **Foundry 14.364 / dnd5e 5.3.3**。另增加精确 **14.368 / 6.0.5** 候选，已通过限定实机接受：ready、原生 Slow 写入、Fatal 骰、单次原生攻击／Midi 同卡关联、既存卡片实际 HP／Slow 应用和掷骰前取消、r84用例精确来源恢复；不推广全部精通分支或生产。依赖模块仍限0.1.1起的0.1.x或精确0.2.0及版本1 API；Next还须有CC原生武器效果能力，启用Midi时只接受 **14.6.0-beta.4338eeab.local.10**。交叉配对、其他版本和缺少能力拒绝运行。同卡type4须匹配活动／物品／来源／单一目标、攻击／伤害骰和真实HP变化；未证实的local10 type0不作为结算依据。Next续做见[四模块当前进度](../../docs/reviews/2026-10-05-next-four-modules-progress.md)，旧版证据留在[原主进度清单](../../docs/reviews/2026-09-25-weapon-mastery-user-report.md)。构建、单测和实机分别报告。
+历史实机接受绑定 **Foundry 14.364 / dnd5e 5.3.3**。合并后保留精确 **Mirror 14.368 / 5.3.3** 的旧 CC 效果与 Midi 接口；不能只按 Core 14.368 选择 native6。另增加精确 **14.368 / 6.0.5** 候选，已通过限定实机接受：ready、原生 Slow 写入、Fatal 骰、单次原生攻击／Midi 同卡关联、既存卡片实际 HP／Slow 应用和掷骰前取消、r84用例精确来源恢复；不推广全部精通分支或生产。依赖模块仍限0.1.1起的0.1.x或精确0.2.0及版本1 API；Next还须有CC原生武器效果能力，启用Midi时只接受 **14.6.0-beta.4338eeab.local.10**。交叉配对、其他版本和缺少能力拒绝运行。同卡type4须匹配活动／物品／来源／单一目标、攻击／伤害骰和真实HP变化；未证实的local10 type0不作为结算依据。Next续做见[四模块当前进度](../../docs/reviews/2026-10-05-next-four-modules-progress.md)，旧版证据留在[原主进度清单](../../docs/reviews/2026-09-25-weapon-mastery-user-report.md)。构建、单测和实机分别报告。
 
 当前为已完成本地验收的交付候选，尚未发布。逐项玩法证据、实测构建与文档打包身份仅在主进度清单维护；本地结果不等于生产或其他版本已验收。
 

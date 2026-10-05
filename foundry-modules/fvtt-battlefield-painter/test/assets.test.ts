@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { access, readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -8,7 +9,7 @@ import { TERRAIN_CONFIGURATIONS } from "../src/catalog";
 
 const assetRoot = resolve(import.meta.dir, "../assets/terrain");
 const expectedWebP = ["brambles.webp", "fire.webp", "frost.webp"];
-const expectedEffectWebP = ["frost-film-v1.webp"];
+const expectedEffectWebP = ["frost-film-v1.webp", "brambles-branch-v1.webp"];
 const expectedWebM = ["brambles.webm", "fire.webm", "frost.webm"];
 const expectedFieldWebM = ["fire-stage-i.webm", "fire-stage-ii.webm"];
 const expectedFrostFieldWebM = ["frost-mist-v1.webm"];
@@ -19,17 +20,23 @@ const expectedAllWebM = [
 ].sort();
 
 describe("original terrain assets", () => {
+  test("ships a transparent horizontal branch component for connected rendering", async () => {
+    if (!ffmpegPath) throw new Error("ffmpeg-static is unavailable");
+    const alpha = await decodeAlpha(resolve(assetRoot, "brambles-branch-v1.webp"), ffmpegPath);
+    expect(alpha.byteLength).toBe(1024 * 128);
+    expect(alphaRange(alpha)).toEqual({ minimum: 0, maximum: 255 });
+  });
   test("ships the three canonical P0 WebPs plus the Frost P2 film", async () => {
     const expected = Object.values(TERRAIN_CONFIGURATIONS)
       .flatMap(({ stages }) => stages.map(({ texture }) => texture.split("/").at(-1)!))
-      .filter((name, index, names) => names.indexOf(name) === index)
+      .filter((name, index, names) => name.endsWith(".webp") && names.indexOf(name) === index)
       .sort();
     const actual = (await readdir(assetRoot))
       .filter((name) => name.endsWith(".webp"))
       .sort();
 
-    expect(expected).toEqual(expectedWebP);
-    expect(actual).toEqual([...expectedWebP, ...expectedEffectWebP].sort());
+    expect(expected).toEqual(["fire.webp", "frost.webp", "brambles-stage-i.webp", "brambles-stage-ii.webp"].sort());
+    expect(actual).toEqual([...expectedWebP, ...expectedEffectWebP, "brambles-stage-i.webp", "brambles-stage-ii.webp"].sort());
   });
 
   test("ships a transparent 1024x1024 seamless Frost film", async () => {
@@ -48,7 +55,7 @@ describe("original terrain assets", () => {
   test("every WebP is 512x512, alpha-capable, and reaches all four edges", async () => {
     if (!ffmpegPath) throw new Error("ffmpeg-static did not provide a platform binary");
 
-    for (const name of expectedWebP) {
+    for (const name of [...expectedWebP, "brambles-stage-i.webp", "brambles-stage-ii.webp"]) {
       const bytes = await readFile(resolve(assetRoot, name));
       expect(bytes.subarray(0, 4).toString("ascii")).toBe("RIFF");
       expect(bytes.subarray(8, 12).toString("ascii")).toBe("WEBP");
@@ -79,7 +86,13 @@ describe("original terrain assets", () => {
   test("ships canonical loops plus the two fire-field samples and no retired audio assets", async () => {
     const media = await readdir(resolve(import.meta.dir, "../assets/terrain"));
     expect(media.filter((name) => name.endsWith(".webm")).sort()).toEqual(expectedAllWebM);
-    await expect(access(resolve(import.meta.dir, "../assets/audio"))).rejects.toThrow();
+    await access(resolve(import.meta.dir, "../assets/audio/ATTRIBUTION.md"));
+    for (const name of ["fire", "acid", "energy", "chime", "drone", "lava", "magic-circle"]) {
+      await access(resolve(import.meta.dir, `../assets/audio/${name}-loop.ogg`));
+    }
+    const energy = await readFile(resolve(import.meta.dir, "../assets/audio/energy-loop.ogg"));
+    expect(createHash("sha256").update(energy).digest("hex")).toBe("a7502a3940ca3f1d0cafb81acd9cc6498c551ac5e2553bbede8c8896468b1439");
+    for (const name of ["fire.ogg", "frost.ogg", "brambles.ogg"]) await expect(access(resolve(import.meta.dir, "../assets/audio", name))).rejects.toThrow();
   });
 
   test("each WebM decodes to a non-opaque alpha plane through libvpx", async () => {

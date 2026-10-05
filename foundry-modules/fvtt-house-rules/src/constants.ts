@@ -4,10 +4,11 @@ export const SUPPORTED_RUNTIMES = [
   { foundry: "14.364", dnd5e: "5.3.3" },
   { foundry: "14.368", dnd5e: "6.0.2" },
   { foundry: "14.368", dnd5e: "6.0.5" },
+  { foundry: "14.368", dnd5e: "5.3.3" },
 ] as const;
-export const MIDI_QOL_VERSIONS = ["14.0.11", "14.6.0-beta.4338eeab.local.9", null] as const;
-export const DAE_VERSIONS = ["14.0.12", "14.0.14", null] as const;
-export const DICE_SO_NICE_VERSIONS = ["6.2.9", "6.3.1", null] as const;
+export const MIDI_QOL_VERSIONS = ["14.0.11", "14.6.0-beta.4338eeab.local.9", null, "14.0.11"] as const;
+export const DAE_VERSIONS = ["14.0.12", "14.0.14", null, "14.0.12"] as const;
+export const DICE_SO_NICE_VERSIONS = ["6.2.9", "6.3.1", null, "6.2.9"] as const;
 
 export const FLAG = {
   ledger: "ledger",

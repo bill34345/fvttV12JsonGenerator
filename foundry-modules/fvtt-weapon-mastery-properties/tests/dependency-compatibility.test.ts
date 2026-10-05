@@ -46,11 +46,22 @@ describe('WMP dependency compatibility gate', () => {
     modules.get('midi-qol').version = '14.6.0-beta.4338eeab.local.9';
     expect(inspectDependencies(globals).ready).toBeFalse();
     modules.delete('midi-qol');
-    for (const [core, system] of [['14.364', '6.0.5'], ['14.368', '5.3.3'], ['14.368', '6.0.6']]) {
+    for (const [core, system] of [['14.364', '6.0.5'], ['14.368', '5.3.2'], ['14.368', '6.0.6']]) {
       globals.game.version = core!;
       globals.game.system.version = system!;
       expect(inspectDependencies(globals).ready).toBeFalse();
     }
+  });
+
+  test('Mirror shares Core14.368 while retaining legacy CC and Midi contracts', () => {
+    const { globals, modules } = fixture();
+    globals.game.version = '14.368';
+    modules.set('midi-qol', { id: 'midi-qol', active: true, version: '14.0.11' });
+    const report = inspectDependencies(globals);
+    expect(report.ready).toBeTrue();
+    expect(report.runtimeCompatible).toBeTrue();
+    expect(report.modules.find(module => module.id === ccId)?.compatible).toBeTrue();
+    expect(report.modules.find(module => module.id === 'midi-qol')).toBeUndefined();
   });
 
 
@@ -92,6 +103,8 @@ describe('WMP dependency compatibility gate', () => {
 
   test('keeps the exact Foundry and dnd5e runtime gate', () => {
     const { globals } = fixture();
+    globals.game.version = '14.368';
+    expect(inspectDependencies(globals).ready).toBeTrue();
     globals.game.version = '14.365';
     expect(inspectDependencies(globals).ready).toBeFalse();
     globals.game.version = '14.364';

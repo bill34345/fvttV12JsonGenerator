@@ -29,7 +29,7 @@ describe('Condition manager rule controls', () => {
     ['14.368', '6.0.5', 'dnd5e', true],
     ['14.368', '6.0.6', 'dnd5e', false],
     ['14.367', '6.0.5', 'dnd5e', false],
-    ['14.368', '5.3.3', 'dnd5e', false],
+    ['14.368', '5.3.3', 'dnd5e', true],
     ['14.364', '5.3.3', 'pf2e', false],
   ])('manager render and submit share the actual supported pair %s/%s/%s', async (core, system, systemId, available) => {
     const target = { uuid: 'Actor.manager-pinned', documentName: 'Actor', name: 'Pinned actor', effects: [] };

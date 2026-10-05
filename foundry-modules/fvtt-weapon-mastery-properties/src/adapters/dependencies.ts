@@ -91,14 +91,19 @@ function conflictModules(globals: any): string[] {
 
 export function inspectDependencies(globals: any = globalThis): DependencyReport {
   const foundryValue = globals?.game?.version ?? globals?.game?.release?.version ?? globals?.game?.foundry?.version;
-  const nextCore = foundryValue === NEXT_FOUNDRY_VERSION;
-  const foundry = exactOrUnknown(foundryValue, nextCore ? NEXT_FOUNDRY_VERSION : FOUNDRY_VERSION);
-  const dnd5e = exactOrUnknown(globals?.game?.system?.version ?? globals?.game?.system?.data?.version, nextCore ? NEXT_DND5E_VERSION : DND5E_VERSION);
+  const systemVersion = globals?.game?.system?.version ?? globals?.game?.system?.data?.version;
+  // Mirror and Next share the same Core. Only the exact Next system pair
+  // requires native6 CC effects and the native6 Midi adapter.
+  const native6 = foundryValue === NEXT_FOUNDRY_VERSION && systemVersion === NEXT_DND5E_VERSION;
+  const foundry = exactOrUnknown(foundryValue, FOUNDRY_VERSION);
+  foundry.compatible = foundry.value === FOUNDRY_VERSION || foundry.value === NEXT_FOUNDRY_VERSION;
+  const expectedSystem = native6 ? NEXT_DND5E_VERSION : DND5E_VERSION;
+  const dnd5e = exactOrUnknown(systemVersion, expectedSystem);
   const systemId = globals?.game?.system?.id;
   const runtimeCompatible = foundry.compatible && dnd5e.compatible && systemId === 'dnd5e';
-  const modules = [conditionsStatus(globals, nextCore), triggerStatus(globals)];
+  const modules = [conditionsStatus(globals, native6), triggerStatus(globals)];
   const midi = moduleRecord(globals, 'midi-qol');
-  if (nextCore && midi) modules.push({
+  if (native6 && midi) modules.push({
     id: 'midi-qol', requiredVersion: NEXT_MIDI_VERSION, installedVersion: midi.version,
     available: true, compatible: midi.version === NEXT_MIDI_VERSION,
     ...(midi.version === NEXT_MIDI_VERSION ? {} : { reason: 'unsupported-native6-midi-version' }),
@@ -107,8 +112,8 @@ export function inspectDependencies(globals: any = globalThis): DependencyReport
   const incompatible = modules.filter((entry) => entry.available && !entry.compatible).map((entry) => entry.id);
   const conflicts = conflictModules(globals);
   const runtimeProblems = [
-    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires ${FOUNDRY_VERSION})`]),
-    ...(dnd5e.compatible ? [] : [`dnd5e ${dnd5e.value ?? 'unknown'} (requires ${DND5E_VERSION})`]),
+    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires ${FOUNDRY_VERSION} or 14.368)`]),
+    ...(dnd5e.compatible ? [] : [`dnd5e ${dnd5e.value ?? 'unknown'} (requires ${expectedSystem} on this Core)`]),
     ...(systemId === 'dnd5e' ? [] : [`system ${systemId ?? 'unknown'} (requires dnd5e)`]),
   ];
   return {

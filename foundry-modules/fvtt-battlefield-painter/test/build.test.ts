@@ -50,10 +50,19 @@ describe("module manifest", () => {
     expect(result.files).toContain("scripts/main.js");
     expect(result.files).toContain("templates/painter.hbs");
     expect(result.files).toContain("styles/painter.css");
-    expect(result.files.filter((name) => name.endsWith(".webp"))).toHaveLength(4);
+    expect(result.files.filter(name => name.endsWith(".png"))).toHaveLength(67);
+    expect(result.files).toContain("assets/terrain/brambles-native-stage-i.png");
+    expect(result.files).toContain("assets/terrain/brambles-native-stage-ii.png");
+    expect(result.files.filter((name) => name.endsWith(".webp"))).toHaveLength(7);
+    expect(result.files).toContain("assets/terrain/brambles-branch-v1.webp");
+    expect(result.files).toContain("assets/terrain/brambles-stage-i.webp");
+    expect(result.files).toContain("assets/terrain/brambles-stage-ii.webp");
     expect(result.files.filter((name) => name.endsWith(".webm"))).toHaveLength(6);
-    expect(result.files.filter((name) => name.endsWith(".ogg"))).toHaveLength(0);
-    expect(result.files.some((name) => name.startsWith("assets/audio/"))).toBe(false);
+    expect(result.files.filter((name) => name.endsWith(".ogg"))).toHaveLength(7);
+    expect(result.files).toContain("assets/audio/ATTRIBUTION.md");
+    expect(result.files).toContain("assets/audio/lava-loop.ogg");
+    expect(result.files).toContain("assets/audio/magic-circle-loop.ogg");
+    expect(result.files.some(name => name.endsWith(".wav"))).toBe(false);
     expect(result.zipPath).toEndWith("fvtt-battlefield-painter.zip");
   });
 
@@ -72,9 +81,11 @@ describe("module manifest", () => {
 
     expect(digest(secondBytes)).toBe(digest(firstBytes));
     const bundle = await readFile(resolve(second.moduleRoot, "scripts/main.js"), "utf8");
+    expect(bundle).not.toContain("brambleRenderMode");
+    expect(bundle).not.toContain("BrambleEffectRenderer");
     expect(bundle).not.toMatch(
       /node:|process\.env|OPENAI_API_KEY|ffmpeg|generate-media|[A-Z]:\\|sourceMappingURL/i,
     );
     expect(second.files.some((name) => name.includes("generate-media"))).toBe(false);
-  });
+  }, 20_000); // Two full 42-option builds compress all media in this test.
 });

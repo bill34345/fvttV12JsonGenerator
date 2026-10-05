@@ -19,3 +19,7 @@ This directory owns the GM-only Open Session Deck browser module. It presents dn
 - No optimistic document writes. Re-resolve UUID targets before each command and fail visibly.
 - Build, install, and hash verification are mechanical evidence only. Runtime completion requires authenticated GM/player Foundry acceptance and visual inspection.
 - Run `bun run test:open-session-deck`, `bun run build:open-session-deck`, `bun run typecheck:foundry-modules`, and relevant repository gates before handoff.
+
+## Mirror Core patch continuation (2026-10-03)
+
+The user authorized Mirror Foundry `14.368` with dnd5e `5.3.3`. Runtime gates now include this exact pair while preserving the previous supported pairs; this does not accept other Core/system combinations. Record actual new-Core behavior separately from legacy tests and historical Next evidence. Current maintenance and acceptance: [Mirror patch review](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md). The new pair overrides older exact-364-only wording for this scoped continuation; existing authority and data protections remain applicable.

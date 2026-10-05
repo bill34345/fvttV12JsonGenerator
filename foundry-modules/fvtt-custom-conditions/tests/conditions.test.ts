@@ -47,7 +47,7 @@ function runtimeFixture(target = actor(), extra: Record<string, any> = {}) {
 }
 
 describe('custom condition contract', () => {
-  test.each([['14.364', '5.3.3'], ['14.368', '6.0.5']])('applies nineteen-condition instances and native roll config modifiers on %s/%s', async (core, system) => {
+  test.each([['14.364', '5.3.3'], ['14.368', '5.3.3'], ['14.368', '6.0.5']])('applies nineteen-condition instances and native roll config modifiers on %s/%s', async (core, system) => {
     const { runtime, target, handlers } = runtimeFixture(actor(), {
       game: { version: core, system: { id: 'dnd5e', version: system } },
     });
@@ -64,7 +64,7 @@ describe('custom condition contract', () => {
     expect(runtime.list(target)).toEqual([]);
   });
 
-  test.each([['14.364', '6.0.5', 'dnd5e'], ['14.368', '5.3.3', 'dnd5e'],
+  test.each([['14.364', '6.0.5', 'dnd5e'], ['14.368', '5.3.2', 'dnd5e'],
     ['14.368', '6.0.6', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
     ['14.364', '5.3.3', 'other-system']])('rejects unreviewed or crossed nineteen-condition runtime %s/%s/%s', async (core, system, id) => {
     const { runtime, target } = runtimeFixture(actor(), { game: { version: core, system: { id, version: system } } });
