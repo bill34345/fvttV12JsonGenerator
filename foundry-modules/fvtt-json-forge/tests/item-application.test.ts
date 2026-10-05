@@ -48,6 +48,64 @@ describe('Forge Item ApplicationV2', () => {
     expect(notifications.infos[0]).toMatch(/创建并重新读取核对成功/u);
   });
 
+  test('loads Markdown or TXT into the source and invalidates an existing preview', async () => {
+    const { application, root } = makeApplication({ convertFinalItemSource: async (request) => bindResponse(accepted, request) });
+    await (application as any).generate(root);
+    expect(root.preview.hidden).toBe(false);
+
+    root.displayName.value = '';
+    root.sourceFile.files = [sourceFile('shield.txt', SHIELD_SOURCE, 'text/plain')];
+    await root.sourceFile.onchange?.();
+
+    expect(root.source.value).toBe(SHIELD_SOURCE);
+    expect(root.displayName.value).toBe('shield');
+    expect((application as any).response).toBeUndefined();
+    expect(root.preview.hidden).toBe(true);
+    expect(root.status.textContent).toMatch(/已读取 shield\.txt/u);
+    expect(root.error.hidden).toBe(true);
+  });
+
+  test('opens the created Item from the completion action', async () => {
+    let opened = 0;
+    const { application, root } = makeApplication({
+      convertFinalItemSource: async (request) => bindResponse(accepted, request),
+      createAcceptedForgeItem: async () => ({
+        ...itemCreateResult('created'),
+        item: { sheet: { render: async () => { opened += 1; } } } as any,
+      }),
+    });
+    await (application as any).generate(root);
+    await (application as any).create();
+
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.openCreated.disabled).toBe(false);
+    await root.openCreated.onclick?.();
+    expect(opened).toBe(1);
+  });
+
+  test('does not let a pending file read overwrite a later edit', async () => {
+    const releaseFile = deferred<string>();
+    const { application, root } = makeApplication();
+    root.displayName.value = '';
+    root.sourceFile.files = [{
+      name: 'stale.txt', type: 'text/plain', size: 1,
+      text: () => releaseFile.promise,
+    }];
+    const pending = root.sourceFile.onchange?.();
+    expect((application as any).readingFile).toBe(true);
+
+    root.displayName.value = 'Manual item';
+    root.displayName.oninput?.();
+    expect((application as any).readingFile).toBe(false);
+    expect(root.generate.disabled).toBe(false);
+    releaseFile.resolve('stale source');
+    await pending;
+
+    expect(root.source.value).toBe(SHIELD_SOURCE);
+    expect(root.displayName.value).toBe('Manual item');
+    expect((application as any).response).toBeUndefined();
+  });
+
   test('invalidates immediately and prevents an old Promise from backfilling the preview', async () => {
     const pending = deferred<ForgeItemResponse>();
     const { application, root } = makeApplication({ convertFinalItemSource: async (request) => bindResponse(await pending.promise, request) });
@@ -136,7 +194,7 @@ describe('Forge Item ApplicationV2', () => {
 
     release.resolve();
     await pending;
-    expect(root.status.textContent).toBe('状态：accepted');
+    expect(root.status.textContent).toBe('状态：Item 已创建并完成回读核对，可打开物品卡。');
     expect(root.create.disabled).toBe(false);
   });
 
@@ -293,6 +351,7 @@ class FakeEventTarget {
 class FakeRoot {
   readonly mode = control('structured');
   readonly source = control(SHIELD_SOURCE);
+  readonly sourceFile = control('', 'file');
   readonly displayName = control('Item Application Test');
   readonly generate = control('');
   readonly cancel = control('');
@@ -305,11 +364,15 @@ class FakeRoot {
   readonly previewText = control('');
   readonly json = control('');
   readonly finalSource = control('');
+  readonly error = control('');
+  readonly createdDocument = control('');
+  readonly openCreated = control('');
 
   querySelector(selector: string): any {
     return ({
       '[name="mode"]': this.mode,
       '[name="source"]': this.source,
+      '[name="sourceFile"]': this.sourceFile,
       '[name="displayName"]': this.displayName,
       '[data-action="generate"]': this.generate,
       '[data-action="cancel"]': this.cancel,
@@ -322,12 +385,19 @@ class FakeRoot {
       '[data-preview-text]': this.previewText,
       '[data-json]': this.json,
       '[data-final-source]': this.finalSource,
+      '[data-error]': this.error,
+      '[data-created-document]': this.createdDocument,
+      '[data-action="open-created"]': this.openCreated,
     } as Record<string, any>)[selector] ?? null;
   }
 }
 
-function control(value: string): any {
-  return { value, disabled: false, hidden: false, textContent: '', innerHTML: '', onclick: undefined, onchange: undefined, oninput: undefined };
+function control(value: string, type = 'button'): any {
+  return { value, type, disabled: false, hidden: false, textContent: '', innerHTML: '', onclick: undefined, onchange: undefined, oninput: undefined };
+}
+
+function sourceFile(name: string, text: string, type = 'text/markdown'): any {
+  return { name, type, size: new TextEncoder().encode(text).byteLength, text: async () => text };
 }
 
 function deferred<T>() {

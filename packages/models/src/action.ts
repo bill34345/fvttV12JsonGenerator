@@ -67,6 +67,13 @@ export interface ActionData {
     units: string;
   };
 
+  /**
+   * Source-explicit individual targets. This is separate from `target`,
+   * which is the legacy area/template target shape consumed by the Activity
+   * generator.
+   */
+  targetAffected?: ActionTarget;
+
   damage?: Damage[];
 
   activity?: {

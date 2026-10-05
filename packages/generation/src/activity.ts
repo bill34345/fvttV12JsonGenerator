@@ -439,6 +439,21 @@ export class ActivityGenerator {
       };
     }
 
+    if (action.targetAffected) {
+      const target = activities[id].target ?? this.buildTargetSchema();
+      const existingAffects = target.affects ?? {};
+      activities[id].target = {
+        ...target,
+        affects: {
+          ...existingAffects,
+          count: action.targetAffected.count,
+          type: action.targetAffected.type,
+          choice: existingAffects.choice ?? false,
+          special: action.targetAffected.special ?? existingAffects.special ?? '',
+        },
+      };
+    }
+
     const generatedActivity = activities[id];
     if (generatedActivity && action.desc) {
       generatedActivity.description = { chatFlavor: action.desc };

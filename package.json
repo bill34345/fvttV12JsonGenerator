@@ -96,7 +96,7 @@
     "verify-release:fvtt-json-forge": "bun test foundry-modules/fvtt-json-forge/tests/release.test.ts --max-concurrency 1",
     "generate:forge-legacy-spell-data": "bun run packages/forge-browser-runtime/scripts/generate-legacy-spell-data.ts",
     "generate:forge-v14-spell-data": "bun run packages/forge-browser-runtime/scripts/generate-v14-spell-data.ts",
-    "test:fvtt-json-forge": "bun test tests/forge-browser-runtime.test.ts tests/forge-item-browser-runtime.test.ts tests/forge-source-library.test.ts tests/forge-source-library-indexed-db.test.ts tests/forge-batch-collection.test.ts tests/forge-batch-queue.test.ts tests/forge-batch-queue-indexed-db.test.ts foundry-modules/fvtt-json-forge/tests --max-concurrency 1",
+    "test:fvtt-json-forge": "bun test tests/forge-browser-runtime.test.ts tests/forge-creature-blueprint.test.ts tests/forge-intake-ui.test.ts tests/forge-item-browser-runtime.test.ts tests/forge-source-library.test.ts tests/forge-source-library-indexed-db.test.ts tests/forge-batch-collection.test.ts tests/forge-batch-queue.test.ts tests/forge-batch-queue-indexed-db.test.ts foundry-modules/fvtt-json-forge/tests --max-concurrency 1",
     "build:chat-memory-guard": "bun run foundry-modules/chat-memory-guard/build.ts --workspace-root .",
     "install:chat-memory-guard": "bun run foundry-modules/chat-memory-guard/build.ts --workspace-root . --install",
     "test:chat-memory-guard": "bun test foundry-modules/chat-memory-guard/src --max-concurrency 4",
@@ -157,7 +157,11 @@
     "install:weapon-mastery-properties": "bun run foundry-modules/fvtt-weapon-mastery-properties/labCli.ts install --apply",
     "verify:weapon-evidence": "bun run foundry-modules/fvtt-weapon-mastery-properties/e2e/receipt-cli.ts",
     "verify-install:weapon-mastery-properties": "bun run foundry-modules/fvtt-weapon-mastery-properties/labCli.ts verify-install",
-    "test:lab-owned-upgrade": "bun test foundry-modules/lab-owned-upgrade.test.ts --max-concurrency 1"
+    "test:lab-owned-upgrade": "bun test foundry-modules/lab-owned-upgrade.test.ts --max-concurrency 1",
+    "test:forge-blueprint": "bun run src/tools/runHermeticFoundryScript.ts test:forge-blueprint:raw",
+    "test:forge-blueprint:raw": "bun test tests/forge-creature-blueprint.test.ts foundry-modules/fvtt-json-forge/tests/application.test.ts foundry-modules/fvtt-json-forge/tests/blueprint-application.test.ts foundry-modules/fvtt-json-forge/tests/blueprint-edge-cases.test.ts foundry-modules/fvtt-json-forge/tests/actor-statblock.test.ts --max-concurrency 1",
+    "test:structured-action-targets": "bun run src/tools/runHermeticFoundryScript.ts test:structured-action-targets:raw",
+    "test:structured-action-targets:raw": "bun test tests/structured-action-targets.test.ts tests/core/generator/structuredActionItems.test.ts tests/core/generator/structuredActionSections.test.ts tests/core/generator/templatePlacementRange.test.ts --max-concurrency 1"
   },
   "devDependencies": {
     "@intellectronica/ruler": "0.3.44",
@@ -169,7 +173,10 @@
     "@vitejs/plugin-react": "^6.0.2",
     "dependency-cruiser": "^18.1.0",
     "knip": "^6.29.0",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "jsdom": "26.1.0",
+    "@types/jsdom": "21.1.7",
+    "handlebars": "4.7.9"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

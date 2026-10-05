@@ -1,0 +1,113 @@
+<form class="fvtt-json-forge-form forge-connection-panel" data-connection-form>
+  <header class="forge-connection-header">
+    <p class="forge-step-kicker">Forge 连接配置</p>
+    <h2>Forge · AI连接</h2>
+    <p>这里管理 Provider、模型和凭据。Actor、Item 与战斗包的生成入口在各自目录中。</p>
+  </header>
+
+  <section class="forge-connection-card" aria-labelledby="forge-connection-basics-heading">
+    <h3 id="forge-connection-basics-heading">基本连接</h3>
+    <div class="forge-connection-grid">
+      <label for="forge-connection-provider">Provider
+        <select id="forge-connection-provider" name="provider">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="google-gemini">Google Gemini</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="xai">xAI (Grok)</option>
+          <option value="mistral">Mistral</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="alibaba-qwen">Alibaba Qwen</option>
+          <option value="moonshot-kimi">Moonshot / Kimi</option>
+          <option value="zhipu-glm">Zhipu GLM</option>
+          <option value="custom">Custom Provider</option>
+        </select>
+      </label>
+      <label for="forge-connection-model">模型
+        <input id="forge-connection-model" name="model" type="search" list="forge-provider-model-options" autocomplete="off" placeholder="输入精确 model ID">
+        <datalist id="forge-provider-model-options" data-model-options></datalist>
+      </label>
+      <label for="forge-connection-api-key">API Key
+        <span class="forge-secret-input">
+          <input id="forge-connection-api-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="forge-connection-key-note">
+          <button type="button" data-action="toggle-key" aria-label="显示 API Key">显示</button>
+        </span>
+      </label>
+    </div>
+    <p id="forge-connection-key-note" class="forge-key-memory-badge" role="status">Key 默认只保留在当前 Foundry 页面；刷新后需要重新输入。</p>
+    <p data-connection-summary class="forge-connection-summary">请选择 Provider。</p>
+  </section>
+
+  <section class="forge-connection-card" aria-labelledby="forge-connection-review-heading">
+    <h3 id="forge-connection-review-heading">复核模型</h3>
+    <label class="forge-inline-field" for="forge-connection-separate-review">
+      <input id="forge-connection-separate-review" name="useSeparateReviewModel" type="checkbox">
+      使用独立复核模型
+    </label>
+    <label data-review-model-field for="forge-connection-review-model">复核模型
+      <input id="forge-connection-review-model" name="reviewModel" type="search" autocomplete="off" placeholder="默认使用提取模型">
+    </label>
+  </section>
+
+  <details class="forge-advanced-settings">
+    <summary>高级连接设置</summary>
+    <p class="forge-advanced-help">一般情况下使用 Provider 默认值。只有接入兼容网关、切换协议或调整结构化输出时才需要修改这里。</p>
+    <div class="forge-advanced-grid">
+      <label for="forge-connection-endpoint">HTTPS endpoint
+        <span class="forge-secret-input">
+          <input id="forge-connection-endpoint" name="endpoint" type="url" placeholder="https://example.com/v1" aria-describedby="forge-connection-endpoint-note">
+          <button type="button" data-action="toggle-endpoint">自定义 endpoint</button>
+        </span>
+      </label>
+      <p id="forge-connection-endpoint-note" class="forge-field-note">必须使用 HTTPS，URL 中不能包含凭据。</p>
+      <label for="forge-connection-protocol">API 协议
+        <select id="forge-connection-protocol" name="protocol">
+          <option value="openai-responses">OpenAI Responses API（流式）</option>
+          <option value="openai-chat">OpenAI Chat Completions</option>
+          <option value="anthropic-messages">Anthropic Messages</option>
+        </select>
+      </label>
+      <label for="forge-connection-auth">认证方式
+        <select id="forge-connection-auth" name="authScheme">
+          <option value="bearer">Bearer</option>
+          <option value="x-api-key">x-api-key</option>
+          <option value="api-key">api-key</option>
+          <option value="none">无需认证</option>
+        </select>
+      </label>
+      <label for="forge-connection-region">区域
+        <select id="forge-connection-region" name="region"><option value="">默认</option></select>
+      </label>
+      <label for="forge-connection-reasoning">Reasoning
+        <select id="forge-connection-reasoning" name="reasoning"><option value="auto">Auto</option></select>
+      </label>
+      <label for="forge-connection-structured-output">结构化输出
+        <select id="forge-connection-structured-output" name="structuredOutput">
+          <option value="json_schema">JSON Schema</option>
+          <option value="json_object">JSON Object</option>
+          <option value="provider_schema">Provider Schema</option>
+          <option value="prompt_fallback">严格 Prompt JSON fallback</option>
+        </select>
+      </label>
+    </div>
+  </details>
+
+  <section class="forge-connection-actions-card" aria-labelledby="forge-connection-actions-heading">
+    <h3 id="forge-connection-actions-heading">验证并保存</h3>
+    <p data-connection-status role="status" aria-live="polite" aria-atomic="true">尚未测试当前连接。</p>
+    <div class="forge-actions forge-connection-actions">
+      <button type="button" data-action="test-connection">测试连接</button>
+      <button type="button" data-action="save">保存配置</button>
+      <a data-provider-docs target="_blank" rel="noreferrer">打开 Provider 文档</a>
+    </div>
+    <p class="forge-key-warning">勾选保存 API Key 后，它会写入当前浏览器的 client-only setting；其他同源模块理论上可能读取它。</p>
+    <label class="forge-inline-field" for="forge-connection-persist-key">
+      <input id="forge-connection-persist-key" name="persistApiKey" type="checkbox">
+      保存 API Key 到当前浏览器（非默认）
+    </label>
+    <div class="forge-secondary-actions">
+      <button type="button" data-action="clear-key">清除当前 API Key</button>
+      <button type="button" data-action="clear-all-keys">清除全部已保存 Key</button>
+    </div>
+  </section>
+</form>

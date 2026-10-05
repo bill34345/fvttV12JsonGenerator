@@ -91,6 +91,7 @@
       "CLI 省略版本默认 v12；本手册的示例不改变这个产品默认值。",
       "v14 锁定 Foundry 14.364 / dnd5e 5.3.3。core 不输出专属 modded 字段；不同模块组合的兼容性需单独核实。",
       "结构化来源的分区决定 Item 显示分区；动作分区中回合开始自动触发的 special Activity 仍显示在动作分区，特性分区中显式 action 也不迁移分区。",
+      "结构化目标的数量、类型和字面限制投影到Activity受影响目标，独立于范围模板；单一生物目标不自动生成AoE模板。",
       "Bleeding / Burning 模板从特性明确给出的骰式、伤害类型和时机取值，默认回合结束，重复施加统一采用较高值。19 种 Custom Conditions 的生成状态 ID 统一使用 fvtt-custom-conditions.<条件 ID>，与 dnd5e 的 bleeding/burning 及其他模块的 dazed 分开；flags 中的规则参数条件 ID 仍是 bleeding、burning 等语义 ID。自定义 Dazed / Shocked 模板采用本项目的移动、动作、附赠动作三选一说明；生成的文本和状态 ID 不代替 Foundry 内的实际回合限制。普通命中伤害和相邻其他状态不能代替缺失参数；在 FVTT 中自动执行需要 Custom Conditions 与 Trigger Engine，JSON 导入不等于状态自动命中或 E2E 通过。",
       "状态模板 Effect ID 使用稳定的来源动作身份；重复生成保持本地引用一致，同一 Item 内的独立动作也有不同身份。生成时间戳可变化，不保证整份 JSON 字节完全相同。",
       "武器来源可显式提供原生精通与 weapon-properties 配置；core 仅投影可原生表达的 Deadly 等字段，精确 Fatal／重击流血保持需复核说明，modded-v14 才输出武器模块配置。独立 Item 使用 workflow 的值级 verifier；verify:actor 仅用于 Actor。",
@@ -693,6 +694,11 @@
         "command": "bun run ci:verify"
       },
       {
+        "title": "核对Forge蓝图与目标映射",
+        "text": "修改蓝图/资料块或结构化受影响目标映射时使用聚焦入口；正式来源验证与真实Foundry验收仍单独执行。",
+        "command": "bun run test:forge-blueprint\nbun run test:structured-action-targets"
+      },
+      {
         "title": "验证共用验收工具",
         "text": "安全包装入口覆盖选择声明/执行范围在前置命令和派发前拒绝、旧证据新鲜度、旧请求兼容，以及原有路径/收据/超时边界。test:acceptance-inspection 只跑状态与保留检查文件，已知慢Git用例使用各自15秒预算；先聚焦修同类问题，再按必要整合边界运行相关组。第二消费者和清理归属仍可分别使用 test:acceptance-next-vm、test:acceptance-cleanup，均不因此执行真实清理。",
         "command": "bun run test:acceptance-tools"
@@ -768,7 +774,7 @@
       },
       {
         "title": "运行并核对",
-        "text": "在Forge Intake中选择原始MD并生成；也可使用CLI。命令输出目录应为新的目录。",
+        "text": "从Actor目录打开Forge生物工作台，使用“战斗包”读取原始MD并生成；连接在独立AI设置配置。也可使用CLI，命令输出目录应为新的目录。",
         "command": "bun run tools/forge-encounter/run-human-intake.ts docs/examples/晶血龙兽与月石晶体-人类写法.md ./crystalbleed-intake-run"
       },
       {

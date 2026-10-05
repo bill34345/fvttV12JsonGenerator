@@ -12,7 +12,7 @@ export function profileAppRoot(config: FoundryLabConfig, profileId: ProfileId): 
 }
 export function buildLaunchCommand(config: FoundryLabConfig, profileId: ProfileId) {
   const profile = profileId === 'core-test' ? config.profiles.coreTest : config.profiles.serverMirror;
-  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(profileAppRoot(config, profileId), 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp'] };
+  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(profileAppRoot(config, profileId), 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp', '--noBackups'] };
 }
 // Foundry 14.364's parseArgs/getEnvDataPath read only --key=value tokens even
 // though buildLaunchCommand preserves the project-facing command contract.

@@ -1,4 +1,5 @@
 import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import {
   BROWSER_MAX_CONCURRENT_ACTOR_JOBS,
   buildForgeItemRequest,
@@ -21,6 +22,7 @@ import {
 } from './itemRuntime';
 
 export interface ForgeItemApplicationEnvironment {
+  pane?: ForgePaneBinding;
   game: any;
   ui?: any;
   foundry?: any;
@@ -40,6 +42,8 @@ interface ItemPreviewSnapshot {
   mode: string;
 }
 
+const MAX_SOURCE_FILE_BYTES = 200_000;
+
 const DEFAULT_SERVICES: ForgeItemApplicationServices = {
   convertFinalItemSource,
   createAcceptedForgeItem,
@@ -54,13 +58,13 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
   if (!ApplicationV2 || typeof HandlebarsApplicationMixin !== 'function') {
     throw new Error('Foundry 14 ApplicationV2 and HandlebarsApplicationMixin are required.');
   }
-  const Base = HandlebarsApplicationMixin(ApplicationV2);
+  const Base = environment.pane ? createForgePaneBase() : HandlebarsApplicationMixin(ApplicationV2);
   return class ForgeItemApplication extends Base {
     static DEFAULT_OPTIONS = {
       id: 'fvtt-json-forge-item',
       classes: ['fvtt-json-forge', 'forge-item-window'],
       position: { width: 760, height: 820 },
-      window: { title: 'Forge Item', resizable: true },
+      window: { title: '导入标准物品资料', resizable: true },
     };
 
     static PARTS = {
@@ -72,6 +76,10 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
     private controller?: AbortController;
     private generationRevision = 0;
     private creating = false;
+    private readingFile = false;
+    private statusMessage = '';
+    private errorMessage = '';
+    private created?: ForgeItemCreateResult;
     private readonly availabilityHooks: Array<{ event: string; id: unknown }> = [];
     private pageGuardRegistered = false;
     private readonly services: ForgeItemApplicationServices = { ...DEFAULT_SERVICES, ...(environment.services ?? {}) };
@@ -83,6 +91,23 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
 
     async _prepareContext() { return {}; }
 
+    workspaceState(): ForgePaneState {
+      return { stage: this.created ? 'created' : this.response ? 'review' : 'input', locked: this.creating };
+    }
+
+    invalidateWorkspaceCandidate(): boolean {
+      if (this.creating) return false;
+      this.cancel();
+      this.response = undefined;
+      this.previewSnapshot = undefined;
+      this.created = undefined;
+      this.statusMessage = '';
+      this.errorMessage = '';
+      const root = this.element as HTMLElement | undefined;
+      if (root) this.renderResult(root);
+      return true;
+    }
+
     _onRender(_context: unknown, _options: unknown) {
       const root = this.element as HTMLElement | undefined;
       if (!root) return;
@@ -92,6 +117,10 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         this.controller?.abort();
         this.response = undefined;
         this.previewSnapshot = undefined;
+        this.created = undefined;
+        this.readingFile = false;
+        this.statusMessage = '';
+        this.errorMessage = '';
         this.renderResult(root);
       };
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
@@ -100,12 +129,15 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (source) source.oninput = invalidatePreview;
       if (displayName) displayName.oninput = invalidatePreview;
       if (mode) mode.onchange = invalidatePreview;
+      const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
+      if (sourceFile) sourceFile.onchange = () => this.readSourceFile(root, sourceFile);
       this.registerAvailabilityHooks();
       this.registerPageGuard();
       this.bind(root, '[data-action="generate"]', () => void this.generate(root));
       this.bind(root, '[data-action="cancel"]', () => this.cancel());
       this.bind(root, '[data-action="clear"]', () => this.clear(root));
       this.bind(root, '[data-action="create"]', () => void this.create());
+      this.bind(root, '[data-action="open-created"]', () => void this.openCreated());
       this.renderResult(root);
     }
 
@@ -120,8 +152,48 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       return super.close(options);
     }
 
+    private async readSourceFile(root: HTMLElement, input: HTMLInputElement): Promise<void> {
+      if (this.creating) return;
+      const file = input.files?.[0];
+      if (!file) return;
+      this.generationRevision += 1;
+      const revision = this.generationRevision;
+      this.controller?.abort();
+      this.response = undefined;
+      this.previewSnapshot = undefined;
+      this.created = undefined;
+      this.errorMessage = '';
+      this.statusMessage = `正在读取 ${file.name || '资料文件'}…`;
+      this.readingFile = true;
+      this.renderResult(root);
+      try {
+        if (!isSupportedSourceFile(file)) throw new Error('请选择 Markdown（.md）或 TXT（.txt）文件。');
+        if (Number.isFinite(file.size) && file.size > MAX_SOURCE_FILE_BYTES) {
+          throw new Error(`来源文件不能超过 ${MAX_SOURCE_FILE_BYTES / 1_000} KB。`);
+        }
+        if (typeof file.text !== 'function') throw new Error('当前浏览器不能读取所选来源文件。');
+        const sourceText = await file.text();
+        if (this.generationRevision !== revision || this.creating) return;
+        root = (this.element as HTMLElement | undefined) ?? root;
+        const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
+        const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
+        if (source) source.value = sourceText;
+        if (displayName && !displayName.value.trim()) displayName.value = sourceFileBaseName(file.name, '未命名物品');
+        this.errorMessage = '';
+        this.statusMessage = `已读取 ${file.name || '来源文件'}，请检查内容后生成预览。`;
+      } catch (error) {
+        if (this.generationRevision !== revision || this.creating) return;
+        this.errorMessage = itemMessageOf(error);
+        this.statusMessage = '文件读取失败，请重新选择来源文件。';
+        this.notify('error', this.errorMessage);
+      } finally {
+        if (this.generationRevision === revision) this.readingFile = false;
+        if (this.generationRevision === revision && !this.creating) this.renderResult(root);
+      }
+    }
+
     private async generate(root: HTMLElement): Promise<void> {
-      if (this.controller || this.creating) return;
+      if (this.controller || this.creating || this.readingFile || environment.pane?.active() === false) return;
       try {
         assertGm(environment.game);
         assertExactRuntime(environment.game);
@@ -144,6 +216,9 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       }
       this.response = undefined;
       this.previewSnapshot = undefined;
+      this.created = undefined;
+      this.statusMessage = '正在生成预览…';
+      this.errorMessage = '';
       const controller = new AbortController();
       const revision = ++this.generationRevision;
       this.controller = controller;
@@ -164,9 +239,14 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         if (!this.isCurrentGeneration(controller, revision) || !sameSnapshot(finalSnapshot, readSnapshot(root))) return;
         this.response = response;
         this.previewSnapshot = finalSnapshot;
+        this.statusMessage = '';
         this.renderResult(root);
       } catch (error) {
-        if (this.isCurrentGeneration(controller, revision) && !controller.signal.aborted) this.notify('error', itemMessageOf(error));
+        if (this.isCurrentGeneration(controller, revision) && !controller.signal.aborted) {
+          this.errorMessage = itemMessageOf(error);
+          this.statusMessage = '生成未完成，请根据错误检查来源后重试。';
+          this.notify('error', this.errorMessage);
+        }
       } finally {
         if (this.controller === controller) {
           this.controller = undefined;
@@ -180,6 +260,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (this.creating) return;
       this.controller?.abort();
       this.generationRevision += 1;
+      this.readingFile = false;
     }
 
     private isCurrentGeneration(controller: AbortController, revision: number): boolean {
@@ -193,13 +274,18 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       if (source) source.value = '';
       if (displayName) displayName.value = '';
+      const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
+      if (sourceFile) sourceFile.value = '';
       this.response = undefined;
       this.previewSnapshot = undefined;
+      this.created = undefined;
+      this.statusMessage = '';
+      this.errorMessage = '';
       this.renderResult(root);
     }
 
     private async create(): Promise<void> {
-      if (!this.response || this.creating) return;
+      if (!this.response || this.creating || environment.pane?.active() === false) return;
       const root = this.element as HTMLElement | undefined;
       if (!root || !this.previewSnapshot || !sameSnapshot(this.previewSnapshot, readSnapshot(root))) {
         this.notify('error', 'Item preview 已过期；请按当前来源重新生成。');
@@ -221,10 +307,17 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
           game: environment.game,
           response: this.response,
         });
+        this.created = result;
+        this.errorMessage = '';
+        this.statusMessage = result.status === 'existing'
+          ? '已找到相同来源和 artifact，可打开已有物品卡。'
+          : 'Item 已创建并完成回读核对，可打开物品卡。';
         this.notify('info', result.status === 'existing'
           ? `已找到相同来源和 artifact 的 Item：${result.uuid}`
           : `Item 创建并重新读取核对成功：${result.uuid}`);
       } catch (error) {
+        this.errorMessage = itemMessageOf(error);
+        this.statusMessage = '创建未完成，请根据错误检查后重试。';
         this.notify('error', itemMessageOf(error));
       } finally {
         this.creating = false;
@@ -233,7 +326,21 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       }
     }
 
+    private async openCreated(): Promise<void> {
+      const created = this.created;
+      if (!created) return;
+      try {
+        assertGm(environment.game);
+        assertExactRuntime(environment.game);
+        await openDocumentSheet(created.item, created.uuid, environment);
+      } catch (error) {
+        this.notify('error', itemMessageOf(error));
+      }
+    }
+
     private renderResult(root: HTMLElement): void {
+      root = (this.element as HTMLElement | undefined) ?? root;
+      environment.pane?.changed();
       const result = this.response && 'result' in this.response ? this.response.result : undefined;
       const snapshotCurrent = Boolean(this.previewSnapshot && sameSnapshot(this.previewSnapshot, readSnapshot(root)));
       const status = root.querySelector('[data-status]') as HTMLElement | null;
@@ -246,12 +353,21 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       const generate = root.querySelector('[data-action="generate"]') as HTMLButtonElement | null;
       const cancel = root.querySelector('[data-action="cancel"]') as HTMLButtonElement | null;
       const create = root.querySelector('[data-action="create"]') as HTMLButtonElement | null;
+      const openCreated = root.querySelector('[data-action="open-created"]') as HTMLButtonElement | null;
+      const createdDocument = root.querySelector('[data-created-document]') as HTMLElement | null;
+      const createdSummary = root.querySelector('[data-created-summary]') as HTMLElement | null;
+      const error = root.querySelector('[data-error]') as HTMLElement | null;
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
       if (status) status.textContent = this.creating
         ? '状态：正在提交并重新读取核对（不可取消）。'
-        : result ? `状态：${result.status}` : '尚未生成。';
+        : this.statusMessage ? `状态：${this.statusMessage}`
+          : result ? `状态：${result.status}` : '尚未生成。';
+      if (error) {
+        error.hidden = !this.errorMessage;
+        error.textContent = this.errorMessage;
+      }
       const messages = (result?.diagnostics ?? []).map((entry) => `[${entry.severity}] ${entry.code}: ${entry.message}`);
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
@@ -263,15 +379,24 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (finalSource) finalSource.textContent = this.response && 'result' in this.response
         ? JSON.stringify(this.response.result.sourceIdentity, null, 2)
         : '';
-      if (generate) generate.disabled = Boolean(this.controller || this.creating);
+      if (generate) generate.disabled = Boolean(this.controller || this.creating || this.readingFile);
       if (cancel) cancel.disabled = this.creating || !this.controller;
-      if (source) source.disabled = this.creating;
+      if (source) source.disabled = this.creating || this.readingFile;
       if (displayName) displayName.disabled = this.creating;
       if (mode) mode.disabled = this.creating;
       if (create) create.disabled = this.creating
         || !snapshotCurrent
         || !isItemApplyable(this.response)
         || !isCurrentItemGmRuntime(environment.game);
+      if (createdDocument) {
+        createdDocument.hidden = !this.created;
+      }
+      if (createdSummary && this.created) createdSummary.textContent = this.created.status === 'existing'
+        ? '已找到相同来源的现有 Item，可以打开物品卡继续检查。'
+        : '已通过回读核对，可以打开物品卡继续检查。';
+      if (openCreated) openCreated.disabled = !this.created || this.creating || !isCurrentItemGmRuntime(environment.game);
+      const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
+      if (sourceFile) sourceFile.disabled = this.creating || this.readingFile;
     }
 
     private registerAvailabilityHooks(): void {
@@ -374,6 +499,35 @@ function sameSnapshot(left: ItemPreviewSnapshot, right: ItemPreviewSnapshot): bo
 function inputValue(root: HTMLElement, name: string): string {
   const element = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
   return element?.value ?? '';
+}
+
+function isSupportedSourceFile(file: File): boolean {
+  const name = typeof file.name === 'string' ? file.name.trim() : '';
+  if (/\.(?:md|txt)$/iu.test(name)) return true;
+  return !name.includes('.') && ['text/plain', 'text/markdown'].includes(file.type);
+}
+
+function sourceFileBaseName(name: string, fallback: string): string {
+  const base = name.replace(/\.(?:md|txt)$/iu, '').trim();
+  return base || fallback;
+}
+
+async function openDocumentSheet(document: unknown, uuid: string, environment: ForgeItemApplicationEnvironment): Promise<void> {
+  const directSheet = (document as { sheet?: { render?: (force?: boolean) => unknown } } | undefined)?.sheet;
+  if (typeof directSheet?.render === 'function') {
+    await directSheet.render(true);
+    return;
+  }
+  const fromUuid = (environment as any).fromUuid ?? (environment.game as any)?.fromUuid ?? (globalThis as any).fromUuid;
+  if (typeof fromUuid === 'function') {
+    const resolved = await fromUuid(uuid);
+    const resolvedSheet = resolved?.sheet;
+    if (typeof resolvedSheet?.render === 'function') {
+      await resolvedSheet.render(true);
+      return;
+    }
+  }
+  throw new Error('创建成功，但无法打开 Item 物品卡。');
 }
 
 function claimItemGeneration(owner: object): boolean {

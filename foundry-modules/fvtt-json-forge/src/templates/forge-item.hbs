@@ -1,28 +1,42 @@
-<section class="fvtt-json-forge-form forge-item-panel">
-  <p class="forge-security-note">仅支持 Foundry 14.364 / dnd5e 5.3.3 / core / icon off。只创建世界 Item，不创建或修改 Actor。</p>
-  <label>模式
-    <select name="mode">
-      <option value="structured">正式 structured Item</option>
-    </select>
+<section data-forge-pane="formal" class="fvtt-json-forge-form forge-item-panel" aria-labelledby="forge-item-heading">
+  <header class="forge-form-header">
+    <h2 id="forge-item-heading">导入标准物品资料</h2>
+    <p>粘贴或读取已经整理好的 Markdown / TXT 资料，先生成安全预览，通过审核后再创建到 Item 目录。</p>
+  </header>
+
+  <p class="forge-security-note">标准资料无需 AI。普通文本可切换顶部“AI 整理”；Provider、模型和 API Key 在独立连接设置中配置。</p>
+  <input type="hidden" name="mode" value="structured">
+
+  <div class="forge-input-grid">
+    <label>物品名称
+      <input name="displayName" type="text" autocomplete="off" value="" placeholder="可选；留空时使用资料文件名">
+    </label>
+    <label class="forge-source-file">读取 Markdown / TXT
+      <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
+      <small>单个文件，最多 200 KB。读取后仍可编辑来源文本。</small>
+    </label>
+  </div>
+
+  <label>来源文本
+    <textarea name="source" rows="16" spellcheck="false" placeholder="粘贴完整的规范 Item Markdown / YAML 来源……"></textarea>
   </label>
-  <label>显示名称
-    <input name="displayName" type="text" value="Forge Item">
-  </label>
-  <label>Item 来源
-    <textarea name="source" rows="16" spellcheck="false" placeholder="粘贴单个正式 Item Markdown/YAML 来源"></textarea>
-  </label>
+
   <div class="forge-actions">
-    <button type="button" data-action="generate"><i class="fas fa-hammer"></i> 生成预览</button>
+    <button type="button" data-action="generate"><i class="fas fa-eye" aria-hidden="true"></i> 生成预览</button>
     <button type="button" data-action="cancel" disabled>取消生成</button>
     <button type="button" data-action="clear">清除</button>
   </div>
-  <p data-status>尚未生成。</p>
+
+  <p data-status role="status" aria-live="polite">尚未生成。</p>
+  <p class="forge-findings forge-error" data-error role="alert" hidden></p>
+
   <section data-diagnostics hidden>
-    <h3>诊断</h3>
+    <h3>需要核对</h3>
     <ul data-diagnostic-list></ul>
   </section>
+
   <section data-preview hidden>
-    <h3>安全预览</h3>
+    <h3>物品安全预览</h3>
     <pre data-preview-text></pre>
     <details>
       <summary>候选 Item JSON</summary>
@@ -33,7 +47,14 @@
       <pre data-final-source></pre>
     </details>
   </section>
+
+  <section class="forge-created-document" data-created-document role="status" hidden>
+    <strong>创建完成</strong>
+    <span data-created-summary>已通过回读核对，可以打开物品卡继续检查。</span>
+    <button type="button" data-action="open-created" disabled><i class="fas fa-cube" aria-hidden="true"></i> 打开物品卡</button>
+  </section>
+
   <div class="forge-actions forge-submit">
-    <button type="button" data-action="create" disabled><i class="fas fa-cube"></i> 确认创建世界 Item</button>
+    <button type="button" data-action="create" disabled><i class="fas fa-cube" aria-hidden="true"></i> 确认创建物品</button>
   </div>
 </section>

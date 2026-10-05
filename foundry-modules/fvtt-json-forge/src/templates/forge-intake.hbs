@@ -1,211 +1,246 @@
-<section class="fvtt-json-forge-form forge-intake-panel" data-current-step="input">
-  <section class="forge-import-card">
-    <h2>角色＋召唤物＋战斗宏</h2>
-    <p>从人类写法MD生成并审核主生物、召唤物及配套宏，或导入已有战斗包；导入后在这里启动战斗控制。</p>
-    <button type="button" data-action="encounter-open">战斗包导入 / 启动控制</button>
-  </section>
-  <p class="forge-security-note">Review workspace 只导出严格安全投影；API Key、Authorization、完整 endpoint、provider 原始响应和本机路径不会进入 bundle、世界 Document、Chat 或日志。若勾选保存 API Key，它会进入当前浏览器的 client-only setting，同一 Foundry 页面内的其他模块理论上可能读取它。</p>
-  <p class="forge-creation-note">Analyze 只建立证据与审阅状态，不创建世界 Document。只有同一 snapshot 的单对象结果在 deterministic、AI review 与正式 Forge response 全部 accepted 后，Confirm Create 才可用。</p>
+<section data-forge-pane="intake" class="fvtt-json-forge-form forge-intake-panel forge-workspace" aria-labelledby="forge-workspace-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
+  <header class="forge-workspace-header">
+    <div class="forge-workspace-title">
+      <h2 id="forge-workspace-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">{{directoryTitle}}</h2>
+      <p>粘贴或读取来源，准备好后分析。</p>
+    </div>
+    <div class="forge-workspace-header-tools">
+      <div class="forge-connection-strip" aria-label="AI 连接状态">
+        <span data-connection-summary>读取当前 AI 配置…</span>
+        <span data-connection-status role="status" aria-live="polite"></span>
+      </div>
+      <button type="button" data-action="connection-open" class="forge-settings-link"><i class="fas fa-sliders" aria-hidden="true"></i> 连接设置</button>
+    </div>
+  </header>
 
-  <section class="forge-import-card" aria-labelledby="forge-import-heading">
-    <div>
-      <h2 id="forge-import-heading">导入只读 Review Bundle</h2>
-      <p>最多 4 MiB。导入只恢复安全审阅投影，不会调用 Provider、恢复旧请求或创建世界 Document；历史 accepted 也必须开启全新 attempt。</p>
-    </div>
-    <label>Review bundle JSON <input name="reviewBundleFile" type="file" accept="application/json,.json"></label>
-    <button type="button" data-action="import" disabled>Import Review Bundle</button>
-  </section>
-
-  <details class="forge-source-library" open aria-labelledby="forge-source-library-heading">
-    <summary id="forge-source-library-heading">Managed Source Library</summary>
-    <p class="forge-library-warning">记录保存在当前浏览器、当前 world/GM scope 的 IndexedDB 中，不写世界 settings/flags，也不是加密保险箱；同一 Foundry origin 的其他模块理论上可以读取。它不会自动 Analyze、调用 Provider、恢复旧请求或创建世界 Document。</p>
-    <div class="forge-library-toolbar">
-      <label>搜索来源与 review
-        <input name="sourceLibrarySearch" type="search" autocomplete="off" placeholder="名称、hash、mode、状态、attempt…">
-      </label>
-      <button type="button" data-action="library-refresh">刷新</button>
-      <button type="button" data-action="library-save" disabled>保存当前来源 / review</button>
-      <button type="button" data-action="library-export" disabled>导出完整 Library</button>
-    </div>
-    <div class="forge-library-import">
-      <label>Portable library JSON（最多 64 MiB）
-        <input name="sourceLibraryFile" type="file" accept="application/json,.json">
-      </label>
-      <button type="button" data-action="library-import" disabled>Strict Import / Merge</button>
-    </div>
-    <p data-library-summary role="status" aria-live="polite">Source library 尚未加载。</p>
-    <div data-library-list class="forge-library-list"><p>暂无可显示记录。</p></div>
-  </details>
-
-  <details class="forge-source-library forge-batch-queue" open aria-labelledby="forge-batch-queue-heading">
-    <summary id="forge-batch-queue-heading">Collection / ZIP / 可恢复 Batch Queue</summary>
-    <p class="forge-library-warning">队列保存在当前浏览器、当前 world/GM scope。GM 显式启动后只以 concurrency 1 顺序运行；关页或刷新会把 running/applying 标为 interrupted，不会在后台自动重发 Provider 请求。只有当前页面仍持有完整 accepted response 的 job 才能进入一次确认的 apply manifest。</p>
-    <div class="forge-library-import forge-batch-import">
-      <label>Collection JSON / ZIP / Portable queue（最多 64 MiB）
-        <input name="batchCollectionFile" type="file" accept="application/json,application/zip,.json,.zip">
-      </label>
-      <button type="button" data-action="batch-import" disabled>Strict Import / Merge</button>
-    </div>
-    <div class="forge-library-toolbar forge-batch-toolbar">
-      <button type="button" data-action="batch-refresh">刷新 Queue</button>
-      <button type="button" data-action="batch-export" disabled>导出 Portable Queue</button>
-      <button type="button" data-action="batch-run" disabled>顺序运行可恢复 Jobs</button>
-      <button type="button" data-action="batch-stop" disabled>停止 Runner</button>
-      <button type="button" data-action="batch-apply" disabled>确认并逐项 Apply 当前 Accepted</button>
-    </div>
-    <p data-batch-summary role="status" aria-live="polite">Batch queue 尚未加载。</p>
-    <div data-batch-list class="forge-library-list forge-batch-list"><p>暂无 Collection 或 queue job。</p></div>
-  </details>
-
-  <nav class="forge-step-nav" data-step-nav aria-label="Forge Intake 工作流">
+  <nav class="forge-step-nav" data-step-nav aria-label="工作进度">
     <ol>
-      <li data-step-indicator="connection">1. 连接 AI</li>
-      <li data-step-indicator="input">2. 输入与分析</li>
-      <li data-step-indicator="review">3. 审阅与创建</li>
+      <li data-step-indicator="input" data-active="true" aria-current="step">输入</li>
+      <li data-step-indicator="review" data-active="false">审核</li>
+      <li data-step-indicator="created" data-active="false">完成</li>
     </ol>
   </nav>
 
-  <section class="forge-step forge-connection-step" data-step="connection" data-ai-settings hidden aria-labelledby="forge-connection-heading">
-    <header class="forge-step-heading">
-      <p class="forge-step-kicker">步骤 1</p>
-      <h2 id="forge-connection-heading">连接 AI</h2>
-      <p>先填写 Provider、API Key 和模型，再测试当前连接。Key 默认只保留在这个 Forge Intake 窗口内。</p>
-    </header>
-    <div class="forge-connection-card">
-      <div class="forge-connection-grid">
-        <label>Provider
-          <select name="provider">
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="google-gemini">Google Gemini</option>
-            <option value="deepseek">DeepSeek</option>
-            <option value="xai">xAI (Grok)</option>
-            <option value="mistral">Mistral</option>
-            <option value="openrouter">OpenRouter</option>
-            <option value="alibaba-qwen">Alibaba Qwen</option>
-            <option value="moonshot-kimi">Moonshot / Kimi</option>
-            <option value="zhipu-glm">Zhipu GLM</option>
-            <option value="custom">Custom Provider</option>
-          </select>
-        </label>
-        <label>模型
-          <input name="model" type="search" list="forge-provider-model-options" autocomplete="off" placeholder="选择推荐模型或输入精确 model ID">
-          <datalist id="forge-provider-model-options" data-model-options></datalist>
-        </label>
-        <label class="forge-api-key-field">API Key
-          <span class="forge-secret-input"><input name="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="forge-key-memory-note"><button type="button" data-action="toggle-key" aria-label="显示 API Key">显示</button></span>
-        </label>
-      </div>
-      <p id="forge-key-memory-note" class="forge-key-memory-badge" role="status">仅保留在当前窗口 · 不会写入 snapshot、bundle、日志或世界数据</p>
-      <p data-connection-summary class="forge-connection-summary">请选择 Provider。</p>
-      <p data-connection-status class="forge-connection-status" role="status" aria-live="polite">未测试连接。</p>
-      <div class="forge-connection-actions">
-        <button type="button" data-action="test-connection">测试连接并加载模型</button>
-        <a data-provider-docs target="_blank" rel="noreferrer">从 Provider 官方页面获取 Key</a>
-      </div>
-    </div>
-    <details class="forge-advanced-settings">
-      <summary>高级连接设置（Chat Completions 为手动兼容选项）</summary>
-      <div class="forge-advanced-grid">
-        <label>HTTPS endpoint
-          <span class="forge-secret-input"><input name="endpoint" type="url" placeholder="https://example.com/v1"><button type="button" data-action="toggle-endpoint">自定义 endpoint</button></span>
-        </label>
-        <label>API 协议
-          <select name="protocol">
-            <option value="openai-responses">OpenAI Responses API（流式）</option>
-            <option value="openai-chat">OpenAI Chat Completions（手动选择）</option>
-            <option value="anthropic-messages">Anthropic Messages</option>
-          </select>
-        </label>
-        <label>区域 <select name="region"><option value="">默认</option></select></label>
-        <label>认证方式 <select name="authScheme"><option value="bearer">Bearer</option></select></label>
-        <label>Reasoning <select name="reasoning"><option value="auto">Auto</option></select></label>
-        <label>结构化输出 <select name="structuredOutput"><option value="json_schema">JSON Schema</option><option value="json_object">JSON Object</option><option value="prompt_fallback">严格 Prompt JSON fallback</option></select></label>
-      </div>
-    </details>
-    <label class="forge-inline-field"><input name="useSeparateReviewModel" type="checkbox"> 使用独立复核模型</label>
-    <label data-review-model-field>复核模型 <input name="reviewModel" type="search" autocomplete="off"></label>
-    <label class="forge-inline-field"><input name="persistApiKey" type="checkbox"> 保存 API Key 到当前浏览器（非默认）</label>
-    <p class="forge-key-warning">开启保存前请确认风险：这是 client-only setting，同一 Foundry 页面内其他模块理论上可能读取它。</p>
-    <div class="forge-secondary-actions">
-      <button type="button" data-action="clear-key">清除当前 API Key</button>
-      <button type="button" data-action="clear-all-keys">清除全部已保存 Key</button>
-    </div>
-  </section>
+  <div class="forge-workspace-scroll" data-workspace-scroll>
+    <div class="forge-stage-stack">
+      <section class="forge-step forge-input-step" data-step="input" aria-labelledby="forge-input-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
+        <header class="forge-step-heading">
+          <h3 id="forge-input-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">来源编辑器</h3>
+          <p>粘贴完整规则或读取文件。分析和预览不会创建目录条目。</p>
+        </header>
 
-  <section class="forge-step forge-input-step" data-step="input" aria-labelledby="forge-input-heading">
-    <header class="forge-step-heading">
-      <p class="forge-step-kicker">步骤 2</p>
-      <h2 id="forge-input-heading">输入与分析</h2>
-      <p>选择 Intake 类型，提供显示名称和来源文本，然后运行一次 Analyze。</p>
-    </header>
-    <div class="forge-input-grid">
-      <label>Intake 类型
-        <select name="mode">
-          <option value="plaintext-actor">Plaintext Actor</option>
-          <option value="ai-monster">AI Monster</option>
-          <option value="ai-item">AI Item</option>
-        </select>
-      </label>
-      <label>显示名称 <input name="displayName" type="text" autocomplete="off"></label>
+        <div class="forge-source-layout" data-source-editor>
+          <label class="forge-source-text">原始来源
+            <textarea name="source" rows="14" placeholder="在这里粘贴生物或物品的完整规则描述……" spellcheck="false" required></textarea>
+          </label>
+          <div class="forge-source-file-panel">
+            <label class="forge-source-file">读取 Markdown / TXT
+              <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
+            </label>
+            <small>读取后仍可编辑来源文本。</small>
+          </div>
+        </div>
+
+        <div class="forge-input-support">
+          {{#if isItemDirectory}}
+          <input type="hidden" name="mode" value="ai-item">
+          <details class="forge-more-options" data-input-options>
+            <summary>来源设置</summary>
+            <div class="forge-input-grid">
+              <label>显示名称（可选）
+                <input name="displayName" type="text" autocomplete="off" placeholder="留空时使用资料文件名">
+              </label>
+            </div>
+          </details>
+          {{else}}
+          <details class="forge-more-options" data-input-options>
+            <summary>来源设置</summary>
+            <div class="forge-input-grid">
+              <label>处理方式
+                <select name="mode">
+                  <option value="ai-monster">AI 整理生物</option>
+                  <option value="plaintext-actor">纯文本审阅 · 无需 AI</option>
+                </select>
+              </label>
+              <label>显示名称（可选）
+                <input name="displayName" type="text" autocomplete="off" placeholder="留空时使用资料文件名">
+              </label>
+            </div>
+          </details>
+          {{/if}}
+
+          <details class="forge-secondary-imports">
+            <summary>其他导入方式</summary>
+            <div class="forge-quick-entry" aria-label="其他导入方式">
+              <div>
+                <strong>已有规范资料？</strong>
+                <span>直接打开标准 Markdown，跳过 AI。</span>
+              </div>
+              <button type="button" data-action="structured-open">导入标准资料</button>
+              {{#if isActorDirectory}}
+              <div>
+                <strong>战斗包</strong>
+                <span>一起管理多个生物、召唤物与控制器。</span>
+              </div>
+              <button type="button" data-action="encounter-open">打开战斗包</button>
+              {{/if}}
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="forge-step forge-review-step" data-step="review" aria-labelledby="forge-review-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}" hidden>
+        <header class="forge-step-heading">
+          <h3 id="forge-review-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">审核结果</h3>
+          <p data-human-summary>结果会显示在这里。核对来源与需要处理的问题后，再创建到目录。</p>
+        </header>
+
+        <p class="forge-status" data-status tabindex="-1" role="status" aria-live="polite">等待输入资料</p>
+        <section class="forge-findings forge-diagnostics" data-diagnostics hidden tabindex="-1">
+          <h4>需要你核对</h4>
+          <ul data-diagnostic-list></ul>
+        </section>
+        <div data-human-preview class="forge-human-preview"></div>
+
+        <section data-preview-section hidden class="forge-review-grid">
+          <details class="forge-human-review">
+            <summary>查看原始来源</summary>
+            <pre data-raw-source></pre>
+          </details>
+          <details class="forge-human-review">
+            <summary>查看来源依据</summary>
+            <pre data-evidence></pre>
+          </details>
+          <details class="forge-technical-details">
+            <summary>技术详情</summary>
+            <div class="forge-technical-grid">
+              <details>
+                <summary>结果核对数据</summary>
+                <pre data-preview></pre>
+              </details>
+              <details>
+                <summary>候选边界</summary>
+                <pre data-candidate></pre>
+              </details>
+              <details>
+                <summary>Provider、model、calls、history</summary>
+                <pre data-metadata></pre>
+              </details>
+              <details>
+                <summary>标准化来源</summary>
+                <pre data-canonical></pre>
+              </details>
+              <details>
+                <summary>生成 JSON</summary>
+                <pre data-json></pre>
+              </details>
+            </div>
+          </details>
+        </section>
+      </section>
+
+      <section class="forge-step forge-created-step" data-step="created" aria-labelledby="forge-created-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}" hidden>
+        <header class="forge-step-heading">
+          <h3 id="forge-created-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">已创建</h3>
+          <p>条目已经完成创建与回读核对。你可以打开卡片继续检查，或继续导入下一份资料。</p>
+        </header>
+        <section data-created-document class="forge-created-document" role="status" tabindex="-1" hidden></section>
+      </section>
     </div>
-    <label>原始来源
-      <textarea name="source" rows="12" spellcheck="false" required></textarea>
-    </label>
+
     <section class="forge-activity-card" data-activity-card hidden aria-live="polite">
-      <h3>当前 AI 请求</h3>
+      <div class="forge-activity-heading">
+        <h4>当前请求</h4>
+        <span>实时状态</span>
+      </div>
       <p data-activity-summary>尚未开始请求。</p>
       <p data-activity-detail></p>
-      <button type="button" data-action="cancel" disabled>结束请求</button>
     </section>
-    <div class="forge-actions forge-input-actions">
-      <button type="button" data-action="analyze">Analyze</button>
-    </div>
-  </section>
 
-  <section class="forge-step forge-review-step" data-step="review" aria-labelledby="forge-review-heading">
-    <header class="forge-step-heading">
-      <p class="forge-step-kicker">步骤 3</p>
-      <h2 id="forge-review-heading">审阅与创建</h2>
-      <p data-human-summary>分析完成后，这里会按人类阅读顺序展示结果、Findings、证据和可用操作。</p>
-    </header>
-    <p data-status role="status" aria-live="polite">状态：empty</p>
-    <ol class="forge-stage-timeline" data-stages aria-label="阶段时间线"></ol>
-    <section class="forge-findings forge-diagnostics" data-diagnostics hidden tabindex="-1">
-      <h3>Findings / 需要处理的问题</h3>
-      <ul data-diagnostic-list></ul>
-    </section>
-    <section data-preview-section hidden class="forge-review-grid">
-      <details class="forge-human-review" open><summary>原始来源（导入记录使用独立只读副本）</summary><pre data-raw-source></pre></details>
-      <details class="forge-human-review" open><summary>结果摘要与安全语义</summary><pre data-preview></pre></details>
-      <details class="forge-human-review" open><summary>来源与 evidence</summary><pre data-evidence></pre></details>
-      <details class="forge-technical-details"><summary>候选边界</summary><pre data-candidate></pre></details>
-      <details class="forge-technical-details"><summary>技术详情：Provider、model、calls、history</summary><pre data-metadata></pre></details>
-      <details class="forge-technical-details"><summary>Canonical source</summary><pre data-canonical></pre></details>
-      <details class="forge-technical-details"><summary>Accepted 候选 JSON</summary><pre data-json></pre></details>
-    </section>
-    <div class="forge-actions forge-action-groups forge-review-actions">
-      <div class="forge-action-group forge-primary-actions" data-action-group="primary">
-        <span>主要操作</span>
-        <button type="button" data-action="generate" disabled>Generate Candidate</button>
-        <button type="button" data-action="create" disabled>Confirm Create</button>
-      </div>
-      <div class="forge-action-group forge-repair-actions" data-action-group="repair">
-        <span>修复操作</span>
-        <button type="button" data-action="repair" disabled>Repair（本 attempt 最多一次）</button>
-        <button type="button" data-action="regenerate" disabled>Regenerate</button>
-      </div>
-      <div class="forge-action-group forge-decision-actions" data-action-group="decision">
-        <span>决策操作</span>
-        <button type="button" data-action="reject" disabled>Reject</button>
-      </div>
-      <div class="forge-action-group forge-tool-actions" data-action-group="tools">
-        <span>工具操作</span>
-        <button type="button" data-action="export" disabled>Export Review Bundle</button>
-        <button type="button" data-action="start-new-attempt" disabled>以当前来源开启新 attempt</button>
-        <button type="button" data-action="clear">Clear</button>
-      </div>
-      <button class="forge-running-cancel" type="button" data-action="cancel" disabled>结束请求</button>
+    <details class="forge-stage-details" data-review-progress>
+      <summary>处理阶段</summary>
+      <ol data-stages aria-label="处理阶段"></ol>
+    </details>
+
+    <details class="forge-advanced-workspace" data-advanced-workspace>
+      <summary>更多工具：历史记录、资料库与批量处理</summary>
+      <section class="forge-import-card" aria-labelledby="forge-import-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
+        <div>
+          <h3 id="forge-import-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">载入历史审核记录</h3>
+          <p>最多 4 MiB。导入只恢复安全审阅投影，不会调用 Provider、恢复旧请求或创建世界 Document；历史 accepted 也必须开启全新 attempt。</p>
+        </div>
+        <label>审核记录 JSON
+          <input name="reviewBundleFile" type="file" accept="application/json,.json">
+        </label>
+        <button type="button" data-action="import" disabled>载入审核记录</button>
+      </section>
+
+      <details class="forge-source-library" aria-labelledby="forge-source-library-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
+        <summary id="forge-source-library-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">资料库</summary>
+        <p class="forge-library-warning">记录保存在当前浏览器、当前 world/GM scope 的 IndexedDB 中，不写世界 settings/flags，也不是加密保险箱；同一 Foundry origin 的其他模块理论上可以读取。它不会自动 Analyze、调用 Provider、恢复旧请求或创建世界 Document。</p>
+        <div class="forge-library-toolbar">
+          <label>搜索资料
+            <input name="sourceLibrarySearch" type="search" autocomplete="off" placeholder="名称、内容或状态…">
+          </label>
+          <button type="button" data-action="library-refresh">刷新</button>
+          <button type="button" data-action="library-save" disabled>保存当前资料</button>
+          <button type="button" data-action="library-export" disabled>导出资料库</button>
+        </div>
+        <div class="forge-library-import">
+          <label>资料库文件（最多 64 MiB）
+            <input name="sourceLibraryFile" type="file" accept="application/json,.json">
+          </label>
+          <button type="button" data-action="library-import" disabled>读取并合并</button>
+        </div>
+        <p data-library-summary role="status" aria-live="polite">资料库尚未加载。</p>
+        <div data-library-list class="forge-library-list"><p>暂无可显示记录。</p></div>
+      </details>
+
+      <details class="forge-source-library forge-batch-queue" aria-labelledby="forge-batch-queue-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
+        <summary id="forge-batch-queue-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">批量处理</summary>
+        <p class="forge-library-warning">队列保存在当前浏览器、当前 world/GM scope。GM 显式启动后只以 concurrency 1 顺序运行；关页或刷新会把 running/applying 标为 interrupted，不会在后台自动重发 Provider 请求。只有当前页面仍持有完整 accepted response 的 job 才能进入一次确认的 apply manifest。</p>
+        <div class="forge-library-import forge-batch-import">
+          <label>Collection JSON / ZIP / Portable queue（最多 64 MiB）
+            <input name="batchCollectionFile" type="file" accept="application/json,application/zip,.json,.zip">
+          </label>
+          <button type="button" data-action="batch-import" disabled>读取并合并</button>
+        </div>
+        <div class="forge-library-toolbar forge-batch-toolbar">
+          <button type="button" data-action="batch-refresh">刷新队列</button>
+          <button type="button" data-action="batch-export" disabled>导出队列</button>
+          <button type="button" data-action="batch-run" disabled>开始批量处理</button>
+          <button type="button" data-action="batch-stop" disabled>停止队列</button>
+          <button type="button" data-action="batch-apply" disabled>确认创建已通过项目</button>
+        </div>
+        <p data-batch-summary role="status" aria-live="polite">队列尚未加载。</p>
+        <div data-batch-list class="forge-library-list forge-batch-list"><p>暂无 Collection 或 queue job。</p></div>
+      </details>
+    </details>
+  </div>
+
+  <footer class="forge-workspace-actions" data-workspace-actions>
+    <div class="forge-workspace-action-row">
+      <button type="button" data-action="analyze" data-workspace-action data-primary="true">分析资料</button>
+      <button type="button" data-action="edit-source" data-workspace-action data-primary="false" hidden>返回编辑</button>
+      <button type="button" data-action="resume-review" data-workspace-action data-primary="false" hidden>继续查看结果</button>
+      <button type="button" data-action="generate" data-workspace-action data-primary="false" hidden>生成并审核</button>
+      <button type="button" data-action="create" data-workspace-action data-primary="false" hidden>确认创建</button>
+      <button type="button" data-action="repair" data-workspace-action data-primary="false" hidden>修正问题</button>
+      <button type="button" data-action="regenerate" data-workspace-action data-primary="false" hidden>重新分析</button>
+      <button type="button" data-action="open-created" data-workspace-action data-primary="false" hidden>打开已创建条目</button>
+      <button type="button" data-action="start-new-attempt" data-workspace-action data-primary="false" hidden>开始新一轮</button>
+      <span class="forge-workspace-secondary-actions">
+        <button type="button" class="forge-secondary-action" data-action="clear" data-workspace-action data-primary="false">清空资料</button>
+        <button type="button" class="forge-running-cancel forge-secondary-action" data-action="cancel" data-workspace-action data-primary="false" hidden disabled>结束请求</button>
+      </span>
     </div>
-  </section>
+    <details class="forge-workspace-more" data-workspace-more hidden>
+      <summary>更多操作</summary>
+      <div class="forge-workspace-more-actions">
+        <button type="button" data-action="export" data-workspace-action data-primary="false" hidden>导出审核记录</button>
+        <button type="button" data-action="reject" data-workspace-action data-primary="false" hidden>不采用本次结果</button>
+      </div>
+    </details>
+    <p class="forge-workspace-hint" data-workspace-hint role="status" aria-live="polite">粘贴完整规则或读取文件，先分析，再由你确认创建。</p>
+  </footer>
 </section>

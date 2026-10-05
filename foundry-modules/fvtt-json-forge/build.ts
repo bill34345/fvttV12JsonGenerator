@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promi
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
-export const MODULE_VERSION = '0.3.0' as const;
+export const MODULE_VERSION = '0.5.0' as const;
 export const RELEASE_TAG = `${MODULE_ID}-v${MODULE_VERSION}` as const;
 export const REPOSITORY_URL = 'https://github.com/bill34345/fvttV12JsonGenerator' as const;
 export const MANIFEST_URL = `https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/${MODULE_ID}/src/module.json` as const;
@@ -38,6 +38,8 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await cp(resolve(sourceRoot, 'templates/forge-item.hbs'), resolve(moduleRoot, 'templates/forge-item.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-intake.hbs'), resolve(moduleRoot, 'templates/forge-intake.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-encounter.hbs'), resolve(moduleRoot, 'templates/forge-encounter.hbs'));
+  await cp(resolve(sourceRoot, 'templates/forge-connection.hbs'), resolve(moduleRoot, 'templates/forge-connection.hbs'));
+  await cp(resolve(sourceRoot, 'templates/forge-workspace.hbs'), resolve(moduleRoot, 'templates/forge-workspace.hbs'));
   await cp(resolve(sourceRoot, 'styles/fvtt-json-forge.css'), resolve(moduleRoot, 'styles/fvtt-json-forge.css'));
 
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;

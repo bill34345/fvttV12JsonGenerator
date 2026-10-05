@@ -18,7 +18,8 @@
     "./encounter-intake": "./src/encounterIntake.ts",
     "./item-intake": "./src/itemIntake.ts",
     "./plaintext": "./src/plaintext.ts",
-    "./provider-connections": "./src/providerConnections.ts"
+    "./provider-connections": "./src/providerConnections.ts",
+    "./creature-blueprint": "./src/creatureBlueprint.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

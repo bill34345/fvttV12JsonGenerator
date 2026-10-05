@@ -1,4 +1,4 @@
-import type { ActionData, StructuredActionData } from '@fvtt-json-generator/models/action';
+import type { ActionData, ActionTarget, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { ActivityGenerator } from './activity';
 import { extractExplicitlyInflictedStatuses, statusIconPath } from './actor-effects';
 import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
@@ -205,8 +205,7 @@ export function structuredActionToActivityData(action: StructuredActionData): an
   }
 
   if (action.target) {
-    base.target = { count: action.target.count === 'all' ? 'all' : (typeof action.target.count === 'number' ? action.target.count : 1), type: action.target.type };
-    if (action.target.special) base.target.affects = { text: action.target.special };
+    base.targetAffected = mapStructuredTarget(action.target);
   }
 
   if (action.failEffects && action.failEffects.length > 0) {
@@ -221,6 +220,25 @@ export function structuredActionToActivityData(action: StructuredActionData): an
   }
 
   return base;
+}
+
+function mapStructuredTarget(target: ActionTarget): NonNullable<ActionData['targetAffected']> {
+  const rawCount = typeof target.count === 'string' ? target.count.trim() : '';
+  const isNumericString = /^\d+$/u.test(rawCount);
+  const count = target.count === 'all'
+    ? ''
+    : typeof target.count === 'number'
+      ? target.count
+      : isNumericString
+        ? Number(rawCount)
+        : '';
+  const restriction = rawCount && rawCount !== 'all' && !isNumericString ? rawCount : '';
+  const special = [restriction, target.special?.trim()].filter(Boolean).join('；');
+  return {
+    count,
+    type: target.type,
+    ...(special ? { special } : {}),
+  };
 }
 
 /**

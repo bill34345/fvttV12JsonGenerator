@@ -1,16 +1,18 @@
-# FVTT JSON Forge 0.3.0（开发候选）
+# FVTT JSON Forge 0.5.0（统一工作台候选）
 
-本次增量在 Forge Intake 内加入人类写法MD的多生物提取、正式生成、固定自动化配置提取、工具编译与独立审核，并保留“战斗包导入 / 启动控制”。0.3.0 当前是本地构建候选，未发布；安装本增量请使用本次构建的 `fvtt-json-forge-0.3.0.zip`，不要把旧版0.1.0当作已包含新入口。
+Forge GM 工作台与生物蓝图已整合为同一模块：GM 从生物或物品目录进入，在一个窗口中切换输入方式、生成预览、审核并确认创建。生物支持手工蓝图、标准资料与 AI 整理；物品保留标准资料与 AI 整理。连接配置独立共享，战斗包有明确的专用入口。
 
-FVTT JSON Forge 是 Foundry VTT 内的 GM-only Actor / Item 生成与证据审阅模块。0.1.0 把 Forge A–E 作为一个产品交付，精确锁定 Foundry `14.364`、dnd5e `5.3.3` 和 `core` profile；其他版本会 fail closed。
+本轮精确支持目标为 Foundry `14.364` 或 `14.368` / dnd5e `5.3.3` / `core` / icon off。只有当前 GM、当前来源和当前目标的正式 accepted 候选才能创建。0.5.0 尚未远端发布；统一组合的实际验收与剩余范围见[当前整合计划](../../docs/plans/2026-10-05-forge-unified-workbench.md)，旧版本的接受不自动推广。
 
-> English summary: FVTT JSON Forge is a GM-only, exact-target browser module for reviewed Actor/Item generation and encounter packages with separately started bound companion macros. This 0.3.0 candidate targets exactly Foundry 14.364 and dnd5e 5.3.3. Existing review recovery, source library and batch paths remain separate. It is not a generic JSON importer or a background server.
+2026-10-05已在Mirror `14.368 / 5.3.3`完成统一窗口、宽窄预览、蓝图草稿/派生/复用、标准Actor/Item创建回读、共享连接设置与战斗包新入口的本地验收。测试对象和审计宏已精确清理，原世界集合及视图保持。此次没有调用真实Provider，也没有重跑原生战斗或启动战斗包；这些范围不由本轮界面验收推广。
+
+> English summary: A single GM workspace combines versioned creature blueprints, structured sources, reviewed AI Intake, readable artifact previews and explicit Actor/Item creation. Encounter import and startup remain separate reviewed actions. Exact runtime pairs are Foundry 14.364 or 14.368 with dnd5e 5.3.3.
 
 ## 安装
 
 ### Foundry Setup 安装
 
-本次0.3.0候选尚未发布，先使用下一节的本地ZIP方式。下面的Setup链接只有在本增量正式发布后才能取得新功能；旧0.1.0发行包不包含战斗包入口。
+本次0.5.0候选尚未发布，先使用下一节的本地ZIP方式。下面的Setup链接只有在本增量正式发布后才能取得新功能；旧0.1.0发行包不包含战斗包入口。
 
 在 Foundry 的 Setup 页面打开 **Add-on Modules → Install Module**，把下面的 manifest URL 粘贴到 **Manifest URL**：
 
@@ -22,7 +24,7 @@ https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-
 
 ### ZIP 手工安装
 
-使用本次本地构建的 `foundry-modules/fvtt-json-forge/dist/release/fvtt-json-forge-0.3.0.zip` 和同目录 `SHA256SUMS.txt`，先核对 SHA-256；不假设尚未发布的GitHub Release已经存在。停止 Foundry 后，把 ZIP 解压为：
+使用本次本地构建的 `foundry-modules/fvtt-json-forge/dist/release/fvtt-json-forge-0.5.0.zip` 和同目录 `SHA256SUMS.txt`，先核对 SHA-256；不假设尚未发布的GitHub Release已经存在。停止 Foundry 后，把 ZIP 解压为：
 
 ```text
 <Foundry Data>/Data/modules/fvtt-json-forge/module.json
@@ -32,19 +34,25 @@ https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-
 
 ZIP 内是 module 根内容，不能再多套一层版本目录。不要覆盖身份不明的同名目录；升级前先确认旧目录确实是本模块。此仓库的运维规则不创建备份，失败时停止并核对目标。
 
-## 三个入口
+## 目录入口与输入方式
 
-只有 GM 能在 **Configure Settings → Module Settings → FVTT JSON Forge** 看到入口：
+在 Actor 目录点击 **Forge 生物**，在 Item 目录点击 **Forge 物品**。同一目录重复打开会聚焦已有窗口。模块设置只保留 **Forge · AI 连接**；不在设置中执行日常生成。
 
-- **Forge Actor**：把结构化 Actor Markdown 转为当前目标的完整 Actor，预览后执行 create-only、readback 和 deterministic reuse。
-- **Forge Item**：对单一、受支持的 world Item 做同样的 preview、create-only、readback 和 reuse；不会隐式创建或修改 Actor。
-- **Forge Intake**：处理 `plaintext-actor`、`ai-monster` 和 `ai-item`。Analyze 只建立来源证据与审阅状态；Generate Candidate 后仍须 formal verification 与 review 同时 `accepted`，Confirm Create 才可用。
+- **手工蓝图（生物）**：左侧加载或新建蓝图，中间填写基础数据、六属性及攻击/豁免组件，右侧持续展示草稿预览。按“生成并验证”产生正式候选后，再确认创建。预览为 2024 资料块顺序，未知的先攻、豁免总值、XP/PB 不猜填；最终派生数值以原生角色卡为准。
+- **标准资料**：粘贴规范来源，或读取 Markdown/TXT；编辑文本后生成和核对正式预览，无需 AI。
+- **AI 整理**：在独立连接设置中完成配置和连接测试，再粘贴/读取原始资料，按“分析资料→生成并审核→确认创建”推进。Actor 仍保留无需 AI 的纯文本审阅子模式。
+
+三种输入方式保留各自草稿，不把复杂来源自动转换成简化蓝图。切换后旧候选失效，需要重新生成或审核；切换模式不写入世界。创建进入提交/回读区间时锁住导航和关闭，结束后显示完成结果并可直接打开卡片。
+
+蓝图库保存在当前浏览器、世界与 GM scope 下。保存/重开仅恢复可编辑来源，不恢复旧 accepted response。派生变体使用新 sourceId，并记录父来源 hash 及字段差异，创建新 Actor 而不覆盖父角色。蓝图仅支持当前有界攻击与豁免组件，最多八个；不承诺完整施法、传奇、巢穴或自动 CR 平衡。
+
+旧公开 `openForgeActor`、`openForgeItem`、`openForgeIntake` 仍可调用，分别进入同一工作台的标准生物、标准物品和 AI 整理视图。标准资料、蓝图仍走来源→workflow→parser/generation→verifier，不能手改最终 JSON 绕过验证。
 
 原单Actor/Item入口遇到`needs_review`、`failed`、`rejected`、多candidate、多artifact、过期snapshot、权限或版本变化时保持零世界写入。战斗包使用独立审核路径：只有明确的GM辅助、外部规则或文字保留行为具有唯一绑定宏，才能进入包级GM确认；未知错误仍拒绝。模块没有“忽略并继续”按钮，也不会把历史review bundle当成可创建response。
 
 ## Provider 与凭据
 
-预览已有战斗包不调用 Provider。人类 MD 入口由 AI 提取生物与固定能力配置，工具生成控制入口；AI 不编写宏代码。本地 Intake 默认使用 DS API 的 deepseek-flash（DeepSeek V4.1 Flash），提取与审核均使用同一模型，默认低推理档；非本地连接继续保留用户明确选择。Luna Max 仅用于受委派的本地验收操作。
+预览已有战斗包不调用 Provider。人类 MD 入口由 AI 提取生物与固定能力配置，工具生成控制入口；AI 不编写宏代码。本地 Intake 默认使用 DS API 的 deepseek-flash（DeepSeek V4.1 Flash），提取与审核均使用同一模型，默认低推理档；非本地连接继续保留用户明确选择。
 
 AI 模式必须先选择 Provider、协议和精确 model ID，并完成当前连接/结构化输出测试。界面提供 OpenAI、Anthropic、Gemini、DeepSeek、xAI、Mistral、OpenRouter、Qwen、Kimi、GLM 与 Custom presets；preset 只代表连接配置，不代表每个 provider/model 都有同等语义验收。
 
@@ -74,7 +82,7 @@ Runner 固定 concurrency `1`，只有 GM 显式点击才运行。刷新或关�
 
 ### 角色、召唤物与配套宏整包导入
 
-在 **Forge Intake → 战斗包导入 / 启动控制** 打开新入口：
+在 **Forge 生物 → 战斗包** 打开专用入口：
 
 1. 选择`fvtt-json-forge-encounter` v1 JSON，或仅包含`encounter.json`的标准ZIP。此前普通龙兽交付ZIP、Review Bundle和Batch Collection不是这个格式。
 2. 点击“预览战斗包”。模块在当前浏览器通过正式workflow重新生成每个Actor，显示基础属性、来源、生成数据、宏代码、图片绑定和具体GM操作规则。这个步骤不会调用AI、创建文档或运行宏。
@@ -97,7 +105,7 @@ Macro创建与执行是两个动作。脚本仍在GM客户端权限下运行；�
 
 ### 其他边界
 
-- 只支持 Foundry `14.364` / dnd5e `5.3.3` / `core`；不是 v12/v13 模块。
+- 只支持精确 Foundry `14.364` 或 `14.368` / dnd5e `5.3.3` / `core`；manifest 中间区间不代表其他 Core 配对可用。
 - 只允许 GM；不是玩家 JSON 导入工具。
 - 不是任意文本、任意模型、任意 Actor/Item 都能 accepted 的保证。
 - 不支持 OCR/PDF/图片 Intake、update/overwrite、按名称合并、embedded Item 产品入口或跨 Document 原子事务。
@@ -117,14 +125,14 @@ bun run verify-release:fvtt-json-forge
 
 发行输出位于 `foundry-modules/fvtt-json-forge/dist/release/`：
 
-- `fvtt-json-forge-0.3.0.zip`
+- `fvtt-json-forge-0.5.0.zip`
 - `fvtt-json-forge-module.json`
 - `SHA256SUMS.txt`
 
 构建器固定 ZIP 排序与时间戳；两次 fresh build 必须产生相同 ZIP SHA-256，并验证 archive、独立 manifest、package version 和下载 URL 一致。
 
 
-## 当前验收与通用性边界（2026-09-15）
+## 历史验收与通用性边界（2026-09-15）
 
 人类 MD 是可复用的输入模板，生物名称不决定执行分支。自动化使用已实现的固定能力库；其具体形态、模板和操作顺序见[战斗包指南](../../tools/forge-encounter/README.md#人类-md-模板与当前能力范围)。任意新机制不能仅凭填写模板获得自动化支持。
 

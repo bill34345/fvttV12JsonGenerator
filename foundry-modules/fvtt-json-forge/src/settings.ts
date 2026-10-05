@@ -43,6 +43,78 @@ export const DEFAULT_CLIENT_SETTINGS: Readonly<ForgeClientSettings> = Object.fre
   savedApiKeys: {},
 });
 
+/**
+ * The settings window and the Actor/Item/Intake windows share one in-page
+ * session.  This is deliberately separate from client storage: a key that
+ * the user did not explicitly persist must remain usable while this Foundry
+ * page is open, but must disappear after a refresh.
+ */
+let forgeSessionSettings: ForgeClientSettings | undefined;
+let forgeSessionStorage: Storage | undefined;
+let forgeSessionTestedIdentity: string | undefined;
+const forgeSessionListeners = new Set<() => void>();
+
+export function readForgeSessionSettings(): ForgeClientSettings {
+  const storage = browserStorage();
+  if (!forgeSessionSettings || forgeSessionStorage !== storage) {
+    forgeSessionSettings = cloneSettings(readClientSettings(storage));
+    forgeSessionStorage = storage;
+    forgeSessionTestedIdentity = undefined;
+  }
+  return cloneSettings(forgeSessionSettings);
+}
+
+/**
+ * Save the current page configuration and update the shared in-memory
+ * session.  The existing client-storage writer still owns persistence and
+ * therefore keeps the API key out of storage unless persistApiKey is true.
+ * A profile change clears the old transient key and loads only the matching
+ * explicitly-saved profile key, if one exists.
+ */
+export function saveForgeSessionSettings(value: Partial<ForgeClientSettings>): ForgeClientSettings {
+  const current = readForgeSessionSettings();
+  const nextInput = buildSessionSettingsInput(current, value);
+  const next = saveClientSettings(nextInput, forgeSessionStorage);
+  const previousIdentity = forgeConnectionIdentity(current);
+  const nextIdentity = forgeConnectionIdentity(next);
+  forgeSessionSettings = cloneSettings(next);
+  if (previousIdentity !== nextIdentity) forgeSessionTestedIdentity = undefined;
+  notifyForgeSessionListeners();
+  return cloneSettings(next);
+}
+
+export function subscribeForgeSessionSettings(listener: () => void): () => void {
+  forgeSessionListeners.add(listener);
+  return () => { forgeSessionListeners.delete(listener); };
+}
+
+export function isForgeSessionConnectionReady(): boolean {
+  const current = readForgeSessionSettings();
+  return forgeSessionTestedIdentity === forgeConnectionIdentity(current);
+}
+
+/** Mark the exact current session connection as having passed its probe. */
+export function markForgeSessionConnectionTested(): void {
+  forgeSessionTestedIdentity = forgeConnectionIdentity(readForgeSessionSettings());
+  notifyForgeSessionListeners();
+}
+
+/** Clear a previous probe before retrying the same connection. */
+export function invalidateForgeSessionConnectionTest(): void {
+  forgeSessionTestedIdentity = undefined;
+  notifyForgeSessionListeners();
+}
+
+/** Clear every persisted profile key while keeping the current page session in sync. */
+export function clearAllForgeSessionApiKeys(): ForgeClientSettings {
+  const current = readForgeSessionSettings();
+  const cleared = clearAllApiKeys(forgeSessionStorage);
+  forgeSessionSettings = cloneSettings({ ...current, ...cleared, savedApiKeys: {} });
+  forgeSessionTestedIdentity = undefined;
+  notifyForgeSessionListeners();
+  return cloneSettings(forgeSessionSettings);
+}
+
 export function readClientSettings(storage: Storage | undefined = browserStorage()): ForgeClientSettings {
   if (!storage) return { ...DEFAULT_CLIENT_SETTINGS };
   try {
@@ -104,6 +176,79 @@ export function clearAllApiKeys(storage: Storage | undefined = browserStorage())
   const cleared = { ...current, apiKey: '', persistApiKey: false, savedApiKeys: {} };
   if (storage) storage.setItem(CLIENT_STORAGE_KEY, JSON.stringify({ ...cleared, apiKey: '' }));
   return cleared;
+}
+
+function buildSessionSettingsInput(
+  current: ForgeClientSettings,
+  value: Partial<ForgeClientSettings>,
+): Partial<ForgeClientSettings> {
+  const providerChanged = typeof value.providerId === 'string' && value.providerId !== current.providerId;
+  const providerId = value.providerId ?? current.providerId;
+  const preset = getForgeProviderPreset(providerId);
+  const profileChanged = providerChanged
+    || (typeof value.endpoint === 'string' && value.endpoint.trim() !== current.endpoint.trim())
+    || (typeof value.protocol === 'string' && value.protocol !== current.protocol)
+    || (typeof value.region === 'string' && value.region.trim() !== current.region.trim());
+
+  const next: Partial<ForgeClientSettings> = {
+    ...current,
+    ...value,
+    // savedApiKeys is an append-only profile map owned by saveClientSettings;
+    // callers cannot replace the map through the session facade.
+    savedApiKeys: current.savedApiKeys,
+  };
+
+  // Changing Provider in the UI should select that provider's endpoint and
+  // protocol unless the caller explicitly supplied a custom value. Keeping a
+  // previous provider's endpoint would produce a misleading mixed profile.
+  if (providerChanged && value.endpoint === undefined) next.endpoint = preset.defaultBaseUrl;
+  if (providerChanged && value.protocol === undefined) next.protocol = preset.defaultProtocol;
+  if (providerChanged && value.authScheme === undefined) next.authScheme = preset.authSchemes[0] ?? 'bearer';
+  if (providerChanged && value.region === undefined) next.region = preset.regions?.[0]?.id ?? '';
+
+  if (profileChanged && (value.apiKey === undefined || value.apiKey === current.apiKey)) {
+    const targetProfile = clientSettingsProfileId({
+      providerId: next.providerId as ForgeProviderId,
+      region: String(next.region ?? ''),
+      endpoint: String(next.endpoint ?? ''),
+      protocol: next.protocol as ForgeProviderProtocol,
+    });
+    const savedKey = current.savedApiKeys[targetProfile] ?? '';
+    next.apiKey = savedKey;
+    // A key loaded from an explicit profile is persisted by definition. If no
+    // matching profile exists, keep the current opt-in state but with an empty
+    // key so it can never leak across connections.
+    if (savedKey) next.persistApiKey = true;
+    else next.persistApiKey = value.persistApiKey === true || current.persistApiKey === true;
+  }
+
+  return next;
+}
+
+function forgeConnectionIdentity(value: ForgeClientSettings): string {
+  return JSON.stringify({
+    providerId: value.providerId,
+    protocol: value.protocol,
+    authScheme: value.authScheme,
+    region: value.region,
+    reasoning: value.reasoning,
+    structuredOutput: value.structuredOutput,
+    useSeparateReviewModel: value.useSeparateReviewModel,
+    endpoint: normalizeBaseUrlIdentity(value.endpoint),
+    model: value.model,
+    reviewModel: value.reviewModel,
+    apiKey: value.apiKey,
+  });
+}
+
+function cloneSettings(value: ForgeClientSettings): ForgeClientSettings {
+  return { ...value, savedApiKeys: { ...value.savedApiKeys } };
+}
+
+function notifyForgeSessionListeners(): void {
+  for (const listener of [...forgeSessionListeners]) {
+    try { listener(); } catch { /* one stale UI subscriber must not break saving */ }
+  }
 }
 
 export function clientSettingsProfileId(value: Pick<ForgeClientSettings, 'providerId' | 'region' | 'endpoint' | 'protocol'>): string {

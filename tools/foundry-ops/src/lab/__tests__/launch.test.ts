@@ -8,12 +8,13 @@ import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOpt
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
   it('builds a loopback-only core command', () => {
-    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--world', 'cor-cotn', '--noupnp'] });
+    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--world', 'cor-cotn', '--noupnp', '--noBackups'] });
   });
   it('uses an independent server mirror port and path', () => {
     const command = buildLaunchCommand(config, 'server-mirror');
     expect(command.args).toContain('30001');
     expect(command.args).toContain(config.profiles.serverMirror.dataPath);
+    expect(buildRuntimeArgs(command.args)).toContain('--noBackups');
   });
   it('binds process ownership and executable arguments to the explicitly selected Mirror Core', () => {
     const upgraded = createLabConfig('I:/fixture/repo', { FVTT_OPS_MIRROR_FOUNDRY_VERSION: '14.368' });
@@ -27,7 +28,7 @@ describe('Foundry profile launcher', () => {
   it('adapts the public command shape to Foundry 14.364 equals-style parsing', () => {
     expect(buildRuntimeArgs(buildLaunchCommand(config, 'core-test').args)).toEqual([
       resolve(config.appRoot, 'main.js'), `--dataPath=${config.profiles.coreTest.dataPath}`,
-      '--hostname=127.0.0.1', '--port=30000', '--world=cor-cotn', '--noupnp',
+      '--hostname=127.0.0.1', '--port=30000', '--world=cor-cotn', '--noupnp', '--noBackups',
     ]);
   });
   it('rejects wildcard or non-loopback listeners', () => {

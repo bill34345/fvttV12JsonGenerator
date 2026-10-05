@@ -25,6 +25,7 @@ import {
 import {
   ManagedForgeBatchQueue,
   MemoryForgeBatchQueueStore,
+  batchQueueEntry,
   type ForgeBatchQueueStore,
 } from '@fvtt-json-generator/forge-browser-runtime/batch-queue';
 import {
@@ -54,6 +55,384 @@ beforeAll(async () => {
 });
 
 describe('Forge Intake Application review workspace', () => {
+  test('builds directory-specific context and routes workspace shortcuts without changing the mode on rerender', async () => {
+    let connectionOpens = 0;
+    let structuredOpens = 0;
+    const { application, root, notifications } = makeApplication({}, undefined, undefined, undefined, undefined, {
+      directoryKind: 'Item',
+      initialMode: 'ai-item',
+      legacyConnectionFields: false,
+      openConnectionSettings: () => { connectionOpens += 1; },
+      openStructuredImport: () => { structuredOpens += 1; },
+    });
+    const context = await (application as any)._prepareContext();
+    expect(context).toMatchObject({ directoryTitle: '物品工作台', isActorDirectory: false, isItemDirectory: true, initialMode: 'ai-item' });
+    expect(root.mode.value).toBe('ai-item');
+    expect(root.previewSection.hidden).toBe(true);
+    expect(root.status.textContent).toBe('等待输入资料');
+    root.mode.value = 'ai-monster';
+    root.mode.onchange?.();
+    expect(root.mode.value).toBe('ai-item');
+    root.connectionOpen.onclick?.();
+    root.structuredOpen.onclick?.();
+    expect(connectionOpens).toBe(1);
+    expect(structuredOpens).toBe(1);
+    expect(notifications.errors).toContain('Item 工作台只支持 AI 物品整理。');
+    await application.close();
+  });
+
+  test('blocks AI analysis until the shared session connection is tested and exposes the settings shortcut', async () => {
+    let analyses = 0;
+    let connectionOpens = 0;
+    const session = forgeSessionSettingsFixture();
+    const { application, root, notifications } = makeApplication({
+      analyzeBrowserActorSourceWithAi: (async (input: any) => { analyses += 1; return readyActorAnalysis(input.source); }) as any,
+      readForgeSessionSettings: () => session,
+      isForgeSessionConnectionReady: () => false,
+      subscribeForgeSessionSettings: () => () => undefined,
+    }, undefined, undefined, undefined, undefined, {
+      directoryKind: 'Actor',
+      initialMode: 'ai-monster',
+      legacyConnectionFields: false,
+      openConnectionSettings: () => { connectionOpens += 1; },
+    });
+    root.source.value = 'AI source waiting for connection';
+    expect(root.analyze.disabled).toBe(true);
+    root.connectionOpen.onclick?.();
+    await (application as any).analyze(root);
+    expect(connectionOpens).toBe(1);
+    expect(analyses).toBe(0);
+    expect(notifications.errors.at(-1)).toContain('AI 连接尚未测试');
+    expect(root.connectionSummary.textContent).toContain('extract');
+    await application.close();
+  });
+
+  test('keeps mixed batch jobs inside the current directory kind', async () => {
+    const batchQueue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    await batchQueue.importCollection(createForgeBatchCollection({
+      label: 'mixed directory queue', createdAt: '2026-09-15T00:00:00.000Z',
+      entries: [
+        { objectKind: 'actor', mode: 'ai-monster', sourceLabel: 'Actor source', rawSource: 'actor source' },
+        { objectKind: 'item', mode: 'ai-item', sourceLabel: 'Item source', rawSource: 'item source' },
+      ],
+    }));
+    const { application, root } = makeApplication({}, undefined, undefined, undefined, batchQueue, {
+      directoryKind: 'Item', initialMode: 'ai-item', legacyConnectionFields: false,
+    });
+    await (application as any).refreshBatch(root, false);
+    const state = await batchQueue.load();
+    expect((application as any).batchJobRunnable(state.jobs[0])).toBe(false);
+    expect((application as any).batchJobRunnable(state.jobs[1])).toBe(true);
+    const actorEntry = batchQueueEntry(state, state.jobs[0]!);
+    expect((application as any).loadBatchEntry(root, actorEntry)).toBe(false);
+    expect(root.source.value).toBe('');
+  });
+
+  test('keeps an accepted review for same-identity session updates, invalidates changed settings, and unsubscribes on close', async () => {
+    const session = forgeSessionSettingsFixture();
+    let listener!: () => void;
+    let unsubscribed = 0;
+    let ready = false;
+    const { application, root } = makeApplication({}, undefined, undefined, undefined, undefined, {
+      directoryKind: 'Actor',
+      initialMode: 'ai-monster',
+      legacyConnectionFields: false,
+      services: {
+        readForgeSessionSettings: () => session,
+        isForgeSessionConnectionReady: () => ready,
+        subscribeForgeSessionSettings: (callback: () => void) => { listener = callback; return () => { unsubscribed += 1; }; },
+      },
+    });
+    root.source.value = 'session source';
+    root.displayName.value = 'Session source';
+    (application as any).status = 'accepted';
+    (application as any).response = acceptedActor;
+    ready = true;
+    listener();
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBe(acceptedActor);
+    session.model = 'changed-model';
+    listener();
+    expect((application as any).status).toBe('needs_review');
+    expect((application as any).response).toBeUndefined();
+    await application.close();
+    expect(unsubscribed).toBe(1);
+  });
+
+  test('does not let a late Markdown file read overwrite a newer manual edit or Clear', async () => {
+    let resolveFile!: (value: string) => void;
+    const firstFile = { name: 'source.md', size: 10, text: () => new Promise<string>(resolve => { resolveFile = resolve; }) } as any;
+    const first = makeApplication({}, undefined, undefined, undefined, undefined, { legacyConnectionFields: false, directoryKind: 'Actor' });
+    first.root.source.value = 'old accepted source';
+    (first.application as any).status = 'accepted';
+    (first.application as any).response = acceptedActor;
+    (first.application as any).snapshot = currentSnapshot(first.application, first.root);
+    first.root.sourceFile.files = [firstFile];
+    const reading = (first.application as any).readSourceFile(first.root, first.root.sourceFile);
+    await Promise.resolve();
+    first.root.source.value = 'manual edit wins';
+    first.root.source.oninput?.();
+    resolveFile('late file content');
+    await reading;
+    expect(first.root.source.value).toBe('manual edit wins');
+
+    let resolveClear!: (value: string) => void;
+    const secondFile = { name: 'source.txt', size: 10, text: () => new Promise<string>(resolve => { resolveClear = resolve; }) } as any;
+    const second = makeApplication({}, undefined, undefined, undefined, undefined, { legacyConnectionFields: false, directoryKind: 'Actor' });
+    second.root.source.value = 'source before clear';
+    second.root.sourceFile.files = [secondFile];
+    const readingClear = (second.application as any).readSourceFile(second.root, second.root.sourceFile);
+    await Promise.resolve();
+    (second.application as any).clear(second.root);
+    resolveClear('must not return after clear');
+    await readingClear;
+    expect(second.root.source.value).toBe('');
+  });
+
+  test('moves through input, review, created, and clear with one primary workspace action per stage', async () => {
+    let creates = 0;
+    const actor = { name: 'Created creature', sheet: { render: () => undefined } };
+    const { application, root, game } = makeApplication({
+      analyzePlaintextActorSource: ((source: string) => ({
+        status: 'ready_to_generate', rawSourceHash: hashSource(source),
+        candidates: [{ id: 'one', label: 'one', start: 0, end: source.length, quote: source }],
+        candidate: { id: 'one', label: 'one', start: 0, end: source.length, quote: source },
+        canonicalSource: ACTOR_SOURCE, findings: [],
+      })) as any,
+      createAcceptedForgeActor: (async () => { creates += 1; return { ...actorCreateResult(), actor }; }) as any,
+    }, undefined, undefined, undefined, undefined, { initialMode: 'plaintext-actor', directoryKind: 'Actor' });
+    (game as any).actors = { contents: [] };
+    (game as any).items = { contents: [] };
+
+    expect(root.dataset.currentStep).toBe('input');
+    expect(root.workspace.dataset.currentStep).toBe('input');
+    expect(root.inputStep.hidden).toBe(false);
+    expect(root.reviewStep.hidden).toBe(true);
+    expect(root.createdStep.hidden).toBe(true);
+    expect(root.advancedWorkspace.hidden).toBe(false);
+    expect(root.analyze.hidden).toBe(false);
+    expect(root.analyze.dataset.primary).toBe('true');
+    expect(primaryWorkspaceActions(root)).toEqual(['analyze']);
+
+    root.source.value = 'one plaintext creature';
+    root.displayName.value = 'Plaintext Creature';
+    root.source.oninput?.();
+    await (application as any).analyze(root);
+    expect((application as any).status).toBe('ready_to_generate');
+    expect(root.dataset.currentStep).toBe('review');
+    expect(root.inputStep.hidden).toBe(true);
+    expect(root.reviewStep.hidden).toBe(false);
+    expect(root.createdStep.hidden).toBe(true);
+    expect(root.generate.hidden).toBe(false);
+    expect(root.generate.dataset.primary).toBe('true');
+    expect(root.editSource.hidden).toBe(false);
+    expect(primaryWorkspaceActions(root)).toEqual(['generate']);
+
+    await (application as any).generate(root);
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBeDefined();
+    expect(root.create.hidden).toBe(false);
+    expect(root.create.disabled).toBe(false);
+    expect(root.create.dataset.primary).toBe('true');
+    expect(primaryWorkspaceActions(root)).toEqual(['create']);
+
+    await (application as any).create(root);
+    expect(creates).toBe(1);
+    expect(root.dataset.currentStep).toBe('created');
+    expect(root.workspace.dataset.currentStep).toBe('created');
+    expect(root.inputStep.hidden).toBe(true);
+    expect(root.reviewStep.hidden).toBe(true);
+    expect(root.createdStep.hidden).toBe(false);
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.openCreated.hidden).toBe(false);
+    expect(root.openCreated.dataset.primary).toBe('true');
+    expect(root.advancedWorkspace.hidden).toBe(true);
+    expect(primaryWorkspaceActions(root)).toEqual(['openCreated']);
+
+    root.clear.onclick?.();
+    expect((application as any).status).toBe('empty');
+    expect((application as any).response).toBeUndefined();
+    expect(root.source.value).toBe('');
+    expect(root.dataset.currentStep).toBe('input');
+    expect(root.inputStep.hidden).toBe(false);
+    expect(root.reviewStep.hidden).toBe(true);
+    expect(root.createdStep.hidden).toBe(true);
+    expect(root.createdDocument.hidden).toBe(true);
+    expect(root.analyze.hidden).toBe(false);
+    expect(root.analyze.dataset.primary).toBe('true');
+    expect(primaryWorkspaceActions(root)).toEqual(['analyze']);
+    await application.close();
+  });
+
+  test('keeps accepted proof while returning to edit, then invalidates creation until reanalysis', async () => {
+    const analyzedSources: string[] = [];
+    let creates = 0;
+    const { application, root } = makeApplication({
+      analyzePlaintextActorSource: ((source: string) => {
+        analyzedSources.push(source);
+        return {
+          status: 'ready_to_generate', rawSourceHash: hashSource(source),
+          candidates: [{ id: 'one', label: 'one', start: 0, end: source.length, quote: source }],
+          candidate: { id: 'one', label: 'one', start: 0, end: source.length, quote: source },
+          canonicalSource: ACTOR_SOURCE, findings: [],
+        };
+      }) as any,
+      createAcceptedForgeActor: (async () => { creates += 1; return actorCreateResult(); }) as any,
+    }, undefined, undefined, undefined, undefined, { initialMode: 'plaintext-actor', directoryKind: 'Actor' });
+    root.source.value = 'original plaintext creature';
+    root.displayName.value = 'Original Creature';
+    root.source.oninput?.();
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    const acceptedResponse = (application as any).response;
+    const acceptedSnapshot = (application as any).snapshot;
+    expect((application as any).status).toBe('accepted');
+    expect(root.create.disabled).toBe(false);
+
+    root.editSource.onclick?.();
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBe(acceptedResponse);
+    expect((application as any).snapshot).toBe(acceptedSnapshot);
+    expect(root.dataset.currentStep).toBe('input');
+    expect(root.resumeReview.hidden).toBe(false);
+    expect(root.create.hidden).toBe(true);
+    expect(primaryWorkspaceActions(root)).toEqual(['resumeReview']);
+
+    root.resumeReview.onclick?.();
+    expect(root.dataset.currentStep).toBe('review');
+    expect((application as any).response).toBe(acceptedResponse);
+    expect(root.create.hidden).toBe(false);
+    expect(root.create.disabled).toBe(false);
+    expect(primaryWorkspaceActions(root)).toEqual(['create']);
+
+    root.source.value = 'mutated plaintext creature';
+    root.source.oninput?.();
+    expect((application as any).status).toBe('needs_review');
+    expect((application as any).response).toBeUndefined();
+    expect((application as any).staleFinding).toEqual(expect.objectContaining({ code: 'STALE_SNAPSHOT', blocking: true }));
+    expect(root.dataset.currentStep).toBe('input');
+    expect(root.create.hidden).toBe(true);
+    expect(root.create.disabled).toBe(true);
+    expect(root.regenerate.hidden).toBe(false);
+    expect(root.regenerate.dataset.primary).toBe('true');
+    expect(primaryWorkspaceActions(root)).toEqual(['regenerate']);
+    expect(creates).toBe(0);
+
+    await (application as any).regenerate(root);
+    expect(analyzedSources).toEqual(['original plaintext creature', 'mutated plaintext creature']);
+    expect((application as any).status).toBe('ready_to_generate');
+    expect((application as any).response).toBeUndefined();
+    expect(root.dataset.currentStep).toBe('review');
+    expect(root.generate.hidden).toBe(false);
+    expect(root.generate.dataset.primary).toBe('true');
+    expect(primaryWorkspaceActions(root)).toEqual(['generate']);
+    await application.close();
+  });
+
+  test('keeps a pending request cancellable in the review stage', async () => {
+    const source = 'pending cancellable creature';
+    const { application, root } = makeApplication({
+      createBrowserAiProvider: (() => ({})) as any,
+      analyzeBrowserActorSourceWithAi: (async (_input: any, _provider: any, signal?: AbortSignal) => await new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      })) as any,
+    }, undefined, undefined, undefined, undefined, { initialMode: 'ai-monster', directoryKind: 'Actor' });
+    setAiForm(application, root, 'ai-monster', source);
+    const pending = (application as any).analyze(root);
+    await Promise.resolve();
+    expect(root.dataset.currentStep).toBe('review');
+    expect(root.cancel.hidden).toBe(false);
+    expect(root.cancel.disabled).toBe(false);
+    expect(primaryWorkspaceActions(root)).toEqual([]);
+    root.cancel.onclick?.();
+    await pending;
+    expect((application as any).status).toBe('failed');
+    expect(root.cancel.hidden).toBe(true);
+    expect(root.diagnosticList.innerHTML).toContain('INTAKE_CANCELLED');
+    await application.close();
+  });
+
+  test('keeps imported accepted history read-only until an explicit fresh attempt', async () => {
+    let providerCalls = 0;
+    let actorCreates = 0;
+    const { application, root } = makeApplication({
+      createBrowserAiProvider: (() => { providerCalls += 1; return {}; }) as any,
+      createAcceptedForgeActor: (async () => { actorCreates += 1; return actorCreateResult(); }) as any,
+    }, undefined, undefined, undefined, undefined, { initialMode: 'ai-monster', directoryKind: 'Actor' });
+    root.source.value = 'live draft must survive import';
+    root.reviewBundleFile.files = [reviewBundleFile(acceptedReviewBundleText())];
+    await (application as any).importBundle(root);
+
+    expect((application as any).importedReview.bundle.status).toBe('accepted');
+    expect(root.dataset.currentStep).toBe('review');
+    expect(root.reviewStep.hidden).toBe(false);
+    expect(root.inputStep.hidden).toBe(true);
+    expect(root.create.hidden).toBe(true);
+    expect(root.create.disabled).toBe(true);
+    expect(root.startNewAttempt.hidden).toBe(false);
+    expect(root.startNewAttempt.disabled).toBe(false);
+    expect(primaryWorkspaceActions(root)).toEqual(['startNewAttempt']);
+    await (application as any).create(root);
+    expect({ providerCalls, actorCreates }).toEqual({ providerCalls: 0, actorCreates: 0 });
+
+    root.startNewAttempt.onclick?.();
+    expect((application as any).importedReview).toBeUndefined();
+    expect((application as any).status).toBe('empty');
+    expect((application as any).recoveredFrom).toEqual(expect.objectContaining({ status: 'accepted' }));
+    expect(root.source.value).toBe('Rat source');
+    expect(root.displayName.value).toBe('Rat');
+    expect(root.mode.value).toBe('ai-monster');
+    expect(root.dataset.currentStep).toBe('input');
+    expect(root.inputStep.hidden).toBe(false);
+    expect(root.reviewStep.hidden).toBe(true);
+    expect(root.startNewAttempt.hidden).toBe(true);
+    expect(root.analyze.hidden).toBe(false);
+    expect(root.create.disabled).toBe(true);
+    expect(primaryWorkspaceActions(root)).toEqual(['analyze']);
+    await application.close();
+  });
+
+  test('keeps the stage renderer selectors aligned with the Forge Intake template', () => {
+    const template = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-intake.hbs', 'utf8');
+    for (const selector of [
+      'forge-workspace"', 'data-workspace-scroll', 'data-advanced-workspace',
+      'data-step="input"', 'data-step="review"', 'data-step="created"',
+      'data-step-indicator="input"', 'data-step-indicator="review"', 'data-step-indicator="created"',
+      'data-workspace-hint', 'data-created-document',
+    ]) expect(template).toContain(selector);
+    for (const action of ['analyze', 'edit-source', 'resume-review', 'generate', 'create', 'regenerate', 'open-created', 'clear', 'cancel']) {
+      expect(template).toContain(`data-action="${action}"`);
+    }
+  });
+
+  test('shows the created Document entry and opens its public sheet', async () => {
+    let renders = 0;
+    const actor = { sheet: { render: () => { renders += 1; } } };
+    const { application, root, game } = makeApplication({
+      analyzePlaintextActorSource: ((source: string) => ({
+        status: 'ready_to_generate', rawSourceHash: hashSource(source), candidates: [{ id: 'one', label: 'one', start: 0, end: source.length, quote: source }],
+        candidate: { id: 'one', label: 'one', start: 0, end: source.length, quote: source }, canonicalSource: ACTOR_SOURCE, findings: [],
+      })) as any,
+      createAcceptedForgeActor: (async () => ({ ...actorCreateResult(), actor })) as any,
+    }, undefined, undefined, undefined, undefined, { directoryKind: 'Actor', initialMode: 'plaintext-actor' });
+    (game as any).actors = { contents: [{}] };
+    (game as any).items = { contents: [{}, {}] };
+    root.mode.value = 'plaintext-actor';
+    root.source.value = 'one plaintext creature';
+    root.displayName.value = 'Plaintext Creature';
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    expect(root.humanPreview.innerHTML).toContain('夜魇');
+    expect(root.humanPreview.innerHTML).toContain('136 / 136');
+    expect(root.humanPreview.innerHTML).toContain('16');
+    await (application as any).create(root);
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.createdDocument.innerHTML).toContain('Actor.intake');
+    expect(root.createdDocument.innerHTML).toContain('世界中 Actor 1');
+    (application as any).openCreatedDocument();
+    expect(renders).toBe(1);
+  });
+
   test('runs plaintext Analyze then Generate, and routes accepted creation only to the Actor adapter', async () => {
     let actorCreates = 0;
     let itemCreates = 0;
@@ -103,6 +482,8 @@ describe('Forge Intake Application review workspace', () => {
     await (application as any).analyze(root);
     await (application as any).generate(root);
     expect((application as any).status).toBe('accepted');
+    expect(root.humanPreview.innerHTML).toContain('骑士之盾');
+    expect(root.humanPreview.innerHTML).not.toContain('[object Object]');
     await (application as any).create(root);
     expect(itemCreates).toBe(1);
     expect(actorCreates).toBe(0);
@@ -1345,6 +1726,7 @@ function makeApplication(
   sourceLibrary = new ManagedForgeSourceLibrary(new MemoryForgeSourceLibraryStore()),
   dialogConfirm?: (config: any) => Promise<boolean>,
   batchQueue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore()),
+  applicationOptions: Record<string, unknown> = {},
 ) {
   const notifications = { errors: [] as string[], infos: [] as string[] };
   const game = { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, world: { id: 'test-world' }, user: { id: 'test-user', isGM: true } };
@@ -1373,10 +1755,12 @@ function makeApplication(
     services,
     sourceLibrary,
     batchQueue,
+    ...applicationOptions,
   };
   const Application = createForgeIntakeApplicationClass(environment);
   const application: any = new Application();
-  const root = new FakeRoot();
+  const root = new FakeRoot(applicationOptions.legacyConnectionFields !== false);
+  (root as any).isConnected = true;
   application.element = root;
   (globalThis as any).document = { activeElement: null };
   application._onRender({}, {});
@@ -1420,6 +1804,12 @@ function readyItemAnalysis(source: string): any {
 }
 
 function blocking(code: string) { return { id: code, code, path: '/', message: code, blocking: true, origin: 'evidence' }; }
+function forgeSessionSettingsFixture(): any {
+  return {
+    providerId: 'custom', protocol: 'openai-chat', authScheme: 'bearer', region: '', reasoning: 'auto', structuredOutput: 'prompt_fallback',
+    useSeparateReviewModel: false, endpoint: 'https://provider.example/v1', model: 'extract', reviewModel: 'review', apiKey: 'session-key', persistApiKey: false, savedApiKeys: {},
+  };
+}
 function acceptedItemResult(): any { if (!('result' in acceptedItem)) throw new Error('Missing Item result.'); return acceptedItem.result; }
 function actorCreateResult(): any { return { status: 'created', actor: {}, uuid: 'Actor.intake', sourceId: 'actor:v1:123e4567-e89b-42d3-a456-426614174000', artifactHash: 'a'.repeat(64) }; }
 function itemCreateResult(): any { return { status: 'created', item: {}, uuid: 'Item.intake', sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174000', artifactHash: 'b'.repeat(64) }; }
@@ -1457,19 +1847,43 @@ function currentSnapshot(_application: any, root: FakeRoot): any {
   });
 }
 
+function primaryWorkspaceActions(root: FakeRoot): string[] {
+  return Object.entries({
+    analyze: root.analyze,
+    editSource: root.editSource,
+    resumeReview: root.resumeReview,
+    generate: root.generate,
+    create: root.create,
+    repair: root.repair,
+    regenerate: root.regenerate,
+    openCreated: root.openCreated,
+    clear: root.clear,
+    cancel: root.cancel,
+    startNewAttempt: root.startNewAttempt,
+  }).filter(([, button]) => !button.hidden && button.dataset.primary === 'true').map(([name]) => name);
+}
+
 class FakeRoot {
+  constructor(private readonly includeConnectionFields = true) {}
+  dataset: Record<string, string> = {};
   mode = control('plaintext-actor', 'select'); source = control('', 'textarea'); displayName = control('');
+  sourceFile = control('', 'file');
   provider = control('openai', 'select'); endpoint = control(''); protocol = control('openai-responses', 'select'); authScheme = control('bearer', 'select'); region = control('', 'select'); reasoning = control('auto', 'select'); structuredOutput = control('json_schema', 'select');
   model = control(''); reviewModel = control(''); apiKey = control('', 'password'); persistApiKey = control('', 'checkbox'); useSeparateReviewModel = control('', 'checkbox'); aiSettings = control('');
   reviewBundleFile = control('', 'file'); import = control(''); startNewAttempt = control('');
   sourceLibrarySearch = control(''); sourceLibraryFile = control('', 'file'); libraryRefresh = control(''); librarySave = control(''); libraryExport = control(''); libraryImport = control('');
   batchCollectionFile = control('', 'file'); batchRefresh = control(''); batchImport = control(''); batchExport = control(''); batchRun = control(''); batchStop = control(''); batchApply = control('');
   analyze = control(''); repair = control(''); generate = control(''); regenerate = control(''); reject = control(''); cancel = control(''); clear = control(''); export = control(''); create = control(''); clearKey = control(''); clearAllKeys = control(''); toggleKey = control(''); toggleEndpoint = control('');
+  editSource = control(''); resumeReview = control(''); openCreated = control('');
   status = control(''); humanSummary = control(''); stages = control(''); diagnostics = control(''); diagnosticList = control(''); previewSection = control(''); activityCard = control(''); candidate = control(''); evidence = control(''); metadata = control(''); canonical = control(''); rawSource = control(''); preview = control(''); json = control('');
   librarySummary = control(''); libraryList = control('');
   batchSummary = control(''); batchList = control('');
+  connectionSummary = control(''); connectionStatus = control(''); humanPreview = control(''); createdDocument = control(''); connectionOpen = control(''); structuredOpen = control('');
+  workspace = control('', 'section'); inputStep = control('', 'section'); reviewStep = control('', 'section'); createdStep = control('', 'section');
+  inputIndicator = control('', 'li'); reviewIndicator = control('', 'li'); createdIndicator = control('', 'li');
+  workspaceScroll = control('', 'section'); advancedWorkspace = control('', 'details'); workspaceMore = control('', 'details'); workspaceHint = control('');
   querySelector(selector: string): any {
-    return ({
+    const fields = ({
       '[name="mode"]': this.mode, '[name="source"]': this.source, '[name="displayName"]': this.displayName, '[name="provider"]': this.provider, '[name="endpoint"]': this.endpoint,
       '[name="protocol"]': this.protocol, '[name="authScheme"]': this.authScheme, '[name="region"]': this.region, '[name="reasoning"]': this.reasoning, '[name="structuredOutput"]': this.structuredOutput,
       '[name="model"]': this.model, '[name="reviewModel"]': this.reviewModel, '[name="apiKey"]': this.apiKey, '[name="persistApiKey"]': this.persistApiKey, '[name="useSeparateReviewModel"]': this.useSeparateReviewModel,
@@ -1482,18 +1896,45 @@ class FakeRoot {
       '[data-action="clear-all-keys"]': this.clearAllKeys,
       '[data-action="toggle-key"]': this.toggleKey, '[data-action="toggle-endpoint"]': this.toggleEndpoint,
       '[data-action="import"]': this.import, '[data-action="start-new-attempt"]': this.startNewAttempt,
+      '[data-action="edit-source"]': this.editSource, '[data-action="resume-review"]': this.resumeReview, '[data-action="open-created"]': this.openCreated,
       '[data-action="library-refresh"]': this.libraryRefresh, '[data-action="library-save"]': this.librarySave, '[data-action="library-export"]': this.libraryExport, '[data-action="library-import"]': this.libraryImport,
       '[data-action="batch-refresh"]': this.batchRefresh, '[data-action="batch-import"]': this.batchImport, '[data-action="batch-export"]': this.batchExport, '[data-action="batch-run"]': this.batchRun, '[data-action="batch-stop"]': this.batchStop, '[data-action="batch-apply"]': this.batchApply,
       '[data-status]': this.status, '[data-stages]': this.stages, '[data-diagnostics]': this.diagnostics, '[data-diagnostic-list]': this.diagnosticList,
       '[data-human-summary]': this.humanSummary, '[data-activity-card]': this.activityCard,
       '[data-preview-section]': this.previewSection, '[data-candidate]': this.candidate, '[data-evidence]': this.evidence, '[data-metadata]': this.metadata,
       '[data-canonical]': this.canonical, '[data-raw-source]': this.rawSource, '[data-preview]': this.preview, '[data-json]': this.json,
+      '.forge-workspace': this.workspace, '[data-step="input"]': this.inputStep, '[data-step="review"]': this.reviewStep, '[data-step="created"]': this.createdStep,
+      '[data-step-indicator="input"]': this.inputIndicator, '[data-step-indicator="review"]': this.reviewIndicator, '[data-step-indicator="created"]': this.createdIndicator,
+      '[data-workspace-scroll]': this.workspaceScroll, '[data-advanced-workspace]': this.advancedWorkspace, '[data-workspace-more]': this.workspaceMore, '[data-workspace-hint]': this.workspaceHint,
       '[data-library-summary]': this.librarySummary, '[data-library-list]': this.libraryList,
       '[data-batch-summary]': this.batchSummary, '[data-batch-list]': this.batchList,
-    } as Record<string, any>)[selector] ?? null;
+      '[name="sourceFile"]': this.sourceFile, '[data-connection-summary]': this.connectionSummary, '[data-connection-status]': this.connectionStatus,
+      '[data-human-preview]': this.humanPreview, '[data-created-document]': this.createdDocument,
+      '[data-action="connection-open"]': this.connectionOpen, '[data-action="structured-open"]': this.structuredOpen,
+    } as Record<string, any>);
+    if (!this.includeConnectionFields && ['[name="provider"]', '[name="endpoint"]', '[name="protocol"]', '[name="authScheme"]', '[name="region"]', '[name="reasoning"]', '[name="structuredOutput"]', '[name="model"]', '[name="reviewModel"]', '[name="apiKey"]', '[name="persistApiKey"]', '[name="useSeparateReviewModel"]'].includes(selector)) return null;
+    return fields[selector] ?? null;
+  }
+  querySelectorAll(selector: string): any[] {
+    if (selector.startsWith('[data-action="')) {
+      const element = this.querySelector(selector);
+      return element ? [element] : [];
+    }
+    return [];
   }
 }
-function control(value: string, type = 'button'): any { return { value, type, checked: false, files: undefined, disabled: false, hidden: false, textContent: '', innerHTML: '', dataset: {}, onclick: undefined, onchange: undefined, oninput: undefined }; }
+function control(value: string, type = 'button'): any {
+  return {
+    value, type, checked: false, files: undefined, disabled: false, hidden: false, textContent: '', innerHTML: '', dataset: {},
+    scrollTop: 0, attributes: {}, onclick: undefined, onchange: undefined, oninput: undefined,
+    focus: () => undefined,
+    setAttribute(name: string, attributeValue: string) { this.attributes[name] = attributeValue; },
+    removeAttribute(name: string) { delete this.attributes[name]; },
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    replaceChildren: () => undefined,
+  };
+}
 
 function reviewBundleFile(content: string): File {
   return { size: new TextEncoder().encode(content).byteLength, text: async () => content } as File;

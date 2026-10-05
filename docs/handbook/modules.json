@@ -643,59 +643,59 @@
     "id": "fvtt-json-forge",
     "title": "FVTT JSON Forge",
     "category": "convert",
-    "summary": "在Foundry内生成并审核Actor/Item，或由人类MD提取多生物与固定自动化配置，导入后明确启用。",
+    "summary": "在一个GM工作台里编辑生物蓝图、导入标准资料或AI整理，核对可读预览后创建生物/物品；战斗包单独审核与启动。",
     "when": "已经打开 Foundry，希望直接把结构化资料或原始文本整理成世界中的 Actor/Item 时使用。",
     "requires": [
       "Foundry14.364或14.368/dnd5e5.3.3/core；创建前绑定真实当前版本、GM和来源/产物身份",
       "dnd5e 5.3.3",
       "GM",
-      "结构化 Actor/Item 来源，或已完成审阅的 Intake 结果",
+      "规范来源、原始文本或手工填写的生物蓝图；蓝图/标准资料无需AI",
       "AI 模式的客户端 Provider、协议、模型和 API Key（仅使用 AI 时）"
     ],
     "steps": [
       {
-        "title": "启用并打开三个入口",
-        "text": "在精确支持版本的世界启用模块；GM 在“配置设置 → 模块设置”中会看到 Forge Actor、Forge Item 和 Forge Intake 三个入口。非 GM、版本不符或 ApplicationV2 不可用时不会创建世界文档。"
+        "title": "从目录打开工作台",
+        "text": "Actor目录使用“Forge 生物”，Item目录使用“Forge 物品”。同一目录重复打开聚焦同一窗口；AI连接设置独立共享。"
       },
       {
-        "title": "生成 Actor",
-        "text": "在 Forge Actor 中粘贴或导入结构化 Actor 来源，填写显示名称并完成生成。先阅读预览、来源、验证状态和诊断，只有通过检查的 accepted 结果才允许创建。"
+        "title": "选择输入方式",
+        "text": "生物可选手工蓝图、标准资料、AI整理；物品保留标准资料和AI整理。标准资料可粘贴或读取Markdown/TXT。各模式保留草稿，切换不会把复杂来源自动改为蓝图。"
       },
       {
-        "title": "生成 Item",
-        "text": "在 Forge Item 中提交单一、受支持的结构化物品来源，核对预览后创建或复用世界物品。这个入口不会替你修改角色卡。"
+        "title": "编辑蓝图并核对预览",
+        "text": "蓝图库在左、编辑在中、独立预览在右。基础/能力/变体/审阅页不会隐藏预览。草稿预览标明未验证；生成并验证后才显示正式artifact。未知运行数值不猜填。"
       },
       {
-        "title": "审阅 Intake",
-        "text": "在 Forge Intake 选择 plaintext-actor、ai-monster 或 ai-item；Analyze 只建立来源证据，Generate Candidate 后还必须同时通过 formal verification 和 review，最后由 GM 点击 Confirm Create。"
+        "title": "审核并确认创建",
+        "text": "AI资料先分析再生成审核；蓝图或标准资料直接正式生成验证。只有当前accepted结果可以确认创建，随后回读并可打开卡片。同源复用；编辑或切换使旧候选失效，提交期间不能切换或关闭。"
       },
       {
-        "title": "管理复查与批量队列",
-        "text": "在 Forge Intake 管理来源库、审查包、混合 Actor/Item 合集与批量队列。历史 accepted 记录需显式开启新尝试；队列一次运行一项。刷新或关闭页面会中断任务，不会自动重发 AI 请求。"
+        "title": "保存草稿与派生",
+        "text": "蓝图来源按当前世界/GM保存，刷新重开需重新生成。派生使用新身份、记录父来源与字段差异，不覆盖原生物。AI页面“更多工具”保留来源库、历史和批量。"
       },
       {
-        "title": "从人类写法MD生成战斗包",
-        "text": "读取包含2至6种生物完整数据与召唤规则的MD。AI提取生物及固定能力参数，工具生成控制入口；核对后一起导入并明确启用。已启用固定配置在刷新时恢复，可在控制面板停用。"
+        "title": "使用战斗包",
+        "text": "生物工作台的“战斗包”打开专用审核。导入角色与宏之后由GM明确启动；来源、绑定、固定能力限制和旧资料保护继续生效。"
       }
     ],
     "outputs": [
       "带 Forge source/artifact identity 的 Foundry Actor 或 world Item，以及创建后的 readback 结果",
       "正式验证、审阅、诊断、来源库、Collection 和可恢复队列数据",
       "按 sourceId 派生的确定性 Document ID 和重复复用状态",
-      "人类MD路径可生成多个独立Actor、一份绑定宏及来源审核记录；每次召唤在场景中创建独立指示物。"
+      "人类MD路径可生成多个独立Actor、一份绑定宏及来源审核记录；每次召唤在场景中创建独立指示物。",
+      "可重新编辑的版本化生物蓝图、规范中文来源、父子派生差异与2024格式可读预览"
     ],
     "limits": [
-      "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
+      "0.5.0统一候选已于2026-10-05通过Mirror14.368/5.3.3的工作台、蓝图、标准Actor/Item创建回读及精确清理；本轮未调用真实Provider、未重跑原生战斗或启动战斗包，尚未远端发布。",
       "本轮兼容候选只允许精确 Foundry 14.364 或 14.368 / dnd5e 5.3.3 / core profile，且所有创建入口只允许 GM；manifest 区间不表示中间 Core 版本均受支持。",
       "不支持 OCR、PDF、图片 Intake、update/overwrite、按名称合并、embedded Item 产品入口或跨 Document 原子事务",
       "API Key 默认只在当前页面内存，显式持久化时也只写当前浏览器 local storage；不会进入世界 Document、Chat、review bundle、Collection、日志或响应",
       "页面关闭后不会继续 AI/HTTP；本地构建或 Lab 结果不等于目标世界 runtime、生产或四小时真实会话验收",
       "AI不编写宏代码。固定入口仅调用模块内已实现能力；旧式脚本包仍需独立代码审核。导入不自动启用，关闭控制面板也不等于停用。",
-      "当前仓库源码仍为未发布的0.3.0候选，Mirror已装0.4.0来自另一个Forge任务；本轮只交付Core兼容补丁，不将蓝图业务源纳入Painter集成。本地Intake默认DS API deepseek-flash（V4.1 Flash），不转送其他Provider凭据；非本地保留原连接选择。",
       "本地已测守护真实减伤和耗尽削弱；重复腐化证据部分通过，按用户决定留待独立状态设计。Dazed修复专项和浏览器完整AI生成链尚未复验。",
       "人类MD模板可用于不同生物；自动化仅限已实现能力形态，不保证任意召唤数量、触发或机制均支持。",
       "Actor蓝图保留来源HP；场上NPC Token重掷HP遵从世界设置，控制器不覆盖。已有其他来源的启用状态不由控制器接管或提前结束。",
-      "当前Mirror保留既有0.4.0蓝图UI，以其准确来源重建的受限Core兼容产物安装；0.3.0普通构建不能覆盖它。统一0.4.0源码/普通构建需先按原Forge任务集成业务源，再接本轮兼容补丁；本轮未执行新Core完整Generate/Create或AI自动化链验收。"
+      "手工蓝图目前限有界攻击/豁免组件；不支持自动CR平衡、完整施法/传奇/巢穴编辑，也不把复杂AI资料自动降格为蓝图。"
     ],
     "keywords": [
       "Forge",
@@ -705,12 +705,16 @@
       "structured",
       "review",
       "accepted",
-      "readback"
+      "readback",
+      "蓝图",
+      "派生",
+      "草稿",
+      "工作台",
+      "statblock"
     ],
     "sources": [
       "foundry-modules/fvtt-json-forge/README.zh-CN.md",
-      "tools/forge-encounter/README.md",
-      "foundry-modules/fvtt-battlefield-painter/docs/local-integration-scope-2026-10-05.md"
+      "tools/forge-encounter/README.md"
     ],
     "watch": [
       "foundry-modules/fvtt-json-forge/"

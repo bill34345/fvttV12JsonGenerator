@@ -4,8 +4,8 @@
   <label>资料名称<input name="humanLabel" value="{{humanLabel}}" maxlength="160" {{#if busy}}disabled{{/if}}></label>
   <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
   <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
-  <p>默认使用Intake连接页的当前Provider、模型与凭据。原始资料最多24000字符，支持2至6种生物；按资料顺序展示主生物及配套生物。</p>
-  {{#if localPage}}<p>本地 AI Intake 使用 DeepSeek V4.1 Flash（deepseek-flash），请在 Intake 连接页配置 DS API。AI 仅提取规则，控制代码由工具提供。</p>{{/if}}
+  <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持2至6种生物；按资料顺序展示主生物及配套生物。</p>
+  <p>AI 只提取规则和选择已实现的能力；控制代码由工具提供。</p>
   <button type="button" data-action="encounter-ai" {{#if busy}}disabled{{/if}}>AI生成并审核战斗包</button>
   <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
   {{#if aiRunning}}<button type="button" data-action="encounter-ai-stop">停止AI生成</button>{{/if}}

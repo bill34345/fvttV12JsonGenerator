@@ -1,6 +1,5 @@
-import { createForgeActorApplicationClass } from './application';
-import { createForgeItemApplicationClass } from './itemApplication';
-import { createForgeIntakeApplicationClass } from './intakeApplication';
+import { createForgeConnectionApplicationClass } from './connectionApplication';
+import { createForgeWorkspaceApplicationClass, type ForgeWorkspaceMode } from './workspaceApplication';
 import {createEncounterAutomationLifecycle} from './encounterAutomationLifecycle';
 import {
   assertExactRuntime,
@@ -10,140 +9,125 @@ import {
   MODULE_ID,
 } from './runtime';
 
-export function openForgeActor(): unknown {
-  const game = (globalThis as any).game;
-  assertGm(game);
-  assertExactRuntime(game);
-  const Application = createForgeActorApplicationClass({
-    game,
-    ui: (globalThis as any).ui,
-    foundry: (globalThis as any).foundry,
-  });
-  return new Application().render(true);
+export function openForgeActor(): unknown { return openForgeWorkspace('Actor', globalThis, 'structured'); }
+export function openForgeItem(): unknown { return openForgeWorkspace('Item', globalThis, 'structured'); }
+
+const workspaces = new WeakMap<object, Map<string, any>>();
+const openingWorkspaces = new WeakSet<object>();
+
+function focusWorkspace(environment: any, key: string, create: () => any, mode?: ForgeWorkspaceMode): unknown {
+  let windows = workspaces.get(environment);
+  if (!windows) { windows = new Map(); workspaces.set(environment, windows); }
+  const existing = windows.get(key);
+  if (existing && (existing.rendered || openingWorkspaces.has(existing))) { if (mode) existing.selectMode?.(mode); existing.bringToFront?.(); return existing; }
+  const application = create();
+  windows.set(key, application);
+  openingWorkspaces.add(application);
+  try {
+    const result = application.render(true);
+    void Promise.resolve(result).then(() => openingWorkspaces.delete(application), () => {
+      openingWorkspaces.delete(application);
+      if (windows?.get(key) === application) windows.delete(key);
+    });
+    return result;
+  } catch (error) { openingWorkspaces.delete(application); windows.delete(key); throw error; }
 }
 
-export function openForgeItem(): unknown {
-  const game = (globalThis as any).game;
-  assertGm(game);
-  assertExactRuntime(game);
-  const Application = createForgeItemApplicationClass({
-    game,
-    ui: (globalThis as any).ui,
-    foundry: (globalThis as any).foundry,
+export function openForgeConnectionSettings(environment: any = globalThis): unknown {
+  assertGm(environment.game); assertExactRuntime(environment.game);
+  return focusWorkspace(environment, 'connection', () => {
+    const Application = createForgeConnectionApplicationClass(environment);
+    return new Application();
   });
-  return new Application().render(true);
 }
 
-export function openForgeIntake(): unknown {
-  const game = (globalThis as any).game;
-  assertGm(game);
-  assertExactRuntime(game);
-  const Application = createForgeIntakeApplicationClass({
-    game,
-    ui: (globalThis as any).ui,
-    foundry: (globalThis as any).foundry,
-  });
-  return new Application().render(true);
+export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = globalThis, mode?: ForgeWorkspaceMode): unknown {
+  if (kind !== 'Actor' && kind !== 'Item') throw new Error('请选择角色或物品目录。');
+  assertGm(environment.game); assertExactRuntime(environment.game);
+  return focusWorkspace(environment, kind, () => {
+    const Application = createForgeWorkspaceApplicationClass({
+      game: environment.game, ui: environment.ui, foundry: environment.foundry,
+      window: environment.window, hooks: environment.Hooks, directoryKind: kind, initialMode: mode,
+      openConnectionSettings: () => openForgeConnectionSettings(environment),
+    });
+    return new Application();
+  }, mode);
+}
+
+/** Compatibility entry: new callers should use the Actor or Item directory. */
+export function openForgeIntake(): unknown { return openForgeWorkspace('Actor', globalThis, 'ai'); }
+
+export function mountForgeDirectoryButton(kind: 'Actor' | 'Item', html: any, environment: any = globalThis): void {
+  const root = html?.querySelector ? html : html?.[0];
+  if (!root?.querySelector) return;
+  const previous = root.querySelector('[data-forge-directory-entry]');
+  if (environment.game?.user?.isGM !== true) { previous?.remove?.(); return; }
+  try { assertExactRuntime(environment.game); } catch { previous?.remove?.(); return; }
+  if (previous) return;
+  const host = root.querySelector('.header-actions') ?? root.querySelector('.directory-header')
+    ?? root.querySelector('header');
+  const document = root.ownerDocument ?? environment.document;
+  if (!host || !document?.createElement) return;
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'forge-directory-entry';
+  button.dataset.forgeDirectoryEntry = kind;
+  button.title = kind === 'Actor' ? '从规则资料生成或导入生物，也可处理召唤战斗包' : '从规则资料生成或导入物品';
+  const icon = document.createElement('i'); icon.className = 'fas fa-hammer'; icon.setAttribute('aria-hidden', 'true');
+  const label = document.createElement('span'); label.textContent = kind === 'Actor' ? 'Forge 生物' : 'Forge 物品';
+  button.append(icon, label);
+  button.onclick = () => {
+    try { openForgeWorkspace(kind, environment); }
+    catch (error) { environment.ui?.notifications?.error?.(error instanceof Error ? error.message : String(error)); }
+  };
+  host.append(button);
 }
 
 export function initializeForgeModule(globalEnvironment: any = globalThis): void {
   if (!globalEnvironment.Hooks) return;
-  const automation=createEncounterAutomationLifecycle(globalEnvironment);
-  globalEnvironment.Hooks.on?.('canvasReady',()=>void automation.resume());
-  let actorMenuRegistered = false;
-  let itemMenuRegistered = false;
-  let intakeMenuRegistered = false;
-  let registrationRetryCount = 0;
-  const registerForgeMenus = () => {
-    if (actorMenuRegistered && itemMenuRegistered && intakeMenuRegistered) return;
-    const settings = globalEnvironment.game?.settings;
-    if (!settings?.registerMenu) return;
+  const automation = createEncounterAutomationLifecycle(globalEnvironment);
+  globalEnvironment.Hooks.on?.('canvasReady', () => void automation.resume());
+  globalEnvironment.Hooks.on?.('renderActorDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Actor', html, globalEnvironment));
+  globalEnvironment.Hooks.on?.('renderItemDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Item', html, globalEnvironment));
+  let registered = false;
+  let retries = 0;
+  const registerSettings = () => {
+    if (registered || !globalEnvironment.game?.settings?.registerMenu) return;
     try {
-      if (!actorMenuRegistered) {
-        const actorMenuType = createForgeActorApplicationClass({
-          game: globalEnvironment.game,
-          ui: globalEnvironment.ui,
-          foundry: globalEnvironment.foundry,
-        });
-        settings.registerMenu(MODULE_ID, 'forgeActor', {
-          name: 'Forge Actor',
-          label: 'Forge Actor',
-          hint: `GM-only Actor generation for Foundry ${EXPECTED_FOUNDRY_VERSION} / dnd5e ${EXPECTED_SYSTEM_VERSION}.`,
-          icon: 'fas fa-hammer',
-          type: actorMenuType,
-          restricted: true,
-        });
-        actorMenuRegistered = true;
-      }
-      if (!itemMenuRegistered) {
-        const itemMenuType = createForgeItemApplicationClass({
-          game: globalEnvironment.game,
-          ui: globalEnvironment.ui,
-          foundry: globalEnvironment.foundry,
-        });
-        settings.registerMenu(MODULE_ID, 'forgeItem', {
-          name: 'Forge Item',
-          label: 'Forge Item',
-          hint: `GM-only bounded world Item creation for Foundry ${EXPECTED_FOUNDRY_VERSION} / dnd5e ${EXPECTED_SYSTEM_VERSION}.`,
-          icon: 'fas fa-cube',
-          type: itemMenuType,
-          restricted: true,
-        });
-        itemMenuRegistered = true;
-      }
-      if (!intakeMenuRegistered) {
-        const intakeMenuType = createForgeIntakeApplicationClass({
-          game: globalEnvironment.game,
-          ui: globalEnvironment.ui,
-          foundry: globalEnvironment.foundry,
-        });
-        settings.registerMenu(MODULE_ID, 'forgeIntake', {
-          name: 'Forge Intake',
-          label: 'Forge Intake',
-          hint: `GM-only bounded review workspace for Foundry ${EXPECTED_FOUNDRY_VERSION} / dnd5e ${EXPECTED_SYSTEM_VERSION}.`,
-          icon: 'fas fa-magnifying-glass-chart',
-          type: intakeMenuType,
-          restricted: true,
-        });
-        intakeMenuRegistered = true;
-      }
+      const type = createForgeConnectionApplicationClass(globalEnvironment);
+      globalEnvironment.game.settings.registerMenu(MODULE_ID, 'connection', {
+        name: 'Forge · AI 连接', label: '配置 AI 连接',
+        hint: '设置 Provider、API Key 和模型。生成与导入请使用角色或物品目录中的 Forge 按钮。',
+        icon: 'fas fa-sliders', type, restricted: true,
+      });
+      registered = true;
     } catch (error) {
-      globalEnvironment.console?.error?.('FVTT JSON Forge menus were not fully registered because ApplicationV2 was unavailable.', error);
+      globalEnvironment.console?.error?.('Forge connection settings are waiting for ApplicationV2.', error);
     }
   };
-  const retryMenuRegistration = () => {
-    if ((actorMenuRegistered && itemMenuRegistered && intakeMenuRegistered) || registrationRetryCount >= 20 || typeof globalEnvironment.setTimeout !== 'function') return;
-    registrationRetryCount += 1;
-    globalEnvironment.setTimeout(() => {
-      registerForgeMenus();
-      retryMenuRegistration();
-    }, 100);
+  const retry = () => {
+    if (registered || retries >= 20 || typeof globalEnvironment.setTimeout !== 'function') return;
+    retries += 1;
+    globalEnvironment.setTimeout(() => { registerSettings(); retry(); }, 100);
   };
+  globalEnvironment.Hooks.once('init', registerSettings);
   globalEnvironment.Hooks.once('ready', async () => {
-    // Some Foundry boot paths expose ApplicationV2 only after init. Retrying
-    // here keeps the GM menu available without weakening the exact runtime
-    // check or adding a second entry when init already succeeded.
-    registerForgeMenus();
+    registerSettings();
     const game = globalEnvironment.game;
     const module = game?.modules?.get?.(MODULE_ID);
     if (module) module.api = Object.freeze({ openForgeActor, openForgeItem, openForgeIntake,
-      startEncounterAutomation:automation.start,stopEncounterAutomation:automation.stop,
-      encounterAutomationRuntimes:automation.runtimes });
+      openForgeWorkspace: (kind: 'Actor' | 'Item') => openForgeWorkspace(kind, globalEnvironment),
+      openForgeConnectionSettings: () => openForgeConnectionSettings(globalEnvironment),
+      startEncounterAutomation: automation.start, stopEncounterAutomation: automation.stop,
+      encounterAutomationRuntimes: automation.runtimes });
     if (game?.user?.isGM !== true) return;
     try {
-      assertExactRuntime(game);
-      await automation.resume();
-    } catch (error) {
-      globalEnvironment.ui?.notifications?.warn?.(error instanceof Error ? error.message : String(error));
-      return;
-    }
+      assertExactRuntime(game); await automation.resume();
+      for (const [kind, directory] of [['Actor', globalEnvironment.ui?.actors], ['Item', globalEnvironment.ui?.items]] as const) {
+        if (directory?.element) mountForgeDirectoryButton(kind, directory.element, globalEnvironment);
+      }
+    } catch (error) { globalEnvironment.ui?.notifications?.warn?.(error instanceof Error ? error.message : String(error)); }
   });
-  globalEnvironment.Hooks.once('init', registerForgeMenus);
-  // A late-loaded client module can miss both lifecycle hooks. Register now
-  // when Foundry has already exposed its settings and ApplicationV2; the
-  // closure keeps this idempotent with the normal init/ready paths.
-  registerForgeMenus();
-  retryMenuRegistration();
+  registerSettings(); retry();
 }
 
 initializeForgeModule();

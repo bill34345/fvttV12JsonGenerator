@@ -1,0 +1,21 @@
+<header class="forge-workspace-navigation">
+  <div class="forge-workspace-titlebar">
+    <h1>{{#if isActorWorkspace}}生物工作台{{else}}物品工作台{{/if}}</h1>
+    <div class="forge-workspace-tools">
+      <span data-workspace-connection-summary role="status" aria-live="polite">读取 AI 连接状态…</span>
+      {{#if isActorWorkspace}}<button type="button" data-workspace-encounter><i class="fas fa-layer-group" aria-hidden="true"></i> 战斗包</button>{{/if}}
+      <button type="button" data-workspace-connection><i class="fas fa-sliders" aria-hidden="true"></i> AI 连接设置</button>
+    </div>
+  </div>
+  <div class="forge-workspace-navigation-row">
+    <div class="forge-workspace-modes" role="group" aria-label="资料输入方式">
+      {{#if isActorWorkspace}}<button type="button" data-forge-mode="blueprint" aria-pressed="false">手工蓝图</button>{{/if}}
+      <button type="button" data-forge-mode="structured" aria-pressed="false">标准资料</button>
+      <button type="button" data-forge-mode="ai" aria-pressed="false">AI 整理</button>
+    </div>
+    <ol class="forge-workspace-progress" aria-label="当前进度">
+      <li data-workspace-stage="input">输入</li><li data-workspace-stage="review">审核</li><li data-workspace-stage="created">完成</li>
+    </ol>
+  </div>
+  <p class="forge-workspace-mode-note">各输入方式保留自己的草稿。切换后需重新生成或审核，复杂资料不会自动改成蓝图。</p>
+</header>

@@ -5,14 +5,14 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "ddde7ee0c225275706c87abe61569c1f0f1e3b668d1862cb15652aa8362ee078",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "63368a2959ed1a4cf5cbb7796fbdd981d63a6ecc58fadf4c17d4dd865c23ab57",
+    "reviewedOn": "2026-10-05",
+    "note": "已对照0.5.0实际Mirror收据、修正截图、完整清理和当前支持表：新增统一工作台与蓝图/标准Actor/Item接受，Provider及战斗启动仍未执行；CLI默认、Intake来源与既有检查入口不变。预览仅修正文色，工具说明同步保留精确版本和范围。"
   },
   "monster-intake": {
-    "fingerprint": "b08de9ae0496e8dfe010e94496906a2b992db6c893705a4e39d9cceda1a4941d",
-    "reviewedOn": "2026-10-03",
-    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
+    "fingerprint": "2648fa156d17483bf11dd75afe7ae8e597dff80c902221fe45a61778311d88e7",
+    "reviewedOn": "2026-10-05",
+    "note": "已对照0.5.0实际Mirror收据、修正截图、完整清理和当前支持表：新增统一工作台与蓝图/标准Actor/Item接受，Provider及战斗启动仍未执行；CLI默认、Intake来源与既有检查入口不变。预览仅修正文色，工具说明同步保留精确版本和范围。"
   },
   "item-intake": {
     "fingerprint": "631b2a7e939fc49ff194cf48f682aedfbe503ce2f57088a0cfc90b8e94a61c0a",
@@ -55,19 +55,19 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "a4f38b5e7075fa1417de66ece1fc9069b153d6203b77d42f5b62c2e610c8624b",
+    "fingerprint": "c58fb911174b7a7dedbbce651b3e626a80599ffcde5207ac1bc4262a3ce00142",
     "reviewedOn": "2026-10-05",
-    "note": "2026-10-05本地集成：对照合并后的README与真实acceptance选择/ready/dispatch入口，保留master全部拒绝与复用门禁、12不重叠文件和相同inspection测试；仅追加Mirror364/368程序选择与未知活PID保护。CI入口沿主线，coverage单进程450秒；没有Foundry操作或扩大玩法接受。两个共享条目按组合人工核对，其余记录按原owner保留。"
+    "note": "核对Lab受控启动显式附带noBackups并实际恢复精确Mirror，符合既有不备份限制；操作入口/目标不扩展。Forge聚焦脚本补入根级UI契约文件，实际范围不扩大。保留当前主线后续规范，最终整合时逐项合成。"
   },
   "verification-development": {
-    "fingerprint": "f2c8729ce1589bf9775209091df1c7e372b5d00dea7cffc402255bd78f14fe76",
+    "fingerprint": "b121e62c2a456254d302a7e261ab29eb3ce4e02ca6d3593e639bbaadaaa0fb6f",
     "reviewedOn": "2026-10-05",
-    "note": "2026-10-05本地集成：对照合并后的README与真实acceptance选择/ready/dispatch入口，保留master全部拒绝与复用门禁、12不重叠文件和相同inspection测试；仅追加Mirror364/368程序选择与未知活PID保护。CI入口沿主线，coverage单进程450秒；没有Foundry操作或扩大玩法接受。两个共享条目按组合人工核对，其余记录按原owner保留。"
+    "note": "已对照0.5.0实际Mirror收据、修正截图、完整清理和当前支持表：新增统一工作台与蓝图/标准Actor/Item接受，Provider及战斗启动仍未执行；CLI默认、Intake来源与既有检查入口不变。预览仅修正文色，工具说明同步保留精确版本和范围。"
   },
   "human-encounter-intake": {
-    "fingerprint": "9ffe15b659433d1470a65796f8403d16e980e06d5c4f9efb1f9ffa13581d6fbf",
-    "reviewedOn": "2026-10-03",
-    "note": "核对新增Mirror专用Core程序选择、跨版本peer互斥和严格只读Forge0.4来源重建；保留CoreTest/Next/生产与无备份/权限边界。固定控制器新增368/5.3.3，AI能力和生成来源契约未扩大。"
+    "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
+    "reviewedOn": "2026-10-05",
+    "note": "逐项核对0.5.0目录单窗/输入切换/独立连接/蓝图来源与草稿派生/正式预览创建、结构化affects与模板分离、两条安全聚焦入口；CLI参数与原生成版本默认不变；实机尚待当前候选验收"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -120,9 +120,9 @@
     "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "524148a7a83a97594c1b18140be9a7aa3431d60e086e064f1427ae8d2f97ad7a",
+    "fingerprint": "bf2850ef7626f76f61debea40efec9f3526ed6ab0d5eb7e2299ffd838f1bebfb",
     "reviewedOn": "2026-10-05",
-    "note": "最终完整CI r3退出0，3558/1/0与369文件，API局部40/0和CLI24/0；新增完成说明和真实r1/r2失败层级。仅文档/手册同步，产品与最终通过的测试实现不再改变；仍排除Forge0.4蓝图业务、实机重放和远端push。"
+    "note": "已对照0.5.0实际Mirror收据、修正截图、完整清理和当前支持表：新增统一工作台与蓝图/标准Actor/Item接受，Provider及战斗启动仍未执行；CLI默认、Intake来源与既有检查入口不变。预览仅修正文色，工具说明同步保留精确版本和范围。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
