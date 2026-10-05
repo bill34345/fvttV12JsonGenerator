@@ -1,0 +1,36 @@
+diff --git a/src/module/patching.ts b/src/module/patching.ts
+--- a/src/module/patching.ts
++++ b/src/module/patching.ts
+@@ -182,5 +182,32 @@
+   class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {
++    clone(data: any = {}, context: any = {}) {
++      const effectType = (this as unknown as { type: string }).type;
++      const nestedFlags = data?.flags?.dnd5e;
++      const dottedFlags = data?.["flags.dnd5e"];
++      const hasEnchantmentProfile = [nestedFlags, dottedFlags].some((flags) =>
++        flags && Object.prototype.hasOwnProperty.call(flags, "enchantmentProfile")
++      );
++      const hasTypeOverride = Object.prototype.hasOwnProperty.call(data ?? {}, "type");
++      const hasExplicitContext = Object.keys(context ?? {}).length > 0;
++
++      if (Number.parseInt(game.system.version, 10) !== 6
++        || effectType !== "enchantment"
++        || (hasTypeOverride && data.type !== effectType)
++        || context?.keepId
++        || hasExplicitContext
++        || !hasEnchantmentProfile) {
++        // @ts-expect-error Document.clone is present at runtime but absent from the generic mixin type.
++        return super.clone(data, context);
++      }
++
++      // @ts-expect-error Document.clone is present at runtime but absent from the generic mixin type.
++      return super.clone(
++        { ...data, _id: foundry.utils.randomID() },
++        { ...context, keepId: true }
++      );
++    }
++
+     // dnd5e's isAppliedEnchantment getter dereferences this.parent.uuid, which throws when
+     // an enchantment effect is loaded standalone (e.g. fromUuid on a compendium-stored
+     // top-level ActiveEffect). Treat the no-parent case as "not applied" and otherwise
+     // fall through to the system's logic.

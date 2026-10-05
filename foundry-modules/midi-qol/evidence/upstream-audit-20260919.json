@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-09-19T17:17:17+08:00",
+  "repository": "https://gitlab.com/tposney/midi-qol",
+  "scope": [
+    "official Foundry package page",
+    "all repository branches",
+    "latest releases",
+    "all open merge-request diffs",
+    "issues matching system.type, setupTemplateCleanup, dnd5e 6, 6.0.2, fumble"
+  ],
+  "result": "LOCAL_PATCH_REQUIRED",
+  "branchCount": 10,
+  "openMergeRequestCount": 12,
+  "officialV14": {
+    "version": "14.0.12",
+    "commit": "2b10fec5d4062e4f8d1643ab78c65de4b3ac8ee8",
+    "dnd5eMaximum": "5.3.99"
+  },
+  "selectedUpstream": {
+    "branch": "dnd6",
+    "commit": "4338eeab85041cd71b76ede36818e2265cbf06ae",
+    "dnd5eMaximum": "6.999",
+    "daeMinimum": "14.0.14"
+  },
+  "findings": [
+    "The dnd6 commit is the newest official branch change applicable to dnd5e 6.",
+    "Official v14 and dnd6 Workflow.setupTemplateCleanup both omit ActiveEffect type.",
+    "No open merge-request diff fixes setupTemplateCleanup, system.type, naturalFumble, or adds type=base to these cleanup effects.",
+    "Issue 33 shows that a manual damage control after a fumble can be intentional; acceptance must distinguish a manual control from automatic hit damage or HP application."
+  ],
+  "sources": [
+    "https://foundryvtt.com/packages/midi-qol",
+    "https://gitlab.com/tposney/midi-qol/-/branches",
+    "https://gitlab.com/tposney/midi-qol/-/releases",
+    "https://gitlab.com/tposney/midi-qol/-/merge_requests?state=opened",
+    "https://gitlab.com/tposney/midi-qol/-/issues/33"
+  ]
+}

@@ -1,0 +1,12 @@
+/upstream/
+/sources/
+/dist/
+__pycache__/
+/item-piles/upstream/
+/item-piles/sources/
+/item-piles/dist/
+/item-piles/dist-local1/
+/item-piles/dist-local2/
+/vision-macro/upstream/
+/vision-macro/sources/
+/vision-macro/dist/

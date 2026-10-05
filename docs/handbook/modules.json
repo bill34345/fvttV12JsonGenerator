@@ -728,8 +728,8 @@
     "summary": "把一个 Token HUD 发起的核心状态和 Foundry v14 movementAction 同步到当前选中的其他 Token。",
     "when": "需要对一组 Token 同时切换状态或移动方式，并希望保留每位用户独立的开关时使用。",
     "requires": [
-      "Foundry VTT 14.364",
-      "dnd5e 5.3.3",
+      "Foundry VTT 14.368",
+      "dnd5e 6.0.5（0.2.0 ServerNext 候选）",
       "至少两个可控制且可更新的 Token",
       "当前用户拥有对应 Actor/Token 权限"
     ],
@@ -748,7 +748,7 @@
       },
       {
         "title": "从一个 HUD 发起操作",
-        "text": "打开选中集合中一个 Token 的 HUD，点击核心状态图标或 movementAction（walk、fly、swim、burrow、crawl、climb 或默认）。状态、overlay 和移动方式会复制到其余合格 Token。"
+        "text": "打开选中集合中一个 Token 的 HUD，点击普通状态图标或 movementAction。疲乏等分级状态左键使每个不同 Actor 各加一级、右键各减一级，保留原有等级差异并限制在 0 到系统上限。"
       },
       {
         "title": "关闭并核对字段",
@@ -756,15 +756,15 @@
       }
     ],
     "outputs": [
-      "选中 Token 的核心 Active Effect 状态和 overlay 同步",
+      "选中 Token 的普通 Active Effect 状态和 overlay 同步；分级状态按各 Actor 增减一级",
       "选中 Token 的 movementAction 批量更新",
       "按 Token/Actor 去重并带权限失败提示的同步事务"
     ],
     "limits": [
       "仅处理 Token HUD 核心状态按钮和 v14 movementAction；物品、法术、DAE、MIDI-QOL 或其他模块直接产生的 ActiveEffect 不会触发同步",
-      "只更新 TokenDocument movementAction，不修改 Actor 移动速度或 Actor system 字段",
+      "移动同步只更新 TokenDocument movementAction，不修改 Actor 移动速度；分级状态调用 dnd5e 正常 API，由系统同步状态数据",
       "同步由发起操作的当前客户端执行，权限不足或对象不唯一时会停止；multistatus 启用时模块会拒绝同步模式",
-      "仅支持 Foundry 14.364 与 dnd5e 5.3.3；单测、构建和安装检查不代替真实 HUD/多客户端回放"
+      "0.2.0 候选只声明 Foundry 14.368 与 dnd5e 6.0.5；单测、构建和安装检查不代替真实 HUD/多客户端回放，旧 0.1.0 安装不随之更改"
     ],
     "keywords": [
       "Token",
@@ -1022,7 +1022,7 @@
     ],
     "limits": [
       "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
-    "本次精确接受CC／TE0.2.0，0.2.1或不完整API仍拒绝。新组合在14.364／5.3.3的实际ready、原生攻击／伤害、TE事件及CC Vex建立／消费和原值恢复通过；这份旧目标收据本身不推广到6.0.5，Next另按下文限定实机证据判断，也不推广生产或全部并发情形。",
+      "本次精确接受CC／TE0.2.0，0.2.1或不完整API仍拒绝。新组合在14.364／5.3.3的实际ready、原生攻击／伤害、TE事件及CC Vex建立／消费和原值恢复通过；这份旧目标收据本身不推广到6.0.5，Next另按下文限定实机证据判断，也不推广生产或全部并发情形。",
       "已完成Foundry14.364/dnd5e5.3.3本地交付候选验收。官方八种精通与三项家规采用已保存真实运行及受影响自动化组合覆盖；原生Vex/流血、当前SY玩家伤害应用与在线GM结算、正式生成导入/持久化均有对应证据。11个已审查测试批次已清理，原场景、Combat、暂停和模块配置恢复。各收据保留实际构建，不宣称全部角色/棋子组合、生产或其他版本均已验收",
       "Midi 14.0.11 的卡片内 Apply 使用精确消息、目标和实际HP变化校验；已修复连续更新省略未变化字段造成的证明拒绝。没有来源消息的右键应用路径仍失败关闭；若缺少有效预检，阻止掷骰并提示错误，不另开原生骰窗",
       "同武器Midi Vex收据可从已保存检查点、第二击消息/卡片和效果读回自动关联；Cleave父子伤害也有只读关联。原生或换武器收据不能套用Midi关联规则，部分原件保留INCOMPLETE标签，需按原始消息、HP与效果独立判断。主进度终审记录这些边界及文档打包与实测构建的等价证明",
@@ -1031,8 +1031,9 @@
       "精确 Fatal 和状态生命周期依赖运行模块；core 原生数据不等于完整武器自动化",
       "显式配置WMP的v14固定来源伤害保留原骰式，不另加属性伤害；生成器绑定基础骰用于Fatal等规则。修改或重排伤害段会使绑定失效，需重新生成并验证。原生基础伤害武器继续使用原生路径；正式JSON校验通过不等于游戏内导入及攻击已验收",
       "house-rules 保留原有弹药与重击规则，仅作为可选兼容对象；不允许其他精通模块重复结算同一效果",
-    "新增精确14.368／6.0.5候选及CC原生武器效果能力门；开启Midi须精确14.6.0-beta.4338eeab.local.10。本地Next已验证ready、原生Slow强弱接替、Fatal真实伤害骰及公开use单次攻击；同一卡片攻击19／伤害骰17后，经新的明确Actor.applyDamage步骤使目标HP2→0并写入一条CC原生Slow。掷骰前真实取消无攻击消息、无预留且Sap仍启用。r80原连续流程超时失败不改写为通过；自有玩法夹具、文档等价包实装及限定读回已闭合。个人HUD旧坐标、孤立旧Setting历史及一处外来Scene旧完整来源未捕获；全部精通矩阵未验。",
-      "公开WMP.api.use在Midi启用时只启动一次攻击，使用同一预检编号并传入指定棋子。指定目标缺少当前画布可用棋子、或message.systemCard会被拒绝。攻击完成可返回待伤害结算；不强制开启自动伤害，不把返回或掷出伤害当作实际扣血。取消窗口不另开备用攻击。"
+      "新增精确14.368／6.0.5候选及CC原生武器效果能力门；开启Midi须精确14.6.0-beta.4338eeab.local.10。本地Next已验证ready、原生Slow强弱接替、Fatal真实伤害骰及公开use单次攻击；同一卡片攻击19／伤害骰17后，经新的明确Actor.applyDamage步骤使目标HP2→0并写入一条CC原生Slow。掷骰前真实取消无攻击消息、无预留且Sap仍启用。r80原连续流程超时失败不改写为通过；自有玩法夹具、文档等价包实装及限定读回已闭合。个人HUD旧坐标、孤立旧Setting历史及一处外来Scene旧完整来源未捕获；全部精通矩阵未验。",
+      "公开WMP.api.use在Midi启用时只启动一次攻击，使用同一预检编号并传入指定棋子。指定目标缺少当前画布可用棋子、或message.systemCard会被拒绝。攻击完成可返回待伤害结算；不强制开启自动伤害，不把返回或掷出伤害当作实际扣血。取消窗口不另开备用攻击。",
+      "2026-10-05在Next14.368／6.0.5关闭Midi时，原生Cleave实机通过：次目标消息及伤害来源准确，主目标保持选中，子伤害1d12+0=9、HP80→71。修复原生hook先完成命中后丢失结算结果的问题；这份接受不推广到Midi Cleave或全部八精通。"
     ],
     "keywords": [
       "武器",
@@ -1049,7 +1050,8 @@
       "foundry-modules/fvtt-weapon-mastery-properties/README.zh-CN.md",
       "docs/plans/weapon-mastery-active-case.md",
       "docs/runbooks/weapon-mastery-cotn-e2e.md",
-      "docs/reviews/2026-09-25-weapon-mastery-user-report.md"
+      "docs/reviews/2026-09-25-weapon-mastery-user-report.md",
+      "docs/reviews/2026-10-05-servernext-closeout.md"
     ],
     "watch": [
       "foundry-modules/fvtt-weapon-mastery-properties/",
@@ -1057,5 +1059,127 @@
       "packages/contracts/src/weapon-effects.ts"
     ],
     "module": "fvtt-weapon-mastery-properties"
+  },
+  {
+    "id": "midi-qol",
+    "title": "Midi-QOL ServerNext 本地兼容候选",
+    "category": "play",
+    "summary": "查阅当前ServerNext 6.0.5／local.10限定接受，以及原6.0.2源码工具的独立适用边界。",
+    "when": "完整 ServerNext 迁移需要 Midi-QOL 战斗自动化，而官方稳定包尚未声明支持 dnd5e 6 时使用当前本地候选。",
+    "requires": [
+      "Foundry VTT 14.368",
+      "当前dnd5e6.0.5／Midi local.10；源码工具锁定6.0.2，不用于覆盖当前安装。",
+      "DAE实际候选与客户端版本以唯一总表为准。",
+      "libWrapper 与 socketlib",
+      "world cor-cotn、server-next 与 GM"
+    ],
+    "steps": [
+      {
+        "title": "区分当前安装与历史工具",
+        "text": "当前安装local.10，在6.0.5下Check／Save请求来源加值各+4已限定接受。原源码工具、local.7的A–G/Z35项及local.9手动APPLY场景属于6.0.2历史证据；旧构建／安装和local.7→local.8资源更新脚本不能覆盖当前候选。模块ID始终为midi-qol。"
+      },
+      {
+        "title": "核对运行身份和加载代码",
+        "text": "确认精确app/data/world/port、资源哈希和当前客户端方法指纹。读取唯一总表与当前版本收据；local.9三资源离线更新仅作历史操作证据，服务器包版本与实际客户端候选分开记录。"
+      },
+      {
+        "title": "只补相关接受缺口",
+        "text": "先复用仍适用的已接受证据。当前非付费模块按正常加载／必要入口无新增错误接受；只有新改动、真实失败或具体缺口才补对应检查，不把历史NOT_EXECUTED自动扩展为所有玩法重测。"
+      },
+      {
+        "title": "核对模板清理链",
+        "text": "模板依赖链等历史专项保留当时版本边界；相关行为再次变化时才按对应合同补验，不能用看到模板或没有toast代替完整链证据。"
+      }
+    ],
+    "outputs": [
+      "保持 midi-qol ID 的本地候选模块",
+      "分层的构建、服务器 smoke 和 A–G 玩法证据",
+      "可在官方修复后删除的独立补丁"
+    ],
+    "limits": [
+      "历史local.7的A–G/Z35项及local.9基础isDamaged手动APPLY接受保留原6.0.2范围。当前ServerNext安装local.10；6.0.5下Check／Save两个请求来源加值各+4、94启用ID和49来源值保留、精确清理已接受，其他权限／隐私／workflow分支不由此扩大。",
+      "只声明固定 ServerNext 目标，不代表其他 Foundry、dnd5e 或世界兼容。",
+      "server-mirror 始终只读；30002 服务由本批主控和用户管理，普通验收复用常驻实例，E2E 只清理自身临时文档，结束不得停服或改动其他任务对象。",
+      "本轮local.10增量补丁和验收记录已进入master；原迁移树的完整Midi源码工具现已本地提交，正在本次本地主线整合，远端推送不在本批范围。旧工具目标与当前安装分开，后续构建、安装或发布按具体范围处理。"
+    ],
+    "keywords": [
+      "Midi-QOL",
+      "ServerNext",
+      "dnd5e 6",
+      "ActiveEffect",
+      "模板",
+      "战斗自动化"
+    ],
+    "sources": [
+      "foundry-modules/midi-qol/README.md",
+      "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md",
+      "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
+    ],
+    "watch": [
+      "foundry-modules/midi-qol/",
+      "docs/plan/midi-qol-dnd6-bugfix-development.md"
+    ],
+    "module": "midi-qol"
+  },
+  {
+    "id": "server-next-external-candidates",
+    "title": "ServerNext 外部模块候选与验收资料",
+    "category": "maintain",
+    "summary": "查阅原迁移树保留的外部模块锁定来源、本地补丁、候选文件及分项验收输入。",
+    "when": "继续ServerNext外部模块工作或核对历史候选时，先从总进度和固定来源判断是否需要新工作。",
+    "requires": [
+      "明确当前Core14.368／dnd5e6.0.5；候选目录中的6.0.2目标和旧运行合同属于历史范围。",
+      "先查唯一迁移总表与独立父审，不重跑已接受的行为，不自动恢复暂停项目。"
+    ],
+    "steps": [
+      {
+        "title": "先看唯一总进度",
+        "text": "打开迁移当前清单，区分已完成限定验收、源码尚未发布、开放问题与暂停项目。"
+      },
+      {
+        "title": "核对固定候选",
+        "text": "对照README、upstream-lock和candidate-inventory；原包的版本、提交和SHA保持历史身份，不改标签冒充6.0.5接受。"
+      },
+      {
+        "title": "按实际新任务准备检查",
+        "text": "复用文件侧共用工具；安装、服务和运行合同需核当前目标与授权。旧install/launch脚本及6.0.2合同不能直接重放已完成批次。"
+      },
+      {
+        "title": "处理本轮DAE与图片修补",
+        "text": "DAE目录保存14.0.14的最小阶段链候选、锁定上游来源与精确版本方法测试；icons目录保存图片引用修复和许可。正常文档API修改图片，保持角色规则来源；文件检查不代替客户端接受，运行结果以唯一总表及分项收据为准。"
+      },
+      {
+        "title": "核对不全包6.0.5适配",
+        "text": "classpack目录保留官方4.3.4的21合集及原文档身份，包含来源明确的链接、MPMM石之坚韧熟练加值次数修复和显式正常API迁移入口。写前及后端均保护进阶、效果、正文和规则版本；缺失自定义召唤／辅助法术单列后续。下面的根目录命令只运行离线检查；运行操作先核唯一总表的来源、迁移、重载、代表UI和清理各门，严格按当前一次性合同执行。失败收据不能清空后重放；代表行为不等于27个宏或完整施法、伤害反应链全部接受。 新构建报告写入dist/candidate-report.json，历史报告保持。",
+        "command": "bun run test:classpack-next"
+      }
+    ],
+    "outputs": [
+      "锁定来源、补丁与候选文件身份；各批次独立验收、恢复和清理证据。"
+    ],
+    "limits": [
+      "这些本地工具、历史补丁与框选同步增量已纳入2026-10-05本地整合；实际运行接受仍逐版本、逐批次判断，远端推送不在本批范围。",
+      "构建或文件检查不替代正常UI、玩家／GM重载、来源语义或精确清理；未接受项保留原边界。",
+      "付费包不由本任务验证；原来未启用项确认后排除，明确暂停项保持暂停。图片明确替代不等于找回原图，也不恢复Plutonium。"
+    ],
+    "keywords": [
+      "ServerNext",
+      "外部模块",
+      "Item Piles",
+      "Vision",
+      "Item Macro",
+      "迁移",
+      "候选"
+    ],
+    "sources": [
+      "foundry-modules/server-next-external-candidates/README.md",
+      "foundry-modules/server-next-external-candidates/classpack/README.md",
+      "docs/plan/server-next-migration-handoff-20260927.md"
+    ],
+    "watch": [
+      "foundry-modules/server-next-external-candidates/"
+    ],
+    "module": "server-next-external-candidates"
   }
 ]

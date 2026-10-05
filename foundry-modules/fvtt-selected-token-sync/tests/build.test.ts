@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
-import { buildModule, createStoredZip, validateManifest } from '../build.ts';
+import { buildModule, createStoredZip, MODULE_VERSION as BUILD_VERSION, validateManifest } from '../build.ts';
+import { MODULE_VERSION as RUNTIME_VERSION } from '../src/constants.ts';
 
 describe('release contract', () => {
   test('manifest pins Foundry and dnd5e versions and has no hard dependency', async () => {
     const manifest = JSON.parse(await readFile(new URL('../src/module.json', import.meta.url), 'utf8'));
+    const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     expect(() => validateManifest(manifest)).not.toThrow();
+    expect([manifest.version, packageJson.version, RUNTIME_VERSION, BUILD_VERSION]).toEqual(['0.2.0', '0.2.0', '0.2.0', '0.2.0']);
     expect(manifest.socket).toBeUndefined();
     expect(manifest.relationships.requires).toBeUndefined();
     expect(manifest.languages).toEqual(expect.arrayContaining([

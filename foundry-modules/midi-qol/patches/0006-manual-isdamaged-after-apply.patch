@@ -1,0 +1,172 @@
+--- a/src/module/Workflow.ts
++++ b/src/module/Workflow.ts
+@@ -3772,6 +3772,7 @@
+ 
+   async expireTargetEffects(expireList: string[]) {
+     if (debugEnabled > 0) warn(`expireTargetEffects | ${expireList}`)
++    const deferDamageExpiry = Number.parseInt(game.system.version, 10) === 6 && configSettings.autoApplyDamage === "none";
+     for (let target of this.targets) {
+       const expiryReason: string[] = [];
+       const appliedEffects = getAppliedEffects(target.actor, { includeEnchantments: true });
+@@ -3800,7 +3801,7 @@
+           expiryReason.push("isHitCritical")
+         }
+         // If auto applying damage can do a better test when damage application has been calculdated
+-        if (wasDamaged && expireList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")
++        if (wasDamaged && !deferDamageExpiry && expireList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")
+           && specialDuration.includes("isDamaged")) {
+           wasExpired = true;
+           expiryReason.push("isDamaged");
+@@ -3821,7 +3822,7 @@
+           expiryReason.push("1Reaction");
+         }
+         if (this.rawDamageDetail) for (let dt of this.rawDamageDetail) {
+-          if (expireList.includes(`isDamaged`) && (wasDamaged || dt.type === "healing") && specialDuration.includes(`isDamaged.${dt.type}`)) {
++          if (!deferDamageExpiry && expireList.includes(`isDamaged`) && (wasDamaged || dt.type === "healing") && specialDuration.includes(`isDamaged.${dt.type}`)) {
+             wasExpired = true;
+             expiryReason.push(`isDamaged.${dt.type}`);
+             break;
+@@ -6595,7 +6596,8 @@
+         if (!specialDuration) return false;
+         return specialDuration.includes(healedDamaged);
+       }).map(ef => ef.uuid)
+-      if ((expiredEffects?.length ?? 0) > 0) {
++      if ((expiredEffects?.length ?? 0) > 0
++        && !(Number.parseInt(game.system.version, 10) === 6 && configSettings.autoApplyDamage === "none" && healedDamaged === "isDamaged")) {
+         await timedAwaitExecuteAsGM("removeEffectUuids", {
+           actorUuid: token.actor?.uuid,
+           effects: expiredEffects,
+--- a/src/module/ChatClasses/DamageApplicationElementMidi.ts
++++ b/src/module/ChatClasses/DamageApplicationElementMidi.ts
+@@ -1,8 +1,14 @@
+ import { configSettings, isDnd5e53 } from "../settings.js";
+-import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
++import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
+ import { TroubleShooter } from "../apps/TroubleShooter.js";
+ import { CombinedTargetDescriptor, DamageApplicationOptions } from "../../globals.js";
+ import { WorkflowDataFlags } from "../Workflow.js";
++import { timedAwaitExecuteAsGM } from "../GMAction.js";
++import { getAppliedEffects } from "../utils.js";
++
++// A second click while removal is pending must not dispatch another expiry.
++const manualDamageExpiryPending = new Set<string>();
++const manualDamageExpiryCompleted = new Set<string>();
+ 
+ // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
+ /** The two fields change-source cycling mutates, viewed generically. */
+@@ -24,6 +30,115 @@
+   chatMessage;
+   damages: any[] = [];
+   damageType: string = "defaultDamage";
++
++  /** Expire base DAE isDamaged only after this Midi tray actually lowers HP or temp HP. */
++  async _onApplyDamage(event: PointerEvent) {
++    if (Number.parseInt(game.system.version, 10) !== 6 || configSettings.autoApplyDamage !== "none") {
++      return super._onApplyDamage(event);
++    }
++    const message = this.chatMessage;
++    if (!message?.id || !message?.uuid || message.type !== "usage" || !message.flags?.[MODULE_ID]
++      || !(message.rolls ?? []).some((roll: Roll) => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) === this.damageType)) {
++      return super._onApplyDamage(event);
++    }
++
++    type HPReadback = { actor: Actor.Implementation; hp: number; temp: number; applied?: { hp: number; temp: number } };
++    const before = new Map<string, HPReadback>();
++    for (const target of this.targetList?.querySelectorAll("option") ?? []) {
++      const token = fromUuidSync(target.value) as TokenDocument.Implementation | null;
++      const actor = token?.actor;
++      // @ts-expect-error dnd5e actor HP data is absent from Foundry's base Actor type.
++      const hp = actor?.system?.attributes?.hp;
++      if (!token?.isOwner || !actor?.uuid || !Number.isFinite(hp?.value) || !Number.isFinite(hp?.temp)) continue;
++      before.set(actor.uuid, { actor, hp: hp.value, temp: hp.temp });
++    }
++
++    // Actor5e.applyDamage emits this only after its awaited actor.update. A cancelled update
++    // has no event, and the originating message must be this exact Midi usage card.
++    const hookId = Hooks.on("dnd5e.applyDamage", (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions & { originatingMessage?: ChatMessage.Implementation; origin?: ChatMessage.Implementation }) => {
++      if (options?.originatingMessage !== message || options?.origin !== message || !(amount > 0)) return;
++      const entry = before.get(actor?.uuid);
++      if (!entry || entry.actor !== actor) return;
++      // @ts-expect-error dnd5e actor HP data is absent from Foundry's base Actor type.
++      const hp = actor.system?.attributes?.hp;
++      if (!Number.isFinite(hp?.value) || !Number.isFinite(hp?.temp)) return;
++      if (hp.value <= entry.hp && hp.temp <= entry.temp && (hp.value < entry.hp || hp.temp < entry.temp)) {
++        entry.applied = { hp: hp.value, temp: hp.temp };
++      }
++    });
++    let applicationError: unknown;
++    let applicationFailed = false;
++    try {
++      await super._onApplyDamage(event);
++    } catch (error) {
++      applicationError = error;
++      applicationFailed = true;
++    } finally {
++      Hooks.off("dnd5e.applyDamage", hookId);
++    }
++
++    for (const [actorUuid, entry] of before) {
++      // @ts-expect-error dnd5e actor HP data is absent from Foundry's base Actor type.
++      const hp = entry.actor.system?.attributes?.hp;
++      const confirmedNow = entry.applied && hp?.value === entry.applied.hp && hp?.temp === entry.applied.temp;
++      // Each card and selector has its own Actor flag, so concurrent applications cannot
++      // overwrite a shared marker array. The applying user need not own the chat card.
++      const marker = `manualIsDamagedExpired_${message.id}_${this.damageType}`;
++      const key = `${actorUuid}:${marker}`;
++      if (manualDamageExpiryPending.has(key) || manualDamageExpiryCompleted.has(key)) continue;
++      manualDamageExpiryPending.add(key);
++      try {
++        // @ts-expect-error the per-card Midi flag is dynamic.
++        let state = entry.actor.getFlag(MODULE_ID, marker) as { status: string; effects: string[] } | undefined;
++        if (state !== undefined && (!Array.isArray(state?.effects) || !state.effects.every(uuid => typeof uuid === "string")
++          || !["pending", "complete"].includes(state.status))) continue;
++        if (state?.status === "complete") {
++          manualDamageExpiryCompleted.add(key);
++          continue;
++        }
++        if (!state) {
++          if (!confirmedNow) continue;
++          const effects = getAppliedEffects(entry.actor, { includeEnchantments: true })
++            .filter(effect => effect.flags?.dae?.specialDuration?.includes("isDamaged") && !effect.disabled && foundry.utils.getProperty(effect, "duration.expired") !== true)
++            .map(effect => effect.uuid);
++          const pending = { status: "pending", effects };
++          await timedAwaitExecuteAsGM("_gmSetFlag", { actorUuid, base: MODULE_ID, key: marker, value: pending });
++          // @ts-expect-error the per-card Midi flag is dynamic.
++          state = entry.actor.getFlag(MODULE_ID, marker) as typeof pending | undefined;
++          if (state?.status !== "pending" || JSON.stringify(state.effects) !== JSON.stringify(effects)) continue;
++        }
++        const stillApplied = getAppliedEffects(entry.actor, { includeEnchantments: true })
++          .filter(effect => state.effects.includes(effect.uuid) && !effect.disabled && foundry.utils.getProperty(effect, "duration.expired") !== true)
++          .map(effect => effect.uuid);
++        if (stillApplied.length) {
++          await timedAwaitExecuteAsGM("removeEffectUuids", {
++            actorUuid,
++            effects: stillApplied,
++            options: { "expiry-reason": "midi-qol:isDamaged" }
++          });
++          // The GM action can return without throwing when removal is refused.
++          if (getAppliedEffects(entry.actor, { includeEnchantments: true })
++            .some(effect => state.effects.includes(effect.uuid) && !effect.disabled && foundry.utils.getProperty(effect, "duration.expired") !== true)) continue;
++        }
++        await timedAwaitExecuteAsGM("_gmSetFlag", {
++          actorUuid, base: MODULE_ID, key: marker, value: { status: "complete", effects: state.effects }
++        });
++        // @ts-expect-error the per-card Midi flag is dynamic.
++        const completed = entry.actor.getFlag(MODULE_ID, marker) as typeof state | undefined;
++        if (completed?.status === "complete" && JSON.stringify(completed.effects) === JSON.stringify(state.effects)) {
++          manualDamageExpiryCompleted.add(key);
++        }
++      } catch (error) {
++        if (!applicationFailed) {
++          applicationError = error;
++          applicationFailed = true;
++        }
++      } finally {
++        manualDamageExpiryPending.delete(key);
++      }
++    }
++    if (applicationFailed) throw applicationError;
++  }
+ 
+ 
+   /**

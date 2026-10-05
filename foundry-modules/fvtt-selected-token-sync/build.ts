@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/prom
 import { relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-selected-token-sync' as const;
-export const MODULE_VERSION = '0.1.0' as const;
+export const MODULE_VERSION = '0.2.0' as const;
 const root = resolve(import.meta.dir);
 const source = resolve(root, 'src');
 const dist = resolve(root, 'dist');
@@ -46,13 +46,13 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.364') {
-    throw new Error('Foundry compatibility must be exactly 14.364.');
+  if (core.minimum !== '14.368' || core.verified !== '14.368' || core.maximum !== '14.368') {
+    throw new Error('Foundry compatibility must be exactly 14.368.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '5.3.3') {
-    throw new Error('dnd5e compatibility must be exactly 5.3.3.');
+  if (system.minimum !== '6.0.5' || system.verified !== '6.0.5' || system.maximum !== '6.0.5') {
+    throw new Error('dnd5e compatibility must be exactly 6.0.5.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (manifest.socket !== undefined) throw new Error('This module must not declare a socket.');

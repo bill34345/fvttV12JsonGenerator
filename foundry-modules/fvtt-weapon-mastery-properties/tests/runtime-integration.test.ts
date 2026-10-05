@@ -1613,9 +1613,11 @@ describe('weapon mastery runtime integration', () => {
   });
 
   test.each([
-    ['14.364', '5.3.3'],
-    ['14.368', '6.0.5'],
-  ])('Cleave binds secondary attack and damage while preserving the primary selection on %s/%s', async (core, system) => {
+    ['14.364', '5.3.3', false],
+    ['14.368', '6.0.5', false],
+    ['14.364', '5.3.3', true],
+    ['14.368', '6.0.5', true],
+  ])('Cleave binds secondary attack and damage while preserving the primary selection on %s/%s (post-hook commits first: %s)', async (core, system, commitBeforeReturn) => {
     const world = createWorld();
     world.globals.game.version = core;
     world.globals.game.system.version = system;
@@ -1660,6 +1662,14 @@ describe('weapon mastery runtime integration', () => {
       } else message.flags.dnd5e.targets = messageOptions.data?.flags?.dnd5e?.targets;
       await world.globals.Hooks.callAll('createChatMessage', message);
       await world.globals.Hooks.callAll('dnd5e.rollAttackV2', message.rolls, { subject: activity });
+      if (commitBeforeReturn) {
+        // The real native post hook can persist the child hit before rollAttack
+        // returns. The wrapper's second commit must retain that outcome without
+        // replaying the settlement or silently skipping the child damage.
+        await world.globals.Hooks.callAll('dnd5e.postRollAttack', message.rolls, { subject: activity });
+        await waitFor(() => attacker.getFlag(MODULE_ID, 'ledger')?.some((entry: any) =>
+          entry.attackId === childId && entry.step === 'committed'), 'native child post-hook commit');
+      }
       return message.rolls;
     };
     activity.rollDamage = async (config: AnyRecord, _dialog: AnyRecord, messageOptions: AnyRecord) => {

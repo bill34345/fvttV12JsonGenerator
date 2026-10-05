@@ -1,0 +1,10 @@
+--- sources\macro\scripts\ItemMacroConfig.mjs
++++ sources\macro\scripts\ItemMacroConfig.mjs
+@@ -97,6 +97,6 @@
+ 
+     logger.debug("ItemMacroConfig.mjs | updateMacro  | ", {command, type, item, oldMacro, newMacro});
+ 
+-    this.object = newMacro;
++    this.document.updateSource(newMacro.toObject());
+   }
+ }

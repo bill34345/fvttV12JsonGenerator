@@ -1227,7 +1227,14 @@ export class WeaponMasteryRuntime {
     const state = await this.resolveState(reference);
     if (!state) return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'unknown-attack' };
     if (!this.authorizedRequester(requester, state.sourceActor, state.item)) return { attackId: reference.attackId, status: 'blocked', settlements: [], reason: 'unauthorized' };
-    if (isTerminal(state.ledger)) return { attackId: reference.attackId, status: state.ledger.step === 'committed' ? 'committed' : 'cancelled', settlements: [] };
+    if (isTerminal(state.ledger)) {
+      const committed = state.ledger.step === 'committed';
+      // Native postRollAttack may commit before rollAttack returns to our
+      // wrapper. Preserve that authoritative result for the Cleave damage
+      // continuation without executing the settled rules a second time.
+      return { attackId: reference.attackId, status: committed ? 'committed' : 'cancelled',
+        ...(committed && state.ledger.outcome ? { outcome: state.ledger.outcome } : {}), settlements: [] };
+    }
     if (!state.started) return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'attack-not-started' };
     const actual = await this.actualOutcome(state, outcome);
     if (actual.outcome === 'failed' || actual.outcome === 'cancelled') return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'missing-authoritative-outcome' };

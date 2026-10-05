@@ -1,7 +1,8 @@
-import { cp, lstat, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises';
+import { lstat, readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
-import { assertExactLabPath, createLabConfig, type FoundryLabConfig } from '../../tools/foundry-ops/src/config.ts';
+import { parse, resolve } from 'node:path';
+import { assertExactLabPath, assertNoReparsePathComponents, createLabConfig, type FoundryLabConfig } from '../../tools/foundry-ops/src/config.ts';
+import { installServerNextOwnedModule, type OwnedModuleInstallResult } from '../../tools/foundry-ops/src/serverNextOwnedModuleInstall.ts';
 import { buildModule, MODULE_ID, MODULE_VERSION } from './build.ts';
 
 const APPROVED_LAB = resolve('F:/FoundryLab/foundry-v14');
@@ -13,8 +14,7 @@ export function createModuleLabConfig(): FoundryLabConfig {
 
 function modulePaths(config: FoundryLabConfig) {
   return {
-    destination: resolve(config.profiles.serverMirror.dataPath, 'Data/modules', MODULE_ID),
-    staging: resolve(config.profiles.serverMirror.dataPath, 'Data/modules', `.${MODULE_ID}.installing`),
+    destination: resolve(config.labRoot, 'data/server-next/Data/modules', MODULE_ID),
     buildRoot: resolve(config.repoRoot, 'foundry-modules', MODULE_ID, 'dist/module'),
   };
 }
@@ -25,44 +25,34 @@ export function assertApprovedLab(config: FoundryLabConfig): void {
   }
 }
 
-export async function installLocal(config = createModuleLabConfig(), apply = false): Promise<Record<string, unknown>> {
+export async function installLocal(config = createModuleLabConfig(), apply = false): Promise<OwnedModuleInstallResult> {
   assertApprovedLab(config);
-  const paths = modulePaths(config);
-  assertExactLabPath(config, paths.destination, ['data', 'server-mirror', 'Data', 'modules', MODULE_ID], 'Selected Token Sync destination');
-  assertExactLabPath(config, paths.staging, ['data', 'server-mirror', 'Data', 'modules', `.${MODULE_ID}.installing`], 'Selected Token Sync staging');
   await buildModule();
-  if (await exists(paths.destination)) throw new Error(`Refusing to overwrite an existing module at ${paths.destination}; no backup or overwrite is permitted.`);
-  if (await exists(paths.staging)) throw new Error(`Stale staging directory exists: ${paths.staging}`);
-  const preview = { apply, destination: paths.destination, buildRoot: paths.buildRoot, production: false, backup: false };
-  if (!apply) return preview;
-
-  try {
-    await mkdir(resolve(paths.destination, '..'), { recursive: true });
-    await cp(paths.buildRoot, paths.staging, { recursive: true, errorOnExist: true, force: false });
-    const expected = await hashTree(paths.buildRoot);
-    const actual = await hashTree(paths.staging);
-    if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error('Staged module bytes differ from the built artifact.');
-    await rename(paths.staging, paths.destination);
-    await assertOwned(paths.destination, true);
-    return { ...preview, changed: true, hash: treeHash(actual) };
-  } catch (error) {
-    if (await exists(paths.staging)) await rm(paths.staging, { recursive: true });
-    throw error;
-  }
+  return installServerNextOwnedModule({
+    repoRoot: config.repoRoot,
+    labRoot: config.labRoot,
+    moduleId: MODULE_ID,
+    version: MODULE_VERSION,
+    apply,
+  });
 }
 
 export async function verifyInstall(config = createModuleLabConfig()): Promise<Record<string, unknown>> {
   assertApprovedLab(config);
   const paths = modulePaths(config);
-  assertExactLabPath(config, paths.destination, ['data', 'server-mirror', 'Data', 'modules', MODULE_ID], 'Selected Token Sync destination');
+  assertExactLabPath(config, paths.destination, ['data', 'server-next', 'Data', 'modules', MODULE_ID], 'Selected Token Sync destination');
+  assertNoReparsePathComponents(parse(config.labRoot).root, paths.destination, 'Selected Token Sync destination');
   await assertOwned(paths.destination, true);
   const script = resolve(paths.destination, 'scripts/index.js');
   if (!(await lstat(script)).isFile()) throw new Error(`Installed browser entry is missing: ${script}`);
+  const expected = await hashTree(paths.buildRoot);
+  const installed = await hashTree(paths.destination);
+  if (JSON.stringify(expected) !== JSON.stringify(installed)) throw new Error('Installed module bytes differ from the built artifact.');
   return {
     ok: true,
     destination: paths.destination,
     version: MODULE_VERSION,
-    hash: treeHash(await hashTree(paths.destination)),
+    hash: treeHash(installed),
     runtimeVerified: false,
   };
 }
@@ -94,5 +84,3 @@ async function hashTree(root: string): Promise<Array<{ path: string; sha256: str
 function treeHash(entries: Array<{ path: string; sha256: string }>): string {
   return createHash('sha256').update(JSON.stringify(entries)).digest('hex');
 }
-
-async function exists(path: string): Promise<boolean> { return Boolean(await lstat(path).catch(() => undefined)); }

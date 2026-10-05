@@ -1,0 +1,124 @@
+[
+  {
+    "id": "item-piles",
+    "version": "3.3.4+servernext.1",
+    "kind": "local-source-build",
+    "source": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\dist-local1\\item-piles",
+    "archiveSha256": "8aec3358a5b7ecbd13600756a07ac146763f7aab91839047f611e11ae56da551",
+    "files": [
+      {
+        "path": "dist/item-piles.css",
+        "sha256": "e9859c3609db4204b1964d082e5ef0e71635bffccf52f8a9b0f267974387689a"
+      },
+      {
+        "path": "dist/item-piles.js",
+        "sha256": "68cab87cec4af1d4a2c699ff293bbb5483d39281e42b9444b5b63ec2d3f912f7"
+      },
+      {
+        "path": "dist/item-piles.js.map",
+        "sha256": "b05be688051f2335e9db97dc9a19c24af0a9e224a2728af8d0eac6fe919b0fa2"
+      },
+      {
+        "path": "languages/cs.json",
+        "sha256": "42de0957f540ae681aa292a30a69827970f1169091da06f459a68e73e458516e"
+      },
+      {
+        "path": "languages/de.json",
+        "sha256": "28b151b921b059682bfc2c44a907e2b8857afbd64b338865480f00319c0dd3f0"
+      },
+      {
+        "path": "languages/en.json",
+        "sha256": "65ff0a510d6cb558d5d3088a4304e704ebd065dd872994745306727602106cf8"
+      },
+      {
+        "path": "languages/es.json",
+        "sha256": "f2c863e81b6f15d100793d661e70dcfe2588925ca2accc95ff2ba1aec758ecf7"
+      },
+      {
+        "path": "languages/fr.json",
+        "sha256": "1b3028d18466603d8363da31475a05af05d3920ebac7fdb0975a6119be86d195"
+      },
+      {
+        "path": "languages/it.json",
+        "sha256": "55499ab39dc65388752b557bab0bfae8878e0ea644d105d531eb8a03015ebec6"
+      },
+      {
+        "path": "languages/ja.json",
+        "sha256": "127cc6deb1a75f2154ce03c3f41690eda685fd8edc7854ca0bc9dc9d0c678762"
+      },
+      {
+        "path": "languages/ko.json",
+        "sha256": "c4476023df855e7ac6940426dd74417aaef35095973662c4ef144560b56d20db"
+      },
+      {
+        "path": "languages/pl.json",
+        "sha256": "e116513903587bb2e44dc1061c283ff3bf35efb1b854dfa06e7c45307897cef6"
+      },
+      {
+        "path": "languages/pt-BR.json",
+        "sha256": "b93fb7ae6e32a88fb3767ffb2b2581c77b4d509ea2e99d77239cd322a8ff6e25"
+      },
+      {
+        "path": "languages/ru.json",
+        "sha256": "043eef773ac0a680e86ceaac1c140de864bc1ba1007329b808ab66f8620dbd8f"
+      },
+      {
+        "path": "languages/zh_Hans.json",
+        "sha256": "47f9cd13446a90c98ca1ac7e7d9635a9cab3c02004710c575ac83ff76e1857f3"
+      },
+      {
+        "path": "languages/zh_Hant.json",
+        "sha256": "2059a96ba84b0ede6882caab0b216f52e10ed6ddd6bb44fb8b9faf5e6840d346"
+      },
+      {
+        "path": "LICENSE",
+        "sha256": "ada465f2c78a5026586a69d7910f37e19d6ddc312297011b2462d24edda346e8"
+      },
+      {
+        "path": "module.json",
+        "sha256": "7584d9229dc13cb7d6110362c3456de041d57b6e72c0c751e663fdb90fcb1914"
+      },
+      {
+        "path": "templates/chat/gave-items.html",
+        "sha256": "4b8a5b3dbca65223fd31b04a485e983b8f348bd59074d720e37e2e681cba37f8"
+      },
+      {
+        "path": "templates/chat/looted.html",
+        "sha256": "acca6c950c0dc51a63ae064aa00da1caff08856d59a0981946b311cc7975ffd8"
+      },
+      {
+        "path": "templates/chat/merchant-traded.html",
+        "sha256": "655f558e6506d85dcf93fcf8bb4e9ef9649101961b8dbeb6793a6f4faad43e51"
+      },
+      {
+        "path": "templates/chat/trade-complete.html",
+        "sha256": "dbe311d7991c91bcdba612cc17e70bc9257119d508b32327e0bdf5c81a603837"
+      },
+      {
+        "path": "templates/chat/trade-started.html",
+        "sha256": "ab13b789db82fb90762ea01a20096af062d6dfabc0cda6e1512346bbe4da2cf7"
+      }
+    ]
+  },
+  {
+    "id": "itempilesdnd5e",
+    "version": "1.1.0+servernext.2",
+    "kind": "local-release-source-adaptation",
+    "source": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20260919-151319-server-next-migration\\foundry-modules\\server-next-external-candidates\\item-piles\\dist-local2\\itempilesdnd5e",
+    "archiveSha256": "4d63912fff59cc48182d42b4792e2408d6db32ee7b54f477a732a91a4a876d9e",
+    "files": [
+      {
+        "path": "dist/module.js",
+        "sha256": "7ad552a0d358461dd7e105a0f36de83766666e68817d96ed43951a621bc2065e"
+      },
+      {
+        "path": "LICENSE",
+        "sha256": "39351822cbcbb4049a5fe9f4d90cfbaa4f64509a5a3f35dfc96db0bd89b01237"
+      },
+      {
+        "path": "module.json",
+        "sha256": "05fea25896cd88cbdf807ee92f44cc0c75b143da902b750014fcf027bedfcfdc"
+      }
+    ]
+  }
+]

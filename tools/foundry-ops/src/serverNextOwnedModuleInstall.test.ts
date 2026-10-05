@@ -240,6 +240,37 @@ describe('ServerNext repository-owned module installer', () => {
     expect(await readdir(modulesRoot)).toEqual([]);
   });
 
+  it('installs the Selected Token Sync 6.0.5 candidate only with an identical source manifest', async () => {
+    const owner = resolve(repoRoot, 'foundry-modules/fvtt-selected-token-sync');
+    const build = resolve(owner, 'dist/module');
+    await mkdir(resolve(owner, 'src'), { recursive: true });
+    await mkdir(resolve(build, 'scripts'), { recursive: true });
+    const manifest = {
+      id: 'fvtt-selected-token-sync', version: '0.2.0',
+      compatibility: { minimum: '14.368', verified: '14.368', maximum: '14.368' },
+      relationships: { systems: [{ id: 'dnd5e', compatibility: { minimum: '6.0.5', verified: '6.0.5', maximum: '6.0.5' } }] },
+      esmodules: ['scripts/index.js'],
+    };
+    const sourceManifest = resolve(owner, 'src/module.json');
+    await writeFile(sourceManifest, JSON.stringify(manifest));
+    await writeFile(resolve(build, 'module.json'), JSON.stringify(manifest));
+    await writeFile(resolve(build, 'scripts/index.js'), 'export {};\n');
+    const request = { repoRoot, labRoot, moduleId: manifest.id, version: manifest.version };
+    manifest.relationships.systems[0]!.compatibility.maximum = '6.0.6';
+    await writeFile(sourceManifest, JSON.stringify(manifest));
+    await expect(installServerNextOwnedModule({ ...request, apply: true })).rejects.toThrow('manifest differs');
+    expect(await readdir(modulesRoot)).toEqual([]);
+    manifest.relationships.systems[0]!.compatibility.maximum = '6.0.5';
+    await writeFile(sourceManifest, JSON.stringify(manifest));
+    const result = await installServerNextOwnedModule({ ...request, apply: true });
+    expect(result.source).toBe(build);
+    expect(result.destination).toBe(resolve(modulesRoot, manifest.id));
+    expect(result.status).toBe('installed');
+    expect(await readdir(modulesRoot)).toEqual([manifest.id]);
+    expect(await readdir(stagingRoot)).toEqual([]);
+    await expect(installServerNextOwnedModule({ ...request, apply: true })).rejects.toThrow('replacement is forbidden');
+  });
+
   it('copies an absent module once, checks all hashes, and keeps staging outside the module scan', async () => {
     const result = await installServerNextOwnedModule(options(true));
     expect(result.status).toBe('installed');

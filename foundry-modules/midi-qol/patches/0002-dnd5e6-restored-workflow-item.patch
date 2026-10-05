@@ -1,0 +1,57 @@
+diff --git a/src/module/Workflow.ts b/src/module/Workflow.ts
+index 915fbcb..e653011 100644
+--- a/src/module/Workflow.ts
++++ b/src/module/Workflow.ts
+@@ -116,7 +116,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
+ import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
+ import { MidiSummonActivity } from "./activities/SummonActivity.js";
+ import { activityHasScaledTargetCount, computeTargetsFromTemplates, createActivityTemplateRegions, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
+-import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
++import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig, Dnd5eChatMessage } from "../globals.js";
+ import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
+ import Token = foundry.canvas.placeables.Token;
+ import { MidiTransformActivity } from "./activities/TransformActivity.js";
+@@ -504,15 +504,19 @@ export class Workflow {
+ 
+     // Use dnd5e's chat card methods — handles both regular and synthetic items
+     if (this.chatCard) {
+-      // @ts-expect-error no dnd5e-types
+-      this.#activity = this.chatCard.getAssociatedActivity() as Activity;
+-      // Apply scaling (stored on message, not on item) — same as dnd5e's _fetchActivity()
+-      if (this.#activity) {
+-        const scaling = this.chatCard.getFlag("dnd5e", "scaling");
+-        if (scaling) {
+-          const item = this.#activity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
+-          // @ts-expect-error no dnd5e-types
+-          this.#activity = item.system.activities.get(this.#activity.id);
++      if (Number.parseInt(game.system.version, 10) >= 6) {
++        this.#activity = (this.chatCard as Dnd5eChatMessage | undefined)?.getAssociatedActivity?.({ scaled: true }) as Activity;
++      } else {
++        // @ts-expect-error no dnd5e-types
++        this.#activity = this.chatCard.getAssociatedActivity() as Activity;
++        // Apply scaling (stored on message, not on item) — same as dnd5e's _fetchActivity()
++        if (this.#activity) {
++          const scaling = this.chatCard.getFlag("dnd5e", "scaling");
++          if (scaling) {
++            const item = this.#activity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
++            // @ts-expect-error no dnd5e-types
++            this.#activity = item.system.activities.get(this.#activity.id);
++          }
+         }
+       }
+     }
+@@ -541,6 +545,14 @@ export class Workflow {
+   get item(): Item.Implementation {
+     if (this.#item) return this.#item;
+     if (this.itemCardUuid && saveToChatCard) {
++      if (Number.parseInt(game.system.version, 10) >= 6) {
++        const associatedItem = this.#activity?.item
++          ?? (this.chatCard as Dnd5eChatMessage | undefined)?.getAssociatedItem?.({ scaled: true });
++        if (associatedItem) {
++          this.#item = associatedItem;
++          return this.#item;
++        }
++      }
+       const itemUuid = this.chatCard?.getFlag("dnd5e", "item")?.uuid;
+       this.#item = fromUuidSync(itemUuid) as Item.Implementation;
+       if (!this.#item) {

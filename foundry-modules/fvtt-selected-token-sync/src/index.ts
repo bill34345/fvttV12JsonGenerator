@@ -1,4 +1,5 @@
 import {
+  applyGradedStatusDelta,
   actorKey,
   collectTargets,
   createIntentStore,
@@ -17,6 +18,9 @@ import { MODULE_ID, MODULE_VERSION, SETTING_ENABLED, SYNC_OPTION_KEY } from './c
 const pending = createIntentStore();
 const confirmedStatus = createIntentStore();
 let recentContextMenu: { sourceTokenKey: string; statusId: string; active: boolean; createdAt: number } | null = null;
+let gradedQueue: Promise<void> = Promise.resolve();
+let gradedRightGesture = 0;
+let handledGradedRight: { gesture: number; sourceTokenKey: string; statusId: string } | null = null;
 
 type HudSource = {
   readonly token: any;
@@ -71,6 +75,11 @@ function statusDefinition(statusId: string): any | null {
   return null;
 }
 
+function gradedMaximum(statusId: string): number | null {
+  const levels = CONFIG.DND5E?.conditionTypes?.[statusId]?.levels;
+  return Number.isInteger(levels) && levels > 0 ? levels : null;
+}
+
 function movementActions(): Record<string, any> | undefined {
   return CONFIG.Token?.movement?.actions;
 }
@@ -97,6 +106,8 @@ function captureStatusIntent(app: any, event: Event): void {
 
   const statusId = target.dataset.statusId;
   if (!statusId || !statusDefinition(statusId)) return;
+  const maxLevel = gradedMaximum(statusId);
+  if (maxLevel !== null && ![0, 2].includes((event as PointerEvent).button)) return;
   const source = sourceFromHud(app);
   const userId = localUserId();
   if (!source?.actor || !userId) return;
@@ -112,6 +123,35 @@ function captureStatusIntent(app: any, event: Event): void {
 
   const sourceEntry = sourceTarget(targets, source);
   if (!sourceEntry) return;
+  if (maxLevel !== null) {
+    const button = (event as PointerEvent).button;
+    const right = button === 2;
+    if (right && handledGradedRight?.gesture === gradedRightGesture
+      && handledGradedRight.sourceTokenKey === sourceEntry.tokenKey
+      && handledGradedRight.statusId === statusId) {
+      blockEvent(event);
+      return;
+    }
+    if (right) handledGradedRight = { gesture: gradedRightGesture, sourceTokenKey: sourceEntry.tokenKey, statusId };
+    blockEvent(event);
+    const transactionId = newTransactionId();
+    const effectId = statusDefinition(statusId)?._id;
+    // A queued job snapshots levels when it starts, so rapid +1, +1 clicks
+    // observe the first completed update rather than racing from one value.
+    gradedQueue = gradedQueue.then(async () => {
+      if (!isEnabled() || localUserId() !== userId) return;
+      const currentFailures = validateTargets(targets, 'status', game.user);
+      if (currentFailures.length) {
+        notify('warn', failureMessage(currentFailures));
+        return;
+      }
+      await applyGradedStatusDelta(targets, statusId, effectId, maxLevel, right ? -1 : 1);
+    }).catch((error: unknown) => {
+      notify('error', `${localize('errors.syncFailed')}: ${String(error)}`);
+      console.error(`[${MODULE_ID}] graded status transaction ${transactionId} failed`, error);
+    });
+    return;
+  }
   const isContextMenu = event.type === 'contextmenu';
   const isAuxClick = event.type === 'auxclick';
   if (isAuxClick && recentContextMenu
@@ -203,6 +243,9 @@ function onRenderTokenHUD(app: any, html: any): void {
   const effectsTray = element.querySelector<HTMLElement>('div.status-effects');
   if (effectsTray && effectsTray.dataset.selectedTokenSyncBound !== 'true') {
     effectsTray.dataset.selectedTokenSyncBound = 'true';
+    effectsTray.addEventListener('pointerdown', (event) => {
+      if (event.button === 2) gradedRightGesture += 1;
+    }, { capture: true });
     effectsTray.addEventListener('click', (event) => captureStatusIntent(app, event), { capture: true });
     effectsTray.addEventListener('contextmenu', (event) => captureStatusIntent(app, event), { capture: true });
     effectsTray.addEventListener('auxclick', (event) => captureStatusIntent(app, event), { capture: true });

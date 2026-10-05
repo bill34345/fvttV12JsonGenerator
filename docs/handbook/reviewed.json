@@ -5,14 +5,14 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "585b1c8951b8d780afebc467a8c16bcaa442d37d6c2b23401a2c23c7495522ac",
+    "fingerprint": "cc4c9d3c22b1c8d340ecf4cbf77e4bc1f88de5dc68ada8af34c73e22f3551980",
     "reviewedOn": "2026-10-05",
-    "note": "逐项合并复核：保留主线ServerNext四模块限定接受及历史缺口、acceptance run/分步/validationSelection和首次安装限制；新增Forge0.5.0仅Mirror工作台与标准来源本地接受，Provider未执行。来源生成/Intake输入输出不变，Lab启动显式noBackups，完整CI门禁和watch保持。"
+    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
   },
   "monster-intake": {
-    "fingerprint": "27fb323e2f706432aaa95ddc0cf7c75fe6f80a5cf3e197beb0a5272b64d9b9dd",
+    "fingerprint": "4de4963065e35f2e0a19c755cd1e1f7fadde02429b7fd5c7a28e36ca4977fdaa",
     "reviewedOn": "2026-10-05",
-    "note": "逐项合并复核：保留主线ServerNext四模块限定接受及历史缺口、acceptance run/分步/validationSelection和首次安装限制；新增Forge0.5.0仅Mirror工作台与标准来源本地接受，Provider未执行。来源生成/Intake输入输出不变，Lab启动显式noBackups，完整CI门禁和watch保持。"
+    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
   },
   "item-intake": {
     "fingerprint": "631b2a7e939fc49ff194cf48f682aedfbe503ce2f57088a0cfc90b8e94a61c0a",
@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "9acd6bc2754390c1338ae0aeee69f1c27309646f2f707339e95fec77312b3456",
+    "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
     "reviewedOn": "2026-10-05",
-    "note": "逐项合并复核：保留主线ServerNext四模块限定接受及历史缺口、acceptance run/分步/validationSelection和首次安装限制；新增Forge0.5.0仅Mirror工作台与标准来源本地接受，Provider未执行。来源生成/Intake输入输出不变，Lab启动显式noBackups，完整CI门禁和watch保持。"
+    "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "15809f5bf0dc656eec4a6b9a5bc5b34204faf355ec9c6bdcb259f3834ed7efe8",
+    "fingerprint": "74652000adb05392f664537901acf80c8995020b37c1223f2e0af68f009ddbac",
     "reviewedOn": "2026-10-05",
-    "note": "逐项合并复核：保留主线ServerNext四模块限定接受及历史缺口、acceptance run/分步/validationSelection和首次安装限制；新增Forge0.5.0仅Mirror工作台与标准来源本地接受，Provider未执行。来源生成/Intake输入输出不变，Lab启动显式noBackups，完整CI门禁和watch保持。"
+    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -73,6 +73,11 @@
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
     "reviewedOn": "2026-10-02",
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
+  },
+  "midi-qol-server-next-patch": {
+    "fingerprint": "d04da9f47e746c4c86a20ada181f0f86c64a0032a5a9679efeab86e0b4a26db4",
+    "reviewedOn": "2026-10-05",
+    "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
   },
   "chat-memory-guard": {
     "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
@@ -125,9 +130,9 @@
     "note": "本轮仅精修Forge模板与样式：控件主次、表单、原生header字体隔离、即时键盘焦点及宽窄布局。已对照目录入口、蓝图/标准/AI步骤、身份/创建/Provider边界，用户入口、输入输出与支持范围均不变；既有说明继续适用，不缩watch。"
   },
   "fvtt-selected-token-sync": {
-    "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
-    "reviewedOn": "2026-09-12",
-    "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
+    "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
+    "reviewedOn": "2026-10-05",
+    "note": "框选同步0.2.0精确Next配对与各Actor增减一级语义、首次安装/权限限制一致，构建5文件与现装一致，复用原限定HUD接受。WMP真实Cleave事件先后缺口已定点修补并276回归通过，已装新build而实机复验待收据，仍不扩大完整八精通。"
   },
   "monster-spell-resolver": {
     "fingerprint": "bb3856fa6fc538cb98c89fb5f4d0946a246f6991002af177fa1f78bd0cd19602",
@@ -145,8 +150,18 @@
     "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "4f25d246226f4c82767793d855d3a399eee14748a3cd250a58651ea66debbc92",
+    "fingerprint": "4002a8f619039d66239a735425478459cf580c81d6f0743f3a9caa7683cb3c32",
     "reviewedOn": "2026-10-05",
-    "note": "对照精确依赖和版本源码、README、274项Cleave回归：14.364/5.3.3、Mirror14.368/5.3.3及Next14.368/6.0.5并存；Next同卡HP/Slow与取消有限实机接受，native6无Midi Cleave子目标修复仅静态回归，八精通新矩阵和生产不提升。"
+    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
+  },
+  "midi-qol": {
+    "fingerprint": "17601ad3917928a07e91494a45e93bb558452a860d3b410a3d6f5d5a251a1edf",
+    "reviewedOn": "2026-10-05",
+    "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
+  },
+  "server-next-external-candidates": {
+    "fingerprint": "3dfc06edf604a8bf7aa5dcc3bc1896a667edd48fe2c78e2a6b74c90dd48f15f1",
+    "reviewedOn": "2026-10-05",
+    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
   }
 }

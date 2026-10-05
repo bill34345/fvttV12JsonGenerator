@@ -1,0 +1,432 @@
+{
+  "upstreamVersion": "4.3.4",
+  "requestedIds": [
+    "Y3yZcHJQTw2VMf0R",
+    "8fO6",
+    "5xnWV6pqjvB7lgls"
+  ],
+  "matchedDocuments": 3,
+  "documents": [
+    {
+      "pack": "extra-ability",
+      "id": "5xnWV6pqjvB7lgls",
+      "name": "阳光爆 Searing Sunburst",
+      "sourceSha256": "263af63fdbc3a02463824c00547f41987e6243dc2bc141ac2ce8b90f60789454",
+      "description": {
+        "value": "<p>从11级起，武僧可以创造出一个纯粹的光能量球以引起一场毁灭性的爆炸。</p><p>以一个动作，你可以魔法般地创造一个球体并且向150尺内的任意一点投掷，在那里瞬间扩张成一个光芒四射的区域。以目标点为中心半径20尺内的所有生物必须立即通过一次体质豁免，若未通过将受到[[/r 2d6]]的光耀伤害。若生物处于全掩护环境并且掩体不透光，那么他不需要进行豁免。</p><p>你可以花费额外的气以提高这个能量球的威力。每花费1点可以使伤害上升[[/r 2d6]]，上限3点。</p>",
+        "chat": ""
+      },
+      "advancement": [],
+      "activities": {
+        "dnd5eactivity000": {
+          "_id": "dnd5eactivity000",
+          "type": "save",
+          "activation": {
+            "type": "action",
+            "value": 1,
+            "condition": "",
+            "override": false
+          },
+          "consumption": {
+            "targets": [
+              {
+                "type": "itemUses",
+                "value": "0",
+                "target": "Compendium.dnd5e_classpack.class-abilityphb.Item.2N9lOBZ0UerzDM55",
+                "scaling": {
+                  "mode": "amount",
+                  "formula": ""
+                }
+              }
+            ],
+            "scaling": {
+              "allowed": true,
+              "max": "3"
+            },
+            "spellSlot": true
+          },
+          "description": {
+            "chatFlavor": ""
+          },
+          "duration": {
+            "concentration": false,
+            "units": "",
+            "special": "",
+            "override": false
+          },
+          "effects": [],
+          "range": {
+            "value": "150",
+            "units": "ft",
+            "special": "",
+            "override": false
+          },
+          "target": {
+            "template": {
+              "count": "",
+              "contiguous": false,
+              "type": "radius",
+              "size": "20",
+              "width": "",
+              "height": "",
+              "units": "ft"
+            },
+            "affects": {
+              "count": "",
+              "type": "",
+              "choice": false,
+              "special": ""
+            },
+            "prompt": true,
+            "override": false
+          },
+          "uses": {
+            "spent": 0,
+            "max": "",
+            "recovery": []
+          },
+          "damage": {
+            "onSave": "half",
+            "parts": [
+              {
+                "custom": {
+                  "enabled": false,
+                  "formula": ""
+                },
+                "number": 2,
+                "denomination": "6",
+                "bonus": "",
+                "types": [
+                  "radiant"
+                ],
+                "scaling": {
+                  "mode": "whole",
+                  "number": 2,
+                  "formula": ""
+                }
+              }
+            ]
+          },
+          "save": {
+            "ability": [
+              "con"
+            ],
+            "dc": {
+              "calculation": "wis",
+              "formula": ""
+            }
+          },
+          "sort": 0,
+          "name": "",
+          "img": "",
+          "appliedEffects": []
+        }
+      },
+      "flags": {
+        "dnd5e": {
+          "persistSourceMigration": true,
+          "migratedUses": 0,
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        },
+        "midiQol": {
+          "AoETargetType": "any",
+          "AoETargetTypeIncludeSelf": true,
+          "autoTarget": "default",
+          "rollAttackPerTarget": "default",
+          "removeAttackDamageButtons": "default",
+          "itemCondition": "",
+          "otherCondition": "",
+          "effectCondition": "",
+          "reactionCondition": ""
+        }
+      }
+    },
+    {
+      "pack": "extra-ability",
+      "id": "8fO6wjfLt8LT8lg7",
+      "name": "热能袭 Searing Arc Strike",
+      "sourceSha256": "e76c3177beb2fd9749177bb5689e6bf15e55f4449818a37c3785bb65f99093c0",
+      "description": {
+        "value": "<p>从6级起，武僧可以转换自己的气变为灼热的能量。</p><p>如果你在你的回合内进行了攻击动作，你可以立即消耗2点气来用附赠动作施放一环@UUID[Compendium.dnd5e_classpack.new-icon.Item.CB9z74KJLWMplGuz]。</p><p>你可以花费额外的气来施展更高环的燃烧之手法术，每一点额外的气都使法术等级上升1环。你最多可以在这个法术上花费的气（2+额外的点数）等同你一半的武僧等级（向下取整）。</p>",
+        "chat": ""
+      },
+      "advancement": [],
+      "activities": {
+        "tPgfHXDEcX6q7dnn": {
+          "type": "cast",
+          "spell": {
+            "uuid": "Compendium.dnd5e_classpack.new-icon.Item.CB9z74KJLWMplGuz",
+            "challenge": {
+              "attack": null,
+              "save": null,
+              "override": false
+            },
+            "level": "1",
+            "properties": [
+              "vocal",
+              "somatic",
+              "material"
+            ],
+            "spellbook": true,
+            "ability": ""
+          },
+          "_id": "tPgfHXDEcX6q7dnn",
+          "sort": 0,
+          "activation": {
+            "type": "bonus",
+            "value": null,
+            "override": true,
+            "condition": ""
+          },
+          "consumption": {
+            "scaling": {
+              "allowed": true,
+              "max": "@classes.monk.levels/2"
+            },
+            "spellSlot": true,
+            "targets": [
+              {
+                "type": "itemUses",
+                "value": "2",
+                "target": "Compendium.dnd5e_classpack.class-abilityphb.Item.2N9lOBZ0UerzDM55",
+                "scaling": {
+                  "mode": "amount",
+                  "formula": ""
+                }
+              }
+            ]
+          },
+          "description": {
+            "chatFlavor": ""
+          },
+          "duration": {
+            "units": "inst",
+            "concentration": false,
+            "override": false
+          },
+          "range": {
+            "units": "self",
+            "override": false
+          },
+          "target": {
+            "template": {
+              "contiguous": false,
+              "units": "ft"
+            },
+            "affects": {
+              "choice": false
+            },
+            "override": false,
+            "prompt": true
+          },
+          "uses": {
+            "spent": 0,
+            "recovery": [],
+            "max": ""
+          },
+          "useConditionText": "",
+          "useConditionReason": "",
+          "effectConditionText": "",
+          "macroData": {
+            "name": "",
+            "command": ""
+          },
+          "ignoreTraits": {
+            "idi": false,
+            "idr": false,
+            "idv": false,
+            "ida": false
+          },
+          "midiProperties": {
+            "ignoreTraits": [],
+            "triggeredActivityId": "none",
+            "triggeredActivityConditionText": "",
+            "triggeredActivityTargets": "targets",
+            "triggeredActivityRollAs": "self",
+            "forceDialog": false,
+            "confirmTargets": "never",
+            "autoTargetType": "any",
+            "autoTargetAction": "default",
+            "automationOnly": false,
+            "otherActivityCompatible": true,
+            "identifier": "",
+            "displayActivityName": false,
+            "rollMode": "default",
+            "chooseEffects": false,
+            "toggleEffect": false,
+            "ignoreFullCover": false
+          },
+          "isOverTimeFlag": false,
+          "overTimeProperties": {
+            "saveRemoves": true,
+            "preRemoveConditionText": "",
+            "postRemoveConditionText": ""
+          },
+          "name": "",
+          "img": ""
+        }
+      },
+      "flags": {
+        "dnd5e": {
+          "persistSourceMigration": true,
+          "migratedUses": 0,
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        },
+        "midiQol": {
+          "AoETargetType": "any",
+          "AoETargetTypeIncludeSelf": true,
+          "autoTarget": "default",
+          "rollAttackPerTarget": "default",
+          "removeAttackDamageButtons": "default",
+          "itemCondition": "",
+          "effectCondition": "",
+          "reactionCondition": "",
+          "otherCondition": ""
+        }
+      }
+    },
+    {
+      "pack": "class-abilityphb",
+      "id": "Y3yZcHJQTw2VMf0R",
+      "name": "宁神境 Tranquility",
+      "sourceSha256": "a0eaecd050505ad00a33b0bba6517368698db755fe4b5124008caf2872cc7589",
+      "description": {
+        "value": "<p>第11级起，你可以进入一种特殊的冥想状态，使浑身环绕着和平的灵光。完成长休后，你将获得法术@UUID[Compendium.dnd5e_classpack.new-icon.FbxdKcDpSPWuGTLA]{庇护术 Sanctuary}的效应，其效应持续至你再次开始长休之前（该法术效应可以如常被提前终止）。该法术效应的豁免DC等于8＋你的感知调整值＋你的熟练加值。</p>",
+        "chat": ""
+      },
+      "advancement": [],
+      "activities": {
+        "QugFnX29M31CPqAf": {
+          "type": "cast",
+          "spell": {
+            "uuid": "Compendium.dnd5e_classpack.new-icon.Item.FbxdKcDpSPWuGTLA",
+            "challenge": {
+              "attack": null,
+              "save": null,
+              "override": false
+            },
+            "level": "1",
+            "properties": [
+              "vocal",
+              "somatic",
+              "material"
+            ],
+            "spellbook": true,
+            "ability": ""
+          },
+          "_id": "QugFnX29M31CPqAf",
+          "sort": 0,
+          "activation": {
+            "type": "action",
+            "value": null,
+            "override": false
+          },
+          "consumption": {
+            "scaling": {
+              "allowed": false
+            },
+            "spellSlot": true,
+            "targets": [
+              {
+                "type": "itemUses",
+                "value": "1"
+              }
+            ]
+          },
+          "description": {
+            "chatFlavor": ""
+          },
+          "duration": {
+            "units": "inst",
+            "concentration": false,
+            "override": false
+          },
+          "range": {
+            "units": "self",
+            "override": false
+          },
+          "target": {
+            "template": {
+              "contiguous": false,
+              "units": "ft"
+            },
+            "affects": {
+              "choice": false
+            },
+            "override": false,
+            "prompt": true
+          },
+          "uses": {
+            "spent": 0,
+            "recovery": [],
+            "max": ""
+          },
+          "useConditionText": "",
+          "useConditionReason": "",
+          "effectConditionText": "",
+          "macroData": {
+            "name": "",
+            "command": ""
+          },
+          "ignoreTraits": {
+            "idi": false,
+            "idr": false,
+            "idv": false,
+            "ida": false
+          },
+          "midiProperties": {
+            "ignoreTraits": [],
+            "triggeredActivityId": "none",
+            "triggeredActivityConditionText": "",
+            "triggeredActivityTargets": "targets",
+            "triggeredActivityRollAs": "self",
+            "forceDialog": false,
+            "confirmTargets": "never",
+            "autoTargetType": "any",
+            "autoTargetAction": "default",
+            "automationOnly": false,
+            "otherActivityCompatible": true,
+            "identifier": "",
+            "displayActivityName": false,
+            "rollMode": "default",
+            "chooseEffects": false,
+            "toggleEffect": false,
+            "ignoreFullCover": false
+          },
+          "isOverTimeFlag": false,
+          "overTimeProperties": {
+            "saveRemoves": true,
+            "preRemoveConditionText": "",
+            "postRemoveConditionText": ""
+          },
+          "name": "",
+          "img": ""
+        }
+      },
+      "flags": {
+        "dnd5e": {
+          "persistSourceMigration": true,
+          "migratedUses": 0,
+          "riders": {
+            "activity": [],
+            "effect": []
+          }
+        },
+        "midiQol": {
+          "rollAttackPerTarget": "default",
+          "itemCondition": "",
+          "effectCondition": "",
+          "removeAttackDamageButtons": "default",
+          "reactionCondition": "",
+          "otherCondition": ""
+        }
+      }
+    }
+  ]
+}

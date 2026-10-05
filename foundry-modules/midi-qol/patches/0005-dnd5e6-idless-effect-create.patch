@@ -1,0 +1,23 @@
+diff --git a/src/module/patching.ts b/src/module/patching.ts
+--- a/src/module/patching.ts
++++ b/src/module/patching.ts
+@@ -180,6 +180,19 @@
+   // Just add MidiDependentDocumentMixin for our registry tracking
+   //@ts-expect-error - Mixin pattern type inference
+   class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {
++    _initializeSource(data: any, options: any = {}) {
++      if (Number.parseInt(game.system.version, 10) === 6 && options?.creation === true) {
++        const isDataModel = data instanceof foundry.abstract.DataModel;
++        const source = isDataModel ? data.toObject() : data;
++        if (source && source.type !== "condition" && source._id == null) {
++          data = { ...source, _id: foundry.utils.randomID() };
++        }
++      }
++
++      // @ts-expect-error _initializeSource is supplied by dnd5e's ActiveEffect5e base at runtime.
++      return super._initializeSource(data, options);
++    }
++
+     clone(data: any = {}, context: any = {}) {
+       const effectType = (this as unknown as { type: string }).type;
+       const nestedFlags = data?.flags?.dnd5e;

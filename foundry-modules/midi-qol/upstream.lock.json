@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://gitlab.com/tposney/midi-qol.git",
+  "advisoryBranch": "dnd6",
+  "commit": "4338eeab85041cd71b76ede36818e2265cbf06ae",
+  "parent": "2b10fec5d4062e4f8d1643ab78c65de4b3ac8ee8",
+  "tree": "f00f2ff428dd197ec0b3b442378d7c8c5455b224",
+  "packageLockGitObject": "eae078ccc073d95d4a459ad4e3b4779167df9a99",
+  "packageLockSha256": "7D3B0AE245B988AD5FB41AAE0839E34F1FEE2222BC88F771173A610ECC45145A",
+  "candidateVersion": "14.6.0-beta.4338eeab.local.9",
+  "moduleId": "midi-qol",
+  "target": {
+    "foundry": "14.368",
+    "dnd5e": "6.0.2",
+    "world": "cor-cotn",
+    "dataRoot": "F:/FoundryLab/foundry-v14/data/server-next",
+    "port": 30002
+  },
+  "patches": [
+    {
+      "path": "patches/0001-dnd5e6-active-effect-base-type.patch",
+      "sha256": "3BFBE35BF569FAAEE6952FD2CB7ABBA67F5EAD47365ABE7DD987720456FFDE79",
+      "purpose": "Provide each Midi-created template, summon, and transform cleanup ActiveEffect with a fresh id, top-level base type, and changes-only system data so dnd5e 6 migration cannot mistake missing ids for status ids."
+    },
+    {
+      "path": "patches/0002-dnd5e6-restored-workflow-item.patch",
+      "sha256": "48CF9838B3E40AFD0D9D1F30B280FBD9FED00BC2E4163496FEA4BBAF035CA26B",
+      "purpose": "Restore a dnd5e 6 ChatMessage item through the already-bound Activity or native scaled chat-card association before legacy flag lookup, preserving older dnd5e behavior and missing-item diagnostics."
+    },
+    {
+      "path": "patches/0003-dnd5e6-unavailable-damage-target.patch",
+      "sha256": "28DCADB396461D0A67D4E901AE2FA842D0A1704EDED147CA2D3420742DB847B4",
+      "purpose": "Before dnd5e 6 calculates a damage target row, render unresolved or actorless non-token targets as visibly unavailable and non-interactive so they cannot abort the damage tray."
+    },
+    {
+      "path": "patches/0004-dnd5e6-enchantment-clone-id.patch",
+      "sha256": "316BE603E37B7E97BC6EAE4F20C3105F0A9392249B4B3692265DA10143D671F4",
+      "purpose": "Give only the default dnd5e 6 enchantment-application clone a fresh ActiveEffect ID so id-less status migrations cannot misclassify it, while preserving caller types and explicit clone contexts."
+    },
+    {
+      "path": "patches/0005-dnd5e6-idless-effect-create.patch",
+      "sha256": "E2C6459078459BAD65CF98D1BAED3CFB13A7D289B80C12D6FE31EE87B6EA48F1",
+      "purpose": "Give only id-less non-condition ActiveEffects created on dnd5e 6 a fresh ID before source migration, preserving explicit IDs, condition migration, non-creation paths, and other system majors."
+    },
+    {
+      "path": "patches/0006-manual-isdamaged-after-apply.patch",
+      "sha256": "F00E76823CFA3111774A999A2D9A610320D2A50D52BB8D4C8D450D68DBB1D510",
+      "purpose": "In dnd5e 6 manual APPLY mode, defer DAE isDamaged expiry until the own Midi damage tray confirms a positive post-write HP or temp HP loss; leave typed expiry pending exact per-type contribution proof."
+    }
+  ]
+}

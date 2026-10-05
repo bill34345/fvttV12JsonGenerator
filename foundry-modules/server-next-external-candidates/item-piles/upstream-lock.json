@@ -1,0 +1,52 @@
+[
+  {
+    "id": "item-piles",
+    "repo": "fantasycalendar/FoundryVTT-ItemPiles",
+    "tag": "3.3.4",
+    "publishedAt": "2026-07-18T20:57:02Z",
+    "releaseUrl": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/tag/3.3.4",
+    "releaseBody": "- Fixed item being locked with a highlight when moving or clicking inside a recipient/container (thank you sambarilov on Github!)\r\n- Fixed item piles sometimes not being able to be opened due to leftover flags spamming errors in the console\r\n- Fixed merchants failing to open when an item's stored prices were not in the expected format\r\n- Fixed converting Small creature tokens into item piles shrinking them\r\n- Fixed merchant currencies being cut off when they wrapped onto a second line",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/download/3.3.4/module.json",
+        "sha256": "3be7e403f485906ea0dd5d91ec930cd24f5ac8992a66fd246f8b6cc6d1be6f05"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/download/3.3.4/module.zip",
+        "sha256": "e2531f17e361a43dcccd721ab70123c63bc349c80976420f38113c9ea0ceac63"
+      }
+    ],
+    "source": {
+      "commit": "85ab971406623fb1c5d01eb1f093fe4855ede6e4",
+      "url": "https://codeload.github.com/fantasycalendar/FoundryVTT-ItemPiles/zip/85ab971406623fb1c5d01eb1f093fe4855ede6e4",
+      "sha256": "912b2118b4696a9eb23f68ea6d0ebd73796dc740b4277929b914ed723cbf41a9"
+    }
+  },
+  {
+    "id": "item-piles-dnd5e",
+    "repo": "fantasycalendar/FoundryVTT-ItemPilesDnD5e",
+    "tag": "1.1.0",
+    "publishedAt": "2026-05-09T21:12:39Z",
+    "releaseUrl": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/tag/1.1.0",
+    "releaseBody": "Updated Item Piles D&D 5e to support Foundry V14",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/download/1.1.0/module.json",
+        "sha256": "369d8308eb1d3ea74f3df9842b27d951dd795b672ca37e0ce01286b6195179bc"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/download/1.1.0/module.zip",
+        "sha256": "6f7cc3335ab6ee9a9c8b5e7b25564bfb616562db3a9ffe31dc828021a660ca56"
+      }
+    ],
+    "source": {
+      "commit": "2db66145826d791c7a7b98682bbcc82532003941",
+      "url": "https://codeload.github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/zip/2db66145826d791c7a7b98682bbcc82532003941",
+      "sha256": "478f98feac769b64bcff957621a62dbd34e531ac134cb209eacf54850543e437"
+    }
+  }
+]

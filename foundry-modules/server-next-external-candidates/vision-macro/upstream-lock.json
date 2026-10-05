@@ -1,0 +1,56 @@
+[
+  {
+    "id": "vision-5e",
+    "repo": "dev7355608/vision-5e",
+    "tag": "v3.2.2",
+    "publishedAt": "2026-08-06T08:53:15Z",
+    "releaseUrl": "https://github.com/dev7355608/vision-5e/releases/tag/v3.2.2",
+    "releaseBody": "- Fixed #192.",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/dev7355608/vision-5e/releases/download/v3.2.2/module.json",
+        "sha256": "7a9063093d6fd6a0823436d235d529c50301277f9141e821d381564816251f6f"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/dev7355608/vision-5e/releases/download/v3.2.2/module.zip",
+        "sha256": "c7a9bac2d6b0791fe777fde5a56f76cf0f43f543f78e721dd0dfec8966003058"
+      }
+    ],
+    "source": {
+      "commit": "0876fbb32eb43bd4562683d80dedfdd9fb62fbcf",
+      "url": "https://codeload.github.com/dev7355608/vision-5e/zip/0876fbb32eb43bd4562683d80dedfdd9fb62fbcf",
+      "sha256": "3be4eb3c14302c20b012b4daeabf369463c76fd0edb648bfa3ea0b2d856ba480"
+    },
+    "packageId": "vision-5e",
+    "packageVersion": "3.2.2"
+  },
+  {
+    "id": "item-macro",
+    "repo": "Foundry-Workshop/Item-Macro",
+    "tag": "v3.0.1",
+    "publishedAt": "2025-07-10T10:14:40Z",
+    "releaseUrl": "https://github.com/Foundry-Workshop/Item-Macro/releases/tag/v3.0.1",
+    "releaseBody": "",
+    "assets": [
+      {
+        "name": "module.json",
+        "url": "https://github.com/Foundry-Workshop/Item-Macro/releases/download/v3.0.1/module.json",
+        "sha256": "57cee33b30187f457bd2ad7f853e15b9d7d373769ce880f7de75b08ecce5843c"
+      },
+      {
+        "name": "module.zip",
+        "url": "https://github.com/Foundry-Workshop/Item-Macro/releases/download/v3.0.1/module.zip",
+        "sha256": "1b14538a7e809ce97e395616bfb069609c3833053dd1b07f16f6c2c912724714"
+      }
+    ],
+    "source": {
+      "commit": "035ade6a94a6b2e433b1a1f64432af3d6b87434a",
+      "url": "https://codeload.github.com/Foundry-Workshop/Item-Macro/zip/035ade6a94a6b2e433b1a1f64432af3d6b87434a",
+      "sha256": "c3bf761d397f91b50becd8e8a1780353e6287e020010b757165794ac67c1ffda"
+    },
+    "packageId": "itemacro",
+    "packageVersion": "3.0.1"
+  }
+]

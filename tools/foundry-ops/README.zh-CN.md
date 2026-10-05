@@ -36,7 +36,7 @@ bun run foundry:ops catalog
 
 ## ServerNext 自有模块首次安装
 
-`lab install-server-next-owned-module` 复用已接受的首次安装保护，只允许代码白名单内的自有模块。本批包含 Trigger Engine、Custom Conditions及Weapon Mastery & Properties；仅首次安装、目标存在即拒绝替换。入口不赋予其他模块的迁移授权，也不证明6.x运行兼容。
+`lab install-server-next-owned-module` 复用已接受的首次安装保护，只允许代码白名单内的自有模块。包含 Trigger Engine、Custom Conditions、Weapon Mastery & Properties 和 Selected Token Sync；仅首次安装、目标存在即拒绝替换。入口不赋予其他模块的迁移授权，也不证明6.x运行兼容。
 
 先在实际候选工作树完成构建和字节核对，确认 Next 归属、世界状态和本次安装范围。显式设置本进程的 `FVTT_OPS_LAB_ROOT` 为 `F:/FoundryLab/foundry-v14` 后预览，例如：
 
@@ -47,7 +47,9 @@ bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigge
 
 本条命令只有显式加入 `--apply` 才写入；缺少它时只核对并返回清单。它只导向该 Lab 的 `data/server-next/Data/modules/<id>`，检查源码／构建完整 manifest 一致、声明资源和逐文件 SHA，拒绝链接、路径逃逸及已有目标（包括空目录）。新构建字节先放到扫描目录外的本批 staging，再一次移入此前不存在的目标；失败保留现场供核对，不覆盖原包或创建备份。
 
-已经安装的 IFS1.0.1 不能使用这个入口升级。已有包升级须另按完整旧文件集合／SHA、候选集合、明确版本和停止状态的受控流程处理。本命令不启停服务、不改世界开关、不读写 LevelDB；安装字节通过后，仍需正常客户端登记、启用和对应玩法验收。
+已经安装的包不能使用这个入口升级。已有包升级须另按完整旧文件集合／SHA、候选集合、明确版本和停止状态的受控流程处理。本命令不启停服务、不改世界开关、不读写 LevelDB；安装字节通过后，仍需正常客户端登记、启用和对应玩法验收。
+
+Spell Resolver 的实际模块 ID 为 `fvtt-json-generator-spell-resolver`，源码 owner 为 `foundry-modules/monster-spell-resolver`；安装参数版本必须等于本次已审查的源码及构建 manifest。Selected Token Sync 0.2.0 的本次目标为精确 Core14.368／dnd5e6.0.5，不把旧 Mirror 0.1.0 的安装入口或接受记录扩大到 Next。
 
 ## 共用验收工具：文件侧第一版
 

@@ -14,6 +14,7 @@ const OWNED_MODULES = {
   'fvtt-house-rules': { owner: 'fvtt-house-rules', manifest: 'src/module.json', build: 'dist' },
   'open-session-deck': { owner: 'open-session-deck', manifest: 'src/module.json', build: 'dist/module' },
   'fvtt-json-generator-spell-resolver': { owner: 'monster-spell-resolver', manifest: 'src/module.json', build: 'dist/module' },
+  'fvtt-selected-token-sync': { owner: 'fvtt-selected-token-sync', manifest: 'src/module.json', build: 'dist/module' },
 } as const;
 const SERVER_NEXT_LAB_ROOT = resolve('F:/FoundryLab/foundry-v14');
 

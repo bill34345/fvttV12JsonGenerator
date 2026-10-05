@@ -9,6 +9,15 @@ not that the module has passed complete long-session acceptance.
 
 Foundry 14.364; dnd5e 5.3.3.
 
+## ServerNext incremental acceptance (2026-10-03 to 2026-10-05)
+
+This row applies only to the stated Next target; it does not update the historical 5.3.3 matrix below.
+
+| Module | Version / target | Status | Accepted scope | Boundary |
+|---|---|---|---|---|
+| fvtt-weapon-mastery-properties | 0.1.0 / Core14.368 / dnd5e6.0.5 / build42e08f2d | Partial overall; native Cleave slice PASS | Real secondary attack and damage, exact Actor/Token/AC and child origin; primary remains selected; 1d12+0=9 and HP80→71. Owned fixtures removed, original settings restored. [Closeout evidence](../reviews/2026-10-05-servernext-closeout.md) | Midi was disabled for this slice; full mastery matrix, multiplayer, long sessions and production not expanded. |
+| fvtt-selected-token-sync | 0.2.0 / Core14.368 / dnd5e6.0.5 | Partial overall; named GM behavior PASS | Real ordinary/graded HUD, per-Actor +/-1, linked/synthetic, bounds/rapid input, overlay, movement/default-null, programmatic exclusion, two GM clients, reload, exact batch cleanup. [Evidence](../reviews/2026-10-03-selected-token-sync-next-605.md) | Full player-role UI, production and long-duration session not accepted. Existing unrelated old-copy identifier error preserved. |
+
 ## Mechanical evidence
 
 - 249 disk manifests inspected

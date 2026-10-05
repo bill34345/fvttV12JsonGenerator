@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-09-20T03:24:34.593Z",
+  "source": "https://gitlab.com/api/v4/projects/tposney%2Fmidi-qol",
+  "lockedCommit": "4338eeab85041cd71b76ede36818e2265cbf06ae",
+  "advisoryHead": "4338eeab85041cd71b76ede36818e2265cbf06ae",
+  "advisoryAdvanced": false,
+  "latestRelease": { "tag": "v14.0.12", "releasedAt": "2026-09-09T12:26:19.211Z" },
+  "branchCount": 10,
+  "openMergeRequestCount": 12,
+  "relevantMergeRequests": [],
+  "scope": "Repeat advisory check of release, all returned branch heads and open MR diffs using the existing tool filters. This does not claim a fresh full code audit of every historical commit. The explicit source lock remains unchanged."
+}

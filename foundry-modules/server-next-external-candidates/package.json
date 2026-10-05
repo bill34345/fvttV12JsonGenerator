@@ -1,0 +1,17 @@
+{
+  "name": "server-next-external-candidates",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests.mjs",
+    "test:item-piles": "node --test item-piles/tests.mjs item-piles/tool.test.mjs item-piles/registration.test.mjs item-piles/reset.test.mjs item-piles/currency-metadata.test.mjs",
+    "test:vision-macro": "node --test vision-macro/tests.mjs vision-macro/tool.test.mjs",
+    "test:dae": "node --test dae/should-apply-change.test.mjs",
+    "build:dae": "node dae/build-candidate.mjs",
+    "build:classpack": "bun classpack/build-candidate.ts",
+    "test:classpack": "bun test classpack/next-migration.test.ts classpack/offline-candidate.test.ts classpack/source-reference-patches.test.ts classpack/tcoe-overlay-projection.test.ts classpack/source-safe-native-migration.test.ts classpack/tcoe-source-interop.test.ts",
+    "test:classpack-source-migration": "bun test classpack/source-safe-native-migration.test.ts --max-concurrency 1",
+    "test:classpack-tcoe-source-interop": "bun test classpack/tcoe-source-interop.test.ts --max-concurrency 1",
+    "test:dae-compendium-status": "node --test dae/compendium-status-guard.test.mjs"
+  }
+}

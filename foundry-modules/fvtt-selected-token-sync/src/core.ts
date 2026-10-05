@@ -110,6 +110,39 @@ export function dedupeActors(targets: readonly SyncTarget[]): any[] {
   return result;
 }
 
+/** Read the native dnd5e condition effect, not the binary Actor.statuses set. */
+export function conditionLevel(actor: any, statusId: string, effectId: string | undefined): number {
+  const effects = actor?.effects;
+  const byId = effectId ? effects?.get?.(effectId) : undefined;
+  const candidates = effects?.documentsByType?.condition ?? effects?.contents ?? [...(effects?.values?.() ?? [])];
+  const effect = byId ?? candidates.find?.((entry: any) => entry?.system?.type === statusId);
+  const level = effect?.system?.level;
+  return Number.isInteger(level) && level > 0 ? level : 0;
+}
+
+/**
+ * Apply one HUD level step to each distinct Actor. Snapshot all levels first,
+ * then re-read after each native write: world Actor updates can project into a
+ * selected synthetic Actor before its own turn in this transaction.
+ */
+export async function applyGradedStatusDelta(
+  targets: readonly SyncTarget[], statusId: string, effectId: string | undefined,
+  maxLevel: number, delta: 1 | -1,
+): Promise<void> {
+  const actors = dedupeActors(targets);
+  const snapshots = actors.map((actor) => ({
+    actor,
+    desired: Math.min(maxLevel, Math.max(0, conditionLevel(actor, statusId, effectId) + delta)),
+  }));
+  snapshots.sort((a, b) => Number(a.actor?.isToken === true) - Number(b.actor?.isToken === true));
+  for (const { actor, desired } of snapshots) {
+    const current = conditionLevel(actor, statusId, effectId);
+    const remaining = desired - current;
+    if (remaining === 0) continue;
+    await actor.toggleStatusEffect(statusId, { levels: remaining });
+  }
+}
+
 export function normalizeMovementAction(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }

@@ -1,0 +1,98 @@
+{
+  "release": {
+    "id": "lib-wrapper",
+    "repo": "ruipin/fvtt-lib-wrapper",
+    "tag": "v1.13.5.1",
+    "publishedAt": "2026-05-03T19:06:47Z",
+    "releaseUrl": "https://github.com/ruipin/fvtt-lib-wrapper/releases/tag/v1.13.5.1",
+    "releaseBody": "",
+    "assets": [
+      {
+        "name": "lib-wrapper-v1.13.5.1.zip",
+        "url": "https://github.com/ruipin/fvtt-lib-wrapper/releases/download/v1.13.5.1/lib-wrapper-v1.13.5.1.zip",
+        "sha256": "8e61e7a08a7bbbbe298e52f0af9766bdd2cf4c4c05fbb12a1ccd58261c6819ce"
+      },
+      {
+        "name": "module.json",
+        "url": "https://github.com/ruipin/fvtt-lib-wrapper/releases/download/v1.13.5.1/module.json",
+        "sha256": "734ba1434f4e537cc6ef3292b9595d392abb09ba4d4cc662301d70ef68911fa0"
+      }
+    ],
+    "source": null
+  },
+  "installedFiles": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "8bc3c1dc7465d244706e1409b8fcff6105ca8575079fb18153d391f4b89ad044"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "f2d2976bb9c6a2e713d968dd47f3a438a7f882ec5c0da89865cbd24ad52a3269"
+    },
+    {
+      "path": "lang/cs.json",
+      "sha256": "544894e3feec4255d5dd24e18c218dc72befb070dbb26f9ffd378c3bafb29324"
+    },
+    {
+      "path": "lang/en.json",
+      "sha256": "9ab57ac95b70b20cff2fd66a04342801b3517442dcda994b39506b4796536ba8"
+    },
+    {
+      "path": "lang/es.json",
+      "sha256": "c863da53ff8ac6004663f796a82076340242edf4414d8e637f8c36ac81bf0979"
+    },
+    {
+      "path": "lang/it.json",
+      "sha256": "9d1456280ab256f2ae20d3e5745ea8a03fe8f148cbc91f73a84e217cc3637ef4"
+    },
+    {
+      "path": "lang/ja.json",
+      "sha256": "17fdb3ca3e86d8f7897a8a07a195381daddc316efa31ff9e0c312a6d5d5da537"
+    },
+    {
+      "path": "lang/pl.json",
+      "sha256": "c095d9614f8b628ed431f176c04b91c66897fb982706bdf835505d38eeb2b4ea"
+    },
+    {
+      "path": "lang/pt-BR.json",
+      "sha256": "00bc7c63695bb15955045a63818ff828b17da8f3c0d902fd501aaed8086ff543"
+    },
+    {
+      "path": "lang/pt-PT.json",
+      "sha256": "db994876317bbe2a9e8ea835eac77d7dc1bac874932cf0704ead1bfb3b654547"
+    },
+    {
+      "path": "lib-wrapper.css",
+      "sha256": "66167baea04802a704790aa5bbd9b9158b790420af4dcee9ed4a9cd8daf91095"
+    },
+    {
+      "path": "lib-wrapper.js",
+      "sha256": "26a498294dfe5e303d58f22b9f5ed14dea0e6dd215f24e50b948e091096f8b73"
+    },
+    {
+      "path": "lib-wrapper.js.map",
+      "sha256": "f04c73c5fb36688625c742d8158de65d300ae0c2ec6ab3e3fc9487213b63eae0"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "a5681bf9b05db14d86776930017c647ad9e6e56ff6bbcfdf21e5848288dfaf1b"
+    },
+    {
+      "path": "module.json",
+      "sha256": "734ba1434f4e537cc6ef3292b9595d392abb09ba4d4cc662301d70ef68911fa0"
+    },
+    {
+      "path": "README.md",
+      "sha256": "96bbd547b6c8ef4a40f5ae138781cb442c74c8ae136d021f2e10d6bedb84ba2c"
+    },
+    {
+      "path": "SYSTEMS.md",
+      "sha256": "53ffc484a77e93758ae8205120f74129fced2741e502dfdf4db7b4145626bb84"
+    },
+    {
+      "path": "templates/settings.html",
+      "sha256": "1848725dd82a670deb6727ab20aa874798f440d70240591b76056f3eecec700c"
+    }
+  ],
+  "identical": true
+}

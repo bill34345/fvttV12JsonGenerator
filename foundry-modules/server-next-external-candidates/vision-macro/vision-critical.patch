@@ -1,0 +1,11 @@
+--- sources\vision\scripts\actor.mjs
++++ sources\vision\scripts\actor.mjs
+@@ -226,7 +226,7 @@
+  */
+ function isPoisonousAttack(activity) {
+     return activity.type === "attack" && (activity.damage.parts.some(isPoisonDamage)
+-        || /\[\s*poison\s*\]/i.test(activity.damage.critical));
++        || /\[\s*poison\s*\]/i.test(activity.damage.critical?.bonus ?? activity.damage.critical));
+ }
+ 
+ /**
