@@ -1,3 +1,4 @@
+import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
 import {
   BROWSER_MAX_CONCURRENT_ACTOR_JOBS,
   buildForgeItemRequest,
@@ -329,7 +330,7 @@ function isItemApplyable(response?: ForgeItemResponse): boolean {
     && result.verification.status === 'accepted'
     && Boolean(result.artifact && result.artifactHash)
     && !result.diagnostics.some((entry) => entry.severity === 'warning' || entry.severity === 'error')
-    && result.target.fvttRuntimeVersion === EXPECTED_FOUNDRY_VERSION
+    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion)
     && result.target.generatorProfile === 'v14'
     && result.target.systemId === 'dnd5e'
     && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION

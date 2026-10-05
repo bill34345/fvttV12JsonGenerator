@@ -604,7 +604,7 @@ export async function installEncounterAutomation(
 
 function assertEnvironment(env: EncounterAutomationEnvironment): void {
   if (!env?.game?.user?.isGM) throw new Error('战斗自动化只能由 GM 启动。');
-  if (env.game.version !== '14.364' || env.game.system?.id !== 'dnd5e' || env.game.system?.version !== '5.3.3') {
+  if ((env.game.version !== '14.364' && env.game.version !== '14.368') || env.game.system?.id !== 'dnd5e' || env.game.system?.version !== '5.3.3') {
     throw new Error('固定战斗自动化只支持 Foundry 14.364 / dnd5e 5.3.3。');
   }
   if (!env.Hooks?.on || !env.Hooks?.off || typeof env.fromUuid !== 'function') throw new Error('Foundry Hooks 或 UUID 解析接口不可用。');

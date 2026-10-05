@@ -30,3 +30,7 @@ Use the package scripts for focused tests, typecheck, deterministic build, and
 artifact verification. Do not install, start, stop, or modify a Foundry Lab
 while working on pure core code unless the parent task explicitly coordinates
 that operation.
+
+## Mirror Core patch continuation (2026-10-03)
+
+The user authorized Mirror Foundry `14.368` with dnd5e `5.3.3`. Runtime gates now include this exact pair while preserving the previous supported pairs; this does not accept other Core/system combinations. Record actual new-Core behavior separately from legacy tests and historical Next evidence. Current maintenance and acceptance: [Mirror patch review](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md). The new pair overrides older exact-364-only wording for this scoped continuation; existing authority and data protections remain applicable.

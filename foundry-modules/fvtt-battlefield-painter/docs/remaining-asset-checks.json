@@ -1,0 +1,482 @@
+[
+  {
+    "file": "earthquake-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "f8629f2b380694d55339e0454f510257b956205cd28acacb4ee690bb0d2d7932",
+    "alphaCoverage": 0.1721054142832625,
+    "clearPixels": 1134370,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "forceBarrier-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "caba8de3f6df139fd09f2b51a9f9005631c2386e9cc4048cc03faf7d40d69f45",
+    "alphaCoverage": 0.43071670482457514,
+    "clearPixels": 91341,
+    "alphaExtrema": [
+      0,
+      252
+    ]
+  },
+  {
+    "file": "grease-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "9d978e6ca843cca44faf820f25c34c4a2cb9189601e32f58c29d7e2c19570f3e",
+    "alphaCoverage": 0.14897190858720774,
+    "clearPixels": 1274809,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "grease-stage-2.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "f7661f0f4be02275fae37dc44f02b9bfc8c4b17e292931b3d227b337bc6880f0",
+    "alphaCoverage": 0.5675900676019182,
+    "clearPixels": 626322,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "haze-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "67ecad634b56e54bc6cc0cbaad08e590f58734c96dd7373d9db4fab659499b42",
+    "alphaCoverage": 0.38948383654340074,
+    "clearPixels": 366733,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "deadlyHaze-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "d02bd23550ac03bf263286f462621022595520cc3156e233d8300b60e040ca1c",
+    "alphaCoverage": 0.4731688854913113,
+    "clearPixels": 502368,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "smoke-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "9066d4d9ad4298695b4932697e654616888282bfa851eeedf62e46d68618e752",
+    "alphaCoverage": 0.5103900610581399,
+    "clearPixels": 557873,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "hole-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "1a7346b4dd915a53682ebcb06ee09ecd2ac084abdf8c68341134ea51e99474ca",
+    "alphaCoverage": 0.5945934874742258,
+    "clearPixels": 571980,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "hole-stage-2.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "ae2a1b1b587133f860fdab166176fec8ef056389ca64983a53542e1731a92825",
+    "alphaCoverage": 0.568552808515331,
+    "clearPixels": 639358,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "mold-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "e5d28132a39292530406ec8971b1bf13df87a01b05a665408933e16a0f0462a4",
+    "alphaCoverage": 0.1984848335219408,
+    "clearPixels": 1006956,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "mold-stage-2.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "62c093a1fae5d0a21e081b8deb1544b67eecaa768f7097b6005a808b37b218e3",
+    "alphaCoverage": 0.5009988663602363,
+    "clearPixels": 623143,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "mold-stage-3.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "f12b3969cac0584a7ba886e8d793db48726d4613748e477e24c27e82e3746f66",
+    "alphaCoverage": 0.580263351165628,
+    "clearPixels": 487735,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "moss-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "2249eb7d45c44ec2bb6fce21fd92749f6f8bb1826a7abb196733e01141a35339",
+    "alphaCoverage": 0.4854505124521567,
+    "clearPixels": 709085,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "sand-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "08318464c9ed4630197ab8fa86e8c69b6a60dea9488f8debd83e34c3994e123b",
+    "alphaCoverage": 0.6566474837202317,
+    "clearPixels": 407358,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "pillar-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "0a3805312bef20628dad8a8037d4888201e239e128fe562317327999e2cb8deb",
+    "alphaCoverage": 0.6530653735921338,
+    "clearPixels": 508608,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "spikes-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "e25eba5e1d91d363ea975511b243fd8bcf858ef67e80e9b4fa9a4a87f22e1bb1",
+    "alphaCoverage": 0.11079419672602601,
+    "clearPixels": 1365752,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "holyLight-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "95483a01c4a9c53e7c43865bc9a9d057158c03d72445e001f9237c65206b5dfe",
+    "alphaCoverage": 0.24135153910214274,
+    "clearPixels": 627367,
+    "alphaExtrema": [
+      0,
+      253
+    ]
+  },
+  {
+    "file": "lightningField-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "2173a24b064b3ea95a5dced33d641f0438829b00ea4a4a2a65e767af54eee70e",
+    "alphaCoverage": 0.16079335630937688,
+    "clearPixels": 542173,
+    "alphaExtrema": [
+      0,
+      253
+    ]
+  },
+  {
+    "file": "magicCircle-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "5d483fc4d6507851cc6ebaef914bac6333072281f09c40f0a9e96433dc9344bc",
+    "alphaCoverage": 0.23500832610998965,
+    "clearPixels": 624529,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "magicLight-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "646bb53d832d6b3e7fbf93132255be828f2effee9ff60c8c08839bff4ff56646",
+    "alphaCoverage": 0.19510823893110174,
+    "clearPixels": 812317,
+    "alphaExtrema": [
+      0,
+      253
+    ]
+  },
+  {
+    "file": "magicPlatform-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "7288188a674e27908780e7b777f1681ed444bb529e98baf72bce43a1bdedcc2d",
+    "alphaCoverage": 0.4849742630506107,
+    "clearPixels": 257479,
+    "alphaExtrema": [
+      0,
+      253
+    ]
+  },
+  {
+    "file": "magicPlatform-stage-2.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "18802c6f1ddf6c0ec492c7f3d87afd820c973b52b13fd1dd3e1806882bd48a4c",
+    "alphaCoverage": 0.3120014041192586,
+    "clearPixels": 556641,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "portal-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "1d2df09f71bdf8f093e6d5da99b4d2b88ec0a494c688c79adcbf314e9833fbf1",
+    "alphaCoverage": 0.498180420646239,
+    "clearPixels": 289129,
+    "alphaExtrema": [
+      0,
+      253
+    ]
+  },
+  {
+    "file": "rift-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "d8eea6abd6e5276d5a65ab244f753a9c227a2be317b10126a3a7e473bd4e163d",
+    "alphaCoverage": 0.13458582846053774,
+    "clearPixels": 1144120,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "rift-stage-2.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "5029db6f6c65c05fa009c8ff6861212f53c830ded09bd81dbc026f05f4a02741",
+    "alphaCoverage": 0.44721586423335874,
+    "clearPixels": 729776,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "rift-stage-3.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "6092c7309c6bb7dcc04404a38a9fd21c0ca9ef0e2b693b7deca32b4e6bc9d3b4",
+    "alphaCoverage": 0.47181890452662373,
+    "clearPixels": 578239,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "rune1-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "6360df5fc67d9376029e90ad2a978c615bc7f76c65ea1186f301701428d002f7",
+    "alphaCoverage": 0.08514898492382308,
+    "clearPixels": 1289232,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "rune2-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "f846ed979c3ca36d5a6a2e77be8b42f3eca2a273f80e13f8a5919dda3551a8c0",
+    "alphaCoverage": 0.1718070613851792,
+    "clearPixels": 1023526,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "rune3-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "5f358dcdd4bbba03233c87501ee42fa07537b976bc7cbae6ded2f049f1594727",
+    "alphaCoverage": 0.06583536741594424,
+    "clearPixels": 1308137,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "rune4-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "4d6c12eaaf71fc41cb53cf01a152049b1987b7980b8fd8a00c2c0352af8c5031",
+    "alphaCoverage": 0.15382509278623754,
+    "clearPixels": 1096236,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "unholyLight-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "4ba312a0d631b52eb2d6aac9231b0baad9617c2ee6c0c62f7deddd39394a81e3",
+    "alphaCoverage": 0.18484614315342981,
+    "clearPixels": 843661,
+    "alphaExtrema": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "wildMagic-stage-1.png",
+    "mode": "RGBA",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "92901cf8e4703fd467077e720d4a5b84f8b2b0743a89e71d60437ae51a68145b",
+    "alphaCoverage": 0.30465768134084015,
+    "clearPixels": 774522,
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  }
+]

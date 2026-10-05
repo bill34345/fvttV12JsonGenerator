@@ -296,7 +296,7 @@ test("MIDI adapter is isolated to exactly 14.0.11 and tolerates matching DAE onl
   next.set("midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.8" });
   expect(inspectMidiAdapter(next, "14.368", "6.0.2").reason).toBe("unsupported-midi-version");
   expect(inspectMidiAdapter(next, "14.364", "5.3.3").supported).toBeFalse();
-  expect(inspectMidiAdapter(new Map(), "14.368", "5.3.3").reason).toBe("unsupported-runtime");
+  expect(inspectMidiAdapter(new Map(), "14.368", "5.3.3").reason).toBe("absent");
 });
 
 describe("critical first-die display contract", () => {

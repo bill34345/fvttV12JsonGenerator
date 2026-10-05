@@ -149,9 +149,8 @@ const pushQuad = (
   stageIndex: number,
   strength: number,
 ): boolean => {
-  // The quad is deliberately larger than one flame lobe. Clipping it to the
-  // owning square prevents an L-shaped hole from being filled by neighbors,
-  // while occupied adjacent squares still meet without a geometric gap.
+  // Each lobe is clipped against the occupied-cell union by the caller.
+  // Adjacent pieces retain the same UV mapping across cell boundaries.
   const halfSize = gridSize * (0.43 + strength * 0.05);
   const rawMinX = anchor.x - halfSize;
   const rawMaxX = anchor.x + halfSize;
@@ -218,6 +217,10 @@ export const buildFireFieldGeometry = (
   }
 
   const origin = inferWorldOrigin(cells, gridSize);
+  const indexed = new Map(cells.map(entry => {
+    const index = cellGridIndex(entry, origin, gridSize);
+    return [`${index.i}:${index.j}`, entry] as const;
+  }));
   const positions: number[] = [];
   const uvs: number[] = [];
   const variants: number[] = [];
@@ -234,9 +237,10 @@ export const buildFireFieldGeometry = (
         : BASE_EMITTER_OFFSETS;
     for (let layer = 0; layer < offsets.length; layer += 1) {
       const [offsetX, offsetY] = offsets[layer]!;
+      const seed = hash32(index.j, index.i, layer + 37);
       const anchor = {
-        x: origin.x + (index.j + offsetX) * gridSize,
-        y: origin.y + (index.i + offsetY) * gridSize,
+        x: origin.x + (index.j + offsetX + (seed - 0.5) * 0.28) * gridSize,
+        y: origin.y + (index.i + offsetY + (hash32(index.j, index.i, layer + 91) - 0.5) * 0.28) * gridSize,
       };
       const epsilon = gridSize * 0.0001;
       if (
@@ -252,10 +256,14 @@ export const buildFireFieldGeometry = (
       const key = `${roundCoordinate(anchor.x)},${roundCoordinate(anchor.y)}`;
       if (emitted.has(key)) continue;
       emitted.add(key);
-      const seed = hash32(latticeX, latticeY, layer + cell.stageIndex * 17);
-      const strength = 0.82 + seed * 0.18;
-      const variant = Math.min(3, Math.floor(seed * 4));
-      pushQuad(
+      const variation = hash32(latticeX, latticeY, layer + 17);
+      const strength = 0.62 + variation * 0.30;
+      const variant = Math.min(3, Math.floor(variation * 4));
+      for (let di = -1; di <= 1; di += 1) {
+        for (let dj = -1; dj <= 1; dj += 1) {
+          const neighbor = indexed.get(`${index.i + di}:${index.j + dj}`);
+          if (!neighbor || neighbor.cell.stageIndex !== cell.stageIndex) continue;
+          pushQuad(
         positions,
         uvs,
         variants,
@@ -263,12 +271,14 @@ export const buildFireFieldGeometry = (
         strengths,
         indices,
         anchor,
-        bounds,
+        neighbor.bounds,
         gridSize,
         variant,
         cell.stageIndex,
         strength,
       );
+        }
+      }
     }
   }
 
@@ -284,7 +294,7 @@ export const buildFireFieldGeometry = (
     strengths: new Float32Array(strengths),
     indices: new Uint16Array(indices),
     cellCount: cells.length,
-    emitterCount: positions.length / 8,
+    emitterCount: emitted.size,
     vertexCount: positions.length / 2,
     triangleCount: indices.length / 3,
     meshCount: positions.length ? 1 : 0,
@@ -339,7 +349,14 @@ vec2 variantUv(vec2 uv, float variant) {
 }
 
 void main() {
-  vec2 sheetUv = variantUv(vUv, vVariant);
+  // Rotate each lobe deterministically in world space so the same upward
+  // silhouette does not form rows of wallpaper. Transparent corners stay
+  // inside the variant quadrant rather than sampling adjacent variants.
+  float angle = fract(vEmitterStrength * 37.0 + vVariant * 0.173) * 6.2831853;
+  mat2 rotation = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+  vec2 localUv = rotation * (vUv - 0.5) + 0.5;
+  if (any(lessThan(localUv, vec2(0.0))) || any(greaterThan(localUv, vec2(1.0)))) discard;
+  vec2 sheetUv = variantUv(clamp(localUv, vec2(0.003), vec2(0.997)), vVariant);
   vec4 sampleColor = vStageIndex < 0.5
     ? texture(uStageITexture, sheetUv)
     : texture(uStageIITexture, sheetUv);
@@ -350,9 +367,11 @@ void main() {
   float brightness = max(max(sampleColor.r, sampleColor.g), sampleColor.b);
   float blackKey = smoothstep(0.012, 0.105, brightness);
   float sourceAlpha = min(sampleColor.a, blackKey);
-  float stageAlpha = vStageIndex < 0.5 ? 0.9 : 1.0;
+  // Stage II has twice as many lobes; normalize their individual emission
+  // so the dense field keeps texture detail instead of clipping to white.
+  float stageAlpha = vStageIndex < 0.5 ? 0.68 : 0.40;
   float sharedFlicker = 0.97 + 0.03 * sin(uTime * 6.2831853);
-  float alpha = blackKey * sourceAlpha * vEmitterStrength * stageAlpha;
+  float alpha = smoothstep(0.12, 0.65, brightness) * sourceAlpha * vEmitterStrength * stageAlpha * 0.55;
   alpha *= sharedFlicker;
   if (alpha < 0.008) discard;
 
@@ -405,7 +424,7 @@ interface FireVideoResource {
   video: any;
   texture: any;
   ready: boolean;
-  playRequested?: boolean;
+  playRequested: boolean;
   onReady?: () => void;
   onError?: () => void;
 }
@@ -459,7 +478,7 @@ const createFireShaderClass = (root: FireEffectRoot): any => {
 const fieldTexturePaths = (): [string, string] => {
   const stages = TERRAIN_CONFIGURATIONS.fire.stages;
   const stageI = stages[0].media.fieldTexture;
-  const stageII = stages[1].media.fieldTexture;
+  const stageII = stages[1]?.media.fieldTexture;
   if (!stageI || !stageII) {
     throw new Error("Fire field media paths are missing from the terrain catalog");
   }
@@ -545,13 +564,16 @@ export class FireEffectRenderer {
       this.#scene = canvas.scene;
       this.#mounted = true;
       this.#available = true;
-      this.#createMedia();
       this.#rebuildNow();
 
       this.#ticker = ticker;
       this.#tickerCallback = (currentTicker?: any): void => {
         const deltaMS = Number(
-          currentTicker?.deltaMS ?? currentTicker?.elapsedMS ?? 1000 / 60,
+          // PIXI 7 passes a numeric delta multiplier, not its ticker object.
+          // Use real elapsed time so low FPS does not repeatedly seek videos
+          // backwards and turn natural playback into a slow, stuttering loop.
+          this.#ticker?.elapsedMS ?? this.#ticker?.deltaMS ??
+            currentTicker?.elapsedMS ?? currentTicker?.deltaMS ?? 1000 / 60,
         );
         if (Number.isFinite(deltaMS)) this.#time += Math.max(0, deltaMS) / 1000;
         if (this.#mesh?.shader?.uniforms) {
@@ -718,8 +740,11 @@ export class FireEffectRenderer {
         video.src = source;
         const resource: FireVideoResource = {
           video,
-          texture: this.#root.PIXI.Texture.from(video, { resourceOptions: { autoPlay: false } }),
+          texture: this.#root.PIXI.Texture.from(video, {
+            resourceOptions: { autoPlay: false, updateFPS: 24 },
+          }),
           ready: false,
+          playRequested: false,
         };
         const generation = this.#lifecycleGeneration;
         resource.onReady = () => {
@@ -729,14 +754,11 @@ export class FireEffectRenderer {
           // _onCanPlay/_onPlayStart in Pixi 7.4.3. Update before requesting play.
           resource.texture.baseTexture?.resource?.update?.();
           resource.ready = true;
-          if (!resource.playRequested) {
-            resource.playRequested = true;
-            const playResult = video.play?.();
-            if (playResult && typeof playResult.catch === "function") {
-              playResult.catch(() => {
-                // Keep the muted resource available for a later user gesture.
-              });
-            }
+          if (Number(video.readyState) < 3 || resource.playRequested) return;
+          resource.playRequested = true;
+          const playResult = video.play?.();
+          if (playResult && typeof playResult.catch === "function") {
+            playResult.catch(() => { resource.playRequested = false; });
           }
         };
         resource.onError = () => {
@@ -779,6 +801,7 @@ export class FireEffectRenderer {
     let next: FireFieldMesh | undefined;
 
     try {
+      if (scan.cells.length) this.#createMedia();
       next = scan.cells.length ? this.#createMesh(scan) : undefined;
       if (next) {
         this.#container.addChild(next.mesh);
@@ -794,6 +817,10 @@ export class FireEffectRenderer {
       throw error;
     }
     if (previous) this.#destroyMesh(previous);
+    if (!scan.cells.length) {
+      for (const resource of this.#media) this.#destroyVideoResource(resource);
+      this.#media = [];
+    }
 
     this.#mesh = next;
     this.#fireCells = scan.cells.length;
@@ -825,6 +852,8 @@ export class FireEffectRenderer {
         uTime: this.#time,
       });
       const mesh = new PIXI.Mesh(geometry, shader);
+      // Fire emits light; screen blending avoids dark cutout rims over maps.
+      mesh.blendMode = PIXI.BLEND_MODES?.SCREEN ?? 3;
       mesh.name = `${MODULE_ID}-fire-field-mesh`;
       mesh.start = 0;
       mesh.size = data.indices.length;

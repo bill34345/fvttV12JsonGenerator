@@ -1,0 +1,162 @@
+[
+  {
+    "file": "earthquake-stage-1.png",
+    "generatorSource": "exec-977d02a6-01dc-411e-8cc8-247f21679128.png",
+    "prompt": "Original top-down earthquake crack network with transparent intact ground; full exact generation prompt is retained in this task."
+  },
+  {
+    "file": "forceBarrier-stage-1.png",
+    "generatorSource": "exec-d207e2fb-3faf-4b0d-9044-da6c3bebb921.png",
+    "prompt": "One original transparent RGBA PNG fantasy battlemap decal, a magical FORCE BARRIER seen directly overhead. A single flat square pane of translucent cool cyan-blue energy, thin bright blue perimeter, subtle evenly spaced luminous lattice lines across the pane, delicate irregular sparks at four edges. Interior genuinely semi-transparent so the battlemap will remain visible, softly shaded glasslike energy, no solid blue background. Hand-painted game spell asset, restrained bright edges and medium blue interior; square pane centered occupying 90 percent of square canvas, fully transparent margins. No perspective box, no upright wall, no floor, no text, no checkerboard, no symbols, no dark scene. One coherent pane to be enlarged across a painted area, crisp readable contour and subtle surface light."
+  },
+  {
+    "file": "grease-stage-1.png",
+    "generatorSource": "exec-2553fb56-f9c7-481a-88bf-0a38b3a0f843.png",
+    "prompt": "One original top-down fantasy battlemap decal of grease, stage 1: separated small puddles and drops of thick golden ochre-yellow oil. Hand-painted VTT art, irregular organic blobs with slippery creamy highlights and darker amber edges. About a dozen varying puddles scattered across square canvas, connected only in two small groups, at least 65 percent fully transparent ground between them. Not green acid, not glowing gold magic, no bubbles erupting into the air. Low glossy liquid seen orthographically directly overhead. Crisp painterly brushwork, natural wet edges, very short subtle shadow. All blobs fit inside transparent margins. Genuine transparent RGBA PNG, no floor, checkerboard, border, grid, text, scene or container. One decal only, readable at 100 pixels and when enlarged across a painted area."
+  },
+  {
+    "file": "grease-stage-2.png",
+    "generatorSource": "exec-67d56b8d-82b7-4084-8fc8-8d93ffefaa4d.png",
+    "prompt": "Create one original transparent RGBA PNG top-down fantasy battlemap oil slick, GREASE stage 2. A single broad connected pool of thick golden ochre-yellow grease with irregular lobed perimeter, several small droplets nearby. Muted amber shadows, creamy yellow oily highlights, subtle swirling oily surface streaks, glossy but not magical glowing. Pool covers about 75 percent of square canvas, few small transparent ground openings, clear fully transparent margin around whole organic shape. Matches hand-painted grounded VTT art, orthographic overhead, flat puddle not tall goo or honey container. Entire coherent pool expands across painted terrain. No floor, no checkerboard, no grid, no border, no text, no scene, no green acid or flames. True alpha outside pool and in gaps; surface must visibly differ from scattered stage-1 puddles by being connected."
+  },
+  {
+    "file": "haze-stage-1.png",
+    "generatorSource": "exec-b113b2bb-247a-4b36-9186-cbead87fed8d.png",
+    "prompt": "Create ONE original square transparent RGBA PNG decal for a fantasy VTT battlemap. A single light cool blue-grey HAZE cloud, seen directly overhead, wispy airy vapor threads and thin irregular gauzy layers. Highly translucent through most of the cloud so the underlying map remains clearly readable. Soft fading alpha edges, irregular asymmetrical patch, no hard circular outline. Quiet natural ground mist, not a bright magic glow or dense smoke. Hand-painted painterly game effect, orthographic direct overhead, fills 85 percent canvas with clear transparent margins. True varied alpha within vapor and fully transparent exterior; absolutely no floor, checkerboard, colored background, rectangular plate, border, text or grid. One coherent cloud that can scale across a painted area."
+  },
+  {
+    "file": "deadlyHaze-stage-1.png",
+    "generatorSource": "exec-7bb530d4-b266-4544-8502-7be3dbfdf695.png",
+    "prompt": "Create ONE original square transparent RGBA PNG decal for a fantasy VTT battlemap. A single sinister violet and muted plum TOXIC HAZE cloud, viewed directly overhead. Uneven curled vapor eddies with a few darker purple pockets, thin lilac wisps, mid-transparent center and transparent fading perimeter. Distinct organic poisonous cloud, no skulls, no cartoon symbols, no bubbles, no glowing circle. Detailed layered vapor, softer and lighter than dense black smoke. Hand-painted painterly game effect, orthographic direct overhead, fills 85 percent canvas with clear transparent margins. True varied alpha within vapor and fully transparent exterior; absolutely no floor, checkerboard, colored background, rectangular plate, border, text or grid. One coherent cloud that can scale across a painted area."
+  },
+  {
+    "file": "smoke-stage-1.png",
+    "generatorSource": "exec-42492681-516b-4437-a197-b5b6ed7956a3.png",
+    "prompt": "Create ONE original square transparent RGBA PNG decal for a fantasy VTT battlemap. A single dense grey SMOKE cloud viewed directly overhead, overlapping soft charcoal and medium-grey billowing curls with lighter dusty edges, darker irregular core and translucent tendrils. Dense enough to partly obscure the ground but naturally fades to full transparency at uneven edges. No fire, no explosion, no mushroom cloud side view, no magic circle, no bright glow. Hand-painted painterly game effect, orthographic direct overhead, fills 85 percent canvas with clear transparent margins. True varied alpha within vapor and fully transparent exterior; absolutely no floor, checkerboard, colored background, rectangular plate, border, text or grid. One coherent cloud that can scale across a painted area."
+  },
+  {
+    "file": "hole-stage-1.png",
+    "generatorSource": "exec-f4e8e64e-8d24-4704-be17-e94ae6f41368.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A shallow collapsing patch of earth, irregular roughly circular depression with cracked dark brown compacted soil, several sagging broken earth plates and scattered stone chips. Subtle dark recess in the middle, still visibly earthen rather than a black void; dusty chipped rim. Looks like ground about to cave in. No lava, no glow, no perspective landscape. Direct orthographic overhead view, grounded detailed hand-painted VTT map art, clear material identity at 100 pixels. Entire irregular patch inside square canvas, clear transparent outer margins. No background floor, checkerboard, text, grid, border, scene, characters or decorative frame."
+  },
+  {
+    "file": "hole-stage-2.png",
+    "generatorSource": "exec-7ddaeb48-be26-4ec0-8d5d-9903556e577d.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A deep irregular open pit in the ground, nearly black center showing genuine depth, steep dark brown rocky inner walls and a ragged crumbling stone-and-earth rim. A few small angular fragments around the rim. Opaque black pit interior, not transparent inside the hole; fully transparent outside the irregular rim. Clearly deeper and more open than a shallow cracked depression. No stairs, no lava or glow. Direct orthographic overhead view, grounded detailed hand-painted VTT map art, clear material identity at 100 pixels. Entire irregular patch inside square canvas, clear transparent outer margins. No background floor, checkerboard, text, grid, border, scene, characters or decorative frame."
+  },
+  {
+    "file": "mold-stage-1.png",
+    "generatorSource": "exec-c94dc711-3a31-4fc4-99ad-5b3326deaa12.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A sparse thin grey-white fungal film, delicate wispy cottony mycelium threads spread in uneven patches, a few tiny pale yellow-green pinhead growths. Most of the underlying ground remains fully transparent; no big mushrooms, no circles or repeated patterns, no magical glow. Early subtle mildew growing over a stone floor, but do not draw the floor. Direct orthographic overhead view, grounded detailed hand-painted VTT map art, clear material identity at 100 pixels. Entire irregular patch inside square canvas, clear transparent outer margins. No background floor, checkerboard, text, grid, border, scene, characters or decorative frame."
+  },
+  {
+    "file": "mold-stage-2.png",
+    "generatorSource": "exec-fcfd5d16-ac2e-4860-9ce7-e81683f04296.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. An established grey-white mildew colony with irregular fuzzy patches and about twenty small pale yellow-green circular fungal spots of varied sizes, cottony threads connecting some colonies. Transparent gaps between patches, moderate coverage, no tall mushroom stems, no magical glow. Clearly more growth than a thin mycelium film, still individual colonies visible. Direct orthographic overhead view, grounded detailed hand-painted VTT map art, clear material identity at 100 pixels. Entire irregular patch inside square canvas, clear transparent outer margins. No background floor, checkerboard, text, grid, border, scene, characters or decorative frame."
+  },
+  {
+    "file": "mold-stage-3.png",
+    "generatorSource": "exec-eca921b4-8148-4316-a769-5eaf990172e1.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A dense mature grey-white fungal growth carpet, many raised small yellow-green spore nodules nestled in thick soft dusty mycelium, varied irregular clusters and tiny pinhead speckles. Dense middle, ragged patchy exterior and some transparent openings. More numerous and larger growths than stage two, natural decaying fungus not glowing magical gems; no tall mushroom stems, no smoke cloud. Direct orthographic overhead view, grounded detailed hand-painted VTT map art, clear material identity at 100 pixels. Entire irregular patch inside square canvas, clear transparent outer margins. No background floor, checkerboard, text, grid, border, scene, characters or decorative frame."
+  },
+  {
+    "file": "moss-stage-1.png",
+    "generatorSource": "exec-fee6443e-d66e-4669-947d-74b0b3e1294c.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. An irregular lush low moss carpet patch, tiny densely packed olive and forest-green moss fronds, muted warm green highlights, dark soft crevices between cushions, a few small brown gaps. Natural rough exterior with delicate small sprigs, no large leaves, no branches, no grass meadow, no flowers. Top-down botanical ground texture, not a hovering cloud. Grounded detailed hand-painted VTT map style, orthographic direct overhead, clear silhouettes readable at 100 pixels. All material fully within canvas, genuinely transparent outer space. No checkerboard, grid, text, border, scenery or extra objects."
+  },
+  {
+    "file": "sand-stage-1.png",
+    "generatorSource": "exec-2b5a12a1-344a-462d-9336-26c26b09a497.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A patch of warm golden-tan fine sand, subtle winding wind-shaped ripples and shallow ridges across its surface, amber shadow troughs and pale sandy highlights. Soft irregular sandy perimeter with scattered tiny grains fading into transparency. One connected patch filling most of the canvas, no rocks, no footprints, no desert landscape or horizon. Grounded detailed hand-painted VTT map style, orthographic direct overhead, clear silhouettes readable at 100 pixels. All material fully within canvas, genuinely transparent outer space. No checkerboard, grid, text, border, scenery or extra objects."
+  },
+  {
+    "file": "pillar-stage-1.png",
+    "generatorSource": "exec-d0d36e14-ea5b-416d-bffa-c19d35c43d1a.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A single solid square grey limestone pillar cap seen exactly from above. Broad worn flat stone top with subtle chisel marks and hairline cracks, chipped bevelled corners, narrow darker stone side edge around the square, tiny close cast shadow. Flat orthographic square footprint, no isometric view, no column shaft or floor, no ornament, no glow. Occupies 90 percent of canvas with clear transparent margin. Grounded detailed hand-painted VTT map style, orthographic direct overhead, clear silhouettes readable at 100 pixels. All material fully within canvas, genuinely transparent outer space. No checkerboard, grid, text, border, scenery or extra objects."
+  },
+  {
+    "file": "spikes-stage-1.png",
+    "generatorSource": "exec-9d420d91-703e-4470-8798-f89431ae1b03.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy battlemap terrain decal. A loose irregular scatter of twelve short dangerous iron floor spikes seen directly overhead, each a dark steel tapered conical or pyramidal spike with small angular base and bright pointed tip. Varying orientations and sizes, tiny close contact shadows, steel-grey metallic highlights with restrained rust near bases. Clearly sharp three-dimensional points, no wooden boards, no trap base plate, no floor or blood. Plenty of transparent ground between individual spikes. Grounded detailed hand-painted VTT map style, orthographic direct overhead, clear silhouettes readable at 100 pixels. All material fully within canvas, genuinely transparent outer space. No checkerboard, grid, text, border, scenery or extra objects."
+  },
+  {
+    "file": "holyLight-stage-1.png",
+    "generatorSource": "exec-7338fb2f-b304-4e4f-8bfa-a2f2775a3c84.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A warm golden HOLY LIGHT aura seen directly overhead: small brilliant ivory center, graceful long tapering sunbeam rays, several shorter uneven radiant strokes, very soft translucent amber halo fading outward. Elegant sacred radiance, restrained painterly glow, no religious icon or object, no solid disk, no yellow rectangular background. Entire effect centered and contained within 85 percent of square canvas, fully transparent margins. Genuine varying alpha in the glow and full transparency in negative space; no black background painted in, no checkerboard, grid, border, text or environment. Hand-painted premium battlemap asset, readable as one whole graphic when enlarged across several grid cells."
+  },
+  {
+    "file": "lightningField-stage-1.png",
+    "generatorSource": "exec-f7799bb5-7fde-474a-b3e4-3a79440a646c.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A coherent field of branching cyan-blue and white LIGHTNING ARCS, irregular forked electric strands spread across the square with varied thickness and a few small bright junctions. Airy transparent gaps occupy most of area. White-hot thin cores with restrained blue glow around each branch. No single round explosion, no clouds, no repeated balls, no ground cracks, no floor. Entire effect centered and contained within 85 percent of square canvas, fully transparent margins. Genuine varying alpha in the glow and full transparency in negative space; no black background painted in, no checkerboard, grid, border, text or environment. Hand-painted premium battlemap asset, readable as one whole graphic when enlarged across several grid cells."
+  },
+  {
+    "file": "magicCircle-stage-1.png",
+    "generatorSource": "exec-ae47ad01-edea-47d5-9d16-d501348445e2.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. One complete intricate GOLDEN MAGIC CIRCLE, exactly face-on overhead: two concentric thin luminous rings, elegant symmetrical interlocking triangles and arcs, twelve small invented arcane glyph marks spaced around the rim, a clear geometric central sigil. Crisp hand-drawn gold linework, subtle amber glow, fully transparent open interior between lines. No readable words, no pentagram requirement, no medallion or solid disk, no scene. Entire effect centered and contained within 85 percent of square canvas, fully transparent margins. Genuine varying alpha in the glow and full transparency in negative space; no black background painted in, no checkerboard, grid, border, text or environment. Hand-painted premium battlemap asset, readable as one whole graphic when enlarged across several grid cells."
+  },
+  {
+    "file": "magicLight-stage-1.png",
+    "generatorSource": "exec-2bfa9e93-3b97-4e42-bd0f-a482229312b4.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. One small intense BLUE MAGIC LIGHT aura, directly overhead: bright ice-white pinpoint core surrounded by soft azure and cyan concentric light falloff with wispy pale-blue irregular rays. Simple floating magical illumination, mostly translucent light with clear alpha edges, subtle painterly texture in halo. No physical orb shell, no geometric magic circle, no clouds, no object or background. Entire effect centered and contained within 85 percent of square canvas, fully transparent margins. Genuine varying alpha in the glow and full transparency in negative space; no black background painted in, no checkerboard, grid, border, text or environment. Hand-painted premium battlemap asset, readable as one whole graphic when enlarged across several grid cells."
+  },
+  {
+    "file": "magicPlatform-stage-1.png",
+    "generatorSource": "exec-171eec79-6eff-49d3-945b-4a7e136fa79e.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A single intact square translucent turquoise MAGIC PLATFORM seen directly overhead. Glasslike pale cyan energy slab with a clean thin double rim, subtle fine etched arcane curves near corners and faint frosted interior sheen. No repeated square lattice. Interior is semi-transparent, enough to see battlemap below. Strong readable square silhouette, no perspective box or raised sidewalls. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "magicPlatform-stage-2.png",
+    "generatorSource": "exec-ffc3d094-d646-4579-b8d3-c6277bdcb96f.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A single damaged square translucent turquoise MAGIC PLATFORM seen directly overhead. Same clean thin cyan double rim and pale glasslike interior as an intact magical slab, but a web of obvious irregular white cracks radiates across the face, several small triangular pieces missing from two corners, a few tiny loose cyan shards immediately outside. The platform is still one recognizable square, with visible broken structure, not replaced by a different circle or colored panel. Semi-transparent interior. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "portal-stage-1.png",
+    "generatorSource": "exec-f7369d52-23f4-4ebd-89dd-37f16e4e5bf0.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. One complete circular violet PORTAL RING viewed face-on overhead. Strong smooth luminous lavender outer ring, swirling deep purple energy strands flowing around a translucent dark-violet interior, several thin orbiting arcs and faint spark specks. Distinct stable circular gateway, no destination scene inside, no stone arch or environment, no skull, no text. Outer edges fade transparently and center retains some transparency. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "rift-stage-1.png",
+    "generatorSource": "exec-7fd058f8-f805-46df-a606-d85adaf6c6d4.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A small unstable ASTRAL RIFT viewed directly overhead: narrow jagged dark slit with two uneven sharp ends, compact electric-blue and indigo wisps wrapping the slit, a few tiny white star sparks. The rift occupies about 45 percent of the square canvas, generous transparent space around it. Not a regular circular portal, no ground, no black background outside the slit. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "rift-stage-2.png",
+    "generatorSource": "exec-ac015e5b-f8c7-48c0-a5b2-ebc964384023.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A medium expanding ASTRAL RIFT viewed directly overhead: a broad irregular dark jagged opening framed by deep blue and indigo turbulent energy, bright cyan thin arcs and scattered small white star sparks. Occupies about 65 percent of canvas, more open and energetic than a narrow slit but stable recognizable central void. Asymmetric torn magical boundary, not a smooth circular portal, genuine transparent space outside. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "rift-stage-3.png",
+    "generatorSource": "exec-500a3645-a5a4-4d7f-9fa5-73f9698c0dac.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. A large violently unstable ASTRAL RIFT viewed directly overhead: wide irregular midnight-dark central tear with several branching jagged extensions, thick electric-blue and indigo energy curls, bright cyan-white fracture arcs and many small star-like sparks around the torn edge. Covers about 85 percent of canvas, visibly larger and more fragmented than medium stage. Not a regular portal ring, no galaxy rectangular background, no landscape. Detailed hand-painted game asset, one coherent full graphic to enlarge across painted cells. Completely transparent outer margins, varying alpha in energy glow. No floor, checkerboard, grid, border, readable text, characters or physical scenery. Keep entire shape inside canvas."
+  },
+  {
+    "file": "rune1-stage-1.png",
+    "generatorSource": "exec-624ed54e-35b3-4450-9250-94b50a7ddae8.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. ONE original angular arcane RUNE made from golden-orange luminous strokes: a tall slanted central stem, two asymmetrical branching sharp hooks, one small hollow diamond and a short cross stroke. A single cohesive invented symbol, elegant pointed calligraphic ends, no surrounding circle. Not a real alphabet letter or number, no readable words. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  },
+  {
+    "file": "rune2-stage-1.png",
+    "generatorSource": "exec-0ede5274-e033-41ea-bccf-379caeb428d9.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. ONE original curved arcane RUNE made from soft leaf-green luminous strokes: a large open asymmetrical spiral connected to a sweeping long tail and two short crescent accents. One cohesive invented calligraphic symbol, clearly different from an angular fork rune. No circle border, no real letters, no numbers or readable words. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  },
+  {
+    "file": "rune3-stage-1.png",
+    "generatorSource": "exec-43ba3232-e586-4627-9c9c-63077397c09c.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. ONE original intersecting arcane RUNE made from cool blue luminous strokes: three uneven vertical strokes joined by a shallow curved horizontal bridge, a small diamond interruption on one stem and two short angled tips. A single coherent invented glyph, hand-drawn tapering linework. No border circle, no real letters, numbers or readable words. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  },
+  {
+    "file": "rune4-stage-1.png",
+    "generatorSource": "exec-158baf97-92d0-4689-95a1-52f86126ca84.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. ONE original hooked arcane RUNE made from red-orange luminous strokes: two asymmetrical hooked curves joined by a diagonal lightning-like stroke with three tiny separated diamond accents. A cohesive invented calligraphic symbol, bold readable silhouette, pointed ends. No circular seal, no real letters, numbers or readable words. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  },
+  {
+    "file": "unholyLight-stage-1.png",
+    "generatorSource": "exec-9b09d197-67a0-4743-a7bb-1424f81b1d4e.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. One ominous UNHOLY LIGHT aura: compact bright pale magenta core, sinuous deep violet and purple radiating rays, irregular dark plum wisps and a restrained translucent lilac halo. Asymmetric eerie glow, no regular ring or portal, no skulls, no text or symbols, no solid background. Contrast soft light against several darker violet streaks, still mostly translucent. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  },
+  {
+    "file": "wildMagic-stage-1.png",
+    "generatorSource": "exec-cec4c515-6a7f-45ff-8a02-d20cd82bc862.png",
+    "prompt": "Create ONE original square transparent RGBA PNG fantasy VTT spell decal. One coherent burst of WILD MAGIC: interwoven flowing ribbons of violet, teal, magenta, pale green and small gold highlights, curling and crossing in an irregular star-like shape, tiny bright sparks, transparent gaps between the colored energy strands. Painterly magical turbulence with distinct fluid strokes, not a grey cloud or regular portal ring, no objects, symbols, letters or characters. Direct face-on overhead view, detailed hand-painted fantasy game effect. Center the complete shape within 80 percent canvas, clear transparent margins and large negative spaces. Restrained glow around readable core strokes, real alpha transparency, no black painted background, checkerboard, grid, decorative frame, physical floor or environment. One graphic, not a contact sheet."
+  }
+]

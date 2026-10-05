@@ -1,0 +1,110 @@
+[
+  {
+    "id": "ruidiumVeinsSweep",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-variants-20260911\\01-脉络-分叉延伸.png",
+    "sourceSha256": "810c39a3c62bc49e55c826a1d2c0a017b7c77e9549b9f25f1388768f4672ebb8",
+    "sourceMode": "RGBA",
+    "output": "ruidiumVeinsSweep-stage-1.png",
+    "sha256": "57c805497fa004fe8a956e16fc68af64a4ee8bbff552285884678908db855973",
+    "size": [
+      1254,
+      1254
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": false
+  },
+  {
+    "id": "ruidiumVeinsFan",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-variants-20260911\\02-脉络-扇形铺展.png",
+    "sourceSha256": "de39eef0b4b8bdad8495cce031df4651b9c21d1b9ca5b6fb68e816134081619a",
+    "sourceMode": "RGBA",
+    "output": "ruidiumVeinsFan-stage-1.png",
+    "sha256": "435a612cb6be8ae7cfb436cc5373c4fffe629cc5fea8dd5d242ca7d065d54e2f",
+    "size": [
+      1254,
+      1254
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": false
+  },
+  {
+    "id": "ruidiumCrystalCrescent",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-material-cleanup\\01-single-crescent.png",
+    "sourceSha256": "2011ebde90ffdb1b9f39ad3227d902ca6f2c34389f3edcb8214a06fcfe74a214",
+    "sourceMode": "RGB",
+    "output": "ruidiumCrystalCrescent-stage-1.png",
+    "sha256": "3b58e70887dc6f6983debfaabe572507b9c1741554889ea288e071df021c04bb",
+    "size": [
+      1254,
+      1254
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": true
+  },
+  {
+    "id": "ruidiumCrystalCross",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-material-cleanup\\02-single-crossflow.png",
+    "sourceSha256": "0752effeabb9a44d7ef9a8699b390bf8ba85e80a49f53445e8b669354af2234e",
+    "sourceMode": "RGB",
+    "output": "ruidiumCrystalCross-stage-1.png",
+    "sha256": "e204576b528888f8569c6cd585f9187ab88e64d36085abaf203295bb478869a5",
+    "size": [
+      1254,
+      1254
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": true
+  },
+  {
+    "id": "ruidiumClusterThree",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-material-cleanup\\03-three-cluster.png",
+    "sourceSha256": "6589c5c594d937f017c05333778487ebb36bdfebf6c0177d6919d973cab16508",
+    "sourceMode": "RGBA",
+    "output": "ruidiumClusterThree-stage-1.png",
+    "sha256": "35ba62aec8c59918362626061f073b79e777222dcae600c6612f229474c35334",
+    "size": [
+      1355,
+      1160
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": false
+  },
+  {
+    "id": "ruidiumClusterFive",
+    "source": "C:\\Users\\Administrator\\.codex\\visualizations\\2026\\09\\09\\01a0843e-d848-7653-90c7-311e93f0dab6\\ruidium-material-cleanup\\04-five-cluster.png",
+    "sourceSha256": "363b392cb4b7beeca9013f4212d04063fa0315da19dac6bbb34aae66eb1ba039",
+    "sourceMode": "RGB",
+    "output": "ruidiumClusterFive-stage-1.png",
+    "sha256": "f34d74a9367e268ef2ba3c71e8fbb256e5fdc48dc94a195a64266b870b77333a",
+    "size": [
+      1355,
+      1160
+    ],
+    "alphaRange": [
+      0,
+      255
+    ],
+    "interiorRgbPreserved": true,
+    "matting": true
+  }
+]

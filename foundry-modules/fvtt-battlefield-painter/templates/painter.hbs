@@ -12,6 +12,7 @@
         class="terrain-card {{#if selected}}is-selected{{/if}}"
         data-action="selectTerrain"
         data-terrain="{{id}}"
+        title="{{description}}"
         style="--terrain-accent: {{accent}}"
         aria-pressed="{{selected}}"
       >
@@ -33,7 +34,7 @@
         data-stage="{{index}}"
         aria-pressed="{{selected}}"
       >
-        <span>阶段 {{#if index}}II{{else}}I{{/if}}</span>
+        <span>{{caption}}</span>
         <strong>{{label}}</strong>
       </button>
     {{/each}}
@@ -46,10 +47,21 @@
     <button type="button" class="mode-button {{#if isErase}}is-selected{{/if}}" data-action="selectMode" data-mode="erase">
       <i class="fa-solid fa-eraser"></i><span>擦除</span>
     </button>
-    <button type="button" class="mode-button {{#if isAdvance}}is-selected{{/if}}" data-action="selectMode" data-mode="advance">
+    <button type="button" class="mode-button {{#if isAdvance}}is-selected{{/if}}" data-action="selectMode" data-mode="advance" {{#unless canAdvance}}disabled{{/unless}}>
       <i class="fa-solid fa-forward-step"></i><span>切换阶段</span>
     </button>
   </div>
+
+  {{#if colors}}
+  <div class="battlefield-painter__colors" aria-label="地形颜色">
+    {{#each colors}}
+    <button type="button" data-action="selectColor" data-color="{{id}}" aria-pressed="{{selected}}" title="{{label}}" style="border-bottom: 4px solid {{hex}}">{{label}}</button>
+    {{/each}}
+  </div>
+  {{/if}}
+  {{#if hasAudio}}
+  <button type="button" data-action="toggleAudio" aria-pressed="{{state.audioEnabled}}" title="控制接下来绘制的地形；已放置声音可在声音图层调整或静音">环境音：{{#if state.audioEnabled}}开启{{else}}关闭{{/if}}</button>
+  {{/if}}
 
   {{#if state.p1Enabled}}
     <section class="battlefield-painter__brush" aria-label="笔刷几何">
@@ -88,7 +100,7 @@
     <section class="battlefield-painter__p2" aria-label="P2 battlefield management">
       <div class="battlefield-painter__section-title">
         <span>Dynamic battlefield</span>
-        <small>Animation and clustered lights</small>
+        <small>地形效果与照明</small>
       </div>
       <button
         type="button"
@@ -98,6 +110,7 @@
       >
         <i class="fa-solid fa-broom"></i><span>Clear module terrain</span>
       </button>
+      <button type="button" data-action="paintRegions" title="选中区域后按 Shift+P；按格心铺设，保留区域孔洞">铺设到选中区域</button>
     </section>
   {{/if}}
 

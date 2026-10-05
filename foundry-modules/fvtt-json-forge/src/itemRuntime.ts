@@ -11,6 +11,7 @@ import {
 } from '@fvtt-json-generator/forge-gateway-protocol';
 import {
   assertExactRuntime,
+  assertResponseTarget,
   assertGm,
   MODULE_ID,
   type ForgeGameLike,
@@ -93,6 +94,7 @@ export async function createAcceptedForgeItem(
     throw new Error('Only a decoded accepted Forge Item response can be created.');
   }
   const result = decoded.value.result;
+  assertResponseTarget(result.target, input.game);
   const accepted = result.verification as ForgeAcceptedVerificationSummary;
   if (
     accepted.status !== 'accepted'

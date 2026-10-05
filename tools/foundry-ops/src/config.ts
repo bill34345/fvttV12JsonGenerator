@@ -8,6 +8,7 @@ export const FOUNDRY_OPS_ENVIRONMENT = {
   backupRoot: 'FVTT_OPS_BACKUP_ROOT',
   testClassicLevelEntry: 'FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY',
   foundryZip: 'FVTT_OPS_FOUNDRY_ZIP',
+  mirrorFoundryVersion: 'FVTT_OPS_MIRROR_FOUNDRY_VERSION',
   defaultWorldId: 'FVTT_OPS_WORLD_ID',
   productionSshTarget: 'FVTT_OPS_PRODUCTION_SSH_TARGET',
   productionDataPath: 'FVTT_OPS_PRODUCTION_DATA_PATH',
@@ -35,7 +36,7 @@ export interface FoundryLabConfig {
   };
   profiles: {
     coreTest: { id: 'core-test'; dataPath: string; host: '127.0.0.1'; port: 30000 };
-    serverMirror: { id: 'server-mirror'; dataPath: string; host: '127.0.0.1'; port: 30001 };
+    serverMirror: { id: 'server-mirror'; dataPath: string; host: '127.0.0.1'; port: 30001; appRoot?: string; foundryVersion?: '14.364' | '14.368' };
   };
 }
 
@@ -46,6 +47,10 @@ export function createLabConfig(repoRoot = process.cwd(), environment: Environme
   const labRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.labRoot] || resolve(root, '.local/foundry-v14'));
   const evidenceRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.evidenceRoot] || resolve(labRoot, 'evidence'));
   const backupRoot = resolve(environment[FOUNDRY_OPS_ENVIRONMENT.backupRoot] || resolve(labRoot, 'backups'));
+  const mirrorVersion = environment[FOUNDRY_OPS_ENVIRONMENT.mirrorFoundryVersion]?.trim() || '14.364';
+  if (mirrorVersion !== '14.364' && mirrorVersion !== '14.368') {
+    throw new Error(`${FOUNDRY_OPS_ENVIRONMENT.mirrorFoundryVersion} supports only exact 14.364 or 14.368`);
+  }
   assertConfiguredRootIsSpecific(root, labRoot, FOUNDRY_OPS_ENVIRONMENT.labRoot);
   assertConfiguredRootIsSpecific(root, evidenceRoot, FOUNDRY_OPS_ENVIRONMENT.evidenceRoot);
   assertConfiguredRootIsSpecific(root, backupRoot, FOUNDRY_OPS_ENVIRONMENT.backupRoot);
@@ -78,6 +83,8 @@ export function createLabConfig(repoRoot = process.cwd(), environment: Environme
       },
       serverMirror: {
         id: 'server-mirror',
+        appRoot: resolve(labRoot, 'app', mirrorVersion),
+        foundryVersion: mirrorVersion,
         dataPath: resolve(labRoot, 'data/server-mirror'),
         host: '127.0.0.1',
         port: 30001,

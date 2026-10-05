@@ -6,14 +6,32 @@
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
-    "maximum": "14.364"
+    "maximum": "14.368"
   },
-  "esmodules": ["scripts/index.js"],
-  "styles": [{ "src": "styles/weapon-mastery-properties.css" }],
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/weapon-mastery-properties.css"
+    }
+  ],
   "languages": [
-    { "lang": "en", "name": "English", "path": "lang/en.json" },
-    { "lang": "cn", "name": "简体中文（Foundry 中文包）", "path": "lang/zh-CN.json" },
-    { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "cn",
+      "name": "简体中文（Foundry 中文包）",
+      "path": "lang/zh-CN.json"
+    },
+    {
+      "lang": "zh-CN",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    }
   ],
   "relationships": {
     "systems": [

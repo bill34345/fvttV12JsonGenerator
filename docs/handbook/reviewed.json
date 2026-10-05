@@ -10,19 +10,19 @@
     "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
   },
   "monster-intake": {
-    "fingerprint": "02e9fc9bae558e627d79dd20b24a823d89118808820c157055ec1f326fe1096d",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "b08de9ae0496e8dfe010e94496906a2b992db6c893705a4e39d9cceda1a4941d",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
   },
   "item-intake": {
-    "fingerprint": "0479dd66ab0b79c808a76f59a9da4d6f93d6b4d1c905024c2fbf662ca686d504",
-    "reviewedOn": "2026-10-02",
-    "note": "已对照Item verifier与Intake规则：固定目标/机制核验不变，来源本身不授权联网；未把Monster四输入命令推广到Item。"
+    "fingerprint": "631b2a7e939fc49ff194cf48f682aedfbe503ce2f57088a0cfc90b8e94a61c0a",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
   },
   "species-intake": {
-    "fingerprint": "33e1f41cf5d70822873658c6de80ed9af31a46eaa5d63d9e8b3ed6b2d08f6126",
-    "reviewedOn": "2026-10-02",
-    "note": "已对照Species独立IR/ledger：既有静态/运行目标和明确构建步骤不变；授权持续与provider真实效果边界明确，未套Monster verifier。"
+    "fingerprint": "e8973c1451898328d2f20a99dceb7590e9ddbfe9e497f7277c539a9bbc0d47e5",
+    "reviewedOn": "2026-10-03",
+    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -55,19 +55,19 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "a788c6ce36ab59ecb887ea80fbfc09fa8d9c9e1be77291cea4f054783a306608",
+    "fingerprint": "61dda375ca3e0848fd71a6ed26d7161cb5de6226423bb7c2da5bddf8254c30b5",
     "reviewedOn": "2026-10-05",
-    "note": "对照实际CLI核对可选run输入/合同互斥、已完成只读、UNKNOWN与RECEIPT_INVALID禁止重放、预检与选择拒绝、manual与外部批次边界；小任务直接用已有检查，保留阶段父审与权限。"
+    "note": "本地整合核对：保留master的Mirror程序目录和未知活PID保护，同时加入run入口、原收据只读复核、未知状态禁止重放和模块专用检查路径；原专用runtime/选择/权限门保持。"
   },
   "verification-development": {
-    "fingerprint": "b71317c1948d779243f358f3e1397a3d612ef9db7db2890c91b97396a6047ce1",
+    "fingerprint": "8628a5189900eb8109be6a54aab57897cfdbe2bea77c141e25059a2bf8698906",
     "reviewedOn": "2026-10-05",
-    "note": "按变更/失败/证据缺口或集成门选择检查；核对安全test:acceptance-workflow聚焦入口与CI固定运行时，保留全CI覆盖与安全包装，减少工具修复后的无关重跑。"
+    "note": "保留master的完整CI和coverage450秒预算；增加安全workflow定点入口，按变更/失败/证据缺口选择检查并保留明确集成门禁，未删除测试清单或降低阈值。"
   },
   "human-encounter-intake": {
-    "fingerprint": "738c0428aa96f6dccaf74165c0bed5bd0591a8f17542d12e4a1b1d95aa4a1a04",
+    "fingerprint": "9ffe15b659433d1470a65796f8403d16e980e06d5c4f9efb1f9ffa13581d6fbf",
     "reviewedOn": "2026-10-03",
-    "note": "已对照晶血样本2.1.2与正式来源：应用实例按有效条件标记投影独立恍惚、保留语义免疫和目标下回合结束期限；当前Forge0.4接收端原生模板兼容已回归，r4真实失败原件保留，r5实机仍待复验。样本单独启动及固定配置路径分工保持。"
+    "note": "核对新增Mirror专用Core程序选择、跨版本peer互斥和严格只读Forge0.4来源重建；保留CoreTest/Next/生产与无备份/权限边界。固定控制器新增368/5.3.3，AI能力和生成来源契约未扩大。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -85,9 +85,9 @@
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "83883663eb8333040330e03e25a01cf63e005af394a51f1e6c573f50ba3a9b5f",
+    "fingerprint": "438be4cb9f7c91d987af095f9c862f618c2b33a4345957628b2e6a1b8ab28fa9",
     "reviewedOn": "2026-10-05",
-    "note": "仅调整模块AGENTS的验证触发与复用方式；画笔功能、入口、版本、安装与现有实机接受范围未改变，原用户说明保持准确。"
+    "note": "保留master刚集成的42项地形、六条长音源、14.368/5.3.3范围及原接受边界；画笔AGENTS同时保留最新技能/接续指针并加入按影响验收。仅检查触发规则变化，无业务源码或素材修改。"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
@@ -100,29 +100,29 @@
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-house-rules": {
-    "fingerprint": "264e8f962be6f3325df5a7a97ebd878811a47102d8771c75d2fa05ad43873bbd",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "5f8aae935e17bf2c1e01fe6e121f4e66c952b3a58bf94a6253305d908084ce99",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "0f45fec775f423446b75e2f1847820de51b4a88ad7a795b126374e66fae15e76",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "23fb7e8ad445b0f91680cd741919763b47bfab7d35da2c0dd85023f26a839a63",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "52627936a0443d08eac95173fbf91876461644c44f9b1160a03fe3ec4d829e67",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "6862746aeb8cce51c5b18777afe47f47fd5d391f20c83921f576d4110b2fc69e",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "392c9197249846ea5076b05464287bc5f546b235380f4772e427fe77f96cb3b6",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "47c9d25044dd4880c3f3e124d3a6087527ac8056505996ef65177911bc4cbb92",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "6e39a6914bdfa2496ed937e193e43c51d92f700ccf66d84ab4bf97e95cb57f3a",
-    "reviewedOn": "2026-10-03",
-    "note": "已对照晶血样本2.1.2与正式来源：应用实例按有效条件标记投影独立恍惚、保留语义免疫和目标下回合结束期限；当前Forge0.4接收端原生模板兼容已回归，r4真实失败原件保留，r5实机仍待复验。样本单独启动及固定配置路径分工保持。"
+    "fingerprint": "524148a7a83a97594c1b18140be9a7aa3431d60e086e064f1427ae8d2f97ad7a",
+    "reviewedOn": "2026-10-05",
+    "note": "最终完整CI r3退出0，3558/1/0与369文件，API局部40/0和CLI24/0；新增完成说明和真实r1/r2失败层级。仅文档/手册同步，产品与最终通过的测试实现不再改变；仍排除Forge0.4蓝图业务、实机重放和远端push。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
@@ -130,14 +130,14 @@
     "note": "模块目录由 worker 对照 README、manifest 与入口源码整理；父代理复核条目并抽样对照 Forge、血猎手、种族与副屏，修正迁移备份冲突；不作为运行时验收"
   },
   "monster-spell-resolver": {
-    "fingerprint": "e0eae9be17789e853e9b3100cd975fd944a5c85c3f2480c69b36ea917a1a82ab",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "bb3856fa6fc538cb98c89fb5f4d0946a246f6991002af177fa1f78bd0cd19602",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "open-session-deck": {
-    "fingerprint": "363a6be1e6cfc6dd25d06ccbf049a2a7ed1d425f20cf053367e9a75a06b101e5",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "136bb0745de37ef6c710902f47f48710e5b9c0589fe8bffe5dc4c106b08a4505",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "session-monitor": {
     "fingerprint": "edad1e41c7657101576ea5a1458cfc6683af67034e326e3afb8b4043a23ebd2f",
@@ -145,8 +145,8 @@
     "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "8169c1c8e9df573fab50a1a1cc07602fe68f47cdd8274f6715cd8db1bf5d0af9",
-    "reviewedOn": "2026-10-02",
-    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
+    "fingerprint": "36023ba723a2e525bdad6c0dc9b2b9bde7b9707fa605554004bb1d8c587a7e50",
+    "reviewedOn": "2026-10-03",
+    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   }
 }

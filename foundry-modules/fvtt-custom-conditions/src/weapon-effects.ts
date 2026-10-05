@@ -1,3 +1,4 @@
+import { genericConditionsSupported } from './runtime-compatibility.ts';
 import {
   buildWeaponEffectFlag,
   createWeaponEffectInstance,
@@ -405,8 +406,7 @@ export class WeaponEffectRuntime {
   }
 
   private requireGM(actor: any): void {
-    if (this.globals.game?.version !== undefined
-      && (this.globals.game.version !== '14.364' || this.globals.game.system?.version !== '5.3.3')) {
+    if (!genericConditionsSupported(this.globals.game)) {
       throw new Error('Weapon Mastery effects remain limited to Foundry 14.364 / dnd5e 5.3.3.');
     }
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作武器临时效果。');

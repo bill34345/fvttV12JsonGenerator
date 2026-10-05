@@ -336,7 +336,10 @@ describe("house-rules runtime and settings integration", () => {
     installHouseRulesApi();
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
     globals.game.version = "14.368";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.version = "14.369";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
+    globals.game.version = "14.368";
     globals.game.system.version = "6.0.2";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
     globals.game.system.version = "6.0.5";

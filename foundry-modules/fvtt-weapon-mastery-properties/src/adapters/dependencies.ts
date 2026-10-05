@@ -89,6 +89,7 @@ function conflictModules(globals: any): string[] {
 
 export function inspectDependencies(globals: any = globalThis): DependencyReport {
   const foundry = exactOrUnknown(globals?.game?.version ?? globals?.game?.release?.version ?? globals?.game?.foundry?.version, FOUNDRY_VERSION);
+  foundry.compatible = foundry.value === FOUNDRY_VERSION || foundry.value === '14.368';
   const dnd5e = exactOrUnknown(globals?.game?.system?.version ?? globals?.game?.system?.data?.version, DND5E_VERSION);
   const systemId = globals?.game?.system?.id;
   const runtimeCompatible = foundry.compatible && dnd5e.compatible && systemId === 'dnd5e';
@@ -97,7 +98,7 @@ export function inspectDependencies(globals: any = globalThis): DependencyReport
   const incompatible = modules.filter((entry) => entry.available && !entry.compatible).map((entry) => entry.id);
   const conflicts = conflictModules(globals);
   const runtimeProblems = [
-    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires ${FOUNDRY_VERSION})`]),
+    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires ${FOUNDRY_VERSION} or 14.368)`]),
     ...(dnd5e.compatible ? [] : [`dnd5e ${dnd5e.value ?? 'unknown'} (requires ${DND5E_VERSION})`]),
     ...(systemId === 'dnd5e' ? [] : [`system ${systemId ?? 'unknown'} (requires dnd5e)`]),
   ];

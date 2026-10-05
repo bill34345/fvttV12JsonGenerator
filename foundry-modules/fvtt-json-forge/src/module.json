@@ -9,10 +9,16 @@
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
-    "maximum": "14.364"
+    "maximum": "14.368"
   },
-  "esmodules": ["scripts/index.js"],
-  "styles": [{ "src": "styles/fvtt-json-forge.css" }],
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/fvtt-json-forge.css"
+    }
+  ],
   "relationships": {
     "systems": [
       {

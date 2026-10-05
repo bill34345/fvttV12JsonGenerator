@@ -1,3 +1,4 @@
+import { genericConditionsSupported } from './runtime-compatibility.ts';
 import {
   CONDITION_DEFINITIONS,
   buildConditionFlag,
@@ -77,8 +78,7 @@ export interface TriggerEventContextLike {
 }
 
 function genericSupported(globals: any): boolean {
-  return globals.game?.version === undefined
-    || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3');
+  return genericConditionsSupported(globals.game);
 }
 
 export class ConditionRuntime {

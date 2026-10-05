@@ -32,6 +32,7 @@ describe("runtime compatibility", () => {
   test.each([
     { foundry: "14.364", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.2" },
+    { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.5" },
   ])("accepts exact runtime pair %j", (versions) => {
     expect(
@@ -74,7 +75,7 @@ describe("runtime compatibility", () => {
     [{ foundry: "14.364", dnd5e: "5.3.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.364", dnd5e: "5.4.0" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.364", dnd5e: "6.0.2" }, "UNSUPPORTED_DND5E_VERSION"],
-    [{ foundry: "14.368", dnd5e: "5.3.3" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.368", dnd5e: "5.3.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.367", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
     [{ foundry: "14.369", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
     [{ foundry: "14.368", dnd5e: "6.0.1" }, "UNSUPPORTED_DND5E_VERSION"],
@@ -176,6 +177,7 @@ describe("Foundry lifecycle bootstrap", () => {
       system: { id: "dnd5e", version: "5.3.3" },
       user: { isGM: true },
       modules: { get: () => module },
+      settings: {register(){throw new Error("No alternative rendering mode may be registered");}},
     };
     once.get("init")?.();
     on.get("getSceneControlButtons")?.(controls);
@@ -209,6 +211,7 @@ describe("Foundry lifecycle bootstrap", () => {
     expect(api.canMutate).toBe(true);
     expect(api.auditEffects()).toEqual(fireEffectDiagnostics);
     expect(api.auditFrostEffects()).toEqual(frostEffectDiagnostics);
+    expect(api.auditBrambleEffects()).toMatchObject({mode:"native",cells:0,meshCount:0});
     expect(api.developmentPhases()).toEqual({ p0: true, p1: true, p2: true });
     expect(api.setDevelopmentPhase("p1", false)).toEqual({
       p0: true,
