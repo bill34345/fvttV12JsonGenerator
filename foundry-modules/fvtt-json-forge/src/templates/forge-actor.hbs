@@ -15,7 +15,7 @@
       <label for="forge-blueprint-library-search">搜索蓝图
         <input id="forge-blueprint-library-search" name="blueprintLibrarySearch" type="search" autocomplete="off" placeholder="搜索蓝图…">
       </label>
-      <button type="button" class="forge-library-new" data-action="blueprint-new">新建蓝图</button>
+      <button type="button" class="forge-library-new" data-action="blueprint-new"><i class="fas fa-plus" aria-hidden="true"></i> 新建蓝图</button>
       <p data-blueprint-library-status role="status">尚未加载；只显示当前世界中由你保存的蓝图。</p>
       <div class="forge-blueprint-library-cards" data-blueprint-library-cards role="group" aria-label="已保存蓝图"></div>
       <label class="forge-library-native-select" for="forge-blueprint-library-select" hidden>已保存蓝图
@@ -24,8 +24,8 @@
       <div class="forge-library-utilities">
         <button type="button" data-action="blueprint-library-load">加载选中</button>
         <button type="button" data-action="blueprint-library-save">保存当前来源</button>
-        <button type="button" data-action="blueprint-library-refresh">刷新列表</button>
-        <button type="button" data-action="blueprint-download">下载规范 Markdown</button>
+        <button type="button" data-action="blueprint-library-refresh"><i class="fas fa-arrows-rotate" aria-hidden="true"></i> 刷新列表</button>
+        <button type="button" data-action="blueprint-download"><i class="fas fa-download" aria-hidden="true"></i> 下载规范 Markdown</button>
       </div>
     </aside>
     <div class="forge-editor-column">
@@ -48,7 +48,7 @@
           <section class="forge-blueprint-panel" id="forge-panel-basic" data-blueprint-panel="basic" role="tabpanel" aria-labelledby="forge-tab-basic">
             <header class="forge-blueprint-heading"><h3>基础数据</h3><p>确定生物身份、防御与能力值。</p></header>
     <fieldset>
-      <legend>基础数据</legend>
+      <legend class="forge-visually-hidden">基础数据</legend>
       <div class="forge-blueprint-grid">
         <label for="forge-blueprint-size">体型
           <select id="forge-blueprint-size" name="blueprintSize">

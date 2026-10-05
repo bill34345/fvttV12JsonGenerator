@@ -120,9 +120,9 @@
     "note": "对照当前精确配对源码和README：14.364/5.3.3、Mirror14.368/5.3.3、Next14.368/6.0.5并存；native6效果写入按dnd5e系统版本而非Core判断，Slow与WMP限定实机及历史来源缺口保留。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "bf2850ef7626f76f61debea40efec9f3526ed6ab0d5eb7e2299ffd838f1bebfb",
+    "fingerprint": "69ea1867603d7fe3875b3076253dc9218dad96c1ec340cab3513a675df684d46",
     "reviewedOn": "2026-10-05",
-    "note": "已对照0.5.0实际Mirror收据、修正截图、完整清理和当前支持表：新增统一工作台与蓝图/标准Actor/Item接受，Provider及战斗启动仍未执行；CLI默认、Intake来源与既有检查入口不变。预览仅修正文色，工具说明同步保留精确版本和范围。"
+    "note": "本轮仅精修Forge模板与样式：控件主次、表单、原生header字体隔离、即时键盘焦点及宽窄布局。已对照目录入口、蓝图/标准/AI步骤、身份/创建/Provider边界，用户入口、输入输出与支持范围均不变；既有说明继续适用，不缩watch。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",
