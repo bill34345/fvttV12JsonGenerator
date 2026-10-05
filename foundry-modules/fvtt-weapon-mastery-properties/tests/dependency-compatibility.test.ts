@@ -33,6 +33,27 @@ function fixture(ccVersion = '0.2.0', teVersion = '0.2.0') {
 }
 
 describe('WMP dependency compatibility gate', () => {
+  test('Next requires a positive native writer capability and the exact optional Midi adapter', () => {
+    const { globals, modules, weaponEffects } = fixture();
+    globals.game.version = '14.368';
+    globals.game.system.version = '6.0.5';
+    expect(inspectDependencies(globals).ready).toBeFalse();
+    expect(inspectDependencies(globals).modules[0]?.reason).toBe('native6-weapon-writer-unavailable');
+    (weaponEffects as any).capabilities = { native6Effects: 1 };
+    expect(inspectDependencies(globals).ready).toBeTrue();
+    modules.set('midi-qol', { id: 'midi-qol', active: true, version: '14.6.0-beta.4338eeab.local.10' });
+    expect(inspectDependencies(globals).ready).toBeTrue();
+    modules.get('midi-qol').version = '14.6.0-beta.4338eeab.local.9';
+    expect(inspectDependencies(globals).ready).toBeFalse();
+    modules.delete('midi-qol');
+    for (const [core, system] of [['14.364', '6.0.5'], ['14.368', '5.3.3'], ['14.368', '6.0.6']]) {
+      globals.game.version = core!;
+      globals.game.system.version = system!;
+      expect(inspectDependencies(globals).ready).toBeFalse();
+    }
+  });
+
+
   test('accepts both exact 0.2.0 modules with version 1 APIs and keeps supported 0.1.x', () => {
     const current = inspectDependencies(fixture().globals);
     expect(current.ready).toBeTrue();

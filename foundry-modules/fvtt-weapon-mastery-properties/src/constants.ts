@@ -9,6 +9,8 @@ export const MODULE_VERSION = '0.1.0' as const;
 export const MODULE_TITLE = '武器精通与特性 / Weapon Mastery & Properties' as const;
 export const FOUNDRY_VERSION = '14.364' as const;
 export const DND5E_VERSION = '5.3.3' as const;
+export const NEXT_FOUNDRY_VERSION = '14.368' as const;
+export const NEXT_DND5E_VERSION = '6.0.5' as const;
 
 export const OFFICIAL_MASTERY_IDS = WEAPON_MASTERY_IDS;
 export type OfficialMasteryId = WeaponMasteryId;

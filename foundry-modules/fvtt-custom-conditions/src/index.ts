@@ -1,7 +1,7 @@
 import { createConditionsApi, type CustomConditionsApi } from './api.ts';
 import { CONDITION_MANAGER_CONTROL_NAME, CONDITION_MANAGER_MENU_KEY, MODULE_ID } from './constants.ts';
 import { createConditionManagerApplicationClass, openConditionManager } from './manager.ts';
-import { ConditionRuntime, registerConditionMappings } from './runtime.ts';
+import { ConditionRuntime, genericSupported, registerConditionMappings } from './runtime.ts';
 
 let runtime: ConditionRuntime | undefined;
 let api: CustomConditionsApi | undefined;
@@ -45,8 +45,7 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
     (context) => api ? openConditionManager(api, globals, context) : undefined,
   );
   hooks.once('init', () => {
-    if (globals.game?.version === undefined
-      || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3')) {
+    if (genericSupported(globals)) {
       registerConditionMappings(globals);
     }
     registerCustomConditionsSettings(globals);

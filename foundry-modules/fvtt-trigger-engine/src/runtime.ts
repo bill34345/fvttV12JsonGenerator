@@ -20,6 +20,7 @@ import type {
   ExternalEventPublishResult,
   DocumentUpdateReport,
   MacroAction,
+  PreparedHitPoints,
   TriggerActionResult,
   TriggerContext,
   TriggerDefinition,
@@ -76,6 +77,7 @@ export class TriggerEngineRuntime {
 
   #triggers: TriggerDefinition[] = [];
   #snapshots = new Map<string, unknown>();
+  #preparedHpSnapshots = new Map<string, PreparedHitPoints>();
   #documentQueues = new Map<string, Promise<void>>();
   #combatSnapshots = new Map<string, CombatStateSnapshot>();
   #combatQueues = new Map<string, Promise<void>>();
@@ -243,6 +245,7 @@ export class TriggerEngineRuntime {
     this.#snapshotHooks = [];
     this.#combatSnapshots.clear();
     this.#seenCombatTurnKeys.clear();
+    this.#preparedHpSnapshots.clear();
     this.#started = false;
     this.#eventListeners.clear();
     this.#externalEventListeners.clear();
@@ -329,9 +332,13 @@ export class TriggerEngineRuntime {
    */
   captureReadySnapshots(): void {
     this.#snapshots.clear();
+    this.#preparedHpSnapshots.clear();
     for (const actor of this.actors()) {
       const uuid = documentUuid(actor);
-      if (uuid) this.#snapshots.set(uuid, snapshotDocument(actor));
+      if (uuid) {
+        this.#snapshots.set(uuid, snapshotDocument(actor));
+        this.rememberPreparedHp(actor, uuid);
+      }
     }
     // Unlinked Token Actors also need a baseline on the GM client before a
     // player performs their first update (preUpdateActor is origin-client only).
@@ -339,7 +346,10 @@ export class TriggerEngineRuntime {
       for (const token of scene.tokens?.values?.() ?? []) {
         const actor = token.actor;
         const uuid = actor && documentUuid(actor);
-        if (uuid) this.#snapshots.set(uuid, snapshotDocument(actor));
+        if (uuid) {
+          this.#snapshots.set(uuid, snapshotDocument(actor));
+          this.rememberPreparedHp(actor, uuid);
+        }
       }
     }
   }
@@ -372,10 +382,16 @@ export class TriggerEngineRuntime {
     const documentUuidValue = documentUuid(document) ?? `Actor.${String(document?.id ?? 'unknown')}`;
     const after = snapshotDocument(document);
     const before = this.#snapshots.get(documentUuidValue);
+    const priorHp = this.#preparedHpSnapshots.get(documentUuidValue);
+    const preparedAfter = snapshotPreparedHp(document);
+    const preparedHp = priorHp && preparedAfter
+      ? { before: { ...priorHp }, after: { ...preparedAfter } } : undefined;
     this.#snapshots.set(documentUuidValue, cloneUnknown(after));
+    this.rememberPreparedHp(document, documentUuidValue);
 
     const nativeModified = Number(document?._stats?.modifiedTime);
     const event = { document, changed, options, userId, documentUuidValue, before, after,
+      preparedHp,
       capturedModifiedTime: Number.isFinite(nativeModified) ? nativeModified : undefined };
     const causalChain = causalExecutions(options);
     const isReentrantCausalUpdate = causalChain.some((entry) => {
@@ -510,9 +526,12 @@ export class TriggerEngineRuntime {
 
     await this.emitEvent(createCombatEventContext(event));
 
+    if (!this.isActiveGM()) return combatReport(combatUuidValue, context.key, 'inactive-gm');
+
     const results: TriggerExecutionResult[] = [];
     const matchedTriggerIds: string[] = [];
     for (const trigger of this.#triggers) {
+      if (!this.isActiveGM()) return { combatUuid: combatUuidValue, key: context.key, matchedTriggerIds, results, skippedReason: 'inactive-gm' };
       if (!trigger.enabled || trigger.event.type !== eventTypeForCombatContext(context) || trigger.event.documentType !== 'Actor') continue;
       if (!evaluateConditionGroup(trigger.conditions, before, after)) continue;
       matchedTriggerIds.push(trigger.id);
@@ -546,6 +565,7 @@ export class TriggerEngineRuntime {
       before: unknown;
       after: unknown;
       capturedModifiedTime?: number;
+      preparedHp?: TriggerEventContext['preparedHp'];
     },
     suppressedTriggerIds: ReadonlySet<string> = new Set(),
     causalChain: readonly CausalExecution[] = [],
@@ -569,11 +589,17 @@ export class TriggerEngineRuntime {
       userId,
       timestamp: Date.now(),
       capturedModifiedTime: event.capturedModifiedTime,
+      ...(event.preparedHp ? { preparedHp: cloneUnknown(event.preparedHp) } : {}),
     });
+
+    if (!this.isActiveGM()) {
+      return { documentUuid: documentUuidValue, matchedTriggerIds: [], results: [], skippedReason: 'inactive-gm' };
+    }
 
     const results: TriggerExecutionResult[] = [];
     const matchedTriggerIds: string[] = [];
     for (const trigger of this.#triggers) {
+      if (!this.isActiveGM()) return { documentUuid: documentUuidValue, matchedTriggerIds, results, skippedReason: 'inactive-gm' };
       if (!trigger.enabled || trigger.event.type !== 'documentUpdate' || trigger.event.documentType !== 'Actor') continue;
       if (!watchedPathsMatch(trigger.event.watchedPaths, changed)) continue;
       if (!evaluateConditionGroup(trigger.conditions, before, after)) continue;
@@ -728,9 +754,12 @@ export class TriggerEngineRuntime {
   private async emitEvent(context: TriggerEventContext): Promise<void> {
     const listeners = [...this.#eventListeners];
     for (const listener of listeners) {
+      // Subscribers may await a document write or dialog while active GM changes.
+      if (!this.isActiveGM()) return;
       try { await listener(cloneEventContext(context)); }
       catch (error) { this.logger.error('[fvtt-trigger-engine] event listener failed', error); }
     }
+    if (!this.isActiveGM()) return;
     this.globals.Hooks?.callAll?.('fvtt-trigger-engine.event', cloneEventContext(context));
   }
 
@@ -741,6 +770,7 @@ export class TriggerEngineRuntime {
       const uuid = documentUuid(document);
       if (uuid && isActorDocument(document) && !this.#snapshots.has(uuid)) {
         this.#snapshots.set(uuid, snapshotDocument(document));
+        this.rememberPreparedHp(document, uuid);
       }
     };
     this.#snapshotHooks.push(['createActor', hooks.on('createActor', seedActor)]);
@@ -748,8 +778,24 @@ export class TriggerEngineRuntime {
     this.#snapshotHooks.push(['preUpdateActor', hooks.on('preUpdateActor', seedActor)]);
     this.#snapshotHooks.push(['deleteActor', hooks.on('deleteActor', (document: any) => {
       const uuid = documentUuid(document);
-      if (uuid) this.#snapshots.delete(uuid);
+      if (uuid) {
+        this.#snapshots.delete(uuid);
+        this.#preparedHpSnapshots.delete(uuid);
+      }
     })]);
+    for (const name of ['createItem', 'updateItem', 'deleteItem', 'createActiveEffect', 'updateActiveEffect', 'deleteActiveEffect']) {
+      this.#snapshotHooks.push([name, hooks.on(name, (document: any) => {
+        const parent = document?.parent;
+        const actor = isActorDocument(parent) ? parent : isActorDocument(parent?.parent) ? parent.parent : undefined;
+        const uuid = actor && documentUuid(actor);
+        if (!uuid) return;
+        const prior = (this.#snapshots.get(uuid) as any)?.system?.attributes?.hp;
+        const current = (snapshotDocument(actor) as any)?.system?.attributes?.hp;
+        // Embedded hooks run after parent.reset(). Preserve a pending Actor HP
+        // transition when its source changed before its post-update hook.
+        if (prior && current && prior.value === current.value && prior.max === current.max) this.rememberPreparedHp(actor, uuid);
+      })]);
+    }
     this.#hookId = hooks.on('updateActor', (document: any, changed: unknown, options: unknown, userId: string | undefined) => {
       void this.handleDocumentUpdate(document, changed, options, userId).catch((error) => {
         this.logger.error('[fvtt-trigger-engine] updateActor processing failed', error);
@@ -768,6 +814,12 @@ export class TriggerEngineRuntime {
   private observeCombatUpdate(combat: any): void {
     const uuid = combatUuid(combat);
     if (uuid && isCombatDocument(combat)) this.#combatSnapshots.set(uuid, readCombatState(combat));
+  }
+
+  private rememberPreparedHp(document: any, uuid: string): void {
+    const prepared = snapshotPreparedHp(document);
+    if (prepared) this.#preparedHpSnapshots.set(uuid, prepared);
+    else this.#preparedHpSnapshots.delete(uuid);
   }
 
   private actors(): any[] {
@@ -815,6 +867,7 @@ export class TriggerEngineRuntime {
       userId,
       timestamp: Date.now(),
       updateDocument: async (changes: unknown, options: unknown = {}) => {
+        this.requireActiveGM();
         if (typeof document?.update !== 'function') throw new Error('Trigger document does not support update()');
         return document.update(changes, withCausalExecutions(options, childCausalChain));
       },
@@ -860,9 +913,15 @@ export class TriggerEngineRuntime {
   }
 
   private async executeAction(action: MacroAction, triggerContext: TriggerContext): Promise<void> {
+    this.requireActiveGM();
     const macro = await this.resolveMacro(action.macroUuid);
+    this.requireActiveGM();
     if (!isExecutableMacro(macro)) throw new Error(`Macro is unavailable or cannot execute: ${action.macroUuid}`);
     await macro.execute({ triggerContext });
+  }
+
+  private requireActiveGM(): void {
+    if (!this.isActiveGM()) throw new Error('Trigger execution requires the current active GM.');
   }
 
   private async resolveMacro(uuid: string): Promise<any> {
@@ -917,6 +976,15 @@ function snapshotDocument(document: any): unknown {
     value = document;
   }
   return cloneUnknown(value);
+}
+
+function snapshotPreparedHp(document: any): PreparedHitPoints | undefined {
+  try {
+    const hp = document?.system?.attributes?.hp;
+    if (typeof hp?.value !== 'number' || !Number.isFinite(hp.value) || hp.value < 0
+      || typeof hp?.max !== 'number' || !Number.isFinite(hp.max) || hp.max < 0) return undefined;
+    return { value: hp.value, max: hp.max };
+  } catch { return undefined; }
 }
 
 function readCombatState(combat: any): CombatStateSnapshot {
@@ -1038,6 +1106,7 @@ function cloneEventContext(context: TriggerEventContext): TriggerEventContext {
     before: cloneUnknown(context.before),
     after: cloneUnknown(context.after),
     changes: cloneUnknown(context.changes),
+    ...(context.preparedHp ? { preparedHp: cloneUnknown(context.preparedHp) } : {}),
   };
 }
 

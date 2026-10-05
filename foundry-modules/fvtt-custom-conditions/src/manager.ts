@@ -7,6 +7,7 @@ import {
 import { CONDITION_MANAGER_CONTROL_NAME, MODULE_ID } from './constants.ts';
 import type { ConditionManagerOpenContext, CustomConditionsApi } from './api.ts';
 import { conditionIconPath, localizedConditionDefinitions, localize } from './localization.ts';
+import { genericSupported } from './runtime.ts';
 
 const INJURY_MODULE_ID = 'fvtt-injury-fading-spirits' as const;
 const MAX_INJURY_STACKS = 3;
@@ -94,8 +95,7 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
         })),
       })));
       return {
-        genericAvailable: globals.game?.version === undefined
-          || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3'),
+        genericAvailable: genericSupported(globals),
         definitions,
         conditionId: this.conditionId,
         paramsJson: this.paramsJson,
@@ -177,8 +177,7 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
     }
 
     static async onSubmit(this: any, _event: unknown, _form: unknown, formData: any) {
-      if (globals.game?.version !== undefined
-        && (globals.game.version !== '14.364' || globals.game.system?.version !== '5.3.3')) return;
+      if (!genericSupported(globals)) return;
       try {
         const data = formData?.object ?? formData;
         const conditionId = String(data.conditionId) as ConditionId;

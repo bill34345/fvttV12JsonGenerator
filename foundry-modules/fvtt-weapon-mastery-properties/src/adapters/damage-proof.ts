@@ -8,6 +8,8 @@
  * Actor state that was observed around updateActor.
  */
 
+import { dnd5eMessageData, hasNativeMessageData, isReviewedMidiVersion, LEGACY_MIDI_VERSION } from './dnd5e-message.ts';
+
 export const DAMAGE_PROOF_SCHEMA_VERSION = 1 as const;
 
 export const DAMAGE_PROOF_LIMITS = Object.freeze({
@@ -590,6 +592,8 @@ function messageActor(value: unknown): CandidateResult {
   if (!source) return { present: false, ambiguous: false };
   const actor = record(source.actor);
   const candidates: unknown[] = [source.actorUuid, actor?.uuid];
+  const itemUuid = dnd5eMessageData(source)?.item?.uuid;
+  if (typeof itemUuid === 'string' && itemUuid.includes('.Item.')) candidates.push(itemUuid.split('.Item.')[0]);
   for (const flags of messageFlags(source)) {
     const flagActor = record(flags.actor);
     candidates.push(flags.actorUuid, flagActor?.uuid);
@@ -629,7 +633,8 @@ function messageTargets(value: unknown): CandidateResult {
   const target = record(source.target);
   const targetActor = record(target?.actor);
   const candidates: unknown[] = [source.targetActorUuid, source.targetUuid, target?.actorUuid, targetActor?.uuid];
-  const targetCollections = [source.targets, source.target, ...messageFlags(source).flatMap((flags) => [flags.targetActorUuid, flags.targetUuid, flags.target, flags.targets])];
+  const targetCollections = hasNativeMessageData(source) ? [dnd5eMessageData(source)?.targets]
+    : [source.targets, source.target, ...messageFlags(source).flatMap((flags) => [flags.targetActorUuid, flags.targetUuid, flags.target, flags.targets])];
   for (const collection of targetCollections) {
     if (collection === undefined || collection === null) continue;
     if (Array.isArray(collection)) candidates.push(...collection.map(targetFromValue));
@@ -650,10 +655,9 @@ function messageTargets(value: unknown): CandidateResult {
 function messageOrigin(value: unknown): CandidateResult {
   const source = messageRecord(value);
   if (!source) return { present: false, ambiguous: false };
-  const candidates: unknown[] = [source.originatingMessageId, source.originatingMessage];
-  for (const flags of messageFlags(source)) {
-    candidates.push(flags.originatingMessageId, flags.originatingMessage);
-  }
+  const candidates: unknown[] = hasNativeMessageData(source) ? [dnd5eMessageData(source)?.originatingMessage]
+    : [source.originatingMessageId, source.originatingMessage,
+      ...messageFlags(source).flatMap(flags => [flags.originatingMessageId, flags.originatingMessage])];
   const values = candidates.map((candidate) => {
     const result = messageRefId(candidate);
     return result.value;
@@ -706,15 +710,24 @@ function validateMessages(proof: DamageProof, links: DamageMessageLinkEvidence):
   if (attackIdentity.ambiguous || damageIdentity.ambiguous) return { ok: false, reason: 'ambiguous-message-identity' };
   if (!attackIdentity.value || attackIdentity.value !== proof.attackMessageId) return { ok: false, reason: 'attack-message-mismatch' };
   if (!damageIdentity.value || damageIdentity.value !== proof.damageMessageId) return { ok: false, reason: 'damage-message-mismatch' };
+  if (!links.midiSameCard && (hasNativeMessageData(attack) || hasNativeMessageData(damage))) {
+    const a = dnd5eMessageData(attack, true), d = dnd5eMessageData(damage, true);
+    if (!hasNativeMessageData(attack) || !hasNativeMessageData(damage)
+      || attack.type !== 'attack' || damage.type !== 'damage'
+      || typeof a.activity?.uuid !== 'string' || a.activity.uuid !== d.activity?.uuid
+      || typeof a.item?.uuid !== 'string' || a.item.uuid !== d.item?.uuid
+      || !a.item.uuid.startsWith(proof.actorUuid + '.Item.')) return { ok: false, reason: 'attack-link-mismatch' };
+    if (!d.originatingMessage) return { ok: false, reason: 'missing-damage-link' };
+  }
   if (links.midiSameCard) {
     const midi = links.midiSameCard;
     const flags = record(damage.flags);
-    const dnd = record(flags?.dnd5e);
+    const dnd = record(dnd5eMessageData(damage, links.midiSameCard.version !== LEGACY_MIDI_VERSION));
     const midiFlags = record(flags?.['midi-qol']);
     const activity = record(dnd?.activity);
     const item = record(dnd?.item);
     const attackFlags = record(attack.flags);
-    const attackDnd = record(attackFlags?.dnd5e);
+    const attackDnd = record(dnd5eMessageData(attack, links.midiSameCard.version !== LEGACY_MIDI_VERSION));
     const attackActivity = record(attackDnd?.activity);
     const attackItem = record(attackDnd?.item);
     const wmp = record(attackFlags?.['fvtt-weapon-mastery-properties']);
@@ -725,10 +738,10 @@ function validateMessages(proof: DamageProof, links: DamageMessageLinkEvidence):
     const supportedDamage = midiFlags?.type === 4
       ? rollTypes.filter(type => type === 'attack').length === 1
         && rollTypes.some(type => type === 'defaultDamage' || type === 'otherDamage' || type === 'bonusDamage')
-      : midiFlags?.type === 0 && typeof midi?.targetTokenUuid === 'string'
+      : midi.version === LEGACY_MIDI_VERSION && midiFlags?.type === 0 && typeof midi?.targetTokenUuid === 'string'
         && midiItemCardDamageMatches(damage, { actorUuid: proof.targetActorUuid,
           tokenUuid: midi.targetTokenUuid, before: proof.before, after: proof.after });
-    if (midi?.version !== '14.0.11' || !supportedDamage
+    if (!isReviewedMidiVersion(midi?.version) || !supportedDamage
       || !midi.activityUuid || activity?.uuid !== midi.activityUuid
       || !midi.itemUuid || item?.uuid !== midi.itemUuid
       || !midi.targetTokenUuid || !Array.isArray(hitTargets)
@@ -786,8 +799,8 @@ function validateMessages(proof: DamageProof, links: DamageMessageLinkEvidence):
     const attackOrigin = messageOrigin(attack);
     const usageRule = messageAttackId(usage);
     const usageRequester = messageRequester(usage);
-    const attackFlags = record(record(attack.flags)?.dnd5e);
-    const usageFlags = record(record(usage?.flags)?.dnd5e);
+    const attackFlags = record(dnd5eMessageData(attack));
+    const usageFlags = record(dnd5eMessageData(usage));
     const attackActivity = record(attackFlags?.activity);
     const attackItem = record(attackFlags?.item);
     const usageActivity = record(usageFlags?.activity);

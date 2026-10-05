@@ -26,6 +26,7 @@ export interface InjuryEventContext {
   userId?: string;
   timestamp?: number;
   capturedModifiedTime?: number;
+  preparedHp?: { before: { value: number; max: number }; after: { value: number; max: number } };
 }
 
 export function injurySupported(globals: any): boolean {
@@ -370,8 +371,8 @@ export class InjuryRuntime {
     if (!this.enabled() || !this.isActiveGM() || context.event?.type !== 'documentUpdate' || context.event.documentType !== 'Actor') return;
     const actor = context.document;
     if (!this.managed(actor) || actor.uuid !== context.documentUuid) return;
-    const before = snapshotHp(context.before);
-    const after = snapshotHp(context.after);
+    const before = context.preparedHp ? validHp(context.preparedHp.before) : snapshotHp(context.before);
+    const after = context.preparedHp ? validHp(context.preparedHp.after) : snapshotHp(context.after);
     if (!before || !after || (before.value === after.value && before.max === after.max)) return;
     const capturedModified = Number(context.capturedModifiedTime ?? (context.after as any)?._stats?.modifiedTime);
     if (!Number.isFinite(capturedModified)) return;
@@ -649,8 +650,14 @@ export class InjuryRuntime {
 function snapshotHp(value: unknown): { value: number; max: number } | null {
   const document = value as any;
   const raw = document?.system?.attributes?.hp;
-  if (!raw || !Number.isFinite(Number(raw.value)) || !Number.isFinite(Number(raw.max))) return null;
-  return { value: Number(raw.value), max: Number(raw.max) };
+  return validHp(raw);
+}
+
+function validHp(raw: unknown): { value: number; max: number } | null {
+  const hp = raw as any;
+  if (typeof hp?.value !== 'number' || !Number.isFinite(hp.value) || hp.value < 0
+    || typeof hp?.max !== 'number' || !Number.isFinite(hp.max) || hp.max < 0) return null;
+  return { value: hp.value, max: hp.max };
 }
 
 function sameHp(actor: any, expected: { value: number; max: number }): boolean {
@@ -669,7 +676,11 @@ function transactionId(uuid: string, modified: number, userId: string | undefine
 function nativeRest(message: any, actor: any, type: 'short' | 'long', requesterId?: string): boolean {
   if (!message?.id || message.type !== 'rest' || message.system?.type !== type
     || !plain(message.system?.deltas) || message.speaker?.actor !== actor?.id) return false;
-  if (requesterId && message.user?.id !== requesterId && message.user !== requesterId) return false;
+  // Core 14 persists the authenticated ChatMessage author. Prefer that
+  // canonical field; older adapters may expose only the legacy user alias.
+  const author = message.author ?? message.user;
+  const authorId = typeof author === 'string' ? author : author?.id;
+  if (requesterId && authorId !== requesterId) return false;
   let associated: any;
   try { associated = message.getAssociatedActor?.(); } catch { return false; }
   return typeof associated?.uuid === 'string' && associated.uuid === actor.uuid;

@@ -100,6 +100,33 @@ describe('combatTurnStart runtime', () => {
     for (const runtime of runtimes.splice(0)) await runtime.stop();
   });
 
+  test.each(['callback', 'subscriber'])('stops Combat delivery after GM handoff in an awaited %s', async (boundary) => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target = actor('target');
+    const encounter = combat([{ id: 'combatant', actor: target }]);
+    const globals = globalsFor(gm, [target], [encounter]);
+    const calls: string[] = [];
+    globals.Hooks = { callAll: () => calls.push('public-hook') };
+    const handoff = async () => {
+      await Promise.resolve();
+      globals.game.users.activeGM = { id: 'other', isGM: true, active: true };
+    };
+    const runtime = new TriggerEngineRuntime({ globals,
+      storage: new MemoryTriggerStorage({ schemaVersion: 1, triggers: [combatTrigger('authority')] }),
+      macroResolver: async () => ({ execute: () => calls.push('macro') }),
+      onCombatTurnStart: boundary === 'callback' ? handoff : undefined,
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    if (boundary === 'subscriber') runtime.subscribe(handoff);
+    runtime.subscribe(() => { calls.push('later-subscriber'); });
+    encounter.round = 1;
+    encounter.turn = 0;
+    const report = await runtime.handleCombatUpdate(encounter, { round: 1, turn: 0 });
+    expect(report.skippedReason).toBe('inactive-gm');
+    expect(calls).toEqual([]);
+  });
+
   test('reserves both phases across rapid native transitions and a slow end subscriber', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
     const combatants = ['a', 'b', 'c'].map((id) => ({ id, actor: actor(id) }));
@@ -515,15 +542,17 @@ describe('combatTurnStart runtime', () => {
     const globals = globalsFor(gm, [], []);
     globals.Hooks = {
       on: (name: string, handler: unknown) => { handlers.set(name, handler); return name; },
-      off: (name: string) => { removed.push(name); },
+      off: (name: string) => { removed.push(name); handlers.delete(name); },
     };
     const runtime = new TriggerEngineRuntime({ globals, storage: new MemoryTriggerStorage() });
     await runtime.start();
     expect(handlers.has('updateActor')).toBeTrue();
     expect(handlers.has('updateCombat')).toBeTrue();
     expect(handlers.has('combatTurnChange')).toBeTrue();
+    const registered = [...handlers.keys()].sort();
     await runtime.stop();
-    expect(removed.sort()).toEqual(['combatTurnChange', 'createActor', 'createToken', 'deleteActor', 'preUpdateActor', 'updateActor', 'updateCombat']);
+    expect(removed.sort()).toEqual(registered);
+    expect(handlers.size).toBe(0);
   });
 
   test('preserves the existing Actor causal recursion guard alongside combat support', async () => {

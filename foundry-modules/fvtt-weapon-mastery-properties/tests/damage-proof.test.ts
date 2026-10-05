@@ -9,6 +9,67 @@ import {
   type DamageProofEvidence,
 } from '../src/adapters/damage-proof';
 
+describe('native6 message evidence', () => {
+  function native() {
+    const e = evidence();
+    const item = { uuid: 'Actor.attacker.Item.weapon' };
+    const activity = { uuid: item.uuid + '.Activity.attack' };
+    const targets = [{ actor: 'Actor.target', token: 'Scene.scene.Token.target' }];
+    Object.assign(e.messages.attackMessage as any, { type: 'attack', system: { activity, item, targets, origin: null } });
+    Object.assign(e.messages.damageMessage as any, { type: 'damage', system: { activity, item, targets, origin: 'attack-message-1' } });
+    return e;
+  }
+
+  test('native origin and target snapshots prove only the observed HP/temp-HP loss', () => {
+    const e = native();
+    const result = validateDamageProof(proof(), e);
+    expect(result.ok).toBeTrue();
+    if (result.ok) expect(result.actualDamage).toBe(8);
+    const damage = e.messages.damageMessage as any;
+    damage.system.targets = [];
+    expect(validateDamageProof(proof(), e).ok).toBeFalse();
+    damage.system.targets = [{ actor: 'Actor.target', token: 'Scene.scene.Token.target' }];
+    damage.system.origin = null;
+    expect(validateDamageProof(proof(), e).ok).toBeFalse();
+    // Favorable retained legacy flags cannot replace missing canonical identity.
+    damage.system.item = null;
+    expect(validateDamageProof(proof(), e).ok).toBeFalse();
+  });
+
+  test('native usage ancestry requires the same activity/item and requester', () => {
+    const e = native();
+    (e.messages.attackMessage as any).system.origin = 'usage-message';
+    (e.messages.damageMessage as any).system.origin = 'usage-message';
+    e.messages.usageMessage = { id: 'usage-message', type: 'usage', author: { id: 'user-1' },
+      system: { activity: { uuid: 'Actor.attacker.Item.weapon.Activity.attack' }, item: { uuid: 'Actor.attacker.Item.weapon' }, targets: [] },
+      flags: { 'fvtt-weapon-mastery-properties': { attackId: 'attack-1' } } };
+    expect(validateDamageProof(proof(), e).ok).toBeTrue();
+    (e.messages.usageMessage as any).system.activity.uuid = 'Actor.attacker.Item.other.Activity.attack';
+    expect(validateDamageProof(proof(), e).ok).toBeFalse();
+  });
+
+  test('local10 same-card type4 requires exact typed identity, one attack and actual damage; type0 remains closed', () => {
+    const e = native();
+    const card: any = e.messages.attackMessage;
+    card.type = 'usage';
+    card.flags['midi-qol'] = { type: 4, sourceActorUuid: 'Actor.attacker', hitTargetUuids: ['Scene.scene.Token.target'] };
+    card.rolls = [{ options: { 'midi-qol': { rollType: 'attack' } } }, { options: { 'midi-qol': { rollType: 'defaultDamage' } } }];
+    e.messages.damageMessage = card;
+    Object.assign(e.messages, { attackId: 'attack-1', actorUuid: 'Actor.attacker',
+      requesterId: 'user-1', targetActorUuid: 'Actor.target' });
+    e.messages.midiSameCard = { version: '14.6.0-beta.4338eeab.local.10',
+      activityUuid: 'Actor.attacker.Item.weapon.Activity.attack', itemUuid: 'Actor.attacker.Item.weapon',
+      targetTokenUuid: 'Scene.scene.Token.target' };
+    const p = proof({ damageMessageId: 'attack-message-1' });
+    expect(validateDamageProof(p, e)).toMatchObject({ ok: true });
+    card.flags['midi-qol'].type = 0;
+    expect(validateDamageProof(p, e).ok).toBeFalse();
+    card.flags['midi-qol'].type = 4;
+    card.rolls.pop();
+    expect(validateDamageProof(p, e).ok).toBeFalse();
+  });
+});
+
 function proof(overrides: Partial<DamageProof> = {}): DamageProof {
   return {
     schemaVersion: 1,

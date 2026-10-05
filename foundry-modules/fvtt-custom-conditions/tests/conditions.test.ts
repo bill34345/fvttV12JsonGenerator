@@ -47,6 +47,39 @@ function runtimeFixture(target = actor(), extra: Record<string, any> = {}) {
 }
 
 describe('custom condition contract', () => {
+  test.each([['14.364', '5.3.3'], ['14.368', '6.0.5']])('applies nineteen-condition instances and native roll config modifiers on %s/%s', async (core, system) => {
+    const { runtime, target, handlers } = runtimeFixture(actor(), {
+      game: { version: core, system: { id: 'dnd5e', version: system } },
+    });
+    expect(runtime.definitions().map(definition => definition.id).sort()).toEqual([...CUSTOM_CONDITION_IDS].sort());
+    const effect = await runtime.apply(target, 'sickened', {});
+    expect(effect.statuses).toEqual([projectedConditionStatusId('sickened')]);
+    const conSave = { subject: target, ability: 'con', rolls: [{ parts: ['1d20'], options: {} }], disadvantage: false };
+    handlers.get('dnd5e.preRollSavingThrow')(conSave);
+    expect(conSave.disadvantage).toBeTrue();
+    const conCheck = { subject: target, ability: 'con', rolls: [{ parts: ['1d20'], options: {} }], disadvantage: false };
+    handlers.get('dnd5e.preRollAbilityCheck')(conCheck);
+    expect(conCheck.disadvantage).toBeFalse();
+    await runtime.remove(target, effect.id);
+    expect(runtime.list(target)).toEqual([]);
+  });
+
+  test.each([['14.364', '6.0.5', 'dnd5e'], ['14.368', '5.3.3', 'dnd5e'],
+    ['14.368', '6.0.6', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
+    ['14.364', '5.3.3', 'other-system']])('rejects unreviewed or crossed nineteen-condition runtime %s/%s/%s', async (core, system, id) => {
+    const { runtime, target } = runtimeFixture(actor(), { game: { version: core, system: { id, version: system } } });
+    expect(runtime.definitions()).toEqual([]);
+    await expect(runtime.apply(target, 'dazed', {})).rejects.toThrow();
+  });
+
+  test('the reviewed Next pair exposes its native weapon writer while malformed input remains rejected', async () => {
+    const { runtime, target } = runtimeFixture(actor(), { game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } } });
+    expect(runtime.definitions()).toHaveLength(19);
+    expect(runtime.weaponEffects.isSupported()).toBeTrue();
+    expect(runtime.weaponEffects.isNative6Supported()).toBeTrue();
+    await expect(runtime.weaponEffects.apply(target, {} as any)).rejects.toThrow();
+  });
+
   test('registers exactly the planned nineteen custom conditions', () => {
     expect(CUSTOM_CONDITION_IDS).toHaveLength(19);
     expect(Object.keys(CONDITION_DEFINITIONS)).toEqual([...CUSTOM_CONDITION_IDS]);
@@ -82,6 +115,102 @@ describe('custom condition contract', () => {
 });
 
 describe('condition runtime', () => {
+  test('publishes optional AC5e target advantage as an owned status rule and removes only its own entry', async () => {
+    const id = projectedConditionStatusId('defenseless');
+    const native = { _id: 'paralyzed', rules: { attack: { opponent: () => 'advantage' } } };
+    const table: any = { paralyzed: native };
+    const { target, runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.603.2' } : undefined } },
+    });
+    expect(table[id]).toMatchObject({ _id: id });
+    const rule = table[id].rules.attack.opponent;
+    expect(rule({ opponent: target })).toBe('');
+    const effect = await runtime.apply(target, 'defenseless', {});
+    expect(rule({ opponent: target })).toBe('advantage');
+    effect.disabled = true;
+    expect(rule({ opponent: target })).toBe('');
+    effect.disabled = false;
+    await runtime.remove(target, effect.id);
+    expect(rule({ opponent: target })).toBe('');
+    target.effects.push({ id: 'bare', statuses: [id], disabled: false, flags: {} });
+    expect(rule({ opponent: target })).toBe('');
+    runtime.stop();
+    expect(table[id]).toBeUndefined();
+    expect(table.paralyzed).toBe(native);
+  });
+
+  test('optional target registry recovers delayed API initialization and preserves a later foreign replacement', async () => {
+    const id = projectedConditionStatusId('defenseless');
+    const { target, globals, handlers, runtime } = runtimeFixture(actor(), {
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.603.2' } : undefined } },
+    });
+    globals.ac5e = { statusEffectsTables: {} };
+    handlers.get('ac5e.statusEffectsReady')();
+    expect(globals.ac5e.statusEffectsTables[id]?._id).toBe(id);
+    await runtime.apply(target, 'frozen', { escapeDC: 10 });
+    expect(globals.ac5e.statusEffectsTables[id]?.rules.attack.opponent({ opponent: target })).toBe('advantage');
+    const foreign = { _id: id, rules: { attack: { opponent: () => 'other-rule' } } };
+    globals.ac5e.statusEffectsTables[id] = foreign;
+    runtime.stop();
+    expect(globals.ac5e.statusEffectsTables[id]).toBe(foreign);
+  });
+
+  test.each(['14.603.1', undefined])('leaves the optional public registry untouched on unverified AC5e %s', (version) => {
+    const table = {};
+    const { runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version } : undefined } },
+    });
+    expect(table).toEqual({}); runtime.stop(); expect(table).toEqual({});
+  });
+
+  test('does not replace a pre-existing optional target rule', () => {
+    const id = projectedConditionStatusId('defenseless'), foreign = { _id: id, rules: { attack: { opponent: () => 'foreign' } } };
+    const table = { [id]: foreign };
+    const { runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.603.2' } : undefined } },
+    });
+    expect(table[id]).toBe(foreign); runtime.stop(); expect(table[id]).toBe(foreign);
+  });
+
+  test.each([
+    ['enfeebled', ['str']], ['clumsy', ['dex']], ['addled', ['int', 'wis', 'cha']],
+  ] as const)('%s persists native ability attack penalties before attack Hooks build their mode', async (condition, abilities) => {
+    const { target, runtime } = runtimeFixture(actor(), {
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } },
+    });
+    // r37/r38: attack mode is captured/rebuilt from the Actor before a late
+    // preRollAttack boolean can reliably survive other configured roll modules.
+    const effect = await runtime.apply(target, condition, {});
+    const attackChanges = effect.changes.filter((change: any) => change.key.includes('.attack.roll.mode'));
+    expect(attackChanges.map((change: any) => change.key).sort()).toEqual(
+      abilities.map(ability => `system.abilities.${ability}.attack.roll.mode`).sort(),
+    );
+    for (const change of attackChanges) expect(change).toMatchObject({ mode: 2, value: '-1' });
+    expect(effect.changes.some((change: any) => change.key === 'system.rolls.attack.mode')).toBeFalse();
+    await runtime.remove(target, effect.id);
+    expect(target.effects).toHaveLength(0);
+    runtime.stop();
+  });
+
+  test('5.3.3 retains the ability attack Hook without creating unsupported native attack fields', async () => {
+    const { target, runtime, handlers } = runtimeFixture(actor(), {
+      game: { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' } },
+    });
+    const effect = await runtime.apply(target, 'enfeebled', {});
+    expect(effect.changes.some((change: any) => change.key.includes('.attack.roll.mode'))).toBeFalse();
+    const config = { subject: { type: 'attack', actor: target }, ability: 'str', rolls: [{ parts: [] }], disadvantage: false };
+    handlers.get('dnd5e.preRollAttack')(config);
+    expect(config.disadvantage).toBeTrue();
+    runtime.stop();
+  });
+
   test('Sickened penalizes only Constitution saves and preserves unrelated roll modes', async () => {
     const { target, runtime, handlers } = runtimeFixture();
     const effect = await runtime.apply(target, 'sickened', {});
@@ -203,6 +332,26 @@ describe('condition runtime', () => {
     for (const instance of [immobilized, frozen, slowed]) {
       expect(changesFor(instance).some((change) => String(change.key).startsWith('system.attributes.movement.'))).toBeFalse();
     }
+  });
+
+  test.each([['slowed', 15], ['immobilized', 0], ['frozen', 0]] as const)('6.0.5 native movement property parsing recognizes %s', async (conditionId, expectedWalk) => {
+    const effects = { noMovement: new Set<string>(), halfMovement: new Set<string>() };
+    const { runtime, target, globals } = runtimeFixture(actor(), {
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } },
+      CONFIG: { statusEffects: [], DND5E: { conditionEffects: effects } },
+    });
+    const visibleStatusIds = globals.CONFIG.statusEffects.map((status: any) => status.id);
+    const effect = await runtime.apply(target, conditionId, conditionId === 'frozen' ? { escapeDC: 14 } : {});
+    const statuses = new Set<string>(effect.statuses);
+    // dnd5e 6.0.5 Actor.hasConditionEffect parses each property as status-level.
+    // A hyphen inside our public namespace must not become a fake status "fvtt".
+    const matches = (properties: Set<string>) => [...properties].some(property => statuses.has(property.split('-')[0]!));
+    const walk = matches(effects.noMovement) ? 0 : 30 * (matches(effects.halfMovement) ? 0.5 : 1);
+    expect(walk).toBe(expectedWalk);
+    expect(statuses.has(projectedConditionStatusId(conditionId))).toBeTrue();
+    expect(runtime.definitions()).toHaveLength(19);
+    expect(globals.CONFIG.statusEffects.map((status: any) => status.id)).toEqual(visibleStatusIds);
+    expect(globals.CONFIG.statusEffects.some((status: any) => status.id.startsWith('fvttcc.'))).toBeFalse();
   });
 
   test('settles bleeding once per generic Combat turn event and persists the checkpoint', async () => {
@@ -882,6 +1031,40 @@ describe('condition runtime', () => {
     await expect(runtime.escapeFrozen(target, runtime.list(target)[0]!.id, helper)).rejects.toThrow('攻击仍在结算');
     expect(rollCalls).toBe(0);
     runtime.stop();
+  });
+
+  test('6.0.5 Helpless critical conversion reads canonical attack type and system target Actor snapshots', async () => {
+    const target = actor('next-helpless-target');
+    const { globals, handlers, runtime } = runtimeFixture(target, { game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } } });
+    globals.fromUuidSync = (uuid: string) => uuid === target.uuid ? target : undefined;
+    await runtime.apply(target, 'helpless', {});
+    const die: any = { total: 8, options: {} };
+    const hit: any = { total: 15, d20: die, options: {}, isFumble: false, toJSON: () => ({ options: { ...hit.options } }) };
+    const message: any = { type: 'attack', system: { targets: [{ actor: target.uuid, token: 'Scene.test.Token.target', ac: 12 }] },
+      rolls: [hit], getAssociatedActivity: () => ({ type: 'attack', item: { type: 'weapon' } }),
+      updateSource(update: any) { this.savedRolls = update.rolls; } };
+    target.system.attributes.ac.value = 99;
+    handlers.get('preCreateChatMessage')(message, { type: 'attack', system: message.system });
+    expect(hit.options.criticalSuccess).toBe(8);
+    expect(message.savedRolls[0].options.criticalSuccess).toBe(8);
+    const miss: any = { total: 11, d20: { total: 8, options: {} }, options: {}, isFumble: false, toJSON: () => ({}) };
+    message.rolls = [miss];
+    handlers.get('preCreateChatMessage')(message, { type: 'attack', system: message.system });
+    expect(miss.options.criticalSuccess).toBeUndefined();
+  });
+
+  test('6.0.5 canonical non-attack or total-cover snapshots cannot fall back to conflicting legacy attack flags', async () => {
+    const target = actor('next-cover-target');
+    const { globals, handlers, runtime } = runtimeFixture(target, { game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } } });
+    globals.fromUuidSync = (uuid: string) => uuid === target.uuid ? target : undefined;
+    await runtime.apply(target, 'helpless', {});
+    const legacy = { dnd5e: { roll: { type: 'attack' }, targets: [{ uuid: target.uuid, ac: 12 }] } };
+    for (const type of ['attack', 'save']) {
+      const roll: any = { total: 25, d20: { total: 8, options: {} }, options: {}, isFumble: false, toJSON: () => ({}) };
+      const message: any = { type, flags: legacy, system: { targets: [{ actor: target.uuid, ac: null }] }, rolls: [roll], updateSource() {} };
+      handlers.get('preCreateChatMessage')(message, { type, system: message.system, flags: legacy });
+      expect(roll.options.criticalSuccess).toBeUndefined();
+    }
   });
 
   test('Helpless critical conversion uses the attack message target snapshot and never turns a miss into a hit', async () => {

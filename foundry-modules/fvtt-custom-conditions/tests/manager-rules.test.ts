@@ -24,6 +24,40 @@ function setup() {
 }
 
 describe('Condition manager rule controls', () => {
+  test.each([
+    ['14.364', '5.3.3', 'dnd5e', true],
+    ['14.368', '6.0.5', 'dnd5e', true],
+    ['14.368', '6.0.6', 'dnd5e', false],
+    ['14.367', '6.0.5', 'dnd5e', false],
+    ['14.368', '5.3.3', 'dnd5e', false],
+    ['14.364', '5.3.3', 'pf2e', false],
+  ])('manager render and submit share the actual supported pair %s/%s/%s', async (core, system, systemId, available) => {
+    const target = { uuid: 'Actor.manager-pinned', documentName: 'Actor', name: 'Pinned actor', effects: [] };
+    const foreign = { uuid: 'Actor.manager-foreign', documentName: 'Actor', name: 'Foreign target' };
+    const calls: any[] = [];
+    const globals: any = {
+      foundry: { applications: { api: { ApplicationV2: class { async render() {} } } } },
+      game: { version: core, system: { id: systemId, version: system }, user: { targets: new Set([{ actor: foreign }]) } },
+      canvas: { tokens: { controlled: [] } },
+    };
+    const api: any = { list: () => [], apply: async (...args: any[]) => calls.push(args) };
+    const Application = createConditionManagerApplicationClass(api, globals);
+    const manager = new Application({ context: { actor: target, conditionId: 'jinxed' } });
+    const context = await manager._prepareContext();
+    expect(context.genericAvailable).toBe(available);
+    expect(context.conditionId).toBe('jinxed');
+    expect(context.actors.map((actor: any) => actor.uuid)).toEqual([target.uuid]);
+    await Application.onSubmit.call(manager, undefined, undefined, {
+      object: { conditionId: 'jinxed', paramsJson: '{"formula":"1d6"}' },
+    });
+    if (available) {
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.slice(0, 3)).toEqual([target, 'jinxed', { formula: '1d6' }]);
+    } else expect(calls).toEqual([]);
+    expect(foreign).not.toHaveProperty('effects');
+  });
+
+
   test('HUD shortcuts for every parameterized condition leave its required inputs invalid until submitted', async () => {
     const target: any = { uuid: 'Actor.hud-param', documentName: 'Actor', effects: [] };
     const unrelated: any = { uuid: 'Actor.other', documentName: 'Actor' };

@@ -606,10 +606,15 @@
         "command": "bun run foundry:ops assets inventory --hash-concurrency=4"
       },
       {
-        "title": "准备文件侧验收合同",
+      "title": "准备文件侧验收合同",
         "text": "按 Foundry Ops 说明准备带绝对路径和已审核命令的请求 JSON。预检失败时停止；成功后使用返回的合同路径依次 ready、execute、collect，需要接续时 resume。run、dispatch、receipt ID 和候选／指令身份自动取得。",
-        "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
-      },
+      "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
+    },
+    {
+      "title": "预览 ServerNext 自有模块首次安装",
+      "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。本批支持 TE/CC 首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
+      "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0"
+    },
       {
         "title": "接入已准备的 ServerNext 批次",
         "text": "按说明填写本任务工作树、旧批次合同和离线授权引用。工具固定跨工作树只读来源并自动绑定回执；ready 只代表文件检查可运行，ready-batch 独立报告运行门禁。源批次暂停和回调归属保留。",

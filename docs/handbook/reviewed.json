@@ -5,14 +5,14 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "ddde7ee0c225275706c87abe61569c1f0f1e3b668d1862cb15652aa8362ee078",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "fb4ab24216afa239e8e443a5f45ea055a5ce5b680febaa70adb56ee447dd9d75",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "monster-intake": {
-    "fingerprint": "02e9fc9bae558e627d79dd20b24a823d89118808820c157055ec1f326fe1096d",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "0bcd1989f9d62953bb99680dab9cd625f7907008cb7501ec4e60250d3c463a8f",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "item-intake": {
     "fingerprint": "0479dd66ab0b79c808a76f59a9da4d6f93d6b4d1c905024c2fbf662ca686d504",
@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "7eaaa536bd549443704c03a032f0b9cea9b9225ec4b916cef8be089d95993847",
-    "reviewedOn": "2026-10-03",
-    "note": "已对照P2修正：新增暂存000000到100755必须保持INCOMPLETE并要求独立模式/意图审查，100644普通新文件仍按字节读回。既有命令、输出层级、无删除授权和模式差异需另核的说明仍准确，仅更新实现指纹。"
+    "fingerprint": "84b9ab281e0faf39296634614b227e89cd7fe350a8f17c5be0da60d7e140bfd7",
+    "reviewedOn": "2026-10-04",
+    "note": "人工核对：CC现有原生与HUD限定义务已实机通过，新武器system.changes写入与native6Effects能力仅候选；WMP仅两精确版本配对，Next启用Midi须local10且同卡type0未证实拒绝。首次安装器增加WMP0.1.0只读预览/不存在目标才安装，无替换、启动或运行接受授权。README与用户参数/GM入口保持，新联合实机待验。"
   },
   "verification-development": {
-    "fingerprint": "7e1d2c5eb46a944aad7287d7335d8a9fd56b2cb6e0b25c7155fdc7cc7d761f0a",
-    "reviewedOn": "2026-10-03",
-    "note": "核对安全测试入口新增样本宏回归；Bun1.3.8循环检查未返回结果，改用同一Knip包的Node官方入口，参数与检查范围不变，Node入口已退出0。正式生成目标与verifier入口不变。"
+    "fingerprint": "f653d5473947052486364110e9a95479d67d1024b353f5e927d8107f873497c8",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "human-encounter-intake": {
     "fingerprint": "738c0428aa96f6dccaf74165c0bed5bd0591a8f17542d12e4a1b1d95aa4a1a04",
@@ -105,19 +105,19 @@
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "0f45fec775f423446b75e2f1847820de51b4a88ad7a795b126374e66fae15e76",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "9e10a4dde5ef36945d8fe45677d41351336fac184bb8823177ab780d8980921d",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "52627936a0443d08eac95173fbf91876461644c44f9b1160a03fe3ec4d829e67",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "6852bb554ee6f33150ec21d61e903f578ebd87a3b51b2c12ed7da8741e63deb6",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "392c9197249846ea5076b05464287bc5f546b235380f4772e427fe77f96cb3b6",
-    "reviewedOn": "2026-10-02",
-    "note": "逐项人工核对最终组合：正式生成与WMP字段/作用域来源、Intake持续授权和provider/accepted边界、CI分层不变；伤势归CC/TE事件/独立复活及Mirror代表接受和恢复有新证据；WMP依赖只新增精确0.2.0并保留API与5.3.3门，新接通实机仍待核。未缩watch，旧证据不推广Next。"
+    "fingerprint": "6b596a70e462045d0d7b20fd1735cfb2e3930070c0187ed7b07e63a2a6fc9178",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   },
   "fvtt-json-forge": {
     "fingerprint": "6e39a6914bdfa2496ed937e193e43c51d92f700ccf66d84ab4bf97e95cb57f3a",
@@ -145,8 +145,8 @@
     "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "8169c1c8e9df573fab50a1a1cc07602fe68f47cdd8274f6715cd8db1bf5d0af9",
-    "reviewedOn": "2026-10-02",
-    "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
+    "fingerprint": "8cff2fbf3addfc208837d385e51373591773fb8e2d888da2cda23decbcaf9563",
+    "reviewedOn": "2026-10-05",
+    "note": "对照r92/r95最终父审、现有模块README和支持矩阵复核七条：仅CC/WMP结论改为限定清理与文档包实装读回已闭合；r80旧断链、个人HUD旧坐标、孤立Setting及一处Scene旧完整来源限制保留。生成、Intake、验证入口输出不变，watch未缩，未提升全部玩法或生产。"
   }
 }

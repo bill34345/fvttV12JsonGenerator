@@ -11,6 +11,7 @@ import type { InjuryState } from './injury.ts';
 
 export interface WeaponEffectsApi {
   readonly version: 1;
+  readonly capabilities: Readonly<{ native6Effects?: 1 }>;
   list(actor: any): WeaponEffectEntry[];
   apply(actor: any, input: WeaponEffectInput): Promise<any>;
   remove(actor: any, id: string): Promise<void>;
@@ -78,6 +79,7 @@ export function createConditionsApi(runtime: ConditionRuntime, openManager: (con
 export function createWeaponEffectsApi(runtime: WeaponEffectRuntime): WeaponEffectsApi {
   return Object.freeze({
     version: 1 as const,
+    capabilities: Object.freeze(runtime.isNative6Supported() ? { native6Effects: 1 as const } : {}),
     list: (actor: any) => runtime.list(actor),
     apply: (actor: any, input: WeaponEffectInput) => runtime.apply(actor, input),
     remove: (actor: any, id: string) => runtime.remove(actor, id),

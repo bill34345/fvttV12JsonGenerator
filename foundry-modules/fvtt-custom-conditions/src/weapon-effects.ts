@@ -67,6 +67,18 @@ export class WeaponEffectRuntime {
     this.isActiveGM = isActiveGM;
   }
 
+  isSupported(): boolean {
+    return this.globals.game?.version === undefined
+      || (this.globals.game.version === '14.364' && this.globals.game.system?.id === 'dnd5e'
+        && this.globals.game.system.version === '5.3.3')
+      || this.isNative6Supported();
+  }
+
+  isNative6Supported(): boolean {
+    return this.globals.game?.version === '14.368' && this.globals.game.system?.id === 'dnd5e'
+      && this.globals.game.system.version === '6.0.5';
+  }
+
   definitions(): Array<{ kind: WeaponEffectKind; label: string }> {
     return (['sap', 'slow', 'vex'] as const).map((kind) => ({ kind, label: LABELS[kind] }));
   }
@@ -245,7 +257,7 @@ export class WeaponEffectRuntime {
 
   /** Apply source/target-relative expiry from the existing Trigger Engine turn events. */
   async handleTriggerEvent(context: WeaponEffectTurnContext): Promise<void> {
-    if (!this.isActiveGM() || context.event?.documentType !== 'Actor') return;
+    if (!this.isSupported() || !this.isActiveGM() || context.event?.documentType !== 'Actor') return;
     if (context.event.type !== 'combatTurnStart' && context.event.type !== 'combatTurnEnd') return;
     const actor = context.document;
     if (!actor || actor.documentName !== 'Actor') return;
@@ -315,7 +327,9 @@ export class WeaponEffectRuntime {
       showIcon: 2,
       /** No legacy ConditionId is placed in statuses for these effects. */
       statuses: [],
-      changes: changesForWeaponEffect(instance, actor),
+      ...(this.isNative6Supported()
+        ? { system: { changes: changesForWeaponEffect(instance, actor, '6.0.5') } }
+        : { changes: changesForWeaponEffect(instance, actor) }),
       origin: origin || sourceOrigin(instance) || null,
       description: descriptionFor(instance),
       flags: buildWeaponEffectFlag(instance),
@@ -324,13 +338,13 @@ export class WeaponEffectRuntime {
 
   private async updateInstance(actor: any, id: string, instance: WeaponEffectInstance, disabled: boolean): Promise<void> {
     const changes = instance.effectKind === 'slow' && !disabled
-      ? changesForWeaponEffect(instance, actor)
+      ? changesForWeaponEffect(instance, actor, this.isNative6Supported() ? '6.0.5' : undefined)
       : [];
     const update: Record<string, unknown> = {
       _id: id,
       disabled,
       [`flags.${MODULE_ID}.weaponEffect`]: instance,
-      changes,
+      [this.isNative6Supported() ? 'system.changes' : 'changes']: changes,
     };
     // Foundry recursively merges object updates. Explicitly remove the
     // optional reservation key when a ticket is cancelled or disabled;
@@ -344,16 +358,18 @@ export class WeaponEffectRuntime {
       && entry.instance.stackingGroup === stackingGroup);
     const active = entries.filter((entry) => !entry.disabled);
     const winner = active.slice().sort((left, right) => slowReduction(right.instance) - slowReduction(left.instance))[0];
+    const native6 = this.isNative6Supported();
+    const currentChanges = (entry: WeaponEffectEntry) => collection(native6 ? entry.effect?.system?.changes : entry.effect?.changes);
     const updates = entries
-      .filter((entry) => !entry.disabled || collection(entry.effect?.changes).length > 0)
-      .map((entry) => {
+      .filter((entry) => !entry.disabled || currentChanges(entry).length > 0)
+      .map((entry): Record<string, unknown> | undefined => {
         const changes = winner?.id === entry.id
-          ? changesForWeaponEffect(entry.instance, actor)
+          ? changesForWeaponEffect(entry.instance, actor, native6 ? '6.0.5' : undefined)
           : [];
-        if (sameChanges(collection(entry.effect?.changes), changes)) return undefined;
-        return { _id: entry.id, changes };
+        if (sameChanges(currentChanges(entry), changes, native6)) return undefined;
+        return { _id: entry.id, [native6 ? 'system.changes' : 'changes']: changes };
       })
-      .filter((update): update is { _id: string; changes: Array<Record<string, unknown>> } => Boolean(update));
+      .filter((update): update is Record<string, unknown> => Boolean(update));
     if (updates.length) await actor.updateEmbeddedDocuments?.('ActiveEffect', updates, { [MODULE_ID]: { managed: true, weaponEffect: true } });
   }
 
@@ -405,9 +421,8 @@ export class WeaponEffectRuntime {
   }
 
   private requireGM(actor: any): void {
-    if (this.globals.game?.version !== undefined
-      && (this.globals.game.version !== '14.364' || this.globals.game.system?.version !== '5.3.3')) {
-      throw new Error('Weapon Mastery effects remain limited to Foundry 14.364 / dnd5e 5.3.3.');
+    if (!this.isSupported()) {
+      throw new Error('Weapon Mastery effects require an exact reviewed Foundry/dnd5e pair: 14.364/5.3.3 or 14.368/6.0.5.');
     }
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作武器临时效果。');
     if (!actor || actor.documentName !== 'Actor') throw new Error('请选择一个 Actor。');
@@ -417,6 +432,7 @@ export class WeaponEffectRuntime {
 export function changesForWeaponEffect(
   instance: WeaponEffectInstance,
   actor?: any,
+  systemVersion?: string,
 ): Array<Record<string, unknown>> {
   if (instance.effectKind !== 'slow') return [];
   // Keep the rule as a fixed ADD contribution. dnd5e's native
@@ -428,7 +444,12 @@ export function changesForWeaponEffect(
   const movementTypes = params.movementTypes?.length
     ? params.movementTypes
     : ['walk', 'burrow', 'climb', 'fly', 'swim'];
-  return movementTypes.flatMap((movement) => {
+  return movementTypes.flatMap<Record<string, unknown>>((movement) => {
+    if (systemVersion === '6.0.5') return [{
+      key: 'system.attributes.movement.speeds.' + movement,
+      type: 'add',
+      value: '-' + reduction,
+    }];
     return [{
       key: `system.attributes.movement.${movement}`,
       mode: 2,
@@ -490,8 +511,15 @@ function slowReduction(instance: WeaponEffectInstance): number {
   return Number((instance.params as SlowWeaponEffectParams).speedReduction) || 0;
 }
 
-function sameChanges(left: Array<Record<string, unknown>>, right: Array<Record<string, unknown>>): boolean {
+function sameChanges(left: Array<Record<string, unknown>>, right: Array<Record<string, unknown>>, native6 = false): boolean {
   if (left.length !== right.length) return false;
+  // Native rows have generated IDs and may be DataModels. Compare their rule
+  // fields so a stable Slow group does not rewrite IDs on every source turn.
+  if (native6) return left.every((entry: any, index) => {
+    const source = entry.toObject?.() ?? entry;
+    const desired = right[index];
+    return source.key === desired?.key && source.type === desired?.type && source.value === desired?.value;
+  });
   return left.every((entry, index) => JSON.stringify(entry) === JSON.stringify(right[index]));
 }
 

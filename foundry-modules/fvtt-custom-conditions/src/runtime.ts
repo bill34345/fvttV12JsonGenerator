@@ -66,6 +66,7 @@ export interface TriggerEventContextLike {
   userId?: string;
   timestamp?: number;
   capturedModifiedTime?: number;
+  preparedHp?: { before: { value: number; max: number }; after: { value: number; max: number } };
   combat?: any;
   combatUuid?: string;
   combatant?: any;
@@ -76,9 +77,12 @@ export interface TriggerEventContextLike {
   phase?: 'start' | 'end';
 }
 
-function genericSupported(globals: any): boolean {
+export function genericSupported(globals: any): boolean {
   return globals.game?.version === undefined
-    || (globals.game.version === '14.364' && globals.game.system?.version === '5.3.3');
+    || (globals.game.system?.id === 'dnd5e' && (
+      (globals.game.version === '14.364' && globals.game.system.version === '5.3.3')
+      || (globals.game.version === '14.368' && globals.game.system.version === '6.0.5')
+    ));
 }
 
 export class ConditionRuntime {
@@ -97,6 +101,7 @@ export class ConditionRuntime {
   #configuredAttackTurnKeys = new WeakMap<object, string | undefined>();
   #pendingEscapeActors = new Set<string>();
   #pendingFrozenDamage = new WeakMap<object, Map<string, number>>();
+  #targetStatusEntries: Array<{ table: Record<string, any>; id: string; entry: any }> = [];
   #started = false;
 
   constructor(globals: any = globalThis, isActiveGM: () => boolean = () => isActiveGMFrom(globals)) {
@@ -122,10 +127,12 @@ export class ConditionRuntime {
       return;
     }
     registerConditionMappings(this.globals);
+    this.ensureOptionalTargetStatusRule();
     const hooks = this.globals.Hooks;
     if (typeof hooks?.on === 'function') {
       this.#triggerReadyHook = hooks.on('fvtt-trigger-engine.ready', () => this.connectTriggerEngine());
       this.#rollHooks.push(['tokenActionHudCorePreRender', registerConditionHudHook(this.globals)]);
+      this.#rollHooks.push(['ac5e.statusEffectsReady', hooks.on('ac5e.statusEffectsReady', () => this.ensureOptionalTargetStatusRule())]);
       this.#rollHooks.push(['dnd5e.preRollAttack', hooks.on('dnd5e.preRollAttack', (config: any) => this.applyRollModifiers(config, 'attack'))]);
       this.#rollHooks.push(['dnd5e.preRollSavingThrow', hooks.on('dnd5e.preRollSavingThrow', (config: any) => this.applyRollModifiers(config, 'save'))]);
       this.#rollHooks.push(['dnd5e.preRollAbilityCheck', hooks.on('dnd5e.preRollAbilityCheck', (config: any) => this.applyRollModifiers(config, 'check'))]);
@@ -155,6 +162,10 @@ export class ConditionRuntime {
   }
 
   stop(): void {
+    for (const { table, id, entry } of this.#targetStatusEntries) {
+      if (table[id] === entry) delete table[id];
+    }
+    this.#targetStatusEntries = [];
     this.injury.stop();
     this.weaponEffects.stop?.();
     if (this.#unsubscribe) this.#unsubscribe();
@@ -196,6 +207,7 @@ export class ConditionRuntime {
 
   async apply(actor: any, conditionId: ConditionId, params: ConditionParams, options: ConditionApplyOptions = {}): Promise<any> {
     this.requireGM(actor);
+    this.ensureOptionalTargetStatusRule();
     const definition = getConditionDefinition(conditionId);
     if (!definition) throw new Error(`Unknown custom condition: ${conditionId}`);
     const instance = createConditionInstance(conditionId, params, {
@@ -521,8 +533,9 @@ export class ConditionRuntime {
       statuses: [
         projectedConditionStatusId(instance.conditionId),
         ...(definition.composite ?? []).map((conditionId) => projectedConditionStatusId(conditionId)),
+        ...nativeMovementPropertyStatuses(instance.conditionId, definition.composite, this.globals.game?.system?.version),
       ],
-      changes: changesFor(instance),
+      changes: changesFor(instance, this.globals.game?.system?.version),
       origin: instance.origin || null,
       description: typeof instance.params.endCondition === 'string' && instance.params.endCondition
         ? instance.params.endCondition
@@ -531,8 +544,36 @@ export class ConditionRuntime {
     };
   }
 
+  private ensureOptionalTargetStatusRule(): void {
+    // AC5e 14.603.2 exposes this table as its public status extension interface.
+    // Its mode builder skips unknown statuses before applying overrides, so a
+    // late config.advantage boolean alone cannot supply our target source.
+    // Frozen/Shocked project the same Defenseless status; register it once so
+    // the engine combines this source with legitimate disadvantage normally.
+    const game = this.globals.game;
+    const optional = game?.modules?.get?.('automated-conditions-5e');
+    if (game?.version !== '14.368' || game?.system?.version !== '6.0.5'
+      || optional?.active !== true || optional.version !== '14.603.2') return;
+    const table = this.globals.ac5e?.statusEffectsTables;
+    const id = projectedConditionStatusId('defenseless');
+    if (!table || typeof table !== 'object' || Array.isArray(table)
+      || !Object.isExtensible(table) || Object.hasOwn(table, id)) return;
+    const entry = {
+      _id: id,
+      name: this.globals.CONFIG?.statusEffects?.find?.((status: any) => status.id === id)?.name ?? 'Defenseless',
+      rules: { attack: { opponent: (context: any) => {
+        if (!this.#started) return '';
+        const entries = this.list(context?.opponent).filter((condition) => !condition.disabled);
+        return hasCondition(entries, 'defenseless') || hasCondition(entries, 'frozen') || hasCondition(entries, 'shocked')
+          ? 'advantage' : '';
+      } } },
+    };
+    table[id] = entry;
+    this.#targetStatusEntries.push({ table, id, entry });
+  }
+
   private requireGM(actor: any): void {
-    if (!genericSupported(this.globals)) throw new Error('Only Injury is enabled on dnd5e 6.0.5; other Custom Conditions require 5.3.3.');
+    if (!genericSupported(this.globals)) throw new Error('Custom Conditions are unsupported on this exact Core/dnd5e runtime.');
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作自定义 Condition。');
     if (!actor || actor.documentName !== 'Actor') throw new Error('请选择一个 Actor。');
   }
@@ -672,6 +713,7 @@ export class ConditionRuntime {
   }
 
   private applyRollModifiers(config: any, kind: 'attack' | 'save' | 'check'): boolean | void {
+    if (kind === 'attack') this.ensureOptionalTargetStatusRule();
     const actor = config?.subject?.actor ?? config?.subject;
     if (!actor || actor.documentName !== 'Actor') return;
     const entries = this.list(actor).filter((entry) => !entry.disabled);
@@ -831,7 +873,7 @@ export class ConditionRuntime {
     const actor = activity?.actor ?? activity?.item?.actor;
     if (!actor || actor.documentName !== 'Actor') return;
     const activation = String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '');
-    // dnd5e 5.3.3 fires postUseActivity before triggering an Attack Activity's
+    // dnd5e 5.3.3 and 6.0.5 fire postUseActivity before an Attack Activity's
     // roll dialog. Defer either activity category until the non-empty rollAttack hook.
     if (!isAttackActivity(activity)) {
       if (activation === 'action') void this.markActionUsed(actor).catch((error) => this.report(error));
@@ -845,7 +887,7 @@ export class ConditionRuntime {
       || !this.#pendingAttackTurnKeys.has(config)) return;
     const combatKey = this.#pendingAttackTurnKeys.get(config);
     this.#pendingAttackTurnKeys.delete(config);
-    // dnd5e 5.3.3 calls this cancellable hook after its attack dialog but
+    // dnd5e 5.3.3 and 6.0.5 call this cancellable hook after the attack dialog but
     // before evaluating the roll. Another choice can finish while it is open.
     const activity = config.subject;
     const actor = activity?.actor ?? activity?.item?.actor;
@@ -947,10 +989,15 @@ export class ConditionRuntime {
 
   private prepareHelplessCriticalMessage(message: any, data: any): void {
     const flags = data?.flags?.dnd5e ?? message?.flags?.dnd5e;
-    if (flags?.roll?.type !== 'attack') return;
-    const targets = Array.isArray(flags.targets) ? flags.targets : [];
-    if (targets.length !== 1 || typeof targets[0]?.uuid !== 'string') return;
-    const target = this.globals.fromUuidSync?.(targets[0].uuid) ?? this.globals.fromUuidSync?.(String(targets[0].uuid));
+    const canonical = this.globals.game?.system?.version === '6.0.5';
+    const type = canonical ? (data?.type ?? message?.type) : flags?.roll?.type;
+    if (type !== 'attack') return;
+    const descriptors = canonical ? (data?.system?.targets ?? message?.system?.targets) : flags?.targets;
+    const targets = Array.isArray(descriptors) ? descriptors : [];
+    const targetUuid = canonical ? targets[0]?.actor : targets[0]?.uuid;
+    if (targets.length !== 1 || typeof targetUuid !== 'string' || !targetUuid) return;
+    const resolve = this.globals.foundry?.utils?.fromUuidSync ?? this.globals.fromUuidSync;
+    const target = resolve?.(targetUuid);
     const targetActor = target?.actor ?? target?.document?.actor ?? target;
     if (!targetActor) return;
     const entries = this.list(targetActor).filter((entry) => !entry.disabled);
@@ -1035,16 +1082,40 @@ export class ConditionRuntime {
   }
 }
 
-export function changesFor(instance: ConditionInstance): Array<Record<string, unknown>> {
+export function changesFor(instance: ConditionInstance, systemVersion?: string): Array<Record<string, unknown>> {
   const changes: Array<Record<string, unknown>> = [];
-  const disadvantage = (ability: string, type: 'check' | 'save') => {
+  const disadvantage = (ability: string, type: 'check' | 'save' | 'attack') => {
     changes.push({ key: `system.abilities.${ability}.${type}.roll.mode`, mode: 2, value: '-1', priority: null });
   };
   if (instance.conditionId === 'addled') for (const ability of ['int', 'wis', 'cha']) { disadvantage(ability, 'check'); disadvantage(ability, 'save'); }
   if (instance.conditionId === 'clumsy') { disadvantage('dex', 'check'); disadvantage('dex', 'save'); }
   if (instance.conditionId === 'enfeebled') { disadvantage('str', 'check'); disadvantage('str', 'save'); }
+  // 6.0.5 builds native AttackActivity roll modes from these Actor fields before
+  // preRollAttack. Persist the ability-specific source so later roll modules
+  // can combine it with legitimate advantage, rather than relying on a late
+  // boolean alone. 5.3.3 has no ability.attack.roll schema; keep its Hook path.
+  if (systemVersion === '6.0.5') {
+    if (instance.conditionId === 'addled') for (const ability of ['int', 'wis', 'cha']) disadvantage(ability, 'attack');
+    if (instance.conditionId === 'clumsy') disadvantage('dex', 'attack');
+    if (instance.conditionId === 'enfeebled') disadvantage('str', 'attack');
+  }
   if (instance.conditionId === 'sickened') disadvantage('con', 'save');
   return changes;
+}
+
+function nativeMovementPropertyStatusId(conditionId: ConditionId): string | undefined {
+  return ['immobilized', 'frozen', 'slowed'].includes(conditionId) ? `fvttcc.${conditionId}` : undefined;
+}
+
+function nativeMovementPropertyStatuses(conditionId: ConditionId, composite: readonly ConditionId[] | undefined, systemVersion: string | undefined): string[] {
+  if (systemVersion !== '6.0.5') return [];
+  // 6.0.5 parses condition properties as status-level by splitting on "-".
+  // Keep the public status IDs intact; these unregistered internal aliases are
+  // collected from ActiveEffect.statuses and do not create extra HUD entries.
+  return [conditionId, ...(composite ?? [])].flatMap((id) => {
+    const status = nativeMovementPropertyStatusId(id);
+    return status ? [status] : [];
+  });
 }
 
 function registerStatusEffects(globals: any): void {
@@ -1088,12 +1159,18 @@ function registerStatusEffects(globals: any): void {
     }
   }
   const effects = globals.CONFIG?.DND5E?.conditionEffects;
-  effects?.noMovement?.add?.('immobilized');
-  effects?.noMovement?.add?.('frozen');
-  effects?.halfMovement?.add?.('slowed');
-  effects?.noMovement?.add?.(projectedConditionStatusId('immobilized'));
-  effects?.noMovement?.add?.(projectedConditionStatusId('frozen'));
-  effects?.halfMovement?.add?.(projectedConditionStatusId('slowed'));
+  if (globals.game?.system?.version === '6.0.5') {
+    effects?.noMovement?.add?.(nativeMovementPropertyStatusId('immobilized'));
+    effects?.noMovement?.add?.(nativeMovementPropertyStatusId('frozen'));
+    effects?.halfMovement?.add?.(nativeMovementPropertyStatusId('slowed'));
+  } else {
+    effects?.noMovement?.add?.('immobilized');
+    effects?.noMovement?.add?.('frozen');
+    effects?.halfMovement?.add?.('slowed');
+    effects?.noMovement?.add?.(projectedConditionStatusId('immobilized'));
+    effects?.noMovement?.add?.(projectedConditionStatusId('frozen'));
+    effects?.halfMovement?.add?.(projectedConditionStatusId('slowed'));
+  }
 }
 
 export function registerConditionMappings(globals: any = globalThis): void {

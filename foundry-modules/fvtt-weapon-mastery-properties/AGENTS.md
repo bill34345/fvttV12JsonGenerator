@@ -3,7 +3,11 @@
 ## Scope
 
 This directory is the owner of the standalone `fvtt-weapon-mastery-properties`
-module. Its supported runtime is Foundry `14.364` with dnd5e `5.3.3` exactly.
+module. Runtime gates accept only Foundry `14.364` / dnd5e `5.3.3` or
+`14.368` / `6.0.5`; the Next candidate still requires its own real acceptance.
+Next requires CC's positive `weaponEffects.capabilities.native6Effects === 1`.
+Native6 identities come from message `system`, and Midi support is pinned to
+`14.6.0-beta.4338eeab.local.10`; incomplete or unreviewed cards fail closed.
 
 The browser entry must remain browser safe. `src/core` contains pure,
 source-driven eligibility, critical-damage, and settlement helpers. It may

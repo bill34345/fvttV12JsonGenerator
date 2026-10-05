@@ -140,6 +140,53 @@ describe('Actor documentUpdate runtime', () => {
     ]);
   });
 
+  test('captures prepared HP before yielding while retaining nullable source maxima', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target: any = actor(10);
+    target.system = { attributes: { hp: { value: 10, max: 20 } } };
+    const original = target.toObject.bind(target);
+    target.toObject = () => { const source = original(true); source.system.attributes.hp.max = null; return source; };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm, [target]), storage: new MemoryTriggerStorage() });
+    runtimes.push(runtime);
+    await runtime.start();
+    const seen: any[] = [];
+    runtime.subscribe((context: any) => { if (context.preparedHp) context.preparedHp.after.max = 999; });
+    runtime.subscribe((context: any) => { seen.push({ prepared: context.preparedHp,
+      sourceBeforeMax: context.before.system.attributes.hp.max, sourceAfterMax: context.after.system.attributes.hp.max }); });
+    target.set('system.attributes.hp.value', 0); target.system.attributes.hp.value = 0;
+    const down = runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 0 });
+    target.set('system.attributes.hp.value', 5); target.system.attributes.hp = { value: 5, max: 30 };
+    const up = runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 5 });
+    target.system.attributes.hp = { value: 7, max: 99 };
+    await Promise.all([down, up]);
+    expect(seen).toEqual([
+      { prepared: { before: { value: 10, max: 20 }, after: { value: 0, max: 20 } }, sourceBeforeMax: null, sourceAfterMax: null },
+      { prepared: { before: { value: 0, max: 20 }, after: { value: 5, max: 30 } }, sourceBeforeMax: null, sourceAfterMax: null },
+    ]);
+  });
+
+  test('refreshes prepared maxima after embedded changes without replacing a pending HP before snapshot', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target: any = actor(10);
+    target.system = { attributes: { hp: { value: 10, max: 20 } } };
+    const original = target.toObject.bind(target);
+    target.toObject = () => { const source = original(true); source.system.attributes.hp.max = null; return source; };
+    const globals = globalsFor(gm, [target]);
+    const handlers = new Map<string, any>();
+    globals.Hooks = { on: (name: string, fn: any) => { handlers.set(name, fn); return name; }, off() {} };
+    const runtime = new TriggerEngineRuntime({ globals, storage: new MemoryTriggerStorage() });
+    runtimes.push(runtime);
+    await runtime.start();
+    const seen: any[] = [];
+    runtime.subscribe((context: any) => { seen.push(context.preparedHp); });
+    target.system.attributes.hp.max = 30;
+    handlers.get('updateItem')?.({ parent: target });
+    target.set('system.attributes.hp.value', 0); target.system.attributes.hp = { value: 0, max: 40 };
+    handlers.get('updateItem')?.({ parent: target });
+    await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 0 });
+    expect(seen).toEqual([{ before: { value: 10, max: 30 }, after: { value: 0, max: 40 } }]);
+  });
+
   test('uses ready shadow snapshots, ignores unrelated and disabled updates, and carries consecutive before/after values', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
     const target = actor(10);
@@ -396,6 +443,80 @@ describe('Actor documentUpdate runtime', () => {
     globals.foundry.utils.fromUuid = async () => ({ documentName: 'Macro', type: 'chat', canExecute: true, execute: () => {} });
     target.set('system.attributes.hp.value', 8);
     expect((await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 8 })).results[0]?.status).toBe('failed');
+  });
+
+  test('stops event subscribers and macros when active GM changes during a subscriber', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target = actor();
+    const globals = globalsFor(gm, [target]);
+    const calls: string[] = [];
+    globals.Hooks = { callAll: () => calls.push('public-hook') };
+    const runtime = new TriggerEngineRuntime({ globals,
+      storage: new MemoryTriggerStorage({ schemaVersion: 1, triggers: [trigger('authority')] }),
+      macroResolver: async () => ({ execute: () => calls.push('macro') }),
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    runtime.subscribe(async () => {
+      calls.push('first');
+      await Promise.resolve();
+      globals.game.users.activeGM = { id: 'other', isGM: true, active: true };
+    });
+    runtime.subscribe(() => { calls.push('second'); });
+    target.set('system.attributes.hp.value', 9);
+    const report = await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 9 });
+    expect(calls).toEqual(['first']);
+    expect(report.skippedReason).toBe('inactive-gm');
+  });
+
+  test('rechecks active GM after asynchronous Macro resolution', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target = actor();
+    const globals = globalsFor(gm, [target]);
+    let executions = 0;
+    const runtime = new TriggerEngineRuntime({ globals,
+      storage: new MemoryTriggerStorage({ schemaVersion: 1, triggers: [trigger('authority')] }),
+      logger: { error() {}, warn() {} },
+      macroResolver: async () => {
+        await Promise.resolve();
+        globals.game.users.activeGM = { id: 'other', isGM: true, active: true };
+        return { execute: () => { executions++; } };
+      },
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    target.set('system.attributes.hp.value', 9);
+    const report = await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 9 });
+    expect(executions).toBe(0);
+    expect(report.results[0]?.status).toBe('failed');
+    expect(String(report.results[0]?.error)).toMatch(/active GM/);
+  });
+
+  test('revokes the causal update helper and later actions after an in-flight GM handoff', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target: any = actor();
+    const globals = globalsFor(gm, [target]);
+    let updates = 0;
+    let retainedContext: any;
+    const calls: string[] = [];
+    target.update = async () => { updates++; };
+    const runtime = new TriggerEngineRuntime({ globals,
+      storage: new MemoryTriggerStorage({ schemaVersion: 1, triggers: [trigger('authority', ['first', 'later'])] }),
+      logger: { error() {}, warn() {} },
+      macroResolver: async (uuid) => ({ execute: async ({ triggerContext }: any) => {
+        calls.push(uuid);
+        retainedContext = triggerContext;
+        await Promise.resolve();
+        globals.game.users.activeGM = { id: 'other', isGM: true, active: true };
+      } }),
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    target.set('system.attributes.hp.value', 9);
+    await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 9 });
+    expect(calls).toEqual(['first']);
+    await expect(retainedContext.updateDocument({ 'system.attributes.hp.value': 8 })).rejects.toThrow(/active GM/);
+    expect(updates).toBe(0);
   });
 });
 

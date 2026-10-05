@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from 'bun:test';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { applyOwnedUpgrades, exactOwnedModulePaths, hashOwnedTree, ownedTreeHash, previewOwnedUpgrades, type OwnedUpgradeSpec } from './lab-owned-upgrade.ts';
@@ -82,4 +82,35 @@ test('same-version 0.2.0 patch rejects identical bytes and changes only the decl
   expect(previews[0]!.changed).toEqual(['scripts/index.js']);
   await applyOwnedUpgrades([spec], async () => {});
   expect(ownedTreeHash(await hashOwnedTree(destination))).toBe(ownedTreeHash(await hashOwnedTree(buildRoot)));
+});
+
+test('IFS 1.0.1 to 1.1.0 keeps exact tree and stopped-service gates without backups', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fvtt-ifs-owned-upgrade-'));
+  roots.push(root);
+  const destination = join(root, 'installed');
+  const buildRoot = join(root, 'candidate');
+  const names = ['module.json', 'scripts/index.js'] as const;
+  const newNames = [...names, 'CREDITS.md'];
+  for (const [directory, version] of [[destination, '1.0.1'], [buildRoot, '1.1.0']] as const) {
+    await tree(directory, version === '1.1.0' ? newNames : names, version);
+    await writeFile(join(directory, 'module.json'), JSON.stringify({ id: 'fvtt-injury-fading-spirits', version }));
+  }
+  const oldHash = ownedTreeHash(await hashOwnedTree(destination));
+  const spec: OwnedUpgradeSpec = { id: 'fvtt-injury-fading-spirits', destination, buildRoot,
+    expectedOldHash: oldHash, expectedPaths: names, expectedNewPaths: newNames, oldVersion: '1.0.1', newVersion: '1.1.0' };
+  expect((await previewOwnedUpgrades([spec]))[0]).toMatchObject({ oldVersion: '1.0.1', newVersion: '1.1.0', apply: false });
+  await expect(applyOwnedUpgrades([spec], async () => { throw new Error('Fixture service is running'); }))
+    .rejects.toThrow('Fixture service is running');
+  expect(ownedTreeHash(await hashOwnedTree(destination))).toBe(oldHash);
+  await writeFile(join(buildRoot, 'OTHER.md'), 'not an approved addition');
+  await expect(applyOwnedUpgrades([{ ...spec, expectedNewPaths: [...newNames, 'OTHER.md'] }], async () => {}))
+    .rejects.toThrow('Unapproved new module file');
+  expect(ownedTreeHash(await hashOwnedTree(destination))).toBe(oldHash);
+  await rm(join(buildRoot, 'OTHER.md'));
+  await expect(previewOwnedUpgrades([{ ...spec, expectedOldHash: '0'.repeat(64) }])).rejects.toThrow('Old complete-tree hash mismatch');
+  await applyOwnedUpgrades([spec], async () => {});
+  expect(ownedTreeHash(await hashOwnedTree(destination))).toBe(ownedTreeHash(await hashOwnedTree(buildRoot)));
+  expect(await readdir(root)).toEqual(['candidate', 'installed']);
+  expect(await readdir(destination)).toEqual(['CREDITS.md', 'module.json', 'scripts']);
+  expect(await readFile(join(destination, 'CREDITS.md'), 'utf8')).toBe('1.1.0:CREDITS.md');
 });
