@@ -1,5 +1,5 @@
 import { AcceptanceError } from './model';
-import { collectAcceptance, executeAcceptance, loadContract, prepareAcceptance, requireReady, resumeAcceptance } from './workflow';
+import { collectAcceptance, executeAcceptance, loadContract, prepareAcceptance, requireReady, resumeAcceptance, runLocalAcceptance } from './workflow';
 import { captureExternalReceipt, externalReadiness, importExternalReceipt, prepareExternalBatch } from './external';
 import { inspectNextVmSource } from './adapters/next-vision-macro';
 import { collectRuntimeBatch, dispatchRuntimeBatch, prepareRuntimeBatch, runtimeReadiness } from './runtime';
@@ -12,10 +12,10 @@ export async function runAcceptanceCli(args: string[], stdout = console.log): Pr
     const [action, ...flags] = args;
     if (!action || action === '--help') {
       stdout('Read-only task checks: inspect-state --input=<current-task-contract.json>; inspect-preservation --input=<preservation-request.json>. These report evidence, never grant execution, acceptance or deletion authority.');
-      stdout('Acceptance: prepare|prepare-batch|prepare-runtime --input=<absolute-request.json>; ready|ready-batch|ready-runtime|claim-runtime|execute|resume --contract=<absolute-contract.json>; collect --contract=<...> --receipt=<...>; inspect-batch --source=<source-contract.json>; capture-receipt --contract=<...> --input=<native.json> --context=<observed-context.json>; import-receipt|collect-runtime --contract=<...> --input=<saved-evidence.json>. Runtime is a separate explicitly resumed local Next Vision/Macro scope; Chrome messaging remains with the authorized host.');
+      stdout('Acceptance: run --input=<absolute-request.json> or run --contract=<absolute-contract.json> for ordinary local-file-checks; prepare|prepare-batch|prepare-runtime --input=<absolute-request.json>; ready|ready-batch|ready-runtime|claim-runtime|execute|resume --contract=<absolute-contract.json>; collect --contract=<...> --receipt=<...>; inspect-batch --source=<source-contract.json>; capture-receipt --contract=<...> --input=<native.json> --context=<observed-context.json>; import-receipt|collect-runtime --contract=<...> --input=<saved-evidence.json>. Runtime is a separate explicitly resumed local Next Vision/Macro scope; Chrome messaging remains with the authorized host.');
       return 0;
     }
-    const allowed: Record<string, string[]> = { 'inspect-state': ['input'], 'inspect-preservation': ['input'], prepare: ['input'], ready: ['contract'], execute: ['contract'], collect: ['contract', 'receipt'], resume: ['contract'], 'inspect-batch': ['source'], 'prepare-batch': ['input'], 'ready-batch': ['contract'], 'capture-receipt': ['contract', 'input', 'context'], 'import-receipt': ['contract', 'input'], 'prepare-runtime': ['input'], 'ready-runtime': ['contract'], 'claim-runtime': ['contract'], 'collect-runtime': ['contract', 'input'] };
+    const allowed: Record<string, string[]> = { 'inspect-state': ['input'], 'inspect-preservation': ['input'], run: ['input', 'contract'], prepare: ['input'], ready: ['contract'], execute: ['contract'], collect: ['contract', 'receipt'], resume: ['contract'], 'inspect-batch': ['source'], 'prepare-batch': ['input'], 'ready-batch': ['contract'], 'capture-receipt': ['contract', 'input', 'context'], 'import-receipt': ['contract', 'input'], 'prepare-runtime': ['input'], 'ready-runtime': ['contract'], 'claim-runtime': ['contract'], 'collect-runtime': ['contract', 'input'] };
     if (!allowed[action]) throw new AcceptanceError('precondition', `Unsupported acceptance action: ${action}`);
     const options: Record<string, string> = {};
     for (const flag of flags) {
@@ -23,10 +23,13 @@ export async function runAcceptanceCli(args: string[], stdout = console.log): Pr
       if (!match || !allowed[action]!.includes(match[1]!) || options[match[1]!] !== undefined) throw new AcceptanceError('precondition', `Unknown, repeated or empty option: ${flag}`);
       options[match[1]!] = match[2]!;
     }
-    for (const key of allowed[action]!) if (!options[key]) throw new AcceptanceError('precondition', `Missing --${key}=<absolute-path>`);
+    if (action === 'run') {
+      if (Boolean(options.input) === Boolean(options.contract)) throw new AcceptanceError('precondition', 'run requires exactly one of --input=<absolute-path> or --contract=<absolute-path>.');
+    } else for (const key of allowed[action]!) if (!options[key]) throw new AcceptanceError('precondition', `Missing --${key}=<absolute-path>`);
     let result: unknown;
     let exitCode = 0;
     switch (action) {
+      case 'run': { const run = await runLocalAcceptance(options.input ?? options.contract!, options.input ? 'input' : 'contract'); result = run; exitCode = run.exitCode; break; }
       case 'inspect-state': result = inspectTaskState(options.input!); break;
       case 'inspect-preservation': { const inspection = inspectPreservation(options.input!); result = inspection; exitCode = inspection.ok ? 0 : 2; break; }
       case 'prepare-runtime': result = await prepareRuntimeBatch(options.input!); break;

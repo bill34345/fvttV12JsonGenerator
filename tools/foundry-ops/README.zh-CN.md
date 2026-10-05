@@ -40,6 +40,15 @@ bun run foundry:ops catalog
 
 准备一个请求 JSON，字段见 [请求示例](../../docs/templates/development-feedback-request.example.json)。`workspaceRoot` 必须是实际 Git worktree 根，`candidatePaths` 和 `argv[0]` 必须是存在的绝对文件路径；`argv` 是参数数组，不经过 shell 拼接。填写目标、验收含义、case 名称、授权来源、预检和一次正式检查。工具自动生成 run／dispatch／receipt ID，读取分支、HEAD、指令基线提交、适用 AGENTS 和候选／执行程序的 SHA-256。
 
+普通本地文件检查可用一次入口；新请求表示明确执行一次，同一请求再次以 `--input` 调用会创建新合同。接续已有合同须传其绝对路径；已有收据仅核验并返回，不重新运行预检或检查；已经领取但没有收据会返回 `INSPECT`／`INCOMPLETE`，需先调查现场，不能用新 `--input` 猜测性重试。此入口拒绝 externalBatch 和 runtime 请求，不负责 Foundry／Chrome 运行验收。模块没有通用 adapter 时仍可调用既有模块脚本，选择 `json-ok` 或 `manual`；`manual` 永远保留待审，成功退出码本身不代表玩法 PASS。
+
+```powershell
+bun run foundry:ops acceptance run --input="I:\实际工作树\.local\request.json"
+bun run foundry:ops acceptance run --contract="<返回的 contractAbsolutePath>"
+```
+
+结果包含 `contractAbsolutePath`、`executionStatus`（`EXECUTED`／`REUSED_RECEIPT`／`NOT_EXECUTED`／`CLAIMED_NO_RECEIPT`／`RECEIPT_INVALID`／`UNKNOWN`）、阶段及原分层 `summary`（若有）。`UNKNOWN` 表示合同身份未能核实，历史执行状态不可推断；`RECEIPT_INVALID` 表示收据存在但读回失败。两者都返回 `INSPECT`／`INCOMPLETE`，禁止盲目重放。出错后用合同路径检查原件。下面的分步入口继续可用。
+
 ```powershell
 bun run foundry:ops acceptance prepare --input="I:\实际工作树\.local\request.json"
 bun run foundry:ops acceptance ready --contract="<prepare 返回的 contractAbsolutePath>"

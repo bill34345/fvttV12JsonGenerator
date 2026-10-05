@@ -149,7 +149,7 @@ export async function executeAcceptance(path: string): Promise<AcceptanceReceipt
   });
 }
 
-export function collectAcceptance(contractPath: string, receiptPath: string): AcceptanceSummary {
+export function collectAcceptance(contractPath: string, receiptPath: string, persistSummary = true): AcceptanceSummary {
   const contract = loadContract(contractPath);
   assertPreflight(contract);
   if (record(readJson(join(dirname(contractPath), 'dispatch-claim.json'))).dispatchId !== contract.dispatchId) throw new AcceptanceError('evidence', 'Dispatch claim does not match this contract.');
@@ -188,8 +188,59 @@ export function collectAcceptance(contractPath: string, receiptPath: string): Ac
   const summaryPath = join(dirname(contractPath), `summary.${receipt.receiptId}.json`);
   if (existsSync(summaryPath)) {
     if (sha256(readFileSync(summaryPath)) !== sha256(`${JSON.stringify(summary, null, 2)}\n`)) throw new AcceptanceError('evidence', 'Existing summary differs; do not overwrite accepted evidence.');
-  } else writeNewJson(summaryPath, summary);
+  } else if (persistSummary) writeNewJson(summaryPath, summary);
   return summary;
+}
+
+/** The optional local-file path composes the existing guarded stages without replaying a claim. */
+export async function runLocalAcceptance(path: string, source: 'input' | 'contract') {
+  let contractPath = path;
+  if (source === 'input') {
+    const request = record(readJson(path));
+    if (request.externalBatch !== undefined || request.runtime !== undefined || request.runtimeAuthority !== undefined) {
+      throw new AcceptanceError('precondition', 'acceptance run supports only ordinary local-file-checks; externalBatch and runtime requests are unsupported.');
+    }
+    contractPath = (await prepareAcceptance(path)).contractAbsolutePath;
+  }
+  const receiptPath = join(dirname(contractPath), 'receipt.json');
+  let executed = false;
+  let loaded = false;
+  try {
+    const contract = loadContract(contractPath);
+    loaded = true;
+    if (contract.request.externalBatch !== undefined) {
+      throw new AcceptanceError('precondition', 'acceptance run does not execute externalBatch contracts.');
+    }
+    if (existsSync(receiptPath)) {
+      const summary = collectAcceptance(contractPath, receiptPath, false);
+      return { contractAbsolutePath: contractPath, executionStatus: 'REUSED_RECEIPT' as const, phase: 'REVIEW' as const, summary, exitCode: summary.exitCode };
+    }
+    if (existsSync(join(dirname(contractPath), 'dispatch-claim.json'))) {
+      return { contractAbsolutePath: contractPath, executionStatus: 'CLAIMED_NO_RECEIPT' as const, phase: 'INSPECT' as const,
+        behavior: 'INCOMPLETE' as const, nextAction: 'Inspect the claimed operation and its output; do not replay this contract.', exitCode: 2 };
+    }
+    await executeAcceptance(contractPath);
+    executed = true;
+    const summary = collectAcceptance(contractPath, receiptPath);
+    return { contractAbsolutePath: contractPath, executionStatus: 'EXECUTED' as const, phase: 'REVIEW' as const, summary, exitCode: summary.exitCode };
+  }
+  catch (error) {
+    // An unverified path must not authorize reading neighboring claim/receipt files.
+    if (!loaded) return { ok: false, contractAbsolutePath: contractPath, executionStatus: 'UNKNOWN' as const,
+      phase: 'INSPECT' as const, behavior: 'INCOMPLETE' as const,
+      layer: error instanceof AcceptanceError ? error.layer : 'tool',
+      reason: error instanceof Error ? error.message : String(error),
+      nextAction: 'Verify the contract identity and existing evidence; do not replay it.', exitCode: 2 };
+    const hasReceipt = existsSync(receiptPath);
+    const claimed = existsSync(join(dirname(contractPath), 'dispatch-claim.json'));
+    return { ok: false, contractAbsolutePath: contractPath,
+      executionStatus: executed ? 'EXECUTED' as const : hasReceipt ? 'RECEIPT_INVALID' as const : claimed ? 'CLAIMED_NO_RECEIPT' as const : 'NOT_EXECUTED' as const,
+      phase: executed || hasReceipt || claimed ? 'INSPECT' as const : 'BLOCKED' as const, behavior: 'INCOMPLETE' as const,
+      layer: error instanceof AcceptanceError ? error.layer : 'tool',
+      reason: error instanceof Error ? error.message : String(error),
+      nextAction: executed || hasReceipt || claimed ? 'Inspect the existing operation and receipt; do not replay this contract.' : 'Resolve the failed prerequisite before preparing a new contract.',
+      exitCode: 2 };
+  }
 }
 
 export function resumeAcceptance(path: string) {

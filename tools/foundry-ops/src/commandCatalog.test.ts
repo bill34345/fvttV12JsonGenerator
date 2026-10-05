@@ -11,7 +11,7 @@ describe('Foundry Ops command catalog', () => {
     }
   });
   it('classifies each file-side acceptance action and forwards absolute paths unchanged', () => {
-    for (const action of ['prepare', 'ready', 'execute', 'collect', 'resume']) {
+    for (const action of ['run', 'prepare', 'ready', 'execute', 'collect', 'resume']) {
       const route = resolveFoundryOpsRoute(['acceptance', action, '--contract=I:/fixture/contract.json']);
       expect(route.command.target).toBe('local');
       expect(route.command.effect).toBe(action === 'ready' ? 'read-only' : 'local-mutation');

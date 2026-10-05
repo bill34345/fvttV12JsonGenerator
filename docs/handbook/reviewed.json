@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "241da5dc83c2d8616551efa3b05672967ac0d77dd96f77efe52ac006d185f5d4",
-    "reviewedOn": "2026-10-04",
-    "note": "对照真实prepare/ready/dispatch路径核对validationSelection：前置命令前拒绝无理由重测和执行覆盖冲突，领取前复核旧分项证据，业务/导出/恢复分开；不推断任意脚本语义。新增inspection安全聚焦入口，仅三例15秒预算，旧请求仍兼容。"
+    "fingerprint": "a788c6ce36ab59ecb887ea80fbfc09fa8d9c9e1be77291cea4f054783a306608",
+    "reviewedOn": "2026-10-05",
+    "note": "对照实际CLI核对可选run输入/合同互斥、已完成只读、UNKNOWN与RECEIPT_INVALID禁止重放、预检与选择拒绝、manual与外部批次边界；小任务直接用已有检查，保留阶段父审与权限。"
   },
   "verification-development": {
-    "fingerprint": "443722f6645994b9e93b6dbc5dbb10189f1776e9ff09e8ccba8896f0a8da643c",
-    "reviewedOn": "2026-10-04",
-    "note": "对照真实prepare/ready/dispatch路径核对validationSelection：前置命令前拒绝无理由重测和执行覆盖冲突，领取前复核旧分项证据，业务/导出/恢复分开；不推断任意脚本语义。新增inspection安全聚焦入口，仅三例15秒预算，旧请求仍兼容。"
+    "fingerprint": "b71317c1948d779243f358f3e1397a3d612ef9db7db2890c91b97396a6047ce1",
+    "reviewedOn": "2026-10-05",
+    "note": "按变更/失败/证据缺口或集成门选择检查；核对安全test:acceptance-workflow聚焦入口与CI固定运行时，保留全CI覆盖与安全包装，减少工具修复后的无关重跑。"
   },
   "human-encounter-intake": {
     "fingerprint": "738c0428aa96f6dccaf74165c0bed5bd0591a8f17542d12e4a1b1d95aa4a1a04",
@@ -85,9 +85,9 @@
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "dbbf13e5c7b7628b2dc4d615e0c0a536440c2dc526b271450e0f582f76f31aee",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "83883663eb8333040330e03e25a01cf63e005af394a51f1e6c573f50ba3a9b5f",
+    "reviewedOn": "2026-10-05",
+    "note": "仅调整模块AGENTS的验证触发与复用方式；画笔功能、入口、版本、安装与现有实机接受范围未改变，原用户说明保持准确。"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
