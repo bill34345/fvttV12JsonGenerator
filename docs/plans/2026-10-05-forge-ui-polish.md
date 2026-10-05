@@ -24,7 +24,7 @@
 
 手册根据实际布局/操作变化核对；保留已有说明与watch，最后记录review/build/check。完整CI仅在实际本地集成边界运行。尚未完成视觉接受时不宣称交付完成。
 
-## 当前状态
+## 第一批实现记录
 
 第一批实现完成。既有Forge聚焦入口311 pass / 0 fail / 2787断言；普通release生成9文件归档。独立构建JS与上一批接受产物逐字节相同，manifest与Intake模板仅因新checkout换行规范变化，其余实质差分为CSS及三模板。已在精确Mirror逐文件校验安装，无重启/世界写入/备份。
 
@@ -51,4 +51,10 @@
 
 完整`bun run ci:verify`退出0：3727 pass / 1 skip / 0 fail、380文件、覆盖率测试阶段361.55秒；独立CLI24项、构建检查、各层类型、架构、覆盖率门禁、anti-overfit433来源、hygiene1952路径、锁定参考、Web构建与离线Actor smoke全部通过。未改变清单或阈值。CSS修复后沿用311项聚焦回归，完整CI同时覆盖最终代码。
 
-原始证据位于`H:/CodexData/visualizations/2026/10/03/01a10117-3f4e-77c2-b7d3-e99e6da803af/forge-ui-polish-20261005/round1`及`round2`；候选`.local/forge-ui-polish`保留测试日志、构建与安装身份。最终归档仍为上述7512eb…、安装CSS仍为4f90ad…；业务JS始终为17fd16a1…，没有修改生成/身份/权限/世界写入实现。代码、实机及必要门禁已完成，待本地快进和最终收据。
+原始证据位于`H:/CodexData/visualizations/2026/10/03/01a10117-3f4e-77c2-b7d3-e99e6da803af/forge-ui-polish-20261005/round1`及`round2`；候选`.local/forge-ui-polish`保留测试日志、构建与安装身份。最终归档仍为上述7512eb…、安装CSS仍为4f90ad…；业务JS始终为17fd16a1…，没有修改生成/身份/权限/世界写入实现。
+
+## 本地交付完成
+
+精修功能提交`0c636e88a1533f1c61adbbd0e942665dd75cafbf`已从主工作区按白名单正常fast-forward合入master，保留基线`690f904`全部内容。合并前主区和索引为空、唯一新增计划路径无碰撞；合并后30项handbook:check通过，主区与候选经核对干净。本次完成补记仅改计划，复用已绑定的最终CI和两轮实机证据，不另做第三轮外观检查或重建。
+
+Mirror维持0.5.0本地候选及常驻服务；无远端push、生产/Next操作、备份或工作树清理。最终机器收据保存于上述证据根的`forge-ui-polish-local-final-20261005.json`。本轮用户要求的前端精修已完成。
