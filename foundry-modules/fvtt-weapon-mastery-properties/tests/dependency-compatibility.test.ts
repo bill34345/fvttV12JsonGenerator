@@ -71,6 +71,8 @@ describe('WMP dependency compatibility gate', () => {
 
   test('keeps the exact Foundry and dnd5e runtime gate', () => {
     const { globals } = fixture();
+    globals.game.version = '14.368';
+    expect(inspectDependencies(globals).ready).toBeTrue();
     globals.game.version = '14.365';
     expect(inspectDependencies(globals).ready).toBeFalse();
     globals.game.version = '14.364';

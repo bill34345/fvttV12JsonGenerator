@@ -77,8 +77,8 @@ export function validateManifest(manifest: Record<string, unknown>): void {
   if (manifest.url !== `${REPOSITORY_URL}/tree/master/foundry-modules/${MODULE_ID}`) throw new Error('FVTT JSON Forge project URL drifted.');
   if (manifest.manifest !== MANIFEST_URL || manifest.download !== DOWNLOAD_URL) throw new Error('FVTT JSON Forge release URLs drifted.');
   const compatibility = asRecord(manifest.compatibility);
-  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.364') {
-    throw new Error('FVTT JSON Forge supports exactly Foundry 14.364.');
+  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.368') {
+    throw new Error('FVTT JSON Forge requires reviewed Core builds 14.364 or 14.368, with 14.364 verified.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('FVTT JSON Forge browser entry drifted.');
   const systems = Array.isArray(asRecord(manifest.relationships).systems) ? asRecord(manifest.relationships).systems : [];

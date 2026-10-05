@@ -1,0 +1,4 @@
+interface:
+  display_name: "Battlefield Effect Workflow"
+  short_description: "逐项制作和接入战场地形效果，复用已确认美术并执行代理自审与本地实机验收"
+  default_prompt: "使用 $battlefield-effect-workflow，按当前交接记录开发下一种战场地形效果，完成自审和本地验收。"

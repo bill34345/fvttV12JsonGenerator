@@ -54,9 +54,9 @@ export const createMovementBehaviorFactory = (
     throw new Error("Foundry core exposes no configurable movement action");
   }
 
-  return (multiplier: number): MovementBehaviorSource => {
+  return (multiplier: number, affectedActions?: readonly string[]): MovementBehaviorSource => {
     const difficulties = Object.fromEntries(
-      actions.map((action) => [action, multiplier]),
+      actions.map((action) => [action, !affectedActions || affectedActions.includes(action) ? multiplier : 1]),
     );
     const model = new Model({ difficulties });
     model.validate?.({ strict: true, clean: true });

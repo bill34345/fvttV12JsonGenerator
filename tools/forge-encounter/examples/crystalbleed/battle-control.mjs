@@ -127,8 +127,8 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
     throw new Error('缺少 Foundry V14 API 绑定；请重新导入完整 V14 战斗宏。');
   }
   if (!game?.user?.isGM) throw new Error('请由 GM 运行晶血龙兽战斗控制。');
-  if (game.version !== '14.364' || game.system?.id !== 'dnd5e' || game.system.version !== '5.3.3') {
-    throw new Error('此宏适用 Foundry 14.364 / dnd5e 5.3.3；V12 请使用原版控制宏。');
+  if ((game.version !== '14.364' && game.version !== '14.368') || game.system?.id !== 'dnd5e' || game.system.version !== '5.3.3') {
+    throw new Error('此宏适用 Foundry 14.364 或 14.368 / dnd5e 5.3.3；V12 请使用原版控制宏。');
   }
   if (!canvas?.ready || !canvas.scene) throw new Error('请先打开战斗场景，再运行此宏。');
   if (!options.actors || !/^Actor\.[0-9a-f]{16}$/.test(options.actors.dragon) || !/^Actor\.[0-9a-f]{16}$/.test(options.actors.crystal)) {

@@ -12,6 +12,8 @@ import {
   resolveLegacySpellUuid,
 } from '@fvtt-json-generator/forge-browser-runtime';
 
+import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+
 export const MODULE_ID = 'fvtt-json-forge' as const;
 export const EXPECTED_FOUNDRY_VERSION = '14.364' as const;
 export const EXPECTED_SYSTEM_ID = 'dnd5e' as const;
@@ -242,13 +244,13 @@ export function assertGm(game: ForgeGameLike): void {
 }
 
 export function assertExactRuntime(game: ForgeGameLike): void {
-  if (game.version !== EXPECTED_FOUNDRY_VERSION) throw new Error(`Forge Actor requires Foundry ${EXPECTED_FOUNDRY_VERSION}.`);
+  if (!isForgeCoreVersionSupported(game.version)) throw new Error(`Forge Actor requires Foundry ${EXPECTED_FOUNDRY_VERSION} or 14.368.`);
   if (game.system?.id !== EXPECTED_SYSTEM_ID || game.system?.version !== EXPECTED_SYSTEM_VERSION) {
     throw new Error(`Forge Actor requires dnd5e ${EXPECTED_SYSTEM_VERSION}.`);
   }
 }
 
-function assertResponseTarget(
+export function assertResponseTarget(
   target: {
     fvttRuntimeVersion: string;
     generatorProfile: string;
@@ -260,7 +262,7 @@ function assertResponseTarget(
   game: ForgeGameLike,
 ): void {
   const expected = {
-    fvttRuntimeVersion: EXPECTED_FOUNDRY_VERSION,
+    fvttRuntimeVersion: game.version,
     generatorProfile: 'v14',
     systemId: EXPECTED_SYSTEM_ID,
     systemVersionObserved: EXPECTED_SYSTEM_VERSION,

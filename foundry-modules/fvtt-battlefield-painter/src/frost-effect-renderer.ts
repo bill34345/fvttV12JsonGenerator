@@ -624,7 +624,7 @@ const createShaderClasses = (root: FrostEffectRoot): { film: any; mist: any } =>
 };
 
 const frostMistTexturePath = (): string => {
-  const source = TERRAIN_CONFIGURATIONS.frost.stages[1].media.fieldTexture;
+  const source = TERRAIN_CONFIGURATIONS.frost.stages[1]?.media.fieldTexture;
   if (!source) throw new Error("Frost mist media path is missing from the terrain catalog");
   return source;
 };

@@ -60,6 +60,7 @@ export function isSupportedTriggerRuntime(globals: any = globalThis): boolean {
   const game = globals.game;
   return game?.system?.id === 'dnd5e' && (
     (game.version === '14.364' && game.system.version === '5.3.3')
+    || (game.version === '14.368' && game.system.version === '5.3.3')
     || (game.version === '14.368' && game.system.version === '6.0.5')
   );
 }
@@ -97,7 +98,7 @@ export function initializeTriggerEngine(globals: any = globalThis): TriggerEngin
   }
   hooks.once('ready', async () => {
     if (!isSupportedTriggerRuntime(globals)) {
-      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine supports only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 6.0.5.');
+      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine supports only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3 or 6.0.5.');
       return;
     }
     runtime = new TriggerEngineRuntime({ globals, storage: new FoundryTriggerStorage(globals.game) });

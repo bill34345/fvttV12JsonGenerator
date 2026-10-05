@@ -32,6 +32,7 @@ export class InjuryFadingRuntime {
   async onReady(): Promise<void> {
     this.supported = game.system?.id === 'dnd5e' && (
       (game.version === '14.364' && game.system.version === '5.3.3')
+      || (game.version === '14.368' && game.system.version === '5.3.3')
       || (game.version === '14.368' && game.system.version === '6.0.2')
       || (game.version === '14.368' && game.system.version === '6.0.5')
     );

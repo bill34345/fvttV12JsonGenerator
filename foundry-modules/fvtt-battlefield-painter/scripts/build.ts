@@ -1,3 +1,4 @@
+import { ADDITIONAL_ASSET_FILES } from "../src/catalog-additions";
 import {
   cp,
   lstat,
@@ -54,6 +55,37 @@ export const validateManifest = (manifest: Record<string, any>): void => {
 };
 
 const mediaFiles = [
+  ...["fire", "acid", "energy", "chime", "drone", "lava", "magic-circle"].map(name => [`assets/audio/${name}-loop.ogg`, "ogg"] as const),
+  ["assets/terrain/brambles-native-roots.png", "png"],
+  ...ADDITIONAL_ASSET_FILES.map(file => [`assets/terrain/${file}`, "png"] as const),
+  ["assets/terrain/wood-native-a.png", "png"],
+  ["assets/terrain/wood-native-b.png", "png"],
+  ["assets/terrain/wood-native-c.png", "png"],
+  ["assets/terrain/rubble-native-a.png", "png"],
+  ["assets/terrain/rubble-native-b.png", "png"],
+  ["assets/terrain/rubble-native-c.png", "png"],
+  ["assets/terrain/flooding-native-stage-i.png", "png"],
+  ["assets/terrain/flooding-native-stage-ii.png", "png"],
+  ["assets/terrain/lava-native-stage-i.png", "png"],
+  ["assets/terrain/lava-native-stage-ii.png", "png"],
+  ["assets/terrain/blood-native-stage-i.png", "png"],
+  ["assets/terrain/blood-native-stage-ii.png", "png"],
+  ["assets/terrain/blood-native-stage-i-b.png", "png"],
+  ["assets/terrain/blood-native-stage-i-c.png", "png"],
+  ["assets/terrain/blood-native-stage-ii-b.png", "png"],
+  ["assets/terrain/blood-native-stage-ii-c.png", "png"],
+  ["assets/terrain/spiderweb-native-a.png", "png"],
+  ["assets/terrain/spiderweb-native-b.png", "png"],
+  ["assets/terrain/spiderweb-native-c.png", "png"],
+  ["assets/terrain/acid-native-stage-i.png", "png"],
+  ["assets/terrain/acid-native-stage-ii.png", "png"],
+  ["assets/terrain/fire-native-a.png", "png"],
+  ["assets/terrain/fire-native-b.png", "png"],
+  ["assets/terrain/fire-native-c.png", "png"],
+  ["assets/terrain/frost-native-ice.png", "png"],
+  ["assets/terrain/frost-native-grains.png", "png"],
+  ["assets/terrain/brambles-native-stage-i.png", "png"],
+  ["assets/terrain/brambles-native-stage-ii.png", "png"],
   ["assets/terrain/fire.webm", "webm-alpha"],
   ["assets/terrain/fire-stage-i.webm", "webm-alpha"],
   ["assets/terrain/fire-stage-ii.webm", "webm-alpha"],
@@ -61,6 +93,9 @@ const mediaFiles = [
   ["assets/terrain/frost-film-v1.webp", "webp"],
   ["assets/terrain/frost-mist-v1.webm", "webm-alpha"],
   ["assets/terrain/brambles.webm", "webm-alpha"],
+  ["assets/terrain/brambles-stage-ii.webp", "webp"],
+  ["assets/terrain/brambles-stage-i.webp", "webp"],
+  ["assets/terrain/brambles-branch-v1.webp", "webp"],
 ] as const;
 
 const hasPrefix = (bytes: Uint8Array, prefix: readonly number[]): boolean =>
@@ -73,7 +108,7 @@ export const validateMediaAssets = async (moduleRoot: string): Promise<void> => 
     if (bytes.length < 1024) throw new Error(`Media asset is unexpectedly small: ${relativePath}`);
     const isWebm = hasPrefix(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
     const valid =
-      kind === "webp"
+      kind === "ogg" ? hasPrefix(bytes, [79, 103, 103, 83]) : kind === "png" ? hasPrefix(bytes, [137, 80, 78, 71, 13, 10, 26, 10]) : kind === "webp"
         ? hasPrefix(bytes, [0x52, 0x49, 0x46, 0x46]) &&
           new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP"
         : isWebm &&
@@ -81,9 +116,10 @@ export const validateMediaAssets = async (moduleRoot: string): Promise<void> => 
             new TextDecoder().decode(bytes).toLowerCase().includes("alpha_mode"));
     if (!valid) throw new Error(`Media asset has an invalid container signature: ${relativePath}`);
   }
-  if (await exists(resolve(moduleRoot, "assets/audio"))) {
-    throw new Error("Battlefield Painter build must not contain retired audio assets");
+  for (const retired of ["fire.ogg", "frost.ogg", "brambles.ogg"]) {
+    if (await exists(resolve(moduleRoot, "assets/audio", retired))) throw new Error("Retired audio must not ship");
   }
+  if (!await exists(resolve(moduleRoot, "assets/audio/ATTRIBUTION.md"))) throw new Error("Audio attribution missing");
 };
 
 export const buildModule = async (): Promise<{
@@ -117,6 +153,7 @@ export const buildModule = async (): Promise<{
   });
   await cp(resolve(root, "assets"), resolve(moduleRoot, "assets"), {
     recursive: true,
+    filter: source => !source.endsWith(".wav"),
   });
   await validateMediaAssets(moduleRoot);
   await cp(resolve(root, "README.zh-CN.md"), resolve(moduleRoot, "README.zh-CN.md"));

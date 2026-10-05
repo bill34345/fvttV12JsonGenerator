@@ -29,10 +29,15 @@ import {
 } from "./scene-clear";
 import { SceneHistory, type HistorySceneLike } from "./scene-history";
 import { TerrainService } from "./terrain-service";
+import { terrainColor, supportsTerrainColor, type TerrainColorId } from "./terrain-colors";
+import { cellsForRegions } from "./region-paint";
 
 export type PainterMode = "paint" | "erase" | "advance";
 
 export interface PainterState {
+  audioEnabled: boolean;
+  colorId: TerrainColorId;
+  completedStrokes: number;
   active: boolean;
   configurationId: TerrainConfigurationId;
   stageIndex: number;
@@ -61,6 +66,9 @@ export class PainterController {
   readonly #createPreview: () => CursorPreviewRenderer;
   #preview: CursorPreviewRenderer | undefined;
   #state: PainterState = {
+    audioEnabled: false,
+    colorId: "original",
+    completedStrokes: 0,
     active: false,
     configurationId: "fire",
     stageIndex: 0,
@@ -112,16 +120,37 @@ export class PainterController {
 
   selectConfiguration(configurationId: TerrainConfigurationId): void {
     if (!TERRAIN_CONFIGURATIONS[configurationId]) return;
-    this.#update({ configurationId });
+    const stageCount = TERRAIN_CONFIGURATIONS[configurationId].stages.length;
+    this.#update({ configurationId, colorId: "original", stageIndex: configurationId === "brambles" ? 2 : Math.min(this.#state.stageIndex, stageCount - 1),
+      ...(stageCount === 1 && this.#state.mode === "advance" ? { mode: "paint" } : {}) });
   }
 
   selectStage(stageIndex: number): void {
-    if (stageIndex !== 0 && stageIndex !== 1) return;
+    if (!Number.isInteger(stageIndex) || stageIndex < 0 || stageIndex >= TERRAIN_CONFIGURATIONS[this.#state.configurationId].stages.length) return;
     this.#update({ stageIndex });
+  }
+
+  selectColor(id: string): void {
+    if (supportsTerrainColor(this.#state.configurationId)) this.#update({ colorId: terrainColor(id).id });
+  }
+
+  toggleAudio(): void { this.#update({ audioEnabled: !this.#state.audioEnabled }); }
+
+  async paintSelectedRegions(): Promise<void> {
+    const current = getFoundryCanvas();
+    if (!getGame()?.user?.isGM || !this.#state.p0Enabled || !current?.ready || !current.grid || current.grid.isGridless || current.grid.type === 0) return;
+    const regions = (current.regions?.controlled ?? []).map((region: any) => region.document);
+    if (!regions.length) { this.#notify("warn", "请先在区域图层选中一个或多个区域。"); return; }
+    const state = { ...this.#state, mode: "paint" as const };
+    try {
+      const cells = cellsForRegions(current.grid, regions, current.dimensions.sceneRect);
+      await this.#enqueueMutation(() => this.#commitStrokeNow({ scene: current.scene, grid: current.grid }, cells, state));
+    } catch (error) { this.#notify("error", String(error)); }
   }
 
   selectMode(mode: PainterMode): void {
     if (!(["paint", "erase", "advance"] as const).includes(mode)) return;
+    if (mode === "advance" && TERRAIN_CONFIGURATIONS[this.#state.configurationId].stages.length < 2) return;
     this.#update({ mode });
   }
 
@@ -177,6 +206,9 @@ export class PainterController {
     if (!foundryCanvas?.ready || !foundryCanvas.scene || !foundryCanvas.grid) {
       this.#notify("warn", "请先打开并激活一个场景。");
       return;
+    }
+    if (foundryCanvas.grid.isGridless || foundryCanvas.grid.type === 0) {
+      this.#notify("warn", "地形画笔需要方格或六角格场景。"); return;
     }
 
     const element = foundryCanvas.app?.canvas ?? foundryCanvas.app?.view;
@@ -289,7 +321,7 @@ export class PainterController {
     if (!(await confirm(preview))) return false;
 
     return this.#enqueueMutation(async () => {
-      if (!isLegacySoundPreviewCurrent(scene, preview)) {
+      if (getGame()?.user?.isGM !== true || getFoundryCanvas()?.scene !== scene || !isLegacySoundPreviewCurrent(scene, preview)) {
         this.#notify("warn", "旧声音清理确认已过期，请重新预览。");
         return false;
       }
@@ -342,6 +374,7 @@ export class PainterController {
     this.#startCell = undefined;
     this.#stroke.clear();
     this.#preview?.hide();
+    this.#update({ completedStrokes: this.#state.completedStrokes + 1 });
   };
 
   #consumePointer(event: PointerEvent): void {
@@ -421,15 +454,22 @@ export class PainterController {
   }
 
   async #commitStroke(): Promise<void> {
-    await this.#enqueueMutation(() => this.#commitStrokeNow());
-  }
-
-  async #commitStrokeNow(): Promise<void> {
-    const foundryCanvas = getFoundryCanvas();
     const cells = [...this.#stroke.values()];
+    const currentCanvas = getFoundryCanvas();
+    const target = { scene: currentCanvas?.scene, grid: currentCanvas?.grid };
+    const state = { ...this.#state };
     this.#stroke.clear();
     this.#preview?.hide();
+    try { await this.#enqueueMutation(() => this.#commitStrokeNow(target, cells, state)); }
+    finally { this.#update({ completedStrokes: this.#state.completedStrokes + 1 }); }
+  }
+
+  async #commitStrokeNow(foundryCanvas: any, cells: GridCell[], state: PainterState): Promise<void> {
     if (!cells.length || !foundryCanvas?.scene || !foundryCanvas?.grid) return;
+    if (!getGame()?.user?.isGM || getFoundryCanvas()?.scene !== foundryCanvas.scene) {
+      this.#update({ status: "场景或权限已改变，已取消尚未开始的笔画。" });
+      return;
+    }
 
     this.#update({ status: `正在处理 ${cells.length} 个格位…` });
     try {
@@ -437,24 +477,26 @@ export class PainterController {
         scene: foundryCanvas.scene,
         grid: foundryCanvas.grid,
         movementBehavior: createMovementBehaviorFactory((globalThis as any).CONFIG),
-        p2Enabled: this.#state.p2Enabled,
+        p2Enabled: state.p2Enabled,
         visualBleed: visualBleedForGrid(foundryCanvas.grid),
       });
       this.#historyFor(foundryCanvas.scene);
 
-      if (this.#state.mode === "paint") {
+      if (state.mode === "paint") {
         const result = await this.#withHistory("绘制地形", () =>
           service.paintCells(
-            this.#state.configurationId,
-            this.#state.stageIndex,
+            state.configurationId,
+            state.stageIndex,
             cells,
+            state.colorId,
+            state.audioEnabled,
           ),
         );
         const skipped = result.skippedCells
           ? `；${result.skippedCells} 格已有本模组地形，已跳过`
           : "";
         this.#update({ status: `已绘制 ${result.createdCells} 格${skipped}。` });
-      } else if (this.#state.mode === "erase") {
+      } else if (state.mode === "erase") {
         await this.#withHistory("擦除地形", () =>
           service.eraseCellKeys(new Set(cells.map(({ key }) => key))),
         );
@@ -493,6 +535,8 @@ export class PainterController {
       if (
         !this.#state.p1Enabled ||
         !this.#state.p2Enabled ||
+        getGame()?.user?.isGM !== true ||
+        getFoundryCanvas()?.scene !== scene ||
         !isClearPreviewCurrent(scene, preview)
       ) {
         this.#notify("warn", "场景在确认期间发生变化，请重新预览清除范围。");
@@ -519,11 +563,12 @@ export class PainterController {
   }
 
   async undo(): Promise<void> {
-    await this.#enqueueMutation(() => this.#undoNow());
+    const scene = getFoundryCanvas()?.scene;
+    await this.#enqueueMutation(() => getFoundryCanvas()?.scene === scene ? this.#undoNow() : Promise.resolve());
   }
 
   async #undoNow(): Promise<void> {
-    if (!this.#state.p1Enabled) return;
+    if (!this.#state.p1Enabled || getGame()?.user?.isGM !== true) return;
     const scene = getFoundryCanvas()?.scene as HistorySceneLike | undefined;
     if (!scene) return;
     try {
@@ -536,11 +581,12 @@ export class PainterController {
   }
 
   async redo(): Promise<void> {
-    await this.#enqueueMutation(() => this.#redoNow());
+    const scene = getFoundryCanvas()?.scene;
+    await this.#enqueueMutation(() => getFoundryCanvas()?.scene === scene ? this.#redoNow() : Promise.resolve());
   }
 
   async #redoNow(): Promise<void> {
-    if (!this.#state.p1Enabled) return;
+    if (!this.#state.p1Enabled || getGame()?.user?.isGM !== true) return;
     const scene = getFoundryCanvas()?.scene as HistorySceneLike | undefined;
     if (!scene) return;
     try {

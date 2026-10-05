@@ -16,6 +16,69 @@ const installGlobal = (key: PropertyKey, value: unknown): void => {
   });
 };
 
+describe("submitted stroke isolation", () => {
+  test.each([false, true])("keeps queued cells/settings immutable; scene changed=%s", async (switchScene) => {
+    const listeners = new Map<string, (event: any) => void>();
+    class CanvasElement {
+      addEventListener(name: string, callback: (event: any) => void) { listeners.set(name, callback); }
+      removeEventListener() {}
+    }
+    class MovementModel {
+      constructor(private source: Record<string, unknown>) {}
+      validate() {}
+      toObject() { return this.source; }
+    }
+    let id = 0;
+    const scene = {
+      tiles: [] as any[], regions: [] as any[], lights: [] as any[], sounds: [] as any[], walls: [] as any[],
+      async createEmbeddedDocuments(type: string, sources: any[]) {
+        const collection = {Tile:this.tiles,Region:this.regions,AmbientLight:this.lights,AmbientSound:this.sounds,Wall:this.walls}[type]!;
+        const created = sources.map(source => ({ ...source, id: String(++id) }));
+        collection.push(...created);
+        return created;
+      },
+      async deleteEmbeddedDocuments() { throw new Error("Painting must not delete existing documents"); },
+    };
+    const grid = {
+      size: 100, isSquare: true,
+      getTopLeftPoint: ({i,j}:any) => ({x:j*100,y:i*100}),
+      getOffset: ({x,y}:any) => ({i:Math.floor(y/100),j:Math.floor(x/100)}),
+      getCenterPoint: ({i,j}:any) => ({x:j*100+50,y:i*100+50}),
+      getVertices: ({i,j}:any) => [{x:j*100,y:i*100},{x:j*100+100,y:i*100},{x:j*100+100,y:i*100+100},{x:j*100,y:i*100+100}],
+    };
+    const testCanvas = {ready:true,scene:scene as any,grid,app:{canvas:new CanvasElement()},canvasCoordinatesFromClient:(p:any)=>p,
+      interface:{grid:{addHighlightLayer(){},clearHighlightLayer(){},highlightPosition(){},destroyHighlightLayer(){}}}};
+    installGlobal("HTMLCanvasElement", CanvasElement);
+    installGlobal("game", {user:{isGM:true}});
+    installGlobal("canvas", testCanvas);
+    installGlobal("CONFIG", {RegionBehavior:{dataModels:{modifyMovementCost:MovementModel}},Token:{movement:{actions:{walk:{}}}}});
+    const controller = new PainterController();
+    controller.setDevelopmentPhase("p1", false);
+    controller.activate();
+    const stroke = (x:number) => {
+      const event = {pointerId:1,button:0,clientX:x,clientY:50,preventDefault(){},stopPropagation(){},stopImmediatePropagation(){}};
+      listeners.get("pointerdown")!(event);
+      listeners.get("pointerup")!(event);
+    };
+    stroke(50);
+    controller.selectConfiguration("frost");
+    stroke(150);
+    controller.selectConfiguration("brambles");
+    if (switchScene) testCanvas.scene = {tiles:[]};
+    await controller.undo(); // Queue barrier; P1 is off, so no history restoration.
+    if (switchScene) {
+      expect(scene.tiles).toHaveLength(0);
+      expect(testCanvas.scene.tiles).toHaveLength(0);
+    } else {
+      expect(scene.tiles.filter(tile => tile.flags['fvtt-battlefield-painter'].visualLayer !== 'detail').map(tile => {
+        const f = tile.flags['fvtt-battlefield-painter'];
+        return [f.cellKey,f.configurationId];
+      })).toEqual([["0:0","fire"],["0:1","frost"]]);
+    }
+    controller.deactivate();
+  });
+});
+
 afterEach(() => {
   for (const [key, descriptor] of previousGlobals) {
     if (descriptor) Object.defineProperty(globalThis, key, descriptor);
@@ -25,6 +88,28 @@ afterEach(() => {
 });
 
 describe("ApplicationV2 painter", () => {
+  test("resubscribes once when the same closed panel is reopened", async () => {
+    class ApplicationV2 {
+      rendered = true;
+      renderCalls = 0;
+      async render() { this.renderCalls++; }
+      async close() { this.rendered = false; }
+    }
+    installGlobal("foundry", { applications:{api:{ApplicationV2,HandlebarsApplicationMixin:(Base:any)=>Base}} });
+    const controller = new PainterController();
+    const App = createPainterApplicationClass(controller);
+    const app = new App();
+    await app.close();
+    const closedCount = app.renderCalls;
+    controller.selectConfiguration("frost");
+    expect(app.renderCalls).toBe(closedCount);
+    app.rendered = true;
+    await app._prepareContext();
+    await app._prepareContext();
+    controller.selectConfiguration("fire");
+    expect(app.renderCalls).toBe(closedCount + 1);
+  });
+
   test("builds the expected public ApplicationV2 subclass and action context", async () => {
     class ApplicationV2 {
       rendered = true;
@@ -68,7 +153,10 @@ describe("ApplicationV2 painter", () => {
     expect(PainterApplication.PARTS.main.template).toBe(
       "modules/fvtt-battlefield-painter/templates/painter.hbs",
     );
-    expect(context.terrains).toHaveLength(3);
+    expect(context.terrains).toHaveLength(42);
+    expect(context.terrains.find((t: any) => t.id === "brambles").preview).toEndWith("brambles-native-stage-i.png");
+    expect(context).not.toHaveProperty("brambleRenderModes");
+    expect(PainterApplication.DEFAULT_OPTIONS.actions).not.toHaveProperty("selectBrambleRendering");
     expect(context.stages).toHaveLength(2);
     expect(new Set(context.stages.map((stage: any) => stage.texture))).toEqual(
       new Set(["modules/fvtt-battlefield-painter/assets/terrain/fire.webp"]),
@@ -96,7 +184,31 @@ describe("ApplicationV2 painter", () => {
       brushShape: "line",
       brushRadius: 2,
     });
-    expect(app.renderCalls).toBe(10);
+    // Selecting terrain now renders once, without the redundant subscriber render.
+    expect(app.renderCalls).toBe(9);
+    // A one-stage card must still render while another terrain is on stage II.
+    const dualContext = await app._prepareContext();
+    expect(dualContext.terrains.find((t:any)=>t.id === "spiderweb").preview).toEndWith("spiderweb-native-a.png");
+    controller.selectMode("advance");
+    controller.selectConfiguration("spiderweb");
+    expect(controller.state).toMatchObject({stageIndex:0,mode:"paint"});
+    controller.selectStage(1); controller.selectStage(-1); controller.selectStage(NaN); controller.selectMode("advance");
+    expect(controller.state).toMatchObject({stageIndex:0,mode:"paint"});
+    const singleContext = await app._prepareContext();
+    expect(singleContext.stages).toHaveLength(1);
+    expect(singleContext.stages[0].caption).toBe("单阶段");
+    expect(singleContext.canAdvance).toBe(false);
+    controller.selectConfiguration("frost"); controller.selectStage(1);
+    expect(controller.state.stageIndex).toBe(1);
+    expect((await app._prepareContext()).canAdvance).toBe(true);
+    controller.selectConfiguration("runes"); controller.selectStage(3);
+    const fourContext = await app._prepareContext();
+    expect(fourContext.stages.map((s:any)=>s.caption)).toEqual(["阶段 I","阶段 II","阶段 III","阶段 IV"]);
+    expect(fourContext.terrains.every((t:any)=>typeof t.preview === "string" && t.preview.length>0)).toBe(true);
+    controller.selectConfiguration("brambles");
+    expect(controller.state.stageIndex).toBe(2);
+    controller.selectConfiguration("mold");controller.selectStage(2);
+    expect((await app._prepareContext()).stages).toHaveLength(3);
     await app.close();
   });
 
@@ -370,6 +482,7 @@ describe("canvas pointer lifecycle", () => {
       Token: { movement: { actions: { walk: {} } } },
     });
     installGlobal("canvas", { scene, grid: {} });
+    installGlobal("game", { user: { isGM: true } });
 
     const controller = new PainterController();
     expect(await controller.clearAll(async () => true)).toBe(true);
@@ -832,4 +945,24 @@ describe("canvas pointer lifecycle", () => {
     expect(controller.state.active).toBe(false);
     expect(notifications).toEqual(["只有 GM 可以修改战场地形。"]);
   });
+});
+
+test("Shift placement serializes render and minimize, paints from erase mode, and restores after completion", async () => {
+  class ApplicationV2 {
+    rendered=true; minimized=false; events:string[]=[];
+    async render(){this.events.push("render");this.minimized=false;return this;}
+    async minimize(){this.events.push("minimize");this.minimized=true;}
+    async maximize(){this.events.push("maximize");this.minimized=false;}
+    async close(){this.rendered=false;}
+  }
+  installGlobal("foundry",{applications:{api:{ApplicationV2,HandlebarsApplicationMixin:(Base:any)=>class extends Base{}}}});
+  let notify=()=>{};
+  const state={active:false,mode:"erase",configurationId:"haze",completedStrokes:0};
+  const controller:any={state,subscribe:(cb:any)=>{notify=cb;return()=>{};},selectConfiguration:(id:string)=>{state.configurationId=id;notify();},selectMode:(mode:string)=>{state.mode=mode;notify();},activate:()=>{state.active=true;notify();},deactivate:()=>{state.active=false;notify();}};
+  const App=createPainterApplicationClass(controller),app=new App();
+  await App.DEFAULT_OPTIONS.actions.selectTerrain.call(app,{shiftKey:true},{dataset:{terrain:"acid"}});
+  expect(state.mode).toBe("paint");expect(app.events).toEqual(["render","minimize"]);expect(app.minimized).toBe(true);
+  notify();expect(app.events).toEqual(["render","minimize"]);
+  state.completedStrokes++;notify();await Promise.resolve();await Promise.resolve();
+  expect(app.events).toEqual(["render","minimize","maximize","render"]);expect(app.minimized).toBe(false);
 });

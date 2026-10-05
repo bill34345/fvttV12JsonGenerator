@@ -7,9 +7,12 @@ import type { FoundryLabConfig } from '../config';
 import { assertInsideLabRoot } from '../config';
 
 export type ProfileId = 'core-test' | 'server-mirror';
+export function profileAppRoot(config: FoundryLabConfig, profileId: ProfileId): string {
+  return profileId === 'server-mirror' ? config.profiles.serverMirror.appRoot ?? config.appRoot : config.appRoot;
+}
 export function buildLaunchCommand(config: FoundryLabConfig, profileId: ProfileId) {
   const profile = profileId === 'core-test' ? config.profiles.coreTest : config.profiles.serverMirror;
-  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp'] };
+  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(profileAppRoot(config, profileId), 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp'] };
 }
 // Foundry 14.364's parseArgs/getEnvDataPath read only --key=value tokens even
 // though buildLaunchCommand preserves the project-facing command contract.
@@ -64,7 +67,7 @@ export function isExpectedFoundryProcess(config: FoundryLabConfig, id: ProfileId
   const profile = profileFor(config, id);
   const tokens = [...commandLine.matchAll(/"([^"]*)"|(\S+)/g)].map((match) => match[1] ?? match[2] ?? '');
   const normalizedPath = (value: string) => resolve(value).replaceAll('\\', '/').toLowerCase();
-  const expectedMain = normalizedPath(resolve(config.appRoot, 'main.js'));
+  const expectedMain = normalizedPath(resolve(profileAppRoot(config, id), 'main.js'));
   const dataToken = tokens.find((token) => token.toLowerCase().startsWith('--datapath='));
   const portToken = tokens.find((token) => token.toLowerCase().startsWith('--port='));
   const worldToken = tokens.find((token) => token.toLowerCase().startsWith('--world='));
@@ -86,16 +89,30 @@ async function writeLaunchEvidence(config: FoundryLabConfig, id: ProfileId, patc
   let existing: LaunchEvidence = { profile: id }; try { existing = JSON.parse(await readFile(path, 'utf8')) as LaunchEvidence; } catch {}
   const temporary = `${path}.tmp`; await writeFile(temporary, `${JSON.stringify({ ...existing, ...patch, profile: id }, null, 2)}\n`, 'utf8'); await rename(temporary, path);
 }
-async function rejectRunningPeer(config: FoundryLabConfig, id: ProfileId): Promise<void> {
+export async function rejectRunningPeer(config: FoundryLabConfig, id: ProfileId, dependencies: {
+  queryProcess?: typeof queryProcess;
+  isProcessAlive?: typeof isProcessAlive;
+} = {}): Promise<void> {
   const peer = otherProfileId(id), pidFile = join(config.evidenceRoot, peer, 'server.pid');
   if (!existsSync(pidFile)) return;
   let pid = 0; try { pid = Number((JSON.parse(await readFile(pidFile, 'utf8')) as { foundry?: unknown }).foundry); } catch {}
-  const info = Number.isInteger(pid) && pid > 0 ? queryProcess(pid) : null;
-  if (info && isExpectedFoundryProcess(config, peer, info.executable, info.commandLine)) {
-    await writeLaunchEvidence(config, id, { mutualExclusion: { rejected: true, runningProfile: peer, runningPid: pid, firstProcessRemainedAlive: queryProcess(pid) !== null } });
-    throw new Error(`Cannot launch ${id} while ${peer} is running as PID ${pid}`);
+  if (!Number.isInteger(pid) || pid <= 0) throw new Error(`Cannot identify peer PID record: ${pidFile}`);
+  const inspect = dependencies.queryProcess ?? queryProcess;
+  const alive = dependencies.isProcessAlive ?? isProcessAlive;
+  const info = inspect(pid);
+  const matchesKnownProfile = info && (isExpectedFoundryProcess(config, peer, info.executable, info.commandLine)
+    || (peer === 'server-mirror' && ['14.364', '14.368'].some(version => isExpectedFoundryProcess({
+      ...config, profiles: { ...config.profiles, serverMirror: {
+        ...config.profiles.serverMirror, appRoot: resolve(config.labRoot, 'app', version),
+      } },
+    }, peer, info.executable, info.commandLine))));
+  if (info || alive(pid)) {
+    await writeLaunchEvidence(config, id, { mutualExclusion: { rejected: true, runningProfile: peer, runningPid: pid, firstProcessRemainedAlive: true } });
+    throw new Error(matchesKnownProfile
+      ? `Cannot launch ${id} while ${peer} is running as PID ${pid}`
+      : `Cannot launch ${id}: peer PID ${pid} is live but its identity is unknown; PID record retained`);
   }
-  await rm(pidFile, { force: true });
+  await rm(pidFile);
 }
 
 interface LaunchReservationOwner { pid: number; profile: ProfileId; token: string }
@@ -160,7 +177,7 @@ async function launchProfileReserved(config: FoundryLabConfig, id: ProfileId): P
   const handle = await open(log, 'a');
   const preload = join(evidence, 'loopback-preload.cjs'); await writeFile(preload, loopbackPreloadSource(), 'utf8');
   const runtime = buildRuntimeArgs(built.args); let child: ChildProcess;
-  try { child = spawn(built.command, ['--require', preload, runtime[0]!, ...runtime.slice(1), '--noipdiscovery'], { cwd: config.appRoot, detached: true, windowsHide: true, stdio: ['ignore', handle.fd, handle.fd] }) as ChildProcess; }
+  try { child = spawn(built.command, ['--require', preload, runtime[0]!, ...runtime.slice(1), '--noipdiscovery'], { cwd: profileAppRoot(config, id), detached: true, windowsHide: true, stdio: ['ignore', handle.fd, handle.fd] }) as ChildProcess; }
   finally { await handle.close(); }
   const pid = child.pid; if (!pid) throw new Error('Foundry process did not receive a PID');
   const cleanup = async () => {

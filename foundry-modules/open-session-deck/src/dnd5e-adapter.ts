@@ -51,11 +51,12 @@ export function supportError(runtime: Dnd5eRuntime): string | undefined {
   if (systemId !== SUPPORTED_SYSTEM_ID) return `System ${systemId || 'unknown'} is unsupported; required ${SUPPORTED_SYSTEM_ID}.`;
   if (isLegacyRuntime(runtime) || isServerNextRuntime(runtime)) return undefined;
   if (foundryVersion !== SUPPORTED_FOUNDRY_VERSION && foundryVersion !== SERVER_NEXT_FOUNDRY_VERSION) return `Foundry ${foundryVersion || 'unknown'} is unsupported; required ${SUPPORTED_FOUNDRY_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}.`;
-  return `dnd5e ${systemVersion || 'unknown'} is unsupported with Foundry ${foundryVersion}; required ${SUPPORTED_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_SYSTEM_VERSIONS.join(' or ')}.`;
+  return `dnd5e ${systemVersion || 'unknown'} is unsupported with Foundry ${foundryVersion}; required ${SUPPORTED_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION}, ${SERVER_NEXT_SYSTEM_VERSIONS.join(' or ')}.`;
 }
 
 function isLegacyRuntime(runtime: Dnd5eRuntime): boolean {
-  return String(runtime.game.version ?? runtime.game.release?.version ?? '') === SUPPORTED_FOUNDRY_VERSION
+  return [SUPPORTED_FOUNDRY_VERSION, SERVER_NEXT_FOUNDRY_VERSION].some(version =>
+    version === String(runtime.game.version ?? runtime.game.release?.version ?? ''))
     && String(runtime.game.system?.version ?? '') === SUPPORTED_SYSTEM_VERSION;
 }
 

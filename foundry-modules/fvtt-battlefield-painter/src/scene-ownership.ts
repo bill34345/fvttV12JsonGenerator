@@ -1,12 +1,8 @@
 import { DOCUMENT_ORDER, MODULE_ID, type PlannedDocumentName } from "./constants";
-import { TERRAIN_CONFIGURATIONS } from "./catalog";
-import type { TerrainDocumentFlag } from "./scene-plan";
+import { terrainDocumentFlag, type TerrainDocumentFlag, type OwnedDocumentLike } from "./terrain-document";
+export { terrainDocumentFlag } from "./terrain-document";
+export type { OwnedDocumentLike } from "./terrain-document";
 
-export interface OwnedDocumentLike {
-  id?: string | null;
-  _id?: string | null;
-  flags?: Record<string, unknown>;
-}
 
 export interface OwnedSceneLike {
   tiles?: Iterable<OwnedDocumentLike>;
@@ -53,63 +49,6 @@ const emptyBundle = (): OwnedBundleDocuments => ({
   Wall: [],
 });
 
-const TERRAIN_ROLES = new Set<TerrainDocumentFlag["role"]>([
-  "terrain-tile",
-  "movement-region",
-  "terrain-light",
-  "terrain-sound",
-  "terrain-wall",
-]);
-
-export const terrainDocumentFlag = (
-  document: OwnedDocumentLike,
-): TerrainDocumentFlag | undefined => {
-  const candidate = document.flags?.[MODULE_ID];
-  if (!candidate || typeof candidate !== "object") return undefined;
-
-  const flag = candidate as Partial<TerrainDocumentFlag>;
-  if (
-    typeof flag.bundleId !== "string" ||
-    typeof flag.configurationId !== "string" ||
-    typeof flag.stageIndex !== "number" ||
-    !TERRAIN_ROLES.has(flag.role as TerrainDocumentFlag["role"])
-  ) {
-    return undefined;
-  }
-
-  const configuration = Object.prototype.hasOwnProperty.call(
-    TERRAIN_CONFIGURATIONS,
-    flag.configurationId,
-  )
-    ? TERRAIN_CONFIGURATIONS[
-        flag.configurationId as keyof typeof TERRAIN_CONFIGURATIONS
-      ]
-    : undefined;
-  if (
-    !configuration ||
-    !Number.isInteger(flag.stageIndex) ||
-    flag.stageIndex < 0 ||
-    flag.stageIndex >= configuration.stages.length
-  ) {
-    return undefined;
-  }
-
-  if (
-    flag.visualEffect !== undefined &&
-    flag.visualEffect !== "fire-field-v1" &&
-    flag.visualEffect !== "frost-field-v1"
-  ) {
-    return undefined;
-  }
-  if (
-    (flag.visualEffect === "fire-field-v1" && flag.configurationId !== "fire") ||
-    (flag.visualEffect === "frost-field-v1" && flag.configurationId !== "frost")
-  ) {
-    return undefined;
-  }
-
-  return flag as TerrainDocumentFlag;
-};
 
 export const collectOwnedBundles = (scene: OwnedSceneLike): OwnedBundleIndex => {
   const bundles: OwnedBundleIndex = new Map();
@@ -196,9 +135,15 @@ export const bundleIdsAtCellKeys = (
   const bundleIds = new Set<string>();
   for (const tile of scene.tiles ?? []) {
     const flag = terrainDocumentFlag(tile);
-    if (flag?.cellKey && cellKeys.has(flag.cellKey)) {
+    if (flag && terrainCellKeys(flag).some(key => cellKeys.has(key))) {
       bundleIds.add(flag.bundleId);
     }
   }
   return bundleIds;
 };
+
+export const terrainCellOffsets = (flag: TerrainDocumentFlag) =>
+  flag.sheetCells ?? (flag.offset ? [flag.offset] : []);
+
+export const terrainCellKeys = (flag: TerrainDocumentFlag) =>
+  flag.sheetCells ? flag.sheetCells.map(({ i, j }) => `${i}:${j}`) : flag.cellKey ? [flag.cellKey] : [];

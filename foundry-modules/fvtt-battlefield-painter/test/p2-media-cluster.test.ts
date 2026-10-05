@@ -29,28 +29,55 @@ describe("P2 media and deterministic clusters", () => {
     const animatedTextures = new Set<string>();
     const fieldTextures = new Set<string>();
     for (const configuration of Object.values(TERRAIN_CONFIGURATIONS)) {
+      if (configuration.placement) continue;
       for (const stage of configuration.stages) {
-        expect(stage.media.staticTexture.endsWith(".webp")).toBe(true);
-        expect(stage.media.animatedTexture.endsWith(".webm")).toBe(true);
+        expect(/\.(webp|png)$/.test(stage.media.staticTexture)).toBe(true);
+        expect(/\.(webm|webp|png)$/.test(stage.media.animatedTexture)).toBe(true);
         staticTextures.add(stage.media.staticTexture);
         animatedTextures.add(stage.media.animatedTexture);
         if (stage.media.fieldTexture) fieldTextures.add(stage.media.fieldTexture);
       }
       if (configuration.id === "brambles") {
-        expect(configuration.stages[0]?.media).toEqual(
+        expect(configuration.stages[0]?.media).not.toEqual(
           configuration.stages[1]?.media,
         );
       }
     }
     expect([...staticTextures].sort()).toEqual([
-      "modules/fvtt-battlefield-painter/assets/terrain/brambles.webp",
+      "modules/fvtt-battlefield-painter/assets/terrain/acid-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/acid-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/blood-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/blood-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-native-roots.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-stage-i.webp",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-stage-ii.webp",
       "modules/fvtt-battlefield-painter/assets/terrain/fire.webp",
+      "modules/fvtt-battlefield-painter/assets/terrain/flooding-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/flooding-native-stage-ii.png",
       "modules/fvtt-battlefield-painter/assets/terrain/frost.webp",
+      "modules/fvtt-battlefield-painter/assets/terrain/lava-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/lava-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/rubble-native-a.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/spiderweb-native-a.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/wood-native-a.png",
     ]);
     expect([...animatedTextures].sort()).toEqual([
-      "modules/fvtt-battlefield-painter/assets/terrain/brambles.webm",
+      "modules/fvtt-battlefield-painter/assets/terrain/acid-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/acid-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/blood-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/blood-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-native-roots.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-stage-i.webp",
+      "modules/fvtt-battlefield-painter/assets/terrain/brambles-stage-ii.webp",
       "modules/fvtt-battlefield-painter/assets/terrain/fire.webm",
+      "modules/fvtt-battlefield-painter/assets/terrain/flooding-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/flooding-native-stage-ii.png",
       "modules/fvtt-battlefield-painter/assets/terrain/frost.webm",
+      "modules/fvtt-battlefield-painter/assets/terrain/lava-native-stage-i.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/lava-native-stage-ii.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/rubble-native-a.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/spiderweb-native-a.png",
+      "modules/fvtt-battlefield-painter/assets/terrain/wood-native-a.png",
     ]);
     expect([...fieldTextures].sort()).toEqual([
       "modules/fvtt-battlefield-painter/assets/terrain/fire-stage-i.webm",
@@ -106,7 +133,7 @@ describe("P2 media and deterministic clusters", () => {
     ).toBeUndefined();
   });
 
-  test("keeps marker-free Frost and Brambles plans on their legacy animated media path", () => {
+  test("uses the current marker-free media and preserves an explicit legacy texture", () => {
     for (const configurationId of ["frost", "brambles"] as const) {
       const plan = buildScenePlan({
         bundleId: `bundle-${configurationId}`,
@@ -116,13 +143,24 @@ describe("P2 media and deterministic clusters", () => {
         movementBehavior,
         p2Enabled: true,
       });
-      expect(plan.Tile[0]?.texture.src.endsWith(".webm")).toBe(true);
+      expect(plan.Tile[0]?.texture.src).toBe(
+        configurationId === "brambles"
+          ? "modules/fvtt-battlefield-painter/assets/terrain/brambles-stage-i.webp"
+          : "modules/fvtt-battlefield-painter/assets/terrain/frost.webm",
+      );
       expect(plan.Tile[0]?.flags["fvtt-battlefield-painter"].visualEffect).toBeUndefined();
+      const legacy = `modules/fvtt-battlefield-painter/assets/terrain/${configurationId}.webm`;
+      const restored = buildScenePlan({
+        bundleId: `legacy-${configurationId}`, configurationId, stageIndex: 0,
+        cells: [cell(0, 0)], movementBehavior, p2Enabled: true, legacyTexture: legacy,
+      });
+      expect(restored.Tile[0]?.texture.src).toBe(legacy);
     }
   });
 
   test("keeps every terrain and stage free of new AmbientSound documents", () => {
     for (const configuration of Object.values(TERRAIN_CONFIGURATIONS)) {
+      if (configuration.placement) continue;
       for (const [stageIndex] of configuration.stages.entries()) {
         const plan = buildScenePlan({
           bundleId: `${configuration.id}-${stageIndex}`,

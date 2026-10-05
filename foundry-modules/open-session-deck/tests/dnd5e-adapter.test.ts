@@ -86,7 +86,7 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.5' }))).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.365' }))).toContain('14.364');
     expect(supportError(runtime({ systemVersion: '5.4.0' }))).toContain('5.3.3');
-    expect(supportError(runtime({ foundryVersion: '14.368' }))).toContain('6.0.2');
+    expect(supportError(runtime({ foundryVersion: '14.368' }))).toBeUndefined();
     expect(supportError(runtime({ systemVersion: '6.0.2' }))).toContain('6.0.2');
     expect(supportError(runtime({ foundryVersion: '14.369', systemVersion: '6.0.2' }))).toContain('14.368');
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.4' }))).toContain('6.0.5');

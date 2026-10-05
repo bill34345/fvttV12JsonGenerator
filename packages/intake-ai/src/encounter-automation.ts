@@ -451,7 +451,7 @@ return await (async function startEncounterRuntime() {
   const foundryHooks = globalThis.Hooks;
   if (!forgeEncounter || !forgeEncounter.packageId || !forgeEncounter.packageHash || !forgeEncounter.actors) throw new Error('Encounter bindings are unavailable.');
   if (!game?.user?.isGM) throw new Error('Only a GM can start encounter automation.');
-  if (game.version !== '14.364') throw new Error('This encounter requires Foundry 14.364.');
+  if (game.version !== '14.364' && game.version !== '14.368') throw new Error('This encounter requires Foundry 14.364 or 14.368.');
   if (game.system?.id !== 'dnd5e' || game.system?.version !== '5.3.3') throw new Error('This encounter requires dnd5e 5.3.3.');
   if (!canvas?.scene) throw new Error('Open the encounter scene before starting automation.');
   if (!foundryHooks || typeof foundryHooks.on !== 'function' || typeof foundryHooks.once !== 'function' || typeof foundryHooks.off !== 'function') throw new Error('Foundry Hooks are unavailable.');

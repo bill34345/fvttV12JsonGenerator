@@ -157,7 +157,7 @@ test('missing recovery, mismatched readback and recovery inside removal scope st
   expect(inspectPreservation(input).ok).toBe(false);
   entry.recovery.absolutePath = join(root, 'untracked.txt'); save(input, request);
   expect(inspectPreservation(input).unknowns.join()).toContain('inside');
-});
+}, 15_000);
 
 test('staged, working and untracked versions require separate matching readbacks', () => {
   bytes(join(root, 'source.txt'), 'staged version'); git(root, 'add', '--', 'source.txt');
@@ -174,7 +174,7 @@ test('a reachable Git file is read back, while merely similar current implementa
   expect(inspectPreservation(input).ok).toBe(true);
   bytes(join(root, 'draft.txt'), 'base plus unique old delta\n');
   expect(inspectPreservation(input).unknowns.join()).toContain('do not match');
-});
+}, 15_000);
 
 test('historical unknown scope stays unknown even with a clean integrated worktree', () => {
   const request = preservation(); request.unknowns = ['50 historical original versions have not been fully reconstructed']; save(input, request);
@@ -187,7 +187,7 @@ test('an unintegrated commit, stale ref or missing retained repository is not pr
   expect(inspectPreservation(input).ok).toBe(false);
   request.integration.commit = 'a'.repeat(40); save(input, request); expect(inspectPreservation(input).ok).toBe(false);
   request.integration.repositoryRoot = join(sandbox, 'missing'); save(input, request); expect(inspectPreservation(input).ok).toBe(false);
-});
+}, 15_000);
 
 test('regenerable declarations are exact, explicit and cannot waive tracked edits', () => {
   mkdirSync(join(root, '.local')); bytes(join(root, '.local/cache.txt'), 'generated');

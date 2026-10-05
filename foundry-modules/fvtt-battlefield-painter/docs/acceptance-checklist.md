@@ -1,4 +1,16 @@
-# Exact Foundry 14.364 Acceptance Checklist
+# Battlefield Painter 接受入口
+
+## 当前候选与实际边界（2026-10-04）
+
+当前候选为`0.3.0-alpha.2`，Mirror目标为用户指定的`14.368 / dnd5e 5.3.3`；既有`14.364 / 5.3.3`和Next切片证据单独保留。当前真实状态以[接续入口](CONTINUATION.md)、[升级与原版对照](../../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md)和[V3接入](audio-v3-integration-2026-10-04.md)为准。下面的alpha.1/P2清单是历史规划，不把旧无音效、阶段形态、版本、组合或长时要求自动套到当前默认美术。
+
+- 已接受：当前服务与模块身份、原版独立安装、保存开关完整性、来源代码必要兼容、Core条件/优先级/Injury窄接受；五组旧音源原版对照与V3七独立音源的加载/播放进度/循环、近远、主音量参数、Fire撤销重做/刷新/擦除及最终恢复。
+- 继续补核：三格型代表交互、纵列六角26个basic配置/36阶段，阶段模式、Region孔洞/去重、Shift收起恢复、真实拖拽/玩家可见与播放器、最终一次清理和全部非任务文档保持。
+- 当前阶段模式只改命中格位；`advanceCellKeys`会保留同笔未命中格位并拆出下一阶段，不以面板的未来绘制stage字段代替实际Tile/Region读回。阶段10的第一次尝试收据为`active=false`，不能作为已启用画笔的阶段交互接受。
+- 本轮保持批准美术、默认关闭声音和能量原文件；狂野魔法/裂隙仅已有basic视觉，不追加深玩法。无用户主观音色接受、弱GPU/大面积/四小时或生产接受，不新增这些运行。
+- 使用同一组标记夹具与当前官方Chrome；Readonly观察工具与完整Initializer分开，最终重导完整工具后恢复/清理。GM/SY权限按实际读回，只对本任务Macro授予必要的文档访问，不改全局账号权限。
+
+## 历史 Exact Foundry 14.364 Acceptance Checklist
 
 Static checks and build output do not satisfy this checklist. Run these in the approved local Lab with Foundry `14.364` and dnd5e `5.3.3`, using a disposable test Scene. Record screenshots, console errors, document counts from `api.auditScene()`, and any recovery action.
 

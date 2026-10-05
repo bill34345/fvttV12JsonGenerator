@@ -191,8 +191,8 @@ export function normalizeBunSourceBanners(bundle: string): string {
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.364') {
-    throw new Error('Foundry compatibility must be exactly 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') {
+    throw new Error('Foundry compatibility must cover 14.364 through 14.368 with 14.364 verified.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};

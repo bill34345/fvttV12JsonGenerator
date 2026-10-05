@@ -1,3 +1,4 @@
+import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
 import {
   BROWSER_GENERATOR_VERSION,
   buildForgeActorRequest,
@@ -862,7 +863,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (this.busy() || this.batchRunning || this.batchApplying || !this.importedReview) return;
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       if (!importedTargetCompatible(this.importedReview)) {
-        this.notify('error', '导入记录的 target 与当前 Foundry 14.364 / dnd5e 5.3.3 安全边界不兼容，不能开启新 attempt。');
+        this.notify('error', '导入记录的 target 与当前 Foundry 14.364 或 14.368 / dnd5e 5.3.3 安全边界不兼容，不能开启新 attempt。');
         return;
       }
       const imported = this.importedReview;
@@ -2318,7 +2319,7 @@ function acceptedActorResponse(response: ForgeActorResponse): boolean {
   const result = decoded.value.result;
   return result.status === 'accepted' && result.verification.status === 'accepted' && Boolean(result.artifact && result.artifactHash)
     && result.diagnostics.length === 0 && result.actorVerification.warnings.length === 0
-    && result.target.fvttRuntimeVersion === EXPECTED_FOUNDRY_VERSION && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
+    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion) && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
 }
 function acceptedItemResponse(response: ForgeItemResponse): boolean {
   const decoded = decodeForgeItemResponse(response);
@@ -2326,7 +2327,7 @@ function acceptedItemResponse(response: ForgeItemResponse): boolean {
   const result = decoded.value.result;
   return result.status === 'accepted' && result.verification.status === 'accepted' && Boolean(result.artifact && result.artifactHash)
     && !result.diagnostics.some((entry) => entry.severity === 'warning' || entry.severity === 'error')
-    && result.target.fvttRuntimeVersion === EXPECTED_FOUNDRY_VERSION && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
+    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion) && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
 }
 function isCurrentRuntime(game: any): boolean { try { assertGm(game); assertExactRuntime(game); return true; } catch { return false; } }
 function allFindings(analysis?: IntakeAnalysis, generation?: IntakeGeneration, stale?: ReturnType<typeof staleFinding>) {
@@ -2365,7 +2366,7 @@ function selectedBatchFile(root: HTMLElement): File | undefined {
 function importedTargetCompatible(imported: ImportedForgeIntakeReviewRecord): boolean {
   const target = imported.bundle.target;
   return Boolean(target
-    && target.fvttVersion === EXPECTED_FOUNDRY_VERSION
+    && isForgeCoreVersionSupported(target.fvttVersion)
     && target.systemId === 'dnd5e'
     && target.systemVersion === EXPECTED_SYSTEM_VERSION
     && target.generatorProfile === 'v14'

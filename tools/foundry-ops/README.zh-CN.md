@@ -249,3 +249,16 @@ bun run foundry:ops production inventory --apply --allow-production-read
 ## 长时间验证边界
 
 Foundry／Chrome 工作沿用根说明，不设固定总时长上限；单操作保留超时，不能用重复短测代替真实长时验收。四小时或其他长时测试只在用户明确要求相应验收时运行；真实会话仍需真实使用证据。工具回归或文件侧收据不能关闭这些门禁。
+
+## Mirror 的14.368程序选择（2026-10-03）
+
+已授权的本轮Mirror使用14.368/dnd5e5.3.3。程序选择只影响Mirror，Core Test继续14.364；生成器默认目标、Next和生产均沿各自契约。
+
+```powershell
+$env:FVTT_OPS_MIRROR_FOUNDRY_VERSION = '14.368'
+bun run foundry:lab launch server-mirror
+```
+
+该选择器只接受精确14.364或14.368，省略时保留原364选择。对正在运行的peer同时识别两个允许的Mirror程序目录；未知活PID失败关闭并保留记录。启动前仍核真实PID、端口、dataPath、World和共享占用，常驻服务不在E2E清理时停止。旧PID文件不能代替实际进程身份；当前服务收据及必要兼容/安装接受见[本轮维护记录](../../docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md)。
+
+本轮Forge0.4.0采用`prepareMirrorForgeOverlay`只读绑定原来源和已安装脚本SHA，原代码重建逐字相等后才做受限Core配对及真实目标绑定适配。工具只生成两个新产物，不安装、不改旧来源、模板、蓝图UI或资产；重建后须重新审其hash与窄差分，不能以master0.3.0覆盖当前Mirror。
