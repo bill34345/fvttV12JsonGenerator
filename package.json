@@ -64,6 +64,8 @@
     "foundry:lab": "bun run tools/foundry-ops/src/cli.ts lab",
     "test:foundry-ops": "bun run src/tools/runHermeticFoundryScript.ts test:foundry-ops:raw",
     "test:acceptance-tools": "bun run src/tools/runHermeticFoundryScript.ts test:acceptance-tools:raw",
+    "test:acceptance-inspection": "bun run src/tools/runHermeticFoundryScript.ts test:acceptance-inspection:raw",
+    "test:acceptance-inspection:raw": "bun test tools/foundry-ops/src/acceptance/inspection.test.ts --max-concurrency 1",
     "test:acceptance-next-vm": "bun run src/tools/runHermeticFoundryScript.ts test:acceptance-next-vm:raw",
     "test:acceptance-cleanup": "bun run src/tools/runHermeticFoundryScript.ts test:acceptance-cleanup:raw",
     "test:acceptance-cleanup:raw": "bun test tools/foundry-ops/src/acceptance/adapters/next-vm-cleanup.test.ts --max-concurrency 1",

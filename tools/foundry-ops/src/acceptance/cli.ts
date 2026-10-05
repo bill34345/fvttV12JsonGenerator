@@ -5,6 +5,7 @@ import { inspectNextVmSource } from './adapters/next-vision-macro';
 import { collectRuntimeBatch, dispatchRuntimeBatch, prepareRuntimeBatch, runtimeReadiness } from './runtime';
 import { inspectTaskState } from './handoff';
 import { inspectPreservation } from './preservation';
+import { validationSelectionSummary } from './selection';
 
 export async function runAcceptanceCli(args: string[], stdout = console.log): Promise<number> {
   try {
@@ -51,7 +52,7 @@ export async function runAcceptanceCli(args: string[], stdout = console.log): Pr
       }
       case 'ready': {
         const contract = requireReady(options.contract!);
-        result = { ok: true, dispatchable: true, executionScope: 'local-file-checks', ...(contract.request.externalBatch ? { runtimeDispatchable: false } : {}), contractAbsolutePath: contract.contractAbsolutePath, dispatchId: contract.dispatchId, contractRevision: contract.contractRevision, workspace: contract.workspace };
+        result = { ok: true, dispatchable: true, executionScope: 'local-file-checks', ...(contract.request.externalBatch ? { runtimeDispatchable: false } : {}), ...(contract.request.validationSelection ? { validation: validationSelectionSummary(contract.request.validationSelection) } : {}), contractAbsolutePath: contract.contractAbsolutePath, dispatchId: contract.dispatchId, contractRevision: contract.contractRevision, workspace: contract.workspace };
         break;
       }
       case 'execute': result = await executeAcceptance(options.contract!); break;

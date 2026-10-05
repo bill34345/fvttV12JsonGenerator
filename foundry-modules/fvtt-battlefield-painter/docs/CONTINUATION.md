@@ -4,7 +4,15 @@
 
 用户随后明确要求“那合并到master吧”，已授权按[核清的本地范围](local-integration-scope-2026-10-05.md)提交并合并到本地 master；不包含远端 push、Forge 0.4.0 蓝图业务源、Foundry 安装/服务操作或工作树清理。原技术验收保持完成停止，本次只执行文件集成。
 
-本次新的验证依据是候选需要吸收 master `cdf387a` 已提交的 17 文件；这是此前 CI 未覆盖的组合。保留产品与运行时身份不变的旧玩法证据，只对最终组合执行一次集成 CI、指令生成/一致性和合并前后手册检查；手册冲突按条目合并、人工核对后生成，不复制旧 HTML 或丢掉共用选择门禁。实际提交、master 读回和停止状态以[本地集成结果](H:/CodexData/visualizations/2026/10/03/01a1010c-9d38-7421-9098-596a96bc261a/painter-master-integration-final-20261005.json)为准。下方“没有commit/merge”的文字保留为授权前停点，不再限制这次明确授权。
+本次新的验证依据是候选需要吸收 master `cdf387a` 已提交的 17 文件；这是此前 CI 未覆盖的组合。保留产品与运行时身份不变的旧玩法证据，只对最终组合执行必要的集成 CI、指令生成/一致性和合并前后手册检查；手册冲突按条目合并、人工核对后生成，不复制旧 HTML 或丢掉共用选择门禁。实际提交、master 读回和停止状态以[本地集成结果](H:/CodexData/visualizations/2026/10/03/01a1010c-9d38-7421-9098-596a96bc261a/painter-master-integration-final-20261005.json)为准。下方“没有commit/merge”的文字保留为授权前停点，不再限制这次明确授权。
+
+本地集成 CI 首次已通过隔离、指令、手册、类型、架构和 Session Monitor build，随后 CLI Item Intake 正例在原 20 秒子进程期限退出143（仅有 Loaded spells 输出，23 pass/1 fail）；CLI/fixture 本身未由本轮产品补丁修改。新增核查仅针对这个必需集成门禁：先用 `bun run test:cli` 窄复验、核对子进程/本地 provider 收集层，保留既有通过的前段和实机证据，不因工具层超时重放玩法或增加时间预算。
+
+同一产品代码、原期限下 `bun run test:cli` 窄复验为24 pass/0 fail；没有修改CLI测试或提高期限，首次超时原因仍未确认。为取得完整必需门禁的真实退出状态，再运行一次 `bun run ci:verify` 完成尚未执行的覆盖率、anti-overfit、资料及构建/离线烟测；不以窄复验冒充完整CI通过，首次失败原件保留。
+
+CI r2中CLI已通过，369文件覆盖率的明确失败为Web API incremental crawl案例在约1681ms未完成，另有同一job ID的Job not found异步清理错误与Bun describe登记错误（总结3546 pass/1 skip/2 fail/2 errors；未直接证明后者因果）。该测试的轮询只有30×50ms；旧r8成功同案例也用了1534ms，本轮超时后finally关闭本地模拟站点，后续请求记录ECONNREFUSED。必要修复只增加一份API测试文件：两个真实抓取案例可轮询10秒以取得终态，其他案例保持原1.5秒轮询，所有案例仍有既有30秒期限；不改Web产品或CLI期限。先按局部AGENTS执行API测试，再核完整CI；保留其余通过片段及r1/r2失败原件。
+
+最终API局部40 pass/0 fail；完整 `bun run ci:verify` r3退出0，含369文件覆盖率、coverage阈值、全量anti-overfit、仓库卫生、锁定dnd5e5.3.3参考、Web构建和Actor离线烟测。CLI与两个抓取案例在完整运行中通过，异步清理/describe错误未再出现；首次CLI超时原因仍保持未确认。本次只做剩余记录/手册同步和本地master fast-forward，之后停止；业务/素材原字节与Mirror已装Forge0.4.0保持，最终HEAD及合并后读回见本地集成结果，不运行下一批实机或推送远端。
 
 ## 当前完成停点（2026-10-05）
 

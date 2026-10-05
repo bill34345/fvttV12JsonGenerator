@@ -56,9 +56,25 @@ bun run foundry:ops acceptance resume --contract="<同一合同绝对路径>"
 
 摘要把 `behavior`、`evidence`、`cleanup` 和 `parentReview` 分开。本版不创建 Foundry 对象，因此 cleanup 是 `NOT_REQUIRED`；parentReview 一直是 `PENDING`，自动分类不能代替父审。收集退出码为 PASS=0、FAIL=1、INCOMPLETE／身份拒绝=2。`resume` 的退出码只表示状态读取结果，不是新的语义验收。
 
-所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同。下述第二消费者已提供离线来源与参考数据 adapter，以及明确恢复后的专属运行合同／服务核对；旧证据影响分析、通用回调调度和对象清理自动化仍属后续。完整任务合同模板用于计划这些边界，不能把文件检查 PASS 升级为玩法通过。
+所有产物只新建在目标 worktree 的 `.local/development-feedback/<runId>/`，不修改既有证据。候选、HEAD 或指令发生变化后准备新合同。下述第二消费者已提供离线来源与参考数据 adapter，以及明确恢复后的专属运行合同／服务核对；自动推断影响范围、通用回调调度和对象清理自动化仍属后续。完整任务合同模板用于计划这些边界，不能把文件检查 PASS 升级为玩法通过。
 
 安全回归入口：`bun run test:acceptance-tools`。流程依据：[开发反馈闭环](../../docs/runbooks/development-feedback-loop.md)；进度：[试点计划](../../docs/plans/2026-09-29-development-feedback-pilot.md)。
+
+### 本批验证选择
+
+复杂批次可在 `prepare` 请求中加入可选 `validationSelection`，见[带选择约束的请求](../../docs/templates/development-feedback-selected-request.example.json)。每行只填 `id`、`layer`（`behavior`／`evidence`／`restoration`）、`decision`（`reuse`／`check`／`defer`）、理由和相关 `context`。同一行为的导出、恢复可分行；不将整体收据失败翻译成全部业务失败。旧请求不带新字段时仍兼容，原身份、预检和一次领取保护继续有效。
+
+- `reuse`：`previous` 指向[分项证据绑定记录](../../docs/templates/development-validation-evidence.example.json)的绝对路径与 SHA-256。记录含同一 case／层级、独立审查的 outcome、旧 context 和原件引用。工具读回记录及原件，要求 PASS 和上下文逐键一致，拒绝缺件、字节变化、错 case／层级、失败分项或未知适用性。旧原件格式不统一时新增小型绑定记录引用它们，保留原始 FAIL／PENDING；不能伪写原件为 PASS。
+- `check`：新场景写具体理由；引用旧场景时还须 `invalidation`，含 kind、理由和可读的差异／故障／要求记录。kind 为 `behavior-change`、`interface-change`、`new-failure`、`insufficient-evidence`、`required-integration`、`unknown-impact`、`tool-repair` 或 `restoration-gap`。旧证明不可读时只能用明确的 `insufficient-evidence` 选择窄补测；不能复用为 PASS。单纯工具／恢复缺口不能作为已过业务层的失效理由。
+- `defer`：列明本轮不做的原因；不执行，也不升级为已接受。若全批只有复用／不做项，准备和派发会拒绝新增执行，不运行前置命令。
+
+**执行范围必须对应。** 启用后，每条 `preflight` 与 `operation` 必须填写 `validationCases:[{id,layer}]`；纯语法／身份准备显式填 `[]`。前置命令只能涉及选中的 check 项；正式命令覆盖集合必须恰好等于 check 集合。包含 reuse／defer、遗漏 check、重复或未知项均拒绝。已有命令若实际运行整套而无法分离，就必须换窄入口或依据具体失效理由扩大本批，不能只改声明掩盖实际全套调用。工具能比对现有入口声明的执行项，不能自动理解任意脚本内部语义、发现隐含依赖或替 host 约束回调内部代码。
+
+`prepare` 在执行任何前置命令前检查选择及覆盖；`ready` 和 `dispatchPrepared()` 在领取前重读复用／失效证据，拒绝路径不会调用执行回调或创建领取记录。`ready` 的 `validation.check/reuse/defer` 返回实际冻结的名单。`collect`／`resume` 保持业务结果、证据完整性和恢复状态分离，不因本轮工具故障清空旧分项结论。
+
+`prepare-batch` 可传同一字段，但该 adapter 的实际正式执行项固定为 `offline-source-readback/evidence`，不会将任意业务 check 偷换成只读来源扫描。`prepare-runtime` 可传同一字段及 `executionCases:[{id,layer}]`，后者必须等于 check 集合；`ready-runtime`／`dispatchRuntimeBatch()` 在服务探针及宿主回调之前复核。宿主按返回的 executionCases 选择实际动作；本增量不新增 runtime adapter，不恢复任何暂停业务，也不绕过已有运行权限／服务检查。
+
+`context`、分项 outcome 和影响分析仍由 owner 对照相关代码、版本、目标和原证据建立；工具只证明声明及文件绑定一致，不能认证人工结论的语义真实性。只列相关事实，整包哈希或无关源码变化不能自动让所有旧结果失效；真实版本接口改变也不能被旧 PASS 免测。使用安全入口 `bun run test:acceptance-inspection` 聚焦三个慢 Git 用例所在文件，定稿后 `bun run test:acceptance-tools` 验证共用真实入口；不把固定单测预算、覆盖率 watchdog 或宿主输出 yield 混为同一种超时。
 
 ### 跨聊天状态与清理前内容核对
 

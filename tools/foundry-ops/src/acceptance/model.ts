@@ -6,6 +6,8 @@ export interface CheckCommand {
   argv: string[];
   timeoutMs: number;
   expectJsonOk?: boolean;
+  /** Explicit coverage when validationSelection is enabled; [] is only for preparation. */
+  validationCases?: ValidationCaseRef[];
 }
 
 export interface AcceptanceRequest {
@@ -20,7 +22,34 @@ export interface AcceptanceRequest {
   adapter: 'json-ok' | 'manual';
   readonlySourcePaths?: string[];
   externalBatch?: ExternalBatchBinding;
+  validationSelection?: ValidationSelection;
 }
+
+export type ValidationLayer = 'behavior' | 'evidence' | 'restoration';
+export interface ValidationCaseRef { id: string; layer: ValidationLayer }
+export interface ValidationEvidence {
+  caseId: string;
+  layer: ValidationLayer;
+  outcome: AcceptanceStatus;
+  /** Only the relevant target/interface/code facts, as established by the evidence reviewer. */
+  context: Record<string, string>;
+  evidence: FileIdentity[];
+}
+export interface ValidationCase {
+  id: string;
+  layer: ValidationLayer;
+  decision: 'reuse' | 'check' | 'defer';
+  reason: string;
+  context: Record<string, string>;
+  /** Immutable case-level binding; it references legacy originals without rewriting them. */
+  previous?: FileIdentity;
+  invalidation?: {
+    kind: 'behavior-change' | 'interface-change' | 'new-failure' | 'insufficient-evidence' | 'required-integration' | 'unknown-impact' | 'tool-repair' | 'restoration-gap';
+    reason: string;
+    evidence: FileIdentity;
+  };
+}
+export interface ValidationSelection { cases: ValidationCase[] }
 
 export interface ExternalBatchBinding {
   consumer: 'server-next-vision-macro';

@@ -611,6 +611,11 @@
         "command": "bun run foundry:ops acceptance prepare --input=\"<请求 JSON 的绝对路径>\""
       },
       {
+        "title": "批次先选复用、补测与不做项",
+        "text": "复杂批次显式启用 validationSelection，引用旧分项证据、相关上下文及具体失效理由，并让每条命令的 validationCases 对应本批 check 清单；专属 runtime 使用 executionCases。准备阶段先阻止无理由重复和覆盖 reuse/defer 的命令，ready/领取前复核证据。旧小请求仍兼容；此检查不证明人工影响分析或任意脚本内部语义正确。",
+        "command": "bun run foundry:ops acceptance ready --contract=\"<已准备的本批合同绝对路径>\""
+      },
+      {
         "title": "接入已准备的 ServerNext 批次",
         "text": "按说明填写本任务工作树、旧批次合同和离线授权引用。工具固定跨工作树只读来源并自动绑定回执；ready 只代表文件检查可运行，ready-batch 独立报告运行门禁。源批次暂停和回调归属保留。",
         "command": "bun run foundry:ops acceptance prepare-batch --input=\"<批次请求 JSON 的绝对路径>\""
@@ -689,7 +694,7 @@
       },
       {
         "title": "验证共用验收工具",
-        "text": "安全包装入口覆盖预检失败不派发、错误路径、候选／指令变化、旧收据、空输出和超时恢复。第二消费者的只读来源与运行边界可用 test:acceptance-next-vm 聚焦验证；test:acceptance-cleanup 核对限定自动后代归属，手动/未知对象仍拒绝，纯检查不执行删除。按变化选择入口，详细操作见 Foundry 环境与资产检查条目。",
+        "text": "安全包装入口覆盖选择声明/执行范围在前置命令和派发前拒绝、旧证据新鲜度、旧请求兼容，以及原有路径/收据/超时边界。test:acceptance-inspection 只跑状态与保留检查文件，已知慢Git用例使用各自15秒预算；先聚焦修同类问题，再按必要整合边界运行相关组。第二消费者和清理归属仍可分别使用 test:acceptance-next-vm、test:acceptance-cleanup，均不因此执行真实清理。",
         "command": "bun run test:acceptance-tools"
       },
       {

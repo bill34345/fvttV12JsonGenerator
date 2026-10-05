@@ -6,7 +6,11 @@
 
 用户2026-10-05明确要求“那合并到master吧”。按本文范围完成必要的 topic 提交、吸收 master `cdf387a`、冲突核对及本地 master fast-forward；不扩大到远端 push、Forge 0.4.0 蓝图业务源、安装/服务或工作树清理。Forge 的兼容补丁可以入主线，主线产品版本仍是 0.3.0，已有 Mirror 0.4.0 安装保持。
 
-新增验证缺口仅是 **Painter/Mirror 候选与主线 validation-selection 的最终代码组合**，因此在吸收主线后执行一次集成 CI，并完成指令生成/一致性、合并前后手册检查。旧实机行为按相同产品/客户端/目标证据复用，不因 Git HEAD 变化重跑。最终动作、提交身份、检查和停止状态见[本地集成结果](H:/CodexData/visualizations/2026/10/03/01a1010c-9d38-7421-9098-596a96bc261a/painter-master-integration-final-20261005.json)；该记录在最终 master 读回后保存。
+新增验证缺口仅是 **Painter/Mirror 候选与主线 validation-selection 的最终代码组合**，因此在吸收主线后执行必要的集成 CI，并完成指令生成/一致性、合并前后手册检查。旧实机行为按相同产品/客户端/目标证据复用，不因 Git HEAD 变化重跑。最终动作、提交身份、检查和停止状态见[本地集成结果](H:/CodexData/visualizations/2026/10/03/01a1010c-9d38-7421-9098-596a96bc261a/painter-master-integration-final-20261005.json)；该记录在最终 master 读回后保存。
+
+实际集成门禁另暴露一份既有API测试的等待窗口问题：`apps/web/src/server/__tests__/api.test.ts` 中两个真实抓取案例等待终态由约1.5秒改为10秒，保持各案30秒总期限和其他案例原等待窗口。旧成功记录1534ms已贴近原界限，本轮1681ms失败后模拟站点被提前关闭并导致后续连接拒绝。该单文件是完成本次必需门禁的测试修复，计入最终集成清单；Web产品代码、抓取能力和授权没有变化，原231路径清单仍作为业务范围历史快照。
+
+最终完整CI r3退出0：覆盖率3558 pass/1 skip/0 fail，369文件；全量anti-overfit、仓库卫生、精确参考验证、Web构建及Actor离线烟测也通过。CLI局部24/0与API局部40/0保留，r1/r2失败日志没有覆盖。CI之后只同步完成说明和手册，产品/测试实现不再改变；合并前手册及范围检查和合并后master读回仍按最终记录执行。
 
 ## 当前身份与完整清单
 

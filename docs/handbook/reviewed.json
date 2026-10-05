@@ -55,14 +55,14 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "foundry-ops": {
-    "fingerprint": "7dbb6294103d072abd658b4d393c93684ce8aaa77cd1424328a5c427f125816b",
-    "reviewedOn": "2026-10-03",
-    "note": "核对新增Mirror专用Core程序选择、跨版本peer互斥和严格只读Forge0.4来源重建；保留CoreTest/Next/生产与无备份/权限边界。固定控制器新增368/5.3.3，AI能力和生成来源契约未扩大。"
+    "fingerprint": "a4f38b5e7075fa1417de66ece1fc9069b153d6203b77d42f5b62c2e610c8624b",
+    "reviewedOn": "2026-10-05",
+    "note": "2026-10-05本地集成：对照合并后的README与真实acceptance选择/ready/dispatch入口，保留master全部拒绝与复用门禁、12不重叠文件和相同inspection测试；仅追加Mirror364/368程序选择与未知活PID保护。CI入口沿主线，coverage单进程450秒；没有Foundry操作或扩大玩法接受。两个共享条目按组合人工核对，其余记录按原owner保留。"
   },
   "verification-development": {
-    "fingerprint": "e989c23cbb9b534cb1e9f8226b3b5d84a1bc1137877724f644db2d7867b9dbff",
-    "reviewedOn": "2026-10-03",
-    "note": "人工对照368文件coverage实际持续PASS及独立复核：仅完整单进程总watchdog由300秒改450秒，通用90秒默认/单案子操作限额、全清单、single-process报告、阈值和CI命令保持；同步当前用户可见限额并记录原超时未接受"
+    "fingerprint": "f2c8729ce1589bf9775209091df1c7e372b5d00dea7cffc402255bd78f14fe76",
+    "reviewedOn": "2026-10-05",
+    "note": "2026-10-05本地集成：对照合并后的README与真实acceptance选择/ready/dispatch入口，保留master全部拒绝与复用门禁、12不重叠文件和相同inspection测试；仅追加Mirror364/368程序选择与未知活PID保护。CI入口沿主线，coverage单进程450秒；没有Foundry操作或扩大玩法接受。两个共享条目按组合人工核对，其余记录按原owner保留。"
   },
   "human-encounter-intake": {
     "fingerprint": "9ffe15b659433d1470a65796f8403d16e980e06d5c4f9efb1f9ffa13581d6fbf",
@@ -85,9 +85,9 @@
     "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "602e31be355d37f27e08aed097915d4bc3e1affcb033a2700db04eeb7c04ed67",
+    "fingerprint": "ca959dd930112643e67b6d045fe23b65e9a7c6f7f799e09337d35e812cec855e",
     "reviewedOn": "2026-10-05",
-    "note": "用户已授权按核清范围本地commit/merge；新增本地集成入口和最终收据引用，Forge0.4蓝图业务仍排除。对照原产品与运行证据，说明不扩大玩法接受；吸收主线后将核对共享条目并生成最终组合。"
+    "note": "最终完整CI r3退出0，3558/1/0与369文件，API局部40/0和CLI24/0；新增完成说明和真实r1/r2失败层级。仅文档/手册同步，产品与最终通过的测试实现不再改变；仍排除Forge0.4蓝图业务、实机重放和远端push。"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
@@ -120,9 +120,9 @@
     "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "a4dcd916b18ebd77c6980ddc0a96ee616b73faa67f109ec7ecbaaa6400760533",
+    "fingerprint": "524148a7a83a97594c1b18140be9a7aa3431d60e086e064f1427ae8d2f97ad7a",
     "reviewedOn": "2026-10-05",
-    "note": "用户已授权按核清范围本地commit/merge；新增本地集成入口和最终收据引用，Forge0.4蓝图业务仍排除。对照原产品与运行证据，说明不扩大玩法接受；吸收主线后将核对共享条目并生成最终组合。"
+    "note": "最终完整CI r3退出0，3558/1/0与369文件，API局部40/0和CLI24/0；新增完成说明和真实r1/r2失败层级。仅文档/手册同步，产品与最终通过的测试实现不再改变；仍排除Forge0.4蓝图业务、实机重放和远端push。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "c5a5a8be283e6625dfef672bd8945c53aa55ce18c4f4359ad3ffa749bfb511ef",

@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { assessNextVmReadback, inspectNextVmSource } from './adapters/next-vision-macro';
 import { captureExternalReceipt, dispatchExternalBatch, externalReadiness, importExternalReceipt, prepareExternalBatch } from './external';
-import { readJson, sha256 } from './files';
+import { fileIdentity, readJson, sha256 } from './files';
 import { executeAcceptance, prepareAcceptance, requireReady } from './workflow';
 import { runAcceptanceCli } from './cli';
-import type { AcceptanceRequest } from './model';
+import type { AcceptanceRequest, ValidationSelection } from './model';
 import { collectRuntimeBatch, dispatchRuntimeBatch, prepareRuntimeBatch, runtimeReadiness } from './runtime';
 
 const test = (name: string, run: () => void | Promise<void>) => bunTest(name, run, 20000);
@@ -284,4 +284,53 @@ test('runtime originals collect idempotently but wrong callback/revision and PAS
     json(input, { ...report, binding: { ...report.binding, [key]: 'old' } });
     expect(() => collectRuntimeBatch(contract.contractAbsolutePath, input)).toThrow('Wrong runtime callback binding');
   }
+});
+
+function runtimeSelection(): ValidationSelection {
+  const context = { target: 'synthetic-next-vm', interface: 'v1' };
+  const prior = join(root, 'selected-prior.json');
+  json(prior, { caseId: 'senses', layer: 'behavior', outcome: 'PASS', context, evidence: [fileIdentity(rawPath)] });
+  return { cases: [{ id: 'senses', layer: 'behavior', decision: 'check', reason: 'A declared dependency interface changed.', context: { ...context, interface: 'v2' }, previous: fileIdentity(prior), invalidation: { kind: 'interface-change', reason: 'Synthetic source contract changed from v1 to v2.', evidence: fileIdentity(contextPath) } }] };
+}
+
+test('runtime selection blocks unreasoned repeats and broad coverage before probes and dispatch', async () => {
+  const fixture = await runtimeFixture();
+  const input = readJson(fixture.runtimeInput) as Record<string, unknown>;
+  const selection = runtimeSelection();
+  input.validationSelection = selection; input.executionCases = [{ id: 'senses', layer: 'behavior' }];
+  delete selection.cases[0]!.invalidation; json(fixture.runtimeInput, input);
+  let probes = 0, calls = 0; const probe = () => { probes++; };
+  await expect(prepareRuntimeBatch(fixture.runtimeInput, probe)).rejects.toThrow('repeat needs'); expect(probes).toBe(0);
+  input.validationSelection = runtimeSelection(); input.executionCases = [{ id: 'senses', layer: 'behavior' }, { id: 'undeclared', layer: 'behavior' }]; json(fixture.runtimeInput, input);
+  await expect(prepareRuntimeBatch(fixture.runtimeInput, probe)).rejects.toThrow('execution includes'); expect(probes).toBe(0);
+  input.executionCases = [{ id: 'senses', layer: 'behavior' }]; json(fixture.runtimeInput, input);
+  const contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe);
+  delete contract.validationSelection!.cases[0]!.invalidation;
+  json(contract.contractAbsolutePath, contract); json(join(dirname(contract.contractAbsolutePath), 'integrity.json'), fileIdentity(contract.contractAbsolutePath));
+  await expect(dispatchRuntimeBatch(contract.contractAbsolutePath, async () => { calls++; }, probe)).rejects.toThrow('repeat needs');
+  expect(calls).toBe(0); expect(probes).toBe(0); expect(existsSync(join(dirname(contract.contractAbsolutePath), 'claim.json'))).toBe(false);
+});
+
+test('runtime selected interface check preserves distinct reused behavior and restoration scope', async () => {
+  const fixture = await runtimeFixture(); const input = readJson(fixture.runtimeInput) as Record<string, unknown>;
+  const selection = runtimeSelection(), context = { target: 'synthetic-next-vm', interface: 'manual-v1' };
+  const prior = join(root, 'manual-prior.json'); json(prior, { caseId: 'manual-api', layer: 'behavior', outcome: 'PASS', context, evidence: [fileIdentity(rawPath)] });
+  selection.cases.push({ id: 'manual-api', layer: 'behavior', decision: 'reuse', reason: 'Unchanged independent boundary.', context, previous: fileIdentity(prior) }, { id: 'cleanup', layer: 'restoration', decision: 'defer', reason: 'Not asserted by a dispatch selection.', context });
+  input.validationSelection = selection; input.executionCases = [{ id: 'senses', layer: 'behavior' }]; json(fixture.runtimeInput, input);
+  const original = readFileSync(rawPath), contract = await prepareRuntimeBatch(fixture.runtimeInput, fixture.probe); let calls = 0;
+  const ready = await runtimeReadiness(contract.contractAbsolutePath, fixture.probe);
+  expect(ready.validation?.reuse.map(item => item.id)).toEqual(['manual-api']);
+  expect(ready.validation?.defer.map(item => item.layer)).toEqual(['restoration']);
+  await dispatchRuntimeBatch(contract.contractAbsolutePath, async value => { calls++; expect(value.executionCases).toEqual([{ id: 'senses', layer: 'behavior' }]); }, fixture.probe);
+  expect(calls).toBe(1); expect(readFileSync(rawPath)).toEqual(original);
+});
+
+test('offline batch selection binds the adapter actual readback case instead of implying a game matrix', async () => {
+  const input = readJson(inputPath) as Record<string, unknown>;
+  input.validationSelection = { cases: [{ id: 'offline-source-readback', layer: 'evidence', decision: 'check', reason: 'Read the existing source contract only.', context: { target: 'synthetic-offline-files' } }] };
+  json(inputPath, input); const contract = await prepare();
+  expect(contract.request.operation.validationCases).toEqual([{ id: 'offline-source-readback', layer: 'evidence' }]);
+  expect(externalReadiness(contract.contractAbsolutePath)).toMatchObject({ dispatchable: false, validation: { check: [{ id: 'offline-source-readback' }] } });
+  input.validationSelection = { cases: [{ id: 'senses', layer: 'behavior', decision: 'check', reason: 'Wrong executor coverage.', context: { target: 'synthetic' } }] };
+  json(inputPath, input); await expect(prepare()).rejects.toThrow('execution');
 });
