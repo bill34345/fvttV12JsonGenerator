@@ -2,7 +2,7 @@
 
 ## 范围
 
-本目录是 `fvtt-injury-fading-spirits` 复活仪式的唯一实现 owner。模块运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、历史候选 `14.368` / `6.0.2` 或新增候选 `14.368` / `6.0.5` 精确配对；6.0.5 仍需本地 Lab 多客户端语义验收。伤势规则、死亡豁免扩展与管理界面现由 `fvtt-custom-conditions` 负责，旧伤势 API 只经该模块的公开 API 转发。
+本目录是 `fvtt-injury-fading-spirits` 复活仪式的唯一实现 owner。模块运行时仅接受 Foundry VTT `14.364` / dnd5e `5.3.3`、Mirror `14.368` / `5.3.3`、历史候选 `14.368` / `6.0.2` 或新增候选 `14.368` / `6.0.5` 精确配对；6.0.5 仍需本地 Lab 多客户端语义验收。伤势规则、死亡豁免扩展与管理界面现由 `fvtt-custom-conditions` 负责，旧伤势 API 只经该模块的公开 API 转发。
 
 ## 硬边界
 

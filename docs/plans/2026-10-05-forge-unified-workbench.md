@@ -2,7 +2,7 @@
 
 ## 当前状态与范围
 
-2026-10-05：用户确认统一方案并要求开始。唯一候选为 `codex/20261005-151259-forge-unified-workbench`，起点 `e917e897c685f9da317986c5671a837b3d314a6c`；root 是耦合 Forge 子系统的唯一 writer。当前阶段：0.5.0已完成授权范围内的Mirror实机/视觉接受与精确清理；正在吸收最新主线并完成最终CI及本地集成。两棵旧树只读保留，不提交、清理或改写其内容。
+2026-10-05：用户确认统一方案并要求开始。唯一候选为 `codex/20261005-151259-forge-unified-workbench`，起点 `e917e897c685f9da317986c5671a837b3d314a6c`；root 是耦合 Forge 子系统的唯一 writer。当前阶段：0.5.0的Mirror实机/视觉、精确清理、手册实页及最终CI均通过，已吸收最新主线；待本地master快进及合并后核对。两棵旧树只读保留，不提交、清理或改写其内容。
 
 目标是一个 `fvtt-json-forge` 工作台：Actor/Item 目录入口、独立共享连接设置、手工蓝图/标准来源/AI 整理、输入→审核→完成、草稿重开和派生。保留用户已选的蓝图库/编辑/独立预览布局及 2024 资料块呈现。当前授权覆盖实施、相关验证和已有边界内的本地提交/集成；不 push、不操作生产或 ServerNext，不修改 Painter。
 
@@ -83,3 +83,7 @@
 - 实际原始收据和截图保留于`H:/CodexData/visualizations/2026/10/03/01a10117-3f4e-77c2-b7d3-e99e6da803af/forge-unified-20261005/chrome-acceptance`；父独立核对为候选`.local/forge-unified/final-parent-review.json`。原GM/Blueprint两树HEAD及29/35路径状态和SHA再次核对不变。
 - 本次真实Provider调用0；native combat、战斗包导入/启动、race stress、Next/生产均不在本次运行PASS范围。提交锁异步重绘由已有离线回归覆盖，未声称并发压力实机通过。旧战斗runtime源码未变，保留其原范围证据。
 - 主线现为`3c23f758b84da73a2848b28094e4313f6819ca2d`：除验证选择/运维条目外又合入ServerNext四模块，Forge及本次共享生成目录无新差分。最终整合保留全部主线增量，重新合成手册，运行完整CI；不因无关主线变化重放已绑定且未改变的Mirror业务。
+- 功能已本地提交`4b1419e`。主线吸收仅冲突于reviewed.json和生成HTML，逐条合成核对后30条手册check及34项agents检查通过；所有主线任务范围外文件、原有scripts和watch均保持。最终CI运行中；依handbook-maintenance实际打开生成页核对Forge入口/蓝图说明和接受边界，通过同一Chrome执行聊天完成，无需重新进入世界。
+- 最终`bun run ci:verify`退出0：3727 pass / 1 skip / 0 fail，380测试文件、主覆盖率测试阶段397.24秒；CLI独立24项与构建测试也通过。完整类型、架构/环、覆盖率门禁、anti-overfit433 sources、hygiene1952 tracked paths、锁定参考、Web build和离线Actor smoke均通过。早期CI r1失败保留，修复后的最终组合已完成必要复验，没有缩减清单或放宽阈值。
+- 合并后普通release重新构建的ZIP仍为`fa8f21d8a2837cc8098c464e194cba0baae78d6163718aa70c1a510edaf9fe7d`，与已接受及已安装产品一致，故复用Mirror行为证据。
+- `FU05-HANDBOOK-01`实页检查及父审通过：Forge条目/三两模式/蓝图库/创建/版本和范围，验证条目的完整CI及两聚焦命令均实际可见；HTML SHA256为`9e905dcf5a170486a3ac7996f88b07bbb82b3c8a4e59be866339b39c87f40afe`。自有tab关闭，父关闭仅本次18764预览服务并确认监听0；Mirror仍为35468。

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { useMidiActivityUntilTerminal } from '../src/adapters/midi-activity.ts';
+import { useMidiActivityUntilAttack, useMidiActivityUntilTerminal } from '../src/adapters/midi-activity.ts';
 
 function setup() {
   const handlers = new Map<string, Set<(workflow: any) => void>>();
@@ -113,4 +113,35 @@ test('missing lifecycle hooks or an already stopped observer never starts the Ac
   const controller = new AbortController(); controller.abort();
   await expect(useMidiActivityUntilTerminal({ ...s.input, signal: controller.signal })).rejects.toThrow('reconcile');
   expect(s.calls).toHaveLength(0);
+});
+
+test('attack observation returns at the exact attack boundary even when manual damage is still pending', async () => {
+  const s = setup();
+  let settled = false;
+  const waiting = useMidiActivityUntilAttack({ ...s.input, dialog: { configure: false } })
+    .then(result => { settled = true; return result; });
+  await Promise.resolve();
+  expect(s.calls[0][1]).toEqual({ configure: false });
+  s.emit('midi-qol.AttackRollComplete', { sequenceId: s.input.sequenceId, activity: { uuid: 'another-activity' } });
+  await Promise.resolve();
+  expect(settled).toBeFalse();
+  const workflow = { sequenceId: s.input.sequenceId, activity: s.activity, attackRoll: { total: 17 } };
+  s.emit('midi-qol.AttackRollComplete', workflow);
+  const result = await waiting;
+  expect(result.event).toBe('attack');
+  expect(result.workflow).toBe(workflow);
+  expect(result.results).toEqual({ message: { id: 'child-card' } });
+  expect(s.count()).toBe(0);
+});
+
+test('attack observation records preAbort before Midi has set the aborted flag', async () => {
+  const s = setup();
+  const waiting = useMidiActivityUntilAttack(s.input);
+  const workflow = { sequenceId: s.input.sequenceId, aborted: false };
+  s.emit('midi-qol.preAbort.' + s.activity.uuid, workflow);
+  const result = await waiting;
+  expect(result.event).toBe('abort');
+  expect(result.workflow?.aborted).toBeFalse();
+  expect(result.results).toEqual({ message: { id: 'child-card' } });
+  expect(s.count()).toBe(0);
 });

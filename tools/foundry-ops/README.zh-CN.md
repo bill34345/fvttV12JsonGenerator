@@ -34,11 +34,35 @@ bun run foundry:ops catalog
 
 `spell-resolver` 命令仍经过 Foundry Ops 的统一权限入口，但浏览器源码、构建、本地安装生命周期和测试均由 `foundry-modules/monster-spell-resolver/` 自己维护；Foundry Ops 只负责把命令路由给该模块，不拥有解析器实现。
 
+## ServerNext 自有模块首次安装
+
+`lab install-server-next-owned-module` 复用已接受的首次安装保护，只允许代码白名单内的自有模块。本批包含 Trigger Engine、Custom Conditions及Weapon Mastery & Properties；仅首次安装、目标存在即拒绝替换。入口不赋予其他模块的迁移授权，也不证明6.x运行兼容。
+
+先在实际候选工作树完成构建和字节核对，确认 Next 归属、世界状态和本次安装范围。显式设置本进程的 `FVTT_OPS_LAB_ROOT` 为 `F:/FoundryLab/foundry-v14` 后预览，例如：
+
+```powershell
+$env:FVTT_OPS_LAB_ROOT = 'F:/FoundryLab/foundry-v14'
+bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0
+```
+
+本条命令只有显式加入 `--apply` 才写入；缺少它时只核对并返回清单。它只导向该 Lab 的 `data/server-next/Data/modules/<id>`，检查源码／构建完整 manifest 一致、声明资源和逐文件 SHA，拒绝链接、路径逃逸及已有目标（包括空目录）。新构建字节先放到扫描目录外的本批 staging，再一次移入此前不存在的目标；失败保留现场供核对，不覆盖原包或创建备份。
+
+已经安装的 IFS1.0.1 不能使用这个入口升级。已有包升级须另按完整旧文件集合／SHA、候选集合、明确版本和停止状态的受控流程处理。本命令不启停服务、不改世界开关、不读写 LevelDB；安装字节通过后，仍需正常客户端登记、启用和对应玩法验收。
+
 ## 共用验收工具：文件侧第一版
 
 本版用于已审核、已授权的本地文件检查，复用上述命令分类、路径保护和子进程入口。请求中声明 `local-file-checks` 不会授予新权限，也不会把被执行命令变成沙箱；命令不得启动服务、操作浏览器或读写 Foundry 世界。生产连接环境变量不会传给这些检查。
 
 准备一个请求 JSON，字段见 [请求示例](../../docs/templates/development-feedback-request.example.json)。`workspaceRoot` 必须是实际 Git worktree 根，`candidatePaths` 和 `argv[0]` 必须是存在的绝对文件路径；`argv` 是参数数组，不经过 shell 拼接。填写目标、验收含义、case 名称、授权来源、预检和一次正式检查。工具自动生成 run／dispatch／receipt ID，读取分支、HEAD、指令基线提交、适用 AGENTS 和候选／执行程序的 SHA-256。
+
+普通本地文件检查可用一次入口；新请求表示明确执行一次，同一请求再次以 `--input` 调用会创建新合同。接续已有合同须传其绝对路径；已有收据仅核验并返回，不重新运行预检或检查；已经领取但没有收据会返回 `INSPECT`／`INCOMPLETE`，需先调查现场，不能用新 `--input` 猜测性重试。此入口拒绝 externalBatch 和 runtime 请求，不负责 Foundry／Chrome 运行验收。模块没有通用 adapter 时仍可调用既有模块脚本，选择 `json-ok` 或 `manual`；`manual` 永远保留待审，成功退出码本身不代表玩法 PASS。
+
+```powershell
+bun run foundry:ops acceptance run --input="I:\实际工作树\.local\request.json"
+bun run foundry:ops acceptance run --contract="<返回的 contractAbsolutePath>"
+```
+
+结果包含 `contractAbsolutePath`、`executionStatus`（`EXECUTED`／`REUSED_RECEIPT`／`NOT_EXECUTED`／`CLAIMED_NO_RECEIPT`／`RECEIPT_INVALID`／`UNKNOWN`）、阶段及原分层 `summary`（若有）。`UNKNOWN` 表示合同身份未能核实，历史执行状态不可推断；`RECEIPT_INVALID` 表示收据存在但读回失败。两者都返回 `INSPECT`／`INCOMPLETE`，禁止盲目重放。出错后用合同路径检查原件。下面的分步入口继续可用。
 
 ```powershell
 bun run foundry:ops acceptance prepare --input="I:\实际工作树\.local\request.json"

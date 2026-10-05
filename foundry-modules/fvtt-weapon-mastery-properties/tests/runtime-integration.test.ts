@@ -593,6 +593,215 @@ function installQueryTransport(
 }
 
 describe('weapon mastery runtime integration', () => {
+  for (const version of [
+    { core: '14.364', system: '5.3.3', midi: '14.0.11' },
+    { core: '14.368', system: '5.3.3', midi: '14.0.11' },
+    { core: '14.368', system: '6.0.5', midi: '14.6.0-beta.4338eeab.local.10' },
+  ]) test('public Midi use owns one attack and one prepared nonce through cleanup on ' + version.core + '/' + version.system, async () => {
+    const world = createWorld();
+    world.globals.game.version = version.core;
+    world.globals.game.system.version = version.system;
+    const originalGet = world.globals.game.modules.get.bind(world.globals.game.modules);
+    if (version.system === '6.0.5') originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    world.globals.game.modules.get = (id: string) => id === 'midi-qol'
+      ? { active: true, version: version.midi } : originalGet(id);
+    const attacker = makeActor('public-midi-attacker');
+    const target = makeActor('public-midi-target');
+    registerActor(world, attacker);
+    registerActor(world, target);
+    const token = makeToken(world, target);
+    attacker.effects.push(makeEffect('sap', 'Actor.enemy', attacker.uuid, 'public-midi-sap'));
+    const item = makeItem(world, attacker, 'public-midi-weapon', disabledConfiguration());
+    const activity = makeActivity(world, item, 'public-midi-activity', { messageId: 'public-midi-native-attack' });
+    let confirmations = 0;
+    world.globals.game.dnd5e = { dice: { D20Roll: { DefaultConfigurationDialog: {
+      async configure() {
+        confirmations++;
+        return [{ total: 15, isSuccess: true, options: { attackMode: 'oneHanded' } }];
+      },
+    } } } };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const baseUse = activity.use;
+    let workflow: AnyRecord | undefined;
+    let suppliedTargets: Set<any> | undefined;
+    activity.use = async (usage: AnyRecord, dialog: AnyRecord, message: AnyRecord) => {
+      suppliedTargets = usage.midiOptions?.targetsToUse;
+      const result = await baseUse(usage, dialog, message);
+      workflow = {
+        id: 'public-midi-workflow', activity, chatCard: result.message, sequenceId: usage.sequenceId,
+        attackRollCount: 0, targets: new Set(usage.midiOptions?.targetsToUse ?? [token]),
+        options: {}, workflowOptions: { ...usage.midiOptions?.workflowOptions },
+      };
+      await world.globals.Hooks.call('midi-qol.preAttackRoll', workflow);
+      const native = makeMessage(world, 'public-midi-native-attack', attacker.uuid, activity.uuid, item.uuid,
+        { total: 15, isSuccess: true }, workflow[PRIVATE_USE_KEY]);
+      if (version.system === '6.0.5') {
+        native.type = 'attack';
+        native.system = {
+          activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
+          origin: result.message.id, targets: [{ actor: target.uuid, token: token.uuid }],
+        };
+      }
+      const rolls = await activity.rollAttack({ [PRIVATE_USE_KEY]: workflow[PRIVATE_USE_KEY] }, {}, {});
+      workflow.attackRoll = rolls[0];
+      await world.globals.Hooks.callAll('midi-qol.AttackRollComplete', workflow);
+      await world.globals.Hooks.callAll('midi-qol.RollComplete', workflow);
+      await world.globals.Hooks.callAll('midi-qol.postCleanup.' + activity.uuid, workflow);
+      return result;
+    };
+    try {
+      const result = await runtime.use(activity, {
+        attackId: 'public-midi-single', targetActor: target, targetToken: token,
+      }, { configure: false }, { create: true });
+      expect(result?.reason).not.toBe('Attack selection is no longer editable.');
+      expect(result?.status).not.toBe('failed');
+      expect(result?.status).not.toBe('blocked');
+      expect(activity.calls.use).toBe(1);
+      expect(activity.calls.rollAttack).toBe(1);
+      expect(confirmations).toBe(1);
+      expect(workflow?.[PRIVATE_USE_KEY]).toBe('public-midi-single');
+      expect(suppliedTargets instanceof Set).toBeTrue();
+      expect([...suppliedTargets!]).toEqual([token]);
+      expect(workflow?.sequenceId).toBe('public-midi-single');
+      expect(attacker.getFlag(MODULE_ID, 'ledger')).toHaveLength(1);
+      expect(attacker.effects).toHaveLength(0);
+    } finally { runtime.stop(); }
+  });
+
+  test('public Midi use cancels a pre-attack abort without consuming Sap or opening a native fallback', async () => {
+    const world = createWorld();
+    const originalGet = world.globals.game.modules.get.bind(world.globals.game.modules);
+    world.globals.game.modules.get = (id: string) => id === 'midi-qol'
+      ? { active: true, version: '14.0.11' } : originalGet(id);
+    const attacker = makeActor('public-midi-abort-attacker');
+    const target = makeActor('public-midi-abort-target');
+    registerActor(world, attacker);
+    registerActor(world, target);
+    attacker.effects.push(makeEffect('sap', 'Actor.enemy', attacker.uuid, 'public-midi-abort-sap'));
+    const item = makeItem(world, attacker, 'public-midi-abort-weapon', disabledConfiguration());
+    const activity = makeActivity(world, item, 'public-midi-abort-activity');
+    const baseUse = activity.use;
+    activity.use = async (usage: AnyRecord, dialog: AnyRecord, message: AnyRecord) => {
+      const result = await baseUse(usage, dialog, message);
+      await world.globals.Hooks.callAll('midi-qol.preAbort.' + activity.uuid, {
+        sequenceId: usage.sequenceId, activity, aborted: false,
+        workflowOptions: usage.midiOptions.workflowOptions,
+      });
+      return result;
+    };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    try {
+      const result = await runtime.use(activity, {
+        attackId: 'public-midi-abort', targetActor: target, targetToken: makeToken(world, target),
+      });
+      expect(result?.status).toBe('cancelled');
+      expect(activity.calls.rollAttack).toBe(0);
+      expect(attacker.effects).toHaveLength(1);
+      expect(attacker.effects[0].instance.reservation).toBeUndefined();
+      expect(attacker.getFlag(MODULE_ID, 'ledger')).toMatchObject([{ attackId: 'public-midi-abort', step: 'cancelled' }]);
+    } finally { runtime.stop(); }
+  });
+
+  test('native6 separate attack/damage messages settle only the linked real HP update', async () => {
+    const world = createWorld();
+    world.globals.game.version = '14.368';
+    world.globals.game.system.version = '6.0.5';
+    const originalGet = world.globals.game.modules.get;
+    originalGet('fvtt-custom-conditions').version = '0.2.0';
+    originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    originalGet('fvtt-trigger-engine').version = '0.2.0';
+    world.globals.fromUuidSync = (uuid: string) => world.tokens.get(uuid);
+    const attacker = makeActor('next-attacker', 'player', ['longsword']);
+    const target = makeActor('next-target');
+    registerActor(world, attacker);
+    registerActor(world, target);
+    const token = makeToken(world, target);
+    const item = makeItem(world, attacker, 'next-weapon', masteryConfiguration('slow'), { mastery: 'slow' });
+    const activity = makeActivity(world, item, 'next-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const attackId = 'next-same-card', cardId = 'next-card';
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, targetToken: token, attackId, messageId: cardId });
+    expect(prepared).toBeDefined();
+    await runtime.startUse(prepared!);
+    const card = putMessage(world, activity, cardId, { attackId, total: 18, isSuccess: true });
+    delete card.flags.dnd5e;
+    card.type = 'attack';
+    card.system = { activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
+      targets: [{ actor: target.uuid, token: token.uuid }], origin: null };
+    await linkRollMessage(world, activity, cardId);
+    expect((await runtime.commitUse(prepared!, { messageId: cardId })).status).toBe('pending');
+    const damage: any = { id: 'next-damage-message', type: 'damage', system: { ...card.system, origin: cardId },
+      flags: { [MODULE_ID]: { attackId } }, author: 'gm', user: 'gm', timestamp: Date.now(), rolls: [{ total: 5 }] };
+    world.messages.set(damage.id, damage);
+    await world.globals.Hooks.callAll('createChatMessage', damage);
+    const changed: AnyRecord = { 'system.attributes.hp.value': 15, 'system.attributes.hp.temp': 0 };
+    await world.globals.Hooks.call('dnd5e.preApplyDamage', target, 5, changed, { originatingMessage: damage });
+    expect(changed['flags.' + MODULE_ID + '.damageProof']).toMatchObject({ attackId, attackMessageId: cardId, damageMessageId: damage.id });
+    target.system.attributes.hp.value = 15;
+    await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+    await waitFor(() => attacker.getFlag(MODULE_ID, 'ledger')?.some((entry: any) => entry.attackId === attackId && entry.step === 'committed') === true, 'native6 Slow commit');
+    expect(target.effects).toHaveLength(1);
+    expect(target.effects[0].instance.effectKind).toBe('slow');
+    await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+    await settleAsync();
+    expect(target.effects).toHaveLength(1);
+    runtime.stop();
+  });
+
+
+  test('native6 local10 type4 settles Slow from canonical message identity and actual HP update once', async () => {
+    const world = createWorld();
+    world.globals.game.version = '14.368';
+    world.globals.game.system.version = '6.0.5';
+    const originalGet = world.globals.game.modules.get;
+    originalGet('fvtt-custom-conditions').version = '0.2.0';
+    originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    originalGet('fvtt-trigger-engine').version = '0.2.0';
+    world.globals.game.modules.get = (id: string) => id === 'midi-qol'
+      ? { id, active: true, version: '14.6.0-beta.4338eeab.local.10' } : originalGet(id);
+    world.globals.fromUuidSync = (uuid: string) => world.tokens.get(uuid);
+    const attacker = makeActor('next-attacker', 'player', ['longsword']);
+    const target = makeActor('next-target');
+    registerActor(world, attacker);
+    registerActor(world, target);
+    const token = makeToken(world, target);
+    const item = makeItem(world, attacker, 'next-weapon', masteryConfiguration('slow'), { mastery: 'slow' });
+    const activity = makeActivity(world, item, 'next-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const attackId = 'next-same-card', cardId = 'next-card';
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, targetToken: token, attackId, messageId: cardId });
+    expect(prepared).toBeDefined();
+    await runtime.startUse(prepared!);
+    const card = putMessage(world, activity, cardId, { attackId, total: 18, isSuccess: true });
+    delete card.flags.dnd5e;
+    card.type = 'usage';
+    card.system = { activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
+      targets: [{ actor: target.uuid, token: token.uuid }], origin: null };
+    card.flags['midi-qol'] = { type: 3, sourceActorUuid: attacker.uuid, hitTargetUuids: [token.uuid] };
+    card.rolls[0].options = { 'midi-qol': { rollType: 'attack' } };
+    await linkRollMessage(world, activity, cardId);
+    expect((await runtime.commitUse(prepared!, { messageId: cardId })).status).toBe('pending');
+    card.flags['midi-qol'].type = 4;
+    card.rolls.push({ total: 5, options: { 'midi-qol': { rollType: 'defaultDamage' } }, parent: card });
+    const changed: AnyRecord = { 'system.attributes.hp.value': 15, 'system.attributes.hp.temp': 0 };
+    await world.globals.Hooks.call('dnd5e.preApplyDamage', target, 5, changed, { originatingMessage: card });
+    expect(changed['flags.' + MODULE_ID + '.damageProof']).toMatchObject({ attackId, attackMessageId: cardId, damageMessageId: cardId });
+    target.system.attributes.hp.value = 15;
+    await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+    await waitFor(() => attacker.getFlag(MODULE_ID, 'ledger')?.some((entry: any) => entry.attackId === attackId && entry.step === 'committed') === true, 'native6 Slow commit');
+    expect(target.effects).toHaveLength(1);
+    expect(target.effects[0].instance.effectKind).toBe('slow');
+    await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+    await settleAsync();
+    expect(target.effects).toHaveLength(1);
+    runtime.stop();
+  });
+
+
   test('native mastery uses the locked nested Set and one Activity.use consumes one native resource', async () => {
     const world = createWorld();
     const attacker = makeActor('attacker', 'player', ['longsword']);
@@ -1403,8 +1612,15 @@ describe('weapon mastery runtime integration', () => {
     runtime.stop();
   });
 
-  test('Cleave uses an independent child attack and rolls damage without a positive ability modifier', async () => {
+  test.each([
+    ['14.364', '5.3.3'],
+    ['14.368', '6.0.5'],
+  ])('Cleave binds secondary attack and damage while preserving the primary selection on %s/%s', async (core, system) => {
     const world = createWorld();
+    world.globals.game.version = core;
+    world.globals.game.system.version = system;
+    const native6 = system === '6.0.5';
+    if (native6) world.globals.game.modules.get('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     const attacker = makeActor('attacker', 'player', ['longsword']);
     const primary = makeActor('primary');
     const secondary = makeActor('secondary');
@@ -1412,6 +1628,7 @@ describe('weapon mastery runtime integration', () => {
     const sourceToken = makeToken(world, attacker);
     const primaryToken = makeToken(world, primary);
     const secondaryToken = makeToken(world, secondary);
+    world.user.targets.add(primaryToken);
     Object.assign(sourceToken, { x: 0, y: 0 });
     Object.assign(primaryToken, { x: 100, y: 0 });
     Object.assign(secondaryToken, { x: 100, y: 100 });
@@ -1425,22 +1642,42 @@ describe('weapon mastery runtime integration', () => {
     item.system.range.reach = 10;
     const activity = makeActivity(world, item, 'cleave-activity');
     activity.token = sourceToken;
+    const descriptors = (target: any, token: any) => [{ actor: target.uuid, token: token.uuid, ac: target.system.attributes.ac.value, name: target.name, img: target.img }];
+    const canonicalAttack = (message: any, targets: any[]) => {
+      message.type = 'attack';
+      message.system = { activity: { uuid: activity.uuid }, item: { uuid: item.uuid }, targets };
+      delete message.flags.dnd5e;
+      return message;
+    };
     activity.rollAttack = async (usage: AnyRecord = {}, _dialog: AnyRecord = {}, messageOptions: AnyRecord = {}) => {
       activity.calls.rollAttack += 1;
       const childId = String(usage[PRIVATE_USE_KEY]);
       const message = makeMessage(world, 'cleave-child-message', attacker.uuid, activity.uuid, item.uuid, { total: 17, isSuccess: true }, childId);
-      message.flags.dnd5e.targets = messageOptions.data?.flags?.dnd5e?.targets;
+      if (native6) {
+        // 6.0.5 defaults to current user targets, then merges caller message.data.
+        canonicalAttack(message, messageOptions.data?.system?.targets ?? descriptors(primary, primaryToken));
+        expect(message.system.targets).toEqual(descriptors(secondary, secondaryToken));
+      } else message.flags.dnd5e.targets = messageOptions.data?.flags?.dnd5e?.targets;
       await world.globals.Hooks.callAll('createChatMessage', message);
       await world.globals.Hooks.callAll('dnd5e.rollAttackV2', message.rolls, { subject: activity });
       return message.rolls;
     };
-    activity.rollDamage = async (config: AnyRecord) => {
+    activity.rollDamage = async (config: AnyRecord, _dialog: AnyRecord, messageOptions: AnyRecord) => {
       const rollConfig: AnyRecord = {
         ...config, subject: activity,
         rolls: [{ base: true, data: { mod: 3 }, parts: ['1d8', '@mod'], options: { type: 'slashing' } }],
       };
       expect(await world.globals.Hooks.call('dnd5e.preRollDamage', rollConfig)).not.toBeFalse();
-      const damageMessage = { id: 'cleave-child-damage-message', flags: { dnd5e: { originatingMessage: 'cleave-child-message' } } };
+      const damageMessage = native6
+        ? { id: 'cleave-child-damage-message', type: 'damage', system: {
+          ...messageOptions.data?.system,
+          targets: messageOptions.data?.system?.targets ?? descriptors(primary, primaryToken),
+        } }
+        : { id: 'cleave-child-damage-message', flags: { dnd5e: { originatingMessage: 'cleave-child-message' } } };
+      if (native6) {
+        expect(damageMessage.system?.targets).toEqual(descriptors(secondary, secondaryToken));
+        expect(damageMessage.system?.origin).toBe('cleave-child-message');
+      }
       const roll = { total: 4 + rollConfig.rolls[0].data.mod, data: { ...rollConfig.rolls[0].data }, options: { type: 'slashing' }, parent: damageMessage };
       expect(await world.globals.Hooks.call('dnd5e.postDamageRollConfiguration', [roll], rollConfig, {})).not.toBeFalse();
       return [roll];
@@ -1450,7 +1687,8 @@ describe('weapon mastery runtime integration', () => {
 
     const prepared = await runtime.prepareUse(activity, { targetActor: primary, targetToken: primaryToken, attackId: 'cleave-parent' });
     await runtime.startUse(prepared!);
-    putMessage(world, activity, 'cleave-parent-message', { attackId: prepared!.attackId });
+    const parentMessage = putMessage(world, activity, 'cleave-parent-message', { attackId: prepared!.attackId });
+    if (native6) canonicalAttack(parentMessage, descriptors(primary, primaryToken));
     await linkRollMessage(world, activity, 'cleave-parent-message');
     const result = await runtime.commitUse(prepared!, { messageId: 'cleave-parent-message' });
 
@@ -1462,6 +1700,8 @@ describe('weapon mastery runtime integration', () => {
     const child = ledger.find((entry: any) => entry.parentAttackId === 'cleave-parent');
     expect(child).toMatchObject({ attackId: `cleave-parent:cleave:${secondary.uuid}`, targetActorUuid: secondary.uuid, step: 'committed' });
     expect(ledger.find((entry: any) => entry.attackId === 'cleave-parent').usedRuleIds).toContain('dnd2024.cleave');
+    expect([...world.user.targets]).toEqual([primaryToken]);
+    expect(ledger.filter((entry: any) => entry.parentAttackId)).toHaveLength(1);
 
     world.globals.game.combat.turn = 1;
     world.globals.game.combat.current.turn = 1;
@@ -1469,7 +1709,8 @@ describe('weapon mastery runtime integration', () => {
     activity.rollAttack = async (_usage: AnyRecord, dialog: AnyRecord) => dialog.applicationClass.configure({ activity });
     const cancelledParent = await runtime.prepareUse(activity, { targetActor: primary, targetToken: primaryToken, attackId: 'cleave-cancel-parent' });
     await runtime.startUse(cancelledParent!);
-    putMessage(world, activity, 'cleave-cancel-parent-message', { attackId: cancelledParent!.attackId });
+    const cancelledParentMessage = putMessage(world, activity, 'cleave-cancel-parent-message', { attackId: cancelledParent!.attackId });
+    if (native6) canonicalAttack(cancelledParentMessage, descriptors(primary, primaryToken));
     await linkRollMessage(world, activity, 'cleave-cancel-parent-message');
     const cancelled = await runtime.commitUse(cancelledParent!, { messageId: 'cleave-cancel-parent-message' });
     expect(cancelled.status).toBe('committed');

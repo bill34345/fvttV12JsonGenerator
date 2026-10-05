@@ -12,8 +12,8 @@ export interface OwnedUpgradeSpec {
   expectedOldHash: string;
   expectedPaths: readonly string[];
   expectedNewPaths?: readonly string[];
-  oldVersion?: '0.1.0' | '0.1.1' | '0.2.0';
-  newVersion?: '0.1.0' | '0.1.1' | '0.2.0';
+  oldVersion?: '0.1.0' | '0.1.1' | '0.2.0' | '1.0.1' | '1.1.0';
+  newVersion?: '0.1.0' | '0.1.1' | '0.2.0' | '1.0.1' | '1.1.0';
 }
 export interface TreeEntry { path: string; sha256: string }
 export interface UpgradePreview { id: string; destination: string; oldVersion: string; newVersion: string; oldHash: string; newHash: string; changed: string[]; apply: boolean }
@@ -95,6 +95,9 @@ export async function previewOwnedUpgrades(specs: readonly OwnedUpgradeSpec[]): 
     if (JSON.stringify(oldPaths) !== JSON.stringify(expectedPaths) || JSON.stringify(newPaths) !== JSON.stringify(expectedNewPaths)) {
       throw new Error(`Exact file-name set mismatch for ${spec.id}: ${spec.destination}`);
     }
+    for (const name of newPaths.filter((name) => !oldPaths.includes(name))) {
+      if (!isApprovedNewFile(spec, name)) throw new Error(`Unapproved new module file: ${name}`);
+    }
     const oldHash = ownedTreeHash(oldEntries);
     if (oldHash.toLowerCase() !== spec.expectedOldHash.toLowerCase()) throw new Error(`Old complete-tree hash mismatch for ${spec.destination}: ${oldHash}`);
     const oldVersion = spec.oldVersion ?? '0.1.0';
@@ -150,18 +153,20 @@ export async function applyOwnedUpgrades(specs: readonly OwnedUpgradeSpec[], ass
           await assertPlainFile(target);
           if (sha256(await readFile(target)) !== candidate.oldSha256) throw new Error(`Installed file drifted after prevalidation: ${target}`);
         } else {
-          if (spec.id !== 'fvtt-custom-conditions' || !/^icons\/injury\/injury-[123]\.svg$/.test(name)) {
+          if (!isApprovedNewFile(spec, name)) {
             throw new Error(`Unapproved new module file: ${name}`);
           }
-          const iconRoot = resolve(spec.destination, 'icons');
-          await assertPlainDirectory(iconRoot);
-          const newDirectory = resolve(iconRoot, 'injury');
-          const directoryState = await lstat(newDirectory).catch((error: any) => {
-            if (error?.code === 'ENOENT') return null;
-            throw error;
-          });
-          if (!directoryState) await mkdir(newDirectory);
-          await assertPlainDirectory(newDirectory);
+          if (spec.id === 'fvtt-custom-conditions') {
+            const iconRoot = resolve(spec.destination, 'icons');
+            await assertPlainDirectory(iconRoot);
+            const newDirectory = resolve(iconRoot, 'injury');
+            const directoryState = await lstat(newDirectory).catch((error: any) => {
+              if (error?.code === 'ENOENT') return null;
+              throw error;
+            });
+            if (!directoryState) await mkdir(newDirectory);
+            await assertPlainDirectory(newDirectory);
+          } else await assertPlainDirectory(spec.destination);
           await assertAbsent(target);
         }
         await assertPlainFile(source);
@@ -185,6 +190,11 @@ export async function applyOwnedUpgrades(specs: readonly OwnedUpgradeSpec[], ass
 async function assertManifest(root: string, id: string, version: string): Promise<void> {
   const manifest = JSON.parse(await readFile(resolve(root, 'module.json'), 'utf8')) as Record<string, unknown>;
   if (manifest.id !== id || manifest.version !== version) throw new Error(`Module identity/version mismatch at ${root}; expected ${id}@${version}.`);
+}
+function isApprovedNewFile(spec: OwnedUpgradeSpec, name: string): boolean {
+  return (spec.id === 'fvtt-custom-conditions' && /^icons\/injury\/injury-[123]\.svg$/.test(name))
+    || (spec.id === 'fvtt-injury-fading-spirits' && spec.oldVersion === '1.0.1'
+      && spec.newVersion === '1.1.0' && name === 'CREDITS.md');
 }
 async function assertPlainDirectory(path: string): Promise<void> {
   const absolute = resolve(path);

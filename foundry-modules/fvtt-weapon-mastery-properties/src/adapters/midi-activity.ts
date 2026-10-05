@@ -2,13 +2,29 @@ interface MidiActivityUse {
   activity: any;
   sequenceId: string;
   usage: Record<string, any>;
+  dialog?: Record<string, any>;
   message?: Record<string, any>;
   globals: any;
   signal?: AbortSignal;
 }
 
+export interface MidiActivityObservation {
+  event: 'attack' | 'abort' | 'cleanup' | 'refused';
+  workflow?: any;
+  results?: any;
+}
+
 /** Wait for this exact local use's public terminal event, not Midi's 90s convenience-wrapper deadline. */
 export function useMidiActivityUntilTerminal(input: MidiActivityUse): Promise<any> {
+  return observeMidiActivity(input, false).then(observation => observation.workflow ?? observation.results);
+}
+
+/** Public use starts one attack; a manual damage step may keep Midi's workflow open afterward. */
+export function useMidiActivityUntilAttack(input: MidiActivityUse): Promise<MidiActivityObservation> {
+  return observeMidiActivity(input, true);
+}
+
+function observeMidiActivity(input: MidiActivityUse, finishOnAttack: boolean): Promise<MidiActivityObservation> {
   const { activity, sequenceId, globals, signal } = input;
   const hooks = globals?.Hooks;
   if (!activity?.uuid || typeof activity.use !== 'function' || !sequenceId
@@ -24,7 +40,10 @@ export function useMidiActivityUntilTerminal(input: MidiActivityUse): Promise<an
   return new Promise((resolve, reject) => {
     const listeners: Array<{ name: string; id: any }> = [];
     let finished = false;
-    const finish = (error: unknown, result?: any) => {
+    let resolveUse!: (value: any) => void;
+    let rejectUse!: (error: unknown) => void;
+    const used = new Promise<any>((resolve, reject) => { resolveUse = resolve; rejectUse = reject; });
+    const finish = (error: unknown, event: MidiActivityObservation['event'], workflow?: any) => {
       if (finished) return;
       finished = true;
       for (const { name, id } of listeners) hooks.off(name, id);
@@ -38,22 +57,27 @@ export function useMidiActivityUntilTerminal(input: MidiActivityUse): Promise<an
         catch (restoreError) { globals?.console?.warn?.('WMP: could not restore the previous token targets.', restoreError); }
       }
       if (error) reject(error);
-      else resolve(result);
+      else used.then(results => resolve({ event, workflow, results }), reject);
     };
-    const stopped = () => finish(new Error('Midi child observation stopped; reconcile before retry.'));
-    const terminal = (workflow: any) => {
-      if (workflow?.sequenceId === sequenceId) finish(null, workflow);
-    };
+    const stopped = () => finish(new Error('Midi child observation stopped; reconcile before retry.'), 'refused');
+    used.then(result => { if (!result) finish(null, 'refused'); }, error => finish(error, 'refused'));
     try {
       for (const name of [`midi-qol.preAbort.${activity.uuid}`, `midi-qol.postCleanup.${activity.uuid}`]) {
-        listeners.push({ name, id: hooks.on(name, terminal) });
+        const event = name.includes('.preAbort.') ? 'abort' : 'cleanup';
+        listeners.push({ name, id: hooks.on(name, (workflow: any) => {
+          if (workflow?.sequenceId === sequenceId) finish(null, event, workflow);
+        }) });
+      }
+      if (finishOnAttack) {
+        const name = 'midi-qol.AttackRollComplete';
+        listeners.push({ name, id: hooks.on(name, (workflow: any) => {
+          if (workflow?.sequenceId === sequenceId && workflow?.activity?.uuid === activity.uuid) finish(null, 'attack', workflow);
+        }) });
       }
       signal?.addEventListener('abort', stopped, { once: true });
       const usage = { ...input.usage, sequenceId, midiOptions: { ...input.usage.midiOptions,
         workflowOptions: { ...input.usage.midiOptions?.workflowOptions, forceCompletion: true } } };
-      Promise.resolve(activity.use(usage, {}, input.message ?? {})).then(result => {
-        if (!result) finish(null, result);
-      }, error => finish(error));
-    } catch (error) { finish(error); }
+      resolveUse(activity.use(usage, input.dialog ?? {}, input.message ?? {}));
+    } catch (error) { rejectUse(error); }
   });
 }

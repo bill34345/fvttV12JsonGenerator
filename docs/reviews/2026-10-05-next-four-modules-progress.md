@@ -1,0 +1,50 @@
+# 四个自建模块迁入 ServerNext：限定验收进度
+
+日期：2026-10-05，上海时间。候选树 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261003-164211-next-four-modules`；目标为本地 ServerNext `127.0.0.1:30002`、`cor-cotn`、Foundry 14.368／dnd5e 6.0.5（最终加载回读 PID 43152、Administrator）。[恢复授权和纠错](../../.local/next-four-modules-20261003/business-resume-20261004/authority-correction-20261005.json)使旧 r52 停点及 r57 误停不再阻断本批工作；原停点与失败证据仍保留在[阶段一记录](2026-10-03-next-four-modules-stage1.md)。
+
+**当前结论：本次限定的四模块本地迁移、玩法验收、自有夹具清理、文档等价包实装及最终读回已闭合，按用户要求停止。** [r92／r95 最终父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-final-readback-r92.json)将技术范围与 Chrome 工作标为完成。r86 原始全量摘要 FAIL 及后续超时原件保留；旧个人 HUD 坐标、孤立设置历史及一处 Scene 的旧完整来源未捕获，不声称所有历史字节逐字复原。上述为迁移收尾当时的运行与文件状态；用户随后明确授权本地提交和合并 master，当前源码整合见下方续记。本次 Git 整合没有操作 Foundry 服务，电脑重启后不沿用旧 PID 作为当前服务证明。未推送或生产部署，也未升级 Core／dnd5e。
+
+| 模块 | 本地 Next 已接受的限定行为 | 仍不能据此宣称 |
+|---|---|---|
+| Trigger Engine（TE 0.2.0） | Actor／Combat 事件、去重、活动 GM 分发及限定回合顺序；伤势和状态消费者接入 | 任意宏副作用、多 GM 并发及长时运行 |
+| Custom Conditions（CC 0.2.0） | 伤势／原生休息／快速复活联动、十九状态原生实例生命周期；选定检定／豁免／攻击／伤害、Frozen 解除、特殊暴击与回合 tick；移动及行动限制、真实管理器参数提交和 HUD 切换；原生武器 Slow 强弱接替 | 十九状态逐项全部动作组合与所有客户端交错操作 |
+| Injury & The Fading Spirits（IFS 1.1.0） | 独立复活基础链及快速复活与 CC 伤势联动 | 其他复活仪式、全部玩家贡献分支及多 GM |
+| Weapon Mastery & Properties（WMP 候选） | 实际 ready／依赖能力门；原生 Slow 30→20→25→30；普通／Fatal 暴击实际骰式；真实公开 `WMP.use` 仅一次攻击，同一原生攻击和 Midi 卡实际攻击 19／伤害骰 17；从**同一卡片**经公开 `Actor.applyDamage` 使目标 HP 2→0，剩余 2 点被扣除，CC 写入一条原生 Slow（walk 30→20）；另一次真实攻击窗口掷骰前取消，preAbort、无攻击消息、Sap 仍启用、无预留且 lease 已取消 | 8 种精通逐项新矩阵、所有命中／未命中路径或生产兼容 |
+
+WMP 的实际扣血是在 r80 夹具恢复后的**新明确应用步骤**完成，严格绑定 r80 原生攻击／Midi 卡／来源／目标／proof nonce；17 是同卡伤害骰结果，目标当时只有 2 HP，因此实际 HP 损失为 2。r80 曾因正常伤害窗口超过 15 秒截止而整体失败，不能改写成一条不中断流程的 PASS；r81 保留了同卡攻击／伤害证据，r84 只补缺失的实际应用与取消。[r84 父审与逐项恢复](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-existing-r84.json)、[r78 原失败](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-r78.json)均保留。r74 的配置 hook 观察器没有直接捕获调用；Slow 的实际效果与源码／守卫标记支持限定结论，不把该 hook 缺口写成直接观察。r56 旧 Actor 的精确原始速度未保存，仍为 UNKNOWN；后来的新基线不能补造旧值。
+
+既有接受证据继续复用：[r71 管理器与 HUD](../../.local/next-four-modules-20261003/cc-hud-manager-fix-r71/parent-adjudication.json)、[r73 WMP 启用](../../.local/next-four-modules-20261003/wmp6-enable-r73/parent-adjudication.json)、[r74 原生效果及 Fatal](../../.local/next-four-modules-20261003/wmp6-native-r74/parent-adjudication.json)。r64／66／67 的移动、动作及装备限制结果，以及此前 TE 基础事件、CC 十九实例／检定／伤害／回合 tick、IFS 快速复活，均属于各自已接受的限定切片；本次状态整理没有重演它们。r84 的 HP 案例 8 项、取消案例 10 项恢复检查及语义差异均通过，原 589 份来源、10 个外来 Combat、成员、世界时间、视图／控制目标和目标 HP 20／2 均恢复；这些是**各案例**的恢复证据，最终总清理另按 r85／86 判读。
+
+[r85 只读盘点父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-final-inventory-r85.json)确认原 589 份 Actor 来源、10 个外来 Combat 和原客户端上下文不变，只把 2 个 Actor、1 个 Scene、1 个 Combat 确认为本批可删除对象。[r86 清理报告](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/cleanup-final-r86.json)记录四个对象确已删除，且仅经 Midi 公共 `deleteWorkflow` 移除精确已完成工作流，原卡片前后 SHA 相同；两份有用的 Macro 与旧聊天原件保留。r86 独立回读也确认原 589 Actor、外来 Scene／10 Combat、用户、模块、世界时间与视图保持。但其 `raw finalReadback` **FAIL**：在预期四对象删除之外，还出现聊天 `x3tkwCwz0Qi6O0k0`；world settings 总摘要从 `434d3e2fe96560e92aeea850549439106665a40a5fa823455fa62fac533bc2ce` 变为 `2e9c2298b85396c1c7cfc74efcdaf35b2785620caf7ad108ee71678db2e98311`。[成员差异](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/membership-diff-final-cleanup-r86.json)和[新增聊天原件](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/added-message-final-cleanup-r86.json)保留；不能把原始全量门改写为 PASS。
+
+r87 改做只读来源补查，但泛枚举哈希过重，Chrome 焦点命令在派发前超时，未取得报告；这不是新的玩法失败。[r87 传输错误](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/transport-errors-post-cleanup-r87.json)记录这一边界。r88 用官方接口对精确自有 `127.0.0.1:30002/game` 页尝试正常 reload／close，仍在相同焦点命令超时；未执行新的测试、清理或服务操作。[r88 收据](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/receipt-browser-recovery-r88.json)保留。人类随后只关闭旧卡顿页，官方新自有页 `651340108` 已恢复，其他标签页和服务不动。
+
+[r89 消息父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-minimal-provenance-r89.json)按消息类型、时间区间与已安装 `monks-combat-details` 源码，确认新聊天是测试 Combat 删除时产生的正常 `RoundEnd`／`monks-combat-details.roundmarker`；它保留，不推断删除授权。[r90 设置父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-setting-source-r90.json)在 1667 条 Setting 中找到清理以来有已知创建／修改时间更新的精确一条：当前 GM 的 `calendaria.calendarHUDPosition` 个人 UI 几何，已安装 Calendaria 1.4.2 源码会在定位时自动保存。旧坐标没有捕获，仍为 UNKNOWN，不猜值回写。另一条旧孤立 `permission_viewer.migrated` 无 `_stats` 时间且模块未注册，历史变化 UNKNOWN。其余有完整时间的设置本段没有保存更新。旧摘要按 key 排序并使用 Core cast 后的 prepared value；USER 与 WORLD 共用存储，337 个同 key 不同用户，故摘要变化不能证明所有设置的原始值曾改动或已逐字恢复。[稳定逐项设置基线](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/stable-setting-identity-baseline-r90.json)按 id／key／user／raw hash 保存；[r92 重载回读父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-final-readback-r92.json)确认 1667 项身份与 raw hash 逐项一致，包括该孤立项。此结果证明从 r90 基线到最终读回没有新变化，不能补造更早的 HUD 坐标或孤立项历史。
+
+r92 最终读回确认 589 个原 Actor 的归一化来源、10 个外来 Combat、旧聊天和历史 Macro、世界时间及视图／控制／目标均保持，四个归属夹具对象仍缺席。65 个外来 Scene 中 64 个客户端 hash 精确一致；第 65 个非活动 Scene 的客户端 hash 改变。[r95 Scene 来源父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-scene-construction-r95.json)对同一当前 raw server Scene 重建两次，三组差异都只在两个 Item 效果内共 10 个原生 `system.changes._id`，去掉这些构造时随机 ID 后两次副本和当前 live Scene 同 hash `9f2bc26ef4ae54cae8fbf144d92e1ef065b2a67e2643b82708cbe4a4f339affa`；两次只读 server GET 相同，Scene 无写入。旧 r85 的完整 Scene 来源没有捕获，不能归一化对照或声称该 Scene 的全部历史字节原样；这项历史证据限制随限定结论保留。
+
+历史 r79 安装身份为 WMP build `6647be96694fdc40d545e7569f6391bb980137d9b55f2c64bcead50aab5d6c42`、Next 脚本 `f5f870cf4fcf442b8f09eeb6214754c3e90d476aa520bad8b0fd6ef93ef8d311`，[旧逐文件收据](../../.local/next-four-modules-20261003/wmp6-use-release-r79/installed-byte-verification.json)保留。当前 r92 已实装文档等价包：WMP build `32515e4a042d44fc174c270b862f7f341774e9fc27532b66d304e1a9c00385f2`、脚本 `19f42f7d05ac18e2c945c878cc6ef251d92cfb4334a61d60a156da2d32bef62f`；[47 文件逐字节核对](../../.local/next-four-modules-20261003/final-installed-byte-verification.json)全部匹配。新 PID 43152 的 Next 已在同一 `cor-cotn` 加载并返回 WMP ready／runtime.started、CC 原生效果能力 1、107 注册／99 启用。[最终加载与来源父审](../../.local/next-four-modules-20261003/wmp6-native-hp-r75/parent-adjudication-final-readback-r92.json)记录身份。局部检查曾通过 CC 163 项／1391 断言、WMP 250 项／1051 断言及类型检查、构建／产物核对。[集成 CI 收据](../../.local/next-four-modules-20261003/final-integration-ci-result.json)显示 `bun run ci:verify` 于 2026-10-05 11:14 上海时间 exit 0，覆盖手册、类型、架构、覆盖率、432 来源 anti-overfit、卫生、5.x／6.x 参考核对、Web build 及 White Tusk Shaman 6 个来源 Item／0 warning／0 network 的离线 Actor smoke。
+
+README 状态文字的[包装核对](../../.local/next-four-modules-20261003/final-doc-package-refresh.json)证明 TE／CC 脚本与旧包逐字节相同，WMP 除 README 和嵌入 buildId 外的脚本行为字节相同；所以实装新包后复用已接受玩法证据，未重跑完整 CI 或攻击。r91 短 Setup／API 窗口失败、r92 首次派发前置缺合同而未做浏览器操作、短启动窗口及报告失败均保留原件；后续正确绑定同一实际进程并完成加载回读，没有另做第二次游戏启动或新的玩法。
+
+耗时包括真实的 dnd5e 6 schema／消息接口差异，以及 WMP 曾在 Midi 已掌管攻击时意外再次打开原生攻击；单攻击分支、nonce 和可用棋子传递已修复，旧／新两个支持配对的回归先红后绿。我们自己的画布就绪判断、精通选择、prepared 与 source 字段比较、正常伤害窗口的 15 秒截止和末尾 LF 运输也造成反复；这些夹具问题不计为产品失败。此次限定迁移现已收尾，按用户要求停止；任何新增玩法矩阵、生产操作、发布或历史数据重建都不属于本结论。
+
+文档核对：已按最终加载与历史来源边界逐项复核四模块及 Markdown 生成、怪物 Intake、验证开发共七条手册说明，更新 review 并重新生成离线页面；`handbook:build` 和 `handbook:check` 均 30 项通过，watch 未缩。玩法代码和既有局部／集成门未改变，故复用已通过的完整 CI 与模块玩法证据。
+
+## 2026-10-05 本地 master 整合续记
+
+授权来源为本任务用户的“好，那么好好merge到master，注意有冲突的地方要全代码链路审查”；重启后用户要求继续。本轮只处理源码的本地提交和合并，不包含远端 push、模块实装或服务恢复。
+
+原迁移的 47 个精确路径已提交为 `b905a4f5e4a50411526b93ccd21aa29671b679b1`；提交前候选索引为空，无删除或范围外路径，`agents:generate`、`agents:check`、`handbook:check` 通过。主 `master` 基线为 `c1b87ee5bf9effb4dff11351f5192efd518cceee`，工作树和索引均干净；先在候选树吸收它，实际产生 11 处内容冲突，与只读预览一致。
+
+源码冲突按完整调用链整合：CC 的 init 注册、管理器显示／提交、通用 runtime 和武器效果统一使用 master 的独立兼容判断，增加精确 Next 配对；WMP 的依赖检查同时判断 Core 与 system，再决定是否需要 CC native6 能力及 local10 Midi。明确保留旧 `14.364/5.3.3`、Mirror `14.368/5.3.3`、Next `14.368/6.0.5`，其余交叉／未审核组合拒绝。Mirror 的效果仍走旧 `changes`，Next 武器效果仍走原生 `system.changes`；TE、IFS 和伤势的晚到 master 配对门、事件传递、消费者与安装器的精确目标保护也纳入审查。WMP manifest／构建覆盖两个已审核 Core、两个 system 版本，实际运行仍执行精确配对门，不把 manifest 的区间当成泛兼容证明。
+
+手册冲突同时保留 master 的 Painter／validationSelection 改进和本候选的四模块 Next 限定接受、首次安装入口及历史证据限制。合并后重新人工核对 watch 对应条目，重新生成离线 HTML；不选取任何一侧旧页面代替新组合。
+
+新增的窄回归覆盖三配对的 CC init／ready 公共 API、管理器可见／提交、Mirror 旧 Slow 写入及强弱接替，以及三个配对 WMP 公开 Midi use 只启动一次攻击。当前局部结果（Bun 1.3.14）：CC 171 项／1451 断言、WMP 273 项／1198 断言、TE 45 项／234 断言、自有包升级保护 4 项／21 断言均通过。运行日志保留在候选 `.local/next-four-modules-20261003/master-integration/`。
+
+检查选择：本次产生了 master 新源码与 Next 候选的新组合，需执行一次整合 CI、模块构建／manifest／产物核对以及合并前后手册门；纯记录变化只复核受影响手册，不重打完整玩法矩阵。既有 11:14 的 CI exit 0 原件实际使用 Bun 1.3.8，本轮按照仓库 CI 锁定的 1.3.14 运行，并在命令的 PATH 中绑定同一运行时给子进程；没有改变全局 Bun。原收据保留，不改写其环境。
+
+独立全链路审查发现并修复了一处 Next 无 Midi 的 Cleave 消息适配遗漏：dnd5e 6.0.5 的 AttackActivity 与 DamageActivity 默认从当前玩家选中目标构造 `system.targets`，旧 `flags.dnd5e.targets` 不会自动迁移为本次原生攻击数据。现在子攻击和子伤害显式绑定所选次目标的 actor／token／AC，伤害保留 child attack 的原生 `system.origin`，玩家仍选中的主目标不变；5.3.3 保持旧字段路径。根据精确版本代码增加窄回归，未修复时 Next 子链失败、旧链通过；修复后 WMP 274 项／1217 断言全通过，包含两配对的次目标、origin、单子链与取消检查。接口来源为本地 `F:/FoundryLab/foundry-v14/data/server-next/Data/systems/dnd5e/system.json`（6.0.5）和同目录 `dnd5e.mjs` 的 `TargetsField`、`rollAttack()`、`rollDamage()`；独立审查已复核修法闭合且没有剩余阻断项。此修正属于源码／契约与回归验证，尚未安装到 Next 或新增 Cleave 实机接受，不扩写原有 Slow／Fatal／取消证据。`cleave-red.log` 与 `cleave-green.log` 保留。其余已审查冲突链没有额外阻断项。
+
+整合验证结果：独立全链路审查及修复复核已闭合；Bun 1.3.14 的一次完整 `bun run ci:verify` exit 0（见 `ci-result.json`／`ci-verify.log`），包含类型、架构、覆盖率、432 来源 anti-overfit、1927 路径卫生、5.x／6.x 参考核对、Web build 及离线 Actor smoke（6 来源 Item、0 warning、0 network）。四个当前包共 58 个 archive 条目逐字节对应构建树，源码／构建 manifest 与 package 版本一致，WMP 冻结产物核对通过；CI 后 ZIP hash 仍一致。手册 30 条通过且全部 current，未缩 watch。所有 11 处内容冲突已在候选解决；主工作区已从 `c1b87ee5` 快进到源码整合提交 `bc0612a3818f69ad4379f0141aca4b5c74ee9567`，合并后 `handbook:check` 30 项再次通过，主树和索引均干净；本地 master 源码合并已完成，远端 push 未执行。最后仅提交本条已完成的进度记录并快进，不改变通过 CI 的运行代码；无需重跑功能。原始日志与最终 `final-receipt.json` 保留在上述候选工作树的 `.local/next-four-modules-20261003/master-integration/`；主树中的相对 `.local` 证据链接应按候选根定位，未复制证据或创建备份。此前 Next 的限定玩法结果只覆盖已实装候选；本次合并包尚未安装，不把 Git 合并或静态测试写成新包实机通过。历史 r80／86 FAIL 和旧 HUD／孤立 Setting／Scene 来源的证据缺口均保持原判。

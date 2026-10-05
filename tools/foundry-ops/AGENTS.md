@@ -25,6 +25,7 @@
 
 ## 命令与验证
 
+- 每批测试先核对 `.github/workflows/ci.yml` 锁定的 Bun 版本，并使本次命令及其子进程沿用同一运行时；环境未变时复用该检查。运行时自身崩溃按工具问题处理，先纠正版本／环境，不在相同条件下重跑整套测试。
 - 测试配置使用 `createHermeticLabConfig()`，默认不继承 Windows 用户级 `FVTT_OPS_*`。`bun run test:foundry-ops`、`bun run test:foundry-lab` 和 `bun run ci:verify` 都会先创建随机 Windows 临时沙箱，把所有可写根限制在沙箱内，清除 `FVTT_OPS_PRODUCTION_*`，只把 F 盘 `classic-level` 作为只读依赖传入，并在结束时严格校验后清理沙箱。
 - `bun run test-isolation:check` 静态检查 Foundry 测试是否显式使用隔离配置；`*:raw` 仅供安全包装器内部调用，不得直接作为人工测试入口。
 - 查看权限目录：`bun run foundry:ops catalog`

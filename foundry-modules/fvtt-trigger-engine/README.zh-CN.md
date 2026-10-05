@@ -1,8 +1,10 @@
 # FVTT Trigger Engine
 
-`fvtt-trigger-engine` 在 Foundry VTT 14.364 / dnd5e 5.3.3 运行，新增 Foundry 14.368 / dnd5e 6.0.5 精确候选。它监听 Actor 文档更新、Combat 回合开始和回合结束，按世界设置中的定义调用宏，并向其他模块公开事件订阅接口；6.0.5 仍待本地运行时验收。
+`fvtt-trigger-engine` 在 Foundry VTT 14.364 / dnd5e 5.3.3 与 Mirror 14.368 / 5.3.3 运行，新增 Foundry 14.368 / dnd5e 6.0.5 精确候选。它监听 Actor 文档更新、Combat 回合开始和回合结束，按世界设置中的定义调用宏，并向其他模块公开事件订阅接口；6.0.5 已通过四模块迁移所需的限定事件、回合、防重复和真实 HP 联动验收。
 
 这个模块不拥有任何具体状态规则。Bleeding、Burning、Frozen 和伤势由独立的 `fvtt-custom-conditions` 模块管理；Trigger Engine 只负责事件、active GM 单执行者、Actor 队列、重复保护、因果链和宏调用。Actor 事件额外携带原生更新 Hook 时捕获的 `capturedModifiedTime`，供订阅者与 before/after HP 一起形成可持久去重的事务身份；旧订阅接口与 WMP external API 不变。
+
+Actor 事件的 `before`／`after` 继续保留持久源数据。自动计算最大 HP 的角色，其源 `hp.max` 可以为 `null`；HP 消费者应使用同步捕获的 `preparedHp.before`／`preparedHp.after` 数值，不能把源 `null` 转成 0。物品和效果使最大 HP 重算后，引擎刷新这份独立快照；排队期间不改读后来发生的状态。
 
 ## 触发器定义
 
@@ -33,6 +35,8 @@ await api.create({
 ```
 
 只有当前 active GM 执行事件订阅者和宏。相同 Actor 的更新按观察顺序排队。宏应使用 `triggerContext.updateDocument()` 回写当前 Actor，让因果链能够阻止递归循环。
+
+等待订阅者、回合回调或宏解析期间若 active GM 改变，旧客户端停止后续分发和宏动作；`triggerContext.updateDocument()` 也会重新验权。已经开始执行的用户宏无法被引擎中断，宏内直接调用文档写入仍须自行检查当前权限。此修复已有定点回归，ServerNext 的双 GM 实机接受仍待完成。
 
 回合结算等待 Foundry 原生 `combatTurnChange`，即核心回合与效果生命周期完成之后；不使用定时器猜测完成时间。快速切换回合时，同一次转换的结束、开始事件会一起按序入队。新建或导入 Actor 会建立更新前快照，便于消费者识别第一次 HP 变化。
 

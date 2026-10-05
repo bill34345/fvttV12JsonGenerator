@@ -1,3 +1,4 @@
+import { dnd5eMessageData, isReviewedMidiVersion, NEXT_MIDI_VERSION, originatingMessageData } from './adapters/dnd5e-message.ts';
 import {
   parseWeaponConfiguration,
   readWeaponConfiguration,
@@ -65,7 +66,7 @@ import {
 import { applyWeaponCriticalRolls, weaponBaseRollIndex } from './adapters/critical-roll.ts';
 import { planWeaponConfigurationUpdate } from './adapters/configuration.ts';
 import { calculateCleaveChildDamage } from './adapters/cleave-damage.ts';
-import { useMidiActivityUntilTerminal } from './adapters/midi-activity.ts';
+import { useMidiActivityUntilAttack, useMidiActivityUntilTerminal } from './adapters/midi-activity.ts';
 import { createDamageProof, isUsageMessage, midiItemCardDamageMatches, recoverDamageProofUpdate, validateDamageProof, type DamageProof } from './adapters/damage-proof.ts';
 import { MODULE_ID, MODULE_VERSION } from './constants.ts';
 
@@ -337,7 +338,7 @@ export class WeaponMasteryRuntime {
     // enough: its workflow falls back to a native roll unless aborted is set.
     this.onHook('midi-qol.preAttackRoll', (workflow: any) => this.preMidiAttack(workflow));
     this.onHook('midi-qol.preAttackRollConfig', (workflow: any) => this.preMidiAttackConfig(workflow));
-    for (const name of ['midi-qol.AttackRollComplete', 'midi-qol.DamageRollComplete', 'midi-qol.postActiveEffects', 'midi-qol.RollComplete']) {
+    for (const name of ['midi-qol.AttackRollComplete', 'midi-qol.DamageRollComplete', 'midi-qol.postActiveEffects', 'midi-qol.RollComplete', 'midi-qol.preAbort', 'midi-qol.postCleanup']) {
       this.onHook(name, (workflow: any) => this.observeMidiCompletion(name, workflow));
     }
     const trigger = triggerEngineApi(this.globals);
@@ -400,14 +401,16 @@ export class WeaponMasteryRuntime {
     }
   }
 
-  /** Prepare, use and then explicitly start the dnd5e activity. */
+  /** Prepare once and let the selected native or Midi flow own the attack. */
 
   async use(subject: any, request: WeaponUseRequest = {}, dialog: AnyRecord = {}, message: AnyRecord = {}): Promise<WeaponUseResult | undefined> {
     const activity = this.resolveActivity(subject, request);
     const prepared = await this.prepareUse(activity ?? subject, { ...request, activity });
     if (!prepared) return undefined;
     if (typeof activity?.use !== 'function') { await this.cancelUse(prepared); return { attackId: prepared.attackId, status: 'failed', settlements: [], reason: 'activity-unavailable' }; }
-    const key = String(activityUuid(activity));
+    if (moduleRecord(this.globals, 'midi-qol')?.active === true) {
+      return this.usePreparedMidi(activity, prepared, request, dialog, message);
+    }
     let results: any;
     this.#guarded.add(activity);
     try {
@@ -415,9 +418,52 @@ export class WeaponMasteryRuntime {
     } finally { this.#guarded.delete(activity); }
     if (!results) return this.cancelUse(prepared);
     const originId = results.message?.id;
-    const outcome = await this.rollPrepared(activity, prepared, request, {}, originId ? { data: { flags: { dnd5e: { originatingMessage: originId } } } } : {});
+    const outcome = await this.rollPrepared(activity, prepared, request, {}, originId ? { data: originatingMessageData(originId, this.globals.game?.system?.version === '6.0.5') } : {});
     if (outcome.status === 'cancelled' && results.updates && typeof activity.refund === 'function') await activity.refund(results.updates);
     return { ...outcome, results };
+  }
+
+  private async usePreparedMidi(activity: any, prepared: PreparedWeaponUse, request: WeaponUseRequest, dialog: AnyRecord, message: AnyRecord): Promise<WeaponUseResult> {
+    const blocked = async (reason: string): Promise<WeaponUseResult> => ({
+      ...await this.cancelUse(prepared), status: 'blocked', reason,
+    });
+    // Midi deliberately suppresses automatic attacks for a system card.
+    if (message.systemCard) return blocked('midi-system-card-cannot-start-attack');
+    let targetsToUse: Set<any> | undefined;
+    if (prepared.targetActorUuid) {
+      const token = prepared.targetTokenUuid ? await fromUuid(this.globals, prepared.targetTokenUuid) : undefined;
+      const placeable = token?.object ?? (token?.document ? token : undefined);
+      if (!placeable || documentUuid(targetToken(placeable)) !== prepared.targetTokenUuid
+        || actorUuid(targetActor(placeable)) !== prepared.targetActorUuid) return blocked('midi-target-token-unavailable');
+      targetsToUse = new Set([placeable]);
+    }
+    const usage = {
+      ...request.usage, [PRIVATE_USE_KEY]: prepared.attackId, subsequentActions: false,
+      midiOptions: {
+        ...request.usage?.midiOptions,
+        ...(targetsToUse ? { targetsToUse, ignoreUserTargets: true } : {}),
+        workflowOptions: {
+          ...request.usage?.midiOptions?.workflowOptions,
+          [PRIVATE_USE_KEY]: prepared.attackId, autoRollAttack: true,
+        },
+      },
+    };
+    try {
+      const observation = await useMidiActivityUntilAttack({
+        activity, sequenceId: prepared.attackId, globals: this.globals, usage, dialog,
+        message: { ...message, data: { ...message.data, flags: {
+          ...message.data?.flags, [MODULE_ID]: { attackId: prepared.attackId },
+        } } },
+      });
+      if (observation.event === 'abort' || observation.event === 'refused') {
+        return { ...await this.cancelUse(prepared), status: 'cancelled', results: observation.results };
+      }
+      const messageId = observation.workflow?.attackRoll?.parent?.id ?? observation.workflow?.attackRollMessageId;
+      const outcome = await this.commitUse(prepared, typeof messageId === 'string' ? { messageId } : {});
+      return { ...outcome, results: observation.results };
+    } catch (error) {
+      return { ...await this.cancelUse(prepared), status: 'failed', settlements: [], reason: errorMessage(error) };
+    }
   }
 
   async attack(subject: any, request: WeaponUseRequest = {}): Promise<WeaponUseResult | undefined> {
@@ -573,6 +619,10 @@ export class WeaponMasteryRuntime {
         ...message.data.flags[MODULE_ID], attackId,
         ...(typeof midiCardId === 'string' ? { midiCardId } : {}),
       };
+      if (typeof midiCardId === 'string' && this.globals.game?.system?.version === '6.0.5') {
+        message.data.system ??= {};
+        message.data.system.origin ??= midiCardId;
+      }
       // Midi can suppress native attack messages; keep an authoritative native
       // message with the original visibility/roll mode for GM adjudication.
       message.create = true;
@@ -771,7 +821,7 @@ export class WeaponMasteryRuntime {
   private observeNativeDamage(rolls: any[], data: any): void {
     for (const roll of rolls ?? []) {
       const message = roll?.parent;
-      const originId = message?.flags?.dnd5e?.originatingMessage;
+      const originId = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
       const id = message?.flags?.[MODULE_ID]?.attackId ?? (originId ? this.#messageAttack.get(originId) : undefined);
       const state = typeof id === 'string' ? this.#pending.get(id) : undefined;
       if (state && message?.id && this.damageMessageMatchesState(message, state)) this.#messageAttack.set(message.id, id);
@@ -899,7 +949,7 @@ export class WeaponMasteryRuntime {
     attackId: string; attackMessageId: string; sourceActorUuid: string; requesterId: string;
   } | undefined {
     if (this.isMidiSameCard(damageMessage)) {
-      const flags = damageMessage.flags?.dnd5e;
+      const flags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
       const sourceActorUuid = damageMessage.flags?.['midi-qol']?.sourceActorUuid;
       const linked = this.midiLinkedAttackMessages(damageMessage);
       const attack = linked.length === 1 ? linked[0] : undefined;
@@ -911,14 +961,14 @@ export class WeaponMasteryRuntime {
         || typeof flags?.activity?.uuid !== 'string' || typeof flags?.item?.uuid !== 'string'
         || !flags.item.uuid.startsWith(`${sourceActorUuid}.Item.`)
         || linked.length > 1
-        || (attack && (attack.flags?.dnd5e?.activity?.uuid !== flags.activity.uuid
-          || attack.flags?.dnd5e?.item?.uuid !== flags.item.uuid
+        || (attack && (dnd5eMessageData(attack, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid !== flags.activity.uuid
+          || dnd5eMessageData(attack, this.globals.game?.system?.version === '6.0.5')?.item?.uuid !== flags.item.uuid
           || (attack.author?.id ?? attack.user?.id ?? attack.user) !== requesterId))
         || !this.midiCardMatchesTarget(damageMessage, actor)
         || !this.midiCardHasDamageRoll(damageMessage)) return undefined;
       return { attackId, attackMessageId, sourceActorUuid, requesterId };
     }
-    const damageFlags = damageMessage?.flags?.dnd5e;
+    const damageFlags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
     const damageAuthor = damageMessage?.author?.id ?? damageMessage?.user?.id ?? damageMessage?.user;
     if (damageFlags?.roll?.type !== 'damage' || typeof damageMessage?.id !== 'string'
       || typeof damageFlags?.activity?.uuid !== 'string' || typeof damageFlags?.item?.uuid !== 'string'
@@ -926,13 +976,13 @@ export class WeaponMasteryRuntime {
     const targetId = actorUuid(actor);
     const origin = damageFlags.originatingMessage;
     const candidates = collection(this.globals?.game?.messages).filter((message: any) => {
-      const flags = message?.flags?.dnd5e;
+      const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
       const author = message?.author?.id ?? message?.user?.id ?? message?.user;
       const usage = origin && origin !== message?.id ? this.globals?.game?.messages?.get?.(origin) : undefined;
       const usageLinked = !origin || origin === message?.id || (isUsageMessage(usage)
         && usage?.flags?.[MODULE_ID]?.attackId === message?.flags?.[MODULE_ID]?.attackId
-        && usage?.flags?.dnd5e?.activity?.uuid === flags?.activity?.uuid
-        && usage?.flags?.dnd5e?.item?.uuid === flags?.item?.uuid
+        && dnd5eMessageData(usage, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid === flags?.activity?.uuid
+        && dnd5eMessageData(usage, this.globals.game?.system?.version === '6.0.5')?.item?.uuid === flags?.item?.uuid
         && flags?.originatingMessage === origin);
       return typeof message?.id === 'string' && typeof message?.flags?.[MODULE_ID]?.attackId === 'string'
         && flags?.roll?.type === 'attack' && flags?.activity?.uuid === damageFlags.activity.uuid
@@ -998,7 +1048,7 @@ export class WeaponMasteryRuntime {
     }
     const attackMessage = await this.resolveMessage(completeProof.attackMessageId);
     const damageMessage = await this.resolveMessage(completeProof.damageMessageId);
-    const damageFlags = damageMessage?.flags?.dnd5e;
+    const damageFlags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
     const usageMessage = damageFlags?.originatingMessage && damageFlags.originatingMessage !== completeProof.attackMessageId
       ? await this.resolveMessage(damageFlags.originatingMessage) : undefined;
     const midiCard = this.isMidiSameCard(damageMessage)
@@ -1019,7 +1069,7 @@ export class WeaponMasteryRuntime {
         targetActorUuid: actorUuid(state.targetActor),
         originatingAttackMessageId: state.ledger.attackMessageId,
         ...(midiCard ? { midiSameCard: {
-          version: '14.0.11', activityUuid: state.prepared.activityUuid,
+          version: this.globals.game.modules.get('midi-qol')?.version, activityUuid: state.prepared.activityUuid,
           itemUuid: state.prepared.itemUuid, targetTokenUuid: state.prepared.targetTokenUuid,
           linkedAttackCount: this.midiLinkedAttackMessages(damageMessage).length,
         } } : {}),
@@ -1045,7 +1095,7 @@ export class WeaponMasteryRuntime {
     if (typeof messageId !== 'string') return undefined;
     const registered = this.globals?.game?.messages?.get?.(messageId);
     if (registered && registered !== message) message = registered;
-    const origin = message?.flags?.dnd5e?.originatingMessage;
+    const origin = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
     const mapped = this.#messageAttack.get(messageId) ?? (typeof origin === 'string' ? this.#messageAttack.get(origin) : undefined);
     const candidates = [...this.#pending.values()].filter(state => {
       if (!state.started || !state.attackObserved || isTerminal(state.ledger)
@@ -1053,7 +1103,7 @@ export class WeaponMasteryRuntime {
       if (this.isMidiSameCard(message)) return this.midiCardMatchesState(message, actor, state);
       if (mapped) return state.prepared.attackId === mapped
         && (messageId === state.ledger.attackMessageId || this.damageMessageMatchesState(message, state));
-      const flags = message?.flags?.dnd5e;
+      const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
       const author = message?.author?.id ?? message?.user?.id ?? message?.user;
       return flags?.roll?.type === 'damage' && flags?.activity?.uuid === state.prepared.activityUuid
         && flags?.item?.uuid === state.prepared.itemUuid && author === state.ledger.requesterId
@@ -1064,7 +1114,7 @@ export class WeaponMasteryRuntime {
 
   private isMidiSameCard(message: any): boolean {
     return this.globals?.game?.modules?.get?.('midi-qol')?.active === true
-      && this.globals.game.modules.get('midi-qol')?.version === '14.0.11'
+      && isReviewedMidiVersion(this.globals.game.modules.get('midi-qol')?.version)
       && [0, 4].includes(message?.flags?.['midi-qol']?.type);
   }
 
@@ -1082,7 +1132,7 @@ export class WeaponMasteryRuntime {
   }
 
   private midiCardHasDamageRoll(message: any): boolean {
-    if (message?.flags?.['midi-qol']?.type === 0) return midiItemCardDamageMatches(message);
+    if (message?.flags?.['midi-qol']?.type === 0) return this.globals.game.modules.get('midi-qol')?.version === '14.0.11' && midiItemCardDamageMatches(message);
     const types = Array.isArray(message?.rolls)
       ? message.rolls.map((roll: any) => roll?.options?.['midi-qol']?.rollType) : [];
     return types.filter((type: string) => type === 'attack').length === 1
@@ -1095,13 +1145,13 @@ export class WeaponMasteryRuntime {
     for (const message of collection(this.globals?.game?.messages)) {
       if (typeof message?.id === 'string' && message.id !== card.id
         && message?.flags?.[MODULE_ID]?.midiCardId === card.id
-        && message?.flags?.dnd5e?.roll?.type === 'attack') byId.set(message.id, message);
+        && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.roll?.type === 'attack') byId.set(message.id, message);
     }
     return [...byId.values()];
   }
 
   private midiCardMatchesState(message: any, actor: any, state: RuntimeState): boolean {
-    const dnd = message?.flags?.dnd5e;
+    const dnd = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
     const midi = message?.flags?.['midi-qol'];
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     const linked = this.midiLinkedAttackMessages(message);
@@ -1124,8 +1174,8 @@ export class WeaponMasteryRuntime {
     const id = message?.flags?.[MODULE_ID]?.attackId;
     const state = typeof id === 'string' ? this.#pending.get(id) : undefined;
     if (state && this.bindAttackMessage(state, message) && this.isGM()) void this.persistState(state).catch(error => this.report(error));
-    else if (state && message?.flags?.dnd5e?.activity?.uuid === state.prepared.activityUuid && message?.flags?.dnd5e?.item?.uuid === state.prepared.itemUuid && (message?.author?.id ?? message?.user?.id ?? message?.user) === state.ledger.requesterId && message?.timestamp >= state.prepared.createdAt && message?.id) this.#messageAttack.set(message.id, state.prepared.attackId);
-    const origin = message?.flags?.dnd5e?.originatingMessage;
+    else if (state && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid === state.prepared.activityUuid && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.item?.uuid === state.prepared.itemUuid && (message?.author?.id ?? message?.user?.id ?? message?.user) === state.ledger.requesterId && message?.timestamp >= state.prepared.createdAt && message?.id) this.#messageAttack.set(message.id, state.prepared.attackId);
+    const origin = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
     const originAttackId = typeof origin === 'string' ? this.#messageAttack.get(origin) : undefined;
     const originState = originAttackId ? this.#pending.get(originAttackId) : undefined;
     if (originState && message?.id && this.damageMessageMatchesState(message, originState)) {
@@ -1134,7 +1184,7 @@ export class WeaponMasteryRuntime {
   }
 
   private damageMessageMatchesState(message: any, state: RuntimeState): boolean {
-    const flags = message?.flags?.dnd5e;
+    const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     return flags?.roll?.type === 'damage' && flags?.activity?.uuid === state.prepared.activityUuid
       && flags?.item?.uuid === state.prepared.itemUuid && author === state.ledger.requesterId
@@ -1151,7 +1201,10 @@ export class WeaponMasteryRuntime {
     if (name.endsWith('AttackRollComplete') && typeof messageId === 'string') {
       void this.commitUse(state.prepared, { messageId }).catch(error => this.report(error));
     }
-    if (name.endsWith('RollComplete')) this.#activeRolls.delete(String(state.prepared.activityUuid));
+    if ((name.endsWith('RollComplete') || name.endsWith('preAbort') || name.endsWith('postCleanup'))
+      && this.#activeRolls.get(String(state.prepared.activityUuid)) === state.prepared.attackId) {
+      this.#activeRolls.delete(String(state.prepared.activityUuid));
+    }
   }
 
   private async abortMidiWorkflow(state: RuntimeState): Promise<void> {
@@ -1521,9 +1574,13 @@ export class WeaponMasteryRuntime {
       }
       return true;
     }
+    const native6 = this.globals.game?.system?.version === '6.0.5';
+    // Both native attack and damage messages default to game.user.targets.
+    // Bind the selected child explicitly without changing that user selection.
+    const nativeTargets = [{ name: target.name, img: target.img, actor: actorUuid(target), token: documentUuid(token), ac: targetAc }];
     const attackMessage = {
-      data: { flags: {
-        dnd5e: { targets: [{ name: target.name, img: target.img, uuid: actorUuid(target), ac: targetAc }] },
+      data: { ...(native6 ? { system: { targets: nativeTargets } } : {}), flags: {
+        ...(!native6 ? { dnd5e: { targets: [{ name: target.name, img: target.img, uuid: actorUuid(target), ac: targetAc }] } } : {}),
         [MODULE_ID]: { attackId: prepared.attackId, parentAttackId: state.prepared.attackId },
       } },
     };
@@ -1541,12 +1598,15 @@ export class WeaponMasteryRuntime {
     }
     const childState = await this.resolveState(prepared);
     if (!childState) throw new Error('Cleave child ledger is unavailable.');
+    if (typeof childState.ledger.attackMessageId !== 'string') throw new Error('Cleave child attack message is unavailable.');
+    const childOrigin = originatingMessageData(childState.ledger.attackMessageId, native6);
     const damageRolls = await activity.rollDamage({
       attackMode: state.prepared.attackMode,
       isCritical: childResult.results?.rolls?.[0]?.isCritical === true,
       [PRIVATE_USE_KEY]: prepared.attackId,
-    }, { configure: false }, { data: { flags: {
-      dnd5e: { originatingMessage: childState.ledger.attackMessageId },
+    }, { configure: false }, { data: { ...childOrigin,
+      ...(native6 ? { system: { ...childOrigin.system, targets: nativeTargets } } : {}), flags: {
+      ...childOrigin.flags,
       [MODULE_ID]: { attackId: prepared.attackId },
     } } });
     if (!childState.cleaveDamageAdjusted || !Array.isArray(damageRolls) || !damageRolls.length) {
@@ -1827,7 +1887,10 @@ export class WeaponMasteryRuntime {
     const id = outcome?.messageId ?? state.ledger.attackMessageId;
     const message = await this.resolveMessage(typeof id === 'string' ? id : undefined);
     if (!message || !this.bindAttackMessage(state, message)) return { outcome: 'failed', critical: false };
-    const roll = collection(message.rolls).find(candidate => Number.isFinite(candidate?.total));
+    const nativeMidi = this.isMidiSameCard(message)
+      && this.globals.game.modules?.get?.('midi-qol')?.version === NEXT_MIDI_VERSION;
+    const roll = collection(message.rolls).find(candidate => Number.isFinite(candidate?.total)
+      && (!nativeMidi || candidate?.options?.['midi-qol']?.rollType === 'attack'));
     if (!roll) return { outcome: 'failed', critical: false };
     const result = outcomeFromRoll(roll, state.targetActor);
     return {
@@ -1837,7 +1900,7 @@ export class WeaponMasteryRuntime {
   }
 
   private bindAttackMessage(state: RuntimeState, message: any): boolean {
-    const flags = message?.flags?.dnd5e;
+    const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
     const moduleFlags = message?.flags?.[MODULE_ID];
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     const speaker = message?.speaker;

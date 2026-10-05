@@ -87,6 +87,39 @@ function hpEvent(actor: any, oldHp: number, newHp: number, modified: number) {
 }
 
 describe('Custom Conditions injury ownership', () => {
+  test.each([['14.364', '5.3.3'], ['14.368', '6.0.5']])('uses captured prepared HP for nullable source maxima on %s/%s', async (core, system) => {
+    const { runtime, actor, globals } = fixture();
+    globals.game.version = core; globals.game.system.version = system;
+    actor.system.attributes.hp.max = 20;
+    await runtime.setStacks(actor, 1, 'setup');
+    const event = (before: number, after: number, revision: number): any => {
+      const context: any = hpEvent(actor, before, after, revision);
+      context.before.system.attributes.hp.max = null; context.after.system.attributes.hp.max = null;
+      context.preparedHp = { before: { value: before, max: 20 }, after: { value: after, max: 20 } };
+      return context;
+    };
+    actor.system.attributes.hp.value = 0; actor._stats.modifiedTime = 200;
+    await runtime.handleEvent(event(10, 0, 200));
+    expect(actor.system.attributes.death.failure).toBe(1);
+    actor.system.attributes.hp.value = 5; actor._stats.modifiedTime = 210;
+    await runtime.handleEvent(event(0, 5, 210));
+    expect(readInjury(actor).stacks).toBe(2);
+    expect(readInjury(actor).lastObservedMax).toBe(20);
+    actor.system.attributes.hp.value = 20; actor._stats.modifiedTime = 220;
+    await runtime.handleEvent(event(5, 20, 220));
+    expect(readInjury(actor).stacks).toBe(0);
+  });
+
+  test('does not coerce a null source maximum to zero when prepared HP was not captured', async () => {
+    const { runtime, actor, writes } = fixture();
+    const context: any = hpEvent(actor, 10, 0, 201);
+    context.before.system.attributes.hp.max = null; context.after.system.attributes.hp.max = null;
+    actor.system.attributes.hp.value = 0; actor._stats.modifiedTime = 201;
+    await runtime.handleEvent(context);
+    expect(writes).toHaveLength(0);
+    expect(actor.flags[CC]).toBeUndefined();
+  });
+
   test('runs the injury episode without Fading Spirits installed', async () => {
     const { runtime, actor, globals } = fixture();
     actor.system.attributes.hp.value = 0;
@@ -322,6 +355,33 @@ describe('Custom Conditions injury ownership', () => {
     expect(readInjury(actor).processedTransactionIds.filter((id: string) => id.includes('rest-1'))).toHaveLength(1);
   });
 
+  test('authenticates a 6.0.5 player native rest by its canonical ChatMessage author and consumes it once', async () => {
+    const { runtime, actor, globals, sockets } = fixture({ legacy: true, stacks: 2 });
+    globals.game.version = '14.368'; globals.game.system.version = '6.0.5';
+    await runtime.migrate(actor);
+    const message = { id: 'native6-rest', type: 'rest', author: { id: 'player' },
+      system: { type: 'short', deltas: {} }, speaker: { actor: actor.id }, getAssociatedActor: () => actor };
+    globals.game.messages.set(message.id, message);
+    const receive = sockets.get(`module.${CC}`);
+    const request = { type: 'rest', actorUuid: actor.uuid, messageId: message.id, restType: 'short' };
+    await receive(request, undefined);
+    expect(readInjury(actor).stacks).toBe(2);
+    await receive(request, 'player');
+    expect(readInjury(actor).stacks).toBe(0);
+    await receive(request, 'player');
+    expect(readInjury(actor).processedTransactionIds.filter(id => id === `rest:${actor.uuid}:${message.id}:short`)).toHaveLength(1);
+  });
+
+  test('a legacy user alias cannot override a different canonical rest-message author', async () => {
+    const { runtime, actor, globals, sockets } = fixture({ legacy: true, stacks: 2 });
+    await runtime.migrate(actor);
+    const message = { id: 'conflicting-author-rest', type: 'rest', author: { id: 'other' }, user: { id: 'player' },
+      system: { type: 'short', deltas: {} }, speaker: { actor: actor.id }, getAssociatedActor: () => actor };
+    globals.game.messages.set(message.id, message);
+    await sockets.get(`module.${CC}`)({ type: 'rest', actorUuid: actor.uuid, messageId: message.id, restType: 'short' }, 'player');
+    expect(readInjury(actor).stacks).toBe(2);
+  });
+
   test('an active GM can clear injury on a native no-chat rest, while an unauthenticated socket cannot', async () => {
     const { actor, runtime, hookMap, sockets } = fixture({ legacy: true, stacks: 2 });
     await hookMap.get('dnd5e.restCompleted')(actor, { type: 'long' }, { type: 'long', chat: false });
@@ -351,7 +411,7 @@ describe('Custom Conditions injury ownership', () => {
     expect(readInjury(actor).stacks).toBe(2);
   });
 
-  test('old automation choices import without enabling NPCs or widening the 6.0.5 condition catalog', async () => {
+  test('old automation choices preserve NPC scope and do not open an unreviewed 6.x condition catalog', async () => {
     const { actor, runtime, settings, globals } = fixture({ legacy: true, ifs: true });
     settings.set(`${CC}.injurySettingsImported`, false);
     settings.set(`${IFS}.enabled`, true);
@@ -362,12 +422,12 @@ describe('Custom Conditions injury ownership', () => {
     actor.type = 'npc';
     expect(runtime.managed(actor)).toBeFalse();
     actor.type = 'character';
-    globals.game.version = '14.368'; globals.game.system.version = '6.0.5';
+    globals.game.version = '14.368'; globals.game.system.version = '6.0.2';
     const conditions = new ConditionRuntime(globals, () => true);
     conditions.start();
     expect(conditions.definitions()).toEqual([]);
     expect(conditions.list(actor)).toEqual([]);
-    await expect(conditions.apply(actor, 'dazed', {})).rejects.toThrow('Only Injury');
+    await expect(conditions.apply(actor, 'dazed', {})).rejects.toThrow('unsupported');
   });
 
   test('public migration and suppression refuse disabled or unsupported runtimes before callbacks', async () => {

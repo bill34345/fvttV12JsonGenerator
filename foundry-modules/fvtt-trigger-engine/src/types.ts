@@ -131,6 +131,11 @@ export type TriggerContextEvent =
   | { type: 'combatTurnStart'; documentType: 'Actor' }
   | { type: 'combatTurnEnd'; documentType: 'Actor' };
 
+export interface PreparedHitPoints {
+  value: number;
+  max: number;
+}
+
 export interface TriggerEventContext {
   event: TriggerContextEvent;
   document: unknown;
@@ -142,6 +147,8 @@ export interface TriggerEventContext {
   timestamp: number;
   /** Native document revision captured at the post-update hook, before queued delivery. */
   capturedModifiedTime?: number;
+  /** Prepared HP captured synchronously; source snapshots may retain a null automatic maximum. */
+  preparedHp?: { before: PreparedHitPoints; after: PreparedHitPoints };
   combat?: any;
   combatUuid?: string;
   combatant?: any;
