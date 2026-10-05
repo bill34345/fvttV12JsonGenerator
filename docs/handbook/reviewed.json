@@ -60,9 +60,9 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "74652000adb05392f664537901acf80c8995020b37c1223f2e0af68f009ddbac",
+    "fingerprint": "6588f0661226d804ab9233c09ca6a8e605713963c39671f74d4784dba602ee3c",
     "reviewedOn": "2026-10-05",
-    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
+    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -150,9 +150,9 @@
     "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "4002a8f619039d66239a735425478459cf580c81d6f0743f3a9caa7683cb3c32",
+    "fingerprint": "81017162139ec54edbe6885413938dde9970ff6b98fde1d9484d37d89de527e1",
     "reviewedOn": "2026-10-05",
-    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
+    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
   },
   "midi-qol": {
     "fingerprint": "17601ad3917928a07e91494a45e93bb558452a860d3b410a3d6f5d5a251a1edf",
@@ -160,8 +160,8 @@
     "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "3dfc06edf604a8bf7aa5dcc3bc1896a667edd48fe2c78e2a6b74c90dd48f15f1",
+    "fingerprint": "7912e61ceebbd85ed9fd86612630f4cc5035b0d3a0595da911085717922ae807",
     "reviewedOn": "2026-10-05",
-    "note": "逐项对照本次收尾报告、冻结安装及实机回执：原生Cleave伤害9与HP80到71通过，Midi恢复99模块，历史源码按版本整合；保留全矩阵/生产/长时边界、历史输入依赖和首次CI失败，最终3959通过1既有跳过，未缩watch或门槛。"
+    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
   }
 }
