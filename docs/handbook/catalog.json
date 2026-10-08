@@ -764,6 +764,10 @@
         "command": "bun run test:forge-blueprint\nbun run test:structured-action-targets"
       },
       {
+        "title": "查阅生物创作研究依据",
+        "text": "历史研究保留外部工具的固定来源、能力与许可边界，以及2024资料块的官方呈现依据。Actor蓝图和可读预览已进入主线；Item配方、CR设计辅助及反派/巢穴等仍是研究提案，不因归档新增开发任务。"
+      },
+      {
         "title": "验证共用验收工具",
         "text": "先核对CI锁定的Bun运行时并供本批子进程复用。安全包装入口覆盖选择声明/执行范围、旧证据、旧请求兼容及路径/超时边界。test:acceptance-workflow 定点验证文件侧执行、收据读回和未知执行不重放；test:acceptance-inspection 只跑状态与保留检查，三个慢Git用例各有15秒预算。先修同类定点问题，再按必要整合边界运行相关组；Next批次和清理归属仍可分别使用原聚焦入口，均不因此执行真实清理。",
         "command": "bun run test:acceptance-tools"
@@ -809,6 +813,8 @@
       "docs/generated-actor-verification.md",
       "docs/acceptance/current-support-matrix.md",
       "docs/REFERENCE_INDEX.md",
+      "docs/reviews/2026-09-22-creature-item-authoring-opportunities.md",
+      "docs/reviews/2026-09-24-dnd2024-statblock-preview-reference.md",
       "docs/runbooks/handbook-maintenance.md",
       "docs/runbooks/dnd5e-version-following.md",
       "docs/runbooks/foundry-v14-development-source-routing.md",

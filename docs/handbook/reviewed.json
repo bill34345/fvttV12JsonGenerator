@@ -65,9 +65,9 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "cd4f4508c2e3c1408d3185d25c020f0774c65321fe3a922082e6963c36d87138",
+    "fingerprint": "0e29e9b30c541529cce6291b27c39f6bac28b4252939a08fb45c1473dfb849ee",
     "reviewedOn": "2026-10-08",
-    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+    "note": "已对照两份原研究、独立审查与现行owner，保留固定来源和许可边界；Actor蓝图/资料块及统一工作台标为已实现，其余仍为研究提案。仅新增资料索引和离线阅读来源，命令、输入输出、支持版本与运行行为不变。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
