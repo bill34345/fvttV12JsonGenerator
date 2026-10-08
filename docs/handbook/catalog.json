@@ -1,5 +1,44 @@
 [
   {
+    "id": "legacy-next-test-inputs",
+    "title": "ServerNext 历史回归测试输入",
+    "category": "maintain",
+    "summary": "独立保存固定版本测试材料，让主工作区和新 worktree 不再依赖旧迁移树。",
+    "when": "运行历史 Midi、DAE、Classpack 或外部候选回归，或检查本地测试材料是否完整时使用。",
+    "requires": [
+      "接收目录是项目 Git checkout；准备来源须持有清单内全部合法来源文件。",
+      "材料只存入忽略的本地测试目录；仓库不分发原始大包和私有分析数据。"
+    ],
+    "steps": [
+      {
+        "title": "检查已准备材料",
+        "text": "在主工作区执行完整哈希与 Git 身份校验。校验不再读取旧迁移树，也不启动 Foundry。",
+        "command": "bun run legacy-next-inputs:prepare -- --check"
+      },
+      {
+        "title": "缺少材料时一次准备",
+        "text": "按来源文档填写绝对来源路径；默认只读计划，显式 --apply 才写入新输入库。写前及写后均核对清单；拒绝覆盖已有库。主工作区准备后，新 sibling worktree 自动共享。"
+      },
+      {
+        "title": "运行当前候选回归",
+        "text": "清除非空的历史输入根覆盖后运行当前候选；测试、补丁、锁定和报告来自当前 checkout，材料来自独立输入库。",
+        "command": "bun run test:legacy-next-inputs\nbun run midi-qol:test\nbun run test:classpack-next"
+      }
+    ],
+    "outputs": [
+      "170 个已核对输入文件、固定 Midi Git 对象/索引与 ready 标记。",
+      "本地 .local/legacy-next-test-inputs/data 测试目录及只读校验结果。"
+    ],
+    "limits": [
+      "只消除旧 worktree 依赖；现有 F 盘 Core、Node、系统方法、TCoE 来源和部分接受收据依赖仍保留。",
+      "非空 FVTT_LEGACY_NEXT_INPUT_ROOT 仍优先；默认回归应按来源说明清除它。",
+      "离线回归不代表现行版本玩法、安装或部署接受；不操作运行中世界或服务。"
+    ],
+    "keywords": ["ServerNext", "测试", "worktree", "Midi", "Classpack", "历史输入"],
+    "sources": ["docs/runbooks/legacy-next-test-inputs.md"],
+    "watch": ["tools/legacy-next-inputs/", "tests/helpers/legacy-next-inputs.mjs"]
+  },
+  {
     "id": "web-workbench",
     "title": "Web 工作台",
     "category": "convert",
@@ -715,6 +754,11 @@
         "command": "bun run ci:verify"
       },
       {
+        "title": "准备历史ServerNext测试输入",
+        "text": "主工作区一次性准备独立输入库后，当前和新worktree自动读取固定材料；先完整核对哈希和Git身份，再运行受影响回归。来源缺失不能跳过为PASS，现有本机参考环境依赖仍按历史版本保留。",
+        "command": "bun run legacy-next-inputs:prepare -- --check\nbun run test:legacy-next-inputs"
+      },
+      {
         "title": "核对Forge蓝图与目标映射",
         "text": "修改蓝图/资料块或结构化受影响目标映射时使用聚焦入口；正式来源验证与真实Foundry验收仍单独执行。",
         "command": "bun run test:forge-blueprint\nbun run test:structured-action-targets"
@@ -916,7 +960,7 @@
       },
       {
         "title": "测试并构建历史锁定候选",
-        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；已有同一候选源码时直接测试。不得使用外部dirty checkout产物，也不得用结果覆盖当前6.0.5安装。 历史测试还需按README取得并校验固定6.0.2分发源，存于忽略的test-sources缓存；测试不读取现行系统文件。",
+        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；历史回归可直接使用已核对的独立测试输入库，当前与新worktree自动定位，不再指向旧迁移树。不得用结果覆盖当前6.0.5安装；固定6.0.2分发源不替换为现行系统文件。",
         "command": "bun run midi-qol:build\nbun run midi-qol:test"
       },
       {
@@ -957,6 +1001,7 @@
     "sources": [
       "foundry-modules/midi-qol/README.md",
       "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/runbooks/legacy-next-test-inputs.md",
       "docs/plan/midi-qol-dnd6-bugfix-development.md",
       "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
     ],

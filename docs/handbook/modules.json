@@ -1100,7 +1100,7 @@
       "历史local.7的A–G/Z35项及local.9基础isDamaged手动APPLY接受保留原6.0.2范围。当前ServerNext安装local.10；6.0.5下Check／Save两个请求来源加值各+4、94启用ID和49来源值保留、精确清理已接受，其他权限／隐私／workflow分支不由此扩大。",
       "只声明固定 ServerNext 目标，不代表其他 Foundry、dnd5e 或世界兼容。",
       "server-mirror 始终只读；30002 服务由本批主控和用户管理，普通验收复用常驻实例，E2E 只清理自身临时文档，结束不得停服或改动其他任务对象。",
-      "本轮local.10增量补丁和验收记录已进入master；原迁移树的完整Midi源码工具现已本地提交，正在本次本地主线整合，远端推送不在本批范围。旧工具目标与当前安装分开，后续构建、安装或发布按具体范围处理。"
+      "local.10增量补丁、验收记录与完整历史Midi源码工具已进入master。固定历史回归材料按独立测试输入库流程准备，旧工具仍保留原6.0.2目标，不覆盖现行安装；后续构建、安装或发布按具体范围处理。"
     ],
     "keywords": [
       "Midi-QOL",
@@ -1113,6 +1113,7 @@
     "sources": [
       "foundry-modules/midi-qol/README.md",
       "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/runbooks/legacy-next-test-inputs.md",
       "docs/plan/midi-qol-dnd6-bugfix-development.md",
       "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
     ],
@@ -1151,7 +1152,7 @@
       },
       {
         "title": "核对不全包6.0.5适配",
-        "text": "classpack目录保留官方4.3.4的21合集及原文档身份，包含来源明确的链接、MPMM石之坚韧熟练加值次数修复和显式正常API迁移入口。写前及后端均保护进阶、效果、正文和规则版本；缺失自定义召唤／辅助法术单列后续。下面的根目录命令只运行离线检查；运行操作先核唯一总表的来源、迁移、重载、代表UI和清理各门，严格按当前一次性合同执行。失败收据不能清空后重放；代表行为不等于27个宏或完整施法、伤害反应链全部接受。 新构建报告写入dist/candidate-report.json，历史报告保持。",
+        "text": "classpack目录保留官方4.3.4的21合集及原文档身份，包含来源明确的链接、MPMM石之坚韧熟练加值次数修复和显式正常API迁移入口。写前及后端均保护进阶、效果、正文和规则版本；缺失自定义召唤／辅助法术单列后续。下面命令只运行离线检查，固定输入可从独立测试输入库自动读取，数据库查询使用本次临时夹具。运行操作先核唯一总表的来源、迁移、重载、代表UI和清理各门，严格按当前一次性合同执行。失败收据不能清空后重放；代表行为不等于27个宏或完整施法、伤害反应链全部接受。新构建报告写入dist/candidate-report.json，历史报告保持。",
         "command": "bun run test:classpack-next"
       }
     ],
@@ -1175,6 +1176,7 @@
     "sources": [
       "foundry-modules/server-next-external-candidates/README.md",
       "foundry-modules/server-next-external-candidates/classpack/README.md",
+      "docs/runbooks/legacy-next-test-inputs.md",
       "docs/plan/server-next-migration-handoff-20260927.md"
     ],
     "watch": [

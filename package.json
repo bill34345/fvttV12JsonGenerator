@@ -171,7 +171,8 @@
     "midi-qol:install": "bun run foundry-modules/midi-qol/cli.ts install",
     "midi-qol:prepare-cf": "bun run foundry-modules/midi-qol/prepare-cf.ts",
     "midi-qol:test": "bun test foundry-modules/midi-qol/tests --max-concurrency 1",
-    "test:legacy-next-inputs": "bun test tests/legacy-next-inputs.test.ts --max-concurrency 1"
+    "test:legacy-next-inputs": "bun test tests/legacy-next-inputs.test.ts tools/legacy-next-inputs/index.test.mjs foundry-modules/server-next-external-candidates/classpack/candidate-report.test.ts --max-concurrency 1",
+    "legacy-next-inputs:prepare": "node tools/legacy-next-inputs/index.mjs"
   },
   "devDependencies": {
     "@intellectronica/ruler": "0.3.44",

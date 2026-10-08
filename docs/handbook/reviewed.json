@@ -1,4 +1,9 @@
 {
+  "legacy-next-test-inputs": {
+    "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
+    "reviewedOn": "2026-10-08",
+    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+  },
   "web-workbench": {
     "fingerprint": "48bcc04dcc1ecea8b1a474f7b8e6773850e464c1c5becf108afd4088281f6827",
     "reviewedOn": "2026-09-12",
@@ -60,9 +65,9 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "6588f0661226d804ab9233c09ca6a8e605713963c39671f74d4784dba602ee3c",
-    "reviewedOn": "2026-10-05",
-    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
+    "fingerprint": "cd4f4508c2e3c1408d3185d25c020f0774c65321fe3a922082e6963c36d87138",
+    "reviewedOn": "2026-10-08",
+    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -75,9 +80,9 @@
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "midi-qol-server-next-patch": {
-    "fingerprint": "d04da9f47e746c4c86a20ada181f0f86c64a0032a5a9679efeab86e0b4a26db4",
-    "reviewedOn": "2026-10-05",
-    "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
+    "fingerprint": "051b0f1910e4c32f0fd847f5ce546c8d9429ca7d90e75c20312923c4141da225",
+    "reviewedOn": "2026-10-08",
+    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "chat-memory-guard": {
     "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
@@ -155,13 +160,13 @@
     "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
   },
   "midi-qol": {
-    "fingerprint": "17601ad3917928a07e91494a45e93bb558452a860d3b410a3d6f5d5a251a1edf",
-    "reviewedOn": "2026-10-05",
-    "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
+    "fingerprint": "440e5e28a279a80de552f6f05a67d7cb6290d48c5e8e102a48de48fd89a7bb38",
+    "reviewedOn": "2026-10-08",
+    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "7912e61ceebbd85ed9fd86612630f4cc5035b0d3a0595da911085717922ae807",
-    "reviewedOn": "2026-10-05",
-    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
+    "fingerprint": "a72a3f7bbc6391ae07935e615d64ae9b41a562288dbc08730bb4b0fbbfef22e4",
+    "reviewedOn": "2026-10-08",
+    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   }
 }

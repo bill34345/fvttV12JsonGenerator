@@ -1,14 +1,14 @@
-# 在独立工作树复用历史测试输入
+# 在独立工作树使用历史测试输入
 
-历史 Midi 6.0.2/local.9 与 ServerNext 外部候选测试需要当时锁定的源码、分发文件、离线候选及证据输入；新检出没有这些 ignored 输入时不能宣称通过。可在当前进程显式设置 `FVTT_LEGACY_NEXT_INPUT_ROOT` 为已经保存这些输入的绝对工作树根，再从**当前候选**运行测试：
+历史 Midi 6.0.2/local.9 与 ServerNext 外部候选测试需要当时锁定的源码、分发文件、离线候选及对照输入。按[历史测试输入准备流程](legacy-next-test-inputs.md)准备主工作区的本地输入库后，当前 checkout 和新 worktree 自动读取它，不再需要指向旧迁移树。新检出没有这些 ignored 输入时不能宣称通过。
 
 ```powershell
-$env:FVTT_LEGACY_NEXT_INPUT_ROOT = '<已核对历史输入工作树的绝对路径>'
+$env:FVTT_LEGACY_NEXT_INPUT_ROOT = $null
 bun run midi-qol:test
 bun run test:classpack-next
 ```
 
-定位器只重定位明确列出的 ignored 缓存路径；测试、实现、lock 和补丁仍从当前候选读取，固定提交、版本及 SHA 检查继续执行。它不复制、下载、安装、写入或清理历史输入，不能把当前运行系统替代历史 6.0.2 来源。未配置变量时沿用当前工作树内的原路径。运行 `ci:verify` 时子进程继承这一显式输入根；通过结论必须注明输入来源，不能当作未准备输入的新克隆通过。
+定位器只重定位明确列出的 ignored 缓存路径；测试、实现、lock 和补丁仍从当前候选读取，固定提交、版本及 SHA 检查继续执行。定位器本身不写入输入；一次性准备工具需显式 `--apply`，默认只读。仍可用非空 `FVTT_LEGACY_NEXT_INPUT_ROOT` 指定经过核对的输入根，它优先于自动定位；为空时先查本 checkout 的库，再查主 checkout 的库，没有库时沿用原缓存路径。准备库的完整校验用 `bun run legacy-next-inputs:prepare -- --check`，不读取旧来源。不能把当前运行系统替代历史 6.0.2 来源；通过结论仍须注明输入与本机参考环境，不能当作未准备输入的新克隆通过。
 
 锁定的 `0001-dnd5e6-active-effect-base-type.patch` 有原始混合换行，其完整 SHA 为 `3bfbe35bf569faaee6952fd2cb7abba67f5ead47365abe7dd987720456ffde79`。精确 Git `-text` 属性保留这些字节；不要改预期 SHA 或宽泛忽略差异来绕过来源门。
 
