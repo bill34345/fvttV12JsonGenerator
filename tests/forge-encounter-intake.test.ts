@@ -58,6 +58,18 @@ describe('human Markdown multi-actor encounter intake',()=>{
     expect(result.report.actors.map(a=>a.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
     expect(env.automationCalls).toBe(1);
   });
+  test('a failed Chinese translation retains the independently reviewed source-language package',async()=>{
+    const env=fixture();let translations=0;
+    const result=await generateEncounterFromHumanMarkdown({source,label:'translation failure',...env,outputLanguage:'zh-CN',
+      translationService:{translate:async()=>{translations++;throw new Error('Translation review unavailable');},review:async()=>({verdict:'accepted',findings:[]})} as any});
+    expect(translations).toBe(1);
+    expect(result.report.status).toBe('ready_for_gm_review');
+    expect(result.report.outputLanguage).toBe('source');
+    expect(result.report.findings.join(' ')).toContain('中文候选未通过');
+    expect(result.prepared?.bundle.localization).toBeUndefined();
+    expect(result.prepared?.hash).toBe(result.report.packageHash);
+    expect(result.prepared?.actors).toHaveLength(2);
+  });
   test('rejected automation review exhausts one repair and never returns an importable result',async()=>{
     const env=fixture();env.automationProvider.review=async()=>({verdict:'needs_review',findings:['Source rule was omitted.']});
     const result=await generateEncounterFromHumanMarkdown({source,label:'test',...env});

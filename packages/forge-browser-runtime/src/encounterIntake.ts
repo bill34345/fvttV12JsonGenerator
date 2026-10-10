@@ -172,7 +172,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       const actorInput={source:actorSource,sourceName:candidate.label,displayName:candidate.label,
         requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${key}`,fvttVersion:'14.364',systemVersion:'5.3.3',
         renderMarkdown:(ir:MonsterIntakeIR)=>renderEncounterActorSource(ir,pendingManualRules,actorSource),
-        onStage:(stage:{stage:string;status:string})=>input.onProgress?.(`生物${index+1}/${candidates.length}：${candidate.label} · ${stage.stage} ${stage.status}`)};
+        onStage:(stage:{stage:string;status:string})=>input.onProgress?.(`生物${index+1}/${candidates.length}：${candidate.label} · ${actorStageLabel(stage.stage)} ${actorStageStatus(stage.status)}`)};
       const draft=input.drafts?.find(d=>d.key===key);
       if(draft&&draft.source!==actorSource)throw new Error('草稿分段与当前原始资料不一致。');
       let analysis=draft?analyzeBrowserActorIntakeDraft(actorInput,draft.ir,fixed):await analyzeBrowserActorSourceWithAi(actorInput,fixed,signal);
@@ -247,10 +247,20 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         report.outputLanguage=input.outputLanguage??'source';
         let finalPrepared=prepared;
         if(input.outputLanguage==='zh-CN'){
-          if(!input.translationService)throw new Error('中文生成缺少翻译与独立审阅服务。');
           report.localization=[];
-          finalPrepared=await localizeForgeEncounter({bundle:prepared.bundle,service:input.translationService,signal,onProgress:progress,
-            onReview:entry=>{const index=report.localization!.findIndex(prior=>prior.actorKey===entry.actorKey);if(index<0)report.localization!.push(entry);else report.localization![index]=entry;publish();}});
+          try {
+            if(!input.translationService)throw new Error('中文生成缺少翻译与独立审阅服务。');
+            finalPrepared=await localizeForgeEncounter({bundle:prepared.bundle,service:input.translationService,signal,onProgress:progress,
+              onReview:entry=>{const index=report.localization!.findIndex(prior=>prior.actorKey===entry.actorKey);if(index<0)report.localization!.push(entry);else report.localization![index]=entry;publish();}});
+          } catch(error) {
+            // The already reviewed source-language package remains available for explicit GM review.
+            report.outputLanguage='source';
+            report.status='ready_for_gm_review';
+            report.packageHash=prepared.hash;
+            report.findings=[`中文候选未通过：${safeFailure(error)}；已保留原语言包。`];
+            publish();
+            return {report,prepared};
+          }
         }
         signal?.throwIfAborted();report.status='ready_for_gm_review';report.packageHash=finalPrepared.hash;publish();return {report,prepared:finalPrepared};
       }
@@ -297,6 +307,12 @@ function hasManualPreparationEvidence(
 function safeFailure(error:unknown):string{
   const message=error instanceof Error?error.message:'生成失败';
   return message.replace(/https?:\/\/\S+/gi,'[endpoint]').replace(/Bearer\s+\S+/gi,'[credential]').slice(0,1600);
+}
+function actorStageLabel(stage:string):string{
+  return ({discover:'识别来源',extract:'提取规则',validate:'核对来源',repair:'修正草稿',generate:'正式生成',review:'独立审核',finalize:'完成核对'} as Record<string,string>)[stage]??'处理当前阶段';
+}
+function actorStageStatus(status:string):string{
+  return ({running:'进行中',completed:'已完成',failed:'失败',skipped:'已跳过'} as Record<string,string>)[status]??'状态待核对';
 }
 
 function isCompanionOnlyStagedGeneration(generation:BrowserActorGenerationResult):boolean{

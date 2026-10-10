@@ -15,11 +15,16 @@
     <ul>{{#each configuredConditions}}<li><strong>{{name}}</strong> — {{summary}}<br>原文别名：{{#each aliases}}{{this}} {{/each}}</li>{{else}}<li>尚未配置自定义状态；原生状态仍可使用。</li>{{/each}}</ul>
   </section>
   <button type="button" data-action="encounter-ai" {{#if busy}}disabled{{/if}}>AI生成并审核战斗包</button>
+  {{#if recoveryPackageAvailable}}<button type="button" data-action="encounter-recover-preview" {{#if busy}}disabled{{/if}}>重新预览保存的候选</button><p>重新走正式校验；保存的通过记录不会替你勾选 GM 确认。</p>{{/if}}
+  {{#if recoveryAvailable}}<button type="button" data-action="encounter-resume" {{#if busy}}disabled{{/if}}>继续任务（{{recoveryDraftCount}} 个已有草稿，重新验证与审核）</button><p>继续任务会使用同一来源的 IR 草稿，重新核对当前状态目录、正式生成结果和独立审核；不会继承旧的通过或导入确认。</p>{{/if}}
+  {{#if hasLocalRecovery}}<button type="button" data-action="encounter-clear-recovery" {{#if busy}}disabled{{/if}}>清除本地战斗包任务</button><p>仅清除当前世界与 GM 的战斗包记录和当前窗口候选；不会删除资料库或连接设置。</p>{{/if}}
   <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
+  {{#if progressDetail}}<p data-encounter-progress>{{progressDetail}}</p>{{/if}}
   {{#if aiRunning}}<button type="button" data-action="encounter-ai-stop">停止AI生成</button>{{/if}}
-  {{#if hasReport}}<button type="button" data-action="encounter-report" {{#if busy}}disabled{{/if}}>下载来源与审核记录</button>{{/if}}
+  {{#if hasReport}}<button type="button" data-action="encounter-report-view" {{#if busy}}disabled{{/if}}>查看／复制审核记录</button><button type="button" data-action="encounter-report" {{#if busy}}disabled{{/if}}>下载来源与审核记录</button>{{/if}}
   {{#if reportDownload}}<p><a data-report-download href="{{reportDownload.url}}" download="{{reportDownload.name}}">下载审核文件</a>（{{reportDownload.name}}，{{reportDownload.byteLength}} 字节）</p>{{/if}}
-  {{#if hasPackage}}<button type="button" data-action="encounter-export">下载生成的战斗包</button>{{/if}}
+  {{#if textView}}<section class="forge-encounter-report-view"><label>{{textView.name}} · 完整 JSON<textarea data-encounter-view-text readonly spellcheck="false" wrap="off" rows="18">{{textView.text}}</textarea></label><button type="button" data-action="encounter-text-copy" {{#if busy}}disabled{{/if}}>复制当前 JSON</button><p>若浏览器不支持自动复制，可在上方文本框中手动全选复制。</p></section>{{/if}}
+  {{#if hasPackage}}<button type="button" data-action="encounter-package-view" {{#if busy}}disabled{{/if}}>查看／复制战斗包 JSON</button><button type="button" data-action="encounter-export">下载生成的战斗包</button>{{/if}}
   <h2>角色、召唤物与配套宏</h2>
   <p>选择 Forge 战斗包 JSON 或 ZIP。角色会从包内来源重新生成；预览不调用 AI，也不执行宏。现有 AI Intake 的 Provider 和模型配置保持原样。</p>
   <label>战斗包文件（最多32 MiB）<input name="encounterFile" type="file" accept=".json,.zip,application/json,application/zip" {{#if busy}}disabled{{/if}}></label>
@@ -29,6 +34,18 @@
   {{#if error}}<p class="forge-error" role="alert">{{error}}</p>{{/if}}
   {{#if ready}}
     <h3>{{label}}</h3>
+    {{#if recoveredReview}}<p>以下来源审核记录来自本地保存的任务，仅供核对。候选已经重新通过正式预览；请自行确认完整原文、规则和导入边界。</p>{{/if}}
+    {{#if reviewCards}}<h3>逐项核对来源与规则</h3><p>原句与参数来自本次来源审核记录；请同时核对完整原文中的限制和例外。导入仍需 GM 明确确认。</p>
+      {{#each reviewCards}}<article class="forge-encounter-macro"><h4>{{actor}}：{{feature}}</h4>
+        <p><strong>来源原句：</strong>{{source}}</p>
+        <p><strong>解析规则：</strong>{{summary}}</p>
+        <p><strong>处理方式：</strong>{{handling}}</p>
+        {{#if evidence}}<p>来源证据：</p><ul>{{#each evidence}}<li>{{label}}：{{quote}}</li>{{/each}}</ul>{{/if}}
+        {{#if evidenceMissing}}<p>本项缺少完整的六段来源证据；请依据完整原文人工核对，不能将缺失字段当作来源已证明。</p>{{/if}}
+        <details><summary>归一化规则参数</summary><pre><code>{{normalized}}</code></pre></details>
+        {{#if gmSteps}}<p>GM 操作与限制：</p><ul>{{#each gmSteps}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+      </article>{{/each}}
+    {{else}}{{#if reviewEvidenceUnavailable}}<p>此包没有当前 AI 来源审核记录，无法显示逐项原文证据；请展开完整来源和规则参数核对。</p>{{/if}}{{/if}}
     {{#if localized}}<p>中文名称旁保留英文；描述和GM步骤仅显示中文。已核对数字、术语并完成独立含义审阅，仍须由GM确认。</p>
       <details><summary>中文术语依据与待核边界</summary><ul>{{#each terminologyNotes}}<li>{{this}}</li>{{/each}}</ul><ul>{{#each terminologyReferences}}<li><a href="{{this}}" target="_blank" rel="noopener noreferrer">5E不全书《玩家手册2024》术语参考</a></li>{{/each}}</ul></details>
     {{else}}<button type="button" data-action="encounter-localize" {{#if busy}}disabled{{/if}}>翻译为中文并核对含义</button><p>使用当前AI连接，只翻译已经验证的显示文本；保留本包来源与GM裁定边界。</p>{{/if}}

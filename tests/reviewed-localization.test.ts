@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import {
   acceptLocalization, assertReviewedLocalization, localizationRequest, localizationText, protectLocalizationText,
   validateLocalizationDraft, LOCALIZATION_TERMS, LEGACY_LOCALIZATION_POLICY, LOCALIZATION_POLICY, localizationHash, decodeEncounterLocalization, type LocalizationPolicy, type LocalizationRequest, type LocalizationDraft,
@@ -34,6 +35,78 @@ function fakeTranslation(input: LocalizationRequest): LocalizationDraft {
 const fakeService = { model: 'fixture-only', reviewModel: 'independent-fixture-only', translate: async (input: LocalizationRequest) => fakeTranslation(input), review: async () => accepted };
 
 describe('reviewed Chinese display contract', () => {
+  test('real Echo word-count fragments keep the strict literal gate while allowing equivalent Chinese words',()=>{
+    const cases=JSON.parse(readFileSync('tests/fixtures/encounter-localization-word-counts.json','utf8')) as Array<{case:string;source:string;rejected:string;corrected:string}>;
+    expect(cases).toHaveLength(4);
+    for(const entry of cases){
+      const input=request(entry.source);
+      expect(()=>validateLocalizationDraft(input,draft(input,entry.rejected))).toThrow('改变数字');
+      expect(validateLocalizationDraft(input,draft(input,entry.corrected)).texts[0]!.text).toBe(entry.corrected);
+    }
+    const first=cases[0]!;const input=request(first.source);
+    for(const changed of [first.corrected.replace('DC 10','DC 11'),first.corrected.replace('1d6','2d6'),
+      `${first.corrected}3`,first.corrected.replace('<p>','<div>')])
+      expect(()=>validateLocalizationDraft(input,draft(input,changed))).toThrow('改变数字');
+  });
+  test('package display R2/R3 and explanatory configured namespace translate without Latin leakage',()=>{
+    const cases=JSON.parse(readFileSync('tests/fixtures/encounter-localization-display-labels.json','utf8')) as Array<{case:string;source:string;rejected:string;corrected:string}>;
+    expect(cases).toHaveLength(4);
+    for(const entry of cases){
+      const input=localizationRequest('package-display-fixture',[localizationText(entry.source.includes('Recovery')?'title':'body',entry.source)]);
+      expect(()=>validateLocalizationDraft(input,draft(input,entry.rejected))).toThrow('未完成中文化');
+      expect(validateLocalizationDraft(input,draft(input,entry.corrected)).texts[0]!.text).toBe(entry.corrected);
+    }
+    const r2=localizationRequest('package-display-fixture',[localizationText('title',cases[0]!.source)]);
+    expect(()=>validateLocalizationDraft(r2,draft(r2,cases[0]!.corrected.replace('第2轮','第3轮')))).toThrow('改变数字');
+  });
+  test('repair treats a rejected title as an unapproved draft, then shares only its corrected name',async()=>{
+    const title=localizationText('title','Chrome Recovery R2 input');
+    const notes=localizationText('body','No registered custom conditions exist in this request, so no configured.* status is used.');
+    const input=localizationRequest('package-display-fixture',[title,notes]);
+    const payloads:Array<{system:string;user:any}>=[];
+    const service=createReviewedTranslationService({baseUrl:'https://provider.example/v1',apiKey:'fixture-only',model:'fixture',
+      httpClient:async(_url,init)=>{
+        const body=JSON.parse(String(init?.body)),system=String(body.messages[0].content),user=JSON.parse(body.messages[1].content);
+        payloads.push({system,user});
+        const translated={texts:user.texts.map((entry:any)=>({id:entry.id,text:entry.kind==='title'?'浏览器恢复第⟦0⟧轮输入':'本请求中不存在已注册的自定义状态，因此未使用任何已配置的自定义状态。'}))};
+        return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(translated)}}]}),{status:200});
+      }});
+    const prior={draft:{texts:[{id:title.id,text:'浏览器恢复 R2 输入'},{id:notes.id,text:'本请求未使用 configured.* 状态。'}]},
+      findings:[`${title.id}：残留英文 R`,`${notes.id}：残留英文 configured`]};
+    const corrected=await service.translate(input,undefined,undefined,prior);
+    expect(validateLocalizationDraft(input,corrected)).toEqual(corrected);
+    expect(payloads).toHaveLength(2);
+    expect(payloads[0]!.system).toContain('render an R⟦n⟧ revision or round label in Chinese');
+    expect(payloads[0]!.user.instruction).toContain('prior draft itself is not an approved glossary');
+    expect(payloads[0]!.user.consistentNames).toEqual([]);
+    expect(payloads[1]!.user.consistentNames).toEqual([{english:title.source,chinese:'浏览器恢复第2轮输入'}]);
+    expect(payloads[1]!.system).toContain('configured.* status means 已配置的自定义状态');
+  });
+  test('translation and repair prompts keep word counts written and honor the supplied title policy',async()=>{
+    const payloads:Array<{system:string;user:any}>=[];
+    const service=createReviewedTranslationService({baseUrl:'https://provider.example/v1',apiKey:'fixture-only',model:'fixture',
+      httpClient:async(_url,init)=>{
+        const body=JSON.parse(String(init?.body));const system=String(body.messages[0].content),user=JSON.parse(body.messages[1].content);
+        payloads.push({system,user});
+        const response=system.startsWith('Independently audit')?accepted
+          :{texts:user.texts.map((entry:any)=>({id:entry.id,text:'效果持续一分钟。'}))};
+        return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(response)}}]}),{status:200});
+      }});
+    const field=localizationText('body','The effect lasts one-minute.');
+    const current=localizationRequest('word-count-fixture',[field]);
+    const translated=await service.translate(current,undefined,undefined,{draft:{texts:[{id:field.id,text:'效果持续1分钟。'}]},findings:[`${field.id}：译文改变数字`]});
+    expect(validateLocalizationDraft(current,translated)).toEqual(translated);
+    expect(await service.review(current,translated)).toEqual(accepted);
+    expect(payloads[0]!.system).toContain('one-minute as 一分钟');
+    expect(payloads[0]!.system).toContain('two rounds as 两轮');
+    expect(payloads[0]!.user.policy).toBe(LOCALIZATION_POLICY);
+    expect(payloads[0]!.user.instruction).toContain('remove that digit');
+    expect(payloads[1]!.user.policy).toBe(LOCALIZATION_POLICY);
+    const legacy=localizationRequest('word-count-fixture',[field],LEGACY_LOCALIZATION_POLICY);
+    await service.translate(legacy);
+    expect(payloads[2]!.user.policy).toBe(LEGACY_LOCALIZATION_POLICY);
+    expect(payloads[2]!.system).toContain('legacy bilingual titles use full-width parentheses');
+  });
   test('each review chunk receives full formal descriptions already bound in the request',async()=>{
     const formal='<p>The target drops to 0 Hit Points. '+ 'Source evidence. '.repeat(600)+'</p>';
     const input=localizationRequest('context-fixture',[localizationText('body',formal),localizationText('body','The drop-to-0 special death consequence.')]);
@@ -299,6 +372,55 @@ describe('formal source to localized encounter', () => {
     const changed:any=structuredClone(bundle);changed.actors[0].source=changed.actors[0].source.replace('hit_points: 10','hit_points: 12');changed.actors[0].sourceHash=hashSource(changed.actors[0].source);
     let newTexts=0;await localizeForgeEncounter({bundle:changed,service:{...fakeService,translate:async request=>{newTexts+=request.texts.length;return fakeTranslation(request);}},priorReviews:receipts});
     expect(newTexts).toBeGreaterThan(1);
+  });
+  test('deterministic draft failure reports its exact field and retries only that field',async()=>{
+    const receipts:any[]=[];let badId='',badText='',reviewCalls=0;
+    await expect(localizeForgeEncounter({bundle:sourcePackage(),onReview:entry=>receipts.push(entry),service:{...fakeService,
+      translate:async input=>{
+        const candidate=fakeTranslation(input);const field=input.texts.find(entry=>entry.kind==='body')??input.texts[0]!;
+        badId=field.id;const changed=candidate.texts.find(entry=>entry.id===badId)!;
+        changed.text+='1';badText=changed.text;return candidate;
+      },review:async()=>{reviewCalls++;return accepted;},
+    }})).rejects.toThrow('改变数字');
+    expect(reviewCalls).toBe(0);
+    const failed=receipts.findLast(entry=>entry.status==='needs_review'&&entry.actorKey==='guard');
+    expect(failed?.findings).toContainEqual(expect.stringContaining(badId));
+    expect(failed?.draft.texts.find((entry:any)=>entry.id===badId).text).toBe(badText);
+    const translatedCounts:number[]=[];
+    await localizeForgeEncounter({bundle:sourcePackage(),priorReviews:receipts,service:{...fakeService,
+      translate:async input=>{translatedCounts.push(input.texts.length);return fakeTranslation(input);},
+      review:async()=>{reviewCalls++;return accepted;},
+    }});
+    expect(translatedCounts[0]).toBe(1);
+    expect(reviewCalls).toBeGreaterThan(0);
+  });
+  test('two approved Actors remain byte-identical while only two rejected package display fields are retried',async()=>{
+    const original=sourcePackage();
+    const secondSource=source.replace('Marsh Guard','Marsh Sentinel');
+    const notes='No registered custom conditions exist in this request, so no configured.* status is used.';
+    const bundle:ForgeEncounterPackage={...original,label:'Chrome Recovery R2 input',
+      actors:[...original.actors,{key:'sentinel',label:'Marsh Sentinel',source:secondSource,sourceHash:hashSource(secondSource)}],
+      macros:[{...original.macros[0]!,bindings:{guard:'guard',sentinel:'sentinel'},notes}]};
+    const priorReviews:any[]=[];
+    const first=await localizeForgeEncounter({bundle,service:fakeService,onReview:entry=>priorReviews.push(entry)});
+    const approvedActors=first.bundle.localization!.actors.map(actor=>({key:actor.key,requestHash:actor.translation.requestHash,
+      translationHash:actor.translation.review.translationHash}));
+    expect(approvedActors).toHaveLength(2);
+    const acceptedPackage=priorReviews.findLast(entry=>!entry.actorKey&&entry.status==='accepted');
+    const labelId=localizationText('title',bundle.label).id,notesId=localizationText('body',notes).id;
+    const failedDraft={texts:acceptedPackage.draft.texts.map((entry:any)=>({...entry,
+      text:entry.id===labelId?'浏览器恢复 R2 输入':entry.id===notesId?'本请求未使用 configured.* 状态。':entry.text}))};
+    const failed={...acceptedPackage,status:'needs_review',translation:undefined,draft:failedDraft,
+      findings:[`${labelId}：残留英文 R`,`${notesId}：残留英文 configured`]};
+    const translatedCounts:number[]=[];let reviewCalls=0;
+    const resumed=await localizeForgeEncounter({bundle,priorReviews:[...priorReviews,failed],service:{...fakeService,
+      translate:async input=>{translatedCounts.push(input.texts.length);return{texts:input.texts.map(entry=>({id:entry.id,
+        text:entry.id===labelId?'浏览器恢复第2轮输入':'本请求中不存在已注册的自定义状态，因此未使用任何已配置的自定义状态。'}))};},
+      review:async()=>{reviewCalls++;return accepted;},
+    }});
+    expect(translatedCounts).toEqual([2]);expect(reviewCalls).toBe(1);
+    expect(resumed.bundle.localization!.actors.map(actor=>({key:actor.key,requestHash:actor.translation.requestHash,
+      translationHash:actor.translation.review.translationHash}))).toEqual(approvedActors);
   });
   test('does not discard unknown provider IDs when assembling resumed drafts',async()=>{
     await expect(localizeForgeEncounter({bundle:sourcePackage(),service:{...fakeService,translate:async request=>({texts:[...fakeTranslation(request).texts,{id:'text-'+'f'.repeat(24),text:'未知字段'}]})}})).rejects.toThrow('额外');

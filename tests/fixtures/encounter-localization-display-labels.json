@@ -1,0 +1,26 @@
+[
+  {
+    "case": "R5 package title, second acceptance round",
+    "source": "Chrome Recovery R2 input",
+    "rejected": "浏览器恢复 R2 输入",
+    "corrected": "浏览器恢复第2轮输入"
+  },
+  {
+    "case": "third acceptance round variant",
+    "source": "Chrome Recovery R3 input",
+    "rejected": "浏览器恢复 R3 输入",
+    "corrected": "浏览器恢复第3轮输入"
+  },
+  {
+    "case": "R5 explanatory namespace sentence",
+    "source": "No registered custom conditions exist in this request, so no configured.* status is used.",
+    "rejected": "本请求中不存在已注册的自定义状态，因此未使用任何 configured.* 状态。",
+    "corrected": "本请求中不存在已注册的自定义状态，因此未使用任何已配置的自定义状态。"
+  },
+  {
+    "case": "another explanatory namespace reference",
+    "source": "This explanatory note mentions the configured.* status namespace but selects no status.",
+    "rejected": "这段说明提及 configured.* 状态命名空间，但未选择任何状态。",
+    "corrected": "这段说明提及已配置自定义状态的命名空间，但未选择任何状态。"
+  }
+]

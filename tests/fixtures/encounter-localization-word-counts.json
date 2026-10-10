@@ -1,0 +1,26 @@
+[
+  {
+    "case": "Echo Claw source prose",
+    "source": "<p>Hit: 7 (1d6 + 4) Slashing damage. A creature struck by this claw is Frightened for one minute. At the end of each of its turns, the target may make a DC 10 Wisdom saving throw.</p>",
+    "rejected": "<p>命中：7（1d6 + 4）挥砍伤害。被此爪击中的生物恐慌，持续1分钟。在其每回合结束时，目标可进行 DC 10 的感知豁免检定。</p>",
+    "corrected": "<p>命中：7（1d6 + 4）挥砍伤害。被此爪击中的生物恐慌，持续一分钟。在其每回合结束时，目标可进行 DC 10 的感知豁免检定。</p>"
+  },
+  {
+    "case": "Echo Claw GM step with hyphenated duration",
+    "source": "The GM removes the effect when the one-minute duration expires if it has not already ended on a successful save.",
+    "rejected": "若尚未因豁免成功而结束，GM 在1分钟持续时间到期时移除此效应。",
+    "corrected": "若尚未因豁免成功而结束，GM 在一分钟持续时间到期时移除此效应。"
+  },
+  {
+    "case": "worded rounds",
+    "source": "The target is Blinded for two rounds.",
+    "rejected": "目标目盲，持续2轮。",
+    "corrected": "目标目盲，持续两轮。"
+  },
+  {
+    "case": "Chinese written quantity",
+    "source": "GM 在十轮后解除目盲状态。",
+    "rejected": "GM 在10轮后解除目盲状态。",
+    "corrected": "GM 在十轮后解除目盲状态。"
+  }
+]

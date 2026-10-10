@@ -70,6 +70,15 @@ export async function localizeForgeEncounter(input: {
       || fresh.texts.some(entry => !missing.some(field => field.id === entry.id))) throw new TypeError('翻译返回了额外、缺失或重复的文本身份。');
     const draft = merge(fresh);
     input.onReview?.({ status: 'translating', actorKey, request, draft, findings });
+    const deterministicFindings = request.texts.flatMap(field => {
+      const candidate = draft.texts.find(entry => entry.id === field.id);
+      try { validateLocalizationDraft({ ...request, texts: [field] }, { texts: candidate ? [candidate] : [] }); return []; }
+      catch (error) { return [`${field.id}：${error instanceof Error ? error.message.slice(0, 400) : '译文确定性校验失败。'}`]; }
+    });
+    if (deterministicFindings.length) {
+      input.onReview?.({ status: 'needs_review', actorKey, request, draft, findings: deterministicFindings });
+      throw new TypeError(`译文确定性校验失败：${deterministicFindings[0]}`);
+    }
     validateLocalizationDraft(request, draft);
     const review = await input.service.review(request, draft, input.signal);
     input.onReview?.({ status: review.verdict === 'accepted' ? 'translating' : 'needs_review', actorKey, request, draft, findings: review.findings });

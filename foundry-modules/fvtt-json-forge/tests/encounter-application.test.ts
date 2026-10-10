@@ -1,5 +1,13 @@
 import {describe,test,expect} from 'bun:test';
 import {JSDOM} from 'jsdom';
+import Handlebars from 'handlebars';
+import {readFileSync} from 'node:fs';
+import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
+import {serializeForgeEncounterPackage} from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
+import {prepareForgeEncounter} from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
+import {fixedEncounterCommand} from '@fvtt-json-generator/intake-ai/encounter-capabilities';
+import {protectLocalizationText,LOCALIZATION_TERMS} from '@fvtt-json-generator/contracts/localization';
+import {encounterFixture} from '../../../tests/helpers/forge-encounter';
 import {createForgeEncounterApplicationClass} from '../src/encounterApplication';
 import type {ConfiguredConditionDefinition} from '@fvtt-json-generator/contracts/configured-conditions';
 
@@ -22,6 +30,76 @@ describe('configured state directory in the actual Forge entry',()=>{
     app.humanSource='Frost Mark source';app.humanLabel='Configured source';await app.generateFromHuman();
     expect(captured.conditionCatalog).toEqual([definition]);expect(captured.conditionCatalog[0]).not.toBe(definition);
     definition.components[0]={kind:'movement-reduction',feet:5};expect(captured.conditionCatalog[0].components[0].feet).toBe(10);
+  });
+});
+
+describe('translated encounter report identity',()=>{
+  const source=['---','layout: creature','name: Marsh Guard','type: aberration','size: Medium','armor_class: 12',
+    'hit_points: 10','challenge: 1','speed: 30','---','### Actions',
+    '- Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.'].join('\n');
+  const translated=(input:any)=>({texts:input.texts.map((entry:any)=>{
+    const protectedText=protectLocalizationText(entry.source);
+    let text=protectedText.restore(protectedText.text.replace(/[A-Za-z]+/gu,'译文'));
+    for(const term of LOCALIZATION_TERMS)if(new RegExp(`\\b${term.english}s?\\b`,'i').test(entry.source))text+=term.chinese;
+    return{id:entry.id,text};
+  })});
+  async function harness(failTranslation=false){
+    const command=fixedEncounterCommand({version:1,rules:[{id:'manual',kind:'gm-manual',actorKey:'guard',itemName:'Bite',parameters:{}}],legendaryRecovery:[]});
+    const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'report-identity-fixture',label:'Guard package',
+      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'guard',
+      actors:[{key:'guard',label:'Marsh Guard',source,sourceHash:hashSource(source)}],
+      macros:[{key:'control',name:'Guard control',command,commandHash:hashSource(command),bindings:{guard:'guard'},covers:[],
+        notes:`原始资料SHA-256：${hashSource(source)}\nGM handles timing.`}],assets:[]};
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
+    const report:any={version:1,source,sourceHash:hashSource(source),model:'fixture',reviewModel:'fixture-review',evidenceMode:'standard',
+      status:'ready_for_gm_review',actors:[],findings:[],packageHash:prepared.hash,outputLanguage:'source'};
+    let stored:any;const blobs:Blob[]=[];
+    const recoveryStore={load:async()=>stored,save:async(value:any)=>{stored=value;},clear:async()=>{stored=undefined;}};
+    const browserWindow:any={Blob,URL:{createObjectURL:(blob:Blob)=>{blobs.push(blob);return`blob:review-${blobs.length}`;},revokeObjectURL:()=>{}},
+      document:{body:{appendChild:()=>{}},createElement:()=>({click(){},remove(){}})}};
+    class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const App=createForgeEncounterApplicationClass({window:browserWindow,game,
+      foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
+      recoveryStore,getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
+      getAiOptions:()=>({baseUrl:'https://provider.example/v1',apiKey:'fixture-secret',model:'fixture'}),
+      createEncounterIntakeProviders:()=>({translationService:{model:'fixture',reviewModel:'fixture-review',
+        translate:async(input:any)=>{if(failTranslation)throw new Error('translation unavailable');return translated(input);},
+        review:async()=>({verdict:'accepted',findings:[]})}} as any)});
+    const app:any=new App();app.humanSource=source;app.humanLabel='Guard package';app.outputLanguage='zh-CN';
+    await app._prepareContext();app.prepared=prepared;app.recoveryPackage=serializeForgeEncounterPackage(prepared.bundle);
+    app.recoveryCatalogHash=hashSource('[]');app.aiReport=report;app.recoveryReport=report;
+    return{App,app,prepared,report,blobs,recoveryStore,get stored(){return stored;}};
+  }
+  test('successful Chinese preparation updates immediate view/download and restored report to the same current hash',async()=>{
+    const {App,app,prepared,blobs,recoveryStore}=await harness();
+    await app.translatePrepared();
+    expect(app.prepared.hash).not.toBe(prepared.hash);
+    expect(app.aiReport).toBe(app.recoveryReport);
+    const current=JSON.parse(app.currentReportText());
+    expect(current.intake.outputLanguage).toBe('zh-CN');expect(current.intake.packageHash).toBe(app.prepared.hash);
+    expect(current.localization.every((entry:any)=>entry.status==='accepted')).toBe(true);
+    expect(current.sourcePackage.localization).toBeTruthy();
+    app.viewReport();const viewed=(await app._prepareContext()).reportViewText;
+    app.exportReport();expect(await blobs[0]!.text()).toBe(viewed);
+    await app.saveRecovery();await expect(recoveryStore.load()).resolves.toMatchObject({report:{outputLanguage:'zh-CN',packageHash:app.prepared.hash}});
+    const reopened:any=new App();await reopened._prepareContext();expect(reopened.prepared).toBeUndefined();
+    await reopened.previewRecovered();expect(reopened.reviewed).toBe(false);
+    expect(JSON.parse(reopened.currentReportText()).intake).toMatchObject({outputLanguage:'zh-CN',packageHash:reopened.prepared.hash});
+    expect(reopened.currentReportText()).toBe(viewed);
+  });
+  test('failed translation keeps the original report and package hash',async()=>{
+    const {app,prepared,report}=await harness(true);
+    await app.translatePrepared();
+    expect(app.prepared).toBe(prepared);expect(app.aiReport).toBe(report);expect(app.recoveryReport).toBe(report);
+    const visible=JSON.parse(app.currentReportText());
+    expect(visible.intake??visible).toMatchObject({outputLanguage:'source',packageHash:prepared.hash});
+  });
+  test('a package without Intake evidence does not fabricate it after translation',async()=>{
+    const {app}=await harness();app.aiReport=undefined;app.recoveryReport=undefined;
+    await app.translatePrepared();
+    expect(app.prepared.bundle.localization).toBeTruthy();expect(app.aiReport).toBeUndefined();
+    expect(JSON.parse(app.currentReportText()).intake).toBeNull();
   });
 });
 
@@ -120,22 +198,27 @@ describe('current encounter review download',()=>{
     const referenceClick=new dom.window.Event('click',{bubbles:true,cancelable:true});root.querySelector('[data-reference]')!.dispatchEvent(referenceClick);
     expect(referenceClick.defaultPrevented).toBe(true);expect(opened).toEqual(['https://reference.example/terms']);
   });
-  function downloadHarness(){
-    const blobs:Blob[]=[],revoked:string[]=[],requests:any[]=[],reportButton:any={},controls=new Map<string,any>();
+  function downloadHarness(getRecoverySecrets:()=>{apiKey:string;baseUrl:string}=()=>({apiKey:'',baseUrl:''})){
+    const blobs:Blob[]=[],revoked:string[]=[],requests:any[]=[],reportButton:any={},viewButton:any={},packageButton:any={},copyButton:any={},controls=new Map<string,any>();
     for(const name of ['humanSource','humanLabel','outputLanguage','encounterFile'])controls.set(name,{value:'new source',files:[{name:'package-b.json'}]});
-    const root:any={querySelector:(selector:string)=>selector==='[data-action="encounter-report"]'?reportButton:controls.get(selector.match(/^\[name="(.+)"\]$/)?.[1]??''),querySelectorAll:()=>[]};
+    const root:any={querySelector:(selector:string)=>selector==='[data-action="encounter-report"]'?reportButton
+      :selector==='[data-action="encounter-report-view"]'?viewButton:selector==='[data-action="encounter-package-view"]'?packageButton
+      :selector==='[data-action="encounter-text-copy"]'?copyButton
+      :controls.get(selector.match(/^\[name="(.+)"\]$/)?.[1]??''),querySelectorAll:()=>[]};
     const browserWindow:any={Blob,URL:{createObjectURL:(blob:Blob)=>{blobs.push(blob);return `blob:http://127.0.0.1:30001/review-${blobs.length}`;},revokeObjectURL:(url:string)=>revoked.push(url)},
       document:{body:{appendChild:(link:any)=>{link.connected=true;}},createElement:()=>({connected:false,href:'',download:'',click(){requests.push({href:this.href,name:this.download,connected:this.connected});},remove(){this.connected=false;}})}};
     class Base{element=root;render(){return this;}async close(){return this;}}
     const App=createForgeEncounterApplicationClass({window:browserWindow,game:{version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}},
+      getRecoverySecrets,
       foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}}});
     const app:any=new App();app._onRender();
     const bundle={id:'package-a',primaryActorKey:'eye',assets:[],actors:[{key:'eye',source:'Original source 1d8 DC 15'}],localization:{sourcePackageId:'original-a',actors:[{key:'eye',translation:{language:'zh-CN',review:{verdict:'accepted',findings:[]},texts:[{id:'name',text:'深海之眼（Eye of the Deep）'}]}}],packageText:{review:{verdict:'accepted',findings:[]}}}};
     app.prepared={bundle,actors:[],macros:[],requirements:[]};
-    return{app,bundle,blobs,revoked,requests,reportButton,controls};
+    return{app,bundle,blobs,revoked,requests,reportButton,viewButton,packageButton,copyButton,controls,browserWindow};
   }
   test('normal report action prepares exact reviewed content and retains a native download link until replaced or closed',async()=>{
-    const {app,bundle,blobs,revoked,requests,reportButton}=downloadHarness();
+    const {app,bundle,blobs,revoked,requests,reportButton,viewButton}=downloadHarness();
+    viewButton.onclick();expect((await app._prepareContext()).reportViewText).toBeTruthy();
     reportButton.onclick();
     expect(JSON.parse(await blobs[0]!.text())).toEqual({intake:null,localization:bundle.localization,sourcePackage:bundle});
     expect(requests).toEqual([{href:'blob:http://127.0.0.1:30001/review-1',name:'encounter-intake-review.json',connected:true}]);
@@ -143,12 +226,65 @@ describe('current encounter review download',()=>{
     expect(revoked).toEqual([]);
     reportButton.onclick();expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1']);
     await app.close();expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1','blob:http://127.0.0.1:30001/review-2']);
-    expect(app.reportDownload).toBeUndefined();reportButton.onclick();expect(blobs).toHaveLength(2);
+    expect(app.reportDownload).toBeUndefined();expect(app.textView).toBeUndefined();reportButton.onclick();expect(blobs).toHaveLength(2);
   });
-  for(const name of ['humanSource','humanLabel','outputLanguage','encounterFile'])test(`changing ${name} revokes the prior candidate review link`,()=>{
-    const {app,blobs,revoked,reportButton,controls}=downloadHarness();reportButton.onclick();
+  test('view and download use exactly the same guarded JSON; copy runs only after its button is clicked',async()=>{
+    const {app,blobs,reportButton,viewButton,copyButton,browserWindow}=downloadHarness();
+    const copied:string[]=[];browserWindow.navigator={clipboard:{writeText:async(text:string)=>{copied.push(text);}}};
+    viewButton.onclick();const viewed=(await app._prepareContext()).reportViewText;
+    expect(viewed).toContain('sourcePackage');expect(blobs).toHaveLength(0);expect(copied).toEqual([]);
+    reportButton.onclick();expect(await blobs[0]!.text()).toBe(viewed);
+    copyButton.onclick();await Promise.resolve();await Promise.resolve();expect(copied).toEqual([viewed]);
+  });
+  test('package view exposes the formal JSON serialization in the same selectable panel',async()=>{
+    const {app,packageButton,copyButton,browserWindow,blobs}=downloadHarness();
+    const bundle=encounterFixture();app.prepared.bundle=bundle;
+    const copied:string[]=[];browserWindow.navigator={clipboard:{writeText:async(text:string)=>{copied.push(text);}}};
+    packageButton.onclick();const context=await app._prepareContext();
+    expect(context.textView.kind).toBe('package');expect(context.textView.name).toBe('test-encounter.forge-encounter.json');
+    expect(context.textView.text).toBe(serializeForgeEncounterPackage(bundle));expect(blobs).toHaveLength(0);expect(copied).toEqual([]);
+    copyButton.onclick();await Promise.resolve();await Promise.resolve();expect(copied).toEqual([context.textView.text]);
+  });
+  test('a restored failed report can be opened without AI or a download, with hostile markup escaped by the real template',async()=>{
+    const hostile='来源 </textarea><script>alert(1)</script> 原文';
+    const report:any={version:1,source:hostile,sourceHash:hashSource(hostile),model:'test',reviewModel:'test',evidenceMode:'standard',status:'failed',actors:[],findings:['审核失败']};
+    const snapshot:any={version:1,source:hostile,sourceHash:hashSource(hostile),label:'失败资料',outputLanguage:'source',
+      target:'14.368/dnd5e/5.3.3/core',catalogHash:hashSource('[]'),report};
+    const viewButton:any={},root:any={querySelector:(selector:string)=>selector==='[data-action="encounter-report-view"]'?viewButton:null,querySelectorAll:()=>[]};
+    class Base{element=root;render(){return this;}async close(){return this;}}
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    let aiCalls=0;const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
+      recoveryStore:{load:async()=>snapshot,save:async()=>undefined,clear:async()=>undefined},getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
+      getAiOptions:()=>{aiCalls++;throw new Error('AI must not start');}});
+    const app:any=new App();expect((await app._prepareContext()).hasReport).toBe(true);app._onRender();viewButton.onclick();
+    const context=await app._prepareContext();expect(context.reportViewText).toBe(JSON.stringify(report,null,2));expect(aiCalls).toBe(0);
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    const dom=new JSDOM(html);expect(dom.window.document.querySelector('script')).toBeNull();
+    expect((dom.window.document.querySelector('[data-encounter-view-text]') as HTMLTextAreaElement).value).toBe(context.reportViewText);
+  });
+  test('copy stays selectable when clipboard writing is unavailable',async()=>{
+    const {app,viewButton,copyButton}=downloadHarness();viewButton.onclick();
+    const text=(await app._prepareContext()).reportViewText;
+    copyButton.onclick();await Promise.resolve();await Promise.resolve();
+    expect((await app._prepareContext()).reportViewText).toBe(text);
+    expect(app.error).toContain('手动全选复制');
+  });
+  test('a rotated current key blocks stale view, copy and download content',async()=>{
+    let key='';const {app,bundle,viewButton,copyButton,reportButton,blobs,browserWindow}=downloadHarness(()=>({apiKey:key,baseUrl:''}));
+    const copied:string[]=[];browserWindow.navigator={clipboard:{writeText:async(text:string)=>{copied.push(text);}}};
+    viewButton.onclick();expect((await app._prepareContext()).reportViewText).toBeTruthy();
+    key='new-private-key';bundle.actors[0]!.source='new-private-key';
+    copyButton.onclick();await Promise.resolve();await Promise.resolve();
+    expect(copied).toEqual([]);expect((await app._prepareContext()).reportViewText).toBeUndefined();
+    viewButton.onclick();expect((await app._prepareContext()).reportViewText).toBeUndefined();
+    reportButton.onclick();expect(blobs).toHaveLength(0);expect(app.error).not.toContain(key);
+  });
+  for(const name of ['humanSource','humanLabel','outputLanguage','encounterFile'])test(`changing ${name} revokes the prior candidate review link`,async()=>{
+    const {app,blobs,revoked,reportButton,viewButton,controls}=downloadHarness();reportButton.onclick();viewButton.onclick();
+    expect((await app._prepareContext()).reportViewText).toBeTruthy();
     const control=controls.get(name);if(name==='outputLanguage'||name==='encounterFile')control.onchange();else control.oninput();
     expect(app.reportDownload).toBeUndefined();expect(app.prepared).toBeUndefined();
+    expect((await app._prepareContext()).reportViewText).toBeUndefined();
     expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1']);reportButton.onclick();expect(blobs).toHaveLength(1);
   });
   test('secret rejection removes a prior safe link and shows an error without preparing another file',()=>{
