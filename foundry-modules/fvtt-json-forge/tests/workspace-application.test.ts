@@ -12,6 +12,33 @@ const source = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜
 const template = (name: string, context: object) => Handlebars.compile(readFileSync(`foundry-modules/fvtt-json-forge/src/templates/${name}.hbs`, 'utf8'))(context);
 
 describe('unified Forge workspace using its actual templates', () => {
+  test.each(['blueprint', 'structured', 'ai'] as const)('opens the guide without changing %s drafts or source state', async mode => {
+    let guideOpens = 0;
+    const c = await makeWorkspace({ openGuide: () => { guideOpens++; } });
+    try {
+      c.app.selectMode(mode);
+      c.edit(c.formal(), 'source', '保留正式来源');
+      c.edit(c.intake(), 'source', '保留原始资料');
+      const formalBefore = c.value(c.formal(), 'source'), intakeBefore = c.value(c.intake(), 'source');
+      c.root.querySelector<HTMLButtonElement>('[data-workspace-guide]')!.click();
+      expect(guideOpens).toBe(1);
+      expect(c.app.mode).toBe(mode);
+      expect(c.value(c.formal(), 'source')).toBe(formalBefore);
+      expect(c.value(c.intake(), 'source')).toBe(intakeBefore);
+      expect(c.nativeWindows()).toBe(1);
+    } finally { await c.cleanup(); }
+  });
+
+  test('a missing guide handler reports the unavailable entry without changing the source', async () => {
+    const c = await makeWorkspace();
+    try {
+      c.edit(c.formal(), 'source', '已有来源');
+      c.root.querySelector<HTMLButtonElement>('[data-workspace-guide]')!.click();
+      expect(c.notifications).toContain('图解手册入口尚未就绪。');
+      expect(c.value(c.formal(), 'source')).toBe('已有来源');
+    } finally { await c.cleanup(); }
+  });
+
   test('uses one native application and preserves independent blueprint, source and AI drafts', async () => {
     const c = await makeWorkspace();
     try {

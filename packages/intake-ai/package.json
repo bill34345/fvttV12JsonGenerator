@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./localization": "./src/localization.ts",
     "./encounter-automation": "./src/encounter-automation.ts",
     ".": "./src/index.ts",
     "./config": "./src/config.ts",
@@ -32,7 +33,8 @@
     "./types": "./src/types.ts",
     "./validator": "./src/validator.ts",
     "./verifier": "./src/verifier.ts",
-    "./encounter-capabilities": "./src/encounter-capabilities.ts"
+    "./encounter-capabilities": "./src/encounter-capabilities.ts",
+    "./source-facts": "./src/source-facts.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

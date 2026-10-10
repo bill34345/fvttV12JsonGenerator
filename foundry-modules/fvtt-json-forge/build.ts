@@ -1,8 +1,9 @@
 import { cp, lstat, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+import { statSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
-export const MODULE_VERSION = '0.5.0' as const;
+export const MODULE_VERSION = '0.5.1' as const;
 export const RELEASE_TAG = `${MODULE_ID}-v${MODULE_VERSION}` as const;
 export const REPOSITORY_URL = 'https://github.com/bill34345/fvttV12JsonGenerator' as const;
 export const MANIFEST_URL = `https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/${MODULE_ID}/src/module.json` as const;
@@ -40,6 +41,8 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await cp(resolve(sourceRoot, 'templates/forge-encounter.hbs'), resolve(moduleRoot, 'templates/forge-encounter.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-connection.hbs'), resolve(moduleRoot, 'templates/forge-connection.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-workspace.hbs'), resolve(moduleRoot, 'templates/forge-workspace.hbs'));
+  await cp(resolve(sourceRoot, 'templates/forge-guide.hbs'), resolve(moduleRoot, 'templates/forge-guide.hbs'));
+  await cp(resolve(sourceRoot, 'guide'), resolve(moduleRoot, 'guide'), { recursive: true });
   await cp(resolve(sourceRoot, 'styles/fvtt-json-forge.css'), resolve(moduleRoot, 'styles/fvtt-json-forge.css'));
 
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;
@@ -152,7 +155,12 @@ export function browserAdapterPlugin(workspaceAliases: ReadonlyMap<string, strin
         }
         const candidate = resolve(args.resolveDir, args.path);
         const replacement = findBrowserAdapter(candidate);
-        return replacement ? { path: replacement } : undefined;
+        if (replacement) return { path: replacement };
+        if (args.path.startsWith('.') || isAbsolute(args.path)) {
+          const source = resolveExistingSource(candidate);
+          if (source) return { path: bunPath(source) };
+        }
+        return undefined;
       });
     },
   };
@@ -191,6 +199,14 @@ function findBrowserAdapter(candidate: string): string | undefined {
   for (const path of [candidate, `${candidate}.ts`, `${candidate}.tsx`, resolve(candidate, 'index.ts')]) {
     const replacement = browserAdapterAliases.get(bunPath(path));
     if (replacement) return replacement;
+  }
+  return undefined;
+}
+
+function resolveExistingSource(candidate: string): string | undefined {
+  for (const path of [candidate, `${candidate}.ts`, `${candidate}.tsx`, `${candidate}.js`, `${candidate}.mjs`,
+    `${candidate}.json`, resolve(candidate, 'index.ts'), resolve(candidate, 'index.tsx'), resolve(candidate, 'index.js')]) {
+    if (statSync(path, { throwIfNoEntry: false })?.isFile()) return path;
   }
   return undefined;
 }

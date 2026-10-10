@@ -2,14 +2,23 @@
   <h2>从人类写法MD生成战斗包</h2>
   <p>在一份资料里写出主生物、召唤物的完整数据和召唤规则。AI提取生物与自动化配置，工具使用已实现的能力生成控制入口。AI不编写宏代码；资料缺项会显示出来，确认导入前不创建角色或启动自动化。</p>
   <label>资料名称<input name="humanLabel" value="{{humanLabel}}" maxlength="160" {{#if busy}}disabled{{/if}}></label>
+  <label>卡片语言<select name="outputLanguage" {{#if busy}}disabled{{/if}}><option value="source" {{#unless chineseSelected}}selected{{/unless}}>保留来源语言</option><option value="zh-CN" {{#if chineseSelected}}selected{{/if}}>中文正文 · 名称保留英文</option></select></label>
   <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
   <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
-  <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持2至6种生物；按资料顺序展示主生物及配套生物。</p>
+  <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持1至6种生物；单只生物也可携带需审核的GM裁定规则。</p>
   <p>AI 只提取规则和选择已实现的能力；控制代码由工具提供。</p>
+  <section class="forge-configured-conditions">
+    <h3>可连接的自定义状态</h3>
+    <p>先在 Custom Conditions 配置状态名称、原文别名和效果机制，再生成怪物。Forge 会读取已保存的目录，按原文连接；定义改变后需重新生成并审核对应能力。</p>
+    {{#if canConfigureConditions}}<button type="button" data-action="encounter-configure-conditions" {{#if busy}}disabled{{/if}}>配置自定义状态</button>{{else}}<p>启用支持可配置状态的 Custom Conditions 后，可在这里配置和连接。</p>{{/if}}
+    <button type="button" data-action="encounter-refresh-conditions" {{#if busy}}disabled{{/if}}>刷新状态目录</button>
+    <ul>{{#each configuredConditions}}<li><strong>{{name}}</strong> — {{summary}}<br>原文别名：{{#each aliases}}{{this}} {{/each}}</li>{{else}}<li>尚未配置自定义状态；原生状态仍可使用。</li>{{/each}}</ul>
+  </section>
   <button type="button" data-action="encounter-ai" {{#if busy}}disabled{{/if}}>AI生成并审核战斗包</button>
   <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
   {{#if aiRunning}}<button type="button" data-action="encounter-ai-stop">停止AI生成</button>{{/if}}
-  {{#if hasReport}}<button type="button" data-action="encounter-report">下载来源与审核记录</button>{{/if}}
+  {{#if hasReport}}<button type="button" data-action="encounter-report" {{#if busy}}disabled{{/if}}>下载来源与审核记录</button>{{/if}}
+  {{#if reportDownload}}<p><a data-report-download href="{{reportDownload.url}}" download="{{reportDownload.name}}">下载审核文件</a>（{{reportDownload.name}}，{{reportDownload.byteLength}} 字节）</p>{{/if}}
   {{#if hasPackage}}<button type="button" data-action="encounter-export">下载生成的战斗包</button>{{/if}}
   <h2>角色、召唤物与配套宏</h2>
   <p>选择 Forge 战斗包 JSON 或 ZIP。角色会从包内来源重新生成；预览不调用 AI，也不执行宏。现有 AI Intake 的 Provider 和模型配置保持原样。</p>
@@ -20,9 +29,14 @@
   {{#if error}}<p class="forge-error" role="alert">{{error}}</p>{{/if}}
   {{#if ready}}
     <h3>{{label}}</h3>
+    {{#if localized}}<p>中文名称旁保留英文；描述和GM步骤仅显示中文。已核对数字、术语并完成独立含义审阅，仍须由GM确认。</p>
+      <details><summary>中文术语依据与待核边界</summary><ul>{{#each terminologyNotes}}<li>{{this}}</li>{{/each}}</ul><ul>{{#each terminologyReferences}}<li><a href="{{this}}" target="_blank" rel="noopener noreferrer">5E不全书《玩家手册2024》术语参考</a></li>{{/each}}</ul></details>
+    {{else}}<button type="button" data-action="encounter-localize" {{#if busy}}disabled{{/if}}>翻译为中文并核对含义</button><p>使用当前AI连接，只翻译已经验证的显示文本；保留本包来源与GM裁定边界。</p>{{/if}}
     {{#each actors}}<details class="forge-encounter-macro"><summary>{{#if isPrimary}}主角色{{else}}配套角色{{/if}}：<strong>{{name}}</strong>（{{key}}）— HP {{hp}} / AC {{ac}} / CR {{cr}}</summary>
       {{#if assisted}}<p>有配套宏/GM辅助规则，详见下方逐项规则。</p>{{/if}}
-      <h4>来源 Markdown</h4><pre><code>{{source}}</code></pre>
+      <p class="forge-localized-prose">{{biography}}</p>
+      {{#each abilities}}<article><h4>{{name}}</h4><p class="forge-localized-prose">{{description}}</p></article>{{/each}}
+      <details><summary>保留的原始来源（用于核对）</summary><pre><code>{{source}}</code></pre></details>
       <details><summary>生成 Actor JSON（只读）</summary><pre><code>{{artifact}}</code></pre></details>
     </details>{{/each}}
     <p>配套图片：{{assetCount}} 个</p>
@@ -30,13 +44,13 @@
     {{#each macros}}
       <details class="forge-encounter-macro"><summary>宏：{{name}} — 查看代码与绑定</summary>
         {{#if fixed}}<p>这是工具生成的固定控制入口，使用模块内已经实现的自动化能力。</p>
-        {{#each capabilities}}<h4>{{actor}}：{{name}}</h4><p>绑定能力：{{item}}</p><details><summary>规则参数</summary><pre><code>{{parameters}}</code></pre></details>{{/each}}{{/if}}
+        {{#each capabilities}}<h4>{{actor}}：{{name}}</h4><p>绑定能力：{{item}}</p>{{#if summary}}<p>{{summary}}</p>{{/if}}<details><summary>规则参数</summary><pre><code>{{parameters}}</code></pre></details>{{/each}}{{/if}}
         <p>{{notes}}</p><p>绑定：{{bindingsText}}</p><pre><code>{{command}}</code></pre>
       </details>
     {{/each}}
     {{#if requirements}}<h3>需要核对的规则（来自正式生成结果）</h3>
       {{#each requirements}}<article class="forge-encounter-macro">
-        <h4>{{actorName}}：{{name}}</h4><p>{{mode}} · {{mechanicId}}</p>
+        <h4>{{actorName}}：{{name}}</h4><p>{{mode}}</p>
         {{#if trigger}}<p>触发：{{trigger.event}}；频率：{{trigger.frequency}}；{{trigger.condition}}</p>{{/if}}
         {{#if conditions}}<p>条件：</p><ul>{{#each conditions}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
         <p>GM操作与执行边界：</p><ul>{{#each gmSteps}}<li>{{this}}</li>{{/each}}</ul>

@@ -419,7 +419,11 @@ export class ActorGenerator {
       actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
       actor.system.traits.languages = {
-        value: (parsed.traits.languages || []).map((lang: string) => LANGUAGE_CODE_MAP[lang] || lang).filter((lang: string) => lang !== ''),
+        // schema-derived: dnd5e 5.3.3 prepareLanguages recognizes the special ALL key.
+        value: (parsed.traits.languages || []).map((lang: string) => {
+          const code = LANGUAGE_CODE_MAP[lang] || lang;
+          return this.isV14() && /^all$/iu.test(code) ? 'ALL' : code;
+        }).filter((lang: string) => lang !== ''),
         custom: parsed.traits.languagesCustom || '',
       };
       
@@ -2135,15 +2139,28 @@ export class ActorGenerator {
     action: GeneratedActionData,
     text: string,
   ): Record<string, unknown> | null {
-    const dropsToZero =
-      /(?:hit points?|生命值|hp)[^。.;]{0,24}(?:降至|to)\s*0/i.test(text)
-      || /(?:reduced|reduce|drop(?:s|ped)?)[^。.;]{0,20}to\s*0(?:\s+hit\s+points?)?/i.test(text);
-    if (!dropsToZero) {
-      return null;
+    // Source-derived: only an explicit HP recovery in the same drop-to-zero
+    // consequence can supply this rule. Earlier dice may describe damage.
+    const source = action.desc ?? text;
+    const dropToZero = /(?:hit points?|生命值|hp)[^。.;]{0,24}(?:降至|降到|to)\s*0|(?:reduces?|reduced|drop(?:s|ped)?)[^。.;]{0,20}to\s*0(?:\s+(?:hit\s+points?|hp))?/giu;
+    const recoverEnglish = /\b(?:regains?|recovers?|restores?|heals?)\s+(?:\d+\s*[(（]\s*)?`?(\d+d\d+(?:\s*[+-]\s*\d+)?)`?\s*[)）]?\s*(?:hit\s+points?|hp)\b/giu;
+    const recoverChinese = /(?:恢复|回复|回復|治愈|治癒)\s*(?:\d+\s*[(（]\s*)?`?(\d+d\d+(?:\s*[+-]\s*\d+)?)`?\s*[)）]?\s*点?(?:生命值|hp)/giu;
+    const laterTurn = /(?:\b(?:at|on)\s+(?:the\s+)?(?:start|beginning|end)\s+of\b[^,;。]*\bturn\b|\bnext\s+turn\b|(?:下|下一|每)回合.{0,8}(?:开始|结束))/iu;
+    let healFormula: string | undefined;
+    for (const drop of source.matchAll(dropToZero)) {
+      const consequence = source.slice(drop.index! + drop[0].length).split(/[。.;!?！？]/u, 1)[0] ?? '';
+      const recoveries = [...consequence.matchAll(recoverEnglish), ...consequence.matchAll(recoverChinese)]
+        .sort((a, b) => a.index! - b.index!);
+      for (const recovery of recoveries) {
+        const beforeRecovery = consequence.slice(0, recovery.index);
+        const afterRecovery = consequence.slice(recovery.index! + recovery[0].length).split(/[,，]/u, 1)[0] ?? '';
+        if (laterTurn.test(beforeRecovery) || laterTurn.test(afterRecovery)) continue;
+        if (/(?:\b(?:cannot|can't|does\s+not|do\s+not|doesn't|not|never|unable\s+to)|(?:不能|无法|不会|未能|禁止))\s*$/iu.test(beforeRecovery)) continue;
+        healFormula = recovery[1];
+        break;
+      }
+      if (healFormula) break;
     }
-
-    const formulas = [...text.matchAll(/(\d+d\d+)/gi)].map((match) => match[1]);
-    const healFormula = formulas[0];
     if (!healFormula) {
       return null;
     }

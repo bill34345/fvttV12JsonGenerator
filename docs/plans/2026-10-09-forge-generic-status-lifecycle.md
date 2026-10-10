@@ -1,0 +1,123 @@
+# Forge 通用状态生命周期 第一批
+
+2026-10-10最新结论：用户继续指令已撤销关机暂停，本轮状态目录扩充与限定本地验收完成。固定5.3.3的全部14种普通原生状况共用命中/时长/回合末豁免契约；束缚真实AI/中文/导入/命中/豁免解除、倒地与昏迷分别解除、系统独立倒地保留及仅倒地对照均有原生实机证据，最终恢复与父级原件核对通过。沿用唯一任务工作树和未发布0.5.1候选，ServerMirror已安装R9并保持运行。14项目录覆盖不等于14项逐一实机；分钟自然时钟到期、仅rider免疫仍属聚焦测试，层数、特殊标记与未知自定义状态需要独立准确表达。完整引文、目标/DC、原生来源绑定及GM审阅门禁继续生效。
+
+第一批结论：本批实现、唯一 ServerMirror 的限定玩法验收、十页图解交付及夹具恢复已完成。Forge 0.5.1 为本地未发布候选；该批实机覆盖目盲/恐慌，分钟自然到期、中毒/麻痹及更多组合保持聚焦测试层证据，不推广为生产或全矩阵通过。
+
+用户已同意开始实施：攻击确认命中后施加原生状态，持续来源指定时长，目标回合末可再次豁免，成功只解除本来源效果。状态、豁免属性/DC和时长为数据参数；生成固定入口宏和配置，不让AI编写执行代码。先支持目盲、恐慌、中毒、麻痹及分钟/轮时长，不扩大为任意状态编辑器或所有怪物机制。
+
+沿用当前任务唯一工作树 `20261006-111625-bettermonsters-eye-deep-sample`，保留已有脏文件；主master新增两次文档/legacy输入提交不作为本轮源码发布授权。无commit/merge/push、生产、备份或服务停止；用户重启后按已有本地授权恢复同一Mirror，不扩至其它实例。来源/编译归属worker，模块运行/UI归属root，锁定接口只读研究独立执行。
+
+## 必须获得的证据
+
+- 来源完整且每个参数有独立准确引文，正式workflow生成；缺少DC/豁免属性或复杂额外条件时不猜测。
+- 同一条通用契约覆盖不同状态、DC、属性和时长；错误或否定引文、无目标、未命中、取消、免疫不得应用效果。
+- 真正原生攻击完成后依绑定消息/目标/活动身份判断命中；旧消息、重复事件、非active GM不得重放。
+- 持久保存来源声明；分钟采用世界时间，轮采用战斗回合锚点。回合末重复豁免可跳过/取消，失败继续，成功移除本条声明；多来源、重载及固定到期分别验证。
+- 聚焦单测、包/模块类型、架构和构建归档；之后在唯一Mirror14.368/dnd5e5.3.3正常导入、攻击、回合推进与豁免。新怪物使用界面/guide；不得以CLI生成证明浏览器AI生成已通过。
+- 同步用户说明与图解，人工review并生成/检查根工具手册。
+
+## 精确接口事实与选择
+
+只读研究核 dnd5e5.3.3缓存提交 `965ad2d0cf5d063dac675ba078b5bd3c3c0dd449`、Core14.368、AC5e14.533.8。`postUseActivity`早于攻击骰，不能证明命中；`postRollAttack`在消息创建后给已评估骰及Activity，取消不发完成Hook。来源 `F:/FoundryLab/reference-cache/dnd5e/5.3.3/repo/module/documents/activity/attack.mjs:164` 与 `module/dice/basic-roll.mjs:171`。
+
+原生消息目标快照含Actor UUID及AC，无可靠Token UUID；preRollAttack记录恰好一个标记Token身份和本次nonce，postRollAttack核消息作者、来源Actor/Item/Activity、原生目标及AC快照。AC5e会改AC，故不重新读取目标当前AC。按原生ChatMessage命中规则处理critical/fumble，ac=null拒绝；真实Mirror必须反证插件共存顺序。
+
+原生状态有固定ID；沿用fixedNativeClaims，共享显示效果不写某来源有限duration。分钟按worldTime，dnd5e默认每轮推进6秒；不使用现实计时器。原生rollSavingThrow默认配置窗口，取消返回null；本轮重复豁免保留该窗口、失败/取消均不解除。
+
+上述是静态接口事实，尚未成为本轮运行PASS。新的聚焦测试用于补本条通用路径及来源/权限/重复/解除缺口；既有海鬼婆包的导入和手册证据不重播。
+
+运行层发现旧flag只保存单包，跨包来源会覆盖；本轮改为兼容旧值的分包状态及Actor写入串行，新增跨包并发施加、不同到期/最后来源清理回归。首轮52项中51通过，唯一失败为新增测试预期英文stopped而实际提示中文已停止，修正断言后连同两个集成案例复验。独立来源审阅发现额外解除条件、亮光限定、错误承受者、否定成功解除及双属性豁免五类过接受，编译worker按完整子句收窄并加正式编译负例。
+
+运行回归54项/472断言已通过，覆盖真实主控制器免疫和重复豁免及跨包状态来源。模块类型发现预览名称表未登记新kind，补齐人类可读名称和状态/属性/DC/时长摘要后复验该类型；不要求用户看JSON理解规则。独立审阅五项反例已补完整编译拒绝，21项新/邻近来源检查通过。普通命中伤害前缀的真实输入兼容仍在补充，避免只让简化测试句通过。
+
+运行独立审阅指出分包envelope后玩家被动能力锁与面板仍读旧外层值，以及按轮状态在原Combat结束/删除后可能不解除。已统一剩余读点，并定义战斗有效时按轮锚点、结束/删除后按保存的世界时间期限；新增玩家锁/面板恢复和结束/删除/重载反例。对应局部复验后再安装候选，不把此前54绿推广至这些新边界。
+
+整合检查：Forge目录273项/1701断言PASS，包及模块类型PASS。架构检查发现新模块只读类型回指主控制器形成循环，改为自有最小环境端口后架构PASS（1268模块）；anti-overfit PASS。该变动无执行代码影响，重构后的browser bundle/归档2项11断言PASS。来源完整句法保守拒绝未支持限定，已覆盖标准命中伤害前缀和中英文；不承诺任意同义改写都自动化。原capability-selection的名称warning断言不经新分支，现有工作区仍有一项accepted/needs_review基线差异，单独保留，不用本轮绿色掩盖。
+
+真实阶段A：DeepSeek连接及测试通过，原始MD中文生成实际执行；下载报告H:/Download/encounter-intake-review (5).json SHA454ffbfa601b419de850c43af2b148dbb5517641932db93d50733eafe9941fa1。首个Actor因sourceHasInlineTrait将统计块前的中文介绍句误当特性而MISSING_SOURCE_FEATURES，再repair_invalid_response；未导入/建场景，保留同源报告。正在修通用章节检测，不改源文本凑通过。
+原生来源补充核查：Core Actor.applyActiveEffects从每个active Effect的statuses聚合，不依赖固定ID；toggleStatusEffect则优先找配置固定ID。原有ensureNativeStatus只借用外部状态，外部到期可能抑制本来源。改为始终持有独立的Forge原生投影；固定ID被外部占用时使用自己的随机DocumentID，保留原生status及原有外部数据。新增外部定时状态到期/停用不影响Forge投影的回归。手动清理Forge来源可在Actor效果页识别Forge名称；原生HUD可能先处理外部固定ID。
+
+从已下载失败IR继续检查未执行的正式投影层：原IR把仅回合末再次豁免写成feature.save和escapeDc，正常workflow复现GEN_MECHANIC_NOT_PROJECTED actor.actions。新增ATTACK_REPEAT_SAVE_NOT_INITIAL与REPEAT_SAVE_NOT_ESCAPE_DC并同步extract/review/repair提示v22/v27/v22，真实报告不改。内存测试移除错误槽位并保留完整重复规则后正式投影accepted/零诊断；合法初始命中豁免和独立挣脱DC保持。70项聚焦源阶段检查通过，下一次必须真实UI生成新提取，不能以手工修报告通过。原外部状态投影回归57项493断言通过。
+
+阶段A2实际下载H:/Download/encounter-intake-review (6).json SHA8ddf44bf74a610dee818c093d049d7c14bbfbe9f281130777f72c0f3b4695220：两Actor均ready_to_generate，真实来源review及generation accepted/零finding，已写accepted-actors-a2.json保留源/IR/投影hash。包生成失败为完整引文检查。失效AI配置未保存，原始选中引文未知；已用这两个真实Actor反证合法片段/去尾换行会被新equality检查拒绝。改为先验证唯一同feature子引文，工具补全完整权威证据，再严格解析额外限定；完整引文保留在编译selection中，未放宽成仅关键词。新增一次受限配置纠正，复用本次已完成Actor证据，第二次仍失败返回needs_review；未知/网络错误不套此循环。31聚焦＋3真实A2源样本通过，尚须R3实际UI接受。准备工具同步允许该来源的唯一受审中文包ID，避免把原文包ID误当中文最终身份。
+
+R3独立复核发现分段证据遗漏：只检查包含选中片段的引用会漏掉另一个独立解除限定。已改为完整候选覆盖该feature及精确同路径claim的全部有效证据；两个分段限定正式编译负例均拒绝，无效引用不作为有效规则。worker 32项250断言及原A2三项13断言通过，独立复核确认该P1关闭。此前R3整合328项2195断言、模块类型、架构1270模块2940依赖和31来源anti-overfit通过；为最终谓词变化复验来源编译/受限纠正/真实A2样本，重建归档并核包类型及anti-overfit，不重放未受影响运行测试。随后仅安装候选并执行A3真实界面集成，不宣布包或游戏层通过。
+
+最终R3本地复验：来源编译及受限纠正19项155断言、构建/归档2项11断言、包类型及31来源anti-overfit PASS；实际A2三项复用worker有效证据，根检查的.local过滤未纳入这三项，不虚报重复执行。用户报告电脑意外重启并要求继续；核30001无listener、原PID11376已消失，R2安装hash仍相同。按已授权常驻实例恢复同一Mirror14.368/cor-cotn，正式launch入口生成新PID15000、loopback/noBackups，HTTP状态active=true；恢复收据与启动日志保留。本次恢复不使已完成离线与A2 Actor证据失效，真实浏览器客户端需重新确认登录、连接和加载字节。安装器改为显式绑定新PID，保留原R2前置hash门禁及14文件白名单，R3候选已安装，后续浏览器接受仍待完成。
+
+A3真实同源生成一次：两Actor提取/审查、automation review、三份中文本地化均accepted；两个通用规则参数正确，正式ZIP下载及2Actor/1Macro导入成功，未修改原生Actor导出保留。首次直接导入遭当前页WeakSet门禁误拒，重传同ZIP/正式Preview成功；R3最终bundle确认encounterPreparation重复两份，独立build worker收窄修解析路径身份，不削弱门禁。Setup被已有14项外部效果保护拦下，未建Scene/Combat；新增只读清单后确认12Actor/14Effect/零ForgeClaims。保护保留，不清理外部效果。测试准备改为只限本批Combat的worldTime delta=0，以及registry实例的refresh限定本批Actor，仍调用原生refresh；无prototype、效果或机制结果改写。Core14.368 combat.mjs原生combatTurn/combatRound提供updateOptions，ActiveEffectRegistry.refresh公开支持context.actors。该工具隔离只验证真实命中/回合末UI及按轮到期；分钟世界时间到期继续复用局部运行测试，不将冻结时间当作分钟真实接受。为新的工具隔离增加一项行为检查，证明外部Combat/options/registry调用原样保留、本批轮次数据不改、仅时间delta归零且可准确解除。刷新客户端后必须先运行helper Readback重装隔离，再推进战斗。
+
+A3来源包及原生导出机械复核49断言PASS，保存accepted-package-native-a3.json：真实review/ZIP/native SHA、完整正式重投影、Actor语义readback和双通用参数均一致；首次检查脚本误用文本hash处理ZIP，修为现有hashEncounterBytes后通过，不改真实产物。测试隔离1项16断言与宏wrapper语法PASS，独立只读安全审查核Core接口及恢复点无实质问题。build修复前真实构建fixture复现2个WeakSet/身份拒绝，路径归一后唯一WeakSet、跨相对/包路径prepared通过而clone拒绝；2个build及1个归档检查/模块类型PASS，ZIP内bundle逐字相同。R4安装与14个HTTP文件核对PASS，JS8f3e6e52b25997bfad62f4a5d7dfd0cb6bf854dd7ec2fac396717ab88d11b1fd。A3的源/提取/编译/翻译证据可复用；A4只核重建客户端的同包Preview/复用导入与隔离准备，不无理由重跑AI。
+
+A4真实同ZIP Preview/导入复用3文档，零新建。Setup与Readback真实下载hash独立核对：Scene.kSFLNHY2e5ypG6s1、Combat.x6tgCTJrbq3fDIe8及2linkedToken完整绑定；一次原生UI下一轮从1至2，读回worldTime21085811不变、blockedTimeDeltas=[6]、isolatedRefreshes=10，外部69个含效果/Forge flag Actor完整source快照不变。控制器尚未启动；不能将该准备PASS称为玩法接受。后续B保存各阶段Actor读回，另加一份只读原生骰/消息导出工具，限定本批receipt/Actor/newMessageID，便于将命中与重复豁免结果绑定实际ChatMessage；不写结果或执行能力。只作wrapper语法核对，无业务测试扩张。
+
+B真实普通+7先12对AC15未命中无状态，随后19命中仍无状态/claim；未执行后续分支。已保留两条native消息及全部Actor读回/隔离，不能宣称玩法PASS。精确本机Midi-QOL14.0.11脚本SHAca530b51fc4883067c5571f1d985931087c09bb21887f9a24c3ab95d48f3a966将chatMessage设false，native postRoll没有roll.parent；结果写回同一MIDI卡，其dnd5e flags也无roll.type。这是已安装插件协议差异，非legacy Hook签名变化。独立锁定源码核midi-qol.AttackRollComplete在checkHits/displayHits后，workflow/setAttackRoll保留普通Roll对象，卡持久保存活动/来源Token/targets/hitTargetUuids/attackTotal/isHit。采用一次性preRoll关联、postAttackRollConfiguration的真实Roll引用、MIDI注册Workflow/持久卡及目标事实核对；MIDI路径不提前走native判定，避免双应用。先加真实卡形状及事件顺序回归红例，再实现并复验native/MIDI身份、取消、miss、重复与权限，随后只补失败玩法，不重跑已有效AI/导入。
+
+MIDI桥接首轮62项525断言通过，模块类型及build/archive3项14断言PASS。独立复核发现延迟卡持久化会在执行时重新起算期限/战斗锚点的P2；改为确认命中时捕获不可变期限及原Combat锚点，持久化仅是执行门槛，排队执行时已到期则消费本次pending并记录、不施加。新增分钟/轮已到期、半分钟延迟保留原起点、切换当前Combat仍保留原锚点的目标回归；该源变化后只复验运行家族、模块类型和重新构建归档。此前R5产物未安装，不把旧构建检查推广到最终修复。
+
+最终R5：独立复核确认P2关闭；64项533断言、模块类型、3项build/archive14断言PASS。安装与14个HTTP文件核对完成，JSbbb1529d1c883fb197b25a6f29e60e968d0ea0c778d93678af8c3a01fc32e681；Midi脚本前后SHA不变。只读消息导出器增加公开运行时owner/history、该包fixedAutomation和旧海鬼婆启用布尔值，补前置匹配/恢复的诊断缺口；只更新测试collector，不覆盖已有helper receipt。下一步B2限定刷新后重装隔离、确认旧消息不回放及本包恢复，再一次新的原生单目标命中/状态/消息读回；通过后才继续剩余UI生命周期，不重跑生成、翻译、导入或已有效的miss事实。
+
+B2真实窄链PASS并独立核原件：R5刷新/helper rearm后旧19卡未回放，公开runtime owner及fixedAutomation.enabled准确、旧海鬼婆false，未再点启动。新普通+7依次14 miss、自然1总8 fumble，均无效果；第三张BPTu0tD0EeDSgjIy自然16对AC15、Midi isHit=true，目标原生目盲Forge及唯一来源claim自动写入。实际骰未含尝试输入的+50，因此只按原始+7自然16报告。lifecycle绑定本新卡，21085811→21085871、原Combat轮2/turn0，外部69快照/世界时间不变。保存accepted-midi-hit-b2.json；回合末、save分支及轮数到期仍未执行。后续B3情境字段依据5.3.3 roll-formulas.hbs与roll-configuration-dialog.mjs为roll.0.situational，需正常失焦并按实际公式/总值判定，若没生效则只记录天然结果、不假称强制失败/成功。
+
+B3真实跳过、同claim/期限/lastTurnKey精确重载保持、无重复提示和控制器恢复后再次目标回合末提示PASS。确认进行豁免后实际直接快掷体质1d20+3=19，正确清除唯一目盲来源及效果；保留该成功证据，未执行取消/失败/恐慌/轮到期。Midi14.0.11 setRollDialogOptions（10778）仅在dialog.configure未指定时采用快掷设置；Forge原先传{}。按本功能原定可取消的原生豁免交互，改为本次rollSavingThrow显式configure:true，提供情境加值和取消机会，不改世界设置。先将既有跨四状态的API调用契约改为显式窗口并复现红例，再作一行调用修复，复验64运行检查/模块类型/构建归档；之后只补受影响save交互和剩余轮到期，不重做skip或重载业务。
+
+R6调用契约红例14pass/1fail已保留；修复后64项533断言、模块类型、3项14断言构建归档PASS。安装/HTTP14文件核对完成，JSe4acc4166c2c53520aef5139f8a18b984b622c75d4ea8c9912a79a4d312584c3。父独立读回B3的skip/精确claim重载/实际体质19成功解除，保存accepted-repeat-save-b3.json；这些有效结果复用。B4仅重新命中后验证现在的原生窗口取消、失败/成功，再验证第二规则恐慌2轮/感知DC13及到期，最后停用并保留夹具供图解与精确清理。
+
+B4剩余生命周期实机PASS，父核11份读回及四份collector的SHA、同组取消/失败保持、体质9/14失败与23成功、恐慌18命中及8/1→10/1原锚点到期。停用后enabled=false/runtimeOwners空，世界时间及外部69个source快照保持。误选自身/无目标/未投窗口原件保留，不计有效命中。情境加值输入未改变实际公式，按原生优势/劣势真实结果判定，未声称其加值生效。分钟自然到期仍仅模块测试，不因本轮冻结世界时钟提升为实机。accepted-lifecycle-b4.json保留分层结论。
+
+图解编辑操作marker已按PDF skill执行一次；保留旧海鬼婆6页，追加4页通用状态真实截图，共10页/17张实拍，另附原文/已审ZIP两份新资源。本地与模块source文件逐字相等；首次构建为标注框超出crop的工具断言，修正后生成。两次批量视觉核对只修十号标题间距和截断下一行UI，最终PDF全部文字位于页面边界内。静态Impeccable只运行一次：10个SVG全幅背景padding提示及1个保留纸色提示均具体记录，未盲改或添加忽略；不宣称零警告。最终PDF SHA34eb812ade64d329924911415b901b7fbaa02da67a6ad4eb76d6fec18fb24f41，HTMLa04aee0b531c52dbca1b3dc6872cf8441cebc02e73c58e39598c56b8a9b5fd32。手册/归档/查看器7项32断言PASS。之后只装4项guide资产变化、保持R6脚本不变；正式查看下载及精确清理仍待最终批次。
+
+R7仅guide资产安装完成（16个文件HTTP核等，JS仍R6 e4acc416...）；原文与ZIP新资源hash对应实际A3源链。最终collector仅增加清理后只读audit分支，正常原生更新且不覆盖helper receipt；绑定实际15个消息ID，检查任务MIDI key、视图、时间和剩余对象，语法PASS。C已派同一内置浏览器执行器，真实下载与清理尚待回传。源代码后续新增的构建身份fixture/JSON契约及路径归一需要最终架构整合检查；此前未变的来源anti-overfit/包类型与已通过玩法继续复用，不另跑全仓CI。
+
+最终整合门禁：架构1272模块/2944依赖及循环检查PASS；七个受影响handbook条目已人工核对并记录review，根工具手册生成与handbook:check通过33条工具。git diff --check通过，仅有既有CRLF归一提示。R6最终运行家族64项533断言、类型、R7手册/构建/归档7项32断言与此前有效来源anti-overfit等按实际变化复用，没有重复全仓CI；既有capability-selection名称warning基线差异保留。
+
+C真实收尾PASS：同一内置浏览器正常查看十页手册及7–10步实拍/红框，实际点击下载PDF、通用状态原文、已审ZIP；父独立SHA核对分别为34eb812ade64d329924911415b901b7fbaa02da67a6ad4eb76d6fec18fb24f41、ddd10fc4cb29137feabd2b54e2de7ac195eda2b17211d93fb312da82f50c8d87、72ae65ef5eafe60cd9632e480f3e3544ad47149d291a1896fe8d91aa3152b40a，并确认下载、本地副本、模块source及安装文件一致。父查看最终实机手册截图c-04-final-guide-deliverable.jpg，文字、实拍和操作标记可读。
+
+精确cleanup仅执行一次，下载收据SHAa9e956a0a271faceb6c19bd968470b7618862e3a9cd5ea845dab83d5754351d7；独立final-audit SHA4f372118e6c744f587c01f563251430245e472c62c7275e39d28aed6594266d4。父核两份原件及cleanupReceipt完全一致，本批2Actor、包Macro、Scene/Combat、15条原生消息及对应Midi workflow均无残留；4个remaining数组为空、11项恢复/保护布尔值全true、外部效果source快照保持。恢复原viewed/active Scene EBJYd289N5uyTmlC、Combat8WCtc3bOyudYuHzh及worldTime21085811；旧海鬼婆Actor/Macro存在且停止，隔离已解除。audit通过后才正常删除两个精确辅助Macro，独立目录计数均0，未删除其他对象或下载证据。
+
+最终收据：.local/forge-status-lifecycle-20261009/chrome/iab-generic-stage-c-receipt.json及父独立accepted-closeout-c.json。PID15000/loopback30001/noBackups实例在执行器结束时保持匹配且运行；保留唯一自有浏览器tab显示图解手册，其他既有页受保护。收尾无AI调用、玩法重放或服务操作。主区仍clean/HEAD15b4a5b05b5150167f4a73418352f8ad18937c3c；改动保留本工作树，未commit、合并、push或发布生产。
+
+状态目录扩充开工：精确5.3.3 reference config与当前安装dnd5e.mjs的conditionTypes正文逐字相同，排除pseudo标记及带levels的exhaustion后得到14种状况，保留原生statuses与riders元数据为回归fixture。记录.local/forge-status-lifecycle-20261009/catalog-expansion/native-status-provenance.json。新的聚焦检查将覆盖所有14种状态的正式来源编译/投影与同一执行器，中文束缚等新状态的准确引文、未知/分级/伪状态拒绝，以及衍生incapacitated和外部状态的来源隔离；随后只补代表性真实新状态链，不重播旧样例AI或玩法。状态名称和识别来自同一共享目录，避免再在prompt、parser、runtime、UI各维护四项列表。既有10页图解只示范操作且未声称仅限四项，步骤与截图可复用；模块README和根手册的支持范围必须同步。
+
+目录首轮88项921断言、包/模块类型与31来源anti-overfit PASS。独立审阅发现P2：Forge新prone投影若占原生canonical ID，会使5.3.3的unconscious独立prone rider查重跳过；随后只有Forge prone成功/到期会误丢昏迷产生的倒地。原14项循环预置了外部prone，尚未覆盖此顺序。按锁定createRiderConditions的canonical查重补双规则红例，随后只让Forge prone使用独立ID，保留系统rider身份；不把独立倒地改成随昏迷解除。该运行改动需复验相关运行家族/类型并在新实机批次补组合，旧目录首轮绿色不代表此问题已关闭。
+
+P2关闭：rider-red.log原件复现canonical prone上出现Forge ownedNativeStatus标记、系统rider被跳过；修复后双规则测试确认2个prone分别归属，先仅prone成功、后unconscious成功都保留系统独立rider。原生factory double按锁定createRiderConditions校准，独立审阅复核关闭、未发现新可操作问题。受影响运行/构建/归档69项720断言、最终模块类型PASS；此前未改的来源与中文编译证据复用。架构1273模块2948依赖/循环PASS。R8只安装scripts/index.js，16文件磁盘/HTTP核等，JS bf45039cdfd3773614f02202d30f9d4c104c6cedb20f24b95d0c4c2cee7045bd，保护模块不变，无服务操作/备份/世界文件编辑。
+
+2026-10-10代表性新状态批次已派原IAB执行聊天；contract catalog-expansion/browser-dispatch.md。本轮输入encounter-status-catalog.md SHAa2290cec3950bf0861f00d51be37fc74d1e74b85d8e838870f26172addd39d9b：2NPC，其中来源包含束缚、倒地和昏迷3招，均1minute/CON10/可选回合末再次豁免。已验证原isolation initializer逐字复用及两个宏wrapper语法；在UI先做inspect/下载最小往返，再setup/生成规则/玩法，成功后连续精确cleanup与独立audit。根仅继续必要独立手册工作，真实结果待回传，不轮询、不宣称已通过。
+
+独立文档工作已完成：模块README/CLI指南/当前支持矩阵及两个根手册条目同步14普通状况与力竭等例外；额外登记共享status-lifecycle契约watch，既有watch不缩小。七个stale条目逐一核对并记录具体review，build/check33条工具PASS，diff --check PASS仅CRLF提示。已读取现有PDF第7–10页，均描述通用操作及原双样例而未声称仅限四种，操作、截图与十页资源保持有效，无需为状态目录扩充重制PDF。先前独立审阅已结束且P2关闭；剩余步骤仅等待IAB真实生成/新状态及精确恢复回传，再由父核原件结案。
+
+2026-10-10关机保存：用户明确要求核子/独立任务、保存并记录进度下次继续。内部3任务completed；原IAB聊天停止扩展，保存已提交的束缚原生豁免后正常停用和精确cleanup。真实AI/三规则中文审核/导入成功，原文SHAa2290cec...，包intake-a2290cec3950bf0861f0-zh-cn-e125b6a783b1f8d8/hash5f990e7d27bff4dfab6b22e19b21d0712ba09402fed2dfb4e81698457a79314a。review(8) SHA70f6012c81715e81452b090bf2443a18b5021ea124d9a48612881ba54d045142，ZIP SHA9fcdb4ba49b169b14ff911460aa2c302228f4b7449cd2b37ca6025a623e51163，原件路径与native Actor导出/所有读回在shutdown-handoff.json中。束缚自然1总8 miss、新22命中AC15产生唯一来源，目标回合末CON10实际1d20+3=11成功解除，readback(2)效果和claim为空。父已核保存的原生消息/读回及文件hash；详细来源IR/正式重投影对照仍作为下次续接前置，不将UIaccepted替代父语义复核。
+
+关机cleanup SHAbe6cb6c92df364e44893b1f844f8626b179fbc65aa5fab3087ac606f8b6e22d7，独立audit SHA7b2705daae730b16d7137c94bdf8991da9ae74cde9da99aeda16c1539dd30002，父核两原件及cleanupReceipt完全一致。2Actor/包Macro/Scene/Combat/3原生消息及MIDI workflows无残留，4剩余数组空，11恢复/保护布尔值全true，外部source快照/世界时间保持。audit后2辅助宏原生精确删除、目录计数0，无待保存编辑窗。原viewed/activeScene EBJYd289N5uyTmlC、Combat8WCtc3bOyudYuHzh、worldTime21085811恢复，海鬼婆保留停用。ServerMirror PID15000/noBackups仍运行，不主动停止；关机后必须重新核PID/路径/版本/浏览器身份。
+
+唯一当前续接说明：.local/forge-status-lifecycle-20261009/catalog-expansion/CURRENT.md；执行器chrome/shutdown-handoff.json SHA736ed9cd4b64080ac7cc58c2ba5161ea476c7aac59a9779cbc4ae39409443427，iab-catalog-receipt状态PARTIAL_USER_REQUESTED_SHUTDOWN_PAUSE。完整源码保持工作树未提交，主master仍clean；未commit/合并/push/备份。明天核源链与现有ZIP后重建fresh ownedfixture，只补未执行的定时prone→unconscious独立rider组合及最终恢复，不无理由重跑AI、翻译或已有效束缚。用户暂停不等于整个扩充批次玩法完成；没有后台继续测试或自动唤醒安排。
+
+2026-10-10收到继续指令，撤销本轮用户暂停。主master仍clean/同HEAD，任务分支与HEAD未变、无MERGE_HEAD；112文件SHA与关机清单完全相同，review/ZIP及已安装R8 JS hash保持。旧服务PID已消失/30001无listener，按正式Lab入口显式绑定F:/FoundryLab/foundry-v14、Mirror14.368、cor-cotn、noBackups恢复，启动收据新PID34792；不沿用旧PID或浏览器session。下一局部检查仅填关机时明确保留的父来源语义缺口：同source→accepted IR/review→当前正式重投影→原生Actor导出及三条固定配置，检查全部原文数值/攻击/伤害/状态/DC/绑定，不重跑provider或已有效束缚实机。此门通过且目标ready后才派原IAB继续未执行组合。
+
+续接来源门PASS：verify-saved-package.test.ts实际1项113断言通过，保存accepted-saved-package-native.json；同源review/ZIP、2Actor正式重投影与原生导出、3固定状态规则、所有基础数据/攻击/伤害及重复豁免无错误初始save/escapeDc均一致。新PID34792进程/loopback30001/路径/world/noBackups匹配，HTTP api/status为active14.368/cor-cotn/dnd5e5.3.3，所供JS仍R8 bf45039c...，工具wrapper hash保持。根所需前置已就绪；仅派原IAB继续倒地/昏迷组合，重建fresh临时对象与新恢复点，复用已有真实AI/束缚证据。启动CLI执行session2719为常驻服务启动残留句柄，服务按约保留，不为收尾终止它。
+
+resume-r1在Slumber前保留现场：Toppling自然1总8、总14 miss，第三张XIRBvKq0gINIjWy7总15对AC15命中。仅prone已出现Forge随机投影和DAE自动canonical，后一条flags.dae.autoCreated=true。不能将该记录归因于尚未发生的unconscious；初始“只有一个prone”的门禁不能继续使用。锁定DAE14.0.12 module/dae.js SHAa3d4497a59e9755093ec2d2af26487896bf1bf83e1242a26dab42f293337b73b：非canonical状态为输入，canonical为输出，expected消失时删除autoCreated投影；dnd5e独立rider按canonical ID查重。独立审阅据精确源码确认兼容缺口，不是单纯改门禁：这种自动投影会让rider跳过，之后可能随Forge prone一并消失。已有原生独立路径绿证据保留，新DAQ组合尚未实机通过。
+
+下一反证仅补该接口缺口：模拟实际DAE autoCreated投影/清理，先prone再unconscious再分别解除，并加从未unconscious时prone正常清理的对照。拟通过公开Document API仅将精确14.0.12纯DAE rider投影转换为独立native后果，保留ID/其他数据；调用原生createRiderConditions，覆盖重用主效果路径。未知版本、foreign provenance、异常形状不猜测接管；新主效果错误须由现有created回滚处理，不能连带删除独立rider。并发外部删除的DAE旧快照不据此获得全面接受，不接DAE私有队列或修改其代码/设置。现场SceneL2wF3HA0lxRUe27B/CombatU1oBYUoctKLcEOSr/原生prone组bcc2c954-1838-46bd-ad8a-a6ae3ec6f7dd保留，controller与隔离armed；修复后只复验受影响运行及此组合。
+
+DAE反证模型首轮暴露测试静态ID native1/native10碰撞，先校准唯一ID，不把该错误当产品失败；dae-rider-red-calibrated.log随后1fail/1pass，正确复现仅Forge prone解除后独立rider消失，prone-only对照保持正确。新增nativeStatusRiders适配在主效果已创建/actor写锁内执行，仅exact14.0.12纯自动投影转为独立native flagfalse并fresh readback，保留其它规则/来源字段；未知版本/foreign metadata原样拒绝，created主效果回滚覆盖新错误，独立rider不进入回滚/生命周期删除。复用主效果再次命中也调用native rider接口。
+
+独立复核另发现rider免疫P2：只免疫prone的目标可能被DAE正常删除rider，不能回滚unconscious。新增接口红例1fail/1pass后按精确CI Set/Array过滤，记录免疫且不要求该rider存在；主控制器校准CI删除对照通过。独立审阅确认P1/P2关闭、无新明确风险。最终受影响运行/构建/归档76项784断言、模块类型及架构1275模块2950依赖/循环PASS。R9仅安装Forge scripts/index.js，16磁盘/HTTP文件核等，JS429a531ee3e09e63b53556aac78cf3c195eca6c63e90f22d372c4a322368bcfd，DAE源码SHA保持a3d4497a...。安装后HTTP检查曾被PowerShell空LASTEXITCODE提前结束，单独补齐HTTP测量，无重复安装或重跑有效业务。
+
+R9原生rider/DAE边界已同步模块README、CLI说明、支持矩阵及两手册条目；五个受影响条目逐一核对、review后build/check33工具PASS，diff --check PASS仅CRLF提示。未改源码的来源113断言、31来源anti-overfit及图解资源继续复用。resume-r2派发已接受，沿用r1真实Toppling与同一ownedfixture，刷新rearm后补Slumber、分别解除、显式站起重置及prone-only对照，再连续停用/cleanup/audit/辅助宏删除。根必要独立工作已完成，下一有用步骤需该结果；结束父回合等待回传，不轮询。
+
+## 2026-10-10 R9 实机与最终结案
+
+原IAB执行器回传 `catalog-expansion/chrome/resume-r2-receipt.json`，状态 `PASS_NATIVE_COMBINATION_CONTROL_AND_RESTORATION`，SHA `d10f1b19737748805d81ace36455d35e0f2e7f7386b97e036128b2a347d20b95`。父核程序 `catalog-expansion/verify-resume-r2.py` PASS，独立检查24份证据文件、实际下载与证据路径哈希、12条原生消息、原生规则及来源声明，保存 `catalog-expansion/accepted-resume-r2.json`，状态 `PARENT_VERIFIED_NATIVE_COMBINATION_CONTROL_AND_RESTORATION`。下述结论取代上文历史等待/暂停状态，不需要重放已有效AI、翻译或束缚。
+
+真实组合沿用R1 Toppling卡 `XIRBvKq0gINIjWy7` 总15命中AC15及原倒地效果/claim；刷新自动恢复controller启用，Readback重建隔离，没有手动重启规则或重开期限。新Slumber卡 `e8UCP3OzS77EtHSU` 为 `1d20+4+3=24` 命中，canonical `dnd5eprone000000` 同ID由纯DAE自动投影转换为独立倒地。父逐字段比较确认仅 `flags.dae.autoCreated` true→false与正常 `_stats.modifiedTime` 改变，其余规则/来源字段以及原Forge倒地效果/声明不变；history保存 `status-lifecycle-independent-rider`/`dae-14.0.12`。昏迷效果保留原生隐含失能。
+
+目标回合末原生CON10豁免 `JTFlad4wLFIsnhBf` 总12成功，只解除Forge定时倒地及其claim，昏迷/失能和独立倒地保留；该回合昏迷豁免跳过。下一回合末 `vycUTJ22TFjLtQ16` 总17成功，只解除昏迷/失能及其DAE镜像，canonical独立倒地仍在、两条claim为空。随后通过正常原生站起仅为对照准备，保存零效果/零claim基线；新Toppling `D5FpHKxsC2PJINLi` 总26命中，CON10 `gVKBQ10PFgaepv12` 总20成功，Forge定时倒地与DAE自动镜像均清除。站起不作为自动解除证据；无手改骰值/Actor/Item/预期flag，攻击完成后的伤害窗口正常关闭、本轮未应用伤害。总12条原生消息原件 `H:/Download/forge-status-catalog-native-messages (15).json` SHA `2818916e6954397db89159e3450891bd20039897099106855e26e6765547864c`。
+
+正常停止后enabled=false/runtimeOwners为空，cleanup仅执行一次，实际 `H:/Download/forge-status-catalog-cleanup (1).json` SHA `c23bf43e058bfb02543158fad49522e569b980ae80c52a5903e2dcc09f0aaf66`；独立 `H:/Download/forge-status-catalog-final-audit (1).json` SHA `02c71f91dfe94b772db24488d4851c1cf5fc995ed8fdddafdd2a188c4590cf36`。父核cleanupReceipt完全一致、4个剩余数组空、11个恢复/保护布尔值true。2Actor/包Macro/Scene/Combat/12消息及Midi workflows无残留；audit后2辅助宏各原生精确Delete确认、目录计数0。原viewed/activeScene `EBJYd289N5uyTmlC`、Combat `8WCtc3bOyudYuHzh`、worldTime `21085811`恢复，外部效果source快照未变，海鬼婆Actor/Macro保留且停止，无未保存Actor/Macro编辑窗。父已查看组合最终效果及恢复界面截图；IAB保留恢复后的Lab页给用户。
+
+最终目标仍同一Mirror PID34792/127.0.0.1:30001/Core14.368/dnd5e5.3.3/Midi14.0.11/DAE14.0.12/cor-cotn/noBackups，服务保持运行。已安装Forge R9 JS SHA `429a531ee3e09e63b53556aac78cf3c195eca6c63e90f22d372c4a322368bcfd`；DAE源码SHA `a3d4497a59e9755093ec2d2af26487896bf1bf83e1242a26dab42f293337b73b`未变。主master仍同HEAD且clean，唯一任务树保存未提交代码、图解与证据，无commit/合并/push/生产/备份或服务停止。
+
+本轮限定本地目标完成：14普通原生状况共享闭合数据契约，完整来源要求与GM审阅不变；本批新增实机为束缚、倒地、昏迷，前批目盲/恐慌证据仍有效。其余状态未逐项实机，分钟自然时钟到期与仅rider免疫仍属聚焦测试，外部并发删除、未知DAE版本/foreign provenance、层数力竭、伪状态与未知自定义状态不获全矩阵保证。最后仅更新进度/兼容结案记录，不改变手册来源或实现，因此复用最终76项784断言、源链113断言、31来源anti-overfit及手册33工具有效结果；不新增全仓CI或无理由复跑。当前唯一续接入口 `catalog-expansion/CURRENT.md` 已改为 `COMPLETE_LOCAL_CANDIDATE_ACCEPTED`，旧关机收据只作历史。

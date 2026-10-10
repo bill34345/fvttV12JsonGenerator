@@ -112,7 +112,7 @@ function createDocumentPlans(prepared: PreparedForgeEncounter): DocumentPlan[] {
     }
     return { key: actor.key, kind: 'Actor', data };
   });
-  for (const macro of bundle.macros) {
+  for (const macro of prepared.macros) {
     const bindings = Object.fromEntries(Object.entries(macro.bindings).map(([name, actorKey]) => [name,
       `Actor.${encounterDocumentId(bundle.id, 'Actor', actorKey)}`]));
     const context = { packageId: bundle.id, packageHash: hash, actors: bindings, bindingKeys: macro.bindings, covers: macro.covers };

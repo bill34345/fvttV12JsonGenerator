@@ -26,6 +26,7 @@ import { buildBrowserActorVerificationSummary } from './actorVerification';
 import { LEGACY_BROWSER_SPELLS } from './browser-legacy-spell-data';
 import { LOCKED_DND5E_V14_SPELLS } from './browser-v14-spell-data';
 import { normalizeForgeActorArtifact } from './artifact';
+import type { ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
 
 export {
   buildForgeItemRequest,
@@ -100,7 +101,7 @@ export function buildForgeActorRequest(options: BuildForgeActorRequestOptions): 
   };
 }
 
-export async function convertFinalActorSource(request: ForgeActorRequest): Promise<ForgeActorResponse> {
+export async function convertFinalActorSource(request: ForgeActorRequest, options: { reviewedLocalization?: ReviewedLocalization } = {}): Promise<ForgeActorResponse> {
   const decoded = decodeForgeActorRequest(request);
   if (!decoded.ok) return errorResponse(requestIdOf(request), decoded.issues);
   const value = decoded.value;
@@ -120,15 +121,16 @@ export async function convertFinalActorSource(request: ForgeActorRequest): Promi
       effectProfile: 'core',
       iconWorkflow: { createResolutionSession: (_targetVersion, options) => createDisabledIconResolutionSession(options) },
       iconOptions: { mode: 'off' },
+      reviewedLocalization: options.reviewedLocalization,
     });
-    const artifact = normalizeForgeActorArtifact(generated.actor, targetVersion);
+    const artifact = normalizeForgeActorArtifact(generated.actor, targetVersion, options.reviewedLocalization ? generated.sourceActor : undefined);
     const formalVerification = verifyGeneratedDocument({
       canonical: generated.canonical,
       output: artifact,
       target: targetVersion,
       effectProfile: 'core',
     });
-    const legacyWarnings = new ActorValidator().validate(parsed, artifact);
+    const legacyWarnings = new ActorValidator().validate(parsed, options.reviewedLocalization ? generated.sourceActor : artifact);
     const actorVerification = buildBrowserActorVerificationSummary(value.source.content, artifact);
     const diagnostics: GenerationDiagnostic[] = [
       ...formalVerification.diagnostics,

@@ -18,10 +18,12 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   const bundlePath = resolve(moduleRoot, 'scripts/index.js');
   const bundle = await readFile(bundlePath, 'utf8');
   const contracts = resolve(root, '../../packages/contracts/src');
-  const normalized = bundle.replace(/^\/\/ (.+\.(?:ts|js))\r?$/gm, (banner, path: string) => {
+  const browserRuntime = resolve(root, '../../packages/forge-browser-runtime/src');
+  const normalized = bundle.replace(/^\/\/ (.+\.(?:ts|js|json))\r?$/gm, (banner, path: string) => {
     const absolute = resolve(process.cwd(), path);
     if (!absolute.startsWith(`${source}/`) && !absolute.startsWith(`${source}\\`)
-      && !absolute.startsWith(`${contracts}/`) && !absolute.startsWith(`${contracts}\\`)) return banner;
+      && !absolute.startsWith(`${contracts}/`) && !absolute.startsWith(`${contracts}\\`)
+      && !absolute.startsWith(`${browserRuntime}/`) && !absolute.startsWith(`${browserRuntime}\\`)) return banner;
     return `// ${relative(root, absolute).replace(/\\/g, '/')}`;
   });
   if (normalized !== bundle) await writeFile(bundlePath, normalized);

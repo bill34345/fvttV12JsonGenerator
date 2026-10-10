@@ -6,9 +6,9 @@ import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown,assert
 import {encodeForgeEncounterPackageZip,serializeForgeEncounterPackage} from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 
-const [sourcePath,outputPath,...flags]=process.argv.slice(2);let mode:string|undefined,resumePath:string|undefined,feedbackPath:string|undefined;
-if(!sourcePath||!outputPath)throw new Error('Usage: bun run tools/forge-encounter/run-human-intake.ts <human.md> <new-output-directory> [--local-ds|--configured-provider] [--resume-draft <review.json>] [--review-feedback <feedback.json>]');
-for(let i=0;i<flags.length;i++){if(['--local-ds','--configured-provider'].includes(flags[i]!)&&!mode)mode=flags[i];else if(flags[i]==='--resume-draft'&&!resumePath&&flags[i+1]&&!flags[i+1]!.startsWith('--'))resumePath=flags[++i];else if(flags[i]==='--review-feedback'&&!feedbackPath&&flags[i+1]&&!flags[i+1]!.startsWith('--'))feedbackPath=flags[++i];else throw new Error('Unknown or duplicate option; local Intake uses DS Flash, not a Luna bridge.');}
+const [sourcePath,outputPath,...flags]=process.argv.slice(2);let mode:string|undefined,resumePath:string|undefined,feedbackPath:string|undefined,outputLanguage:'source'|'zh-CN'='source';
+if(!sourcePath||!outputPath)throw new Error('Usage: bun run tools/forge-encounter/run-human-intake.ts <human.md> <new-output-directory> [--local-ds|--configured-provider] [--language zh-CN] [--resume-draft <review.json>] [--review-feedback <feedback.json>]');
+for(let i=0;i<flags.length;i++){if(['--local-ds','--configured-provider'].includes(flags[i]!)&&!mode)mode=flags[i];else if(flags[i]==='--language'&&flags[i+1]==='zh-CN'&&outputLanguage==='source'){outputLanguage='zh-CN';i++;}else if(flags[i]==='--resume-draft'&&!resumePath&&flags[i+1]&&!flags[i+1]!.startsWith('--'))resumePath=flags[++i];else if(flags[i]==='--review-feedback'&&!feedbackPath&&flags[i+1]&&!flags[i+1]!.startsWith('--'))feedbackPath=flags[++i];else throw new Error('Unknown or duplicate option; local Intake uses DS Flash, not a Luna bridge.');}
 const source=await readFile(resolve(sourcePath),'utf8');
 const localDs=mode!=='--configured-provider';
 let localKey=process.env.DEEPSEEK_API_KEY??'';
@@ -42,12 +42,12 @@ if(feedbackPath){
 }
 const output=resolve(outputPath);await mkdir(output,{recursive:false});
 const options={baseUrl:config.baseUrl,apiKey:config.apiKey,model:config.model,reviewModel:config.reviewModel,
-  reasoning:config.reasoningEffort,protocol:localDs?'openai-responses' as const:'openai-chat' as const,structuredOutput:'json_object' as const,
+  reasoning:config.reasoningEffort,protocol:'openai-chat' as const,structuredOutput:'json_object' as const,
   timeoutMs:config.timeoutMs,repairTimeoutMs:config.repairTimeoutMs,allowLocalBridge:false,
 };
 const controller=new AbortController();process.once('SIGINT',()=>controller.abort());
 const providers=createEncounterIntakeProviders(options,controller.signal);
-const result=await generateEncounterFromHumanMarkdown({source,label,...providers,drafts,draftParentHash,sourceFeedback,signal:controller.signal,
+const result=await generateEncounterFromHumanMarkdown({source,label,...providers,drafts,draftParentHash,sourceFeedback,outputLanguage,signal:controller.signal,
   onProgress:message=>console.log(JSON.stringify({at:new Date().toISOString(),message})),
   onReport:report=>{const text=JSON.stringify(report,null,2);assertEncounterSecretsAbsent(text,[config.apiKey,config.baseUrl]);writeFileSync(resolve(output,'review.json'),text);}});
 if(!result.prepared){console.log(JSON.stringify({status:result.report.status,findings:result.report.findings}));process.exitCode=1;}

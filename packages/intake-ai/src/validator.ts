@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { explicitMovementHoverEvidence } from './movement-evidence';
+import { explicitSourceSaves } from './save-evidence';
 import { validatePortableSpellManifest } from '@fvtt-json-generator/spell-manifest-contracts/validator';
 import type {
   AbilityKey,
@@ -81,6 +83,26 @@ export function validateMonsterIntakeIR(
 
   validateCreature(source, ir, finding);
   validateExplicitAcConflicts(source, options.coverageRange, finding);
+  const sourceSaves = explicitSourceSaves(source, options.coverageRange);
+  for (const fact of sourceSaves) {
+    const others=sourceSaves.filter(other=>other.ability===fact.ability);
+    if(new Set(others.map(other=>other.total)).size>1){
+      finding('SOURCE_SAVE_CONFLICT', `/creature/saves/${fact.ability}`, 'This candidate contains conflicting explicit save totals.', 'conflict', others.map(other=>other.evidence));
+      continue;
+    }
+    const score=ir.creature?.abilities?.[fact.ability];
+    const actual=ir.creature?.saves?.[fact.ability] ?? (typeof score==='number'?Math.floor((score-10)/2):undefined);
+    if(actual!==fact.total)finding('SOURCE_SAVE_OMITTED', `/creature/saves/${fact.ability}`, `Source save ${fact.ability} ${fact.total} is not preserved by IR ${String(actual)}.`, 'semantic', [fact.evidence]);
+  }
+  const hoverEvidence = explicitMovementHoverEvidence(source, ir.claims, options.coverageRange);
+  if (hoverEvidence && (ir.creature?.attributes?.movement?.hover !== true
+    || typeof ir.creature?.attributes?.movement?.fly !== 'number')) {
+    finding('SOURCE_HOVER_OMITTED', '/creature/attributes/movement/hover',
+      'Exact movement evidence explicitly grants hover, but IR does not preserve it with a fly speed.', 'semantic', [hoverEvidence]);
+  } else if (ir.creature?.attributes?.movement?.hover === true && !hoverEvidence) {
+    finding('UNSUPPORTED_HOVER', '/creature/attributes/movement/hover',
+      'Hover requires exact positive movement evidence within this candidate.', 'evidence');
+  }
 
   const claims = Array.isArray(ir.claims) ? ir.claims : [];
   if (!Array.isArray(ir.claims)) {
@@ -235,9 +257,60 @@ function validateCreature(
           }
         });
       }
+      validateAttackRepeatSaveSlots(source, ir, section, index, feature, finding);
     });
   }
   validateSourceFeaturePresence(source, creature, finding);
+}
+
+/** Repeat saves end an existing attack effect; they are not the attack's initial Save Activity or an escape check. */
+function validateAttackRepeatSaveSlots(
+  source: string,
+  ir: MonsterIntakeIR,
+  section: string,
+  index: number,
+  feature: MonsterIntakeIR['creature']['actions'][number],
+  finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+): void {
+  if (feature?.activityType !== 'attack' || !feature.attack) return;
+  const path = `/creature/${section}/${index}`;
+  const references = [
+    ...(Array.isArray(feature.evidence) ? feature.evidence : []),
+    ...(Array.isArray(ir.claims) ? ir.claims.filter(claim => isRecord(claim) && claim.path === path)
+      .flatMap(claim => Array.isArray(claim.evidence) ? claim.evidence : []) : []),
+  ];
+  const ref = references.find(candidate => isRecord(candidate) && Number.isInteger(candidate.start) && Number.isInteger(candidate.end)
+    && candidate.start >= 0 && candidate.end <= source.length && source.slice(candidate.start, candidate.end) === candidate.quote
+    && typeof feature.description === 'string' && candidate.quote.includes(feature.description));
+  if (!ref) return; // Existing exact-evidence checks reject an unbound feature separately.
+  const quote = ref.quote;
+  const hit = /\bhit:|\bon a hit\b:?|命中(?:时|：|:)/iu.exec(quote);
+  if (!hit) return;
+  const afterHit = quote.slice(hit.index + hit[0].length);
+  const turn = /at the end of each of (?:its|the target['’]s|the creature['’]s) turns|at the end of each target turn|目标(?:在)?(?:其)?每(?:个|一)回合结束时/iu.exec(afterHit);
+  if (!turn) return;
+  const sentenceStart = Math.max(...[...afterHit.slice(0, turn.index).matchAll(/[.!?。！？；;]/gu)].map(match => match.index! + 1), 0);
+  const repeatSentence = afterHit.slice(sentenceStart).split(/[.!?。！？；;]/u)[0] ?? '';
+  if (!/(?:saving throw|豁免)/iu.test(repeatSentence) || !/\bDC\s*\d+|难度等级\s*\d+/iu.test(repeatSentence)) return;
+  const beforeRepeat = afterHit.slice(0, sentenceStart);
+  if (feature.save && !/(?:saving throw|豁免)/iu.test(beforeRepeat)) {
+    finding('ATTACK_REPEAT_SAVE_NOT_INITIAL', `${path}/save`,
+      'The source has only a target-turn-end repeat save, not an initial attack save. Remove primary save and its save claims; preserve the complete repeat rule in description and appliedConditions.condition.',
+      'semantic', [ref]);
+  }
+  const conditions = Array.isArray(feature.appliedConditions) ? feature.appliedConditions : [];
+  for (const [conditionIndex, condition] of conditions.entries()) {
+    if (!isRecord(condition) || condition.escapeDc === undefined) continue;
+    const dc = condition.escapeDc;
+    const trueEscape = quote.split(/[.!?。！？；;]/u).some(sentence =>
+      /\b(?:escape|break free)\b|挣脱|逃脱/iu.test(sentence)
+      && /\b(?:check|DC)\b|检定|难度等级/iu.test(sentence)
+      && Number.isSafeInteger(dc) && dc > 0 && dc <= 30
+      && new RegExp(`(?:\\bDC\\s*|难度等级\\s*)${dc}(?!\\d)`, 'iu').test(sentence));
+    if (!trueEscape) finding('REPEAT_SAVE_NOT_ESCAPE_DC', `${path}/appliedConditions/${conditionIndex}/escapeDc`,
+      'A target-turn-end repeat saving throw is not an escape check. Remove escapeDc and its claim unless the source explicitly states a matching escape check; keep the repeat rule literal.',
+      'semantic', [ref]);
+  }
 }
 
 function validateSourceFeaturePresence(
@@ -272,11 +345,21 @@ function sourceHasInlineTrait(source: string): boolean {
   const actionMarker = /(?:^|\n)\s*(?:Actions|动作)(?=\s|$)/imu;
   const actionIndex = source.search(actionMarker);
   if (actionIndex < 0) return false;
-  const prefix = source.slice(0, actionIndex);
-  return prefix.split(/\r?\n/).some((line) => {
-    const value = line.replace(/<!--.*?-->/g, '').trim();
-    if (!value || /^#|^(?:AC|HP|Speed|Type|Size|Initiative|STR|DEX|CON|INT|WIS|CHA|护甲等级|生命值|速度|类型|体型|先攻|力量|敏捷|体质|智力|感知|魅力|感官|语言|挑战等级|熟练加值)/iu.test(value)) return false;
-    return /^[^.!?。！？]{2,80}[.!?。！？]/u.test(value);
+  const lines = source.slice(0, actionIndex).split(/\r?\n/).map(line => line.replace(/<!--.*?-->/gu, '').trim());
+  const statStart = lines.findIndex(line => /^(?:AC|HP|Armor Class|Hit Points|护甲等级|生命值)(?=\s|[:：]|\d)/iu.test(line));
+  const metadata = /^(?:AC|HP|Armor Class|Hit Points|Speed|Type|Size|Initiative|STR|DEX|CON|INT|WIS|CHA|Saving Throws|Skills|Damage Vulnerabilities|Damage Resistances|Damage Immunities|Condition Immunities|Senses|Languages|Challenge|Proficiency Bonus|护甲等级|生命值|速度|类型|体型|先攻|力量|敏捷|体质|智力|感知|魅力|豁免|技能|伤害易伤|伤害抗性|伤害免疫|状态免疫|感官|语言|挑战等级|熟练加值)(?=\b|\s|[:：]|\d)/iu;
+  const isBoundary = (line: string) => !line || /^#/u.test(line) || metadata.test(line);
+  return lines.slice(statStart < 0 ? 0 : statStart + 1).some((line, index, bodyLines) => {
+    if (isBoundary(line)) return false;
+    const header = /^([^.!?。！？]{2,80})[.!?。！？]\s*(.*)$/u.exec(line);
+    const name = (header?.[1] ?? line).trim();
+    const englishName = /^[A-Z][\p{L}\p{M}'’/-]*(?:\s+(?:[A-Z][\p{L}\p{M}'’/-]*|\([^)]{1,30}\)))*$/u.test(name);
+    const chineseName = name.length <= 30 && /\p{Script=Han}/u.test(name)
+      && /^[\p{Script=Han}A-Za-z0-9（）()·\-—\s]+$/u.test(name);
+    if (!englishName && !chineseName) return false;
+    const nextBody = bodyLines.slice(index + 1).find(next => next.length > 0);
+    return Boolean(header?.[2]?.trim()) || Boolean(nextBody && !isBoundary(nextBody)
+      && (Boolean(header) || /[.!?。！？]/u.test(nextBody)));
   });
 }
 

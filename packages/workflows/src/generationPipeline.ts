@@ -11,6 +11,8 @@ import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/acto
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
+import type { ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
+import { projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
 import {
   createDisabledIconResolutionSession,
   type IconReviewReport,
@@ -26,6 +28,8 @@ export interface ActorGenerationPipelineOptions {
   fvttVersion: FvttTargetVersion;
   effectProfile: EffectProfile;
   translationService?: ActorGeneratorOptions['translationService'];
+  /** Explicit reviewed display text; source parsing and mechanics always precede this projection. */
+  reviewedLocalization?: ReviewedLocalization;
   iconOptions?: IconWorkflowOptions;
   iconWorkflow?: Pick<IconWorkflowPort, 'createResolutionSession'>;
 }
@@ -36,6 +40,7 @@ export interface ActorGenerationArtifact {
   verification: GenerationVerification;
   diagnostics: GenerationDiagnostic[];
   iconReview: IconReviewReport | null;
+  sourceActor: any;
 }
 
 export async function generateActorArtifact(
@@ -62,8 +67,12 @@ export async function generateActorArtifact(
     target: options.fvttVersion,
     effectProfile: options.effectProfile,
   });
+  const localized = options.reviewedLocalization
+    ? projectReviewedActorLocalization(actor, options.sourceText, options.reviewedLocalization).actor
+    : actor;
   return {
-    actor,
+    actor: localized,
+    sourceActor: actor,
     canonical,
     verification,
     diagnostics: verification.diagnostics,

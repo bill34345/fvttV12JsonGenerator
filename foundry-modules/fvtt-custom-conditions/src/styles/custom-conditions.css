@@ -47,3 +47,12 @@
   --pill-border: 1px solid var(--dnd5e-color-tan);
   color: var(--color-text-primary);
 }
+.configured-manager-panel { margin: 0.75rem 0; padding: 0.75rem; border: 1px solid var(--color-border-light-primary); }
+.configured-manager-panel header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.configured-editor-layout { display: grid; grid-template-columns: minmax(12rem, 30%) minmax(0, 1fr); gap: 1rem; }
+.configured-catalog-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 60vh; overflow: auto; }
+.configured-catalog-list article { display: grid; grid-template-columns: 1fr auto auto; gap: 0.3rem; align-items: center; }
+.configured-catalog-list article small { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.configured-definition-form { max-height: 65vh; overflow: auto; padding-right: 0.35rem; }
+.configured-mechanism { margin: 0.65rem 0; padding: 0.6rem; border: 1px solid var(--color-border-light-primary); }
+.configured-editor textarea { width: 100%; }

@@ -5,6 +5,8 @@ import {
   type ConditionId,
   type ConditionParams,
 } from '@fvtt-json-generator/contracts/conditions';
+import { configuredConditionFingerprint, type ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
+import { NATIVE_LIFECYCLE_STATUS_DEFINITIONS, type NativeLifecycleStatus } from '@fvtt-json-generator/contracts/status-lifecycle';
 import { CONDITION_MANAGER_CONTROL_NAME, MODULE_ID } from './constants.ts';
 import type { ConditionManagerOpenContext, CustomConditionsApi } from './api.ts';
 import { conditionIconPath, localizedConditionDefinitions, localize } from './localization.ts';
@@ -47,6 +49,11 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
         increaseInjury: this.increaseInjury,
         decreaseInjury: this.decreaseInjury,
         openInjuryWizard: this.openInjuryWizard,
+        openConfiguredEditor: this.openConfiguredEditor,
+        applyConfigured: this.applyConfigured,
+        removeConfigured: this.removeConfigured,
+        toggleConfigured: this.toggleConfigured,
+        escapeConfiguredFrozen: this.escapeConfiguredFrozen,
       },
     };
 
@@ -80,10 +87,17 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
 
     async _prepareContext() {
       const definitions = localizedConditionDefinitions(globals).map((definition) => ({ ...definition, selected: definition.id === this.conditionId }));
+      const configuredDefinitions = this.api.configuredConditions?.catalog?.() ?? [];
       const actors = await Promise.all(this.actors.map(async (actor: any) => ({
         uuid: actor.uuid,
         name: actor.name,
-        conditions: this.api.list(actor).map((entry) => ({
+        configuredConditions: (this.api.configuredConditions?.list?.(actor) ?? []).map((entry) => ({ ...entry,
+          actorUuid: actor.uuid, name: entry.definition.name,
+          skippedLabel: entry.skippedComponents.join('、'),
+          frozenComponentId: entry.disabled ? '' : (this.api.list(actor).find((condition) =>
+            entry.componentIds.includes(condition.id) && condition.instance.conditionId === 'frozen')?.id ?? ''),
+        })),
+        conditions: this.api.list(actor).filter((entry) => !entry.effect?.flags?.[MODULE_ID]?.configuredComponent).map((entry) => ({
           ...entry,
           actorUuid: actor.uuid,
           conditionLabel: localizedConditionDefinitions(globals).find((definition) => definition.id === entry.instance.conditionId)?.label
@@ -97,6 +111,7 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
       return {
         genericAvailable: genericConditionsSupported(globals.game),
         definitions,
+        configuredDefinitions,
         conditionId: this.conditionId,
         paramsJson: this.paramsJson,
         sourceName: this.sourceName,
@@ -111,6 +126,48 @@ export function createConditionManagerApplicationClass(api?: CustomConditionsApi
       this.actors = this.fixedActor ? [this.fixedActor] : captureTargets(globals);
       this.editing = null;
       await this.render({ force: true });
+    }
+
+    static async openConfiguredEditor(this: any) {
+      try { await this.api.configuredConditions.openEditor(); }
+      catch (error) { notify(globals, error); }
+    }
+
+    static async applyConfigured(this: any) {
+      try {
+        const id = String(new FormData(this.element).get('configuredDefinitionId') ?? '');
+        const definition = this.api.configuredConditions.catalog().find((item: ConfiguredConditionDefinition) => item.id === id);
+        if (!definition) throw new Error('请先选择一个已保存的组合状态。');
+        if (!this.actors.length) throw new Error('请先标记或选中至少一个 Actor。');
+        for (const actor of this.actors) await this.api.configuredConditions.apply(actor, {
+          id: definition.id, fingerprint: configuredConditionFingerprint(definition),
+        });
+        await this.render({ force: true });
+      } catch (error) { notify(globals, error); }
+    }
+
+    static async removeConfigured(this: any, _event: unknown, target: any) {
+      const actor = this.actors.find((candidate: any) => candidate.uuid === target.dataset.actorUuid);
+      if (!actor) return;
+      try { await this.api.configuredConditions.remove(actor, target.dataset.instanceId); await this.render({ force: true }); }
+      catch (error) { notify(globals, error); }
+    }
+
+    static async toggleConfigured(this: any, _event: unknown, target: any) {
+      const actor = this.actors.find((candidate: any) => candidate.uuid === target.dataset.actorUuid);
+      const entry = actor && this.api.configuredConditions.list(actor).find((item: any) => item.instanceId === target.dataset.instanceId);
+      if (!entry) return;
+      try { await this.api.configuredConditions.setEnabled(actor, entry.instanceId, entry.disabled); await this.render({ force: true }); }
+      catch (error) { notify(globals, error); }
+    }
+
+    static async escapeConfiguredFrozen(this: any, event: unknown, target: any) {
+      const actor = this.actors.find((candidate: any) => candidate.uuid === target.dataset.actorUuid);
+      const entry = actor && this.api.configuredConditions.list(actor).find((item: any) => item.instanceId === target.dataset.instanceId);
+      const frozenId = entry && !entry.disabled ? this.api.list(actor).find((condition: any) =>
+        entry.componentIds.includes(condition.id) && condition.instance.conditionId === 'frozen')?.id : undefined;
+      if (!frozenId) return;
+      await this.constructor.escapeFrozen.call(this, event, { dataset: { actorUuid: actor.uuid, effectId: frozenId } });
     }
 
     static async edit(this: any, _event: unknown, target: any) {
@@ -318,4 +375,209 @@ export function captureTargets(globals: any): any[] {
 
 function notify(globals: any, error: unknown): void {
   globals.ui?.notifications?.error?.(error instanceof Error ? error.message : String(error));
+}
+
+type MechanismDraft = { kind: 'builtin-condition'; conditionId: ConditionId; params: ConditionParams }
+  | { kind: 'native-condition'; status: NativeLifecycleStatus }
+  | { kind: 'movement-reduction'; feet: number | string };
+interface DefinitionDraft {
+  id: string; name: string; description: string; englishAliases: string; chineseAliases: string;
+  components: MechanismDraft[];
+}
+
+function blankDefinition(): DefinitionDraft {
+  return { id: '', name: '', description: '', englishAliases: '', chineseAliases: '',
+    components: [{ kind: 'builtin-condition', conditionId: 'sickened', params: {} }] };
+}
+
+function aliasLines(value: string): string[] {
+  return value.split(/[\n,，;；]/u).map(part => part.trim()).filter(Boolean);
+}
+
+/** Consume ordinary form fields; the editor never asks a GM to write JSON or code. */
+export function configuredDefinitionFromForm(data: Record<string, unknown>, count: number): ConfiguredConditionDefinition {
+  const name = String(data.name ?? '').trim();
+  if (/[()（）]/u.test(name) || !/[\u3400-\u9fff]\s+[A-Za-z]/u.test(name)) {
+    throw new Error('显示名称请按“中文 English”填写，中间用空格分隔，不使用括号。');
+  }
+  const english = aliasLines(String(data.englishAliases ?? ''));
+  const chinese = aliasLines(String(data.chineseAliases ?? ''));
+  if (!english.length || !chinese.length) throw new Error('请分别填写英文和中文的原文名称。');
+  const slug = String(data.slug ?? '').trim() || english[0]!.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
+  const components: ConfiguredConditionDefinition['components'] = [];
+  for (let index = 0; index < count; index += 1) {
+    const kind = String(data[`component-${index}-kind`] ?? '');
+    if (kind === 'movement-reduction') {
+      components.push({ kind, feet: Number(data[`component-${index}-feet`]) });
+      continue;
+    }
+    if (kind === 'native-condition') {
+      components.push({ kind, status: String(data[`component-${index}-status`] ?? '') as NativeLifecycleStatus });
+      continue;
+    }
+    if (kind !== 'builtin-condition') throw new Error('未知机制类型。');
+    const conditionId = String(data[`component-${index}-conditionId`] ?? '') as ConditionId;
+    const definition = CONDITION_DEFINITIONS[conditionId];
+    if (!definition) throw new Error('请选择已有状态机制。');
+    const params: ConditionParams = {};
+    for (const parameter of definition.parameters) {
+      const raw = data[`component-${index}-param-${parameter.id}`];
+      if (raw === undefined || raw === '') continue;
+      params[parameter.id] = parameter.type === 'number' ? Number(raw)
+        : parameter.type === 'boolean' ? raw === 'true' : String(raw);
+    }
+    components.push({ kind, conditionId, params });
+  }
+  return {
+    schemaVersion: 1, id: `configured.${slug}`, name,
+    description: String(data.description ?? '').trim(), aliases: [...english, ...chinese], components,
+  };
+}
+
+export function createConfiguredEditorApplicationClass(api?: CustomConditionsApi, globals: any = globalThis): any {
+  const foundryApi = globals.foundry?.applications?.api;
+  const ApplicationV2 = foundryApi?.ApplicationV2;
+  const HandlebarsApplicationMixin = foundryApi?.HandlebarsApplicationMixin;
+  if (typeof ApplicationV2 !== 'function') throw new Error('Foundry 14 ApplicationV2 is unavailable.');
+  const Base = typeof HandlebarsApplicationMixin === 'function' ? HandlebarsApplicationMixin(ApplicationV2) : ApplicationV2;
+  return class ConfiguredEditorApplication extends Base {
+    static DEFAULT_OPTIONS = {
+      id: `${MODULE_ID}-configured-editor`, tag: 'form',
+      window: { title: 'FVTTCONDITIONS.Configured.Title', contentClasses: ['standard-form'], icon: 'fa-solid fa-puzzle-piece' },
+      position: { width: 860, height: 780 },
+      actions: { newDefinition: this.newDefinition, editDefinition: this.editDefinition,
+        saveDefinition: this.saveDefinition, deleteDefinition: this.deleteDefinition,
+        addMechanism: this.addMechanism, removeMechanism: this.removeMechanism },
+    };
+    static PARTS = { body: { template: `modules/${MODULE_ID}/templates/configured-editor.hbs` } };
+    api: CustomConditionsApi;
+    draft: DefinitionDraft = blankDefinition();
+    editingId: string | null = null;
+
+    constructor(options?: { api?: CustomConditionsApi }) {
+      super();
+      this.api = options?.api ?? api ?? globals.game?.modules?.get?.(MODULE_ID)?.api;
+      if (!this.api?.configuredConditions) throw new Error('Configured Conditions API is unavailable.');
+    }
+
+    async _prepareContext() {
+      const choices = localizedConditionDefinitions(globals);
+      const mechanisms = this.draft.components.map((component, index) => ({
+        index, kind: component.kind,
+        builtin: component.kind === 'builtin-condition',
+        movement: component.kind === 'movement-reduction',
+        native: component.kind === 'native-condition',
+        nativeChoices: Object.entries(NATIVE_LIFECYCLE_STATUS_DEFINITIONS).map(([id, value]) => ({
+          id, label: `${value.label} ${id}`, selected: component.kind === 'native-condition' && component.status === id,
+        })),
+        feet: component.kind === 'movement-reduction' ? component.feet : '',
+        choices: choices.map(item => ({ ...item, selected: component.kind === 'builtin-condition' && component.conditionId === item.id })),
+        parameters: component.kind === 'builtin-condition'
+          ? CONDITION_DEFINITIONS[component.conditionId].parameters.map(parameter => ({
+            ...parameter,
+            value: component.params[parameter.id] ?? parameter.default ?? '',
+            isSelect: parameter.type === 'select' || parameter.type === 'boolean',
+            isNumber: parameter.type === 'number',
+            isBoolean: parameter.type === 'boolean',
+            choices: (parameter.type === 'boolean' ? ['true', 'false'] : parameter.options ?? []).map(value => ({
+              value, selected: String(component.params[parameter.id] ?? parameter.default ?? '') === value,
+            })),
+          })) : [],
+      }));
+      return { draft: this.draft, editing: !!this.editingId, definitions: this.api.configuredConditions.catalog(), mechanisms };
+    }
+
+    _onRender(...args: any[]) {
+      super._onRender?.(...args);
+      this.element?.querySelectorAll?.('select[data-mechanism-choice]')?.forEach((select: any) => {
+        select.addEventListener('change', async () => {
+          this.captureDraft();
+          const index = Number(select.dataset.index);
+          if (select.dataset.mechanismChoice === 'kind') this.draft.components[index] = select.value === 'movement-reduction'
+            ? { kind: 'movement-reduction', feet: 10 }
+            : select.value === 'native-condition' ? { kind: 'native-condition', status: 'blinded' }
+              : { kind: 'builtin-condition', conditionId: 'sickened', params: {} };
+          if (select.dataset.mechanismChoice === 'conditionId') this.draft.components[index] = {
+            kind: 'builtin-condition', conditionId: select.value as ConditionId, params: {},
+          };
+          await this.render({ force: true });
+        });
+      });
+    }
+
+    captureDraft(): void {
+      if (!this.element || typeof FormData !== 'function') return;
+      const data = Object.fromEntries(new FormData(this.element).entries());
+      const previous = this.draft;
+      const components = previous.components.map((component, index): MechanismDraft => {
+        const kind = String(data[`component-${index}-kind`] ?? component.kind);
+        if (kind === 'movement-reduction') return { kind, feet: String(data[`component-${index}-feet`] ?? '10') };
+        if (kind === 'native-condition') return { kind, status: String(data[`component-${index}-status`] ?? 'blinded') as NativeLifecycleStatus };
+        const conditionId = String(data[`component-${index}-conditionId`] ?? (component.kind === 'builtin-condition' ? component.conditionId : 'sickened')) as ConditionId;
+        const params: ConditionParams = {};
+        for (const parameter of CONDITION_DEFINITIONS[conditionId]?.parameters ?? []) {
+          const value = data[`component-${index}-param-${parameter.id}`];
+          if (value === undefined || value === '') continue;
+          params[parameter.id] = parameter.type === 'number' ? Number(value)
+            : parameter.type === 'boolean' ? value === 'true' : String(value);
+        }
+        return { kind: 'builtin-condition', conditionId, params };
+      });
+      this.draft = { id: previous.id, name: String(data.name ?? ''), description: String(data.description ?? ''),
+        englishAliases: String(data.englishAliases ?? ''), chineseAliases: String(data.chineseAliases ?? ''), components };
+    }
+
+    static async newDefinition(this: any) { this.draft = blankDefinition(); this.editingId = null; await this.render({ force: true }); }
+
+    static async editDefinition(this: any, _event: unknown, target: any) {
+      const definition = this.api.configuredConditions.catalog().find((item: ConfiguredConditionDefinition) => item.id === target.dataset.definitionId);
+      if (!definition) return;
+      this.editingId = definition.id;
+      this.draft = { id: definition.id, name: definition.name, description: definition.description,
+        englishAliases: definition.aliases.filter((alias: string) => /[A-Za-z]/u.test(alias)).join('\n'),
+        chineseAliases: definition.aliases.filter((alias: string) => !/[A-Za-z]/u.test(alias)).join('\n'),
+        components: structuredClone(definition.components) };
+      await this.render({ force: true });
+    }
+
+    static async saveDefinition(this: any) {
+      try {
+        this.captureDraft();
+        const data = Object.fromEntries(new FormData(this.element).entries());
+        const definition = configuredDefinitionFromForm({ ...data,
+          slug: this.editingId?.slice('configured.'.length) ?? '' }, this.draft.components.length);
+        if (!this.editingId && this.api.configuredConditions.catalog().some((item: ConfiguredConditionDefinition) => item.id === definition.id)) {
+          throw new Error('这个英文名称已对应一个已保存状态；请从左侧选择它进行编辑。');
+        }
+        const saved = await this.api.configuredConditions.save(definition);
+        this.editingId = saved.id;
+        await this.render({ force: true });
+      } catch (error) { notify(globals, error); }
+    }
+
+    static async deleteDefinition(this: any, _event: unknown, target: any) {
+      try {
+        await this.api.configuredConditions.delete(target.dataset.definitionId);
+        if (this.editingId === target.dataset.definitionId) { this.editingId = null; this.draft = blankDefinition(); }
+        await this.render({ force: true });
+      } catch (error) { notify(globals, error); }
+    }
+
+    static async addMechanism(this: any) {
+      this.captureDraft();
+      this.draft.components.push({ kind: 'builtin-condition', conditionId: 'sickened', params: {} });
+      await this.render({ force: true });
+    }
+
+    static async removeMechanism(this: any, _event: unknown, target: any) {
+      this.captureDraft();
+      this.draft.components.splice(Number(target.dataset.index), 1);
+      await this.render({ force: true });
+    }
+  };
+}
+
+export async function openConfiguredEditor(api: CustomConditionsApi, globals: any = globalThis): Promise<unknown> {
+  const Editor = createConfiguredEditorApplicationClass(api, globals);
+  return new Editor({ api }).render({ force: true });
 }

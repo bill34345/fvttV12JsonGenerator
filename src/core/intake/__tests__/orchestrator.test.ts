@@ -1617,6 +1617,62 @@ describe('AI monster intake orchestrator', () => {
     expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
   });
 
+  test('retains a corrected repair ledger when exact source spans originally have missing coverage bindings', async () => {
+    for (const claimPaths of [[], ['/creature/not-present']]) {
+      const provider = new FakeProvider();
+      provider.extract = async () => {
+        provider.extractionCalls += 1;
+        const ir = buildValidLurkerIr();
+        const start = LURKER_SOURCE.indexOf('特质Traits');
+        const end = start + '特质Traits'.length;
+        const template = ir.coverage[0]!;
+        ir.coverage = [
+          { ...template, end: start, quote: LURKER_SOURCE.slice(0, start) },
+          { start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths },
+          { ...template, start: end, quote: LURKER_SOURCE.slice(end) },
+        ];
+        return ir;
+      };
+
+      const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage-repair.txt', ...roots() }, provider);
+
+      expect(result.status).toBe('succeeded');
+      expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
+      expect(provider.repairRequests[0]!.deterministicFindings).toContainEqual(expect.objectContaining({
+        code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true,
+      }));
+      const repaired = JSON.parse(readFileSync(join(result.creatures[0]!.bundlePath, 'intake-ir.json'), 'utf8'));
+      expect(repaired.coverage).toHaveLength(1);
+      expect(repaired.creature.actions).toHaveLength(2);
+      expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
+    }
+  });
+
+  test('keeps incomplete coverage repairs blocked instead of treating exact quotes as sufficient', async () => {
+    const invalidIr = () => {
+      const ir = buildValidLurkerIr();
+      const start = LURKER_SOURCE.indexOf('特质Traits');
+      const end = start + '特质Traits'.length;
+      const template = ir.coverage[0]!;
+      ir.coverage = [
+        { ...template, end: start, quote: LURKER_SOURCE.slice(0, start) },
+        { start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths: [] },
+        { ...template, start: end, quote: LURKER_SOURCE.slice(end) },
+      ];
+      return ir;
+    };
+    const provider = new FakeProvider();
+    provider.extract = async () => invalidIr();
+    provider.repair = async () => invalidIr();
+
+    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage-still-invalid.txt', ...roots() }, provider);
+
+    expect(result.status).toBe('needs_review');
+    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
+    expect(existsSync(join(result.creatures[0]!.bundlePath, 'candidate-actor.json'))).toBe(false);
+  });
+
   test('uses the single repair budget for initial deterministic blockers before rendering', async () => {
     const provider = new FakeProvider();
     provider.extract = async () => {

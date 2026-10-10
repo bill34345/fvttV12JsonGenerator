@@ -1,6 +1,9 @@
 import { hashArtifact, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
 import { buildForgeActorRequest, convertFinalActorSource } from './index';
 import { decodeForgeEncounterPackageText, encounterPackageHash, type ForgeEncounterPackage } from './encounterPackage';
+import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
+import { assertEncounterLocalizationIdentity, localizedEncounterPresentation } from './encounterLocalizationProjection';
+import type { ForgeEncounterPackageMacro } from './encounterPackage';
 
 export interface PreparedEncounterActor {
   key: string;
@@ -19,6 +22,8 @@ export interface EncounterRequirement {
   detailJson:string;
 }
 export interface PreparedForgeEncounter {
+  label: string;
+  macros: readonly ForgeEncounterPackageMacro[];
   bundle: Readonly<ForgeEncounterPackage>;
   hash: string;
   actors: readonly PreparedEncounterActor[];
@@ -30,6 +35,7 @@ const ASSISTED_CODES = new Set(['GEN_GM_ASSISTANCE_REQUIRED', 'GEN_EXTERNAL_RULE
 /** Re-run the formal pipeline. A file's historical acceptance never grants create authority. */
 export async function prepareForgeEncounter(text: string, signal?: AbortSignal): Promise<PreparedForgeEncounter> {
   const bundle = decodeForgeEncounterPackageText(text);
+  assertEncounterLocalizationIdentity(bundle);
   const actors: PreparedEncounterActor[] = [];
   const assetFields = new Set<string>();
   for (const asset of bundle.assets) for (const target of asset.targets) for (const field of target.fields) {
@@ -41,7 +47,7 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
     signal?.throwIfAborted();
     const request = buildForgeActorRequest({ content: input.source, displayName: input.label,
       requestId: `encounter-${bundle.id}-${input.key}`, fvttVersion: bundle.target.foundry, systemVersion: bundle.target.systemVersion });
-    const response = await convertFinalActorSource(request);
+    const response = await convertFinalActorSource(request, { reviewedLocalization: bundle.localization?.actors.find(actor => actor.key === input.key)?.translation });
     signal?.throwIfAborted();
     if (!('result' in response)) throw new Error(`${input.label}：正式生成请求失败。`);
     const result = response.result;
@@ -75,7 +81,8 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
         detailJson:JSON.stringify(m,null,2),
       })) });
   }
-  const result: PreparedForgeEncounter = freeze({ bundle, hash: encounterPackageHash(bundle), actors,
+  const presentation = localizedEncounterPresentation(bundle, actors);
+  const result: PreparedForgeEncounter = freeze({ bundle, hash: encounterPackageHash(bundle), actors, ...presentation,
     requirements: actors.flatMap(a => a.requirements) });
   preparedProofs.add(result);
   return result;
@@ -98,41 +105,10 @@ function assertEncounterStagedMarkerIntegrity(artifact: JsonObject): void {
       ? item.flags.fvttJsonGenerator.behaviorMechanics
       : [];
     for (const mechanic of mechanics) {
-      if (typeof mechanic?.id !== 'string' || !mechanic.id.startsWith('encounter-staged-')) continue;
-      if (!isCompleteEncounterStagedMarker(item, mechanic)) {
-        throw new Error(`${String(item?.name ?? '未知载体')}：staged 条件机制缺少一致的载体、分区或来源路径绑定。`);
+      if (typeof mechanic?.id !== 'string' || !/^encounter-(staged|manual)-/u.test(mechanic.id)) continue;
+      if (!readEncounterRuleMarker(item, mechanic)) {
+        throw new Error(`${String(item?.name ?? '未知载体')}：staged/manual 条件机制缺少一致的载体、分区或来源路径绑定。`);
       }
     }
   }
-}
-
-function isCompleteEncounterStagedMarker(item: any, mechanic: any): boolean {
-  const match = /^encounter-staged-(trait|action|bonus|reaction|legendary)-(\d+)$/u.exec(String(mechanic?.id ?? ''));
-  if (!match?.[1] || !match[2]) return false;
-  const index = Number.parseInt(match[2], 10) - 1;
-  const expected = ({
-    trait: { carrier: '特性', source: 'traits' }, action: { carrier: '动作', source: 'actions' },
-    bonus: { carrier: '附赠动作', source: 'bonusActions' }, reaction: { carrier: '反应', source: 'reactions' },
-    legendary: { carrier: '传奇动作', source: 'legendaryActions' },
-  } as Record<string, { carrier: string; source: string }>)[match[1]];
-  if (!expected || index < 0) return false;
-  const carrier = mechanic?.carrier;
-  const itemSection = item?.flags?.['tidy5e-sheet']?.section ?? item?.flags?.['tidy5e-sheet']?.actionSection;
-  const conditions: string[] = Array.isArray(mechanic?.conditions) ? mechanic.conditions.map(String) : [];
-  const paths = conditions.filter((value) => value.startsWith('encounter-staged:/creature/'));
-  const coverage = conditions.filter((value) => value.startsWith('encounter-staged-coverage:'));
-  return mechanic.kind === 'lifecycle'
-    && mechanic.coverage === 'literal'
-    && mechanic.executionMode === 'gm-assisted'
-    && mechanic.ruleSource === 'source-derived'
-    && carrier?.section === expected.carrier
-    && carrier?.name === item?.name
-    && itemSection === expected.carrier
-    && paths.length > 0
-    && paths.every((path) => new RegExp(`^encounter-staged:/creature/${expected.source}/${index}/appliedConditions/(?:0|[1-9]\\d*)$`).test(path))
-    && coverage.length === 1
-    && coverage[0] === `encounter-staged-coverage:actor.${expected.source}`
-    && Array.isArray(mechanic?.gmSteps)
-    && mechanic.gmSteps.length >= 2
-    && mechanic.gmSteps.every((step: unknown) => typeof step === 'string' && step.trim().length > 0);
 }

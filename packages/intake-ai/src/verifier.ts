@@ -1,5 +1,6 @@
 import yaml from 'js-yaml';
 import { projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
+import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
 import {
   findForbiddenTargetWorldIdentifiers,
   hashManifest,
@@ -45,7 +46,8 @@ export function verifyMonsterIntake(
     code, path, message, blocking: true, origin: 'semantic',
   });
   const actualName = String(projection.name ?? '');
-  if (!actualName.includes(expected.identity.name) || (expected.identity.englishName && !actualName.includes(expected.identity.englishName))) {
+  const foldedName = actualName.toLowerCase();
+  if (!foldedName.includes(expected.identity.name.toLowerCase()) || (expected.identity.englishName && !foldedName.includes(expected.identity.englishName.toLowerCase()))) {
     add('ACTOR_NAME_DRIFT', '/creature/identity/name', `Expected actor name to preserve ${expected.identity.name}${expected.identity.englishName ? ` / ${expected.identity.englishName}` : ''}, got ${actualName}.`);
   }
   compare(add, 'ACTOR_AC_DRIFT', '/creature/attributes/ac', expected.attributes.ac, projection.ac);
@@ -666,14 +668,25 @@ function compareFeatureSections(
       compare(add, 'ACTOR_SAVE_DC_DRIFT', `/creature/${section}/${index}/save/dc`, feature.save.dc, found.saveDc);
       if (!arrayValues(found.saveAbilities).includes(feature.save.ability)) add('ACTOR_SAVE_ABILITY_DRIFT', `/creature/${section}/${index}/save/ability`, `${feature.name} lost save ability ${feature.save.ability}.`);
     }
+    const actualStatuses = arrayValues(found.statuses).map(normalizeCondition);
+    const nativeBranches = (feature.appliedConditions ?? []).filter((applied) => (
+      applied.statuses.some((status) => actualStatuses.includes(normalizeCondition(status)))
+    ));
+    const nativeBranchStatuses = new Set(nativeBranches.flatMap((applied) => applied.statuses.map(normalizeCondition))
+      .filter((status) => actualStatuses.includes(status)));
+    if (nativeBranches.length > 1 && nativeBranches.some((applied) => applied.staged) && nativeBranchStatuses.size > 1) {
+      add('STAGED_CONDITIONS_SIMULTANEOUS', `/creature/${section}/${index}/appliedConditions`, `${feature.name} projects distinct source stages together as native conditions.`);
+    }
     for (const [conditionIndex, applied] of (feature.appliedConditions ?? []).entries()) {
-      const actualStatuses = arrayValues(found.statuses).map(normalizeCondition);
       const expectedStatuses = applied.statuses.map(normalizeCondition);
-      const stagedCompanion = hasStagedCompanionMarker(found, section, index, feature);
+      const stagedCompanion = hasConditionCompanionMarker(found, section, index, feature,'staged');
+      const manualCompanion = hasConditionCompanionMarker(found, section, index, feature,'manual');
       for (const status of expectedStatuses) if (!actualStatuses.includes(status)) {
         const path = `/creature/${section}/${index}/appliedConditions/${conditionIndex}`;
         if (stagedCompanion) {
           add('ACTOR_STAGED_CONDITION_REQUIRES_COMPANION', path, `${feature.name} retains a source-derived staged branch for the encounter companion; do not apply the missing condition natively.`);
+        } else if(manualCompanion){
+          add('ACTOR_CONDITION_REQUIRES_GM',path,`${feature.name} preserves this special consequence for explicit GM adjudication; it is not a native automatic effect.`);
         } else {
           add('ACTOR_CONDITION_DRIFT', path, `${feature.name} lost condition ${status}.`);
         }
@@ -685,48 +698,26 @@ function compareFeatureSections(
   if (matched < expected.length) add('ACTOR_FEATURE_COUNT_DRIFT', `/creature/${section}`, `${section} expected ${expected.length} separate entries but matched ${matched}.`);
 }
 
-function hasStagedCompanionMarker(
+function hasConditionCompanionMarker(
   item: Record<string, unknown>,
   section: string,
   featureIndex: number,
   feature: CanonicalFeature,
+  mode:'staged'|'manual',
 ): boolean {
+  const prefix=`encounter-${mode}`;
   const stagedPaths = (feature.appliedConditions ?? [])
-    .map((condition, conditionIndex) => condition.staged ? `encounter-staged:/creature/${section}/${featureIndex}/appliedConditions/${conditionIndex}` : undefined)
+    .map((condition, conditionIndex) => mode==='manual'||condition.staged ? `${prefix}:/creature/${section}/${featureIndex}/appliedConditions/${conditionIndex}` : undefined)
     .filter((path): path is string => Boolean(path));
   if (stagedPaths.length === 0) return false;
-  const sectionKey = ({
-    traits: 'trait', actions: 'action', bonusActions: 'bonus', reactions: 'reaction', legendaryActions: 'legendary',
-  } as Record<string, string>)[section];
-  if (!sectionKey) return false;
-  const expectedId = `encounter-staged-${sectionKey}-${featureIndex + 1}`;
-  const expectedCoverage = `encounter-staged-coverage:actor.${section}`;
-  const expectedCarrier = ({
-    traits: '特性', actions: '动作', bonusActions: '附赠动作', reactions: '反应', legendaryActions: '传奇动作',
-  } as Record<string, string>)[section];
   const mechanics = Array.isArray(item.behaviorMechanics) ? item.behaviorMechanics.map(asRecord) : [];
+  const description=compact(feature.description);
+  if(!description)return false;
   const matching = mechanics.filter((mechanic) => {
-    const conditions = Array.isArray(mechanic.conditions) ? mechanic.conditions.map(String) : [];
-    const gmSteps = Array.isArray(mechanic.gmSteps) ? mechanic.gmSteps.map(String) : [];
-    const paths = conditions.filter((value) => value.startsWith('encounter-staged:/creature/'));
-    const coverage = conditions.filter((value) => value.startsWith('encounter-staged-coverage:'));
-    const carrier = asRecord(mechanic.carrier);
-    return mechanic.id === expectedId
-      && mechanic.kind === 'lifecycle'
-      && mechanic.coverage === 'literal'
-      && mechanic.executionMode === 'gm-assisted'
-      && mechanic.ruleSource === 'source-derived'
-      && mechanic.name === feature.name
-      && carrier.section === expectedCarrier
-      && carrier.name === item.name
-      && item.section === expectedCarrier
-      && paths.length > 0
-      && paths.every((path) => new RegExp(`^encounter-staged:/creature/${section}/${featureIndex}/appliedConditions/(?:0|[1-9]\\d*)$`).test(path))
-      && coverage.length === 1
-      && coverage[0] === expectedCoverage
-      && stagedPaths.every((path) => conditions.includes(path))
-      && gmSteps.length >= 2
-      && gmSteps.every((step) => step.trim().length > 0);
+    const marker=readEncounterRuleMarker(item,mechanic);
+    return marker?.mode===mode&&marker.section===section&&marker.featureIndex===featureIndex
+      &&mechanic.name===feature.name&&stagedPaths.every(path=>marker.paths.includes(path))
+      &&(mechanic.gmSteps as string[]).some(step=>compact(step)?.includes(description));
   });
   return matching.length === 1;
 }

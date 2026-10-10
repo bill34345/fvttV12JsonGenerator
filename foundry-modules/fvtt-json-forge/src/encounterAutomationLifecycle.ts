@@ -17,7 +17,7 @@ export function createEncounterAutomationLifecycle(env:any,install=installEncoun
     if(current&&hashes.get(id)===context.packageHash){if(options.showPanel!==false)await current.showPanel();return current;}
     if(current)await current.stop();
     const promise=(async()=>{
-      const runtime=await install(env,{packageId:id,packageHash:context.packageHash,bindings:context.actors,config});
+      const runtime=await install(env,{packageId:id,packageHash:context.packageHash,bindings:context.actors,config},{resumeExisting:options.persist===false});
       try{
         if(options.persist!==false)await macro.setFlag(MODULE_ID,key,{version:1,enabled:true,context,config});
         const originalStop=runtime.stop.bind(runtime);

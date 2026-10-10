@@ -60,8 +60,10 @@ export function candidateReportPath(here: string, exists: (path: string) => bool
   throw new Error('Candidate report missing');
 }
 
-export function readCandidateReport(here: string): ClasspackCandidateReport {
-  const { candidate } = candidatePaths(here);
+export function readCandidateReport(
+  here: string,
+  candidateDirectory = candidatePaths(here).candidate,
+): ClasspackCandidateReport {
   const report = JSON.parse(readFileSync(candidateReportPath(here), 'utf8')) as ClasspackCandidateReport;
   const sha256 = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex');
   const identities: Array<[string, string]> = [
@@ -70,7 +72,7 @@ export function readCandidateReport(here: string): ClasspackCandidateReport {
     ['source-baseline.json', report.sourceBaselineSha256],
   ];
   for (const [file, expected] of identities) {
-    if (typeof expected !== 'string' || sha256(join(candidate, file)) !== expected) {
+    if (typeof expected !== 'string' || sha256(join(candidateDirectory, file)) !== expected) {
       throw new Error(`Candidate report identity differs from ${file}`);
     }
   }

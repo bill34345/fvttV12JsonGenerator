@@ -1,7 +1,8 @@
 import { genericConditionsSupported } from './runtime-compatibility.ts';
 import { createConditionsApi, type CustomConditionsApi } from './api.ts';
 import { CONDITION_MANAGER_CONTROL_NAME, CONDITION_MANAGER_MENU_KEY, MODULE_ID } from './constants.ts';
-import { createConditionManagerApplicationClass, openConditionManager } from './manager.ts';
+import { CONFIGURED_CATALOG_SETTING } from './configured-runtime.ts';
+import { createConditionManagerApplicationClass, openConditionManager, openConfiguredEditor } from './manager.ts';
 import { ConditionRuntime, registerConditionMappings } from './runtime.ts';
 
 let runtime: ConditionRuntime | undefined;
@@ -27,6 +28,9 @@ export function registerCustomConditionsSettings(globals: any = globalThis): voi
     settings.register(MODULE_ID, 'injurySettingsImported', {
       name: 'FVTTCONDITIONS.Injury.Imported', scope: 'world', config: false, type: Boolean, default: false,
     });
+    settings.register(MODULE_ID, CONFIGURED_CATALOG_SETTING, {
+      name: 'FVTTCONDITIONS.Configured.Catalog', scope: 'world', config: false, type: Array, default: [], restricted: true,
+    });
   }
   if (typeof settings?.registerMenu !== 'function') return;
   try {
@@ -44,6 +48,7 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
   api = createConditionsApi(
     runtime ?? new ConditionRuntime(globals, () => isActiveGM(globals)),
     (context) => api ? openConditionManager(api, globals, context) : undefined,
+    () => api ? openConfiguredEditor(api, globals) : undefined,
   );
   hooks.once('init', () => {
     if (genericConditionsSupported(globals.game)) {
@@ -53,6 +58,10 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
     attachModuleApi(globals.game, api);
   });
   if (typeof hooks.on === 'function') {
+    hooks.on('deleteActiveEffect', (effect: any) => api?.configuredConditions.onRootDeleted(effect)
+      .catch((error: unknown) => globals.console?.error?.(`[${MODULE_ID}] configured root cleanup failed`, error)));
+    hooks.on('updateActiveEffect', (effect: any, changed: any, options: any) => api?.configuredConditions.onRootUpdated(effect, changed, options)
+      .catch((error: unknown) => globals.console?.error?.(`[${MODULE_ID}] configured root toggle failed`, error)));
     hooks.on('getSceneControlButtons', (controls: Record<string, any>) => {
       if (!isActiveGM(globals)) return;
       const tokenControl = controls?.tokens;
@@ -68,7 +77,8 @@ export function initializeCustomConditions(globals: any = globalThis): { readonl
   hooks.once('ready', () => {
     runtime = new ConditionRuntime(globals, () => isActiveGM(globals));
     runtime.start();
-    api = createConditionsApi(runtime, (context) => api ? openConditionManager(api, globals, context) : undefined);
+    api = createConditionsApi(runtime, (context) => api ? openConditionManager(api, globals, context) : undefined,
+      () => api ? openConfiguredEditor(api, globals) : undefined);
     attachModuleApi(globals.game, api);
   });
   return { get runtime() { return runtime; }, api };

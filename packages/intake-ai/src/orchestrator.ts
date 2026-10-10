@@ -38,6 +38,7 @@ import type {
 } from './types';
 import { renderIntakeVerificationMarkdown, verifyMonsterIntake } from './verifier';
 import { validateMonsterIntakeIR } from './validator';
+import { normalizeMonsterSourceFacts } from './source-facts';
 
 export {
   chunkSource,
@@ -794,10 +795,10 @@ export function anchorIrEvidence(
   for (const ref of collectGeneralEvidenceRefs(next)) anchorEvidenceRef(source, candidateScope, ref);
   partitionMythicActions(next, source);
   normalizeModelIr(next, source, options.normalizeAbsentOptionalZeroes ?? true);
-  ensureMovementQualifiers(next, source);
   anchorSpellcastingEvidence(source, candidateScope, next, options.canonicalizeModelSpellEvidence ?? true);
   ensureFeatureEvidence(next, source);
   ensureFeatureSourceQualifiers(next, source);
+  normalizeMonsterSourceFacts(next, source, candidate);
   ensureLegendaryPreambleEvidence(next, source);
   ensureEvidenceBackedFeatureClaims(next, source);
   repairCoverageLedger(next, source, candidate);
@@ -813,17 +814,6 @@ export function anchorIrEvidence(
     source.slice(entry.start, entry.end) === entry.quote || /\S/u.test(entry.quote)
   ));
   return next;
-}
-
-function ensureMovementQualifiers(ir: MonsterIntakeIR, source: string): void {
-  const movement = ir.creature.attributes.movement;
-  const explicitHover = ir.claims
-    .filter((claim) => claim.path === '/creature/attributes/movement' || claim.path === '/creature/attributes/movement/hover')
-    .flatMap((claim) => claim.evidence)
-    .some((ref) => source.slice(ref.start, ref.end) === ref.quote
-      && /(?:\bfly(?:ing)?\b|\u98de\u884c)[\s\S]{0,40}(?:\bhover\b|\u60ac\u505c|\u60ac\u6d6e)/iu.test(ref.quote));
-  if (explicitHover && typeof movement.fly === 'number') movement.hover = true;
-  else delete movement.hover;
 }
 
 function isDisprovedMythicActivationFinding(
@@ -874,7 +864,7 @@ function mergeConservativeRepair(
     ...previousClaims.filter((claim) => typeof claim?.path === 'string' && !repairedPaths.has(claim.path)),
   ];
 
-  if (hasUsableCoverage(previous.coverage, source)) {
+  if (hasUsableCoverage(previous.coverage, source, next.claims)) {
     next.coverage = structuredClone(previous.coverage);
   }
   const previousUncertainties = Array.isArray(previous.uncertainties) ? previous.uncertainties : [];
@@ -908,7 +898,8 @@ function hasSourceBackedSpellcasting(groups: unknown, source: string): boolean {
   });
 }
 
-function hasUsableCoverage(entries: unknown, source: string): entries is MonsterIntakeIR['coverage'] {
+function hasUsableCoverage(entries: unknown, source: string, claims: IntakeClaim[]): entries is MonsterIntakeIR['coverage'] {
+  const claimPaths = new Set(claims.map((claim) => claim?.path).filter((path): path is string => typeof path === 'string'));
   return Array.isArray(entries) && entries.length > 0 && entries.every((entry) => {
     const record = asRecord(entry);
     return (record?.classification === 'mechanical'
@@ -916,7 +907,14 @@ function hasUsableCoverage(entries: unknown, source: string): entries is Monster
       || record?.classification === 'ignored-with-reason')
       && Number.isInteger(record.start)
       && Number.isInteger(record.end)
-      && source.slice(record.start as number, record.end as number) === record.quote;
+      && source.slice(record.start as number, record.end as number) === record.quote
+      // An exact quote with missing bindings is still invalid coverage. Keeping
+      // that old ledger would undo the provider's corrected repair ledger.
+      && (record.classification !== 'mechanical' || (
+        Array.isArray(record.claimPaths)
+        && record.claimPaths.length > 0
+        && record.claimPaths.every((path) => typeof path === 'string' && claimPaths.has(path))
+      ));
   });
 }
 

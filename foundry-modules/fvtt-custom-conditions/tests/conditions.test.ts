@@ -15,7 +15,7 @@ function actor(id = 'target', extra: Record<string, unknown> = {}): any {
   return {
     ...data,
     toObject: () => structuredClone(data),
-    async createEmbeddedDocuments(_type: string, entries: any[]) { const created = entries.map((entry, index) => ({ ...entry, id: `effect-${index}`, _id: `effect-${index}`, parent: this })); data.effects.push(...created); return created; },
+    async createEmbeddedDocuments(_type: string, entries: any[]) { const created = entries.map((entry, index) => ({ ...entry, id: `effect-${data.effects.length + index}`, _id: `effect-${data.effects.length + index}`, parent: this })); data.effects.push(...created); return created; },
     async updateEmbeddedDocuments(type: string, updates: any[]) { for (const update of updates) { const document = (type === 'ActiveEffect' ? data.effects : data.items).find((entry: any) => entry.id === update._id); if (document) { for (const [key, value] of Object.entries(update)) { if (key === 'flags.fvtt-custom-conditions.condition') { document.flags ??= {}; document.flags['fvtt-custom-conditions'] ??= {}; document.flags['fvtt-custom-conditions'].condition = value; } else if (key === 'system.equipped') { document.system.equipped = value; } else if (key === 'changes') document.changes = value; else Object.assign(document, { [key]: value }); } } } return type === 'ActiveEffect' ? data.effects : data.items; },
     async deleteEmbeddedDocuments(_type: string, ids: string[]) { for (let index = data.effects.length - 1; index >= 0; index -= 1) if (ids.includes(data.effects[index].id)) data.effects.splice(index, 1); return []; },
     async update(update: any) { for (const [path, value] of Object.entries(update)) { if (path === 'system.attributes.hp.value') data.system.attributes.hp.value = value; else if (path.startsWith('flags.')) { const parts = path.split('.'); const module = parts[1] ?? ''; const key = parts[2] ?? ''; const child = parts[3]; data.flags[module] ??= {}; if (child) data.flags[module][key] ??= {}; if (child) data.flags[module][key][child] = value; else data.flags[module][key] = value; } } },
@@ -141,6 +141,19 @@ describe('condition runtime', () => {
     expect(table.paralyzed).toBe(native);
   });
 
+  test('Next optional Defenseless entry preserves its configured status name', () => {
+    const id = projectedConditionStatusId('defenseless');
+    const table: Record<string, any> = {};
+    const { runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      CONFIG: { statusEffects: [{ id, name: '自定义无防备' }] },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.603.2' } : undefined } },
+    });
+    expect(table[id]?.name).toBe('自定义无防备');
+    runtime.stop();
+  });
+
   test('optional target registry recovers delayed API initialization and preserves a later foreign replacement', async () => {
     const id = projectedConditionStatusId('defenseless');
     const { target, globals, handlers, runtime } = runtimeFixture(actor(), {
@@ -177,6 +190,73 @@ describe('condition runtime', () => {
         modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.603.2' } : undefined } },
     });
     expect(table[id]).toBe(foreign); runtime.stop(); expect(table[id]).toBe(foreign);
+  });
+
+  test('Mirror AC5e recognizes only active Strength and Dexterity condition attack sources', async () => {
+    const strId = projectedConditionStatusId('enfeebled'), dexId = projectedConditionStatusId('clumsy');
+    const native = { _id: 'paralyzed', rules: { attack: { opponent: () => 'advantage' } } };
+    const table: Record<string, any> = { paralyzed: native };
+    const { target, runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' },
+        i18n: { localize: (key: string) => `本地化 ${key}` },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.533.8' } : undefined } },
+    });
+    expect(table[strId].name).toBe('本地化 FVTTCONDITIONS.Condition.enfeebled.Name');
+    expect(table[dexId].name).toBe('本地化 FVTTCONDITIONS.Condition.clumsy.Name');
+    expect(table.paralyzed).toBe(native);
+    const strength = table[strId].rules.attack.subject, dexterity = table[dexId].rules.attack.subject;
+    expect(strength({ subject: target, ability: 'str' })).toBe('');
+    const enfeebled = await runtime.apply(target, 'enfeebled', {});
+    const clumsy = await runtime.apply(target, 'clumsy', {});
+    expect(strength({ subject: target, ability: 'str' })).toBe('disadvantage');
+    expect([table.paralyzed.rules.attack.opponent({}), strength({ subject: target, ability: 'str' })]).toEqual(['advantage', 'disadvantage']);
+    expect(strength({ subject: target, ability: 'dex' })).toBe('');
+    expect(dexterity({ subject: target, ability: 'dex' })).toBe('disadvantage');
+    expect(dexterity({ subject: target, ability: 'con' })).toBe('');
+    // AC5e receives a source it can compose with a real advantage source;
+    // neither condition reports a made-up advantage or a forced final mode.
+    expect(strength({ subject: actor('other'), ability: 'str' })).toBe('');
+    enfeebled.disabled = true;
+    expect(strength({ subject: target, ability: 'str' })).toBe('');
+    enfeebled.disabled = false;
+    await runtime.remove(target, clumsy.id);
+    expect(dexterity({ subject: target, ability: 'dex' })).toBe('');
+    runtime.stop();
+    expect(table[strId]).toBeUndefined(); expect(table[dexId]).toBeUndefined(); expect(table.paralyzed).toBe(native);
+  });
+
+  test('Mirror optional attack sources recover late public table initialization and preserve foreign replacements', () => {
+    const strId = projectedConditionStatusId('enfeebled'), dexId = projectedConditionStatusId('clumsy');
+    const { globals, handlers, runtime } = runtimeFixture(actor(), {
+      game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active: true, version: '14.533.8' } : undefined } },
+    });
+    const table: Record<string, any> = {};
+    globals.ac5e = { statusEffectsTables: table };
+    handlers.get('ac5e.statusEffectsReady')();
+    const first = table[strId];
+    handlers.get('ac5e.statusEffectsReady')();
+    expect(table[strId]).toBe(first);
+    expect(Object.keys(table).sort()).toEqual([strId, dexId].sort());
+    const foreign = { _id: strId, rules: { attack: { subject: () => 'foreign' } } };
+    table[strId] = foreign;
+    runtime.stop();
+    expect(table[strId]).toBe(foreign);
+    expect(table[dexId]).toBeUndefined();
+  });
+
+  test.each([
+    ['14.364', '5.3.3', '14.533.8', true], ['14.368', '5.3.3', '14.533.7', true],
+    ['14.368', '5.3.3', '14.603.2', true], ['14.368', '5.3.3', '14.533.8', false],
+  ] as const)('Mirror attack registry leaves unsupported %s/%s AC5e %s active=%s untouched', (core, system, version, active) => {
+    const table = {};
+    const { runtime } = runtimeFixture(actor(), {
+      ac5e: { statusEffectsTables: table },
+      game: { version: core, system: { id: 'dnd5e', version: system },
+        modules: { get: (name: string) => name === 'automated-conditions-5e' ? { active, version } : undefined } },
+    });
+    expect(table).toEqual({}); runtime.stop(); expect(table).toEqual({});
   });
 
   test.each([

@@ -22,6 +22,36 @@
     </section>
   {{/if}}
   {{#if genericAvailable}}
+  <section class="configured-manager-panel">
+    <header><h3>{{localize "FVTTCONDITIONS.Configured.Title"}}</h3>
+      <button type="button" data-action="openConfiguredEditor">{{localize "FVTTCONDITIONS.Configured.OpenEditor"}}</button></header>
+    <p class="hint">{{localize "FVTTCONDITIONS.Configured.ManagerHint"}}</p>
+    {{#if configuredDefinitions.length}}
+      <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Choose"}}</label>
+        <select name="configuredDefinitionId">
+          {{#each configuredDefinitions}}<option value="{{id}}">{{name}}</option>{{/each}}
+        </select>
+        <button type="button" data-action="applyConfigured">{{localize "FVTTCONDITIONS.Manager.Apply"}}</button>
+      </div>
+    {{/if}}
+    {{#each actors}}
+      {{#if configuredConditions.length}}
+        <h4>{{name}}</h4>
+        <ul class="condition-list">
+          {{#each configuredConditions}}
+            <li><span><strong>{{name}}</strong> · {{#if disabled}}{{localize "FVTTCONDITIONS.Manager.Disabled"}}{{else}}{{localize "FVTTCONDITIONS.Manager.Enabled"}}{{/if}}
+              {{#if skippedLabel}} · {{localize "FVTTCONDITIONS.Configured.ImmuneSkipped"}} {{skippedLabel}}{{/if}}</span>
+              <span class="condition-actions">
+                {{#if frozenComponentId}}<button type="button" data-action="escapeConfiguredFrozen" data-actor-uuid="{{actorUuid}}" data-instance-id="{{instanceId}}">{{localize "FVTTCONDITIONS.Manager.EscapeFrozen"}}</button>{{/if}}
+                <button type="button" data-action="toggleConfigured" data-actor-uuid="{{actorUuid}}" data-instance-id="{{instanceId}}">{{localize "FVTTCONDITIONS.Manager.Toggle"}}</button>
+                <button type="button" data-action="removeConfigured" data-actor-uuid="{{actorUuid}}" data-instance-id="{{instanceId}}">{{localize "FVTTCONDITIONS.Manager.Remove"}}</button>
+              </span>
+            </li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    {{/each}}
+  </section>
   <div class="condition-targets">
     {{#each actors}}
       <article data-actor-uuid="{{uuid}}">

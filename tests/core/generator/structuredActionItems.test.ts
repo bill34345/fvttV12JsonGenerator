@@ -286,7 +286,7 @@ describe('appendStructuredActionItems', () => {
       const item: any = {
         name: 'Ambiguous Effect Carrier',
         effects: [{ _id: 'generic-both', statuses: ['frightened', 'dazed'], duration: {}, description: 'generic effect', flags: {} }],
-        system: { activities: { save: { effects: [{ _id: 'generic-both' }] } } },
+        system: { activities: { save: { type: 'save', effects: [{ _id: 'generic-both' }] } } },
       };
 
       attachEmbeddedEffects(item, [{ type: 'frightened', describe: 'Source fear lasts 1 minute.', duration: '1 minute' }]);

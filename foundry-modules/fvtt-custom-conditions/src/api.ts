@@ -8,6 +8,8 @@ import type {
 import type { ConditionApplyOptions, ConditionEntry, ConditionRuntime } from './runtime.ts';
 import type { WeaponEffectEntry, WeaponEffectRuntime } from './weapon-effects.ts';
 import type { InjuryState } from './injury.ts';
+import { ConfiguredConditionRuntime, type ConfiguredConditionEntry, type ConfiguredApplyOptions } from './configured-runtime.ts';
+import type { ConfiguredConditionDefinition, ConfiguredConditionReference } from '@fvtt-json-generator/contracts/configured-conditions';
 
 export interface WeaponEffectsApi {
   readonly version: 1;
@@ -37,6 +39,19 @@ export interface CustomConditionsApi {
   applyFromItem(item: any, actors: any[], effectId?: string, overrides?: ConditionParams): Promise<void>;
   escapeFrozen(actor: any, effectId: string, rollerActor?: any): ReturnType<ConditionRuntime['escapeFrozen']>;
   openManager(context?: ConditionManagerOpenContext): Promise<unknown>;
+  configuredConditions: {
+    readonly version: 1;
+    catalog(): ConfiguredConditionDefinition[];
+    save(definition: ConfiguredConditionDefinition): Promise<ConfiguredConditionDefinition>;
+    delete(id: string): Promise<void>;
+    apply(actor: any, ref: ConfiguredConditionReference, options?: ConfiguredApplyOptions): Promise<any>;
+    list(actor: any): ConfiguredConditionEntry[];
+    remove(actor: any, instanceId: string): Promise<void>;
+    setEnabled(actor: any, instanceId: string, enabled: boolean): Promise<void>;
+    openEditor(): Promise<unknown>;
+    onRootDeleted(effect: any): Promise<void>;
+    onRootUpdated(effect: any, changed: any, options: any): Promise<void>;
+  };
   weaponEffects: WeaponEffectsApi;
   injury: {
     readonly owner: 'fvtt-custom-conditions';
@@ -50,8 +65,10 @@ export interface CustomConditionsApi {
   };
 }
 
-export function createConditionsApi(runtime: ConditionRuntime, openManager: (context?: ConditionManagerOpenContext) => Promise<unknown> | unknown): CustomConditionsApi {
+export function createConditionsApi(runtime: ConditionRuntime, openManager: (context?: ConditionManagerOpenContext) => Promise<unknown> | unknown,
+  openEditor: () => Promise<unknown> | unknown = () => { throw new Error('Configured condition editor is unavailable.'); }): CustomConditionsApi {
   const weaponEffects = createWeaponEffectsApi(runtime.weaponEffects);
+  const configured = new ConfiguredConditionRuntime(runtime.globals, runtime.isActiveGM, runtime);
   return Object.freeze({
     definitions: () => runtime.definitions(),
     list: (actor: any) => runtime.list(actor),
@@ -62,6 +79,19 @@ export function createConditionsApi(runtime: ConditionRuntime, openManager: (con
     applyFromItem: (item: any, actors: any[], effectId?: string, overrides?: ConditionParams) => runtime.applyFromItem(item, actors, effectId, overrides),
     escapeFrozen: (actor: any, effectId: string, rollerActor?: any) => runtime.escapeFrozen(actor, effectId, rollerActor),
     openManager: async (context?: ConditionManagerOpenContext) => openManager(context),
+    configuredConditions: Object.freeze({
+      version: 1 as const,
+      catalog: () => configured.catalog(),
+      save: (definition: ConfiguredConditionDefinition) => configured.save(definition),
+      delete: (id: string) => configured.delete(id),
+      apply: (actor: any, ref: ConfiguredConditionReference, options?: ConfiguredApplyOptions) => configured.apply(actor, ref, options),
+      list: (actor: any) => configured.list(actor),
+      remove: (actor: any, instanceId: string) => configured.remove(actor, instanceId),
+      setEnabled: (actor: any, instanceId: string, enabled: boolean) => configured.setEnabled(actor, instanceId, enabled),
+      openEditor: async () => openEditor(),
+      onRootDeleted: (effect: any) => configured.onRootDeleted(effect),
+      onRootUpdated: (effect: any, changed: any, options: any) => configured.onRootUpdated(effect, changed, options),
+    }),
     weaponEffects,
     injury: Object.freeze({
       owner: 'fvtt-custom-conditions' as const,

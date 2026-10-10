@@ -1,6 +1,8 @@
 import { createForgeConnectionApplicationClass } from './connectionApplication';
 import { createForgeWorkspaceApplicationClass, type ForgeWorkspaceMode } from './workspaceApplication';
+import { createForgeGuideApplicationClass } from './guideApplication';
 import {createEncounterAutomationLifecycle} from './encounterAutomationLifecycle';
+import {installEncounterDamageBridge,installPassiveActivityLockGuard} from './encounterAutomationRuntime';
 import {
   assertExactRuntime,
   assertGm,
@@ -41,6 +43,14 @@ export function openForgeConnectionSettings(environment: any = globalThis): unkn
   });
 }
 
+export function openForgeGuide(environment: any = globalThis): unknown {
+  assertGm(environment.game); assertExactRuntime(environment.game);
+  return focusWorkspace(environment, 'guide', () => {
+    const Application = createForgeGuideApplicationClass(environment);
+    return new Application();
+  });
+}
+
 export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = globalThis, mode?: ForgeWorkspaceMode): unknown {
   if (kind !== 'Actor' && kind !== 'Item') throw new Error('请选择角色或物品目录。');
   assertGm(environment.game); assertExactRuntime(environment.game);
@@ -49,6 +59,7 @@ export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = gl
       game: environment.game, ui: environment.ui, foundry: environment.foundry,
       window: environment.window, hooks: environment.Hooks, directoryKind: kind, initialMode: mode,
       openConnectionSettings: () => openForgeConnectionSettings(environment),
+      openGuide: () => openForgeGuide(environment),
     });
     return new Application();
   }, mode);
@@ -85,7 +96,11 @@ export function mountForgeDirectoryButton(kind: 'Actor' | 'Item', html: any, env
 export function initializeForgeModule(globalEnvironment: any = globalThis): void {
   if (!globalEnvironment.Hooks) return;
   const automation = createEncounterAutomationLifecycle(globalEnvironment);
-  globalEnvironment.Hooks.on?.('canvasReady', () => void automation.resume());
+  globalEnvironment.Hooks.on?.('canvasReady', () => {
+    installPassiveActivityLockGuard(globalEnvironment);
+    installEncounterDamageBridge(globalEnvironment);
+    void automation.resume();
+  });
   globalEnvironment.Hooks.on?.('renderActorDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Actor', html, globalEnvironment));
   globalEnvironment.Hooks.on?.('renderItemDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Item', html, globalEnvironment));
   let registered = false;
@@ -113,10 +128,13 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
   globalEnvironment.Hooks.once('ready', async () => {
     registerSettings();
     const game = globalEnvironment.game;
+    installPassiveActivityLockGuard(globalEnvironment);
+    installEncounterDamageBridge(globalEnvironment);
     const module = game?.modules?.get?.(MODULE_ID);
     if (module) module.api = Object.freeze({ openForgeActor, openForgeItem, openForgeIntake,
       openForgeWorkspace: (kind: 'Actor' | 'Item') => openForgeWorkspace(kind, globalEnvironment),
       openForgeConnectionSettings: () => openForgeConnectionSettings(globalEnvironment),
+      openForgeGuide: () => openForgeGuide(globalEnvironment),
       startEncounterAutomation: automation.start, stopEncounterAutomation: automation.stop,
       encounterAutomationRuntimes: automation.runtimes });
     if (game?.user?.isGM !== true) return;

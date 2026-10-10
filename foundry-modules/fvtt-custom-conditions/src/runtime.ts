@@ -219,7 +219,7 @@ export class ConditionRuntime {
       }
       const origin = options.origin ?? '';
       const existing = this.list(actor).filter((entry) => entry.instance.conditionId === conditionId
-        && entry.origin === origin && !entry.disabled);
+        && entry.origin === origin && !entry.disabled && !entry.effect?.flags?.[MODULE_ID]?.configuredComponent);
       if (existing.length && stacking === 'unspecified') {
         throw new Error('该来源没有说明重复施加规则，请在 Condition 面板中选择叠加、替换或忽略。');
       }
@@ -237,7 +237,8 @@ export class ConditionRuntime {
   }
 
   private async applyHighestCondition(actor: any, incoming: ConditionInstance, name?: string, preferredId?: string): Promise<any> {
-    const all = this.list(actor).filter((entry) => entry.instance.conditionId === incoming.conditionId);
+    const all = this.list(actor).filter((entry) => entry.instance.conditionId === incoming.conditionId
+      && !entry.effect?.flags?.[MODULE_ID]?.configuredComponent);
     const preferred = all.find((entry) => entry.id === preferredId);
     const active = all.filter((entry) => !entry.disabled && entry.id !== preferredId);
 
@@ -300,6 +301,7 @@ export class ConditionRuntime {
     this.requireGM(actor);
     const current = this.list(actor).find((entry) => entry.id === id);
     if (!current) throw new Error('Condition 已移除或无效。');
+    if (current.effect?.flags?.[MODULE_ID]?.configuredComponent) throw new Error('请通过组合状态管理器操作此来源。');
     const next = createConditionInstance(conditionId, params, {
       instanceId: current.instance.instanceId,
       enabled: !current.disabled,
@@ -336,7 +338,8 @@ export class ConditionRuntime {
     this.requireGM(actor);
     await this.enqueue(actor, async () => {
       this.requireGM(actor);
-      if (this.list(actor).some((entry) => entry.id === id)) await actor.deleteEmbeddedDocuments?.('ActiveEffect', [id]);
+      const entry = this.list(actor).find((candidate) => candidate.id === id);
+      if (entry) await actor.deleteEmbeddedDocuments?.('ActiveEffect', configuredRemovalIds(actor, entry));
     });
   }
 
@@ -345,6 +348,7 @@ export class ConditionRuntime {
     if (typeof enabled !== 'boolean') throw new TypeError('enabled must be a boolean');
     const entry = this.list(actor).find((candidate) => candidate.id === id);
     if (!entry) throw new Error('Condition 已移除或无效。');
+    if (entry.effect?.flags?.[MODULE_ID]?.configuredComponent) throw new Error('请通过组合状态管理器操作此来源。');
     await this.enqueue(actor, async () => {
       if (enabled && (entry.instance.conditionId === 'bleeding' || entry.instance.conditionId === 'burning')) {
         const instance = createConditionInstance(entry.instance.conditionId, entry.instance.params, {
@@ -462,7 +466,9 @@ export class ConditionRuntime {
       try { await this.normalizeHighestExisting(actor, conditionId); }
       catch (error) { blockedHighest.add(conditionId); this.report(error); }
     }
-    const entries = this.list(actor).filter((entry) => !entry.disabled && !blockedHighest.has(entry.instance.conditionId));
+    const entries = this.list(actor).filter((entry) => !entry.disabled && !blockedHighest.has(entry.instance.conditionId))
+      .filter((entry) => !['bleeding', 'burning'].includes(entry.instance.conditionId)
+        || this.highestEntryId(actor, entry.instance.conditionId as 'bleeding' | 'burning') === entry.id);
     const timed = entries.filter((entry) => {
       const timing = entry.instance.params.timing;
       return (context.event?.type === 'combatTurnStart' && timing === 'turnStart')
@@ -498,7 +504,12 @@ export class ConditionRuntime {
     const before = readHP(context.before);
     const after = readHP(context.after);
     if (before === undefined || after === undefined || after <= before) return;
-    const ids = this.list(actor).filter((entry) => entry.instance.params.endOnHealing === true).map((entry) => entry.id);
+    const matching = this.list(actor).filter((entry) => entry.instance.params.endOnHealing === true);
+    const groupIds = new Set(matching.map((entry) => entry.effect?.flags?.[MODULE_ID]?.configuredComponent?.instanceId)
+      .filter((id): id is string => typeof id === 'string'));
+    const ids = collection(actor?.effects).filter((effect) => groupIds.has(effect?.flags?.[MODULE_ID]?.configuredRoot?.instanceId)
+      || groupIds.has(effect?.flags?.[MODULE_ID]?.configuredComponent?.instanceId)).map(effectId);
+    ids.push(...matching.filter((entry) => !entry.effect?.flags?.[MODULE_ID]?.configuredComponent).map((entry) => entry.id));
     if (ids.length) await actor.deleteEmbeddedDocuments?.('ActiveEffect', ids);
   }
 
@@ -541,32 +552,62 @@ export class ConditionRuntime {
     };
   }
 
+  /** Build an owned component from the same fixed rules used by ordinary conditions. */
+  configuredComponentData(conditionId: ConditionId, params: ConditionParams, instanceId: string, name: string, origin?: string, source?: string): Record<string, unknown> {
+    const instance = createConditionInstance(conditionId, params, { instanceId, origin, source });
+    return this.effectData(instance, name);
+  }
+
+  async configuredComponentsCreated(actor: any, components: readonly ConditionId[]): Promise<void> {
+    if (!components.includes('shocked')) return;
+    const equipped = collection(actor?.items).filter((item) => item?.system?.equipped === true && isHeldItem(item));
+    try { await unequipActorItems(actor); }
+    catch (error) {
+      const ids = new Set(equipped.map((item) => item.id ?? item._id));
+      const restore = collection(actor?.items).filter((item) => ids.has(item.id ?? item._id) && item?.system?.equipped === false)
+        .map((item) => ({ _id: item.id ?? item._id, 'system.equipped': true }));
+      if (restore.length) {
+        try { await actor.updateEmbeddedDocuments?.('Item', restore, { [MODULE_ID]: { internal: true } }); }
+        catch (restoreError) { throw new AggregateError([error, restoreError], 'Shocked 装备写入失败，自动恢复也失败；请 GM 核对装备状态。'); }
+      }
+      throw error;
+    }
+  }
+
   private ensureOptionalTargetStatusRule(): void {
-    // AC5e 14.603.2 exposes this table as its public status extension interface.
-    // Its mode builder skips unknown statuses before applying overrides, so a
-    // late config.advantage boolean alone cannot supply our target source.
-    // Frozen/Shocked project the same Defenseless status; register it once so
-    // the engine combines this source with legitimate disadvantage normally.
+    // Both reviewed AC5e builds expose a mutable public status table. Its mode
+    // builder ignores unknown statuses, so a bare preRollAttack boolean cannot
+    // compose with AC5e's own advantage sources in the 5.3.3 fast-forward path.
     const game = this.globals.game;
     const optional = game?.modules?.get?.('automated-conditions-5e');
-    if (game?.version !== '14.368' || game?.system?.version !== '6.0.5'
-      || optional?.active !== true || optional.version !== '14.603.2') return;
+    const next = game?.version === '14.368' && game?.system?.version === '6.0.5' && optional?.version === '14.603.2';
+    const mirror = game?.version === '14.368' && game?.system?.version === '5.3.3' && optional?.version === '14.533.8';
+    if ((!next && !mirror) || optional?.active !== true) return;
     const table = this.globals.ac5e?.statusEffectsTables;
-    const id = projectedConditionStatusId('defenseless');
     if (!table || typeof table !== 'object' || Array.isArray(table)
-      || !Object.isExtensible(table) || Object.hasOwn(table, id)) return;
-    const entry = {
-      _id: id,
-      name: this.globals.CONFIG?.statusEffects?.find?.((status: any) => status.id === id)?.name ?? 'Defenseless',
-      rules: { attack: { opponent: (context: any) => {
-        if (!this.#started) return '';
-        const entries = this.list(context?.opponent).filter((condition) => !condition.disabled);
-        return hasCondition(entries, 'defenseless') || hasCondition(entries, 'frozen') || hasCondition(entries, 'shocked')
-          ? 'advantage' : '';
-      } } },
+      || !Object.isExtensible(table)) return;
+    const register = (conditionId: ConditionId, rules: Record<string, unknown>, name?: string) => {
+      const id = projectedConditionStatusId(conditionId);
+      if (Object.hasOwn(table, id)) return;
+      const entry = { _id: id, name: name ?? localizedConditionDefinition(CONDITION_DEFINITIONS[conditionId], this.globals).label, rules };
+      table[id] = entry;
+      this.#targetStatusEntries.push({ table, id, entry });
     };
-    table[id] = entry;
-    this.#targetStatusEntries.push({ table, id, entry });
+    if (mirror) {
+      for (const [conditionId, ability] of [['enfeebled', 'str'], ['clumsy', 'dex']] as const) {
+        register(conditionId, { attack: { subject: (context: any) => {
+          if (!this.#started || context?.ability !== ability) return '';
+          const entries = this.list(context?.subject).filter((condition) => !condition.disabled);
+          return hasCondition(entries, conditionId) ? 'disadvantage' : '';
+        } } });
+      }
+    }
+    if (next) register('defenseless', { attack: { opponent: (context: any) => {
+      if (!this.#started) return '';
+      const entries = this.list(context?.opponent).filter((condition) => !condition.disabled);
+      return hasCondition(entries, 'defenseless') || hasCondition(entries, 'frozen') || hasCondition(entries, 'shocked')
+        ? 'advantage' : '';
+    } } }, this.globals.CONFIG?.statusEffects?.find?.((status: any) => status.id === projectedConditionStatusId('defenseless'))?.name ?? 'Defenseless');
   }
 
   private requireGM(actor: any): void {
@@ -704,9 +745,21 @@ export class ConditionRuntime {
       if (comparison === undefined) throw new Error(`Actor ${actor.name ?? actorKey(actor)} has multiple ${conditionId} effects whose formulas cannot be compared; no effect was deleted.`);
       if (comparison > 0) winner = candidate;
     }
-    const duplicates = all.filter((entry) => entry.id !== winner.id).map((entry) => entry.id);
+    const hasConfiguredSource = all.some((entry) => entry.effect?.flags?.[MODULE_ID]?.configuredComponent);
+    const duplicates = hasConfiguredSource ? [] : all.filter((entry) => entry.id !== winner.id).map((entry) => entry.id);
     if (duplicates.length) await actor.deleteEmbeddedDocuments?.('ActiveEffect', duplicates);
     return this.list(actor).find((entry) => entry.id === winner.id);
+  }
+
+  private highestEntryId(actor: any, conditionId: 'bleeding' | 'burning'): string | undefined {
+    const entries = this.list(actor).filter((entry) => !entry.disabled && entry.instance.conditionId === conditionId);
+    let winner = entries[0];
+    for (const entry of entries.slice(1)) {
+      const comparison = compareConditionFormulaStrength(String(entry.instance.params.formula ?? ''), String(winner?.instance.params.formula ?? ''));
+      if (comparison === undefined) return undefined;
+      if (comparison > 0) winner = entry;
+    }
+    return winner?.id;
   }
 
   private applyRollModifiers(config: any, kind: 'attack' | 'save' | 'check'): boolean | void {
@@ -1051,7 +1104,7 @@ export class ConditionRuntime {
       for (const entry of entries) {
         const threshold = Number(entry.instance.params.breakDamage ?? 20);
         const accumulated = Number(entry.instance.params.breakDamageTaken ?? 0) + gained;
-        if (accumulated >= threshold) removals.push(entry.id);
+        if (accumulated >= threshold) removals.push(...configuredRemovalIds(actor, entry));
         else {
           const next = createConditionInstance('frozen', { ...entry.instance.params, breakDamageTaken: accumulated }, {
             instanceId: entry.instance.instanceId,
@@ -1064,7 +1117,7 @@ export class ConditionRuntime {
         }
       }
       if (updates.length) await actor.updateEmbeddedDocuments?.('ActiveEffect', updates);
-      if (removals.length) await actor.deleteEmbeddedDocuments?.('ActiveEffect', removals);
+      if (removals.length) await actor.deleteEmbeddedDocuments?.('ActiveEffect', [...new Set(removals)]);
     });
   }
 
@@ -1077,6 +1130,18 @@ export class ConditionRuntime {
     this.globals.console?.error?.(`[${MODULE_ID}]`, error);
     this.globals.ui?.notifications?.error?.(`Condition 自动结算需要 GM 检查：${String(error)}`);
   }
+}
+
+function configuredRemovalIds(actor: any, entry: ConditionEntry): string[] {
+  const owner = entry.effect?.flags?.[MODULE_ID]?.configuredComponent;
+  if (!owner || typeof owner.instanceId !== 'string') return [entry.id];
+  return collection(actor?.effects).filter((effect) => {
+    const root = effect?.flags?.[MODULE_ID]?.configuredRoot;
+    const child = effect?.flags?.[MODULE_ID]?.configuredComponent;
+    const candidate = root ?? child;
+    return candidate?.instanceId === owner.instanceId && candidate?.definitionId === owner.definitionId
+      && candidate?.fingerprint === owner.fingerprint;
+  }).map(effectId);
 }
 
 export function changesFor(instance: ConditionInstance, systemVersion?: string): Array<Record<string, unknown>> {

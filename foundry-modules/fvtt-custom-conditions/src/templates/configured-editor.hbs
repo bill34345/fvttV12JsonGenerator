@@ -1,0 +1,72 @@
+<section class="configured-editor">
+  <p class="hint">{{localize "FVTTCONDITIONS.Configured.Intro"}}</p>
+  <div class="configured-editor-layout">
+    <aside class="configured-catalog-list">
+      <button type="button" data-action="newDefinition">{{localize "FVTTCONDITIONS.Configured.New"}}</button>
+      {{#each definitions}}
+        <article>
+          <strong>{{name}}</strong><small>{{id}}</small>
+          <button type="button" data-action="editDefinition" data-definition-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Edit"}}</button>
+          <button type="button" data-action="deleteDefinition" data-definition-id="{{id}}">{{localize "FVTTCONDITIONS.Manager.Remove"}}</button>
+        </article>
+      {{else}}<p class="hint">{{localize "FVTTCONDITIONS.Configured.Empty"}}</p>{{/each}}
+    </aside>
+    <div class="configured-definition-form">
+      {{#if editing}}<p class="hint">{{localize "FVTTCONDITIONS.Configured.StableId"}} {{draft.id}}</p>{{/if}}
+      <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Name"}}</label>
+        <input name="name" value="{{draft.name}}" maxlength="120" required placeholder="霜蚀 Frostbite"></div>
+      <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Description"}}</label>
+        <textarea name="description" rows="3" maxlength="2000">{{draft.description}}</textarea></div>
+      <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.EnglishAliases"}}</label>
+        <textarea name="englishAliases" rows="2" required placeholder="Frostbite">{{draft.englishAliases}}</textarea></div>
+      <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.ChineseAliases"}}</label>
+        <textarea name="chineseAliases" rows="2" required placeholder="霜蚀">{{draft.chineseAliases}}</textarea></div>
+      <p class="hint">{{localize "FVTTCONDITIONS.Configured.AliasHint"}}</p>
+      <h3>{{localize "FVTTCONDITIONS.Configured.Mechanisms"}}</h3>
+      {{#each mechanisms}}
+        <fieldset class="configured-mechanism">
+          <legend>{{localize "FVTTCONDITIONS.Configured.Mechanism"}} {{index}}</legend>
+          <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Kind"}}</label>
+            <select name="component-{{index}}-kind" data-mechanism-choice="kind" data-index="{{index}}">
+              <option value="builtin-condition" {{#if builtin}}selected{{/if}}>{{localize "FVTTCONDITIONS.Configured.Builtin"}}</option>
+              <option value="native-condition" {{#if native}}selected{{/if}}>{{localize "FVTTCONDITIONS.Configured.Native"}}</option>
+              <option value="movement-reduction" {{#if movement}}selected{{/if}}>{{localize "FVTTCONDITIONS.Configured.Movement"}}</option>
+            </select></div>
+          {{#if builtin}}
+            <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Builtin"}}</label>
+              <select name="component-{{index}}-conditionId" data-mechanism-choice="conditionId" data-index="{{index}}">
+                {{#each choices}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+              </select></div>
+            {{#each parameters}}
+              <div class="form-group"><label>{{label}}</label>
+                {{#if isSelect}}
+                  <select name="component-{{../index}}-param-{{id}}">
+                    {{#unless required}}<option value="">—</option>{{/unless}}
+                    {{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{value}}</option>{{/each}}
+                  </select>
+                {{else}}
+                  <input name="component-{{../index}}-param-{{id}}" value="{{value}}" {{#if isNumber}}type="number"{{else}}type="text"{{/if}}
+                    {{#if min}}min="{{min}}"{{/if}} {{#if max}}max="{{max}}"{{/if}} {{#if maxLength}}maxlength="{{maxLength}}"{{/if}}
+                    {{#if required}}required{{/if}}>
+                {{/if}}
+              </div>
+            {{/each}}
+          {{else}}
+          {{#if native}}
+            <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Native"}}</label>
+              <select name="component-{{index}}-status">
+                {{#each nativeChoices}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+              </select></div>
+          {{else}}
+            <div class="form-group"><label>{{localize "FVTTCONDITIONS.Configured.Feet"}}</label>
+              <input name="component-{{index}}-feet" type="number" min="1" max="100" step="1" value="{{feet}}" required></div>
+          {{/if}}
+          {{/if}}
+          <button type="button" data-action="removeMechanism" data-index="{{index}}">{{localize "FVTTCONDITIONS.Configured.RemoveMechanism"}}</button>
+        </fieldset>
+      {{/each}}
+      <button type="button" data-action="addMechanism">{{localize "FVTTCONDITIONS.Configured.AddMechanism"}}</button>
+      <button type="button" data-action="saveDefinition">{{localize "FVTTCONDITIONS.Configured.Save"}}</button>
+    </div>
+  </div>
+</section>

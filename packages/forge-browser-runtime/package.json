@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./native-status-riders": "./src/nativeStatusRiders.ts",
+    "./encounter-localization": "./src/encounterLocalization.ts",
     ".": "./src/index.ts",
     "./ai": "./src/ai.ts",
     "./intake-review": "./src/intakeReview.ts",

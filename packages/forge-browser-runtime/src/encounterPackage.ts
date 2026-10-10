@@ -1,4 +1,5 @@
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import { decodeEncounterLocalization, type EncounterLocalization } from '@fvtt-json-generator/contracts/localization';
 import { hashArtifact, hashSource, type JsonObject, type Sha256 } from '@fvtt-json-generator/forge-gateway-protocol';
 
 export const FORGE_ENCOUNTER_PACKAGE_SCHEMA = 'fvtt-json-forge-encounter' as const;
@@ -88,6 +89,7 @@ export interface ForgeEncounterPackageAsset {
 }
 
 export interface ForgeEncounterPackage {
+  readonly localization?: EncounterLocalization;
   readonly schema: typeof FORGE_ENCOUNTER_PACKAGE_SCHEMA;
   readonly version: typeof FORGE_ENCOUNTER_PACKAGE_VERSION;
   readonly id: string;
@@ -169,7 +171,7 @@ export function encounterPackageHash(bundle: ForgeEncounterPackage): string {
 
 function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPackage> {
   scanUntrustedJson(value);
-  const root = exactRecord(value, '$', ROOT_KEYS);
+  const root = exactRecord(value, '$', Object.hasOwn(value as object, 'localization') ? [...ROOT_KEYS, 'localization'] : ROOT_KEYS);
   literal(root.schema, FORGE_ENCOUNTER_PACKAGE_SCHEMA, '$.schema');
   literalNumber(root.version, FORGE_ENCOUNTER_PACKAGE_VERSION, '$.version');
   const id = slug(root.id, '$.id');
@@ -197,6 +199,7 @@ function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPacka
     actors,
     macros,
     assets,
+    ...(Object.hasOwn(root, 'localization') ? { localization: decodeEncounterLocalization(root.localization) } : {}),
   };
   assertTextSize(stableStringify(normalized), 'Encounter package JSON');
   return deepFreeze(normalized);

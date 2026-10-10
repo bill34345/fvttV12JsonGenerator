@@ -1,0 +1,114 @@
+{
+  "source": "Actual owned Stage B native MIDI cards; no provider or personal campaign data",
+  "core": "14.368",
+  "system": "5.3.3",
+  "midi": "14.0.11",
+  "cases": [
+    {
+      "id": "GOKOVZV16wipTGWX",
+      "speaker": {
+        "scene": "kSFLNHY2e5ypG6s1",
+        "actor": "525be0483e0c0980",
+        "token": "UZOmPVYCrWl5g9j4",
+        "alias": "帷幕追猎者 Veil Stalker"
+      },
+      "roll": {
+        "total": 12,
+        "formula": "1d20 + 4 + 3",
+        "isCritical": false,
+        "isFumble": false
+      },
+      "flags": {
+        "dnd5e": {
+          "activity": {
+            "type": "attack",
+            "id": "a8007b752bc7f236",
+            "uuid": "Actor.525be0483e0c0980.Item.39286e312d26f966.Activity.a8007b752bc7f236"
+          },
+          "item": {
+            "type": "weapon",
+            "id": "39286e312d26f966",
+            "uuid": "Actor.525be0483e0c0980.Item.39286e312d26f966"
+          },
+          "targets": [
+            {
+              "name": "恐怖潜猎者 Dread Stalker",
+              "img": "systems/dnd5e/icons/svg/actors/npc.svg",
+              "uuid": "Actor.3a5af2db51d87aee",
+              "ac": 15
+            }
+          ]
+        },
+        "midi-qol": {
+          "messageType": "attack",
+          "activityUuid": "Actor.525be0483e0c0980.Item.39286e312d26f966.Activity.a8007b752bc7f236",
+          "attackingTokenUuid": "Scene.kSFLNHY2e5ypG6s1.Token.UZOmPVYCrWl5g9j4",
+          "attackTotal": 12,
+          "isHit": false,
+          "hitTargetUuids": [],
+          "targets": [
+            {
+              "uuid": "Scene.kSFLNHY2e5ypG6s1.Token.Ej0uUW8cVHrPoU0U",
+              "name": "恐怖潜猎者 Dread Stalker"
+            }
+          ],
+          "attackRollCount": 1
+        }
+      }
+    },
+    {
+      "id": "oqaT9eIJ8QZhOzD8",
+      "speaker": {
+        "scene": "kSFLNHY2e5ypG6s1",
+        "actor": "525be0483e0c0980",
+        "token": "UZOmPVYCrWl5g9j4",
+        "alias": "帷幕追猎者 Veil Stalker"
+      },
+      "roll": {
+        "total": 19,
+        "formula": "1d20 + 4 + 3",
+        "isCritical": false,
+        "isFumble": false
+      },
+      "flags": {
+        "dnd5e": {
+          "activity": {
+            "type": "attack",
+            "id": "a8007b752bc7f236",
+            "uuid": "Actor.525be0483e0c0980.Item.39286e312d26f966.Activity.a8007b752bc7f236"
+          },
+          "item": {
+            "type": "weapon",
+            "id": "39286e312d26f966",
+            "uuid": "Actor.525be0483e0c0980.Item.39286e312d26f966"
+          },
+          "targets": [
+            {
+              "name": "恐怖潜猎者 Dread Stalker",
+              "img": "systems/dnd5e/icons/svg/actors/npc.svg",
+              "uuid": "Actor.3a5af2db51d87aee",
+              "ac": 15
+            }
+          ]
+        },
+        "midi-qol": {
+          "messageType": "attack",
+          "activityUuid": "Actor.525be0483e0c0980.Item.39286e312d26f966.Activity.a8007b752bc7f236",
+          "attackingTokenUuid": "Scene.kSFLNHY2e5ypG6s1.Token.UZOmPVYCrWl5g9j4",
+          "attackTotal": 19,
+          "isHit": true,
+          "hitTargetUuids": [
+            "Scene.kSFLNHY2e5ypG6s1.Token.Ej0uUW8cVHrPoU0U"
+          ],
+          "targets": [
+            {
+              "uuid": "Scene.kSFLNHY2e5ypG6s1.Token.Ej0uUW8cVHrPoU0U",
+              "name": "恐怖潜猎者 Dread Stalker"
+            }
+          ],
+          "attackRollCount": 1
+        }
+      }
+    }
+  ]
+}

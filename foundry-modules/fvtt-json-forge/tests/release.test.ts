@@ -20,12 +20,19 @@ describe('FVTT JSON Forge release package', () => {
     expect(second.archiveSha256).toBe(first.archiveSha256);
     expect(secondArchive).toEqual(firstArchive);
     expect(second.archiveEntries).toEqual([
+      'guide/generic-status-source.md',
+      'guide/generic-status.forge-encounter.zip',
+      'guide/grandmother-sea-hag.forge-encounter.zip',
+      'guide/guide.pdf',
+      'guide/index.html',
+      'guide/source-example.md',
       'module.json',
       'scripts/index.js',
       'styles/fvtt-json-forge.css',
       'templates/forge-actor.hbs',
       'templates/forge-connection.hbs',
       'templates/forge-encounter.hbs',
+      'templates/forge-guide.hbs',
       'templates/forge-intake.hbs',
       'templates/forge-item.hbs',
       'templates/forge-workspace.hbs',

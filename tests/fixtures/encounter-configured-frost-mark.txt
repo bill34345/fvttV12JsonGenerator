@@ -1,0 +1,2 @@
+Frost Claw. Melee Weapon Attack: +5 to hit. Hit: The target is Frost Mark for 1 minute. At the end of each of its turns, the target can make a DC 10 Constitution saving throw, ending the effect on a success.
+霜爪。近战武器攻击，命中时，目标陷入霜印状态，持续1分钟。目标在其每个回合结束时可以进行一次DC10体质豁免，成功则结束该效果。

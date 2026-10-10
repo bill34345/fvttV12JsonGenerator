@@ -7,9 +7,10 @@ import {
   extractDamagePartsFromText,
 } from './actor-text';
 import { createStableDocumentId } from './stableId';
-import { buildConditionFlag, createConditionInstance, getConditionDefinition, projectedConditionStatusId, type ConditionId, type ConditionParams } from '@fvtt-json-generator/contracts/conditions';
+import { buildConditionFlag, createConditionInstance, getConditionDefinition, projectedConditionStatusId, readConditionInstance, type ConditionId, type ConditionParams } from '@fvtt-json-generator/contracts/conditions';
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { extractBurningSpec } from './burning';
+import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -558,53 +559,20 @@ function encounterStagedMarkerStatuses(item: any): Set<string> {
   if (!Array.isArray(mechanics)) return new Set();
   const statuses = new Set<string>();
   for (const mechanic of mechanics) {
-    const conditions: string[] = Array.isArray(mechanic?.conditions) ? mechanic.conditions.map(String) : [];
-    if (!isCompleteEncounterStagedMarker(item, mechanic, conditions)) continue;
-    for (const condition of conditions) {
-      const match = condition.match(/^encounter-staged-status:([a-z-]+)$/u);
-      if (match?.[1]) statuses.add(match[1]);
-    }
+    const marker=readEncounterRuleMarker(item,mechanic);
+    if(marker)for(const status of marker.statuses)statuses.add(status);
   }
   return statuses;
-}
-
-function isCompleteEncounterStagedMarker(item: any, mechanic: any, conditions: readonly string[]): boolean {
-  const match = /^encounter-staged-(trait|action|bonus|reaction|legendary)-(\d+)$/u.exec(String(mechanic?.id ?? ''));
-  if (!match?.[1] || !match[2]) return false;
-  const index = Number.parseInt(match[2], 10) - 1;
-  const expected = ({
-    trait: { carrier: '特性', source: 'traits' }, action: { carrier: '动作', source: 'actions' },
-    bonus: { carrier: '附赠动作', source: 'bonusActions' }, reaction: { carrier: '反应', source: 'reactions' },
-    legendary: { carrier: '传奇动作', source: 'legendaryActions' },
-  } as Record<string, { carrier: string; source: string }>)[match[1]];
-  if (!expected || index < 0) return false;
-  const carrier = mechanic?.carrier;
-  const itemSection = item?.flags?.['tidy5e-sheet']?.section ?? item?.flags?.['tidy5e-sheet']?.actionSection;
-  const paths = conditions.filter((value) => value.startsWith('encounter-staged:/creature/'));
-  const coverage = conditions.filter((value) => value.startsWith('encounter-staged-coverage:'));
-  return mechanic.kind === 'lifecycle'
-    && mechanic.coverage === 'literal'
-    && mechanic.executionMode === 'gm-assisted'
-    && mechanic.ruleSource === 'source-derived'
-    && carrier?.section === expected.carrier
-    && carrier?.name === item?.name
-    && itemSection === expected.carrier
-    && paths.length > 0
-    && paths.every((path) => new RegExp(`^encounter-staged:/creature/${expected.source}/${index}/appliedConditions/(?:0|[1-9]\\d*)$`).test(path))
-    && coverage.length === 1
-    && coverage[0] === `encounter-staged-coverage:actor.${expected.source}`
-    && Array.isArray(mechanic?.gmSteps)
-    && mechanic.gmSteps.length >= 2
-    && mechanic.gmSteps.every((step: unknown) => typeof step === 'string' && step.trim().length > 0);
 }
 
 function isPlainInferredStagedEffect(effect: any, stagedStatuses: ReadonlySet<string>): boolean {
   const statuses: string[] = Array.isArray(effect?.statuses) ? effect.statuses.map(String) : [];
   const flags = effect?.flags?.fvttJsonGenerator ?? {};
+  const template=readConditionInstance(effect);
   return statuses.length > 0
     && statuses.every((status) => stagedStatuses.has(status))
     && effect?.disabled === false
-    && effect?.description === ''
+    && (effect?.description === '' || (template?.template===true&&template.enabled===true))
     && Array.isArray(effect?.changes) && effect.changes.length === 0
     && !flags.sourceDerivedEmbeddedEffect
     && !flags.behaviorState

@@ -1,4 +1,25 @@
 /* Shared Foundry form primitives. Keep the module compact at its default width. */
+.forge-guide-window .window-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.forge-guide-viewer {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.forge-guide-viewer iframe {
+  width: 100%;
+  flex: 1;
+  border: 0;
+  background: #f6f3ee;
+}
+
 .fvtt-json-forge-form {
   display: grid;
   gap: 0.75rem;
@@ -1297,3 +1318,121 @@
 @media (prefers-reduced-motion: reduce) {
   .forge-unified-window *, .forge-connection-window * { transition: none !important; animation: none !important; }
 }
+
+/* The fixed encounter controls keep DialogV2's Foundry window and two-button footer. */
+.forge-encounter-control-window {
+  --forge-bg: #101b21;
+  --forge-panel: #16262e;
+  --forge-control: #20313a;
+  --forge-border: #3c535b;
+  --forge-border-strong: #607980;
+  --forge-text: #eaf0ed;
+  --forge-muted: #b2c5c8;
+  --forge-highlight: #82dadd;
+  --forge-focus: #a1eff0;
+  --forge-error: #ffb8ae;
+  color: var(--forge-text);
+  font: 0.9rem/1.5 var(--font-primary, system-ui), "Microsoft YaHei", sans-serif;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+}
+.forge-encounter-control-window .window-content {
+  flex: 1 1 auto;
+  color: var(--forge-text);
+  background: var(--forge-bg);
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+.forge-encounter-control-window .dialog-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-height: 0;
+  max-height: calc(100vh - 6rem);
+}
+.forge-encounter-control-window .dialog-content {
+  flex: 1 1 auto;
+  container: forge-encounter-control / inline-size;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 1rem 1.2rem;
+  scrollbar-color: var(--forge-border-strong) var(--forge-bg);
+}
+.forge-encounter-control-window .form-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  border-top: 1px solid var(--forge-border);
+  background: var(--forge-panel);
+}
+.forge-encounter-control-window .form-footer button {
+  flex: 0 1 auto;
+  min-width: 7rem;
+  white-space: normal;
+}
+.forge-encounter-control { display: grid; gap: 1rem; min-width: 0; }
+.forge-encounter-control :is(p, h2, ul) { margin: 0; }
+.forge-encounter-control :is(p, li, summary, label) { overflow-wrap: anywhere; }
+.forge-encounter-control-intro { max-width: 72ch; color: var(--forge-text); }
+.forge-encounter-control-section {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--forge-border);
+  min-width: 0;
+}
+.forge-encounter-control-section h2 { font: 650 1.08rem/1.35 var(--font-primary, system-ui); color: var(--forge-text); }
+.forge-encounter-control-section > p { max-width: 72ch; }
+.forge-encounter-control label { display: grid; gap: 0.3rem; min-width: 0; color: var(--forge-text); font-weight: 600; }
+.forge-encounter-control select {
+  min-width: 0;
+  width: 100%;
+  min-height: 2.45rem;
+  padding: 0.4rem 0.55rem;
+  color: var(--forge-text);
+  background: var(--forge-control);
+  border: 1px solid var(--forge-border-strong);
+  border-radius: 0.3rem;
+  font: inherit;
+}
+.forge-encounter-control-action { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 0.8rem; min-width: 0; }
+.forge-encounter-control-action p { flex: 1 1 15rem; min-width: 0; font-weight: 600; color: var(--forge-text); }
+.forge-encounter-control-identity { color: var(--forge-muted); font-size: 0.86rem; }
+.forge-encounter-control button,
+.forge-encounter-control-window .form-footer button {
+  min-height: 2.4rem;
+  padding: 0.4rem 0.8rem;
+  color: var(--forge-text);
+  background: var(--forge-control);
+  border: 1px solid var(--forge-border-strong);
+  border-radius: 0.3rem;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: none;
+}
+.forge-encounter-control button:hover:not(:disabled),
+.forge-encounter-control-window .form-footer button:hover:not(:disabled) { background: #2a424c; border-color: var(--forge-highlight); }
+.forge-encounter-control :is(button, select, summary):focus-visible,
+.forge-encounter-control-window .form-footer button:focus-visible { outline: 2px solid var(--forge-focus); outline-offset: 2px; }
+.forge-encounter-control :is(button, select):disabled { color: #9aafb3; background: #17272f; border-color: var(--forge-border); cursor: not-allowed; opacity: 1; }
+.forge-encounter-control details { min-width: 0; }
+.forge-encounter-control summary { cursor: pointer; color: var(--forge-highlight); font-weight: 600; text-underline-offset: 0.2em; }
+.forge-encounter-control details ul,
+.forge-encounter-control-section > ul { padding-left: 1.3rem; margin-top: 0.45rem; display: grid; gap: 0.3rem; }
+.forge-encounter-control-note,
+.forge-encounter-control-events { color: var(--forge-muted); font-size: 0.84rem; }
+.forge-encounter-control-error { color: var(--forge-error); font-weight: 600; }
+.forge-encounter-control-error[hidden] { display: none; }
+@container forge-encounter-control (max-width: 35rem) {
+  .forge-encounter-control-action { align-items: stretch; }
+  .forge-encounter-control-action button { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-encounter-control-window * { transition: none !important; animation: none !important; }
+}
+.fvtt-json-forge .forge-localized-prose { white-space: pre-wrap; overflow-wrap: anywhere; }

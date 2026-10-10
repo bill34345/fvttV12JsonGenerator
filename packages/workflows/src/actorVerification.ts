@@ -253,6 +253,10 @@ function inferFoundryMajor(actor: RecordLike): '12' | '14' | undefined {
 
 function sourceMentionsItem(source: string, itemName: string): boolean {
   const candidates = new Set<string>([itemName]);
+  const localizedName = itemName.match(/（(.+)）$/u)?.[1];
+  if (localizedName) candidates.add(localizedName);
+  const spacedName = itemName.match(/^[\u3400-\u9fff][^A-Za-z]*\s+([A-Za-z][\s\S]*)$/u)?.[1];
+  if (spacedName) candidates.add(spacedName);
   const bilingualMatch = itemName.match(/\(([^)]+)\)/);
   if (bilingualMatch?.[1]) {
     candidates.add(bilingualMatch[1]);

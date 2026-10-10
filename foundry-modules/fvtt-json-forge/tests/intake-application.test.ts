@@ -159,6 +159,24 @@ describe('Forge Intake Application review workspace', () => {
     expect(unsubscribed).toBe(1);
   });
 
+  test('an open encounter reads the current shared connection even when the hidden Intake form is stale', async () => {
+    const session = forgeSessionSettingsFixture();
+    const { application, root } = makeApplication({ readForgeSessionSettings: () => session }, undefined, undefined, undefined, undefined, {
+      directoryKind: 'Actor', initialMode: 'ai-monster', legacyConnectionFields: false,
+    });
+    session.model = 'current-extraction-model';
+    session.apiKey = 'current-session-key';
+    session.protocol = 'openai-responses';
+    const options = (application as any).encounterAiProviderOptions(new AbortController());
+    expect(options.model).toBe('current-extraction-model');
+    expect(options.apiKey).toBe('current-session-key');
+    expect(options.protocol).toBe('openai-responses');
+    expect(root.apiKey.value).toBe('');
+    (root as any).isConnected = false;
+    expect(() => (application as any).encounterAiProviderOptions(new AbortController())).toThrow('请重新打开 Forge 工作台');
+    await application.close();
+  });
+
   test('does not let a late Markdown file read overwrite a newer manual edit or Clear', async () => {
     let resolveFile!: (value: string) => void;
     const firstFile = { name: 'source.md', size: 10, text: () => new Promise<string>(resolve => { resolveFile = resolve; }) } as any;

@@ -1,0 +1,7 @@
+<section class="forge-guide-viewer" aria-label="Forge 图解手册">
+  {{#if guideError}}
+    <div><p role="alert">{{guideError}}</p><p><a href="{{guidePdfUrl}}" download>下载 PDF 手册</a> · <a href="{{guideSourceUrl}}" download>下载本例原文</a> · <a href="{{guidePackageUrl}}" download>下载本例已审包</a></p></div>
+  {{else}}
+    <iframe srcdoc="{{guideHtml}}" title="从一页 PDF 到中文怪物卡：图解手册" sandbox="allow-same-origin allow-downloads"></iframe>
+  {{/if}}
+</section>

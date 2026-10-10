@@ -180,7 +180,9 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v21');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v22');
+    expect(prompt).toContain('feature.save is only for a source-explicit initial saving throw');
+    expect(prompt).toContain('never copy the repeat-save DC into escapeDc');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
     expect(prompt).toContain('Parent object claims do not support child values');
@@ -254,7 +256,8 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v26');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v27');
+    expect(prompt).toContain('A saving throw repeated at the end of each target turn');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
     expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
@@ -319,7 +322,8 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v21');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v22');
+    expect(prompt).toContain('remove wrong save/escapeDc');
     expect(prompt).toContain('Never remove a required empty array in repair');
     expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
     expect(prompt).toContain('Return a compact JSON Patch envelope only');

@@ -3,6 +3,32 @@ import { initializeForgeModule } from '../src/index';
 import { clearApiKey, clientSettingsProfileId, readClientSettings, saveClientSettings } from '../src/settings';
 
 describe('FVTT JSON Forge bootstrap and client settings', () => {
+  test('canvasReady registers the damage bridge before an encounter controller can register post-damage hooks', () => {
+    const callbacks = new Map<string, Array<{ id: number; fn: (...args: any[]) => unknown }>>();
+    const once = new Map<string, () => void>();
+    let nextId = 0;
+    const hooks = {
+      on: (name: string, fn: (...args: any[]) => unknown) => {
+        const id = ++nextId;
+        callbacks.set(name, [...(callbacks.get(name) ?? []), { id, fn }]);
+        return id;
+      },
+      once: (name: string, fn: () => void) => once.set(name, fn),
+    };
+    const environment: any = {
+      Hooks: hooks,
+      game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'player', isGM: false }, users: { activeGM: { id: 'gm' } } },
+      canvas: { ready: true },
+    };
+    initializeForgeModule(environment);
+    callbacks.get('canvasReady')?.[0]?.fn(); // Core draws the canvas before firing ready.
+    const bridgePostId = callbacks.get('dnd5e.applyDamage')?.[0]?.id;
+    expect(bridgePostId).toBeNumber();
+    const controllerPostId = hooks.on('dnd5e.applyDamage', () => undefined);
+    expect(bridgePostId!).toBeLessThan(controllerPostId);
+    once.get('ready')?.();
+    expect(callbacks.get('dnd5e.applyDamage')).toHaveLength(2); // no duplicate bridge registration
+  });
   test('registers a restricted real ApplicationV2 subclass and a GM-only API', () => {
     class ApplicationV2 {}
     const hooks = new Map<string, () => void>();

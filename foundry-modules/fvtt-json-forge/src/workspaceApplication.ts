@@ -15,6 +15,7 @@ export interface ForgeWorkspaceEnvironment {
   directoryKind: 'Actor' | 'Item';
   initialMode?: ForgeWorkspaceMode;
   openConnectionSettings?: () => unknown;
+  openGuide?: () => unknown;
   actor?: Partial<ForgeApplicationEnvironment>;
   item?: Partial<ForgeItemApplicationEnvironment>;
   intake?: Partial<ForgeIntakeApplicationEnvironment>;
@@ -104,6 +105,14 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
       if (encounter) encounter.onclick = () => {
         if (this.locked()) return;
         this.paneRoot('intake')?.querySelector<HTMLButtonElement>('[data-action="encounter-open"]')?.click();
+      };
+      const guide = root.querySelector<HTMLButtonElement>('[data-workspace-guide]');
+      if (guide) guide.onclick = () => {
+        try {
+          assertGm(environment.game); assertExactRuntime(environment.game);
+          if (!environment.openGuide) throw new Error('图解手册入口尚未就绪。');
+          environment.openGuide();
+        } catch (error) { this.report(error); }
       };
       this.synchronizeFormalMode();
       this.refreshNavigation();

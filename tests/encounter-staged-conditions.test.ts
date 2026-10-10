@@ -13,6 +13,7 @@ import { serializeForgeEncounterPackage } from '@fvtt-json-generator/forge-brows
 import { generateEncounterFromHumanMarkdown, type EncounterAutomationPort } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import { convertMarkdownContentToJson } from '../src/core/workflow/singleFileConversion';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { suppressEncounterStagedInferredEffects } from '@fvtt-json-generator/generation/actor-effects';
 import { LURKER_SOURCE, buildValidLurkerIr } from '../src/core/intake/__tests__/fixtures/lurker';
 import { RAT_WARLOCK_SOURCE, buildRatWarlockIr } from '../src/core/intake/__tests__/fixtures/rat-warlock';
@@ -53,6 +54,38 @@ function provider(): MonsterIntakeAiProvider {
 }
 
 describe('encounter staged condition companion boundary', () => {
+  test('rejects simultaneous native stages when each IR branch contains just one status', async () => {
+    const text = 'Stone Stages. The target makes a DC 13 Dexterity save. First Failure: Restrained. At the end of its next turn it repeats the save. Second Failure: Petrified.';
+    const source = `${LURKER_SOURCE}\n\n${text}`;
+    const quote = { start: source.lastIndexOf(text), end: source.length, quote: text };
+    const ir = buildValidLurkerIr();
+    ir.source = { sha256: hashSource(source), length: source.length };
+    ir.coverage.push({ ...quote, classification: 'mechanical', claimPaths: ['/creature/actions/0'] });
+    ir.creature.actions[0] = {
+      name: 'Stone Stages', description: text, activityType: 'save', save: { dc: 13, ability: 'dex' }, evidence: [quote],
+      appliedConditions: [
+        { statuses: ['restrained'], condition: 'First Failure' },
+        { statuses: ['petrified'], condition: 'Second Failure', staged: true },
+      ],
+    };
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    const item = (generated.rawJson as any).items.find((entry: any) => entry.name === 'Stone Stages');
+    expect(item.effects.flatMap((effect: any) => effect.statuses).sort()).toEqual(['petrified', 'restrained']);
+    const report = verifyMonsterIntake(source, ir, markdown, generated.rawJson);
+
+    expect(report.findings).toContainEqual(expect.objectContaining({
+      code: 'STAGED_CONDITIONS_SIMULTANEOUS', path: '/creature/actions/0/appliedConditions', blocking: true,
+    }));
+    expect(report.status).toBe('needs_review');
+
+    const ordinary = structuredClone(ir);
+    ordinary.creature.actions[0]!.appliedConditions![1]!.staged = false;
+    const ordinaryMarkdown = renderMonsterIntakeMarkdown(ordinary);
+    const ordinaryGenerated = await convertMarkdownContentToJson({ content: ordinaryMarkdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    expect(verifyMonsterIntake(source, ordinary, ordinaryMarkdown, ordinaryGenerated.rawJson).findings.filter(finding => finding.code === 'STAGED_CONDITIONS_SIMULTANEOUS')).toEqual([]);
+  });
+
   test('removes a staged feature\'s embedded effects and post-generation inferred effect refs while ordinary source remains native', async () => {
     const { source, ir } = stagedFixture();
     const stagedSource = renderEncounterActorSource(ir, [], source);

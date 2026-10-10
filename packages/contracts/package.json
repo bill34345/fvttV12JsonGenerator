@@ -4,14 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./localization": "./src/localization.ts",
     ".": "./src/index.ts",
     "./artifacts": "./src/artifacts.ts",
     "./canonical-actor": "./src/canonicalActor.ts",
     "./conditions": "./src/conditions.ts",
+    "./configured-conditions": "./src/configured-conditions.ts",
     "./weapon-properties": "./src/weapon-properties.ts",
     "./weapon-effects": "./src/weapon-effects.ts",
     "./diagnostics": "./src/diagnostics.ts",
     "./evidence": "./src/evidence.ts",
+    "./encounter-rules": "./src/encounter-rules.ts",
+    "./status-lifecycle": "./src/status-lifecycle.ts",
     "./hash": "./src/hash.ts",
     "./target": "./src/target.ts"
   },

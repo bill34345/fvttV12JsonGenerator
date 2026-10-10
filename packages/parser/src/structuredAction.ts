@@ -117,6 +117,10 @@ export class StructuredActionParser {
       if (rawDamage !== undefined) action.damage = this.parseDamageParts(rawDamage);
     }
 
+    if (action.type === 'damage' && rawDamage !== undefined) {
+      action.damage = this.parseDamageParts(rawDamage);
+    }
+
     if (action.type === 'heal' && rawHealing && typeof rawHealing === 'object' && !Array.isArray(rawHealing)) {
       const healing = rawHealing as Record<string, unknown>;
       const formula = String(healing['\u516c\u5f0f'] ?? healing['formula'] ?? '').trim();

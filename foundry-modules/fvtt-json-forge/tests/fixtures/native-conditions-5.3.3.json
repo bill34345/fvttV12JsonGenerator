@@ -1,0 +1,87 @@
+{
+  "systemVersion": "5.3.3",
+  "sourceCommit": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+  "selection": "conditionTypes excluding pseudo markers and level-based exhaustion",
+  "conditions": [
+    {
+      "id": "blinded",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "charmed",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "deafened",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "frightened",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "grappled",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "incapacitated",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "invisible",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "paralyzed",
+      "statuses": [
+        "incapacitated"
+      ],
+      "riders": []
+    },
+    {
+      "id": "petrified",
+      "statuses": [
+        "incapacitated"
+      ],
+      "riders": []
+    },
+    {
+      "id": "poisoned",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "prone",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "restrained",
+      "statuses": [],
+      "riders": []
+    },
+    {
+      "id": "stunned",
+      "statuses": [
+        "incapacitated"
+      ],
+      "riders": []
+    },
+    {
+      "id": "unconscious",
+      "statuses": [
+        "incapacitated"
+      ],
+      "riders": [
+        "prone"
+      ]
+    }
+  ]
+}

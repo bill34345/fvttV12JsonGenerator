@@ -1,0 +1,59 @@
+# Grandmother Sea Hag：单页PDF处理与Forge图解手册
+
+用户要求处理H:/Download/Sea Hags.pdf中的Grandmother Sea Hag，并提供图多字少、可在本地及Forge模块查看的手册。复用唯一工作树与既有审核流程；不修改原PDF，不手改最终Actor JSON，不提交、合并、推送或操作生产。
+
+## 来源与本次检查范围
+
+源PDF6页，SHA-256为70739312d347c2366a5b1fe1f5acfffb2d16c3b10390dfe9302364143399b0d5。目标在阅读器第5页，CR15、AC16、HP272，完整17项能力；第1页Hag Debts与第2页Merthirst为引用定义。正式文档提取run为10c77d7d-181a-4ff6-8836-9e072ea2a7e7，选定p5-grandmother-sea-hag-p5-block1；原始块、页码、坐标、方法和置信度保留。
+
+本次必须核对PDF原图、提取／准备文字、真实Intake及正式来源、Actor和中文显示结果；先检查来源限定，再检查能力Activity、资源和Effect/linkage。复杂特殊效果允许来源完整的GM裁定，不以文本保留宣称自动化。尤其核对目标INT/WIS选择、逃脱DC15与初始DEX DC18不同、失败差5、可见性／浴血／浸没／债务对象，以及传奇资源只有1且没有来源恢复时机。
+
+手册与工作台入口改变用户操作，应在小范围实现后补实际按钮／查看行为、browser build与归档、模块类型、手册人工核对和build/check。图解使用真实来源及实际界面素材，红框／箭头／编号突出用户需要操作的位置，尽量少用正文；新的页面截图不得冒用旧候选作为本次实机通过。
+
+## 当前执行
+
+Root拥有提取、正式生成、手册及入口实现。独立只读代理已经核完整第5页与跨页定义，已记录17项来源检查表。原Chrome执行聊天的新批次标准前置仍报Browser is not available: chrome；只有iab／mcpapps，未操作页面或世界，未换通道。PDF／正式生成继续独立进行，实际操作截图与示范仍待可用的授权执行渠道。
+
+已准备真实来源输入：保留原生候选原件，按页面目视核对只修复24类词间空白，不改原字符／数值；追加相同PDF的债务与Merthirst定义，source-binding.json保留页块、坐标、方法、原始／准备hash及每项空白变化。真实CLI Intake从该5495字符来源开始，不复用旧怪物IR或最终JSON。
+
+手册入口采用独立只读ApplicationV2 iframe，继承现有Forge窗口及按钮风格，不切换工作台模式、清空草稿或写世界数据。当前入口及guide文件打包规则实现中；最终HTML/PDF需要实际图像完成后才构建、检查和安装。已因AGENTS.md:44的明确工具选择限制请求用户选择是否允许官方Computer Use，仅浏览器演示等待该选择，独立来源／生成／实现继续。
+
+第一轮真实Intake保留为needs_review：模型把传奇动作前导段压为一行，原证据有CRLF及末尾换行，严格来源文字检查拒绝。初次和自动repair为同一问题；诊断已核确为排版空白差异，max1及来源限定没有不同。后续使用公开resume＋source-bound feedback，要求模型与对应claim保留完整原证据字符串，不放宽validator、不手改IR／Actor。新guide入口与模板对应聚焦检查覆盖三模式草稿不变、单窗口复用、GM／版本拒绝及禁脚本iframe。
+
+第二轮resume已经通过IR验证与生成，但finalize真实发现两项缺口：明确damage类型的反应／传奇动作在parser未读取伤害数组；Cursed这种非原生后果在取得gm-manual配置前就被普通效果漂移门禁挡住。根与只读代理核确owner，两个独立worker分别修复显式damage解析及Encounter临时GM准备／最终唯一覆盖；不按怪物名字写特例，不造Cursed AE、不丢IR条件、不放宽verifier。Parser正反例147项及入口12项＋staged4项通过，类型／架构通过；Root guide16项／75断言通过。真实r3随后复用同来源IR重新走完整生成与审阅，并用正式source-bound反馈恢复Mariner’s Woe的显示空白；这些局部成功不代替真实源接受。
+
+r3 Actor来源审阅accepted且固定自动化配置已生成，最终prepare发现Death Glare的Item由现有builder写入Legendary Actions，而共享marker仅认传奇动作；中文carrier、能力名、条件路径与coverage均一致。修复只识别这个确切Item分区别名，保留carrier和其余身份严格检查。新增marker正反例检查两种marker模式、两种已知分区、两个Tidy字段及错误名称／大小写／分区／索引／路径／coverage。后续恢复须重新生成并比对r3 Actor审阅的完整输入，重编译保存的selection；若绑定一致只补未运行的最终配置审阅，不重做有效提取／来源审核。
+
+恢复r4/r5未调用Provider，诊断发现完整审阅输入唯一差异为renderer新分配的forge-source-id；其余IR、投影和deterministic findings逐字段相同。r6因此重新调用真实Actor审阅，不冒称旧hash已匹配；来源分段及保存selection通过完整输入比对和重新编译复用。最终prepare发现两个Cursed Save outcome仍为literal：删去虚假的自动条件后，既有普通FAILURE条件语法未识别Cursed。窄修复识别明确“Failure: [target is/becomes] Cursed”及对应中文受诅咒句，继续拒绝仅差值／第二次／条件前置／未知成功分支，不放宽整包literal门禁。新增完整Actor回归对照既有must-succeed/or来源，检查Save、无伤害成功分支和零伪造AE。
+
+独立来源核对发现r6将同PDF两段引用定义判为ignored，正式卡片缺少债务与海渴症完整内容；已给真实AI传source-bound biography反馈，不手改IR/JSON、不新增第18个能力。另核本地安装的精确dnd5e5.3.3 dnd5e.mjs:26791，prepareLanguages特例实际为大写ALL，而非推测的小写all；原All会不显示。v14仅将明确all大小写及现有泛语言映射规范为ALL，legacy目标保持不变，未知语言不扩大；正式workflow回归比较完整Actor及近反例。
+
+r7在无必要的新discovery调用超时，未进入修正；r8复用同source/hash/完整分段，真正调用repair并验证。独立递归diff证明creature仅biography改变，两引用定义完整、17项机械数据未变。真实Actor审阅拦住已有的Bilebrine错误onDropToZero.healFormula=5d8；根核r6同错，不能把此前accepted当作可靠语义结论。owner只因降0和任意首个骰式就推治疗，已交独立worker窄修来源绑定的恢复子句及近反例，原文疾病不赋治疗。
+
+用户明确回复“用内置浏览器吧”，替代本批官方Chrome backend选择。原独立执行聊天通过iab/browser2/tab1正常GM登录和Forge入口前置，实际6.1-sol/medium/FullAccess已核；零AI／导入／世界文档／设置写入，PID11376常驻保持。父已读前置收据并看原截图；当前旧脚本加载字节仍未测，不扩大为新候选运行通过。后续复用该唯一工作页完成本例与截图；UI有AI待测试/fake-model徽标，已有包预览与导入无需配置或调用AI。
+
+onDrop窄修及Alyxian/Serpentmaw共20项通过，29源anti-overfit通过；最终生成器两目录281项/1244断言再次通过，packages/modules类型与架构通过。r9真实Actor审核accepted后，root恢复脚本的自动化端口因漏传json_object退回默认json_schema而HTTP400；正式CLI一直明确json_object，产品未改。r10保存r9完整来源/投影hash并复用其有效审核，对r6能力提案按当前IR/投影重新编译，正式prepare及manual路径逐项验证通过，只补一次真实最终配置审核，accepted/findings[]。英文包hash9ff908d0c760e379d4e1314462091b0fbda62fa0c7530c62e1ee48ce49bf8fb6，17Item/34Activity，verify:actor零warning/sourceIntegrityError。独立审核两引用完整、ALL、传奇max1/无恢复、正确伤害和无虚假治疗；Nettletide/Sargassum/Death条件与引用均清除。Seed Terror仍Utility并保留可手工应用的frightened模板，INT/WIS选择/DC18/1分钟与回合末重复豁免不自动，手册须如实说明。
+
+中文r1已实际翻译137项后因一个Activity术语不合已核译法被阻止；保留完整草稿。r2通过既有resume-review按字段复验复用其余译文，只修缺项/不合格字段，之后仍需完整独立含义审阅；不手改译文/JSON、失败不以英文回退算完成。
+
+r2 Provider审阅及独立逐项审阅发现keep-food-down误译吞咽、Seed Terror回合末Save Ends未写成功才结束、英文failure-margin-5/margin-1/drop-to-0连字符被当作负号，以及0HP摘要误称死亡。根核实际source/draft，数字token保护器确将复合词连字符连同数字锁定，迫使错误负号。修正只区分英文数字修饰语（多词复合、margin/level）的分隔横线与数学负号；HP-5、空格负数、Unicode减号和骰式减法保持严格。19项/164断言覆盖source roundtrip、正确中文与新负号拒绝及既有政策/整包边界。以原request/draft全等与snapshot hash绑定追加9个独立审阅text-ID反馈，不改任何译文；r3用正式resume只重译这些不合格字段，再审完整137项。原P2译文未进入正式包。
+
+后续审阅有三项可反证意见。AnySearch实际读取用户指定的[PHB2024其他术语](https://5echm.kagangtuya.top/topics/玩家手册2024/术语汇编/其他术语.htm)：Cover明确半身掩护（与data/cn.json一致），Damage Types为强酸／暗蚀；不采纳要求改成半掩护的个人词表。固定控制器encounterAutomationRuntime.ts:544使用margin>=minFailureMargin，1为下界。Death Glare完整正式能力只降0，不能按简写摘要里的death一词宣称死亡。原审阅／逐项triage及参考原文保留，不伪造accepted。Actor的分批审核以前只有本批槽位而无全部完整能力描述，现每批补同一已绑定request中派生的formalSourceDescriptions（无额外opaque ID）及来源优先级；不是额外检索或跨来源证据。相关transport／本地化及Intake/CLI安全包装288项/1078断言通过。
+
+r4 Actor137项真实accepted；独立逐ID证明仅13项按前述问题修正，其余124项逐字保持。包级3项虽获Provider接受，独立复核又发现一个notes槽的因果／死亡／阈值摘要不够明确，故其批准作废而保留Actor绑定。r5修两处但仍遗漏两个“至少”；r6只人工校正这两处待审译文草稿，删除其旧批准，并通过正式resume重新进行真实独立审核与workflow再生，不编辑最终Actor／来源／IR。最终notes逐字hash与校正草稿一致，Provider accepted/findings[]；Actor及标准MD和r4逐字相同，复用其verify:actor零warnings/sourceIntegrityErrors。新包hash为f0a0ba5c3914f65faafdb304ee460ba5f175322a4b7b6d20951bda85ebf0645f，Actorhash为f4b2b7815ddab0022a5ade75ca5809cb44562f842f046bc86c8855d6901e1ede。最终全图再生核17Item/34Activity、197处仅显示变化、12个GM规则无参数漂移、原始Actor/Macro来源保持，未用旧图级PASS替代当前包。
+
+六页基础图解HTML/PDF已生成并逐页目视核对，位于模块src/guide及H:/Download/Forge图解手册-Grandmother-Sea-Hag；当前界面图明确标位置图，真实源页为PDF第5页。只读手册窗口、GM／版本拒绝、三模式草稿保持、单窗口复用、沙箱和打包已测；模块完整安全入口355项/3124断言通过。构建14文件（新增四个guide文件及模板），仅本模块8个路径更新至Mirror，所有安装与HTTP字节一致，保护模块未变，PID11376保持，无世界文件编辑／停服／备份。第一次安装脚本仅语法前置失败、零目标执行，修复helper并ParseFile确认后才执行。
+
+当前已安装JS为ed10c7a0f065ec7d2f14fa487b53a56747415e5904c6e7eda82f8aaaf2c14401；正式中文ZIP SHA为24fe8962573244f44e29e0d63374d63d12034b650298bec254a9d33e00bfdc94。主IAB批次iab-3已派给原执行聊天，复用browser2/tab1，父尚未接收本次导入／骰／手册／实拍回读；这些运行层级保持待验。任务要求保留新怪物及单个宏作为交付物，测试消息仅按直接归属清理，既有世界资料与设置不动。实拍回传后仅更新手册图像并做最后窄查看／下载，不重播已通过生成、翻译或导入。
+
+最后静态anti-overfit29源通过。按Intake package要求实际运行四件同源verify:intake，独立Actor状态仍needs_review/exit2，五项仅为ACTOR_CONDITION_REQUIRES_GM，分别对应actions3/4/6、bonus1、legendary3；这不是普通单Actor accepted，完整包经唯一GM覆盖和真实审核接受。七个受影响handbook条目已逐项读实现/说明：markdown/Monster的来源核对边界正确；Item/Species未接入Forge翻译服务，入口/目标/decision流程保持；verification-development命令未改；human/Forge补单只来源、PDF先提取、中文选择及图解入口。待最终实拍资源固定后记录review并生成/检查，避免对尚会变化的图解刷新指纹。已请求在父聊天右侧显示本地PDF，Codex返回queued；不将排队记为已经显示或运行接受。
+
+手册窗口窄修复复验：IAB 收据确认模块 HTML 响应为 text/plain，直接 iframe src 留白；修改为读取固定内置文档后使用禁用脚本的 sandbox srcdoc，保留本地下载基址和显式读取失败提示。针对同一 MIME 的回归先失败 2 项，再通过 17 项。类型检查发现 Bun 的全局 fetch 类型带 preconnect 静态成员，注入接口收窄为实际需要的 HTTP callable 后复验模块类型和相同局部测试；该类型修复不改变浏览器打包行为。重新构建只用于最终候选的脚本与手册绑定，原生 Actor 和战斗规则的既有证据继续有效。
+
+IAB主批次实际证据已接收并独立复核：来源选择演示未调用浏览器AI；r6预览HP272/AC16/CR15，正常创建并保留Actor.b7f39150c77c367e及Macro.7e5fbc910e1c3a36。原生导出17 Item/34 Activity通过verify:actor，零warning/sourceIntegrityError。腐肉爪原生攻击1d20+10=17，斩挥2d8+5=13、暗蚀2d10=14；没有选择目标，没有点击Apply，不称实际命中或扣血。恐惧之种查看规则打开正确中文原生Item，随后停止控制器。最终读回HP/资源/Effect/system未变，只有原生掷骰偏好flag和Item修改时间变化；清理本次唯一Chat消息后DOM为零，既有消息保留，零Token/Scene/设置修改，服务保留。
+
+手册最终使用原PDF第5页与实际IAB来源/预览/原生能力/GM规则界面，文档级裁切和红框不修改原截图像素；六页最终PDF逐页目视核对无错位、缺字或遮盖。HTML SHA b2119aa24a8c17bfe13118f95a0b2046789b58993010f9646fa537c3c07f3649，PDF SHA 3078446a620c083d728382d4cce91ce9cd1b9b1d39ab5b03abfc0352c3b26a3c；本地H:/Download/Forge图解手册-Grandmother-Sea-Hag与模块资产一致。最新guide-fix只改脚本、guide模板、HTML/PDF四文件，JS SHA e53cfac44a1059fde9247d60483f7fb65ddbd1d57e8c2e26340fed8c14198387，安装14文件及HTTP字节全等、保护模块未变；模块类型通过，最终入口/草稿/构建/归档检查19项94断言通过。窄IAB复验已派原聊天，只验证手册实际显示、三个下载目标及PDF下载，不重做有效游戏操作。该窗口运行与下载层级当前仍待回传。
+
+最终静态设计检查运行一次，返回8项warning：六项为包裹原截图的SVG视窗被视为无padding，已有最终六页视觉核对确认文字与红框未贴边或裁断；一项为纸面背景颜色，保留本手册的阅读/打印配色；一项为既有工作台的选中tab下边框，不属于本次新增图解样式。未把warning报告为零，也未为检测器扩大改动。README与两个handbook条目已改为真实PDF页、实拍及红框描述。七项影响条目分别记录具体人工核对后，handbook:build及handbook:check均PASS（33项），未缩小watch或改既有目录覆盖。
+
+最终IAB窄复验回传PASS，父已读完整收据、检查实拍显示图并独立核对实际下载文件hash。原browser2/tab1刷新后正常打开手册，标题与六步正文可读，原PDF图及步骤2至6全部实拍逐页可见；三个download链接均指向固定模块资源。从手册正常点击一次下载PDF，实际H:/Download/guide.pdf SHA 3078446a620c083d728382d4cce91ce9cd1b9b1d39ab5b03abfc0352c3b26a3c，与候选和本地交付一致。关闭手册后原Guard蓝图仍在，随后重新打开并保留唯一交付页。新JS安装hash与父HTTP14文件字节证据及新鲜页面行为绑定；未测客户端JS响应SHA，保留这个证据限度。此次零AI、导入、骰、规则控制、世界文档／设置写入和服务操作，Actor/Macro保留、控制器停止、PID11376保持。原空白与下载缺口均补齐，实际证据见chrome/iab-guide-final-receipt.json。本次正式来源／中文审阅、原生导入与掷骰、手册视觉／内置窗口／下载层级完成；生产、git发布和全复杂规则自动化未包含在本次结论内。

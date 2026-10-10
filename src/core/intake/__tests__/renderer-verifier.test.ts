@@ -36,6 +36,25 @@ async function generatedRatWarlock() {
 }
 
 describe('intake Markdown renderer and deterministic verifier', () => {
+  test('accepts case-only actor name variants deduplicated by the renderer', async () => {
+    const ir = buildRatWarlockIr();
+    ir.creature.identity.name = 'RAT WARLOCK';
+    ir.creature.identity.englishName = 'Rat Warlock';
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    expect((generated.rawJson as any).name).toBe('RAT WARLOCK');
+    expect(verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, generated.rawJson).findings.filter(value => value.code === 'ACTOR_NAME_DRIFT')).toEqual([]);
+    const changed = structuredClone(generated.rawJson) as any;
+    changed.name = 'RAT WIZARD';
+    expect(verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, changed).findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_NAME_DRIFT' }));
+  });
+
+  test('still blocks omission of a distinct source English name', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock();
+    actor.name = ir.creature.identity.name;
+    expect(verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor).findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_NAME_DRIFT' }));
+  });
+
   test('preserves a source-explicit creature subtype through Markdown and Actor verification', async () => {
     const ir = buildValidLurkerIr();
     ir.creature.identity.creatureTypeCustom = 'goblinoid';

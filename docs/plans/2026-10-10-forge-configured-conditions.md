@@ -1,0 +1,51 @@
+# Forge 可配置状态连接
+
+用户已明确授权：以后在Custom Conditions用已有机制配置新状态，Forge能读取、识别来源名称并连接到怪物能力，无需每状态修改Mod代码。沿用当前唯一任务工作树和本地Mirror14.368/dnd5e5.3.3；保留未提交成果，不commit/合并/push/生产、备份或停止服务。
+
+本轮出口是实际可配置、可保存并经Forge来源链绑定的状态。Custom Conditions负责世界级定义目录、机制执行、实例快照与精确移除；Forge负责已验证命中、持续时间、回合末豁免、来源所有权和能力绑定；Trigger Engine继续提供现有事件。新定义由现有十九种自定义机制、十四种普通原生状态及固定移动减速机制组合，不接受任意代码、效果路径或未知机制。名称/别名识别须唯一，稳定ID引用；生成包携带受审定义快照，当前世界缺失或定义指纹变化时拒绝错误自动连接，要求重新审核。
+
+代码分工：root拥有共享契约与Forge界面/主控制器；worker拥有Custom Conditions目录、实例执行与无代码编辑器；独立来源worker拥有Intake/浏览器正式生成的目录传递与证据解析。每个耦合子系统保持一个writer，公共契约由root集中维护。
+
+验证缺口：新契约需要不安全数据/歧义/指纹稳定性检查；CC需要保存重载、权限、组合机制、来源实例与外部效果保护；Forge需要动态目录、同源完整引文、正式生成及变更定义拒绝、命中/再次豁免仅移除本实例的主控制器检查。相关类型/构建/架构在整合边界运行，parser/来源编译变化执行局部anti-overfit。之后复用已授权IAB执行聊天，在同一Mirror正常界面建立全新状态、生成/审核/导入一个新能力，确认实际效果与成功解除，再清理本批对象、恢复视图/时间、核原件。旧14原生状况和既有海鬼婆证据按依赖复用。
+
+用户入口与步骤改变，需同步模块说明、使用runbook、handbook条目及人工review/生成检查；原图解通用导入步骤保持，新状态配置路径补少量真实截图说明。
+
+状态：BOUNDED_LOCAL_ACCEPTANCE_COMPLETE / UNRELEASED。主master初始clean HEAD15b4a5b05b5150167f4a73418352f8ad18937c3c；任务HEAD6a7845650a04b8a78b458e5edd5f74fb2bb35ab3。本轮新状态有独立R1-R4来源、界面、原生运行、恢复与父审证据；旧R9仍只覆盖它自己的范围。
+
+整合进度：共同契约、CC目录/API/无代码编辑器、Forge来源目录与固定能力连接已实现。独立审阅发现并关闭四项问题：目录名称歧义、定义编辑后重载阻断旧实例、原生rider失败后的装备副作用、手工删除主效果的子效果残留；另补手工主效果停用/启用传播。CC全套195项1570断言为最后Hook增量前有效结果；增量16项93断言和类型通过。根最终受影响控制器/生命周期/CC/正式来源82项842断言通过；此前根目录/UI/原生运行91项879断言与新增UI局部16项85断言分阶段保留。包类型、架构1284模块2992依赖/循环、34来源anti-overfit通过；两模块最终build与冻结锁安装检查通过。没有全仓CI，既有capability-selection命名warning基线差异保持。
+
+回复流连续三轮中断后，由聊天01a123a1-57a4-78c3-a02a-7fb90d7627c9接管原聊天01a1143a-4fd4-7530-aa62-322e1ea8cc2d。避免输出内嵌图片HTML或整份工具历史。原Mirror进程消失/30001无listener时，已按正式Lab入口恢复同一14.368/5.3.3/cor-cotn/noBackups，当前PID43560、127.0.0.1:30001。launcher session55771是常驻启动句柄，不为结案终止。
+
+安装实际已完成，原进度文字漏记：.local/forge-configured-conditions-20261010/install-receipt.json记录2026-10-10T02:24:18Z安装10项差异，其他受保护入口不变、无服务操作、无备份或世界数据库编辑；served-identity.json已保存当时HTTP字节核对。接管后只复核当前候选/安装/HTTP身份和必要检查结果，不重复安装或既有原生状态验收；新配置状态的真实界面证据仍缺失。下一步准备本轮最小配置/生成/运行批次，复用原IAB执行器。
+
+回传授权更新：用户在本接管聊天明确要求“让他允许回传到本聊天，并且从此开始只能回传到本聊天”。执行聊天继续使用01a10b1b-3a61-7843-a584-8391d8bca8a3；从此本轮及后续续接的callbackThreadId只能是01a123a1-57a4-78c3-a02a-7fb90d7627c9，不再向故障原聊天回传。
+
+接管复核已落盘takeover-identity.json：48个模块文件的当前候选/安装/HTTP字节完全一致。已准备本轮setup/collector及acceptance-inputs.json，复用上一接受批次的时间/外部效果隔离初始化函数并逐字核对；只补批身份、目录基线和实际移动/实例导出，AsyncFunction解析通过。真实目录往返和刷新恢复由执行器在扩展玩法前验证。新批forge-configured-conditions-20261010-r1/revision1已成功派发到原执行聊天；完整当前说明在.local/forge-configured-conditions-20261010/CURRENT.md。状态仍是实机待验收，不能把派发成功算成PASS。
+
+手册剩余缺口与处理：原线程最后handbook:status报告9项待复核，之前的“手册已同步”不能复用为本轮检查通过。接管已人工对照这9项的步骤/限制、模块README、使用runbook及共享实现差异。markdown-convert/monster-intake/item-intake/species-intake维持原CLI入口与目标，新增组合定义由Forge显式传入，CLI不自动读取世界目录；内部来源/本地化/投影增量不授权手改最终JSON或放宽promotion。verification-development维持安全包装和来源/实机分别判断；fvtt-trigger-engine的公开事件/编辑器/权限不因消费者读取目录改变。human-encounter-intake/fvtt-json-forge/fvtt-custom-conditions已补无代码配置、稳定ID/定义快照、目录刷新、变更定义需重新审核及世界隔离步骤，并明确实机范围待本轮收据；原有版本、未知机制、玩家/多目标边界保留。下一步仅更新这些已核对条目的review、生成页面并运行handbook:check，不重跑既有业务测试。
+
+手册缺口已关闭：上述9项按具体人工结论更新review；Bun1.3.14下handbook:build与handbook:check均通过，33项工具的来源、覆盖、入口、指纹与页面一致，日志takeover-handbook-check.log。当前主控尚未收到新状态的实机收据；执行器已成功接受本轮派发。主控在独立工作完成后结束本回合，等待新主控UUID上的完成/阻塞回传再核对原件与继续处理，不轮询、不把派发或手册通过写为玩法完成。
+
+R1实机回传与父审：chrome/configured-r1-receipt.json及原始catalog-baseline的SHA一致，创建与重开字段原件精确匹配“霜蚀 Frostbite”、英文/中文别名、减速10尺与原生deafened；父已检查配置/Forge摘要截图。UI创建、关闭重开与Forge世界目录识别为PASS。生成前置报AI monster intake requires an API key, base URL, and extraction model，尚未启动AI，无report/ZIP/Actor/包Macro/Scene/Combat/消息，未推进世界时间；未将此前置失败算为状态功能失败。
+
+保留definition configured.frostbite/helper tWov9I34Mwz15NJZ及新自有IAB browser2/tab1，详见CURRENT。父只核已使用的FVTT_LOCAL_DS_KEY_FILE环境引用，现有文件仍在且为非空JSON字符串凭据，未输出秘钥或改变环境/文件。settings.ts与连接模板明确默认Key仅保留当前页并在刷新后消失；优先正常AI连接页核对实际非敏感profile，空白时恢复此前DeepSeek/deepseek-flash，不覆盖其他用户profile，不勾持久保存。R2/revision2已成功派发给同一执行器，仅补连接/正式生成与剩余玩法/恢复证据，保留R1成果，仍仅回新主控。
+
+R2新失败证据与最小修复：真实AI已执行，同源报告SHA bf4b1ebb4cec98b5bd608e47f7547a5dff213fbf792cd90894c6b0cae7348df5。两Actor分析/来源AI审阅通过，配置提取正确绑定configured.frostbite快照/减速10/deafened/1minute/CON10，但独立自动化review严格键校验失败；无ZIP/世界文档，Frost Stalker的前置needs_review是既有特殊状态准备层，不能冒称整包接受。静态复核发现reviewSystemPrompt混入ENCOUNTER_CAPABILITY_CATALOG的生成根对象指令与configuredConditionPrompt的“Return trigger...”指令；这与review仅允许verdict/findings冲突。保留严格decoder，分开生成输出契约与复核能力参考，用实际transport请求回归证明复核无生成指令、含正确schema且畸形响应仍阻断，不推断未保留的原始provider输出形状。另有实机事实：已打开encounter在保存新连接后仍读隐藏Intake旧表单，正常重开才恢复。修正为每次encounter生成从当前共享session读取连接，保留关闭/权限/身份门禁。
+
+新增检查只对应这两个真实缺口：局部transport/隐藏表单回归、正式来源链与模块类型/构建/归档；parser未修改，不重跑已接受状态矩阵。复核请求修正后优先从已保存同源IR与配置恢复失败阶段，仍走正式renderer/workflow/verifier与真实独立review，不手改Actor或伪造旧review。运行时改变时仅重验相应连接读取和新状态剩余链；手册人工核对这两项内部修正是否改变用户步骤。
+
+R3修正与恢复通过：两个回归先红，修正后原5文件中的其他97项通过，唯一失败为新测试把已有provider目录省略schemaVersion的格式误写成完整契约；只修该测试期望，再跑该文件12项89断言通过，合并未变证据为98项全通过。包类型、Forge类型及构建/归档3项14断言通过。5个实际stale手册条目已人工确认内部协议/连接修正不改既有使用步骤，review/build/check33项通过。角色数值辅助初次误用melee而现有版本原生投影用mwak，对照现有结构化生成回归后仅改辅助断言，重新正式prepare成功，不修改业务产物。
+
+恢复采用原文与R2报告双SHA绑定的内置drafts/fresh-validation-and-review入口：discovery/extraction调用0，已保存selection重新compiler验证并复用1次，来源review2次、自动化review1次真实accepted/findings[]。同源报告r3-resumed-review-report.json与正式ZIP已落盘；包IDintake-a442213638adc63c2947、packageHash e85e72f2fcf4dc382c000e30a35244d583aec0e6be486b446ec6e8e8922bdc38。再次ZIP→prepare→正式workflow投影核两Actor源数值、攻击、状态定义与时长/再次豁免全匹配。原UI失败保留，续接CLI不能冒称一次全新UI生成。R3只安装Forge JS，SHA946c498247a9022a4e70e71494280f516aecc1ae22506ac12a88da2d5573d301；48项HTTP核等、受保护入口不变、无服务操作，原收据保留。下一步同执行器只导入已审包并补真实命中/解除/精确恢复，不重做AI/创建定义。
+
+R3实机已回传PARTIAL，原件SHA已记录：正常Preview/import、两Actor原生导出、setup/read/collector往返及真实第三次攻击19命中AC15，walk30→20/耳聋/同instance归属成立。目标回合结束却无重复豁免；现场停在round2/turn0，保留controller/时间隔离及原始命中，不重打攻击。父对照精确Foundry14.368 common/abstract/document.mjs#setFlag和common/utils/helpers.mjs#expandObject、现场fixedNativeClaims.configured.frostbite嵌套数组，确认生产读取器只取平铺数组而丢失此项；原测试double未模拟递归点键展开。修正读取边界兼容实际嵌套与历史平铺形式，保留存储格式/来源身份，并把真实展开契约纳入double及恢复回归。另确认现场configuredEffectId误指向耳聋子效果，CC使用created[0]/created[index]假定返回顺序；需按configuredRoot/configuredComponent实例标记定位主/子效果，并让旧错误root ID下的手工主效果解除仍按实例身份识别。新增检查只覆盖点键重载、来源精确解除、乱序批返回/原生rider，既有源链/AI/命中事实保留。
+
+R4修正/门禁：Foundry展开double先复现7个配置状态/乱序rider失败。修正后Forge运行时/持久化/状态生命周期81项通过；CC检查初次被新局部变量与既有RootFlag同名阻断，改名后只重跑CC16项94断言通过。另用3项15断言定点证明真实嵌套与旧平铺两种存储重载均进入成功再次豁免、旧错误child ID不阻断实际root手工停用。两模块类型及最终构建/归档7项122断言通过；2项stale手册人工复核后build/check33项通过。R4仅安装Forge/CC两脚本，48项HTTP核等，过程不操作服务/世界数据，旧收据保留。新验收先复用R3原命中完成真实豁免；由于CC新施加返回身份已改变，成功解除后补一次正常新命中，核claim指向实际root并正常再次解除。这项追加只补新修改的应用返回身份，不重做生成/目录/旧状态矩阵。
+
+最终R4实机与父审接受：chrome/configured-r4-receipt.json SHA4ae1eba6174c7d704fa569b25faeda2b35ad40b72353fe89f8e78a8189b0ea70。父重新核14个JSON原件、4个截图SHA及实际下载原件，核原生7张骰卡和两条repeat-save success history，检查可见DC10提示与速度30截图；parent-acceptance.json已落盘。刷新R4后原claim与R3原件逐字相等，原root/child/DAE镜像、walk20和世界时间保持，控制器自动恢复；CON10原生1d20+3=20成功自动清原实例并恢复walk30。新攻击13miss/20hit，claim.configuredEffectId精确等于新root5VQgkoLo0iHFpzvD而非child13b1588692914a34，walk20/耳聋；CON10原生1d20+3=13成功后root/child/DAE镜像/实例/claim全部清空，walk30。没有人工修改骰、flag或删效果。自动移除过程中删除Hook使用configured-status-manually-cleared历史标签，不能据该标签推断发生人工清除；真实save卡、success history和阶段读回提供判定依据。
+
+恢复/交付：正常停用本包、helper cleanup一次，清本批2Actor/1包Macro/Scene/Combat/7消息；正常配置编辑器删除本批Frostbite定义并恢复目录[]。独立final audit四个remaining数组[]、runtime/isolation移除、原viewed/active Scene EBJYd289N5uyTmlC、Combat8WCtc3bOyudYuHzh、worldTime21085811、foreignEffectsUnchanged与3项海鬼婆保护全通过；之后按精确ID原生删除helper/collector，目录计数均0。服务PID43560/loopback30001保持运行，未服务操作、备份或生产写入。原自有IAB页保留为已恢复Lab交付页；所有callback只进接管主控。没有commit/合并/push或清理工作树。
+
+接受边界：本轮完成“正常配置新状态→世界目录识别→同源正式生成与真实独立复核恢复→正常Preview/import→原生命中/减速与耳聋→重载保留→回合末真实豁免解除→精确恢复”的限定本地链。R2实际UI生成失败及父CLI同源续接分层保留，不把它改写为一次全新无中断UI生成。十九/十四目录全部组合、实时自然分钟到期、其他客户端/版本及生产不因此接受。新名称/已实现机制组合无需逐状态改Mod代码；完全新机制仍需一次通用实现。支持矩阵已更新为限定本地PASS/全目录与发布PARTIAL，既有有效来源/原生状态证据继续保留。
+
+最终收尾检查：支持矩阵变更引起的3项stale手册条目及3项模块/战斗包当前接受说明已人工复核，最终handbook:build/check33项通过，日志final-handbook-check.log。git diff --check通过，主工作区最终clean；两个所供脚本SHA仍与已接受R4完全一致，服务active=true、14.368/5.3.3/cor-cotn、PID43560/loopback30001。CURRENT.md补3张本地真实截图的操作说明，含原世界侧栏的原件只保留本地证据，不作为公开发布素材。

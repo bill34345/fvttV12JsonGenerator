@@ -342,6 +342,15 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       });
     }
 
+    private encounterAiProviderOptions(controller: AbortController) {
+      const root = this.element as HTMLElement | undefined;
+      if (!root || root.isConnected === false) throw new Error('请重新打开 Forge 工作台并确认 AI 连接设置。');
+      const current = this.sessionApi.readForgeSessionSettings?.();
+      const form = readForm(root);
+      return this.aiProviderOptions(current === undefined ? form
+        : { ...form, ...coerceForgeSessionSettings(current, this.settings) }, controller);
+    }
+
     private async promptAiWaitDecision(status: IntakeRequestWaitStatus): Promise<'continue' | 'stop'> {
       const dialog = foundryGlobal?.applications?.api?.DialogV2;
       if (!dialog?.wait) {
@@ -460,9 +469,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (this.directoryKind !== 'Actor' || this.busy() || this.batchApplying) return;
         try { assertGm(environment.game); assertExactRuntime(environment.game);
           const Encounter = createForgeEncounterApplicationClass({ ...environment, foundry: foundryGlobal,
-            getAiOptions:controller=>{const currentRoot=this.element as HTMLElement|undefined;
-              if(!currentRoot||currentRoot.isConnected===false)throw new Error('请重新打开 Forge 工作台并确认 AI 连接设置。');
-              return this.aiProviderOptions(readForm(currentRoot),controller);},
+            getAiOptions:controller=>this.encounterAiProviderOptions(controller),
             getAiWaitPolicy:controller=>({
               cycleMs:BROWSER_AI_WAIT_CYCLE_MS,
               cyclesBeforeDecision:BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION,

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./reviewed-localization": "./src/reviewed-localization.ts",
     ".": "./src/index.ts",
     "./ac-effect-extraction": "./src/acEffectExtraction.ts",
     "./activity": "./src/activity.ts",

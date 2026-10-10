@@ -104,6 +104,7 @@
       "version": "0.2.0",
       "dependencies": {
         "@fvtt-json-generator/contracts": "workspace:*",
+        "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -141,7 +142,7 @@
     },
     "foundry-modules/fvtt-json-forge": {
       "name": "@fvtt-json-generator/fvtt-json-forge",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "dependencies": {
         "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
         "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",

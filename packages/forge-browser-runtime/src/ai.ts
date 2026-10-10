@@ -28,6 +28,7 @@ import {
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import { normalizeMonsterSourceFacts } from '@fvtt-json-generator/intake-ai/source-facts';
 import {
   BROWSER_AI_REPAIR_TIMEOUT_MS,
   BROWSER_AI_STAGE_TIMEOUT_MS,
@@ -390,6 +391,7 @@ function normalizeBrowserMonsterIr(
   }
 
   const claims = Array.isArray(next.claims) ? next.claims : [];
+  normalizeMonsterSourceFacts(next,source,candidate);
   for (const entry of Array.isArray(next.coverage) ? next.coverage : []) {
     if (!Array.isArray(entry?.claimPaths)) continue;
     entry.claimPaths = [...new Set(entry.claimPaths.flatMap((path) => {

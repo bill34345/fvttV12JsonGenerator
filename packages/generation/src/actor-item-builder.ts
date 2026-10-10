@@ -393,9 +393,12 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
       if (!Array.isArray(activity.effects)) activity.effects = [];
       const existing = activity.effects.find((entry: any) => entry?._id === effect._id);
       if (existing) {
-        existing.onSave = false;
+        // schema-derived: dnd5e 4.3.9 / 5.3.3 add onSave only to the Save
+        // Activity's AppliedEffectField. Other Activity models clean it away.
+        if (activity.type === 'save') existing.onSave = false;
+        else delete existing.onSave;
       } else {
-        activity.effects.push({ _id: effect._id, onSave: false });
+        activity.effects.push({ _id: effect._id, ...(activity.type === 'save' ? { onSave: false } : {}) });
       }
     }
   }

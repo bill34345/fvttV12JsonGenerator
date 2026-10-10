@@ -18,6 +18,14 @@ describe('custom conditions release artifact', () => {
     ]) expect(result.files).toContain(`icons/${id}.svg`);
   });
 
+  test('packages the configured condition editor and browser API', async () => {
+    expect(result.files).toContain('templates/configured-editor.hbs');
+    expect(result.files).toContain('templates/condition-manager.hbs');
+    const bundle = await readFile(resolve(result.moduleRoot, 'scripts/index.js'), 'utf8');
+    expect(bundle).toContain('configuredCatalog');
+    expect(bundle).toContain('configuredConditions');
+  });
+
   test('packages creator attribution and source hashes for every condition icon', async () => {
     expect(result.files).toContain('CREDITS.md');
     expect(result.files).toContain('README.md');

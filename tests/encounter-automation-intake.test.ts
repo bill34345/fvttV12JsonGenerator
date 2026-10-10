@@ -3,6 +3,7 @@ import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-gene
 import {
   buildEncounterMacroCommand,
   createEncounterAutomationProvider,
+  EncounterAutomationSelectionNeedsReviewError,
   decodeEncounterAutomation,
   renderEncounterActorSource,
   type EncounterAutomationIR,
@@ -103,9 +104,85 @@ describe('encounter automation Intake', () => {
   });
 
   test('the AI provider rejects a returned executable command even when legacy manual packages can carry reviewed scripts',async()=>{
-    installFakeTransport([automation(request())]);
+    installFakeTransport([automation(request()),automation(request())]);
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    await expect(provider.generate(request())).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
+  });
+
+  test('configured-condition review sends only the review response contract with capability reference data', async () => {
+    const input = request();
+    input.conditionCatalog = [{ schemaVersion: 1, id: 'configured.frostbite', name: '霜蚀 Frostbite',
+      description: '移动速度降低10尺，并陷入耳聋。', aliases: ['Frostbite', '霜蚀'],
+      components: [{ kind: 'movement-reduction', feet: 10 }, { kind: 'native-condition', status: 'deafened' }] }];
+    const seen: Array<{ url: string; body: any }> = [];
+    installFakeTransport([{ verdict: 'accepted', findings: [] }], seen);
+    const provider = createEncounterAutomationProvider({ baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'test', structuredOutput: 'json_schema' });
+    await expect(provider.review({ ...input, automation: automation(input) })).resolves.toEqual({ verdict: 'accepted', findings: [] });
+    const prompt = seen[0]!.body.messages[0].content;
+    expect(prompt).toContain('"verdict"');
+    expect(prompt).toContain('status-lifecycle');
+    expect(prompt).toContain('configured.frostbite');
+    expect(prompt).not.toContain('Return data only:');
+    expect(prompt).not.toContain('Return trigger, status, duration and repeatSave only');
+    expect(seen[0]!.body.response_format.json_schema.schema.required).toEqual(['verdict', 'findings']);
+    expect(JSON.parse(seen[0]!.body.messages[1].content).configuredConditions).toEqual(input.conditionCatalog.map(({schemaVersion:_,...definition})=>definition));
+  });
+
+  test('an accepted review with generation or extra keys still fails closed', async () => {
+    const input = request();
+    const provider = createEncounterAutomationProvider({ baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'test', structuredOutput: 'json_object' });
+    for (const invalid of [{ verdict: 'accepted', findings: [], version: 2 }, { version: 2, name: 'Control', rules: [], manualSteps: [], legendaryRecovery: [] }]) {
+      const seen: Array<{ url: string; body: any }> = [];
+      installFakeTransport([invalid], seen);
+      await expect(provider.review({ ...input, automation: automation(input) })).rejects.toThrow('$review must contain exactly the supported keys.');
+      expect(seen).toHaveLength(1);
+    }
+  });
+
+  test('one source-bound compiler failure gets one data-only correction with unchanged actor evidence',async()=>{
+    const input=request();
+    const feature=input.actors[0]!.ir.creature.actions[0]!;
+    const proposed={version:2,name:'Reviewed control',notes:'',manualSteps:[],legendaryRecovery:[],rules:[
+      {id:'manual',kind:'gm-manual',actorKey:'rat',featureName:feature.name,section:'action',
+        quote:feature.evidence![0]!.quote,gmSteps:['Read source.','Apply the rule.'],parameters:{}}]};
+    const corrected={...proposed,rules:[]};
+    const seen:Array<{url:string;body:any}>=[];
+    installFakeTransport([proposed,corrected],seen);
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    const result=await provider.generate(input);
+    expect(result.selection?.rules).toEqual([]);
+    expect(seen).toHaveLength(2);
+    const first=JSON.parse(seen[0]!.body.messages[1].content);
+    const second=JSON.parse(seen[1]!.body.messages[1].content);
+    expect(second.source).toBe(first.source);
+    expect(second.actors).toEqual(first.actors);
+    expect(second.prior).toEqual(proposed);
+    expect(second.findings).toHaveLength(1);
+    expect(second.findings[0]).toContain('source-bound compilation');
+  });
+
+  test('second data failure is typed, and executable fields never enter correction prior or output',async()=>{
+    const input=request();
+    const malicious={version:2,name:'Unsafe',notes:'',manualSteps:[],legendaryRecovery:[],rules:[],command:'return eval("code")'};
+    const seen:Array<{url:string;body:any}>=[];
+    installFakeTransport([malicious,malicious],seen);
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    let caught:unknown;
+    try{await provider.generate(input);}catch(error){caught=error;}
+    expect(caught).toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
+    expect((caught as EncounterAutomationSelectionNeedsReviewError).findings).toHaveLength(1);
+    expect(seen).toHaveLength(2);
+    const retry=JSON.parse(seen[1]!.body.messages[1].content);
+    expect(retry.prior).toBeUndefined();
+    expect(JSON.stringify(retry)).not.toContain('return eval');
+  });
+
+  test('transport errors do not enter the compiler correction path',async()=>{
+    let calls=0;
+    globalThis.fetch=(async()=>{calls++;return new Response('bad request',{status:400});}) as unknown as typeof fetch;
     const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
     await expect(provider.generate(request())).rejects.toThrow();
+    expect(calls).toBe(1);
   });
 
   test('rejects an invalid independent review response and cancelled provider work without starting a request', async () => {

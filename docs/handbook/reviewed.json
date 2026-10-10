@@ -5,24 +5,24 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "cc4c9d3c22b1c8d340ecf4cbf77e4bc1f88de5dc68ada8af34c73e22f3551980",
-    "reviewedOn": "2026-10-05",
-    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
+    "fingerprint": "1d3baef33697a719e70ef3761230419289e8e39fae57a9aff21f45991b80511f",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照阶段提交记录与R3/R4原件：原始CI缺历史输入的失败保留，静态门禁和补齐只读输入后的完整测试/后续门禁共同闭合。支持矩阵只新增本地topic提交边界，CLI/Intake入口、目标、来源推广、验收范围保持；未合并master、推送或发布。"
   },
   "monster-intake": {
-    "fingerprint": "4de4963065e35f2e0a19c755cd1e1f7fadde02429b7fd5c7a28e36ca4977fdaa",
-    "reviewedOn": "2026-10-05",
-    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
+    "fingerprint": "5abdc0a780b54789b79d3bfc94c621eda783018eb5c5540aa0877d48d1280133",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照阶段提交记录与R3/R4原件：原始CI缺历史输入的失败保留，静态门禁和补齐只读输入后的完整测试/后续门禁共同闭合。支持矩阵只新增本地topic提交边界，CLI/Intake入口、目标、来源推广、验收范围保持；未合并master、推送或发布。"
   },
   "item-intake": {
-    "fingerprint": "631b2a7e939fc49ff194cf48f682aedfbe503ce2f57088a0cfc90b8e94a61c0a",
-    "reviewedOn": "2026-10-03",
-    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
+    "fingerprint": "7f8a76e2d0366d82962dad8db2eb939bd77dcd3746f68a44338891d2dc59dacf",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照同义句selection与来源证据边界、完整原文独立审核及旧包兼容；已更新战斗包/Forge中英文同义说法步骤，额外限制和未知机制仍交GM。新增实现只经encounter路径，Monster普通入口、Item/Species来源契约、命令、输出与推广门禁不变。代码与构建已核，四语言和GM分支实机仍待本批收据，不提升生产/版本/任意机制。"
   },
   "species-intake": {
-    "fingerprint": "e8973c1451898328d2f20a99dceb7590e9ddbfe9e497f7277c539a9bbc0d47e5",
-    "reviewedOn": "2026-10-03",
-    "note": "人工核对本次Intake改动只有固定战斗控制器的Core364/368白名单；输入入口、IR结构、来源链和promotion gate保持原契约，没有扩大Item或Species目标接受。"
+    "fingerprint": "2bdb2bca162ac561c0aebccd46af8f2f789d5854e72f85f71ad2ce7687b58010",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照同义句selection与来源证据边界、完整原文独立审核及旧包兼容；已更新战斗包/Forge中英文同义说法步骤，额外限制和未知机制仍交GM。新增实现只经encounter路径，Monster普通入口、Item/Species来源契约、命令、输出与推广门禁不变。代码与构建已核，四语言和GM分支实机仍待本批收据，不提升生产/版本/任意机制。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,9 +30,9 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "f1adf7fac3afb168c26c4146801c00d476ca1e9a3679887ecdb98eb35fbddc11",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "45427cb46d1973bc630184e513bc2287bb6f6a14155589e43e0e765e03d98247",
+    "reviewedOn": "2026-10-08",
+    "note": "本次仅受审中文显示policy与名称来源核验变化；Vault同步入口、manifest、覆盖和既有无备份冲突未改变，原限制仍正确。"
   },
   "goddessfantasy-crawl": {
     "fingerprint": "64792117f98292b555e33d7a293818521c949a610bc549d5125bb0084bac1478",
@@ -50,9 +50,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "json-translation": {
-    "fingerprint": "2ce05e584bc481c29671e2de3496a848bf76ecd7f0037f502525bc93bd5e1646",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "b0c2da35ed6e9c0d6f0c42347c16c60c64f19503b02664ee22f097b2580b4787",
+    "reviewedOn": "2026-10-08",
+    "note": "本次Forge中文投影的空格名称不改变旧原位JSON翻译入口；仍不能用旧翻译队列修补正式Actor，目录写入限制保持。"
   },
   "foundry-ops": {
     "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "6588f0661226d804ab9233c09ca6a8e605713963c39671f74d4784dba602ee3c",
-    "reviewedOn": "2026-10-05",
-    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
+    "fingerprint": "542120b2548be1c5ffb4d122782e9e3c7c999c26acea8691fc046d2b5d94311a",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照阶段提交记录与R3/R4原件：原始CI缺历史输入的失败保留，静态门禁和补齐只读输入后的完整测试/后续门禁共同闭合。支持矩阵只新增本地topic提交边界，CLI/Intake入口、目标、来源推广、验收范围保持；未合并master、推送或发布。"
   },
   "human-encounter-intake": {
-    "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
-    "reviewedOn": "2026-10-05",
-    "note": "逐项核对0.5.0目录单窗/输入切换/独立连接/蓝图来源与草稿派生/正式预览创建、结构化affects与模板分离、两条安全聚焦入口；CLI参数与原生成版本默认不变；实机尚待当前候选验收"
+    "fingerprint": "022968c65fa114c7dfcdf8d8178418e702e1729a56101bc48b98cf259eeb29a9",
+    "reviewedOn": "2026-10-10",
+    "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -115,19 +115,19 @@
     "note": "对照runtime、manifest和README：精确14.364/5.3.3、Mirror14.368/5.3.3、14.368/6.0.2及Next14.368/6.0.5；Next基础及快速复活限定接受，其他仪式玩家多GM不提升。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "626460dd08209b871aaaa57ff64e30849c4b21d477fe59aa092d77bceb65f1eb",
-    "reviewedOn": "2026-10-05",
-    "note": "对照runtime和README：14.364/5.3.3、Mirror14.368/5.3.3、Next14.368/6.0.5精确配对；活动GM事件、回合和CC消费只在已验限定切片，不扩大任意宏或多GM。"
+    "fingerprint": "32c3e40891e519ec201647c21ddd4abf1df4a1e0bc6570b89a15f50ab4e2b0ed",
+    "reviewedOn": "2026-10-10",
+    "note": "已人工对照各条目、来源与共享实现差异：CLI入口/目标/版本与安全检查步骤保持；组合定义由Forge显式传入，CLI不读取世界目录，正式来源和promotion不放宽。Trigger Engine公开事件及权限不因消费者目录增量改变。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "eaec3a2067d947d61c83034becb04f11da6bc3cc7e91a700cfc933467bc04746",
-    "reviewedOn": "2026-10-05",
-    "note": "对照当前精确配对源码和README：14.364/5.3.3、Mirror14.368/5.3.3、Next14.368/6.0.5并存；native6效果写入按dnd5e系统版本而非Core判断，Slow与WMP限定实机及历史来源缺口保留。"
+    "fingerprint": "03889c3973b27198cfa16c0df9319b2ce5407bac81e541c60926c1fdb51fc0b2",
+    "reviewedOn": "2026-10-10",
+    "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "69ea1867603d7fe3875b3076253dc9218dad96c1ec340cab3513a675df684d46",
-    "reviewedOn": "2026-10-05",
-    "note": "本轮仅精修Forge模板与样式：控件主次、表单、原生header字体隔离、即时键盘焦点及宽窄布局。已对照目录入口、蓝图/标准/AI步骤、身份/创建/Provider边界，用户入口、输入输出与支持范围均不变；既有说明继续适用，不缩watch。"
+    "fingerprint": "f04ef5f3e711c9a3679a3de97d8668289ce18721970fa8ea19bb6a73ba4475bd",
+    "reviewedOn": "2026-10-10",
+    "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
@@ -160,8 +160,8 @@
     "note": "核对历史6.0.2/local.9与当前6.0.5/local.10独立目标，旧安装器写前拒绝6.0.5。保留原外部候选版本/来源SHA/已接受切片，新增只读输入根复用说明；固定0001混合换行原SHA保留。未升级或重建运行外部包。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "7912e61ceebbd85ed9fd86612630f4cc5035b0d3a0595da911085717922ae807",
-    "reviewedOn": "2026-10-05",
-    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
+    "fingerprint": "91c5680d39d53432f855c7eb99a6b4703166dfd02072cf77357f32df1179731b",
+    "reviewedOn": "2026-10-10",
+    "note": "提交整合检查仅修历史Classpack报告与ignored候选目录分开读取的参数适配，默认构建读取、安装目标和权限均未变；两LevelDB离线测试改到临时夹具并核原库身份不变，42项通过。已对照现有用户步骤、版本和运行接受边界，说明无需改写。"
   }
 }

@@ -21,9 +21,9 @@ import type { MonsterIntakeConfig } from './config';
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v1',
-  extract: 'monster-intake-extract-v21',
-  review: 'monster-intake-review-v26',
-  repair: 'monster-intake-repair-v21',
+  extract: 'monster-intake-extract-v22',
+  review: 'monster-intake-review-v27',
+  repair: 'monster-intake-repair-v22',
 } as const;
 
 export type MonsterIntakeProviderErrorCode =
@@ -110,6 +110,12 @@ Normalize the standard NPC type wording Medium humanoid (any race), or the abbre
 creatureType humanoid plus creatureTypeCustom any race/任意种族; retain the literal parenthetical and do not invent a specific race.
 If a save DC is explicit but its ability is absent, retain the DC and effect literally in description, omit structured save,
 and do not create a blocking uncertainty solely for the intentionally unautomated missing ability.
+For an attack that applies a condition on hit, feature.save is only for a source-explicit initial saving throw before that
+condition is applied. A saving throw repeated at the end of each target turn to end an existing condition is not an initial
+save: omit feature.save when that is the only save. Preserve its complete ability, DC, timing, and success-ending wording
+in the feature description and appliedConditions.condition. appliedConditions.escapeDc is only for a separate, explicitly
+stated escape check with its own DC; never copy the repeat-save DC into escapeDc. In repair, remove wrong save/escapeDc
+fields and source claims that point to those removed fields, while retaining the full literal repeat-save rule.
 Multiattack is an action aggregator, not an attack roll. Preserve its complete source-backed prose as utility (or damage only
 when independently supported), and never attach attack type, to-hit, reach, or range automation to the Multiattack entry itself.
 When the source has no explicit Legendary Actions/传奇动作 resource or preamble, omit legendary entirely; never emit null,

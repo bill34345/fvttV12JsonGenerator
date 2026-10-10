@@ -13,14 +13,17 @@ import {
  * second conversion of the same final source look like a conflicting Actor.
  * This projection is Forge-only so existing CLI/Web output remains unchanged.
  */
-export function normalizeForgeActorArtifact(value: unknown, target: '12' | '14'): JsonObject {
+export function normalizeForgeActorArtifact(value: unknown, target: '12' | '14', identitySource?: unknown): JsonObject {
   const actor = cloneJsonObject(value);
   normalizeStats(actor);
   if (target === '14' && Array.isArray(actor.items)) {
     for (const item of actor.items) if (isJsonObject(item)) normalizeEmbeddedAttackRangesForFoundryV14(item);
   }
 
-  const replacements = collectEffectIdReplacements(actor);
+  // Display translations must not allocate different Effect identities or break their Activity references.
+  const source = identitySource === undefined ? actor : cloneJsonObject(identitySource);
+  if (identitySource !== undefined) normalizeStats(source);
+  const replacements = collectEffectIdReplacements(source);
   replaceGeneratedEffectIds(actor, replacements);
   return actor;
 }
