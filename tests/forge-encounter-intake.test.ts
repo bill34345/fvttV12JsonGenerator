@@ -1,20 +1,20 @@
 import {describe,test,expect} from 'bun:test';
-import {generateEncounterFromHumanMarkdown,createEncounterIntakeProviders,assertEncounterSecretsAbsent,explicitCreatureSections,type EncounterAutomationPort} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown,reviewForgeEncounterCandidate,createEncounterIntakeProviders,assertEncounterSecretsAbsent,explicitCreatureSections,type EncounterAutomationPort} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types';
 import {RAT_WARLOCK_SOURCE,buildRatWarlockIr} from '../src/core/intake/__tests__/fixtures/rat-warlock';
 import {LURKER_SOURCE,buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';
 
 const source=RAT_WARLOCK_SOURCE+LURKER_SOURCE;
 function fixture(){
-  let automationCalls=0;
+  let automationCalls=0, actorReviewCalls=0, automationReviewCalls=0;
   const provider:MonsterIntakeAiProvider={providerName:'offline-fixture',extractionModel:'fixture',reviewModel:'fixture',
     discover:async()=>({schemaVersion:1,candidates:[{id:'first',label:'Rat',start:0,end:RAT_WARLOCK_SOURCE.length,quote:RAT_WARLOCK_SOURCE},
       {id:'second',label:'Lurker',start:RAT_WARLOCK_SOURCE.length,end:source.length,quote:LURKER_SOURCE}]}),
     extract:async r=>r.source===RAT_WARLOCK_SOURCE?buildRatWarlockIr():buildValidLurkerIr(),
-    repair:async r=>r.ir,review:async()=>({schemaVersion:1,verdict:'accepted',findings:[]})};
+    repair:async r=>r.ir,review:async()=>{actorReviewCalls++;return {schemaVersion:1,verdict:'accepted',findings:[]};}};
   const automationProvider:EncounterAutomationPort={generate:async()=>{automationCalls++;return {version:1,name:'Fixture control',command:'const primary = await fromUuid(forgeEncounter.actors["actor-1"]); return {showPanel(){}, stop(){}};',notes:'Offline fixture',rules:[],manualSteps:[]};},
-    review:async()=>({verdict:'accepted',findings:[]})};
-  return {provider,automationProvider,get automationCalls(){return automationCalls;}};
+    review:async()=>{automationReviewCalls++;return {verdict:'accepted',findings:[]};}};
+  return {provider,automationProvider,get automationCalls(){return automationCalls;},get actorReviewCalls(){return actorReviewCalls;},get automationReviewCalls(){return automationReviewCalls;}};
 }
 describe('human Markdown multi-actor encounter intake',()=>{
   test('ordinary numbered creature headings preserve exact source segments',()=>{
@@ -56,6 +56,52 @@ describe('human Markdown multi-actor encounter intake',()=>{
     if(result.report.status!=='ready_for_gm_review')console.log(result.report.findings);
     expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);
     expect(result.report.actors.map(a=>a.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
+    expect(env.automationCalls).toBe(1);
+    expect(env.actorReviewCalls).toBe(2);
+    expect(env.automationReviewCalls).toBe(1);
+    expect(result.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([1,1]);
+  });
+  test('deferred encounter prepares both Actors with zero paid reviews; explicit audit only reviews the current package',async()=>{
+    const env=fixture();
+    const generated=await generateEncounterFromHumanMarkdown({source,label:'test',...env,reviewPolicy:'deferred'});
+    expect(generated.report.status).toBe('ready_for_gm_review');
+    expect(generated.prepared?.actors).toHaveLength(2);
+    expect(generated.report.automationReview).toEqual({status:'not_requested'});
+    expect(generated.report.actors.map(actor=>actor.generation?.modelReviewStatus)).toEqual(['not_requested','not_requested']);
+    expect(generated.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([0,0]);
+    expect(env.actorReviewCalls).toBe(0);
+    expect(env.automationReviewCalls).toBe(0);
+    expect(env.automationCalls).toBe(1);
+    const stale=structuredClone(generated.report);
+    stale.actors[1]!.source+=' changed';
+    await expect(reviewForgeEncounterCandidate({source,report:stale,prepared:generated.prepared!,
+      provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow(/不一致/u);
+    expect(env.actorReviewCalls).toBe(0);
+    const audited=await reviewForgeEncounterCandidate({source,report:generated.report,prepared:generated.prepared!,
+      provider:env.provider,automationProvider:env.automationProvider});
+    expect(audited.report.status).toBe('ready_for_gm_review');
+    expect(audited.prepared?.hash).toBe(generated.prepared?.hash);
+    expect(audited.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([1,1]);
+    expect(audited.report.automationReview).toEqual({verdict:'accepted',findings:[]});
+    expect(env.actorReviewCalls).toBe(2);
+    expect(env.automationReviewCalls).toBe(1);
+    expect(env.automationCalls).toBe(1);
+    await expect(reviewForgeEncounterCandidate({source:`${source}changed`,report:generated.report,prepared:generated.prepared!,
+      provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow(/变化/u);
+  });
+  test('an explicit negative package model opinion stays visible while local-valid GM preview remains',async()=>{
+    const env=fixture();
+    const generated=await generateEncounterFromHumanMarkdown({source,label:'test',...env,reviewPolicy:'deferred'});
+    let packageReviews=0;
+    env.automationProvider.review=async()=>{packageReviews++;return {verdict:'needs_review',findings:['请由GM核对这条来源限定。']};};
+    const audited=await reviewForgeEncounterCandidate({source,report:generated.report,prepared:generated.prepared!,
+      provider:env.provider,automationProvider:env.automationProvider});
+    expect(audited.report.status).toBe('ready_for_gm_review');
+    expect(audited.prepared?.hash).toBe(generated.prepared?.hash);
+    expect(audited.report.automationReview).toEqual({verdict:'needs_review',findings:['请由GM核对这条来源限定。']});
+    expect(audited.report.findings).toContain('请由GM核对这条来源限定。');
+    expect(env.actorReviewCalls).toBe(2);
+    expect(packageReviews).toBe(1);
     expect(env.automationCalls).toBe(1);
   });
   test('a failed Chinese translation retains the independently reviewed source-language package',async()=>{

@@ -1,0 +1,119 @@
+# Forge 付费模型审核改为显式可选操作
+
+状态：2026-10-11本轮授权功能已完成，必要本地行为验收通过。付费审核默认关闭、默认review0、无Key GM实际创建及中文partial/完整草稿/GM v2/正式包恢复已分别实测并由根复核。完成页可见GM技术审批元数据出口仍PARTIAL，下载文件落盘UNKNOWN；两项证据边界保留，未冒称通过。最终468 module/类型/手册检查通过。用户已授权把本轮实现与手册提交到当前分支，未授权合并master或推送；提交前基线HEAD65b7a4d568988756e245014f2c7eb4b8a0eb3600。
+
+## 用户决定
+
+付费模型审核默认关闭，只有用户明确点击审核按钮才发请求。生成、翻译、续跑、刷新或旧设置不得隐式开启审核。用户已进一步明确：本地来源与参数校验通过后，可完全由GM人工核对并确认导入，不强制使用AI审核。审核按钮只复核当前候选，不重新生成、翻译或修正；使用当前生成模型并提示可能产生额外API费用，不持久保存自动开启状态。
+
+## 实施约定
+
+- Forge Actor/Item候选生成与付费模型复核分离。候选真实记录not_requested/ready_for_gm_review，本地验证与正式response仍须通过。GM确认绑定当前来源/候选/目标，才交给现有accepted Document adapter；不得把未调用AI写成AI accepted。
+- 战斗包默认仍做IR/source/numeric验证、自动化选择decode、固定宏与伴随覆盖、正式prepare；Actor及整包review均不自动请求。最终GM勾选和导入仍独立。显式审核只审当前source/report/package绑定的候选，旧候选不能借按钮重新获得权限。
+- 中文先翻译并确定性校验成来源绑定草稿，不调用service.review；GM实际确认后使用明确GM审批类型/hash经正式workflow生成中文包，不伪填model。旧模型审核v1包继续可读，新的GM批准与AI批准区分。显式AI审核可审当前译文，不重译。
+- 单体历史/批量保留真实审批来源与只读历史边界；不能把导入历史直接变为可创建response。遗留AI入口不得留下自动review。CLI/shared provider默认审核政策保持独立。
+- 来源/名称/语言/模型配置改变会撤销旧审核动作身份；不因已有Key或历史设置自动消费。缺参数、未知机制或确定性失败继续阻断，最终由GM决定已支持候选。
+
+## 所有权与验证
+
+Runtime owner负责ai/item/encounter生成与显式review/GM审批API、Intake状态/历史绑定及对应测试；翻译owner负责localization契约、中文草稿/GM批准与显式审阅；两个UI owner分别负责单体Intake与战斗包入口/模板/测试。一个文件仅一个writer，index导出由runtime owner整合，root负责文档/类型组合与实机。
+
+验证重点是完整默认流程review调用0、明确按钮只发review且generate/translate/repair调用0、配置/来源/刷新与批量不自动开启、真实not_requested/GM proof与旧AI证据区分、缺项不放行、取消与并发身份。用模拟Provider保留精确调用证据；相关模块/业务/翻译/types/架构/build/手册按影响选择，实机只补新操作，不重跑生命周期或无关矩阵。真实Provider调用范围在最小Chrome交接明确，不用测试默许自动消费。
+
+## r1 结果与历史过程（最终结论见末节）
+
+实现、模拟/组件及非浏览器门禁通过，本次实机仍PARTIAL，不宣称全部完成。前轮第二轮记录仅代表当时自动同模型政策；本决定覆盖其默认审核行为，未变的导航/源绑定/生命周期证据仍有效。
+
+所有writer已冻结。Actor/Item/Encounter默认候选和显式审核API、GM本地批准、v2中文GM批准、历史/队列ready状态与UI接线完成。独立审查发现并闭合三项：中文失败/partial草稿续翻重发整组字段的成本回归；Encounter同模型不同连接配置还能审核旧候选的身份缺口；GM历史target/findings hash只验格式未核内容。分别由原owner窄修并回归，未伪造AI accepted或放宽本地block。此前写入期间共享module失败保留，不能算最终结果；新中文34、业务540与各owner窄测有效。
+
+稳定组合检查依据：本轮新ready状态/GM proof/中文v2契约改变多个公共消费者与UI事件，需一次完整Forge module、alltypes及架构门禁；相关业务540/翻译34输入未再改变则复用。审核控制流改变需scoped anti-overfit核修改的生产源。最后build/安装身份、手册人工review/build/check和新UI实机分别验证，未变生命周期不重放。
+
+稳定模块439通过、0失败（33文件/3964断言）。首次alltypes发现新测试修改readonly包/未收窄v1 union，翻译owner只修测试并跑alltypes与34翻译通过；首次架构发现新增包根翻译转导出与既有prepare/index闭环，runtime owner移除未被消费的新根出口，继续使用原公开子入口，packages types与architecture1297/3050通过。两层修复未改变业务行为，439/540证据保持，原失败日志保留。18修改源anti-overfit通过。
+
+手册5项stale已逐项人工核对，CLI/正式Markdown默认保持，Forge成本/GM中文批准/恢复/语言标签已同步；review/build/check33通过。最终build与install-r1只修改Forge JS/CSS及connection/encounter/intake三个模板，16HTTP内容核等，原PID43560/运行者Administrator、目标14.368/5.3.3/cor-cotn和guide/其他模块保护项未变。JS SHA2c44da693d0c19e587f4b22f2a59626e7e1d8c57459fb79120ca5ff2720bff44。
+
+实机最小范围已固定在本轮.local/CHROME_HANDOFF.md：一个简单Guard默认生成后清Key、GM确认创建/回读/精确清理；原R1英文包正常上传、中文draft→清Key→GM本地批准v2正式预览及恢复，不导入中文或启用。本批不点击真实付费AI审核按钮，其仅review/不重生成等隔离由模拟Provider/真实模板事件证明，旧真实Provider审核服务证据按影响复用；只有必要来源分析与翻译使用既有授权API，不额外为验收付审核费用。真实结果待回传。
+
+实机派发已接受：forge-explicit-model-review-20261011-r1/revision1，复用独立执行器01a1256e-2e8f-7561-8537-57bc3602a62c，唯一回传本聊天01a123a1-57a4-78c3-a02a-7fb90d7627c9。父控完成必要准备后结束回合，不轮询；当前实现与非浏览器检查通过，实机仍等待收据，不宣称全部完成。
+
+2026-10-11 01:20（Asia/Shanghai）真实回传PARTIAL，原件收据SHA d5d2eb9bd81194224db4848790e03947f81d6185740bb6b15bf46ba24e220cf8。Guard仅Analyze一次，其IR将原文277..285的Actions标题分类mechanical而无claimPaths，UNCLAIMED_MECHANICAL_COVERAGE阻断；未repair/Generate/GMcreate，创建Actor0。真实逻辑review0与not_requested可核，但完整无Key GM创建/证明尚未实测。中文首轮Actor2术语失败，经唯一一次续翻后实际UI显示2Actor草稿本地通过、包级字段text-26caa7c85fda2a5c99f114e4残留legendaryRecovery；未再次续翻、未AI审核或批准无效草稿，正式GM v2/恢复未执行。
+
+新增证据缺口：多次显式readonly导出的5个JSON仍与首失败snapshot逐字节相同（SHA6d92478adcf7b1285b5661e3227458194860e0af96d4177dc11d5706e867d3a8，Actor2仍5findings），与实际最新DOM的包级1失败不同，根因未查。记录不能冒充正式中文包，最新完整机读报告未取得，保留DOM/旧快照与有效源包。父控独立核来源Actions跨度、Guard调用计数、旧导出hash、最新DOM以及原10设置恢复，并查看最终空界面图。
+
+收尾完成：世界/服务写入0，无Actor需删除，Key absent/persistfalse，原10可见设置恢复，单体/战斗包关闭重开空，Source Library0来源0review且未删除旧记录/队列，无活动Provider，主tab保留。按用户关机安排已记录本地SHUTDOWN_HANDOFF.md/CURRENT.md并暂停；不继续改代码/再测试/再付费。明天先核现场与已有证据，分别处理标题coverage、剩余译文字段与报告投影，再补真正未验证的GM路径，不重跑已有无关有效检查。
+
+## 2026-10-11 继续处理
+
+用户明确继续后，main master3734eb2 clean、候选HEAD65b7a4d与原件核对一致。30001无监听，旧PID无效；保留昨晚收据，不把关机前身份当当前身份。本地Lab无人占用预检已保存，按现有Foundry Ops launch入口重新启动同一14.368/server-mirror/cor-cotn实例供后续验收，禁止新增实例或备份，服务保留到关机。
+
+标题coverage：真实虚构Guard来源/IR进入tracked fixture，来源SHA3f32c0f001fdc15ce88d6c2f4a770f8046522b6998f3261b300481c4537ab9cf。原分析红例确实为needs_review；仅来源/候选范围精确、整行裸结构标题、mechanical空claim的条目确定性归为非机械。含次数、规则文字或过期跨度继续阻断，不修改正式JSON或共享validator。模拟Provider新增8个分析回归，448 module/0fail、alltypes/package types/定向1源anti-overfit通过，根审差异无放宽真实机械内容。
+
+报告问题分层：Intake来源路径的翻译回调只更新live translationReport，未同步报告/保存快照，mounted HBS红例已定位；R1实际上传路径intake:null，导出函数直接投影新live数据的测试可通过，故不能把前者直接宣称为R1旧导出根因。修复已打开readonly内容与旧download link撤销后，仍须实际Chrome对比新DOM/导出证明。上传包原v1恢复依赖humanSource/Intake report，无法保存partial；最小uploaded v2分支在同一模块owner内处理，沿用world-GM scope、目标/catalog、正式包hash与完整请求身份，不恢复付费按钮权限或GM确认。
+
+剩余译文：本地replay-residual-field.ts重建原英文包的text-26caa7c85fda2a5c99f114e4，匹配最新DOM候选。validateLocalizationDraft精确拒绝legendaryRecovery，程序字段名在说明正文中应译为中文，未被保护器锁定；只用中文替代该残留的本地对照能通过，未提升/保存为正式翻译或输出。模拟真实translation service确认续翻仅此ID、附原译文和错误反馈，实际Provider请求0。最新Actor2名称glossary未完整导出，故不宣称恢复整份request。首次本地检查因transport将测试sentinel包装成network错误而断言失败，调整捕获断言后通过，不属于实机或服务故障。收据.local/forge-explicit-model-review-20261011/residual-field-offline-receipt.json。
+
+根审与独立只读审查确认完整上传draft也须恢复：原v2只存progress使无Key GM批准入口丢失。新增mounted HBS完整草稿保存/重开/正式prepare/清Key/GM批准红例；最小optional未批准localizationDraft经正式包hash与assertForgeEncounterLocalizationDraft重验后才展示，损坏draft单独丢弃，不损失仍有效partial；GM勾选/付费审核权限保持不恢复。owner12聚焦回归和模块types通过，原34报告/恢复及13导航/IndexedDB有效。
+
+最终组合检查依据：本日新增snapshot联合类型及readonly/download/续翻回调/真实HBS恢复触达多个模块消费者，稳定后运行一次完整安全Forge module与alltypes，防止分别窄测漏掉组合；后续无相关改动则复用。标题归一化已有1源anti-overfit，package imports未改变则复用此前架构/业务540/翻译34。手册3项stale须逐项人工核对并review/build/check；模块build与installed16文件/保护6文件及新PID/owner身份核对之后，才派发实际Chrome差异验收。
+
+本日稳定组合最终454 module通过（33文件/4062断言/0fail），alltypes通过；日志resume-module-final.log、resume-typecheck-all-final.log。独立delta复核确认唯一P2闭合，未发现新阻断。手册verification-development/human-encounter-intake/fvtt-json-forge逐项对照说明更新、review/build/check33通过，生成根HTML；未声称此构建代表功能实机通过。
+
+install-r2只更新Forge scripts/index.js，SHA eae6e54b0404c2684dd7943552e62c95468892edb4ff5a3e2364c0c7b4bc13cc；16候选/安装/HTTP文件相等，原guide与CC/TE/WMP保护6文件保持。新服务PID41904/ownerAdministrator/14.368/5.3.3/cor-cotn/noBackups已核，父启动1次，执行器不进行服务操作。canonical launch已输出ok/pid，但host exec session31108未回终止状态；实际进程/loopback端口/HTTP身份独立已验证，不将未知命令退出码算PASS或为了收尾停服务。此工具会话不再轮询。
+
+CHROME_HANDOFF_R2.md固定最小实际场景：Guard分析/生成后无KeyGM创建并精确清理；真实上传英文包partial续翻/刷新恢复、最新readonly报告与新下载；完整未批准draft刷新后无KeyGM批准v2，以及正式中文包恢复。已清的R1未知最新request不拼造恢复；真实审核按钮仍不点击。代码冻结，等待独立执行器实际回传后评估，尚不宣称实机闭合。
+
+r2派发已由Codex app接受目标01a1256e-2e8f-7561-8537-57bc3602a62c，唯一callback本主01a123a1-57a4-78c3-a02a-7fb90d7627c9。父无独立必要工作剩余，结束回合等待完成/真实阻碍回传；不轮询、不提交或合并。
+
+## r2 实机回传与窄修
+
+2026-10-11 11:11（Asia/Shanghai）r2回传PARTIAL，收据SHA084456f320c5f1131e2a6ebf39e7c53286394a0c7cf67d2849dbf486b3e6af22。Actions分析通过，但Guard Generate一次返回GENERATION_PROVIDER_FAILURE，未重试/修正、未创建，UUID=null/world0。实际Chrome原tab关机后缺席，官方inventory确认后在同Chrome创建唯一必要替代tab651343607，保护5用户页；同PID41904服务未操作。无KeyGM Actor创建仍未执行。
+
+中文真实证据通过：自然Actor2五术语失败，26有效字段刷新恢复与一次真实续翻均逐字节保持。partial record前后SHA76648ec83ac902b8e949ad8950560c11bbae255bb57da106aba974fd473acd3b；完整未批准draft刷新前后SHA06c636ae0e59fa855c095f2c7a8212e2e9f334ddc5dc967eacc5105864bf2968；无Key实际GM批准，两Actor和packageText均v2/approval.kind=gm/gmId FccwB5HfAhy1F49a/无review.model。正式中文包与再次恢复同SHA43e6ab034070df7c95efe8c1813dfca4b517b14e82f561c38cf1dc2d17767de3，原Actor来源不变/导入勾选未继承/未导入或启用。根verify-r2-receipt.ts独立正式prepare、逐字段validate与26文本hash、三个前后bytes、approvedRecord.sourcePackage和原10设置比较均通过，截图/DOM也核Twilight昏暗光照和任意伤害解除两限定。此证据保持，不因后续报告UI修复重放翻译。
+
+报告实机partial→complete→GM批准的最新readonly记录hash正确变化，旧下载link撤销、新link身份更新。连续展开项未满足：续翻起步显式clearReportPresentation使视图收起；已新增真实HBS延迟Provider红例并窄修为同包续翻保留report/prior progress、起步只撤download、回调更新当前textarea。37局部测试/模块types通过，未新增真实调用。一次正常下载wait10s超时，下载文件UNKNOWN/NOT_CAPTURED；readonly记录独立验证，不因此重跑已有效业务或换blob/CDP通道。
+
+Guard新失败诊断：相同R2 IR在离线source→Analyze→Generate→GM approve及browser-target bundle均通过，排除源数据/正式converter常规失败。加入真实UI可选displayName空字符串后精确复现同generic失败；convertRenderedActor的`??`不会回退空串，buildForgeActorRequest的requireNonEmpty抛TypeError。只修AI Actor候选传参空白→有效sourceName，不放宽正式required契约。Item生成同行`??`有同缺陷，在同owner最小两行/正式workflow回归内处理；不扩renderer，不因可本地修复重发Provider。来源名和显示名都空仍硬失败，非空显示名保留。后续只补Guard无Key创建实机，中文已通过链复用。
+
+收尾r2：原10设置根核相等、Key absent/persistfalse，单体source空、Source Library0来源0review，战斗包清除后重开无source/resume/repreview/report/problem/package，主新tab保留，无活动Provider/世界或服务写入。一个续翻前置失败是关闭父工作台导致共享连接root失效，正常重开工作台后同源partial未变；此依赖边界作为后续使用流程优化线索，不将其当译文损坏或额外成功请求。
+
+r3组合检查依据：本日新修Actor/Item正式传参，以及Encounter实时readonly callback直接影响模块消费者，需稳定组合后一次完整安全module；owner新7窄回归、package/module/alltypes与2源anti-overfit已通过，不再重复类型/业务540/中文34或既有真实中文链。手册3项watch因实现变化需再次人工对照，说明“显示名可选”的既有语义现在被正确执行，正式required门禁未变，连续展开与旧链接撤销说明已由37真实HBS回归覆盖。安装r3后只补默认未审Guard生成/无KeyGM创建/回读/清理，避免为报告视觉重复付翻译费。
+
+r3冻结组合462 module通过（33文件/4104断言/0fail），日志resume-module-r3-final.log。手册3项再次人工对照/review/build/check33通过，README人类MD说明明确提取后本地校验与另行显式付费审核。build/install-r3/16HTTP与保护6文件核对通过；只更新Forge JS SHA52bca95e741aeff59bdf8ec0c894ff63b78585efeb7be1552e6a5626c879130a。CHROME_HANDOFF_R3.md限定一个默认空显示名Guard的Analyze/Generate→清KeyGM创建/回读/精确清理，复用同tab651343607及中文R2实证，不因下载未知扩大任务。
+
+r3派发由Codex app接受同一执行器01a1256e-2e8f-7561-8537-57bc3602a62c，唯一callback本主。父无独立必要工作剩余，结束回合等待回传，不轮询，不宣称Guard已通过。
+
+## r3 实机回传与凭据边界修复
+
+r3回传PARTIAL，收据SHA8b34f6b7e37766a825b7a4960b85ca1753caef781b89c5c8cbcd68d95dd16636。可选显示名真实空串，Analyze一次/Generate一次均通过；来源数值正确，review0/repair0、not_requested。候选artifact SHA1c1a27da124b8107da5df16a699a9b98d3e86347e4a49e22b75f55d11e4025c5。正常共享连接清Key后来源/IR/候选技术块逐字节未变，却出现STALE_SNAPSHOT，GM按钮不可用，Actor0/UUIDnull；未重分析或绕过。根verify-r3-evidence.ts对原source→IR→canonical→实际artifact做verifyMonsterIntake accepted/0blocking、技术块一致、Key absent/persistfalse与原10设置恢复独立核验；有效Generate证据保留，不能代替GM创建。
+
+根因范围已定位至真实共享订阅双接缝：Intake的sessionConnectionIdentity含apiKey且变化时invalidateReview，外层workspace对任何settings通知无条件invalidateWorkspaceCandidate，故只修下层或直接调用create的假root测试会漏。新的单writer负责application/intakeApplication与真实HBS共享连接测试；先复现正常清当前/全部Key，经外层workspace与嵌入Intake，再修credential-only变化保留完成候选的本地GM资格。来源/mode/name/target或非凭据连接配置改变仍严格撤旧；旧候选付费审核能力在凭据改变时必须撤销，后来改回Key也不自动复活。进行中请求/晚回、GM权限/产物hash/本地硬阻断及批量/历史边界保留，凭据及其hash不进持久记录。此缺口需要真实订阅红例和模块组合检查，既有中文R2/生成R3不重放为诊断。
+
+r3收尾仍完成：设置根核相等、Key absent/persistfalse、单体source空、SourceLibrary0来源0review，无记录删除；Guard目录唯一名无匹配、搜索恢复；战斗包R2空状态保持、主tab651343607保留、无活动Provider/服务/世界写入。原生角色卡/GM proof/Actor删除未执行，付费审核按钮未点。下一实机仅验证修后清Key→GM实际创建，不扩大中文或战斗场景。
+
+凭据边界窄修已冻结并获独立复核：外层workspace比较不含Key的非凭据identity；Intake凭据-only变化保留本地候选、private credential revision撤旧付费资格，改回Key不复活。进行中的Provider取消/晚回拒绝，本地提交继续且防重复。clearAllForgeSessionApiKeys原先用stored清空对象覆盖transient session，现只清apiKey/persistApiKey/savedApiKeys而保留当前非敏感配置，不把transient配置倒写存储。same-identity probe只render，避免新增fillSettings覆盖legacy未保存连接草稿。
+
+新增检查依据：根因跨真实外层workspace、内嵌Intake及共享settings，需真实HBS共享订阅红→绿，不能只直接置root.apiKey或私有create。owner固定Bun1.3.14窄测6/53断言及module types通过（早期1.3.8红绿仅诊断）；覆盖Actor/Item标准与AI pane、清当前/全部Key、pending创建、Provider晚回和旧paid不复活。新私有字段与跨层回调在组合边界运行一次完整安全module及alltypes，复用未受影响业务/中文/anti-overfit；手册3项对照说明review/build/check后安装r4，只补最后Guard无Key创建。
+
+r4稳定组合468 module通过（33文件/4157断言/0fail）与alltypes通过，日志resume-module-r4-final.log/resume-types-r4-final.log。独立review最终无阻断。实际handbook:status只有fvtt-json-forge stale，因此仅该项重新人工对照/review，其他未变条目复用；build/check33通过。build/install-r4只改JS SHAc07f1c9402573ebe0744e05587833b3de0caff093e26fc3b72e1db296f02e7c3、16HTTP匹配/保护文件与PID41904/owner不变。CHROME_HANDOFF_R4.md限定清当前临时Key，不在实机clear-all用户其它profiles；最后只补同一Guard无KeyGM创建/proof/回读/精确清理，中文/战斗不重放。
+
+r4派发已接受同一独立Chrome执行器，唯一回传本主，父无独立必要工作剩余，结束回合等待实际回传后评估；不轮询，不将本次交接当完成。
+
+## 最终结论与证据边界
+
+2026-10-11 12:08（Asia/Shanghai）r4实际回传FUNCTIONAL PASS，原收据SHA887436e229ebf937301f68420f4647e09106d43cd2b2b189b8eeefd9ffa80007。可选显示名空，正常Analyze一次/Generate一次后本地有效、review0/repair0/not_requested。共享连接清当前Key后非凭据配置与候选artifact逐字节未变，Key absent/persistfalse，GM按钮enabled、付费审核disabled；未重填Key/重分析或生成，显式点击GM确认创建，唯一新Actor.d2cd7ccaa8de3ed2实际创建并完成回读。原生卡复制UUID一致，HP11/11、公式2d8+2、AC14、walk30、六属性13/12/12/10/11/10、CR1/8/PB2、Shortsword+3/reach5/单目标/4(1d6+1)Piercing符合来源。没有掷骰/攻击/改值提交。
+
+该测试Actor按目录data-entry-id与UUID匹配后正常UI精确删除，目标ID行0/名称image0/唯一名搜索无匹配，搜索恢复。仅一个Actor创建与删除，无独立Item/Macro/Token/Scene/Combat/Chat/time操作；SourceLibrary0来源0review无记录需删，单体source空，原10设置相等、Key absent/persistfalse，战斗包R2空状态保持，无活动Provider，原5用户页及主tab651343607保留，服务PID41904继续常驻。根查看原生卡截图和HP/创建/清理DOM，verify-r4-evidence.ts独立核来源→IR→canonical→实际artifact语义accepted/0blocking、清Key前后技术块、配置/UUID/目录删除身份与原设置；收据r4-parent-evidence-verification.json。中文复用r2-parent-evidence-verification.json，正式包SHA43e6ab034070df7c95efe8c1813dfca4b517b14e82f561c38cf1dc2d17767de3，26有效字段保持、完整未批准及正式v2恢复均通过，不重复付费翻译。
+
+实际范围绑定Mirror Core14.368/dnd5e5.3.3/cor-cotn。最终代码组合468 module（33文件/4157断言/0fail）、alltypes、模块types、相关安全窄回归与2源anti-overfit通过；未变业务540/中文34及架构1297/3050证据复用。最终构建JS c07f1c9402573ebe0744e05587833b3de0caff093e26fc3b72e1db296f02e7c3，16候选/安装/HTTP核等，保护文件未改。手册同步并人工review/build/check33通过。main master3734eb2 clean、候选HEAD65b7a4d+本轮改动仍未提交，未合并或推送。
+
+保留三项准确边界：完成页只提供创建UUID/回读，原review技术区隐藏且没有正常可见返回/导出入口，因此可见gmApproval元数据出口PARTIAL，隐藏DOM诊断件不能当可见证明；GM/hash绑定仍有正式workflow/模板回归，实际GM创建不受影响。浏览器一次下载wait超时，下载落盘UNKNOWN，当前只读JSON记录已独立验证，不将工具下载结果未知当业务失败或绕通道重跑。真实付费AI审核按钮本轮NOT_EXECUTED，只有模拟Provider与真实HBS事件证明其调用隔离，旧真实Provider审核服务证据按影响复用；生成/翻译实际使用了API，原始HTTP次数未捕获，不声称总API调用为0。
+
+后续体验优化线索：完成页的可见审批摘要/记录导出，以及关闭父工作台后战斗包共享连接root的依赖提示。本轮不扩大为新功能、不继续重放已有效样本。授权工作收尾，无待回传任务；不自动提交、合并、推送或停止常驻Lab。
+
+## 当前分支提交整理
+
+用户在功能验收后明确授权“把这一轮的改动连同手册一起整理提交到当前分支，先不要合并到master”。本次提交整理包含第二轮问题导航、显式可选模型审核、GM人工批准与中文恢复、相关回归fixture、两个阶段记录，以及手册条目/人工核对记录/根HTML；不包含.local中的凭据、运行日志或浏览器原件。原件继续保留在当前worktree。
+
+提交前复核当前分支codex/20261006-111625-bettermonsters-eye-deep-sample和53个功能、手册及回归文件，另纳入fixture末尾空行的路径级Git属性，共54个文件；master3734eb2及主索引干净，无路径重叠或额外未跟踪文件需混入。已验证代码未再改动，复用最终468 module/alltypes/相关业务、中文、架构、anti-overfit及r2/r4实机证据，不因提交记录变化重跑API。按提交门禁运行agents:generate/agents:check与handbook:check，核对暂存区范围及diffcheck后只在本分支提交；不合并master、推送、清理worktree或操作测试服务。
+
+首次暂存完整diffcheck仅报告tests/fixtures/forge-heading-coverage/guard.md的末尾空行；这是捕获来源的一部分，fixture必须保持SHA3f32c0f001fdc15ce88d6c2f4a770f8046522b6998f3261b300481c4537ab9cf。沿用已有.gitattributes的来源保真惯例，仅对该路径设置whitespace=-blank-at-eof，并核暂存blob的来源SHA；完整默认diffcheck重新通过。该属性不改变文件字节或其他路径规则，不改全局Git配置、校验器或来源/IR。运行日志与浏览器原件保持ignored，不纳入提交。

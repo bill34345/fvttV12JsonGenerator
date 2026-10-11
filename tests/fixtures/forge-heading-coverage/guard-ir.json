@@ -1,0 +1,496 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha256": "3f32c0f001fdc15ce88d6c2f4a770f8046522b6998f3261b300481c4537ab9cf",
+    "length": 389
+  },
+  "creature": {
+    "identity": {
+      "name": "Forge Manual Review Guard 20261011",
+      "englishName": "Forge Manual Review Guard 20261011",
+      "size": "medium",
+      "creatureType": "humanoid",
+      "creatureTypeCustom": "",
+      "alignment": "Neutral"
+    },
+    "abilities": {
+      "str": 13,
+      "dex": 12,
+      "con": 12,
+      "int": 10,
+      "wis": 11,
+      "cha": 10
+    },
+    "attributes": {
+      "ac": 14,
+      "acKind": "flat",
+      "hp": {
+        "value": 11,
+        "formula": "2d8 + 2"
+      },
+      "movement": {
+        "walk": 30
+      },
+      "cr": 0.125,
+      "xp": 25,
+      "proficiencyBonus": 2
+    },
+    "saves": {},
+    "skills": {},
+    "defenses": {
+      "resistances": [],
+      "immunities": [],
+      "vulnerabilities": [],
+      "conditionImmunities": []
+    },
+    "senses": {
+      "passivePerception": 10
+    },
+    "languages": {
+      "values": [
+        "Common"
+      ]
+    },
+    "traits": [],
+    "actions": [
+      {
+        "name": "Shortsword",
+        "englishName": "Shortsword",
+        "description": "Shortsword. Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) Piercing damage.",
+        "activityType": "attack",
+        "activationType": "action",
+        "attack": {
+          "type": "mwak",
+          "toHit": 3,
+          "reach": 5
+        },
+        "damage": [
+          {
+            "formula": "1d6 + 1",
+            "type": "piercing",
+            "relationship": "base"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [],
+    "reactions": [],
+    "legendaryActions": []
+  },
+  "claims": [
+    {
+      "path": "/creature/identity/name",
+      "valueKind": "explicit",
+      "value": "Forge Manual Review Guard 20261011",
+      "evidence": [
+        {
+          "start": 2,
+          "end": 36,
+          "quote": "Forge Manual Review Guard 20261011"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/identity/size",
+      "valueKind": "explicit",
+      "value": "medium",
+      "evidence": [
+        {
+          "start": 38,
+          "end": 44,
+          "quote": "Medium"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/identity/creatureType",
+      "valueKind": "explicit",
+      "value": "humanoid",
+      "evidence": [
+        {
+          "start": 45,
+          "end": 53,
+          "quote": "Humanoid"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/identity/alignment",
+      "valueKind": "explicit",
+      "value": "Neutral",
+      "evidence": [
+        {
+          "start": 55,
+          "end": 62,
+          "quote": "Neutral"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/abilities",
+      "valueKind": "explicit",
+      "value": {
+        "str": 13,
+        "dex": 12,
+        "con": 12,
+        "int": 10,
+        "wis": 11,
+        "cha": 10
+      },
+      "evidence": [
+        {
+          "start": 115,
+          "end": 186,
+          "quote": "STR 13 (+1) DEX 12 (+1) CON 12 (+1) INT 10 (+0) WIS 11 (+0) CHA 10 (+0)"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/ac",
+      "valueKind": "explicit",
+      "value": 14,
+      "evidence": [
+        {
+          "start": 75,
+          "end": 77,
+          "quote": "14"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/acKind",
+      "valueKind": "derived",
+      "value": "flat",
+      "evidence": [
+        {
+          "start": 63,
+          "end": 77,
+          "quote": "Armor Class 14"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/hp",
+      "valueKind": "explicit",
+      "value": 11,
+      "evidence": [
+        {
+          "start": 89,
+          "end": 101,
+          "quote": "11 (2d8 + 2)"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/hp/formula",
+      "valueKind": "explicit",
+      "value": "2d8 + 2",
+      "evidence": [
+        {
+          "start": 93,
+          "end": 100,
+          "quote": "2d8 + 2"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/movement",
+      "valueKind": "explicit",
+      "value": {
+        "walk": 30
+      },
+      "evidence": [
+        {
+          "start": 108,
+          "end": 114,
+          "quote": "30 ft."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/cr",
+      "valueKind": "derived",
+      "value": 0.125,
+      "evidence": [
+        {
+          "start": 243,
+          "end": 246,
+          "quote": "1/8"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/xp",
+      "valueKind": "explicit",
+      "value": 25,
+      "evidence": [
+        {
+          "start": 248,
+          "end": 250,
+          "quote": "25"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/attributes/proficiencyBonus",
+      "valueKind": "explicit",
+      "value": 2,
+      "evidence": [
+        {
+          "start": 273,
+          "end": 275,
+          "quote": "+2"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/senses",
+      "valueKind": "explicit",
+      "value": {
+        "passivePerception": 10
+      },
+      "evidence": [
+        {
+          "start": 194,
+          "end": 215,
+          "quote": "passive Perception 10"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/languages",
+      "valueKind": "explicit",
+      "value": {
+        "values": [
+          "Common"
+        ]
+      },
+      "evidence": [
+        {
+          "start": 226,
+          "end": 232,
+          "quote": "Common"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0",
+      "valueKind": "explicit",
+      "evidence": [
+        {
+          "start": 285,
+          "end": 387,
+          "quote": "Shortsword. Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) Piercing damage."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0/attack/type",
+      "valueKind": "explicit",
+      "value": "mwak",
+      "evidence": [
+        {
+          "start": 297,
+          "end": 316,
+          "quote": "Melee Weapon Attack"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0/attack/toHit",
+      "valueKind": "explicit",
+      "value": 3,
+      "evidence": [
+        {
+          "start": 318,
+          "end": 327,
+          "quote": "+3 to hit"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0/attack/reach",
+      "valueKind": "explicit",
+      "value": 5,
+      "evidence": [
+        {
+          "start": 329,
+          "end": 340,
+          "quote": "reach 5 ft."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0/damage/0/formula",
+      "valueKind": "explicit",
+      "value": "1d6 + 1",
+      "evidence": [
+        {
+          "start": 362,
+          "end": 369,
+          "quote": "1d6 + 1"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "/creature/actions/0/damage/0/type",
+      "valueKind": "explicit",
+      "value": "piercing",
+      "evidence": [
+        {
+          "start": 371,
+          "end": 386,
+          "quote": "Piercing damage"
+        }
+      ],
+      "confidence": "high"
+    }
+  ],
+  "coverage": [
+    {
+      "start": 0,
+      "end": 38,
+      "quote": "# Forge Manual Review Guard 20261011\n\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/identity/name"
+      ]
+    },
+    {
+      "start": 38,
+      "end": 63,
+      "quote": "Medium Humanoid, Neutral\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/identity/size",
+        "/creature/identity/creatureType",
+        "/creature/identity/alignment"
+      ]
+    },
+    {
+      "start": 63,
+      "end": 78,
+      "quote": "Armor Class 14\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/attributes/ac",
+        "/creature/attributes/acKind"
+      ]
+    },
+    {
+      "start": 78,
+      "end": 102,
+      "quote": "Hit Points 11 (2d8 + 2)\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/attributes/hp",
+        "/creature/attributes/hp/formula"
+      ]
+    },
+    {
+      "start": 102,
+      "end": 115,
+      "quote": "Speed 30 ft.\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/attributes/movement"
+      ]
+    },
+    {
+      "start": 115,
+      "end": 187,
+      "quote": "STR 13 (+1) DEX 12 (+1) CON 12 (+1) INT 10 (+0) WIS 11 (+0) CHA 10 (+0)\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/abilities"
+      ]
+    },
+    {
+      "start": 187,
+      "end": 216,
+      "quote": "Senses passive Perception 10\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/senses"
+      ]
+    },
+    {
+      "start": 216,
+      "end": 233,
+      "quote": "Languages Common\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/languages"
+      ]
+    },
+    {
+      "start": 233,
+      "end": 255,
+      "quote": "Challenge 1/8 (25 XP)\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/attributes/cr",
+        "/creature/attributes/xp"
+      ]
+    },
+    {
+      "start": 255,
+      "end": 277,
+      "quote": "Proficiency Bonus +2\n\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/attributes/proficiencyBonus"
+      ]
+    },
+    {
+      "start": 277,
+      "end": 285,
+      "quote": "Actions\n",
+      "classification": "mechanical",
+      "claimPaths": []
+    },
+    {
+      "start": 285,
+      "end": 387,
+      "quote": "Shortsword. Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) Piercing damage.",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/actions/0",
+        "/creature/actions/0/attack/type",
+        "/creature/actions/0/attack/toHit",
+        "/creature/actions/0/attack/reach",
+        "/creature/actions/0/damage/0/formula",
+        "/creature/actions/0/damage/0/type"
+      ]
+    },
+    {
+      "start": 387,
+      "end": 389,
+      "quote": "\n\n",
+      "classification": "ignored-with-reason",
+      "claimPaths": [],
+      "reason": "trailing whitespace"
+    }
+  ],
+  "uncertainties": []
+}

@@ -11,3 +11,5 @@ foundry-modules/server-next-external-candidates/**/*.patch whitespace=-blank-at-
 foundry-modules/server-next-external-candidates/*.patch whitespace=-blank-at-eol,-space-before-tab
 # Keep the accepted registration input's existing terminal blank line byte-faithful.
 foundry-modules/server-next-external-candidates/item-piles/register-target-first.js whitespace=-blank-at-eof
+# Preserve the captured Guard source's terminal blank line and source SHA.
+tests/fixtures/forge-heading-coverage/guard.md whitespace=-blank-at-eof

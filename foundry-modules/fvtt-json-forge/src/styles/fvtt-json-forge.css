@@ -247,6 +247,8 @@
   margin: 0;
 }
 
+.forge-encounter-volatile { display: contents; }
+
 .forge-encounter-panel ul {
   margin: 0;
   padding-inline-start: 1.4rem;
@@ -877,6 +879,41 @@
   border-radius: 4px;
   padding: 0.8rem;
 }
+
+.forge-encounter-navigation {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid #49636a;
+  border-radius: 0.35rem;
+  color: #e7ecec;
+  background: #1b2a33;
+}
+
+.forge-encounter-navigation :is(h3, h4, h5, p) { margin: 0; overflow-wrap: anywhere; }
+.forge-encounter-metrics,
+.forge-encounter-nav-controls,
+.forge-encounter-issue-actions { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: center; min-width: 0; }
+.forge-encounter-metrics > span { flex: 1 1 8rem; min-width: 0; padding: 0.4rem 0.55rem; border: 1px solid #49636a; border-radius: 0.25rem; }
+.forge-encounter-nav-controls label { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
+.forge-encounter-nav-controls select { max-width: min(100%, 18rem); min-width: 0; }
+.forge-encounter-navigation :is(button, select) { color: #e7ecec; background: #2a424c; border: 1px solid #657a81; border-radius: 0.25rem; min-height: 2.2rem; }
+.forge-encounter-navigation :is(button, select):focus-visible { outline: 2px solid #82cdd0; outline-offset: 2px; }
+.forge-encounter-nav-controls button[aria-pressed="true"] { border-color: #82cdd0; font-weight: 700; }
+.forge-encounter-issues { display: grid; gap: 0.55rem; min-width: 0; }
+.forge-encounter-issue { display: grid; gap: 0.35rem; min-width: 0; padding: 0.7rem; border-inline-start: 0.2rem solid #d9a65c; background: #24363e; }
+.forge-encounter-issue .forge-localized-prose { overflow-wrap: anywhere; white-space: pre-wrap; }
+.forge-encounter-issue-actions span { color: #b6c6c7; font-size: 0.88rem; }
+.forge-encounter-translation-draft,
+.forge-encounter-review-concerns { display: grid; gap: 0.55rem; min-width: 0; padding: 0.8rem; border: 1px solid #49636a; border-radius: 0.3rem; background: #1b2a33; color: #e7ecec; }
+.forge-encounter-translation-draft :is(h3, p),
+.forge-encounter-review-concerns h4 { margin: 0; overflow-wrap: anywhere; }
+.forge-encounter-translation-draft details { min-width: 0; }
+.forge-encounter-translation-draft article { min-width: 0; margin-block: 0.5rem; padding: 0.5rem; border-inline-start: 2px solid #82cdd0; background: #24363e; }
+.forge-encounter-translation-draft :is(button, summary, input):focus-visible { outline: 2px solid #82cdd0; outline-offset: 2px; }
+.forge-encounter-review-concerns { border-color: #d9a65c; }
+.forge-encounter-review-state { overflow-wrap: anywhere; }
 
 /* Use the real Foundry window width for layout decisions; the 640/700px breaks
    also cover a narrow floating Application even when the viewport is wide. */

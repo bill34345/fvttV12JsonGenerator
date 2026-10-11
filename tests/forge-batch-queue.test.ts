@@ -10,8 +10,10 @@ import {
   serializeForgeBatchQueue,
   type ForgeBatchQueueStore,
 } from '@fvtt-json-generator/forge-browser-runtime/batch-queue';
-import { buildForgeIntakeReviewBundle, serializeForgeIntakeReviewBundle } from '@fvtt-json-generator/forge-browser-runtime/intake-review';
-import { decodeForgeIntakeReviewBundleText } from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
+import { buildForgeIntakeReviewBundle, serializeForgeIntakeReviewBundle,
+  forgeGmTargetHash, forgeGmModelFindingsHash } from '@fvtt-json-generator/forge-browser-runtime/intake-review';
+import { buildForgeIntakeReviewBundleV2, decodeForgeIntakeReviewBundleText,
+  serializeForgeIntakeReviewBundleV2 } from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
 
 const TIMES = [
   '2026-08-30T11:00:00.000Z',
@@ -25,6 +27,56 @@ const TIMES = [
 ];
 
 describe('Forge browser-local batch queue core', () => {
+  test('keeps a local-valid Item pending until this GM approves its exact volatile candidate', async () => {
+    const queue = manager(new MemoryForgeBatchQueueStore());
+    let state = await queue.importCollection(collection());
+    const job = state.jobs[1]!;
+    state = await queue.startJob(job.id);
+    const pending = gmItemReview('ready_for_gm_review');
+    state = await queue.settleJob(job.id, pending);
+    expect(state.jobs[1]!.status).toBe('ready_for_gm_review');
+    await expect(queue.beginApply(job.id)).rejects.toThrow(/accepted proof/u);
+    const approved = gmItemReview('accepted');
+    const stale = structuredClone(approved.bundle) as any;
+    stale.candidateHash = hashSource('another candidate');
+    stale.gmApproval.candidateHash = stale.candidateHash;
+    await expect(queue.approveReadyJob(job.id,
+      decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(stale)))).rejects.toThrow(/不一致/u);
+    state = await queue.approveReadyJob(job.id, approved);
+    expect(state.jobs[1]!.status).toBe('accepted');
+    expect(state.jobs[1]!.latestReview?.gmApproval?.gmId).toBe('gm');
+    state = await queue.beginApply(job.id);
+    expect(state.jobs[1]!.status).toBe('applying');
+  });
+
+  test('GM accepted proof retains negative model advice without inventing model acceptance', () => {
+    const approved = structuredClone(gmItemReview('accepted').bundle) as any;
+    approved.modelReviewStatus = 'needs_review';
+    approved.gmApproval.modelReviewStatus = 'needs_review';
+    approved.reviewVerdict = 'needs_review';
+    approved.calls.review = 1;
+    approved.aiReviewFindings = [{ id: 'advice', code: 'CHECK_SOURCE', path: '/item/description',
+      message: 'GM should inspect this source.', blocking: true, origin: 'ai-review', evidence: [] }];
+    approved.gmApproval.modelFindingsHash = forgeGmModelFindingsHash(approved.aiReviewFindings);
+    const imported = decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(approved));
+    expect(imported.bundle.gmApproval?.modelReviewStatus).toBe('needs_review');
+    expect(imported.bundle.aiReviewFindings).toHaveLength(1);
+    const removedFinding = structuredClone(approved);
+    removedFinding.aiReviewFindings = [];
+    expect(() => decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(removedFinding)))
+      .toThrow(/GM确认.*不一致/u);
+    const changedFinding = structuredClone(approved);
+    changedFinding.aiReviewFindings[0].message = 'Changed advice.';
+    expect(() => decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(changedFinding)))
+      .toThrow(/GM确认.*不一致/u);
+    const changedTarget = structuredClone(approved);
+    changedTarget.target.generatorVersion = '0.1.1';
+    expect(() => decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(changedTarget)))
+      .toThrow(/GM确认.*不一致/u);
+    delete approved.gmApproval;
+    expect(() => decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(approved)))
+      .toThrow(/GM approval|accepted review verdict/u);
+  });
   test('imports a mixed collection once and preserves ordered independent jobs across sessions', async () => {
     const store = new MemoryForgeBatchQueueStore();
     const queue = manager(store);
@@ -286,6 +338,30 @@ function importedReview(rawSource: string, mode: 'plaintext-actor' | 'ai-item', 
     ...(accepted ? { canonicalSource, sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) } } : {}),
     target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     ...(accepted ? { candidateResponse: { requestId, status: 'accepted' as const, artifactHash: hashSource(`${objectKind} artifact`), verificationStatus: 'accepted' as const, diagnostics: [] } } : {}),
+    history: [],
+  })));
+}
+
+function gmItemReview(status: 'ready_for_gm_review' | 'accepted') {
+  const rawSource = 'Shield source', sourceId = 'item:v1:123e4567-e89b-42d3-a456-426614174000';
+  const canonicalSource = `---\nforge-source-id: ${sourceId}\n---\ncanonical item source`;
+  const candidateHash = hashSource('current candidate');
+  const artifactHash = hashSource('item artifact');
+  const target = { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+    generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' };
+  const gmApproval = { gmId: 'gm', sourceHash: hashSource(rawSource), finalSourceHash: hashSource(canonicalSource),
+    artifactHash, targetHash: forgeGmTargetHash(target), candidateHash,
+    modelReviewStatus: 'not_requested' as const, modelFindingsHash: forgeGmModelFindingsHash([]) };
+  return decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(buildForgeIntakeReviewBundleV2({
+    objectKind: 'item', mode: 'ai-item', requestId: 'queue-item-current', attemptId: 'queue-item-current:attempt-1',
+    status, rawSource, rawSourceHash: hashSource(rawSource), canonicalSource,
+    sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) },
+    target,
+    deterministicFindings: [], aiReviewFindings: [], modelReviewStatus: 'not_requested', candidateHash,
+    calls: { discovery: 1, extraction: 1, review: 0, repair: 0 }, repairCount: 0,
+    candidateResponse: { requestId: 'queue-item-current', status: 'accepted' as const,
+      artifactHash, verificationStatus: 'accepted' as const, diagnostics: [] },
+    ...(status === 'accepted' ? { gmApproval } : {}),
     history: [],
   })));
 }

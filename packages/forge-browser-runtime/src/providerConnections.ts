@@ -169,6 +169,8 @@ export type ForgeProviderConnectionStatus =
   | 'authentication'
   | 'model_list'
   | 'protocol'
+  | 'request_rejected'
+  | 'provider_error'
   | 'structured_output'
   | 'rate_limited'
   | 'timeout'
@@ -281,8 +283,10 @@ export function normalizeForgeProviderConnection(input: ForgeProviderConnectionI
   if (!capabilities.reasoning.includes(reasoning)) throw new Error('The selected reasoning option is not supported by this provider/model combination.');
   const structuredOutput = input.structuredOutput ?? capabilities.structuredOutput[0] ?? 'prompt_fallback';
   if (!capabilities.structuredOutput.includes(structuredOutput)) throw new Error('The selected structured-output mode is not supported by this provider/model combination.');
-  const useSeparateReviewModel = input.useSeparateReviewModel === true;
-  const reviewModel = useSeparateReviewModel ? (input.reviewModel?.trim() || model) : model;
+  // Legacy input fields remain decodable, but Forge sends every review to the
+  // selected generation model. A stored reviewer cannot re-enable itself.
+  const useSeparateReviewModel = false;
+  const reviewModel = model;
   return {
     providerId,
     baseUrl: regionalBaseUrl.replace(/\/+$/u, ''),
@@ -433,8 +437,11 @@ function classifyProbeError(error: unknown): ForgeProviderConnectionStatus {
     if (code === 'http_error') {
       const status = (error as { status?: number }).status;
       if (status === 401 || status === 403) return 'authentication';
-      if (status === 404 || status === 405) return 'protocol';
-      return 'protocol';
+      if (status === 429) return 'rate_limited';
+      if (status === 408) return 'timeout';
+      if (status === 405) return 'protocol';
+      if (typeof status === 'number' && status >= 400 && status < 500) return 'request_rejected';
+      return 'provider_error';
     }
   }
   return 'browser_transport';
@@ -445,6 +452,12 @@ function probeMessage(status: ForgeProviderConnectionStatus, error: unknown): st
   if (status === 'rate_limited') return 'Provider 限流；请稍后重试。';
   if (status === 'timeout') return 'Provider 请求超时。';
   if (status === 'protocol') return 'Provider 不接受当前协议或 endpoint。';
+  if (status === 'request_rejected') {
+    const httpStatus = error && typeof error === 'object' && 'status' in error ? (error as { status?: number }).status : undefined;
+    if (httpStatus === 404) return 'Provider 未找到当前模型或请求端点（HTTP 404）；请核对模型 ID 与 endpoint。';
+    return `Provider 拒绝当前模型 ID 或探测请求参数${typeof httpStatus === 'number' ? `（HTTP ${httpStatus}）` : ''}；请核对模型名称及结构化输出设置。`;
+  }
+  if (status === 'provider_error') return 'Provider 服务端暂时出错；请稍后重试。';
   if (status === 'structured_output') return 'Provider 未返回可验证的结构化 JSON。';
   if (status === 'configuration') return error instanceof Error ? error.message : 'Provider 配置无效。';
   return '浏览器无法访问 Provider，可能被网络或 CORS 阻断。';

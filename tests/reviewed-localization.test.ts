@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
-  acceptLocalization, assertReviewedLocalization, localizationRequest, localizationText, protectLocalizationText,
+  acceptLocalization, approveLocalizationByGm, assertReviewedLocalization, localizationRequest, localizationText, protectLocalizationText,
   validateLocalizationDraft, LOCALIZATION_TERMS, LEGACY_LOCALIZATION_POLICY, LOCALIZATION_POLICY, localizationHash, decodeEncounterLocalization, type LocalizationPolicy, type LocalizationRequest, type LocalizationDraft,
 } from '@fvtt-json-generator/contracts/localization';
 import { createActorLocalizationRequest, projectReviewedActorLocalization, formatReviewedTitle } from '@fvtt-json-generator/generation/reviewed-localization';
@@ -10,7 +10,8 @@ import {buildActorVerificationSummaryFromValues} from '@fvtt-json-generator/work
 import {buildBrowserActorVerificationSummary} from '../packages/forge-browser-runtime/src/actorVerification';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
-import { localizeForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
+import { assertForgeEncounterLocalizationDraft, approveForgeEncounterLocalization, draftForgeEncounterLocalization,
+  localizeForgeEncounter, reviewForgeEncounterLocalizationDraft, verifiedEncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { fixedEncounterCommand, readFixedEncounterConfiguration } from '@fvtt-json-generator/intake-ai/encounter-capabilities';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
@@ -35,6 +36,19 @@ function fakeTranslation(input: LocalizationRequest): LocalizationDraft {
 const fakeService = { model: 'fixture-only', reviewModel: 'independent-fixture-only', translate: async (input: LocalizationRequest) => fakeTranslation(input), review: async () => accepted };
 
 describe('reviewed Chinese display contract', () => {
+  test('GM approval records bind request and translation without claiming model acceptance', () => {
+    const input = request('A guardian waits.');
+    const candidate = draft(input, '守卫等待。');
+    const approved = approveLocalizationByGm(input, candidate, 'gm-42');
+    expect(approved.version).toBe(2);
+    expect(approved.approval).toMatchObject({ kind: 'gm', gmId: 'gm-42' });
+    expect((approved as any).review).toBeUndefined();
+    expect(assertReviewedLocalization(input, approved)).toEqual(approved);
+    const changed = { ...input, sourceHash: 'another-source' };
+    expect(() => assertReviewedLocalization(changed, approved)).toThrow();
+    expect(() => assertReviewedLocalization(input, { ...approved, texts: [{ ...approved.texts[0], text: '守卫逃走。' }] })).toThrow();
+    expect(() => approveLocalizationByGm(input, candidate, '')).toThrow();
+  });
   test('real Echo word-count fragments keep the strict literal gate while allowing equivalent Chinese words',()=>{
     const cases=JSON.parse(readFileSync('tests/fixtures/encounter-localization-word-counts.json','utf8')) as Array<{case:string;source:string;rejected:string;corrected:string}>;
     expect(cases).toHaveLength(4);
@@ -288,6 +302,157 @@ async function approvedFixture(policy: LocalizationPolicy) {
   };
 }
 describe('formal source to localized encounter', () => {
+  test('default Chinese draft translates without review; actual GM identity approves through formal preparation', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    const counts = { translate: 0, review: 0 };
+    const progress: any[] = [];
+    const service = { ...fakeService, translate: async (input: LocalizationRequest) => { counts.translate++; return fakeTranslation(input); },
+      review: async () => { counts.review++; return accepted; } };
+    const draft = await draftForgeEncounterLocalization({ prepared, service, onReview: entry => progress.push(entry) });
+    expect(counts.translate).toBe(2); expect(counts.review).toBe(0);
+    expect(progress.filter(entry => entry.status === 'draft_ready')).toHaveLength(2);
+    expect(progress.some(entry => entry.status === 'accepted' || entry.translation)).toBe(false);
+    expect(draft.sourcePackageHash).toBe(prepared.hash);
+    assertForgeEncounterLocalizationDraft(prepared, structuredClone(draft));
+    const localized = await approveForgeEncounterLocalization({ prepared, draft, gmId: 'gm-real-user-42' });
+    expect(counts).toEqual({ translate: 2, review: 0 });
+    expect(localized.bundle.localization?.actors[0]?.translation).toMatchObject({ version: 2,
+      approval: { kind: 'gm', gmId: 'gm-real-user-42' } });
+    expect((localized.bundle.localization?.actors[0]?.translation as any).review).toBeUndefined();
+    expect(localized.actors[0]!.name).toContain('译文');
+    const restored = await prepareForgeEncounter(serializeForgeEncounterPackage(localized.bundle));
+    expect(restored.hash).toBe(localized.hash);
+  });
+  test('explicit model review uses only current draft and preserves negative findings', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    let translates = 0, reviews = 0;
+    const service = { ...fakeService, translate: async (input: LocalizationRequest) => { translates++; return fakeTranslation(input); },
+      review: async () => { reviews++; return accepted; } };
+    const draft = await draftForgeEncounterLocalization({ prepared, service });
+    const translated = translates;
+    const localized = await reviewForgeEncounterLocalizationDraft({ prepared, draft, service });
+    expect({ translates, reviews }).toEqual({ translates: translated, reviews: 2 });
+    expect(localized.bundle.localization?.packageText.version).toBe(1);
+    const findings: string[] = [];
+    await expect(reviewForgeEncounterLocalizationDraft({ prepared, draft,
+      service: { ...service, review: async () => ({ verdict: 'needs_review' as const, findings: ['含义有误'] }) },
+      onReview: entry => findings.push(...entry.findings ?? []),
+    })).rejects.toThrow('含义有误');
+    expect(findings).toContain('含义有误');
+  });
+  test('saved draft progress restores as unapproved and never carries model or GM approval', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    let translates = 0, reviews = 0;
+    const service = { ...fakeService, translate: async (input: LocalizationRequest) => { translates++; return fakeTranslation(input); },
+      review: async () => { reviews++; return accepted; } };
+    const progress: any[] = [];
+    await draftForgeEncounterLocalization({ prepared, service, onReview: entry => progress.push(entry) });
+    const saved = progress.filter(entry => entry.status === 'draft_ready');
+    const verified = verifiedEncounterLocalizationProgress(prepared.bundle, prepared.actors, structuredClone(saved));
+    expect(verified.map(entry => entry.status)).toEqual(['draft_ready', 'draft_ready']);
+    const restored = await draftForgeEncounterLocalization({ prepared, service, priorDrafts: verified });
+    expect(translates).toBe(2); expect(reviews).toBe(0);
+    expect(restored.actors[0]!.draft).toBeDefined();
+    expect((restored as any).approval).toBeUndefined();
+    const stale = verifiedEncounterLocalizationProgress(prepared.bundle, prepared.actors,
+      [{ ...saved[0], request: { ...saved[0].request, sourceHash: 'changed' } }]);
+    expect(stale[0]?.status).toBe('needs_review'); expect(stale[0]?.draft).toBeUndefined();
+  });
+  test('draft-only retry requests only the failed field and preserves every valid text byte', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    const progress: any[] = []; let rejectedId = '', reviews = 0;
+    await expect(draftForgeEncounterLocalization({ prepared, onReview: entry => progress.push(entry),
+      service: { ...fakeService, translate: async input => {
+        const candidate = fakeTranslation(input);
+        const field = input.texts.find(entry => /\d/u.test(entry.source))!;
+        expect(field).toBeDefined(); rejectedId = field.id;
+        candidate.texts.find(entry => entry.id === rejectedId)!.text += '999';
+        return candidate;
+      }, review: async () => { reviews++; return accepted; } },
+    })).rejects.toThrow('改变数字');
+    const failed = progress.findLast(entry => entry.status === 'needs_review' && entry.actorKey === 'guard');
+    expect(failed.findings).toContainEqual(expect.stringContaining(rejectedId));
+    const kept = failed.draft.texts.filter((entry: any) => entry.id !== rejectedId);
+    const requested: string[][] = [];
+    const draft = await draftForgeEncounterLocalization({ prepared, priorDrafts: progress,
+      service: { ...fakeService, translate: async input => { requested.push(input.texts.map(entry => entry.id)); return fakeTranslation(input); },
+        review: async () => { reviews++; return accepted; } },
+    });
+    expect(requested[0]).toEqual([rejectedId]);
+    expect(draft.actors[0]!.draft.texts.filter(entry => entry.id !== rejectedId)).toEqual(kept);
+    assertForgeEncounterLocalizationDraft(prepared, draft);
+    expect(reviews).toBe(0);
+  });
+  test('an interrupted onDraft partial resumes only missing fields', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    const progress: any[] = []; let actorFields = 0, retained: any;
+    await expect(draftForgeEncounterLocalization({ prepared, onReview: entry => progress.push(entry),
+      service: { ...fakeService, translate: async (input: LocalizationRequest, _signal?: AbortSignal,
+        onDraft?: (draft: LocalizationDraft) => void) => {
+        actorFields = input.texts.length; expect(actorFields).toBeGreaterThan(1);
+        retained = fakeTranslation(input).texts[0]!;
+        onDraft?.({ texts: [retained] });
+        throw new Error('interrupted');
+      } },
+    })).rejects.toThrow('interrupted');
+    const partial = progress.findLast(entry => entry.status === 'translating' && entry.draft?.texts.length);
+    expect(partial.draft.texts).toEqual([retained]);
+    const calls: number[] = []; let reviews = 0;
+    const resumed = await draftForgeEncounterLocalization({ prepared, priorDrafts: progress,
+      service: { ...fakeService, translate: async input => { calls.push(input.texts.length); return fakeTranslation(input); },
+        review: async () => { reviews++; return accepted; } },
+    });
+    expect(calls[0]).toBe(actorFields - 1);
+    expect(resumed.actors[0]!.draft.texts).toContainEqual(retained);
+    assertForgeEncounterLocalizationDraft(prepared, resumed);
+    expect(reviews).toBe(0);
+  });
+  test('draft retry does not borrow text from another policy or source', async () => {
+    const bundle = sourcePackage();
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
+    const progress: any[] = [];
+    await draftForgeEncounterLocalization({ prepared, service: fakeService, onReview: entry => progress.push(entry) });
+    const saved = progress.filter(entry => entry.status === 'draft_ready');
+    const oldPolicy = saved.map(entry => ({ ...entry, request: { ...entry.request, policy: LEGACY_LOCALIZATION_POLICY } }));
+    const oldPolicyCalls: number[] = [];
+    await draftForgeEncounterLocalization({ prepared, priorDrafts: oldPolicy,
+      service: { ...fakeService, translate: async input => { oldPolicyCalls.push(input.texts.length); return fakeTranslation(input); } } });
+    expect(oldPolicyCalls[0]).toBe(saved[0].request.texts.length);
+    const changedSource = bundle.actors[0]!.source.replace('hit_points: 10', 'hit_points: 12');
+    const changed: ForgeEncounterPackage = { ...bundle, actors: bundle.actors.map((actor, index) => index === 0
+      ? { ...actor, source: changedSource, sourceHash: hashSource(changedSource) } : actor) };
+    const current = await prepareForgeEncounter(serializeForgeEncounterPackage(changed));
+    const changedCalls: number[] = [];
+    await draftForgeEncounterLocalization({ prepared: current, priorDrafts: saved,
+      service: { ...fakeService, translate: async input => { changedCalls.push(input.texts.length); return fakeTranslation(input); } } });
+    expect(changedCalls[0]).toBeGreaterThan(0);
+  });
+  test('stale source, changed numbers, forged hashes and cancellation cannot approve or review drafts', async () => {
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    let reviews = 0;
+    const service = { ...fakeService, review: async () => { reviews++; return accepted; } };
+    const draft = await draftForgeEncounterLocalization({ prepared, service });
+    const numeric: any = structuredClone(draft);
+    const field = numeric.actors[0].request.texts.find((entry: any) => /\d/u.test(entry.source));
+    expect(field).toBeDefined();
+    numeric.actors[0].draft.texts.find((entry: any) => entry.id === field.id).text += '999';
+    await expect(approveForgeEncounterLocalization({ prepared, draft: numeric, gmId: 'gm-real-user-42' })).rejects.toThrow();
+    const forged: any = structuredClone(draft); forged.packageText.requestHash = 'a'.repeat(64);
+    await expect(reviewForgeEncounterLocalizationDraft({ prepared, draft: forged, service })).rejects.toThrow();
+    const mutated: any = structuredClone(draft);
+    await expect(reviewForgeEncounterLocalizationDraft({ prepared, draft: mutated,
+      service: { ...service, review: async (_request, candidate) => { candidate.texts[0]!.text += '变更'; return accepted; } },
+    })).rejects.toThrow('译文身份');
+    const original = sourcePackage();
+    const changedSource = original.actors[0]!.source.replace('hit_points: 10', 'hit_points: 12');
+    const changed: ForgeEncounterPackage = { ...original, actors: original.actors.map((actor, index) => index === 0
+      ? { ...actor, source: changedSource, sourceHash: hashSource(changedSource) } : actor) };
+    const changedPrepared = await prepareForgeEncounter(serializeForgeEncounterPackage(changed));
+    expect(() => assertForgeEncounterLocalizationDraft(changedPrepared, draft)).toThrow();
+    const controller = new AbortController(); controller.abort();
+    await expect(reviewForgeEncounterLocalizationDraft({ prepared, draft, service, signal: controller.signal })).rejects.toThrow();
+    expect(reviews).toBe(0);
+  });
   test('regenerates a language-bound artifact and recompiles only display bindings, retaining original source evidence', async () => {
     const original = sourcePackage(); const before = await prepareForgeEncounter(serializeForgeEncounterPackage(original));
     let packageContext:any;
@@ -403,8 +568,12 @@ describe('formal source to localized encounter', () => {
       macros:[{...original.macros[0]!,bindings:{guard:'guard',sentinel:'sentinel'},notes}]};
     const priorReviews:any[]=[];
     const first=await localizeForgeEncounter({bundle,service:fakeService,onReview:entry=>priorReviews.push(entry)});
-    const approvedActors=first.bundle.localization!.actors.map(actor=>({key:actor.key,requestHash:actor.translation.requestHash,
-      translationHash:actor.translation.review.translationHash}));
+    const modelBindings=(actors:NonNullable<typeof first.bundle.localization>['actors'])=>actors.map(actor=>{
+      if(actor.translation.version!==1)throw new Error('Expected the legacy v1 model review record.');
+      return {key:actor.key,requestHash:actor.translation.requestHash,
+        translationHash:actor.translation.review.translationHash};
+    });
+    const approvedActors=modelBindings(first.bundle.localization!.actors);
     expect(approvedActors).toHaveLength(2);
     const acceptedPackage=priorReviews.findLast(entry=>!entry.actorKey&&entry.status==='accepted');
     const labelId=localizationText('title',bundle.label).id,notesId=localizationText('body',notes).id;
@@ -419,8 +588,7 @@ describe('formal source to localized encounter', () => {
       review:async()=>{reviewCalls++;return accepted;},
     }});
     expect(translatedCounts).toEqual([2]);expect(reviewCalls).toBe(1);
-    expect(resumed.bundle.localization!.actors.map(actor=>({key:actor.key,requestHash:actor.translation.requestHash,
-      translationHash:actor.translation.review.translationHash}))).toEqual(approvedActors);
+    expect(modelBindings(resumed.bundle.localization!.actors)).toEqual(approvedActors);
   });
   test('does not discard unknown provider IDs when assembling resumed drafts',async()=>{
     await expect(localizeForgeEncounter({bundle:sourcePackage(),service:{...fakeService,translate:async request=>({texts:[...fakeTranslation(request).texts,{id:'text-'+'f'.repeat(24),text:'未知字段'}]})}})).rejects.toThrow('额外');

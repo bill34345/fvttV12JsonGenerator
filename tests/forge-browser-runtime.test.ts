@@ -33,6 +33,9 @@ import {
   analyzeBrowserActorSourceWithAi,
   createBrowserAiProvider,
   convertRawActorSourceWithAi,
+  generateBrowserActorIntakeCandidate,
+  reviewBrowserActorIntakeCandidate,
+  approveBrowserActorIntakeCandidateForGm,
   generateAndReviewBrowserActorIntake,
   repairBrowserActorIntake,
   type BrowserActorIntakeInput,
@@ -58,6 +61,9 @@ import {
 const SOURCE_ID = 'actor:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeSourceId;
 const NIGHTGAUNT_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md'), 'utf8');
 const BOLBARA_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/bolbara.md'), 'utf8');
+const GUARD_HEADING_SOURCE = readFileSync(resolve('tests/fixtures/forge-heading-coverage/guard.md'), 'utf8');
+const GUARD_HEADING_IR = JSON.parse(readFileSync(resolve('tests/fixtures/forge-heading-coverage/guard-ir.json'), 'utf8')) as MonsterIntakeIR;
+const GUARD_R2_IR = JSON.parse(readFileSync(resolve('tests/fixtures/forge-heading-coverage/guard-ir-r2.json'), 'utf8')) as MonsterIntakeIR;
 const ENGLISH_SOURCE = [
   '---',
   'layout: creature',
@@ -349,7 +355,7 @@ describe('browser Forge Actor runtime', () => {
     });
   });
 
-  test('runs discover, deterministic repair, render, review, and final browser conversion with one fake provider', async () => {
+  test('legacy AI conversion keeps formal output for review without automatically paying for model audit', async () => {
     const valid = buildRatWarlockIr();
     const invalid = {
       ...valid,
@@ -393,12 +399,13 @@ describe('browser Forge Actor runtime', () => {
       onStage: (stage) => stageEvents.push(`${stage.stage}:${stage.status}`),
     }, provider);
 
-    expect(calls).toEqual({ discover: 1, extract: 1, repair: 1, review: 1 });
-    expect(result.status).toBe('accepted');
+    expect(calls).toEqual({ discover: 1, extract: 1, repair: 1, review: 0 });
+    expect(result.status).toBe('needs_review');
     expect(result.rawSourceHash).toBe(hashSource(RAT_WARLOCK_SOURCE));
     expect(result.finalSource).toContain(`forge-source-id: ${SOURCE_ID}`);
     expect(result.finalSourceHash).toBe(hashSource(result.finalSource!));
-    expect(result.response && 'result' in result.response ? result.response.result.status : 'failed').toBe('accepted');
+    expect(result.response).toBeUndefined();
+    expect(result.findings.map(finding => finding.code)).toContain('GM_CONFIRMATION_REQUIRED');
     expect(result.findings.some((finding) => finding.blocking)).toBe(false);
     expect(result.findings.map((finding) => finding.code)).not.toContain('SOURCE_HASH_MISMATCH');
     expect(result.findings.map((finding) => finding.code)).not.toContain('INVALID_SOURCE_SHA256');
@@ -436,6 +443,42 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.evidence?.candidate).toMatchObject({ start: 0, end: RAT_WARLOCK_SOURCE.length });
     expect(analysis).not.toHaveProperty('response');
     expect(JSON.stringify(analysis)).not.toMatch(/artifactHash|api-key|authorization/iu);
+  });
+
+  test('keeps an Actor candidate unreviewed until an explicit model check or current GM approval', async () => {
+    let reviews = 0;
+    const provider = ratWarlockProvider({ review: async () => {
+      reviews += 1;
+      return { schemaVersion: 1, verdict: 'accepted', findings: [] };
+    } });
+    const input = actorAiInput('optional-actor-review');
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    const candidate = await generateBrowserActorIntakeCandidate(input, analysis, provider);
+    expect(candidate.status).toBe('ready_for_gm_review');
+    expect(candidate.modelReviewStatus).toBe('not_requested');
+    expect(candidate.calls.review).toBe(0);
+    expect(reviews).toBe(0);
+    expect(candidate.response).toBeUndefined();
+    expect(candidate.candidateResponse && 'result' in candidate.candidateResponse
+      ? candidate.candidateResponse.result.status : 'failed').toBe('accepted');
+    const manual = approveBrowserActorIntakeCandidateForGm(input, candidate, 'gm');
+    expect(manual.gmApproval?.modelReviewStatus).toBe('not_requested');
+    expect(reviews).toBe(0);
+    expect(() => approveBrowserActorIntakeCandidateForGm(input,
+      { ...candidate, finalSource: `${candidate.finalSource}changed` }, 'gm')).toThrow(/变化/u);
+    const checked = await reviewBrowserActorIntakeCandidate(input, candidate, provider);
+    expect(reviews).toBe(1);
+    expect(checked.calls.review).toBe(1);
+    expect(checked.calls.extraction).toBe(candidate.calls.extraction);
+    expect(checked.calls.repair).toBe(candidate.calls.repair);
+    expect(checked.finalSourceHash).toBe(candidate.finalSourceHash);
+    expect(checked.modelReviewStatus).toBe('accepted');
+    expect(checked.status).toBe('ready_for_gm_review');
+    const approved = approveBrowserActorIntakeCandidateForGm(input, checked, 'gm');
+    expect(approved.status).toBe('accepted');
+    expect(approved.gmApproval).toMatchObject({ gmId: 'gm', sourceHash: hashSource(input.source),
+      candidateHash: candidate.candidateHash, modelReviewStatus: 'accepted' });
+    expect(approved.response).toEqual(candidate.candidateResponse);
   });
 
   test('materializes omitted claim evidence quotes before browser validation and after bounded repair', async () => {
@@ -504,6 +547,142 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION' }));
     expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
     expect(analysis.ir?.coverage.flatMap((entry) => entry.claimPaths)).not.toContain('/creature/actions');
+  });
+
+  test('classifies a source-exact bare section heading without another provider call', async () => {
+    const calls = { repair: 0, review: 0 };
+    const provider = ratWarlockProvider({
+      discover: async () => ({ schemaVersion: 1, candidates: [{
+        id: 'guard', label: 'Guard', start: 0, end: GUARD_HEADING_SOURCE.length, quote: GUARD_HEADING_SOURCE,
+      }] }),
+      extract: async () => structuredClone(GUARD_HEADING_IR),
+      repair: async () => { calls.repair += 1; return structuredClone(GUARD_HEADING_IR); },
+      review: async () => { calls.review += 1; return { schemaVersion: 1, verdict: 'accepted', findings: [] }; },
+    });
+    const analysis = await analyzeBrowserActorSourceWithAi({
+      ...actorAiInput('bare-heading-guard'), source: GUARD_HEADING_SOURCE,
+    }, provider);
+
+    expect(GUARD_HEADING_IR.source.sha256).toBe(hashSource(GUARD_HEADING_SOURCE));
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
+    expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
+      end: 285, quote: 'Actions\n', classification: 'narrative', claimPaths: [],
+    });
+    expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(calls).toEqual({ repair: 0, review: 0 });
+  });
+
+  test.each(['Reactions\n', 'Bonus Actions\n', '### Actions\n', '传奇动作\n'])(
+    'recognizes a standalone %s section label with exact shifted evidence', async (heading) => {
+      const { source, ir } = guardWithHeading(heading);
+      const analysis = await analyzeBrowserActorSourceWithAi({
+        ...actorAiInput('other-bare-heading'), source,
+      }, guardHeadingProvider(source, ir));
+      expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
+      expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
+        quote: heading, classification: 'narrative', claimPaths: [],
+      });
+      expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    },
+  );
+
+  test.each([
+    ['numbered heading', 'Actions 3/Day\n'],
+    ['mechanical text on heading line', 'Actions. Recharge 5–6\n'],
+  ])('does not dismiss unclaimed mechanics in a %s', async (_label, heading) => {
+    const { source, ir } = guardWithHeading(heading);
+    const analysis = await analyzeBrowserActorSourceWithAi({
+      ...actorAiInput('mechanical-heading'), source,
+    }, guardHeadingProvider(source, ir));
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true }));
+    expect(analysis.ir?.coverage.find(entry => entry.start === 277)?.classification).toBe('mechanical');
+  });
+
+  test('does not normalize a heading with a stale source range', async () => {
+    const ir = structuredClone(GUARD_HEADING_IR);
+    const heading = ir.coverage.find(entry => entry.start === 277)!;
+    heading.start += 1;
+    const analysis = await analyzeBrowserActorSourceWithAi({
+      ...actorAiInput('stale-heading-range'), source: GUARD_HEADING_SOURCE,
+    }, guardHeadingProvider(GUARD_HEADING_SOURCE, ir));
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true }));
+    expect(analysis.ir?.coverage.find(entry => entry.end === 285)?.classification).toBe('mechanical');
+  });
+
+  test.each(['', ' \t '])('takes the saved R2 Guard IR with blank display name %j through local Generate and GM confirmation', async (displayName) => {
+    const { sourceId: _unusedSourceId, ...withoutSourceId } = actorAiInput('guard-r2-generate');
+    const input = { ...withoutSourceId, source: GUARD_HEADING_SOURCE, displayName, fvttVersion: '14.368' };
+    const provider = guardHeadingProvider(input.source, GUARD_R2_IR);
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    expect(analysis.status).toBe('ready_to_generate');
+    const candidate = await generateBrowserActorIntakeCandidate(input, analysis, provider);
+    if (candidate.status !== 'ready_for_gm_review') {
+      throw new Error(`R2 Guard Generate: ${JSON.stringify({
+        status: candidate.status, findings: candidate.findings.map(f => ({ code: f.code, message: f.message })),
+        stages: candidate.stages, calls: candidate.calls,
+      })}`);
+    }
+    expect(candidate.modelReviewStatus).toBe('not_requested');
+    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    const formal = candidate.candidateResponse;
+    if (!formal || !('result' in formal) || formal.result.status !== 'accepted') {
+      throw new Error('R2 Guard is missing an accepted formal response.');
+    }
+    const bundledResponse = await (await browserRuntime()).convertFinalActorSource(buildForgeActorRequest({
+      content: candidate.finalSource!, displayName: 'Guard', requestId: input.requestId,
+      fvttVersion: input.fvttVersion, systemVersion: input.systemVersion,
+      sourceId: formal.result.sourceIdentity.sourceId,
+    }));
+    expect('result' in bundledResponse ? bundledResponse.result.status : 'failed').toBe('accepted');
+    if ('result' in bundledResponse && bundledResponse.result.status === 'accepted') {
+      expect(bundledResponse.result.artifactHash).toBe(formal.result.artifactHash);
+    }
+    const approved = approveBrowserActorIntakeCandidateForGm(input, candidate, 'gm');
+    expect(approved.status).toBe('accepted');
+    expect(approved.response && 'result' in approved.response ? approved.response.result.status : 'failed').toBe('accepted');
+  });
+
+  test('takes the saved R2 Guard IR through the browser-target AI bundle', async () => {
+    const outdir = await mkdtemp(resolve(tmpdir(), 'forge-r2-guard-bundle-'));
+    try {
+      const bundlePath = await buildBrowserBundle({
+        entrypoint: resolve('tests/fixtures/forge-heading-coverage/browser-ai-entry.ts'),
+        outdir, naming: 'browser-ai.js',
+      });
+      const bundled = await import(pathToFileURL(bundlePath).href) as {
+        analyzeBrowserActorSourceWithAi: typeof analyzeBrowserActorSourceWithAi;
+        generateBrowserActorIntakeCandidate: typeof generateBrowserActorIntakeCandidate;
+      };
+      const input: BrowserActorIntakeInput = {
+        ...actorAiInput('guard-r2-bundle'), source: GUARD_HEADING_SOURCE, sourceId: undefined,
+        displayName: '', fvttVersion: '14.368',
+      };
+      const provider = guardHeadingProvider(input.source, GUARD_R2_IR);
+      const analysis = await bundled.analyzeBrowserActorSourceWithAi(input, provider);
+      expect(analysis.status).toBe('ready_to_generate');
+      const candidate = await bundled.generateBrowserActorIntakeCandidate(input, analysis, provider);
+      expect(candidate.status).toBe('ready_for_gm_review');
+      expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    } finally {
+      await rm(outdir, { recursive: true });
+    }
+  });
+
+  test('keeps formal Actor generation blocked when both display and source names are blank', async () => {
+    const input = {
+      ...actorAiInput('guard-no-name'), source: GUARD_HEADING_SOURCE,
+      displayName: ' ', sourceName: '', fvttVersion: '14.368',
+    };
+    const provider = guardHeadingProvider(input.source, GUARD_R2_IR);
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    expect(analysis.status).toBe('ready_to_generate');
+    const candidate = await generateBrowserActorIntakeCandidate(input, analysis, provider);
+    expect(candidate.status).toBe('failed');
+    expect(candidate.candidateResponse).toBeUndefined();
+    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
   });
 
   test('keeps an absent feature section and parent coverage without exact child claims fail-closed', async () => {
@@ -822,14 +1001,16 @@ describe('browser Forge Actor runtime', () => {
       }),
     };
 
-    const result = await convertRawActorSourceWithAi({
+    const input = {
       source: RAT_WARLOCK_SOURCE,
       sourceName: 'blocking-review',
       requestId: 'blocking-review',
       fvttVersion: '14.364',
       systemVersion: '5.3.3',
       sourceId: SOURCE_ID,
-    }, provider);
+    };
+    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
+    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
 
     expect(result.status).toBe('needs_review');
     expect(result.findings).toContainEqual(expect.objectContaining({ id: 'blocking-review', blocking: true }));
@@ -1149,6 +1330,36 @@ function actorAiInput(requestId: string): BrowserActorIntakeInput {
     systemVersion: '5.3.3',
     sourceId: SOURCE_ID,
   };
+}
+
+function guardWithHeading(heading: string): { source: string; ir: MonsterIntakeIR } {
+  const originalHeading = 'Actions\n';
+  const start = GUARD_HEADING_SOURCE.indexOf(originalHeading);
+  const end = start + originalHeading.length;
+  const source = GUARD_HEADING_SOURCE.slice(0, start) + heading + GUARD_HEADING_SOURCE.slice(end);
+  const offset = heading.length - originalHeading.length;
+  const ir = structuredClone(GUARD_HEADING_IR);
+  ir.source = { sha256: hashSource(source), length: source.length };
+  const refs = [...ir.claims.flatMap(claim => claim.evidence), ...ir.coverage];
+  for (const ref of refs) {
+    if (ref.start === start && ref.end === end && ref.quote === originalHeading) {
+      ref.end += offset;
+      ref.quote = heading;
+    } else if (ref.start >= end) {
+      ref.start += offset;
+      ref.end += offset;
+    }
+  }
+  return { source, ir };
+}
+
+function guardHeadingProvider(source: string, ir: MonsterIntakeIR): MonsterIntakeAiProvider {
+  return ratWarlockProvider({
+    discover: async () => ({ schemaVersion: 1, candidates: [{
+      id: 'guard', label: 'Guard', start: 0, end: source.length, quote: source,
+    }] }),
+    extract: async () => structuredClone(ir),
+  });
 }
 
 function ratWarlockProvider(overrides: Partial<MonsterIntakeAiProvider> = {}): MonsterIntakeAiProvider {

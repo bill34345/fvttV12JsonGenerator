@@ -4,11 +4,27 @@ import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-gene
 import type { ForgeActorResponse } from '@fvtt-json-generator/forge-gateway-protocol';
 import { createForgeActorApplicationClass, type ForgeApplicationServices } from '../src/application';
 import { ForgeTemporaryActorCleanupError, type ForgeActorCreateResult } from '../src/runtime';
-import { CLIENT_STORAGE_KEY } from '../src/settings';
+import { CLIENT_STORAGE_KEY, markForgeSessionConnectionTested, saveForgeSessionSettings } from '../src/settings';
 
 const NIGHTGAUNT_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
 
 describe('Forge Actor Application lifecycle', () => {
+  test('shared credential and probe notifications preserve the current structured preview', async () => {
+    saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
+      model: 'extract', apiKey: 'page-key' });
+    const { application, root } = makeApplication();
+    (application as any).response = await makeAcceptedResponse();
+    (application as any).renderResult(root);
+    expect(root.create.disabled).toBe(false);
+    markForgeSessionConnectionTested();
+    saveForgeSessionSettings({ apiKey: '' });
+    expect((application as any).response).toBeDefined();
+    expect(root.create.disabled).toBe(false);
+    saveForgeSessionSettings({ model: 'changed-model' });
+    expect((application as any).response).toBeUndefined();
+    expect(root.create.disabled).toBe(true);
+    await application.close();
+  });
   test('does not let a stale generation repopulate the preview after source input changes', async () => {
     const accepted = await makeAcceptedResponse();
     const firstStarted = deferred<void>();
@@ -95,25 +111,18 @@ describe('Forge Actor Application lifecycle', () => {
     expect((application as any).response).toBeUndefined();
   });
 
-  test('renders AI stage transitions before the Intake promise completes', async () => {
+  test('redirects legacy AI mode before any Provider request', async () => {
     await withForgeSessionSettings(async () => {
-      const emitted = deferred<void>();
-      const release = deferred<any>();
+      let calls = 0;
       const services: Partial<ForgeApplicationServices> = {
-        convertRawActorSourceWithAi: async (input) => {
-          input.onStage?.({ stage: 'discover', status: 'running' });
-          emitted.resolve();
-          return release.promise;
-        },
+        createBrowserAiProvider: (() => { calls += 1; throw new Error('Legacy AI provider must not run.'); }) as any,
+        convertRawActorSourceWithAi: (async () => { calls += 1; throw new Error('Legacy AI intake must not run.'); }) as any,
       };
       const { application, root } = makeApplication(services);
       root.mode.value = 'ai';
-
-      const pending = (application as any).generate(root);
-      await emitted.promise;
-      expect(root.stages.innerHTML).toContain('discover：running');
-      release.resolve({ status: 'needs_review', findings: [], stages: [{ stage: 'discover', status: 'completed' }] });
-      await pending;
+      await (application as any).generate(root);
+      expect(calls).toBe(0);
+      expect((application as any).response).toBeUndefined();
     });
   });
 
@@ -288,7 +297,7 @@ describe('Forge Actor Application lifecycle', () => {
     }
   });
 
-  test('keeps AI needs-review output non-applyable at the status, button, and create action boundaries', async () => {
+  test('blocks legacy AI mode before intake or world creation', async () => {
     const accepted = await makeAcceptedResponse();
     let createCalls = 0;
     const services: Partial<ForgeApplicationServices> = {
@@ -318,16 +327,15 @@ describe('Forge Actor Application lifecycle', () => {
       root.source.value = 'one raw Actor source';
       await (application as any).generate(root);
 
-      expect((application as any).intake?.status).toBe('needs_review');
-      expect((application as any).response).toBe(accepted);
-      expect(root.status.textContent).toBe('状态：needs_review');
+      expect((application as any).intake).toBeUndefined();
+      expect((application as any).response).toBeUndefined();
       expect(root.create.disabled).toBe(true);
       await (application as any).create();
       expect(createCalls).toBe(0);
     });
   });
 
-  test('rejects an injected accepted AI intake that still contains a blocking finding', async () => {
+  test('does not consume an injected legacy AI result with blocking findings', async () => {
     const accepted = await makeAcceptedResponse();
     let createCalls = 0;
     const services: Partial<ForgeApplicationServices> = {
@@ -357,7 +365,7 @@ describe('Forge Actor Application lifecycle', () => {
 
       await (application as any).generate(root);
 
-      expect((application as any).intake?.status).toBe('accepted');
+      expect((application as any).intake).toBeUndefined();
       expect(root.create.disabled).toBe(true);
       await (application as any).create();
       expect(createCalls).toBe(0);

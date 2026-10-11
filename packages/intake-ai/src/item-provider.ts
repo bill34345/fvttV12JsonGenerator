@@ -297,6 +297,8 @@ export function responseFormatForStage(
 }
 
 export interface OpenAICompatibleItemIntakeOptions extends MonsterIntakeConfig {
+  /** Forge-only review output focus; CLI and other callers retain the full prompt. */
+  reviewFocus?: 'forge-brief';
   responseFormat?: ItemIntakeResponseFormat;
   httpClient?: HttpClient;
   audit?: (event: IntakeProviderAuditEvent) => void;
@@ -393,7 +395,7 @@ export class OpenAICompatibleItemIntakeProvider implements ItemIntakeAiProvider 
         model,
         reasoning: this.options.transport?.reasoning ?? this.options.reasoningEffort,
         structuredOutput: responseFormat,
-        systemPrompt: `${PROMPTS[stage]}${attempt > 1 ? '\nRetry: return a complete schema-valid object with exact evidence.' : ''}`,
+        systemPrompt: `${PROMPTS[stage]}${stage === 'review' && this.options.reviewFocus === 'forge-brief' ? '\nForge self-check with the selected generation model: report only concrete source-backed mechanical mismatches, missing rules, wrong numbers, limits, or effects. Keep each finding short. Do not suggest style edits, speculate about external rules, or restate correct fields. The GM makes the final acceptance decision.' : ''}${attempt > 1 ? '\nRetry: return a complete schema-valid object with exact evidence.' : ''}`,
         userContent: JSON.stringify(payload),
         httpClient: this.httpClient,
         signal: controller.signal,

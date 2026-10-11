@@ -1,7 +1,9 @@
 import type { EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import { decodeStatusLifecycleParameters, nativeLifecycleStatusLabel } from '@fvtt-json-generator/contracts/status-lifecycle';
 import { localizationText, type EncounterLocalization } from '@fvtt-json-generator/contracts/localization';
+import type { EncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import { configuredConditionSummary } from './configuredConditions';
+import { approvedDisplayTitle } from './encounterReviewNavigation';
 
 const EVIDENCE = [
   ['application', '施加对象与触发'], ['duration', '持续时间'], ['repeatSave', '再次豁免'],
@@ -9,8 +11,9 @@ const EVIDENCE = [
 ] as const;
 
 /** Human-readable projection only. The source report never grants import authority. */
-export function encounterReviewCards(report: EncounterIntakeReport | undefined, localized?: EncounterLocalization): Array<{
-  actor: string; feature: string; source: string; summary: string; normalized: string; handling: string;
+export function encounterReviewCards(report: EncounterIntakeReport | undefined, localized?: EncounterLocalization,
+  progress:readonly EncounterLocalizationProgress[]=[]): Array<{
+  actorKey: string; actor: string; feature: string; gmManual:boolean; source: string; summary: string; normalized: string; handling: string;
   gmSteps: string[]; evidence: Array<{ label: string; quote: string }>;
   evidenceMissing: boolean;
 }> {
@@ -27,12 +30,25 @@ export function encounterReviewCards(report: EncounterIntakeReport | undefined, 
       const value = rule.sourceEvidence?.[key];
       return typeof value === 'string' && value.length <= 2000 && quote.includes(value) ? [{ label, quote: value }] : [];
     });
-    const actorTranslation=localized?.actors.find(entry=>entry.key===rule.actorKey)?.translation;
-    const translations=actorTranslation?.review.verdict==='accepted'&&!actorTranslation.review.findings.length
+    const acceptedProgress=progress.find(entry=>entry.actorKey===rule.actorKey && entry.status==='accepted'
+      && !entry.findings?.length && entry.translation && 'review'in entry.translation
+      && entry.translation.review.verdict==='accepted');
+    const actorTranslation=localized?.actors.find(entry=>entry.key===rule.actorKey)?.translation??acceptedProgress?.translation;
+    const approved=!!actorTranslation&&('approval'in actorTranslation||'review'in actorTranslation
+      &&actorTranslation.review.verdict==='accepted'&&!actorTranslation.review.findings.length);
+    const translations=approved&&actorTranslation
       ? new Map(actorTranslation.texts.map(entry=>[entry.id,entry.text])):undefined;
+    const originalActor=actor?.analysis?.candidate?.label ?? rule.actorKey;
+    const approvedTitle=(original:string):string=>{
+      const id=localizationText('title',original).id;
+      const translated=translations?.get(id);
+      const bound=acceptedProgress?.request.texts.some(entry=>entry.id===id&&entry.kind==='title'&&entry.source===original)
+        ||localized?.actors.some(entry=>entry.key===rule.actorKey&&entry.translation.texts.some(text=>text.id===id));
+      return translated&&bound&&actorTranslation?approvedDisplayTitle(original,translated,actorTranslation.policy):original;
+    };
     return {
-      actor: actor?.analysis?.candidate?.label ?? rule.actorKey,
-      feature: rule.featureName,
+      actorKey:rule.actorKey,actor:actor?.analysis?.candidate?.label?approvedTitle(originalActor):originalActor,gmManual:rule.kind==='gm-manual',
+      feature: approvedTitle(rule.featureName),
       source: quote || '来源原句缺失，请展开完整来源核对。',
       summary:rule.kind==='status-lifecycle'?safeLifecycleSummary(rule.parameters)
         :rule.kind==='gm-manual'?'此项由 GM 按完整来源原句及下方步骤裁定；工具不自动执行。'

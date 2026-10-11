@@ -1,4 +1,5 @@
 import {
+  hashArtifact,
   hashSource,
   type ForgeItemResponse,
   type ForgeItemSourceId,
@@ -44,6 +45,7 @@ import {
 } from './adapters/v14SpellCatalog';
 import { combineAbortSignals, guardResponseBodyForCallerAbort } from './abortSignal';
 import { buildForgeItemRequest, convertFinalItemSource } from './item';
+import { forgeGmTargetHash, forgeGmModelFindingsHash } from './intakeReview';
 
 const BROWSER_ITEM_RESOLVER = {
   resolveSpell: resolveLockedDnd5eV14Spell,
@@ -102,13 +104,23 @@ export interface BrowserItemIntakeAnalysis {
 }
 
 export interface BrowserItemGenerationResult {
-  status: 'accepted' | 'needs_review' | 'failed';
+  status: 'accepted' | 'ready_for_gm_review' | 'needs_review' | 'failed';
   analysis: BrowserItemIntakeAnalysis;
   rawSourceHash?: Sha256;
   finalSourceHash?: Sha256;
   finalSource?: string;
   markdown?: string;
   response?: ForgeItemResponse;
+  candidateResponse?: ForgeItemResponse;
+  candidateHash?: Sha256;
+  modelReviewStatus?: 'not_requested' | 'accepted' | 'needs_review' | 'failed';
+  modelReviewError?: string;
+  deterministicFindings?: ItemIntakeFinding[];
+  modelReviewFindings?: ItemIntakeFinding[];
+  modelReviewFindingsHash?: Sha256;
+  gmApproval?: { gmId: string; sourceHash: Sha256; finalSourceHash: Sha256; artifactHash: Sha256;
+    targetHash: Sha256; candidateHash: Sha256; modelReviewStatus: 'not_requested' | 'accepted' | 'needs_review' | 'failed';
+    modelFindingsHash: Sha256 };
   itemProjection?: unknown;
   formalStatus?: 'accepted' | 'needs_review' | 'failed';
   review?: ItemAiReviewResult;
@@ -117,6 +129,91 @@ export interface BrowserItemGenerationResult {
   provider: BrowserItemProviderIdentity;
   calls: BrowserItemIntakeCalls;
   errorCode?: BrowserItemIntakeAnalysis['errorCode'];
+}
+
+function itemCandidateHash(analysis: BrowserItemIntakeAnalysis, finalSource: string, response: ForgeItemResponse): Sha256 {
+  return hashSource(JSON.stringify({ rawSourceHash: analysis.rawSourceHash, ir: analysis.ir,
+    finalSourceHash: hashSource(finalSource), response }));
+}
+
+function assertCurrentItemCandidate(input: BrowserItemIntakeInput, candidate: BrowserItemGenerationResult): Extract<ForgeItemResponse, {result: unknown}> {
+  const response = candidate.candidateResponse;
+  if (!candidate.analysis.ir || !candidate.analysis.candidate || !candidate.finalSource || !candidate.finalSourceHash
+    || !candidate.candidateHash || !candidate.rawSourceHash || !response || !('result' in response)) {
+    throw new TypeError('当前 Item 候选缺少来源、正式响应或候选身份。');
+  }
+  if (candidate.rawSourceHash !== hashSource(input.source) || candidate.analysis.rawSourceHash !== candidate.rawSourceHash
+    || hashSource(candidate.finalSource) !== candidate.finalSourceHash
+    || itemCandidateHash(candidate.analysis, candidate.finalSource, response) !== candidate.candidateHash
+    || response.requestId !== input.requestId || response.result.sourceIdentity.sourceHash !== candidate.finalSourceHash
+    || response.result.target.fvttRuntimeVersion !== input.fvttVersion
+    || response.result.target.systemVersionObserved !== input.systemVersion) {
+    throw new TypeError('Item 来源、候选或目标已变化，必须重新生成。');
+  }
+  const local = validateItemIntakeIRWithResolver(input.source, candidate.analysis.ir, candidate.analysis.candidate, BROWSER_ITEM_RESOLVER);
+  if (local.blocking.length || (candidate.analysis.ir.item?.stages?.length ?? 0) > 1
+    || multiStageSourceFinding(candidate.analysis.candidate)) throw new TypeError('Item 来源本地校验仍有阻断问题。');
+  return response;
+}
+
+export async function reviewBrowserItemIntakeCandidate(
+  input: BrowserItemIntakeInput,
+  candidate: BrowserItemGenerationResult,
+  provider: ItemIntakeAiProvider,
+  signal?: AbortSignal,
+): Promise<BrowserItemGenerationResult> {
+  const response = assertCurrentItemCandidate(input, candidate);
+  if (!['not_requested', 'failed'].includes(candidate.modelReviewStatus??'') || candidate.gmApproval)
+    throw new TypeError('该 Item 候选已处理模型审核或 GM 确认。');
+  if (JSON.stringify(identity(provider)) !== JSON.stringify(candidate.provider))
+    throw new TypeError('Item 模型配置已变化，不能审核旧候选。');
+  signal?.throwIfAborted();
+  const calls = { ...candidate.calls, review: candidate.calls.review + 1 };
+  const stages = structuredClone(candidate.stages);
+  reporter(stages, input.onStage)('review', 'running');
+  try {
+    const review = await withAbort(provider.review({ source: input.source, candidate: candidate.analysis.candidate!,
+      ir: candidate.analysis.ir!, markdown: candidate.finalSource!, itemProjection: candidate.itemProjection,
+      deterministicFindings: candidate.deterministicFindings ?? candidate.findings }), signal);
+    reporter(stages, input.onStage)('review', 'completed');
+    const modelReviewFindings = dedupe(review.findings ?? []);
+    const findings = dedupe([...(candidate.deterministicFindings ?? candidate.findings), ...modelReviewFindings]);
+    const locallyReady = itemResponseStatus(response) === 'accepted'
+      && !(candidate.deterministicFindings ?? candidate.findings).some(entry => entry.blocking);
+    return { ...candidate, status: locallyReady ? 'ready_for_gm_review' : 'needs_review',
+      review, modelReviewStatus: review.verdict === 'accepted' ? 'accepted' : 'needs_review',
+      modelReviewFindings, modelReviewFindingsHash: forgeGmModelFindingsHash(modelReviewFindings),
+      modelReviewError: undefined, findings, calls, stages };
+  } catch (error) {
+    const message = safeMessage(error);
+    reporter(stages, input.onStage)('review', 'failed', message);
+    return { ...candidate, modelReviewStatus: 'failed', modelReviewError: message, calls, stages };
+  }
+}
+
+export function approveBrowserItemIntakeCandidateForGm(
+  input: BrowserItemIntakeInput,
+  candidate: BrowserItemGenerationResult,
+  gmId: string,
+): BrowserItemGenerationResult {
+  const response = assertCurrentItemCandidate(input, candidate);
+  if (typeof gmId !== 'string' || !gmId.trim() || gmId.length > 128) throw new TypeError('GM身份无效。');
+  if (candidate.status !== 'ready_for_gm_review' || response.result.status !== 'accepted'
+    || !response.result.artifactHash
+    || (candidate.deterministicFindings ?? candidate.findings).some(entry => entry.blocking)
+    || projectFormalFindings(response).some(entry => entry.blocking)
+    || (['accepted','needs_review'].includes(candidate.modelReviewStatus??'') && !candidate.modelReviewFindingsHash)
+    || (candidate.modelReviewStatus==='not_requested' && (candidate.calls.review!==0 || candidate.modelReviewFindings?.length))
+    || (candidate.modelReviewFindingsHash && candidate.modelReviewFindingsHash
+      !== forgeGmModelFindingsHash(candidate.modelReviewFindings ?? []))) {
+    throw new TypeError('Item 正式生成或来源参数未通过本地校验，不能由 GM 确认。');
+  }
+  if (hashArtifact(response.result.artifact) !== response.result.artifactHash) throw new TypeError('Item 正式产物与当前来源不一致。');
+  return { ...candidate, status: 'accepted', response,
+    gmApproval: { gmId: gmId.trim(), sourceHash: candidate.rawSourceHash!, finalSourceHash: candidate.finalSourceHash!,
+      artifactHash: response.result.artifactHash, targetHash: forgeGmTargetHash(response.result.target),
+      candidateHash: candidate.candidateHash!, modelReviewStatus: candidate.modelReviewStatus ?? 'not_requested',
+      modelFindingsHash: forgeGmModelFindingsHash(candidate.modelReviewFindings ?? []) } };
 }
 
 export interface BrowserItemAiProviderOptions {
@@ -149,7 +246,8 @@ export function createBrowserItemAiProvider(
     apiKey: options.apiKey,
     baseUrl: options.baseUrl,
     model: options.model,
-    reviewModel: options.reviewModel ?? options.model,
+    reviewModel: options.model,
+    reviewFocus: 'forge-brief',
     timeoutMs: options.timeoutMs ?? BROWSER_AI_STAGE_TIMEOUT_MS,
     repairTimeoutMs: options.repairTimeoutMs ?? BROWSER_AI_REPAIR_TIMEOUT_MS,
     ...(options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {}),
@@ -299,6 +397,25 @@ export async function generateAndReviewBrowserItemIntake(
   provider: ItemIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserItemGenerationResult> {
+  return generateBrowserItemIntake(input, analysis, provider, signal, true);
+}
+
+export async function generateBrowserItemIntakeCandidate(
+  input: BrowserItemIntakeInput,
+  analysis: BrowserItemIntakeAnalysis,
+  provider: ItemIntakeAiProvider,
+  signal?: AbortSignal,
+): Promise<BrowserItemGenerationResult> {
+  return generateBrowserItemIntake(input, analysis, provider, signal, false);
+}
+
+async function generateBrowserItemIntake(
+  input: BrowserItemIntakeInput,
+  analysis: BrowserItemIntakeAnalysis,
+  provider: ItemIntakeAiProvider,
+  signal: AbortSignal | undefined,
+  reviewRequested: boolean,
+): Promise<BrowserItemGenerationResult> {
   const stages = structuredClone(analysis.stages);
   const calls = structuredClone(analysis.calls);
   const report = reporter(stages, input.onStage);
@@ -322,7 +439,7 @@ export async function generateAndReviewBrowserItemIntake(
     const markdown = renderItemIntakeMarkdown(input.source, analysis.candidate, analysis.ir);
     const request = buildForgeItemRequest({
       content: markdown,
-      displayName: input.displayName ?? input.sourceName,
+      displayName: input.displayName?.trim() ? input.displayName : input.sourceName,
       requestId: input.requestId,
       fvttVersion: input.fvttVersion,
       systemVersion: input.systemVersion,
@@ -342,6 +459,17 @@ export async function generateAndReviewBrowserItemIntake(
         finalSourceHash: request.source.utf8Sha256, finalSource: canonicalMarkdown, markdown: canonicalMarkdown, itemProjection, formalStatus,
         findings: dedupe([...validation.findings, ...formalFindings]), stages, provider: identity(provider), calls,
       };
+    }
+    if (!reviewRequested) {
+      const deterministicFindings = dedupe([...validation.findings, ...formalFindings]);
+      const ready = !deterministicFindings.some(entry => entry.blocking);
+      report('finalize', ready ? 'completed' : 'failed');
+      return { status: ready ? 'ready_for_gm_review' : 'needs_review',
+        analysis: { ...structuredClone(analysis), stages, calls }, rawSourceHash: analysis.rawSourceHash,
+        finalSourceHash: request.source.utf8Sha256, finalSource: canonicalMarkdown, markdown: canonicalMarkdown,
+        itemProjection, formalStatus, candidateResponse: response,
+        candidateHash: itemCandidateHash(analysis, canonicalMarkdown, response), modelReviewStatus: 'not_requested',
+        deterministicFindings, findings: deterministicFindings, stages, provider: identity(provider), calls };
     }
     report('review', 'running');
     calls.review += 1;
@@ -365,6 +493,7 @@ export async function generateAndReviewBrowserItemIntake(
       finalSource: canonicalMarkdown,
       markdown: canonicalMarkdown,
       ...(status === 'accepted' ? { response } : {}),
+      modelReviewStatus: review.verdict === 'accepted' ? 'accepted' : 'needs_review',
       itemProjection,
       formalStatus,
       review,

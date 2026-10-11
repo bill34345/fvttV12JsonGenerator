@@ -28,6 +28,7 @@ describe('configured state directory in the actual Forge entry',()=>{
     expect(context.configuredConditions[0].summary).toBe('移动速度降低 10 尺');
     await configureButton.onclick();expect(opened).toBe(1);
     app.humanSource='Frost Mark source';app.humanLabel='Configured source';await app.generateFromHuman();
+    expect(captured.reviewPolicy).toBe('deferred');
     expect(captured.conditionCatalog).toEqual([definition]);expect(captured.conditionCatalog[0]).not.toBe(definition);
     definition.components[0]={kind:'movement-reduction',feet:5};expect(captured.conditionCatalog[0].components[0].feet).toBe(10);
   });
@@ -43,17 +44,19 @@ describe('translated encounter report identity',()=>{
     for(const term of LOCALIZATION_TERMS)if(new RegExp(`\\b${term.english}s?\\b`,'i').test(entry.source))text+=term.chinese;
     return{id:entry.id,text};
   })});
-  async function harness(failTranslation=false){
+  async function harness(failTranslation=false,explicitReviewer?:any,currentOptions?:()=>Record<string,unknown>,
+    translationOverride?:(input:any,call:number,onPartial?:(value:any)=>void)=>any,twoActors=false){
     const command=fixedEncounterCommand({version:1,rules:[{id:'manual',kind:'gm-manual',actorKey:'guard',itemName:'Bite',parameters:{}}],legendaryRecovery:[]});
     const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'report-identity-fixture',label:'Guard package',
       target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'guard',
       actors:[{key:'guard',label:'Marsh Guard',source,sourceHash:hashSource(source)}],
       macros:[{key:'control',name:'Guard control',command,commandHash:hashSource(command),bindings:{guard:'guard'},covers:[],
         notes:`原始资料SHA-256：${hashSource(source)}\nGM handles timing.`}],assets:[]};
+    if(twoActors){const second=source.replaceAll('Marsh Guard','Bog Watcher');bundle.actors.push({key:'watcher',label:'Bog Watcher',source:second,sourceHash:hashSource(second)});bundle.macros[0].bindings.watcher='watcher';}
     const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
-    const report:any={version:1,source,sourceHash:hashSource(source),model:'fixture',reviewModel:'fixture-review',evidenceMode:'standard',
+    const report:any={version:1,source,sourceHash:hashSource(source),model:'fixture',reviewModel:'fixture',conditionCatalogHash:hashSource('[]'),evidenceMode:'standard',
       status:'ready_for_gm_review',actors:[],findings:[],packageHash:prepared.hash,outputLanguage:'source'};
-    let stored:any;const blobs:Blob[]=[];
+    let stored:any,translateCalls=0,reviewCalls=0,optionReads=0;const blobs:Blob[]=[];
     const recoveryStore={load:async()=>stored,save:async(value:any)=>{stored=value;},clear:async()=>{stored=undefined;}};
     const browserWindow:any={Blob,URL:{createObjectURL:(blob:Blob)=>{blobs.push(blob);return`blob:review-${blobs.length}`;},revokeObjectURL:()=>{}},
       document:{body:{appendChild:()=>{}},createElement:()=>({click(){},remove(){}})}};
@@ -62,24 +65,39 @@ describe('translated encounter report identity',()=>{
     const App=createForgeEncounterApplicationClass({window:browserWindow,game,
       foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       recoveryStore,getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
-      getAiOptions:()=>({baseUrl:'https://provider.example/v1',apiKey:'fixture-secret',model:'fixture'}),
-      createEncounterIntakeProviders:()=>({translationService:{model:'fixture',reviewModel:'fixture-review',
-        translate:async(input:any)=>{if(failTranslation)throw new Error('translation unavailable');return translated(input);},
-        review:async()=>({verdict:'accepted',findings:[]})}} as any)});
+      getAiOptions:()=>{optionReads++;return{baseUrl:'https://provider.example/v1',apiKey:'fixture-secret',model:'fixture',...currentOptions?.()};},
+      reviewForgeEncounterCandidate:explicitReviewer,
+      generateEncounterFromHumanMarkdown:async()=>({report,prepared}),
+      createEncounterIntakeProviders:(options:any)=>({provider:{extractionModel:options.model,reviewModel:options.model},automationProvider:{},
+        translationService:{model:'fixture',reviewModel:'fixture-review',
+        translate:async(input:any,_signal:any,onPartial:any)=>{translateCalls++;if(failTranslation)throw new Error('translation unavailable');return translationOverride?translationOverride(input,translateCalls,onPartial):translated(input);},
+        review:async()=>{reviewCalls++;return{verdict:'accepted',findings:[]};}}} as any)});
     const app:any=new App();app.humanSource=source;app.humanLabel='Guard package';app.outputLanguage='zh-CN';
-    await app._prepareContext();app.prepared=prepared;app.recoveryPackage=serializeForgeEncounterPackage(prepared.bundle);
-    app.recoveryCatalogHash=hashSource('[]');app.aiReport=report;app.recoveryReport=report;
-    return{App,app,prepared,report,blobs,recoveryStore,get stored(){return stored;}};
+    await app._prepareContext();await app.generateFromHuman();
+    return{App,app,prepared,report,blobs,recoveryStore,get stored(){return stored;},
+      get translateCalls(){return translateCalls;},get reviewCalls(){return reviewCalls;},get optionReads(){return optionReads;}};
   }
-  test('successful Chinese preparation updates immediate view/download and restored report to the same current hash',async()=>{
-    const {App,app,prepared,blobs,recoveryStore}=await harness();
+  test('Chinese draft uses no model review; GM approval updates view, download and restored package identity',async()=>{
+    const session=await harness();const {App,app,prepared,blobs,recoveryStore}=session;
     await app.translatePrepared();
+    expect(app.prepared).toBe(prepared);expect(app.localizationDraft.sourcePackageHash).toBe(prepared.hash);
+    expect(session.translateCalls).toBeGreaterThan(0);expect(session.reviewCalls).toBe(0);
+    const draftContext=await app._prepareContext();
+    expect(draftContext.draftPreview).toBeTruthy();expect(draftContext.canApproveTranslation).toBe(false);
+    const optionsAfterDraft=session.optionReads;
+    app.translationReviewed=true;await app.approveLocalization();
+    expect(session.optionReads).toBe(optionsAfterDraft);expect(session.reviewCalls).toBe(0);
     expect(app.prepared.hash).not.toBe(prepared.hash);
+    const localizedContext=await app._prepareContext();
+    expect(localizedContext.reviewNavigation.actors[0].label).toBe(app.prepared.actors[0].name);
+    const localizedHtml=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(localizedContext);
+    expect(new JSDOM(localizedHtml).window.document.querySelector('[data-review-actor] option[value="guard"]')?.textContent)
+      .toBe(app.prepared.actors[0].name);
     expect(app.aiReport).toBe(app.recoveryReport);
     const current=JSON.parse(app.currentReportText());
     expect(current.intake.outputLanguage).toBe('zh-CN');expect(current.intake.packageHash).toBe(app.prepared.hash);
-    expect(current.localization.every((entry:any)=>entry.status==='accepted')).toBe(true);
-    expect(current.sourcePackage.localization).toBeTruthy();
+    expect(current.localization.every((entry:any)=>entry.status==='draft_ready')).toBe(true);
+    expect(current.sourcePackage.localization.packageText.approval.kind).toBe('gm');
     app.viewReport();const viewed=(await app._prepareContext()).reportViewText;
     app.exportReport();expect(await blobs[0]!.text()).toBe(viewed);
     await app.saveRecovery();await expect(recoveryStore.load()).resolves.toMatchObject({report:{outputLanguage:'zh-CN',packageHash:app.prepared.hash}});
@@ -91,15 +109,260 @@ describe('translated encounter report identity',()=>{
   test('failed translation keeps the original report and package hash',async()=>{
     const {app,prepared,report}=await harness(true);
     await app.translatePrepared();
-    expect(app.prepared).toBe(prepared);expect(app.aiReport).toBe(report);expect(app.recoveryReport).toBe(report);
+    expect(app.prepared).toBe(prepared);
+    expect(app.aiReport).toMatchObject({source:report.source,packageHash:report.packageHash,
+      localization:[{actorKey:'guard',status:'translating'}]});
+    expect(app.recoveryReport).toBe(app.aiReport);
     const visible=JSON.parse(app.currentReportText());
     expect(visible.intake??visible).toMatchObject({outputLanguage:'source',packageHash:prepared.hash});
+  });
+  test('mounted report and download follow resumed partial translation through a package-field failure and recovery',async()=>{
+    const session=await harness(false,undefined,undefined,(input,call)=>{
+      if(call===2)throw new Error('actor 2 first attempt failed');
+      if(call===4){const result=translated(input);return{texts:result.texts.map((field:any,index:number)=>index===0?{...field,text:'legendaryRecovery'}:field)};}
+      return translated(input);
+    },true);
+    const {App,app,blobs,recoveryStore}=session;
+    await app.translatePrepared();
+    expect(app.translationReport.map((entry:any)=>[entry.actorKey,entry.status])).toEqual([['guard','draft_ready'],['watcher','translating']]);
+    await app.translatePrepared();
+    expect(app.translationReport.map((entry:any)=>[entry.actorKey,entry.status])).toEqual([['guard','draft_ready'],['watcher','draft_ready'],[undefined,'needs_review']]);
+    const context=await app._prepareContext();
+    expect(context.reviewNavigation.issues.some((issue:any)=>issue.actor==='战斗包')).toBe(true);
+    const dom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
+    app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();
+    (dom.window.document.querySelector('[data-action="encounter-report-view"]') as HTMLButtonElement).click();
+    const visible=JSON.parse((await app._prepareContext()).reportViewText);
+    expect(visible.intake.localization.map((entry:any)=>[entry.actorKey,entry.status])).toEqual([['guard','draft_ready'],['watcher','draft_ready'],[undefined,'needs_review']]);
+    (dom.window.document.querySelector('[data-action="encounter-report"]') as HTMLButtonElement).click();
+    expect(await blobs[0]!.text()).toBe(app.textView.text);
+    await app.saveRecovery();
+    expect((await recoveryStore.load()).report.localization).toEqual(visible.intake.localization);
+    const reopened:any=new App();await reopened._prepareContext();await reopened.previewRecovered();
+    expect(reopened.translationReport).toEqual(visible.intake.localization);
+    expect(reopened.reviewed).toBe(false);expect(session.reviewCalls).toBe(0);
+  });
+  test('uploaded English package exposes the latest partial report in mounted view and fresh download',async()=>{
+    const translatedRequests:string[][]=[];
+    const session=await harness(false,undefined,undefined,(input,call)=>{
+      translatedRequests.push(input.texts.map((field:any)=>field.id));
+      if(call===2)throw new Error('actor 2 first attempt failed');
+      if(call===4){const result=translated(input);return{texts:result.texts.map((field:any,index:number)=>index===0?{...field,text:'legendaryRecovery'}:field)};}
+      return translated(input);
+    },true);
+    const {app,blobs,prepared}=session;
+    const data=new TextEncoder().encode(serializeForgeEncounterPackage(prepared.bundle));
+    const mount=async()=>{const context=await app._prepareContext();const dom=new JSDOM(Handlebars.compile(
+      readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
+      app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();return dom.window.document;};
+    const initial=await mount();const file=initial.querySelector('[name="encounterFile"]') as HTMLInputElement;
+    Object.defineProperty(file,'files',{value:[{size:data.length,arrayBuffer:async()=>data.buffer}]});
+    file.dispatchEvent(new file.ownerDocument.defaultView!.Event('change'));
+    await app.preview();expect(app.aiReport).toBeUndefined();
+    await app.translatePrepared();
+    const first=await mount();(first.querySelector('[data-action="encounter-report-view"]') as HTMLButtonElement).click();
+    const oldText=(await app._prepareContext()).reportViewText;
+    (first.querySelector('[data-action="encounter-report"]') as HTMLButtonElement).click();
+    expect(JSON.parse(oldText).localization.map((entry:any)=>entry.status)).toEqual(['draft_ready','translating']);
+    await app.translatePrepared();
+    const latest=await mount();(latest.querySelector('[data-action="encounter-report-view"]') as HTMLButtonElement).click();
+    const currentText=(await app._prepareContext()).reportViewText;
+    (latest.querySelector('[data-action="encounter-report"]') as HTMLButtonElement).click();
+    expect(currentText).not.toBe(oldText);
+    expect(JSON.parse(currentText).intake).toBeNull();
+    expect(JSON.parse(currentText).localization.map((entry:any)=>[entry.actorKey,entry.status])).toEqual([
+      ['guard','draft_ready'],['watcher','draft_ready'],[undefined,'needs_review']]);
+    expect(await blobs[1]!.text()).toBe(currentText);
+    await app.saveRecovery();
+    const stored=await session.recoveryStore.load();
+    expect(stored).toMatchObject({version:2,kind:'uploaded-package',packageHash:app.prepared.hash});
+    expect(stored.report).toBeUndefined();expect(stored.source).toBeUndefined();
+    await session.recoveryStore.save({...stored,localizationDraft:{version:1,sourcePackageId:prepared.bundle.id,
+      sourcePackageHash:stored.packageHash,actors:[],packageText:{}}});
+    const reopened:any=new session.App();const pending=await reopened._prepareContext();
+    expect(reopened.prepared).toBeUndefined();expect(reopened.reviewed).toBe(false);
+    expect(pending.hasReport).toBe(false);
+    await reopened.previewRecovered();
+    expect(reopened.prepared.hash).toBe(app.prepared.hash);
+    expect(reopened.translationReport).toEqual(JSON.parse(currentText).localization);
+    expect(reopened.localizationDraft).toBeUndefined();
+    expect(reopened.reviewed).toBe(false);expect(reopened.translationReviewed).toBe(false);
+    await reopened.translatePrepared();
+    expect(reopened.localizationDraft).toBeTruthy();
+    expect(translatedRequests).toHaveLength(5);
+    expect(translatedRequests[4]).toHaveLength(1);
+    expect(session.reviewCalls).toBe(0);
+  });
+  test('an open mounted report stays visible and follows live progress during same-package resume',async()=>{
+    let continueActor!:(value:any)=>void,started!:(value:void)=>void;
+    const actorStarted=new Promise<void>(resolve=>{started=resolve;});
+    const actorPending=new Promise<any>(resolve=>{continueActor=resolve;});
+    const session=await harness(false,undefined,undefined,(input,call,onPartial)=>{
+      if(call===2)throw new Error('actor 2 first attempt failed');
+      if(call===3){onPartial?.({texts:[translated(input).texts[0]]});started();return actorPending;}
+      if(call===4){const result=translated(input);return{texts:result.texts.map((field:any,index:number)=>index===0?{...field,text:'legendaryRecovery'}:field)};}
+      return translated(input);
+    },true);
+    const {app,prepared}=session;
+    const data=new TextEncoder().encode(serializeForgeEncounterPackage(prepared.bundle));
+    const mount=async()=>{const context=await app._prepareContext();const dom=new JSDOM(Handlebars.compile(
+      readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
+      app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();return dom.window.document;};
+    const initial=await mount();const file=initial.querySelector('[name="encounterFile"]') as HTMLInputElement;
+    Object.defineProperty(file,'files',{value:[{size:data.length,arrayBuffer:async()=>data.buffer}]});
+    file.dispatchEvent(new file.ownerDocument.defaultView!.Event('change'));
+    await app.preview();await app.translatePrepared();
+    const before=await mount();(before.querySelector('[data-action="encounter-report-view"]') as HTMLButtonElement).click();
+    (before.querySelector('[data-action="encounter-report"]') as HTMLButtonElement).click();
+    const first=(await app._prepareContext()).reportViewText;
+    const opened=await mount();const openTextarea=opened.querySelector('[data-encounter-view-text]') as HTMLTextAreaElement;
+    expect(openTextarea.value).toBe(first);
+    const running=app.translatePrepared();await actorStarted;
+    const live=await app._prepareContext();
+    expect(live.reportViewText).toBeTruthy();expect(live.reportViewText).not.toBe(first);
+    expect(openTextarea.value).toBe(live.reportViewText);
+    expect(live.reportDownload).toBeUndefined();
+    const liveDom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(live));
+    expect((liveDom.window.document.querySelector('[data-encounter-view-text]') as HTMLTextAreaElement).value).toBe(live.reportViewText);
+    continueActor(translated({texts:app.translationReport.find((entry:any)=>entry.actorKey==='watcher').request.texts}));
+    await running;
+    const finalContext=await app._prepareContext();
+    expect(finalContext.reportViewText).toBeTruthy();
+    expect(JSON.parse(finalContext.reportViewText).localization.at(-1).status).toBe('needs_review');
+    expect(session.reviewCalls).toBe(0);
+  });
+  test('uploaded complete unapproved draft restores for Key-free local GM approval after formal preview',async()=>{
+    let connection:Record<string,unknown>={};
+    const session=await harness(false,undefined,()=>connection,undefined,true);
+    const {app,prepared,recoveryStore}=session;
+    const data=new TextEncoder().encode(serializeForgeEncounterPackage(prepared.bundle));
+    const mount=async(current:any)=>{const context=await current._prepareContext();const dom=new JSDOM(Handlebars.compile(
+      readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
+      current.element=dom.window.document.querySelector('.forge-encounter-panel');current._onRender();return dom.window.document;};
+    const initial=await mount(app);const file=initial.querySelector('[name="encounterFile"]') as HTMLInputElement;
+    Object.defineProperty(file,'files',{value:[{size:data.length,arrayBuffer:async()=>data.buffer}]});
+    file.dispatchEvent(new file.ownerDocument.defaultView!.Event('change'));
+    await app.preview();await app.translatePrepared();
+    expect(app.localizationDraft).toBeTruthy();await app.saveRecovery();
+    expect((await recoveryStore.load()).version).toBe(2);
+    connection={apiKey:''};const reads=session.optionReads;
+    const reopened:any=new session.App();await reopened._prepareContext();await reopened.previewRecovered();
+    expect(reopened.reviewed).toBe(false);expect(reopened.translationReviewed).toBe(false);
+    const restored=await mount(reopened);
+    expect(restored.querySelector('.forge-encounter-translation-draft')).toBeTruthy();
+    const check=restored.querySelector('[name="encounterTranslationReviewed"]') as HTMLInputElement;
+    check.checked=true;check.dispatchEvent(new check.ownerDocument.defaultView!.Event('change'));
+    expect((restored.querySelector('[data-action="encounter-approve-localization"]') as HTMLButtonElement).disabled).toBe(false);
+    await reopened.approveLocalization();
+    expect(reopened.prepared.bundle.localization.packageText.approval.kind).toBe('gm');
+    expect(reopened.reviewed).toBe(false);expect(session.optionReads).toBe(reads);
+    expect(session.reviewCalls).toBe(0);
   });
   test('a package without Intake evidence does not fabricate it after translation',async()=>{
     const {app}=await harness();app.aiReport=undefined;app.recoveryReport=undefined;
     await app.translatePrepared();
-    expect(app.prepared.bundle.localization).toBeTruthy();expect(app.aiReport).toBeUndefined();
+    expect(app.prepared.bundle.localization).toBeUndefined();expect(app.localizationDraft).toBeTruthy();expect(app.aiReport).toBeUndefined();
+    app.translationReviewed=true;await app.approveLocalization();
+    expect(app.prepared.bundle.localization.packageText.approval.kind).toBe('gm');expect(app.aiReport).toBeUndefined();
     expect(JSON.parse(app.currentReportText()).intake).toBeNull();
+  });
+  test('saved Chinese draft restores only after formal preview and does not request review or inherit GM checks',async()=>{
+    const session=await harness();const {App,app,recoveryStore}=session;
+    await app.translatePrepared();await app.saveRecovery();
+    const reopened:any=new App();await reopened._prepareContext();
+    expect(reopened.prepared).toBeUndefined();expect((await reopened._prepareContext()).draftPreview).toBeUndefined();
+    await reopened.previewRecovered();
+    const context=await reopened._prepareContext();
+    expect(context.draftPreview).toBeTruthy();expect(context.translationReviewed).toBe(false);
+    expect(context.reviewed).toBe(false);expect(context.canApproveTranslation).toBe(false);
+    expect(context.canReviewCandidate).toBe(false);
+    expect(context.modelReviewState).toContain('没有本会话生成连接的有效证明');
+    expect(session.reviewCalls).toBe(0);
+    await expect(recoveryStore.load()).resolves.toMatchObject({report:{localizationDraft:{sourcePackageHash:reopened.prepared.hash}}});
+  });
+  test('GM can approve a validated draft without a Provider, Key or connection test',async()=>{
+    const session=await harness();await session.app.translatePrepared();
+    let optionsRead=0;
+    class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
+    const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
+      getAiOptions:()=>{optionsRead++;throw Error('No connection may be read for GM approval');}});
+    const app:any=new App();app.prepared=session.prepared;app.localizationDraft=session.app.localizationDraft;app.translationReviewed=true;
+    await app.approveLocalization();
+    expect(app.prepared.bundle.localization.packageText.approval.kind).toBe('gm');
+    expect(optionsRead).toBe(0);expect(session.reviewCalls).toBe(0);
+    expect(app.reviewed).toBe(false);
+  });
+  test('explicit AI button reviews one bound candidate once without generation or translation',async()=>{
+    let calls=0,received:any,finish!:(result:any)=>void;
+    const pending=new Promise<any>(resolve=>{finish=resolve;});
+    const session=await harness(false,async(input:any)=>{calls++;received=input;return pending;});
+    const {app,prepared,report}=session;app.reviewed=true;
+    const first=app.reviewCurrentCandidate(),second=app.reviewCurrentCandidate();
+    expect(calls).toBe(1);expect(app.busy).toBe(true);expect(app.reviewed).toBe(false);
+    expect(received).toMatchObject({source:report.source,prepared,report});
+    expect(session.translateCalls).toBe(0);expect(session.reviewCalls).toBe(0);
+    finish({report:{...report,automationReview:{verdict:'accepted',findings:[]}},prepared});
+    await first;await second;
+    expect(app.prepared).toBe(prepared);expect(app.aiReport.automationReview.verdict).toBe('accepted');
+    expect(session.translateCalls).toBe(0);expect(session.reviewCalls).toBe(0);
+  });
+  test('AI concerns remain visible while a locally valid candidate can receive a separate GM confirmation',async()=>{
+    const session=await harness(false,async(input:any)=>({report:{...input.report,
+      automationReview:{verdict:'needs_review',findings:['规则范围仍需 GM 判断']},findings:['规则范围仍需 GM 判断']},
+      prepared:input.prepared}));
+    const {app,prepared}=session;
+    await app.reviewCurrentCandidate();
+    expect(app.prepared).toBe(prepared);expect(app.reviewed).toBe(false);
+    let context=await app._prepareContext();expect(context.aiConcerns).toBe(true);expect(context.canImport).toBe(false);
+    expect(context.aiReviewFindings).toEqual(['规则范围仍需 GM 判断']);
+    expect(context.reviewNavigation.blocked).toBe(0);
+    app.reviewed=true;context=await app._prepareContext();expect(context.canImport).toBe(true);
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    expect(new JSDOM(html).window.document.querySelector('[data-action="encounter-import"]')?.textContent)
+      .toContain('仍有 AI 提示');
+    expect(session.translateCalls).toBe(0);expect(session.reviewCalls).toBe(0);
+  });
+  test('same model with changed endpoint, provider, reasoning or output mode pays for no stale review',async()=>{
+    for(const changed of [{model:'different-model'},{baseUrl:'https://other.example/v1'},
+      {providerId:'other-provider'},{reasoning:'low'},{structuredOutput:'json_schema'}]){
+      let effective:Record<string,unknown>={},calls=0;
+      const session=await harness(false,async()=>{calls++;throw Error('Reviewer must not be reached');},()=>effective);
+      effective=changed;
+      await session.app.reviewCurrentCandidate();
+      expect(calls).toBe(0);expect(session.app.prepared).toBe(session.prepared);
+      expect(session.app.error).toContain('完整 AI 连接配置');
+      session.app.reviewed=true;
+      expect((await session.app._prepareContext()).canImport).toBe(true);
+      expect(session.reviewCalls).toBe(0);expect(session.translateCalls).toBe(0);
+    }
+  });
+  test('a newer connection session revision cannot reuse the generation review authority',async()=>{
+    let calls=0;
+    const session=await harness(false,async()=>{calls++;throw Error('Stale paid action');});
+    session.app.sessionRevision++;
+    expect((await session.app._prepareContext()).canReviewCandidate).toBe(false);
+    await session.app.reviewCurrentCandidate();
+    expect(calls).toBe(0);expect(session.app.error).toContain('本会话生成连接的有效证明');
+    session.app.reviewed=true;expect((await session.app._prepareContext()).canImport).toBe(true);
+  });
+  test('stale or cancelled explicit review cannot install a prior paid result',async()=>{
+    for(const stale of ['source','model','cancel']){
+      let finish!:(result:any)=>void,selectedModel='fixture';
+      const pending=new Promise<any>(resolve=>{finish=resolve;});
+      const session=await harness(false,async()=>pending,()=>({model:selectedModel}));
+      const {app,prepared,report}=session;
+      const operation=app.reviewCurrentCandidate();
+      if(stale==='source'){app.fileRevision++;app.humanSource+=' edited';}
+      else if(stale==='model')selectedModel='other-model';
+      else app.controller.abort();
+      finish({report:{...report,automationReview:{verdict:'accepted',findings:[]}},prepared});
+      await operation;
+      expect(app.prepared).toBe(prepared);
+      expect(app.aiReport.automationReview?.verdict).toBeUndefined();
+      expect(app.reviewed).toBe(false);
+      expect(session.translateCalls).toBe(0);expect(session.reviewCalls).toBe(0);
+    }
   });
 });
 
@@ -235,6 +498,16 @@ describe('current encounter review download',()=>{
     expect(viewed).toContain('sourcePackage');expect(blobs).toHaveLength(0);expect(copied).toEqual([]);
     reportButton.onclick();expect(await blobs[0]!.text()).toBe(viewed);
     copyButton.onclick();await Promise.resolve();await Promise.resolve();expect(copied).toEqual([viewed]);
+  });
+  test('a newer partial report refreshes visible JSON and revokes the older download link',async()=>{
+    const {app,reportButton,viewButton,revoked}=downloadHarness();
+    viewButton.onclick();reportButton.onclick();const oldText=(await app._prepareContext()).reportViewText;
+    app.translationReport=[{status:'needs_review',request:{texts:[]},findings:['new package field'] }];
+    const context=await app._prepareContext();
+    expect(context.reportViewText).not.toBe(oldText);
+    expect(JSON.parse(context.reportViewText).localization[0].findings).toEqual(['new package field']);
+    expect(context.reportDownload).toBeUndefined();
+    expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1']);
   });
   test('package view exposes the formal JSON serialization in the same selectable panel',async()=>{
     const {app,packageButton,copyButton,browserWindow,blobs}=downloadHarness();

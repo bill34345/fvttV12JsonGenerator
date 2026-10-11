@@ -1,8 +1,8 @@
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { assertEncounterSecretsAbsent, type EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import type { EncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
+import type { EncounterLocalizationProgress, ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 
-export interface EncounterRecoverySnapshot {
+export interface SourceEncounterRecoverySnapshot {
   version: 1;
   source: string;
   sourceHash: string;
@@ -13,7 +13,28 @@ export interface EncounterRecoverySnapshot {
   report?: EncounterIntakeReport;
   package?: string;
   translationReport?: EncounterLocalizationProgress[];
+  packageHash?: never;
+  packageSha256?: never;
 }
+
+/** A formally serialized upload has no human Markdown or Intake report to restore. */
+export interface UploadedEncounterRecoverySnapshot {
+  version: 2;
+  kind: 'uploaded-package';
+  target: string;
+  catalogHash: string;
+  package: string;
+  packageHash: string;
+  packageSha256: string;
+  translationReport: EncounterLocalizationProgress[];
+  localizationDraft?: ForgeEncounterLocalizationDraft;
+  source?: never;
+  sourceHash?: never;
+  label?: never;
+  outputLanguage?: never;
+  report?: never;
+}
+export type EncounterRecoverySnapshot=SourceEncounterRecoverySnapshot|UploadedEncounterRecoverySnapshot;
 
 export interface EncounterRecoveryStore {
   load(): Promise<EncounterRecoverySnapshot | undefined>;
@@ -122,6 +143,27 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
   scanSecrets(data);
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('无效的战斗包任务记录。');
   const record = data as Record<string, unknown>;
+  if(record.version===2){
+    if(record.kind!=='uploaded-package'||typeof record.target!=='string'
+      ||!/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target)
+      ||typeof record.catalogHash!=='string'||!/^[a-f0-9]{64}$/.test(record.catalogHash)
+      ||typeof record.package!=='string'||!record.package.length||record.package.length>MAX_BYTES
+      ||typeof record.packageHash!=='string'||!/^[a-f0-9]{64}$/.test(record.packageHash)
+      ||typeof record.packageSha256!=='string'||record.packageSha256!==hashSource(record.package)
+      ||!Array.isArray(record.translationReport)||record.translationReport.length>8
+      ||record.translationReport.some(entry=>!entry||typeof entry!=='object'
+        ||!['translating','draft_ready','needs_review'].includes(String(entry.status))
+        ||entry.translation!==undefined||!entry.request||typeof entry.request!=='object')
+      ||(record.localizationDraft!==undefined&&(!record.localizationDraft||typeof record.localizationDraft!=='object'
+        ||Array.isArray(record.localizationDraft)||(record.localizationDraft as Record<string,unknown>).version!==1
+        ||(record.localizationDraft as Record<string,unknown>).sourcePackageHash!==record.packageHash
+        ||typeof (record.localizationDraft as Record<string,unknown>).sourcePackageId!=='string'
+        ||!Array.isArray((record.localizationDraft as Record<string,unknown>).actors)
+        ||!(record.localizationDraft as Record<string,unknown>).packageText))
+      ||['source','sourceHash','label','outputLanguage','report','reviewed','accepted'].some(key=>key in record))
+      throw new TypeError('上传战斗包恢复记录与包、目标或译文进度不符。');
+    return record as unknown as UploadedEncounterRecoverySnapshot;
+  }
   if (record.version !== 1 || typeof record.source !== 'string' || !record.source.trim() || record.source.length > 24000
     || typeof record.label !== 'string' || !record.label.trim() || record.label.length > 160
     || (record.outputLanguage !== 'source' && record.outputLanguage !== 'zh-CN')

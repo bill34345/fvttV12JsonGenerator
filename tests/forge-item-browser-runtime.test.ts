@@ -20,12 +20,82 @@ import {
 import { conversionApplication } from '../src/core/application/conversion';
 import { normalizeForgeItemArtifact } from '../packages/forge-browser-runtime/src/artifact';
 import { buildBrowserBundle } from '../foundry-modules/fvtt-json-forge/build';
+import { analyzeBrowserItemSourceWithAi, generateBrowserItemIntakeCandidate,
+  reviewBrowserItemIntakeCandidate, approveBrowserItemIntakeCandidateForGm } from '@fvtt-json-generator/forge-browser-runtime/item-intake';
+import { buildJewelOfThreePrayersIr, jewelCandidate, JEWEL_OF_THREE_PRAYERS_SOURCE } from '../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
 
 const ITEM_SOURCE_ID = 'item:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeItemSourceId;
 const SHIELD_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md'), 'utf8');
 const JEWEL_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/items/三祷之坠.md'), 'utf8');
 
 describe('browser Forge Item runtime', () => {
+  test('holds a local-valid Item for GM approval and treats optional AI findings as advice', async () => {
+    const source = JEWEL_OF_THREE_PRAYERS_SOURCE;
+    const input = { source, sourceName: 'Jewel', displayName: 'Jewel', requestId: 'item-optional-review',
+      fvttVersion: '14.364', systemVersion: '5.3.3' };
+    let reviews = 0;
+    const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
+      discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
+      extract: async () => buildJewelOfThreePrayersIr(), repair: async (request: any) => request.ir,
+      review: async () => { reviews += 1; return { schemaVersion: 1 as const, verdict: 'needs_review' as const,
+        findings: [{ id: 'advice', code: 'CHECK_SOURCE', path: '/item/description', message: 'GM should check this wording.',
+          blocking: true, origin: 'ai-review' as const }] }; },
+    };
+    const analysis = await analyzeBrowserItemSourceWithAi(input, provider);
+    const candidate = await generateBrowserItemIntakeCandidate(input, analysis, provider);
+    expect(candidate.status).toBe('ready_for_gm_review');
+    expect(candidate.modelReviewStatus).toBe('not_requested');
+    expect(candidate.calls.review).toBe(0);
+    expect(reviews).toBe(0);
+    expect(candidate.response).toBeUndefined();
+    const manual = approveBrowserItemIntakeCandidateForGm(input, candidate, 'gm');
+    expect(manual.status).toBe('accepted');
+    expect(manual.gmApproval?.modelReviewStatus).toBe('not_requested');
+    const checked = await reviewBrowserItemIntakeCandidate(input, candidate, provider);
+    expect(reviews).toBe(1);
+    expect(checked.calls.review).toBe(1);
+    expect(checked.calls.extraction).toBe(candidate.calls.extraction);
+    expect(checked.calls.repair).toBe(candidate.calls.repair);
+    expect(checked.finalSourceHash).toBe(candidate.finalSourceHash);
+    expect(checked.modelReviewStatus).toBe('needs_review');
+    expect(checked.status).toBe('ready_for_gm_review');
+    expect(checked.modelReviewFindings).toHaveLength(1);
+    const approved = approveBrowserItemIntakeCandidateForGm(input, checked, 'gm');
+    expect(approved.gmApproval?.modelReviewStatus).toBe('needs_review');
+    expect(approved.response).toEqual(candidate.candidateResponse);
+    expect(() => approveBrowserItemIntakeCandidateForGm(input,
+      { ...candidate, candidateHash: '0'.repeat(64) as any }, 'gm')).toThrow(/变化/u);
+  });
+  test.each(['', ' \t '])('falls back from blank Item display name %j before formal generation', async (displayName) => {
+    const input = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceName: 'Jewel', displayName,
+      requestId: 'item-blank-display', fvttVersion: '14.368', systemVersion: '5.3.3' };
+    const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
+      discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
+      extract: async () => buildJewelOfThreePrayersIr(), repair: async (request: any) => request.ir,
+      review: async () => { throw new Error('optional model review must not run'); },
+    };
+    const analysis = await analyzeBrowserItemSourceWithAi(input, provider);
+    expect(analysis.status).toBe('ready_to_generate');
+    const candidate = await generateBrowserItemIntakeCandidate(input, analysis, provider);
+    expect(candidate.status).toBe('ready_for_gm_review');
+    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(approveBrowserItemIntakeCandidateForGm(input, candidate, 'gm').status).toBe('accepted');
+  });
+  test('keeps Item generation blocked when both display and source names are blank', async () => {
+    const input = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceName: '', displayName: ' ',
+      requestId: 'item-no-name', fvttVersion: '14.368', systemVersion: '5.3.3' };
+    const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
+      discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
+      extract: async () => buildJewelOfThreePrayersIr(), repair: async (request: any) => request.ir,
+      review: async () => { throw new Error('optional model review must not run'); },
+    };
+    const analysis = await analyzeBrowserItemSourceWithAi(input, provider);
+    expect(analysis.status).toBe('ready_to_generate');
+    const candidate = await generateBrowserItemIntakeCandidate(input, analysis, provider);
+    expect(candidate.status).toBe('failed');
+    expect(candidate.candidateResponse).toBeUndefined();
+    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+  });
   test.each([
     ['12.331', '12', '4.3.9'],
     ['13.340', '12', '4.3.9'],

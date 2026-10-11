@@ -68,6 +68,24 @@ describe('Forge page connection session', () => {
     unsubscribe();
   });
 
+  test('ignores a saved separate reviewer and invalidates a tested generation model change', () => {
+    const storage = makeStorage();
+    storage.setItem('fvtt-json-forge.client-settings', JSON.stringify({
+      providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
+      model: 'generator', reviewModel: 'old-heavy-reviewer', useSeparateReviewModel: true,
+    }));
+    installStorage(storage);
+    expect(readForgeSessionSettings()).toMatchObject({ model: 'generator', reviewModel: 'generator', useSeparateReviewModel: false });
+    markForgeSessionConnectionTested();
+    expect(isForgeSessionConnectionReady()).toBe(true);
+    const saved = saveForgeSessionSettings({ model: 'new-generator', reviewModel: 'old-heavy-reviewer', useSeparateReviewModel: true });
+    expect(saved).toMatchObject({ model: 'new-generator', reviewModel: 'new-generator', useSeparateReviewModel: false });
+    expect(isForgeSessionConnectionReady()).toBe(false);
+    expect(JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!)).toMatchObject({
+      model: 'new-generator', reviewModel: 'new-generator', useSeparateReviewModel: false,
+    });
+  });
+
   test('does not force a loopback session to DeepSeek when the saved choice is explicit', () => {
     const storage = makeStorage();
     storage.setItem('fvtt-json-forge.client-settings', JSON.stringify({
@@ -89,6 +107,23 @@ describe('Forge page connection session', () => {
     expect(cleared.apiKey).toBe('');
     expect(cleared.savedApiKeys).toEqual({});
     expect(JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!).savedApiKeys).toEqual({});
+  });
+
+  test('clear-all preserves transient connection fields without writing them to storage', () => {
+    const storage = makeStorage();
+    installStorage(storage);
+    saveForgeSessionSettings({ providerId: 'openai', endpoint: 'https://api.openai.com/v1', protocol: 'openai-responses',
+      model: 'stored-model', apiKey: 'stored-key', persistApiKey: true });
+    const transient = saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1',
+      protocol: 'openai-chat', model: 'transient-model', apiKey: 'page-key', persistApiKey: false });
+    const storedBeforeClear = JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!);
+    const cleared = clearAllForgeSessionApiKeys();
+    expect(cleared).toMatchObject({ providerId: transient.providerId, endpoint: transient.endpoint,
+      protocol: transient.protocol, model: transient.model, apiKey: '', persistApiKey: false, savedApiKeys: {} });
+    expect(readForgeSessionSettings()).toEqual(cleared);
+    expect(JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!)).toEqual({
+      ...storedBeforeClear, apiKey: '', persistApiKey: false, savedApiKeys: {},
+    });
   });
 });
 

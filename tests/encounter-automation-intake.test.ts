@@ -10,6 +10,7 @@ import {
   type EncounterAutomationRequest,
 } from '../packages/intake-ai/src/encounter-automation';
 import { RAT_WARLOCK_SOURCE, buildRatWarlockIr } from '../src/core/intake/__tests__/fixtures/rat-warlock';
+import { createEncounterIntakeProviders } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 
 const originalFetch = globalThis.fetch;
 
@@ -101,6 +102,21 @@ describe('encounter automation Intake', () => {
     await expect(provider.review({ ...input, automation: result })).resolves.toEqual({ verdict: 'accepted', findings: [] });
     expect(seen[1]!.body.model).toBe('gpt-review');
     expect(seen).toHaveLength(2);
+  });
+
+  test('Forge automation self-check ignores an old reviewer model without skipping the request', async () => {
+    const input = request();
+    const seen: Array<{ url: string; body: any }> = [];
+    installFakeTransport([{ verdict: 'needs_review', findings: ['A source limit is missing.'] }], seen);
+    const { automationProvider } = createEncounterIntakeProviders({
+      baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
+      reviewModel: 'old-reviewer', protocol: 'openai-chat', structuredOutput: 'json_object',
+    });
+    const review = await automationProvider.review({ ...input, automation: automation(input) });
+    expect(review).toEqual({ verdict: 'needs_review', findings: ['A source limit is missing.'] });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.body.model).toBe('generator');
+    expect(seen[0]!.body.messages[0].content).toContain('Forge self-check with the selected generation model');
   });
 
   test('the AI provider rejects a returned executable command even when legacy manual packages can carry reviewed scripts',async()=>{

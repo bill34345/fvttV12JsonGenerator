@@ -128,6 +128,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     private errorMessage = '';
     private created?: ForgeActorCreateResult;
     private unsubscribeConnection?: () => void;
+    private connectionSettingsIdentity = '';
     private blueprintDraft: BlueprintDraft = createEmptyBlueprintDraft();
     private blueprintCore?: CreatureBlueprintV1;
     private blueprintParentCore?: CreatureBlueprintV1;
@@ -530,8 +531,12 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       if (sourceFile) sourceFile.onchange = () => this.readSourceFile(root, sourceFile);
       this.registerAvailabilityHooks();
       this.registerPageGuard();
+      this.connectionSettingsIdentity = workspaceConnectionIdentity(readForgeSessionSettings());
       if (!this.unsubscribeConnection) this.unsubscribeConnection = subscribeForgeSessionSettings(() => {
         const activeRoot = this.element as HTMLElement | undefined;
+        const nextIdentity = workspaceConnectionIdentity(readForgeSessionSettings());
+        if (nextIdentity === this.connectionSettingsIdentity) return;
+        this.connectionSettingsIdentity = nextIdentity;
         if (activeRoot) this.invalidateWorkspaceCandidate();
       });
       this.bind(root, '[data-action="generate"]', () => void this.generate(root));
@@ -651,6 +656,10 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         return;
       }
       const mode = valueOf(root, 'mode');
+      if (mode === 'ai') {
+        this.notify('error', '普通文本 AI 请从 Actor 工作台运行；候选生成不会自动请求付费审核。');
+        return;
+      }
       let source = valueOf(root, 'source');
       const displayName = valueOf(root, 'displayName') || 'Forge Actor';
       if (mode === 'blueprint') {
@@ -697,7 +706,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
             apiKey: apiSettings.apiKey,
             baseUrl: apiSettings.endpoint,
             model: apiSettings.model,
-            reviewModel: apiSettings.reviewModel || apiSettings.model,
+            reviewModel: apiSettings.model,
           }, controller.signal);
           const intake = await this.services.convertRawActorSourceWithAi({
             source,
@@ -1522,6 +1531,21 @@ function sourceLibraryScope(game: any): string {
   const userId = typeof game?.user?.id === 'string' ? game.user.id.trim() : '';
   if (!worldId || !userId) throw new Error('蓝图来源库需要当前 world ID 和 GM user ID。');
   return `${worldId}:${userId}`;
+}
+
+function workspaceConnectionIdentity(settings: ReturnType<typeof readForgeSessionSettings>): string {
+  return JSON.stringify({
+    providerId: settings.providerId,
+    endpoint: settings.endpoint.trim(),
+    protocol: settings.protocol,
+    authScheme: settings.authScheme,
+    region: settings.region,
+    model: settings.model,
+    reviewModel: settings.reviewModel,
+    useSeparateReviewModel: settings.useSeparateReviewModel,
+    reasoning: settings.reasoning,
+    structuredOutput: settings.structuredOutput,
+  });
 }
 
 function safeDownloadName(value: string): string {

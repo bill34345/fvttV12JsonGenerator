@@ -8,6 +8,7 @@ import { requestIntakeProvider, type IntakeTransportRequest } from './transport'
 
 export interface ReviewedTranslationOptions extends Omit<IntakeTransportRequest, 'systemPrompt' | 'userContent' | 'signal'> {
   reviewModel?: string;
+  reviewFocus?: 'forge-brief';
   timeoutMs?: number;
   onProgress?: (message: string) => void;
 }
@@ -29,7 +30,7 @@ export function createReviewedTranslationService(options: ReviewedTranslationOpt
         structuredOutput: { mode: 'json_object' },
         systemPrompt: stage === 'translate'
           ? `${RULES}\nUse idiomatic Chinese: Grappled is the state 受擒; creature Grappled by X means 处于X造成的受擒状态的生物, never 被X受擒. CC means 自定义状态. Display prose such as gm-assisted must be translated as GM辅助处理 and external-rule as 外部规则裁定; only JSON keys and opaque text IDs are program keys. Use consistentNames as the approved naming glossary, including inside descriptions. Return {"texts":[{"id":"supplied opaque ID","text":"Chinese translation"}]}, exactly one for every supplied text.`
-          : `Independently audit every supplied Chinese translation against its English source. ${RULES}\nCheck omissions, negation, if/otherwise, first/second failure, source versus target, turn start versus end, damage/healing and all numbers/terms. Report only unresolved defects in Chinese, starting each finding with the affected text-ID. Positive confirmations do not belong in findings. Return {"verdict":"accepted"|"needs_review","findings":string[]}; accepted requires findings:[]. Do not change translations.`,
+          : `${options.reviewFocus==='forge-brief'?'Briefly self-check each supplied Chinese translation against its English source using the selected generation model.':'Independently audit every supplied Chinese translation against its English source.'} ${RULES}\nCheck omissions, negation, if/otherwise, first/second failure, source versus target, turn start versus end, damage/healing and all numbers/terms. Report only unresolved defects in Chinese, starting each finding with the affected text-ID. Positive confirmations do not belong in findings. Return {"verdict":"accepted"|"needs_review","findings":string[]}; accepted requires findings:[]. Do not change translations.${options.reviewFocus==='forge-brief'?' Report only concrete meaning or mechanical errors, not wording style or external rules speculation. Keep each finding concise; GM confirms the final result.':''}`,
         userContent: JSON.stringify(payload), signal: combined,
       });
       signal?.throwIfAborted();
@@ -95,7 +96,7 @@ export function createReviewedTranslationService(options: ReviewedTranslationOpt
       const findings: string[] = [];
       const chunks = batches(input.texts);
       for (const [index, chunk] of chunks.entries()) {
-        options.onProgress?.(`独立中文含义审阅 ${index + 1}/${chunks.length}`);
+        options.onProgress?.(`${options.reviewFocus==='forge-brief'?'中文含义简要复核':'独立中文含义审阅'} ${index + 1}/${chunks.length}`);
         const review = decodeLocalizationReview(await request('review', { ...context,
           policy: input.policy,
           sourceRuleContext: input.sourceRuleContext,
@@ -103,7 +104,7 @@ export function createReviewedTranslationService(options: ReviewedTranslationOpt
           consistentNames: [...(input.nameGlossary ?? []), ...input.texts.filter(entry => entry.kind === 'title').map(entry => ({ english: entry.source, chinese: texts.get(entry.id) }))],
           texts: chunk.map(entry => ({ ...entry, translation: texts.get(entry.id) })),
         }, signal));
-        if (review.verdict !== 'accepted' && !review.findings.length) findings.push('独立审阅未确认本批译文。');
+        if (review.verdict !== 'accepted' && !review.findings.length) findings.push(options.reviewFocus==='forge-brief'?'模型未确认本批译文。':'独立审阅未确认本批译文。');
         findings.push(...review.findings);
       }
       return { verdict: findings.length ? 'needs_review' : 'accepted', findings };

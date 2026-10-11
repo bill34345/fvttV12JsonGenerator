@@ -2,9 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { createForgeEncounterApplicationClass } from '../src/encounterApplication';
 import { configuredConditionsCatalog } from '../src/configuredConditions';
-import { decodeEncounterRecovery, serializeEncounterRecovery, IndexedDbEncounterRecoveryStore, EncounterRecoveryConflictError, type EncounterRecoverySnapshot } from '../src/encounterRecoveryStore';
+import { decodeEncounterRecovery, serializeEncounterRecovery, IndexedDbEncounterRecoveryStore, EncounterRecoveryConflictError,
+  type EncounterRecoverySnapshot, type SourceEncounterRecoverySnapshot } from '../src/encounterRecoveryStore';
 import { encounterReviewCards } from '../src/encounterReviewCards';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
+import { serializeForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { encounterFixture } from '../../../tests/helpers/forge-encounter';
 import { localizationText } from '@fvtt-json-generator/contracts/localization';
 
@@ -12,10 +14,17 @@ const source = '## 生物一：Night Claw\nIts attack hits a target.\n## 生物�
 function game() { return { version: '14.368', world: { id: 'world-a' }, system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'gm-a', isGM: true }, macros: { contents: [] } }; }
 function report(): any { return { version: 1, source, sourceHash: hashSource(source), model: 'first', reviewModel: 'first', evidenceMode: 'exact-quotes-v1',
   status: 'needs_review', actors: [{ key: 'actor-1', start: 0, end: source.indexOf('## 生物二'), source: source.slice(0, source.indexOf('## 生物二')), analysis: { ir: { sample: true }, candidate: { label: 'Night Claw' } } }], findings: ['Review unavailable'] }; }
-function snapshot(overrides: Partial<EncounterRecoverySnapshot> = {}): EncounterRecoverySnapshot {
+function snapshot(overrides: Partial<SourceEncounterRecoverySnapshot> = {}): SourceEncounterRecoverySnapshot {
   const current = game();
   return { version: 1, source, sourceHash: hashSource(source), label: '夜爪与守卫', outputLanguage: 'zh-CN',
     target: '14.368/dnd5e/5.3.3/core', catalogHash: hashSource(JSON.stringify(configuredConditionsCatalog(current))), report: report(), ...overrides };
+}
+async function uploadedSnapshot(){
+  const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(encounterFixture()));
+  const serialized=serializeForgeEncounterPackage(prepared.bundle);
+  return {version:2 as const,kind:'uploaded-package' as const,target:'14.368/dnd5e/5.3.3/core',
+    catalogHash:hashSource(JSON.stringify(configuredConditionsCatalog(game()))),package:serialized,
+    packageHash:prepared.hash,packageSha256:hashSource(serialized),translationReport:[]};
 }
 function app(store: { load: () => Promise<EncounterRecoverySnapshot | undefined>; save: (value: EncounterRecoverySnapshot) => Promise<void>; clear?: () => Promise<void> }, generate?: (input: any) => Promise<any>, key: () => string = () => 'secret-fixture-key') {
   let providerCalls = 0, generationCalls = 0, captured: any;
@@ -88,6 +97,47 @@ describe('encounter task checkpoint', () => {
     expect(() => serializeEncounterRecovery(snapshot({ label: '"apiKey":"private"' }))).toThrow('凭据');
     expect(() => decodeEncounterRecovery(valid.replace(hashSource(source), '0'.repeat(64)))).toThrow();
     expect(() => serializeEncounterRecovery(snapshot({ report: { ...report(), actors: [null] } as any }))).toThrow('来源报告');
+  });
+  test('uploaded package checkpoints reject corruption and restore only after formal preview with no provider',async()=>{
+    const valid=await uploadedSnapshot();
+    expect(decodeEncounterRecovery(serializeEncounterRecovery(valid))).toEqual(valid);
+    expect(()=>serializeEncounterRecovery({...valid,packageSha256:'0'.repeat(64)})).toThrow('上传战斗包');
+    expect(()=>serializeEncounterRecovery({...valid,report:report()} as any)).toThrow('上传战斗包');
+    expect(()=>serializeEncounterRecovery({...valid,translationReport:[{status:'accepted'}]} as any)).toThrow('上传战斗包');
+    const wrongRequest={...valid,translationReport:[{actorKey:'main',status:'draft_ready',request:{sourceHash:'0'.repeat(64)},draft:{texts:[]}}]};
+    const harness=app({load:async()=>wrongRequest as any,save:async()=>undefined});
+    const before=await harness.application._prepareContext();
+    expect(before.recoveryPackageAvailable).toBe(true);expect(before.canImport).toBe(false);
+    await harness.application.previewRecovered();
+    expect(harness.application.prepared.hash).toBe(valid.packageHash);
+    expect(harness.application.translationReport).toEqual([]);
+    expect(harness.application.reviewed).toBe(false);
+    expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(0);
+  });
+  test('uploaded package restore rejects a changed formal hash, target or catalog',async()=>{
+    const valid=await uploadedSnapshot();
+    for(const stale of [{...valid,packageHash:'0'.repeat(64)},
+      {...valid,target:'14.364/dnd5e/5.3.3/core'},
+      {...valid,catalogHash:'a'.repeat(64)}]){
+      const harness=app({load:async()=>stale,save:async()=>undefined});
+      const before=await harness.application._prepareContext();
+      if(stale.packageHash!==valid.packageHash){
+        expect(before.recoveryPackageAvailable).toBe(true);
+        await harness.application.previewRecovered();expect(harness.application.prepared).toBeUndefined();
+      }else expect(before.recoveryPackageAvailable).toBe(false);
+      expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(0);
+    }
+  });
+  test('editing source or clearing a recovered upload revokes its package and partial checkpoint',async()=>{
+    let saved:EncounterRecoverySnapshot|undefined=await uploadedSnapshot();
+    const store={load:async()=>saved,save:async(value:EncounterRecoverySnapshot)=>{saved=value;},clear:async()=>{saved=undefined;}};
+    const harness=app(store);await harness.application._prepareContext();await harness.application.previewRecovered();
+    harness.application._onRender();harness.sourceControl.value=source;harness.sourceControl.oninput();
+    await harness.application.saveRecovery();
+    expect(harness.application.prepared).toBeUndefined();expect(harness.application.recoveryPackage).toBeUndefined();
+    expect((saved as EncounterRecoverySnapshot|undefined)?.version).toBe(1);expect(saved?.package).toBeUndefined();
+    await harness.application.clearCurrentRecovery();expect(saved).toBeUndefined();
+    expect(harness.providerCalls).toBe(0);
   });
 
   test('clearing the source removes the checkpoint and reopening does not revive it', async () => {

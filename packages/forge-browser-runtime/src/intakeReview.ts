@@ -10,6 +10,7 @@ export type ForgeIntakeReviewStatus =
   | 'analyzing'
   | 'ready_to_generate'
   | 'generating_and_reviewing'
+  | 'ready_for_gm_review'
   | 'repairing'
   | 'regenerating'
   | 'accepted'
@@ -25,8 +26,10 @@ export type ForgeIntakeReviewEvent =
   | 'analysis_failed'
   | 'generate'
   | 'generation_accepted'
+  | 'generation_ready_for_gm_review'
   | 'generation_needs_review'
   | 'generation_failed'
+  | 'gm_approve'
   | 'repair'
   | 'repair_ready'
   | 'repair_needs_review'
@@ -49,10 +52,12 @@ const REVIEW_TRANSITIONS: Readonly<Record<ForgeIntakeReviewStatus, Partial<Recor
   ready_to_generate: { generate: 'generating_and_reviewing', clear: 'empty' },
   generating_and_reviewing: {
     generation_accepted: 'accepted',
+    generation_ready_for_gm_review: 'ready_for_gm_review',
     generation_needs_review: 'needs_review',
     generation_failed: 'failed',
     clear: 'empty',
   },
+  ready_for_gm_review: { gm_approve: 'accepted', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
   repairing: {
     repair_ready: 'ready_to_generate',
     repair_needs_review: 'needs_review',
@@ -168,6 +173,27 @@ export interface ForgeIntakeFindingProjection {
   evidence: ForgeIntakeEvidenceRefProjection[];
 }
 
+type ForgeGmModelFinding = Omit<ForgeIntakeFindingProjection, 'evidence'> & {
+  evidence?: ForgeIntakeEvidenceRefProjection[];
+};
+
+/** Same field set for formal responses and portable review-bundle target metadata. */
+export function forgeGmTargetHash(target:
+  | NonNullable<ForgeIntakeReviewBundleInput['target']>
+  | { generatorVersion:string; fvttRuntimeVersion:string; systemId:string; systemVersionObserved:string;
+      generatorProfile:string; effectProfile:string; iconMode:string }): Sha256 {
+  const fvttVersion = 'fvttVersion' in target ? target.fvttVersion : target.fvttRuntimeVersion;
+  const systemVersion = 'systemVersion' in target ? target.systemVersion : target.systemVersionObserved;
+  return hashSource(stableStringify({ generatorVersion:target.generatorVersion, fvttVersion,
+    systemId:target.systemId, systemVersion, generatorProfile:target.generatorProfile,
+    effectProfile:target.effectProfile, iconMode:target.iconMode }));
+}
+
+/** Hash exactly the safe finding projection that the portable bundle will serialize. */
+export function forgeGmModelFindingsHash(findings: readonly ForgeGmModelFinding[]): Sha256 {
+  return hashSource(stableStringify(findings.map(projectFinding)));
+}
+
 export interface ForgeIntakeEvidenceProjection {
   source?: { sha256: string; length: number };
   claims: Array<{
@@ -192,6 +218,18 @@ export interface ForgeIntakeEvidenceProjection {
   }>;
 }
 
+export type ForgeModelReviewStatus = 'not_requested' | 'accepted' | 'needs_review' | 'failed';
+export interface ForgeIntakeGmApproval {
+  gmId: string;
+  sourceHash: Sha256;
+  finalSourceHash: Sha256;
+  artifactHash: Sha256;
+  targetHash: Sha256;
+  candidateHash: Sha256;
+  modelReviewStatus: ForgeModelReviewStatus;
+  modelFindingsHash: Sha256;
+}
+
 export interface ForgeIntakeReviewBundleInput {
   objectKind: ForgeIntakeObjectKind;
   mode: ForgeIntakeMode;
@@ -205,6 +243,9 @@ export interface ForgeIntakeReviewBundleInput {
   deterministicFindings?: ForgeIntakeFindingProjection[];
   aiReviewFindings?: ForgeIntakeFindingProjection[];
   reviewVerdict?: 'accepted' | 'revise' | 'needs_review';
+  modelReviewStatus?: ForgeModelReviewStatus;
+  candidateHash?: Sha256;
+  gmApproval?: ForgeIntakeGmApproval;
   provider?: {
     name: string;
     extractionModel: string;
@@ -327,12 +368,16 @@ function assertBundleIdentity(input: ForgeIntakeReviewBundleInput): void {
 
 function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput): void {
   const acceptedTopLevel = input.status === 'accepted' || input.status === 'committing_and_reading_back';
+  const awaitingGm = input.status === 'ready_for_gm_review';
   const response = input.candidateResponse;
-  if (!acceptedTopLevel && response) {
-    throw new Error('Forge Intake candidate response is forbidden unless the top-level review status is accepted.');
+  if (!acceptedTopLevel && !awaitingGm && response) {
+    throw new Error('Forge Intake candidate response is forbidden unless the top-level review status is GM-ready or accepted.');
   }
   if (acceptedTopLevel && !response) {
     throw new Error('Forge Intake accepted review status requires one accepted candidate response.');
+  }
+  if (awaitingGm && (!response || !input.candidateHash || input.gmApproval)) {
+    throw new Error('Forge Intake GM-ready candidate needs a bound formal response without prior GM approval.');
   }
   if (!response) return;
   if (response.requestId !== input.requestId) {
@@ -347,7 +392,7 @@ function projectCandidate(value: ForgeIntakeCandidateProjection): ForgeIntakeCan
   return { id: value.id, label: value.label, ...projectEvidenceRef(value) };
 }
 
-function projectFinding(value: ForgeIntakeFindingProjection): ForgeIntakeFindingProjection {
+function projectFinding(value: ForgeGmModelFinding): ForgeIntakeFindingProjection {
   return {
     id: value.id,
     code: value.code,

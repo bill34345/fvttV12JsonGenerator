@@ -20,7 +20,7 @@ export interface LocalizationRequest {
 }
 export interface LocalizationDraft { texts: Array<{ id: string; text: string }> }
 export interface LocalizationReview { verdict: 'accepted' | 'needs_review'; findings: string[] }
-export interface ReviewedLocalization extends LocalizationDraft {
+export interface ModelReviewedLocalization extends LocalizationDraft {
   version: 1;
   language: 'zh-CN';
   policy: LocalizationPolicy;
@@ -28,6 +28,16 @@ export interface ReviewedLocalization extends LocalizationDraft {
   requestHash: string;
   review: LocalizationReview & { translationHash: string; model: string };
 }
+/** Explicit, local approval by the signed-in GM. It makes no claim about AI review. */
+export interface GmApprovedLocalization extends LocalizationDraft {
+  version: 2;
+  language: 'zh-CN';
+  policy: LocalizationPolicy;
+  terminology: typeof TERMINOLOGY_VERSION;
+  requestHash: string;
+  approval: { kind: 'gm'; gmId: string; translationHash: string };
+}
+export type ReviewedLocalization = ModelReviewedLocalization | GmApprovedLocalization;
 
 const referenceRoot = 'https://5echm.kagangtuya.top/topics/玩家手册2024/术语汇编/';
 export const LOCALIZATION_TERMS = [
@@ -90,9 +100,16 @@ export function decodeLocalizationReview(value: unknown): LocalizationReview {
   return { verdict: review.verdict, findings: [...review.findings] };
 }
 export function decodeReviewedLocalization(value: unknown): ReviewedLocalization {
-  const r = localizationRecord(value, ['version', 'language', 'policy', 'terminology', 'requestHash', 'texts', 'review']);
-  if (r.version !== 1 || r.language !== 'zh-CN' || ![LOCALIZATION_POLICY, LEGACY_LOCALIZATION_POLICY].includes(r.policy) || r.terminology !== TERMINOLOGY_VERSION
+  const r = localizationRecord(value, ['version', 'language', 'policy', 'terminology', 'requestHash', 'texts', value && typeof value === 'object' && (value as any).version === 2 ? 'approval' : 'review']);
+  if (![1, 2].includes(r.version) || r.language !== 'zh-CN' || ![LOCALIZATION_POLICY, LEGACY_LOCALIZATION_POLICY].includes(r.policy) || r.terminology !== TERMINOLOGY_VERSION
     || typeof r.requestHash !== 'string' || !/^[0-9a-f]{64}$/.test(r.requestHash)) throw new TypeError('翻译语言、术语版本或来源身份不受支持。');
+  if (r.version === 2) {
+    const approval = localizationRecord(r.approval, ['kind', 'gmId', 'translationHash']);
+    if (approval.kind !== 'gm' || typeof approval.gmId !== 'string' || !approval.gmId.trim() || approval.gmId.length > 200
+      || typeof approval.translationHash !== 'string' || !/^[0-9a-f]{64}$/.test(approval.translationHash)) throw new TypeError('GM 审批缺少有效身份或绑定。');
+    return { version: 2, language: 'zh-CN', policy: r.policy, terminology: TERMINOLOGY_VERSION,
+      requestHash: r.requestHash, ...decodeLocalizationDraft({ texts: r.texts }), approval: { kind: 'gm', gmId: approval.gmId, translationHash: approval.translationHash } };
+  }
   const review = localizationRecord(r.review, ['verdict', 'findings', 'translationHash', 'model']);
   const decodedReview = decodeLocalizationReview({ verdict: review.verdict, findings: review.findings });
   if (typeof review.translationHash !== 'string' || !/^[0-9a-f]{64}$/.test(review.translationHash)
@@ -158,19 +175,29 @@ export function validateLocalizationDraft(request: LocalizationRequest, value: u
   return { texts: request.texts.map(entry => ({ id: entry.id, text: map.get(entry.id)! })) };
 }
 
-export function acceptLocalization(request: LocalizationRequest, draft: LocalizationDraft, review: LocalizationReview, model: string): ReviewedLocalization {
+export function acceptLocalization(request: LocalizationRequest, draft: LocalizationDraft, review: LocalizationReview, model: string): ModelReviewedLocalization {
   const valid = validateLocalizationDraft(request, draft);
   const checked = decodeLocalizationReview(review);
   if (checked.verdict !== 'accepted') throw new TypeError(`中文含义仍需核对：${checked.findings.join('；')}`);
   const requestHash = localizationHash(request);
   return decodeReviewedLocalization({ version: 1, language: 'zh-CN', policy: request.policy, terminology: TERMINOLOGY_VERSION, requestHash,
-    texts: valid.texts, review: { ...checked, translationHash: localizationHash({ requestHash, texts: valid.texts }), model } });
+    texts: valid.texts, review: { ...checked, translationHash: localizationHash({ requestHash, texts: valid.texts }), model } }) as ModelReviewedLocalization;
+}
+export function approveLocalizationByGm(request: LocalizationRequest, draft: LocalizationDraft, gmId: string): GmApprovedLocalization {
+  const valid = validateLocalizationDraft(request, draft);
+  const requestHash = localizationHash(request);
+  return decodeReviewedLocalization({ version: 2, language: 'zh-CN', policy: request.policy, terminology: TERMINOLOGY_VERSION,
+    requestHash, texts: valid.texts, approval: { kind: 'gm', gmId, translationHash: localizationHash({ requestHash, texts: valid.texts }) } }) as GmApprovedLocalization;
+}
+export function localizationTranslationHash(value: ReviewedLocalization): string {
+  return value.version === 1 ? value.review.translationHash : value.approval.translationHash;
 }
 export function assertReviewedLocalization(request: LocalizationRequest, value: unknown): ReviewedLocalization {
   const reviewed = decodeReviewedLocalization(value);
   const valid = validateLocalizationDraft(request, { texts: reviewed.texts });
-  if (reviewed.policy !== request.policy || reviewed.requestHash !== localizationHash(request) || reviewed.review.verdict !== 'accepted' || reviewed.review.findings.length
-    || reviewed.review.translationHash !== localizationHash({ requestHash: reviewed.requestHash, texts: valid.texts })) throw new TypeError('译文或来源已改变，必须重新审核。');
+  if (reviewed.policy !== request.policy || reviewed.requestHash !== localizationHash(request)
+    || (reviewed.version === 1 && (reviewed.review.verdict !== 'accepted' || reviewed.review.findings.length))
+    || localizationTranslationHash(reviewed) !== localizationHash({ requestHash: reviewed.requestHash, texts: valid.texts })) throw new TypeError('译文或来源已改变，必须重新审核。');
   return reviewed;
 }
 

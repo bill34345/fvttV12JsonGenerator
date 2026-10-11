@@ -108,8 +108,8 @@ export function invalidateForgeSessionConnectionTest(): void {
 /** Clear every persisted profile key while keeping the current page session in sync. */
 export function clearAllForgeSessionApiKeys(): ForgeClientSettings {
   const current = readForgeSessionSettings();
-  const cleared = clearAllApiKeys(forgeSessionStorage);
-  forgeSessionSettings = cloneSettings({ ...current, ...cleared, savedApiKeys: {} });
+  clearAllApiKeys(forgeSessionStorage);
+  forgeSessionSettings = cloneSettings({ ...current, apiKey: '', persistApiKey: false, savedApiKeys: {} });
   forgeSessionTestedIdentity = undefined;
   notifyForgeSessionListeners();
   return cloneSettings(forgeSessionSettings);
@@ -233,10 +233,10 @@ function forgeConnectionIdentity(value: ForgeClientSettings): string {
     region: value.region,
     reasoning: value.reasoning,
     structuredOutput: value.structuredOutput,
-    useSeparateReviewModel: value.useSeparateReviewModel,
+    useSeparateReviewModel: false,
     endpoint: normalizeBaseUrlIdentity(value.endpoint),
     model: value.model,
-    reviewModel: value.reviewModel,
+    reviewModel: value.model,
     apiKey: value.apiKey,
   });
 }
@@ -276,10 +276,12 @@ export function normalizeSettings(value: unknown): ForgeClientSettings {
     region: typeof record.region === 'string' ? record.region.trim() : DEFAULT_CLIENT_SETTINGS.region,
     reasoning: isReasoning(record.reasoning) ? record.reasoning : DEFAULT_CLIENT_SETTINGS.reasoning,
     structuredOutput: isStructuredOutput(record.structuredOutput) ? record.structuredOutput : DEFAULT_CLIENT_SETTINGS.structuredOutput,
-    useSeparateReviewModel: record.useSeparateReviewModel === true,
+    // Older browser settings may contain a separate reviewer. Forge now uses
+    // the selected generation model for every review stage.
+    useSeparateReviewModel: false,
     endpoint,
     model: typeof record.model === 'string' ? record.model.trim() : DEFAULT_CLIENT_SETTINGS.model,
-    reviewModel: typeof record.reviewModel === 'string' ? record.reviewModel.trim() : DEFAULT_CLIENT_SETTINGS.reviewModel,
+    reviewModel: typeof record.model === 'string' ? record.model.trim() : DEFAULT_CLIENT_SETTINGS.model,
     apiKey: record.persistApiKey === true && typeof record.apiKey === 'string'
       ? record.apiKey
       : persistedKey ?? DEFAULT_CLIENT_SETTINGS.apiKey,

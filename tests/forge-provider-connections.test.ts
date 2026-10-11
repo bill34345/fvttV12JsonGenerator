@@ -7,6 +7,10 @@ import {
   testForgeProviderConnection,
 } from '../packages/forge-browser-runtime/src/providerConnections';
 import { requestIntakeProvider } from '../packages/intake-ai/src/transport';
+import { createBrowserAiProvider } from '../packages/forge-browser-runtime/src/ai';
+import { createBrowserItemAiProvider } from '../packages/forge-browser-runtime/src/itemIntake';
+import { createEncounterIntakeProviders } from '../packages/forge-browser-runtime/src/encounterIntake';
+import { localizationRequest, localizationText } from '@fvtt-json-generator/contracts/localization';
 import type { HttpResponse } from '../packages/intake-ai/src/http';
 
 function response(status: number, body: unknown): HttpResponse {
@@ -39,6 +43,110 @@ describe('Forge provider-first connections', () => {
     expect(JSON.stringify({ ...connection, apiKey: undefined })).not.toContain('secret-key');
     expect(() => normalizeForgeProviderConnection({ providerId: 'custom', baseUrl: 'https://custom.example/v1', model: 'custom-model', reasoning: 'high' })).toThrow(/reasoning/u);
     expect(resolveForgeProviderCapabilities('deepseek', 'openai-responses', 'deepseek-v4-flash').reasoning).toEqual(['auto', 'low', 'high', 'max']);
+  });
+
+  test('probes only the selected model when legacy separate-review fields are supplied', async () => {
+    const connection = normalizeForgeProviderConnection({
+      providerId: 'custom', baseUrl: 'https://provider.example/v1', protocol: 'openai-chat',
+      model: 'generator', reviewModel: 'old-reviewer', useSeparateReviewModel: true, apiKey: 'test-key',
+    });
+    expect(connection).toMatchObject({ model: 'generator', reviewModel: 'generator', useSeparateReviewModel: false });
+    const requestedModels: string[] = [];
+    const result = await testForgeProviderConnection(connection, {
+      loadModels: false,
+      httpClient: async (_url, init) => {
+        requestedModels.push(JSON.parse(init.body).model);
+        return response(200, { choices: [{ message: { content: '{"ok":true}' } }] });
+      },
+    });
+    expect(result.status).toBe('connected');
+    expect(requestedModels).toEqual(['generator']);
+  });
+
+  test('Forge sends one real review request to the generation model and keeps a negative verdict', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ model: string; prompt: string }> = [];
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      requests.push({ model: body.model, prompt: body.messages[0].content });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+        schemaVersion: 1, verdict: 'needs_review', findings: [{
+          id: 'missing-limit', code: 'SOURCE_LIMIT_MISSING', path: '/creature/actions/0',
+          message: 'The source limit was omitted.', blocking: true,
+        }],
+      }) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    try {
+      const provider = createBrowserAiProvider({
+        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
+        reviewModel: 'old-reviewer', protocol: 'openai-chat',
+      });
+      const review = await provider.review({ source: 'Source limit', ir: {}, markdown: '', actorProjection: {}, deterministicFindings: [] } as any);
+      expect(provider.reviewModel).toBe('generator');
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ model: 'generator' });
+      expect(requests[0]!.prompt).toContain('Forge self-check with the selected generation model');
+      expect(review.verdict).toBe('needs_review');
+      expect(review.findings).toHaveLength(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('Forge Item review also uses its generation model and preserves a negative verdict', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ model: string; prompt: string }> = [];
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      requests.push({ model: body.model, prompt: body.messages[0].content });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+        schemaVersion: 1, verdict: 'needs_review', findings: [{
+          id: 'wrong-uses', code: 'SOURCE_USES_MISMATCH', path: '/item/uses',
+          message: 'The source gives no charges.', blocking: true, origin: 'semantic',
+        }],
+      }) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    try {
+      const provider = createBrowserItemAiProvider({
+        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
+        reviewModel: 'old-reviewer', protocol: 'openai-chat',
+      });
+      const review = await provider.review({ source: 'No charges', candidate: {}, ir: {}, markdown: '', itemProjection: {}, deterministicFindings: [] } as any);
+      expect(provider.reviewModel).toBe('generator');
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ model: 'generator' });
+      expect(requests[0]!.prompt).toContain('Forge self-check with the selected generation model');
+      expect(review.verdict).toBe('needs_review');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('Forge Chinese self-check uses its generation model with one review request', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ model: string; prompt: string }> = [];
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      requests.push({ model: body.model, prompt: body.messages[0].content });
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"verdict":"accepted","findings":[]}' } }] }),
+        { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    try {
+      const { provider, translationService } = createEncounterIntakeProviders({
+        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
+        reviewModel: 'old-reviewer', protocol: 'openai-chat',
+      });
+      expect(provider.reviewModel).toBe('generator');
+      expect(translationService.reviewModel).toBe('generator');
+      const request = localizationRequest('source', [localizationText('title', 'Goblin')]);
+      const review = await translationService.review(request, { texts: [{ id: request.texts[0]!.id, text: '地精' }] });
+      expect(review).toEqual({ verdict: 'accepted', findings: [] });
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ model: 'generator' });
+      expect(requests[0]!.prompt).toMatch(/^Briefly self-check/u);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test('builds normalized OpenAI Chat, Responses, and Anthropic Messages envelopes', async () => {
@@ -147,6 +255,37 @@ describe('Forge provider-first connections', () => {
       httpClient: async () => { throw new Error('CORS blocked'); },
     });
     expect(transport.status).toBe('browser_transport');
+  });
+
+  test('classifies probe HTTP failures without guessing the cause or exposing raw errors', async () => {
+    const cases = [
+      { http: 400, status: 'request_rejected', message: /模型 ID 或探测请求参数.*HTTP 400/u },
+      { http: 404, status: 'request_rejected', message: /模型或请求端点.*HTTP 404/u },
+      { http: 405, status: 'protocol', message: /协议或 endpoint/u },
+      { http: 422, status: 'request_rejected', message: /模型 ID 或探测请求参数.*HTTP 422/u },
+      { http: 500, status: 'provider_error', message: /服务端暂时出错/u },
+      { http: 503, status: 'provider_error', message: /服务端暂时出错/u },
+      { http: 401, status: 'authentication', message: /认证失败/u },
+      { http: 429, status: 'rate_limited', message: /限流/u },
+    ] as const;
+    for (const entry of cases) {
+      const requests: string[] = [];
+      const result = await testForgeProviderConnection({
+        providerId: 'custom', baseUrl: 'https://provider.example/v1', protocol: 'openai-chat',
+        model: 'selected-model', apiKey: 'secret-key',
+      }, {
+        loadModels: false,
+        httpClient: async (_url, init) => {
+          requests.push(JSON.parse(init.body).model);
+          return response(entry.http, { error: 'secret raw response and secret-key' });
+        },
+      });
+      expect(requests, `HTTP ${entry.http}`).toEqual(['selected-model']);
+      expect(result.status, `HTTP ${entry.http}`).toBe(entry.status);
+      expect(result.message, `HTTP ${entry.http}`).toMatch(entry.message);
+      expect(JSON.stringify(result)).not.toMatch(/secret raw response|secret-key/u);
+      if (entry.http === 400 || entry.http === 404) expect(result.message).not.toContain('模型不存在');
+    }
   });
 
   test('allows an explicitly selected Custom no-auth connection without inventing a key', async () => {

@@ -5,24 +5,24 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "1d3baef33697a719e70ef3761230419289e8e39fae57a9aff21f45991b80511f",
+    "fingerprint": "9d866223f24edc57a2410a38c288f6b5832d4dd75b059d02f38f7eb1d75aa390",
     "reviewedOn": "2026-10-10",
-    "note": "已对照阶段提交记录与R3/R4原件：原始CI缺历史输入的失败保留，静态门禁和补齐只读输入后的完整测试/后续门禁共同闭合。支持矩阵只新增本地topic提交边界，CLI/Intake入口、目标、来源推广、验收范围保持；未合并master、推送或发布。"
+    "note": "已核CLI与Markdown正式入口；共享翻译契约新增明确GM批准v2，只由显式调用传入，原CLI输入/默认审核/版本选择/输出和来源验证步骤未改。旧模型v1继续兼容，入口说明仍准确。"
   },
   "monster-intake": {
-    "fingerprint": "a2c942f672988d2b36940ad547a04085975070278ac64c15f1667203db75b71f",
+    "fingerprint": "2ab5476c0907ea2856e17a47503eab0e7b6f9129f64aaba2f2eca54a8b02de0a",
     "reviewedOn": "2026-10-10",
-    "note": "人工对照三类CLI命令、来源与promotion限制及localization服务调用方：本轮仅显示文本翻译/repair提示变化，这三类入口未调用本次服务；参数、版本、来源核对和推广边界保持。"
+    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
   },
   "item-intake": {
-    "fingerprint": "972942ca0e4a49be00201fcb9a9a9d1b5b314203db6a1c597e7cafe7bc9ea21e",
+    "fingerprint": "6b5c07030f31236ccfc0496e3ea30ab7573faae273e44ab0df0c85c44fcc00f5",
     "reviewedOn": "2026-10-10",
-    "note": "人工对照三类CLI命令、来源与promotion限制及localization服务调用方：本轮仅显示文本翻译/repair提示变化，这三类入口未调用本次服务；参数、版本、来源核对和推广边界保持。"
+    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
   },
   "species-intake": {
-    "fingerprint": "a45b60c71ad7d1d4b326067fda1872f876d4e0705ac3c25175c804fa71ed1b97",
+    "fingerprint": "4ea52a4259f31f649f307d8efb08317cf8c16238c65c72ba08ca1524d09d7e36",
     "reviewedOn": "2026-10-10",
-    "note": "人工对照三类CLI命令、来源与promotion限制及localization服务调用方：本轮仅显示文本翻译/repair提示变化，这三类入口未调用本次服务；参数、版本、来源核对和推广边界保持。"
+    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -50,9 +50,9 @@
     "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
   },
   "json-translation": {
-    "fingerprint": "b0c2da35ed6e9c0d6f0c42347c16c60c64f19503b02664ee22f097b2580b4787",
-    "reviewedOn": "2026-10-08",
-    "note": "本次Forge中文投影的空格名称不改变旧原位JSON翻译入口；仍不能用旧翻译队列修补正式Actor，目录写入限制保持。"
+    "fingerprint": "2d82afeb8c7491c426baa3bed986d9a645916f6397b1e6def36dad0edc613931",
+    "reviewedOn": "2026-10-10",
+    "note": "已对照实际UI及默认零review控制流：Actor/Item/战斗包/中文/续跑与批量均不自动审核，按钮才额外收费；本地有效候选可GM确认，中文草稿需真实GM批准并formal prepare，旧v1与GM v2区分。同步成本说明/语言标签/恢复和旧翻译入口边界，CLI默认保持。"
   },
   "foundry-ops": {
     "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "60b9c844448cc518757d5bc899793844502d86e04a857ba2b92b1ede57ae054d",
-    "reviewedOn": "2026-10-10",
-    "note": "已补test:reviewed-localization现有hermetic包装入口并核23项回归。词写数量提示不改literal/HTML保护；逐field失败保留原稿，局部anti-overfit显式4文件。类型/411模块/依赖/构建与真实语义分开，原A-D证据复用。"
+    "fingerprint": "7180427b02bcf053650e2a8bec35231f163751f940104de1ee3882b0c56acc4d",
+    "reviewedOn": "2026-10-11",
+    "note": "2026-10-11 r3逐项复核：Actor/Item可选显示名空白回退来源名，二者均空仍拒绝，正式CLI/verifier/目标门禁不变；同包中文续翻保留已展开报告并实时更新、旧下载链接起步撤销，换源和清除仍撤旧视图。恢复与无Key GM批准说明已由r2实机及正式包独立核验，持续展开新增真实HBS回归；不把下载文件未知写作PASS。"
   },
   "human-encounter-intake": {
-    "fingerprint": "d466e1089f77baa97790640a5852d1d48d75f9236f127f9f9a5114d75aff4b40",
-    "reviewedOn": "2026-10-10",
-    "note": "人工对照战斗包README、恢复/中文步骤与最新实现：仅修显示轮次和namespace说明翻译、撤旧失败标题词表；续翻译仍只修失败字段，复用同源已批准Actor译文并完整独立审核，数值/身份/GM限制保持。已有步骤准确，无需改写说明，不将待实测提升为PASS。"
+    "fingerprint": "4ad3872b1c1d7838a24217fac8c7eb9ba8d7f073a8912fdfa0a433259f38e01f",
+    "reviewedOn": "2026-10-11",
+    "note": "2026-10-11 r3逐项复核：Actor/Item可选显示名空白回退来源名，二者均空仍拒绝，正式CLI/verifier/目标门禁不变；同包中文续翻保留已展开报告并实时更新、旧下载链接起步撤销，换源和清除仍撤旧视图。恢复与无Key GM批准说明已由r2实机及正式包独立核验，持续展开新增真实HBS回归；不把下载文件未知写作PASS。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "dc3db729cc2b678023caa32b4d894d942f94f0009f82b00ca553846bf0dee9b1",
-    "reviewedOn": "2026-10-10",
-    "note": "人工对照战斗包恢复、可见/下载报告与README：中文正式准备成功后报告立即同步zh-CN及当前包hash，查看/下载/保存/刷新一致；失败保留原语言，上传包无Intake不补造。仅修报告同步，无新增入口或设置步骤，现有恢复/审核/凭据限制说明仍准确。R6真实行为与报告层定向回归分别记录。"
+    "fingerprint": "84e87b04e7020ba989b09b73e6770ace8708e3b2b5a71f749feac850a36c2f6a",
+    "reviewedOn": "2026-10-11",
+    "note": "2026-10-11 r4人工核对共享凭据边界：清/替换当前Key保留同源同目标本地有效候选的GM创建，撤连接测试与旧付费审核权限，改回Key不复活；清全部Key保留当前非敏感临时连接配置且不倒写存储。非凭据/source/hash/GM门禁保留，Provider晚回取消与本地提交防重复有真实HBS回归。其余handbook条目watch未变，复用已有核对。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

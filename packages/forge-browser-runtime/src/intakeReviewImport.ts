@@ -10,6 +10,8 @@ import {
   FORGE_INTAKE_REVIEW_BUNDLE_SCHEMA,
   FORGE_INTAKE_REVIEW_BUNDLE_VERSION,
   buildForgeIntakeReviewBundle,
+  forgeGmTargetHash,
+  forgeGmModelFindingsHash,
   serializeForgeIntakeReviewBundle,
   type ForgeIntakeCandidateProjection,
   type ForgeIntakeEvidenceProjection,
@@ -20,6 +22,8 @@ import {
   type ForgeIntakeReviewBundleInput,
   type ForgeIntakeReviewBundleV1,
   type ForgeIntakeReviewStatus,
+  type ForgeIntakeGmApproval,
+  type ForgeModelReviewStatus,
   type SafeJsonValue,
 } from './intakeReview';
 
@@ -51,6 +55,7 @@ const STATUSES = [
   'analyzing',
   'ready_to_generate',
   'generating_and_reviewing',
+  'ready_for_gm_review',
   'repairing',
   'regenerating',
   'accepted',
@@ -60,6 +65,7 @@ const STATUSES = [
   'committing_and_reading_back',
 ] as const;
 const REVIEW_VERDICTS = ['accepted', 'revise', 'needs_review'] as const;
+const MODEL_REVIEW_STATUSES = ['not_requested', 'accepted', 'needs_review', 'failed'] as const;
 const RESPONSE_STATUSES = ['accepted', 'needs_review', 'failed'] as const;
 const HISTORY_ACTIONS = ['reject', 'repair', 'regenerate'] as const;
 
@@ -75,6 +81,9 @@ export interface ForgeIntakeReviewRecoveryLineage {
 
 export interface ForgeIntakeReviewBundleV2 extends Omit<ForgeIntakeReviewBundleV1, 'version'> {
   version: typeof FORGE_INTAKE_REVIEW_BUNDLE_VERSION_V2;
+  modelReviewStatus?: ForgeModelReviewStatus;
+  candidateHash?: Sha256;
+  gmApproval?: ForgeIntakeGmApproval;
   sourceLabel?: string;
   recoveredFrom?: ForgeIntakeReviewRecoveryLineage;
 }
@@ -103,6 +112,9 @@ export function buildForgeIntakeReviewBundleV2(
   return structuredClone({
     ...v1,
     version: FORGE_INTAKE_REVIEW_BUNDLE_VERSION_V2,
+    ...(input.modelReviewStatus ? { modelReviewStatus: requireEnum(input.modelReviewStatus, MODEL_REVIEW_STATUSES, 'modelReviewStatus') } : {}),
+    ...(input.candidateHash ? { candidateHash: requireSha256(input.candidateHash, 'candidateHash') } : {}),
+    ...(input.gmApproval ? { gmApproval: checkedGmApproval(input.gmApproval) } : {}),
     ...(sourceLabel !== undefined ? { sourceLabel } : {}),
     ...(recoveredFrom !== undefined ? { recoveredFrom } : {}),
   });
@@ -167,7 +179,7 @@ function decodeBundle(root: Record<string, unknown>, version: 1 | 2): ForgeIntak
     'schema', 'version', 'objectKind', 'mode', 'requestId', 'attemptId', 'status', 'rawSource', 'rawSourceHash',
     'candidate', 'evidence', 'deterministicFindings', 'aiReviewFindings', 'reviewVerdict', 'provider', 'calls',
     'repairCount', 'canonicalSource', 'sourceIdentity', 'target', 'candidateResponse', 'history',
-    ...(version === 2 ? ['sourceLabel', 'recoveredFrom'] : []),
+    ...(version === 2 ? ['sourceLabel', 'recoveredFrom', 'modelReviewStatus', 'candidateHash', 'gmApproval'] : []),
   ], '$');
   const objectKind = requireEnum(root.objectKind, OBJECT_KINDS, '$.objectKind');
   const mode = requireEnum(root.mode, MODES, '$.mode');
@@ -190,6 +202,10 @@ function decodeBundle(root: Record<string, unknown>, version: 1 | 2): ForgeIntak
   if (root.candidate !== undefined) input.candidate = decodeCandidate(root.candidate, '$.candidate', rawSource);
   if (root.evidence !== undefined) input.evidence = decodeEvidence(root.evidence, '$.evidence', rawSource);
   if (root.reviewVerdict !== undefined) input.reviewVerdict = requireEnum(root.reviewVerdict, REVIEW_VERDICTS, '$.reviewVerdict');
+  if (version === 2 && root.modelReviewStatus !== undefined)
+    input.modelReviewStatus = requireEnum(root.modelReviewStatus, MODEL_REVIEW_STATUSES, '$.modelReviewStatus');
+  if (version === 2 && root.candidateHash !== undefined) input.candidateHash = requireSha256(root.candidateHash, '$.candidateHash');
+  if (version === 2 && root.gmApproval !== undefined) input.gmApproval = checkedGmApproval(root.gmApproval);
   if (root.provider !== undefined) input.provider = decodeProvider(root.provider, '$.provider');
   if (root.canonicalSource !== undefined) input.canonicalSource = requireString(root.canonicalSource, '$.canonicalSource', MAX_TEXT_LENGTH);
   if (root.sourceIdentity !== undefined) input.sourceIdentity = decodeSourceIdentity(root.sourceIdentity, '$.sourceIdentity', objectKind);
@@ -218,6 +234,9 @@ function decodeBundle(root: Record<string, unknown>, version: 1 | 2): ForgeIntak
   return {
     ...v1,
     version: FORGE_INTAKE_REVIEW_BUNDLE_VERSION_V2,
+    ...(input.modelReviewStatus ? { modelReviewStatus: input.modelReviewStatus } : {}),
+    ...(input.candidateHash ? { candidateHash: input.candidateHash } : {}),
+    ...(input.gmApproval ? { gmApproval: input.gmApproval } : {}),
     ...(root.sourceLabel !== undefined
       ? { sourceLabel: requireString(root.sourceLabel, '$.sourceLabel', MAX_LABEL_LENGTH, true) }
       : {}),
@@ -435,15 +454,39 @@ function decodeRecoveryLineage(value: unknown, path: string): ForgeIntakeReviewR
 }
 
 function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): void {
+  if (input.status === 'ready_for_gm_review') {
+    if (!input.candidateHash || !input.modelReviewStatus || !input.canonicalSource || !input.sourceIdentity || !input.target
+      || input.gmApproval || (input.modelReviewStatus === 'not_requested' && (input.calls?.review ?? 0) !== 0)) {
+      throw new TypeError('Forge Intake GM候选需要真实未批准的来源、产物与模型审核状态。');
+    }
+  }
+  if (input.gmApproval && input.status !== 'accepted' && input.status !== 'committing_and_reading_back')
+    throw new TypeError('GM确认只允许绑定当前 accepted 候选。');
   const accepted = input.status === 'accepted' || input.status === 'committing_and_reading_back';
   if (!accepted) return;
   if (!input.canonicalSource || !input.sourceIdentity || !input.target) {
     throw new TypeError('Forge Intake accepted history requires canonical source identity and target metadata.');
   }
-  if (input.mode !== 'plaintext-actor' && input.reviewVerdict !== 'accepted') {
-    throw new TypeError('Forge Intake accepted AI history requires an accepted review verdict.');
+  if (input.mode !== 'plaintext-actor' && !input.gmApproval && (input.modelReviewStatus || input.reviewVerdict !== 'accepted')) {
+    throw new TypeError('Forge Intake accepted AI history requires current GM approval or a legacy accepted review verdict.');
   }
-  if ([...(input.deterministicFindings ?? []), ...(input.aiReviewFindings ?? [])].some((finding) => finding.blocking)) {
+  if (input.gmApproval && (input.gmApproval.sourceHash !== input.rawSourceHash
+    || input.gmApproval.finalSourceHash !== input.sourceIdentity?.finalSourceHash
+    || input.gmApproval.artifactHash !== input.candidateResponse?.artifactHash
+    || input.gmApproval.candidateHash !== input.candidateHash
+    || input.gmApproval.modelReviewStatus !== input.modelReviewStatus
+    || input.gmApproval.targetHash !== forgeGmTargetHash(input.target!)
+    || input.gmApproval.modelFindingsHash !== forgeGmModelFindingsHash(input.aiReviewFindings ?? []))) {
+    throw new TypeError('GM确认与当前来源、候选或正式产物不一致。');
+  }
+  if (input.modelReviewStatus === 'not_requested' && ((input.calls?.review ?? 0) !== 0 || input.reviewVerdict || input.aiReviewFindings?.length)) {
+    throw new TypeError('未请求模型审核的候选不能声明模型审核结果。');
+  }
+  if (input.modelReviewStatus === 'accepted' && input.reviewVerdict !== 'accepted') {
+    throw new TypeError('模型审核状态与实际结果不一致。');
+  }
+  if ((input.deterministicFindings ?? []).some((finding) => finding.blocking)
+    || (!input.gmApproval && (input.aiReviewFindings ?? []).some((finding) => finding.blocking))) {
     throw new TypeError('Forge Intake accepted history must not contain a blocking finding.');
   }
   if (input.evidence?.uncertainties.some((uncertainty) => uncertainty.blocking)) {
@@ -452,6 +495,22 @@ function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): v
   if (input.candidateResponse?.diagnostics.some((diagnostic) => diagnostic.severity === 'warning' || diagnostic.severity === 'error')) {
     throw new TypeError('Forge Intake accepted history must not contain warning or error diagnostics.');
   }
+}
+
+function checkedGmApproval(value: unknown): ForgeIntakeGmApproval {
+  const record = requireRecord(value, '$.gmApproval');
+  assertExactKeys(record, ['gmId', 'sourceHash', 'finalSourceHash', 'artifactHash', 'targetHash',
+    'candidateHash', 'modelReviewStatus', 'modelFindingsHash'], '$.gmApproval');
+  return {
+    gmId: requireString(record.gmId, '$.gmApproval.gmId', 128, true),
+    sourceHash: requireSha256(record.sourceHash, '$.gmApproval.sourceHash'),
+    finalSourceHash: requireSha256(record.finalSourceHash, '$.gmApproval.finalSourceHash'),
+    artifactHash: requireSha256(record.artifactHash, '$.gmApproval.artifactHash'),
+    targetHash: requireSha256(record.targetHash, '$.gmApproval.targetHash'),
+    candidateHash: requireSha256(record.candidateHash, '$.gmApproval.candidateHash'),
+    modelReviewStatus: requireEnum(record.modelReviewStatus, MODEL_REVIEW_STATUSES, '$.gmApproval.modelReviewStatus'),
+    modelFindingsHash: requireSha256(record.modelFindingsHash, '$.gmApproval.modelFindingsHash'),
+  };
 }
 
 function decodeSafeJson(value: unknown, path: string, depth = 0): SafeJsonValue {

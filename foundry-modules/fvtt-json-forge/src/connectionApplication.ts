@@ -133,7 +133,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
 
     private bindInputEvents(root: HTMLElement): void {
       const provider = root.querySelector('[name="provider"]') as HTMLSelectElement | null;
-      const fields = ['provider', 'model', 'reviewModel', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'useSeparateReviewModel'];
+      const fields = ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput'];
       for (const name of fields) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
         if (!input) continue;
@@ -336,10 +336,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const settings = this.settings;
       setValue(root, 'provider', settings.providerId);
       setValue(root, 'model', settings.model);
-      setValue(root, 'reviewModel', settings.reviewModel);
       setValue(root, 'apiKey', settings.apiKey);
       setChecked(root, 'persistApiKey', settings.persistApiKey);
-      setChecked(root, 'useSeparateReviewModel', settings.useSeparateReviewModel);
       setValue(root, 'endpoint', settings.endpoint);
       setValue(root, 'protocol', settings.protocol);
       setValue(root, 'authScheme', settings.authScheme);
@@ -373,9 +371,6 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         endpoint.value = preset.regions?.[0]?.baseUrl ?? preset.defaultBaseUrl;
       }
       if (endpointToggle) endpointToggle.textContent = endpoint?.readOnly ? '自定义 endpoint' : '使用官方 endpoint';
-      const review = root.querySelector('[data-review-model-field]') as HTMLElement | null;
-      const separate = root.querySelector('[name="useSeparateReviewModel"]') as HTMLInputElement | null;
-      if (review) review.hidden = separate?.checked !== true;
       const docs = root.querySelector('[data-provider-docs]') as HTMLAnchorElement | null;
       if (docs) docs.href = preset.docsUrl ?? '#';
       const summary = root.querySelector('[data-connection-summary]') as HTMLElement | null;
@@ -403,7 +398,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       }
       if (save) save.disabled = this.testing;
       if (test) test.disabled = this.testing;
-      for (const name of ['provider', 'model', 'reviewModel', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'useSeparateReviewModel', 'persistApiKey']) {
+      for (const name of ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'persistApiKey']) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
         if (input) input.disabled = this.testing;
       }
@@ -440,9 +435,9 @@ function readConnectionForm(root: HTMLElement): ForgeClientSettings {
     region: inputValue(root, 'region'),
     reasoning: (inputValue(root, 'reasoning') || 'auto') as ForgeProviderReasoning,
     structuredOutput: (inputValue(root, 'structuredOutput') || 'prompt_fallback') as ForgeStructuredOutputMode,
-    useSeparateReviewModel: checkedValue(root, 'useSeparateReviewModel'),
+    useSeparateReviewModel: false,
     model: inputValue(root, 'model'),
-    reviewModel: inputValue(root, 'reviewModel'),
+    reviewModel: inputValue(root, 'model'),
     apiKey: inputValue(root, 'apiKey'),
     persistApiKey: checkedValue(root, 'persistApiKey'),
   };

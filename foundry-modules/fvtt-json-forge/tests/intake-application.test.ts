@@ -10,6 +10,8 @@ import { hashArtifact, hashSource, type ForgeActorResponse, type ForgeItemRespon
 import {
   buildForgeIntakeReviewBundle,
   createForgeIntakeSnapshot,
+  forgeGmTargetHash,
+  forgeGmModelFindingsHash,
   serializeForgeIntakeReviewBundle,
 } from '@fvtt-json-generator/forge-browser-runtime/intake-review';
 import {
@@ -37,6 +39,7 @@ import {
   type ForgeIntakeApplicationServices,
 } from '../src/intakeApplication';
 import { claimForgeAiJob, releaseForgeAiJob } from '../src/aiJobGate';
+import { clearAllForgeSessionApiKeys, markForgeSessionConnectionTested, readForgeSessionSettings, saveForgeSessionSettings } from '../src/settings';
 
 const ACTOR_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
 const ITEM_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md', 'utf8');
@@ -151,6 +154,10 @@ describe('Forge Intake Application review workspace', () => {
     listener();
     expect((application as any).status).toBe('accepted');
     expect((application as any).response).toBe(acceptedActor);
+    session.apiKey = '';
+    listener();
+    expect((application as any).status).toBe('accepted');
+    expect((application as any).response).toBe(acceptedActor);
     session.model = 'changed-model';
     listener();
     expect((application as any).status).toBe('needs_review');
@@ -159,9 +166,23 @@ describe('Forge Intake Application review workspace', () => {
     expect(unsubscribed).toBe(1);
   });
 
+  test('a connection probe notification leaves unsaved legacy connection fields alone', async () => {
+    const session = forgeSessionSettingsFixture();
+    let listener!: () => void;
+    const { application, root } = makeApplication({
+      readForgeSessionSettings: () => session,
+      subscribeForgeSessionSettings: (callback: () => void) => { listener = callback; return () => undefined; },
+    });
+    root.model.value = 'unsaved-model-draft';
+    listener();
+    expect(root.model.value).toBe('unsaved-model-draft');
+    await application.close();
+  });
+
   test('an open encounter reads the current shared connection even when the hidden Intake form is stale', async () => {
     const session = forgeSessionSettingsFixture();
-    const { application, root } = makeApplication({ readForgeSessionSettings: () => session }, undefined, undefined, undefined, undefined, {
+    const { application, root } = makeApplication({ readForgeSessionSettings: () => session,
+      isForgeSessionConnectionReady: () => true }, undefined, undefined, undefined, undefined, {
       directoryKind: 'Actor', initialMode: 'ai-monster', legacyConnectionFields: false,
     });
     session.model = 'current-extraction-model';
@@ -174,6 +195,22 @@ describe('Forge Intake Application review workspace', () => {
     expect(root.apiKey.value).toBe('');
     (root as any).isConnected = false;
     expect(() => (application as any).encounterAiProviderOptions(new AbortController())).toThrow('请重新打开 Forge 工作台');
+    await application.close();
+  });
+
+  test('an encounter refuses an untested or changed model before creating an AI provider', async () => {
+    const session = forgeSessionSettingsFixture();
+    let ready = false;
+    const { application } = makeApplication({ readForgeSessionSettings: () => session,
+      isForgeSessionConnectionReady: () => ready }, undefined, undefined, undefined, undefined, {
+      directoryKind: 'Actor', initialMode: 'ai-monster', legacyConnectionFields: false,
+    });
+    expect(() => (application as any).encounterAiProviderOptions(new AbortController())).toThrow('尚未测试或已失效');
+    ready = true;
+    expect((application as any).encounterAiProviderOptions(new AbortController()).model).toBe(session.model);
+    ready = false;
+    session.model = 'changed-model';
+    expect(() => (application as any).encounterAiProviderOptions(new AbortController())).toThrow('尚未测试或已失效');
     await application.close();
   });
 
@@ -285,7 +322,7 @@ describe('Forge Intake Application review workspace', () => {
   test('keeps accepted proof while returning to edit, then invalidates creation until reanalysis', async () => {
     const analyzedSources: string[] = [];
     let creates = 0;
-    const { application, root } = makeApplication({
+    const { application, root, notifications } = makeApplication({
       analyzePlaintextActorSource: ((source: string) => {
         analyzedSources.push(source);
         return {
@@ -418,7 +455,7 @@ describe('Forge Intake Application review workspace', () => {
       'data-step-indicator="input"', 'data-step-indicator="review"', 'data-step-indicator="created"',
       'data-workspace-hint', 'data-created-document',
     ]) expect(template).toContain(selector);
-    for (const action of ['analyze', 'edit-source', 'resume-review', 'generate', 'create', 'regenerate', 'open-created', 'clear', 'cancel']) {
+    for (const action of ['analyze', 'edit-source', 'resume-review', 'generate', 'model-review', 'create', 'regenerate', 'open-created', 'clear', 'cancel']) {
       expect(template).toContain(`data-action="${action}"`);
     }
   });
@@ -486,7 +523,7 @@ describe('Forge Intake Application review workspace', () => {
     const { application, root } = makeApplication({
       createBrowserItemAiProvider: (() => ({})) as any,
       analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
-      generateAndReviewBrowserItemIntake: (async () => ({
+      generateBrowserItemIntakeCandidate: (async () => ({
         status: 'accepted', analysis, rawSourceHash: hashSource(source), finalSource: ITEM_SOURCE,
         finalSourceHash: acceptedItemResult().sourceIdentity.sourceHash, response: acceptedItem,
         itemProjection: acceptedItemResult().artifact, formalStatus: 'accepted',
@@ -507,6 +544,241 @@ describe('Forge Intake Application review workspace', () => {
     expect(actorCreates).toBe(0);
   });
 
+  test('keeps Item model review opt-in and lets GM approve a locally valid candidate with visible AI findings', async () => {
+    const source = 'current AI Item source';
+    const analysis = readyItemAnalysis(source);
+    const calls = { generate: 0, review: 0, approve: 0, create: 0 };
+    const aiFinding = { id: 'ai-warning', code: 'AI_WARNING', path: '/', message: 'AI 建议人工检查', blocking: true, origin: 'ai-review' };
+    const { application, root } = makeApplication({
+      createBrowserItemAiProvider: (() => ({})) as any,
+      analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
+      generateBrowserItemIntakeCandidate: (async (input: any) => {
+        calls.generate += 1;
+        const request = buildForgeItemRequest({ content: ITEM_SOURCE, displayName: input.displayName || input.sourceName,
+          requestId: input.requestId, fvttVersion: input.fvttVersion, systemVersion: input.systemVersion });
+        const response = await convertFinalItemSource(request);
+        if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Item fixture failed.');
+        return { status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(source),
+          finalSource: request.source.content, finalSourceHash: request.source.utf8Sha256,
+          candidateResponse: response, candidateHash: hashSource(`candidate:${source}`),
+          itemProjection: response.result.artifact, formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+          deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+          calls: { ...analysis.calls, review: 0 } };
+      }) as any,
+      reviewBrowserItemIntakeCandidate: (async (_input: any, current: any) => {
+        calls.review += 1;
+        return { ...current, modelReviewStatus: 'needs_review',
+          review: { schemaVersion: 1, verdict: 'needs_review', findings: [aiFinding] },
+          modelReviewFindings: [aiFinding], modelReviewFindingsHash: forgeGmModelFindingsHash([aiFinding]),
+          findings: [aiFinding],
+          calls: { ...current.calls, review: 1 } };
+      }) as any,
+      approveBrowserItemIntakeCandidateForGm: ((input: any, current: any, gmId: string) => {
+        calls.approve += 1;
+        expect(input.source).toBe(source);
+        expect(gmId).toBe('test-user');
+        const result = current.candidateResponse.result;
+        return { ...current, status: 'accepted', response: current.candidateResponse,
+          gmApproval: { gmId, sourceHash: hashSource(input.source), finalSourceHash: current.finalSourceHash,
+            artifactHash: result.artifactHash, targetHash: forgeGmTargetHash(result.target),
+            candidateHash: current.candidateHash, modelReviewStatus: current.modelReviewStatus,
+            modelFindingsHash: forgeGmModelFindingsHash(current.modelReviewFindings ?? []) } };
+      }) as any,
+      createAcceptedForgeItem: (async () => { calls.create += 1; return itemCreateResult(); }) as any,
+    });
+    setAiForm(application, root, 'ai-item', source);
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    expect(calls).toEqual({ generate: 1, review: 0, approve: 0, create: 0 });
+    expect((application as any).status).toBe('ready_for_gm_review');
+    expect(root.modelReview.hidden).toBe(false);
+    expect(root.create.disabled).toBe(false);
+    expect(root.humanSummary.textContent).toContain('AI 尚未审核');
+    await (application as any).reviewCandidate(root);
+    expect(calls).toEqual({ generate: 1, review: 1, approve: 0, create: 0 });
+    expect(root.diagnosticList.innerHTML).toContain('AI_WARNING');
+    expect(root.create.textContent).toContain('仍有AI提示');
+    expect(root.create.disabled).toBe(false);
+    await (application as any).create(root);
+    expect(calls).toEqual({ generate: 1, review: 1, approve: 1, create: 1 });
+    const bundle = (application as any).buildBundle({ mode: 'ai-item', displayName: root.displayName.value,
+      protocol: root.protocol.value, region: root.region.value, reasoning: root.reasoning.value,
+      structuredOutput: root.structuredOutput.value });
+    const imported = decodeForgeIntakeReviewBundleText(JSON.stringify(bundle));
+    expect(imported.bundle.modelReviewStatus).toBe('needs_review');
+    expect(imported.bundle.aiReviewFindings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'AI_WARNING', blocking: true })]));
+    expect(imported.bundle.gmApproval?.modelFindingsHash).toBe(forgeGmModelFindingsHash(imported.bundle.aiReviewFindings));
+  });
+
+  test('creates a current Item candidate through GM approval without any model review or connection recheck', async () => {
+    const source = 'GM-only Item source';
+    const analysis = readyItemAnalysis(source);
+    let reviews = 0;
+    let approvals = 0;
+    let creates = 0;
+    const { application, root } = makeApplication({
+      createBrowserItemAiProvider: (() => ({})) as any,
+      analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
+      generateBrowserItemIntakeCandidate: (async () => ({
+        status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(source),
+        finalSource: ITEM_SOURCE, finalSourceHash: acceptedItemResult().sourceIdentity.sourceHash,
+        candidateResponse: acceptedItem, formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+        deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+        calls: { ...analysis.calls, review: 0 },
+      })) as any,
+      reviewBrowserItemIntakeCandidate: (async () => { reviews += 1; throw new Error('Unexpected paid review.'); }) as any,
+      approveBrowserItemIntakeCandidateForGm: ((_input: any, current: any) => {
+        approvals += 1;
+        return { ...current, status: 'accepted', response: acceptedItem, gmApproval: { gmId: 'test-user', modelReviewStatus: 'not_requested' } };
+      }) as any,
+      createAcceptedForgeItem: (async () => { creates += 1; return itemCreateResult(); }) as any,
+    });
+    setAiForm(application, root, 'ai-item', source);
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    root.apiKey.value = '';
+    (application as any).connectionProbe = undefined;
+    await (application as any).create(root);
+    expect({ reviews, approvals, creates }).toEqual({ reviews: 0, approvals: 1, creates: 1 });
+  });
+
+  test('shared session key clearing keeps Actor and Item local GM creation while revoking paid review', async () => {
+    for (const mode of ['ai-monster', 'ai-item'] as const) {
+      saveForgeSessionSettings({ ...forgeSessionSettingsFixture(), apiKey: 'session-key' });
+      markForgeSessionConnectionTested();
+      const source = `${mode} shared session source`;
+      const analysis = mode === 'ai-item' ? readyItemAnalysis(source) : readyActorAnalysis(source);
+      let reviews = 0;
+      let approvals = 0;
+      let creates = 0;
+      const candidate = {
+        status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(source),
+        finalSource: mode === 'ai-item' ? ITEM_SOURCE : ACTOR_SOURCE,
+        finalSourceHash: mode === 'ai-item' ? acceptedItemResult().sourceIdentity.sourceHash : (acceptedActor as any).result.sourceIdentity.sourceHash,
+        candidateResponse: mode === 'ai-item' ? acceptedItem : acceptedActor,
+        formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+        deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+        calls: { ...analysis.calls, review: 0 },
+      };
+      const { application, root } = makeApplication({
+        createBrowserAiProvider: (() => ({})) as any,
+        createBrowserItemAiProvider: (() => ({})) as any,
+        analyzeBrowserActorSourceWithAi: (async () => analysis) as any,
+        analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
+        generateBrowserActorIntakeCandidate: (async () => candidate) as any,
+        generateBrowserItemIntakeCandidate: (async () => candidate) as any,
+        reviewBrowserActorIntakeCandidate: (async () => { reviews += 1; throw new Error('Unexpected review.'); }) as any,
+        reviewBrowserItemIntakeCandidate: (async () => { reviews += 1; throw new Error('Unexpected review.'); }) as any,
+        approveBrowserActorIntakeCandidateForGm: ((_input: any, current: any) => { approvals += 1; return { ...current, status: 'accepted', response: acceptedActor }; }) as any,
+        approveBrowserItemIntakeCandidateForGm: ((_input: any, current: any) => { approvals += 1; return { ...current, status: 'accepted', response: acceptedItem }; }) as any,
+        createAcceptedForgeActor: (async () => { creates += 1; return actorCreateResult(); }) as any,
+        createAcceptedForgeItem: (async () => { creates += 1; return itemCreateResult(); }) as any,
+      }, undefined, undefined, undefined, undefined, { directoryKind: mode === 'ai-item' ? 'Item' : 'Actor', initialMode: mode, legacyConnectionFields: false });
+      root.source.value = source;
+      root.displayName.value = 'Review object';
+      await (application as any).analyze(root);
+      await (application as any).generate(root);
+      expect((application as any).status).toBe('ready_for_gm_review');
+      if (mode === 'ai-item') clearAllForgeSessionApiKeys();
+      else saveForgeSessionSettings({ apiKey: '', persistApiKey: false });
+      expect(readForgeSessionSettings().apiKey).toBe('');
+      expect((application as any).status).toBe('ready_for_gm_review');
+      expect(root.create.disabled).toBe(false);
+      expect(root.modelReview.disabled).toBe(true);
+      saveForgeSessionSettings({ apiKey: 'session-key' });
+      markForgeSessionConnectionTested();
+      await (application as any).reviewCandidate(root);
+      expect(reviews).toBe(0);
+      await (application as any).create(root);
+      expect({ approvals, creates }).toEqual({ approvals: 1, creates: 1 });
+      await application.close();
+    }
+  });
+
+  test('shared credential or model changes abort an in-flight Provider result before it can publish', async () => {
+    for (const change of ['credential', 'model'] as const) {
+      saveForgeSessionSettings({ ...forgeSessionSettingsFixture(), apiKey: 'session-key' });
+      markForgeSessionConnectionTested();
+      let finish!: (value: any) => void;
+      let requestSignal: AbortSignal | undefined;
+      const { application, root } = makeApplication({
+        createBrowserAiProvider: ((_options: any, signal: AbortSignal) => { requestSignal = signal; return {}; }) as any,
+        analyzeBrowserActorSourceWithAi: (async () => await new Promise(resolve => { finish = resolve; })) as any,
+      }, undefined, undefined, undefined, undefined, { directoryKind: 'Actor', initialMode: 'ai-monster', legacyConnectionFields: false });
+      root.source.value = `${change} pending source`;
+      root.displayName.value = 'Pending Actor';
+      const pending = (application as any).analyze(root);
+      expect(requestSignal?.aborted).toBe(false);
+      if (change === 'credential') saveForgeSessionSettings({ apiKey: '' });
+      else saveForgeSessionSettings({ model: 'changed-model' });
+      expect(requestSignal?.aborted).toBe(true);
+      finish(readyActorAnalysis(root.source.value));
+      await pending;
+      expect((application as any).analysis).toBeUndefined();
+      expect((application as any).status).toBe('needs_review');
+      expect(root.create.disabled).toBe(true);
+      await application.close();
+    }
+  });
+
+  test('keeps Actor generation and GM confirmation free of implicit model review', async () => {
+    const source = 'GM-only Actor source';
+    const analysis = readyActorAnalysis(source);
+    let reviews = 0;
+    let approvals = 0;
+    let creates = 0;
+    const { application, root } = makeApplication({
+      createBrowserAiProvider: (() => ({})) as any,
+      analyzeBrowserActorSourceWithAi: (async () => analysis) as any,
+      generateBrowserActorIntakeCandidate: (async () => ({
+        status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(source),
+        finalSource: ACTOR_SOURCE, finalSourceHash: ('result' in acceptedActor ? acceptedActor.result.sourceIdentity.sourceHash : hashSource(ACTOR_SOURCE)),
+        candidateResponse: acceptedActor, formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+        deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+        calls: { ...analysis.calls, review: 0 },
+      })) as any,
+      reviewBrowserActorIntakeCandidate: (async () => { reviews += 1; throw new Error('Unexpected paid Actor review.'); }) as any,
+      approveBrowserActorIntakeCandidateForGm: ((_input: any, current: any) => {
+        approvals += 1;
+        return { ...current, status: 'accepted', response: acceptedActor, gmApproval: { gmId: 'test-user', modelReviewStatus: 'not_requested' } };
+      }) as any,
+      createAcceptedForgeActor: (async () => { creates += 1; return actorCreateResult(); }) as any,
+    });
+    setAiForm(application, root, 'ai-monster', source);
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    expect((application as any).status).toBe('ready_for_gm_review');
+    expect(reviews).toBe(0);
+    await (application as any).create(root);
+    expect({ reviews, approvals, creates }).toEqual({ reviews: 0, approvals: 1, creates: 1 });
+  });
+
+  test('keeps a candidate pending when the final local GM hash check rejects it', async () => {
+    const source = 'stale hash Item source';
+    const analysis = readyItemAnalysis(source);
+    let creates = 0;
+    const { application, root, notifications } = makeApplication({
+      createBrowserItemAiProvider: (() => ({})) as any,
+      analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
+      generateBrowserItemIntakeCandidate: (async () => ({
+        status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(source),
+        finalSource: ITEM_SOURCE, finalSourceHash: acceptedItemResult().sourceIdentity.sourceHash,
+        candidateResponse: acceptedItem, formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+        deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+        calls: { ...analysis.calls, review: 0 },
+      })) as any,
+      approveBrowserItemIntakeCandidateForGm: (() => { throw new Error('候选哈希已变化'); }) as any,
+      createAcceptedForgeItem: (async () => { creates += 1; throw new Error('Rejected candidate reached world creation.'); }) as any,
+    });
+    setAiForm(application, root, 'ai-item', source);
+    await (application as any).analyze(root);
+    await (application as any).generate(root);
+    await (application as any).create(root);
+    expect((application as any).status).toBe('ready_for_gm_review');
+    expect(creates).toBe(0);
+    expect(notifications.errors.at(-1)).toContain('候选哈希已变化');
+  });
+
   test('never starts generation after GM authority or the exact runtime changes following analysis', async () => {
     for (const drift of ['gm', 'runtime'] as const) {
       let generations = 0;
@@ -515,7 +787,7 @@ describe('Forge Intake Application review workspace', () => {
       const { application, root, game } = makeApplication({
         createBrowserItemAiProvider: (() => ({})) as any,
         analyzeBrowserItemSourceWithAi: (async () => analysis) as any,
-        generateAndReviewBrowserItemIntake: (async () => { generations += 1; throw new Error('Stale authority reached generation.'); }) as any,
+        generateBrowserItemIntakeCandidate: (async () => { generations += 1; throw new Error('Stale authority reached generation.'); }) as any,
       });
       setAiForm(application, root, 'ai-item', source);
       await (application as any).analyze(root);
@@ -1413,6 +1685,59 @@ describe('Forge Intake Application review workspace', () => {
     expect(creates).toBe(0);
   });
 
+  test('batch retains a local Item candidate until one GM confirmation approves and creates it without model review', async () => {
+    const batchQueue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    let reviews = 0;
+    let approvals = 0;
+    let creates = 0;
+    const { application, root, notifications } = makeApplication({
+      createBrowserItemAiProvider: (() => ({})) as any,
+      analyzeBrowserItemSourceWithAi: (async (input: any) => readyItemAnalysis(input.source)) as any,
+      generateBrowserItemIntakeCandidate: (async (input: any, analysis: any) => {
+        const request = buildForgeItemRequest({ content: ITEM_SOURCE, displayName: input.displayName || input.sourceName,
+          requestId: input.requestId, fvttVersion: input.fvttVersion, systemVersion: input.systemVersion });
+        const response = await convertFinalItemSource(request);
+        if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Item fixture failed.');
+        return { status: 'ready_for_gm_review', analysis, rawSourceHash: hashSource(input.source),
+          finalSource: request.source.content, finalSourceHash: request.source.utf8Sha256,
+          candidateResponse: response, candidateHash: hashSource(`candidate:${input.source}`),
+          itemProjection: response.result.artifact, formalStatus: 'accepted', modelReviewStatus: 'not_requested',
+          deterministicFindings: [], findings: [], stages: [], provider: analysis.provider,
+          calls: { ...analysis.calls, review: 0 } };
+      }) as any,
+      reviewBrowserItemIntakeCandidate: (async () => { reviews += 1; throw new Error('Unexpected model review.'); }) as any,
+      approveBrowserItemIntakeCandidateForGm: ((input: any, current: any, gmId: string) => {
+        approvals += 1;
+        const result = current.candidateResponse.result;
+        return { ...current, status: 'accepted', response: current.candidateResponse,
+          gmApproval: { gmId, sourceHash: hashSource(input.source), finalSourceHash: current.finalSourceHash,
+            artifactHash: result.artifactHash, targetHash: forgeGmTargetHash(result.target),
+            candidateHash: current.candidateHash, modelReviewStatus: 'not_requested', modelFindingsHash: forgeGmModelFindingsHash([]) } };
+      }) as any,
+      createAcceptedForgeItem: (async ({ response }: any) => {
+        creates += 1;
+        const sourceId = response.result.sourceIdentity.sourceId;
+        return { ...itemCreateResult(), uuid: `Item.${hashArtifact({ sourceId }).slice(0, 16)}` };
+      }) as any,
+    }, undefined, undefined, async () => true, batchQueue);
+    await settleBatch(application, root);
+    root.provider.value = 'custom'; root.endpoint.value = 'https://provider.example/v1';
+    root.protocol.value = 'openai-chat'; root.authScheme.value = 'bearer'; root.model.value = 'extract';
+    root.reviewModel.value = 'review'; root.apiKey.value = 'transient';
+    authorizeAiConnection(application, root);
+    await batchQueue.importCollection(createForgeBatchCollection({ label: 'GM-only Item batch',
+      entries: [{ objectKind: 'item', mode: 'ai-item', sourceLabel: 'Item', rawSource: 'batch Item source' }] }));
+    await (application as any).refreshBatch(root, false);
+    await (application as any).runBatch(root);
+    expect((await batchQueue.load()).jobs[0]?.status).toBe('ready_for_gm_review');
+    expect({ reviews, approvals, creates }).toEqual({ reviews: 0, approvals: 0, creates: 0 });
+    expect(root.batchApply.disabled).toBe(false);
+    await (application as any).applyBatch(root);
+    expect({ reviews, approvals, creates }).toEqual({ reviews: 0, approvals: 1, creates: 1 });
+    expect((await batchQueue.load()).jobs[0]?.status).toBe('applied');
+    expect(notifications.errors).toEqual([]);
+  });
+
   test('excludes a cancelled job until GM explicitly restores it to pending', async () => {
     const analyzed: string[] = [];
     let creates = 0;
@@ -1510,7 +1835,7 @@ describe('Forge Intake Application review workspace', () => {
       })) as any,
       createBrowserItemAiProvider: (() => ({})) as any,
       analyzeBrowserItemSourceWithAi: (async (input: any) => readyItemAnalysis(input.source)) as any,
-      generateAndReviewBrowserItemIntake: (async (input: any, analysis: any) => {
+      generateBrowserItemIntakeCandidate: (async (input: any, analysis: any) => {
         const request = buildForgeItemRequest({
           content: ITEM_SOURCE, displayName: input.displayName || input.sourceName,
           requestId: input.requestId, fvttVersion: input.fvttVersion, systemVersion: input.systemVersion,
@@ -1716,7 +2041,7 @@ describe('Forge Intake Application review workspace', () => {
         gameRef.user.isGM = false;
         return readyItemAnalysis(input.source);
       }) as any,
-      generateAndReviewBrowserItemIntake: (async () => { generations += 1; throw new Error('Revoked GM reached generation.'); }) as any,
+      generateBrowserItemIntakeCandidate: (async () => { generations += 1; throw new Error('Revoked GM reached generation.'); }) as any,
     }, undefined, undefined, undefined, batchQueue);
     gameRef = game;
     await settleBatch(application, root);
@@ -1891,7 +2216,7 @@ class FakeRoot {
   reviewBundleFile = control('', 'file'); import = control(''); startNewAttempt = control('');
   sourceLibrarySearch = control(''); sourceLibraryFile = control('', 'file'); libraryRefresh = control(''); librarySave = control(''); libraryExport = control(''); libraryImport = control('');
   batchCollectionFile = control('', 'file'); batchRefresh = control(''); batchImport = control(''); batchExport = control(''); batchRun = control(''); batchStop = control(''); batchApply = control('');
-  analyze = control(''); repair = control(''); generate = control(''); regenerate = control(''); reject = control(''); cancel = control(''); clear = control(''); export = control(''); create = control(''); clearKey = control(''); clearAllKeys = control(''); toggleKey = control(''); toggleEndpoint = control('');
+  analyze = control(''); repair = control(''); generate = control(''); modelReview = control(''); regenerate = control(''); reject = control(''); cancel = control(''); clear = control(''); export = control(''); create = control(''); clearKey = control(''); clearAllKeys = control(''); toggleKey = control(''); toggleEndpoint = control('');
   editSource = control(''); resumeReview = control(''); openCreated = control('');
   status = control(''); humanSummary = control(''); stages = control(''); diagnostics = control(''); diagnosticList = control(''); previewSection = control(''); activityCard = control(''); candidate = control(''); evidence = control(''); metadata = control(''); canonical = control(''); rawSource = control(''); preview = control(''); json = control('');
   librarySummary = control(''); libraryList = control('');
@@ -1908,7 +2233,7 @@ class FakeRoot {
       '[name="reviewBundleFile"]': this.reviewBundleFile,
       '[name="sourceLibrarySearch"]': this.sourceLibrarySearch, '[name="sourceLibraryFile"]': this.sourceLibraryFile,
       '[name="batchCollectionFile"]': this.batchCollectionFile,
-      '[data-ai-settings]': this.aiSettings, '[data-action="analyze"]': this.analyze, '[data-action="repair"]': this.repair, '[data-action="generate"]': this.generate,
+      '[data-ai-settings]': this.aiSettings, '[data-action="analyze"]': this.analyze, '[data-action="repair"]': this.repair, '[data-action="generate"]': this.generate, '[data-action="model-review"]': this.modelReview,
       '[data-action="regenerate"]': this.regenerate, '[data-action="reject"]': this.reject, '[data-action="cancel"]': this.cancel, '[data-action="clear"]': this.clear,
       '[data-action="export"]': this.export, '[data-action="create"]': this.create, '[data-action="clear-key"]': this.clearKey,
       '[data-action="clear-all-keys"]': this.clearAllKeys,

@@ -1,7 +1,7 @@
 import {
-  assertReviewedLocalization, localizationHash, localizationRequest, localizationText,
+  assertReviewedLocalization, localizationHash, localizationRequest, localizationText, localizationTranslationHash, validateLocalizationDraft,
   LEGACY_LOCALIZATION_POLICY, LOCALIZATION_POLICY,
-  type LocalizationPolicy, type LocalizationRequest, type LocalizationText, type ReviewedLocalization,
+  type LocalizationPolicy, type LocalizationRequest, type LocalizationText, type ReviewedLocalization, type LocalizationDraft,
 } from '@fvtt-json-generator/contracts/localization';
 
 type Path = Array<string | number>;
@@ -103,11 +103,20 @@ export interface ActorLocalizationResult { actor: any; itemNames: LocalizedItemN
 export function projectReviewedActorLocalization(actor: any, sourceIdentity: string, input: ReviewedLocalization): ActorLocalizationResult {
   const request = createActorLocalizationRequest(actor, sourceIdentity, input.policy);
   const reviewed = assertReviewedLocalization(request, input);
-  const translated = new Map(reviewed.texts.map(entry => [entry.id, entry.text]));
+  return projectActorLocalizationDraft(actor, sourceIdentity, { texts: reviewed.texts }, reviewed.policy,
+    { requestHash: reviewed.requestHash, translationHash: localizationTranslationHash(reviewed) });
+}
+
+/** Validated display preview; no approval is conferred by this projection. */
+export function projectActorLocalizationDraft(actor: any, sourceIdentity: string, input: LocalizationDraft,
+  policy: LocalizationPolicy = LOCALIZATION_POLICY, binding?: { requestHash: string; translationHash: string }): ActorLocalizationResult {
+  const request = createActorLocalizationRequest(actor, sourceIdentity, policy);
+  const draft = validateLocalizationDraft(request, input);
+  const translated = new Map(draft.texts.map(entry => [entry.id, entry.text]));
   const output = structuredClone(actor);
   for (const field of actorFields(actor)) {
     const text = translated.get(field.text.id)!;
-    write(output, field.path, field.text.kind === 'title' ? formatReviewedTitle(field.text.source,text,reviewed.policy) : text);
+    write(output, field.path, field.text.kind === 'title' ? formatReviewedTitle(field.text.source,text,policy) : text);
   }
   if (output.prototypeToken && typeof output.prototypeToken === 'object') output.prototypeToken.name = output.name;
   const itemNames: LocalizedItemName[] = (actor.items ?? []).map((item: any, index: number) => ({ index, id: item._id ?? null, source: item.name, display: output.items[index].name }));
@@ -130,8 +139,9 @@ export function projectReviewedActorLocalization(actor: any, sourceIdentity: str
   output.flags ??= {};
   output.flags[SCOPE] ??= {};
   output.flags[SCOPE].localization = {
-    version: 1, language: reviewed.language, policy: reviewed.policy, terminology: reviewed.terminology,
-    requestHash: reviewed.requestHash, translationHash: reviewed.review.translationHash,
+    version: 1, language: 'zh-CN', policy, terminology: request.terminology,
+    requestHash: binding?.requestHash ?? localizationHash(request),
+    translationHash: binding?.translationHash ?? localizationHash({ requestHash: localizationHash(request), texts: draft.texts }),
     sourceName: actor.name, itemNames,
   };
   return { actor: output, itemNames, request };

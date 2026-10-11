@@ -38,14 +38,8 @@
   </section>
 
   <section class="forge-connection-card" aria-labelledby="forge-connection-review-heading">
-    <h3 id="forge-connection-review-heading">复核模型</h3>
-    <label class="forge-inline-field" for="forge-connection-separate-review">
-      <input id="forge-connection-separate-review" name="useSeparateReviewModel" type="checkbox">
-      使用独立复核模型
-    </label>
-    <label data-review-model-field for="forge-connection-review-model">复核模型
-      <input id="forge-connection-review-model" name="reviewModel" type="search" autocomplete="off" placeholder="默认使用提取模型">
-    </label>
+    <h3 id="forge-connection-review-heading">审核方式</h3>
+    <p>生成候选时不会自动请求付费模型审核。只有在工作台明确点击“AI审核当前候选（额外API费用）”才使用当前生成模型复核；本地校验通过后也可由 GM 人工核对并确认创建。</p>
   </section>
 
   <details class="forge-advanced-settings">
