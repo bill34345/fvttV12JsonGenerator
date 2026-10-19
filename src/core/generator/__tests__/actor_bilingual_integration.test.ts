@@ -352,7 +352,7 @@ describe('ActorGenerator english bilingual integration', () => {
         description: '<p>After moving at least 20 feet in a straight line toward a creature, the next attack the orc makes against that creature scores a critical hit on a roll of 18-20.</p>',
       },
       {
-        name: 'Spirit-Bonded Body',
+        name: 'Spirit-Bonded Body (Recharges after a Short or Long Rest)',
         description: '<p>(Recharges after a Short or Long Rest). As a bonus action, the orc can transform into a dire wolf for up to 4 hours. The orc reverts to its true form if it falls unconscious.</p>',
       },
       {
@@ -367,7 +367,7 @@ describe('ActorGenerator english bilingual integration', () => {
 
     const minion = actor.items.find((item: any) => item.name === 'Minion: Savage Horde');
     expect(minion.effects).toEqual([]);
-    const spiritBody = actor.items.find((item: any) => item.name === 'Spirit-Bonded Body');
+    const spiritBody = actor.items.find((item: any) => item.name === 'Spirit-Bonded Body (Recharges after a Short or Long Rest)');
     expect(spiritBody.effects).toEqual([]);
   });
 

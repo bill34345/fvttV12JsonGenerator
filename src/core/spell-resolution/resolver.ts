@@ -1,4 +1,4 @@
-import { normalizeSpellIdentity } from './normalize';
+import { normalizeSpellIdentity, localizedSpellCandidateAlias } from './normalize';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import type {
   PortableSpellRef,
@@ -81,7 +81,7 @@ export function resolveSpellRef(input?: ResolveSpellRefInput): SpellResolutionRe
     }
     if (saved.sourceInventoryHash === inventoryHash && saved.resolutionConfigHash === configurationHash) {
       const selected = candidates.find((candidate) => candidate.uuid === saved.selectedUuid);
-      if (!selected || !savedCandidateStillValid(saved, selected, candidates, ref)) {
+      if (!selected || !savedCandidateStillValid(saved, selected, candidates, ref,configuration)) {
         return unresolved(base, 'needs_review', [finding('INVALID_SAVED_MAPPING', `/${ref.refId}`, 'Saved mapping no longer satisfies UUID, identity, rules, or source facts.', evidence)]);
       }
       base.trace.push(trace('REUSE_SAVED_MAPPING', 'Reused a concrete mapping against the unchanged source inventory.', [selected]));
@@ -122,9 +122,11 @@ function resolveAutomatically(
   candidates: SpellCandidateMetadata[],
   configuration: SpellResolutionConfiguration,
 ): SpellResolutionResult {
-  const refKeys = spellRefKeys(ref);
-  const exact = candidates.map((candidate) => ({ candidate, keys: candidateKeys(candidate) })).filter((entry) => intersects(refKeys, entry.keys));
-  base.trace.push(trace('EXACT_IDENTITY_FILTER', `Found ${exact.length} candidate(s) by exact identifier, English name, or explicit alias.`, exact.map((entry) => entry.candidate)));
+  const identity=spellLookupIdentity(ref,candidates);
+  if(identity.ambiguous)return unresolved(base,'needs_review',[finding('AMBIGUOUS_EXACT_MATCH',`/${ref.refId}`,'The Chinese name confirms more than one English spell identity; review is required.',ref.evidence,identity.proofs)],identity.proofs);
+  if(identity.proofs.length)base.trace.push(trace('CONFIRM_ENGLISH_IDENTITY','Confirmed the English identifier from exact bilingual source-index metadata before normal lookup.',identity.proofs));
+  const exact = exactCandidates(identity,candidates).map(candidate=>({candidate}));
+  base.trace.push(trace('EXACT_IDENTITY_FILTER', `Found ${exact.length} candidate(s) by exact identifier, English name or explicit alias.`, exact.map((entry) => entry.candidate)));
 
   const unknownRules = exact.filter((entry) => entry.candidate.rules === undefined).map((entry) => entry.candidate);
   if (unknownRules.length > 0) {
@@ -244,26 +246,56 @@ const DND5E_SCHOOL_CODE_TO_FULL_NAME: Readonly<Record<string, string>> = Object.
   trs: 'transmutation',
 });
 
-function candidateMatchesRef(candidate: SpellCandidateMetadata, ref: PortableSpellRef): boolean {
-  return intersects(spellRefKeys(ref), candidateKeys(candidate));
+/** Shared exact identity only; callers retain their own metadata/rules gates. */
+export function candidateMatchesRef(candidate: SpellCandidateMetadata, ref: PortableSpellRef,candidates:readonly SpellCandidateMetadata[]=[candidate]): boolean {
+  const identity=spellLookupIdentity(ref,candidates);
+  return matchesIdentity(candidate,identity);
+}
+
+function matchesIdentity(candidate:SpellCandidateMetadata,identity:ReturnType<typeof spellLookupIdentity>):boolean{
+  return !identity.ambiguous&&intersects(identity.keys,candidateKeys(candidate));
+}
+
+function exactCandidates(identity:ReturnType<typeof spellLookupIdentity>,candidates:readonly SpellCandidateMetadata[]):SpellCandidateMetadata[]{
+  return candidates.filter(candidate=>matchesIdentity(candidate,identity));
 }
 
 function spellRefKeys(ref: PortableSpellRef): Set<string> {
   return normalizedSet([ref.identifier, ref.englishName, ...ref.aliases]);
 }
 
-function candidateKeys(candidate: SpellCandidateMetadata): Set<string> {
-  return normalizedSet([candidate.identifier, candidate.name]);
+function spellLookupIdentity(ref:PortableSpellRef,candidates:readonly SpellCandidateMetadata[]){
+  const keys=spellRefKeys(ref),proofs:SpellCandidateMetadata[]=[];
+  if([...keys].some(key=>/[a-z]/iu.test(key)))return{keys,proofs,ambiguous:false};
+  const english=new Set<string>();
+  for(const candidate of candidates){
+    const chinese=localizedSpellCandidateAlias(candidate.name,candidate.identifier);
+    if(chinese&&keys.has(normalizeSpellIdentity(chinese))){english.add(normalizeSpellIdentity(candidate.identifier!));proofs.push(candidate);}
+  }
+  return{keys:english.size===1?english:keys,proofs,ambiguous:english.size>1};
 }
 
-function savedCandidateStillValid(saved: SavedSpellMapping, selected: SpellCandidateMetadata, candidates: SpellCandidateMetadata[], ref: PortableSpellRef): selected is SpellCandidateMetadata & { rules: SpellRulesGeneration } {
+function candidateKeys(candidate: SpellCandidateMetadata, ref?: PortableSpellRef): Set<string> {
+  // Explicit English identity keeps its existing exact route. A colliding
+  // localized display name must not enlarge that reference's candidate pool.
+  // The localized alias remains available for non-automatic near-name suggestions.
+  // Automatic selection and all later guards reuse the confirmed English keys.
+  const hasEnglishIdentity = !ref||[...spellRefKeys(ref)].some(key => /[a-z]/iu.test(key));
+  const localized = hasEnglishIdentity ? undefined : localizedSpellCandidateAlias(candidate.name, candidate.identifier);
+  return normalizedSet([candidate.identifier, candidate.name, localized]);
+}
+
+function savedCandidateStillValid(saved: SavedSpellMapping, selected: SpellCandidateMetadata, candidates: SpellCandidateMetadata[], ref: PortableSpellRef,configuration:SpellResolutionConfiguration): selected is SpellCandidateMetadata & { rules: SpellRulesGeneration } {
   if (selected.rules !== saved.rules) return false;
   if (saved.selectionOrigin === 'manual-review') return isValidManualReviewCandidate(selected, candidates, ref);
-  if (!candidateMatchesRef(selected, ref) || candidateContradictions(selected, ref).length > 0) return false;
+  if (!candidateMatchesRef(selected, ref,candidates) || candidateContradictions(selected, ref).length > 0) return false;
   if (ref.sourceBookHint && normalizeOptional(selected.sourceBook) !== normalizeSpellIdentity(ref.sourceBookHint)) return false;
-  if (saved.rules === '2024') return true;
+  if (saved.rules === '2024') {
+    const current=resolveAutomatically(makeBase(),ref,candidates,configuration);
+    return current.status==='resolved'&&current.selected.uuid===selected.uuid;
+  }
 
-  const sameKey = candidates.filter((candidate) => candidateMatchesRef(candidate, ref));
+  const sameKey = exactCandidates(spellLookupIdentity(ref,candidates),candidates);
   if (sameKey.some((candidate) => candidate.rules !== '2014')) return false;
   const valid2014 = sameKey.filter((candidate) => candidate.rules === '2014' && candidateContradictions(candidate, ref).length === 0);
   const hinted2014 = ref.sourceBookHint
@@ -282,8 +314,8 @@ export function isValidManualReviewCandidate(
     || candidateContradictions(selected, ref).length > 0) return false;
   if (ref.sourceBookHint && normalizeOptional(selected.sourceBook) !== normalizeSpellIdentity(ref.sourceBookHint)) return false;
 
-  const sameKey = candidates.filter((candidate) => candidateMatchesRef(candidate, ref));
-  const exactSelection = candidateMatchesRef(selected, ref);
+  const sameKey = exactCandidates(spellLookupIdentity(ref,candidates),candidates);
+  const exactSelection = sameKey.some(candidate=>candidate.uuid===selected.uuid);
   const reviewPool = exactSelection ? sameKey : approximateSuggestions(ref, [...candidates]);
   if (!exactSelection && (sameKey.length > 0 || !reviewPool.some((candidate) => candidate.uuid === selected.uuid))) return false;
   if (selected.rules === '2014' && reviewPool.some((candidate) => candidate.rules !== '2014')) return false;
@@ -302,7 +334,7 @@ function intersects(left: Set<string>, right: Set<string>): boolean {
 function approximateSuggestions(ref: PortableSpellRef, candidates: SpellCandidateMetadata[]): SpellCandidateMetadata[] {
   const refKeys = [...spellRefKeys(ref)];
   return candidates.filter((candidate) => {
-    for (const left of refKeys) for (const right of candidateKeys(candidate)) {
+    for (const left of refKeys) for (const right of candidateKeys(candidate, ref)) {
       const maxLength = Math.max(left.length, right.length);
       if (maxLength >= 5 && levenshtein(left, right) <= Math.min(2, Math.floor(maxLength / 4))) return true;
     }

@@ -1,5 +1,11 @@
 # Current Support Matrix
 
+**2026-10-17 Forge 共用契约恢复 — 本轮限定 PASS，整体 Partial：** 攻击、伤害、豁免、范围、原生次数和真实法术授予接入共用多操作契约；复杂后果保留完整来源与独立GM按钮。当前Midi14.0.11的新卡导入适配阻止GM条件按钮被Other Activity自动串起，未知active版本写前停止，旧卡不迁移。最终离线native332／legacy19／staged241／raw77／facts68／encounter620、类型/架构/95来源anti-overfit通过，独立r11的旧full-IR、LF/CRLF、多共享法术池与旧CLI通过。构造机制、两份真实CHM及普通full-IR正常DeepSeek均经同源修复复测ready；普通6实际2HTTP含一次repair，两个正式verifier及14项完整源语义检查通过，全成分条款保留到五个ref，原普通5遗漏现被正式守卫阻断。r4/r5代表攻击/伤害、共享池耗尽、目标Save、真实Cast及刷新保护已通过；普通6新卡实际Mirror Image的免V/S/M、独立池消费、原生Spell聊天及055刷新读回通过，旧数据保护无差异。保存输入或有限样例不能推广为任意新来源首次成功，所有首次失败原件保留。范围、旧包差异、实际环境恢复与未验层见[执行记录](../plans/2026-10-17-forge-common-contract-restoration.md)。旧卡与旧战斗包恢复任务保留，不提交、合并或推送。
+
+**2026-10-16 Forge 原生基础恢复 — 本轮限定 PASS，整体 Partial：** 已核实的攻击、伤害、豁免、范围与资源可与完整GM剩余规则共用Item。真实Steam中文卡正常掷骰与15尺锥形、保存Cloaker的原生字段和自身中心半径60模板已核对；范围从大型Token占格边缘量起，不把原生中心距离65尺误判为多扩5尺。Foundry／Midi的命中、豁免成败和扣血不列为生成器重复验收。详见[原生基础恢复记录](2026-10-16-forge-native-basics-recovery.md)，不升级为任意来源首次成功或复杂规则全自动化。
+
+**2026-10-14 Forge 分步手动能力候选 — Partial:** Forge 战斗包将基础字段与完整能力分步核验，完整复杂能力可作为明确 GM 手动 Item 生成，不添加自动伤害／豁免／效果／资源消费。普通受支持攻击保留原生投影；条件静态头和非原生状态保留完整GM手动能力，不能变成无条件抗性。经用户批准的Colossal使用最大原生gargantuan，完整原文/中文Colossal标签和GM尺寸判断提示保留；其他未知基础枚举与真实事实冲突继续阻断。被动察觉核对包含原生passive修正；来源XP显示经验值，金额保持。当前保存输入正式链12例123能力及8份完整中文草稿与原生待验分开记录，历史六例0/6不改写。当前进度见[实施与验收记录](2026-10-14-forge-staged-manual.md)，不能据此宣称任意PDF首次成功。
+
 **Current as of:** 2026-10-10 (scoped amendments; historical rows retain their stated dates and targets)
 **Canonical role:** this file is the current support summary. Dated reports remain immutable evidence snapshots; later amendments clarify their present interpretation without erasing earlier failures or narrower passes.
 

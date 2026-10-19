@@ -1,3 +1,4 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import type { StructuredActionData } from '@fvtt-json-generator/models/action';
 import type { ParsedItem } from '@fvtt-json-generator/models/item';
@@ -11,7 +12,7 @@ import type {
   GenerationMechanicKind,
   MechanicProjectionState,
 } from './types';
-import { deriveExplicitSaveOutcome } from './save-outcome';
+import { conditionalAttackSaveTrigger, deriveExplicitSaveOutcome, normalizedSourceDamageParts } from './save-outcome';
 import { parseWeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 
 interface AdapterSource {
@@ -46,7 +47,9 @@ function collectActionMechanics(
   action: StructuredActionData | Record<string, any>,
   path: string,
 ): CanonicalGenerationMechanic[] {
-  const raw = action as Record<string, any>;
+  const sourceAction = action as Record<string, any>;
+  const raw:Record<string,any> = sourceAction.executionMode==='native-with-gm'
+    ? {...sourceAction,describe:sourceAction.nativeRuleText,desc:sourceAction.nativeRuleText}:sourceAction;
   const result: CanonicalGenerationMechanic[] = [];
   const attack = raw.attack ?? (raw.attackType ? {
     type: raw.attackType,
@@ -75,26 +78,37 @@ function collectActionMechanics(
     ));
   }
   if (attack) result.push(mechanic('attack', `${path}/attack`, attack));
-  if (raw.damage?.length || attack?.damage?.length) {
+  const sourceDamage = normalizedSourceDamageParts(raw);
+  if (sourceDamage) {
+    // Source-derived: native settlement and conditional/manual consequences
+    // are separate facts. Keeping a trigger never makes it unconditional damage.
+    for (const [index, part] of sourceDamage.entries()) {
+      const native = (part.relationship === 'base' || part.relationship === 'additional') && !part.condition
+        && (raw.type !== 'utility' || raw.damage?.length);
+      result.push(mechanic('damage', `${path}/damage/${index}`, part, native ? 'projected' : 'literal-only'));
+    }
+  } else if (raw.damage?.length || attack?.damage?.length) {
     result.push(mechanic('damage', `${path}/damage`, raw.damage ?? attack.damage));
   }
   if (raw.save || raw.DC) {
     const save = raw.save ?? {
       dc: raw.DC,
       ability: raw.ability,
-      outcome: deriveExplicitSaveOutcome(raw),
+      outcome: raw.executionMode==='native-with-gm' ? raw.saveOutcome??deriveExplicitSaveOutcome(raw):deriveExplicitSaveOutcome(raw),
     };
+    const trigger = conditionalAttackSaveTrigger(raw);
     const outcome = save.outcome;
     result.push(mechanic(
       'save',
       `${path}/save`,
       {
         ...save,
+        ...(trigger ? { condition: trigger } : {}),
         ...(raw.damage ? { damage: raw.damage } : {}),
         ...(raw.useAction ? { useAction: raw.useAction } : {}),
         ...(raw.activity ? { activity: raw.activity } : {}),
       },
-      outcome === 'literal' ? 'literal-only' : 'projected',
+      outcome === 'literal' || trigger ? 'literal-only' : 'projected',
     ));
   }
   if (raw.activation) result.push(mechanic('activation', `${path}/activation`, raw.activation));
@@ -119,12 +133,14 @@ function collectActionMechanics(
     }));
   }
   if (raw.useAction?.limitedUses || raw.uses || raw.perLongRest || raw.recharge) {
-    result.push(mechanic('uses', `${path}/uses`, raw.useAction?.limitedUses ?? raw.uses ?? raw.perLongRest ?? raw.recharge));
+    const value=raw.useAction?.limitedUses ?? raw.uses ?? raw.perLongRest ?? raw.recharge;
+    result.push(mechanic('uses', `${path}/uses`, raw.executionMode==='gm-manual'&&raw.uses
+      ? {...raw.uses,executionMode:'gm-manual',sourceText:raw.describe} : value));
   }
   if (raw.range || attack?.range) result.push(mechanic('range', `${path}/range`, raw.range ?? attack.range));
   if (raw.passiveEffect) result.push(mechanic('effect', `${path}/passiveEffect`, raw));
   for (const [index, effect] of (raw.embeddedEffects ?? []).entries()) {
-    result.push(mechanic('effect', `${path}/effects/${index}`, effect));
+    result.push(mechanic('effect', `${path}/effects/${index}`, { ...effect, sourceText: raw.describe }));
   }
   return result;
 }
@@ -197,7 +213,7 @@ export function adaptParsedItemToCanonical(
   const mechanics: CanonicalGenerationMechanic[] = [];
   if (parsed.weaponConfiguration !== undefined) {
     const configuration = parseWeaponConfiguration(parsed.weaponConfiguration);
-    const itemName = parsed.englishName ? `${parsed.name} (${parsed.englishName})` : parsed.name;
+    const itemName = displayName(parsed.name, parsed.englishName);
     const criticalBaselinesByActivityId = Object.fromEntries(
       Object.entries(parsed.activities ?? {})
         .filter(([, activity]) => activity.type === 'attack')

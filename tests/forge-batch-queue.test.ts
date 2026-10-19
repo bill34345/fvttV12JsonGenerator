@@ -113,6 +113,7 @@ describe('Forge browser-local batch queue core', () => {
     expect(() => createForgeBatchApplyManifest(state, [{ ...candidate, artifactHash: hashSource('wrong') }], TIMES[3])).toThrow(/identity.*accepted proof/u);
     expect(() => createForgeBatchApplyManifest(state, [{ ...candidate, documentId: '0'.repeat(16) }], TIMES[3])).toThrow(/deterministic Forge identity/u);
     expect(() => createForgeBatchApplyManifest(state, [{ ...candidate, target: { ...candidate.target, fvttVersion: '14.365' } }], TIMES[3])).toThrow(/exact Task E runtime/u);
+    expect(() => createForgeBatchApplyManifest(state, [{ ...candidate, target: { ...candidate.target, iconMode: 'safe' } }], TIMES[3])).toThrow(/exact Task E runtime/u);
     state = await queue.beginApply(actorJob.id);
     expect(state.jobs[0]!.status).toBe('applying');
     state = await queue.finishApply(actorJob.id, {

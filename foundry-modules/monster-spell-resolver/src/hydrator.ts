@@ -12,6 +12,7 @@ import {
   type LiteralRestrictionReport,
   type ResolverManagedIdentity,
 } from './cast-activity';
+import { planSpellEffectDuration } from './spell-effect-duration';
 import {
   assertAdoptableNativeCache,
   assertLinkedFeatureOwnership,
@@ -39,6 +40,8 @@ export interface NativeCacheJournalEntry {
   cachedFor: string;
   selectedUuid: string;
   nativeProjection: Record<string, any>;
+  /** Complete source-bound states planned by this transaction after ownership. */
+  ownedProjections?: Record<string, any>[];
   ownershipApplied: boolean;
 }
 
@@ -115,6 +118,12 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     && item?.flags?.[RESOLVER_MODULE_ID]?.groupId === group.groupId);
   if (features.length !== 1) throw new TypeError('Manifest group must identify exactly one linked generated feature.');
   const feature = features[0]!;
+  if(ref.uses?.shared){
+    const uses=feature.system?.uses;
+    if(String(uses?.max)!==String(ref.uses.value)||!uses?.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')){
+      throw new TypeError('Shared Cast requires the source-generated feature pool; refusing an absent or conflicting counter.');
+    }
+  }
 
   const built = buildCastActivitySource({
     manifestId: validated.value.manifestId,
@@ -122,6 +131,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     group,
     ref,
     selectedUuid: input.selection.uuid,
+    activationType: feature.flags?.fvttJsonGenerator?.spellcastingActivationType,
   });
   if (built.identity.logicalRefKey !== input.selection.logicalRefKey) {
     throw new TypeError('Hydration selection logicalRefKey does not match the manifest identity.');
@@ -334,6 +344,38 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   const finalCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   const finalOwned = finalCaches.find((entry) => entry.flags?.[RESOLVER_MODULE_ID]?.managed === true);
   if (finalOwned) cache = finalOwned;
+  if (!input.preserveExisting && built.activity.duration) {
+    assertResolverDocumentOwnership(input.actor, preparedFeature, cache, built.identity, 'spell', activity.relativeUUID);
+    const expected = documentSource(cache);
+    const durationPlan = planSpellEffectDuration(nativeCacheSource, expected, built.activity.duration);
+    if (durationPlan.unresolvedEffectIds.length) {
+      built.literalRestrictions.push({
+        manifestId: built.identity.manifestId, groupId: group.groupId, refId: ref.refId,
+        kind: 'casting', text: ref.restrictions.filter(entry => entry.kind === 'casting').map(entry => entry.text).join('；')
+          + '；部分法术效果是否继承该时限需GM核对',
+        status: 'literal-unsupported',
+      });
+    }
+    if (durationPlan.changedEffectIds.length) {
+      expected.effects = durationPlan.effects;
+      const nativeEntry = input.journal.nativeCaches.find(entry => entry.id === documentId(cache));
+      if (nativeEntry) {
+        nativeEntry.ownedProjections ??= [];
+        // A rejected public write may still have committed. Keep both the
+        // original native state and the complete explicitly planned owned state.
+        nativeEntry.ownedProjections.push(captureNativeCacheProjection(expected));
+      }
+      if (typeof cache.updateEmbeddedDocuments !== 'function') throw Error('Owned Spell public ActiveEffect update API is unavailable.');
+      await cache.updateEmbeddedDocuments('ActiveEffect', durationPlan.changedEffectIds.map(id => ({
+        _id: id,
+        'duration.value': durationPlan.effects.find(effect => effect._id === id)!.duration.value,
+      })));
+      cache = findItem(input.actor, documentId(cache));
+      if (!cache) throw new Error('Owned cache disappeared while projecting its source-bound effect duration.');
+      assertResolverDocumentOwnership(input.actor, preparedFeature, cache, built.identity, 'spell', activity.relativeUUID);
+      assertNativeCacheProjectionMatches(expected, cache);
+    }
+  }
   cache = await refreshPreparedSpellHash(input.actor, preparedFeature, activity, cache, built.identity);
 
   const result: HydratedSelection = {

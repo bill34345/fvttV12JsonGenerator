@@ -20,7 +20,9 @@ function ratCases() {
   const parsed = new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr()));
   const manifest = parsed.spellManifest!;
   const group = manifest.spellcastingGroups[0]!;
-  return group.spellRefs.map((ref, index) => ({
+  // This helper enumerates the supported native subset. The original ten-ref
+  // manifest, including its ray-limited ref, is checked separately below.
+  return group.spellRefs.filter(ref=>!ref.restrictions.some(r=>r.kind==='casting')).map((ref, index) => ({
     ref,
     built: buildCastActivitySource({
       manifestId: manifest.manifestId,
@@ -33,6 +35,27 @@ function ratCases() {
 }
 
 describe('native dnd5e 5.3.3 Cast Activity source', () => {
+  test('the complete original manifest retains its ray-limited spell and rejects an unrestricted Cast for it',()=>{
+    const parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr())),manifest=parsed.spellManifest!,group=manifest.spellcastingGroups[0]!;
+    expect(group.spellRefs).toHaveLength(10);
+    const limited=group.spellRefs.filter(ref=>ref.restrictions.some(r=>r.kind==='casting'));expect(limited).toHaveLength(1);
+    for(const ref of limited)expect(()=>buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow('Unsupported source casting restriction');
+    expect(ratCases().length+limited.length).toBe(10);
+  });
+  for(const activationType of ['action','bonus','reaction'] as const)test('source casting timing overrides the matched spell defaults: '+activationType,()=>{
+    const parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr())),manifest=parsed.spellManifest!,group=manifest.spellcastingGroups[0]!,ref=group.spellRefs.find(ref=>!ref.restrictions.length)!;
+    const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType});
+    expect(built.activity.activation).toEqual({type:activationType,value:1,override:true});
+  });
+  for(const [text,value,units] of [['（持续24小时）','24','hour'],['(lasts for 7 minutes)','7','minute'],['持续2天','2','day']] as const)test('source duration restriction becomes a native Cast override: '+text,()=>{
+    const base=ratCases()[0]!.ref,ref:PortableSpellRef={...base,method:'at-will',uses:undefined,restrictions:[{kind:'casting',text,evidence:[]}]};
+    const built=buildCastActivitySource({manifestId:'source-variant',featureId:'VariantFeature01',group:{groupId:'variants',featureItemKey:'variants',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
+    expect(built.activity.duration).toEqual({value,units,concentration:false,override:true});expect(built.literalRestrictions).toEqual([]);
+  });
+  test('a qualified duration blocks native Cast rather than becoming unrestricted',()=>{
+    const base=ratCases()[0]!.ref,ref:PortableSpellRef={...base,method:'at-will',uses:undefined,ignoresMaterialComponents:false,restrictions:[{kind:'casting',text:'无须任何法术成分',evidence:[]},{kind:'casting',text:'持续24小时，若目标未受伤',evidence:[]}]};
+    expect(()=>buildCastActivitySource({manifestId:'source-variant',featureId:'VariantFeature01',group:{groupId:'variants',featureItemKey:'variants',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow('Unsupported source casting restriction');
+  });
   test('uses native Actor spell slots for a source-leveled prepared spell', () => {
     const base = structuredClone(ratCases()[0]!.ref);
     const ref: PortableSpellRef = {
@@ -60,9 +83,9 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
     expect(built.activity.spell).toMatchObject({ ability: 'wis', level: 1, spellbook: true });
   });
 
-  test('projects all ten real Rat refs to native Cast source without destination rewrites or macros', () => {
+  test('projects the nine supported Rat refs without hiding the separately rejected ray restriction', () => {
     const cases = ratCases();
-    expect(cases).toHaveLength(10);
+    expect(cases).toHaveLength(9);
 
     for (const { built } of cases) {
       expect(built.activity).toMatchObject({
@@ -80,7 +103,7 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
 
     const atWill = cases.filter(({ ref }) => ref.uses === undefined);
     const daily = cases.filter(({ ref }) => ref.uses?.recovery === 'day');
-    expect(atWill).toHaveLength(4);
+    expect(atWill).toHaveLength(3);
     expect(daily).toHaveLength(6);
     for (const { built } of atWill) {
       expect(built.activity.uses).toBeUndefined();
@@ -104,7 +127,6 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
     expect(mageArmor.built.activity.target).toMatchObject({ override: true, affects: { type: 'self' } });
     expect(cases.flatMap(({ built }) => built.literalRestrictions).map((entry) => entry.text)).toEqual(
       expect.arrayContaining([
-        cases.find(({ ref }) => ref.identifier === 'eldritch-blast')!.ref.restrictions[0]!.text,
         cases.find(({ ref }) => ref.identifier === 'conjure-animals')!.ref.restrictions[0]!.text,
       ]),
     );

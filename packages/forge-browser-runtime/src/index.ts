@@ -21,12 +21,13 @@ import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verific
 import type { GenerationDiagnostic } from '@fvtt-json-generator/generation/types';
 import { ParserFactory } from '@fvtt-json-generator/parser/router';
 import { generateActorArtifact } from '@fvtt-json-generator/workflows/generation-pipeline';
-import { createDisabledIconResolutionSession } from '@fvtt-json-generator/workflows/icon-port';
+import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { buildBrowserActorVerificationSummary } from './actorVerification';
 import { LEGACY_BROWSER_SPELLS } from './browser-legacy-spell-data';
 import { LOCKED_DND5E_V14_SPELLS } from './browser-v14-spell-data';
 import { normalizeForgeActorArtifact } from './artifact';
 import type { ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
+import { withActorRulePresentation } from './actorRulePresentationContext';
 
 export {
   buildForgeItemRequest,
@@ -96,12 +97,12 @@ export function buildForgeActorRequest(options: BuildForgeActorRequestOptions): 
     resolvedTarget: {
       generatorProfile: target.generatorProfile,
       effectProfile: 'core',
-      iconMode: 'off',
+      iconMode: target.generatorProfile === 'v14' ? 'safe' : 'off',
     },
   };
 }
 
-export async function convertFinalActorSource(request: ForgeActorRequest, options: { reviewedLocalization?: ReviewedLocalization } = {}): Promise<ForgeActorResponse> {
+export async function convertFinalActorSource(request: ForgeActorRequest, options: { reviewedLocalization?: ReviewedLocalization; captureRulePresentation?: boolean } = {}): Promise<ForgeActorResponse> {
   const decoded = decodeForgeActorRequest(request);
   if (!decoded.ok) return errorResponse(requestIdOf(request), decoded.issues);
   const value = decoded.value;
@@ -119,9 +120,11 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
       route,
       fvttVersion: targetVersion,
       effectProfile: 'core',
-      iconWorkflow: { createResolutionSession: (_targetVersion, options) => createDisabledIconResolutionSession(options) },
-      iconOptions: { mode: 'off' },
+      iconWorkflow: { createResolutionSession: createBundledIconResolutionSession },
+      iconOptions: { mode: value.resolvedTarget.iconMode },
       reviewedLocalization: options.reviewedLocalization,
+      captureRulePresentation: targetVersion === '14' && options.captureRulePresentation === true,
+      ...(targetVersion === '14' ? { rulePresentationActorNormalizer: (actor: unknown) => normalizeForgeActorArtifact(actor, '14') } : {}),
     });
     const artifact = normalizeForgeActorArtifact(generated.actor, targetVersion, options.reviewedLocalization ? generated.sourceActor : undefined);
     const formalVerification = verifyGeneratedDocument({
@@ -185,10 +188,11 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
     const finalActorVerification = status === verification.status
       ? projection.actorVerification
       : projectForgeVerification({ verification: { ...verification, status, diagnostics }, actorVerification }).actorVerification;
-    const base = makeResultBase(value, formalVerification.target.stats.systemVersion, finalVerification, finalActorVerification, safeDiagnostics);
+    const base = { ...makeResultBase(value, formalVerification.target.stats.systemVersion, finalVerification, finalActorVerification, safeDiagnostics),
+      ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge verification was not proven by the closed projection.');
-      return {
+      return withActorRulePresentation({
         protocolVersion: 1,
         requestId: value.requestId,
         result: {
@@ -198,10 +202,10 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
           artifactHash: hashArtifact(artifact),
           verification: acceptedVerification,
         },
-      };
+      }, generated.rulePresentation);
     }
     if (status === 'needs_review') {
-      return {
+      return withActorRulePresentation({
         protocolVersion: 1,
         requestId: value.requestId,
         result: {
@@ -210,7 +214,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
           artifact,
           verification: finalVerification,
         },
-      };
+      }, generated.rulePresentation);
     }
     return { protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', verification: finalVerification } };
   } catch (error) {
@@ -234,7 +238,7 @@ function makeResultBase(
       systemId: 'dnd5e' as const,
       systemVersionObserved,
       effectProfile: 'core' as const,
-      iconMode: 'off' as const,
+      iconMode: request.resolvedTarget.iconMode,
     },
     diagnostics,
     verification,

@@ -460,7 +460,7 @@ function isItemApplyable(response?: ForgeItemResponse): boolean {
     && result.target.systemId === 'dnd5e'
     && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION
     && result.target.effectProfile === 'core'
-    && result.target.iconMode === 'off';
+    && (result.target.iconMode === 'off' || result.target.iconMode === 'safe');
 }
 
 function assertItemResponseMatchesRequest(response: ForgeItemResponse, request: ForgeItemRequest): void {
@@ -469,6 +469,7 @@ function assertItemResponseMatchesRequest(response: ForgeItemResponse, request: 
   if (
     response.result.sourceIdentity.sourceId !== request.source.sourceId
     || response.result.sourceIdentity.sourceHash !== request.source.utf8Sha256
+    || response.result.target.iconMode !== request.resolvedTarget.iconMode
   ) {
     throw new Error('Forge Item response source identity does not match the active final source.');
   }

@@ -1,0 +1,2955 @@
+{
+  "version": 1,
+  "scope": "20 independent noncasting monster parents. Five genuine-casting research appendices are not GM controls and not included in this min50 corpus. All complete rules use explicit synthetic base facts; execution/slots/ammo/equipment not silently granted.",
+  "attribution": "SRD5.1 by Wizards of the Coast LLC, CC BY4.0. https://dnd.wizards.com/resources/systems-reference-document ; https://creativecommons.org/licenses/by/4.0/legalcode",
+  "cases": [
+    {
+      "id": "r9m-lemure-hellish-rejuvenation",
+      "label": "Lemure — Hellish Rejuvenation",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Lemure CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nHellish Rejuvenation. A lemure that dies in the Nine Hells comes back to life with all its hit points in 1d10 days unless it is killed by a good-aligned creature with a bless spell cast on that creature or its remains are sprinkled with holy water.\n",
+      "creature": {
+        "identity": {
+          "name": "Lemure",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Lemure CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Hellish Rejuvenation",
+          "section": "trait",
+          "text": "Hellish Rejuvenation. A lemure that dies in the Nine Hells comes back to life with all its hit points in 1d10 days unless it is killed by a good-aligned creature with a bless spell cast on that creature or its remains are sprinkled with holy water.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Hellish Rejuvenation",
+          "section": "trait",
+          "text": "Hellish Rejuvenation. A lemure that dies in the Nine Hells comes back to life with all its hit points in 1d10 days unless it is killed by a good-aligned creature with a bless spell cast on that creature or its remains are sprinkled with holy water.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 278,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/lemure.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "lemure.raw.yml",
+        "capturedSha256": "37d7b819453c757e1120810778de832a2fa369f166e7328df75b7190a38ecc1f",
+        "gitBlob": "840fceb440ad6e481e3316ebbd55a1d93b71d366"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "DiesINNINEHELLS ->allHPreturn1d10DAYS UNLESSgood-alignedKILLERhasBlessonKILLER ORholywateronREMAINS. NoLemureBlessgrant, goodalignmentalone, blessonvictim, oroutsideNineHellsrevival.",
+      "omission": "that dies in the Nine Hells",
+      "flip": [
+        "with a bless spell cast on that creature",
+        "with a bless spell cast on the lemure"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "spells=[Bless] onlemure; resurrectionblockedbygoodkillerwithoutBless; uses.max=10/day",
+      "falseSpellGrant": "bless"
+    },
+    {
+      "id": "r9m-horned-devil-multiattack",
+      "label": "Horned Devil — Multiattack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Horned Devil CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nMultiattack. The devil makes three melee attacks: two with its fork and one with its tail. It can use Hurl Flame in place of any melee attack.\n",
+      "creature": {
+        "identity": {
+          "name": "Horned Devil",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Horned Devil CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The devil makes three melee attacks: two with its fork and one with its tail. It can use Hurl Flame in place of any melee attack.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The devil makes three melee attacks: two with its fork and one with its tail. It can use Hurl Flame in place of any melee attack.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 276,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/horned-devil.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "horned-devil.raw.yml",
+        "capturedSha256": "1cec1fd0dde04bd42e3863f450f4c3e287b9955ffa742411a259ea00d81b00dd",
+        "gitBlob": "ef70cc4ecbd13b0190fb32a605556d9114bdd91c"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "3baseMELEEattacks2Fork1Tail; HurlFlamecanreplaceEACHANYmeleeattack, allowingMIXEDmelee/flamecombination. Notall-or-nothing3meleeOR1flame, mandatoryTailreplacementonly, or4attacks.",
+      "omission": "in place of any melee attack",
+      "flip": [
+        "It can use Hurl Flame in place of any melee attack",
+        "It can use Hurl Flame only in place of its tail attack"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "onlyTailcanbereplaced; allthreeattacksreplacedwithsingleFlame; sourceHurlFlamerefbecomesnamedspellgrant"
+    },
+    {
+      "id": "r9m-barbed-devil-hurl-flame",
+      "label": "Barbed Devil — Hurl Flame",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Barbed Devil CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nHurl Flame. Ranged Spell Attack: +5 to hit, range 150 ft., one target. Hit: 10 (3d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.\n",
+      "creature": {
+        "identity": {
+          "name": "Barbed Devil",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Barbed Devil CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Hurl Flame",
+          "section": "action",
+          "text": "Hurl Flame. Ranged Spell Attack: +5 to hit, range 150 ft., one target. Hit: 10 (3d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Hurl Flame",
+          "section": "action",
+          "text": "Hurl Flame. Ranged Spell Attack: +5 to hit, range 150 ft., one target. Hit: 10 (3d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rsak",
+                "toHit": 5,
+                "range": 150
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "3d6",
+                  "type": "fire",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Spell Attack: +5 to hit, range 150 ft., one target.",
+                "target": "Ranged Spell Attack: +5 to hit, range 150 ft., one target.",
+                "damage": [
+                  "Hit: 10 (3d6) fire damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 274,
+            "column": "left"
+          },
+          {
+            "page": 274,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/barbed-devil.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "barbed-devil.raw.yml",
+        "capturedSha256": "0dc6635c1eda3a523646fc759a978edbe87d834892dceed45f23b931943d7c5d",
+        "gitBlob": "2cd3cfb46be8cdda0adc6ee382cdf510d2f5b11d"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "RANGEDSPELL+5/single150ft/3d6fire. ExtraIGNITIONonlyFLAMMABLEOBJECTnotWORN/CARRIED; creaturetakesfirebutthisparentdoesnotigniteit/orgiveongoingdamage. NoFireballCastgrant.",
+      "omission": "that isn't being worn or carried",
+      "flip": [
+        "If the target is a flammable object",
+        "If the target is a creature or a flammable object"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "allowedDamage": [
+          "3d6"
+        ]
+      },
+      "irProbes": [
+        {
+          "id": "wrong-printed-basic-fact",
+          "assign": {
+            "executionMode": "native-with-gm",
+            "activityType": "utility",
+            "nativeRuleText": "Hurl Flame. Ranged Spell Attack: +5 to hit, range 150 ft., one target. Hit: 10 (3d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.",
+            "manualRemainder": "Hurl Flame. Ranged Spell Attack: +5 to hit, range 150 ft., one target. Hit: 10 (3d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.",
+            "sourceOperations": [
+              {
+                "id": "attack",
+                "name": "Attack",
+                "type": "attack",
+                "relationship": "primary",
+                "attack": {
+                  "type": "rsak",
+                  "toHit": 5,
+                  "range": 150
+                },
+                "targetSpecial": "one target",
+                "damage": [
+                  {
+                    "formula": "1d20",
+                    "type": "fire",
+                    "relationship": "base"
+                  }
+                ],
+                "proof": {
+                  "attack": "Ranged Spell Attack: +5 to hit, range 150 ft., one target.",
+                  "target": "Ranged Spell Attack: +5 to hit, range 150 ft., one target.",
+                  "damage": [
+                    "Hit: 10 (3d6) fire damage."
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "ignitesallcreatureslikeMagmin; addsunprintedongoing1d6; range.long=300"
+    },
+    {
+      "id": "r9m-fire-elemental-touch",
+      "label": "Fire Elemental — Touch",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Fire Elemental CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nTouch. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) fire damage. If the target is a creature or a flammable object, it ignites. Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns.\n",
+      "creature": {
+        "identity": {
+          "name": "Fire Elemental",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Fire Elemental CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Touch",
+          "section": "action",
+          "text": "Touch. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) fire damage. If the target is a creature or a flammable object, it ignites. Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Touch",
+          "section": "action",
+          "text": "Touch. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) fire damage. If the target is a creature or a flammable object, it ignites. Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 6,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "fire",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 10 (2d6 + 3) fire damage."
+                ]
+              }
+            },
+            {
+              "id": "ongoing",
+              "name": "GM at target START until doused",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "1d10",
+                  "type": "fire",
+                  "relationship": "conditional"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 307,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/elemental/fire-elemental.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "fire-elemental.raw.yml",
+        "capturedSha256": "64b670a9749c06e808dbaf03e560ef3164eb81cbd7bcb5877667caa9b552039c",
+        "gitBlob": "05ceb2c163ddb03cef7b29da5589474db9ffa961"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "Melee+6/5ft/2d6+3fireonHIT;creatureORflammableobjectignites,1d10fireatTARGETSTARTuntilcreatureACTIONdouse. ContrastsMagminENDtiming; notimmediate3d6+3, ownerturnburn, oranyobjectflammable.",
+      "omission": "Until a creature takes an action to douse the fire",
+      "flip": [
+        "at the start of each of its turns",
+        "at the end of each of its turns"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noAttackDamage": [
+          "1d10"
+        ],
+        "noSave": true,
+        "allowedDamage": [
+          "1d10",
+          "2d6+3"
+        ]
+      },
+      "irProbes": [
+        {
+          "id": "wrong-printed-basic-fact",
+          "assign": {
+            "executionMode": "native-with-gm",
+            "activityType": "utility",
+            "nativeRuleText": "Touch. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) fire damage. If the target is a creature or a flammable object, it ignites. Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns.",
+            "manualRemainder": "Touch. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) fire damage. If the target is a creature or a flammable object, it ignites. Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns.",
+            "sourceOperations": [
+              {
+                "id": "attack",
+                "name": "Attack",
+                "type": "attack",
+                "relationship": "primary",
+                "attack": {
+                  "type": "mwak",
+                  "toHit": 6,
+                  "reach": 5
+                },
+                "targetSpecial": "one target",
+                "damage": [
+                  {
+                    "formula": "1d20",
+                    "type": "fire",
+                    "relationship": "base"
+                  }
+                ],
+                "proof": {
+                  "attack": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target.",
+                  "target": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target.",
+                  "damage": [
+                    "Hit: 10 (2d6 + 3) fire damage."
+                  ]
+                }
+              },
+              {
+                "id": "ongoing",
+                "name": "GM at target START until doused",
+                "type": "damage",
+                "relationship": "follow-up",
+                "damage": [
+                  {
+                    "formula": "1d10",
+                    "type": "fire",
+                    "relationship": "conditional"
+                  }
+                ],
+                "proof": {
+                  "damage": [
+                    "Until a creature takes an action to douse the fire, the target takes 5 (1d10) fire damage at the start of each of its turns."
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "ongoingatENDborrowedfromMagmin; immediateburnpacket; effectonlycreaturesnotflammableobjects"
+    },
+    {
+      "id": "r9m-nightmare-confer-fire-resistance",
+      "label": "Nightmare — Confer Fire Resistance",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Nightmare CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nConfer Fire Resistance. The nightmare can grant resistance to fire damage to anyone riding it.\n",
+      "creature": {
+        "identity": {
+          "name": "Nightmare",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Nightmare CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Confer Fire Resistance",
+          "section": "trait",
+          "text": "Confer Fire Resistance. The nightmare can grant resistance to fire damage to anyone riding it.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Confer Fire Resistance",
+          "section": "trait",
+          "text": "Confer Fire Resistance. The nightmare can grant resistance to fire damage to anyone riding it.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 336,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/nightmare.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "nightmare.raw.yml",
+        "capturedSha256": "bc8768784bd4786eba963f92bcd4efd2661d60cdbbe349b718edb6cebc9b7f20",
+        "gitBlob": "fafaf765ccb573bd44594a96195690bf1f81236b"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "CanGRANTFIRERESISTANCEtoRIDINGcreature(s), notowner, adjacentnonriders, wholeparty, immunity, fixed30ftradius, ormagicalFireShieldcast. RidereligibilitydiffersEtherealStrideadjacency.",
+      "omission": "riding it",
+      "flip": [
+        "resistance to fire damage",
+        "immunity to fire damage"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [
+        {
+          "id": "rider-resistance-not-owner",
+          "path": [
+            "defenses",
+            "resistances"
+          ],
+          "value": [
+            "cold",
+            "fire"
+          ]
+        }
+      ],
+      "researchBadField": "ownerresistanceaddedinsteadofrider; allnearbyalliesfireimmune"
+    },
+    {
+      "id": "r9m-nightmare-ethereal-stride",
+      "label": "Nightmare — Ethereal Stride",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Nightmare CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nEthereal Stride. The nightmare and up to three willing creatures within 5 feet of it magically enter the Ethereal Plane from the Material Plane, or vice versa.\n",
+      "creature": {
+        "identity": {
+          "name": "Nightmare",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Nightmare CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Ethereal Stride",
+          "section": "action",
+          "text": "Ethereal Stride. The nightmare and up to three willing creatures within 5 feet of it magically enter the Ethereal Plane from the Material Plane, or vice versa.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Ethereal Stride",
+          "section": "action",
+          "text": "Ethereal Stride. The nightmare and up to three willing creatures within 5 feet of it magically enter the Ethereal Plane from the Material Plane, or vice versa.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 336,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/nightmare.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "nightmare.raw.yml",
+        "capturedSha256": "bc8768784bd4786eba963f92bcd4efd2661d60cdbbe349b718edb6cebc9b7f20",
+        "gitBlob": "fafaf765ccb573bd44594a96195690bf1f81236b"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "NightmarePLUSupto3WILLINGcreaturesWITHIN5ft enterMaterial<->Ethereal. Neednotberiding. Notself-only, involuntarypassengers, familiar1mileTeleport, PlaneShiftspellgrant, or3/dayresource.",
+      "omission": "willing ",
+      "flip": [
+        "up to three willing creatures within 5 feet of it",
+        "any number of willing creatures within 5 feet of it"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "targetsrestrictedtoridersonly; uses.max=3/day; one-wayplaneentry"
+    },
+    {
+      "id": "r9m-salamander-heated-weapons",
+      "label": "Salamander — Heated Weapons",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Salamander CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nHeated Weapons. Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack).\n",
+      "creature": {
+        "identity": {
+          "name": "Salamander",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Salamander CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Heated Weapons",
+          "section": "trait",
+          "text": "Heated Weapons. Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack).\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Heated Weapons",
+          "section": "trait",
+          "text": "Heated Weapons. Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack).",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 344,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/elemental/salamander.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "salamander.raw.yml",
+        "capturedSha256": "a5c849496c3919a9a63bbd9dfccae8ff8bd0ecb34d38fbe4ad9fe7cd7d6a5a21",
+        "gitBlob": "64ff30e51d7df006d29a2756c65b1f6774a0d0da"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "METALMELEE-WEAPONcategorywieldedbyowner gets1d6fireONHIT ALREADYINCLUDED. MeleeWEAPONisnotMeleeATTACKonly:printedSpearalsohasthrownrangeandfire. Noextraadditionagain, allweapons/woodenweapons, orinstantstandalonefireoperation.",
+      "omission": "metal ",
+      "flip": [
+        "metal melee weapon",
+        "metal weapon used for a melee attack"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        },
+        {
+          "id": "included-on-hit-grant-not-immediate-extra-damage",
+          "assign": {
+            "executionMode": "native-with-gm",
+            "activityType": "utility",
+            "nativeRuleText": "Heated Weapons. Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack).",
+            "manualRemainder": "Heated Weapons. Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack).",
+            "sourceOperations": [
+              {
+                "id": "wrong-instant",
+                "name": "Wrong Immediate Fire",
+                "type": "damage",
+                "relationship": "primary",
+                "damage": [
+                  {
+                    "formula": "1d6",
+                    "type": "fire",
+                    "relationship": "base"
+                  }
+                ],
+                "proof": {
+                  "damage": [
+                    "Any metal melee weapon the salamander wields deals an extra 3 (1d6) fire damage on a hit (included in the attack)."
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "addssecond1d6tocompiledSpear; dropsfirewhenthatmeleeweaponisthrown; applieswoodenClub"
+    },
+    {
+      "id": "r9m-spy-sneak-attack",
+      "label": "Spy — Sneak Attack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Spy CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nSneak Attack (1/Turn). The spy deals an extra 7 (2d6) damage when it hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of the spy that isn't incapacitated and the spy doesn't have disadvantage on the attack roll.\n",
+      "creature": {
+        "identity": {
+          "name": "Spy",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Spy CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Sneak Attack (1/Turn)",
+          "section": "trait",
+          "text": "Sneak Attack (1/Turn). The spy deals an extra 7 (2d6) damage when it hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of the spy that isn't incapacitated and the spy doesn't have disadvantage on the attack roll.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Sneak Attack (1/Turn)",
+          "section": "trait",
+          "text": "Sneak Attack (1/Turn). The spy deals an extra 7 (2d6) damage when it hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of the spy that isn't incapacitated and the spy doesn't have disadvantage on the attack roll.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 402,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/humanoid/spy.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "spy.raw.yml",
+        "capturedSha256": "6da8fce6346bb87a85a943ce317e13cd4926c0214e5a1cc4878c8f2800045595",
+        "gitBlob": "6dbe8bf0f411caafcce41b3cd966e9765b0be5d7"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "1/TURN extra2d6fromWEAPONHIT ifadvantage ORvictimwithin5ofnonincapacitatedALLYandownattacknotdisadvantaged. NPCparentdoesNOTaddPC-Roguefinesse/rangedrestriction. Notautomaticallhits, spellattacks, independentdamagetype, or1/ownround.",
+      "omission": "and the spy doesn't have disadvantage on the attack roll",
+      "flip": [
+        "weapon attack",
+        "finesse or ranged weapon attack"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 1,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "addsPCfinesse-onlyrestriction; uses.max=1/day; bonusdamageapplieswhenallyincapacitated"
+    },
+    {
+      "id": "r9m-veteran-multiattack",
+      "label": "Veteran — Multiattack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Veteran CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nMultiattack. The veteran makes two longsword attacks. If it has a shortsword drawn, it can also make a shortsword attack.\n",
+      "creature": {
+        "identity": {
+          "name": "Veteran",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Veteran CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The veteran makes two longsword attacks. If it has a shortsword drawn, it can also make a shortsword attack.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The veteran makes two longsword attacks. If it has a shortsword drawn, it can also make a shortsword attack.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 403,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/humanoid/veteran.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "veteran.raw.yml",
+        "capturedSha256": "cb70df283a9e7824f76014bc6d143764d7edd066095bb703484c96ea346124c1",
+        "gitBlob": "171442f18db5c6abcbfedcd105b78f8175670a7f"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "TWOlongswordattacksPLUSoptionalTHIRDshortswordONLYifSHORTSWORDDRAWN. Conditionaladditionalattacknotreplacement, prerequisiteisweaponstate, andnoinventedattackstatsfromreference.",
+      "omission": "If it has a shortsword drawn, ",
+      "flip": [
+        "it can also make a shortsword attack",
+        "it can replace both longsword attacks with a shortsword attack"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "always3attackswithoutdrawnShortsword; ShortSwordreplacesallLongswords"
+    },
+    {
+      "id": "r9m-ghast-turn-defiance",
+      "label": "Ghast — Turning Defiance",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Ghast CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nTurning Defiance. The ghast and any ghouls within 30 feet of it have advantage on saving throws against effects that turn undead.\n",
+      "creature": {
+        "identity": {
+          "name": "Ghast",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Ghast CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Turning Defiance",
+          "section": "trait",
+          "text": "Turning Defiance. The ghast and any ghouls within 30 feet of it have advantage on saving throws against effects that turn undead.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Turning Defiance",
+          "section": "trait",
+          "text": "Turning Defiance. The ghast and any ghouls within 30 feet of it have advantage on saving throws against effects that turn undead.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 312,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/undead/ghast.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "ghast.raw.yml",
+        "capturedSha256": "cb9563254813154d27a4e3637dab6bbb1f11dc6f0a1f1673e49a7988630ca7be",
+        "gitBlob": "4b08f1c557d002bc3fd47ad3fc5e6d16b5100b39"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "AdvantageSavesagainstTURNUNDEAD forSELFANDGHOULSwithin30ft. Notallundead/otherghasts, turnimmunity, allyallSavesadvantage, orfearprotection. Species-limitedshareddefensecontrastsLichself-onlyTurnResistance.",
+      "omission": "and any ghouls within 30 feet of it",
+      "flip": [
+        "any ghouls",
+        "any undead"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "allundeadAura; conditionImmunity=turned; owner-onlyloseseligibleghouls"
+    },
+    {
+      "id": "r9m-ghast-claws",
+      "label": "Ghast — Claws",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Ghast CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nClaws. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage. If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.\n",
+      "creature": {
+        "identity": {
+          "name": "Ghast",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Ghast CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Claws",
+          "section": "action",
+          "text": "Claws. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage. If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Claws",
+          "section": "action",
+          "text": "Claws. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage. If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 5,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "slashing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 10 (2d6 + 3) slashing damage."
+                ]
+              }
+            },
+            {
+              "id": "save",
+              "name": "GM save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 10,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute."
+              }
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 312,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/undead/ghast.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "ghast.raw.yml",
+        "capturedSha256": "cb9563254813154d27a4e3637dab6bbb1f11dc6f0a1f1673e49a7988630ca7be",
+        "gitBlob": "4b08f1c557d002bc3fd47ad3fc5e6d16b5100b39"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "Melee+5/5ft/2d6+3slashing; CREATUREEXCEPTUNDEAD CON10paralyzed1minute/endvictimrepeat. ELVESareNOTexempt(unlikeGhoul). DamageandstatusSaveeligibilityareseparate.",
+      "omission": "The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "flip": [
+        "other than an undead",
+        "other than an elf or undead"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "allowedDamage": [
+          "2d6+3"
+        ]
+      },
+      "irProbes": [
+        {
+          "id": "wrong-printed-basic-fact",
+          "assign": {
+            "executionMode": "native-with-gm",
+            "activityType": "utility",
+            "nativeRuleText": "Claws. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage. If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+            "manualRemainder": "Claws. Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage. If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+            "sourceOperations": [
+              {
+                "id": "attack",
+                "name": "Attack",
+                "type": "attack",
+                "relationship": "primary",
+                "attack": {
+                  "type": "mwak",
+                  "toHit": 5,
+                  "reach": 5
+                },
+                "targetSpecial": "one target",
+                "damage": [
+                  {
+                    "formula": "2d6+3",
+                    "type": "slashing",
+                    "relationship": "base"
+                  }
+                ],
+                "proof": {
+                  "attack": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target.",
+                  "target": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target.",
+                  "damage": [
+                    "Hit: 10 (2d6 + 3) slashing damage."
+                  ]
+                }
+              },
+              {
+                "id": "save",
+                "name": "GM save",
+                "type": "save",
+                "relationship": "follow-up",
+                "save": {
+                  "dc": 11,
+                  "abilities": [
+                    "con"
+                  ],
+                  "choice": "single",
+                  "outcome": "none"
+                },
+                "proof": {
+                  "save": "If the target is a creature other than an undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute."
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "ELFautoimmunityborrowedfromGhoul; noattackdamageonundead; automaticparalyzedonsaveSuccess"
+    },
+    {
+      "id": "r9m-lich-legendary-resistance",
+      "label": "Lich — Legendary Resistance",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Lich CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nLegendary Resistance (3/Day). If the lich fails a saving throw, it can choose to succeed instead.\n",
+      "creature": {
+        "identity": {
+          "name": "Lich",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Lich CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Legendary Resistance (3/Day)",
+          "section": "trait",
+          "text": "Legendary Resistance (3/Day). If the lich fails a saving throw, it can choose to succeed instead.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Legendary Resistance (3/Day)",
+          "section": "trait",
+          "text": "Legendary Resistance (3/Day). If the lich fails a saving throw, it can choose to succeed instead.",
+          "operations": [],
+          "uses": {
+            "max": 3,
+            "period": "day"
+          }
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 325,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/undead/lich.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "lich.raw.yml",
+        "capturedSha256": "69a0b40d02be05562bd78f9b019e3122b2b445d200bcc77be1a978b02efd4eef",
+        "gitBlob": "fe9ef137c3f9a842afb1e1b30cd35b492a5e2f38"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "3/DAYoptionalFAILURESAVE->SUCCESSreplacement, notadvantage/+3bonus/autoallsuccess. IndependentoflegendaryACTIONpoolrecoveredonownturn; noReaction/actioncostprinted.",
+      "omission": "If the lich fails a saving throw, ",
+      "flip": [
+        "(3/Day)",
+        "(3/Turn)"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": false,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "wrong-per-turn-recovery-for-daily-resistance",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "shortRest"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "consumeslegendary-actionpoints; resets3eachturn; requiresreaction; Savebonus+3"
+    },
+    {
+      "id": "r9m-kraken-multiattack",
+      "label": "Kraken — Multiattack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Kraken CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nMultiattack. The kraken makes three tentacle attacks, each of which it can replace with one use of Fling.\n",
+      "creature": {
+        "identity": {
+          "name": "Kraken",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Kraken CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The kraken makes three tentacle attacks, each of which it can replace with one use of Fling.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The kraken makes three tentacle attacks, each of which it can replace with one use of Fling.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 324,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/monstrosity/kraken.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "kraken.raw.yml",
+        "capturedSha256": "313fccb143c07535e27b8a89b24173f46f0d1359e3d928c0772deee8b65e6854",
+        "gitBlob": "dfea62cb45df3cdcc689c8ad033fc34b6738c63a"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "THREEtentacleattacks,EACHcanbeREPLACEDone-for-onebyFlingutility. Mixed1/2/3Flingchoicesallowed, noextra4thaction, Flingnotanattackroll; referencedFling'seligibilityremainsapplicable.",
+      "omission": "each of which it can replace with one use of Fling",
+      "flip": [
+        "each of which it can replace",
+        "only one of which it can replace"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "atmostoneFlingreplacement; addsFlingafter3attacks; makesFlingameleeattack"
+    },
+    {
+      "id": "r9m-mummy-lord-dreadful-glare",
+      "label": "Mummy Lord — Dreadful Glare",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Mummy Lord CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nDreadful Glare. The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.\n",
+      "creature": {
+        "identity": {
+          "name": "Mummy Lord",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Mummy Lord CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Dreadful Glare",
+          "section": "action",
+          "text": "Dreadful Glare. The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Dreadful Glare",
+          "section": "action",
+          "text": "Dreadful Glare. The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "GM save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 16,
+                "abilities": [
+                  "wis"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn.",
+                "range": "The mummy lord targets one creature it can see within 60 feet of it."
+              },
+              "range": 60
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 334,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/undead/mummy-lord.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "mummy-lord.raw.yml",
+        "capturedSha256": "6b49996327e7078b87914a22260d1605120323044b52765436f225b994a0b0c1",
+        "gitBlob": "34666e9bc47bec187ecff23b3180a727e5d5c94c"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "Visiblecreature60ft/mutualsight WIS16fearuntilmummynextEND; failMARGIN5addsParalyzedsametime. SuccessfulSave24himmunitytoALLmummiesANDmummylords, contrastingordinaryMummyexceptionthatEXCLUDESlords.",
+      "omission": "If the target can see the mummy lord, ",
+      "flip": [
+        "of all mummies and mummy lords",
+        "of all mummies (but not mummy lords)"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "wrong-printed-basic-fact",
+          "assign": {
+            "executionMode": "native-with-gm",
+            "activityType": "utility",
+            "nativeRuleText": "Dreadful Glare. The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.",
+            "manualRemainder": "Dreadful Glare. The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.",
+            "sourceOperations": [
+              {
+                "id": "save",
+                "name": "GM save",
+                "type": "save",
+                "relationship": "primary",
+                "save": {
+                  "dc": 17,
+                  "abilities": [
+                    "wis"
+                  ],
+                  "choice": "single",
+                  "outcome": "none"
+                },
+                "proof": {
+                  "save": "If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn.",
+                  "range": "The mummy lord targets one creature it can see within 60 feet of it."
+                },
+                "range": 60
+              }
+            ]
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "immunityexcludeslordsoronlythisowner; rawdie<=5; no-mutual-sightneeded"
+    },
+    {
+      "id": "r9m-imp-shapechanger",
+      "label": "Imp — Shapechanger",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Imp CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nShapechanger. The imp can use its action to polymorph into a beast form that resembles a rat (speed 20 ft.), a raven (20 ft., fly 60 ft.), or a spider (20 ft., climb 20 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.\n",
+      "creature": {
+        "identity": {
+          "name": "Imp",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Imp CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Shapechanger",
+          "section": "trait",
+          "text": "Shapechanger. The imp can use its action to polymorph into a beast form that resembles a rat (speed 20 ft.), a raven (20 ft., fly 60 ft.), or a spider (20 ft., climb 20 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Shapechanger",
+          "section": "trait",
+          "text": "Shapechanger. The imp can use its action to polymorph into a beast form that resembles a rat (speed 20 ft.), a raven (20 ft., fly 60 ft.), or a spider (20 ft., climb 20 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 277,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/fiend/imp.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "imp.raw.yml",
+        "capturedSha256": "066ce8fe37e84aed4d6f9cc4f2e44b5a3da4926fbaee1eadf9f8480a2f3c2090",
+        "gitBlob": "4de0a9b64c50374dd9333657faec8d81cf6e411b"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "ACTION3namedbeastformswithFORM-SPECIFICMOVEMENTmatrix:ratwalk20;ravenwalk20/fly60;spiderwalk20/climb20. OnlynotedSPEEDstatschange, gearsunchanged, deathtrueform. Noimportallbeaststats/sensesorallmovementmodesineveryform.",
+      "omission": "Any equipment it is wearing or carrying isn't transformed.",
+      "flip": [
+        "Its statistics are the same in each form, except for the speed changes noted",
+        "Its statistics are replaced by those of the chosen beast in each form"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [
+        {
+          "id": "form-speed-not-permanent-base",
+          "path": [
+            "attributes",
+            "movement",
+            "fly"
+          ],
+          "value": 60
+        }
+      ],
+      "researchBadField": "allformsgainfly60ANDclimb20; copiesbeastHP/AC; transformsallgear"
+    },
+    {
+      "id": "r9m-hunter-shark-water-breathing",
+      "label": "Hunter Shark — Water Breathing",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Hunter Shark CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nWater Breathing. The shark can breathe only underwater.\n",
+      "creature": {
+        "identity": {
+          "name": "Hunter Shark",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Hunter Shark CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Water Breathing",
+          "section": "trait",
+          "text": "Water Breathing. The shark can breathe only underwater.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Water Breathing",
+          "section": "trait",
+          "text": "Water Breathing. The shark can breathe only underwater.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 382,
+            "column": "left"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/beast/hunter-shark.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "hunter-shark.raw.yml",
+        "capturedSha256": "e6fc424ca77c016c5ee7dc1047de89c42a7b0dd1836004bcb97db068a4f7718c",
+        "gitBlob": "fa2bf81b01dfc51f7a293866975907cceebcd5cb"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "ONLYUNDERWATERbreathing; noairbreathingpermission, amphibiousperiodic4hourconstraintfromSahuagin, addedWaterBreathingspell, waterwalkingorsuffocationdamageguess.",
+      "omission": "only ",
+      "flip": [
+        "only underwater",
+        "air and water"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "canbreatheairunrestricted; spells=[Water Breathing]; 4hourairtimerinvented",
+      "falseSpellGrant": "water breathing",
+      "falseSpellGrantReference": "Water Breathing"
+    },
+    {
+      "id": "r9m-tyrannosaurus-rex-multiattack",
+      "label": "Tyrannosaurus Rex — Multiattack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Tyrannosaurus Rex CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nMultiattack. The tyrannosaurus makes two attacks: one with its bite and one with its tail. It can't make both attacks against the same target.\n",
+      "creature": {
+        "identity": {
+          "name": "Tyrannosaurus Rex",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Tyrannosaurus Rex CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The tyrannosaurus makes two attacks: one with its bite and one with its tail. It can't make both attacks against the same target.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The tyrannosaurus makes two attacks: one with its bite and one with its tail. It can't make both attacks against the same target.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 279,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/beast/tyrannosaurus-rex.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "tyrannosaurus-rex.raw.yml",
+        "capturedSha256": "96b0edfc547bf2dd8df15ba9b374d7424f3e9bedf4e7bf27cdd67eb77b403270",
+        "gitBlob": "6a8cec572c2f1a6e14b4367056aec917446dc849"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "2attacks1Bite1Tail, MUSTUSEdifferentTARGETS. Notglobalattackbanoronlydifferentweapons; evenmissedBitedoesnotwaivesametargetprohibition, unlikeCrocTailowngrapple-onlyexclusion.",
+      "omission": "It can't make both attacks against the same target.",
+      "flip": [
+        "can't make both attacks against the same target",
+        "must make both attacks against the same target"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "bothattackssametargetallowedifBitemisses; noattackactionsallowedbecausecant; count3"
+    },
+    {
+      "id": "r9m-chimera-multiattack",
+      "label": "Chimera — Multiattack",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Chimera CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nMultiattack. The chimera makes three attacks: one with its bite, one with its horns, and one with its claws. When its fire breath is available, it can use the breath in place of its bite or horns.\n",
+      "creature": {
+        "identity": {
+          "name": "Chimera",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Chimera CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The chimera makes three attacks: one with its bite, one with its horns, and one with its claws. When its fire breath is available, it can use the breath in place of its bite or horns.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Multiattack",
+          "section": "action",
+          "text": "Multiattack. The chimera makes three attacks: one with its bite, one with its horns, and one with its claws. When its fire breath is available, it can use the breath in place of its bite or horns.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 267,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/monstrosity/chimera.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "chimera.raw.yml",
+        "capturedSha256": "8035682c61a9af3cd7056e36b8e2dd9cb98e7d5919532e1940f1befbc5869e47",
+        "gitBlob": "9e40051b7cf7e0c7305ddad507fad41342ecac03"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "3baseattacksBite/Horns/Claws; ONLYwhenFireBreathAVAILABLE mayREPLACEBiteORHornswithbreath, NEVERClaws. Notextra4thability, anyattackreplacement, orfreebreathwhileunavailable.",
+      "omission": "When its fire breath is available, ",
+      "flip": [
+        "in place of its bite or horns",
+        "in addition to its bite, horns, and claws"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "breathreplacesClaworaddsfourthaction; ignoresrechargeavailability"
+    },
+    {
+      "id": "r9m-manticore-tail-spike-regrowth",
+      "label": "Manticore — Tail Spike Regrowth",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Manticore CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nTail Spike Regrowth. The manticore has twenty-four tail spikes. Used spikes regrow when the manticore finishes a long rest.\n",
+      "creature": {
+        "identity": {
+          "name": "Manticore",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Manticore CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Tail Spike Regrowth",
+          "section": "trait",
+          "text": "Tail Spike Regrowth. The manticore has twenty-four tail spikes. Used spikes regrow when the manticore finishes a long rest.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Tail Spike Regrowth",
+          "section": "trait",
+          "text": "Tail Spike Regrowth. The manticore has twenty-four tail spikes. Used spikes regrow when the manticore finishes a long rest.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 329,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/monstrosity/manticore.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "manticore.raw.yml",
+        "capturedSha256": "a986870a3d88ccea32795873a7d3a894b486b44d8f89521f19615a7a831a3e1b",
+        "gitBlob": "8b0ccf3517619b98a3e1dbe833309fd7a6ccaf61"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "FINITEnaturalAMMO24tailspikes;USEDspikesregrowLONGREST, notshortrest/dawn/24perday. Thisisdepletableammo, unlikeHP/capacitycount; one-spikeattacksownexpenditure,nottreatas24usesoftheregrowthaction.",
+      "omission": "Used spikes regrow when the manticore finishes a long rest.",
+      "flip": [
+        "a long rest",
+        "a short rest"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 24,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "24/dayordawnpool; regrowthconsumes24charges; maxHP24or24spikespereachattack"
+    },
+    {
+      "id": "r9m-roper-spider-climb",
+      "label": "Roper — Spider Climb",
+      "family": "new-complete-monster-rule-parent",
+      "source": "Roper CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nSpider Climb. The roper can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.\n",
+      "creature": {
+        "identity": {
+          "name": "Roper",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Roper CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Traits\n"
+        },
+        {
+          "destination": "feature",
+          "name": "Spider Climb",
+          "section": "trait",
+          "text": "Spider Climb. The roper can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Spider Climb",
+          "section": "trait",
+          "text": "Spider Climb. The roper can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.",
+          "operations": []
+        }
+      ],
+      "provenance": {
+        "edition": "SRD5.1 CC, 2014 rules",
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+        "pages": [
+          {
+            "page": 342,
+            "column": "right"
+          }
+        ],
+        "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/monsters/monstrosity/roper.yml",
+        "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+        "capturedFile": "roper.raw.yml",
+        "capturedSha256": "35882ee3cfced07cc08cd6f91f753bca1fba340e4254f3ae106d06518883a8f4",
+        "gitBlob": "32e3757d755f38315bce0bd5a6a5351935ea2878"
+      },
+      "scope": "Complete new official rule parent on explicit synthetic base; actual full monster stats, spells, equipment, ammo inventories and movement automation not imported.",
+      "expectedBoundary": "CanCLIMB difficultsurfacesincludingUPSIDE-DOWNCEILINGS WITHOUTABILITYCHECK. NotcastSpiderClimb, checkDCinvented, numericClimbspeedguess, bypassallterrainorpassthroughsolids.",
+      "omission": "including upside down on ceilings",
+      "flip": [
+        "without needing to make an ability check",
+        "only after succeeding on an ability check"
+      ],
+      "checks": {
+        "noAutomaticStatuses": true,
+        "noCasts": true,
+        "noUses": true,
+        "noSave": true,
+        "noDamage": true
+      },
+      "irProbes": [
+        {
+          "id": "invented-daily-pool-not-targets-frequency-or-ammo",
+          "assign": {
+            "uses": {
+              "max": 3,
+              "period": "day"
+            }
+          }
+        }
+      ],
+      "baseProbes": [],
+      "researchBadField": "spells=[Spider Climb]; requiresAthleticsDC15; baseclimbSpeed30fromnowhere",
+      "falseSpellGrant": "spider climb",
+      "falseSpellGrantReference": "Spider Climb"
+    }
+  ]
+}

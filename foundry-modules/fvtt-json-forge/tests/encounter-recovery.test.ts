@@ -9,6 +9,7 @@ import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtim
 import { serializeForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { encounterFixture } from '../../../tests/helpers/forge-encounter';
 import { localizationText } from '@fvtt-json-generator/contracts/localization';
+import firstCompanyUi from '../../../tests/fixtures/forge-company-first-ui-recovery.json';
 
 const source = '## 生物一：Night Claw\nIts attack hits a target.\n## 生物二：守卫\n守卫的攻击命中目标。';
 function game() { return { version: '14.368', world: { id: 'world-a' }, system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'gm-a', isGM: true }, macros: { contents: [] } }; }
@@ -40,6 +41,32 @@ function app(store: { load: () => Promise<EncounterRecoverySnapshot | undefined>
 }
 
 describe('encounter task checkpoint', () => {
+  test('round-trips the actual single native Company candidate without inventing a controller or losing its draft', async () => {
+    const data = structuredClone(firstCompanyUi.snapshot) as unknown as SourceEncounterRecoverySnapshot;
+    expect(data.package).not.toContain(data.sourceHash);
+    const restored = decodeEncounterRecovery(serializeEncounterRecovery(data));
+    expect(restored).toEqual(data);
+    const harness = app({ load: async () => restored, save: async () => undefined });
+    expect((await harness.application._prepareContext()).recoveryPackageAvailable).toBe(true);
+    await harness.application.previewRecovered();
+    expect(harness.application.prepared.hash).toBe(data.report!.packageHash);
+    expect(harness.application.localizationDraft).toEqual(data.report!.localizationDraft);
+    expect(harness.application.prepared.bundle.macros).toEqual([]);
+    expect((await harness.application._prepareContext()).canImport).toBe(false);
+    expect(harness.providerCalls).toBe(0);
+    expect(harness.generationCalls).toBe(0);
+  });
+
+  test('rejects modified package content even when the old source-hash substring is retained', async () => {
+    const fixture = encounterFixture();
+    const original = { ...fixture, macros: [{ ...fixture.macros[0]!, notes: `原始资料SHA-256：${hashSource(source)}` }] };
+    const prepared = await prepareForgeEncounter(JSON.stringify(original));
+    const changed = { ...original, label: 'Changed candidate with the old source identity' };
+    expect(JSON.stringify(changed)).toContain(hashSource(source));
+    const data = snapshot({ report: { ...report(), packageHash: prepared.hash }, package: JSON.stringify(changed) });
+    expect(() => serializeEncounterRecovery(data)).toThrow('保存的战斗包与来源报告不符');
+  });
+
   test('source is saved before the first AI request and restored after reopening', async () => {
     let saved: EncounterRecoverySnapshot | undefined;
     const store = { load: async () => saved, save: async (value: EncounterRecoverySnapshot) => { saved = value; }, clear: async () => { saved = undefined; } };

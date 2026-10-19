@@ -1,6 +1,9 @@
+import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
+import { sourceOperationErrors } from '@fvtt-json-generator/models/source-operations';
 import type {
   StructuredActionData,
   DamagePart,
+  SourceDamagePart,
   AoeTemplate,
   ActionTarget,
   SaveEffect,
@@ -11,6 +14,8 @@ import type {
   SaveAbility,
   TriggerType,
 } from '@fvtt-json-generator/models/action';
+import { parseSupportedRuleFacts } from './sourceRuleFacts';
+import {sourceManualSpellUses,sourceGmTriggeredSave} from '@fvtt-json-generator/models/source-rule-facts';
 import {
   isWeaponMasteryId,
   parseWeaponConfiguration,
@@ -34,6 +39,7 @@ const ABILITY_MAP: Record<string, string> = {
 
 const AOE_SHAPE_MAP: Record<string, string> = {
   '球形': 'sphere',
+  '半径': 'radius',
   '锥形': 'cone',
   '线形': 'line',
   '立方体': 'cube',
@@ -59,6 +65,25 @@ export class StructuredActionParser {
     const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
     const record = entry as Record<string, unknown>;
+    const executionMode = record['执行模式'] ?? record.executionMode;
+    if (executionMode !== undefined && executionMode !== 'gm-manual'&&executionMode!=='native-with-gm') throw new Error('InvalidFeatureExecutionMode');
+    if(executionMode==='native-with-gm'&&(!String(record.nativeRuleText??'').trim()||!String(record.manualRemainder??'').trim()))throw new Error('InvalidMixedFeatureBoundary');
+    if(record.spellUseRecords!==undefined){
+      const expected=sourceManualSpellUses(String(describe));
+      if(executionMode!=='native-with-gm'||!expected||JSON.stringify(record.spellUseRecords)!==JSON.stringify(expected.records)||record.nativeRuleText!==expected.ruleText)
+        throw new Error('InvalidManualSpellUsesSource');
+    }
+    if(record.gmTriggeredSave!==undefined&&(executionMode!=='native-with-gm'||JSON.stringify(record.gmTriggeredSave)!==JSON.stringify(sourceGmTriggeredSave(String(describe)))))throw new Error('InvalidGmTriggeredSaveSource');
+    if(record.nativeFailureStatuses!==undefined&&executionMode!=='native-with-gm')throw new Error('InvalidNativeFailureStatusesSource');
+    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||sourceOperationErrors(String(describe),record.sourceOperations,Array.isArray(record.sourceContext)?record.sourceContext:[]).length))throw new Error('InvalidSourceOperations');
+    if(record.sourceContext!==undefined&&(!Array.isArray(record.sourceContext)||record.sourceContext.some(context=>typeof context!=='string'||!context.trim())))throw new Error('InvalidSourceOperationContext');
+    if(record.sourceFeatureId!==undefined&&(typeof record.sourceFeatureId!=='string'||!/^\w{16}$/u.test(record.sourceFeatureId)))throw new Error('InvalidSourceFeatureIdentity');
+    if (executionMode === 'gm-manual') {
+      const forbidden = ['伤害','damage','治疗','healing','攻击类型','attackType','命中','toHit','DC','属性','ability','AoE','aoe','目标','target','内嵌效果','子活动','失败效果','成功效果','weapon-properties','weaponProperties','武器特性','native-mastery','nativeMastery','原生精通','spellcastingFeatureKey'];
+      if (forbidden.some(key => Object.hasOwn(record, key)) || type !== 'utility' || !String(describe).trim()) {
+        throw new Error('ManualFeatureContainsExecutableMechanics');
+      }
+    }
     const rawDamage = record['\u4f24\u5bb3'] ?? record['damage'];
     const rawHealing = record['\u6cbb\u7597'] ?? record['healing'];
     const activation = record['activation'];
@@ -74,18 +99,28 @@ export class StructuredActionParser {
     const nativeMastery = this.parseNativeMastery(
       record['native-mastery'] ?? record.nativeMastery ?? record['原生精通'],
     );
-    if (spellcastingFeatureKey && sectionName !== '特性') {
-      throw new Error('InvalidSpellcastingFeatureLinkSection: spellcastingFeatureKey is allowed only in the 特性 section.');
+    if (spellcastingFeatureKey && !['特性','动作','附赠动作','反应'].includes(sectionName)) {
+      throw new Error('InvalidSpellcastingFeatureLinkSection: expected a trait, action, bonus action or reaction.');
     }
-    if (spellcastingFeatureKey && explicitActivationType) {
-      throw new Error('InvalidSpellcastingFeatureActivation: linked spellcasting features must remain passive.');
+    if (spellcastingFeatureKey && explicitActivationType && !['action','bonus','reaction'].includes(explicitActivationType)) {
+      throw new Error('InvalidSpellcastingFeatureActivation: unsupported linked spellcasting activation.');
     }
     const subActions = this.parseSubActions((entry as Record<string, unknown>)['子活动']);
+    if(record.literalName!==undefined&&record.literalName!==true)throw new Error('InvalidLiteralName');
+    const literalName=record.literalName===true||executionMode!==undefined||!!spellcastingFeatureKey;
     const embeddedEffects = this.parseEmbeddedEffects((entry as Record<string, unknown>)['内嵌效果']);
 
     const action: StructuredActionData = {
-      name: this.extractName(String(name)),
-      englishName: this.extractEnglishName(String(name)),
+      name: literalName?String(name):this.extractName(String(name)),
+      ...(executionMode === 'gm-manual'||executionMode==='native-with-gm' ? { executionMode } : {}),
+      ...(executionMode==='native-with-gm'?{nativeRuleText:String(record.nativeRuleText),manualRemainder:String(record.manualRemainder)}:{}),
+      ...(record.spellUseRecords!==undefined?{spellUseRecords:sourceManualSpellUses(String(describe))!.records}:{}),
+      ...(record.gmTriggeredSave!==undefined?{gmTriggeredSave:sourceGmTriggeredSave(String(describe))!}:{}),
+      ...(record.nativeFailureStatuses!==undefined?{nativeFailureStatuses:record.nativeFailureStatuses as StructuredActionData['nativeFailureStatuses']}:{}),
+      ...(record.sourceOperations!==undefined?{sourceOperations:structuredClone(record.sourceOperations) as StructuredActionData['sourceOperations']}:{}),
+      ...(record.sourceContext!==undefined?{sourceContext:[...record.sourceContext as string[]]}:{}),
+      ...(record.sourceFeatureId!==undefined?{sourceFeatureId:record.sourceFeatureId as string}:{}),
+      englishName: literalName?undefined:this.extractEnglishName(String(name)),
       spellcastingFeatureKey,
       ...(weaponConfiguration ? { weaponConfiguration } : {}),
       ...(nativeMastery ? { nativeMastery } : {}),
@@ -97,6 +132,12 @@ export class StructuredActionParser {
       } : undefined,
       describe: String(describe),
     };
+    if (rawDamage !== undefined) action.sourceDamageParts = this.parseSourceDamageParts(rawDamage);
+    action.sourceRuleFacts = executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
+    if(executionMode==='native-with-gm'&&['none','half','full'].includes(String(record.saveOutcome)))action.saveOutcome=record.saveOutcome as 'none'|'half'|'full';
+    const explicitRange=record['范围']??record.range;
+    if(typeof explicitRange==='string'&&explicitRange.trim())action.range=explicitRange.trim();
+    if(typeof record.targetSpecial==='string'&&record.targetSpecial.trim())action.targetSpecial=record.targetSpecial.trim();
 
     if (action.type === 'attack' || (entry as Record<string, unknown>)['攻击类型']) {
       const attackType = (entry as Record<string, unknown>)['攻击类型'] ?? (entry as Record<string, unknown>)['attackType'] ?? '';
@@ -109,6 +150,8 @@ export class StructuredActionParser {
     if (action.type === 'save' || (entry as Record<string, unknown>)['DC']) {
       action.DC = this.parseNumber((entry as Record<string, unknown>)['DC']);
       action.ability = this.normalizeAbility(String((entry as Record<string, unknown>)['属性'] ?? (entry as Record<string, unknown>)['ability']));
+      const saveCondition = record['豁免条件'] ?? record.saveCondition;
+      if (typeof saveCondition === 'string' && saveCondition.trim()) action.saveCondition = saveCondition.trim();
       const dcSourceKind = (entry as Record<string, unknown>)['DC来源'] ?? (entry as Record<string, unknown>)['dcSourceKind'];
       if (dcSourceKind === 'ability' || dcSourceKind === 'spellcasting' || dcSourceKind === 'literal') {
         action.dcSourceKind = dcSourceKind;
@@ -127,6 +170,13 @@ export class StructuredActionParser {
       const rawType = String(healing['\u7c7b\u578b'] ?? healing['type'] ?? '').trim().toLowerCase();
       if (formula && (rawType === 'healing' || rawType === 'temphp')) {
         action.healing = { formula, type: rawType };
+        if(healing.target!==undefined){
+          const target=healing.target;
+          if(!target||typeof target!=='object'||Array.isArray(target))throw new Error('InvalidHealingTarget');
+          const recipient=target as Record<string,unknown>;
+          if(Object.keys(recipient).some(key=>!['type','count','special'].includes(key))||!['self','creature'].includes(String(recipient.type))||recipient.count!==1||typeof recipient.special!=='string'||!recipient.special.trim())throw new Error('InvalidHealingTarget');
+          action.healing.target={type:recipient.type as 'self'|'creature',count:1,special:recipient.special};
+        }
       }
     }
 
@@ -239,13 +289,11 @@ export class StructuredActionParser {
   }
 
   private extractName(fullName: string): string {
-    const match = fullName.match(/^(.+?)\s*\(/);
-    return match?.[1]?.trim() ?? fullName.trim();
+    return splitBilingualName(fullName).name;
   }
 
   private extractEnglishName(fullName: string): string | undefined {
-    const match = fullName.match(/\(([^)]+)\)\s*$/);
-    return match?.[1]?.trim();
+    return splitBilingualName(fullName).englishName;
   }
 
   private normalizeType(t: string): StructuredActionData['type'] {
@@ -277,21 +325,37 @@ export class StructuredActionParser {
     return 0;
   }
 
-  private parseDamageParts(parts: unknown): DamagePart[] | undefined {
-    if (!parts || !Array.isArray(parts)) return undefined;
-    const damage = parts.flatMap((p: unknown) => {
-      if (typeof p === 'string') return [{ formula: p, type: '' }];
-      const record = p as Record<string, unknown>;
-      const relationship = String(record['关系'] ?? record['relationship'] ?? '').trim().toLowerCase();
-      // Conditional and replacement damage remain explicit in Intake Markdown,
-      // but must not be flattened into the primary on-hit/save damage activity.
-      if (relationship === 'conditional' || relationship === 'replacement') return [];
-      return [{
-        formula: String(record['公式'] ?? record['formula'] ?? ''),
-        type: String(record['类型'] ?? record['type'] ?? ''),
-      }];
+  private parseSourceDamageParts(parts: unknown): SourceDamagePart[] | undefined {
+    if (parts === undefined) return undefined;
+    if (!Array.isArray(parts)) throw new Error('InvalidSourceDamage: expected a damage list.');
+    const result = parts.map((part: unknown): SourceDamagePart => {
+      if (typeof part === 'string') return { formula: part, type: '', relationship: 'base' };
+      if (!part || typeof part !== 'object' || Array.isArray(part)) throw new Error('InvalidSourceDamage: expected a damage part.');
+      const record = part as Record<string, unknown>;
+      const relationship = String(record['关系'] ?? record.relationship ?? 'base').trim().toLowerCase();
+      const condition = record['条件'] ?? record.condition;
+      const types=record['类型选项']??record.types;
+      if(types!==undefined&&(!Array.isArray(types)||types.length<2||types.some(t=>typeof t!=='string'||!t.trim())||new Set(types).size!==types.length))throw new Error('InvalidSourceDamage: an exclusive type choice requires distinct nonempty types.');
+      if (!['base', 'additional', 'conditional', 'replacement'].includes(relationship)
+        || condition !== undefined && (typeof condition !== 'string' || !condition.trim())) {
+        throw new Error('InvalidSourceDamage: relationship or condition is invalid.');
+      }
+      return {
+        formula: String(record['公式'] ?? record.formula ?? ''),
+        type: String(record['类型'] ?? record.type ?? ''),
+        ...(types===undefined?{}:{types:types as string[]}),
+        relationship: relationship as SourceDamagePart['relationship'],
+        ...(condition === undefined ? {} : { condition: condition.trim() }),
+      };
     });
-    return damage.length > 0 ? damage : undefined;
+    return result.length ? result : undefined;
+  }
+
+  private parseDamageParts(parts: unknown): DamagePart[] | undefined {
+    const damage = this.parseSourceDamageParts(parts)?.filter(part =>
+      part.relationship === 'base' || part.relationship === 'additional')
+      .map(({ formula, type, types }) => ({ formula, type, ...(types ? { types } : {}) }));
+    return damage?.length ? damage : undefined;
   }
 
   private parseAoe(aoe: unknown): AoeTemplate | undefined {
@@ -360,6 +424,9 @@ export class StructuredActionParser {
       duration: (e as Record<string, unknown>)['持续'] ? String((e as Record<string, unknown>)['持续']) : undefined,
       damageType: (e as Record<string, unknown>)['伤害类型'] ? String((e as Record<string, unknown>)['伤害类型']) : undefined,
       damageFormula: (e as Record<string, unknown>)['伤害公式'] ? String((e as Record<string, unknown>)['伤害公式']) : undefined,
+      escapeDc: (e as Record<string, unknown>)['逃脱DC'] === undefined
+        ? undefined : this.parseNumber((e as Record<string, unknown>)['逃脱DC']),
+      staged: (e as Record<string, unknown>)['阶段'] === true ? true : undefined,
     }));
   }
 }

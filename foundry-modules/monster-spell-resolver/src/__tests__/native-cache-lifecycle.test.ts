@@ -30,6 +30,26 @@ function preparedCache(reference: string): Record<string, any> {
 }
 
 describe('native cache projection normalization', () => {
+  for(const [raw,stored] of [
+    ['<p><一名生物进行[[/check ability=int skill=inv]]检定。</p>','<p>&lt;一名生物进行[[/check ability=int skill=inv]]检定。</p>'],
+    ['<p>Range < 30 feet & damage 4.</p>','<p>Range &lt; 30 feet &amp; damage 4.</p>'],
+    ['<p><δύο creatures <3 feet &Reference[dimlight]</p>','<p>&lt;δύο creatures &lt;3 feet &amp;Reference[dimlight]</p>'],
+  ])test('accepts only equivalent HTML serialization: '+raw,()=>{
+    const expected=preparedCache('unchanged'),actual=structuredClone(expected);expected.effects[0].description=raw;actual.effects[0].description=stored;
+    const before=JSON.stringify([expected,actual]);expect(()=>assertNativeCacheProjectionMatches(expected,actual)).not.toThrow();expect(JSON.stringify([expected,actual])).toBe(before);
+  });
+  for(const [raw,changed] of [
+    ['<p><b>Damage 4</b></p>','<p>&lt;b&gt;Damage 4&lt;/b&gt;</p>'],
+    ['<p>&amp;lt;</p>','<p>&lt;</p>'],
+    ['<p>&notin</p>','<p>&amp;notin</p>'],
+    ['<p>Range < 30 feet.</p>','<p>Range &lt; 60 feet.</p>'],
+    ['<script>if(x<3)run()</script>','<script>if(x&lt;3)run()</script>'],
+    ['<!-- source <3 --><p>same</p>','<!-- source &lt;3 --><p>same</p>'],
+    ['<p><a data-uuid="Compendium.a.b.Item.A">same</a></p>','<p><a data-uuid="Compendium.a.b.Item.B">same</a></p>'],
+  ])test('rejects real text, markup, reference or escape-depth changes: '+raw,()=>{
+    const expected=preparedCache('unchanged'),actual=structuredClone(expected);expected.effects[0].description=raw;actual.effects[0].description=changed;
+    expect(()=>assertNativeCacheProjectionMatches(expected,actual)).toThrow(/public getter projection/iu);
+  });
   test('accepts Foundry HTML ampersand escaping without ignoring rich-text semantics', () => {
     const expected = preparedCache('&Reference[dimlight]');
     const actual = preparedCache('&amp;Reference[dimlight]');

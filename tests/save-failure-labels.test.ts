@@ -17,6 +17,47 @@ async function generate(description: string,withDamage=true) {
 }
 
 describe('source-labelled failed-save damage', () => {
+  test.each([
+    'Dexterity Saving Throw: DC 15. Failure: The creature\nis Restrained until the end of its next turn.',
+    'Dexterity Saving Throw: DC 15. First Failure:\nThe target is\nUnconscious for one minute.',
+    'Dexterity Saving Throw: DC 15. FAILURE: 目标\n陷入束缚，持续至下一回合结束。',
+  ])('projects wrapped ordinary failed-save conditions without changing the formal Actor shape: %s',async(description)=>{
+    const baseline=await generate(description.replaceAll('\n',' '),false);
+    for(const newline of ['\n','\r\n']){
+      const result=await generate(description.replaceAll('\n',newline),false);
+      expect(result.verification.mechanicsCoverage.find(entry=>entry.kind==='save')?.status).toBe('projected');
+      const normalized=[result,baseline].map(output=>{
+        const actor=structuredClone(output.artifact) as any;
+        for(const item of actor.items){
+          item.system.description.value='';
+          item.system.activities=Object.fromEntries(Object.entries(item.system.activities).map(([id,value],index)=>{
+            const activity=value as any;
+            expect(activity._id).toBe(id);
+            expect(activity.save).toEqual({ability:['dex'],dc:{calculation:'',formula:'15'}});
+            expect(activity.damage).toEqual({onSave:'none',parts:[]});
+            activity._id=`source-activity-${index}`;activity.description.chatFlavor='';return [activity._id,activity];
+          }));
+        }
+        return actor;
+      });
+      expect(normalized[0]).toEqual(normalized[1]);
+    }
+  });
+  test('keeps review for wrapped margin/second failure, a separate paragraph or unresolved success',async()=>{
+    for(const description of [
+      'DC 15. Failure by 5 or More: The creature\nis Restrained.',
+      'DC 15. Second Failure:\nThe target is Unconscious.',
+      'DC 15. Failure: The GM decides.\nThe target is Restrained.',
+      'DC 15. Failure: The GM decides\n\nThe target is Restrained.',
+      'DC 15. Failure: The creature\nis Restrained. Success: The creature is Restrained for less time.',
+      'DC 15. Failure: The creature is not\nRestrained.',
+      'DC 15. Failure: The creature is immune to\nbeing Restrained.',
+      'DC 15. Failure: If the target is already\nRestrained, the GM decides what happens.',
+    ]){
+      const result=await generate(description,false);
+      expect(result.verification.mechanicsCoverage.find(entry=>entry.kind==='save')?.status).toBe('literal-only');
+    }
+  });
   test('preserves a literal Curse with native Save mechanics and no invented native condition',async()=>{
     const baseline=await generate('The target must succeed on a DC 15 Dexterity saving throw or be Cursed.',false);
     for(const description of [
@@ -30,12 +71,16 @@ describe('source-labelled failed-save damage', () => {
         const actor=structuredClone(output.artifact) as any;
         for(const item of actor.items){
           expect(item.effects).toEqual([]);
+          // Content-selected icons can differ for distinct literal descriptions;
+          // keep this comparison on the complete mechanical document shape.
+          item.img='content-icon';
           item.system.description.value='';
           item.system.activities=Object.fromEntries(Object.entries(item.system.activities).map(([id,value],index)=>{
             const activity=value as any;expect(id).toMatch(/^[0-9a-z]{16}$/);expect(activity._id).toBe(id);
             expect(activity.save).toEqual({ability:['dex'],dc:{calculation:'',formula:'15'}});
             expect(activity.damage).toEqual({onSave:'none',parts:[]});
             expect(activity.effects??[]).toEqual([]);
+            activity.img='content-icon';
             activity._id=`source-activity-${index}`;activity.description.chatFlavor='';return [activity._id,activity];
           }));
         }

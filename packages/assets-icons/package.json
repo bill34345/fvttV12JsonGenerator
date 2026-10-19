@@ -15,6 +15,7 @@
     "./token-review-types": "./src/assets/tokenReviewTypes.ts",
     "./visual-hints": "./src/assets/visualHints.ts",
     "./icon-adapter": "./src/icons/adapter.ts",
+    "./icon-browser": "./src/icons/browser.ts",
     "./icon-report": "./src/icons/report.ts",
     "./icon-resolver": "./src/icons/resolver.ts",
     "./icon-resources": "./src/icons/resources.ts",

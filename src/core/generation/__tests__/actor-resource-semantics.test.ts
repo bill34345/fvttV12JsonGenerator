@@ -117,9 +117,9 @@ describe('source-derived Actor resource semantics', () => {
       expect(result.verification.mechanicsCoverage.filter((entry) =>
         entry.kind.startsWith('resource'))).toHaveLength(9);
 
-      const shell = itemByName(actor, '反魔甲壳 (Antimagic Carapace)');
-      const spikes = itemByName(actor, '棘刺储备 (Spike Reserve)');
-      const bloom = itemByName(actor, '奥术滋养 (Arcane Feeding)');
+      const shell = itemByName(actor, '反魔甲壳 Antimagic Carapace');
+      const spikes = itemByName(actor, '棘刺储备 Spike Reserve');
+      const bloom = itemByName(actor, '奥术滋养 Arcane Feeding');
       expect(shell._id).toMatch(/^[A-Za-z0-9]{16}$/);
       expect(shell.system.uses).toEqual({ spent: 2, max: '2', recovery: [] });
       expect(spikes.system.uses).toEqual({
@@ -144,8 +144,8 @@ describe('source-derived Actor resource semantics', () => {
         value: '@item.uses.value',
       }));
 
-      const spikeShot = itemByName(actor, '棘刺射击 (Spike Shot)');
-      const spikeVolley = itemByName(actor, '棘刺齐射 (Spike Volley)');
+      const spikeShot = itemByName(actor, '棘刺射击 Spike Shot');
+      const spikeVolley = itemByName(actor, '棘刺齐射 Spike Volley');
       expect(activities(spikeShot)[0].consumption.targets).toContainEqual(expect.objectContaining({
         type: 'itemUses',
         target: spikes._id,
@@ -157,7 +157,7 @@ describe('source-derived Actor resource semantics', () => {
         value: '3',
       }));
 
-      const psychicBurst = itemByName(actor, '心灵爆发 (Psychic Burst)');
+      const psychicBurst = itemByName(actor, '心灵爆发 Psychic Burst');
       const empoweredBurst = activities(psychicBurst).find((activity) =>
         activity.flags?.fvttJsonGenerator?.resourceConsumption?.id === 'shell-burst-variable');
       expect(empoweredBurst).toBeDefined();
@@ -176,7 +176,7 @@ describe('source-derived Actor resource semantics', () => {
         scaling: { mode: 'whole', number: 0, formula: '3' },
       }));
 
-      const bloomCloud = itemByName(actor, '绽放云 (Bloom Cloud)');
+      const bloomCloud = itemByName(actor, '绽放云 Bloom Cloud');
       const expandedCloud = activities(bloomCloud).find((activity) =>
         activity.flags?.fvttJsonGenerator?.resourceConsumption?.id === 'bloom-cloud-variable');
       expect(expandedCloud.target.template.size).toBe('15 + 5 * @scaling');

@@ -22,7 +22,7 @@ import {
 import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
 import type { GenerationDiagnostic } from '@fvtt-json-generator/generation/types';
 import { parseForgeItemSource } from '@fvtt-json-generator/parser/forge-item-source';
-import { createDisabledIconResolutionSession } from '@fvtt-json-generator/workflows/icon-port';
+import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { generateItemArtifacts } from '@fvtt-json-generator/workflows/item-generation';
 import { normalizeForgeItemArtifact } from './artifact';
 import { buildBrowserItemVerificationSummary } from './itemVerification';
@@ -74,7 +74,7 @@ export function buildForgeItemRequest(options: BuildForgeItemRequestOptions): Fo
     resolvedTarget: {
       generatorProfile: target.generatorProfile,
       effectProfile: 'core',
-      iconMode: 'off',
+      iconMode: target.generatorProfile === 'v14' ? 'safe' : 'off',
     },
   };
 }
@@ -93,8 +93,8 @@ export async function convertFinalItemSource(request: ForgeItemRequest): Promise
     const artifacts = await generateItemArtifacts(parsed.item, {
       fvttVersion: targetVersion,
       effectProfile: 'core',
-      iconWorkflow: { createResolutionSession: (_targetVersion, options) => createDisabledIconResolutionSession(options) },
-      iconOptions: { mode: 'off' },
+      iconWorkflow: { createResolutionSession: createBundledIconResolutionSession },
+      iconOptions: { mode: value.resolvedTarget.iconMode },
     });
     if (artifacts.length !== 1) {
       return artifacts.length === 0
@@ -139,14 +139,14 @@ export async function convertFinalItemSource(request: ForgeItemRequest): Promise
         verification = projectForgeVerificationSummary({ ...formalVerification, status, diagnostics });
       }
     }
-    const base = makeItemResultBase(
+    const base = { ...makeItemResultBase(
       value,
       formalVerification.target.stats.systemVersion,
       verification,
       itemVerification,
       itemDocument,
       projectForgeDiagnostics(diagnostics),
-    );
+    ), ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge Item verification was not proven by the closed projection.');
       return {
@@ -235,7 +235,7 @@ function makeItemResultBase(
       systemId: 'dnd5e' as const,
       systemVersionObserved,
       effectProfile: 'core' as const,
-      iconMode: 'off' as const,
+      iconMode: request.resolvedTarget.iconMode,
     },
     diagnostics,
     verification,

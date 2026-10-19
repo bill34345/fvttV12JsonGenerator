@@ -1,3 +1,4 @@
+import type { IconReviewReport } from '@fvtt-json-generator/contracts/icon-review';
 import type {
   ConversionStatus,
   DiagnosticSeverity,
@@ -24,6 +25,8 @@ export type ForgeGeneratorProfile = typeof FORGE_GENERATOR_PROFILES[number];
 
 export const FORGE_EFFECT_PROFILE = 'core' as const;
 export const FORGE_ICON_MODE = 'off' as const;
+export const FORGE_ICON_MODES = ['off', 'safe'] as const;
+export type ForgeIconMode = typeof FORGE_ICON_MODES[number];
 
 export type ForgeCompatibility = 'supported' | 'forward-fallback';
 
@@ -345,7 +348,7 @@ export interface ForgeActorRequest {
   resolvedTarget: {
     generatorProfile: ForgeGeneratorProfile;
     effectProfile: typeof FORGE_EFFECT_PROFILE;
-    iconMode: typeof FORGE_ICON_MODE;
+    iconMode: ForgeIconMode;
   };
 }
 
@@ -447,11 +450,12 @@ export interface ForgeActorResultBase {
     systemId: 'dnd5e';
     systemVersionObserved: string;
     effectProfile: typeof FORGE_EFFECT_PROFILE;
-    iconMode: typeof FORGE_ICON_MODE;
+    iconMode: ForgeIconMode;
   };
   diagnostics: ForgeDiagnostic[];
   verification: ForgeVerificationSummary;
   actorVerification: ForgeActorVerificationSummary;
+  iconReview?: IconReviewReport;
 }
 
 export type ForgeActorResult =
@@ -479,6 +483,7 @@ export interface ForgeItemResultBase {
   verification: ForgeVerificationSummary;
   itemVerification: ForgeItemVerificationSummary;
   itemDocument: ForgeItemDocumentSummary;
+  iconReview?: IconReviewReport;
 }
 
 export type ForgeItemResult =

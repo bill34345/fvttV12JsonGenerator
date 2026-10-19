@@ -164,7 +164,7 @@ export function expandParsedItemStages(parsed: ParsedItem): ExpandedStage[] {
       (stage.requirements?.length ?? 0) > 0
       || Object.values(stage.actions ?? {}).some((entries) => (entries?.length ?? 0) > 0),
     );
-    const suffix = stageIndex === 0 ? '' : ` (${stage.name})`;
+    const suffix = stageIndex === 0 ? '' : ` ${stage.name}`;
     const diagnostics: GenerationDiagnostic[] = sourceMechanicsPresent ? [] : [{
       code: 'GEN_STAGE_LITERAL_REVIEW_REQUIRED',
       severity: 'warning',

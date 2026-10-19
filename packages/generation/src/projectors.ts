@@ -54,6 +54,9 @@ class Dnd5e533Projector implements GenerationProjector {
         effectProfile: options.effectProfile,
         translationService: options.translationService,
         iconResolver: options.iconResolver,
+        onRulePresentationPlan: options.onRulePresentationPlan,
+        rulePresentationSource: document.source.text,
+        rulePresentationActorNormalizer: options.rulePresentationActorNormalizer,
       });
       return options.route
         ? generator.generateForRoute(document.compatibilitySource, options.route)

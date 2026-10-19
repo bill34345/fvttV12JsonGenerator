@@ -197,7 +197,8 @@ describe('project robustness source regressions', () => {
     expect(result.status).not.toBe('failed');
     expect(actor.system.details.type.value).toBe(type!.split(' ')[0]);
     expect(result.actorVerification!.sourceIntegrityErrors).toEqual([]);
-    const item = actor.items.find((i: any) => i.name === 'Guard Stance');
+    const expectedName=`Guard Stance (Recharges after a ${rest} Rest)`;
+    const item = actor.items.find((i: any) => i.name === expectedName);
     expect(item.system.uses).toEqual({ spent: 0, max: '1', recovery: [{ period, type: 'recoverAll' }] });
     expect(Object.values(item.system.activities).some((a: any) => a.consumption?.targets.some((t: any) => t.type === 'itemUses' && t.value === '1'))).toBe(true);
     const crlf = await convertMarkdownContentToJson({ ...target, content: content.replace(/\r?\n/g, '\r\n') });
@@ -205,8 +206,8 @@ describe('project robustness source regressions', () => {
     for (const corrupt of [
       (copy: any) => { copy.system.details.type.value = ''; },
       (copy: any) => { copy.system.details.type.subtype = 'invented subtype'; },
-      (copy: any) => { delete copy.items.find((i: any) => i.name === 'Guard Stance').system.uses; },
-      (copy: any) => { copy.items.find((i: any) => i.name === 'Guard Stance').system.description.value = ''; },
+      (copy: any) => { delete copy.items.find((i: any) => i.name === expectedName).system.uses; },
+      (copy: any) => { copy.items.find((i: any) => i.name === expectedName).system.description.value = ''; },
     ]) {
       const copy = structuredClone(actor); corrupt(copy);
       expect(buildActorVerificationSummaryFromValues({ source: content, actor: copy }).sourceIntegrityErrors.length).toBeGreaterThan(0);
@@ -227,7 +228,7 @@ describe('project robustness source regressions', () => {
     const actor = result.rawJson as any;
     expect(actor.system.details.type).toMatchObject({ value: 'humanoid', subtype: 'orc, shapechanger' });
     expect(result.actorVerification!.sourceIntegrityErrors).toEqual([]);
-    expect(actor.items.find((i: any) => i.name === 'Spirit-Bonded Body').system.uses.recovery[0].period).toBe('sr');
+    expect(actor.items.find((i: any) => i.name === 'Spirit-Bonded Body (Recharges after a Short or Long Rest)').system.uses.recovery[0].period).toBe('sr');
     expect(actor.system.skills.prc.bonuses.passive).toBe('+3');
   });
 

@@ -1,0 +1,275 @@
+{
+  "provenance": {
+    "kind": "actual normal DeepSeek Gith import preflight failure plus explicitly authored shared control manifest",
+    "actorId": "ace5d3afdcde19d2",
+    "githReadbackSha256": "7f3970607c00b6f340cf9e9162e35abad670b8310ada29933af450ab93189cc4",
+    "preflightReportSha256": "e78207c98900d3fd8db1d7983bc02c1a2b90df6cc66ec530bdccb3f9a0e7b37d",
+    "githSourceSha256": "8295ff67c551ba3040ff24fd071db273b05728b08e83c5eabc0c173434862fb9",
+    "sharedControlRealModelCalls": 0,
+    "candidateMetadataInTests": "synthetic metadata for planning only, not actual matching acceptance"
+  },
+  "githSource": "**吉斯泽莱开悟者 Githzerai Enlightened**\n\n吉斯泽莱人花费大量的精力进行冥想，以此超越形体的局限，领悟现实的本质。完成了进阶修行的泽锡修士会被称为开悟者。\n\n**吉斯泽莱开悟者Githzerai Enlightened**\n中型类人（吉斯人），任意阵营\n护甲等级：18（灵能护体）\n生命值：112（15d8+45）\n速度：40 尺\n力量14（+2） 敏捷19（+4） 体质16（+3）\n智力17（+3） 感知19（+4） 魅力13（+1）\n豁免：力量+6，敏捷+8，智力+7，感知+8\n技能：奥秘+7，洞悉+8，察觉+8\n感官：被动察觉18\n语言：吉斯语\n挑战等级：10（5,900 XP） 熟练加值+4\n\n**灵能护体Psychic Defense。**当开悟者未着装任何护甲也未持用任何盾牌时，它的AC将加上它的感知调整值。\n**动作Actions**\n**多重攻击Multiattack。**开悟者发动三次徒手打击。\n**徒手打击Unarmed Strike。**近战武器攻击：命中+8，触及5 尺，单一目标。命中：13（2d8+4）的钝击伤害外加18（4d8）的心灵伤害。\n**时光打击Temporal Strike（充能6）。**近战武器攻击：命中+8，触及5 \r\n尺，单一生物。命中：13（2d8+4）的钝击伤害外加52（8d12）的心灵伤害。该目标须进行一次DC \r\n16的感知豁免，失败则其向未来穿越1轮。穿越时光的目标在效应持续时间内消失。当效应终止时，目标会重新出现在其离开时的位置，若该位置已被占据，则它出现在最近的未被占据的位置上。\n**施法Spellcasting（灵能Psionics）。**开悟者施展以下法术之一，使用感知作为施法属性且不需要法术成分（法术豁免DC \r\n16）：\n随意：法师之手mage hand（生成隐形的手）\n每项3/日：识破隐形see invisibility\n每项1/日：位面转移plane shift，传送术teleport\n**反应Reactions**\n**轻身坠Slow Fall。**当开悟者要承受坠地伤害时，其可以使用反应将伤害减少50点。\n",
+  "githManifest": {
+    "schemaVersion": 1,
+    "manifestId": "intake-8295ff67c551ba30-githzerai-enlightened-staged-spells-unit-6-692",
+    "sourceSha256": "8295ff67c551ba3040ff24fd071db273b05728b08e83c5eabc0c173434862fb9",
+    "rulesPreference": "2024",
+    "spellcastingGroups": [
+      {
+        "groupId": "staged-spells-unit-6",
+        "featureItemKey": "staged-spells-unit-6",
+        "ability": "wis",
+        "saveDc": 16,
+        "spellRefs": [
+          {
+            "refId": "staged-spells-unit-6-grant-0-spell-1",
+            "identifier": "see-invisibility",
+            "originalName": "识破隐形see invisibility",
+            "englishName": "see invisibility",
+            "chineseName": "识破隐形",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 3,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "不需要法术成分",
+                "evidence": [
+                  {
+                    "start": 746,
+                    "end": 753,
+                    "quote": "不需要法术成分"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 799,
+                "end": 819,
+                "quote": "识破隐形see invisibility"
+              }
+            ]
+          },
+          {
+            "refId": "staged-spells-unit-6-grant-1-spell-1",
+            "identifier": "plane-shift",
+            "originalName": "位面转移plane shift",
+            "englishName": "plane shift",
+            "chineseName": "位面转移",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 1,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "不需要法术成分",
+                "evidence": [
+                  {
+                    "start": 746,
+                    "end": 753,
+                    "quote": "不需要法术成分"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 826,
+                "end": 841,
+                "quote": "位面转移plane shift"
+              }
+            ]
+          },
+          {
+            "refId": "staged-spells-unit-6-grant-1-spell-2",
+            "identifier": "teleport",
+            "originalName": "传送术teleport",
+            "englishName": "teleport",
+            "chineseName": "传送术",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 1,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "不需要法术成分",
+                "evidence": [
+                  {
+                    "start": 746,
+                    "end": 753,
+                    "quote": "不需要法术成分"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 842,
+                "end": 853,
+                "quote": "传送术teleport"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "sharedManifest": {
+    "schemaVersion": 1,
+    "manifestId": "intake-e377ec3ad51b50c5-shared-casting-test-staged-spells-unit-2-360",
+    "sourceSha256": "e377ec3ad51b50c5df3df7e14d064b1c0ffe3840984ac59f31bdd2ae12ecf073",
+    "rulesPreference": "2024",
+    "spellcastingGroups": [
+      {
+        "groupId": "staged-spells-unit-2",
+        "featureItemKey": "staged-spells-unit-2",
+        "ability": "wis",
+        "saveDc": 14,
+        "spellRefs": [
+          {
+            "refId": "staged-spells-unit-2-grant-0-spell-1",
+            "identifier": "blur",
+            "originalName": "Blur",
+            "englishName": "Blur",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": true
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "without any spell components",
+                "evidence": [
+                  {
+                    "start": 416,
+                    "end": 444,
+                    "quote": "without any spell components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 515,
+                "end": 519,
+                "quote": "Blur"
+              }
+            ]
+          },
+          {
+            "refId": "staged-spells-unit-2-grant-0-spell-2",
+            "identifier": "disguise-self",
+            "originalName": "Disguise Self",
+            "englishName": "Disguise Self",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": true
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "without any spell components",
+                "evidence": [
+                  {
+                    "start": 416,
+                    "end": 444,
+                    "quote": "without any spell components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 521,
+                "end": 534,
+                "quote": "Disguise Self"
+              }
+            ]
+          },
+          {
+            "refId": "staged-spells-unit-2-grant-1-spell-1",
+            "identifier": "see-invisibility",
+            "originalName": "See Invisibility",
+            "englishName": "See Invisibility",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 3,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "without any spell components",
+                "evidence": [
+                  {
+                    "start": 416,
+                    "end": 444,
+                    "quote": "without any spell components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 547,
+                "end": 563,
+                "quote": "See Invisibility"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "failedReport": {
+    "manifestId": "intake-8295ff67c551ba30-githzerai-enlightened-staged-spells-unit-6-692",
+    "sourceInventoryHash": "9fa7795ba00304d7a8ab614969e0789a555eb55d9969ec131b8f3adec4181252",
+    "candidateMetadataHash": "bd203392ce6bc343f913e799e711220dfa9f9d0aa8a7d47310f52b910b851580",
+    "resolutionConfigHash": "ba22d89867f139ed1c0264835bdb57ad2777d34aab81653e41a5f6398d384e7b",
+    "currentManagedProjectionHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "manualDecisionsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "results": [],
+    "findings": [
+      {
+        "code": "UNSUPPORTED_CAST_USES",
+        "path": "/spellcastingGroups/0/spellRefs/0/uses",
+        "message": "首版 innate Cast Activity 只支持独立 1/day 使用次数；尚未创建任何写入计划。",
+        "blocking": true,
+        "evidence": [
+          {
+            "start": 799,
+            "end": 819,
+            "quote": "识破隐形see invisibility"
+          }
+        ]
+      }
+    ]
+  }
+}

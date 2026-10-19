@@ -3,6 +3,7 @@
  * All Actor/Item definitions are imported from the project CLI artifacts.
  */
 import { CUSTOM_CONDITIONS_MODULE_ID, buildConditionFlag, createConditionInstance, isConditionId, projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
+import { displayName, splitBilingualName } from '@fvtt-json-generator/models/display-name';
 
 export const RUNTIME_VERSION = '2.1.2';
 const FLAG = 'crystalbleedV14';
@@ -170,9 +171,12 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
   });
 
   function itemFor(actor, label) {
-    const item = list(actor?.items).find(item => item.name === label);
-    if (!item) throw new Error(`缺少正式生成的能力：${label}`);
-    return item;
+    const names=splitBilingualName(label),name=displayName(names.name,names.englishName);
+    const matches = list(actor?.items).filter(item => {
+      const actual=splitBilingualName(item.name);return displayName(actual.name,actual.englishName)===name;
+    });
+    if (matches.length!==1) throw new Error(`正式生成的能力必须唯一：${label}`);
+    return matches[0];
   }
   function primary(item, type) {
     const activity = list(item.system.activities).find(activity =>
@@ -231,7 +235,10 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
     return candidate;
   }
   function crystalBlueprint() {
-    const candidates = list(game.actors).filter(actor => isCrystal(actor) && actor.name === '月石晶体 (Moonstone Crystal)');
+    const candidates = list(game.actors).filter(actor => {
+      const names=splitBilingualName(actor.name);
+      return isCrystal(actor)&&displayName(names.name,names.englishName)==='月石晶体 Moonstone Crystal';
+    });
     if (candidates.length !== 1) throw new Error('请保留唯一一份正式生成的“月石晶体”Actor 作为召唤来源。');
     return candidates[0];
   }

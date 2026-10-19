@@ -1,4 +1,5 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts';
+import { decodeIconReviewReport } from '@fvtt-json-generator/contracts/icon-review';
 import { canonicalJsonStringify, hashArtifact, hashSource } from './hash';
 import {
   FORGE_ACTOR_CAPABILITY,
@@ -27,6 +28,7 @@ import {
   FORGE_EXECUTION_MODES,
   FORGE_EXPRESSION_COVERAGES,
   FORGE_GENERATOR_PROFILES,
+  FORGE_ICON_MODES,
   FORGE_MECHANIC_COVERAGE_STATUSES,
   FORGE_MECHANIC_KINDS,
   FORGE_PROTOCOL_VERSION,
@@ -93,6 +95,7 @@ const ACTOR_RESULT_KEYS = new Set([
   'diagnostics',
   'verification',
   'actorVerification',
+  'iconReview',
   'status',
   'artifact',
   'artifactHash',
@@ -105,6 +108,7 @@ const ITEM_RESULT_KEYS = new Set([
   'verification',
   'itemVerification',
   'itemDocument',
+  'iconReview',
   'status',
   'artifact',
   'artifactHash',
@@ -753,7 +757,10 @@ function readResolvedTarget(
   if (!record) return undefined;
   const generatorProfile = readEnum(record, 'generatorProfile', path, FORGE_GENERATOR_PROFILES, issues);
   const effectProfile = readLiteral(record, 'effectProfile', path, 'core', issues);
-  const iconMode = readLiteral(record, 'iconMode', path, 'off', issues);
+  const iconMode = readEnum(record, 'iconMode', path, FORGE_ICON_MODES, issues);
+  if (iconMode === 'safe' && generatorProfile !== 'v14') {
+    issue(issues, `${path}/iconMode`, 'TARGET_MISMATCH', 'Safe icons require the v14 generation profile.');
+  }
   if (!generatorProfile || !effectProfile || !iconMode) return undefined;
   return { generatorProfile, effectProfile, iconMode };
 }
@@ -780,10 +787,14 @@ function readActorResultBase(
   const systemId = targetRecord ? readLiteral(targetRecord, 'systemId', '$/target', 'dnd5e', issues) : undefined;
   const systemVersionObserved = targetRecord ? readNonEmptyString(targetRecord, 'systemVersionObserved', '$/target', issues) : undefined;
   const effectProfile = targetRecord ? readLiteral(targetRecord, 'effectProfile', '$/target', 'core', issues) : undefined;
-  const iconMode = targetRecord ? readLiteral(targetRecord, 'iconMode', '$/target', 'off', issues) : undefined;
+  const iconMode = targetRecord ? readEnum(targetRecord, 'iconMode', '$/target', FORGE_ICON_MODES, issues) : undefined;
+  if (iconMode === 'safe' && generatorProfile !== 'v14') {
+    issue(issues, '$/target/iconMode', 'TARGET_MISMATCH', 'Safe icons require the v14 generation profile.');
+  }
   const diagnostics = readDiagnostics(record.diagnostics, '$/diagnostics', issues);
   const verification = readVerificationSummary(record.verification, '$/verification', issues);
   const actorVerification = readActorVerificationSummary(record.actorVerification, '$/actorVerification', issues);
+  const iconReview = readIconReview(record, generatorProfile, iconMode, issues);
 
   if (fvttRuntimeVersion && generatorProfile) {
     try {
@@ -809,6 +820,7 @@ function readActorResultBase(
     diagnostics,
     verification,
     actorVerification,
+    ...(iconReview ? { iconReview } : {}),
   };
 }
 
@@ -834,7 +846,10 @@ function readItemResultBase(
   const systemId = targetRecord ? readLiteral(targetRecord, 'systemId', '$/target', 'dnd5e', issues) : undefined;
   const systemVersionObserved = targetRecord ? readNonEmptyString(targetRecord, 'systemVersionObserved', '$/target', issues) : undefined;
   const effectProfile = targetRecord ? readLiteral(targetRecord, 'effectProfile', '$/target', 'core', issues) : undefined;
-  const iconMode = targetRecord ? readLiteral(targetRecord, 'iconMode', '$/target', 'off', issues) : undefined;
+  const iconMode = targetRecord ? readEnum(targetRecord, 'iconMode', '$/target', FORGE_ICON_MODES, issues) : undefined;
+  if (iconMode === 'safe' && generatorProfile !== 'v14') {
+    issue(issues, '$/target/iconMode', 'TARGET_MISMATCH', 'Safe icons require the v14 generation profile.');
+  }
   const diagnostics = readDiagnostics(record.diagnostics, '$/diagnostics', issues);
   const verification = readVerificationSummary(record.verification, '$/verification', issues);
   const itemVerification = readClosedProjection(
@@ -849,6 +864,7 @@ function readItemResultBase(
     projectForgeItemDocumentSummary,
     issues,
   );
+  const iconReview = readIconReview(record, generatorProfile, iconMode, issues);
 
   if (fvttRuntimeVersion && generatorProfile) {
     try {
@@ -875,7 +891,16 @@ function readItemResultBase(
     verification,
     itemVerification,
     itemDocument,
+    ...(iconReview ? { iconReview } : {}),
   };
+}
+
+function readIconReview(record: Record<string, unknown>, profile: string | undefined, mode: string | undefined, issues: ForgeDecodeIssue[]) {
+  if (!Object.hasOwn(record, 'iconReview')) return undefined;
+  if (profile !== 'v14' || mode !== 'safe') {
+    issue(issues, '$/iconReview', 'TARGET_MISMATCH', 'Icon review requires the v14 safe icon target.');
+  }
+  return readClosedProjection(record.iconReview, '$/iconReview', decodeIconReviewReport, issues);
 }
 
 function readClosedProjection<T>(

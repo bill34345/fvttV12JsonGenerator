@@ -912,6 +912,14 @@
 .forge-encounter-translation-draft details { min-width: 0; }
 .forge-encounter-translation-draft article { min-width: 0; margin-block: 0.5rem; padding: 0.5rem; border-inline-start: 2px solid #82cdd0; background: #24363e; }
 .forge-encounter-translation-draft :is(button, summary, input):focus-visible { outline: 2px solid #82cdd0; outline-offset: 2px; }
+.forge-encounter-preview-error { padding: 0.6rem; border-inline-start: 0.2rem solid #d9a65c; background: #3c2a26; color: #fff; }
+.forge-encounter-translation-draft .forge-encounter-fixed-rule { margin: 0.4rem 0; padding: 0.45rem; border-inline-start: 2px solid #d9a65c; background: #1b2a33; }
+.forge-encounter-prose-slot { margin-block: 0.5rem; padding: 0.45rem; border: 1px solid #49636a; }
+.forge-encounter-uncovered { margin-block: 0.55rem; padding: 0.65rem; border-inline-start: 0.25rem solid #d9a65c; background: #3c3027; }
+.forge-encounter-uncovered-entry { margin-block: 0.4rem; padding-block-start: 0.35rem; border-top: 1px solid #806a51; }
+.forge-encounter-uncovered ul { margin: 0.25rem 0 0; padding-inline-start: 1.3rem; }
+
+
 .forge-encounter-review-concerns { border-color: #d9a65c; }
 .forge-encounter-review-state { overflow-wrap: anywhere; }
 

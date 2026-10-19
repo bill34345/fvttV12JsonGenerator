@@ -6,7 +6,8 @@
   <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
   <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
   <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持1至6种生物；单只生物也可携带需 GM 裁定的规则。付费模型审核须另行点击，不会随生成、翻译或恢复自动执行。</p>
-  <p>AI 只提取规则和选择已实现的能力；控制代码由工具提供。</p>
+  <p>明确的单只完整生物数据可在本地识别，省略模型发现请求。单只角色全部通过原生与来源校验且没有配套机制要求时，不请求控制配置、不创建空宏；复杂规则继续走配套审核与GM处理。</p>
+  <p>引用定义、明确能力与法术等级会在来源校验中核对。中文翻译会保护明确的再次豁免时点、成功解除、失败差值及此次伤害降至0 HP的条件；不明确的含义仍需GM核对。AI只提取规则和选择已实现的能力；控制代码由工具提供。</p>
   <section class="forge-configured-conditions">
     <h3>可连接的自定义状态</h3>
     <p>先在 Custom Conditions 配置状态名称、原文别名和效果机制，再生成怪物。Forge 会读取已保存的目录，按原文连接；定义改变后需重新生成并核对对应能力。</p>
@@ -64,6 +65,7 @@
   </section>{{/if}}
   {{#if ready}}
     <h3>{{label}}</h3>
+    {{#if iconReviewText}}<details class="forge-encounter-macro"><summary>Icon 选图依据与近似程度</summary><pre>{{iconReviewText}}</pre></details>{{/if}}
     {{#if modelReviewState}}<p class="forge-encounter-review-state" role="status">{{modelReviewState}}</p>{{/if}}
     {{#if aiReviewFindings}}<section class="forge-encounter-review-concerns"><h4>AI 审核提示，供 GM 核对</h4><ul>{{#each aiReviewFindings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
     {{#if canReviewCandidate}}<button type="button" data-action="encounter-review-candidate">AI 审核当前候选（额外 API 费用）</button><p>只复核当前已生成的角色、规则和已存在的中文草稿；不会重新调用模型生成、翻译或自动修正。</p>{{/if}}
@@ -79,12 +81,48 @@
         {{#if gmSteps}}<p>GM 操作与限制：</p><ul>{{#each gmSteps}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
       </article>{{/each}}
     {{else}}{{#if reviewEvidenceUnavailable}}<p>此包没有当前 AI 来源审核记录，无法显示逐项原文证据；请展开完整来源和规则参数核对。</p>{{/if}}{{/if}}
+    {{#if draftPreviewError}}<p class="forge-encounter-preview-error" role="alert">{{draftPreviewError}}。中文草稿不能批准；请重新核对当前来源与候选。</p>{{/if}}
     {{#if draftPreview}}<section class="forge-encounter-translation-draft"><h3>中文草稿 · 待 GM 核对</h3>
       <p>草稿通过本地文本校验，尚未获 GM 批准。模型审核状态与已有提示见上方；当前可导入的仍是原语言包。</p>
+      {{#if draftPreview.factsMode}}<p>剩余正文可在本地人工修正，不调用 AI。保存时重新核对来源、数值和术语，并撤销当前确认；之后仍须 GM 批准。固定规则只读。</p>{{else}}<p>正文可在本地人工修正，不调用 AI。保存时重新核对来源、数值和术语，并撤销当前确认；之后仍须 GM 批准。</p>{{/if}}
       {{#each draftPreview.actors}}<details><summary>{{name}}（{{key}}）· 中文显示字段</summary>
-        {{#each fields}}<article><strong>{{kind}}</strong><p class="forge-localized-prose">原文：{{source}}</p><p class="forge-localized-prose">草稿：{{text}}</p></article>{{/each}}
+        {{#if factsMode}}{{#each factsRows}}<article class="forge-encounter-facts-row"><strong>{{pathLabel}}</strong>
+          <p class="forge-localized-prose"><strong>完整来源：</strong>{{fullSource}}</p>
+          <p class="forge-localized-prose"><strong>完整合成中文：</strong>{{assembledZh}}</p>
+          {{#if uncoveredMechanics}}<section class="forge-encounter-uncovered" aria-label="结构化事实供 GM 核对">
+            <strong>结构化事实供 GM 核对</strong><p>以下限定尚未完整覆盖，不能视为自动执行；请核对完整来源并裁定。</p>
+            {{#each uncoveredMechanics}}<div class="forge-encounter-uncovered-entry"><p class="forge-localized-prose">事实摘要：{{summaryZh}}</p>
+              {{#if details}}<ul>{{#each details}}<li class="forge-localized-prose">未覆盖原文：{{this}}</li>{{/each}}</ul>{{else}}<p>本字段的完整限定仍需对照上方来源核对。</p>{{/if}}
+            </div>{{/each}}
+          </section>{{/if}}
+          {{#if fixedBlocks}}<details><summary>固定中文规则（只读）</summary>
+            {{#each fixedBlocks}}<section class="forge-encounter-fixed-rule"><p class="forge-localized-prose">来源：{{source}}</p><p class="forge-localized-prose">中文：{{zh}}</p><p>处理方式：{{modeLabel}}</p></section>{{/each}}
+          </details>{{/if}}
+          {{#each editableSlots}}<div class="forge-encounter-prose-slot" data-localization-part="{{partKey}}" data-localization-field="{{textId}}">
+            <p>文本边界：{{reviewLabel}}</p><p class="forge-localized-prose">待译原文：{{source}}</p><p class="forge-localized-prose">剩余文本草稿：{{draft}}</p>
+            {{#if editable}}<details><summary>人工修正剩余正文（本地）</summary><label>修正后的正文<textarea data-localization-edit rows="5">{{draft}}</textarea></label><button type="button" data-action="encounter-save-localization-body">保存正文修正</button></details>{{/if}}
+          </div>{{/each}}
+        </article>{{/each}}{{else}}
+        {{#each fields}}<article data-localization-part="{{partKey}}" data-localization-field="{{id}}"><strong>{{kind}}</strong><p class="forge-localized-prose">原文：{{source}}</p><p class="forge-localized-prose">草稿：{{text}}</p>
+          {{#if editable}}<details><summary>人工修正正文（本地）</summary><label>修正后的正文<textarea data-localization-edit rows="5">{{text}}</textarea></label><button type="button" data-action="encounter-save-localization-body">保存正文修正</button></details>{{/if}}
+        </article>{{/each}}{{/if}}
       </details>{{/each}}
-      <details><summary>战斗包名称与控制说明</summary>{{#each draftPreview.packageFields}}<article><strong>{{kind}}</strong><p class="forge-localized-prose">原文：{{source}}</p><p class="forge-localized-prose">草稿：{{text}}</p></article>{{/each}}</details>
+      <details><summary>战斗包名称与控制说明</summary>
+        {{#if draftPreview.factsMode}}{{#each draftPreview.packageFactsRows}}<article class="forge-encounter-facts-row"><strong>{{pathLabel}}</strong>
+          <p class="forge-localized-prose"><strong>完整来源：</strong>{{fullSource}}</p>
+          <p class="forge-localized-prose"><strong>完整合成中文：</strong>{{assembledZh}}</p>
+          {{#if fixedBlocks}}<details><summary>固定控制说明（只读）</summary>
+            {{#each fixedBlocks}}<section class="forge-encounter-fixed-rule"><p class="forge-localized-prose">来源：{{source}}</p><p class="forge-localized-prose">中文：{{zh}}</p><p>处理方式：{{modeLabel}}</p></section>{{/each}}
+          </details>{{/if}}
+          {{#each editableSlots}}<div class="forge-encounter-prose-slot" data-localization-part="{{partKey}}" data-localization-field="{{textId}}">
+            <p>文本边界：{{reviewLabel}}</p><p class="forge-localized-prose">待译原文：{{source}}</p><p class="forge-localized-prose">剩余文本草稿：{{draft}}</p>
+            {{#if editable}}<details><summary>人工修正剩余正文（本地）</summary><label>修正后的正文<textarea data-localization-edit rows="5">{{draft}}</textarea></label><button type="button" data-action="encounter-save-localization-body">保存正文修正</button></details>{{/if}}
+          </div>{{/each}}
+        </article>{{/each}}{{else}}
+        {{#each draftPreview.packageFields}}<article data-localization-part="{{partKey}}" data-localization-field="{{id}}"><strong>{{kind}}</strong><p class="forge-localized-prose">原文：{{source}}</p><p class="forge-localized-prose">草稿：{{text}}</p>
+          {{#if editable}}<details><summary>人工修正正文（本地）</summary><label>修正后的正文<textarea data-localization-edit rows="5">{{text}}</textarea></label><button type="button" data-action="encounter-save-localization-body">保存正文修正</button></details>{{/if}}
+        </article>{{/each}}{{/if}}
+      </details>
       <label><input name="encounterTranslationReviewed" type="checkbox" {{#if translationReviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>我已逐项核对当前中文草稿与原文，并批准其显示文本</label>
       <button type="button" data-action="encounter-approve-localization" {{#unless canApproveTranslation}}disabled{{/unless}}>GM 批准中文并生成正式候选（本地）</button>
     </section>{{/if}}
@@ -107,6 +145,9 @@
         <p>{{notes}}</p><p>绑定：{{bindingsText}}</p><pre><code>{{command}}</code></pre>
       </details>
     {{/each}}
+    {{#if manualSourceRules}}<h3>完整 GM 手动能力</h3><p>以下能力已完整保留在角色物品和活动说明中。GM 根据中文与原文裁定目标、条件、结果、期限及资源；点击活动不会自动造成伤害、豁免、效果或棋子移动。</p>
+      {{#each manualSourceRules}}<details class="forge-encounter-macro"><summary>{{actorName}} · {{name}} · GM 手动</summary><pre>{{sourceText}}</pre></details>{{/each}}
+    {{/if}}
     {{#if requirements}}<h3>需要核对的规则（来自正式生成结果）</h3>
       {{#each requirements}}<article class="forge-encounter-macro">
         <h4>{{actorName}}：{{name}}</h4><p>{{mode}}</p>
@@ -117,8 +158,9 @@
         <details><summary>完整机制定义</summary><pre><code>{{detailJson}}</code></pre></details>
       </article>{{/each}}
     {{/if}}
-    <p>这是可执行宏代码。请确认包的来源和上述代码符合你的战斗规则；包内“已审核”的描述本身不构成执行证明。</p>
-    <label><input name="encounterReviewed" type="checkbox" {{#if reviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>我已核对角色、宏代码、绑定和保留的 GM 操作规则{{#if aiConcerns}}，包括上方 AI 提示{{/if}}</label>
+    {{#if macros}}<p>这是可执行宏代码。请确认包的来源和上述代码符合你的战斗规则；包内“已审核”的描述本身不构成执行证明。</p>
+    {{else}}<p>本包没有配套宏。请核对角色数据、来源和保留的 GM 操作规则。</p>{{/if}}
+    <label><input name="encounterReviewed" type="checkbox" {{#if reviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>我已核对角色{{#if macros}}、宏代码、绑定{{else}}数据{{/if}}和保留的 GM 操作规则{{#if aiConcerns}}，包括上方 AI 提示{{/if}}</label>
     <button type="button" data-action="encounter-import" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
     <p>只创建或复用相同且未改变的文档，不覆盖已有内容。导入宏不会启动宏。多文档操作不是跨浏览器事务，页面意外关闭后请重新预览检查。</p>
     <details><summary>包身份</summary><code>{{packageHash}}</code></details>

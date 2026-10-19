@@ -1,0 +1,128 @@
+import { describe, expect, test } from 'bun:test';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import { localizationHash, localizationRequest, localizationText } from '@fvtt-json-generator/contracts/localization';
+import { OpenAICompatibleMonsterIntakeProvider, type ProviderResponseEvidence, type IntakeProviderAuditEvent } from '@fvtt-json-generator/intake-ai/provider';
+import { createReviewedTranslationService } from '@fvtt-json-generator/intake-ai/localization';
+import { createEncounterIntakeProviders } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import { buildValidLurkerIr, LURKER_SOURCE } from '../src/core/intake/__tests__/fixtures/lurker';
+
+// Newly constructed malformed replies. The missing historical Mezzoloth reply
+// has not been recovered and none of these fixtures claim to reproduce it.
+const connection = { authMode: 'api-key' as const, baseUrl: 'https://evidence.example/v1', apiKey: 'fixture-private-key',
+  model: 'fixture-model', reviewModel: 'fixture-model', timeoutMs: 1_000, repairTimeoutMs: 1_000 };
+const response = (content: string) => new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+const source = 'One complete source rule.';
+const extraction = { source, sourceSha256: sha256(source), candidate: { id: 'case-1', label: 'Fixture', start: 0, end: source.length, quote: source } };
+
+describe('explicit private response evidence before rejection', () => {
+  test('captures malformed JSON before parsing; redacts credentials without exposing raw request or audit data', async () => {
+    const events: ProviderResponseEvidence[] = [], audits: IntakeProviderAuditEvent[] = [];
+    const raw = `invalid JSON fixture-private-key Bearer another-token {"cookie":"session-value","secret":"other-value"} ${connection.baseUrl}`;
+    let calls = 0;
+    const provider = new OpenAICompatibleMonsterIntakeProvider({ ...connection, audit: event => audits.push(event),
+      responseEvidence: { record: event => { events.push(event); } },
+      httpClient: async () => { calls++; return response(raw); } });
+    await expect(provider.extract(extraction)).rejects.toThrow();
+    expect(calls).toBe(2); // Existing bounded parser retry, unchanged by evidence capture.
+    expect(events).toHaveLength(2);
+    expect(events.map(event => event.attempt)).toEqual([1, 2]);
+    expect(events[1]!.requestHash).not.toBe(events[0]!.requestHash);
+    const event = events[0]!;
+    expect(event.stage).toBe('extract');
+    expect(event.sourceHash).toBe(sha256(source));
+    expect(event.responseHash).toBe(sha256(raw));
+    expect(event.requestHash).toMatch(/^[0-9a-f]{64}$/u);
+    expect(event.redacted).toBe(true);
+    expect(event.truncated).toBe(false);
+    for (const sensitive of ['fixture-private-key', 'another-token', 'session-value', 'other-value', connection.baseUrl, source])
+      expect(JSON.stringify(event)).not.toContain(sensitive);
+    expect(JSON.stringify(audits)).not.toContain('content');
+    expect(JSON.stringify(audits)).not.toContain('invalid JSON');
+  });
+
+  test('captures the complete token-corrupt translation before restore rejects it and binds the actual batch', async () => {
+    const events: ProviderResponseEvidence[] = [];
+    const input = localizationRequest(sha256('source one'), [localizationText('body', '<p>Damage 3d6.</p>')]);
+    const raw = JSON.stringify({ texts: [{ id: input.texts[0]!.id, text: '伤害⟦0⟧⟦0⟧。' }] });
+    let calls = 0;
+    const service = createReviewedTranslationService({ ...connection, responseEvidence: { record: event => { events.push(event); } },
+      httpClient: async () => { calls++; return response(raw); } });
+    await expect(service.translate(input)).rejects.toThrow();
+    expect(calls).toBe(1);
+    expect(events[0]).toMatchObject({ stage: 'translate', sourceHash: input.sourceHash,
+      localizationRequestHash: localizationHash(input), textIds: [input.texts[0]!.id], content: raw, attempt: 1,
+      responseHash: sha256(raw), truncated: false, redacted: false });
+    const changed = { ...input, sourceHash: sha256('source two') };
+    await expect(service.translate(changed)).rejects.toThrow();
+    expect(events[1]!.localizationRequestHash).not.toBe(events[0]!.localizationRequestHash);
+    expect(events[1]!.sourceHash).not.toBe(events[0]!.sourceHash);
+  });
+
+  test('storage rejection and a broken failure reporter never retry or reject a valid provider response', async () => {
+    let calls = 0, failed = 0;
+    const valid = { schemaVersion: 1 as const, candidates: [] };
+    const provider = new OpenAICompatibleMonsterIntakeProvider({ ...connection,
+      responseEvidence: { record: async () => { throw new Error('private filesystem error'); },
+        onStorageFailure: () => { failed++; throw new Error('private diagnostic error'); } },
+      httpClient: async () => { calls++; return response(JSON.stringify(valid)); } });
+    expect(await provider.discover({ source, sourceSha256: sha256(source), chunkStart: 0, chunkEnd: source.length })).toEqual(valid);
+    expect(calls).toBe(1);
+    expect(failed).toBe(1);
+  });
+
+  test('capture is disabled unless an owner supplies a sink; ordinary audits remain safe', async () => {
+    const audits: IntakeProviderAuditEvent[] = [];
+    const provider = new OpenAICompatibleMonsterIntakeProvider({ ...connection, audit: event => audits.push(event),
+      httpClient: async () => response('bad response with private model text') });
+    await expect(provider.extract(extraction)).rejects.toThrow();
+    expect(JSON.stringify(audits)).not.toContain('private model text');
+    expect(Object.keys(provider)).not.toContain('responses');
+  });
+
+  test('the actual Forge provider factory forwards one opt-in sink to extraction, automation and localization without enabling review', async () => {
+    const originalFetch = globalThis.fetch;
+    const events: ProviderResponseEvidence[] = [];
+    let calls = 0;
+    globalThis.fetch = (async () => { calls++; return response('constructed bad reply'); }) as unknown as typeof fetch;
+    try {
+      const providers = createEncounterIntakeProviders({ ...connection, responseEvidence: { record: event => { events.push(event); } } });
+      const stagedSource='Proof CR 1\nMedium construct\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. One target takes 3 damage.\n';
+      const baseSource=stagedSource.slice(0,stagedSource.indexOf('Actions\n'));
+      await expect(providers.provider.extract({source:stagedSource,sourceSha256:sha256(stagedSource),candidate:{id:'proof',label:'Proof',start:0,end:stagedSource.length,quote:stagedSource}})).rejects.toThrow();
+      await expect(providers.automationProvider.generate({source:LURKER_SOURCE,actors:[{key:'actor-1',source:LURKER_SOURCE,
+        ir:buildValidLurkerIr(),artifact:{items:[]}}]})).rejects.toThrow();
+      const input = localizationRequest(sha256(source), [localizationText('body', 'A rule.')]);
+      await expect(providers.translationService.translate(input)).rejects.toThrow();
+      expect(events.map(event => event.stage)).toEqual(['extract', 'automation-generate', 'translate']);
+      expect(calls).toBe(3);
+      expect(events[0]!.sourceHash).toBe(sha256(baseSource));
+      expect(events[2]!.sourceHash).toBe(sha256(source));
+      expect(events[1]).toMatchObject({sourceHash:sha256(LURKER_SOURCE),attempt:1,content:'constructed bad reply',truncated:false,redacted:false});
+      expect(events[1]!.requestHash).toMatch(/^[0-9a-f]{64}$/u);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+  test('the Forge factory retains the fast path and records a complete partial-feature request', async () => {
+    const originalFetch=globalThis.fetch, events:ProviderResponseEvidence[]=[],stages:any[]=[];
+    const source='Proof CR 1\nMedium construct, unaligned\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 3 (1d6) bludgeoning damage.\nDream Snare (Recharge 5-6). Each creature within 20 feet must make a DC 12 Wisdom saving throw or fall asleep until the end of its next turn.\n';
+    const facts={schemaVersion:1,creature:{identity:{name:'Proof',size:'medium',creatureType:'construct',alignment:'unaligned'},
+      abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},attributes:{ac:15,hp:{value:20},movement:{walk:30},cr:1},
+      saves:{},skills:{},defenses:{resistances:[],immunities:[],vulnerabilities:[],conditionImmunities:[]},senses:{},languages:{values:[]}},uncertainties:[]};
+    let calls=0;
+    globalThis.fetch=(async(_url:unknown,init:any)=>{calls++;const payload=JSON.parse(JSON.parse(init.body).messages[1].content);return response(JSON.stringify(payload.unitId?{schemaVersion:1,unitId:payload.unitId,mode:'manual',facts:{}}:facts));}) as unknown as typeof fetch;
+    try{
+      const providers=createEncounterIntakeProviders({...connection,onExtractionStage:event=>{stages.push(event);},
+        responseEvidence:{record:event=>{events.push(event);}}});
+      const ir=await providers.provider.extract({source,sourceSha256:sha256(source),candidate:{id:'proof',label:'Proof',start:0,end:source.length,quote:source}});
+      expect(calls).toBe(2);expect(events).toHaveLength(2);expect(events.every(event=>event.stage==='extract')).toBe(true);
+      expect(ir.creature.actions).toHaveLength(2);
+      expect(ir.creature.actions[0]).toMatchObject({name:'Slam',activityType:'attack',attack:{toHit:2}});
+      expect(ir.creature.actions[1]).toMatchObject({name:'Dream Snare (Recharge 5-6)',executionMode:'native-with-gm',activityType:'save',save:{dc:12,ability:'wis'},recharge:[5,6]});
+      expect(ir.creature.actions[1]!.appliedConditions).toBeUndefined();
+      expect(ir.creature.actions[1]!.description).toContain('or fall asleep until the end of its next turn.');
+      expect(ir.creature.actions[1]!.damage).toBeUndefined();expect(ir.creature.actions[1]!.manualRemainder).toContain('fall asleep');
+      expect(stages.filter(event=>event.stage==='feature'&&event.status==='validated')).toHaveLength(2);
+      expect(stages.filter(event=>event.stage==='feature').some(event=>event.processor==='model'&&event.status==='request')).toBe(true);
+      expect(stages.at(-1)).toMatchObject({stage:'assembly',status:'validated',plannedCalls:2,retryCalls:0});
+    }finally{globalThis.fetch=originalFetch;}
+  });
+});

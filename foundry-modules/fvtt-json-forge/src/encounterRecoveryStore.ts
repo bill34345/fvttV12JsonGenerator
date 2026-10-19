@@ -1,4 +1,5 @@
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import { decodeForgeEncounterPackageText, encounterPackageHash } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertEncounterSecretsAbsent, type EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type { EncounterLocalizationProgress, ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 
@@ -186,9 +187,13 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
       ||(report.packageHash!==undefined&&!/^[a-f0-9]{64}$/.test(report.packageHash)))
       throw new TypeError('战斗包来源报告与保存的任务不符。');
   }
-  if (record.package !== undefined && (typeof record.package !== 'string' || record.package.length > MAX_BYTES
-    || !record.report || !(record.report as EncounterIntakeReport).packageHash || !record.package.includes(record.sourceHash as string)))
-    throw new TypeError('保存的战斗包与来源报告不符。');
+  if (record.package !== undefined) {
+    const expected = (record.report as EncounterIntakeReport | undefined)?.packageHash;
+    try {
+      if (typeof record.package !== 'string' || record.package.length > MAX_BYTES || !expected
+        || encounterPackageHash(decodeForgeEncounterPackageText(record.package)) !== expected) throw new TypeError();
+    } catch { throw new TypeError('保存的战斗包与来源报告不符。'); }
+  }
   if (record.translationReport !== undefined && (!Array.isArray(record.translationReport) || record.translationReport.length > 8))
     throw new TypeError('无效的中文审核进度。');
   return record as unknown as EncounterRecoverySnapshot;

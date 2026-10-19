@@ -1,0 +1,26 @@
+{
+  "origin": "Saved actual Mezzoloth Company run3 and unapproved GM prose corrections; not a new model response",
+  "cases": [
+    {
+      "originalTextId": "text-90ba413208aaf4ae58817c10",
+      "source": "<p>MEZZOLOTH COMPANY CR 20<br>A clacking horde of insectile mercenaries, reeking of<br>brimstone with an undertone of something worse beneath.<br>AC 18 (natural armor)<br>HP 225 (30d8 + 90)<br>Speed 40 ft.<br>Initiative +6 (16)<br>Size Huge (Swarm of<br>Medium)<br>Type Fiend (Yugoloth)<br>MOD SAVE MOD SAVE MOD SAVE<br>STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3<br>INT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0<br>Resistances Fire; Damage from Attacks<br>Immunities Acid, Poison; Charmed, Frightened, Grappled,<br>Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned<br>Senses Blindsight 60 ft., Passive Perception 12<br>Languages Abyssal, Infernal, Telepathy 60 ft.<br>Drives Advertise Services, Collect Loot, Escalate Conflict<br>XP 25,000 Proficiency Bonus +6<br><br>Traits<br><br>Actions<br><br>Bonus Actions<br><br>护甲等级：18（天生护甲）</p>",
+      "sourceSha256": "dd6de893f3cfdc76e8e9347116e60c0946c9851b4eaaaaf2c586edef2fb7ebf0",
+      "failedTranslation": "<p>梅佐罗斯连队 CR 20<br>一群发出咔嗒声的昆虫状雇佣兵，散发着<br>硫磺恶臭，底下还透出某种更糟东西的气息。<br>AC 18（天生护甲）<br>HP 225 (30d8 + 90)<br>速度 40 尺。<br>先攻 +6（16）<br>体型 巨型（<br>中型集群）<br>类型 邪魔（尤格罗斯魔）<br>调整值 豁免 调整值 豁免 调整值 豁免<br>力量 18 +4 +4 敏捷 11 +0 +0 体质 16 +3 +3<br>智力 7 -2 -2 感知 14 +2 +2 魅力 10 +0 +0<br>抗性 火焰；攻击造成的伤害<br>免疫 强酸、毒素；魅惑、恐慌、受擒、<br>麻痹、石化、中毒、倒地、束缚、震慑<br>感官 盲视 60 尺，被动察觉 12<br>语言 深渊语、炼狱语，心灵感应 60 尺。<br>动机 宣传服务、收集战利品、升级冲突<br>经验值 25，000 熟练加值 +6<br><br>特性<br><br>动作<br><br>附赠动作<br><br>护甲等级：18（天生护甲）</p>",
+      "reviewedCorrection": "<p>梅佐罗斯连队 CR 20<br>一群发出咔嗒声的昆虫状雇佣兵，散发着<br>硫磺恶臭，底下还透出某种更糟东西的气息。<br>AC 18（天生护甲）<br>HP 225 (30d8 + 90)<br>速度 40 尺。<br>先攻 +6（16）<br>体型 巨型（由中型生物<br>组成的集群）<br>类型 邪魔（尤格罗斯魔）<br>调整值 豁免 调整值 豁免 调整值 豁免<br>力量 18 +4 +4 敏捷 11 +0 +0 体质 16 +3 +3<br>智力 7 -2 -2 感知 14 +2 +2 魅力 10 +0 +0<br>抗性 火焰；攻击造成的伤害<br>免疫 强酸、毒素；魅惑、恐慌、受擒、<br>麻痹、石化、中毒、倒地、束缚、震慑<br>感官 盲视 60 尺，被动察觉 12<br>语言 深渊语、炼狱语，心灵感应 60 尺。<br>动机 宣传服务、收集战利品、升级冲突<br>经验值 25，000 熟练加值 +6<br><br>特性<br><br>动作<br><br>附赠动作<br><br>护甲等级：18（天生护甲）</p>"
+    },
+    {
+      "originalTextId": "text-999696d72a9d8551d811d15a",
+      "source": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>",
+      "sourceSha256": "967c19cdd5acdf33af7ac38353f5a9b307616ef399aa0ac39ce6c00d0f760e23",
+      "failedTranslation": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>细肢撕裂。近战攻击检定：+10，触及0尺。命中：49<br>(10d8 + 4)挥砍伤害；若<br>连队处于浴血状态，则伤害减半，且目标处于受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以尝试逃脱，即<br>以附赠动作进行。</p>",
+      "reviewedCorrection": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>细肢撕裂。近战攻击检定：+10，触及0尺。命中：49<br>(10d8 + 4)挥砍伤害；若连队处于浴血状态，此伤害减半。<br>目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以尝试逃脱，即<br>以附赠动作进行。</p>"
+    },
+    {
+      "originalTextId": "text-f07cd6aa405bc4704253e583",
+      "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>",
+      "sourceSha256": "8e1faed642bcd8d8e1a9a92f8a5f13bcf8d0d1fba9946d32aabba518b0448980",
+      "failedTranslation": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>织腐齐射。一阵带倒刺的骨刺飞出，<br>在其身后留下被毁魔法痕迹。<br>每个位于15尺半径球状区域内、且位于60尺内的生物<br>必须进行一次敏捷 豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害，外加 11（2d10）暗蚀伤害。<br>成功或失败：环阶为2或更低、且影响<br>该生物的每个法术结束。</p>",
+      "reviewedCorrection": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>织腐齐射。一阵带倒刺的骨刺飞出，<br>在其身后留下被毁魔法痕迹。<br>位于连队60尺内、半径15尺的一个球状区域内的每个生物<br>必须进行一次敏捷 豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害，外加 11（2d10）暗蚀伤害。<br>成功或失败：环阶为2或更低、且影响<br>该生物的每个法术结束。</p>"
+    }
+  ]
+}

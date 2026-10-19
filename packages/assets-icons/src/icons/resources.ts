@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { overrideSelectorKey } from './selectors';
+export { overrideSelectorKey } from './selectors';
 import type {
   IconWorkflowOptions,
   V14IconCatalog,
@@ -23,7 +25,6 @@ export class IconConfigurationError extends Error {
     this.name = 'IconConfigurationError';
   }
 }
-
 export function loadV14IconCatalog(options: IconWorkflowOptions = {}): V14IconCatalog {
   const catalog = options.catalog ?? readJsonFile<V14IconCatalog>(
     CATALOG_PATH,
@@ -181,24 +182,4 @@ function validateOverrides(
     }
     keys.add(key);
   }
-}
-
-export function overrideSelectorKey(selector: V14IconOverrideFile['entries'][number]['selector']): string {
-  return [
-    normalizeSelectorValue(selector.itemType),
-    selector.actorEnglishName ? `actor-en:${normalizeSelectorValue(selector.actorEnglishName)}` : '',
-    selector.actorName ? `actor:${normalizeSelectorValue(selector.actorName)}` : '',
-    selector.englishName ? `en:${normalizeSelectorValue(selector.englishName)}` : '',
-    selector.name ? `name:${normalizeSelectorValue(selector.name)}` : '',
-  ].filter(Boolean).join('|');
-}
-
-function normalizeSelectorValue(value: string): string {
-  return value
-    .normalize('NFKD')
-    .toLowerCase()
-    .replace(/[’']/gu, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-    .replace(/\s+/gu, ' ');
 }

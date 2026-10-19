@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import { RESOLVER_MODULE_ID } from '../../../../src/core/spell-resolution';
-import { buildSpellResolverPackage } from '../../build';
+import { buildSpellResolverPackage, scanBytes } from '../../build';
 import {
   EXACT_DND5E_VERSION,
   EXACT_FOUNDRY_VERSION,
@@ -425,6 +425,7 @@ describe('Foundry companion module contract', () => {
       'templates/report.hbs',
       'templates/review.hbs',
       'templates/settings.hbs',
+      'third-party-licenses.txt',
     ]);
     expect(await readFile(resolve(second.outputDir, 'templates/review.hbs'), 'utf8')).toContain('{{{content}}}');
     expect(await readFile(resolve(second.outputDir, 'templates/report.hbs'), 'utf8')).toContain('{{{content}}}');
@@ -435,8 +436,25 @@ describe('Foundry companion module contract', () => {
     const bundle = await readFile(resolve(second.outputDir, 'scripts/index.js'), 'utf8');
     expect(bundle).not.toMatch(/node:crypto|sourceMappingURL|I:\\|\.local[\\/]|rat-warlock|OPENAI_API_KEY/i);
     expect(firstBytes.includes(Buffer.from('module.json'))).toBe(true);
+    const notices=await readFile(resolve(second.outputDir,'third-party-licenses.txt'),'utf8');
+    expect(notices).toContain('parse5 7.3.0');expect(notices).toContain('entities 6.0.1');expect(notices).toContain('Copyright');
     expect(await readFile(resolve(moduleRoot, '../../..', '.gitignore'), 'utf8')).toMatch(/^dist$/m);
   }, 20_000);
+});
+
+describe('browser build material guard',()=>{
+  const bytes=(s:string)=>new TextEncoder().encode(s);
+  test('accepts ordinary AST node object keys',()=>{
+    expect(()=>scanBytes(bytes('const entry = {node: tree, index: 0};'),'property')).not.toThrow();
+    expect(()=>scanBytes(bytes('const entry = {"node": tree};'),'quoted-property')).not.toThrow();
+    expect(()=>scanBytes(bytes('const namespace = "http://www.w3.org/1999/xhtml";'),'namespace')).not.toThrow();
+  });
+  for(const code of ["import fs from 'node:fs';",'import("node:stream")','const specifier = `node:crypto`; import(specifier);','//# sourceMappingURL=source.map','const key="OPENAI_API_KEY";'])test('rejects forbidden material: '+code,()=>{
+    expect(()=>scanBytes(bytes(code),'forbidden')).toThrow(/Forbidden/iu);
+  });
+  for(const path of ['C:\\Users\\private','C:/Users/private','file:///C:/Users/private'])test('still rejects a local absolute path: '+path,()=>{
+    expect(()=>scanBytes(bytes(JSON.stringify(path)),'local-path')).toThrow(/Forbidden/iu);
+  });
 });
 
 class FakeRuntimeAdapter implements ResolverFoundryAdapter {

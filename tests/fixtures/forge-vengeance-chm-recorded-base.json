@@ -1,0 +1,72 @@
+{
+  "source": "# 复仇天使 Angel of Vengeance\n\n**栖息地：** 任意； **宝藏：** 武备\n\n复仇天使，又称**乌穆尔提Umulti**，最初是更强大的神圣力量所派遣的星天神侍，负责为那些蒙冤者追寻正义与报应。若一位星天神侍在伸张正义期间犯下邪恶、不道德或卑劣的举动，它便可能遭受腐化，其恶行会令其肉体与灵魂逐渐凋零，转化为复仇天使。\n复仇天使以冒犯神圣存在者为目标，无论其罪行轻重。这些天使的目的不是交涉，而是杀戮；复仇天使开口之时，只为告知受害者死期将至。\n复仇天使的真实形态是一只巨大的燃烧之眼，位于五重同心圆环的中央。圆环通常由与其原先侍奉的神圣力量相契合的材质构成。例如，由火焰神祇创造的天使们，会显现火焰之环；而由财富之神祇创造的，则常以贵金属构成圆环。复仇天使常伪装成缄默而果决的人形，身披铠甲，手持利剑。\n（译注：Umulti，词源拉丁语Ultio，意为复仇、报复；该天使的形象来自以西结书的座天使Ophanim）\n\n##### 复仇天使Angel of Vengeance\n\n大型天族，混乱邪恶\n\n**AC**18\t**先攻**+7（17）\n\n**HP**130（20d10+20）\n\n**速度**40尺，飞行40尺\n\n调整\t豁免\t\t\t\t调整\t豁免\t\t\t\t调整\t豁免\n\n**力量**\t20\t+5\t+5\t\t**敏捷**\t16\t+3\t+3\t\t**体质**\t12\t+1\t+5\n\n**智力**\t16\t+3\t+3\t\t**感知**\t12\t+1\t+1\t\t**魅力**\t14\t+2\t+2\n\n**技能**运动+9\n\n**免疫**光耀\n\n**感官**真实视觉120尺；被动察觉11\n\n**语言**全部，心灵感应120尺\n\n**CR**9（XP5,000；PB+4）\n\n###### 特质Traits\n\n**魔法抗性Magic Resistance。**复仇天使对抗法术和其他魔法效应时进行的豁免检定具有优势。\n\n###### 动作Actions\n\n**多重攻击Multiattack。**复仇天使发动三次圆环攻击。其可以将其中一次攻击替换为使用不瞑之眼。\n **圆环Ring。**近战攻击检定：+9，触及10尺。命中：14（2d8+5）钝击伤害，若目标生物体型不超过大型，则其被五道圆环之一擒抱，陷入受擒状态（逃脱DC15），且在受擒期间，目标陷入束缚状态。\n **天谴之锥Cone of Retribution（充能5~6）。**感知豁免检定：DC15，90尺锥状区域内的每个敌人。失败：18（4d8）光耀伤害，且目标陷入失能状态，直至其下回合结束。成功：仅半伤。\n **施法Spellcasting。**复仇天使施展以下一道法术，无需任何法术成分并使用智力作为施法属性（法术豁免DC15）：\n **随意：** 易容术Disguise Self（持续24小时）， 生物定位术Locate Creature\n **1/日：**位面转移Plane Shift\n **不瞑之眼Unblinking Eye。**魅力豁免检定：DC15，单一受擒于复仇天使的生物。失败：28（8d6）心灵伤害。成功：仅半伤。\n",
+  "baseResponse": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {
+        "name": "复仇天使",
+        "size": "large",
+        "creatureType": "celestial",
+        "englishName": "Angel of Vengeance",
+        "alignment": "混乱邪恶"
+      },
+      "abilities": {
+        "str": 20,
+        "dex": 16,
+        "con": 12,
+        "int": 16,
+        "wis": 12,
+        "cha": 14
+      },
+      "attributes": {
+        "ac": 18,
+        "hp": {
+          "value": 130,
+          "formula": "20d10+20"
+        },
+        "movement": {
+          "walk": 40,
+          "fly": 40
+        },
+        "cr": 9,
+        "initiative": 7,
+        "xp": 5000,
+        "proficiencyBonus": 4
+      },
+      "saves": {
+        "str": 5,
+        "dex": 3,
+        "con": 5,
+        "int": 3,
+        "wis": 1,
+        "cha": 2
+      },
+      "skills": {
+        "athletics": 9
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [
+          "radiant"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "truesight": 120,
+        "passivePerception": 11
+      },
+      "languages": {
+        "values": [
+          "all"
+        ],
+        "custom": "心灵感应120尺"
+      }
+    },
+    "uncertainties": []
+  },
+  "provenance": {
+    "sourceSha256": "3e1e5024a1a2a0d94a173981d2a9c9e2c7efcb2260fb22d816d494b6db4ee6de",
+    "origin": "Actual first DeepSeek base extraction; BASE_STATIC_CONFLICT languages; no final Actor existed"
+  }
+}

@@ -1,0 +1,524 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha256": "bafad45419cbe42e9041be7f4919ffb3cb8eb32e9048c0472ec8927f6dbeb571",
+    "length": 1132
+  },
+  "creature": {
+    "identity": {
+      "name": "Faldric the Archer",
+      "englishName": "Faldric the Archer",
+      "size": "medium",
+      "creatureType": "humanoid",
+      "alignment": "neutral evil"
+    },
+    "abilities": {
+      "str": 11,
+      "dex": 16,
+      "con": 13,
+      "int": 11,
+      "wis": 14,
+      "cha": 13
+    },
+    "attributes": {
+      "ac": 15,
+      "acKind": "flat",
+      "hp": {
+        "value": 44,
+        "formula": "8d8 + 8"
+      },
+      "movement": {
+        "walk": 30
+      },
+      "cr": 3,
+      "xp": 700
+    },
+    "saves": {
+      "dex": 4,
+      "wis": 2
+    },
+    "skills": {
+      "acrobatics": 5,
+      "perception": 3
+    },
+    "defenses": {
+      "resistances": [],
+      "immunities": [],
+      "vulnerabilities": [],
+      "conditionImmunities": []
+    },
+    "senses": {
+      "passivePerception": 13
+    },
+    "languages": {
+      "values": [
+        "Common"
+      ]
+    },
+    "traits": [
+      {
+        "name": "Acute Sight",
+        "englishName": "Acute Sight",
+        "description": "Faldric has advantage on Wisdom (Perception) checks that rely on sight.",
+        "activityType": "utility"
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "englishName": "Multiattack",
+        "description": "Faldric makes two attacks with either his longbow or his shortsword.",
+        "activityType": "utility",
+        "activationType": "action"
+      },
+      {
+        "name": "Longbow",
+        "englishName": "Longbow",
+        "description": "Ranged Weapon Attack: +5 to hit, range 150/600 ft., one target. Hit: 7 (1d8 + 3) piercing damage.",
+        "activityType": "attack",
+        "activationType": "action",
+        "attack": {
+          "type": "rwak",
+          "toHit": 5,
+          "range": 150,
+          "longRange": 600
+        },
+        "damage": [
+          {
+            "formula": "1d8 + 3",
+            "type": "piercing",
+            "relationship": "base"
+          }
+        ]
+      },
+      {
+        "name": "Shortsword",
+        "englishName": "Shortsword",
+        "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 6 (1d6 + 3) piercing damage.",
+        "activityType": "attack",
+        "activationType": "action",
+        "attack": {
+          "type": "mwak",
+          "toHit": 5,
+          "reach": 5
+        },
+        "damage": [
+          {
+            "formula": "1d6 + 3",
+            "type": "piercing",
+            "relationship": "base"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [],
+    "reactions": [
+      {
+        "name": "Pelliton’s Archer",
+        "englishName": "Pelliton’s Archer",
+        "description": "When a creature Faldric can see enters a space adjacent to Sir Pelliton, Faldric may use his reaction to make a longbow attack against that creature. If this attack is successful, the target is also knocked prone.",
+        "activityType": "attack",
+        "activationType": "reaction",
+        "attack": {
+          "type": "rwak",
+          "toHit": 5,
+          "range": 150,
+          "longRange": 600
+        },
+        "damage": [
+          {
+            "formula": "1d8 + 3",
+            "type": "piercing",
+            "relationship": "base"
+          }
+        ],
+        "appliedConditions": [
+          {
+            "statuses": [
+              "prone"
+            ],
+            "condition": "If this attack is successful, the target is also knocked prone."
+          }
+        ]
+      }
+    ],
+    "legendaryActions": []
+  },
+  "claims": [
+    {
+      "path": "/creature/identity/name",
+      "valueKind": "explicit",
+      "value": "Faldric the Archer",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 21,
+          "end": 47,
+          "quote": "name: \"Faldric the Archer\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/identity/size",
+      "valueKind": "explicit",
+      "value": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 183,
+          "end": 204,
+          "quote": "size: Medium humanoid"
+        }
+      ]
+    },
+    {
+      "path": "/creature/identity/creatureType",
+      "valueKind": "explicit",
+      "value": "humanoid",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 183,
+          "end": 204,
+          "quote": "size: Medium humanoid"
+        }
+      ]
+    },
+    {
+      "path": "/creature/identity/alignment",
+      "valueKind": "explicit",
+      "value": "neutral evil",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 205,
+          "end": 228,
+          "quote": "alignment: neutral evil"
+        }
+      ]
+    },
+    {
+      "path": "/creature/abilities",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 105,
+          "end": 182,
+          "quote": "cha: 13 (+1)\nwis: 14 (+2)\nint: 11 (+0)\ncon: 13 (+1)\ndex: 16 (+3)\nstr: 11 (+0)"
+        }
+      ]
+    },
+    {
+      "path": "/creature/attributes/ac",
+      "valueKind": "explicit",
+      "value": 15,
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 418,
+          "end": 453,
+          "quote": "armor_class: \"15 (studded leather)\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/attributes/hp",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 391,
+          "end": 417,
+          "quote": "hit_points: \"44 (8d8 + 8)\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/attributes/movement",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 375,
+          "end": 390,
+          "quote": "speed: \"30 ft.\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/attributes/cr",
+      "valueKind": "explicit",
+      "value": 3,
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 229,
+          "end": 252,
+          "quote": "challenge: \"3 (700 XP)\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/attributes/xp",
+      "valueKind": "explicit",
+      "value": 700,
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 229,
+          "end": 252,
+          "quote": "challenge: \"3 (700 XP)\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/saves",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 344,
+          "end": 374,
+          "quote": "saving_throws: \"Dex +4 Wis +2\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/skills",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 273,
+          "end": 311,
+          "quote": "skills: \"Acrobatics +5, Perception +3\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/senses",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 312,
+          "end": 343,
+          "quote": "senses: \"passive Perception 13\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/languages",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 253,
+          "end": 272,
+          "quote": "languages: \"Common\""
+        }
+      ]
+    },
+    {
+      "path": "/creature/traits/0",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 459,
+          "end": 549,
+          "quote": "***Acute Sight.*** Faldric has advantage on Wisdom\n(Perception) checks that rely on sight."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/0",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 565,
+          "end": 652,
+          "quote": "***Multiattack.*** Faldric makes two attacks with either his longbow or his shortsword."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/1",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 654,
+          "end": 766,
+          "quote": "***Longbow.*** Ranged Weapon Attack: +5 to hit,\nrange 150/600 ft., one target. Hit: 7 (1d8 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/1/attack",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 654,
+          "end": 766,
+          "quote": "***Longbow.*** Ranged Weapon Attack: +5 to hit,\nrange 150/600 ft., one target. Hit: 7 (1d8 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/1/damage/0",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 654,
+          "end": 766,
+          "quote": "***Longbow.*** Ranged Weapon Attack: +5 to hit,\nrange 150/600 ft., one target. Hit: 7 (1d8 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/2",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 768,
+          "end": 876,
+          "quote": "***Shortsword.*** Melee Weapon Attack: +5 to\nhit, reach 5 ft., one target. Hit: 6 (1d6 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/2/attack",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 768,
+          "end": 876,
+          "quote": "***Shortsword.*** Melee Weapon Attack: +5 to\nhit, reach 5 ft., one target. Hit: 6 (1d6 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/actions/2/damage/0",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 768,
+          "end": 876,
+          "quote": "***Shortsword.*** Melee Weapon Attack: +5 to\nhit, reach 5 ft., one target. Hit: 6 (1d6 + 3)\npiercing damage."
+        }
+      ]
+    },
+    {
+      "path": "/creature/reactions/0",
+      "valueKind": "explicit",
+      "confidence": "high",
+      "evidence": [
+        {
+          "start": 893,
+          "end": 1131,
+          "quote": "***Pelliton’s Archer.*** When a creature Faldric can\nsee enters a space adjacent to Sir Pelliton, Faldric\nmay use his reaction to make a longbow attack\nagainst that creature. If this attack is successful,\nthe target is also knocked prone."
+        }
+      ]
+    },
+    {
+      "path": "/creature/reactions/0/attack",
+      "valueKind": "explicit",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "start": 893,
+          "end": 1131,
+          "quote": "***Pelliton’s Archer.*** When a creature Faldric can\nsee enters a space adjacent to Sir Pelliton, Faldric\nmay use his reaction to make a longbow attack\nagainst that creature. If this attack is successful,\nthe target is also knocked prone."
+        },
+        {
+          "start": 654,
+          "end": 766,
+          "quote": "***Longbow.*** Ranged Weapon Attack: +5 to hit,\nrange 150/600 ft., one target. Hit: 7 (1d8 + 3)\npiercing damage."
+        }
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "start": 0,
+      "end": 457,
+      "quote": "---\nlayout: creature\nname: \"Faldric the Archer\"\ntags: [medium, humanoid, cr3, strongholds-and-followers]\ncha: 13 (+1)\nwis: 14 (+2)\nint: 11 (+0)\ncon: 13 (+1)\ndex: 16 (+3)\nstr: 11 (+0)\nsize: Medium humanoid\nalignment: neutral evil\nchallenge: \"3 (700 XP)\"\nlanguages: \"Common\"\nskills: \"Acrobatics +5, Perception +3\"\nsenses: \"passive Perception 13\"\nsaving_throws: \"Dex +4 Wis +2\"\nspeed: \"30 ft.\"\nhit_points: \"44 (8d8 + 8)\"\narmor_class: \"15 (studded leather)\"\n---",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/identity/name",
+        "/creature/identity/size",
+        "/creature/identity/creatureType",
+        "/creature/identity/alignment",
+        "/creature/abilities",
+        "/creature/attributes/ac",
+        "/creature/attributes/hp",
+        "/creature/attributes/movement",
+        "/creature/attributes/cr",
+        "/creature/attributes/xp",
+        "/creature/saves",
+        "/creature/skills",
+        "/creature/senses",
+        "/creature/languages"
+      ]
+    },
+    {
+      "start": 457,
+      "end": 549,
+      "quote": "\n\n***Acute Sight.*** Faldric has advantage on Wisdom\n(Perception) checks that rely on sight.",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/traits/0"
+      ]
+    },
+    {
+      "start": 549,
+      "end": 652,
+      "quote": "\n\n\n### Actions\n\n***Multiattack.*** Faldric makes two attacks with either his longbow or his shortsword.",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/actions/0"
+      ]
+    },
+    {
+      "start": 652,
+      "end": 766,
+      "quote": "\n\n***Longbow.*** Ranged Weapon Attack: +5 to hit,\nrange 150/600 ft., one target. Hit: 7 (1d8 + 3)\npiercing damage.",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/actions/1",
+        "/creature/actions/1/attack",
+        "/creature/actions/1/damage/0"
+      ]
+    },
+    {
+      "start": 766,
+      "end": 876,
+      "quote": "\n\n***Shortsword.*** Melee Weapon Attack: +5 to\nhit, reach 5 ft., one target. Hit: 6 (1d6 + 3)\npiercing damage.",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/actions/2",
+        "/creature/actions/2/attack",
+        "/creature/actions/2/damage/0"
+      ]
+    },
+    {
+      "start": 876,
+      "end": 1132,
+      "quote": "\n\n### Reactions\n\n***Pelliton’s Archer.*** When a creature Faldric can\nsee enters a space adjacent to Sir Pelliton, Faldric\nmay use his reaction to make a longbow attack\nagainst that creature. If this attack is successful,\nthe target is also knocked prone.\n",
+      "classification": "mechanical",
+      "claimPaths": [
+        "/creature/reactions/0",
+        "/creature/reactions/0/attack"
+      ]
+    }
+  ],
+  "uncertainties": []
+}

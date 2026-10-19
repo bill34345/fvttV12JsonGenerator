@@ -291,7 +291,7 @@ describe('source-derived standalone Item semantics', () => {
       const parsed = new ItemParser().parse(shieldFixture);
       const generated = await new ItemGenerator({ fvttVersion }).generate(parsed);
       const activities = activitySemantics(generated);
-      const reaction = activities.find((activity) => activity.name === '庇护领域 (Protective Field)');
+      const reaction = activities.find((activity) => activity.name === '庇护领域 Protective Field');
 
       expect(generated.system.rarity).toBe('veryRare');
       expect(generated.system.armor).toEqual({ value: 2, dex: null, magicalBonus: 2 });
@@ -300,12 +300,12 @@ describe('source-derived standalone Item semantics', () => {
       expect(generated.system.weight).toEqual({ value: 6, units: 'lb' });
       expect(generated.system.price).toEqual({ value: 0, denomination: 'gp' });
       expect(activities.map((activity) => activity.name)).toEqual([
-        '强力猛击 (Forceful Bash)',
-        '庇护领域 (Protective Field)',
+        '强力猛击 Forceful Bash',
+        '庇护领域 Protective Field',
       ]);
-      const bash = activities.find((activity) => activity.name === '强力猛击 (Forceful Bash)');
+      const bash = activities.find((activity) => activity.name === '强力猛击 Forceful Bash');
       const rawBash = Object.values(generated.system.activities ?? {})
-        .find((activity: any) => activity.name === '强力猛击 (Forceful Bash)') as any;
+        .find((activity: any) => activity.name === '强力猛击 Forceful Bash') as any;
       const prone = generated.effects?.find((effect: any) => effect.statuses?.includes('prone'));
       expect(rawBash.attack).toEqual(expect.objectContaining({
         ability: 'str',
@@ -422,7 +422,7 @@ describe('source-derived standalone Item semantics', () => {
           : [],
       },
       {
-        name: '三祷之坠 (Jewel of Three Prayers)',
+        name: '三祷之坠 Jewel of Three Prayers',
         rarity: 'legendary',
         stageNames: ['休眠态', '觉醒态', '升华态'],
         firstStageActionTypes: [],

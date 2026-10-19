@@ -219,11 +219,11 @@ describe('portable Actor spell manifest boundary', () => {
   });
 
   it.each([
-    ['an action section', { 动作: [spellcastingTrait('feature-a', 'Action Link', 'Wrong section.')] }, 'SPELL_FEATURE_LINK_INVALID_SECTION'],
-    ['an explicitly active trait', {
+    ['a legendary section', { 传奇动作: [spellcastingTrait('feature-a', 'Action Link', 'Wrong section.')] }, 'SPELL_FEATURE_LINK_INVALID_SECTION'],
+    ['a special activation', {
       特性: [{
         ...spellcastingTrait('feature-a', 'Active Link', 'Wrong activation.'),
-        activation: { type: 'action' as const, explicit: true },
+        activation: { type: 'special' as const, explicit: true },
       }],
     }, 'SPELL_FEATURE_LINK_INVALID_ACTIVATION'],
   ])('rejects direct generator linkage on %s', (_label, structuredActions, code) => {

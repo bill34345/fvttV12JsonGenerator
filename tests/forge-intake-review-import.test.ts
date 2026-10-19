@@ -74,6 +74,15 @@ function decodeObject(value: unknown) {
 }
 
 describe('Forge Intake untrusted review bundle import', () => {
+  test('reads both historical off and new v14 safe targets, rejecting safe on v12', () => {
+    const input = acceptedInput();
+    for (const iconMode of ['off', 'safe']) {
+      const bundle = buildForgeIntakeReviewBundle({ ...input, target: { ...input.target!, iconMode } });
+      expect(decodeObject(bundle).bundle.target?.iconMode).toBe(iconMode);
+    }
+    const unsupported = buildForgeIntakeReviewBundle({ ...input, target: { ...input.target!, generatorProfile: 'v12', iconMode: 'safe' } });
+    expect(() => decodeObject(unsupported)).toThrow(/target/u);
+  });
   test('strictly decodes V1, migrates it to an immutable read-only V2 record, and normalizes whitespace', () => {
     const bundle = buildForgeIntakeReviewBundle(acceptedInput());
     const pretty = serializeForgeIntakeReviewBundle(bundle);
@@ -131,7 +140,7 @@ describe('Forge Intake untrusted review bundle import', () => {
       [{ ...base, sourceIdentity: { ...base.sourceIdentity!, finalSourceHash: hashSource('other') } }, /final source hash/u],
       [{ ...base, sourceIdentity: { ...base.sourceIdentity!, sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174000' } }, /sourceId|source identity/u],
       [{ ...base, sourceIdentity: { ...base.sourceIdentity!, sourceId: 'actor:v1:223e4567-e89b-42d3-a456-426614174000' } }, /canonicalSource/u],
-      [{ ...base, target: { ...base.target!, iconMode: 'safe' } }, /target/u],
+      [{ ...base, target: { ...base.target!, iconMode: 'invented' } }, /target/u],
       [{ ...base, candidateResponse: { ...base.candidateResponse!, requestId: 'other' } }, /requestId/u],
       [{ ...base, candidateResponse: { ...base.candidateResponse!, artifactHash: undefined } }, /artifactHash/u],
       [{ ...base, history: [{ sequence: 2, action: 'repair', attemptId: 'a', resultingStatus: 'repairing' }, { sequence: 1, action: 'reject', attemptId: 'a', resultingStatus: 'rejected' }] }, /strictly increasing/u],

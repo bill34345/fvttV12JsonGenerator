@@ -18,7 +18,7 @@ describe('Crystalbleed approved source stages', () => {
     // Independent source-semantic check: final approved rule is CON18, 2d8 psychic,
     // half damage on success. Do not infer this expectation from generated JSON.
     const audit = (actor: any) => {
-      const item = actor.items.find((entry: any) => entry.name === '晶片齐射 (Shard Salvo)');
+      const item = actor.items.find((entry: any) => entry.name === '晶片齐射 Shard Salvo');
       const a: any = Object.values(item.system.activities)[0];
       assertEqualStructure({ save: a.save, onSave: a.damage.onSave, parts: a.damage.parts.map((p: any) => ({number:p.number,denomination:p.denomination,types:p.types,bonus:p.bonus})) },
         { save: {ability:['con'],dc:{calculation:'',formula:'18'}},onSave:'half',parts:[{number:2,denomination:8,types:['psychic'],bonus:''}] });
@@ -30,7 +30,7 @@ describe('Crystalbleed approved source stages', () => {
       (a: any) => { a.damage.onSave = 'none'; },
     ]) {
       const copy = structuredClone(output);
-      const salvo = copy.items.find((item: any) => item.name === '晶片齐射 (Shard Salvo)');
+      const salvo = copy.items.find((item: any) => item.name === '晶片齐射 Shard Salvo');
       mutate(Object.values(salvo.system.activities)[0]);
       expect(() => audit(copy)).toThrow();
     }
@@ -50,13 +50,13 @@ describe('Crystalbleed approved source stages', () => {
   });
   it('keeps crystal DEX damage separate from conditional CHA corruption and exhaustion', () => {
     const actor = generate('crystal.md');
-    const spikes = actor.items.find((i: any) => i.name === '月石戳刺 (Moonstone Spikes)');
+    const spikes = actor.items.find((i: any) => i.name === '月石戳刺 Moonstone Spikes');
     const save: any = Object.values(spikes.system.activities).find((a: any) => a.type === 'save');
     expect(save.save).toEqual({ ability: ['dex'], dc: { calculation: '', formula: '18' } });
     expect(save.damage.onSave).toBe('none');
     expect(save.effects ?? []).toEqual([]);
     expect(spikes.effects).toEqual([]);
-    const corruption = actor.items.find((i: any) => i.name === '月石腐化 (Moonstone Corruption)');
+    const corruption = actor.items.find((i: any) => i.name === '月石腐化 Moonstone Corruption');
     const followup: any = Object.values(corruption.system.activities).find((a: any) => a.type === 'save');
     expect(followup.save).toEqual({ ability: ['cha'], dc: { calculation: '', formula: '18' } });
     expect(followup.effects ?? []).toEqual([]);
@@ -67,13 +67,13 @@ describe('Crystalbleed approved source stages', () => {
     const actor = generate('dragon.md');
     expect(actor.system.traits.languages.value).toEqual(['common', 'draconic', 'undercommon']);
     expect(actor.system.traits.ci.value).toEqual(['charmed', 'frightened', 'poisoned', 'stunned', 'transformed']);
-    const salvo = actor.items.find((i: any) => i.name === '晶片齐射 (Shard Salvo)');
+    const salvo = actor.items.find((i: any) => i.name === '晶片齐射 Shard Salvo');
     expect(salvo.effects.flatMap((e: any) => e.statuses)).toEqual(['fvtt-custom-conditions.dazed']);
     const save: any = Object.values(salvo.system.activities)[0];
     expect(save.damage.parts).toHaveLength(1);
     expect(save.damage.parts[0]).toMatchObject({ number: 2, denomination: 8, types: ['psychic'] });
     expect(save.activation).toMatchObject({ type: 'legendary', value: 2 });
-    const defiance = actor.items.find((i: any) => i.name === '绯晶拒绝 (Ruidium Defiance)');
+    const defiance = actor.items.find((i: any) => i.name === '绯晶拒绝 Ruidium Defiance');
     expect(defiance.system.uses).toEqual({ spent: 0, max: '2', recovery: [{ period: 'day', type: 'recoverAll' }] });
     expect(defiance.effects.flatMap((e: any) => e.changes)).toEqual([]);
     expect(defiance.effects[0].description).toContain('下一回合开始');
@@ -99,6 +99,15 @@ describe('generic structured lifecycle regressions', () => {
         expect(activity.target.template).toMatchObject({ type: shape, size, units: 'ft' });
         expect(activity.range?.value).not.toBe(5);
         const effects = item.effects.filter((effect: any) => effect.statuses.includes(status));
+        if (fvttVersion === '14' && status === 'frightened') {
+          // This source explicitly lets an ally end fear early; core has no
+          // executor for that lifecycle. Save, damage, area and recharge above
+          // remain native, with the complete status consequence left to GM.
+          expect(effects).toEqual([]);
+          expect(activity.effects ?? []).toEqual([]);
+          expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toContain(status);
+          continue;
+        }
         expect(effects).toHaveLength(1);
         expect(effects[0].duration).toMatchObject(duration);
         expect(effects[0].flags.fvttJsonGenerator.sourceDerivedEmbeddedEffect).toBe(true);

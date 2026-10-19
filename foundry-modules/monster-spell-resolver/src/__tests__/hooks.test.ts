@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import savedUsesFailure from '../../../../tests/fixtures/forge-gith-resolver-uses-failure.json';
 import { hashManifest, logicalSpellRefKey, RESOLVER_MODULE_ID } from '../../../../src/core/spell-resolution';
 import { buildSpellResolverPackage } from '../../build';
 import {
@@ -109,6 +110,14 @@ describe('spell resolver status and safe event coordination', () => {
     await scheduled[0]!();
     expect(processed).toEqual(['actor-1']);
   });
+  test('never queues or executes an Actor that requires recovery, including a previously queued event',async()=>{
+    const scheduled:Array<()=>void|Promise<void>>=[],processed:string[]=[];
+    const coordinator=createResolverEventCoordinator({authority:()=>({isGM:true,userId:'gm'}),runtimeSupported:()=>true,isActive:()=>false,isAlreadyApplied:()=>false,schedule:fn=>scheduled.push(fn),process:async a=>{processed.push(a.id);}});
+    const target=actor() as any;target.flags[RESOLVER_MODULE_ID].spellResolution.status='failed-recovery-required';
+    expect(coordinator.onActorEvent(target,{userId:'gm'})).toBe('ignored');expect(scheduled).toEqual([]);
+    target.flags[RESOLVER_MODULE_ID].spellResolution.status='pending';expect(coordinator.onActorEvent(target,{userId:'gm'})).toBe('scheduled');
+    target.flags[RESOLVER_MODULE_ID].spellResolution.status='failed-recovery-required';await scheduled[0]!();expect(processed).toEqual([]);
+  });
 
   test('normalizes the Object-backed savedMappings setting and fails closed on malformed entries', () => {
     const mapping = {
@@ -168,6 +177,112 @@ describe('Actor-level resolve pipeline', () => {
     };
     return { target, calls, settings, dependencies, service: createResolverActorService(dependencies) };
   }
+
+  function localizedServiceFixture(mutate?: (document: any) => any) {
+    const fixture = serviceFixture(), manifest = fixture.target.flags[RESOLVER_MODULE_ID].spellManifest;
+    const reference = manifest.spellcastingGroups[0].spellRefs[0];
+    reference.identifier = '辉光护罩'; reference.originalName = '辉光护罩'; reference.chineseName = '辉光护罩';
+    reference.evidence = [{ start: 0, end: 4, quote: '辉光护罩' }];
+    const runtime = fixture.dependencies.getRuntime(), candidate = runtime.sourceIndex.candidates[0];
+    candidate.name = '辉光护罩 Luminous Ward'; candidate.identifier = 'luminous-ward';
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.dependencies.fetchSelectedDocument = async (uuid: string) => {
+      fixture.calls.fetch.push(uuid);
+      const document = { documentName: 'Item', type: 'spell', uuid, name: candidate.name,
+        system: { identifier: candidate.identifier, source: { rules: candidate.rules, book: candidate.sourceBook }, level: candidate.level, school: candidate.school } };
+      return mutate ? mutate(document) : document;
+    };
+    return fixture;
+  }
+
+  test('normal Actor service accepts the same source-verified Chinese identity at selection and full-document validation', async () => {
+    const fixture = localizedServiceFixture(), before = structuredClone(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest);
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.fetch).toHaveLength(1);
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.review).toBe(0);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest).toEqual(before);
+    expect(fixture.calls.execute[0][2].selections[0].uuid).toBe(fixture.dependencies.getRuntime().sourceIndex.candidates[0].uuid);
+  });
+  test('normal service validates an English-only selected Spell using the same indexed English confirmation',async()=>{
+    const fixture=localizedServiceFixture(),runtime=fixture.dependencies.getRuntime(),candidate=runtime.sourceIndex.candidates[0];
+    runtime.sourceIndex.candidates.push({...candidate,name:'辉光护罩 Luminous Ward',rules:'2014',packageId:'legacy',uuid:'Compendium.legacy.spells.Item.englishProof0001'});
+    candidate.name='Luminous Ward';
+    const before=structuredClone(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest);
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(1);expect(fixture.calls.fetch).toEqual([candidate.uuid]);
+    expect(fixture.calls.review).toBe(0);expect(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest).toEqual(before);
+  });
+
+  test.each(['name', 'identifier', 'rules', 'sourceBook', 'level', 'school'] as const)('localized selection still rejects full-document %s drift before transaction', async key => {
+    const fixture = localizedServiceFixture(document => {
+      if (key === 'name') document.name = '辉光护罩 Other Ward';
+      if (key === 'identifier') document.system.identifier = 'other-ward';
+      if (key === 'rules') document.system.source.rules = '2014';
+      if (key === 'sourceBook') document.system.source.book = 'Other Book';
+      if (key === 'level') document.system.level++;
+      if (key === 'school') document.system.school = 'evo';
+      return document;
+    });
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0); expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.calls.notifications.flat().join(' ')).toContain(`${key} changed after indexing`);
+  });
+
+  test.each(['uuid', 'type', 'documentName', 'unreadable'] as const)('localized selection keeps the exact readable Spell %s guard', async key => {
+    const fixture = localizedServiceFixture(document => {
+      if (key === 'unreadable') return undefined;
+      document[key] = key === 'uuid' ? 'Compendium.other.spells.Item.unrelatedspell01' : key === 'type' ? 'feat' : 'Actor';
+      return document;
+    });
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(0); expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.calls.notifications.flat().join(' ')).toContain('not the exact readable Spell');
+  });
+
+  test('normal Actor service does not promote Chinese display fields or logical refId into identity keys', async () => {
+    const fixture = localizedServiceFixture(), reference = fixture.target.flags[RESOLVER_MODULE_ID].spellManifest.spellcastingGroups[0].spellRefs[0];
+    reference.refId = '辉光护罩'; reference.identifier = '未知法术';
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.fetch).toEqual([]); expect(fixture.calls.execute).toHaveLength(0);
+    expect(fixture.target.updateCalls).toEqual([]); expect(fixture.calls.review).toBe(1);
+  });
+
+  for (const key of ['githManifest', 'sharedManifest'] as const) test(`normal Actor resolve entry reaches one transaction for saved ${key}`, async () => {
+    const fixture = serviceFixture(), manifest = structuredClone(savedUsesFailure[key]);
+    fixture.target.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
+    const candidates = manifest.spellcastingGroups.flatMap(group => group.spellRefs.map((ref, index) => ({
+      id: String(index).padStart(16, '0'), uuid: `Compendium.dnd5e.spells24.Item.${String(index).padStart(16, '0')}`,
+      packageId: 'dnd5e', packId: 'spells24', name: ref.englishName, identifier: ref.identifier,
+      rules: '2024', sourceBook: 'PHB', level: 1, school: 'abj',
+    })));
+    const runtime = fixture.dependencies.getRuntime(); runtime.sourceIndex.candidates = candidates;
+    fixture.dependencies.getRuntime = () => runtime;
+    fixture.dependencies.fetchSelectedDocument = async (uuid: string) => {
+      fixture.calls.fetch.push(uuid); const candidate = candidates.find(row => row.uuid === uuid)!;
+      return { documentName: 'Item', type: 'spell', uuid, name: candidate.name,
+        system: { identifier: candidate.identifier, source: { rules: candidate.rules, book: candidate.sourceBook }, level: 1, school: 'abj' } };
+    };
+    await fixture.service.resolve(fixture.target);
+    expect(fixture.calls.fetch).toHaveLength(candidates.length);
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.execute[0]![2].selections).toHaveLength(candidates.length);
+    expect(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest).toEqual(manifest);
+  });
+
+  test('unresolved recovery blocks explicit and automatic hydration without mutating residual content',async()=>{
+    const fixture=serviceFixture();fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.status='failed-recovery-required';
+    await fixture.service.resolve(fixture.target);await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.fetch).toEqual([]);expect(fixture.calls.execute).toEqual([]);expect(fixture.target.updateCalls).toEqual([]);
+    expect(fixture.calls.notifications).toContainEqual(['warn','FVTTJSONSPELL.Notification.RecoveryRequired']);
+  });
+  test('pending Forge import blocks both explicit and automatic processing until verified',async()=>{
+    const fixture=serviceFixture();fixture.target.flags['fvtt-json-forge']={spellImportPhase:'pending'};
+    await fixture.service.resolve(fixture.target);await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.fetch).toEqual([]);expect(fixture.calls.execute).toEqual([]);expect(fixture.target.updateCalls).toEqual([]);
+    fixture.target.flags['fvtt-json-forge'].spellImportPhase='verified';await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(1);
+  });
 
   async function installHydratedPair(fixture: ReturnType<typeof serviceFixture>, protect = false) {
     await fixture.service.processActor(fixture.target, { explicit: true });
@@ -279,12 +394,11 @@ describe('Actor-level resolve pipeline', () => {
     expect(readLastRenderedReport(fixture).failureDiagnostic).toEqual(diagnostic);
   });
 
-  test('a later ordinary failure clears the earlier transaction ownership and residual diagnostics', async () => {
+  test('after complete rollback, a later ordinary failure replaces the earlier transaction diagnostics', async () => {
     const diagnostic = { phase: 'selection' as const, selectionIndex: 1, selectionCount: 1,
-      residualPaths: ['/items/NewCache00000001'] };
+      residualPaths: [] };
     const fixture = serviceFixture({ execute: async () => {
-      throw new HydrationTransactionError('first failure', false,
-        [{ path: '/items/NewCache00000001' }], undefined, diagnostic);
+      throw new HydrationTransactionError('first failure', true, [], undefined, diagnostic);
     } });
     await fixture.service.processActor(fixture.target);
     expect(fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.failureDiagnostic).toEqual(diagnostic);
@@ -298,7 +412,7 @@ describe('Actor-level resolve pipeline', () => {
     expect(readLastRenderedReport(fixture).failureDiagnostic).toBeUndefined();
   });
 
-  test('a later transaction phase clears nested prior ownership under Foundry-style recursive merge', async () => {
+  test('after complete rollback, a later phase clears nested prior ownership under Foundry-style recursive merge', async () => {
     const first = { phase: 'selection' as const, selectionIndex: 1, selectionCount: 2,
       ownership: { code: 'RESOLVER_OWNERSHIP_MISSING' as const, expectedType: 'spell' as const,
         namespacePresent: false, managed: false, documentType: '<missing>' }, residualPaths: [] };
@@ -306,8 +420,8 @@ describe('Actor-level resolve pipeline', () => {
       ownership: null, residualPaths: ['/rollback/errors'] };
     let attempt = 0;
     const fixture = serviceFixture({ execute: async () => {
-      const diagnostic = ++attempt === 1 ? first : second;
-      throw new HydrationTransactionError('transaction failure', false,
+      const firstAttempt=++attempt===1,diagnostic = firstAttempt ? first : second;
+      throw new HydrationTransactionError('transaction failure', firstAttempt,
         diagnostic.residualPaths.map((path) => ({ path })), undefined, diagnostic);
     } });
     const merge = (before: any, after: any): any => {
@@ -1381,7 +1495,12 @@ describe('public Foundry hook and GM control registration', () => {
   test('bundles browser-safe public-hook code without patches or custom Activity registration', async () => {
     const built = await buildSpellResolverPackage();
     const bundle = await readFile(resolve(built.outputDir, 'scripts/index.js'), 'utf8');
-    expect(bundle).not.toMatch(/\.prototype\s*=|\.prototype\.[A-Za-z_$][\w$]*\s*=|CONFIG\.DND5E\.activityTypes|registerActivity|world[- ]wide|require\s*\(|node:/i);
+    const forbidden=/\.prototype\s*=(?!=|>)|\.prototype\.[A-Za-z_$][\w$]*\s*=(?!=|>)|CONFIG\.DND5E\.activityTypes|registerActivity|world[- ]wide|require\s*\(|["'`]node:/i;
+    expect('String.prototype.codePointAt == null').not.toMatch(forbidden);
+    expect('Actor.prototype.use = replacement').toMatch(forbidden);
+    expect('Actor.prototype = replacement').toMatch(forbidden);
+    // Print only the forbidden token on failure, never the whole bundle.
+    expect(bundle.match(forbidden)?.[0]).toBeUndefined();
     expect(bundle).toContain('getHeaderControlsApplicationV2');
     expect(bundle).toContain('getActorContextOptions');
   });

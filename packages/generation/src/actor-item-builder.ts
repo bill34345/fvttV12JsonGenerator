@@ -1,11 +1,11 @@
 import type { ActionData, ActionTarget, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { ActivityGenerator } from './activity';
-import { extractExplicitlyInflictedStatuses, statusIconPath } from './actor-effects';
+import { extractExplicitlyInflictedStatuses, statusIconPath, simpleConditionDuration } from './actor-effects';
 import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
 import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { createStableDocumentId } from './stableId';
-import { deriveExplicitSaveOutcome } from './save-outcome';
+import { conditionalAttackSaveTrigger, deriveExplicitSaveOutcome } from './save-outcome';
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -44,6 +44,9 @@ export function resolveItemActivationCost(
  * Build item range from action data.
  */
 export function buildItemRange(action: GeneratedActionData): Record<string, number | string | null> {
+  if (!action.attack && action.activity?.range) return {
+    value: parseNumericDistance(String(action.activity.range.value)), long: null, reach: null, units: action.activity.range.units,
+  };
   if (action.attack?.type === 'mwak') {
     return {
       value: null,
@@ -165,9 +168,14 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     englishName: action.englishName,
     type: action.type,
     desc: action.describe || '',
+    ...(action.sourceDamageParts ? { sourceDamageParts: action.sourceDamageParts } : {}),
+    ...(action.sourceRuleFacts ? { sourceRuleFacts: action.sourceRuleFacts } : {}),
     ...(action.weaponConfiguration ? { weaponConfiguration: action.weaponConfiguration } : {}),
     ...(action.nativeMastery ? { nativeMastery: action.nativeMastery } : {}),
   };
+  if(action.type!=='attack'&&action.range&&/^\d+\s*(?:尺|ft\.?)?$/iu.test(action.range.trim()))
+    base.activity={range:{value:Number(action.range.match(/\d+/u)![0]),units:'ft'}};
+  if(action.targetSpecial)base.activity={...base.activity,targetSpecial:action.targetSpecial};
 
   if (action.type === 'attack' && action.attackType) {
     base.attack = { type: action.attackType };
@@ -194,10 +202,12 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     base.save = {
       dc: action.DC,
       ability: action.ability || 'str',
-      outcome: deriveExplicitSaveOutcome(action as unknown as Record<string, any>),
+      outcome: action.saveOutcome??deriveExplicitSaveOutcome(action as unknown as Record<string, any>),
     };
     if (action.dcSourceAbility) base.save.dcSourceAbility = action.dcSourceAbility;
     if (action.dcSourceKind) base.save.dcSourceKind = action.dcSourceKind;
+    const saveCondition = action.saveCondition ?? conditionalAttackSaveTrigger(action);
+    if (saveCondition) base.save.condition = saveCondition;
     if (action.aoe) {
       base.save.dc = action.DC;
       base.aoe = { type: action.aoe.shape, template: { distance: action.aoe.range, type: action.aoe.shape } };
@@ -355,7 +365,7 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
       }
       effect = {
         _id: id,
-        name: status ? `${embedded.type} (${status})` : embedded.type,
+        name: status ? `${embedded.type} ${status}` : embedded.type,
         type: 'base',
         system: {},
         changes: [],
@@ -415,15 +425,7 @@ function embeddedEffectDuration(source: string | undefined): Record<string, numb
     startTurn: null,
   };
   if (!source) return duration;
-  const match = source.normalize('NFKC').match(/(\d+)\s*(rounds?|minutes?|hours?|days?|轮|分钟|小时|天)/iu);
-  const value = Number(match?.[1]);
-  const unit = match?.[2]?.toLocaleLowerCase('en-US');
-  if (!Number.isInteger(value) || value <= 0 || !unit) return duration;
-  if (unit === '轮' || unit.startsWith('round')) duration.rounds = value;
-  else if (unit === '分钟' || unit.startsWith('minute')) duration.seconds = value * 60;
-  else if (unit === '小时' || unit.startsWith('hour')) duration.seconds = value * 3600;
-  else duration.seconds = value * 86400;
-  return duration;
+  return { ...duration, ...simpleConditionDuration(source) };
 }
 
 function normalizeEmbeddedEffectStatus(type: string): string | undefined {

@@ -14,9 +14,9 @@ import type {
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]*$/;
 const SAFE_FORMULA = /^(?:\d+|\d+d\d+(?:\s*[+-]\s*\d+)?)$/i;
-const SECTIONS = new Set<ActorResourceSection>(['特性', '动作', '附赠动作', '反应', '传奇动作']);
+const SECTIONS = new Set<ActorResourceSection>(['特性', '动作', '附赠动作', '反应', '传奇动作','神话动作']);
 const ACTIVATIONS = new Set<ActorResourceActivation>(['special', 'action', 'bonus', 'reaction']);
-const RECOVERIES = new Set<ActorResourceRecovery>(['none', 'lr', 'sr', 'day']);
+const RECOVERIES = new Set<ActorResourceRecovery>(['none', 'lr', 'sr', 'day','dawn']);
 const DAMAGE_TYPES = new Set([
   'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic',
   'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder',
@@ -88,10 +88,11 @@ function enumValue<T extends string>(value: unknown, values: Set<T>, path: strin
 
 function itemRef(value: unknown, path: string): ActorResourceItemRef {
   const raw = record(value, path);
-  exactKeys(raw, ['分区', '名称'], path);
+  exactKeys(raw, ['分区', '名称','sourceFeatureId'], path);
   return {
     section: enumValue(raw['分区'], SECTIONS, `${path}.分区`),
     name: text(raw['名称'], `${path}.名称`),
+    ...(raw.sourceFeatureId===undefined?{}:{sourceFeatureId:id(raw.sourceFeatureId,`${path}.sourceFeatureId`)}),
   };
 }
 

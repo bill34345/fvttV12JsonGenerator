@@ -36,7 +36,7 @@ describe('Forge Actor statblock renderer', () => {
     const html = renderActorStatblock(artifact);
 
     expect(html).toContain('class="forge-statblock"');
-    expect(html).toContain('试验兽 (Test Beast)');
+    expect(html).toContain('试验兽 (Test Beast)'); // Authored title, not an appended alias.
     expect(html).toContain('中型 · beast');
     expect(html).toContain('HP 生命值</dt><dd>22（4d8+4）');
     expect(html).toContain('AC 护甲等级');

@@ -39,7 +39,7 @@ function getActivities(item: GeneratedActor['items'][number]): any[] {
 }
 
 function findItems(actor: GeneratedActor, englishName: string) {
-  return actor.items.filter((candidate) => candidate.name.includes(`(${englishName})`));
+  return actor.items.filter((candidate) => candidate.name.endsWith(` ${englishName}`));
 }
 
 function findSingleItem(actor: GeneratedActor, englishName: string) {
@@ -54,7 +54,7 @@ function findSingleItem(actor: GeneratedActor, englishName: string) {
 function findLegendaryItem(actor: GeneratedActor, englishName: string) {
   const item = actor.items.find(
     (candidate) =>
-      candidate.name.includes(`(${englishName})`) &&
+      candidate.name.endsWith(` ${englishName}`) &&
       candidate.flags?.['tidy5e-sheet']?.section === 'Legendary Actions',
   );
   expect(item).toBeDefined();

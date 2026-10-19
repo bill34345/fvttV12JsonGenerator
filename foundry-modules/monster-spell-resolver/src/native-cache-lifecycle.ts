@@ -1,5 +1,6 @@
 import { RESOLVER_MODULE_ID } from '../../../src/core/spell-resolution';
 import { computeManagedSourceHash } from './cast-activity';
+import {parseFragment,serialize} from 'parse5';
 
 export interface ResolverDocumentHookBus {
   on(hook: 'createItem' | 'updateActiveEffect', callback: (...args: any[]) => void): unknown;
@@ -175,6 +176,17 @@ export function normalizeNativeEffectHookChanges(changed: unknown): unknown {
   return candidates[0];
 }
 
+/** Call only after strict ownership checks; unowned cache adoption still uses the native state alone. */
+export function assertOwnedJournalCacheProjection(
+  entry: { nativeProjection: Record<string, any>; ownedProjections?: Record<string, any>[] },
+  cache: any,
+): void {
+  for (const projection of [entry.nativeProjection, ...(entry.ownedProjections ?? [])]) {
+    try { assertNativeCacheProjectionMatches(projection, cache); return; } catch { /* Try the next complete planned state. */ }
+  }
+  throw Error('Owned cache does not match its original native or complete transaction-planned projection.');
+}
+
 export function assertNativeCacheProjectionMatches(expectedProjection: unknown, actualDocument: any): void {
   const expected = captureNativeCacheProjection(expectedProjection);
   const actual = captureNativeCacheProjection(actualDocument);
@@ -213,13 +225,13 @@ function normalizeNativeCacheRichText(projection: Record<string, any>): void {
   const description = projection.system?.description;
   if (isRecord(description)) {
     for (const key of ['value', 'chat']) {
-      if (typeof description[key] === 'string') description[key] = normalizeHtmlAmpersands(description[key]);
+      if (typeof description[key] === 'string') description[key] = normalizeNativeHtml(description[key]);
     }
   }
   if (!Array.isArray(projection.effects)) return;
   for (const effect of projection.effects) {
     if (isRecord(effect) && typeof effect.description === 'string') {
-      effect.description = normalizeHtmlAmpersands(effect.description);
+      effect.description = normalizeNativeHtml(effect.description);
     }
   }
 }
@@ -245,8 +257,12 @@ function withoutNativeChangeRowIds(changes: unknown[]): unknown[] {
   });
 }
 
-function normalizeHtmlAmpersands(value: string): string {
-  return value.replaceAll('&amp;', '&');
+function normalizeNativeHtml(value: string): string {
+  // Source-derived native creation serializes a literal '<' before non-ASCII
+  // text as '&lt;'. Compare inert HTML trees, not decoded strings: real tags,
+  // text, attributes, comments, references and entity depth remain distinct.
+  // parse5 has no DOM, script execution, resource loading, or Foundry writes.
+  return serialize(parseFragment(value));
 }
 
 function documentId(document: any): string {

@@ -1,0 +1,951 @@
+{
+  "source": "纽吉怪虚空猎手Neogi Void Hunter\n\n纽吉怪虚空猎手比一般的纽吉怪成体要大，通常会在夜蛛（见《星界冒险者指南》）上担任船长的角色。虚空猎手向一个或多个星际实体效忠，以换得体验它们所拥有的巨大力量的资格。这些被称为 \"埃克马Acamar\"、\"凯丰Caiphon\"、\"吉拜斯Gibbeth\"和 \"哈达Hadar\"的实体，看上去像是星辰，由邪恶的精华所构成。\n\n纽吉怪虚空猎手Neogi Void Hunter\n\n中型异怪（魔契师），普遍守序邪恶\n\n护甲等级 14（天生护甲）\n\n生命值 58(9d8+18)\n\n速度 30 尺，\n攀爬 30 尺\n\n力量6 (-2) 敏捷16（+3)\n体质14（+2)\n\n智力16（+3） 感知12（+1） 魅力18（+4）\n\n豁免 感知+3，魅力+6\n\n技能 奥秘+5，欺瞒+6，威吓+6，察觉+3，游说+6\n\n感官 黑暗视觉 120 尺， 被动察觉 13\n\n语言 通用语，深潜语，地底通用语，30尺心灵感应\n\n挑战等级 4 (1100\nXP) 熟练加值+2\n\n魔鬼视界Devil's\nSight。魔法黑暗不会阻挡纽吉怪的黑暗视觉。\n\n精神坚韧Mental Fortitude。纽吉怪在进行对抗魅惑与恐慌的豁免检定时具有优势，并且魔法无法让纽吉怪陷入睡眠。\n\n蛛行Spider Climb。纽吉怪可以攀爬在难以攀爬的表面上，包括倒吊在天花板上，且不需要进行属性检定。\n\n动作\n\n多重攻击Multiattack。纽吉怪进行一次啃咬与两次爪击，或者，它进行两次魔能矢攻击。\n\n啃咬Bite。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。目标可以在每个其回合结束重复此豁免，成功则该生物身上的效应提前结束。\n\n爪击Claws。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:\n7(1d8+3)点穿刺伤害。\n\n魔能矢Eldritch Bolt。远程法术攻击: 命中+6 ，射程120尺 ，单一目标。命中:\n20(3d10+4)点力场伤害。\n\n施法Spellcasting。纽吉怪施展以下法术，以魅力作为其施法属性：\n\n每项1/日：任意门， 隐形术\n\n附赠动作\n\n奴役Enslave（长休或短休后充能）。\n\n纽吉怪指定一个自身30尺内它能看见的生物。该生物必须成功通过DC14的感知豁免，否则被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。\n",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "07d0be495b60b9de73a1db36eb2c07b7879c1ac18d886f5cec031b880b2fa2d9",
+      "length": 1161
+    },
+    "creature": {
+      "identity": {
+        "name": "纽吉怪虚空猎手",
+        "englishName": "Neogi Void Hunter",
+        "size": "medium",
+        "creatureType": "aberration",
+        "creatureTypeCustom": "魔契师",
+        "alignment": "普遍守序邪恶"
+      },
+      "abilities": {
+        "str": 6,
+        "dex": 16,
+        "con": 14,
+        "int": 16,
+        "wis": 12,
+        "cha": 18
+      },
+      "attributes": {
+        "ac": 14,
+        "acKind": "natural",
+        "hp": {
+          "value": 58,
+          "formula": "9d8+18"
+        },
+        "movement": {
+          "walk": 30,
+          "climb": 30
+        },
+        "cr": 4,
+        "xp": 1100,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "wis": 3,
+        "cha": 6
+      },
+      "skills": {
+        "arcana": 5,
+        "deception": 6,
+        "intimidation": 6,
+        "perception": 3,
+        "persuasion": 6
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "darkvision": 120,
+        "passivePerception": 13
+      },
+      "languages": {
+        "values": [
+          "Common",
+          "Deep Speech",
+          "Undercommon"
+        ],
+        "custom": "30尺心灵感应"
+      },
+      "biography": "纽吉怪虚空猎手比一般的纽吉怪成体要大，通常会在夜蛛（见《星界冒险者指南》）上担任船长的角色。虚空猎手向一个或多个星际实体效忠，以换得体验它们所拥有的巨大力量的资格。这些被称为 \"埃克马Acamar\"、\"凯丰Caiphon\"、\"吉拜斯Gibbeth\"和 \"哈达Hadar\"的实体，看上去像是星辰，由邪恶的精华所构成。",
+      "spellcasting": [
+        {
+          "groupId": "spellcasting-1",
+          "featureName": "施法",
+          "featureEnglishName": "Spellcasting",
+          "description": "施法Spellcasting。纽吉怪施展以下法术，以魅力作为其施法属性：\n\n每项1/日：任意门， 隐形术",
+          "evidence": [
+            {
+              "start": 908,
+              "end": 960,
+              "quote": "施法Spellcasting。纽吉怪施展以下法术，以魅力作为其施法属性：\n\n每项1/日：任意门， 隐形术"
+            }
+          ],
+          "ability": "cha",
+          "abilityEvidence": [
+            {
+              "start": 933,
+              "end": 943,
+              "quote": "以魅力作为其施法属性"
+            }
+          ],
+          "componentWaivers": [],
+          "usageGroups": [
+            {
+              "usage": "daily-each",
+              "count": 1,
+              "evidence": [
+                {
+                  "start": 946,
+                  "end": 960,
+                  "quote": "每项1/日：任意门， 隐形术"
+                }
+              ],
+              "spellRefs": [
+                {
+                  "refId": "dimension-door",
+                  "identifier": "任意门",
+                  "originalName": "任意门",
+                  "chineseName": "任意门",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 952,
+                      "end": 955,
+                      "quote": "任意门"
+                    }
+                  ]
+                },
+                {
+                  "refId": "invisibility",
+                  "identifier": "隐形术",
+                  "originalName": "隐形术",
+                  "chineseName": "隐形术",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 957,
+                      "end": 960,
+                      "quote": "隐形术"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "sourceResourcePools": [],
+      "traits": [
+        {
+          "name": "魔鬼视界",
+          "englishName": "Devil's Sight",
+          "description": "魔鬼视界Devil's\nSight。魔法黑暗不会阻挡纽吉怪的黑暗视觉。",
+          "evidence": [
+            {
+              "start": 452,
+              "end": 487,
+              "quote": "魔鬼视界Devil's\nSight。魔法黑暗不会阻挡纽吉怪的黑暗视觉。"
+            }
+          ]
+        },
+        {
+          "name": "精神坚韧",
+          "englishName": "Mental Fortitude",
+          "description": "精神坚韧Mental Fortitude。纽吉怪在进行对抗魅惑与恐慌的豁免检定时具有优势，并且魔法无法让纽吉怪陷入睡眠。",
+          "evidence": [
+            {
+              "start": 489,
+              "end": 549,
+              "quote": "精神坚韧Mental Fortitude。纽吉怪在进行对抗魅惑与恐慌的豁免检定时具有优势，并且魔法无法让纽吉怪陷入睡眠。"
+            }
+          ]
+        },
+        {
+          "name": "蛛行",
+          "englishName": "Spider Climb",
+          "description": "蛛行Spider Climb。纽吉怪可以攀爬在难以攀爬的表面上，包括倒吊在天花板上，且不需要进行属性检定。",
+          "evidence": [
+            {
+              "start": 551,
+              "end": 604,
+              "quote": "蛛行Spider Climb。纽吉怪可以攀爬在难以攀爬的表面上，包括倒吊在天花板上，且不需要进行属性检定。"
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "name": "多重攻击",
+          "englishName": "Multiattack",
+          "description": "多重攻击Multiattack。纽吉怪进行一次啃咬与两次爪击，或者，它进行两次魔能矢攻击。",
+          "activityType": "utility",
+          "activationType": "action",
+          "evidence": [
+            {
+              "start": 610,
+              "end": 655,
+              "quote": "多重攻击Multiattack。纽吉怪进行一次啃咬与两次爪击，或者，它进行两次魔能矢攻击。"
+            }
+          ]
+        },
+        {
+          "name": "啃咬",
+          "englishName": "Bite",
+          "description": "啃咬Bite。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。目标可以在每个其回合结束重复此豁免，成功则该生物身上的效应提前结束。",
+          "activityType": "utility",
+          "activationType": "action",
+          "executionMode": "native-with-gm",
+          "evidence": [
+            {
+              "start": 657,
+              "end": 787,
+              "quote": "啃咬Bite。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。目标可以在每个其回合结束重复此豁免，成功则该生物身上的效应提前结束。"
+            }
+          ],
+          "sourceOperations": [
+            {
+              "id": "bite-attack",
+              "name": "啃咬",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 5,
+                "reach": 5
+              },
+              "targetSpecial": "单一目标",
+              "damage": [
+                {
+                  "formula": "1d8+3",
+                  "type": "piercing",
+                  "relationship": "base"
+                },
+                {
+                  "formula": "4d6",
+                  "type": "poison",
+                  "relationship": "additional"
+                }
+              ],
+              "proof": {
+                "attack": "近战武器攻击: 命中+5 ，触及5尺 ，单一目标。",
+                "target": "近战武器攻击: 命中+5 ，触及5尺 ，单一目标。",
+                "damage": [
+                  "命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。"
+                ]
+              }
+            },
+            {
+              "id": "bite-save",
+              "name": "体质豁免",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 12,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。"
+              }
+            }
+          ]
+        },
+        {
+          "name": "爪击",
+          "englishName": "Claws",
+          "description": "爪击Claws。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:\n7(1d8+3)点穿刺伤害。",
+          "activityType": "attack",
+          "activationType": "action",
+          "attack": {
+            "type": "mwak",
+            "toHit": 5,
+            "reach": 5
+          },
+          "damage": [
+            {
+              "formula": "1d8+3",
+              "type": "piercing",
+              "relationship": "base"
+            }
+          ],
+          "evidence": [
+            {
+              "start": 789,
+              "end": 840,
+              "quote": "爪击Claws。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:\n7(1d8+3)点穿刺伤害。"
+            }
+          ]
+        },
+        {
+          "name": "魔能矢",
+          "englishName": "Eldritch Bolt",
+          "description": "魔能矢Eldritch Bolt。远程法术攻击: 命中+6 ，射程120尺 ，单一目标。命中:\n20(3d10+4)点力场伤害。",
+          "activityType": "attack",
+          "activationType": "action",
+          "attack": {
+            "type": "rsak",
+            "toHit": 6,
+            "range": 120
+          },
+          "damage": [
+            {
+              "formula": "3d10+4",
+              "type": "force",
+              "relationship": "base"
+            }
+          ],
+          "evidence": [
+            {
+              "start": 842,
+              "end": 906,
+              "quote": "魔能矢Eldritch Bolt。远程法术攻击: 命中+6 ，射程120尺 ，单一目标。命中:\n20(3d10+4)点力场伤害。"
+            }
+          ]
+        }
+      ],
+      "bonusActions": [
+        {
+          "name": "奴役",
+          "englishName": "Enslave",
+          "description": "奴役Enslave（长休或短休后充能）。\n\n纽吉怪指定一个自身30尺内它能看见的生物。该生物必须成功通过DC14的感知豁免，否则被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。",
+          "activityType": "save",
+          "activationType": "bonus",
+          "uses": {
+            "max": 1,
+            "period": "shortRest"
+          },
+          "save": {
+            "dc": 14,
+            "ability": "wis",
+            "condition": "魅惑"
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "charmed"
+              ],
+              "condition": "被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。",
+              "duration": "1日",
+              "staged": false
+            }
+          ],
+          "evidence": [
+            {
+              "start": 968,
+              "end": 1160,
+              "quote": "奴役Enslave（长休或短休后充能）。\n\n纽吉怪指定一个自身30尺内它能看见的生物。该生物必须成功通过DC14的感知豁免，否则被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。"
+            }
+          ]
+        }
+      ],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "纽吉怪虚空猎手",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 7,
+            "quote": "纽吉怪虚空猎手"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/englishName",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "Neogi Void Hunter",
+        "evidence": [
+          {
+            "start": 7,
+            "end": 24,
+            "quote": "Neogi Void Hunter"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "medium",
+        "evidence": [
+          {
+            "start": 211,
+            "end": 213,
+            "quote": "中型"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "aberration",
+        "evidence": [
+          {
+            "start": 213,
+            "end": 215,
+            "quote": "异怪"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureTypeCustom",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "魔契师",
+        "evidence": [
+          {
+            "start": 216,
+            "end": 219,
+            "quote": "魔契师"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/alignment",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "普遍守序邪恶",
+        "evidence": [
+          {
+            "start": 221,
+            "end": 227,
+            "quote": "普遍守序邪恶"
+          }
+        ]
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 278,
+            "end": 332,
+            "quote": "力量6 (-2) 敏捷16（+3)\n体质14（+2)\n\n智力16（+3） 感知12（+1） 魅力18（+4）"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 14,
+        "evidence": [
+          {
+            "start": 229,
+            "end": 242,
+            "quote": "护甲等级 14（天生护甲）"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": {
+          "value": 58,
+          "formula": "9d8+18"
+        },
+        "evidence": [
+          {
+            "start": 244,
+            "end": 258,
+            "quote": "生命值 58(9d8+18)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": {
+          "walk": 30,
+          "climb": 30
+        },
+        "evidence": [
+          {
+            "start": 260,
+            "end": 276,
+            "quote": "速度 30 尺，\n攀爬 30 尺"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 4,
+        "evidence": [
+          {
+            "start": 427,
+            "end": 433,
+            "quote": "挑战等级 4"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 1100,
+        "evidence": [
+          {
+            "start": 434,
+            "end": 443,
+            "quote": "(1100\nXP)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 2,
+        "evidence": [
+          {
+            "start": 444,
+            "end": 450,
+            "quote": "熟练加值+2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 334,
+            "end": 346,
+            "quote": "豁免 感知+3，魅力+6"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 348,
+            "end": 375,
+            "quote": "技能 奥秘+5，欺瞒+6，威吓+6，察觉+3，游说+6"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 377,
+            "end": 399,
+            "quote": "感官 黑暗视觉 120 尺， 被动察觉 13"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "derived",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 401,
+            "end": 425,
+            "quote": "语言 通用语，深潜语，地底通用语，30尺心灵感应"
+          }
+        ]
+      },
+      {
+        "path": "/creature/biography",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 26,
+            "end": 183,
+            "quote": "纽吉怪虚空猎手比一般的纽吉怪成体要大，通常会在夜蛛（见《星界冒险者指南》）上担任船长的角色。虚空猎手向一个或多个星际实体效忠，以换得体验它们所拥有的巨大力量的资格。这些被称为 \"埃克马Acamar\"、\"凯丰Caiphon\"、\"吉拜斯Gibbeth\"和 \"哈达Hadar\"的实体，看上去像是星辰，由邪恶的精华所构成。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 452,
+            "end": 487,
+            "quote": "魔鬼视界Devil's\nSight。魔法黑暗不会阻挡纽吉怪的黑暗视觉。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 489,
+            "end": 549,
+            "quote": "精神坚韧Mental Fortitude。纽吉怪在进行对抗魅惑与恐慌的豁免检定时具有优势，并且魔法无法让纽吉怪陷入睡眠。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/2",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 551,
+            "end": 604,
+            "quote": "蛛行Spider Climb。纽吉怪可以攀爬在难以攀爬的表面上，包括倒吊在天花板上，且不需要进行属性检定。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 610,
+            "end": 655,
+            "quote": "多重攻击Multiattack。纽吉怪进行一次啃咬与两次爪击，或者，它进行两次魔能矢攻击。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 657,
+            "end": 787,
+            "quote": "啃咬Bite。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。目标可以在每个其回合结束重复此豁免，成功则该生物身上的效应提前结束。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/2",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 789,
+            "end": 840,
+            "quote": "爪击Claws。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:\n7(1d8+3)点穿刺伤害。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/3",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 842,
+            "end": 906,
+            "quote": "魔能矢Eldritch Bolt。远程法术攻击: 命中+6 ，射程120尺 ，单一目标。命中:\n20(3d10+4)点力场伤害。"
+          }
+        ]
+      },
+      {
+        "path": "/creature/spellcasting/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 908,
+            "end": 960,
+            "quote": "施法Spellcasting。纽吉怪施展以下法术，以魅力作为其施法属性：\n\n每项1/日：任意门， 隐形术"
+          }
+        ]
+      },
+      {
+        "path": "/creature/bonusActions/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 968,
+            "end": 1160,
+            "quote": "奴役Enslave（长休或短休后充能）。\n\n纽吉怪指定一个自身30尺内它能看见的生物。该生物必须成功通过DC14的感知豁免，否则被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 26,
+        "quote": "纽吉怪虚空猎手Neogi Void Hunter\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/identity/englishName"
+        ]
+      },
+      {
+        "start": 26,
+        "end": 185,
+        "quote": "纽吉怪虚空猎手比一般的纽吉怪成体要大，通常会在夜蛛（见《星界冒险者指南》）上担任船长的角色。虚空猎手向一个或多个星际实体效忠，以换得体验它们所拥有的巨大力量的资格。这些被称为 \"埃克马Acamar\"、\"凯丰Caiphon\"、\"吉拜斯Gibbeth\"和 \"哈达Hadar\"的实体，看上去像是星辰，由邪恶的精华所构成。\n\n",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 185,
+        "end": 211,
+        "quote": "纽吉怪虚空猎手Neogi Void Hunter\n\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Repeated title header; identity already extracted."
+      },
+      {
+        "start": 211,
+        "end": 229,
+        "quote": "中型异怪（魔契师），普遍守序邪恶\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/size",
+          "/creature/identity/creatureType",
+          "/creature/identity/creatureTypeCustom",
+          "/creature/identity/alignment"
+        ]
+      },
+      {
+        "start": 229,
+        "end": 244,
+        "quote": "护甲等级 14（天生护甲）\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac"
+        ]
+      },
+      {
+        "start": 244,
+        "end": 260,
+        "quote": "生命值 58(9d8+18)\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp"
+        ]
+      },
+      {
+        "start": 260,
+        "end": 278,
+        "quote": "速度 30 尺，\n攀爬 30 尺\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement"
+        ]
+      },
+      {
+        "start": 278,
+        "end": 334,
+        "quote": "力量6 (-2) 敏捷16（+3)\n体质14（+2)\n\n智力16（+3） 感知12（+1） 魅力18（+4）\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities"
+        ]
+      },
+      {
+        "start": 334,
+        "end": 348,
+        "quote": "豁免 感知+3，魅力+6\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 348,
+        "end": 377,
+        "quote": "技能 奥秘+5，欺瞒+6，威吓+6，察觉+3，游说+6\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 377,
+        "end": 401,
+        "quote": "感官 黑暗视觉 120 尺， 被动察觉 13\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 401,
+        "end": 427,
+        "quote": "语言 通用语，深潜语，地底通用语，30尺心灵感应\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 427,
+        "end": 452,
+        "quote": "挑战等级 4 (1100\nXP) 熟练加值+2\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/cr",
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 452,
+        "end": 489,
+        "quote": "魔鬼视界Devil's\nSight。魔法黑暗不会阻挡纽吉怪的黑暗视觉。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 489,
+        "end": 551,
+        "quote": "精神坚韧Mental Fortitude。纽吉怪在进行对抗魅惑与恐慌的豁免检定时具有优势，并且魔法无法让纽吉怪陷入睡眠。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/1"
+        ]
+      },
+      {
+        "start": 551,
+        "end": 606,
+        "quote": "蛛行Spider Climb。纽吉怪可以攀爬在难以攀爬的表面上，包括倒吊在天花板上，且不需要进行属性检定。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/2"
+        ]
+      },
+      {
+        "start": 606,
+        "end": 610,
+        "quote": "动作\n\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Section heading; features are covered separately."
+      },
+      {
+        "start": 610,
+        "end": 657,
+        "quote": "多重攻击Multiattack。纽吉怪进行一次啃咬与两次爪击，或者，它进行两次魔能矢攻击。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/0"
+        ]
+      },
+      {
+        "start": 657,
+        "end": 789,
+        "quote": "啃咬Bite。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:7(1d8+3)点穿刺伤害加14(4d6)点毒素伤害，并且目标必须成功通过一次DC12的体质豁免，否则陷入1分钟中毒状态。目标可以在每个其回合结束重复此豁免，成功则该生物身上的效应提前结束。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/1"
+        ]
+      },
+      {
+        "start": 789,
+        "end": 842,
+        "quote": "爪击Claws。近战武器攻击: 命中+5 ，触及5尺 ，单一目标。命中:\n7(1d8+3)点穿刺伤害。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/2"
+        ]
+      },
+      {
+        "start": 842,
+        "end": 908,
+        "quote": "魔能矢Eldritch Bolt。远程法术攻击: 命中+6 ，射程120尺 ，单一目标。命中:\n20(3d10+4)点力场伤害。\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/3"
+        ]
+      },
+      {
+        "start": 908,
+        "end": 962,
+        "quote": "施法Spellcasting。纽吉怪施展以下法术，以魅力作为其施法属性：\n\n每项1/日：任意门， 隐形术\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/spellcasting/0"
+        ]
+      },
+      {
+        "start": 962,
+        "end": 968,
+        "quote": "附赠动作\n\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Section heading; features are covered separately."
+      },
+      {
+        "start": 968,
+        "end": 1160,
+        "quote": "奴役Enslave（长休或短休后充能）。\n\n纽吉怪指定一个自身30尺内它能看见的生物。该生物必须成功通过DC14的感知豁免，否则被纽吉怪魔法性地魅惑一日，在纽吉怪死亡或与该生物距离超过1英里后魅惑也会提前结束。被魅惑对象不能违抗纽吉怪的命令，也不能执行任何反应，纽吉怪和奴役对象最远能够在一英里内用心灵感应交流。一旦被魅惑对象受到伤害，其就可以再次进行豁免检定，成功则该效应提前结束。",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/0"
+        ]
+      },
+      {
+        "start": 1160,
+        "end": 1161,
+        "quote": "\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Trailing newline whitespace."
+      }
+    ],
+    "uncertainties": []
+  },
+  "provenance": "Recorded Neogi normal Forge response050, existing source; frozen originals untouched. Offline only.",
+  "destinationCandidates": [
+    {
+      "packId": "dnd5e.spells24",
+      "id": "phbsplInvisibili",
+      "name": "隐形术 Invisibility",
+      "type": "spell",
+      "identifier": "invisibility",
+      "rules": "2024",
+      "sourceBook": "SRD 5.2",
+      "level": 2,
+      "school": "ill"
+    },
+    {
+      "packId": "dnd5e.spells24",
+      "id": "phbsplDimensionD",
+      "name": "任意门 Dimension Door",
+      "type": "spell",
+      "identifier": "dimension-door",
+      "rules": "2024",
+      "sourceBook": "SRD 5.2",
+      "level": 4,
+      "school": "con"
+    }
+  ],
+  "destinationProvenance": "Existing readonly Mirror index snapshot 2026-10-17T18:19:38.753Z, no current connection."
+}

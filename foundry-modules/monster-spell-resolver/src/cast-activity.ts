@@ -36,15 +36,17 @@ export interface NativeCastActivitySource {
   _id: string;
   type: 'cast';
   name: string;
+  activation?: {type:'action'|'bonus'|'reaction';value:1;override:true};
   consumption: {
     spellSlot: boolean;
-    targets: Array<{ type: 'activityUses'; value: '1' }>;
+    targets: Array<{ type: 'activityUses' | 'itemUses'; value: '1' }>;
   };
   uses?: {
     spent: 0;
-    max: '1';
+    max: string;
     recovery: [{ period: 'day'; type: 'recoverAll' }];
   };
+  duration?: {value:string;units:'hour'|'minute'|'day';concentration:false;override:true};
   target?: {
     override: true;
     prompt: false;
@@ -79,6 +81,8 @@ export interface BuildCastActivitySourceInput {
   group: PortableSpellcastingGroup;
   ref: PortableSpellRef;
   selectedUuid: string;
+  /** Explicit source timing carried by the generated feature, not inferred from a spell name. */
+  activationType?: 'action'|'bonus'|'reaction';
 }
 
 export interface BuiltCastActivitySource {
@@ -148,18 +152,40 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
   const consumption: NativeCastActivitySource['consumption'] = { spellSlot: prepared, targets: [] };
   let uses: NativeCastActivitySource['uses'];
   if (input.ref.uses !== undefined) {
-    if (input.ref.uses.value !== 1 || input.ref.uses.recovery !== 'day' || input.ref.uses.shared) {
-      throw new TypeError('Task 7 supports only source-evidenced independent 1/day Activity uses.');
+    if (!Number.isSafeInteger(input.ref.uses.value)||input.ref.uses.value<1||input.ref.uses.recovery !== 'day') {
+      throw new TypeError('Native daily spell uses require a positive source-evidenced integer and day recovery.');
     }
-    uses = { spent: 0, max: '1', recovery: [{ period: 'day', type: 'recoverAll' }] };
-    consumption.targets = [{ type: 'activityUses', value: '1' }];
+    if(input.ref.uses.shared){
+      const shared=input.group.spellRefs.filter(ref=>ref.uses?.shared);
+      if(shared.length<2||shared.some(ref=>ref.uses!.value!==input.ref.uses!.value||ref.uses!.recovery!=='day'))throw new TypeError('Shared Cast refs must identify one consistent source pool.');
+      consumption.targets=[{type:'itemUses',value:'1'}];
+    }else{
+      uses = { spent: 0, max: String(input.ref.uses.value), recovery: [{ period: 'day', type: 'recoverAll' }] };
+      consumption.targets = [{ type: 'activityUses', value: '1' }];
+    }
   } else if (input.ref.method === 'innate') {
     throw new TypeError('Innate Cast refs without an explicit supported use contract fail closed.');
   }
 
   const selfTarget = input.ref.restrictions.find(isExactSelfTarget);
+  const handled=new Set<PreservedSpellRestriction>();
+  let duration:NativeCastActivitySource['duration'];
+  const ignored=new Set(input.ref.ignoresMaterialComponents?['material']:[]);
+  for(const restriction of input.ref.restrictions){
+    if(restriction.kind!=='casting')continue;
+    const text=restriction.text.normalize('NFKC').replace(/[*_]/gu,'').trim();
+    const timed=/^\(?\s*(?:持续|lasts?(?: for)?|duration\s*:)\s*(\d+)\s*(小时|hours?|分钟|minutes?|天|days?)\s*\)?$/iu.exec(text);
+    if(timed&&Number(timed[1])>0&&(restriction.value===undefined||restriction.value===Number(timed[1]))){
+      const units=/小时|hour/iu.test(timed[2]!)?'hour':/分钟|minute/iu.test(timed[2]!)?'minute':'day';
+      const next:NonNullable<NativeCastActivitySource['duration']>={value:timed[1]!,units,concentration:false,override:true};
+      if(duration&&JSON.stringify(duration)!==JSON.stringify(next))throw Error('Conflicting source spell duration overrides');
+      duration=next;handled.add(restriction);
+    }else if(/^(?:(?:无需|无须|不需要|不需)\s*(?:任何|所有|全部)?\s*法术成分|(?:without|requires? no|requiring no)\s+(?:any\s+)?spell components?)$/iu.test(text)){
+      for(const component of ['vocal','somatic','material'])ignored.add(component);handled.add(restriction);
+    }
+  }
   const literalRestrictions = input.ref.restrictions
-    .filter((restriction) => restriction !== selfTarget)
+    .filter((restriction) => restriction !== selfTarget&&!handled.has(restriction))
     .map((restriction) => ({
       manifestId: input.manifestId,
       groupId: input.group.groupId,
@@ -169,6 +195,10 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
       ...(restriction.value === undefined ? {} : { value: restriction.value }),
       status: 'literal-unsupported' as const,
     }));
+  // Unknown casting qualifiers must never become unrestricted executable
+  // Casts. The atomic hydration owner reports this error before any writes.
+  if(literalRestrictions.some(restriction=>restriction.kind==='casting'))throw new TypeError('Unsupported source casting restriction; retain the complete feature for GM review.');
+  if(input.activationType!==undefined&&!['action','bonus','reaction'].includes(input.activationType))throw new TypeError('Unsupported source casting activation.');
 
   const challenge = {
     override: input.group.attackBonus !== undefined || input.group.saveDc !== undefined,
@@ -178,9 +208,11 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
   const activity: NativeCastActivitySource = {
     _id: activityId,
     type: 'cast',
-    name: input.ref.englishName ?? input.ref.chineseName ?? input.ref.originalName,
+    name: input.ref.chineseName&&input.ref.englishName?`${input.ref.chineseName} ${input.ref.englishName}`:input.ref.englishName ?? input.ref.chineseName ?? input.ref.originalName,
+    ...(input.activationType?{activation:{type:input.activationType,value:1,override:true}}:{}),
     consumption,
     ...(uses === undefined ? {} : { uses }),
+    ...(duration?{duration}:{}),
     ...(selfTarget === undefined ? {} : {
       target: { override: true, prompt: false, affects: { type: 'self', choice: false } },
     }),
@@ -191,7 +223,7 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
       challenge,
       // Cast spell.properties is the ignored-component set. [] means preserve
       // all source requirements; [material] waives only material components.
-      properties: input.ref.ignoresMaterialComponents ? ['material'] : [],
+      properties: ['vocal','somatic','material'].filter(component=>ignored.has(component)),
       spellbook: true,
     },
     flags: {

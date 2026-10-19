@@ -1,14 +1,17 @@
 import * as yaml from 'js-yaml';
+import type {CreatureSize} from '@fvtt-json-generator/models/canonical-monster';
 import { FIELD_MAPPING, type ParsedNPC, type FieldDefinition } from './mapping';
 import { i18n } from './i18n';
 import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import { StructuredActionParser } from './structuredAction';
+import { parseSupportedRuleFacts } from './sourceRuleFacts';
 import type { StructuredActionData } from '@fvtt-json-generator/models/action';
 import { validatePortableSpellManifestStructure } from '@fvtt-json-generator/spell-manifest-contracts/validator';
 import { parseActorResourceSemantics } from './resourceSemantics';
 import { parseActorBehaviorSemantics } from './behaviorSemantics';
 import { validateForgeSourceMetadata } from './forgeSourceMetadata';
 import { FORGE_SOURCE_ID_FIELD } from '@fvtt-json-generator/contracts';
+import { decodeSourceTextPresentationBoundary } from '@fvtt-json-generator/models/source-text-presentation';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -34,6 +37,10 @@ export class YamlParser {
     const { frontmatter, body } = this.splitContent(content);
     const rawData = yaml.load(frontmatter) as Record<string, any>;
     validateForgeSourceMetadata(rawData);
+    const literalBiography = rawData && Object.hasOwn(rawData, 'intake-biography-mode');
+    if (literalBiography && (rawData['intake-biography-mode'] !== 'literal-v1' || body.trim())) {
+      throw new Error('InvalidIntakeBiographyMode: expected literal-v1 with frontmatter-only canonical content.');
+    }
 
     const result: ParsedNPC = {
       name: '',
@@ -49,6 +56,7 @@ export class YamlParser {
       saveBonuses: {},
       items: []
     };
+    if (literalBiography) result.biographyMode = 'literal';
 
     if (body.trim()) {
       const extracted = this.extractBodySections(body);
@@ -87,6 +95,11 @@ export class YamlParser {
 
     this.traverse(rawData, result, true);
 
+    if (rawData && Object.hasOwn(rawData, 'intake-biography-presentation')) {
+      if (!literalBiography) throw new Error('InvalidIntakeBiographyPresentation: literal mode required.');
+      result.biographyPresentation = decodeSourceTextPresentationBoundary(rawData['intake-biography-presentation'], result.details.biography ?? '');
+    }
+
     if (rawData && typeof rawData === 'object') {
       if ('豁免熟练' in rawData) {
         this.parseSavingThrows((rawData as Record<string, unknown>)['豁免熟练'], result);
@@ -94,7 +107,7 @@ export class YamlParser {
       if ('技能' in rawData) {
         const skills = (rawData as Record<string, unknown>)['技能'];
         if (skills && typeof skills === 'object' && !Array.isArray(skills)) {
-          this.parseSkills(skills as Record<string, string | number>, result);
+          this.parseSkills(skills as Record<string, unknown>, result);
         }
       }
       if ('感官' in rawData) {
@@ -109,6 +122,14 @@ export class YamlParser {
       }
     }
 
+    if (result.details.biography) {
+      const facts = parseSupportedRuleFacts(result.details.biography);
+      // Literal biography does not create Items or executable mechanics. The
+      // closed food-retention fact is display-only and must still share its
+      // verified meaning with formal Chinese presentation.
+      const displayFacts = result.biographyMode === 'literal' ? facts.filter(fact => fact.kind === 'food-retention') : facts;
+      if (displayFacts.length) result.biographyRuleFacts = displayFacts;
+    }
     return result;
   }
 
@@ -118,7 +139,9 @@ export class YamlParser {
     // Case 1: Standard Jekyll-style frontmatter
     const match = normalized.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
     if (match) {
-      return { frontmatter: match[1]!, body: match[2]!.trim() };
+      // The separator consumes a YAML line break. Restore it so a final
+      // keep-chomp (|+) scalar retains its exact source/evidence bytes.
+      return { frontmatter: match[1]!+'\n', body: match[2]!.trim() };
     }
 
     // Case 2: No leading ---, but has a separator
@@ -133,6 +156,8 @@ export class YamlParser {
   private traverse(obj: any, result: ParsedNPC, isRoot = false) {
     for (const [key, value] of Object.entries(obj)) {
       if (isRoot && key === FORGE_SOURCE_ID_FIELD) continue;
+      if (isRoot && key === 'intake-biography-mode') continue;
+      if (isRoot && key === 'intake-biography-presentation') continue;
       const mapping = FIELD_MAPPING[key];
 
       if (mapping) {
@@ -212,6 +237,12 @@ export class YamlParser {
       if (internalKey === 'cr') result.details.cr = this.parseChallengeRating(processedValue);
       if (internalKey === 'xp') result.details.xp = parseInt(processedValue);
       if (internalKey === 'alignment') result.details.alignment = processedValue;
+      if (internalKey === 'swarmSize') {
+        const sizes:Record<string,CreatureSize>={'微型':'tiny','小型':'small','中型':'medium','大型':'large','巨型':'huge','超巨型':'gargantuan',tiny:'tiny',small:'small',medium:'medium',large:'large',huge:'huge',gargantuan:'gargantuan'};
+        const value=sizes[String(processedValue).trim().toLowerCase()];
+        if(!value)throw new Error('InvalidSwarmSize: 集群个体体型 must be a supported creature size.');
+        result.details.swarmSize=value;
+      }
       if (internalKey === 'creatureType') result.details.creatureType = processedValue;
       if (internalKey === 'creatureTypeCustom') result.details.creatureTypeCustom = processedValue;
       if (internalKey === 'spellLevel') result.details.spellLevel = parseInt(processedValue);
@@ -785,7 +816,7 @@ export class YamlParser {
     return result;
   }
 
-  private parseSkills(skills: Record<string, string | number>, result: ParsedNPC): void {
+  private parseSkills(skills: Record<string, unknown>, result: ParsedNPC): void {
     const parsedSkills: Record<string, number> = {};
     const skillBonuses: Record<string, number> = {};
     const profBonus = this.getProficiencyBonus(result);
@@ -802,7 +833,21 @@ export class YamlParser {
       let skillValue = 0.5;
       const valStr = String(val);
 
-      if (valStr === '专精' || valStr === '2') {
+      if (val !== null && typeof val === 'object') {
+        // Source-derived additive contract: explicit totals cannot be confused
+        // with the historical numeric proficiency levels below.
+        const total = (val as Record<string, unknown>)['总加值'];
+        if (Array.isArray(val) || Object.keys(val).length !== 1 || !Object.hasOwn(val, '总加值')
+          || typeof total !== 'number' || !Number.isFinite(total) || !Number.isInteger(total)) {
+          throw new Error(`InvalidSkillTotal: '${key}' must contain only 总加值 with a finite integer.`);
+        }
+        skillValue = this.inferSkillProficiency(skillKey, total, result, profBonus);
+        // Source totals do not establish half proficiency. Avoid fractional
+        // corrections at odd PB while leaving legacy half proficiency intact.
+        if (skillValue === 0.5) skillValue = 0;
+        const delta = total - this.expectedSkillModifier(skillKey, skillValue, result, profBonus);
+        if (delta !== 0) skillBonuses[skillKey] = delta;
+      } else if (valStr === '专精' || valStr === '2') {
         skillValue = 2;
       } else if (valStr === '熟练' || valStr === '1') {
         skillValue = 1;

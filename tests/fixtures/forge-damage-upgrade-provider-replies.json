@@ -1,0 +1,1036 @@
+{
+  "provenance": {
+    "description": "Frozen first real replies, 3 HTTP requests, no retry. Same two complete SRD5.2.1 rules and synthetic carrier.",
+    "sourceSha256": "f1cc45f3c02196c909d9f7023ff2f27b224c3f358d62c5a3b0306784df96a3e6",
+    "ordinaryResponseSha256": "180f3bcd391efbed0570c6992bf186be7c3c77a75ce575a62e033e17b28cd652",
+    "stagedBaseResponseSha256": "0f8a0793d2020bc055b49f55909fd73c50ae636e4b48322b47dbbb6e967f575a",
+    "stagedInvalidFeatureResponseSha256": "d69925fa168f067049ab88b7b6447802db95577ff3001dc27cd8817c7f7c7479"
+  },
+  "ordinaryIr": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "f1cc45f3c02196c909d9f7023ff2f27b224c3f358d62c5a3b0306784df96a3e6",
+      "length": 1126
+    },
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "englishName": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "acKind": "flat",
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "Common"
+        ]
+      },
+      "sourceResourcePools": [],
+      "traits": [
+        {
+          "name": "Level 7: Elemental Fury",
+          "englishName": "Level 7: Elemental Fury",
+          "description": "The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "activityType": "utility",
+          "evidence": [
+            {
+              "start": -1,
+              "end": -1,
+              "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n"
+            }
+          ]
+        },
+        {
+          "name": "Level 15: Improved Elemental Fury",
+          "englishName": "Level 15: Improved Elemental Fury",
+          "description": "The option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.",
+          "activityType": "utility",
+          "evidence": [
+            {
+              "start": -1,
+              "end": -1,
+              "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n"
+            }
+          ]
+        }
+      ],
+      "actions": [],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "Sentinel",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "medium",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "HP 30 (4d8 + 12) Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "construct",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 15,
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "AC 15"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "HP 30 (4d8 + 12) Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 2,
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 450,
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 2,
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Saving Throws Con +5"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Skills Perception +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Damage Resistances Cold"
+          },
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Damage Immunities Poison"
+          },
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Condition Immunities Poisoned"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 12"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Languages Common"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": -1,
+            "end": -1,
+            "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Sentinel CR 2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "AC 15\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "HP 30 (4d8 + 12) Size Medium\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp",
+          "/creature/identity/size"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Saving Throws Con +5\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Skills Perception +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Damage Resistances Cold\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Damage Immunities Poison\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Condition Immunities Poisoned\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Senses Darkvision 60 ft., Passive Perception 12\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Languages Common\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "XP 450 PB +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": -1,
+        "end": -1,
+        "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/1"
+        ]
+      }
+    ],
+    "uncertainties": []
+  },
+  "stagedBaseResponse": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "common"
+        ]
+      }
+    },
+    "uncertainties": []
+  },
+  "invalidStagedFeature": {
+    "schemaVersion": 1,
+    "unitId": "unit-2",
+    "mode": "native-with-gm",
+    "facts": {
+      "sourceOperations": [
+        {
+          "id": "primal-strike",
+          "name": "Primal Strike",
+          "type": "damage",
+          "relationship": "primary",
+          "damage": [
+            {
+              "formula": "1d8",
+              "type": "cold",
+              "types": [
+                "cold",
+                "fire",
+                "lightning",
+                "thunder"
+              ],
+              "relationship": "conditional"
+            }
+          ],
+          "proof": {
+            "damage": [
+              "Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "ordinaryAnchoredIrBeforeFix": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "f1cc45f3c02196c909d9f7023ff2f27b224c3f358d62c5a3b0306784df96a3e6",
+      "length": 1126
+    },
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "englishName": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "acKind": "flat",
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "common"
+        ]
+      },
+      "sourceResourcePools": [],
+      "traits": [
+        {
+          "name": "Level 7: Elemental Fury",
+          "englishName": "Level 7: Elemental Fury",
+          "description": "The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "activityType": "utility",
+          "evidence": [
+            {
+              "start": 336,
+              "end": 809,
+              "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+            }
+          ]
+        },
+        {
+          "name": "Level 15: Improved Elemental Fury",
+          "englishName": "Level 15: Improved Elemental Fury",
+          "description": "The option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.",
+          "activityType": "utility",
+          "evidence": [
+            {
+              "start": 811,
+              "end": 1124,
+              "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8."
+            }
+          ]
+        }
+      ],
+      "actions": [],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "Sentinel",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 13,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "medium",
+        "evidence": [
+          {
+            "start": 20,
+            "end": 48,
+            "quote": "HP 30 (4d8 + 12) Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": "construct",
+        "evidence": [
+          {
+            "start": 49,
+            "end": 96,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 97,
+            "end": 136,
+            "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 15,
+        "evidence": [
+          {
+            "start": 14,
+            "end": 19,
+            "quote": "AC 15"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 20,
+            "end": 48,
+            "quote": "HP 30 (4d8 + 12) Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 49,
+            "end": 96,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 2,
+        "evidence": [
+          {
+            "start": 0,
+            "end": 13,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 450,
+        "evidence": [
+          {
+            "start": 323,
+            "end": 335,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "value": 2,
+        "evidence": [
+          {
+            "start": 323,
+            "end": 335,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 137,
+            "end": 157,
+            "quote": "Saving Throws Con +5"
+          },
+          {
+            "start": 151,
+            "end": 157,
+            "quote": "Con +5"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 158,
+            "end": 178,
+            "quote": "Skills Perception +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 179,
+            "end": 202,
+            "quote": "Damage Resistances Cold"
+          },
+          {
+            "start": 203,
+            "end": 227,
+            "quote": "Damage Immunities Poison"
+          },
+          {
+            "start": 228,
+            "end": 257,
+            "quote": "Condition Immunities Poisoned"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 258,
+            "end": 305,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 12"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 306,
+            "end": 322,
+            "quote": "Languages Common"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 336,
+            "end": 811,
+            "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 811,
+            "end": 1126,
+            "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 14,
+        "quote": "Sentinel CR 2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": 14,
+        "end": 20,
+        "quote": "AC 15\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac"
+        ]
+      },
+      {
+        "start": 20,
+        "end": 49,
+        "quote": "HP 30 (4d8 + 12) Size Medium\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp",
+          "/creature/identity/size"
+        ]
+      },
+      {
+        "start": 49,
+        "end": 97,
+        "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType"
+        ]
+      },
+      {
+        "start": 97,
+        "end": 137,
+        "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities"
+        ]
+      },
+      {
+        "start": 137,
+        "end": 158,
+        "quote": "Saving Throws Con +5\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 158,
+        "end": 179,
+        "quote": "Skills Perception +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 179,
+        "end": 203,
+        "quote": "Damage Resistances Cold\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 203,
+        "end": 228,
+        "quote": "Damage Immunities Poison\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 228,
+        "end": 258,
+        "quote": "Condition Immunities Poisoned\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 258,
+        "end": 306,
+        "quote": "Senses Darkvision 60 ft., Passive Perception 12\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 306,
+        "end": 323,
+        "quote": "Languages Common\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 323,
+        "end": 336,
+        "quote": "XP 450 PB +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 336,
+        "end": 811,
+        "quote": "Traits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 811,
+        "end": 1126,
+        "quote": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/1"
+        ]
+      }
+    ],
+    "uncertainties": []
+  }
+}

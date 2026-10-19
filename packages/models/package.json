@@ -10,7 +10,12 @@
     "./canonical-monster": "./src/canonicalMonster.ts",
     "./item": "./src/item.ts",
     "./resource": "./src/resource.ts"
+    ,"./source-rule-facts": "./src/sourceRuleFacts.ts"
+    ,"./source-text-presentation": "./src/sourceTextPresentation.ts"
     ,"./species": "./src/species.ts"
+    ,"./display-name": "./src/displayName.ts"
+    ,"./source-operations": "./src/sourceOperations.ts"
+    ,"./source-resource-pools": "./src/sourceResourcePools.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

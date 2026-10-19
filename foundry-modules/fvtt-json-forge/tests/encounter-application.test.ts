@@ -10,6 +10,7 @@ import {protectLocalizationText,LOCALIZATION_TERMS} from '@fvtt-json-generator/c
 import {encounterFixture} from '../../../tests/helpers/forge-encounter';
 import {createForgeEncounterApplicationClass} from '../src/encounterApplication';
 import type {ConfiguredConditionDefinition} from '@fvtt-json-generator/contracts/configured-conditions';
+import {draftForgeEncounterLocalization} from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 
 describe('configured state directory in the actual Forge entry',()=>{
   test('reads saved state definitions, exposes configuration entry, and supplies a fresh snapshot to generation',async()=>{
@@ -35,6 +36,61 @@ describe('configured state directory in the actual Forge entry',()=>{
 });
 
 describe('translated encounter report identity',()=>{
+  test.each([false,true])('actual saved-package entry keeps source boundaries and blocks/revises meaning conflict=%s through approval and recovery',async meaningConflict=>{
+    const sentence=meaningConflict?'It warns creatures that approach.':'It guards a quiet library.';
+    const author=sentence+'\n作者备注：护甲等级：14。';
+    const notes=['护甲等级：14（Natural Armor）'];
+    const canonical=['---','名称: Forest Keeper','类型: npc','护甲等级: 14','生命值: 20',
+      'intake-biography-mode: literal-v1','传记: '+JSON.stringify(author+'\n\n'+notes[0]),
+      'intake-biography-presentation: '+JSON.stringify({version:1,sourceLength:author.length,programNotes:notes}),
+      '特性:','  - 名称: Quiet Watch','    类型: utility','    执行模式: gm-manual','    描述: Quiet Watch. It remains alert.','---'].join('\n');
+    const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'source-boundary-entry',label:'Boundary package',
+      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'keeper',
+      actors:[{key:'keeper',label:'Forest Keeper',source:canonical,sourceHash:hashSource(canonical)}],macros:[],assets:[]};
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
+    const draft=await draftForgeEncounterLocalization({prepared,service:{
+      model:'offline-fixture',reviewModel:'disabled',
+      translate:async request=>({texts:request.texts.map(field=>({id:field.id,text:field.kind==='title'
+        ?field.source==='Forest Keeper'?'森林守卫':field.source==='Quiet Watch'?'静默守望':'边界包'
+        :field.source.replace(sentence,meaningConflict?'它警告靠近的建筑。':'它守护安静的图书馆。').replace('Natural Armor','天生护甲')
+          .replace('Quiet Watch.','静默守望。').replace('It remains alert.','它保持警觉。')}))}),
+      review:async()=>{throw Error('No model review');},
+    }});
+    let stored:any={version:2,kind:'uploaded-package',target:'14.368/dnd5e/5.3.3/core',catalogHash:hashSource('[]'),
+      package:serializeForgeEncounterPackage(bundle),packageHash:prepared.hash,packageSha256:hashSource(serializeForgeEncounterPackage(bundle)),translationReport:[],localizationDraft:draft};
+    let optionReads=0;
+    class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
+      getAiOptions:()=>{optionReads++;throw Error('Saved entry cannot access Provider');},getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
+      recoveryStore:{load:async()=>stored,save:async value=>{stored=value;},clear:async()=>{stored=undefined;}}});
+    const app:any=new App();await app._prepareContext();await app.previewRecovered();
+    const context=await app._prepareContext();
+    const row=context.draftPreview.actors[0].factsRows.find((entry:any)=>entry.pathLabel.includes('biography'));
+    expect(row.fullSource).toBe(author);expect(row.assembledZh).toContain('程序说明');expect(row.assembledZh).not.toContain('data-forge-program-notes');
+    const dom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
+    app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();
+    const checkbox=app.element.querySelector('[name="encounterTranslationReviewed"]') as HTMLInputElement;
+    checkbox.checked=true;checkbox.dispatchEvent(new dom.window.Event('change'));
+    await app.approveLocalization();
+    if(meaningConflict){
+      expect(app.error).toContain('对象类别');expect(app.prepared.bundle.localization).toBeUndefined();
+      const field=app.localizationDraft.actors[0].request.texts.find((entry:any)=>entry.source.includes(sentence));
+      const corrected=app.localizationDraft.actors[0].draft.texts.find((entry:any)=>entry.id===field.id).text.replace('它警告靠近的建筑。','它警告靠近的生物。');
+      app.reviseLocalizationBody('keeper',field.id,corrected,app.prepared,app.localizationDraft);
+      expect(app.translationReviewed).toBe(false);expect(app.reviewed).toBe(false);
+      checkbox.checked=true;checkbox.dispatchEvent(new dom.window.Event('change'));
+      await app.approveLocalization();
+      expect(app.error).toBe('');
+    }
+    const value=app.prepared.actors[0].artifact.system.details.biography.value;
+    expect(value.split('<hr><h3>英文原文</h3>')[1]).toBe('<p>'+author.replaceAll('\n','<br>')+'</p>');
+    expect(value).toContain('<aside data-forge-program-notes><h3>程序说明</h3><p>护甲等级：14（天生护甲）</p></aside>');
+    expect(app.reviewed).toBe(false);expect(optionReads).toBe(0);
+    await app.saveRecovery();const reopened:any=new App();await reopened._prepareContext();await reopened.previewRecovered();
+    expect(reopened.prepared.actors[0].artifact.system.details.biography.value).toBe(value);
+    expect(reopened.reviewed).toBe(false);expect(optionReads).toBe(0);
+  });
   const source=['---','layout: creature','name: Marsh Guard','type: aberration','size: Medium','armor_class: 12',
     'hit_points: 10','challenge: 1','speed: 30','---','### Actions',
     '- Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.'].join('\n');
@@ -45,16 +101,16 @@ describe('translated encounter report identity',()=>{
     return{id:entry.id,text};
   })});
   async function harness(failTranslation=false,explicitReviewer?:any,currentOptions?:()=>Record<string,unknown>,
-    translationOverride?:(input:any,call:number,onPartial?:(value:any)=>void)=>any,twoActors=false){
+    translationOverride?:(input:any,call:number,onPartial?:(value:any)=>void)=>any,twoActors=false,fixedNotes=false,sourceInput=source){
     const command=fixedEncounterCommand({version:1,rules:[{id:'manual',kind:'gm-manual',actorKey:'guard',itemName:'Bite',parameters:{}}],legendaryRecovery:[]});
     const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'report-identity-fixture',label:'Guard package',
       target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'guard',
-      actors:[{key:'guard',label:'Marsh Guard',source,sourceHash:hashSource(source)}],
+      actors:[{key:'guard',label:'Marsh Guard',source:sourceInput,sourceHash:hashSource(sourceInput)}],
       macros:[{key:'control',name:'Guard control',command,commandHash:hashSource(command),bindings:{guard:'guard'},covers:[],
-        notes:`原始资料SHA-256：${hashSource(source)}\nGM handles timing.`}],assets:[]};
-    if(twoActors){const second=source.replaceAll('Marsh Guard','Bog Watcher');bundle.actors.push({key:'watcher',label:'Bog Watcher',source:second,sourceHash:hashSource(second)});bundle.macros[0].bindings.watcher='watcher';}
+        notes:`原始资料SHA-256：${hashSource(sourceInput)}\n${fixedNotes?'Use the native activities. The GM resolves manual consequences from each Item’s complete rule.\n':''}GM handles timing.`}],assets:[]};
+    if(twoActors){const second=sourceInput.replaceAll('Marsh Guard','Bog Watcher');bundle.actors.push({key:'watcher',label:'Bog Watcher',source:second,sourceHash:hashSource(second)});bundle.macros[0].bindings.watcher='watcher';}
     const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
-    const report:any={version:1,source,sourceHash:hashSource(source),model:'fixture',reviewModel:'fixture',conditionCatalogHash:hashSource('[]'),evidenceMode:'standard',
+    const report:any={version:1,source:sourceInput,sourceHash:hashSource(sourceInput),model:'fixture',reviewModel:'fixture',conditionCatalogHash:hashSource('[]'),evidenceMode:'standard',
       status:'ready_for_gm_review',actors:[],findings:[],packageHash:prepared.hash,outputLanguage:'source'};
     let stored:any,translateCalls=0,reviewCalls=0,optionReads=0;const blobs:Blob[]=[];
     const recoveryStore={load:async()=>stored,save:async(value:any)=>{stored=value;},clear:async()=>{stored=undefined;}};
@@ -72,11 +128,50 @@ describe('translated encounter report identity',()=>{
         translationService:{model:'fixture',reviewModel:'fixture-review',
         translate:async(input:any,_signal:any,onPartial:any)=>{translateCalls++;if(failTranslation)throw new Error('translation unavailable');return translationOverride?translationOverride(input,translateCalls,onPartial):translated(input);},
         review:async()=>{reviewCalls++;return{verdict:'accepted',findings:[]};}}} as any)});
-    const app:any=new App();app.humanSource=source;app.humanLabel='Guard package';app.outputLanguage='zh-CN';
+    const app:any=new App();app.humanSource=sourceInput;app.humanLabel='Guard package';app.outputLanguage='zh-CN';
     await app._prepareContext();await app.generateFromHuman();
     return{App,app,prepared,report,blobs,recoveryStore,get stored(){return stored;},
       get translateCalls(){return translateCalls;},get reviewCalls(){return reviewCalls;},get optionReads(){return optionReads;}};
   }
+  test('saved prose resumes locally in the actual entry and resets approval before recovery',async()=>{
+    const currentSource=source.replace('### Actions','The sentinel&#39;s watch.\n### Actions');
+    const session=await harness(false,undefined,undefined,undefined,false,false,currentSource),{app}=session;
+    await app.translatePrepared();
+    const original=structuredClone(app.localizationDraft),calls=session.translateCalls;
+    expect(app.translationReport.some((entry:any)=>entry.findings?.some((f:string)=>f.includes('撇号')))).toBe(true);
+    app.translationReviewed=true;app.reviewed=true;
+    await app.translatePrepared();
+    expect(app.error).toBe('');expect(session.translateCalls).toBe(calls);expect(session.reviewCalls).toBe(0);
+    expect(app.translationReviewed).toBe(false);expect(app.reviewed).toBe(false);
+    expect(app.localizationDraft.actors[0].translationHash).not.toBe(original.actors[0].translationHash);
+    const context=await app._prepareContext();expect(context.canApproveTranslation).toBe(false);
+    await app.saveRecovery();const reopened:any=new session.App();await reopened._prepareContext();await reopened.previewRecovered();
+    expect(reopened.localizationDraft).toEqual(app.localizationDraft);
+    expect(reopened.translationReviewed).toBe(false);expect(reopened.reviewed).toBe(false);
+    expect(session.translateCalls).toBe(calls);expect(session.reviewCalls).toBe(0);
+  });
+  test('uploaded saved prose keeps package progress through recovery before local resume',async()=>{
+    const currentSource=source.replace('### Actions','The sentinel&#39;s watch.\n### Actions');
+    const session=await harness(false,undefined,undefined,undefined,false,false,currentSource),{app,prepared}=session;
+    await app.translatePrepared();await app.saveRecovery();
+    const calls=session.translateCalls,serialized=serializeForgeEncounterPackage(prepared.bundle),binding=session.stored;
+    const original=structuredClone(app.localizationDraft),progress=structuredClone(app.translationReport);
+    expect(progress.some((entry:any)=>entry.status==='needs_review')).toBe(true);
+    await app.close();
+    await session.recoveryStore.save({version:2,kind:'uploaded-package',target:binding.target,catalogHash:binding.catalogHash,
+      package:serialized,packageHash:prepared.hash,packageSha256:hashSource(serialized),translationReport:progress,localizationDraft:original});
+    const resumed:any=new session.App();await resumed._prepareContext();await resumed.previewRecovered();
+    expect(resumed.translationReport).toEqual(progress);
+    resumed.translationReviewed=true;resumed.reviewed=true;await resumed.translatePrepared();
+    expect(resumed.error).toBe('');expect(session.translateCalls).toBe(calls);expect(session.reviewCalls).toBe(0);
+    expect(resumed.localizationDraft.actors[0].translationHash).not.toBe(original.actors[0].translationHash);
+    expect(resumed.translationReviewed).toBe(false);expect(resumed.reviewed).toBe(false);
+    await resumed.saveRecovery();await resumed.close();
+    const reopened:any=new session.App();await reopened._prepareContext();await reopened.previewRecovered();
+    expect(reopened.localizationDraft).toEqual(resumed.localizationDraft);
+    expect(reopened.translationReviewed).toBe(false);expect(reopened.reviewed).toBe(false);
+    expect(session.translateCalls).toBe(calls);expect(session.reviewCalls).toBe(0);
+  });
   test('Chinese draft uses no model review; GM approval updates view, download and restored package identity',async()=>{
     const session=await harness();const {App,app,prepared,blobs,recoveryStore}=session;
     await app.translatePrepared();
@@ -105,6 +200,96 @@ describe('translated encounter report identity',()=>{
     await reopened.previewRecovered();expect(reopened.reviewed).toBe(false);
     expect(JSON.parse(reopened.currentReportText()).intake).toMatchObject({outputLanguage:'zh-CN',packageHash:reopened.prepared.hash});
     expect(reopened.currentReportText()).toBe(viewed);
+  });
+  test('actual prose editor saves locally, resets confirmation and survives refresh without Provider access',async()=>{
+    const session=await harness();const {app,prepared}=session;await app.translatePrepared();
+    const oldDraft=app.localizationDraft,part=oldDraft.actors[0];
+    const field=part.request.texts.find((entry:any)=>entry.kind==='body');
+    const oldText=part.draft.texts.find((entry:any)=>entry.id===field.id).text,newText=oldText+'（人工核对。）';
+    const reads=session.optionReads,calls=session.translateCalls;
+    const dom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(await app._prepareContext()));
+    app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();
+    const row=app.element.querySelector(`[data-localization-field="${field.id}"]`);
+    const editor=row.querySelector('[data-localization-edit]') as HTMLTextAreaElement;editor.value=newText;
+    app.translationReviewed=true;app.reviewed=true;
+    (row.querySelector('[data-action="encounter-save-localization-body"]') as HTMLButtonElement).click();
+    expect(app.localizationDraft.actors[0].draft.texts.find((entry:any)=>entry.id===field.id).text).toBe(newText);
+    expect(app.localizationDraft.actors[0].translationHash).not.toBe(oldDraft.actors[0].translationHash);
+    expect(app.prepared).toBe(prepared);expect(app.reviewed).toBe(false);expect(app.translationReviewed).toBe(false);
+    expect(session.optionReads).toBe(reads);expect(session.translateCalls).toBe(calls);expect(session.reviewCalls).toBe(0);
+    await app.saveRecovery();const restored:any=new session.App();await restored._prepareContext();await restored.previewRecovered();
+    expect(restored.localizationDraft.actors[0].draft.texts.find((entry:any)=>entry.id===field.id).text).toBe(newText);
+    expect(restored.translationReviewed).toBe(false);expect(restored.reviewed).toBe(false);
+    expect(session.optionReads).toBe(reads);expect(session.translateCalls).toBe(calls);
+  });
+  test('prose editor rejects numeric changes and detached controls without replacing the valid draft',async()=>{
+    const session=await harness();const {app}=session;await app.translatePrepared();
+    const original=app.localizationDraft,part=original.actors[0];
+    const field=part.request.texts.find((entry:any)=>entry.kind==='body'&&entry.source.includes('1d6'));
+    const oldText=part.draft.texts.find((entry:any)=>entry.id===field.id).text;
+    const dom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(await app._prepareContext()));
+    app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();
+    const row=app.element.querySelector(`[data-localization-field="${field.id}"]`);
+    (row.querySelector('[data-localization-edit]') as HTMLTextAreaElement).value=oldText.replace('1d6','2d6');
+    const save=row.querySelector('[data-action="encounter-save-localization-body"]') as HTMLButtonElement;
+    app.translationReviewed=true;save.click();
+    expect(app.localizationDraft).toBe(original);expect(app.error).toContain('改变数字');expect(app.translationReviewed).toBe(false);
+    app.localizationDraft=structuredClone(original);const changed=app.localizationDraft;save.click();
+    expect(app.localizationDraft).toBe(changed);expect(app.error).toContain('来源或草稿已改变');
+    expect(session.reviewCalls).toBe(0);
+  });
+  test('facts draft previews all Actor display fields from the current prepared source',async()=>{
+    const session=await harness();const {app,prepared}=session;
+    await app.translatePrepared();
+    expect(app.localizationDraft.actors[0].request.policy).toBe('zh-CN-facts-v1');
+    expect(prepared.actors[0]?.rulePresentation).toBeTruthy();
+    const context=await app._prepareContext();
+    expect(context.draftPreviewError).toBeUndefined();
+    const actor=context.draftPreview.actors[0];
+    expect(actor.factsMode).toBe(true);
+    expect(actor.factsRows.some((row:any)=>row.fullSource==='Marsh Guard'&&row.assembledZh.includes('Marsh Guard'))).toBe(true);
+    expect(actor.factsRows.some((row:any)=>row.fullSource.includes('1d6+2')
+      &&row.assembledZh.includes('1d6+2'))).toBe(true);
+    expect(actor.fields).toBeUndefined();
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    const document=new JSDOM(html).window.document;
+    expect(document.querySelector('.forge-encounter-facts-row')).not.toBeNull();
+    expect(document.querySelector('.forge-encounter-fixed-rule textarea')).toBeNull();
+    expect(document.querySelector('[data-action="encounter-approve-localization"]')).not.toBeNull();
+    expect(session.reviewCalls).toBe(0);
+    const stale=structuredClone(app.localizationDraft);
+    stale.actors[0].requestHash='0'.repeat(64);
+    app.localizationDraft=stale;app.translationReviewed=true;
+    const staleContext=await app._prepareContext();
+    expect(staleContext.draftPreview).toBeUndefined();
+    expect(staleContext.draftPreviewError).toContain('来源校验');
+    expect(staleContext.canApproveTranslation).toBe(false);
+  });
+  test('facts package preview includes fixed tool notes and residual prose without an editable fixed block',async()=>{
+    const session=await harness(false,undefined,undefined,undefined,false,true);
+    const {app}=session;await app.translatePrepared();
+    const context=await app._prepareContext();
+    expect(context.draftPreviewError).toBeUndefined();
+    expect(context.draftPreview.factsMode).toBe(true);
+    const note=context.draftPreview.packageFactsRows.find((row:any)=>row.pathLabel==='control:notes');
+    expect(note).toBeTruthy();
+    expect(note.fullSource).toContain('Use the native activities. The GM resolves manual consequences');
+    expect(note.fullSource).toContain('GM handles timing.');
+    expect(note.assembledZh).toContain('使用原生能力活动');
+    expect(note.fixedBlocks).toHaveLength(1);
+    expect(note.editableSlots).toHaveLength(1);
+    expect(note.editableSlots[0].source).toBe('GM handles timing.');
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    const document=new JSDOM(html).window.document;
+    const packageRow=[...document.querySelectorAll('.forge-encounter-facts-row')]
+      .find(row=>row.textContent?.includes('Use the native activities. The GM resolves manual consequences'));
+    const fixed=packageRow?.querySelector('.forge-encounter-fixed-rule');
+    expect(fixed?.textContent).toContain('使用原生能力活动');
+    expect(fixed?.querySelector('textarea')).toBeNull();
+    expect(packageRow?.textContent).toContain('GM handles timing.');
+    expect(packageRow?.querySelectorAll('[data-localization-field]')).toHaveLength(1);
+    expect(packageRow?.querySelector('[data-localization-field] textarea')).not.toBeNull();
+    expect(session.reviewCalls).toBe(0);
   });
   test('failed translation keeps the original report and package hash',async()=>{
     const {app,prepared,report}=await harness(true);
@@ -565,5 +750,59 @@ describe('current encounter review download',()=>{
     app.forbiddenValues=['private-test-value'];bundle.actors[0]!.source='private-test-value';reportButton.onclick();
     expect(app.reportDownload).toBeUndefined();expect(blobs).toHaveLength(1);expect(requests).toHaveLength(1);
     expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1']);expect(app.error).toBeTruthy();expect(app.error).not.toContain('private-test-value');
+  });
+});
+
+
+describe('facts-based GM translation preview',()=>{
+  test('shows the complete source and assembled Chinese while keeping fixed rules read-only',()=>{
+    const context:any={ready:true,draftPreview:{factsMode:true,actors:[{key:'guard',name:'Marsh Guard',factsMode:true,factsRows:[{
+      pathLabel:'items.0.system.description.value',
+      fullSource:'Bite. The target takes 5 (1d6+2) piercing damage if hit; the GM decides when it retreats.',
+      assembledZh:'啮咬。命中后目标受到 5（1d6+2）点穿刺伤害；撤退时机由 GM 裁定。',
+      fixedBlocks:[{source:'The target takes 5 (1d6+2) piercing damage if hit.',
+        zh:'命中后目标受到 5（1d6+2）点穿刺伤害。',factRefs:['hit','damage'],executionMode:'native',modeLabel:'原生规则'}],
+      editableSlots:[{textId:'text-aaaaaaaaaaaaaaaaaaaaaaaa',partKey:'guard',source:'the GM decides when it retreats.',
+        draft:'撤退时机由 GM 裁定。',review:'gm-assisted',reviewLabel:'待 GM 核对',editable:true}],
+    }]}],packageFields:[]}};
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    const document=new JSDOM(html).window.document;
+    const row=document.querySelector('.forge-encounter-facts-row')!;
+    expect(row.textContent).toContain('Bite. The target takes 5 (1d6+2) piercing damage if hit; the GM decides when it retreats.');
+    expect(row.textContent).toContain('啮咬。命中后目标受到 5（1d6+2）点穿刺伤害；撤退时机由 GM 裁定。');
+    expect(row.querySelector('.forge-encounter-fixed-rule')?.textContent).toContain('命中后目标受到 5（1d6+2）点穿刺伤害。');
+    expect(row.textContent).toContain('待 GM 核对');
+    expect(row.querySelector('.forge-encounter-fixed-rule textarea')).toBeNull();
+    expect(row.querySelectorAll('[data-localization-field]')).toHaveLength(1);
+    expect(row.querySelector('[data-localization-field] textarea')).not.toBeNull();
+    expect(row.querySelector('[data-action="encounter-save-localization-body"]')).not.toBeNull();
+  });
+  test('shows every uncovered English condition for GM review as escaped read-only source',()=>{
+    const condition='Only while wearing Heavy Armor & standing in seawater <script>alert(1)</script>.';
+    const context:any={ready:true,draftPreview:{factsMode:true,actors:[{key:'guard',name:'Marsh Guard',factsMode:true,
+      factsRows:[{pathLabel:'items.0.system.description.value',fullSource:`Shred. ${condition}`,
+        assembledZh:'撕碎。重甲与海水限定待 GM 核对。',fixedBlocks:[],editableSlots:[],
+        uncoveredMechanics:[{summaryZh:'伤害限定条件须 GM 对照原文裁定',details:[condition,'The target must remain grappled.'],
+          factRefs:['item/0/shred/condition']}]}]}],packageFactsRows:[],packageFields:[]}};
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context);
+    const document=new JSDOM(html).window.document;
+    const review=document.querySelector('.forge-encounter-uncovered')!;
+    expect(review.textContent).toContain('结构化事实供 GM 核对');
+    expect(review.textContent).toContain('不能视为自动执行');
+    expect(review.querySelectorAll('li')).toHaveLength(2);
+    expect(review.textContent).toContain(condition);
+    expect(review.textContent).toContain('The target must remain grappled.');
+    expect(review.querySelector('textarea, [data-localization-field], script')).toBeNull();
+    expect(document.querySelector('script')).toBeNull();
+    expect(review.innerHTML).toContain('&lt;script&gt;');
+  });
+  test('a missing rebuilt presentation visibly blocks facts approval',()=>{
+    const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))({
+      ready:true,draftPreviewError:'完整中文预览不可用：中文预览缺少重新生成的规则事实。',canApproveTranslation:false,
+    });
+    const document=new JSDOM(html).window.document;
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('规则事实');
+    expect(document.querySelector('[data-action="encounter-approve-localization"]')).toBeNull();
+    expect(document.querySelector('.forge-encounter-translation-draft')).toBeNull();
   });
 });

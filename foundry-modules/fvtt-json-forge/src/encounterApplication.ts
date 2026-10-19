@@ -1,16 +1,18 @@
 import { decodeForgeEncounterPackageZip, serializeForgeEncounterPackage, encodeForgeEncounterPackageZip } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { prepareForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
-import { approveForgeEncounterLocalization, assertForgeEncounterLocalizationDraft, draftForgeEncounterLocalization,
-  reviewForgeEncounterLocalizationDraft, verifiedEncounterLocalizationProgress, LOCALIZATION_TERM_NOTES, LOCALIZATION_TERMS,
+import { actorLocalizationDisplayRows, encounterPackageLocalizationDisplayRows, approveForgeEncounterLocalization, assertForgeEncounterLocalizationDraft, draftForgeEncounterLocalization,
+  reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress, LOCALIZATION_TERM_NOTES, LOCALIZATION_TERMS,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import { createEncounterIntakeProviders, generateEncounterFromHumanMarkdown, reviewForgeEncounterCandidate,
   assertEncounterSecretsAbsent, readFixedEncounterConfiguration, type EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type { BrowserAiProviderOptions } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { decodeStatusLifecycleParameters } from '@fvtt-json-generator/contracts/status-lifecycle';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import {localizationMeaningFindings} from '@fvtt-json-generator/contracts/localization';
 import { configuredConditionsApi, configuredConditionsCatalog, configuredConditionSummary } from './configuredConditions';
 import { encounterReviewCards, statusLifecycleSummary } from './encounterReviewCards';
 import { encounterReviewNavigation } from './encounterReviewNavigation';
+import { iconReviewPresentation } from './iconReviewPresentation';
 import { decodeEncounterRecovery, serializeEncounterRecovery, IndexedDbEncounterRecoveryStore, type EncounterRecoveryStore, type EncounterRecoverySnapshot } from './encounterRecoveryStore';
 import { readForgeSessionSettings, subscribeForgeSessionSettings } from './settings';
 import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
@@ -106,6 +108,9 @@ export function createForgeEncounterApplicationClass(environment: {
       const candidateActors=navigation.actors.length?navigation.actors.map(actor=>({...actor,label:localizedNames.get(actor.key)??actor.label}))
         :this.prepared?.actors.map(actor=>({key:actor.key,label:actor.name}))??[];
       const candidateRules=this.prepared?.macros.flatMap(macro=>readFixedEncounterConfiguration(macro.command)?.rules??[])??[];
+      const manualSourceRules=this.prepared?.actors.flatMap(actor=>((actor.artifact.items??[]) as any[])
+        .filter(item=>item.flags?.fvttJsonGenerator?.manualRule?.mode==='gm-manual')
+        .map(item=>({actorKey:actor.key,actorName:actor.name,name:String(item.name),sourceText:String(item.flags.fvttJsonGenerator.manualRule.sourceText)})))??[];
       const selectedActor=this.actorFilter && candidateActors.some(actor=>actor.key===this.actorFilter)?this.actorFilter:'';
       const issueItems=navigation.issues.map((issue,index)=>{
         const canContinue=issue.action==='translate'?!!this.prepared&&!this.prepared.bundle.localization
@@ -116,8 +121,15 @@ export function createForgeEncounterApplicationClass(environment: {
       const reviewCards=encounterReviewCards(this.prepared?this.aiReport:undefined,this.prepared?.bundle.localization,currentProgress);
       const possibleDraft=this.localizationDraft??this.aiReport?.localizationDraft;
       let currentDraft:ForgeEncounterLocalizationDraft|undefined;
+      let draftPreviewError:string|undefined;
       if(this.prepared&&!this.prepared.bundle.localization&&possibleDraft){
-        try{assertForgeEncounterLocalizationDraft(this.prepared,possibleDraft);currentDraft=possibleDraft;}catch{/* Stale saved drafts never grant approval. */}
+        try{assertForgeEncounterLocalizationDraft(this.prepared,possibleDraft);currentDraft=possibleDraft;}
+        catch(error){
+          // Facts drafts need a complete source-bound presentation, never a residual-only preview.
+          if(possibleDraft.packageText?.request?.policy==='zh-CN-facts-v1'
+            ||Array.isArray(possibleDraft.actors)&&possibleDraft.actors.some(actor=>actor?.request?.policy==='zh-CN-facts-v1'))
+            draftPreviewError=`完整中文预览未通过来源校验：${message(error)}`;
+        }
       }
       const currentReport=this.prepared&&this.aiReport?.source===this.humanSource
         &&this.aiReport.sourceHash===hashSource(this.humanSource)&&this.aiReport.packageHash===this.prepared.hash?this.aiReport:undefined;
@@ -126,13 +138,68 @@ export function createForgeEncounterApplicationClass(environment: {
       const needsPaidReview=!!currentReport&&(!currentReport.automationReview||'status'in currentReport.automationReview
         ||currentReport.actors.some(actor=>['not_requested','failed'].includes(actor.generation?.modelReviewStatus??''))
         ||!!currentDraft);
-      const draftFields=(part:ForgeEncounterLocalizationDraft['packageText'])=>{
+      const draftFields=(part:ForgeEncounterLocalizationDraft['packageText'],actorKey?:string)=>{
         const translated=new Map(part.draft.texts.map(field=>[field.id,field.text]));
-        return part.request.texts.map(field=>({kind:field.kind==='title'?'标题':'正文',source:field.source,text:translated.get(field.id)??''}));
+        return part.request.texts.map(field=>({id:field.id,partKey:actorKey??'_package',editable:field.kind==='body'&&!this.busy&&!this.result,
+          kind:field.kind==='title'?'标题':'正文',source:field.source,text:translated.get(field.id)??''}));
       };
-      const draftPreview=currentDraft?{actors:currentDraft.actors.map(actor=>({key:actor.key,
-        name:this.prepared!.actors.find(item=>item.key===actor.key)?.name??actor.key,fields:draftFields(actor)})),
-        packageFields:draftFields(currentDraft.packageText)}:undefined;
+      type FactsPreviewRow={pathLabel:string;fullSource:string;assembledZh:string;
+        uncoveredMechanics:ReturnType<typeof actorLocalizationDisplayRows>[number]['uncoveredMechanics'];
+        fixedBlocks:Array<ReturnType<typeof actorLocalizationDisplayRows>[number]['fixedBlocks'][number]&{modeLabel:string}>;
+        editableSlots:Array<{textId:string;source:string;draft:string;review:string;reviewLabel:string;partKey:string;editable:boolean}>};
+      let draftPreview: {factsMode:boolean;actors:Array<{key:string;name:string;factsMode?:boolean;
+        fields?:ReturnType<typeof draftFields>;factsRows?:FactsPreviewRow[]}>;
+        packageFields:ReturnType<typeof draftFields>;packageFactsRows?:FactsPreviewRow[]}|undefined;
+      if(currentDraft){
+        try{
+          draftPreview={factsMode:currentDraft.actors.some(actor=>actor.request.policy==='zh-CN-facts-v1'),
+            actors:currentDraft.actors.map(actor=>{
+            const preparedActor=this.prepared!.actors.find(item=>item.key===actor.key);
+            const sourceActor=this.prepared!.bundle.actors.find(item=>item.key===actor.key);
+            if(!preparedActor||!sourceActor)throw new TypeError('中文预览缺少当前角色来源。');
+            if(actor.request.policy!=='zh-CN-facts-v1')return {key:actor.key,name:preparedActor.name,fields:draftFields(actor,actor.key)};
+            if(!preparedActor.rulePresentation)throw new TypeError('中文预览缺少重新生成的规则事实。');
+            const factsRows=actorLocalizationDisplayRows(preparedActor.artifact,sourceActor.source,actor.draft,preparedActor.rulePresentation)
+              .map(row=>({pathLabel:Array.isArray(row.path)?row.path.join('.'):String(row.path),
+                fullSource:/description|biography/u.test(row.path)?displayText(row.fullSource):row.fullSource,
+                assembledZh:/description|biography/u.test(row.path)?displayText(row.assembledZh):row.assembledZh,uncoveredMechanics:row.uncoveredMechanics,
+                fixedBlocks:row.fixedBlocks.map(block=>({...block,modeLabel:block.executionMode==='native'?'原生规则':'需要 GM 辅助'})),
+                editableSlots:row.editableSlots.map(slot=>{
+                  const field=actor.request.texts.find(entry=>entry.id===slot.textId);
+                  if(!field)throw new TypeError('中文预览的剩余文本不属于当前翻译请求。');
+                  return {...slot,partKey:actor.key,reviewLabel:slot.review==='gm-assisted'?'待 GM 核对':'常规文本',
+                    editable:field.kind==='body'&&!this.busy&&!this.result};
+                })}));
+            if(!factsRows.length||factsRows.filter(row=>row.fixedBlocks.length).length!==preparedActor.rulePresentation.fields.length)
+              throw new TypeError('中文预览的完整显示字段或规则字段数量不一致。');
+            const displayedIds=new Set(factsRows.flatMap(row=>row.editableSlots.map(slot=>slot.textId)));
+            if(actor.request.texts.some(field=>!displayedIds.has(field.id)))
+              throw new TypeError('中文预览遗漏了当前请求的显示字段。');
+            return {key:actor.key,name:preparedActor.name,factsMode:true,factsRows};
+          }),packageFields:draftFields(currentDraft.packageText)};
+          if(draftPreview.factsMode){
+            const packagePart=currentDraft.packageText;
+            const packageRows=encounterPackageLocalizationDisplayRows(this.prepared!,currentDraft);
+            draftPreview.packageFactsRows=packageRows.map(row=>({pathLabel:String(row.path),
+              fullSource:row.fullSource,assembledZh:row.assembledZh,uncoveredMechanics:row.uncoveredMechanics,
+              fixedBlocks:row.fixedBlocks.map(block=>({...block,modeLabel:block.executionMode==='native'?'原生规则':'需要 GM 辅助'})),
+              editableSlots:row.editableSlots.map(slot=>{
+                const field=packagePart.request.texts.find(entry=>entry.id===slot.textId);
+                if(!field)throw new TypeError('战斗包中文预览的剩余文本不属于当前翻译请求。');
+                return {...slot,partKey:'_package',reviewLabel:slot.review==='gm-assisted'?'待 GM 核对':'常规文本',
+                  editable:field.kind==='body'&&!this.busy&&!this.result};
+              })}));
+            const packageIds=new Set(draftPreview.packageFactsRows.flatMap(row=>row.editableSlots.map(slot=>slot.textId)));
+            if(!draftPreview.packageFactsRows.length||packagePart.request.texts.some(field=>!packageIds.has(field.id)))
+              throw new TypeError('战斗包中文预览遗漏了完整来源、规则或显示字段。');
+            draftPreview.packageFields=[];
+          }
+        }catch(error){
+          draftPreview=undefined;
+          draftPreviewError=`完整中文预览不可用：${message(error)}`;
+          currentDraft=undefined;
+        }
+      }
       let installed:any[]=[];
       try { installed=listForgeEncounterMacros(game); } catch(error){ this.error=message(error); }
       let configuredConditions:any[]=[];
@@ -153,7 +220,8 @@ export function createForgeEncounterApplicationClass(environment: {
         recoveryDraftCount:this.recoveryReport?.actors.filter(actor=>actor.analysis?.ir).length??0,
         recoveredReview:this.recoveredReview,
         progressDetail:this.progressDetail,
-        draftPreview,translationReviewed:this.translationReviewed,
+        draftPreview,draftPreviewError,translationReviewed:this.translationReviewed,
+        iconReviewText:this.prepared?iconReviewPresentation(this.prepared.actors.map(actor=>actor.iconReview)):undefined,
         canApproveTranslation:!!currentDraft&&this.translationReviewed&&!this.busy&&!this.result,
         canReviewCandidate:needsPaidReview&&!this.prepared?.bundle.localization&&!this.busy&&!this.result
           &&!!this.generationReviewBinding&&this.generationReviewBinding.sessionRevision===this.sessionRevision
@@ -175,12 +243,12 @@ export function createForgeEncounterApplicationClass(environment: {
           :currentReport.automationReview&&'status'in currentReport.automationReview
           ?'AI 审核未请求；本地校验通过后可由 GM 人工确认。'
           :'当前记录没有 AI 审核结论；请由 GM 核对来源和规则。',
-        importLabel:aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':'一起导入角色与宏',
+        importLabel:aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':this.prepared?.macros.length?'一起导入角色与宏':'导入完整角色',
         showReviewNavigation:candidateActors.length>0||navigation.issues.length>0,
-        reviewNavigation:{...navigation,actorCount:candidateActors.length,hasRuleCounts:!!this.aiReport?.automation?.selection||candidateRules.length>0,
+        reviewNavigation:{...navigation,actorCount:candidateActors.length,hasRuleCounts:!!this.aiReport?.automation?.selection||candidateRules.length>0||manualSourceRules.length>0,
           gmMechanisms:this.prepared?.requirements.length??0,
           automatic:navigation.automatic||candidateRules.filter(rule=>rule.kind!=='gm-manual').length,
-          manual:navigation.manual||candidateRules.filter(rule=>rule.kind==='gm-manual').length,
+          manual:(navigation.manual||candidateRules.filter(rule=>rule.kind==='gm-manual').length)+manualSourceRules.length,
           actors:candidateActors.map(actor=>({...actor,selected:actor.key===selectedActor})),
           allSelected:this.reviewFilter==='all',issuesSelected:this.reviewFilter==='issues',gmSelected:this.reviewFilter==='gm',
           selectedActor,visibleIssues:this.reviewFilter==='gm'?[]:issueItems.filter(issue=>!selectedActor||issue.actorKey===selectedActor),
@@ -202,6 +270,7 @@ export function createForgeEncounterApplicationClass(environment: {
             summary:r.kind==='status-lifecycle'?statusLifecycleSummary(r.parameters):undefined,parameters:JSON.stringify(r.parameters,null,2)})),
             bindingsText:Object.entries(m.bindings).map(([name,key])=>`${name} → ${key}`).join('；')};
         }),
+        manualSourceRules:manualSourceRules.filter(rule=>!selectedActor||rule.actorKey===selectedActor),
         requirements:this.prepared?.requirements.filter(requirement=>(!selectedActor||requirement.actorKey===selectedActor)
           &&this.reviewFilter!=='issues').map(requirement=>({...requirement,
           mode:requirement.mode==='gm-assisted'?'GM辅助处理':requirement.mode==='external-rule'?'外部规则裁定':requirement.mode,
@@ -250,6 +319,13 @@ export function createForgeEncounterApplicationClass(environment: {
       if(translationReviewed)translationReviewed.onchange=()=>{this.translationReviewed=translationReviewed.checked;
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-approve-localization"]');
         if(button)button.disabled=!this.translationReviewed||this.busy||!!this.result;};
+      const editPrepared=this.prepared,editDraft=this.localizationDraft??this.aiReport?.localizationDraft;
+      root.querySelectorAll<HTMLButtonElement>('[data-action="encounter-save-localization-body"]').forEach(button=>{
+        button.onclick=()=>{const row=button.closest<HTMLElement>('[data-localization-field]');
+          const editor=row?.querySelector<HTMLTextAreaElement>('[data-localization-edit]');
+          if(row&&editor)this.reviseLocalizationBody(row.dataset.localizationPart==='_package'?undefined:row.dataset.localizationPart,
+            row.dataset.localizationField??'',editor.value,editPrepared,editDraft);};
+      });
       const bind=(action:string,fn:()=>unknown)=>{const b=root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);if(b)b.onclick=()=>void fn();};
       bind('encounter-preview',()=>this.preview());
       bind('encounter-localize',()=>this.translatePrepared());
@@ -376,7 +452,7 @@ export function createForgeEncounterApplicationClass(environment: {
           ? '原语言包已通过本地校验；中文草稿也已生成，等待 GM 明确核对批准。AI 审核未请求。'
           :output.report.outputLanguage==='source'&&this.outputLanguage==='zh-CN'
           ? '中文草稿未完成；原语言包已通过本地校验，可单独重试翻译。AI 审核未请求。'
-          : `已生成${output.prepared.actors.length}个生物与固定控制入口，本地校验已完成；AI 审核未请求，请由 GM 核对来源和规则后最终确认。`;
+          : `已生成${output.prepared.actors.length}个生物${output.prepared.bundle.macros.length?'与固定控制入口':''}，本地校验已完成；AI 审核未请求，请由 GM 核对来源和规则后最终确认。`;
         this.error=output.report.findings.join('\n');
       }catch(error){if(!this.recoveryReport&&prior&&resume)this.recoveryReport=prior;this.error=controller.signal.aborted?'已取消AI生成，没有创建世界文档。':message(error);this.status='生成未完成；已保存的有效草稿可继续。';this.queueRecoverySave();}
       finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;if(!this.closed)void this.render();}
@@ -427,6 +503,29 @@ export function createForgeEncounterApplicationClass(environment: {
         this.syncTranslationReport(original);
         this.error=controller.signal.aborted?'中文草稿生成已取消。':message(error);this.status='中文草稿未完成；原语言包仍可供 GM 核对。';this.queueRecoverySave();}
       finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;if(!this.closed)void this.render();}
+    }
+    private reviseLocalizationBody(actorKey:string|undefined,textId:string,text:string,
+      expectedPrepared?:PreparedForgeEncounter,expectedDraft?:ForgeEncounterLocalizationDraft):void {
+      if(this.busy||this.closed||this.result)return;
+      this.translationReviewed=false;this.reviewed=false;this.error='';
+      try{
+        assertGm(game);assertExactRuntime(game);
+        const draft=this.localizationDraft??this.aiReport?.localizationDraft;
+        if(!this.prepared||!draft||this.prepared!==expectedPrepared||draft!==expectedDraft)
+          throw new Error('来源或草稿已改变，请重新打开当前正文后修正。');
+        const next=reviseForgeEncounterLocalizationBody({prepared:this.prepared,draft,actorKey,textId,text});
+        assertEncounterSecretsAbsent(JSON.stringify(next),this.forbiddenValues);
+        const part=actorKey===undefined?next.packageText:next.actors.find(actor=>actor.key===actorKey)!;
+        const meaningFindings=localizationMeaningFindings(part.request,part.draft);
+        const progress:EncounterLocalizationProgress={status:meaningFindings.length?'needs_review':'draft_ready',actorKey,request:part.request,draft:part.draft,findings:meaningFindings};
+        const index=this.translationReport.findIndex(entry=>entry.actorKey===actorKey);
+        if(index<0)this.translationReport.push(progress);else this.translationReport[index]=progress;
+        this.localizationDraft=next;
+        if(this.recoveryReport){this.recoveryReport={...this.recoveryReport,localizationDraft:next,localization:this.translationReport};this.aiReport=this.recoveryReport;}
+        this.clearReportPresentation();this.syncTranslationReport(this.prepared);this.queueRecoverySave();
+        this.status=meaningFindings.length?'正文已保存；仍有来源含义或正文残留问题，须按提示修正后才能批准。未请求 AI。':'正文修正已通过本地校验；请重新核对当前草稿并批准。未请求 AI。';
+      }catch(error){this.error=message(error);this.status='正文修正未保存，原有效草稿保留；请核对来源、数值和术语。';}
+      void this.render();
     }
     private async approveLocalization():Promise<void>{
       if(this.busy||this.closed||!this.translationReviewed||!this.prepared||this.prepared.bundle.localization||!this.localizationDraft)return;
@@ -821,7 +920,18 @@ function encounterRetryLabel(stage:string):string{
 }
 // Core 14.368 promotes document-level hyperlinks to new tabs, including downloads.
 function preserveNativeDownload(event:Event):void{event.stopPropagation();}
-function displayText(value:unknown):string{return typeof value==='string'?value.replace(/<\/(?:p|li|div|h[1-6])>|<br\s*\/?\s*>/giu,'\n').replace(/<[^>]*>/gu,'').replace(/&nbsp;/gu,' ').replace(/&amp;/gu,'&').trim():'';}
+function displayText(value:unknown):string{
+  if(typeof value!=='string')return '';
+  // Decode once after removing generated markup. Authored escaped tags remain
+  // visible text and are escaped by Handlebars, never interpreted as HTML.
+  const entities:Record<string,string>={nbsp:' ',amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"};
+  return value.replace(/<\/(?:p|li|div|aside|h[1-6])>|<br\s*\/?\s*>/giu,'\n').replace(/<[^>]*>/gu,'')
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/giu,entity=>{
+      const key=entity.slice(1,-1).toLowerCase();if(entities[key]!==undefined)return entities[key];
+      const code=key.startsWith('#x')?Number.parseInt(key.slice(2),16):Number.parseInt(key.slice(1),10);
+      return [34,38,39,60,62,160].includes(code)?String.fromCodePoint(code):entity;
+    }).trim();
+}
 function download(name:string,content:string|Uint8Array,type:string){
   const url=URL.createObjectURL(new Blob([content as any],{type}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

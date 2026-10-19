@@ -64,7 +64,7 @@ function salvoEnvironment() {
   };
   dragon.update = async changes => { dragon.system.resources.legact.spent = changes['system.resources.legact.spent']; };
   dragon.getRollData = () => ({});
-  const salvo = dragon.items.find(item => item.name === '晶片齐射 (Shard Salvo)');
+  const salvo = dragon.items.find(item => item.name === '晶片齐射 Shard Salvo');
   salvo.uuid = `${dragon.uuid}.Item.salvo`;
   salvo.actor = dragon;
   salvo.system.activities = Object.values(salvo.system.activities).map(activity => ({ ...activity, item: salvo }));
@@ -108,7 +108,7 @@ function salvoEnvironment() {
 
 describe('reviewed Crystalbleed companion and current generated artifacts', () => {
   test('finds the generated custom dazed effect without accepting a different condition', () => {
-    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 (Shard Salvo)');
+    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 Shard Salvo');
     expect(salvo.effects[0].statuses).toEqual(['fvtt-custom-conditions.dazed']);
     expect(findCompanionEffect(salvo, 'dazed')).toBe(salvo.effects[0]);
     expect(findCompanionEffect(salvo, 'stunned')).toBeUndefined();
@@ -124,7 +124,7 @@ describe('reviewed Crystalbleed companion and current generated artifacts', () =
   });
 
   test('materializes the generated dazed template as a fresh enabled condition and preserves its source', () => {
-    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 (Shard Salvo)');
+    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 Shard Salvo');
     const template = findCompanionEffect(salvo, 'dazed');
     const before = JSON.stringify(template);
     const first = createCompanionEffectData(template, 'Actor.1111111111111111.Item.salvo', 100);
@@ -146,7 +146,7 @@ describe('reviewed Crystalbleed companion and current generated artifacts', () =
     // cor-cotn r4: Item effect 634026d2d16c240f retained its custom-condition
     // template flag but persisted statuses=[dazed]. Copying that status caused
     // DAE to create dnd5edazed000000 outside the companion expiry boundary.
-    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 (Shard Salvo)');
+    const salvo = artifact('dragon').items.find(item => item.name === '晶片齐射 Shard Salvo');
     const template = structuredClone(salvo.effects[0]);
     template.statuses = ['dazed'];
     const before = JSON.stringify(template);

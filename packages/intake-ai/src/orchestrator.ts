@@ -1,3 +1,8 @@
+import {stagedFeatureMechanics} from './staged-feature-mechanics';
+import {bindSourceDamageUpgrades} from './source-damage-upgrade';
+import {completeSourceFeatureEvidence} from './source-completeness';
+import {splitStagedMonsterSource,stagedLegendaryBudget,stagedLegendaryActionCost,stagedLegendaryLedger} from './staged-source';
+import {sourceFeatureResources,materializeSourceOperationEvidence} from '@fvtt-json-generator/models/source-operations';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   copyFileSync,
@@ -797,11 +802,20 @@ export function anchorIrEvidence(
   normalizeModelIr(next, source, options.normalizeAbsentOptionalZeroes ?? true);
   anchorSpellcastingEvidence(source, candidateScope, next, options.canonicalizeModelSpellEvidence ?? true);
   ensureFeatureEvidence(next, source);
+  // Newly restored healing OPs did not exist when the provider bound its IR.
+  // Bind them only after this feature's exact source coordinates are known.
+  for(const section of FEATURE_SECTIONS)for(const feature of next.creature[section]??[]){
+    if(!feature.sourceOperations?.some(op=>op.type==='heal'&&op.evidence===undefined))continue;
+    const parent=feature.evidence?.find(ref=>source.slice(ref.start,ref.end)===ref.quote&&ref.quote.includes(feature.description));
+    if(parent)feature.sourceOperations=materializeSourceOperationEvidence(feature.description,feature.sourceOperations,parent.start+parent.quote.indexOf(feature.description)) as typeof feature.sourceOperations;
+  }
   ensureFeatureSourceQualifiers(next, source);
+  ensureLegendarySourceResources(next,source,candidate);
   normalizeMonsterSourceFacts(next, source, candidate);
   ensureLegendaryPreambleEvidence(next, source);
   ensureEvidenceBackedFeatureClaims(next, source);
   repairCoverageLedger(next, source, candidate);
+  bindSourceDamageUpgrades(source,next,{start:candidate.start,end:candidate.end});
   if (options.removeDisprovedProcessUncertainties ?? true) {
     next.uncertainties = next.uncertainties.filter((uncertainty) => !isDisprovedWholeSourceOffsetUncertainty(
       source,
@@ -851,9 +865,29 @@ function mergeConservativeRepair(
       next.creature[section] = structuredClone(previous.creature[section] ?? []) as never;
     }
   }
-  if (hasSourceBackedSpellcasting(previous.creature.spellcasting, source)
-    && !hasSourceBackedSpellcasting(next.creature.spellcasting, source)) {
-    next.creature.spellcasting = structuredClone(previous.creature.spellcasting);
+  for (const oldGroup of previous.creature.spellcasting ?? []) {
+    if (!hasSourceBackedSpellcasting([oldGroup], source)) continue;
+    if (!Array.isArray(next.creature.spellcasting)) next.creature.spellcasting = [];
+    const current = next.creature.spellcasting.find((group) => group?.groupId === oldGroup.groupId);
+    if (!current) {
+      next.creature.spellcasting.push(structuredClone(oldGroup));
+      continue;
+    }
+    const scopes = evidenceArray(oldGroup.evidence).filter((ref) => source.slice(ref.start, ref.end) === ref.quote);
+    const manual = evidenceArray(oldGroup.manualGrants).filter((ref) => /\S/u.test(ref.quote)
+      && source.slice(ref.start, ref.end) === ref.quote
+      && scopes.some((scope) => scope.start <= ref.start && ref.end <= scope.end));
+    if (current.manualGrants !== undefined && !Array.isArray(current.manualGrants)) continue;
+    const restored = manual.filter((ref) => !current.manualGrants?.some((value) => (
+      value.start === ref.start && value.end === ref.end && value.quote === ref.quote
+    )));
+    if (restored.length > 0) {
+      current.manualGrants = [...(current.manualGrants ?? []), ...structuredClone(restored)];
+      current.description = oldGroup.description;
+      current.evidence = structuredClone(oldGroup.evidence);
+      // A repair that also turns this manual span into an executable grant
+      // remains blocked by the validator's overlap check; never drop the GM rule.
+    }
   }
 
   const repairedClaims = Array.isArray(next.claims) ? next.claims : [];
@@ -890,11 +924,19 @@ function hasSourceBackedEntries(entries: unknown, source: string): boolean {
 function hasSourceBackedSpellcasting(groups: unknown, source: string): boolean {
   return Array.isArray(groups) && groups.length > 0 && groups.every((group) => {
     const record = asRecord(group);
+    const scopes = evidenceArray(record?.evidence).filter((ref) => (
+      /\S/u.test(ref.quote) && source.slice(ref.start, ref.end) === ref.quote
+    ));
+    const manualGrants = evidenceArray(record?.manualGrants);
+    const hasCompleteManualGrants = manualGrants.length > 0 && manualGrants.every((ref) => (
+      /\S/u.test(ref.quote) && source.slice(ref.start, ref.end) === ref.quote
+      && scopes.some((scope) => scope.start <= ref.start && ref.end <= scope.end)
+    ));
     return typeof record?.featureName === 'string'
       && typeof record.description === 'string'
-      && evidenceArray(record.evidence).some((ref) => source.slice(ref.start, ref.end) === ref.quote)
+      && scopes.length > 0
       && Array.isArray(record.usageGroups)
-      && record.usageGroups.length > 0;
+      && (record.usageGroups.length > 0 || hasCompleteManualGrants);
   });
 }
 
@@ -997,10 +1039,33 @@ function ensureFeatureSourceQualifiers(ir: MonsterIntakeIR, source: string): voi
       if (/concentration|专注/u.test(qualifier)) {
         feature.activationCondition ??= 'Concentration';
       }
-      const daily = qualifier.match(/\b(\d+)\s*\/\s*(?:day|日)\b/iu);
-      if (daily?.[1]) {
-        feature.uses = { max: Number(daily[1]), period: 'day' };
-      }
+      const proven=sourceFeatureResources(typeof feature.name==='string'?feature.name:'',typeof feature.description==='string'?feature.description:'',ir.creature.identity.name);
+      if(proven.uses)feature.uses=proven.uses;
+    }
+  }
+}
+
+/** Ordinary extraction reuses the program-owned shared context used by
+ * staging. It fills only absent proven values; explicit conflicts survive. */
+function ensureLegendarySourceResources(ir:MonsterIntakeIR,source:string,candidate:DiscoveryCandidate):void{
+  if(!ir.creature.legendaryActions?.length)return;
+  let plan:ReturnType<typeof splitStagedMonsterSource>;
+  try{plan=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate});}catch{return;}
+  const modern=plan.units.filter(unit=>stagedLegendaryLedger(unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value)));if(!modern.length)return;
+  const claim=(path:string,refs:EvidenceRef[])=>{
+    if(!ir.claims.some(value=>value.path===path))ir.claims.push({path,valueKind:'explicit',confidence:'high',evidence:refs});
+    for(const ref of refs)for(const covered of ir.coverage)if(covered.start<=ref.start&&covered.end>=ref.end&&!covered.claimPaths.includes(path)){covered.claimPaths.push(path);covered.classification='mechanical';}
+  };
+  const budget=stagedLegendaryBudget(plan,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value));
+  if(budget&&ir.creature.legendary===undefined){ir.creature.legendary=budget;claim('/creature/legendary/max',budget.evidence);claim('/creature/legendary/preamble',budget.evidence);}
+  for(const[index,feature]of ir.creature.legendaryActions.entries()){
+    const ref=feature.evidence?.[0];if(!ref)continue;
+    const unit=plan.features.find(unit=>unit.section==='legendary'&&unit.start<=ref.start&&unit.end>=ref.end);if(!unit)continue;
+    const cost=stagedLegendaryActionCost(plan,unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value));if(cost===undefined)continue;
+    if(feature.legendaryCost===undefined)feature.legendaryCost=sourceFeatureResources(feature.name,feature.description,ir.creature.identity.name).legendaryCost??cost;
+    if(feature.sourceOperations&&feature.sourceContext===undefined){
+      const contexts=(unit.contextIds??[]).map(id=>plan.units.find(context=>context.id===id)!).filter(Boolean);
+      feature.sourceContext=contexts.map(context=>context.quote);claim(`/creature/legendaryActions/${index}/sourceContext`,contexts.map(({start,end,quote})=>({start,end,quote})));
     }
   }
 }
@@ -1537,7 +1602,21 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
       if (!['attack', 'save', 'damage', 'heal', 'utility'].includes(String(feature.activityType))) {
         feature.activityType = feature.attack ? 'attack' : feature.save ? 'save' : feature.damage?.length ? 'damage' : 'utility';
       }
-      applyExplicitTemporaryHitPointMechanics(feature);
+      // Providers may keep a printed title in name/evidence and omit only that
+      // line from description. Restore it from a complete source-bound parent,
+      // never by guessing a heading from the model's name or rewriting prose.
+      if(!feature.sourceOperations&&/\bhit points?\b/iu.test(feature.description)
+        &&!feature.description.trimStart().startsWith(feature.name)){
+        const featurePath=`/creature/${section}/${featureIndex}`;
+        const parent=completeSourceFeatureEvidence(source,ir,feature,featurePath);
+        const quote=parent?.quote.trim(),old=feature.description.trim();
+        if(quote&&quote.slice(quote.indexOf('\n')+1).trim()===old
+          &&stagedFeatureMechanics(quote,feature.name,ir.creature.identity.name)?.facts.healing){
+          feature.description=quote;
+          for(const field of ['nativeRuleText','manualRemainder'] as const)if(feature[field]===old)feature[field]=quote;
+        }
+      }
+      applyExplicitTemporaryHitPointMechanics(feature,ir.creature.identity.name);
       applyExplicitReferencedSpellMechanics(feature, ir.creature.spellcasting);
       if (feature.activityType === 'attack' && !feature.attack) {
         feature.activityType = feature.damage?.length ? 'damage' : 'utility';
@@ -1717,8 +1796,47 @@ function normalizeLanguageValue(value: string): string {
  * and descriptions that merely mention temporary hit points remain utility.
  */
 function applyExplicitTemporaryHitPointMechanics(
-  feature: MonsterIntakeIR['creature']['traits'][number],
+  feature: MonsterIntakeIR['creature']['traits'][number],actorName?:string,
 ): void {
+  const primary=stagedFeatureMechanics(feature.description,feature.name,actorName)?.facts,healing=primary?.healing;
+  if(primary?.sourceOperations&&feature.sourceOperations===undefined){
+    const expected=primary.sourceOperations[0]!.healing!;
+    const old=feature.healing;
+    const flatCorrect=!old||Object.keys(old).every(key=>['formula','type','target'].includes(key))&&typeof old.formula==='string'
+      &&old.formula.replace(/\s+/gu,'')===expected.formula&&old.type===expected.type
+      &&(old.target===undefined||Object.keys(old.target).every(key=>['type','count','special'].includes(key))
+        &&old.target.type===expected.target.type&&old.target.count===expected.target.count&&old.target.special===expected.target.special);
+    if(flatCorrect&&feature.range===undefined&&!feature.attack&&!feature.damage?.length&&!feature.save&&!feature.aoe
+      &&!feature.appliedConditions&&!feature.gmTriggeredSave&&!feature.nativeFailureStatuses){
+      feature.sourceOperations=primary.sourceOperations;
+      feature.activityType='utility';feature.executionMode='native-with-gm';
+      feature.nativeRuleText=feature.description.trim();feature.manualRemainder=feature.description.trim();
+      delete feature.healing;
+    }
+    return;
+  }
+  // An explicit action-owned fixed heal is a supported basic operation even
+  // when the provider returns a prose-only Utility. Fill only missing fields;
+  // an explicit conflicting heal or another executable mechanic still fails.
+  if(healing&&primary?.activationType&&feature.healing===undefined&&feature.sourceOperations===undefined
+    &&[undefined,'utility','heal'].includes(feature.activityType)&&!feature.attack&&!feature.save&&!feature.damage?.length
+    &&!feature.aoe&&!feature.appliedConditions&&!feature.gmTriggeredSave&&!feature.nativeFailureStatuses){
+    feature.healing=healing;feature.activityType='heal';feature.executionMode='native-with-gm';
+    feature.nativeRuleText??=feature.description.trim();feature.manualRemainder??=feature.description.trim();
+  }
+  if(feature.executionMode==='native-with-gm'&&feature.sourceOperations===undefined){
+    // Restore only missing recipient metadata on an already exact basic roll;
+    // conflicting dice, kind or an explicit wrong recipient must still fail.
+    if(healing&&feature.healing&&feature.healing.formula.replace(/\s+/gu,'')===healing.formula&&feature.healing.type===healing.type){
+      if(feature.healing.target===undefined)feature.healing.target=healing.target;
+      if(feature.range===undefined&&primary?.range!==undefined)feature.range=primary.range;
+      if(feature.activationType===undefined&&primary?.activationType!==undefined)feature.activationType=primary.activationType;
+    }
+    return;
+  }
+  // Explicit GM carriers own their operations and preserve branch outcomes.
+  // Do not add a second flat heal merely because a random table mentions HP.
+  if(feature.executionMode==='gm-manual'||feature.executionMode==='native-with-gm'||feature.sourceOperations!==undefined)return;
   const text = feature.description.normalize('NFKC');
   const negated = /(?:can't|cannot|can\s+not|doesn't|does\s+not|unable\s+to)\s+(?:gain|receive)[^.!?\n]{0,24}temporary\s+hit\s+points|(?:不能|无法|不会)[^。！？\n]{0,24}(?:获得|取得)[^。！？\n]{0,16}临时生命值/iu.test(text);
   if (negated) return;

@@ -14,11 +14,12 @@ const STATIC_FILES = [
   'templates/report.hbs',
   'templates/review.hbs',
   'templates/settings.hbs',
+  'third-party-licenses.txt',
 ] as const;
 const FORBIDDEN_TEXT = [
-  /node:/i,
+  /["'`]node:/i,
   /sourceMappingURL/i,
-  /[A-Za-z]:[\\/]/,
+  /(?:^|[^A-Za-z0-9_])[A-Za-z]:[\\/]/,
   /\.local[\\/]/i,
   /OPENAI_API_KEY/i,
   /rat-warlock/i,
@@ -168,7 +169,7 @@ async function scanFiles(files: string[], outputDir: string): Promise<void> {
   for (const path of files) scanBytes(new Uint8Array(await readFile(path)), normalizeArchivePath(relative(outputDir, path)));
 }
 
-function scanBytes(bytes: Uint8Array, label: string): void {
+export function scanBytes(bytes: Uint8Array, label: string): void {
   const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   for (const pattern of FORBIDDEN_TEXT) {
     if (pattern.test(text)) throw new Error(`Forbidden local or runtime-incompatible material in ${label}: ${pattern}`);

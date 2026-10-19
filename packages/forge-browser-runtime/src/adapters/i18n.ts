@@ -23,7 +23,7 @@ export class I18nMapper {
   public getKey(input: string): string | undefined {
     const result = this.reverseMap.get(this.normalize(input));
     if (result) return result;
-    return { '死灵': 'DND5E.DamageNecrotic' }[this.normalize(input)];
+    return { '死灵': 'DND5E.DamageNecrotic', '冷冻': 'DND5E.DamageCold', '黯蚀': 'DND5E.DamageNecrotic' }[this.normalize(input)];
   }
 
   public getTranslation(key: string): string | undefined {

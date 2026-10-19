@@ -1,0 +1,770 @@
+{
+  "source": "<!-- document-source {\"page\":4,\"block\":\"p4-gazer-statblock\",\"method\":\"native-pdf-text\",\"confidence\":1,\"bbox\":{\"x\":53,\"y\":44,\"width\":243,\"height\":518}} -->\n# Gazer\n\nGAZER CR 1/2\nA tiny, toothed eye weaves through the air, its halo of\nworming eyestalks vigilant for threats.\nAC 13 (Natural Armor) Initiative +2 (12)\nHP 13 (3d4 + 6) Size Tiny (8 in. diameter)\nSpeed Fly 30 ft. (Hover) Type Aberration (Beholder)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 10 +0 +0 DEX 14 +2 +2 CON 15 +2 +2\nINT 15 +2 +2 WIS 15 +2 +2 CHA 13 +1 +1\nSkills Perception +4, Stealth +4\nImmunities Prone\nSenses Darkvision 60 ft., Passive Perception 14\nLanguages Can crudely mimic any language it has heard\nXP 100 Proficiency Bonus +2\nTraits\nFlighty Familiar. An Incapacitated gazer subjected to the\nFind Familiar ritual is transformed into a familiar spirit.\nIt obeys the caster’s commands until it fails an\nIntelligence, Wisdom, or Charisma Saving Throw, at\nwhich point it becomes hostile once more.\nSpying Eye. Each beholder in a 5-mile Emanation from the\ngazer can perceive the world through the gazer’s senses.\nActions\nEye Rays. The gazer shoots two of the following magical\neye rays at random (reroll duplicates), choosing targets it\ncan see within 60 feet:\n1. Dazing Ray. The target must make a WISDOM SAVING\nTHROW: DC 12. FAILURE: The creature is Charmed and\nDazed until the end of its next turn.\n2. Fear Ray. The target must make a WISDOM SAVING THROW:\nDC 12. FAILURE: The creature is Frightened until the end\nof its next turn.\n3. Frost Ray. The target must make a\nDEXTERITY SAVING THROW: DC 12. FAILURE: 10 (3d6) Cold\ndamage.\n4. Force Ray. The target must make a\nSTRENGTH SAVING THROW: DC 12. FAILURE: The target is\npushed 25 (1d10 x 5) feet away from the gazer.\n",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "a9c9cfc009ee19152ab64755bbda600628eabc3add772f32ecbad05a174b9a9b",
+      "length": 1732
+    },
+    "creature": {
+      "identity": {
+        "name": "Gazer",
+        "englishName": "Gazer",
+        "size": "tiny",
+        "creatureType": "aberration",
+        "creatureTypeCustom": "Beholder"
+      },
+      "abilities": {
+        "str": 10,
+        "dex": 14,
+        "con": 15,
+        "int": 15,
+        "wis": 15,
+        "cha": 13
+      },
+      "attributes": {
+        "ac": 13,
+        "acKind": "natural",
+        "initiative": 2,
+        "hp": {
+          "value": 13,
+          "formula": "3d4 + 6"
+        },
+        "movement": {
+          "fly": 30,
+          "hover": true
+        },
+        "cr": 0.5,
+        "xp": 100,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "str": 0,
+        "dex": 2,
+        "con": 2,
+        "int": 2,
+        "wis": 2,
+        "cha": 1
+      },
+      "skills": {
+        "perception": 4,
+        "stealth": 4
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "prone"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 14
+      },
+      "languages": {
+        "values": [],
+        "custom": "Can crudely mimic any language it has heard"
+      },
+      "biography": "A tiny, toothed eye weaves through the air, its halo of worming eyestalks vigilant for threats.",
+      "traits": [
+        {
+          "name": "Flighty Familiar",
+          "englishName": "Flighty Familiar",
+          "description": "An Incapacitated gazer subjected to the Find Familiar ritual is transformed into a familiar spirit. It obeys the caster’s commands until it fails an Intelligence, Wisdom, or Charisma Saving Throw, at which point it becomes hostile once more."
+        },
+        {
+          "name": "Spying Eye",
+          "englishName": "Spying Eye",
+          "description": "Each beholder in a 5-mile Emanation from the gazer can perceive the world through the gazer’s senses."
+        }
+      ],
+      "actions": [
+        {
+          "name": "Eye Rays",
+          "englishName": "Eye Rays",
+          "description": "The gazer shoots two of the following magical eye rays at random (reroll duplicates), choosing targets it can see within 60 feet:\n1. Dazing Ray. The target must make a WISDOM SAVING THROW: DC 12. FAILURE: The creature is Charmed and Dazed until the end of its next turn.\n2. Fear Ray. The target must make a WISDOM SAVING THROW: DC 12. FAILURE: The creature is Frightened until the end of its next turn.\n3. Frost Ray. The target must make a DEXTERITY SAVING THROW: DC 12. FAILURE: 10 (3d6) Cold damage.\n4. Force Ray. The target must make a STRENGTH SAVING THROW: DC 12. FAILURE: The target is pushed 25 (1d10 x 5) feet away from the gazer.",
+          "activityType": "utility",
+          "activationType": "action"
+        },
+        {
+          "name": "Dazing Ray",
+          "englishName": "Dazing Ray",
+          "description": "The target must make a WISDOM SAVING THROW: DC 12. FAILURE: The creature is Charmed and Dazed until the end of its next turn.",
+          "activityType": "save",
+          "activationType": "action",
+          "save": {
+            "dc": 12,
+            "ability": "wis"
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "charmed",
+                "dazed"
+              ],
+              "duration": "until the end of its next turn"
+            }
+          ]
+        },
+        {
+          "name": "Fear Ray",
+          "englishName": "Fear Ray",
+          "description": "The target must make a WISDOM SAVING THROW: DC 12. FAILURE: The creature is Frightened until the end of its next turn.",
+          "activityType": "save",
+          "activationType": "action",
+          "save": {
+            "dc": 12,
+            "ability": "wis"
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "frightened"
+              ],
+              "duration": "until the end of its next turn"
+            }
+          ]
+        },
+        {
+          "name": "Frost Ray",
+          "englishName": "Frost Ray",
+          "description": "The target must make a DEXTERITY SAVING THROW: DC 12. FAILURE: 10 (3d6) Cold damage.",
+          "activityType": "damage",
+          "activationType": "action",
+          "save": {
+            "dc": 12,
+            "ability": "dex"
+          },
+          "damage": [
+            {
+              "formula": "3d6",
+              "type": "cold",
+              "relationship": "base"
+            }
+          ]
+        },
+        {
+          "name": "Force Ray",
+          "englishName": "Force Ray",
+          "description": "The target must make a STRENGTH SAVING THROW: DC 12. FAILURE: The target is pushed 25 (1d10 x 5) feet away from the gazer.",
+          "activityType": "save",
+          "activationType": "action",
+          "save": {
+            "dc": 12,
+            "ability": "str"
+          }
+        }
+      ],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "value": "Gazer",
+        "evidence": [
+          {
+            "start": 164,
+            "end": 176,
+            "quote": "GAZER CR 1/2"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "value": "tiny",
+        "evidence": [
+          {
+            "start": 314,
+            "end": 356,
+            "quote": "HP 13 (3d4 + 6) Size Tiny (8 in. diameter)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "value": "aberration",
+        "evidence": [
+          {
+            "start": 357,
+            "end": 408,
+            "quote": "Speed Fly 30 ft. (Hover) Type Aberration (Beholder)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/creatureTypeCustom",
+        "valueKind": "explicit",
+        "value": "Beholder",
+        "evidence": [
+          {
+            "start": 357,
+            "end": 408,
+            "quote": "Speed Fly 30 ft. (Hover) Type Aberration (Beholder)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 436,
+            "end": 474,
+            "quote": "STR 10 +0 +0 DEX 14 +2 +2 CON 15 +2 +2"
+          },
+          {
+            "start": 475,
+            "end": 513,
+            "quote": "INT 15 +2 +2 WIS 15 +2 +2 CHA 13 +1 +1"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "value": 13,
+        "evidence": [
+          {
+            "start": 273,
+            "end": 313,
+            "quote": "AC 13 (Natural Armor) Initiative +2 (12)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/acKind",
+        "valueKind": "explicit",
+        "value": "natural",
+        "evidence": [
+          {
+            "start": 273,
+            "end": 313,
+            "quote": "AC 13 (Natural Armor) Initiative +2 (12)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/initiative",
+        "valueKind": "explicit",
+        "value": 2,
+        "evidence": [
+          {
+            "start": 273,
+            "end": 313,
+            "quote": "AC 13 (Natural Armor) Initiative +2 (12)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 314,
+            "end": 356,
+            "quote": "HP 13 (3d4 + 6) Size Tiny (8 in. diameter)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 357,
+            "end": 408,
+            "quote": "Speed Fly 30 ft. (Hover) Type Aberration (Beholder)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "value": 0.5,
+        "evidence": [
+          {
+            "start": 164,
+            "end": 176,
+            "quote": "GAZER CR 1/2"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "value": 100,
+        "evidence": [
+          {
+            "start": 666,
+            "end": 693,
+            "quote": "XP 100 Proficiency Bonus +2"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "value": 2,
+        "evidence": [
+          {
+            "start": 666,
+            "end": 693,
+            "quote": "XP 100 Proficiency Bonus +2"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 436,
+            "end": 474,
+            "quote": "STR 10 +0 +0 DEX 14 +2 +2 CON 15 +2 +2"
+          },
+          {
+            "start": 475,
+            "end": 513,
+            "quote": "INT 15 +2 +2 WIS 15 +2 +2 CHA 13 +1 +1"
+          },
+          {
+            "start": 436,
+            "end": 448,
+            "quote": "STR 10 +0 +0"
+          },
+          {
+            "start": 449,
+            "end": 461,
+            "quote": "DEX 14 +2 +2"
+          },
+          {
+            "start": 462,
+            "end": 474,
+            "quote": "CON 15 +2 +2"
+          },
+          {
+            "start": 475,
+            "end": 487,
+            "quote": "INT 15 +2 +2"
+          },
+          {
+            "start": 488,
+            "end": 500,
+            "quote": "WIS 15 +2 +2"
+          },
+          {
+            "start": 501,
+            "end": 513,
+            "quote": "CHA 13 +1 +1"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 514,
+            "end": 546,
+            "quote": "Skills Perception +4, Stealth +4"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 547,
+            "end": 563,
+            "quote": "Immunities Prone"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 564,
+            "end": 611,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 14"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 612,
+            "end": 665,
+            "quote": "Languages Can crudely mimic any language it has heard"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/biography",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 177,
+            "end": 272,
+            "quote": "A tiny, toothed eye weaves through the air, its halo of\nworming eyestalks vigilant for threats."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 701,
+            "end": 960,
+            "quote": "Flighty Familiar. An Incapacitated gazer subjected to the\nFind Familiar ritual is transformed into a familiar spirit.\nIt obeys the caster’s commands until it fails an\nIntelligence, Wisdom, or Charisma Saving Throw, at\nwhich point it becomes hostile once more."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/traits/1",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 961,
+            "end": 1074,
+            "quote": "Spying Eye. Each beholder in a 5-mile Emanation from the\ngazer can perceive the world through the gazer’s senses."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/0",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 1083,
+            "end": 1222,
+            "quote": "Eye Rays. The gazer shoots two of the following magical\neye rays at random (reroll duplicates), choosing targets it\ncan see within 60 feet:"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/1",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 1223,
+            "end": 1363,
+            "quote": "1. Dazing Ray. The target must make a WISDOM SAVING\nTHROW: DC 12. FAILURE: The creature is Charmed and\nDazed until the end of its next turn."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/2",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 1364,
+            "end": 1495,
+            "quote": "2. Fear Ray. The target must make a WISDOM SAVING THROW:\nDC 12. FAILURE: The creature is Frightened until the end\nof its next turn."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/3",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 1496,
+            "end": 1594,
+            "quote": "3. Frost Ray. The target must make a\nDEXTERITY SAVING THROW: DC 12. FAILURE: 10 (3d6) Cold\ndamage."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/4",
+        "valueKind": "explicit",
+        "evidence": [
+          {
+            "start": 1595,
+            "end": 1731,
+            "quote": "4. Force Ray. The target must make a\nSTRENGTH SAVING THROW: DC 12. FAILURE: The target is\npushed 25 (1d10 x 5) feet away from the gazer."
+          }
+        ],
+        "confidence": "high"
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 154,
+        "quote": "<!-- document-source {\"page\":4,\"block\":\"p4-gazer-statblock\",\"method\":\"native-pdf-text\",\"confidence\":1,\"bbox\":{\"x\":53,\"y\":44,\"width\":243,\"height\":518}} -->",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Provider document-source metadata comment; not creature content."
+      },
+      {
+        "start": 154,
+        "end": 164,
+        "quote": "\n# Gazer\n\n",
+        "classification": "narrative",
+        "claimPaths": [],
+        "reason": ""
+      },
+      {
+        "start": 164,
+        "end": 177,
+        "quote": "GAZER CR 1/2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": 177,
+        "end": 273,
+        "quote": "A tiny, toothed eye weaves through the air, its halo of\nworming eyestalks vigilant for threats.\n",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 273,
+        "end": 314,
+        "quote": "AC 13 (Natural Armor) Initiative +2 (12)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac",
+          "/creature/attributes/initiative"
+        ]
+      },
+      {
+        "start": 314,
+        "end": 357,
+        "quote": "HP 13 (3d4 + 6) Size Tiny (8 in. diameter)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp",
+          "/creature/identity/size"
+        ]
+      },
+      {
+        "start": 357,
+        "end": 409,
+        "quote": "Speed Fly 30 ft. (Hover) Type Aberration (Beholder)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType",
+          "/creature/identity/creatureTypeCustom"
+        ]
+      },
+      {
+        "start": 409,
+        "end": 436,
+        "quote": "MOD SAVE MOD SAVE MOD SAVE\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Repeated table column header row; contains no creature values."
+      },
+      {
+        "start": 436,
+        "end": 475,
+        "quote": "STR 10 +0 +0 DEX 14 +2 +2 CON 15 +2 +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities",
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 475,
+        "end": 514,
+        "quote": "INT 15 +2 +2 WIS 15 +2 +2 CHA 13 +1 +1\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities",
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 514,
+        "end": 547,
+        "quote": "Skills Perception +4, Stealth +4\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 547,
+        "end": 564,
+        "quote": "Immunities Prone\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 564,
+        "end": 612,
+        "quote": "Senses Darkvision 60 ft., Passive Perception 14\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 612,
+        "end": 666,
+        "quote": "Languages Can crudely mimic any language it has heard\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 666,
+        "end": 694,
+        "quote": "XP 100 Proficiency Bonus +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 694,
+        "end": 701,
+        "quote": "Traits\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Section heading; the trait entries themselves follow."
+      },
+      {
+        "start": 701,
+        "end": 961,
+        "quote": "Flighty Familiar. An Incapacitated gazer subjected to the\nFind Familiar ritual is transformed into a familiar spirit.\nIt obeys the caster’s commands until it fails an\nIntelligence, Wisdom, or Charisma Saving Throw, at\nwhich point it becomes hostile once more.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 961,
+        "end": 1075,
+        "quote": "Spying Eye. Each beholder in a 5-mile Emanation from the\ngazer can perceive the world through the gazer’s senses.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/1"
+        ]
+      },
+      {
+        "start": 1075,
+        "end": 1083,
+        "quote": "Actions\n",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "Section heading; the action entries themselves follow."
+      },
+      {
+        "start": 1083,
+        "end": 1223,
+        "quote": "Eye Rays. The gazer shoots two of the following magical\neye rays at random (reroll duplicates), choosing targets it\ncan see within 60 feet:\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/0"
+        ]
+      },
+      {
+        "start": 1223,
+        "end": 1364,
+        "quote": "1. Dazing Ray. The target must make a WISDOM SAVING\nTHROW: DC 12. FAILURE: The creature is Charmed and\nDazed until the end of its next turn.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/1"
+        ]
+      },
+      {
+        "start": 1364,
+        "end": 1496,
+        "quote": "2. Fear Ray. The target must make a WISDOM SAVING THROW:\nDC 12. FAILURE: The creature is Frightened until the end\nof its next turn.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/2"
+        ]
+      },
+      {
+        "start": 1496,
+        "end": 1595,
+        "quote": "3. Frost Ray. The target must make a\nDEXTERITY SAVING THROW: DC 12. FAILURE: 10 (3d6) Cold\ndamage.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/3"
+        ]
+      },
+      {
+        "start": 1595,
+        "end": 1732,
+        "quote": "4. Force Ray. The target must make a\nSTRENGTH SAVING THROW: DC 12. FAILURE: The target is\npushed 25 (1d10 x 5) feet away from the gazer.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      }
+    ],
+    "uncertainties": [
+      {
+        "id": "u1",
+        "code": "RANDOM_RAY_SELECTION",
+        "path": "/creature/actions/0",
+        "message": "Eye Rays requires the gazer to shoot two of the four listed rays at random, rerolling duplicates, choosing targets it can see within 60 feet. The deterministic IR cannot encode random ray selection or a shared selection pool, so each ray is preserved as its own action feature alongside the Eye Rays action.",
+        "blocking": false,
+        "evidence": [
+          {
+            "start": 1083,
+            "end": 1222,
+            "quote": "Eye Rays. The gazer shoots two of the following magical\neye rays at random (reroll duplicates), choosing targets it\ncan see within 60 feet:"
+          }
+        ],
+        "candidates": []
+      }
+    ]
+  },
+  "provenance": {
+    "resultSha256": "9a44cd15969c8340a05ee531000d5ae3b5c6487cf42579139f4c44aab06f3b33",
+    "purpose": "Unmodified new Gazer IR from the rejected configuration run, for source-bound compact handoff regression."
+  }
+}

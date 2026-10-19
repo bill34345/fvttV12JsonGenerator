@@ -1,0 +1,14 @@
+{
+  "origin": "CHM 26.08.06 Githzerai Enlightened; exact source clauses from preflight, before any model run",
+  "sourceSha256": "8295ff67c551ba3040ff24fd071db273b05728b08e83c5eabc0c173434862fb9",
+  "clauses": [
+    {
+      "name": "徒手打击Unarmed Strike",
+      "source": "**徒手打击Unarmed Strike。**近战武器攻击：命中+8，触及5 尺，单一目标。命中：13（2d8+4）的钝击伤害外加18（4d8）的心灵伤害。\n"
+    },
+    {
+      "name": "时光打击Temporal Strike（充能6）",
+      "source": "**时光打击Temporal Strike（充能6）。**近战武器攻击：命中+8，触及5 \r\n尺，单一生物。命中：13（2d8+4）的钝击伤害外加52（8d12）的心灵伤害。该目标须进行一次DC \r\n16的感知豁免，失败则其向未来穿越1轮。穿越时光的目标在效应持续时间内消失。当效应终止时，目标会重新出现在其离开时的位置，若该位置已被占据，则它出现在最近的未被占据的位置上。\n"
+    }
+  ]
+}

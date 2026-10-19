@@ -11,7 +11,8 @@ import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/acto
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
-import type { ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
+import { FACT_LOCALIZATION_POLICY, type ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
+import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
 import { projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
 import {
   createDisabledIconResolutionSession,
@@ -30,6 +31,9 @@ export interface ActorGenerationPipelineOptions {
   translationService?: ActorGeneratorOptions['translationService'];
   /** Explicit reviewed display text; source parsing and mechanics always precede this projection. */
   reviewedLocalization?: ReviewedLocalization;
+  /** Internal opt-in; CLI/Web defaults retain their existing localization behavior. */
+  captureRulePresentation?: boolean;
+  rulePresentationActorNormalizer?: ActorGeneratorOptions['rulePresentationActorNormalizer'];
   iconOptions?: IconWorkflowOptions;
   iconWorkflow?: Pick<IconWorkflowPort, 'createResolutionSession'>;
 }
@@ -41,6 +45,7 @@ export interface ActorGenerationArtifact {
   diagnostics: GenerationDiagnostic[];
   iconReview: IconReviewReport | null;
   sourceActor: any;
+  rulePresentation?: RulePresentationPlan;
 }
 
 export async function generateActorArtifact(
@@ -54,12 +59,17 @@ export async function generateActorArtifact(
   const iconSession = options.iconWorkflow
     ? options.iconWorkflow.createResolutionSession(options.fvttVersion, options.iconOptions)
     : createDisabledIconResolutionSession(options.iconOptions);
+  let rulePresentation: RulePresentationPlan | undefined;
+  const capture = options.fvttVersion === '14' && (options.captureRulePresentation
+    || options.reviewedLocalization?.policy === FACT_LOCALIZATION_POLICY);
   const actor = await projector.project(canonical, {
     targetVersion: options.fvttVersion,
     effectProfile: options.effectProfile,
     route: options.route,
     translationService: options.translationService,
     iconResolver: iconSession.resolver,
+    ...(capture ? { onRulePresentationPlan: (plan: RulePresentationPlan) => { rulePresentation = plan; },
+      rulePresentationActorNormalizer: options.rulePresentationActorNormalizer } : {}),
   });
   const verification = verifyGeneratedDocument({
     canonical,
@@ -68,11 +78,12 @@ export async function generateActorArtifact(
     effectProfile: options.effectProfile,
   });
   const localized = options.reviewedLocalization
-    ? projectReviewedActorLocalization(actor, options.sourceText, options.reviewedLocalization).actor
+    ? projectReviewedActorLocalization(actor, options.sourceText, options.reviewedLocalization, rulePresentation).actor
     : actor;
   return {
     actor: localized,
     sourceActor: actor,
+    ...(rulePresentation ? { rulePresentation } : {}),
     canonical,
     verification,
     diagnostics: verification.diagnostics,

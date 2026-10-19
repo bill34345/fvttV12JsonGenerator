@@ -150,9 +150,11 @@ export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPre
 /**
  * Keep the Foundry-independent planner aligned with the deliberately narrow
  * dnd5e 5.3.3 Cast builder so an unsupported manifest can never enter a write
- * transaction. Supported contracts are unlimited at-will casts, independent
- * innate 1/day casts, and source-leveled prepared casts that consume the
- * Actor's native dnd5e spell-slot pool.
+ * transaction. Supported contracts are unlimited at-will casts, positive
+ * daily innate uses (independent or a structurally validated shared group),
+ * and source-leveled prepared casts consuming the Actor's native spell slots.
+ * Hydration additionally requires the source-generated feature counter for
+ * shared uses before making any writes; the planner cannot infer that pool.
  */
 function validateHydratorCastSupport(manifest: PortableSpellManifest): SpellResolutionFinding[] {
   const findings: SpellResolutionFinding[] = [];
@@ -199,13 +201,13 @@ function validateHydratorCastSupport(manifest: PortableSpellManifest): SpellReso
         return;
       }
       if (ref.uses === undefined
-        || ref.uses.value !== 1
-        || ref.uses.recovery !== 'day'
-        || ref.uses.shared) {
+        || !Number.isSafeInteger(ref.uses.value)
+        || ref.uses.value < 1
+        || ref.uses.recovery !== 'day') {
         findings.push(finding(
           'UNSUPPORTED_CAST_USES',
           `${refPath}/uses`,
-          '首版 innate Cast Activity 只支持独立 1/day 使用次数；尚未创建任何写入计划。',
+          'Innate Cast Activity 需要正整数的每日使用次数；共享次数还须有同组一致的来源次数池。尚未创建任何写入计划。',
           ref.evidence,
         ));
       }

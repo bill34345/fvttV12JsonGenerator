@@ -24,6 +24,8 @@ Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse �
 
 `fvtt-json-forge` 是 A–E 统一交付的 GM-only 浏览器模块，锁定 Foundry `14.364` / dnd5e `5.3.3` / `core`。它提供 Actor、Item、证据优先 Intake、review bundle 恢复、当前浏览器/世界/GM scope 的 Source Library，以及 mixed Actor/Item Collection、标准 ZIP、concurrency-1 可恢复队列和 accepted-only 批量创建/readback。
 
+2026-10-17共用契约候选将同一能力的攻击、伤害、独立豁免与次数分别保留，完整特殊规则明确交GM；多个来源明确的共享法术池分别计次，真实施法继续交目标世界Resolver匹配。排版整理使用原文行身份，完整能力事实仍逐项核对来源，不能因后果复杂而整体变成文字占位。旧卡、旧失败原件和CLI默认版本保留，旧卡不自动迁移。本轮离线、正常DeepSeek与实机进度见[执行记录](docs/plans/2026-10-17-forge-common-contract-restoration.md)，未完成层级不算通过。
+
 正式发行版通过 Foundry Setup 的 **Install Module** 安装，manifest URL 为：
 
 ```text
@@ -45,6 +47,16 @@ bun run cli:help
 仓库中的 `data/cn.json`、`data/spells.ldb` 和 v12 golden master 为现有 v12 工作流提供映射与模板。v14 正常生成不需要完整的 dnd5e/Foundry 上游仓库。
 
 ## 单文件转换
+
+技能可以明确写总加值，避免与旧格式的熟练倍率混淆：
+
+```yaml
+技能:
+  察觉: {总加值: 2}
+  隐匿: {总加值: -1}
+```
+
+`总加值` 必须是唯一字段且为整数；AI Intake 生成的 Markdown 使用此写法。旧 `察觉: 1`／`熟练`、`察觉: 2`／`专精` 和 `0.5`／`半熟练` 仍表示熟练倍率，原有含义不变。该新增写法沿用原生技能与额外加值投影，不要求 Foundry 新接口或模块。
 
 默认生成 Foundry v12 core JSON：
 
@@ -204,6 +216,8 @@ MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
 ```
 
 这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`；这只是旧的本机兼容桥设置，不是网页的 Companion。Companion 留空时始终使用这台电脑当前 Codex CLI 的默认模型，不会偷偷填入 Luna。
+
+怪物 Intake 会分别核对基础数值与完整能力；后面的动作分段失败，不会跳过前面的生命值、属性或速度检查。清楚的属性/调整值表格、链接显示文字、Markdown 引用符和 PDF 连字按排版等价读取，原文和证据坐标保持不变。`S0`、`l` 等无法确认的数字留在当前候选待核对，不能用 AI 猜值代替证据。来源明确的缺失先攻或语言附注可从同一基础数据段补回；显式冲突仍拒绝。未写 PB 时沿用已核实 CR 对应的原生派生规则，写出的 PB 则对照原文。旧技能倍率、Foundry 目标及导入接口保持原有约定。
 
 运行单只或合集：
 

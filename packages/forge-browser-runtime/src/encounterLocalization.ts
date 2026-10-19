@@ -1,13 +1,15 @@
 import {
-  acceptLocalization, approveLocalizationByGm, assertReviewedLocalization, localizationHash, validateLocalizationDraft,
-  type ReviewedLocalization, type LocalizationRequest, type LocalizationDraft, type EncounterLocalization,
+  FACT_LOCALIZATION_POLICY, LOCALIZATION_POLICY, acceptLocalization, approveLocalizationByGm, assertReviewedLocalization, localizationHash, validateLocalizationDraft,localizationMeaningFindings,normalizeLocalizationBodyProse,
+  type ReviewedLocalization, type LocalizationRequest, type LocalizationDraft, type EncounterLocalization, type LocalizationPolicy,
 } from '@fvtt-json-generator/contracts/localization';
 import { createActorLocalizationRequest, projectActorLocalizationDraft, projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
 import type { ReviewedTranslationServicePort } from '@fvtt-json-generator/generation/ports';
 import { assertPreparedForgeEncounter, prepareForgeEncounter, type PreparedForgeEncounter } from './encounterPreparation';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from './encounterPackage';
-import { createEncounterTextRequest, localizedEncounterId } from './encounterLocalizationProjection';
+import { createEncounterTextRequest, localizedEncounterId, previewEncounterTextRows } from './encounterLocalizationProjection';
 export { createEncounterTextRequest } from './encounterLocalizationProjection';
+export { actorLocalizationDisplayRows } from '@fvtt-json-generator/generation/reviewed-localization';
+import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
 export type { EncounterLocalization } from '@fvtt-json-generator/contracts/localization';
 export { LOCALIZATION_TERMS, LOCALIZATION_TERM_NOTES } from '@fvtt-json-generator/contracts/localization';
 
@@ -34,6 +36,11 @@ export interface ForgeEncounterLocalizationDraft {
   packageText: ForgeLocalizationDraftPart;
 }
 
+function draftPolicy(prepared: PreparedForgeEncounter): LocalizationPolicy {
+  if (!prepared.bundle.target.foundry.startsWith('14.')) return LOCALIZATION_POLICY;
+  if (prepared.actors.some(actor => !actor.rulePresentation)) throw new TypeError('当前 v14 候选缺少重新生成的规则事实；不能退回整段模型翻译。');
+  return FACT_LOCALIZATION_POLICY;
+}
 function sourcePrepared(prepared: PreparedForgeEncounter): void {
   assertPreparedForgeEncounter(prepared);
   if (prepared.bundle.localization) throw new TypeError('中文草稿必须绑定未翻译的当前来源包。');
@@ -50,15 +57,35 @@ export function assertForgeEncounterLocalizationDraft(prepared: PreparedForgeEnc
   sourcePrepared(prepared);
   if (value.version !== 1 || value.sourcePackageId !== prepared.bundle.id || value.sourcePackageHash !== prepared.hash
     || value.actors.length !== prepared.actors.length) throw new TypeError('中文草稿与当前战斗包不一致。');
+  const policy = value.packageText.request.policy;
   const previews = prepared.actors.map(actor => {
     const entry = value.actors.find(part => part.key === actor.key);
     const source = prepared.bundle.actors.find(part => part.key === actor.key)!.source;
     if (!entry || value.actors.filter(part => part.key === actor.key).length !== 1) throw new TypeError('中文草稿角色身份无效。');
-    const request = createActorLocalizationRequest(actor.artifact, source);
+    if (entry.request.policy !== policy) throw new TypeError('中文草稿不能混用旧策略与事实策略。');
+    const request = createActorLocalizationRequest(actor.artifact, source, policy, actor.rulePresentation);
     const draft = checkedPart(request, entry);
-    return { artifact: projectActorLocalizationDraft(actor.artifact, source, draft).actor };
+    return { key: actor.key, rulePresentation: actor.rulePresentation,
+      artifact: projectActorLocalizationDraft(actor.artifact, source, draft, policy, undefined, actor.rulePresentation).actor };
   });
-  checkedPart(createEncounterTextRequest(prepared.bundle, previews), value.packageText);
+  checkedPart(createEncounterTextRequest(prepared.bundle, previews, policy), value.packageText);
+}
+
+/** Local GM prose correction. Source identity, protected values and title bindings remain unchanged. */
+export function reviseForgeEncounterLocalizationBody(input: {
+  prepared: PreparedForgeEncounter; draft: ForgeEncounterLocalizationDraft;
+  actorKey?: string; textId: string; text: string;
+}): ForgeEncounterLocalizationDraft {
+  assertForgeEncounterLocalizationDraft(input.prepared, input.draft);
+  const next = structuredClone(input.draft);
+  const part = input.actorKey === undefined ? next.packageText : next.actors.find(actor => actor.key === input.actorKey);
+  const field = part?.request.texts.find(entry => entry.id === input.textId);
+  if (!part || !field || field.kind !== 'body') throw new TypeError('只能修正当前来源绑定的正文；标题与角色身份保持不变。');
+  part.draft = validateLocalizationDraft(part.request, { texts: part.draft.texts.map(entry =>
+    entry.id === input.textId ? { id: entry.id, text: input.text } : entry) });
+  part.translationHash = localizationHash({ requestHash: part.requestHash, texts: part.draft.texts });
+  assertForgeEncounterLocalizationDraft(input.prepared, next);
+  return next;
 }
 
 /** Translate current display slots and preserve a source-bound, unapproved preview draft. */
@@ -72,6 +99,7 @@ export async function draftForgeEncounterLocalization(input: {
 }): Promise<ForgeEncounterLocalizationDraft> {
   const { prepared } = input;
   sourcePrepared(prepared);
+  const policy = draftPolicy(prepared);
   const translate = async (request: LocalizationRequest, actorKey?: string): Promise<ForgeLocalizationDraftPart> => {
     input.signal?.throwIfAborted();
     const requestHash = localizationHash(request);
@@ -80,20 +108,37 @@ export async function draftForgeEncounterLocalization(input: {
       try { return localizationHash(entry.request) === requestHash; } catch { return false; }
     });
     const reusable = new Map<string, { id: string; text: string }>();
-    const findings = [...(prior?.findings ?? [])];
+    const resolvedLocalFindings = new Set<string>();
+    let locallyRevised = 0;
     for (const entry of prior?.draft?.texts ?? []) {
       const field = request.texts.find(field => field.id === entry.id);
       if (!field) continue;
       try {
-        const checked = validateLocalizationDraft({ ...request, texts: [field] }, { texts: [entry] });
+        const fieldRequest = { ...request, texts: [field] };
+        // Validate the original before cleanup: source/number/markup failures
+        // must never be laundered into a reusable field. Only unapproved,
+        // same-request prose is normalized, through the shared display rule.
+        const original = validateLocalizationDraft(fieldRequest, { texts: [entry] });
+        const text = field.kind === 'body' ? normalizeLocalizationBodyProse(field.source, original.texts[0]!.text) : original.texts[0]!.text;
+        const checked = validateLocalizationDraft(fieldRequest, { texts: [{ id: entry.id, text }] });
+        if (text !== original.texts[0]!.text) {
+          const remaining = new Set(localizationMeaningFindings(fieldRequest, checked));
+          for (const finding of localizationMeaningFindings(fieldRequest, original))
+            if (!remaining.has(finding)) resolvedLocalFindings.add(finding);
+          locallyRevised++;
+        }
         reusable.set(entry.id, checked.texts[0]!);
       } catch { /* Only the failing field is sent for translation again. */ }
     }
+    // Resolve only the exact local findings disproved by the validated edit.
+    // Other semantic/model findings keep their existing targeted retry path.
+    const findings = [...(prior?.findings ?? [])].filter(finding => !resolvedLocalFindings.has(finding));
     if (prior?.status === 'needs_review' && findings.length) {
       const rejectedIds = new Set(findings.flatMap(finding => finding.match(/text-[0-9a-f]{24}/gu) ?? []));
       if (rejectedIds.size) for (const id of rejectedIds) reusable.delete(id);
       else reusable.clear();
     }
+    if (locallyRevised) input.onProgress?.(`已在本地整理保存稿的${locallyRevised}段显示文本；当前草稿仍须重新核对批准。`);
     const missing = request.texts.filter(field => !reusable.has(field.id));
     const nameGlossary = [...(request.nameGlossary ?? []), ...request.texts.filter(field => field.kind === 'title').flatMap(field => {
       const text = reusable.get(field.id)?.text;
@@ -123,23 +168,26 @@ export async function draftForgeEncounterLocalization(input: {
       throw new TypeError(`译文确定性校验失败：${deterministicFindings[0]}`);
     }
     draft = validateLocalizationDraft(request, draft);
-    input.onReview?.({ status: 'draft_ready', actorKey, request, draft });
+    const meaningFindings=localizationMeaningFindings(request,draft);
+    input.onReview?.({ status: meaningFindings.length?'needs_review':'draft_ready', actorKey, request, draft,findings:meaningFindings });
     return { request, draft, requestHash, translationHash: localizationHash({ requestHash, texts: draft.texts }) };
   };
   const actors: ForgeEncounterLocalizationDraft['actors'] = [];
-  const previews: Array<{ artifact: unknown }> = [];
+  const previews: Array<{ key: string; artifact: unknown; rulePresentation?: RulePresentationPlan }> = [];
   for (const actor of prepared.actors) {
     input.onProgress?.(`正在翻译中文草稿：${actor.name}`);
     const source = prepared.bundle.actors.find(entry => entry.key === actor.key)!.source;
-    const part = await translate(createActorLocalizationRequest(actor.artifact, source), actor.key);
+    const part = await translate(createActorLocalizationRequest(actor.artifact, source, policy, actor.rulePresentation), actor.key);
     actors.push({ key: actor.key, ...part });
-    previews.push({ artifact: projectActorLocalizationDraft(actor.artifact, source, part.draft).actor });
+    previews.push({ key: actor.key, rulePresentation: actor.rulePresentation,
+      artifact: projectActorLocalizationDraft(actor.artifact, source, part.draft, policy, undefined, actor.rulePresentation).actor });
   }
-  const packageText = await translate(createEncounterTextRequest(prepared.bundle, previews));
+  const packageText = await translate(createEncounterTextRequest(prepared.bundle, previews, policy));
   const result: ForgeEncounterLocalizationDraft = { version: 1, sourcePackageId: prepared.bundle.id,
     sourcePackageHash: prepared.hash, actors, packageText };
   assertForgeEncounterLocalizationDraft(prepared, result);
-  input.onProgress?.('中文草稿已通过本地校验，等待 GM 核对；AI 尚未审核。');
+  const meaningFindings=[...result.actors,result.packageText].flatMap(part=>localizationMeaningFindings(part.request,part.draft));
+  input.onProgress?.(meaningFindings.length?'中文草稿已保存；有来源含义或正文残留问题，须按提示修正后才能批准。':'中文草稿已通过结构校验，仍须核对含义后批准；AI 尚未审核。');
   return result;
 }
 
@@ -195,14 +243,17 @@ export async function reviewForgeEncounterLocalizationDraft(input: {
  */
 export function verifiedEncounterLocalizationProgress(
   bundle:ForgeEncounterPackage,
-  actors:readonly {key:string;artifact:unknown}[],
+  actors:readonly {key:string;artifact:unknown;rulePresentation?:RulePresentationPlan}[],
   progress:readonly EncounterLocalizationProgress[],
 ):EncounterLocalizationProgress[] {
   if(bundle.localization)return [];
   const prepared=new Map(actors.map(actor=>[actor.key,actor]));
   const actorRequests=new Map(bundle.actors.flatMap(actor=>{
     const current=prepared.get(actor.key);
-    return current?[[actor.key,createActorLocalizationRequest(current.artifact,actor.source)] as const]:[];
+    const matching = progress.filter(entry => entry.actorKey === actor.key);
+    const policy = matching.length === 1 ? matching[0]!.request.policy : (current?.rulePresentation ? FACT_LOCALIZATION_POLICY : LOCALIZATION_POLICY);
+    try { return current ? [[actor.key, createActorLocalizationRequest(current.artifact, actor.source, policy, current.rulePresentation)] as const] : []; }
+    catch { return []; }
   }));
   const previews=new Map<string,unknown>();
   const accepted=new Map<string,ReviewedLocalization>();
@@ -210,15 +261,18 @@ export function verifiedEncounterLocalizationProgress(
     const matches=progress.filter(entry=>entry.actorKey===actor.key);
     if(matches.length!==1)continue;
     const entry=matches[0]!,request=actorRequests.get(actor.key);
-    if(!request||entry.findings?.length)continue;
+    if(!request)continue;
     try{
       if(localizationHash(entry.request)!==localizationHash(request))continue;
-      if(entry.status==='accepted'&&entry.translation){
+      if(entry.status==='accepted'&&entry.translation&&!entry.findings?.length){
         const translation=assertReviewedLocalization(request,entry.translation);
         accepted.set(actor.key,translation);
-        previews.set(actor.key,projectReviewedActorLocalization(currentArtifact(actor.key),actor.source,translation).actor);
-      }else if(entry.status==='draft_ready'&&entry.draft){
-        previews.set(actor.key,projectActorLocalizationDraft(currentArtifact(actor.key),actor.source,entry.draft).actor);
+        previews.set(actor.key,projectReviewedActorLocalization(currentArtifact(actor.key),actor.source,translation,prepared.get(actor.key)?.rulePresentation).actor);
+      }else if(['draft_ready','needs_review','translating'].includes(entry.status)&&entry.draft){
+        // A complete, structurally valid unapproved draft can bind package
+        // fields even while its meaning findings await correction. Retain
+        // those findings/status; this projection grants no approval.
+        previews.set(actor.key,projectActorLocalizationDraft(currentArtifact(actor.key),actor.source,entry.draft,request.policy,undefined,prepared.get(actor.key)?.rulePresentation).actor);
       }
     }catch{ /* Saved progress is not current approval. */ }
   }
@@ -226,7 +280,10 @@ export function verifiedEncounterLocalizationProgress(
   let packageRequest:LocalizationRequest|undefined;
   if(previews.size===bundle.actors.length){
     try{
-      packageRequest=createEncounterTextRequest(bundle,bundle.actors.map(actor=>({artifact:previews.get(actor.key)})));
+      const actorPolicies = new Set([...actorRequests.values()].map(request => request.policy));
+      if (actorPolicies.size !== 1) throw new TypeError('保存进度不能混用本地化策略。');
+      packageRequest=createEncounterTextRequest(bundle,bundle.actors.map(actor=>({ key:actor.key,
+        artifact:previews.get(actor.key),rulePresentation:prepared.get(actor.key)?.rulePresentation })),[...actorPolicies][0]);
     }catch{ /* Keep package findings without asserting a field owner. */ }
   }
   return progress.map(entry=>{
@@ -323,4 +380,14 @@ export async function localizeForgeEncounter(input: {
   const bundle = { ...original.bundle, id: localizedEncounterId(original.bundle.id, localization), localization };
   input.onProgress?.('译文已通过模型简要复核，正在重新生成中文角色并绑定固定控制入口。');
   return prepareForgeEncounter(serializeForgeEncounterPackage(bundle), input.signal);
+}
+
+/** Regenerated, source-bound full package preview. The draft alone cannot supply fixed rules. */
+export function encounterPackageLocalizationDisplayRows(prepared: PreparedForgeEncounter, draft: ForgeEncounterLocalizationDraft) {
+  assertForgeEncounterLocalizationDraft(prepared, draft);
+  const policy = draft.packageText.request.policy;
+  const actors = prepared.actors.map(actor => ({ key: actor.key, rulePresentation: actor.rulePresentation,
+    artifact: projectActorLocalizationDraft(actor.artifact, prepared.bundle.actors.find(entry => entry.key === actor.key)!.source,
+      draft.actors.find(entry => entry.key === actor.key)!.draft, policy, undefined, actor.rulePresentation).actor }));
+  return previewEncounterTextRows(prepared.bundle, actors, draft.packageText.draft, policy);
 }

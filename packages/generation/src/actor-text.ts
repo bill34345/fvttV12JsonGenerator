@@ -1,3 +1,4 @@
+import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
 import { i18n } from '@fvtt-json-generator/parser/i18n';
 import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 
@@ -1162,6 +1163,30 @@ function hasExplicitEnglishFeatureMarker(title: string): boolean {
 }
 
 /**
+ * Source-derived literal prose has no Markdown or rule inference. Escape first
+ * so source tags stay visible text, and keep every line and list/formula sign.
+ */
+export function formatLiteralHtml(raw: unknown): string {
+  if (typeof raw !== 'string' || !raw) return '';
+  const escaped = raw.replace(/&/gu, '&amp;').replace(/</gu, '&lt;').replace(/>/gu, '&gt;')
+    .replace(/"/gu, '&quot;').replace(/'/gu, '&#39;');
+  return `<p>${escaped.replace(/\r\n|\r|\n/gu, '<br>')}</p>`;
+}
+
+/** Product instructions are separate from the author's literal rule text. */
+export const MANUAL_RULE_NOTICE = 'GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。';
+export function formatManualRuleHtml(source: string, emphasizeNotice: boolean): string {
+  const notice = emphasizeNotice ? `<strong>${MANUAL_RULE_NOTICE}</strong>` : MANUAL_RULE_NOTICE;
+  return `<p>${notice}</p>${formatLiteralHtml(source)}`;
+}
+export function formatMixedRuleHtml(source:string,emphasizeNotice:boolean,operations:readonly string[]=[]):string{
+  const labels:Record<string,string>={attack:'攻击检定',damage:'已配置的伤害骰',heal:'已配置的治疗骰',save:'豁免检定',resource:'次数消耗与恢复',area:'范围模板'};
+  const configured=operations.map(operation=>labels[operation]).filter(Boolean).join('、')||'面板中的基础操作';
+  const notice=`本项已配置：${configured}。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。`;
+  return `<p>${emphasizeNotice?`<strong>${notice}</strong>`:notice}</p>${formatLiteralHtml(source)}`;
+}
+
+/**
  * Format structured HTML from raw text.
  */
 export function formatStructuredHtml(raw: unknown): string {
@@ -1222,13 +1247,7 @@ export function cleanDescriptionSegment(segment: string): string {
 /**
  * Split a bilingual name into Chinese and English parts.
  */
-export function splitBilingualName(raw: string): { name: string; englishName?: string } {
-  const match = raw.match(/^(.+?)\s*\(\s*([A-Za-z][A-Za-z0-9\s&:'-]+?)\s*\)\s*$/);
-  if (match?.[1] && match[2]) {
-    return { name: match[1].trim(), englishName: match[2].trim() };
-  }
-  return { name: raw.trim() };
-}
+export { splitBilingualName } from '@fvtt-json-generator/models/display-name';
 
 /**
  * Parse a localized attack line (Chinese format).

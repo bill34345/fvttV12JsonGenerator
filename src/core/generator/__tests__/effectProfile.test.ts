@@ -570,7 +570,7 @@ describe('ActorGenerator effect profiles', () => {
     });
   });
 
-  it('keeps the real DAE fixture source-equivalent while adding exactly one modded-v14 duration', async () => {
+  it('keeps until-damage consequences GM-owned in core and uses the existing DAE executor in modded-v14', async () => {
     const coreActor = await loadDaeFixture('core');
     const moddedActor = await loadDaeFixture('modded-v14');
     const coreBrand = coreActor.items.find((item: any) => item.name === 'Dread Brand');
@@ -587,9 +587,10 @@ describe('ActorGenerator effect profiles', () => {
     expect(coreActor.name).toBe('Damage-Bound Warden');
     expect(moddedActor.name).toBe(coreActor.name);
     expect(moddedActor.items.map((item: any) => item.name)).toEqual(coreActor.items.map((item: any) => item.name));
-    expect(coreEffect?.flags).toEqual({
-      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
-    });
+    expect(coreEffect).toBeUndefined();
+    expect(coreBrandActivity.effects ?? []).toEqual([]);
+    expect(coreBrand.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['frightened']);
+    expect(coreBrand.system.description.value).toContain('until it takes damage');
     expect(moddedEffect?.flags).toEqual({
       fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
       dae: { specialDuration: ['isDamaged'] },
@@ -602,15 +603,12 @@ describe('ActorGenerator effect profiles', () => {
     expect(moddedFist?.effects ?? []).toEqual([]);
     expect(moddedActor.items.flatMap((item: any) => item.effects ?? [])
       .filter((effect: any) => effect.flags?.dae?.specialDuration)).toHaveLength(1);
-    const comparisonOptions = {
-      ignorePaths: [
-        'items.*.effects.*._id',
-        'items.*.effects.*.flags.dae',
-        'items.*.system.activities.*.effects.*._id',
-      ],
-    };
-    expect(prepareStructureForComparison(moddedActor, comparisonOptions)).toEqual(
-      prepareStructureForComparison(coreActor, comparisonOptions),
+    for (const field of ['attack', 'damage', 'save', 'activation', 'consumption', 'range', 'target', 'duration']) {
+      expect(moddedBrandActivity[field]).toEqual(coreBrandActivity[field]);
+    }
+    const withoutBrand = (actor: any) => ({ ...actor, items: actor.items.filter((item: any) => item.name !== 'Dread Brand') });
+    expect(prepareStructureForComparison(withoutBrand(moddedActor))).toEqual(
+      prepareStructureForComparison(withoutBrand(coreActor)),
     );
   });
 

@@ -1,3 +1,4 @@
+import {sourceMentionsDisplayName as sourceMentionsItem} from '@fvtt-json-generator/models/display-name';
 import { readFileSync } from 'node:fs';
 import { extractSourceDerivedAcEffect } from '@fvtt-json-generator/generation/ac-effect-extraction';
 
@@ -51,6 +52,7 @@ export interface ActorVerificationSummary {
     name: string;
     type: string;
     creatureType?: unknown;
+    swarmSize?: unknown;
     hp?: unknown;
     ac?: unknown;
     cr?: unknown;
@@ -134,6 +136,7 @@ export function buildActorVerificationSummaryFromValues(
       name: String(actor.name ?? ''),
       type: String(actor.type ?? ''),
       creatureType: getRecord(details.type).value,
+      ...(getRecord(details.type).swarm?{swarmSize:getRecord(details.type).swarm}:{}),
       hp: attributes.hp,
       ac: attributes.ac,
       cr: details.cr,
@@ -154,6 +157,11 @@ function verifySourceIdentityAndRecovery(source: string, actor: RecordLike): str
   const frontmatter = source.match(/^\uFEFF?---\s*\r?\n([\s\S]*?)\r?\n---/);
   if (frontmatter) {
     const header = frontmatter[1] ?? '';
+    const member=header.match(/^(?:集群个体体型|swarm_size|swarmSize):\s*["']?([^\r\n"']+?)["']?\s*$/imu)?.[1]?.trim().toLowerCase();
+    if(member){
+      const sizes:Record<string,string>={tiny:'tiny',微型:'tiny',small:'sm',小型:'sm',medium:'med',中型:'med',large:'lg',大型:'lg',huge:'huge',巨型:'huge',gargantuan:'grg',超巨型:'grg'};
+      if(!sizes[member]||type.swarm!==sizes[member])errors.push('SOURCE_SWARM_SIZE_MISMATCH: individual swarm size differs from source.');
+    }
     const explicit = header.match(/^(?:creature_type|type):\s*["']?([a-z]+)(?:\s*\(([^)]+)\))?["']?\s*$/im);
     const combined = header.match(/^size:\s*["']?(?:tiny|small|medium|large|huge|gargantuan)\s+([a-z]+)(?:\s*\(([^)]+)\))?["']?\s*$/im);
     const expected = explicit && explicit[1]?.toLowerCase() !== 'npc' ? explicit : combined;
@@ -251,36 +259,6 @@ function inferFoundryMajor(actor: RecordLike): '12' | '14' | undefined {
   return undefined;
 }
 
-function sourceMentionsItem(source: string, itemName: string): boolean {
-  const candidates = new Set<string>([itemName]);
-  const localizedName = itemName.match(/（(.+)）$/u)?.[1];
-  if (localizedName) candidates.add(localizedName);
-  const spacedName = itemName.match(/^[\u3400-\u9fff][^A-Za-z]*\s+([A-Za-z][\s\S]*)$/u)?.[1];
-  if (spacedName) candidates.add(spacedName);
-  const bilingualMatch = itemName.match(/\(([^)]+)\)/);
-  if (bilingualMatch?.[1]) {
-    candidates.add(bilingualMatch[1]);
-  }
-
-  const withoutParen = itemName.replace(/\s*\([^)]*\)\s*/g, '').trim();
-  if (withoutParen) {
-    candidates.add(withoutParen);
-  }
-
-  const normalizedSource = normalizeSearchText(source);
-  for (const candidate of candidates) {
-    const normalizedCandidate = normalizeSearchText(candidate);
-    if (normalizedCandidate && normalizedSource.includes(normalizedCandidate)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function normalizeSearchText(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, ' ').trim();
-}
 
 function getRecord(value: unknown): RecordLike {
   return value && typeof value === 'object' && !Array.isArray(value)

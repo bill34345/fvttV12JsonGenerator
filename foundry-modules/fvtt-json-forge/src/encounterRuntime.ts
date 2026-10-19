@@ -1,12 +1,14 @@
 import { hashArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeEncounterAssetBytes, hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertPreparedForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
-import { assertActorSemantics, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact } from './runtime';
+import { assertActorSemantics, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
 import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {isForgeSpellImportPending} from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 
 export interface EncounterDocument {
   id: string; uuid: string; name: string;
   toObject(): any;
+  update?(changes: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
   delete(): Promise<unknown>;
   execute?: () => Promise<unknown>;
 }
@@ -18,6 +20,7 @@ interface Collection {
 export interface EncounterGame {
   version: string; system: { id: string; version: string }; user: { id: string; isGM: boolean };
   actors: Collection; macros: Collection;
+  modules?:ForgeGameLike['modules'];
 }
 export interface EncounterImportResult {
   packageId: string; packageHash: string;
@@ -42,9 +45,11 @@ export async function importForgeEncounter(input: {
   if (locks.has(prepared.bundle.id)) throw new Error('这个战斗包正在导入，请等待当前操作完成。');
   locks.add(prepared.bundle.id);
   const created: Array<{kind:'Actor'|'Macro';document:EncounterDocument}> = [];
+  const verifiedActors: EncounterDocument[]=[];
+  let committed=false;
   const result: EncounterImportResult = { packageId: prepared.bundle.id, packageHash: prepared.hash, documents: [] };
   try {
-    const plans = createDocumentPlans(prepared);
+    const plans = createDocumentPlans(prepared,game);
     // All conflicts are checked before the first upload or world Document write.
     for (const plan of plans) {
       const existing = collection(game, plan.kind).get(plan.data._id);
@@ -72,10 +77,11 @@ export async function importForgeEncounter(input: {
           if (!document) throw error;
         }
       }
-      verifyDocument(document, plan);
+      verifyDocument(document, plan,status==='created');
+      if(plan.kind==='Actor')verifiedActors.push(document);
       result.documents.push({ key: plan.key, kind: plan.kind, uuid: document.uuid, id: document.id, name: document.name, status });
     }
-    return result;
+    committed=true;
   } catch (error) {
     const remaining: string[] = [];
     for (const {document,kind} of created.reverse()) {
@@ -84,15 +90,20 @@ export async function importForgeEncounter(input: {
     }
     const detail = remaining.length ? ` 无法清理的新文档：${remaining.join('、')}；重试前请检查。` : ' 本次已识别的新文档已清理，既有文档未覆盖。';
     throw new Error(`${error instanceof Error ? error.message : String(error)}${detail} 已上传的内容寻址图片保留以供重试。`);
-  } finally { locks.delete(prepared.bundle.id); }
+  } finally { if(!committed)locks.delete(prepared.bundle.id); }
+  // All Actors, Macros and readbacks must commit first. Completion is a
+  // separate metadata update broadcast normally to every connected GM.
+  // Errors here cannot delete documents another resolver may now be using.
+  try{for(const actor of verifiedActors)await completeForgeSpellImport(actor);return result;}
+  finally{locks.delete(prepared.bundle.id);}
 }
 
 interface DocumentPlan { key: string; kind: 'Actor'|'Macro'; data: any }
-function createDocumentPlans(prepared: PreparedForgeEncounter): DocumentPlan[] {
+function createDocumentPlans(prepared: PreparedForgeEncounter,game:EncounterGame): DocumentPlan[] {
   const { bundle, hash } = prepared;
   const identity = (kind: string, key: string) => ({ version: 1, packageId: bundle.id, packageHash: hash, key, kind });
   const plans: DocumentPlan[] = prepared.actors.map(actor => {
-    const data: any = prepareFoundryImportArtifact(actor.artifact);
+    const data: any = prepareFoundryImportArtifact(actor.artifact,game);
     // Exact dnd5e 5.3.3 NPC create normalization, observed in the local Lab.
     // Only absent artwork receives the native default; explicit source art remains strict.
     if(data.type==='npc'){
@@ -104,6 +115,7 @@ function createDocumentPlans(prepared: PreparedForgeEncounter): DocumentPlan[] {
     if (Array.isArray(data.system?.skills?.value) && data.system.skills.value.length === 0) delete data.system.skills.value;
     data._id = encounterDocumentId(bundle.id, 'Actor', actor.key);
     data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key) };
+    markForgeSpellImportPending(data);
     for (const asset of bundle.assets) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
       for (const path of target.fields) {
         if (path === 'img') data.img = encounterAssetPath(hash, asset);
@@ -137,8 +149,9 @@ function assertEncounterEnvironment(game: EncounterGame):void {
   assertGm({user:game.user});assertExactRuntime({version:game.version,system:game.system});
 }
 function collection(game: EncounterGame, kind: 'Actor'|'Macro'): Collection { return kind === 'Actor' ? game.actors : game.macros; }
-function verifyDocument(document: EncounterDocument, plan: DocumentPlan): void {
+function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPendingNew=false): void {
   const actual = document.toObject();
+  if(plan.kind==='Actor'&&!allowPendingNew&&isForgeSpellImportPending(actual))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
   if (document.id !== plan.data._id || hashArtifact(actual.flags?.[MODULE_ID]?.encounter ?? {}) !== hashArtifact(plan.data.flags[MODULE_ID].encounter)) {
     throw new Error(`${plan.data.name}：文档身份冲突，未覆盖已有内容。`);
   }

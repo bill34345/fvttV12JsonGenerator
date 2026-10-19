@@ -1,0 +1,260 @@
+{
+  "scope": "Two existing complete rules; synthetic carrier reused; fixed injected provider replies, not real AI or batch expansion.",
+  "sources": [
+    {
+      "role": "upgrade-main",
+      "printedTitle": "Level 15: Improved Elemental Fury",
+      "sourceParentSha256": "6725b6ecc3d0c2a8bb33b1088c5ba4a6728d296b638e57a0b96d0132af820c02",
+      "fullRuleText": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.",
+      "completeActualProof": "The extra damage of your Primal Strike increases to 2d8."
+    },
+    {
+      "role": "full-functional-existing-feature",
+      "printedTitle": "Level 7: Elemental Fury",
+      "sourceParentSha256": "1114df58ab22e2b89c6b1be6d8638dc4dcf1466035c4c7105d2e430544e16928",
+      "fullRuleText": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+      "completeActualProof": "Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+    }
+  ],
+  "case": {
+    "id": "existing-elemental-fury-upgrade",
+    "label": "Elemental Fury Level 7: Elemental Fury",
+    "family": "complete-weird-rule-parent",
+    "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nLevel 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\nLevel 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n",
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "common"
+        ]
+      }
+    },
+    "units": [
+      {
+        "destination": "base",
+        "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+      },
+      {
+        "destination": "context",
+        "text": "Traits\n"
+      },
+      {
+        "destination": "feature",
+        "section": "trait",
+        "name": "Level 7: Elemental Fury",
+        "text": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).\n\n"
+      },
+      {
+        "destination": "feature",
+        "section": "trait",
+        "name": "Level 15: Improved Elemental Fury",
+        "text": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.\n\n"
+      }
+    ],
+    "features": [
+      {
+        "name": "Level 7: Elemental Fury",
+        "section": "trait",
+        "text": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+        "operations": [
+          {
+            "id": "chosen-primal-strike-once-per-turn-on-hit",
+            "name": "GM chosen-primal-strike-once-per-turn-on-hit; only under complete parent prerequisites",
+            "type": "damage",
+            "relationship": "follow-up",
+            "sourceText": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+            "condition": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+            "damage": [
+              {
+                "formula": "1d8",
+                "type": "cold",
+                "relationship": "conditional",
+                "condition": "Level 7: Elemental Fury\nThe might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+                "types": [
+                  "cold",
+                  "fire",
+                  "lightning",
+                  "thunder"
+                ]
+              }
+            ],
+            "proof": {
+              "damage": [
+                "Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Level 15: Improved Elemental Fury",
+        "text": "Level 15: Improved Elemental Fury\nThe option you chose for Elemental Fury grows more powerful, as detailed below. Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8.",
+        "section": "trait",
+        "operations": []
+      }
+    ],
+    "provenance": {
+      "edition": "SRD5.2.1 CC, 2024rules",
+      "url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+      "pdfSha256": "8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+      "pages": [
+        {
+          "page": 43,
+          "column": "right"
+        }
+      ],
+      "extraction": "PDFnative text flow, per-column raw spans; no OCR word repair",
+      "packUrl": "https://raw.githubusercontent.com/foundryvtt/dnd5e/965ad2d0cf5d063dac675ba078b5bd3c3c0dd449/packs/_source/classes24/druid/class-features/elemental-fury.yml",
+      "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+      "capturedFile": "elemental-fury.raw.yml",
+      "capturedSha256": "be4bdd6ebc81ba4bb627fc5c9d6643ecb36e8375b44dd3e59acf64a6263518c7",
+      "packRole": "Cross-check only: fixed5.3.3 2024pack may precedeSRD5.2.1errata; PDF remainsoracle"
+    },
+    "scope": "Complete official SRD rule parent on an explicit synthetic base. Native primitives only when proven; complex mechanics retain complete GM source. No real-model reliability, full monster/equipped Item import or live runtime claim.",
+    "expectedBoundary": "ChooseONEclassbenefit:WisModtoDRUIDcantripdamage ORononeOWNturnHITweapon/Beastformattackextra1d8CHOOSEONECold/Fire/Lightning/ThunderWHENhit. Nofourstackedtypes/noallclasscantripmod/noactualspellgrant;typechoice/unknownWisnotflattenedintoActorbase.",
+    "omission": "Once on each of your turns",
+    "flip": [
+      "You gain one of the following options of your choice.",
+      "You gain both of the following options at the same time."
+    ],
+    "checks": {
+      "noAutomaticStatuses": true,
+      "noCasts": true,
+      "noUses": true,
+      "noHeal": true,
+      "noSave": true,
+      "allowedDamage": [
+        "1d8"
+      ]
+    },
+    "irProbes": [
+      {
+        "id": "wrong-explicit-basic-fact",
+        "assign": {
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "manualRemainder": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "sourceOperations": [
+            {
+              "id": "chosen-primal-strike-once-per-turn-on-hit",
+              "name": "GM chosen-primal-strike-once-per-turn-on-hit; only under complete parent prerequisites",
+              "type": "damage",
+              "relationship": "follow-up",
+              "sourceText": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+              "condition": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+              "damage": [
+                {
+                  "formula": "1d20",
+                  "type": "cold",
+                  "relationship": "conditional",
+                  "condition": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+                  "types": [
+                    "cold",
+                    "fire",
+                    "lightning",
+                    "thunder"
+                  ]
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourth-choice-thunder-not-poison",
+        "assign": {
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "manualRemainder": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+          "sourceOperations": [
+            {
+              "id": "chosen-primal-strike-once-per-turn-on-hit",
+              "name": "GM chosen-primal-strike-once-per-turn-on-hit; only under complete parent prerequisites",
+              "type": "damage",
+              "relationship": "follow-up",
+              "sourceText": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+              "condition": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+              "damage": [
+                {
+                  "formula": "1d8",
+                  "type": "cold",
+                  "relationship": "conditional",
+                  "condition": "Level 7: Elemental Fury. The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
+                  "types": [
+                    "cold",
+                    "fire",
+                    "lightning",
+                    "poison"
+                  ]
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "baseProbes": []
+  },
+  "attribution": "This work includes material from the System Reference Document 5.2.1 (SRD 5.2.1) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, https://creativecommons.org/licenses/by/4.0/legalcode. Changes: source-derived full parent excerpts carried by a synthetic Actor header; expected structured proposals and deliberate errors are test-only additions. 2024 source edition; Foundry target remains 14.364/dnd5e5.3.3."
+}

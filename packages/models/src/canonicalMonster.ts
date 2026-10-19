@@ -1,5 +1,7 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { PortableSpellRef } from '@fvtt-json-generator/spell-manifest-contracts';
+import type { ManualSpellUseRecord, GmTriggeredSave, NativeFailureStatus, HealingPart } from './action';
+import type { SourceOperation,SourceResourcePool } from './sourceOperationTypes';
 
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CreatureSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
@@ -7,6 +9,8 @@ export type CreatureSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gar
 export interface CanonicalDamagePart {
   formula: string;
   type: string;
+  /** One damage roll with an exclusive source-listed type choice. */
+  types?: string[];
   relationship: 'base' | 'additional' | 'replacement' | 'conditional';
   condition?: string;
 }
@@ -20,6 +24,20 @@ export interface CanonicalAppliedCondition {
 }
 
 export interface CanonicalFeature {
+  sourceFeatureId?:string;
+  /** Source-backed, independently clickable operations; never automatic triggers. */
+  sourceOperations?: SourceOperation[];
+  /** Exact shared preambles retained at every GM-operated button. */
+  sourceContext?: string[];
+  /** Source-complete rule deliberately adjudicated by the GM; never inferred automation. */
+  executionMode?: 'gm-manual' | 'native-with-gm';
+  /** Program-verified primary operation; the remaining prose is never inferred. */
+  nativeRuleText?: string;
+  manualRemainder?: string;
+  /** Independent source-listed counters only; actual spell resolution stays GM-owned. */
+  spellUseRecords?: ManualSpellUseRecord[];
+  gmTriggeredSave?: GmTriggeredSave;
+  nativeFailureStatuses?: NativeFailureStatus[];
   name: string;
   englishName?: string;
   /** Literal qualifier attached to the source feature label, such as (Concentration) or (1/Day). */
@@ -30,6 +48,9 @@ export interface CanonicalFeature {
   activityType?: 'attack' | 'save' | 'damage' | 'heal' | 'utility';
   activationType?: 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
   activationCondition?: string;
+  /** Source-explicit placement distance and literal target restriction. */
+  range?: number;
+  targetSpecial?: string;
   attack?: {
     type: 'mwak' | 'rwak' | 'msak' | 'rsak';
     toHit: number;
@@ -38,19 +59,17 @@ export interface CanonicalFeature {
     longRange?: number;
   };
   damage?: CanonicalDamagePart[];
-  healing?: {
-    formula: string;
-    type: 'healing' | 'temphp';
-  };
+  healing?: HealingPart;
   save?: {
     dc: number;
     ability: AbilityKey;
     condition?: string;
     dcSourceKind?: 'spellcasting' | 'literal';
+    outcome?: 'none' | 'half' | 'full';
   };
   /** Source-explicit area template. The placement range remains in the literal description unless separately structured. */
   aoe?: {
-    shape: 'sphere' | 'cone' | 'line' | 'cube' | 'cylinder' | 'rectangle';
+    shape: 'sphere' | 'radius' | 'cone' | 'line' | 'cube' | 'cylinder' | 'rectangle';
     radius: number;
   };
   appliedConditions?: CanonicalAppliedCondition[];
@@ -75,6 +94,14 @@ interface CanonicalIndependentSpellUsageGroup {
   spellRefs: CanonicalSpellRef[];
 }
 
+interface CanonicalDailySpellUsageGroup {
+  usage: 'daily-each' | 'daily-shared';
+  /** Source-explicit count. Its grant evidence must entail both count and sharing. */
+  count: number;
+  evidence: EvidenceRef[];
+  spellRefs: CanonicalSpellRef[];
+}
+
 interface CanonicalPreparedCantripUsageGroup {
   usage: 'prepared-cantrip';
   evidence: EvidenceRef[];
@@ -93,10 +120,14 @@ interface CanonicalPreparedSlotUsageGroup {
 
 export type CanonicalSpellUsageGroup =
   | CanonicalIndependentSpellUsageGroup
+  | CanonicalDailySpellUsageGroup
   | CanonicalPreparedCantripUsageGroup
   | CanonicalPreparedSlotUsageGroup;
 
 export interface CanonicalSpellcastingGroup {
+  /** Complete source grants requiring GM adjudication; never executable placeholder spells. */
+  manualGrants?: EvidenceRef[];
+  activationType?: 'action' | 'bonus' | 'reaction';
   groupId: string;
   featureName: string;
   featureEnglishName?: string;
@@ -115,12 +146,17 @@ export interface CanonicalSpellcastingGroup {
 }
 
 export interface CanonicalMonster {
+  sourceResourcePools?:SourceResourcePool[];
   identity: {
     name: string;
     englishName?: string;
     size: CreatureSize;
+    /** Size of each individual in a source-explicit swarm; independent of the Actor size. */
+    swarmSize?: CreatureSize;
     creatureType: string;
     creatureTypeCustom?: string;
+    /** Source label retained for an explicitly approved largest-native size mapping. */
+    sourceSize?: string;
     alignment?: string;
   };
   abilities: Record<AbilityKey, number>;

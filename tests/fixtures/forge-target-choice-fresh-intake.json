@@ -1,0 +1,1004 @@
+{
+  "origin": "Unmodified IR from the first fresh run after its one built-in repair; failed before prepared candidate.",
+  "resultSha256": "a039560b42a10917c3a77694282c945682bdec6abdd5ecdac7b4986fdd5fbba4",
+  "source": "<!-- document-source {\"page\":4,\"block\":\"p4-block1\",\"method\":\"native-pdf-text\",\"confidence\":1,\"bbox\":{\"x\":57.5624976015625,\"y\":43.49999818750007,\"width\":496.689506104603,\"height\":550.7654770514374}} -->\n# SEA HAG AUNTIE\n\nSEA HAG AUNTIE CR 7\nA lurking shape leers from the brine, lidless eyes glaring\nfrom a tangle cloud of sodden hair. Her long claws twitch\nwith the shifting current.\nAC 15 (Natural Armor) Initiative +5 (15)\nHP 151 (18d8 + 72) Size Medium\nSpeed 30 ft., Swim 40 ft. Type Fey\nMOD SAVE MOD SAVE MOD SAVE\nStr 19 +4 +4 Dex 15 +2 +2 Con 18 +4 +7\nInt 15 +2 +2 Wis 13 +1 +4 Cha 18 +4 +7\nSkills Deception +7, Insight +4, Perception +4, Stealth +8\nSenses Darkvision 60 ft., Passive Perception 14\nLanguages Aquan, Common, Giant\nDrives Keep Grudges, Punish Disrespect, Sow Mistrust\nXP 2,900 Proficiency Bonus +3\nTraits\nIllusory Mimicry. The hag can perfectly mimic the voice\nand appearance of any Beast or Humanoid that is Cursed\nby or Indebted to it.\nCoven Craft. While at least two allies with this trait are\nwithin 30 feet of the hag, its Attack Rolls have Advantage\nand creatures have Disadvantage on any saving throw\nthey make against effects it controls.\nActions\nMultiattack. The hag makes two attacks, one of which it\ncan replace with a use of its Pilfered Spell, Seed Terror, or\nSteal Passion.\nRotflesh Claw. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage plus 11 (2d10) Necrotic\ndamage.\nPilfered Spell. The sea hag casts a spell of Level 3 or below\nknown by a creature Cursed by or Indebted to it, using\nthat creature’s spell slots.\nSeed Terror. Illusory blight spreads from the hag in a 15-\nfoot Emanation, making flesh appear to sag and rot. Each\ncreature in the area must make a\nIntelligence or Wisdom Saving Throw:\n(Target’s Choice) DC 15. Failure: The creature is\nFrightened for 1 minute (Save Ends at end of turn).\nSteal Passion (Concentration). The hag tears a token from a\ncreature within 5 feet, forcing it to make a Charisma\nSaving Throw: DC 15. Failure: The creature is Cursed.\nFailure by 5 or More: The hag can maintain this effect\nwithout Concentration.\nWhile Cursed in this way, the creature suffers one of the\nfollowing effects of the hag’s choice.\nThe creature can’t speak louder than a whisper, and can’t\ncast spells of Level 1 or above.\nThe creature’s Speed is reduced by 10 feet and it can’t take\nBonus Actions or Reactions.\nThe creature has Disadvantage on any d20 Test that uses\nStrength or Charisma.\nBilebrine (Recharge 5-6, Level 5 Spell). Stinging brine\nsurges over a creature the hag can see within 60 feet,\nforcing it to make a Constitution Saving Throw: DC 15.\nFailure: 22 (5d8) Acid damage plus 22 (5d8) Necrotic\ndamage. Success: Half damage.\nA creature reduced to 0 Hit Points by this damage is\ninfected with Merthirst.\nBonus Actions\nDrowner’s Dive. The hag moves up to half its Swim Speed,\nthen can attempt to Hide if it has at least Half Cover.\nSargassum Grasp. A tangle of seaweed blooms to envelop\na submerged creature within 30 feet, forcing it to make a\nDexterity Saving Throw: DC 15. Failure: The creature\nis Restrained until the end of its next turn (escape DC 15)\nand dragged 15 feet in a direction of the hag’s choice.\nDeath Glare (Only if Bloodied). One Frightened creature\nwithin 30 feet must make a Wisdom Saving Throw: DC\n15. Failure: The creature is Stunned until the end of its\nnext turn. Failure by 5 or More: The creature drops to 0\nHit Points.\nReactions\nCourage to Dread. Trigger: A creature within 30 feet\nsucceeds on an Intelligence or Wisdom Saving Throw.\nResponse: The hag deals 9 (2d8) Necrotic damage to it.\n\n## Referenced definitions from the same PDF\n\nHag Debts\r\nA creature that has made an unfulfilled promise to a hag, or\r\none that removes a Curse created by a hag, becomes\r\nIndebted to the hag.\r\nA creature Indebted to a hag becomes psychically\r\nconnected to it. The hag can telepathically communicate\r\nwith it over any distance and can choose to perceive through\r\nits senses at will. Once per day, the hag can force an\r\nindebted creature to reroll d20 Test, taking the second result.\n\nMerthirst\r\nA creature infected with merthirst loses all appetite, its eyes\r\nbecome bloodshot, and a crust of pale salt gradually\r\naccumulates around its nose and lips. It can keep solid food\r\ndown only if washed down with sea water.\n",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "0960bd91a4d3704371324d4cfa1e24c010a80f2a2afcc6b41032818cedc326c1",
+      "length": 4314
+    },
+    "creature": {
+      "identity": {
+        "name": "SEA HAG AUNTIE",
+        "englishName": "Sea Hag Auntie",
+        "size": "medium",
+        "creatureType": "fey"
+      },
+      "abilities": {
+        "str": 19,
+        "dex": 15,
+        "con": 18,
+        "int": 15,
+        "wis": 13,
+        "cha": 18
+      },
+      "attributes": {
+        "ac": 15,
+        "acKind": "natural",
+        "initiative": 5,
+        "hp": {
+          "value": 151,
+          "formula": "18d8 + 72"
+        },
+        "movement": {
+          "walk": 30,
+          "swim": 40
+        },
+        "cr": 7,
+        "xp": 2900,
+        "proficiencyBonus": 3
+      },
+      "saves": {
+        "str": 4,
+        "dex": 2,
+        "con": 7,
+        "int": 2,
+        "wis": 4,
+        "cha": 7
+      },
+      "skills": {
+        "deception": 7,
+        "insight": 4,
+        "perception": 4,
+        "stealth": 8
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 14
+      },
+      "languages": {
+        "values": [
+          "Aquan",
+          "Common",
+          "Giant"
+        ]
+      },
+      "biography": "A lurking shape leers from the brine, lidless eyes glaring from a tangle cloud of sodden hair. Her long claws twitch with the shifting current. Drives: Keep Grudges, Punish Disrespect, Sow Mistrust.\n\nHag Debts\r\nA creature that has made an unfulfilled promise to a hag, or\r\none that removes a Curse created by a hag, becomes\r\nIndebted to the hag.\r\nA creature Indebted to a hag becomes psychically\r\nconnected to it. The hag can telepathically communicate\r\nwith it over any distance and can choose to perceive through\r\nits senses at will. Once per day, the hag can force an\r\nindebted creature to reroll d20 Test, taking the second result.\n\nMerthirst\r\nA creature infected with merthirst loses all appetite, its eyes\r\nbecome bloodshot, and a crust of pale salt gradually\r\naccumulates around its nose and lips. It can keep solid food\r\ndown only if washed down with sea water.",
+      "traits": [
+        {
+          "name": "Illusory Mimicry",
+          "englishName": "Illusory Mimicry",
+          "description": "The hag can perfectly mimic the voice\nand appearance of any Beast or Humanoid that is Cursed\nby or Indebted to it.",
+          "activityType": "utility"
+        },
+        {
+          "name": "Coven Craft",
+          "englishName": "Coven Craft",
+          "description": "While at least two allies with this trait are\nwithin 30 feet of the hag, its Attack Rolls have Advantage\nand creatures have Disadvantage on any saving throw\nthey make against effects it controls.",
+          "activityType": "utility"
+        }
+      ],
+      "actions": [
+        {
+          "name": "Multiattack",
+          "englishName": "Multiattack",
+          "description": "The hag makes two attacks, one of which it\ncan replace with a use of its Pilfered Spell, Seed Terror, or\nSteal Passion.",
+          "activityType": "utility",
+          "activationType": "action"
+        },
+        {
+          "name": "Rotflesh Claw",
+          "englishName": "Rotflesh Claw",
+          "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage plus 11 (2d10) Necrotic\ndamage.",
+          "activityType": "attack",
+          "activationType": "action",
+          "attack": {
+            "type": "mwak",
+            "toHit": 7,
+            "reach": 5
+          },
+          "damage": [
+            {
+              "formula": "2d8 + 4",
+              "type": "slashing",
+              "relationship": "base"
+            },
+            {
+              "formula": "2d10",
+              "type": "necrotic",
+              "relationship": "additional"
+            }
+          ]
+        },
+        {
+          "name": "Pilfered Spell",
+          "englishName": "Pilfered Spell",
+          "description": "The sea hag casts a spell of Level 3 or below\nknown by a creature Cursed by or Indebted to it, using\nthat creature’s spell slots.",
+          "activityType": "utility",
+          "activationType": "action"
+        },
+        {
+          "name": "Seed Terror",
+          "englishName": "Seed Terror",
+          "description": "Illusory blight spreads from the hag in a 15-\nfoot Emanation, making flesh appear to sag and rot. Each\ncreature in the area must make a\nIntelligence or Wisdom Saving Throw:\n(Target’s Choice) DC 15. Failure: The creature is\nFrightened for 1 minute (Save Ends at end of turn).",
+          "activityType": "save",
+          "activationType": "action",
+          "save": {
+            "dc": 15,
+            "condition": "Failure: The creature is Frightened for 1 minute (Save Ends at end of turn)."
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "frightened"
+              ],
+              "condition": "Failure: The creature is Frightened for 1 minute (Save Ends at end of turn).",
+              "duration": "1 minute (Save Ends at end of turn)"
+            }
+          ]
+        },
+        {
+          "name": "Steal Passion (Concentration)",
+          "englishName": "Steal Passion",
+          "description": "The hag tears a token from a\ncreature within 5 feet, forcing it to make a Charisma\nSaving Throw: DC 15. Failure: The creature is Cursed.\nFailure by 5 or More: The hag can maintain this effect\nwithout Concentration.\nWhile Cursed in this way, the creature suffers one of the\nfollowing effects of the hag’s choice.\nThe creature can’t speak louder than a whisper, and can’t\ncast spells of Level 1 or above.\nThe creature’s Speed is reduced by 10 feet and it can’t take\nBonus Actions or Reactions.\nThe creature has Disadvantage on any d20 Test that uses\nStrength or Charisma.",
+          "activityType": "save",
+          "activationType": "action",
+          "save": {
+            "dc": 15,
+            "ability": "cha",
+            "condition": "Failure: The creature is Cursed."
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "cursed"
+              ],
+              "condition": "Failure: The creature is Cursed."
+            }
+          ]
+        },
+        {
+          "name": "Bilebrine (Recharge 5-6, Level 5 Spell)",
+          "englishName": "Bilebrine",
+          "description": "(Recharge 5-6, Level 5 Spell). Stinging brine\nsurges over a creature the hag can see within 60 feet,\nforcing it to make a Constitution Saving Throw: DC 15.\nFailure: 22 (5d8) Acid damage plus 22 (5d8) Necrotic\ndamage. Success: Half damage.\nA creature reduced to 0 Hit Points by this damage is\ninfected with Merthirst.",
+          "activityType": "damage",
+          "activationType": "action",
+          "recharge": [
+            5,
+            6
+          ],
+          "save": {
+            "dc": 15,
+            "ability": "con"
+          },
+          "damage": [
+            {
+              "formula": "5d8",
+              "type": "acid",
+              "relationship": "base"
+            },
+            {
+              "formula": "5d8",
+              "type": "necrotic",
+              "relationship": "additional"
+            }
+          ]
+        }
+      ],
+      "bonusActions": [
+        {
+          "name": "Drowner’s Dive",
+          "englishName": "Drowner's Dive",
+          "description": "The hag moves up to half its Swim Speed,\nthen can attempt to Hide if it has at least Half Cover.",
+          "activityType": "utility",
+          "activationType": "bonus"
+        },
+        {
+          "name": "Sargassum Grasp",
+          "englishName": "Sargassum Grasp",
+          "description": "A tangle of seaweed blooms to envelop\na submerged creature within 30 feet, forcing it to make a\nDexterity Saving Throw: DC 15. Failure: The creature\nis Restrained until the end of its next turn (escape DC 15)\nand dragged 15 feet in a direction of the hag’s choice.",
+          "activityType": "save",
+          "activationType": "bonus",
+          "save": {
+            "dc": 15,
+            "ability": "dex",
+            "condition": "Failure: The creature is Restrained until the end of its next turn (escape DC 15) and dragged 15 feet in a direction of the hag’s choice."
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "restrained"
+              ],
+              "escapeDc": 15,
+              "condition": "Failure: The creature is Restrained until the end of its next turn (escape DC 15) and dragged 15 feet in a direction of the hag’s choice.",
+              "duration": "until the end of its next turn"
+            }
+          ]
+        },
+        {
+          "name": "Death Glare (Only if Bloodied)",
+          "englishName": "Death Glare",
+          "description": "One Frightened creature\nwithin 30 feet must make a Wisdom Saving Throw: DC\n15. Failure: The creature is Stunned until the end of its\nnext turn. Failure by 5 or More: The creature drops to 0\nHit Points.",
+          "activityType": "save",
+          "activationType": "bonus",
+          "save": {
+            "dc": 15,
+            "ability": "wis",
+            "condition": "Failure: The creature is Stunned until the end of its next turn."
+          },
+          "appliedConditions": [
+            {
+              "statuses": [
+                "stunned"
+              ],
+              "condition": "Failure: The creature is Stunned until the end of its next turn.",
+              "duration": "until the end of its next turn"
+            }
+          ]
+        }
+      ],
+      "reactions": [
+        {
+          "name": "Courage to Dread",
+          "englishName": "Courage to Dread",
+          "description": "Trigger: A creature within 30 feet\nsucceeds on an Intelligence or Wisdom Saving Throw.\nResponse: The hag deals 9 (2d8) Necrotic damage to it.",
+          "activityType": "damage",
+          "activationType": "reaction",
+          "damage": [
+            {
+              "formula": "2d8",
+              "type": "necrotic",
+              "relationship": "base"
+            }
+          ]
+        }
+      ],
+      "legendaryActions": [],
+      "mythicActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "value": "SEA HAG AUNTIE",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 220,
+            "end": 239,
+            "quote": "SEA HAG AUNTIE CR 7"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "value": "medium",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 444,
+            "end": 455,
+            "quote": "Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "value": "fey",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 482,
+            "end": 490,
+            "quote": "Type Fey"
+          }
+        ]
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "value": {
+          "str": 19,
+          "dex": 15,
+          "con": 18,
+          "int": 15,
+          "wis": 13,
+          "cha": 18
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 518,
+            "end": 595,
+            "quote": "Str 19 +4 +4 Dex 15 +2 +2 Con 18 +4 +7\nInt 15 +2 +2 Wis 13 +1 +4 Cha 18 +4 +7"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "value": 15,
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 384,
+            "end": 405,
+            "quote": "AC 15 (Natural Armor)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/initiative",
+        "valueKind": "explicit",
+        "value": 5,
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 406,
+            "end": 424,
+            "quote": "Initiative +5 (15)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "value": {
+          "value": 151,
+          "formula": "18d8 + 72"
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 425,
+            "end": 443,
+            "quote": "HP 151 (18d8 + 72)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "value": {
+          "walk": 30,
+          "swim": 40
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 456,
+            "end": 481,
+            "quote": "Speed 30 ft., Swim 40 ft."
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "value": 7,
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 220,
+            "end": 239,
+            "quote": "SEA HAG AUNTIE CR 7"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "value": 2900,
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 787,
+            "end": 795,
+            "quote": "XP 2,900"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "value": 3,
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 796,
+            "end": 816,
+            "quote": "Proficiency Bonus +3"
+          }
+        ]
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "value": {
+          "str": 4,
+          "dex": 2,
+          "con": 7,
+          "int": 2,
+          "wis": 4,
+          "cha": 7
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 518,
+            "end": 595,
+            "quote": "Str 19 +4 +4 Dex 15 +2 +2 Con 18 +4 +7\nInt 15 +2 +2 Wis 13 +1 +4 Cha 18 +4 +7"
+          },
+          {
+            "start": 518,
+            "end": 530,
+            "quote": "Str 19 +4 +4"
+          },
+          {
+            "start": 531,
+            "end": 543,
+            "quote": "Dex 15 +2 +2"
+          },
+          {
+            "start": 544,
+            "end": 556,
+            "quote": "Con 18 +4 +7"
+          },
+          {
+            "start": 557,
+            "end": 569,
+            "quote": "Int 15 +2 +2"
+          },
+          {
+            "start": 570,
+            "end": 582,
+            "quote": "Wis 13 +1 +4"
+          },
+          {
+            "start": 583,
+            "end": 595,
+            "quote": "Cha 18 +4 +7"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "value": {
+          "deception": 7,
+          "insight": 4,
+          "perception": 4,
+          "stealth": 8
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 596,
+            "end": 654,
+            "quote": "Skills Deception +7, Insight +4, Perception +4, Stealth +8"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "value": {
+          "darkvision": 60,
+          "passivePerception": 14
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 655,
+            "end": 702,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 14"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "value": {
+          "values": [
+            "Aquan",
+            "Common",
+            "Giant"
+          ]
+        },
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 703,
+            "end": 733,
+            "quote": "Languages Aquan, Common, Giant"
+          }
+        ]
+      },
+      {
+        "path": "/creature/biography",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 240,
+            "end": 383,
+            "quote": "A lurking shape leers from the brine, lidless eyes glaring\nfrom a tangle cloud of sodden hair. Her long claws twitch\nwith the shifting current."
+          },
+          {
+            "start": 734,
+            "end": 786,
+            "quote": "Drives Keep Grudges, Punish Disrespect, Sow Mistrust"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 824,
+            "end": 956,
+            "quote": "Illusory Mimicry. The hag can perfectly mimic the voice\nand appearance of any Beast or Humanoid that is Cursed\nby or Indebted to it."
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 957,
+            "end": 1165,
+            "quote": "Coven Craft. While at least two allies with this trait are\nwithin 30 feet of the hag, its Attack Rolls have Advantage\nand creatures have Disadvantage on any saving throw\nthey make against effects it controls."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 1174,
+            "end": 1306,
+            "quote": "Multiattack. The hag makes two attacks, one of which it\ncan replace with a use of its Pilfered Spell, Seed Terror, or\nSteal Passion."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 1307,
+            "end": 1422,
+            "quote": "Rotflesh Claw. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage plus 11 (2d10) Necrotic\ndamage."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/2",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 1423,
+            "end": 1568,
+            "quote": "Pilfered Spell. The sea hag casts a spell of Level 3 or below\nknown by a creature Cursed by or Indebted to it, using\nthat creature’s spell slots."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/3",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 1569,
+            "end": 1856,
+            "quote": "Seed Terror. Illusory blight spreads from the hag in a 15-\nfoot Emanation, making flesh appear to sag and rot. Each\ncreature in the area must make a\nIntelligence or Wisdom Saving Throw:\n(Target’s Choice) DC 15. Failure: The creature is\nFrightened for 1 minute (Save Ends at end of turn)."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/4",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 1857,
+            "end": 2457,
+            "quote": "Steal Passion (Concentration). The hag tears a token from a\ncreature within 5 feet, forcing it to make a Charisma\nSaving Throw: DC 15. Failure: The creature is Cursed.\nFailure by 5 or More: The hag can maintain this effect\nwithout Concentration.\nWhile Cursed in this way, the creature suffers one of the\nfollowing effects of the hag’s choice.\nThe creature can’t speak louder than a whisper, and can’t\ncast spells of Level 1 or above.\nThe creature’s Speed is reduced by 10 feet and it can’t take\nBonus Actions or Reactions.\nThe creature has Disadvantage on any d20 Test that uses\nStrength or Charisma."
+          }
+        ]
+      },
+      {
+        "path": "/creature/actions/5",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 2458,
+            "end": 2784,
+            "quote": "Bilebrine (Recharge 5-6, Level 5 Spell). Stinging brine\nsurges over a creature the hag can see within 60 feet,\nforcing it to make a Constitution Saving Throw: DC 15.\nFailure: 22 (5d8) Acid damage plus 22 (5d8) Necrotic\ndamage. Success: Half damage.\nA creature reduced to 0 Hit Points by this damage is\ninfected with Merthirst."
+          }
+        ]
+      },
+      {
+        "path": "/creature/bonusActions/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 2799,
+            "end": 2911,
+            "quote": "Drowner’s Dive. The hag moves up to half its Swim Speed,\nthen can attempt to Hide if it has at least Half Cover."
+          }
+        ]
+      },
+      {
+        "path": "/creature/bonusActions/1",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 2912,
+            "end": 3193,
+            "quote": "Sargassum Grasp. A tangle of seaweed blooms to envelop\na submerged creature within 30 feet, forcing it to make a\nDexterity Saving Throw: DC 15. Failure: The creature\nis Restrained until the end of its next turn (escape DC 15)\nand dragged 15 feet in a direction of the hag’s choice."
+          }
+        ]
+      },
+      {
+        "path": "/creature/bonusActions/2",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 3194,
+            "end": 3427,
+            "quote": "Death Glare (Only if Bloodied). One Frightened creature\nwithin 30 feet must make a Wisdom Saving Throw: DC\n15. Failure: The creature is Stunned until the end of its\nnext turn. Failure by 5 or More: The creature drops to 0\nHit Points."
+          }
+        ]
+      },
+      {
+        "path": "/creature/reactions/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 3438,
+            "end": 3597,
+            "quote": "Courage to Dread. Trigger: A creature within 30 feet\nsucceeds on an Intelligence or Wisdom Saving Throw.\nResponse: The hag deals 9 (2d8) Necrotic damage to it."
+          }
+        ]
+      },
+      {
+        "path": "/creature/biography",
+        "valueKind": "preserved-literal",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 3644,
+            "end": 4081,
+            "quote": "Hag Debts\r\nA creature that has made an unfulfilled promise to a hag, or\r\none that removes a Curse created by a hag, becomes\r\nIndebted to the hag.\r\nA creature Indebted to a hag becomes psychically\r\nconnected to it. The hag can telepathically communicate\r\nwith it over any distance and can choose to perceive through\r\nits senses at will. Once per day, the hag can force an\r\nindebted creature to reroll d20 Test, taking the second result.\n\n"
+          },
+          {
+            "start": 4081,
+            "end": 4314,
+            "quote": "Merthirst\r\nA creature infected with merthirst loses all appetite, its eyes\r\nbecome bloodshot, and a crust of pale salt gradually\r\naccumulates around its nose and lips. It can keep solid food\r\ndown only if washed down with sea water.\n"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 201,
+        "quote": "<!-- document-source {\"page\":4,\"block\":\"p4-block1\",\"method\":\"native-pdf-text\",\"confidence\":1,\"bbox\":{\"x\":57.5624976015625,\"y\":43.49999818750007,\"width\":496.689506104603,\"height\":550.7654770514374}} -->",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "provider document-source metadata comment, not creature content"
+      },
+      {
+        "start": 202,
+        "end": 239,
+        "quote": "# SEA HAG AUNTIE\n\nSEA HAG AUNTIE CR 7",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": 240,
+        "end": 383,
+        "quote": "A lurking shape leers from the brine, lidless eyes glaring\nfrom a tangle cloud of sodden hair. Her long claws twitch\nwith the shifting current.",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 384,
+        "end": 490,
+        "quote": "AC 15 (Natural Armor) Initiative +5 (15)\nHP 151 (18d8 + 72) Size Medium\nSpeed 30 ft., Swim 40 ft. Type Fey",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac",
+          "/creature/attributes/initiative",
+          "/creature/attributes/hp",
+          "/creature/identity/size",
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType"
+        ]
+      },
+      {
+        "start": 491,
+        "end": 517,
+        "quote": "MOD SAVE MOD SAVE MOD SAVE",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "repeated table column header"
+      },
+      {
+        "start": 518,
+        "end": 595,
+        "quote": "Str 19 +4 +4 Dex 15 +2 +2 Con 18 +4 +7\nInt 15 +2 +2 Wis 13 +1 +4 Cha 18 +4 +7",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities",
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 596,
+        "end": 654,
+        "quote": "Skills Deception +7, Insight +4, Perception +4, Stealth +8",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 655,
+        "end": 702,
+        "quote": "Senses Darkvision 60 ft., Passive Perception 14",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 703,
+        "end": 733,
+        "quote": "Languages Aquan, Common, Giant",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 734,
+        "end": 786,
+        "quote": "Drives Keep Grudges, Punish Disrespect, Sow Mistrust",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 787,
+        "end": 816,
+        "quote": "XP 2,900 Proficiency Bonus +3",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 817,
+        "end": 956,
+        "quote": "Traits\nIllusory Mimicry. The hag can perfectly mimic the voice\nand appearance of any Beast or Humanoid that is Cursed\nby or Indebted to it.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 957,
+        "end": 1165,
+        "quote": "Coven Craft. While at least two allies with this trait are\nwithin 30 feet of the hag, its Attack Rolls have Advantage\nand creatures have Disadvantage on any saving throw\nthey make against effects it controls.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/1"
+        ]
+      },
+      {
+        "start": 1166,
+        "end": 1306,
+        "quote": "Actions\nMultiattack. The hag makes two attacks, one of which it\ncan replace with a use of its Pilfered Spell, Seed Terror, or\nSteal Passion.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/0"
+        ]
+      },
+      {
+        "start": 1307,
+        "end": 1422,
+        "quote": "Rotflesh Claw. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage plus 11 (2d10) Necrotic\ndamage.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/1"
+        ]
+      },
+      {
+        "start": 1423,
+        "end": 1568,
+        "quote": "Pilfered Spell. The sea hag casts a spell of Level 3 or below\nknown by a creature Cursed by or Indebted to it, using\nthat creature’s spell slots.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/2"
+        ]
+      },
+      {
+        "start": 1569,
+        "end": 1856,
+        "quote": "Seed Terror. Illusory blight spreads from the hag in a 15-\nfoot Emanation, making flesh appear to sag and rot. Each\ncreature in the area must make a\nIntelligence or Wisdom Saving Throw:\n(Target’s Choice) DC 15. Failure: The creature is\nFrightened for 1 minute (Save Ends at end of turn).",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/3"
+        ]
+      },
+      {
+        "start": 1857,
+        "end": 2102,
+        "quote": "Steal Passion (Concentration). The hag tears a token from a\ncreature within 5 feet, forcing it to make a Charisma\nSaving Throw: DC 15. Failure: The creature is Cursed.\nFailure by 5 or More: The hag can maintain this effect\nwithout Concentration.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      },
+      {
+        "start": 2103,
+        "end": 2199,
+        "quote": "While Cursed in this way, the creature suffers one of the\nfollowing effects of the hag’s choice.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      },
+      {
+        "start": 2200,
+        "end": 2290,
+        "quote": "The creature can’t speak louder than a whisper, and can’t\ncast spells of Level 1 or above.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      },
+      {
+        "start": 2291,
+        "end": 2379,
+        "quote": "The creature’s Speed is reduced by 10 feet and it can’t take\nBonus Actions or Reactions.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      },
+      {
+        "start": 2380,
+        "end": 2457,
+        "quote": "The creature has Disadvantage on any d20 Test that uses\nStrength or Charisma.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/4"
+        ]
+      },
+      {
+        "start": 2458,
+        "end": 2784,
+        "quote": "Bilebrine (Recharge 5-6, Level 5 Spell). Stinging brine\nsurges over a creature the hag can see within 60 feet,\nforcing it to make a Constitution Saving Throw: DC 15.\nFailure: 22 (5d8) Acid damage plus 22 (5d8) Necrotic\ndamage. Success: Half damage.\nA creature reduced to 0 Hit Points by this damage is\ninfected with Merthirst.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/5"
+        ]
+      },
+      {
+        "start": 2785,
+        "end": 2911,
+        "quote": "Bonus Actions\nDrowner’s Dive. The hag moves up to half its Swim Speed,\nthen can attempt to Hide if it has at least Half Cover.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/0"
+        ]
+      },
+      {
+        "start": 2912,
+        "end": 3193,
+        "quote": "Sargassum Grasp. A tangle of seaweed blooms to envelop\na submerged creature within 30 feet, forcing it to make a\nDexterity Saving Throw: DC 15. Failure: The creature\nis Restrained until the end of its next turn (escape DC 15)\nand dragged 15 feet in a direction of the hag’s choice.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/1"
+        ]
+      },
+      {
+        "start": 3194,
+        "end": 3427,
+        "quote": "Death Glare (Only if Bloodied). One Frightened creature\nwithin 30 feet must make a Wisdom Saving Throw: DC\n15. Failure: The creature is Stunned until the end of its\nnext turn. Failure by 5 or More: The creature drops to 0\nHit Points.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/2"
+        ]
+      },
+      {
+        "start": 3428,
+        "end": 3597,
+        "quote": "Reactions\nCourage to Dread. Trigger: A creature within 30 feet\nsucceeds on an Intelligence or Wisdom Saving Throw.\nResponse: The hag deals 9 (2d8) Necrotic damage to it.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/reactions/0"
+        ]
+      },
+      {
+        "start": 3599,
+        "end": 3642,
+        "quote": "## Referenced definitions from the same PDF",
+        "classification": "ignored-with-reason",
+        "claimPaths": [],
+        "reason": "heading introducing referenced external rules definitions, not a feature of this stat block"
+      },
+      {
+        "start": 3644,
+        "end": 4079,
+        "quote": "Hag Debts\r\nA creature that has made an unfulfilled promise to a hag, or\r\none that removes a Curse created by a hag, becomes\r\nIndebted to the hag.\r\nA creature Indebted to a hag becomes psychically\r\nconnected to it. The hag can telepathically communicate\r\nwith it over any distance and can choose to perceive through\r\nits senses at will. Once per day, the hag can force an\r\nindebted creature to reroll d20 Test, taking the second result.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/biography"
+        ],
+        "reason": "Exact referenced definition preserved as text; GM handles its mechanics."
+      },
+      {
+        "start": 4081,
+        "end": 4313,
+        "quote": "Merthirst\r\nA creature infected with merthirst loses all appetite, its eyes\r\nbecome bloodshot, and a crust of pale salt gradually\r\naccumulates around its nose and lips. It can keep solid food\r\ndown only if washed down with sea water.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/biography"
+        ],
+        "reason": "Exact referenced definition preserved as text; GM handles its mechanics."
+      },
+      {
+        "start": 3644,
+        "end": 4081,
+        "quote": "Hag Debts\r\nA creature that has made an unfulfilled promise to a hag, or\r\none that removes a Curse created by a hag, becomes\r\nIndebted to the hag.\r\nA creature Indebted to a hag becomes psychically\r\nconnected to it. The hag can telepathically communicate\r\nwith it over any distance and can choose to perceive through\r\nits senses at will. Once per day, the hag can force an\r\nindebted creature to reroll d20 Test, taking the second result.\n\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 4081,
+        "end": 4314,
+        "quote": "Merthirst\r\nA creature infected with merthirst loses all appetite, its eyes\r\nbecome bloodshot, and a crust of pale salt gradually\r\naccumulates around its nose and lips. It can keep solid food\r\ndown only if washed down with sea water.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      }
+    ],
+    "uncertainties": []
+  }
+}

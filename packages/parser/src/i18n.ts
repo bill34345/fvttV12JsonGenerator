@@ -64,6 +64,8 @@ export class I18nMapper {
     // Fallback for common damage type synonyms
     const fallbackMap: Record<string, string> = {
       '死灵': 'DND5E.DamageNecrotic',
+      '冷冻': 'DND5E.DamageCold',
+      '黯蚀': 'DND5E.DamageNecrotic',
     };
     return fallbackMap[simplified];
   }

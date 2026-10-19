@@ -8,6 +8,8 @@ import { verifyMonsterIntake } from '../verifier';
 import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE, ratEvidence } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
+import {stagedSpellParentPlan} from '../../../../tests/helpers/staged-spell-plan';
+import {stagedSpellcastingGroups,sourceGroupComponentClause} from '../../../../packages/intake-ai/src/staged-spellcasting';
 
 const EXPECTED_GROUPS = [
   { usage: 'at-will', spells: ['eldritch-blast', 'mage-armor', 'minor-illusion', 'thaumaturgy'] },
@@ -482,6 +484,84 @@ describe('source-evidenced spellcasting intake', () => {
   });
 
   test.each([
+    ['以魅力作为其施法属性','cha'],['使用智力作为它的施法属性','int'],['以感知为施法属性','wis'],
+    ['以力量作为其施法属性','str'],['以敏捷作为其施法属性','dex'],['以体质作为其施法属性','con'],
+    ['Its spellcasting ability is 𝒲isdom','wis'],
+  ] as const)('accepts a complete affirmative Chinese casting-ability predicate: %s',(abilityClause,ability)=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability,grantPredicate:true});expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    const plan=stagedSpellParentPlan(source,ir.creature.spellcasting![0]!);
+    const groups=[...stagedSpellcastingGroups(plan).values()];
+    expect(groups.map(group=>group.ability)).toEqual([ability]);
+    for(const proof of groups[0]!.abilityEvidence!)expect(source.slice(proof.start,proof.end)).toBe(proof.quote);
+  });
+  test('component inheritance consumes the same Chinese casting profile as ordinary validation',()=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause:'以魅力作为其施法属性',ability:'cha',materialClause:'它无需法术成分，以魅力作为其施法属性',allComponents:true,grantPredicate:true});
+    const group=ir.creature.spellcasting![0]!;
+    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    const parent=group.evidence[0]!;
+    expect(sourceGroupComponentClause(parent,group)?.ambiguous).toBe(false);
+  });
+  test.each([
+    '施法属性：魅力',
+    '施法时使用魅力',
+    '以**魅力**作为其施法属性',
+    'Charisma is its spellcasting ability',
+    '其施法所依赖的属性为魅力',
+  ])('checks an AI-normalized ability against its own source fact rather than a sentence template: %s',abilityClause=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    const wrong=structuredClone(ir);wrong.creature.spellcasting![0]!.ability='int';
+    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test.each([
+    'Its spellcasting ability is unrelated to Charisma',
+    '其施法属性与魅力无关',
+    '其施法属性为魅力，仅在夜晚',
+    'Its spellcasting ability is Charisma, only at night',
+  ])('co-occurrence or a postposed condition is not an unconditional casting profile: %s',abilityClause=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test.each(['Its spellcasting ability is Charisma, and it can cast invisibility only at night','其施法属性为魅力，并且它施展隐形术仅在夜晚'])('a restriction on a separately named spell does not change an unconditional casting ability: %s',abilityClause=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    expect(validateMonsterIntakeIR(source,ir).blocking).not.toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test.each([
+    'Its spellcasting ability is Charisma, but its spellcasting ability is Intelligence',
+    'If it is bloodied, its spellcasting ability is Charisma',
+    'It cannot cast spells, using Charisma as its spellcasting ability',
+  ])('a short AI quote cannot hide the owning spell group context: %s',abilityClause=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    const quote=abilityClause.includes('using Charisma')?'using Charisma as its spellcasting ability':abilityClause.match(/(?:Its|its) spellcasting ability is Charisma/u)![0];
+    const start=source.indexOf(quote);expect(start).toBeGreaterThanOrEqual(0);
+    ir.creature.spellcasting![0]!.abilityEvidence=[{start,end:start+quote.length,quote}];
+    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test('clipping both group and field quotes cannot hide the independent complete source parent',()=>{
+    const abilityClause='Its spellcasting ability is Charisma, only at night';
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    const quote='Its spellcasting ability is Charisma',start=source.indexOf(quote);
+    const group=ir.creature.spellcasting![0]!;
+    ir.coverage.push({...group.evidence[0]!,classification:'mechanical',claimPaths:['/creature/spellcasting/0']});
+    group.abilityEvidence=group.evidence=[{start,end:start+quote.length,quote}];
+    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test.each(['不以魅力作为其施法属性','并非使用魅力作为施法属性','以魅力作为其施法属性，实际以智力作为其施法属性'])('staged extraction cannot accept a negative or contradictory profile: %s',abilityClause=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
+    const plan=stagedSpellParentPlan(source,ir.creature.spellcasting![0]!);
+    expect(()=>stagedSpellcastingGroups(plan)).toThrow('UNPROVEN_STAGED_SPELLCASTING_ABILITY');
+  });
+  test.each([
+    '以魅力作为武器攻击属性','不以魅力作为其施法属性','并非使用魅力作为施法属性','以感知作为其施法属性','以魅力作为其施法属性，实际以智力作为其施法属性',
+  ])('rejects unrelated, negative or conflicting Chinese casting-ability evidence: %s',(abilityClause)=>{
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha'});expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+  });
+  test('a Chinese-only spell retains its literal identifier and cannot borrow an invented English identity',()=>{
+    const {source,ir}=buildEnglishCasterCase({spellName:'任意门',explicitAlias:'门'}),ref=(ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];ref.identifier='任意门';ref.chineseName='任意门';delete ref.englishName;ref.aliases=[];expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    ref.englishName='Dimension Door';ref.identifier='dimension-door';expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_REF_EVIDENCE_MISMATCH'}));
+  });
+
+  test.each([
     {
       label: 'English ability-first syntax',
       abilityClause: 'It uses Wisdom as spellcasting ability',
@@ -498,6 +578,7 @@ describe('source-evidenced spellcasting intake', () => {
       abilityClause: '它的施法属性为感知',
       ability: 'wis' as const,
       materialClause: '它无需法术成分',
+      allComponents: true,
     },
     {
       label: 'Chinese source wording for material components',
@@ -505,8 +586,8 @@ describe('source-evidenced spellcasting intake', () => {
       ability: 'wis' as const,
       materialClause: '它无需任何构材',
     },
-  ])('accepts generalized evidenced spellcasting syntax: $label', ({ abilityClause, materialClause, ability }) => {
-    const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause, ability });
+  ])('accepts generalized evidenced spellcasting syntax: $label', ({ abilityClause, materialClause, ability, allComponents }) => {
+    const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause, ability, allComponents });
 
     expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
   });
@@ -835,8 +916,10 @@ function buildEnglishCasterCase(
     explicitAlias?: string;
     abilityClause?: string;
     materialClause?: string;
-    ability?: 'wis' | 'int';
+    ability?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
     multilineUsage?: boolean;
+    allComponents?: boolean;
+    grantPredicate?: boolean;
   } = {},
 ): { source: string; ir: ReturnType<typeof buildValidLurkerIr> } {
   const spellName = options.spellName ?? 'Sacred Flame';
@@ -848,7 +931,7 @@ function buildEnglishCasterCase(
   const usageGrant = options.multilineUsage
     ? `**At Will:**\n- ${spellGrant}`
     : `At Will: ${spellGrant}`;
-  const description = `Innate Spellcasting. Its lore records +99 and trap DC 99; Charisma appears only in its lore. ${abilityClause} (spell save DC 13, +5 to hit with spell attacks). ${materialClause}.\n${usageGrant}`;
+  const description = `Innate Spellcasting. ${options.grantPredicate?'It casts the following spells. ':''}Its lore records +99 and trap DC 99; Charisma appears only in its lore. ${abilityClause} (spell save DC 13, +5 to hit with spell attacks). ${materialClause}.\n${usageGrant}`;
   const source = `${LURKER_SOURCE}\n${description}`;
   const ir = buildValidLurkerIr() as any;
   const start = source.length - description.length;
@@ -869,7 +952,7 @@ function buildEnglishCasterCase(
       spellRefs: [{
         refId: `instance-${identifier}-1`, identifier, originalName: spellName,
         englishName: spellName, aliases: [spellName, explicitAlias],
-        restrictions: [], evidence: [evidence(spellGrant)],
+        restrictions: options.allComponents?[{kind:'casting',text:'无需法术成分',evidence:[evidence('无需法术成分')]}]:[], evidence: [evidence(spellGrant)],
       }],
     }],
   }];

@@ -1,0 +1,2518 @@
+{
+  "provenance": {
+    "source": "Actual first normal Chrome Company run; no edited model result",
+    "evidenceSha256": "a192f04d905ab6e81ece733c4f7455a7d3115b5f4a112b0102c3995c3de720cb",
+    "sourceSha256": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+    "failure": "single-actor-native source bundle has no full raw source hash substring; previous recovery rejects it"
+  },
+  "snapshot": {
+    "version": 1,
+    "source": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+    "sourceHash": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+    "label": "Mezzoloth Company",
+    "outputLanguage": "zh-CN",
+    "target": "14.368/dnd5e/5.3.3/core",
+    "catalogHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "report": {
+      "version": 1,
+      "source": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+      "sourceHash": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+      "model": "deepseek-flash",
+      "reviewModel": "deepseek-flash",
+      "evidenceMode": "exact-quotes-v1",
+      "status": "ready_for_gm_review",
+      "actors": [
+        {
+          "key": "actor-1",
+          "start": 0,
+          "end": 2170,
+          "source": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+          "analysis": {
+            "status": "ready_to_generate",
+            "attemptId": "encounter-ai-4468a3683784-actor-1:attempt-1",
+            "rawSourceHash": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+            "candidates": [
+              {
+                "id": "single-creature",
+                "label": "MEZZOLOTH COMPANY",
+                "start": 0,
+                "end": 2170,
+                "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+              }
+            ],
+            "candidate": {
+              "id": "single-creature",
+              "label": "MEZZOLOTH COMPANY",
+              "start": 0,
+              "end": 2170,
+              "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+            },
+            "ir": {
+              "schemaVersion": 1,
+              "source": {
+                "sha256": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+                "length": 2170
+              },
+              "creature": {
+                "identity": {
+                  "name": "Mezzoloth Company",
+                  "size": "huge",
+                  "creatureType": "fiend",
+                  "creatureTypeCustom": "Yugoloth"
+                },
+                "abilities": {
+                  "str": 18,
+                  "dex": 11,
+                  "con": 16,
+                  "int": 7,
+                  "wis": 14,
+                  "cha": 10
+                },
+                "attributes": {
+                  "ac": 18,
+                  "hp": {
+                    "value": 225,
+                    "formula": "30d8 + 90"
+                  },
+                  "movement": {
+                    "walk": 40
+                  },
+                  "cr": 20,
+                  "acKind": "natural",
+                  "initiative": 6,
+                  "xp": 25000,
+                  "proficiencyBonus": 6
+                },
+                "saves": {
+                  "str": 4,
+                  "dex": 0,
+                  "con": 3,
+                  "int": -2,
+                  "wis": 2,
+                  "cha": 0
+                },
+                "skills": {},
+                "defenses": {
+                  "resistances": [
+                    "fire"
+                  ],
+                  "immunities": [
+                    "acid",
+                    "poison"
+                  ],
+                  "vulnerabilities": [],
+                  "conditionImmunities": [
+                    "charmed",
+                    "frightened",
+                    "grappled",
+                    "paralyzed",
+                    "petrified",
+                    "poisoned",
+                    "prone",
+                    "restrained",
+                    "stunned"
+                  ]
+                },
+                "senses": {
+                  "blindsight": 60,
+                  "passivePerception": 12
+                },
+                "languages": {
+                  "values": [
+                    "abyssal",
+                    "infernal"
+                  ],
+                  "custom": "Telepathy 60 ft."
+                },
+                "traits": [
+                  {
+                    "name": "Resistances",
+                    "description": "Resistances Fire; Damage from Attacks\n",
+                    "executionMode": "gm-manual",
+                    "activityType": "utility",
+                    "evidence": [
+                      {
+                        "start": 361,
+                        "end": 399,
+                        "quote": "Resistances Fire; Damage from Attacks\n"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Conniving Resistance",
+                    "description": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.",
+                    "evidence": [
+                      {
+                        "start": 705,
+                        "end": 880,
+                        "quote": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\n"
+                      }
+                    ],
+                    "activityType": "utility",
+                    "executionMode": "gm-manual"
+                  },
+                  {
+                    "name": "Swarm",
+                    "description": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.",
+                    "evidence": [
+                      {
+                        "start": 880,
+                        "end": 1021,
+                        "quote": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\n"
+                      }
+                    ],
+                    "activityType": "utility",
+                    "executionMode": "gm-manual"
+                  }
+                ],
+                "actions": [
+                  {
+                    "name": "Multiattack",
+                    "description": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.",
+                    "evidence": [
+                      {
+                        "start": 1029,
+                        "end": 1101,
+                        "quote": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.\n"
+                      }
+                    ],
+                    "activityType": "utility",
+                    "activationType": "action",
+                    "executionMode": "gm-manual"
+                  },
+                  {
+                    "name": "Spindly Shred",
+                    "description": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.",
+                    "evidence": [
+                      {
+                        "start": 1101,
+                        "end": 1355,
+                        "quote": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\n"
+                      }
+                    ],
+                    "activationType": "action",
+                    "activityType": "attack",
+                    "attack": {
+                      "type": "mwak",
+                      "toHit": 10,
+                      "reach": 0
+                    },
+                    "damage": [
+                      {
+                        "formula": "10d8+4",
+                        "type": "slashing",
+                        "relationship": "base"
+                      }
+                    ],
+                    "executionMode": "native-with-gm",
+                    "nativeRuleText": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49 (10d8 + 4) Slashing damage.",
+                    "manualRemainder": ", or half as much damage if the company is Bloodied, and the target is Grappled (escape DC 18). A creature Grappled in this way can attempt to escape as a Bonus Action."
+                  },
+                  {
+                    "name": "Weaverot Volley",
+                    "description": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.",
+                    "evidence": [
+                      {
+                        "start": 1355,
+                        "end": 1702,
+                        "quote": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\n"
+                      }
+                    ],
+                    "activationType": "action",
+                    "activityType": "save",
+                    "save": {
+                      "dc": 18,
+                      "ability": "dex",
+                      "dcSourceKind": "literal",
+                      "outcome": "none"
+                    },
+                    "range": 60,
+                    "aoe": {
+                      "shape": "sphere",
+                      "radius": 15
+                    },
+                    "damage": [
+                      {
+                        "formula": "4d6",
+                        "type": "piercing",
+                        "relationship": "base"
+                      },
+                      {
+                        "formula": "2d10",
+                        "type": "necrotic",
+                        "relationship": "additional"
+                      }
+                    ],
+                    "executionMode": "native-with-gm",
+                    "nativeRuleText": "Weaverot Volley. Each creature in a 15-foot radius Sphere within 60 feet must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14 (4d6) Piercing damage plus 11 (2d10) Necrotic damage",
+                    "manualRemainder": "SUCCESS OR FAILURE: Each spell of Level 2 or below affecting the creature ends."
+                  }
+                ],
+                "bonusActions": [
+                  {
+                    "name": "Toxic Emission",
+                    "description": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.",
+                    "evidence": [
+                      {
+                        "start": 1716,
+                        "end": 1979,
+                        "quote": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\n"
+                      }
+                    ],
+                    "activationType": "bonus",
+                    "activityType": "save",
+                    "save": {
+                      "dc": 17,
+                      "ability": "con",
+                      "dcSourceKind": "literal",
+                      "outcome": "half"
+                    },
+                    "aoe": {
+                      "shape": "radius",
+                      "radius": 10
+                    },
+                    "damage": [
+                      {
+                        "formula": "4d8",
+                        "type": "poison",
+                        "relationship": "base"
+                      }
+                    ],
+                    "executionMode": "native-with-gm",
+                    "nativeRuleText": "Toxic Emission. each creature within 10 feet of it to make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8) Poison damage SUCCESS: Half damage.",
+                    "manualRemainder": "and the creature is Blinded until the end of its next turn. "
+                  },
+                  {
+                    "name": "Strike-Gate (1/Day)",
+                    "description": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.",
+                    "evidence": [
+                      {
+                        "start": 1979,
+                        "end": 2170,
+                        "quote": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+                      }
+                    ],
+                    "activationType": "bonus",
+                    "uses": {
+                      "max": 1,
+                      "period": "day"
+                    },
+                    "activityType": "save",
+                    "save": {
+                      "dc": 16,
+                      "ability": "cha",
+                      "dcSourceKind": "literal",
+                      "outcome": "none"
+                    },
+                    "executionMode": "native-with-gm",
+                    "nativeRuleText": "Strike-Gate (1/Day). Any creature Grappled by it must make a CHARISMA SAVING THROW: DC 16",
+                    "manualRemainder": ". FAILURE: The creature teleports with the company."
+                  }
+                ],
+                "reactions": [],
+                "legendaryActions": [],
+                "biography": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n\nTraits\n\nActions\n\nBonus Actions"
+              },
+              "claims": [
+                {
+                  "path": "/creature/identity/name",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/size",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/creatureType",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/creatureTypeCustom",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/abilities",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/ac",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/hp",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/movement",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/cr",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/acKind",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/initiative",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/xp",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/proficiencyBonus",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/saves",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    },
+                    {
+                      "start": 284,
+                      "end": 296,
+                      "quote": "STR 18 +4 +4"
+                    },
+                    {
+                      "start": 297,
+                      "end": 309,
+                      "quote": "DEX 11 +0 +0"
+                    },
+                    {
+                      "start": 310,
+                      "end": 322,
+                      "quote": "CON 16 +3 +3"
+                    },
+                    {
+                      "start": 323,
+                      "end": 334,
+                      "quote": "INT 7 -2 -2"
+                    },
+                    {
+                      "start": 335,
+                      "end": 347,
+                      "quote": "WIS 14 +2 +2"
+                    },
+                    {
+                      "start": 348,
+                      "end": 360,
+                      "quote": "CHA 10 +0 +0"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/skills",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/defenses",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/senses",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/languages",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 361,
+                      "end": 399,
+                      "quote": "Resistances Fire; Damage from Attacks\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 698,
+                      "end": 705,
+                      "quote": "Traits\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 705,
+                      "end": 880,
+                      "quote": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/2",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 880,
+                      "end": 1021,
+                      "quote": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1021,
+                      "end": 1029,
+                      "quote": "Actions\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1029,
+                      "end": 1101,
+                      "quote": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1101,
+                      "end": 1355,
+                      "quote": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/2",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1355,
+                      "end": 1702,
+                      "quote": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1702,
+                      "end": 1716,
+                      "quote": "Bonus Actions\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/bonusActions/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1716,
+                      "end": 1979,
+                      "quote": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/bonusActions/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1979,
+                      "end": 2170,
+                      "quote": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+                    }
+                  ]
+                }
+              ],
+              "coverage": [
+                {
+                  "start": 0,
+                  "end": 698,
+                  "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/identity/name",
+                    "/creature/identity/size",
+                    "/creature/identity/creatureType",
+                    "/creature/identity/creatureTypeCustom",
+                    "/creature/abilities",
+                    "/creature/attributes/ac",
+                    "/creature/attributes/hp",
+                    "/creature/attributes/movement",
+                    "/creature/attributes/cr",
+                    "/creature/attributes/acKind",
+                    "/creature/attributes/initiative",
+                    "/creature/attributes/xp",
+                    "/creature/attributes/proficiencyBonus",
+                    "/creature/saves",
+                    "/creature/skills",
+                    "/creature/defenses",
+                    "/creature/senses",
+                    "/creature/languages",
+                    "/creature/traits/0",
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 698,
+                  "end": 705,
+                  "quote": "Traits\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 705,
+                  "end": 880,
+                  "quote": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/traits/1"
+                  ]
+                },
+                {
+                  "start": 880,
+                  "end": 1021,
+                  "quote": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/traits/2"
+                  ]
+                },
+                {
+                  "start": 1021,
+                  "end": 1029,
+                  "quote": "Actions\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 1029,
+                  "end": 1101,
+                  "quote": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/0"
+                  ]
+                },
+                {
+                  "start": 1101,
+                  "end": 1355,
+                  "quote": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/1"
+                  ]
+                },
+                {
+                  "start": 1355,
+                  "end": 1702,
+                  "quote": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/2"
+                  ]
+                },
+                {
+                  "start": 1702,
+                  "end": 1716,
+                  "quote": "Bonus Actions\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 1716,
+                  "end": 1979,
+                  "quote": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/bonusActions/0"
+                  ]
+                },
+                {
+                  "start": 1979,
+                  "end": 2170,
+                  "quote": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/bonusActions/1"
+                  ]
+                }
+              ],
+              "uncertainties": []
+            },
+            "validation": {
+              "findings": [],
+              "blocking": [],
+              "warnings": []
+            },
+            "evidence": {
+              "candidate": {
+                "id": "single-creature",
+                "label": "MEZZOLOTH COMPANY",
+                "start": 0,
+                "end": 2170,
+                "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+              },
+              "source": {
+                "sha256": "4468a368378447825b92b44f583ab7acb631f79fcae17ababa77abc374f07761",
+                "length": 2170
+              },
+              "claims": [
+                {
+                  "path": "/creature/identity/name",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/size",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/creatureType",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/identity/creatureTypeCustom",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/abilities",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/ac",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/hp",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/movement",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/cr",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/acKind",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/initiative",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/xp",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/attributes/proficiencyBonus",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/saves",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    },
+                    {
+                      "start": 284,
+                      "end": 296,
+                      "quote": "STR 18 +4 +4"
+                    },
+                    {
+                      "start": 297,
+                      "end": 309,
+                      "quote": "DEX 11 +0 +0"
+                    },
+                    {
+                      "start": 310,
+                      "end": 322,
+                      "quote": "CON 16 +3 +3"
+                    },
+                    {
+                      "start": 323,
+                      "end": 334,
+                      "quote": "INT 7 -2 -2"
+                    },
+                    {
+                      "start": 335,
+                      "end": 347,
+                      "quote": "WIS 14 +2 +2"
+                    },
+                    {
+                      "start": 348,
+                      "end": 360,
+                      "quote": "CHA 10 +0 +0"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/skills",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/defenses",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/senses",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/languages",
+                  "valueKind": "explicit",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 361,
+                      "end": 399,
+                      "quote": "Resistances Fire; Damage from Attacks\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 0,
+                      "end": 698,
+                      "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 698,
+                      "end": 705,
+                      "quote": "Traits\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 705,
+                      "end": 880,
+                      "quote": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/traits/2",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 880,
+                      "end": 1021,
+                      "quote": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1021,
+                      "end": 1029,
+                      "quote": "Actions\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1029,
+                      "end": 1101,
+                      "quote": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1101,
+                      "end": 1355,
+                      "quote": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/actions/2",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1355,
+                      "end": 1702,
+                      "quote": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/biography",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1702,
+                      "end": 1716,
+                      "quote": "Bonus Actions\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/bonusActions/0",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1716,
+                      "end": 1979,
+                      "quote": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\n"
+                    }
+                  ]
+                },
+                {
+                  "path": "/creature/bonusActions/1",
+                  "valueKind": "preserved-literal",
+                  "confidence": "high",
+                  "evidence": [
+                    {
+                      "start": 1979,
+                      "end": 2170,
+                      "quote": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n"
+                    }
+                  ]
+                }
+              ],
+              "coverage": [
+                {
+                  "start": 0,
+                  "end": 698,
+                  "quote": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/identity/name",
+                    "/creature/identity/size",
+                    "/creature/identity/creatureType",
+                    "/creature/identity/creatureTypeCustom",
+                    "/creature/abilities",
+                    "/creature/attributes/ac",
+                    "/creature/attributes/hp",
+                    "/creature/attributes/movement",
+                    "/creature/attributes/cr",
+                    "/creature/attributes/acKind",
+                    "/creature/attributes/initiative",
+                    "/creature/attributes/xp",
+                    "/creature/attributes/proficiencyBonus",
+                    "/creature/saves",
+                    "/creature/skills",
+                    "/creature/defenses",
+                    "/creature/senses",
+                    "/creature/languages",
+                    "/creature/traits/0",
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 698,
+                  "end": 705,
+                  "quote": "Traits\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 705,
+                  "end": 880,
+                  "quote": "Conniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/traits/1"
+                  ]
+                },
+                {
+                  "start": 880,
+                  "end": 1021,
+                  "quote": "Swarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/traits/2"
+                  ]
+                },
+                {
+                  "start": 1021,
+                  "end": 1029,
+                  "quote": "Actions\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 1029,
+                  "end": 1101,
+                  "quote": "Multiattack. The company makes one attack and uses its\nWeaverot Volley.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/0"
+                  ]
+                },
+                {
+                  "start": 1101,
+                  "end": 1355,
+                  "quote": "Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/1"
+                  ]
+                },
+                {
+                  "start": 1355,
+                  "end": 1702,
+                  "quote": "Weaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/actions/2"
+                  ]
+                },
+                {
+                  "start": 1702,
+                  "end": 1716,
+                  "quote": "Bonus Actions\n",
+                  "classification": "narrative",
+                  "claimPaths": [
+                    "/creature/biography"
+                  ]
+                },
+                {
+                  "start": 1716,
+                  "end": 1979,
+                  "quote": "Toxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/bonusActions/0"
+                  ]
+                },
+                {
+                  "start": 1979,
+                  "end": 2170,
+                  "quote": "Strike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+                  "classification": "mechanical",
+                  "claimPaths": [
+                    "/creature/bonusActions/1"
+                  ]
+                }
+              ],
+              "uncertainties": []
+            },
+            "findings": [],
+            "stages": [
+              {
+                "stage": "discover",
+                "status": "completed",
+                "message": "本地确认唯一完整生物数据，保留全部来源，省略模型发现请求。"
+              },
+              {
+                "stage": "extract",
+                "status": "completed"
+              },
+              {
+                "stage": "validate",
+                "status": "completed"
+              },
+              {
+                "stage": "repair",
+                "status": "skipped"
+              },
+              {
+                "stage": "generate",
+                "status": "skipped"
+              },
+              {
+                "stage": "review",
+                "status": "skipped"
+              },
+              {
+                "stage": "finalize",
+                "status": "skipped"
+              }
+            ],
+            "provider": {
+              "providerName": "openai-compatible",
+              "extractionModel": "deepseek-flash",
+              "reviewModel": "deepseek-flash",
+              "promptVersions": {
+                "discover": "monster-intake-discover-v2-source-lines",
+                "extract": "monster-intake-extract-v22",
+                "review": "monster-intake-review-v27",
+                "repair": "monster-intake-repair-v22"
+              }
+            },
+            "calls": {
+              "discovery": 0,
+              "extraction": 1,
+              "review": 0,
+              "repair": 0
+            },
+            "repairCount": 0
+          }
+        }
+      ],
+      "findings": [],
+      "conditionCatalogHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "generationRoute": "single-actor-native",
+      "packageHash": "76abdf6e1597847105bfd18e5e5256c218e1876863e978c42b8b9644bc84ae6a",
+      "localization": [
+        {
+          "status": "draft_ready",
+          "actorKey": "actor-1",
+          "request": {
+            "version": 1,
+            "language": "zh-CN",
+            "policy": "zh-CN-facts-v1",
+            "terminology": "5echm-phb2024-project-20261007-v2",
+            "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+            "sourceHash": "c43b491e8cfbc3e657c414b5f40983b6a032091bd4972d34068e6f3a10c1f7f6",
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "kind": "title",
+                "source": "Mezzoloth Company"
+              },
+              {
+                "id": "text-90ba413208aaf4ae58817c10",
+                "kind": "body",
+                "source": "<p>MEZZOLOTH COMPANY CR 20<br>A clacking horde of insectile mercenaries, reeking of<br>brimstone with an undertone of something worse beneath.<br>AC 18 (natural armor)<br>HP 225 (30d8 + 90)<br>Speed 40 ft.<br>Initiative +6 (16)<br>Size Huge (Swarm of<br>Medium)<br>Type Fiend (Yugoloth)<br>MOD SAVE MOD SAVE MOD SAVE<br>STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3<br>INT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0<br>Resistances Fire; Damage from Attacks<br>Immunities Acid, Poison; Charmed, Frightened, Grappled,<br>Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned<br>Senses Blindsight 60 ft., Passive Perception 12<br>Languages Abyssal, Infernal, Telepathy 60 ft.<br>Drives Advertise Services, Collect Loot, Escalate Conflict<br>XP 25,000 Proficiency Bonus +6<br><br>Traits<br><br>Actions<br><br>Bonus Actions<br><br>护甲等级：18（天生护甲）</p>"
+              },
+              {
+                "id": "text-a11c0cd60f9a73909f49810f",
+                "kind": "body",
+                "source": "Yugoloth"
+              },
+              {
+                "id": "text-9bb995b18dd291bd58eedb34",
+                "kind": "body",
+                "source": "Telepathy 60 ft."
+              },
+              {
+                "id": "text-3ccee375e7a9fd3727d28789",
+                "kind": "title",
+                "source": "Resistances"
+              },
+              {
+                "id": "text-23bc9bad59d39dae8b4d3ee3",
+                "kind": "body",
+                "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Resistances Fire; Damage from Attacks<br></p>"
+              },
+              {
+                "id": "text-1976d244a62bd1c20fe5b6fa",
+                "kind": "body",
+                "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Resistances Fire; Damage from Attacks<br></p>"
+              },
+              {
+                "id": "text-cef408b2edda3b42468c4e09",
+                "kind": "title",
+                "source": "Conniving Resistance"
+              },
+              {
+                "id": "text-f9d659743e17552b102a5f73",
+                "kind": "body",
+                "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+              },
+              {
+                "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+                "kind": "body",
+                "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+              },
+              {
+                "id": "text-5483afc890ebb5fd6bf07889",
+                "kind": "title",
+                "source": "Swarm"
+              },
+              {
+                "id": "text-864aeac0aafd67f35b6c56c1",
+                "kind": "body",
+                "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+              },
+              {
+                "id": "text-7a2ae1a07a4bf646373c28d5",
+                "kind": "body",
+                "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+              },
+              {
+                "id": "text-d304309624aaa15fde83a8c9",
+                "kind": "title",
+                "source": "Multiattack"
+              },
+              {
+                "id": "text-9915495ef3bd6da1f92f3253",
+                "kind": "body",
+                "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+              },
+              {
+                "id": "text-29e5f24fe5b16c8a74436d40",
+                "kind": "body",
+                "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+              },
+              {
+                "id": "text-5f5bfb766480f358b9792324",
+                "kind": "title",
+                "source": "Spindly Shred"
+              },
+              {
+                "id": "text-999696d72a9d8551d811d15a",
+                "kind": "body",
+                "source": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+              },
+              {
+                "id": "text-76f1311f95710169e673b8fa",
+                "kind": "body",
+                "source": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+              },
+              {
+                "id": "text-7bfeac8ee7d17ee6236f9246",
+                "kind": "title",
+                "source": "Weaverot Volley"
+              },
+              {
+                "id": "text-f07cd6aa405bc4704253e583",
+                "kind": "body",
+                "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+              },
+              {
+                "id": "text-65d2fbc47606faa67ac76bb7",
+                "kind": "body",
+                "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+              },
+              {
+                "id": "text-a23aa3022d7c5594d79e4972",
+                "kind": "title",
+                "source": "Toxic Emission"
+              },
+              {
+                "id": "text-9ba482141e55de3d3cf80cf0",
+                "kind": "body",
+                "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+              },
+              {
+                "id": "text-0a4d0501f78b395999e86834",
+                "kind": "body",
+                "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+              },
+              {
+                "id": "text-89249ded079199bfe804f515",
+                "kind": "title",
+                "source": "Strike-Gate (1/Day)"
+              },
+              {
+                "id": "text-4f2f85c95b89a118c292ce38",
+                "kind": "body",
+                "source": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+              },
+              {
+                "id": "text-bed21d9249c42e6f63a1b546",
+                "kind": "body",
+                "source": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+              }
+            ]
+          },
+          "draft": {
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "text": "梅佐罗斯魔连队"
+              },
+              {
+                "id": "text-90ba413208aaf4ae58817c10",
+                "text": "<p>梅佐罗斯魔连队 CR 20<br>一群咔嗒作响的昆虫形雇佣兵，散发着<br>硫磺恶臭，底下还透出某种更糟东西的气息。<br>AC 18（天生护甲）<br>HP 225 (30d8 + 90)<br>速度 40 尺。<br>先攻 +6（16）<br>体型 巨型（由中型生物<br>组成的集群）<br>类型 邪魔（尤格罗斯魔）<br>调整值 豁免 调整值 豁免 调整值 豁免<br>力量 18 +4 +4 敏捷 11 +0 +0 体质 16 +3 +3<br>智力 7 -2 -2 感知 14 +2 +2 魅力 10 +0 +0<br>抗性 火焰；来自攻击的伤害<br>免疫 强酸、毒素；魅惑、恐慌、受擒、<br>麻痹、石化、中毒、倒地、束缚、震慑<br>感官 盲视 60 尺，被动察觉 12<br>语言 深渊语、炼狱语、心灵感应 60 尺。<br>驱动力 宣传服务、收集战利品、激化冲突<br>经验值 25，000 熟练加值 +6<br><br>特质<br><br>动作<br><br>附赠动作<br><br>护甲等级：18（天生护甲）</p>"
+              },
+              {
+                "id": "text-a11c0cd60f9a73909f49810f",
+                "text": "尤格罗斯魔"
+              },
+              {
+                "id": "text-9bb995b18dd291bd58eedb34",
+                "text": "心灵感应 60 尺。"
+              },
+              {
+                "id": "text-3ccee375e7a9fd3727d28789",
+                "text": "抗性"
+              },
+              {
+                "id": "text-23bc9bad59d39dae8b4d3ee3",
+                "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>抗性 火焰；来自攻击的伤害<br></p>"
+              },
+              {
+                "id": "text-1976d244a62bd1c20fe5b6fa",
+                "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>抗性 火焰；来自攻击的伤害<br></p>"
+              },
+              {
+                "id": "text-cef408b2edda3b42468c4e09",
+                "text": "狡诈抗性"
+              },
+              {
+                "id": "text-f9d659743e17552b102a5f73",
+                "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+              },
+              {
+                "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+                "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+              },
+              {
+                "id": "text-5483afc890ebb5fd6bf07889",
+                "text": "集群"
+              },
+              {
+                "id": "text-864aeac0aafd67f35b6c56c1",
+                "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+              },
+              {
+                "id": "text-7a2ae1a07a4bf646373c28d5",
+                "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+              },
+              {
+                "id": "text-d304309624aaa15fde83a8c9",
+                "text": "多重攻击"
+              },
+              {
+                "id": "text-9915495ef3bd6da1f92f3253",
+                "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+              },
+              {
+                "id": "text-29e5f24fe5b16c8a74436d40",
+                "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+              },
+              {
+                "id": "text-5f5bfb766480f358b9792324",
+                "text": "细长撕裂"
+              },
+              {
+                "id": "text-999696d72a9d8551d811d15a",
+                "text": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+              },
+              {
+                "id": "text-76f1311f95710169e673b8fa",
+                "text": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+              },
+              {
+                "id": "text-7bfeac8ee7d17ee6236f9246",
+                "text": "织腐齐射"
+              },
+              {
+                "id": "text-f07cd6aa405bc4704253e583",
+                "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+              },
+              {
+                "id": "text-65d2fbc47606faa67ac76bb7",
+                "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+              },
+              {
+                "id": "text-a23aa3022d7c5594d79e4972",
+                "text": "毒气喷发"
+              },
+              {
+                "id": "text-9ba482141e55de3d3cf80cf0",
+                "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+              },
+              {
+                "id": "text-0a4d0501f78b395999e86834",
+                "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+              },
+              {
+                "id": "text-89249ded079199bfe804f515",
+                "text": "打击之门（每日1次）"
+              },
+              {
+                "id": "text-4f2f85c95b89a118c292ce38",
+                "text": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+              },
+              {
+                "id": "text-bed21d9249c42e6f63a1b546",
+                "text": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+              }
+            ]
+          },
+          "findings": []
+        },
+        {
+          "status": "draft_ready",
+          "request": {
+            "version": 1,
+            "language": "zh-CN",
+            "policy": "zh-CN-facts-v1",
+            "terminology": "5echm-phb2024-project-20261007-v2",
+            "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+            "sourceHash": "c4207405a19b0e7f8e91650a8e07d9aff27b4b89cde11841b2a031b85561f8f4",
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "kind": "title",
+                "source": "Mezzoloth Company"
+              }
+            ],
+            "nameGlossary": [
+              {
+                "english": "Mezzoloth Company",
+                "chinese": "梅佐罗斯魔连队"
+              },
+              {
+                "english": "Resistances",
+                "chinese": "抗性"
+              },
+              {
+                "english": "Conniving Resistance",
+                "chinese": "狡诈抗性"
+              },
+              {
+                "english": "Swarm",
+                "chinese": "集群"
+              },
+              {
+                "english": "Multiattack",
+                "chinese": "多重攻击"
+              },
+              {
+                "english": "Spindly Shred",
+                "chinese": "细长撕裂"
+              },
+              {
+                "english": "Weaverot Volley",
+                "chinese": "织腐齐射"
+              },
+              {
+                "english": "Toxic Emission",
+                "chinese": "毒气喷发"
+              },
+              {
+                "english": "Strike-Gate (1/Day)",
+                "chinese": "打击之门（每日1次）"
+              }
+            ],
+            "sourceRuleContext": [
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",4,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】近战武器攻击，命中加值+10，触及0尺；基础伤害10d8 + 4点挥砍；激活方式：动作。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",5,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 18敏捷豁免；区域形状或范围待GM核对；射程60尺；基础伤害4d6点穿刺；追加伤害2d10点暗蚀；激活方式：动作；未覆盖条件或机制由GM对照完整来源核对。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",6,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 17体质豁免，成功时伤害减半；球形区域，范围10尺；基础伤害4d8点毒素；激活方式：附赠动作。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",7,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 16魅力豁免；激活方式：附赠动作；每日可使用1次。</p>"
+              }
+            ]
+          },
+          "draft": {
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "text": "梅佐罗斯魔连队"
+              }
+            ]
+          },
+          "findings": []
+        }
+      ],
+      "localizationDraft": {
+        "version": 1,
+        "sourcePackageId": "intake-4468a368378447825b92",
+        "sourcePackageHash": "76abdf6e1597847105bfd18e5e5256c218e1876863e978c42b8b9644bc84ae6a",
+        "actors": [
+          {
+            "key": "actor-1",
+            "request": {
+              "version": 1,
+              "language": "zh-CN",
+              "policy": "zh-CN-facts-v1",
+              "terminology": "5echm-phb2024-project-20261007-v2",
+              "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+              "sourceHash": "c43b491e8cfbc3e657c414b5f40983b6a032091bd4972d34068e6f3a10c1f7f6",
+              "texts": [
+                {
+                  "id": "text-1af5c4eb2b894bd2e0604e0f",
+                  "kind": "title",
+                  "source": "Mezzoloth Company"
+                },
+                {
+                  "id": "text-90ba413208aaf4ae58817c10",
+                  "kind": "body",
+                  "source": "<p>MEZZOLOTH COMPANY CR 20<br>A clacking horde of insectile mercenaries, reeking of<br>brimstone with an undertone of something worse beneath.<br>AC 18 (natural armor)<br>HP 225 (30d8 + 90)<br>Speed 40 ft.<br>Initiative +6 (16)<br>Size Huge (Swarm of<br>Medium)<br>Type Fiend (Yugoloth)<br>MOD SAVE MOD SAVE MOD SAVE<br>STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3<br>INT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0<br>Resistances Fire; Damage from Attacks<br>Immunities Acid, Poison; Charmed, Frightened, Grappled,<br>Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned<br>Senses Blindsight 60 ft., Passive Perception 12<br>Languages Abyssal, Infernal, Telepathy 60 ft.<br>Drives Advertise Services, Collect Loot, Escalate Conflict<br>XP 25,000 Proficiency Bonus +6<br><br>Traits<br><br>Actions<br><br>Bonus Actions<br><br>护甲等级：18（天生护甲）</p>"
+                },
+                {
+                  "id": "text-a11c0cd60f9a73909f49810f",
+                  "kind": "body",
+                  "source": "Yugoloth"
+                },
+                {
+                  "id": "text-9bb995b18dd291bd58eedb34",
+                  "kind": "body",
+                  "source": "Telepathy 60 ft."
+                },
+                {
+                  "id": "text-3ccee375e7a9fd3727d28789",
+                  "kind": "title",
+                  "source": "Resistances"
+                },
+                {
+                  "id": "text-23bc9bad59d39dae8b4d3ee3",
+                  "kind": "body",
+                  "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Resistances Fire; Damage from Attacks<br></p>"
+                },
+                {
+                  "id": "text-1976d244a62bd1c20fe5b6fa",
+                  "kind": "body",
+                  "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Resistances Fire; Damage from Attacks<br></p>"
+                },
+                {
+                  "id": "text-cef408b2edda3b42468c4e09",
+                  "kind": "title",
+                  "source": "Conniving Resistance"
+                },
+                {
+                  "id": "text-f9d659743e17552b102a5f73",
+                  "kind": "body",
+                  "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+                },
+                {
+                  "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+                  "kind": "body",
+                  "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+                },
+                {
+                  "id": "text-5483afc890ebb5fd6bf07889",
+                  "kind": "title",
+                  "source": "Swarm"
+                },
+                {
+                  "id": "text-864aeac0aafd67f35b6c56c1",
+                  "kind": "body",
+                  "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+                },
+                {
+                  "id": "text-7a2ae1a07a4bf646373c28d5",
+                  "kind": "body",
+                  "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+                },
+                {
+                  "id": "text-d304309624aaa15fde83a8c9",
+                  "kind": "title",
+                  "source": "Multiattack"
+                },
+                {
+                  "id": "text-9915495ef3bd6da1f92f3253",
+                  "kind": "body",
+                  "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+                },
+                {
+                  "id": "text-29e5f24fe5b16c8a74436d40",
+                  "kind": "body",
+                  "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+                },
+                {
+                  "id": "text-5f5bfb766480f358b9792324",
+                  "kind": "title",
+                  "source": "Spindly Shred"
+                },
+                {
+                  "id": "text-999696d72a9d8551d811d15a",
+                  "kind": "body",
+                  "source": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+                },
+                {
+                  "id": "text-76f1311f95710169e673b8fa",
+                  "kind": "body",
+                  "source": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+                },
+                {
+                  "id": "text-7bfeac8ee7d17ee6236f9246",
+                  "kind": "title",
+                  "source": "Weaverot Volley"
+                },
+                {
+                  "id": "text-f07cd6aa405bc4704253e583",
+                  "kind": "body",
+                  "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+                },
+                {
+                  "id": "text-65d2fbc47606faa67ac76bb7",
+                  "kind": "body",
+                  "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+                },
+                {
+                  "id": "text-a23aa3022d7c5594d79e4972",
+                  "kind": "title",
+                  "source": "Toxic Emission"
+                },
+                {
+                  "id": "text-9ba482141e55de3d3cf80cf0",
+                  "kind": "body",
+                  "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+                },
+                {
+                  "id": "text-0a4d0501f78b395999e86834",
+                  "kind": "body",
+                  "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+                },
+                {
+                  "id": "text-89249ded079199bfe804f515",
+                  "kind": "title",
+                  "source": "Strike-Gate (1/Day)"
+                },
+                {
+                  "id": "text-4f2f85c95b89a118c292ce38",
+                  "kind": "body",
+                  "source": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+                },
+                {
+                  "id": "text-bed21d9249c42e6f63a1b546",
+                  "kind": "body",
+                  "source": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+                }
+              ]
+            },
+            "draft": {
+              "texts": [
+                {
+                  "id": "text-1af5c4eb2b894bd2e0604e0f",
+                  "text": "梅佐罗斯魔连队"
+                },
+                {
+                  "id": "text-90ba413208aaf4ae58817c10",
+                  "text": "<p>梅佐罗斯魔连队 CR 20<br>一群咔嗒作响的昆虫形雇佣兵，散发着<br>硫磺恶臭，底下还透出某种更糟东西的气息。<br>AC 18（天生护甲）<br>HP 225 (30d8 + 90)<br>速度 40 尺。<br>先攻 +6（16）<br>体型 巨型（由中型生物<br>组成的集群）<br>类型 邪魔（尤格罗斯魔）<br>调整值 豁免 调整值 豁免 调整值 豁免<br>力量 18 +4 +4 敏捷 11 +0 +0 体质 16 +3 +3<br>智力 7 -2 -2 感知 14 +2 +2 魅力 10 +0 +0<br>抗性 火焰；来自攻击的伤害<br>免疫 强酸、毒素；魅惑、恐慌、受擒、<br>麻痹、石化、中毒、倒地、束缚、震慑<br>感官 盲视 60 尺，被动察觉 12<br>语言 深渊语、炼狱语、心灵感应 60 尺。<br>驱动力 宣传服务、收集战利品、激化冲突<br>经验值 25，000 熟练加值 +6<br><br>特质<br><br>动作<br><br>附赠动作<br><br>护甲等级：18（天生护甲）</p>"
+                },
+                {
+                  "id": "text-a11c0cd60f9a73909f49810f",
+                  "text": "尤格罗斯魔"
+                },
+                {
+                  "id": "text-9bb995b18dd291bd58eedb34",
+                  "text": "心灵感应 60 尺。"
+                },
+                {
+                  "id": "text-3ccee375e7a9fd3727d28789",
+                  "text": "抗性"
+                },
+                {
+                  "id": "text-23bc9bad59d39dae8b4d3ee3",
+                  "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>抗性 火焰；来自攻击的伤害<br></p>"
+                },
+                {
+                  "id": "text-1976d244a62bd1c20fe5b6fa",
+                  "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>抗性 火焰；来自攻击的伤害<br></p>"
+                },
+                {
+                  "id": "text-cef408b2edda3b42468c4e09",
+                  "text": "狡诈抗性"
+                },
+                {
+                  "id": "text-f9d659743e17552b102a5f73",
+                  "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+                },
+                {
+                  "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+                  "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+                },
+                {
+                  "id": "text-5483afc890ebb5fd6bf07889",
+                  "text": "集群"
+                },
+                {
+                  "id": "text-864aeac0aafd67f35b6c56c1",
+                  "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+                },
+                {
+                  "id": "text-7a2ae1a07a4bf646373c28d5",
+                  "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+                },
+                {
+                  "id": "text-d304309624aaa15fde83a8c9",
+                  "text": "多重攻击"
+                },
+                {
+                  "id": "text-9915495ef3bd6da1f92f3253",
+                  "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+                },
+                {
+                  "id": "text-29e5f24fe5b16c8a74436d40",
+                  "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+                },
+                {
+                  "id": "text-5f5bfb766480f358b9792324",
+                  "text": "细长撕裂"
+                },
+                {
+                  "id": "text-999696d72a9d8551d811d15a",
+                  "text": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+                },
+                {
+                  "id": "text-76f1311f95710169e673b8fa",
+                  "text": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+                },
+                {
+                  "id": "text-7bfeac8ee7d17ee6236f9246",
+                  "text": "织腐齐射"
+                },
+                {
+                  "id": "text-f07cd6aa405bc4704253e583",
+                  "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+                },
+                {
+                  "id": "text-65d2fbc47606faa67ac76bb7",
+                  "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+                },
+                {
+                  "id": "text-a23aa3022d7c5594d79e4972",
+                  "text": "毒气喷发"
+                },
+                {
+                  "id": "text-9ba482141e55de3d3cf80cf0",
+                  "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+                },
+                {
+                  "id": "text-0a4d0501f78b395999e86834",
+                  "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+                },
+                {
+                  "id": "text-89249ded079199bfe804f515",
+                  "text": "打击之门（每日1次）"
+                },
+                {
+                  "id": "text-4f2f85c95b89a118c292ce38",
+                  "text": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+                },
+                {
+                  "id": "text-bed21d9249c42e6f63a1b546",
+                  "text": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+                }
+              ]
+            },
+            "requestHash": "868fc03617527be526ba952d6bad9885fba536adcb5d35eb86f89f7e746247e7",
+            "translationHash": "6367b3520498c63bbeb0ea3b8c7e9d0119a52d61abc76018665b4f2b8d90dbbd"
+          }
+        ],
+        "packageText": {
+          "request": {
+            "version": 1,
+            "language": "zh-CN",
+            "policy": "zh-CN-facts-v1",
+            "terminology": "5echm-phb2024-project-20261007-v2",
+            "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+            "sourceHash": "c4207405a19b0e7f8e91650a8e07d9aff27b4b89cde11841b2a031b85561f8f4",
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "kind": "title",
+                "source": "Mezzoloth Company"
+              }
+            ],
+            "nameGlossary": [
+              {
+                "english": "Mezzoloth Company",
+                "chinese": "梅佐罗斯魔连队"
+              },
+              {
+                "english": "Resistances",
+                "chinese": "抗性"
+              },
+              {
+                "english": "Conniving Resistance",
+                "chinese": "狡诈抗性"
+              },
+              {
+                "english": "Swarm",
+                "chinese": "集群"
+              },
+              {
+                "english": "Multiattack",
+                "chinese": "多重攻击"
+              },
+              {
+                "english": "Spindly Shred",
+                "chinese": "细长撕裂"
+              },
+              {
+                "english": "Weaverot Volley",
+                "chinese": "织腐齐射"
+              },
+              {
+                "english": "Toxic Emission",
+                "chinese": "毒气喷发"
+              },
+              {
+                "english": "Strike-Gate (1/Day)",
+                "chinese": "打击之门（每日1次）"
+              }
+            ],
+            "sourceRuleContext": [
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",4,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】近战武器攻击，命中加值+10，触及0尺；基础伤害10d8 + 4点挥砍；激活方式：动作。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",5,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 18敏捷豁免；区域形状或范围待GM核对；射程60尺；基础伤害4d6点穿刺；追加伤害2d10点暗蚀；激活方式：动作；未覆盖条件或机制由GM对照完整来源核对。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",6,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 17体质豁免，成功时伤害减半；球形区域，范围10尺；基础伤害4d8点毒素；激活方式：附赠动作。</p>"
+              },
+              {
+                "actor": "actor-1",
+                "section": "[\"items\",7,\"system\",\"description\",\"chat\"]",
+                "name": "MEZZOLOTH COMPANY",
+                "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 16魅力豁免；激活方式：附赠动作；每日可使用1次。</p>"
+              }
+            ]
+          },
+          "draft": {
+            "texts": [
+              {
+                "id": "text-1af5c4eb2b894bd2e0604e0f",
+                "text": "梅佐罗斯魔连队"
+              }
+            ]
+          },
+          "requestHash": "b7a8d3e06be0abe50ad744626acc3b52620efeaf35cfc0474422e48e5ac82306",
+          "translationHash": "e98fc669d5a165b059d3d335582889d461970afea7f6cfdfd27175fc9e38b47d"
+        }
+      }
+    },
+    "package": "{\"schema\": \"fvtt-json-forge-encounter\", \"version\": 1, \"id\": \"intake-4468a368378447825b92\", \"label\": \"Mezzoloth Company\", \"target\": {\"foundry\": \"14.364\", \"system\": \"dnd5e\", \"systemVersion\": \"5.3.3\", \"effectProfile\": \"core\"}, \"primaryActorKey\": \"actor-1\", \"actors\": [{\"key\": \"actor-1\", \"label\": \"MEZZOLOTH COMPANY\", \"source\": \"---\\nintake-biography-mode: literal-v1\\nintake-biography-presentation:\\n  version: 1\\n  sourceLength: 729\\n  programNotes:\\n    - 护甲等级：18（天生护甲）\\n名称: Mezzoloth Company\\n类型: npc\\n体型: 巨型\\n生物类型: 邪魔\\n生物类型备注: Yugoloth\\n能力:\\n  力量: 18\\n  敏捷: 11\\n  体质: 16\\n  智力: 7\\n  感知: 14\\n  魅力: 10\\n护甲等级: 18\\n生命值: 225 (30d8 + 90)\\n速度: 步行 40 尺\\n先攻: 6\\n熟练加值: 6\\n挑战等级: 20\\n经验值: 25000\\n豁免熟练:\\n  力量: 4\\n  敏捷: 0\\n  体质: 3\\n  智力: -2\\n  感知: 2\\n  魅力: 0\\n伤害抗性:\\n  - 火焰\\n伤害免疫:\\n  - 强酸\\n  - 毒素\\n状态免疫:\\n  - 魅惑\\n  - 恐慌\\n  - 受擒\\n  - 麻痹\\n  - 石化\\n  - 中毒\\n  - 倒地\\n  - 束缚\\n  - 震慑\\n感官:\\n  盲视: 60\\n  被动察觉: 12\\n语言:\\n  - abyssal\\n  - infernal\\n语言备注: Telepathy 60 ft.\\n传记: |-\\n  MEZZOLOTH COMPANY CR 20\\n  A clacking horde of insectile mercenaries, reeking of\\n  brimstone with an undertone of something worse beneath.\\n  AC 18 (natural armor)\\n  HP 225 (30d8 + 90)\\n  Speed 40 ft.\\n  Initiative +6 (16)\\n  Size Huge (Swarm of\\n  Medium)\\n  Type Fiend (Yugoloth)\\n  MOD SAVE MOD SAVE MOD SAVE\\n  STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\\n  INT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\\n  Resistances Fire; Damage from Attacks\\n  Immunities Acid, Poison; Charmed, Frightened, Grappled,\\n  Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned\\n  Senses Blindsight 60 ft., Passive Perception 12\\n  Languages Abyssal, Infernal, Telepathy 60 ft.\\n  Drives Advertise Services, Collect Loot, Escalate Conflict\\n  XP 25,000 Proficiency Bonus +6\\n\\n  Traits\\n\\n  Actions\\n\\n  Bonus Actions\\n\\n  护甲等级：18（天生护甲）\\n特性:\\n  - 名称: Resistances\\n    literalName: true\\n    类型: utility\\n    描述: |\\n      Resistances Fire; Damage from Attacks\\n    执行模式: gm-manual\\n  - 名称: Conniving Resistance\\n    literalName: true\\n    类型: utility\\n    描述: |-\\n      Conniving Resistance. The company has Advantage on\\n      Saving Throws against spells and other magical effects.\\n      It always appears to fail any Intelligence or Wisdom\\n      Saving Throws.\\n    执行模式: gm-manual\\n  - 名称: Swarm\\n    literalName: true\\n    类型: utility\\n    描述: |-\\n      Swarm. The company can occupy another creature’s\\n      space and vice versa, and can move through any opening\\n      large enough for a single mezzoloth.\\n    执行模式: gm-manual\\n动作:\\n  - 名称: Multiattack\\n    literalName: true\\n    类型: utility\\n    激活: action\\n    描述: |-\\n      Multiattack. The company makes one attack and uses its\\n      Weaverot Volley.\\n    执行模式: gm-manual\\n  - 名称: Spindly Shred\\n    literalName: true\\n    类型: attack\\n    激活: action\\n    描述: |-\\n      Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\\n      (10d8 + 4) Slashing damage, or half as much damage if\\n      the company is Bloodied, and the target is Grappled\\n      (escape DC 18).\\n      A creature Grappled in this way can attempt to escape as\\n      a Bonus Action.\\n    执行模式: native-with-gm\\n    nativeRuleText: \\\"Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49 (10d8 + 4) Slashing damage.\\\"\\n    manualRemainder: \\\", or half as much damage if the company is Bloodied, and the target is Grappled (escape DC 18). A creature Grappled in this way can attempt to escape as a Bonus Action.\\\"\\n    攻击类型: mwak\\n    命中: 10\\n    范围: 触及 0 尺\\n    伤害:\\n      - 公式: 10d8 + 4\\n        类型: slashing\\n        关系: base\\n  - 名称: Weaverot Volley\\n    literalName: true\\n    类型: save\\n    激活: action\\n    描述: |-\\n      Weaverot Volley. A volley of barbed spines sails forth,\\n      leaving trails of ruined magic in their wake.\\n      Each creature in a 15-foot radius Sphere within 60 feet\\n      must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\\n      (4d6) Piercing damage plus 11 (2d10) Necrotic damage.\\n      SUCCESS OR FAILURE: Each spell of Level 2 or below affecting\\n      the creature ends.\\n    执行模式: native-with-gm\\n    nativeRuleText: \\\"Weaverot Volley. Each creature in a 15-foot radius Sphere within 60 feet must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14 (4d6) Piercing damage plus 11 (2d10) Necrotic damage\\\"\\n    manualRemainder: \\\"SUCCESS OR FAILURE: Each spell of Level 2 or below affecting the creature ends.\\\"\\n    范围: 60 尺\\n    伤害:\\n      - 公式: 4d6\\n        类型: piercing\\n        关系: base\\n      - 公式: 2d10\\n        类型: necrotic\\n        关系: additional\\n    DC: 18\\n    属性: 敏捷\\n    dcSourceKind: literal\\n    saveOutcome: none\\n    AoE:\\n      形状: 球形\\n      范围: 15\\n附赠动作:\\n  - 名称: Toxic Emission\\n    literalName: true\\n    类型: save\\n    激活: bonus\\n    描述: |-\\n      Toxic Emission. Clouds of stinging gas hiss from the\\n      company, forcing each creature within 10 feet of it to\\n      make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\\n      Poison damage and the creature is Blinded until the end\\n      of its next turn. SUCCESS: Half damage.\\n    执行模式: native-with-gm\\n    nativeRuleText: \\\"Toxic Emission. each creature within 10 feet of it to make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8) Poison damage SUCCESS: Half damage.\\\"\\n    manualRemainder: \\\"and the creature is Blinded until the end of its next turn. \\\"\\n    伤害:\\n      - 公式: 4d8\\n        类型: poison\\n        关系: base\\n    DC: 17\\n    属性: 体质\\n    dcSourceKind: literal\\n    saveOutcome: half\\n    AoE:\\n      形状: 半径\\n      范围: 10\\n  - 名称: Strike-Gate (1/Day)\\n    literalName: true\\n    类型: save\\n    激活: bonus\\n    描述: |-\\n      Strike-Gate (1/Day). The company teleports to a space\\n      within 120 feet. Any creature Grappled by it must make a\\n      CHARISMA SAVING THROW: DC 16. FAILURE: The creature\\n      teleports with the company.\\n    执行模式: native-with-gm\\n    nativeRuleText: \\\"Strike-Gate (1/Day). Any creature Grappled by it must make a CHARISMA SAVING THROW: DC 16\\\"\\n    manualRemainder: \\\". FAILURE: The creature teleports with the company.\\\"\\n    DC: 16\\n    属性: 魅力\\n    dcSourceKind: literal\\n    saveOutcome: none\\n    使用次数:\\n      max: 1\\n      period: day\\n---\\n\", \"sourceHash\": \"67fdc84e826251b4afa487c6373dab86f1d18345d3bd826f6f80c5587fe27552\"}], \"macros\": [], \"assets\": []}",
+    "translationReport": [
+      {
+        "status": "draft_ready",
+        "actorKey": "actor-1",
+        "request": {
+          "version": 1,
+          "language": "zh-CN",
+          "policy": "zh-CN-facts-v1",
+          "terminology": "5echm-phb2024-project-20261007-v2",
+          "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+          "sourceHash": "c43b491e8cfbc3e657c414b5f40983b6a032091bd4972d34068e6f3a10c1f7f6",
+          "texts": [
+            {
+              "id": "text-1af5c4eb2b894bd2e0604e0f",
+              "kind": "title",
+              "source": "Mezzoloth Company"
+            },
+            {
+              "id": "text-90ba413208aaf4ae58817c10",
+              "kind": "body",
+              "source": "<p>MEZZOLOTH COMPANY CR 20<br>A clacking horde of insectile mercenaries, reeking of<br>brimstone with an undertone of something worse beneath.<br>AC 18 (natural armor)<br>HP 225 (30d8 + 90)<br>Speed 40 ft.<br>Initiative +6 (16)<br>Size Huge (Swarm of<br>Medium)<br>Type Fiend (Yugoloth)<br>MOD SAVE MOD SAVE MOD SAVE<br>STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3<br>INT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0<br>Resistances Fire; Damage from Attacks<br>Immunities Acid, Poison; Charmed, Frightened, Grappled,<br>Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned<br>Senses Blindsight 60 ft., Passive Perception 12<br>Languages Abyssal, Infernal, Telepathy 60 ft.<br>Drives Advertise Services, Collect Loot, Escalate Conflict<br>XP 25,000 Proficiency Bonus +6<br><br>Traits<br><br>Actions<br><br>Bonus Actions<br><br>护甲等级：18（天生护甲）</p>"
+            },
+            {
+              "id": "text-a11c0cd60f9a73909f49810f",
+              "kind": "body",
+              "source": "Yugoloth"
+            },
+            {
+              "id": "text-9bb995b18dd291bd58eedb34",
+              "kind": "body",
+              "source": "Telepathy 60 ft."
+            },
+            {
+              "id": "text-3ccee375e7a9fd3727d28789",
+              "kind": "title",
+              "source": "Resistances"
+            },
+            {
+              "id": "text-23bc9bad59d39dae8b4d3ee3",
+              "kind": "body",
+              "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Resistances Fire; Damage from Attacks<br></p>"
+            },
+            {
+              "id": "text-1976d244a62bd1c20fe5b6fa",
+              "kind": "body",
+              "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Resistances Fire; Damage from Attacks<br></p>"
+            },
+            {
+              "id": "text-cef408b2edda3b42468c4e09",
+              "kind": "title",
+              "source": "Conniving Resistance"
+            },
+            {
+              "id": "text-f9d659743e17552b102a5f73",
+              "kind": "body",
+              "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+            },
+            {
+              "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+              "kind": "body",
+              "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Conniving Resistance. The company has Advantage on<br>Saving Throws against spells and other magical effects.<br>It always appears to fail any Intelligence or Wisdom<br>Saving Throws.</p>"
+            },
+            {
+              "id": "text-5483afc890ebb5fd6bf07889",
+              "kind": "title",
+              "source": "Swarm"
+            },
+            {
+              "id": "text-864aeac0aafd67f35b6c56c1",
+              "kind": "body",
+              "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+            },
+            {
+              "id": "text-7a2ae1a07a4bf646373c28d5",
+              "kind": "body",
+              "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Swarm. The company can occupy another creature’s<br>space and vice versa, and can move through any opening<br>large enough for a single mezzoloth.</p>"
+            },
+            {
+              "id": "text-d304309624aaa15fde83a8c9",
+              "kind": "title",
+              "source": "Multiattack"
+            },
+            {
+              "id": "text-9915495ef3bd6da1f92f3253",
+              "kind": "body",
+              "source": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+            },
+            {
+              "id": "text-29e5f24fe5b16c8a74436d40",
+              "kind": "body",
+              "source": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>Multiattack. The company makes one attack and uses its<br>Weaverot Volley.</p>"
+            },
+            {
+              "id": "text-5f5bfb766480f358b9792324",
+              "kind": "title",
+              "source": "Spindly Shred"
+            },
+            {
+              "id": "text-999696d72a9d8551d811d15a",
+              "kind": "body",
+              "source": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+            },
+            {
+              "id": "text-76f1311f95710169e673b8fa",
+              "kind": "body",
+              "source": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Spindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49<br>(10d8 + 4) Slashing damage, or half as much damage if<br>the company is Bloodied, and the target is Grappled<br>(escape DC 18).<br>A creature Grappled in this way can attempt to escape as<br>a Bonus Action.</p>"
+            },
+            {
+              "id": "text-7bfeac8ee7d17ee6236f9246",
+              "kind": "title",
+              "source": "Weaverot Volley"
+            },
+            {
+              "id": "text-f07cd6aa405bc4704253e583",
+              "kind": "body",
+              "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+            },
+            {
+              "id": "text-65d2fbc47606faa67ac76bb7",
+              "kind": "body",
+              "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Weaverot Volley. A volley of barbed spines sails forth,<br>leaving trails of ruined magic in their wake.<br>Each creature in a 15-foot radius Sphere within 60 feet<br>must make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14<br>(4d6) Piercing damage plus 11 (2d10) Necrotic damage.<br>SUCCESS OR FAILURE: Each spell of Level 2 or below affecting<br>the creature ends.</p>"
+            },
+            {
+              "id": "text-a23aa3022d7c5594d79e4972",
+              "kind": "title",
+              "source": "Toxic Emission"
+            },
+            {
+              "id": "text-9ba482141e55de3d3cf80cf0",
+              "kind": "body",
+              "source": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+            },
+            {
+              "id": "text-0a4d0501f78b395999e86834",
+              "kind": "body",
+              "source": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Toxic Emission. Clouds of stinging gas hiss from the<br>company, forcing each creature within 10 feet of it to<br>make a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)<br>Poison damage and the creature is Blinded until the end<br>of its next turn. SUCCESS: Half damage.</p>"
+            },
+            {
+              "id": "text-89249ded079199bfe804f515",
+              "kind": "title",
+              "source": "Strike-Gate (1/Day)"
+            },
+            {
+              "id": "text-4f2f85c95b89a118c292ce38",
+              "kind": "body",
+              "source": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+            },
+            {
+              "id": "text-bed21d9249c42e6f63a1b546",
+              "kind": "body",
+              "source": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>Strike-Gate (1/Day). The company teleports to a space<br>within 120 feet. Any creature Grappled by it must make a<br>CHARISMA SAVING THROW: DC 16. FAILURE: The creature<br>teleports with the company.</p>"
+            }
+          ]
+        },
+        "draft": {
+          "texts": [
+            {
+              "id": "text-1af5c4eb2b894bd2e0604e0f",
+              "text": "梅佐罗斯魔连队"
+            },
+            {
+              "id": "text-90ba413208aaf4ae58817c10",
+              "text": "<p>梅佐罗斯魔连队 CR 20<br>一群咔嗒作响的昆虫形雇佣兵，散发着<br>硫磺恶臭，底下还透出某种更糟东西的气息。<br>AC 18（天生护甲）<br>HP 225 (30d8 + 90)<br>速度 40 尺。<br>先攻 +6（16）<br>体型 巨型（由中型生物<br>组成的集群）<br>类型 邪魔（尤格罗斯魔）<br>调整值 豁免 调整值 豁免 调整值 豁免<br>力量 18 +4 +4 敏捷 11 +0 +0 体质 16 +3 +3<br>智力 7 -2 -2 感知 14 +2 +2 魅力 10 +0 +0<br>抗性 火焰；来自攻击的伤害<br>免疫 强酸、毒素；魅惑、恐慌、受擒、<br>麻痹、石化、中毒、倒地、束缚、震慑<br>感官 盲视 60 尺，被动察觉 12<br>语言 深渊语、炼狱语、心灵感应 60 尺。<br>驱动力 宣传服务、收集战利品、激化冲突<br>经验值 25，000 熟练加值 +6<br><br>特质<br><br>动作<br><br>附赠动作<br><br>护甲等级：18（天生护甲）</p>"
+            },
+            {
+              "id": "text-a11c0cd60f9a73909f49810f",
+              "text": "尤格罗斯魔"
+            },
+            {
+              "id": "text-9bb995b18dd291bd58eedb34",
+              "text": "心灵感应 60 尺。"
+            },
+            {
+              "id": "text-3ccee375e7a9fd3727d28789",
+              "text": "抗性"
+            },
+            {
+              "id": "text-23bc9bad59d39dae8b4d3ee3",
+              "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>抗性 火焰；来自攻击的伤害<br></p>"
+            },
+            {
+              "id": "text-1976d244a62bd1c20fe5b6fa",
+              "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>抗性 火焰；来自攻击的伤害<br></p>"
+            },
+            {
+              "id": "text-cef408b2edda3b42468c4e09",
+              "text": "狡诈抗性"
+            },
+            {
+              "id": "text-f9d659743e17552b102a5f73",
+              "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+            },
+            {
+              "id": "text-fe6d46ca9ec3bc737b4e1f6f",
+              "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>狡诈抗性。连队在对抗法术和其他魔法效应的<br>豁免检定上具有优势。<br>它总是显得未能通过任何智力或感知<br>豁免检定。</p>"
+            },
+            {
+              "id": "text-5483afc890ebb5fd6bf07889",
+              "text": "集群"
+            },
+            {
+              "id": "text-864aeac0aafd67f35b6c56c1",
+              "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+            },
+            {
+              "id": "text-7a2ae1a07a4bf646373c28d5",
+              "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>集群。连队可以占据另一名生物<br>的空间，反之亦然，并且可以穿过任何<br>足以容纳单个梅佐罗斯魔的开口。</p>"
+            },
+            {
+              "id": "text-d304309624aaa15fde83a8c9",
+              "text": "多重攻击"
+            },
+            {
+              "id": "text-9915495ef3bd6da1f92f3253",
+              "text": "<p><strong>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</strong></p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+            },
+            {
+              "id": "text-29e5f24fe5b16c8a74436d40",
+              "text": "<p>GM 手动能力：按完整规则核对目标、前提、结果、持续时间和资源；此活动不自动造成伤害、进行豁免、施加效果或移动棋子。</p><p>多重攻击。连队发动一次攻击，并使用其<br>织腐齐射。</p>"
+            },
+            {
+              "id": "text-5f5bfb766480f358b9792324",
+              "text": "细长撕裂"
+            },
+            {
+              "id": "text-999696d72a9d8551d811d15a",
+              "text": "<p><strong>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+            },
+            {
+              "id": "text-76f1311f95710169e673b8fa",
+              "text": "<p>本项已配置：攻击检定、已配置的伤害骰。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>细长撕裂。近战攻击检定：+10，触及 0 尺。命中：49<br>(10d8 + 4) 挥砍伤害，；若<br>连队处于浴血状态，此伤害减半。目标还会陷入受擒状态<br>（逃脱 DC 18）。<br>以这种方式处于受擒状态的生物可以作为一个<br>附赠动作尝试逃脱。</p>"
+            },
+            {
+              "id": "text-7bfeac8ee7d17ee6236f9246",
+              "text": "织腐齐射"
+            },
+            {
+              "id": "text-f07cd6aa405bc4704253e583",
+              "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+            },
+            {
+              "id": "text-65d2fbc47606faa67ac76bb7",
+              "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>织腐齐射。一排带倒刺的棘刺飞出，<br>在身后留下被破坏的魔法痕迹。<br>中心位于60尺范围内、半径15尺的球形区域内的每个生物<br>必须进行一次敏捷豁免检定：DC 18。失败：14<br>（4d6）穿刺伤害加 11（2d10）暗蚀伤害。<br>成功或失败：每个等级为2或更低、影响<br>该生物的法术结束。</p>"
+            },
+            {
+              "id": "text-a23aa3022d7c5594d79e4972",
+              "text": "毒气喷发"
+            },
+            {
+              "id": "text-9ba482141e55de3d3cf80cf0",
+              "text": "<p><strong>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+            },
+            {
+              "id": "text-0a4d0501f78b395999e86834",
+              "text": "<p>本项已配置：豁免检定、已配置的伤害骰、范围模板。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>毒气喷发。刺鼻的气云从<br>连队中嘶嘶喷出，迫使距其 10 尺内的每名生物<br>进行一次体质豁免检定：DC 17。失败：18（4d8）<br>毒素伤害，且该生物目盲，直到其下一回合结束<br>。成功：伤害减半。</p>"
+            },
+            {
+              "id": "text-89249ded079199bfe804f515",
+              "text": "打击之门（每日1次）"
+            },
+            {
+              "id": "text-4f2f85c95b89a118c292ce38",
+              "text": "<p><strong>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</strong></p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+            },
+            {
+              "id": "text-bed21d9249c42e6f63a1b546",
+              "text": "<p>本项已配置：豁免检定、次数消耗与恢复。其余目标资格、条件和后续特殊规则由 GM 按完整正文处理；程序不自动结算这些规则。</p><p>打击之门（每日1次）。连队传送到一个空间，该空间<br>位于 120 尺内。任何处于其造成的受擒状态的生物必须进行<br>一次魅力豁免检定：DC 16。失败：该生物<br>随连队一起传送。</p>"
+            }
+          ]
+        },
+        "findings": []
+      },
+      {
+        "status": "draft_ready",
+        "request": {
+          "version": 1,
+          "language": "zh-CN",
+          "policy": "zh-CN-facts-v1",
+          "terminology": "5echm-phb2024-project-20261007-v2",
+          "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+          "sourceHash": "c4207405a19b0e7f8e91650a8e07d9aff27b4b89cde11841b2a031b85561f8f4",
+          "texts": [
+            {
+              "id": "text-1af5c4eb2b894bd2e0604e0f",
+              "kind": "title",
+              "source": "Mezzoloth Company"
+            }
+          ],
+          "nameGlossary": [
+            {
+              "english": "Mezzoloth Company",
+              "chinese": "梅佐罗斯魔连队"
+            },
+            {
+              "english": "Resistances",
+              "chinese": "抗性"
+            },
+            {
+              "english": "Conniving Resistance",
+              "chinese": "狡诈抗性"
+            },
+            {
+              "english": "Swarm",
+              "chinese": "集群"
+            },
+            {
+              "english": "Multiattack",
+              "chinese": "多重攻击"
+            },
+            {
+              "english": "Spindly Shred",
+              "chinese": "细长撕裂"
+            },
+            {
+              "english": "Weaverot Volley",
+              "chinese": "织腐齐射"
+            },
+            {
+              "english": "Toxic Emission",
+              "chinese": "毒气喷发"
+            },
+            {
+              "english": "Strike-Gate (1/Day)",
+              "chinese": "打击之门（每日1次）"
+            }
+          ],
+          "sourceRuleContext": [
+            {
+              "actor": "actor-1",
+              "section": "[\"items\",4,\"system\",\"description\",\"chat\"]",
+              "name": "MEZZOLOTH COMPANY",
+              "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】近战武器攻击，命中加值+10，触及0尺；基础伤害10d8 + 4点挥砍；激活方式：动作。</p>"
+            },
+            {
+              "actor": "actor-1",
+              "section": "[\"items\",5,\"system\",\"description\",\"chat\"]",
+              "name": "MEZZOLOTH COMPANY",
+              "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 18敏捷豁免；区域形状或范围待GM核对；射程60尺；基础伤害4d6点穿刺；追加伤害2d10点暗蚀；激活方式：动作；未覆盖条件或机制由GM对照完整来源核对。</p>"
+            },
+            {
+              "actor": "actor-1",
+              "section": "[\"items\",6,\"system\",\"description\",\"chat\"]",
+              "name": "MEZZOLOTH COMPANY",
+              "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 17体质豁免，成功时伤害减半；球形区域，范围10尺；基础伤害4d8点毒素；激活方式：附赠动作。</p>"
+            },
+            {
+              "actor": "actor-1",
+              "section": "[\"items\",7,\"system\",\"description\",\"chat\"]",
+              "name": "MEZZOLOTH COMPANY",
+              "description": "\n已核实的固定中文：<p>【结构化事实供GM核对】DC 16魅力豁免；激活方式：附赠动作；每日可使用1次。</p>"
+            }
+          ]
+        },
+        "draft": {
+          "texts": [
+            {
+              "id": "text-1af5c4eb2b894bd2e0604e0f",
+              "text": "梅佐罗斯魔连队"
+            }
+          ]
+        },
+        "findings": []
+      }
+    ]
+  }
+}

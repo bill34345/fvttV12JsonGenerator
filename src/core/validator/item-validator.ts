@@ -1,3 +1,4 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
 import type { ParsedItem } from '@fvtt-json-generator/models/item';
 import type { ItemDocument } from '@fvtt-json-generator/generation/item-generator';
 import { mapSourceItemTypeToFoundry } from '@fvtt-json-generator/generation/item-type-mapping';
@@ -7,9 +8,7 @@ export class ItemValidator {
     const warnings: string[] = [];
 
     // Check: name matches
-    const expectedName = parsed.englishName
-      ? `${parsed.name} (${parsed.englishName})`
-      : parsed.name;
+    const expectedName = displayName(parsed.name, parsed.englishName);
     if (item.name !== expectedName && parsed.name) {
       warnings.push(`Name mismatch: Expected '${expectedName}', got '${item.name}'`);
     }

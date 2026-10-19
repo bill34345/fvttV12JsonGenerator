@@ -4,6 +4,9 @@ import type { StructuredActionData } from '../../../src/core/models/action';
 import { attachEmbeddedEffects } from '../../../packages/generation/src/actor-item-builder';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { YamlParser } from '../../../packages/parser/src/yaml';
+import { adaptParsedActorToCanonical } from '@fvtt-json-generator/generation/adapters';
+import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
+import { enforceCoreConditionLifecycles } from '@fvtt-json-generator/generation/actor-effects';
 
 describe('appendStructuredActionItems', () => {
   function createMinimalParsedNPC(structuredActions: any): any {
@@ -143,7 +146,111 @@ describe('appendStructuredActionItems', () => {
   });
 
   describe('attack action generation', () => {
-    it('projects and links source-derived structured embedded effects', () => {
+    it('keeps a complex timed condition GM-owned while preserving its Save and rest use', () => {
+      const describe = 'Each target makes a DC 14 Wisdom saving throw. On a failed save, the target becomes frightened for 1 day. The effect ends if its source dies or is more than 1 mile away. Whenever the target takes damage, it repeats the saving throw, ending the effect on a success.';
+      const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({
+        附赠动作: [{ name: 'Dread Tether', type: 'save', activation: { type: 'bonus' }, DC: 14, ability: 'wis', describe,
+          uses: { max: 1, period: 'shortRest' }, embeddedEffects: [{ type: 'frightened', describe, duration: '1 day' }] }],
+      }));
+      const item = actor.items.find((entry: any) => entry.name.includes('Dread Tether')), activity = getActivities(item)[0];
+      expect(item.effects).toEqual([]); expect(activity.effects ?? []).toEqual([]);
+      expect(activity).toMatchObject({ type: 'save', activation: { type: 'bonus' }, save: { dc: { formula: '14' }, ability: ['wis'] } });
+      expect(item.system.uses).toMatchObject({ max: '1', recovery: [{ period: 'sr' }] });
+      expect(activity.consumption.targets).toContainEqual(expect.objectContaining({ type: 'itemUses', value: '1' }));
+      expect(item.system.description.value).toContain('1 mile');
+      expect(item.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', sourceText: describe, statuses: ['frightened'] });
+      expect(item.system.description.value).toContain('GM');
+    });
+
+    it('projects exact simple condition durations including Chinese 日 without changing untimed conditions', () => {
+      for (const [duration, native] of [['1日', { seconds: 86400 }], ['1天', { seconds: 86400 }], ['1 day', { seconds: 86400 }], ['1 minute', { seconds: 60 }], ['2轮', { rounds: 2 }], [undefined, {}]] as const) {
+        const describe = `The target becomes blinded${duration ? ' for ' + duration : ''}.`;
+        const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Light Veil', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'blinded', describe, duration }] }] }));
+        const item = actor.items.find((entry: any) => entry.name.includes('Light Veil'));
+        expect(item.effects).toHaveLength(1); expect(item.effects[0].duration).toMatchObject(native);
+        expect(getActivities(item)[0].effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+      }
+    });
+
+    it('does not link an unrepresentable explicit condition duration as an indefinite Effect', () => {
+      const describe = 'The target becomes stunned until the end of its next turn.';
+      const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Brief Shock', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'stunned', describe, duration: 'until the end of its next turn' }] }] }));
+      const item = actor.items.find((entry: any) => entry.name.includes('Brief Shock'));
+      expect(item.effects).toEqual([]); expect(getActivities(item)[0].effects ?? []).toEqual([]);
+    });
+
+    it('keeps unparsed source durations GM-owned even when structured duration is absent', () => {
+      for (const describe of ['The target becomes charmed for one minute.', '目标陷入魅惑，持续一日。']) {
+        const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Quiet Influence', type: 'save', DC: 13, ability: 'wis', describe, embeddedEffects: [{ type: 'charmed', describe }] }] }));
+        expect(actor.items[0].effects).toEqual([]);
+        expect(actor.items[0].flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['charmed']);
+      }
+    });
+
+    it('retains a supported independent status while a different status lifecycle remains GM-owned', () => {
+      for (const describe of ['The target is prone. It is poisoned until the end of its next turn.', '目标陷入倒地。它陷入中毒，直到其下一回合结束。']) {
+        const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Stinging Sweep', type: 'save', DC: 13, ability: 'dex', describe, embeddedEffects: [{ type: 'prone', describe }, { type: 'poisoned', describe }] }] }));
+        const item = actor.items[0];
+        expect(item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone']);
+        expect(getActivities(item)[0].effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+        expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['poisoned']);
+      }
+    });
+
+    it('binds a shared trailing interval to coordinated states instead of making the first indefinite', () => {
+      for (const describe of ['The target becomes blinded and deafened for 1 minute.', '目标陷入目盲和耳聋，持续1分钟。']) {
+        const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Sensory Flash', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'blinded', describe }, { type: 'deafened', describe }] }] }));
+        expect(actor.items[0].effects).toHaveLength(2);
+        expect(actor.items[0].effects.map((effect: any) => effect.duration.seconds)).toEqual([60, 60]);
+      }
+    });
+
+    it('maps all four ordinary attack kinds to the locked V14 native type while preserving literal rolls', () => {
+      for (const kind of ['mwak', 'rwak', 'msak', 'rsak'] as const) {
+        const action = { name: 'Literal Strike', type: 'attack', attackType: kind, toHit: 6, range: kind.startsWith('r') ? '60/120 ft.' : 'reach 5 ft.', damage: [{ formula: '2d6+4', type: 'force' }], describe: 'Literal attack.' };
+        const item = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [action] })).items[0];
+        expect(getActivities(item)[0].attack).toMatchObject({ flat: true, bonus: '6', type: { value: kind.startsWith('r') ? 'ranged' : 'melee', classification: kind.endsWith('sak') ? 'spell' : 'weapon' } });
+        expect(getActivities(item)[0].damage.parts[0]).toMatchObject({ number: 2, denomination: 6, bonus: '4', types: ['force'] });
+        const legacy = new ActorGenerator({ fvttVersion: '12', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [action] })).items[0];
+        expect(getActivities(legacy)[0].attack.type.value).toBe(kind);
+        const mixed = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ ...action, executionMode: 'native-with-gm', nativeRuleText: action.describe, manualRemainder: 'Additional consequences remain GM-owned.' }] })).items[0];
+        expect(getActivities(mixed)[0].attack.type).toEqual(getActivities(item)[0].attack.type);
+      }
+    });
+
+    it('checks the complete source-bound GM status without granting missing basic mechanics', () => {
+      const describe = 'Melee Weapon Attack: +6 to hit, reach 5 ft. Hit: 2d6+4 force damage, and the target becomes blinded for 1 day. The effect ends if its source dies.';
+      const saveSource = 'The target makes a DC 14 Wisdom saving throw. On a failed save, the target becomes frightened for 1 day. The effect ends if its source dies.';
+      const parsed = createMinimalParsedNPC({ 动作: [{ name: 'Dimming Strike', type: 'attack', attackType: 'mwak', toHit: 6, range: 'reach 5 ft.', describe, damage: [{ formula: '2d6+4', type: 'force' }], uses: { max: 1, period: 'shortRest' }, embeddedEffects: [{ type: 'blinded', describe, duration: '1 day' }] }, { name: 'Dread Pulse', type: 'save', DC: 14, ability: 'wis', describe: saveSource, embeddedEffects: [{ type: 'frightened', describe: saveSource, duration: '1 day' }] }] });
+      const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(parsed);
+      const canonical = adaptParsedActorToCanonical(parsed);
+      const verify = (output: any) => verifyGeneratedDocument({ canonical, output, target: '14', effectProfile: 'core' });
+      expect(verify(actor).diagnostics.filter(entry => entry.severity === 'error')).toEqual([]);
+      for (const change of ['attack', 'damage', 'save', 'uses', 'source', 'qualifier', 'mode'] as const) {
+        const altered = structuredClone(actor), item = altered.items[0], activities = Object.values(item.system.activities) as any[];
+        if (change === 'attack') for (const [key, activity] of Object.entries(item.system.activities) as [string, any][]) { if (activity.type === 'attack') delete item.system.activities[key]; }
+        if (change === 'damage') { for (const activity of activities) if (activity.damage) activity.damage.parts = []; if (item.system.damage) item.system.damage.base = {}; }
+        if (change === 'save') for (const [key, activity] of Object.entries(altered.items[1].system.activities) as [string, any][]) { if (activity.type === 'save') delete altered.items[1].system.activities[key]; }
+        if (change === 'uses') delete item.system.uses;
+        if (change === 'source') item.flags.fvttJsonGenerator.conditionLifecycle.sourceText = 'Unrelated rule.';
+        if (change === 'qualifier') item.system.description.value = '<p>The target becomes blinded.</p><p>GM</p>';
+        if (change === 'mode') activities[0].attack.type.value = 'mwak';
+        expect(verify(altered).status).toBe('failed');
+      }
+    });
+
+    it('preserves the established modded until-damage executor and unrelated non-status Effects', () => {
+      const describe = 'On a failed save, the target becomes frightened until it takes damage.';
+      const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'modded-v14' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Dread Mark', type: 'save', DC: 14, ability: 'wis', describe }] }));
+      const item = actor.items[0], effect = item.effects.find((entry: any) => entry.statuses?.includes('frightened'));
+      expect(effect.flags.dae.specialDuration).toContain('isDamaged');
+      expect(getActivities(item)[0].effects).toContainEqual(expect.objectContaining({ _id: effect._id }));
+      const other = { items: [{ system: { description: { value: 'The target becomes prone. If the source is bloodied, its AC increases by 2.' }, activities: {} }, effects: [{ _id: 'nativeProne00001', statuses: ['prone'], duration: {} }, { _id: 'armorEffect00001', statuses: [], changes: [{ key: 'system.attributes.ac.bonus', value: '2' }] }] }] };
+      const unchanged = structuredClone(other); enforceCoreConditionLifecycles(other);
+      expect(other).toEqual(unchanged);
+    });
+
+    it('keeps unimplemented escape lifecycles GM-owned without losing the native attack', () => {
       const generator = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' });
       const actionSection = String.fromCodePoint(21160, 20316);
       const parsed = createMinimalParsedNPC({
@@ -167,11 +274,10 @@ describe('appendStructuredActionItems', () => {
       const activities = getActivities(item);
       const effectIds = (item.effects ?? []).map((effect: any) => effect._id);
 
-      expect((item.effects ?? []).flatMap((effect: any) => effect.statuses ?? []).sort()).toEqual([
-        'grappled',
-        'restrained',
-      ]);
-      expect(activities[0].effects.map((entry: any) => entry._id).sort()).toEqual(effectIds.sort());
+      expect(item.effects).toEqual([]); expect(effectIds).toEqual([]);
+      expect(activities[0].effects ?? []).toEqual([]);
+      expect(activities[0].type).toBe('attack'); expect(activities[0].damage.parts).toHaveLength(1);
+      expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses.sort()).toEqual(['grappled', 'restrained']);
     });
 
     it('does not create an embedded effect from unrelated non-application prose', () => {

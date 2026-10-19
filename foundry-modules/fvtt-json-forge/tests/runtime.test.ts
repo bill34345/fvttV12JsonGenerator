@@ -5,6 +5,7 @@ import { hashArtifact, type ForgeActorResponse, type JsonObject } from '@fvtt-js
 import { splitCollection } from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import {
   createAcceptedForgeActor,
+  assertActorSemantics,
   ForgeTemporaryActorCleanupError,
   MODULE_ID,
   type ForgeActorCreateResult,
@@ -30,6 +31,13 @@ beforeAll(async () => {
 });
 
 describe('Foundry Forge Actor creation boundary', () => {
+  test('rejects lost embedded Item artwork during Actor readback', () => {
+    if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') throw new Error('Fixture is not accepted.');
+    const artifact = acceptedResponse.result.artifact;
+    const changed = structuredClone(artifact) as Record<string, any>;
+    changed.items[0].img = 'icons/svg/mystery-man.svg';
+    expect(() => assertActorSemantics(artifact, changed)).toThrow(/semantics.*img/u);
+  });
   test('creates a formally generated 368 artifact only in the matching reviewed Mirror runtime', async () => {
     const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
     const response = await convertFinalActorSource(buildForgeActorRequest({
@@ -145,7 +153,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     }
 
     const brittleShell = (response.result.artifact.items as Array<Record<string, any>>)
-      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+      .find((item) => item.name === '脆壳反震 Brittle Shell');
     expect(brittleShell?.effects?.[0]?.changes?.[0]?.mode).toBe(5);
     expect(brittleShell?.effects?.[0]?.changes?.[0]?.value).toBe('14');
 
@@ -153,7 +161,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
     const imported = collection.contents[0]!.toObject() as Record<string, any>;
     const importedBrittleShell = (imported.items as Array<Record<string, any>>)
-      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+      .find((item) => item.name === '脆壳反震 Brittle Shell');
     const importedEffect = importedBrittleShell?.effects?.[0] as Record<string, any>;
 
     expect(result.status).toBe('created');
@@ -162,7 +170,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(importedEffect?.system?.changes?.[0]?.value).toBe(14);
 
     const persistedBrittleShell = (collection.contents[0]!.data.items as Array<Record<string, any>>)
-      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+      .find((item) => item.name === '脆壳反震 Brittle Shell');
     const persistedEffect = persistedBrittleShell?.effects?.[0] as Record<string, any>;
     const canonicalChanges = structuredClone(persistedEffect.system.changes);
     delete persistedEffect.system.changes;
@@ -181,12 +189,12 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(collection.createCount).toBe(1);
     expect(collection.contents).toHaveLength(1);
 
-    const canonicalResponse = withCanonicalEffectChanges(response, '脆壳反震 (Brittle Shell)');
+    const canonicalResponse = withCanonicalEffectChanges(response, '脆壳反震 Brittle Shell');
     const canonicalCollection = new FakeActorCollection();
     await expect(createAcceptedForgeActor({ game: supportedGame(canonicalCollection), response: canonicalResponse }))
       .resolves.toMatchObject({ status: 'created' });
     const canonicalImportedItem = (canonicalCollection.contents[0]!.data.items as Array<Record<string, any>>)
-      .find((item) => item.name === '脆壳反震 (Brittle Shell)');
+      .find((item) => item.name === '脆壳反震 Brittle Shell');
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.type).toBe('override');
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]).not.toHaveProperty('mode');
     expect(canonicalImportedItem?.effects?.[0]?.system?.changes?.[0]?.value).toBe('14');
@@ -212,7 +220,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     }
 
     const swallow = (response.result.artifact.items as Array<Record<string, any>>)
-      .find((item) => item.name === '吞咽 (Swallow)');
+      .find((item) => item.name === '吞咽 Swallow');
     const attackEntry = Object.entries(asRecord(swallow?.system?.activities))
       .find(([, activity]) => asRecord(activity).type === 'attack');
     if (!attackEntry) throw new Error('Swallow attack Activity was not found.');
@@ -224,7 +232,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
     const imported = collection.contents[0]!.toObject() as Record<string, any>;
     expect(result.status).toBe('created');
-    expect(findActivity(imported, '吞咽 (Swallow)', attackId).range)
+    expect(findActivity(imported, '吞咽 Swallow', attackId).range)
       .toMatchObject({ override: true, value: 5, units: 'ft' });
   });
 
@@ -242,7 +250,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     }
 
     const venomousBite = (response.result.artifact.items as Array<Record<string, any>>)
-      .find((item) => item.name === '毒液咬击 (Venomous Bite)');
+      .find((item) => item.name === '毒液咬击 Venomous Bite');
     const utilityActivity = Object.values(asRecord(venomousBite?.system?.activities))
       .map(asRecord)
       .find((activity) => activity.name === 'Gain Temporary HP');
@@ -251,14 +259,14 @@ describe('Foundry Forge Actor creation boundary', () => {
     const collection = new FakeActorCollection();
     await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
       .resolves.toMatchObject({ status: 'created' });
-    const importedUtility = findActivity(collection.contents[0]!.data, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    const importedUtility = findActivity(collection.contents[0]!.data, '毒液咬击 Venomous Bite', utilityActivity!._id);
     expect(importedUtility.target.template.units).toBe('ft');
 
-    const activeResponse = withActiveActivityTemplate(response, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    const activeResponse = withActiveActivityTemplate(response, '毒液咬击 Venomous Bite', utilityActivity!._id);
     const activeCollection = new FakeActorCollection();
     await expect(createAcceptedForgeActor({ game: supportedGame(activeCollection), response: activeResponse }))
       .resolves.toMatchObject({ status: 'created' });
-    const activeImported = findActivity(activeCollection.contents[0]!.data, '毒液咬击 (Venomous Bite)', utilityActivity!._id);
+    const activeImported = findActivity(activeCollection.contents[0]!.data, '毒液咬击 Venomous Bite', utilityActivity!._id);
     activeImported.target.template.units = 'm';
     await expect(createAcceptedForgeActor({ game: supportedGame(activeCollection), response: activeResponse }))
       .rejects.toThrow(/failed readback verification/u);

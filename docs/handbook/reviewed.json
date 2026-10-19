@@ -1,28 +1,28 @@
 {
   "web-workbench": {
-    "fingerprint": "48bcc04dcc1ecea8b1a474f7b8e6773850e464c1c5becf108afd4088281f6827",
-    "reviewedOn": "2026-09-12",
-    "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
+    "fingerprint": "6402208082b1d863f3533f681a49fa2eb85fc027ccdddf9c8994236fd8275972",
+    "reviewedOn": "2026-10-13",
+    "note": "已对照本轮实现和现有步骤：Forge浏览器模糊内容/类别/继承图及可选iconReview已写明；CLI/Web默认off及CLI保守safe保持。v14内置状态ID标题、5.3.3语言叶子key/别名、完整公式及有界数字用途/重甲条件已补说明；源绑定和GM批准/付费审核政策保持。其他入口操作和既有无备份限制未改变，未推广原生运行验收。"
   },
   "markdown-convert": {
-    "fingerprint": "9d866223f24edc57a2410a38c288f6b5832d4dd75b059d02f38f7eb1d75aa390",
-    "reviewedOn": "2026-10-10",
-    "note": "已核CLI与Markdown正式入口；共享翻译契约新增明确GM批准v2，只由显式调用传入，原CLI输入/默认审核/版本选择/输出和来源验证步骤未改。旧模型v1继续兼容，入口说明仍准确。"
+    "fingerprint": "cde71e606743e6eb5ce75ac36446815a146edb724e44585bcd409c7f26f3dd26",
+    "reviewedOn": "2026-10-19",
+    "note": "已核对来源父边界及完整规则投影：只改善Intake标题与正文分离的来源证明和已知操作承接，现有结构化转换命令、默认版本及GM边界不变。首批模型成功与当前保存回复验证分开。"
   },
   "monster-intake": {
-    "fingerprint": "2ab5476c0907ea2856e17a47503eab0e7b6f9129f64aaba2f2eca54a8b02de0a",
-    "reviewedOn": "2026-10-10",
-    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
+    "fingerprint": "7901141d83da08beb8e9d0a77089d30f4ee96c4663dd38e8fcf873b94c555768",
+    "reviewedOn": "2026-10-19",
+    "note": "仅更新同候选全新真实请求的实测边界：2HTTP、零重试，分步首次正式链保住2d8与全部条件；普通因空spellcasting列表阻断，IR正确不算最终输出通过。无产品源码、入口、版本、安装或实机行为变更。历史首次及保存回复复验保持各自结论。"
   },
   "item-intake": {
-    "fingerprint": "6b5c07030f31236ccfc0496e3ea30ab7573faae273e44ab0df0c85c44fcc00f5",
-    "reviewedOn": "2026-10-10",
-    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
+    "fingerprint": "35870e08209c82e1690e75e4b95ef4f63e5e3ced2efe20c38aa3f3f999b6eb5e",
+    "reviewedOn": "2026-10-19",
+    "note": "已核对独立Item与Species入口及推广限制：本轮仅怪物SourceOP同源固定伤害的父规则与dispatch修复，不扩展二者Evidence IR、版本、运行时接受或操作步骤。"
   },
   "species-intake": {
-    "fingerprint": "4ea52a4259f31f649f307d8efb08317cf8c16238c65c72ba08ca1524d09d7e36",
-    "reviewedOn": "2026-10-10",
-    "note": "人工核对CLI入口、target与promotion限制及reviewFocus调用：本轮只在Forge opt-in同模型简短复核，CLI仍保留自身生成/审核配置与默认提示；三类CLI命令、来源核对与正式推广边界保持。"
+    "fingerprint": "add7a5efa52e385756ca61068d89fb8ca1cb4357b69d22cf0ac6a46d7bf8ae31",
+    "reviewedOn": "2026-10-19",
+    "note": "已核对独立Item与Species入口及推广限制：本轮仅怪物SourceOP同源固定伤害的父规则与dispatch修复，不扩展二者Evidence IR、版本、运行时接受或操作步骤。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,29 +30,29 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "45427cb46d1973bc630184e513bc2287bb6f6a14155589e43e0e765e03d98247",
-    "reviewedOn": "2026-10-08",
-    "note": "本次仅受审中文显示policy与名称来源核验变化；Vault同步入口、manifest、覆盖和既有无备份冲突未改变，原限制仍正确。"
+    "fingerprint": "a9743f2acc984292e2d02be772ee770d04947ece47a87ce02ec417ace47ce48b",
+    "reviewedOn": "2026-10-18",
+    "note": "人工核对本次workflows仅将来源名称存在性函数与browser共用；这两个入口不调用该验收函数，备份冲突、原位翻译、命令与产物说明均保持正确，无需改写。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "64792117f98292b555e33d7a293818521c949a610bc549d5125bb0084bac1478",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "65f3ac605cce3698951456e9bb0831750d7e497429fe33c225589d36a06f0b14",
+    "reviewedOn": "2026-10-18",
+    "note": "已核对条目及共享README：本次怪物来源检查不修改采集入口、参数、文本来源或采集操作限制。"
   },
   "artwork-icons": {
-    "fingerprint": "9c6ae355c8ac665d6b95bb388661d257257a582f557c3b2c57d29907aa9e440f",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "5f8f77416afe3595cf14cebeb3d14c524b420be7a557f12b9919229ae0e434c9",
+    "reviewedOn": "2026-10-18",
+    "note": "已核对条目及共享README：本次不修改图标选择、来源、safe/override授权或图片操作步骤。"
   },
   "legacy-text": {
-    "fingerprint": "8cab6a716854b28a7f1f6192c5ac336f50ece653ac2df847de842b1f8d0f9abf",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "bf98d80b0db631561f0c57046de0540037cf48228920fbbbb28ce7a77219d04e",
+    "reviewedOn": "2026-10-18",
+    "note": "已核对条目及共享README：旧文本与结构化格式入口不变，旧技能倍率和明确总加值兼容；本次未迁移现有文件。"
   },
   "json-translation": {
-    "fingerprint": "2d82afeb8c7491c426baa3bed986d9a645916f6397b1e6def36dad0edc613931",
-    "reviewedOn": "2026-10-10",
-    "note": "已对照实际UI及默认零review控制流：Actor/Item/战斗包/中文/续跑与批量均不自动审核，按钮才额外收费；本地有效候选可GM确认，中文草稿需真实GM批准并formal prepare，旧v1与GM v2区分。同步成本说明/语言标签/恢复和旧翻译入口边界，CLI默认保持。"
+    "fingerprint": "d05ce2ac0f374cd7cdfe3a87ee0592cdfb17400eadbb4f98998cec728df0042c",
+    "reviewedOn": "2026-10-18",
+    "note": "人工核对本次workflows仅将来源名称存在性函数与browser共用；这两个入口不调用该验收函数，备份冲突、原位翻译、命令与产物说明均保持正确，无需改写。"
   },
   "foundry-ops": {
     "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "7180427b02bcf053650e2a8bec35231f163751f940104de1ee3882b0c56acc4d",
-    "reviewedOn": "2026-10-11",
-    "note": "2026-10-11 r3逐项复核：Actor/Item可选显示名空白回退来源名，二者均空仍拒绝，正式CLI/verifier/目标门禁不变；同包中文续翻保留已展开报告并实时更新、旧下载链接起步撤销，换源和清除仍撤旧视图。恢复与无Key GM批准说明已由r2实机及正式包独立核验，持续展开新增真实HBS回归；不把下载文件未知写作PASS。"
+    "fingerprint": "4f251f7c3a3c7d80ac1451f25e528f104c005cc9ec0534c4f8a4c6c1009a14e7",
+    "reviewedOn": "2026-10-19",
+    "note": "已核对新增安全定点入口test:forge-damage-upgrade、正式来源验证和受影响检查。16定点通过；既有v12测试前置失败单独保留，局部结果不替代CI或实机接受。"
   },
   "human-encounter-intake": {
-    "fingerprint": "4ad3872b1c1d7838a24217fac8c7eb9ba8d7f073a8912fdfa0a433259f38e01f",
-    "reviewedOn": "2026-10-11",
-    "note": "2026-10-11 r3逐项复核：Actor/Item可选显示名空白回退来源名，二者均空仍拒绝，正式CLI/verifier/目标门禁不变；同包中文续翻保留已展开报告并实时更新、旧下载链接起步撤销，换源和清除仍撤旧视图。恢复与无Key GM批准说明已由r2实机及正式包独立核验，持续展开新增真实HBS回归；不把下载文件未知写作PASS。"
+    "fingerprint": "947117a1a7b405a8da553c7dfabc54576f881ff5cac243c4af43b23d008d9d86",
+    "reviewedOn": "2026-10-19",
+    "note": "仅更新同候选全新真实请求的实测边界：2HTTP、零重试，分步首次正式链保住2d8与全部条件；普通因空spellcasting列表阻断，IR正确不算最终输出通过。无产品源码、入口、版本、安装或实机行为变更。历史首次及保存回复复验保持各自结论。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -95,9 +95,9 @@
     "note": "保留master刚集成的42项地形、六条长音源、14.368/5.3.3范围及原接受边界；画笔AGENTS同时保留最新技能/接续指针并加入按影响验收。仅检查触发规则变化，无业务源码或素材修改。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "019e600a5f105805a499f275b58df54322a1fc9f36bafd8be0b27fb6af37ef1b",
+    "reviewedOn": "2026-10-18",
+    "note": "已核对条目及共享README：新怪物Intake段落不改变血猎内容、模块安装入口、规则或适用版本。"
   },
   "fvtt-homebrew-species": {
     "fingerprint": "08762ebdbb4655ad01354079c0b8f46cace4181c7cfebb184ec9e41ee48c9701",
@@ -106,8 +106,8 @@
   },
   "fvtt-house-rules": {
     "fingerprint": "5f8aae935e17bf2c1e01fe6e121f4e66c952b3a58bf94a6253305d908084ce99",
-    "reviewedOn": "2026-10-03",
-    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
+    "reviewedOn": "2026-10-17",
+    "note": "逐项核对来源入口、命令与独立owner，本轮README及共享watch变化没有增加这些工具的用户操作或授权范围；旧CLI Bloodfin正式链和既有完整源包比较另有回归。图标仍默认off；Vault Sync既有备份与无备份规则冲突警告保留，House Rules/Blood Hunter不引入Forge操作说明或新运行接受声明。"
   },
   "fvtt-injury-fading-spirits": {
     "fingerprint": "455e1d1fcb4dd6dde20e7d362ebb041899a33a8dbaa485e1065f5d8cc9cde926",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "84e87b04e7020ba989b09b73e6770ace8708e3b2b5a71f749feac850a36c2f6a",
-    "reviewedOn": "2026-10-11",
-    "note": "2026-10-11 r4人工核对共享凭据边界：清/替换当前Key保留同源同目标本地有效候选的GM创建，撤连接测试与旧付费审核权限，改回Key不复活；清全部Key保留当前非敏感临时连接配置且不倒写存储。非凭据/source/hash/GM门禁保留，Provider晚回取消与本地提交防重复有真实HBS回归。其余handbook条目watch未变，复用已有核对。"
+    "fingerprint": "c99f2bd715e2dec4d01bc585f4ce6f8292582348ae733c7c256fd34bd693b6a3",
+    "reviewedOn": "2026-10-19",
+    "note": "仅更新同候选全新真实请求的实测边界：2HTTP、零重试，分步首次正式链保住2d8与全部条件；普通因空spellcasting列表阻断，IR正确不算最终输出通过。无产品源码、入口、版本、安装或实机行为变更。历史首次及保存回复复验保持各自结论。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
@@ -135,9 +135,9 @@
     "note": "框选同步0.2.0精确Next配对与各Actor增减一级语义、首次安装/权限限制一致，构建5文件与现装一致，复用原限定HUD接受。WMP真实Cleave事件先后缺口已定点修补并276回归通过，已装新build而实机复验待收据，仍不扩大完整八精通。"
   },
   "monster-spell-resolver": {
-    "fingerprint": "bb3856fa6fc538cb98c89fb5f4d0946a246f6991002af177fa1f78bd0cd19602",
-    "reviewedOn": "2026-10-03",
-    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
+    "fingerprint": "a204b47732455ae4de3b67a35fcb13ad363e1e43a041c9541412860df8badd80",
+    "reviewedOn": "2026-10-18",
+    "note": "最终保存映射反例已补红绿：英文身份确认后仍复核原来源优先级，旧自动选择不再适用时待审，不自动迁移旧卡；422项完整服务通过。README、既定身份/UUID保护和离线接受边界一致。"
   },
   "open-session-deck": {
     "fingerprint": "136bb0745de37ef6c710902f47f48710e5b9c0589fe8bffe5dc4c106b08a4505",

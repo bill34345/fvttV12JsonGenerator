@@ -1,4 +1,18 @@
 import type { WeaponConfiguration, WeaponMasteryId } from '@fvtt-json-generator/contracts/weapon-properties';
+import type { SourceOperation,NativeFailureStatus } from './sourceOperationTypes';
+export type {NativeFailureStatus} from './sourceOperationTypes';
+
+/** A counter for a source-listed, GM-resolved spell; never a Cast Activity. */
+export interface ManualSpellUseRecord { name: string; max: number; period: 'day' }
+
+/** A separate native Save invoked by the GM after the explicit source trigger. */
+export interface GmTriggeredSave {
+  dc: number;
+  ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+  trigger: string;
+  sourceText: string;
+  failureStatuses: NativeFailureStatus[];
+}
 
 /** Source-derived action intermediate representation shared by parsing and generation. */
 export interface Damage {
@@ -16,6 +30,8 @@ export interface Damage {
 export interface HealingPart {
   formula: string;
   type: 'healing' | 'temphp';
+  /** Explicit recipient; source qualifications stay literal and GM-reviewed. */
+  target?: { type:'self'|'creature'; count:1; special:string };
 }
 
 export type SaveOutcome = 'none' | 'half' | 'full' | 'literal';
@@ -52,6 +68,8 @@ export interface ActionData {
     outcome?: SaveOutcome;
     onSave?: string;
     onFail?: string;
+    /** Literal source qualifier for when the save applies. */
+    condition?: string;
   };
 
   healing?: HealingPart;
@@ -75,15 +93,18 @@ export interface ActionData {
   targetAffected?: ActionTarget;
 
   damage?: Damage[];
+  sourceDamageParts?: SourceDamagePart[];
+  sourceRuleFacts?: SourceRuleFact[];
 
   activity?: {
+    targetSpecial?: string;
     duration?: {
       value: string;
       units: 'round' | 'minute' | 'hour' | 'day' | string;
       concentration: boolean;
     };
     range?: {
-      value: string;
+      value: string | number;
       units: 'ft' | string;
     };
     target?: {
@@ -159,7 +180,7 @@ export interface ActionData {
 
 export type ActivityActivationType = 'action' | 'bonus' | 'reaction' | 'legendary' | 'special';
 export type ActivityType = 'attack' | 'save' | 'damage' | 'heal' | 'utility';
-export type AoeShape = '球形' | '锥形' | '线形' | '立方体' | '圆柱形' | '矩形';
+  export type AoeShape = '球形' | '半径' | '锥形' | '线形' | '立方体' | '圆柱形' | '矩形';
 export type TriggerType = '命中后' | '失败' | '成功' | '低值' | '降至0' | '濒血' | 'special';
 export type SaveAbility = '力量' | '敏捷' | '体质' | '智力' | '感知' | '魅力' | 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -168,6 +189,43 @@ export interface DamagePart {
   type: string;
   types?: string[];
 }
+
+/** Preserve source relationships when a branch cannot become native damage. */
+export interface SourceDamagePart extends DamagePart {
+  relationship: 'base' | 'additional' | 'conditional' | 'replacement';
+  condition?: string;
+}
+
+/** Complete supported source clauses, parsed before Actor and Chinese projection. */
+export type SourceRuleFact =
+  | { kind: 'attack-damage'; source: string; attackType: 'mwak' | 'rwak';
+      toHit: number; distance: string; target: string; average: number; formula: string; damageType: string }
+  | { kind: 'save-damage'; source: string; targetScope: { kind: 'target' } | { kind: 'area' }
+      | { kind: 'within'; feet: number }; dc: number; ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+      average: number; formula: string; damageType: string; halfOnSuccess: boolean }
+  | { kind: 'save-status'; source: string; requiredTargetStatus: string; withinFeet: number;
+      dc: number; ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'; appliedStatus: string;
+      duration: 'target-next-turn-end'; failureMarginDropToZero?: number }
+  | { kind: 'save-damage-status'; source: string; withinFeet: number;
+      dc: number; ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+      average: number; formula: string; damageType: string; appliedStatus: string;
+      duration: 'target-next-turn-end'; halfOnSuccess: true }
+  | { kind: 'visible-target-save-damage'; source: string; viewer: string; withinFeet: number;
+      dc: number; ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+      damages: Array<{ average: number; formula: string; damageType: string }>;
+      halfOnSuccess: true }
+  | { kind: 'heavy-armour-half'; source: string; targetCondition: 'grappled' | 'restrained'; grappler: string;
+      average: number; formula: string; damageType: string; armourNegated: boolean }
+  | { kind: 'food-retention'; source: string; food: 'solid'; requiredLiquid: 'sea-water'; outcome: 'retain-not-vomit' }
+  | { kind: 'target-choice-save'; source: string;
+      targetScope: { kind: 'area'; feet: number; areaSource: string }
+        | { kind: 'within'; feet: number; mustSeeSource: boolean };
+      choices: ['int', 'wis'];
+      dc: number; failedStatus: string; duration: { value: number; unit: 'minute' | 'round' | 'hour' };
+      repeatAt: 'start' | 'end' }
+  | { kind: 'forced-movement'; source: string; target: 'creature' | 'target'; dc: number;
+      ability: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'; distance: number;
+      distanceFormula?: string; origin: string };
 
 export interface AoeTemplate {
   shape: AoeShape;
@@ -212,6 +270,8 @@ export interface EmbeddedEffect {
   duration?: string;
   damageType?: string;
   damageFormula?: string;
+  escapeDc?: number;
+  staged?: boolean;
 }
 
 export interface SpecialEffect {
@@ -220,6 +280,18 @@ export interface SpecialEffect {
 }
 
 export interface StructuredActionData {
+  sourceFeatureId?:string;
+  sourceOperations?: SourceOperation[];
+  sourceContext?: string[];
+  /** Explicit source workflow boundary. Prose must not generate executable mechanics. */
+  executionMode?: 'gm-manual' | 'native-with-gm';
+  nativeRuleText?: string;
+  spellUseRecords?: ManualSpellUseRecord[];
+  gmTriggeredSave?: GmTriggeredSave;
+  nativeFailureStatuses?: NativeFailureStatus[];
+  manualRemainder?: string;
+  saveOutcome?: 'none' | 'half' | 'full';
+  targetSpecial?: string;
   name: string;
   englishName?: string;
   /** Stable source-derived bridge to a portable spell manifest feature. */
@@ -235,9 +307,12 @@ export interface StructuredActionData {
   toHit?: number;
   range?: string;
   damage?: DamagePart[];
+  sourceDamageParts?: SourceDamagePart[];
+  sourceRuleFacts?: SourceRuleFact[];
   healing?: HealingPart;
   DC?: number;
   ability?: SaveAbility;
+  saveCondition?: string;
   dcSourceAbility?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
   dcSourceKind?: 'ability' | 'spellcasting' | 'literal';
   aoe?: AoeTemplate;

@@ -1,4 +1,7 @@
 import type { HttpClient, HttpResponse } from './http';
+import {FailureReplyBuffer, sanitizeFailureReply, type FailureReplyReason, type FailureEvidenceStatus,
+  type TransportFailureDiagnostic, type TransportFailureEvidence} from './transport-failure-evidence';
+export type {TransportFailureDiagnostic,TransportFailureEvidence} from './transport-failure-evidence';
 
 /**
  * Protocols understood by the browser and Node Intake providers.  Keeping
@@ -28,11 +31,14 @@ export interface IntakeTransportOptions {
   stream?: boolean;
   /** Safe semantic activity only; raw provider events and reasoning are never exposed. */
   onActivity?: (activity: IntakeProviderActivity) => void;
+  /** Private, opt-in persistence. Runs for transport failures before they reach callers. */
+  onFailureEvidence?: (evidence: TransportFailureEvidence) => boolean | void | Promise<boolean | void>;
 }
 
 export type IntakeProviderActivityPhase =
   | 'sending'
   | 'awaiting_headers'
+  | 'receiving_response'
   | 'streaming_reasoning'
   | 'streaming_output'
   | 'validating'
@@ -41,10 +47,24 @@ export type IntakeProviderActivityPhase =
   | 'failed'
   | 'stopped';
 
-export type IntakeProviderTransportState = 'pending' | 'stream_open' | 'closed' | 'browser_error';
+export type IntakeProviderTransportState = 'pending' | 'body_open' | 'stream_open' | 'closed' | 'browser_error';
 export type IntakeProviderActivityState = 'unknown' | 'reported_in_progress' | 'reported_reasoning' | 'reported_output' | 'completed' | 'failed';
 
-export interface IntakeProviderActivity {
+export type IntakeRequestFailureReason = FailureReplyReason;
+
+/** Counts and timestamps only: no body, endpoint, credentials or reasoning text. */
+export interface IntakeRequestObservation {
+  responseHeadersAtMs?: number;
+  firstDataAtMs?: number;
+  lastDataAtMs?: number;
+  bodyCompletedAtMs?: number;
+  receivedBytes?: number;
+  keepAliveCount?: number;
+  failureReason?: IntakeRequestFailureReason;
+  failureEvidenceStatus?: FailureEvidenceStatus;
+}
+
+export interface IntakeProviderActivity extends IntakeRequestObservation {
   phase: IntakeProviderActivityPhase;
   transport: IntakeProviderTransportState;
   providerActivity: IntakeProviderActivityState;
@@ -63,7 +83,7 @@ export type IntakeRequestWaitPhase = 'awaiting_response_headers' | 'reading_resp
  * remote model is still thinking or that a low-level TCP connection is alive;
  * browsers do not expose either fact to application code.
  */
-export interface IntakeRequestWaitStatus {
+export interface IntakeRequestWaitStatus extends IntakeRequestObservation {
   phase: IntakeRequestWaitPhase;
   elapsedMs: number;
   completedCycles: number;
@@ -88,6 +108,11 @@ export interface IntakeRequestWaitPolicy {
   cycleMs: number;
   cyclesBeforeDecision: number;
   onDecision(status: IntakeRequestWaitStatus): Promise<IntakeRequestWaitDecision>;
+}
+
+/** Forge may wait on the same request until completion or explicit cancellation. */
+export function createContinuousIntakeWaitPolicy(): IntakeRequestWaitPolicy {
+  return { cycleMs: 180_000, cyclesBeforeDecision: 4, onDecision: async () => 'continue' };
 }
 
 export interface IntakeTransportRequest extends IntakeTransportOptions {
@@ -122,6 +147,7 @@ export class IntakeTransportError extends Error {
   readonly code: IntakeTransportErrorCode;
   readonly retryable: boolean;
   readonly status?: number;
+  failure?: TransportFailureDiagnostic;
 
   constructor(
     code: IntakeTransportErrorCode,
@@ -138,7 +164,12 @@ export class IntakeTransportError extends Error {
 
 const DEFAULT_STRUCTURED_OUTPUT: IntakeStructuredOutput = { mode: 'json_object' };
 
-interface ObservedProviderState {
+interface ObservedProviderState extends IntakeRequestObservation {
+  capture?: FailureReplyBuffer;
+  captureUnavailable?:boolean;
+  providerCode?: string;
+  providerType?: string;
+  bodyReadFailure?:TransportFailureDiagnostic['bodyReadFailure'];
   phase: IntakeRequestWaitPhase;
   activityPhase: IntakeProviderActivityPhase;
   responseHeadersReceived: boolean;
@@ -170,6 +201,9 @@ export async function requestIntakeProvider(
     transport: 'pending',
     providerActivity: 'unknown',
     outputCharactersReceived: 0,
+    receivedBytes: 0,
+    keepAliveCount: 0,
+    ...(request.onFailureEvidence ? {capture:new FailureReplyBuffer()} : {}),
   };
   emitActivity(request, observed, startedAt, 'sending');
   const interactiveAbort = request.waitPolicy
@@ -181,9 +215,35 @@ export async function requestIntakeProvider(
     startedAt,
   );
   if (interactiveAbort) void operation.then(interactiveAbort.dispose, interactiveAbort.dispose);
-  return request.waitPolicy
-    ? waitForHumanDecision(operation, request, request.waitPolicy, observed, startedAt, interactiveAbort?.abort)
-    : operation;
+  try {
+    return await (request.waitPolicy
+      ? waitForHumanDecision(operation, request, request.waitPolicy, observed, startedAt, interactiveAbort?.abort)
+      : operation);
+  } catch(error) {
+    const snapshot=observed.capture?.snapshot();
+    const diagnostic:TransportFailureDiagnostic={version:1,reason:observed.failureReason??(observed.responseHeadersReceived?'unexpected_response':'connection_failed'),phase:observed.phase,
+      elapsedMs:Math.max(0,Date.now()-startedAt),responseHeadersAtMs:observed.responseHeadersAtMs,
+      firstDataAtMs:observed.firstDataAtMs,lastDataAtMs:observed.lastDataAtMs,bodyCompletedAtMs:observed.bodyCompletedAtMs,
+      ...(observed.httpStatus===undefined?{}:{httpStatus:observed.httpStatus}),receivedBytes:observed.receivedBytes??0,
+      capturedBytes:snapshot?.capturedBytes??0,bodyComplete:observed.bodyCompletedAtMs!==undefined,
+      captureTruncated:snapshot?.truncated??false,representation:observed.responseHeadersReceived&&!observed.captureUnavailable?(snapshot?.representation??'unavailable'):'unavailable',
+      hashScope:!snapshot||!observed.responseHeadersReceived||observed.captureUnavailable?'unavailable':snapshot.representation==='reconstructed-json'?'reconstructed-json-bytes':
+        snapshot.truncated?'captured-head-and-tail-bytes':observed.bodyCompletedAtMs===undefined?'received-prefix-bytes':'complete-response-bytes',
+      ...(observed.providerCode?{providerCode:observed.providerCode}:{}),...(observed.providerType?{providerType:observed.providerType}:{}),
+      ...(observed.bodyReadFailure?{bodyReadFailure:observed.bodyReadFailure}:{}),
+      evidenceStatus:'not_configured'};
+    if(request.onFailureEvidence){
+      const raw=snapshot?.content??'',content=sanitizeFailureReply(raw,[request.apiKey,request.baseUrl]);
+      const {evidenceStatus,...details}=diagnostic;
+      try { diagnostic.evidenceStatus=await request.onFailureEvidence({diagnostic:details,content,capturedBodyHash:snapshot?.hash??'',redacted:content!==raw})===false?'save_failed':
+        observed.responseHeadersReceived&&observed.captureUnavailable?'metadata_only':'saved'; }
+      catch { diagnostic.evidenceStatus='save_failed'; }
+    }
+    observed.failureEvidenceStatus=diagnostic.evidenceStatus;
+    if(error instanceof IntakeTransportError)error.failure=Object.freeze({...diagnostic});
+    emitActivity(request,observed,startedAt,observed.lastEventType);
+    throw error;
+  }
 }
 
 async function executeIntakeProviderRequest(
@@ -201,28 +261,28 @@ async function executeIntakeProviderRequest(
 
   let response: Awaited<ReturnType<HttpClient>>;
   try {
-    response = await httpClient(url, {
+    if (request.signal?.aborted) throw request.signal.reason;
+    response = await withRequestAbort(httpClient(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       signal: request.signal,
-    });
+    }), request.signal);
     observed.phase = 'reading_response_body';
     observed.responseHeadersReceived = true;
     observed.httpStatus = response.status;
+    observed.responseHeadersAtMs = Date.now();
     observed.lastObservableProgressAtMs = Date.now();
-    observed.transport = request.stream && protocol === 'openai-responses' ? 'stream_open' : 'pending';
-    observed.activityPhase = 'awaiting_headers';
+    observed.transport = request.stream && protocol === 'openai-responses' ? 'stream_open' : 'body_open';
+    observed.activityPhase = 'receiving_response';
     emitActivity(request, observed, startedAt, 'response.headers');
   } catch (error) {
     observed.transport = 'browser_error';
     observed.activityPhase = 'failed';
     observed.providerActivity = 'failed';
-    if (isAbortError(error)) {
-      observed.activityPhase = 'stopped';
-      emitActivity(request, observed, startedAt, 'stopped');
-      throw new IntakeTransportError('timeout', 'AI provider request timed out.', { retryable: true });
-    }
+    const aborted = recordRequestAbort(error, request, observed, startedAt);
+    if (aborted) throw aborted;
+    observed.failureReason = 'connection_failed';
     if (error instanceof IntakeTransportError) {
       emitActivity(request, observed, startedAt, 'browser.error');
       throw error;
@@ -238,23 +298,19 @@ async function executeIntakeProviderRequest(
     throw new IntakeTransportError('network', 'AI provider network request failed.', { retryable: true });
   }
 
-  if (response.status === 429) {
-    observed.transport = 'closed';
-    observed.activityPhase = 'failed';
-    observed.providerActivity = 'failed';
-    emitActivity(request, observed, startedAt, 'response.failed');
-    throw new IntakeTransportError('rate_limited', 'AI provider rate limited the request.', {
-      retryable: true,
-      status: 429,
-    });
-  }
   if (!response.ok) {
+    // Error bodies are evidence too: consume them once through the same observer.
+    try { const value=await readObservedJson(response,request,observed,startedAt);recordProviderError(value,request,observed); }
+    catch(error){const aborted=recordRequestAbort(error,request,observed,startedAt);if(aborted)throw aborted;
+      observed.bodyReadFailure=['invalid_json','invalid_encoding','empty_response'].includes(observed.failureReason??'')
+        ?observed.failureReason as TransportFailureDiagnostic['bodyReadFailure']:'interrupted';}
+    observed.failureReason = 'http_error';
     observed.transport = 'closed';
     observed.activityPhase = 'failed';
     observed.providerActivity = 'failed';
     emitActivity(request, observed, startedAt, 'response.failed');
-    throw new IntakeTransportError('http_error', `AI provider HTTP ${response.status}.`, {
-      retryable: response.status >= 500,
+    throw new IntakeTransportError(response.status===429?'rate_limited':'http_error',response.status===429?'AI provider rate limited the request.':`AI provider HTTP ${response.status}.`, {
+      retryable: response.status === 429 || response.status >= 500,
       status: response.status,
     });
   }
@@ -272,13 +328,9 @@ async function executeIntakeProviderRequest(
         }
         throw error;
       }
-      if (isAbortError(error)) {
-        observed.activityPhase = 'stopped';
-        observed.transport = 'closed';
-        observed.providerActivity = 'failed';
-        emitActivity(request, observed, startedAt, 'stopped');
-        throw new IntakeTransportError('timeout', 'AI provider request timed out.', { retryable: true });
-      }
+      const aborted = recordRequestAbort(error, request, observed, startedAt);
+      if (aborted) throw aborted;
+      observed.failureReason = 'response_interrupted';
       observed.transport = 'browser_error';
       observed.activityPhase = 'failed';
       observed.providerActivity = 'failed';
@@ -289,30 +341,48 @@ async function executeIntakeProviderRequest(
 
   let envelope: unknown;
   try {
-    envelope = await response.json();
+    envelope = await readObservedJson(response, request, observed, startedAt);
   } catch (error) {
-    if (isAbortError(error)) {
-      observed.transport = 'closed';
-      observed.activityPhase = 'stopped';
-      observed.providerActivity = 'failed';
-      emitActivity(request, observed, startedAt, 'stopped');
-      throw new IntakeTransportError('timeout', 'AI provider request timed out.', { retryable: true });
-    }
+    const aborted = recordRequestAbort(error, request, observed, startedAt);
+    if (aborted) throw aborted;
     if (error && typeof error === 'object' && 'code' in error && 'retryable' in error) {
       observed.transport = 'closed';
       observed.activityPhase = 'failed';
       observed.providerActivity = 'failed';
+      observed.failureReason ??= error.code === 'invalid_response' ? 'invalid_json' : 'response_interrupted';
       emitActivity(request, observed, startedAt, 'response.failed');
       throw error;
     }
     observed.transport = 'closed';
     observed.activityPhase = 'failed';
     observed.providerActivity = 'failed';
+    observed.failureReason ??= error instanceof SyntaxError ? 'invalid_json' : 'response_interrupted';
     emitActivity(request, observed, startedAt, 'response.failed');
-    throw new IntakeTransportError('invalid_response', 'AI provider returned invalid JSON.', { retryable: true });
+    if (observed.failureReason === 'response_interrupted') {
+      throw new IntakeTransportError('network', 'AI provider response was interrupted before completion.', { retryable: true });
+    }
+    throw new IntakeTransportError('invalid_response', observed.failureReason==='invalid_encoding'?'AI provider returned unreadable response encoding.':'AI provider returned invalid or incomplete JSON.', { retryable: true });
+  }
+  if(recordProviderError(envelope,request,observed)){
+    observed.failureReason='provider_error';observed.transport='closed';observed.activityPhase='failed';observed.providerActivity='failed';
+    emitActivity(request,observed,startedAt,'response.failed');
+    throw new IntakeTransportError('invalid_response','AI provider returned a service error instead of an answer.',{retryable:false,status:response.status});
+  }
+  const envelopeRecord = asRecord(envelope);
+  const finishReason = asRecord(Array.isArray(envelopeRecord?.choices) ? envelopeRecord.choices[0] : undefined)?.finish_reason;
+  if ((protocol === 'openai-chat' && typeof finishReason === 'string' && finishReason !== 'stop')
+    || envelopeRecord?.status === 'incomplete'
+    || (protocol === 'anthropic-messages' && envelopeRecord?.stop_reason === 'max_tokens')) {
+    observed.transport = 'closed';
+    observed.activityPhase = 'incomplete';
+    observed.providerActivity = 'failed';
+    observed.failureReason = 'provider_incomplete';
+    emitActivity(request, observed, startedAt, 'response.incomplete');
+    throw new IntakeTransportError('invalid_response', 'AI provider reported an unfinished response.', { retryable: true });
   }
   const content = extractProviderContent(protocol, envelope);
   if (!content) {
+    observed.failureReason = hasAnswerSlot(protocol,envelope)?'empty_response':'unexpected_response';
     observed.transport = 'closed';
     observed.activityPhase = 'failed';
     observed.providerActivity = 'failed';
@@ -323,6 +393,7 @@ async function executeIntakeProviderRequest(
   observed.transport = 'closed';
   observed.activityPhase = 'completed';
   observed.providerActivity = 'completed';
+  observed.outputCharactersReceived = content.length;
   emitActivity(request, observed, startedAt, 'response.completed');
   return {
     protocol,
@@ -356,7 +427,7 @@ async function waitForHumanDecision<T>(
     completedCycles += 1;
     if (completedCycles % policy.cyclesBeforeDecision !== 0) continue;
     decisionRound += 1;
-    const decision = await policy.onDecision({
+    const decisionOrResult = await Promise.race([settled, policy.onDecision({
       phase: observed.phase,
       elapsedMs: Math.max(0, Date.now() - startedAt),
       completedCycles,
@@ -373,12 +444,16 @@ async function waitForHumanDecision<T>(
       lastEventAtMs: observed.lastEventAtMs,
       ...(observed.lastEventType ? { lastEventType: observed.lastEventType } : {}),
       outputCharactersReceived: observed.outputCharactersReceived,
+      ...requestObservation(observed),
       requestSettledSignal: requestSettled.signal,
-    });
-    if (decision === 'stop') {
+    }).then(decision => ({ kind: 'decision' as const, decision }))]);
+    if (decisionOrResult.kind === 'value') return decisionOrResult.value;
+    if (decisionOrResult.kind === 'error') throw decisionOrResult.error;
+    if (decisionOrResult.decision === 'stop') {
       stopRequest?.();
       observed.activityPhase = 'stopped';
       observed.transport = 'closed';
+      observed.failureReason = 'user_cancelled';
       emitActivity(request, observed, startedAt, 'stopped');
       throw new IntakeTransportError('network', 'AI provider request was stopped by the user.', { retryable: false });
     }
@@ -403,8 +478,115 @@ function emitActivity(
     lastEventAtMs: now,
     ...(observed.lastEventType ? { lastEventType: observed.lastEventType } : {}),
     outputCharactersReceived: observed.outputCharactersReceived,
+    ...requestObservation(observed),
   };
   try { request.onActivity?.(activity); } catch { /* UI observers must not break the provider request. */ }
+}
+
+function requestObservation(observed: ObservedProviderState): IntakeRequestObservation {
+  return {
+    responseHeadersAtMs: observed.responseHeadersAtMs,
+    firstDataAtMs: observed.firstDataAtMs,
+    lastDataAtMs: observed.lastDataAtMs,
+    bodyCompletedAtMs: observed.bodyCompletedAtMs,
+    receivedBytes: observed.receivedBytes,
+    keepAliveCount: observed.keepAliveCount,
+    failureReason: observed.failureReason,
+    failureEvidenceStatus: observed.failureEvidenceStatus,
+  };
+}
+
+function recordProviderError(value:unknown,request:IntakeTransportRequest,observed:ObservedProviderState):boolean {
+  const record=asRecord(value),error=record?.error??asRecord(record?.response)?.error;
+  if(!error||(typeof error!=='object'&&typeof error!=='string'))return false;
+  const details=asRecord(error);
+  const hint=(value:unknown):string|undefined=>{
+    if(typeof value!=='string'&&typeof value!=='number')return undefined;
+    const safe=sanitizeFailureReply(String(value),[request.apiKey,request.baseUrl]);
+    return /^[A-Za-z0-9_.:-]{1,80}$/u.test(safe)?safe:undefined;
+  };
+  observed.providerCode=hint(details?.code);observed.providerType=hint(details?.type);
+  return true;
+}
+function hasAnswerSlot(protocol:IntakeTransportProtocol,value:unknown):boolean {
+  const record=asRecord(value);if(!record)return false;
+  if(protocol==='openai-responses')return typeof record.output_text==='string'||Array.isArray(record.output);
+  if(protocol==='anthropic-messages')return Array.isArray(record.content);
+  const message=asRecord(asRecord(Array.isArray(record.choices)?record.choices[0]:undefined)?.message);
+  return !!message&&(message.content===null||typeof message.content==='string'||Array.isArray(message.content));
+}
+
+async function readObservedJson(
+  response: HttpResponse, request: IntakeTransportRequest,
+  observed: ObservedProviderState, startedAt: number,
+): Promise<unknown> {
+  // Structural test/legacy adapters without a body retain their JSON contract.
+  if (!response.body) {
+    observed.captureUnavailable=true;
+    const result = await withRequestAbort(response.json(), request.signal);
+    if(observed.capture){observed.capture.reconstructed=true;observed.capture.append(JSON.stringify(result)??'');observed.captureUnavailable=false;}
+    observed.bodyCompletedAtMs = Date.now();
+    return result;
+  }
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const parts: string[] = [];
+  let jsonStarted = false;
+  for await (const chunk of responseChunks(response.body, request.signal)) {
+    const bytes = typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk;
+    observed.capture?.append(bytes);
+    if (bytes.byteLength === 0) continue;
+    const now = Date.now();
+    observed.firstDataAtMs ??= now;
+    observed.lastDataAtMs = now;
+    observed.receivedBytes = (observed.receivedBytes ?? 0) + bytes.byteLength;
+    let text: string;
+    try { text = decoder.decode(bytes, { stream: true }); }
+    catch { observed.failureReason = 'invalid_encoding'; throw new SyntaxError('Invalid response encoding.'); }
+    parts.push(text);
+    // Only whitespace bytes count as a connection hint; they say nothing about inference.
+    const keepAlive = !jsonStarted && bytes.every(byte => byte === 32 || byte === 9 || byte === 10 || byte === 13);
+    if (!keepAlive) jsonStarted = true;
+    if (keepAlive) observed.keepAliveCount = (observed.keepAliveCount ?? 0) + 1;
+    emitActivity(request, observed, startedAt, keepAlive ? 'response.keep_alive' : 'response.body.data');
+  }
+  observed.bodyCompletedAtMs = Date.now();
+  observed.activityPhase = 'validating';
+  emitActivity(request, observed, startedAt, 'response.body.completed');
+  const raw=parts.join('');
+  if(!raw.trim()){observed.failureReason='empty_response';throw new IntakeTransportError('invalid_response','AI provider returned an empty response.',{retryable:true});}
+  let tail:string;try{tail=decoder.decode();}catch{observed.failureReason='invalid_encoding';throw new SyntaxError('Invalid response encoding.');}
+  try { return JSON.parse(raw + tail); }
+  catch { observed.failureReason = 'invalid_json'; throw new SyntaxError('Invalid response JSON.'); }
+}
+
+function recordRequestAbort(
+  error: unknown, request: IntakeTransportRequest,
+  observed: ObservedProviderState, startedAt: number,
+): IntakeTransportError | undefined {
+  const reason = request.signal?.aborted ? request.signal.reason : error;
+  const safeError = error instanceof Error && 'code' in error && 'retryable' in error ? error : undefined;
+  const timeout = (reason instanceof Error && reason.name === 'TimeoutError') || safeError?.code === 'timeout';
+  const callerCancelled = safeError?.code === 'network' && safeError.retryable === false && /cancelled|stopped/u.test(safeError.message);
+  if (!request.signal?.aborted && !timeout && !callerCancelled && !isAbortError(error)) return undefined;
+  const cancelled = (request.signal?.aborted && !timeout) || callerCancelled;
+  observed.failureReason = cancelled ? 'user_cancelled' : 'deadline_exceeded';
+  observed.activityPhase = cancelled ? 'stopped' : 'failed';
+  observed.transport = 'closed';
+  observed.providerActivity = 'failed';
+  emitActivity(request, observed, startedAt, cancelled ? 'stopped' : 'response.failed');
+  return new IntakeTransportError(cancelled ? 'network' : 'timeout', cancelled
+    ? 'AI provider request was cancelled by the caller.'
+    : 'AI provider request exceeded its configured deadline.', { retryable: !cancelled });
+}
+
+function withRequestAbort<T>(operation: Promise<T>, signal?: AbortSignal, cancel?: () => void): Promise<T> {
+  if (!signal) return operation;
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => { try { cancel?.(); } catch { /* original cancellation remains authoritative */ } reject(signal.reason ?? new DOMException('Cancelled', 'AbortError')); };
+    if (signal.aborted) abort();
+    else signal.addEventListener('abort', abort, { once: true });
+    void operation.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
 }
 
 async function readOpenAiResponsesStream(
@@ -456,7 +638,7 @@ async function readOpenAiResponsesStream(
     }
     const safeType = safeEventType(eventType);
     if (eventType === 'response.created' || eventType === 'response.in_progress') {
-      observed.activityPhase = 'awaiting_headers';
+      observed.activityPhase = 'receiving_response';
       observed.providerActivity = 'reported_in_progress';
       emitActivity(request, observed, startedAt, safeType);
       const id = asRecord(record.response)?.id ?? record.id;
@@ -501,6 +683,7 @@ async function readOpenAiResponsesStream(
       return;
     }
     if (eventType === 'response.incomplete') {
+      observed.failureReason='provider_incomplete';
       terminal = 'incomplete';
       observed.activityPhase = 'incomplete';
       observed.transport = 'closed';
@@ -509,6 +692,7 @@ async function readOpenAiResponsesStream(
       throw new IntakeTransportError('invalid_response', 'AI provider returned an incomplete response.', { retryable: true });
     }
     if (eventType === 'response.failed') {
+      recordProviderError(record,request,observed);observed.failureReason='provider_error';
       terminal = 'failed';
       observed.activityPhase = 'failed';
       observed.transport = 'closed';
@@ -521,7 +705,15 @@ async function readOpenAiResponsesStream(
     emitActivity(request, observed, startedAt, safeType);
   };
 
-  for await (const chunk of responseChunks(body)) {
+  for await (const chunk of responseChunks(body, request.signal)) {
+    observed.capture?.append(chunk);
+    const bytes = typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk;
+    if (bytes.byteLength) {
+      observed.firstDataAtMs ??= Date.now();
+      observed.lastDataAtMs = Date.now();
+      observed.receivedBytes = (observed.receivedBytes ?? 0) + bytes.byteLength;
+      emitActivity(request, observed, startedAt, 'response.body.data');
+    }
     const value = typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true });
     buffer += value;
     const blocks = buffer.split(/\r?\n\r?\n/u);
@@ -530,6 +722,7 @@ async function readOpenAiResponsesStream(
   }
   buffer += decoder.decode();
   if (buffer.trim()) processBlock(buffer);
+  observed.bodyCompletedAtMs = Date.now();
 
   if (terminal !== 'completed' || !terminalResponse) {
     observed.transport = 'closed';
@@ -582,22 +775,31 @@ function parseSseBlock(block: string): { event?: string; data: string } | undefi
   return { ...(event ? { event } : {}), data: data.join('\n') };
 }
 
-async function* responseChunks(body: NonNullable<HttpResponse['body']>): AsyncGenerator<Uint8Array | string> {
+async function* responseChunks(body: NonNullable<HttpResponse['body']>, signal?: AbortSignal): AsyncGenerator<Uint8Array | string> {
   if (typeof (body as any).getReader === 'function') {
     const reader = (body as ReadableStream<Uint8Array>).getReader();
+    let completed=false;
     try {
       while (true) {
-        const next = await reader.read();
-        if (next.done) break;
+        const next = await withRequestAbort(reader.read(), signal, () => { void reader.cancel().catch(() => undefined); });
+        if (next.done) {completed=true;break;}
         if (next.value !== undefined) yield next.value;
       }
     } finally {
+      if(!completed)try{await reader.cancel();}catch{/* Preserve the original read/parse failure. */}
       reader.releaseLock();
     }
     return;
   }
   if (typeof (body as any)[Symbol.asyncIterator] === 'function') {
-    for await (const chunk of body as AsyncIterable<Uint8Array>) yield chunk;
+    const iterator = (body as AsyncIterable<Uint8Array>)[Symbol.asyncIterator]();
+    try {
+      while (true) {
+        const next = await withRequestAbort(iterator.next(), signal);
+        if (next.done) break;
+        yield next.value;
+      }
+    } finally { if (signal?.aborted) void iterator.return?.().catch(() => undefined); }
     return;
   }
   throw new IntakeTransportError('invalid_response', 'AI provider returned an unreadable response stream.', { retryable: true });
@@ -605,6 +807,8 @@ async function* responseChunks(body: NonNullable<HttpResponse['body']>): AsyncGe
 
 function safeEventType(eventType: string): string {
   const known = new Set([
+    'sending', 'response.headers', 'response.keep_alive', 'response.body.data',
+    'response.body.completed', 'stopped', 'browser.error',
     'response.created',
     'response.in_progress',
     'response.output_item.added',

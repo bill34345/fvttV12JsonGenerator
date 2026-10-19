@@ -11,12 +11,190 @@ import {buildBrowserActorVerificationSummary} from '../packages/forge-browser-ru
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { assertForgeEncounterLocalizationDraft, approveForgeEncounterLocalization, draftForgeEncounterLocalization,
-  localizeForgeEncounter, reviewForgeEncounterLocalizationDraft, verifiedEncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
+  localizeForgeEncounter, reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { fixedEncounterCommand, readFixedEncounterConfiguration } from '@fvtt-json-generator/intake-ai/encounter-capabilities';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { normalizeForgeActorArtifact } from '../packages/forge-browser-runtime/src/artifact';
 import { createReviewedTranslationService } from '@fvtt-json-generator/intake-ai/localization';
+import foodFailure from './fixtures/localization-food-retention-failure.json';
+import {normalizeLocalizationBodyProse,localizationMeaningFindings} from '@fvtt-json-generator/contracts/localization';
+
+test('known participant-category contradictions need no provider review request',async()=>{
+ const field=localizationText('body','<p>The sentinel watches creatures that enter.</p>'),request=localizationRequest('generic-participant-review',[field]);
+ let calls=0;
+ const service=createReviewedTranslationService({baseUrl:'https://fixture.invalid',apiKey:'fake-only',model:'fixture',
+  httpClient:async()=>{calls++;throw Error('A known local contradiction must not request AI review');}});
+ const result=await service.review(request,{texts:[{id:field.id,text:'<p>守卫监视进入的建筑。</p>'}]});
+ expect(result.verdict).toBe('needs_review');expect(result.findings.join(' ')).toContain('对象类别');expect(calls).toBe(0);
+});
+
+test('translation and review share the display-mode rule while request identities remain unchanged',async()=>{
+  const field=localizationText('body','执行模式：gm-assisted；外部边界：external-rule。'),input=localizationRequest('display-mode-review',[field]);
+  const original=structuredClone(input),prompts:string[]=[];
+  const service=createReviewedTranslationService({baseUrl:'https://fixture.invalid/v1',apiKey:'fixture-only',model:'fixture',
+    httpClient:async(_url,init)=>{const payload=JSON.parse(String(init?.body)),system=payload.messages[0].content;prompts.push(system);
+      const user=JSON.parse(payload.messages[1].content),review=Object.hasOwn(user.texts[0],'translation');
+      return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(review?{verdict:'accepted',findings:[]}:{texts:[{id:field.id,text:'执行模式：GM辅助处理；外部边界：外部规则裁定。'}]})}}]}));}});
+  const draft=await service.translate(input);await expect(service.review(input,draft)).resolves.toEqual({verdict:'accepted',findings:[]});
+  expect(prompts).toHaveLength(2);
+  for(const system of prompts){expect(system).toContain('gm-assisted');expect(system).toContain('GM辅助处理');expect(system).toContain('外部规则裁定');}
+  expect(input).toEqual(original);expect(draft.texts[0]!.id).toBe(field.id);
+});
+
+describe('source-owned public URLs stay exact without hiding untranslated prose',()=>{
+ const check=(source:string,text:string)=>{const field=localizationText('body',source);
+  return validateLocalizationDraft(localizationRequest('generic-url-fixture',[field]),{texts:[{id:field.id,text}]}).texts[0]!.text;};
+ for(const url of ['https://docs.example.org/rules/entry','http://reference.example.net/v2?q=17#section',
+  'https://archive.example.com/Advantage/3d8?dc=16&amp;part=2#Dazed','https://例子.test/规则/第3章'])
+  test(`same exact source URL: ${url}`,()=>{expect(check(`<p>Source: ${url}</p>`,`<p>来源：${url}</p>`)).toBe(`<p>来源：${url}</p>`);});
+ test('a URL-only body remains metadata, with no fabricated Chinese requirement',()=>{
+  const url='https://docs.example.org/Appendix';expect(check(`<p>${url}</p>`,`<p>${url}</p>`)).toBe(`<p>${url}</p>`);
+ });
+ test('an entity inside an exact URL does not consume the prose apostrophe budget',()=>{
+  const url='https://docs.example.org/a&apos;s';
+  expect(check(`<p>The fiend&#39;s note. Source: ${url}</p>`,`<p>该邪魔的便条。来源：${url}</p>`)).toContain(url);
+ });
+ test('two sources and repeated citations retain their count and order',()=>{
+  const a='https://a.example/rules',b='https://b.example/context';
+  expect(check(`<p>Sources: ${a} ${b} ${a}</p>`,`<p>来源：${a} ${b} ${a}</p>`)).toContain(b);
+  expect(()=>check(`<p>Sources: ${a} ${b}</p>`,`<p>来源：${b} ${a}</p>`)).toThrow('来源网址');
+ });
+ test('Markdown destination parentheses do not swallow following Chinese rules or dice',()=>{
+  const url='https://reference.example.net/rules';
+  expect(check(`<p>It begins [Burning](${url}) (1d10).</p>`,`<p>它开始[燃烧](${url})（1d10）。</p>`)).toContain('1d10');
+  expect(()=>check(`<p>Read [rules](${url}) then wait.</p>`,`<p>阅读[规则](${url}) untranslated rules。</p>`)).toThrow('未完成中文化');
+ });
+ test('balanced path parentheses remain part of the exact address',()=>{
+  const url='https://reference.example.net/a_(b)';
+  expect(check(`<p>Source: [rules](${url})</p>`,`<p>来源：[规则](${url})</p>`)).toContain(url);
+  expect(()=>check(`<p>Source: ${url}</p>`,'<p>来源：https://reference.example.net/a_(c)</p>')).toThrow('来源网址');
+ });
+ for(const changed of ['http://docs.example.org/rules?x=1#top','https://docs.example.org/other?x=1#top',
+  'https://docs.example.org/rules?x=2#top','https://docs.example.org/rules?x=1#bottom','https://evil.example/rules?x=1#top'])
+  test(`source URL mutation rejected: ${changed}`,()=>{
+   expect(()=>check('<p>Source: https://docs.example.org/rules?x=1#top</p>',`<p>来源：${changed}</p>`)).toThrow('来源网址');
+  });
+ test('missing, duplicated and invented URLs are rejected',()=>{
+  const url='https://docs.example.org/rules';
+  expect(()=>check(`<p>Source: ${url}</p>`,'<p>来源。</p>')).toThrow('来源网址');
+  expect(()=>check(`<p>Source: ${url}</p>`,`<p>来源：${url} ${url}</p>`)).toThrow('来源网址');
+  expect(()=>check('<p>A quiet hall.</p>',`<p>安静大厅，来源：${url}</p>`)).toThrow('来源网址');
+ });
+ test('real untranslated text beside a valid citation still fails',()=>{
+  const source='<p>The target cannot move. Source: https://docs.example.org/rules</p>';
+  expect(()=>check(source,'<p>The target cannot move. 来源：https://docs.example.org/rules</p>')).toThrow('未完成中文化');
+  expect(()=>check(source,'<p>目标不能移动。untranslated prose https://docs.example.org/rules</p>')).toThrow('未完成中文化');
+  expect(()=>check(source,'<p>目标不能移动。https://docs.example.org/rules/untranslated-prose</p>')).toThrow('来源网址');
+ });
+ test('HTML hrefs remain structural and labels still need translation',()=>{
+  const source='<p>Read <a href="https://docs.example.org/rules">the rules</a>.</p>';
+  expect(check(source,'<p>阅读<a href="https://docs.example.org/rules">规则</a>。</p>')).toContain('规则');
+  expect(()=>check(source,'<p>阅读<a href="https://evil.example/rules">规则</a>。</p>')).toThrow();
+  expect(()=>check(source,'<p>阅读<a href="https://docs.example.org/rules">the rules</a>。</p>')).toThrow('未完成中文化');
+ });
+ test('numbers outside URLs and unrelated no-URL cases retain existing checks',()=>{
+  const source='<p>Take 10 damage. Source: https://docs.example.org/20</p>';
+  expect(()=>check(source,'<p>受到20伤害。来源：https://docs.example.org/20</p>')).toThrow('改变数字');
+  expect(check('<p>A quiet hall.</p>','<p>安静的大厅。</p>')).toBe('<p>安静的大厅。</p>');
+ });
+ test('the actual translation service sends a URL as one protected unit and restores it',async()=>{
+  const url='https://archive.example.org/3d8?dc=16#rule';let calls=0;
+  const field=localizationText('body',`<p>Read ${url} for 1 minute.</p>`),input=localizationRequest('url-transport',[field]);
+  const chinese=`<p>阅读${url}，持续1分钟。</p>`;
+  const service=createReviewedTranslationService({baseUrl:'https://fixture.invalid',apiKey:'fixture-only',model:'fixture',
+   httpClient:async(_url,init)=>{calls++;const payload=JSON.parse(JSON.parse(String(init?.body)).messages[1].content);
+    expect(payload.texts[0].source).not.toContain('archive.example.org');expect(payload.texts[0].source).not.toContain('3d8');
+    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({texts:[{id:field.id,text:protectLocalizationText(chinese).text}]})}}]}));}});
+  const output=await service.translate(input);expect(output.texts[0]!.text).toBe(chinese);expect(calls).toBe(1);
+  expect(()=>validateLocalizationDraft(input,output)).not.toThrow();
+ });
+});
+
+describe('source-bound food retention meaning', () => {
+  const input = foodFailure.request as LocalizationRequest;
+  const captured = foodFailure.draft;
+  const originalHash = localizationHash(foodFailure);
+  const correct = {texts: captured.texts.map(entry => ({...entry,
+    text: entry.text.replace('咽下固体食物', '让吃下的固体食物不被吐出')}))};
+  const source = 'It can keep solid food down only if washed down with sea water.';
+  const candidate = (text: string, english = source) => {
+    const request = localizationRequest('food-retention-test', [localizationText('body', english)]);
+    return {request, draft: {texts: [{id: request.texts[0]!.id, text}]}};
+  };
+  test('rejects the exact recorded HTML translation without altering either original field', () => {
+    expect(() => validateLocalizationDraft(input, captured)).toThrow('食物留存');
+    expect(localizationHash(foodFailure)).toBe(originalHash);
+  });
+  test('the real translation service carries the meaning guidance and cannot make the captured wrong prose pass', async () => {
+    let calls = 0;
+    const service = createReviewedTranslationService({baseUrl: 'https://provider.example/v1', apiKey: 'fixture-only', model: 'fixture',
+      httpClient: async (_url, init) => {
+        calls++;
+        const payload = JSON.parse(JSON.parse(String(init?.body)).messages[1].content);
+        expect(payload.referenceGuidance).toContain('retaining food without vomiting');
+        expect(payload.referenceGuidance).toContain('necessary seawater condition');
+        expect(payload.texts[0].source).toContain('keep solid food');
+        return new Response(JSON.stringify({choices: [{message: {content: JSON.stringify({texts: [{
+          id: input.texts[0]!.id, text: protectLocalizationText(captured.texts[0]!.text).text,
+        }]})}}]}), {status: 200});
+      }});
+    const output = await service.translate(input);
+    expect(output).toEqual(captured);
+    expect(calls).toBe(1);
+    expect(() => validateLocalizationDraft(input, output)).toThrow('食物留存');
+  });
+  test('the public GM approval and imported approval gates reject the same wrong meaning', () => {
+    expect(() => approveLocalizationByGm(input, captured, 'fixture-only')).toThrow('食物留存');
+    const valid = approveLocalizationByGm(input, correct, 'fixture-only');
+    const stale = {...valid, texts: structuredClone(captured.texts), approval: {...valid.approval,
+      translationHash: localizationHash({requestHash: valid.requestHash, texts: captured.texts})}};
+    expect(() => assertReviewedLocalization(input, stale)).toThrow('食物留存');
+  });
+  test('correct food retention survives the original HTML split and source/name variants', () => {
+    expect(validateLocalizationDraft(input, correct)).toEqual(correct);
+    for (const english of [source, source.replace('It can', 'The creature can'), source.replace('food down', 'food\r\ndown'),
+      '<p>It can keep solid food</p><p>down only if washed down with sea water.</p>']) {
+      const translated = english.startsWith('<p>')
+        ? '<p>只有用海水送服，吃下的固体食物</p><p>才不会吐出。</p>'
+        : '只有用海水送服，吃下的固体食物才不会吐出。';
+      const value = candidate(translated, english);
+      expect(validateLocalizationDraft(value.request, value.draft)).toEqual(value.draft);
+    }
+    const renamed = structuredClone(input);
+    renamed.texts[0]!.source = renamed.texts[0]!.source.replace('Merthirst', 'Salt Affliction');
+    expect(validateLocalizationDraft(renamed, correct)).toEqual(correct);
+  });
+  test('accepts explicit equivalent retention wording without prescribing one stylistic translation', () => {
+    for (const text of ['它只有用海水送服，才能让吃下的固体食物不被吐出。',
+      '只有用海水送服，它才不会吐出吃下的固体食物。',
+      '它只有用海水送服，才能留住吃下的固体食物而不呕吐。',
+      '固体食物必须用海水送服，否则会吐出。']) {
+      const value = candidate(text); expect(validateLocalizationDraft(value.request, value.draft)).toEqual(value.draft);
+    }
+  });
+  test('rejects swallowing alone, missing or inverted conditions, changed liquid and extra exceptions', () => {
+    for (const text of ['它只有用海水送服才能咽下固体食物。', '它能留住固体食物而不吐出。',
+      '它只有用淡水送服，吃下的固体食物才不会吐出。', '它只有不用海水送服，吃下的固体食物才不会吐出。',
+      '只有用海水送服，吃下的固体食物才会吐出。', '只要用海水送服，吃下的固体食物就不会吐出。',
+      '只有用海水送服，吃下的固体食物才不会吐出，淡水也可以。']) {
+      const value = candidate(text); expect(() => validateLocalizationDraft(value.request, value.draft)).toThrow('食物留存');
+    }
+  });
+  test('does not infer seawater from ambiguous or changed source and keeps existing token checks', () => {
+    for (const english of [source.replace('sea water', 'fresh water'), source.replace('only if', 'even if'),
+      source.replace('sea water.', 'sea water or fresh water.')]) {
+      const value = candidate('只有用海水送服，吃下的固体食物才不会吐出。', english);
+      expect(() => validateLocalizationDraft(value.request, value.draft)).toThrow('食物留存');
+    }
+    const number = structuredClone(correct); number.texts[0]!.text = number.texts[0]!.text.replace('15', '16');
+    expect(() => validateLocalizationDraft(input, number)).toThrow('改变数字');
+    const markup = structuredClone(correct); markup.texts[0]!.text = markup.texts[0]!.text.replace('<ul>', '<ol>');
+    expect(() => validateLocalizationDraft(input, markup)).toThrow('改变数字');
+    const unrelated = candidate('它只有用海水送服才能咽下固体食物。', 'It can swallow solid food only if washed down with sea water.');
+    expect(validateLocalizationDraft(unrelated.request, unrelated.draft)).toEqual(unrelated.draft);
+  });
+});
 
 const accepted = { verdict: 'accepted' as const, findings: [] };
 function request(source = '<p>DC 16: 3d8 damage; Paralyzed until the end of its next turn.</p>') {
@@ -254,7 +432,7 @@ describe('reviewed Chinese display contract', () => {
     expect(localized.items[0].flags.fvttJsonGenerator.behaviorMechanics[0]).toMatchObject({
       id: 'encounter-rule-1', executionMode: 'gm-assisted', carrier: { name: localized.items[0].name, section: variant==='damage-removal'?'传奇动作':'动作' }, conditions: before.items[0].flags.fvttJsonGenerator.behaviorMechanics[0].conditions,
     });
-    expect(localized.items[0].effects[0].name).toBe('译文麻痹 Paralyzed');
+    expect(localized.items[0].effects[0].name).toBe('麻痹 Paralyzed');
     expect(localized.items[0].flags.fvttJsonGenerator.behaviorMechanics[0].name).toBe(localized.items[0].name);
     const effects = structuredClone(localized.items[0].effects); effects[0].name = before.items[0].effects[0].name;
     expect(effects).toEqual(before.items[0].effects);
@@ -302,6 +480,73 @@ async function approvedFixture(policy: LocalizationPolicy) {
   };
 }
 describe('formal source to localized encounter', () => {
+  test('food retention failure blocks real draft preparation and invalidates cached draft reuse without review', async () => {
+    const original = sourcePackage();
+    const english = 'It can keep solid food down only if washed down with sea water.';
+    const actorSource = original.actors[0]!.source.replace('### Actions', '### Traits\n- Brine Affliction. ' + english + '\n### Actions');
+    const bundle = {...original, actors: [{...original.actors[0]!, source: actorSource, sourceHash: hashSource(actorSource)}]};
+    const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
+    const before = localizationHash(prepared);
+    const receipts: any[] = [];
+    let reviews = 0;
+    const translated = (input: LocalizationRequest, sentence: string) => {
+      const candidate = fakeTranslation(input);
+      for (const field of input.texts.filter(field => field.source.includes(english))) {
+        candidate.texts.find(text => text.id === field.id)!.text = field.source.replace('Brine Affliction', '盐水病').replace(english, sentence);
+      }
+      return candidate;
+    };
+    const wrong = '它只有用海水送服才能咽下固体食物。';
+    const review = async (): Promise<never> => { reviews++; throw new Error('Paid review must stay disabled'); };
+    await expect(draftForgeEncounterLocalization({prepared, onReview: entry => receipts.push(entry),
+      service: {model: 'fixture-only', reviewModel: 'disabled', translate: async input => translated(input, wrong), review}})).rejects.toThrow('食物留存');
+    const failed = receipts.findLast(entry => entry.status === 'needs_review');
+    expect(failed.findings.every((message: string) => message.includes('食物留存'))).toBe(true);
+    const badIds = failed.request.texts.filter((field: any) => field.source.includes(english)).map((field: any) => field.id).sort();
+    expect(badIds.length).toBeGreaterThan(0);
+    expect(failed.draft.texts.filter((field: any) => badIds.includes(field.id)).every((field: any) => field.text.includes('咽下'))).toBe(true);
+    const sent: string[][] = [];
+    const resumed = await draftForgeEncounterLocalization({prepared,
+      priorDrafts: [{...failed, status: 'draft_ready', findings: []}],
+      service: {model: 'fixture-only', reviewModel: 'disabled', translate: async input => { sent.push(input.texts.map(field => field.id).sort());
+        return translated(input, '只有用海水送服，吃下的固体食物才不会吐出。'); }, review}});
+    expect(sent[0]).toEqual(badIds);
+    expect(() => assertForgeEncounterLocalizationDraft(prepared, resumed)).not.toThrow();
+    expect(localizationHash(prepared)).toBe(before);
+    expect(reviews).toBe(0);
+  });
+  test('local prose corrections retain source, titles and untouched fields while rebinding only the corrected draft part',async()=>{
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    const original=await draftForgeEncounterLocalization({prepared,service:fakeService});
+    const actor=original.actors[0]!,field=actor.request.texts.find(entry=>entry.kind==='body')!;
+    const previous=actor.draft.texts.find(entry=>entry.id===field.id)!;
+    const next=reviseForgeEncounterLocalizationBody({prepared,draft:original,actorKey:actor.key,textId:field.id,text:previous.text+'（人工核对。）'});
+    expect(next.sourcePackageHash).toBe(original.sourcePackageHash);
+    expect(next.actors[0]!.request).toEqual(actor.request);
+    expect(next.actors[0]!.translationHash).not.toBe(actor.translationHash);
+    expect(next.packageText).toEqual(original.packageText);
+    expect(next.actors[0]!.draft.texts.filter(entry=>entry.id!==field.id)).toEqual(actor.draft.texts.filter(entry=>entry.id!==field.id));
+    expect(original.actors[0]!.draft.texts.find(entry=>entry.id===field.id)).toEqual(previous);
+    const packageField=next.packageText.request.texts.find(entry=>entry.kind==='body')!;
+    const packageText=next.packageText.draft.texts.find(entry=>entry.id===packageField.id)!.text;
+    const last=reviseForgeEncounterLocalizationBody({prepared,draft:next,textId:packageField.id,text:packageText+'（人工核对。）'});
+    expect(last.actors).toEqual(next.actors);expect(last.packageText.translationHash).not.toBe(next.packageText.translationHash);
+    assertForgeEncounterLocalizationDraft(prepared,last);
+    expect(prepared.bundle.localization).toBeUndefined();
+  });
+  test('local corrections reject changed numbers, titles, unknown ownership and stale source binding',async()=>{
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
+    const draft=await draftForgeEncounterLocalization({prepared,service:fakeService});
+    const part=draft.actors[0]!,field=part.request.texts.find(entry=>entry.kind==='body'&&entry.source.includes('1d6'))!;
+    const original=part.draft.texts.find(entry=>entry.id===field.id)!.text;
+    expect(()=>reviseForgeEncounterLocalizationBody({prepared,draft,actorKey:part.key,textId:field.id,text:original.replace('1d6','2d6')})).toThrow('改变数字');
+    expect(()=>reviseForgeEncounterLocalizationBody({prepared,draft,actorKey:part.key,textId:part.request.texts.find(entry=>entry.kind==='title')!.id,text:'改名'})).toThrow('正文');
+    expect(()=>reviseForgeEncounterLocalizationBody({prepared,draft,actorKey:'other-actor',textId:field.id,text:original})).toThrow('正文');
+    const changed={...sourcePackage(),id:'localization-fixture-changed'};
+    const other=await prepareForgeEncounter(serializeForgeEncounterPackage(changed));
+    expect(()=>reviseForgeEncounterLocalizationBody({prepared:other,draft,actorKey:part.key,textId:field.id,text:original})).toThrow('不一致');
+    assertForgeEncounterLocalizationDraft(prepared,draft);
+  });
   test('default Chinese draft translates without review; actual GM identity approves through formal preparation', async () => {
     const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
     const counts = { translate: 0, review: 0 };
@@ -340,6 +585,54 @@ describe('formal source to localized encounter', () => {
     })).rejects.toThrow('含义有误');
     expect(findings).toContain('含义有误');
   });
+  for(const priorStatus of ['draft_ready','needs_review'] as const)test(`saved prose cleanup resumes locally from ${priorStatus} without retranslating`,async()=>{
+    const originalBundle=sourcePackage();
+    const editedSource=originalBundle.actors[0]!.source.replace('### Actions',"The sentinel&#39;s watch warns creatures that enter.\n### Actions");
+    const bundle:ForgeEncounterPackage={...originalBundle,actors:originalBundle.actors.map(actor=>({...actor,source:editedSource,sourceHash:hashSource(editedSource)}))};
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle)),progress:any[]=[];
+    const original=await draftForgeEncounterLocalization({prepared,service:fakeService,onReview:entry=>progress.push(entry)});
+    expect(localizationMeaningFindings(original.actors[0]!.request,original.actors[0]!.draft).some(f=>f.includes('撇号'))).toBe(true);
+    const saved=progress.filter(entry=>['draft_ready','needs_review'].includes(entry.status)).map(entry=>({...entry,
+      status:priorStatus,findings:priorStatus==='needs_review'?localizationMeaningFindings(entry.request,entry.draft):[]}));
+    const frozen=structuredClone(saved);let calls=0,reviews=0;
+    const verified=verifiedEncounterLocalizationProgress(prepared.bundle,prepared.actors,saved);
+    expect(verified).toEqual(saved);
+    const resumed=await draftForgeEncounterLocalization({prepared,priorDrafts:verified,service:{
+      ...fakeService,translate:async()=>{calls++;throw Error('Locally repairable prose must not call translation');},
+      review:async()=>{reviews++;throw Error('No paid review');}}});
+    expect(calls).toBe(0);expect(reviews).toBe(0);expect(saved).toEqual(frozen);
+    expect(resumed.actors[0]!.draft.texts).toEqual(original.actors[0]!.draft.texts.map(entry=>{
+      const field=original.actors[0]!.request.texts.find(f=>f.id===entry.id)!;
+      return {...entry,text:field.kind==='body'?normalizeLocalizationBodyProse(field.source,entry.text):entry.text};
+    }));
+    expect(resumed.actors[0]!.translationHash).not.toBe(original.actors[0]!.translationHash);
+    expect(localizationMeaningFindings(resumed.actors[0]!.request,resumed.actors[0]!.draft)).toEqual([]);
+    expect(resumed.sourcePackageHash).toBe(original.sourcePackageHash);
+    expect((resumed as any).approval).toBeUndefined();
+    await expect(approveForgeEncounterLocalization({prepared,draft:resumed,gmId:'offline-prose-test'})).resolves.toBeDefined();
+  });
+  for(const findingKind of ['external','participant'] as const)test(`local prose cleanup keeps unresolved ${findingKind} review findings`,async()=>{
+    const originalBundle=sourcePackage();
+    const editedSource=originalBundle.actors[0]!.source.replace('### Actions',"The sentinel&#39;s watch warns creatures that enter.\n### Actions");
+    const bundle:ForgeEncounterPackage={...originalBundle,actors:originalBundle.actors.map(actor=>({...actor,source:editedSource,sourceHash:hashSource(editedSource)}))};
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle)),progress:any[]=[];
+    await draftForgeEncounterLocalization({prepared,service:fakeService,onReview:entry=>progress.push(entry)});
+    const saved=progress.filter(entry=>['draft_ready','needs_review'].includes(entry.status));
+    const actor=saved.find(entry=>entry.actorKey==='guard'),id=actor.request.texts.find((f:any)=>f.kind==='body'&&f.source.includes('sentinel')).id;
+    actor.status='needs_review';
+    if(findingKind==='external')actor.findings.push(`${id}：另一个尚未解决的含义问题。`);
+    else{
+      const field=actor.request.texts.find((f:any)=>f.id===id);
+      const candidate={...field,source:field.source.replace('The sentinel&#39;s watch warns creatures that enter.','哨兵&#39;的守望警告靠近的建筑。')};
+      actor.draft.texts.find((t:any)=>t.id===id).text=fakeTranslation({...actor.request,texts:[candidate]}).texts[0]!.text;
+      actor.findings=localizationMeaningFindings(actor.request,actor.draft);
+      expect(actor.findings.some((f:string)=>f.includes('对象类别'))).toBe(true);
+    }
+    let requested:string[]=[];
+    await expect(draftForgeEncounterLocalization({prepared,priorDrafts:saved,service:{...fakeService,
+      translate:async input=>{requested=input.texts.map(t=>t.id);throw Error('Unresolved review still requires translation');}}})).rejects.toThrow('Unresolved review');
+    expect(requested).toEqual([id]);
+  });
   test('saved draft progress restores as unapproved and never carries model or GM approval', async () => {
     const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
     let translates = 0, reviews = 0;
@@ -357,6 +650,17 @@ describe('formal source to localized encounter', () => {
     const stale = verifiedEncounterLocalizationProgress(prepared.bundle, prepared.actors,
       [{ ...saved[0], request: { ...saved[0].request, sourceHash: 'changed' } }]);
     expect(stale[0]?.status).toBe('needs_review'); expect(stale[0]?.draft).toBeUndefined();
+  });
+  test('invalid actor draft cannot bind package progress even when its request is current',async()=>{
+    const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage())),progress:any[]=[];
+    await draftForgeEncounterLocalization({prepared,service:fakeService,onReview:entry=>progress.push(entry)});
+    const saved=structuredClone(progress.filter(entry=>entry.status==='draft_ready'));
+    const actor=saved.find(entry=>entry.actorKey==='guard');actor.status='needs_review';actor.findings=['待核数值'];
+    actor.draft.texts.find((entry:any)=>entry.text.includes('1d6')).text='错误数字2d6';
+    const checked=verifiedEncounterLocalizationProgress(prepared.bundle,prepared.actors,saved);
+    const packageProgress=checked.find(entry=>!entry.actorKey);
+    expect(packageProgress?.status).toBe('needs_review');expect(packageProgress?.draft).toBeUndefined();
+    expect(packageProgress?.request.texts).toEqual([]);
   });
   test('draft-only retry requests only the failed field and preserves every valid text byte', async () => {
     const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(sourcePackage()));
@@ -613,4 +917,12 @@ describe('formal source to localized encounter', () => {
     const service={...fakeService,translate:async(input:LocalizationRequest)=>{const value=fakeTranslation(input);for(const entry of input.texts)if(entry.kind==='title'&&entry.source===name)value.texts.find(text=>text.id===entry.id)!.text='长'.repeat(60);return value;}};
     await expect(localizeForgeEncounter({bundle,service})).rejects.toThrow('256');
   });
+});
+
+test('both Actor source summaries preserve compound count qualifiers across bracket presentation',()=>{
+ const source='Last Stand (3/Day, or 4/Day in Lair). It can choose to succeed instead.';
+ for(const [name,missing]of [['Last Stand 3/Day, or 4/Day in Lair',false],['Last Stand（3/Day, or 4/Day in Lair）',false],['Last Stand 5/Day, or 4/Day in Lair',true],['Last Stand 3/Long Rest, or 4/Day in Lair',true],['Unknown Stand 3/Day, or 4/Day in Lair',true]]as const){
+  const actor={name:'Guard',type:'npc',items:[{name,type:'feat',system:{}}]};
+  for(const summary of [buildActorVerificationSummaryFromValues({source,actor}),buildBrowserActorVerificationSummary(source,actor)])expect(summary.warnings.filter(w=>w.startsWith('Item name not found'))).toHaveLength(missing?1:0);
+ }
 });

@@ -1,7 +1,9 @@
 import type { EvidenceRef } from './types';
 
 const MOVEMENT_PATHS = new Set(['/creature/attributes/movement', '/creature/attributes/movement/fly', '/creature/attributes/movement/hover']);
-const POSITIVE_HOVER = /(?:\bfly(?:ing)?\b|飞行)\s*[:：]?\s*\d+(?:\.\d+)?\s*(?:ft\.?|feet|尺)[\s\S]{0,40}[(（]\s*(?:hover(?:ing)?|悬停|悬浮)\s*[)）]/iu;
+// Fullwidth decimal presentation has the same meaning while direct matching
+// preserves the exact original UTF-16 evidence span.
+const POSITIVE_HOVER = /(?:(?:\bfly|ﬂy)(?:ing)?\b|飞行)\s*[:：]?\s*[\d０-９]+(?:[.．][\d０-９]+)?\s*(?:ft\.?|feet|尺)[\s\S]{0,40}[(（]\s*(?:hover(?:ing)?|悬停|悬浮)\s*[)）]/iu;
 const SECTION_BOUNDARY = /(?:^|\n)\s*(?:Traits|Actions|Bonus Actions|Reactions|Legendary Actions|Mythic Actions|特性|动作|附赠动作|反应|传奇动作|神话动作)\s*(?:\r?\n|$)/iu;
 
 /** Recover only a positive movement qualifier proven by exact, nearby references in this candidate. */

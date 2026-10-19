@@ -36,6 +36,51 @@ async function generatedRatWarlock() {
 }
 
 describe('intake Markdown renderer and deterministic verifier', () => {
+  async function lifecycleFixture(description: string, duration?: string, statuses = ['frightened']) {
+    const ir = buildRatWarlockIr();
+    ir.creature.actions = [{ name: 'Dread Tether', description, activityType: 'save', activationType: 'bonus', save: { dc: 14, ability: 'wis' }, uses: { max: 1, period: 'shortRest' }, appliedConditions: [{ statuses, duration }] }];
+    const markdown = renderMonsterIntakeMarkdown(ir), generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    const actor = generated.rawJson as any, item = actor.items.find((entry: any) => entry.name === 'Dread Tether');
+    return { ir, markdown, actor, item, check: () => verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor).findings.filter(finding => /ACTOR_CONDITION_(?:LIFECYCLE|DURATION|BOUNDARY)_DRIFT/u.test(finding.code)) };
+  }
+
+  test('rejects the old linked indefinite status even with an accurate sourceDuration hint', async () => {
+    const f = await lifecycleFixture('The target makes a DC 14 Wisdom saving throw. On a failure, the target becomes frightened for 1 day. The effect ends if its source dies or is more than 1 mile away. Whenever it takes damage, it repeats the saving throw.', '1 day');
+    expect(f.check()).toEqual([]);
+    f.item.effects = [{ _id: 'badStatus0000001', statuses: ['frightened'], duration: { seconds: null, rounds: null, turns: null }, flags: { fvttJsonGenerator: { sourceDuration: '1 day' } } }];
+    (Object.values(f.item.system.activities)[0] as any).effects = [{ _id: 'badStatus0000001', onSave: false }];
+    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+  });
+
+  test('checks actual native duration and complete GM boundary rather than status or metadata alone', async () => {
+    const simple = await lifecycleFixture('The target makes a DC 14 Wisdom saving throw. On a failure, the target becomes frightened for 1 day.', '1 day');
+    expect(simple.check()).toEqual([]); simple.item.effects[0].duration.seconds = null;
+    expect(simple.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DURATION_DRIFT' }));
+    const complex = await lifecycleFixture('The target becomes frightened for 1 minute. The effect ends when the target takes damage.', '1 minute');
+    expect(complex.check()).toEqual([]); delete complex.item.flags.fvttJsonGenerator.conditionLifecycle;
+    expect(complex.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_BOUNDARY_DRIFT' }));
+  });
+
+  test('checks omitted source duration and independent status lifecycles against actual Effects', async () => {
+    for (const source of ['The target becomes frightened for one minute.', '目标陷入恐慌，持续一日。']) {
+      const f = await lifecycleFixture(source); expect(f.check()).toEqual([]);
+      f.item.effects = [{ _id: 'badDuration00001', statuses: ['frightened'], duration: {} }];
+      expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+    }
+    const f = await lifecycleFixture('The target is prone. It is poisoned until the end of its next turn.', undefined, ['prone', 'poisoned']);
+    expect(f.item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone']); expect(f.check()).toEqual([]);
+    f.item.effects.push({ _id: 'badPoison0000001', statuses: ['poisoned'], duration: {} });
+    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+  });
+
+  test('rejects legacy attack enums inside an existing V14 Activity rather than trusting the matching string', async () => {
+    const { ir, markdown, actor } = await generatedRatWarlock(), feature = ir.creature.actions.find(entry => entry.attack)!;
+    const item = actor.items.find((entry: any) => entry.name.includes(feature.name));
+    const activity = Object.values(item.system.activities)[0] as any;
+    activity.attack.type.value = feature.attack!.type;
+    expect(verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor).findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_ATTACK_NATIVE_TYPE_DRIFT' }));
+  });
+
   test('accepts case-only actor name variants deduplicated by the renderer', async () => {
     const ir = buildRatWarlockIr();
     ir.creature.identity.name = 'RAT WARLOCK';
@@ -648,7 +693,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const activity = Object.values(item.system.activities)[0] as any;
 
     expect(markdown).toContain('范围: 触及 5 尺或射程 20/60 尺');
-    expect(activity.attack.type.value).toBe('mwak');
+    expect(activity.attack.type).toEqual({ value: 'melee', classification: 'weapon' });
     expect(activity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
     const projection = projectActor(generated.rawJson);
     expect((projection.items as Array<Record<string, unknown>>).find((candidate) => String(candidate.name).includes('Claw')))
@@ -748,7 +793,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, generated.rawJson);
 
     expect(markdown).toContain('护甲等级：14（有法师护甲mage armor时15）');
-    expect(markdown).toMatch(/名称: 爪击 \(Claw\)[\s\S]*?类型: attack/);
+    expect(markdown).toMatch(/名称: 爪击 Claw[\s\S]*?类型: attack/);
     expect(markdown).toContain('类型: piercing');
     expect(markdown).toContain('激活: bonus');
     expect(report.findings).toEqual([]);
@@ -772,7 +817,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     actor.system.attributes.senses.darkvision = 0;
     actor.system.traits.languages.custom = '';
     for (const ability of Object.values(actor.system.abilities) as any[]) ability.value = 10;
-    actor.items = actor.items.filter((item: any) => !['蛛行 (Spider Climb)', '纯真结界 (Ward of Innocence)'].includes(item.name));
+    actor.items = actor.items.filter((item: any) => !['蛛行 Spider Climb', '纯真结界 Ward of Innocence'].includes(item.name));
     const claw = actor.items.find((item: any) => item.name.includes('爪击'));
     claw.system.range.reach = 5;
     claw.system.damage.base.denomination = 6;

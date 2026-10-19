@@ -109,6 +109,9 @@ export interface GenerationProjectionOptions {
   route?: ParserRoute;
   translationService?: ActorGeneratorOptions['translationService'];
   iconResolver?: GenerationIconResolver;
+  /** Internal capture of the exact normalized facts consumed by this projection. */
+  onRulePresentationPlan?: ActorGeneratorOptions['onRulePresentationPlan'];
+  rulePresentationActorNormalizer?: ActorGeneratorOptions['rulePresentationActorNormalizer'];
 }
 
 export interface GenerationProjector {

@@ -1,10 +1,11 @@
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeConfiguredConditionCatalog, type ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
-import { normalizeDiscovery, partitionDiscoveryCandidates } from '@fvtt-json-generator/intake-ai/discovery';
+import { normalizeDiscovery, partitionDiscoveryCandidates, singleCreatureSourceCandidate } from '@fvtt-json-generator/intake-ai/discovery';
 import { OpenAICompatibleMonsterIntakeProvider } from '@fvtt-json-generator/intake-ai/provider';
 import { createEncounterAutomationProvider, EncounterAutomationSelectionNeedsReviewError } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import type { BrowserAiProviderOptions } from './ai';
 import { createReviewedTranslationService } from '@fvtt-json-generator/intake-ai/localization';
+import { createContinuousIntakeWaitPolicy } from '@fvtt-json-generator/intake-ai/transport';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
 import { extractExplicitlyInflictedStatuses } from '@fvtt-json-generator/generation/actor-effects';
 import type { ReviewedTranslationServicePort } from '@fvtt-json-generator/generation/ports';
@@ -13,8 +14,8 @@ import { draftForgeEncounterLocalization, localizeForgeEncounter,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from './encounterLocalization';
 import type { MonsterIntakeAiProvider, DiscoveryCandidate, MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
 import {
-  buildEncounterMacroCommand, renderEncounterActorSource, decodeEncounterAutomation, encounterStagedConditionRequirements,encounterManualConditionRequirements,
-  type EncounterAutomationIR, type EncounterAutomationRequest, type EncounterAutomationRule,
+  buildEncounterMacroCommand, renderEncounterActorSource, decodeEncounterAutomation, encounterStagedConditionRequirements,encounterManualConditionRequirements, manualForcedMovementRequirements,
+  type EncounterAutomationIR, type EncounterAutomationRequest, type EncounterAutomationRule, type EncounterCompilerRejection,
 } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {
   analyzeBrowserActorSourceWithAi, generateAndReviewBrowserActorIntake, generateBrowserActorIntakeCandidate,
@@ -41,7 +42,8 @@ export interface EncounterIntakeReport {
   conditionCatalogHash?:string;
   evidenceMode:'standard'|'exact-quotes-v1';
   requestedOptions?:{protocol:BrowserAiProviderOptions['protocol'];reasoning:BrowserAiProviderOptions['reasoning'];maxAttempts?:1|2};
-  discovery?:{mode:'ordinary-headings'|'ai-discovery';providerCalls:number};
+  discovery?:{mode:'ordinary-headings'|'single-statblock'|'ai-discovery';providerCalls:number};
+  generationRoute?:'single-actor-native'|'encounter-with-controller';
   recovery?:{parentReportHash:string;mode:'fresh-validation-and-review'};
   sourceFeedback?:Array<{actorKey:string;path:string;message:string}>;
   status:'running'|'ready_for_gm_review'|'needs_review'|'failed';
@@ -79,7 +81,9 @@ export function assertEncounterSecretsAbsent(content:string,forbiddenValues:read
   for(const value of forbiddenValues){if(value.trim()&&content.includes(value.trim()))throw new TypeError('战斗包包含当前配置的敏感连接信息。');}
 }
 
-export function createEncounterIntakeProviders(options:BrowserAiProviderOptions & {allowLocalBridge?:boolean},signal?:AbortSignal){
+export function createEncounterIntakeProviders(options:BrowserAiProviderOptions & {allowLocalBridge?:boolean;onCompilationRejected?:(evidence:EncounterCompilerRejection)=>void;responseEvidence?:import('@fvtt-json-generator/intake-ai/provider').ProviderResponseEvidenceSink;
+  onExtractionStage?:(metadata:unknown)=>void|Promise<void>},signal?:AbortSignal){
+  const waitPolicy=options.waitPolicy??(options.timeoutMs===undefined&&options.repairTimeoutMs===undefined?createContinuousIntakeWaitPolicy():undefined);
   const url=new URL(options.baseUrl);
   const loopback=(host:string)=>['127.0.0.1','localhost','[::1]'].includes(host);
   const localBridge=options.allowLocalBridge===true&&url.protocol==='http:'&&loopback(url.hostname);
@@ -95,18 +99,20 @@ export function createEncounterIntakeProviders(options:BrowserAiProviderOptions 
   const retry=localBridge&&options.waitPolicy?{signal,budgetMs:options.encounterRetryBudgetMs,onRetry:options.onRetry}:undefined;
   const providerTimeoutMs=retry?600000:options.timeoutMs??600000;
   const providerRepairTimeoutMs=retry?600000:options.repairTimeoutMs??600000;
-  const createActorProvider=(attemptSignal?:AbortSignal)=>new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:options.apiKey,baseUrl:options.baseUrl,
+  const createActorProvider=(attemptSignal?:AbortSignal)=>new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:options.apiKey,baseUrl:options.baseUrl,signal:combineEncounterSignals(signal,attemptSignal),maxAttempts:1,
     model:options.model,reviewModel:options.model,timeoutMs:providerTimeoutMs,repairTimeoutMs:providerRepairTimeoutMs,
     reviewFocus:'forge-brief',
     evidenceAnchoring:'exact-quotes',
-    waitPolicy:options.waitPolicy,onActivity:options.onActivity,
+    stagedExtraction:{baseMode:'facts',featureMode:'auto',signal:combineEncounterSignals(signal,attemptSignal),onStage:options.onExtractionStage},
+    responseEvidence:options.responseEvidence,
+    waitPolicy,onActivity:options.onActivity,
     transport,httpClient:(requestUrl,init)=>fetch(requestUrl,{...init,signal:combineEncounterSignals(signal,attemptSignal,init?.signal)})});
   const baseActorProvider=createActorProvider();
-  const createAutomationProvider=(attemptSignal?:AbortSignal)=>createEncounterAutomationProvider({...options,reviewModel:options.model,reviewFocus:'forge-brief',timeoutMs:providerTimeoutMs},combineEncounterSignals(signal,attemptSignal));
+  const createAutomationProvider=(attemptSignal?:AbortSignal)=>createEncounterAutomationProvider({...options,waitPolicy,reviewModel:options.model,reviewFocus:'forge-brief',timeoutMs:providerTimeoutMs},combineEncounterSignals(signal,attemptSignal));
   const baseAutomationProvider=createAutomationProvider();
   const actorProvider=retry?retryingMonsterProvider(baseActorProvider,createActorProvider,retry):baseActorProvider;
   const automationProvider=retry?retryingAutomationProvider(baseAutomationProvider,createAutomationProvider,retry):baseAutomationProvider;
-  const translationService = createReviewedTranslationService({ ...options, reviewModel:options.model, reviewFocus:'forge-brief', protocol: transport.protocol, authScheme: transport.authScheme,
+  const translationService = createReviewedTranslationService({ ...options, waitPolicy, reviewModel:options.model, reviewFocus:'forge-brief', protocol: transport.protocol, authScheme: transport.authScheme,
     structuredOutput: transport.structuredOutput, stream: options.protocol === 'openai-responses',
     httpClient: (url, init) => fetch(url, { ...init, signal: combineEncounterSignals(signal, init?.signal) }),
   });
@@ -150,6 +156,21 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
   const progress=(message:string)=>{signal?.throwIfAborted();input.onProgress?.(message);};
   const publish=()=>input.onReport?.(structuredClone(report));
   const pending=(findings:string[]):EncounterIntakeResult=>{report.status='needs_review';report.findings=findings;publish();return {report};};
+  const finishDeferred=async(prepared:PreparedForgeEncounter):Promise<EncounterIntakeResult>=>{
+    report.automationReview={status:'not_requested'};report.outputLanguage='source';
+    report.status='ready_for_gm_review';report.packageHash=prepared.hash;publish();
+    if(input.outputLanguage==='zh-CN'){
+      try{
+        if(!input.translationService)throw new Error('中文生成缺少翻译服务。');
+        report.localization=[];
+        const localizationDraft=await draftForgeEncounterLocalization({prepared,service:input.translationService,signal,onProgress:progress,
+          onReview:entry=>{const index=report.localization!.findIndex(prior=>prior.actorKey===entry.actorKey);
+            if(index<0)report.localization!.push(entry);else report.localization![index]=entry;publish();}});
+        report.localizationDraft=localizationDraft;publish();return {report,prepared,localizationDraft};
+      }catch(error){report.findings=[`中文草稿未完成：${safeFailure(error)}；原语言包仍可供 GM 核对。`];publish();}
+    }
+    return {report,prepared};
+  };
   try{
     conditionCatalog=decodeConfiguredConditionCatalog(input.conditionCatalog??[]);
     report.conditionCatalogHash=hashSource(JSON.stringify(conditionCatalog));
@@ -158,8 +179,10 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     if(input.drafts?.length){if(!/^[a-f0-9]{64}$/.test(input.draftParentHash??''))throw new Error('缺少草稿来源报告指纹。');report.recovery={parentReportHash:input.draftParentHash!,mode:'fresh-validation-and-review'};}
     progress('正在识别资料中的全部生物。');
     const explicit=explicitCreatureSections(source);
-    report.discovery={mode:explicit.length>=2?'ordinary-headings':'ai-discovery',providerCalls:explicit.length>=2?0:1};
-    const discovery=explicit.length>=2?{candidates:explicit}:await provider.discover({source,sourceSha256:report.sourceHash,chunkStart:0,chunkEnd:source.length});
+    const single=singleCreatureSourceCandidate(source);
+    const local=explicit.length>=2?explicit:single?[single]:undefined;
+    report.discovery={mode:explicit.length>=2?'ordinary-headings':single?'single-statblock':'ai-discovery',providerCalls:local?0:1};
+    const discovery=local?{candidates:local}:await provider.discover({source,sourceSha256:report.sourceHash,chunkStart:0,chunkEnd:source.length});
     signal?.throwIfAborted();
     const raw=normalizeDiscovery(source,discovery.candidates);
     if(raw.length<1||raw.length>6)return pending(['战斗包入口需要识别1至6种生物；不会自动选取第一种或忽略其余生物。']);
@@ -211,9 +234,25 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       actor.generation=generation;signal?.throwIfAborted();publish();
       if(generation.status!==(deferred?'ready_for_gm_review':'accepted')&&!isCompanionOnlyStagedGeneration(generation,deferred))
         return pending(generation.findings.filter(f=>f.blocking).map(f=>`${candidate.label}：${f.code} ${f.message}`).concat([`${candidate.label}尚未通过正式生成与来源校验。`]));
-      if(!hasManualPreparationEvidence(generation.findings,analysis.ir!,pendingManualRules))
+      if(!hasManualPreparationEvidence(generation.findings,analysis.ir!,pendingManualRules,actorSource))
         return pending([`${candidate.label} 的手工条件准备未证明特殊后果只由 GM 处理。`]);
     }
+    const native=report.actors.length===1?report.actors[0]:undefined;
+    const needsCompanion=(native?.generation?.actorProjection as any)?.items?.some((item:any)=>
+      (item.flags?.fvttJsonGenerator?.behaviorMechanics??[]).some((mechanic:any)=>['gm-assisted','external-rule'].includes(mechanic.executionMode)));
+    if(deferred&&native&&native.generation?.formalStatus==='accepted'&&native.generation.intakeVerificationStatus==='accepted'
+      &&!native.generation.findings.some(f=>f.blocking)&&!needsCompanion
+      &&manualPreparationRules(native.analysis.ir!,native.source,native.key).length===0
+      &&encounterStagedConditionRequirements(native.analysis.ir!,native.source).length===0){
+      report.generationRoute='single-actor-native';
+      progress('唯一生物已通过原生生成与来源校验，省略配套控制配置请求；仍需GM确认。');
+      const actorSource=renderEncounterActorSource(native.analysis.ir!,[],native.source);
+      const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
+        label:input.label,target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:native.key,
+        actors:[{key:native.key,label:native.analysis.candidate!.label,source:actorSource,sourceHash:hashSource(actorSource)}],macros:[],assets:[]};
+      return await finishDeferred(await prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal));
+    }
+    report.generationRoute='encounter-with-controller';
     const request:EncounterAutomationRequest={source,conditionCatalog,actors:report.actors.map(a=>({key:a.key,ir:a.analysis.ir!,source:a.source,artifact:a.generation!.actorProjection}))};
     progress('角色来源审核已通过，正在提取固定自动化能力与参数；AI不会编写宏代码。');
     let automation=decodeEncounterAutomation(await automationProvider.generate(request),request);signal?.throwIfAborted();
@@ -227,7 +266,9 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       for(const actor of report.actors){
         for(const required of manualPreparationRules(actor.analysis.ir!,actor.source,actor.key)){
           if(rules.filter(rule=>rule.actorKey===actor.key&&rule.section===required.section
-            &&rule.featureName===required.featureName&&['gm-manual','status-lifecycle'].includes(rule.capabilityKind??'')).length!==1){
+            &&rule.featureName===required.featureName
+            && (manualForcedMovementRequirements(actor.analysis.ir!,actor.source).some(movement=>movement.section===required.section&&movement.featureName===required.featureName)
+              ? rule.capabilityKind==='gm-manual' : ['gm-manual','status-lifecycle'].includes(rule.capabilityKind??''))).length!==1){
             return pending([`${actor.key} 的 ${required.section}/${required.featureName} 缺少来源绑定的 GM 手工条件覆盖。`]);
           }
         }
@@ -247,32 +288,12 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         const final=prepared.actors.find(item=>item.key===actor.key);
         const finalSource=bundle.actors.find(item=>item.key===actor.key)?.source;
         if(!final||!finalSource||!hasManualPreparationEvidence(
-          verifyMonsterIntake(actor.source,actor.analysis.ir!,finalSource,final.artifact).findings,actor.analysis.ir!,pendingRules)){
+          verifyMonsterIntake(actor.source,actor.analysis.ir!,finalSource,final.artifact).findings,actor.analysis.ir!,pendingRules,actor.source)){
           return pending([`${actor.key} 的最终 Actor 未证明特殊后果只由 GM 处理。`]);
         }
       }
       if(deferred){
-        report.automationReview={status:'not_requested'};
-        report.outputLanguage='source';
-        report.status='ready_for_gm_review';
-        report.packageHash=prepared.hash;
-        publish();
-        if(input.outputLanguage==='zh-CN'){
-          try{
-            if(!input.translationService)throw new Error('中文生成缺少翻译服务。');
-            report.localization=[];
-            const localizationDraft=await draftForgeEncounterLocalization({prepared,service:input.translationService,signal,onProgress:progress,
-              onReview:entry=>{const index=report.localization!.findIndex(prior=>prior.actorKey===entry.actorKey);
-                if(index<0)report.localization!.push(entry);else report.localization![index]=entry;publish();}});
-            report.localizationDraft=localizationDraft;
-            publish();
-            return {report,prepared,localizationDraft};
-          }catch(error){
-            report.findings=[`中文草稿未完成：${safeFailure(error)}；原语言包仍可供 GM 核对。`];
-            publish();
-          }
-        }
-        return {report,prepared};
+        return await finishDeferred(prepared);
       }
       const review=await automationProvider.review({...request,automation,finalSources:prepared.actors.map(a=>({key:a.key,source:bundle.actors.find(s=>s.key===a.key)!.source,artifact:a.artifact}))});
       signal?.throwIfAborted();report.automationReview=review;publish();
@@ -319,12 +340,13 @@ export async function reviewForgeEncounterCandidate(input:{
   const {source,prepared,provider,automationProvider,signal}=input;
   const conditionCatalog=decodeConfiguredConditionCatalog(input.conditionCatalog??[]);
   assertPreparedForgeEncounter(prepared);
+  const nativeOnly=input.report.generationRoute==='single-actor-native'&&prepared.actors.length===1&&prepared.bundle.macros.length===0;
   if(prepared.bundle.localization||input.report.status!=='ready_for_gm_review'
     ||input.report.source!==source||input.report.sourceHash!==hashSource(source)
     ||input.report.packageHash!==prepared.hash||input.report.actors.length!==prepared.actors.length
     ||input.report.model!==provider.extractionModel||input.report.reviewModel!==provider.reviewModel
     ||input.report.conditionCatalogHash!==hashSource(JSON.stringify(conditionCatalog))
-    ||!input.report.automation)throw new TypeError('战斗包来源、模型或正式候选已变化，不能审核旧候选。');
+    ||(!nativeOnly&&!input.report.automation)||(nativeOnly&&!!input.report.automation))throw new TypeError('战斗包来源、模型或正式候选已变化，不能审核旧候选。');
   const report=structuredClone(input.report);
   const publish=()=>input.onReport?.(structuredClone(report));
   // Check every actor and the final fixed configuration before any paid audit.
@@ -346,10 +368,10 @@ export async function reviewForgeEncounterCandidate(input:{
     key:actor.key,ir:actor.analysis.ir!,source:actor.source,
     artifact:prepared.actors.find(entry=>entry.key===actor.key)!.artifact,
   }))};
-  const automation=decodeEncounterAutomation(report.automation,request);
-  const rules=automation.rules.map((rule,index)=>({...rule,mechanicId:`encounter-rule-${index+1}`,
-    capabilityKind:automation.selection?.rules[index]?.kind}));
-  if(prepared.bundle.macros.length!==1||prepared.bundle.macros[0]!.command!==buildEncounterMacroCommand(automation)
+  const automation=nativeOnly?undefined:decodeEncounterAutomation(report.automation,request);
+  const rules=automation?.rules.map((rule,index)=>({...rule,mechanicId:`encounter-rule-${index+1}`,
+    capabilityKind:automation.selection?.rules[index]?.kind}))??[];
+  if((!nativeOnly&&(prepared.bundle.macros.length!==1||prepared.bundle.macros[0]!.command!==buildEncounterMacroCommand(automation!)))
     ||report.actors.some(actor=>prepared.bundle.actors.find(entry=>entry.key===actor.key)?.source
       !==renderEncounterActorSource(actor.analysis.ir!,rules.filter(rule=>rule.actorKey===actor.key),actor.source)))
     throw new TypeError('固定控制入口或最终生物来源与待审核配置不一致。');
@@ -373,7 +395,7 @@ export async function reviewForgeEncounterCandidate(input:{
       publish();return {report};
     }
   }
-  if(!report.automationReview||'status'in report.automationReview){
+  if(automation&&(!report.automationReview||'status'in report.automationReview)){
     try{
       const review=await automationProvider.review({...request,automation,finalSources:prepared.actors.map(actor=>({
         key:actor.key,source:prepared.bundle.actors.find(entry=>entry.key===actor.key)!.source,artifact:actor.artifact,
@@ -416,6 +438,11 @@ function manualPreparationRules(ir:MonsterIntakeIR,source:string,actorKey:string
   const sections=[['trait',ir.creature.traits],['action',ir.creature.actions],['bonus',ir.creature.bonusActions],
     ['reaction',ir.creature.reactions],['legendary',ir.creature.legendaryActions]] as const;
   const rules:Array<EncounterAutomationRule & {mechanicId:string;capabilityKind:'gm-manual'}>=[];
+  for (const movement of manualForcedMovementRequirements(ir, source)) {
+    rules.push({actorKey, section:movement.section, featureName:movement.featureName, quote:movement.quote,
+      mechanicId:`encounter-pending-push-${movement.section}-${Number(movement.claimPath.split('/').at(-1))+1}`,
+      capabilityKind:'gm-manual',gmSteps:['使用原生豁免判定；推离仅由 GM 手动处理，当前是准备声明。',movement.description]});
+  }
   for(const [section,features] of sections)for(const [index,feature] of features.entries()){
     const conditions=feature.appliedConditions??[];
     if(conditions.length===0||conditions.some(condition=>condition.staged))continue;
@@ -436,10 +463,15 @@ function manualPreparationRules(ir:MonsterIntakeIR,source:string,actorKey:string
 function hasManualPreparationEvidence(
   findings:readonly {code:string;path:string}[],ir:MonsterIntakeIR,
   rules:readonly (EncounterAutomationRule & {mechanicId:string;capabilityKind:'gm-manual'})[],
+  source:string,
 ):boolean{
   return encounterManualConditionRequirements(ir,rules).every(requirement=>requirement.conditionPaths.every(path=>
     findings.some(finding=>finding.path===path&&finding.code==='ACTOR_CONDITION_REQUIRES_GM')
-    &&!findings.some(finding=>finding.path===path&&finding.code==='ACTOR_CONDITION_DRIFT')));
+    &&!findings.some(finding=>finding.path===path&&finding.code==='ACTOR_CONDITION_DRIFT')))
+    &&manualForcedMovementRequirements(ir,source).every(requirement=>
+      findings.some(finding=>finding.code==='ACTOR_FORCED_MOVEMENT_REQUIRES_GM'
+        &&finding.path===requirement.claimPath)
+      &&!findings.some(finding=>finding.code==='ACTOR_FORCED_MOVEMENT_UNBOUND'&&finding.path===requirement.claimPath));
 }
 function safeFailure(error:unknown):string{
   const message=error instanceof Error?error.message:'生成失败';
@@ -459,7 +491,7 @@ function isCompanionOnlyStagedGeneration(generation:BrowserActorGenerationResult
     && (allowUnreviewed||generation.review?.verdict==='accepted')
     && Boolean(generation.finalSource)
     && blocking.length>0
-    && blocking.every(f=>['ACTOR_STAGED_CONDITION_REQUIRES_COMPANION','ACTOR_CONDITION_REQUIRES_GM'].includes(f.code));
+    && blocking.every(f=>['ACTOR_STAGED_CONDITION_REQUIRES_COMPANION','ACTOR_CONDITION_REQUIRES_GM','ACTOR_FORCED_MOVEMENT_REQUIRES_GM'].includes(f.code));
 }
 
 /** Optional ordinary prose headings, not a required authoring schema or creature-name lookup. */

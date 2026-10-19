@@ -71,6 +71,10 @@ describe('encounter staged condition companion boundary', () => {
     const markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const item = (generated.rawJson as any).items.find((entry: any) => entry.name === 'Stone Stages');
+    // Generation now keeps the unsupported repeat-save lifecycle GM-owned.
+    // Recreate the invalid simultaneous-stage candidate to retain the verifier
+    // regression rather than requiring generation to emit that old defect.
+    item.effects.push({ _id: 'badStage00000001', statuses: ['restrained'] });
     expect(item.effects.flatMap((effect: any) => effect.statuses).sort()).toEqual(['petrified', 'restrained']);
     const report = verifyMonsterIntake(source, ir, markdown, generated.rawJson);
 
@@ -108,7 +112,7 @@ describe('encounter staged condition companion boundary', () => {
     const incompleteMarkerSource = stagedSource.replace(/\n        - .*Staged Fright.*\n---/u, '\n---');
     const incompleteGenerated = await convertMarkdownContentToJson({ content: incompleteMarkerSource, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const incompleteItem = (incompleteGenerated.rawJson as any).items.find((item: any) => item.name.includes('Staged Fright'));
-    expect(incompleteItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(true);
+    expect(incompleteItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(false);
     expect(verifyMonsterIntake(source, ir, incompleteMarkerSource, incompleteGenerated.rawJson).findings).toContainEqual(expect.objectContaining({
       code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/1',
     }));
@@ -118,12 +122,14 @@ describe('encounter staged condition companion boundary', () => {
     const ordinarySource = renderEncounterActorSource(ordinary, [], source);
     const ordinaryGenerated = await convertMarkdownContentToJson({ content: ordinarySource, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const ordinaryItem = (ordinaryGenerated.rawJson as any).items.find((item: any) => item.name.includes('Staged Fright'));
-    expect(ordinaryItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(true);
+    expect(ordinaryItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(false);
+    expect(ordinaryItem.flags.fvttJsonGenerator.conditionLifecycle.statuses).toContain('frightened');
     const carrierMismatch = structuredClone(ordinaryGenerated.rawJson) as any;
     const mismatchItem = carrierMismatch.items.find((item: any) => item.name.includes('Staged Fright'));
     const mismatchedMarker = structuredClone(stagedItem.flags.fvttJsonGenerator.behaviorMechanics[0]);
     mismatchedMarker.carrier.name = 'Other carrier';
     mismatchItem.flags.fvttJsonGenerator = { behaviorMechanics: [mismatchedMarker] };
+    mismatchItem.effects.push({ _id: 'plainFear0000001', statuses: ['frightened'], disabled: false, changes: [], description: '' });
     suppressEncounterStagedInferredEffects(carrierMismatch);
     expect(mismatchItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(true);
   });

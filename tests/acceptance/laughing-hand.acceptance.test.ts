@@ -27,7 +27,7 @@ async function generateActor(slug: string): Promise<any> {
 }
 
 function findItem(actor: any, englishName: string): any {
-  const item = actor.items.find((candidate: any) => String(candidate.name).includes(`(${englishName})`));
+  const item = actor.items.find((candidate: any) => String(candidate.name).endsWith(` ${englishName}`));
   expect(item).toBeDefined();
   if (!item) {
     throw new Error(`Missing item ${englishName}`);
@@ -49,13 +49,13 @@ describe('Laughing Hand Obsidian acceptance gate', () => {
 
     expect(actor.items.map((item: any) => item.name)).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('(Mouths in Wounds)'),
-        expect.stringContaining('(Horrifying Laughter)'),
-        expect.stringContaining('(Bone-Crushing Fist)'),
-        expect.stringContaining('(Sword Arm)'),
-        expect.stringContaining('(Summon Shadow Hounds)'),
-        expect.stringContaining('(Tormenting Approach)'),
-        expect.stringContaining('(Unnatural Pursuit)'),
+        expect.stringContaining(' Mouths in Wounds'),
+        expect.stringContaining(' Horrifying Laughter'),
+        expect.stringContaining(' Bone-Crushing Fist'),
+        expect.stringContaining(' Sword Arm'),
+        expect.stringContaining(' Summon Shadow Hounds'),
+        expect.stringContaining(' Tormenting Approach'),
+        expect.stringContaining(' Unnatural Pursuit'),
       ]),
     );
 

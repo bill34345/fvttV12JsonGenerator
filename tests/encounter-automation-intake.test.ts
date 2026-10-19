@@ -92,11 +92,16 @@ describe('encounter automation Intake', () => {
     expect(seen[0]!.url).toBe('https://provider.example/v1/chat/completions');
     expect(seen[0]!.body.model).toBe('gpt-test');
     expect(seen[0]!.body.reasoning_effort).toBe('max');
-    expect(seen[0]!.body.messages[1].content).toContain('"artifact":{}');
+    const compact=JSON.parse(seen[0]!.body.messages[1].content);
+    expect(compact.actors[0].artifact).toBeUndefined();
+    expect(compact.actors[0].ir).toBeUndefined();
+    expect(compact.actors[0].source).toBeUndefined();
+    expect(compact.source).toBe(input.source);
+    expect(compact.actors[0].features[0].ref).toBeTruthy();
     expect(seen[0]!.body.messages[0].content).toContain('Never write executable code');
     expect(seen[0]!.body.messages[0].content).toContain('save-summon');
     expect(seen[0]!.body.response_format.json_schema.schema.required).toEqual([
-      'version', 'name', 'notes', 'rules', 'legendaryRecovery', 'manualSteps',
+      'version', 'rules', 'legendaryRecovery', 'unresolved',
     ]);
 
     await expect(provider.review({ ...input, automation: result })).resolves.toEqual({ verdict: 'accepted', findings: [] });
@@ -172,7 +177,7 @@ describe('encounter automation Intake', () => {
     const second=JSON.parse(seen[1]!.body.messages[1].content);
     expect(second.source).toBe(first.source);
     expect(second.actors).toEqual(first.actors);
-    expect(second.prior).toEqual(proposed);
+    expect(second.prior).toEqual({version:3,rules:[{featureRef:'feature-1-action-1',kind:'gm-manual',parameters:{},gmSteps:proposed.rules[0]!.gmSteps}],legendaryRecovery:[],unresolved:[]});
     expect(second.findings).toHaveLength(1);
     expect(second.findings[0]).toContain('source-bound compilation');
   });
@@ -241,7 +246,7 @@ describe('encounter automation Intake', () => {
     if (!('result' in response)) throw new Error('Expected a browser runtime result.');
     expect(response.result.status).toBe('needs_review');
     if (!('artifact' in response.result)) throw new Error('Expected formal artifact for review.');
-    const carrier = (response.result.artifact!.items as any[]).find((item) => item.name === '啃咬 (Bite)');
+    const carrier = (response.result.artifact!.items as any[]).find((item) => item.name === '啃咬 Bite');
     expect(carrier.flags.fvttJsonGenerator.behaviorMechanics).toEqual([expect.objectContaining({
       id: 'rule-1', kind: 'lifecycle', coverage: 'literal', executionMode: 'gm-assisted', ruleSource: 'source-derived',
     })]);

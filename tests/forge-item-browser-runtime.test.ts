@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -125,6 +127,8 @@ describe('browser Forge Item runtime', () => {
       content: request.source.content,
       fvttVersion: workflowTarget,
       effectProfile: 'core',
+      iconOptions: { mode: request.resolvedTarget.iconMode },
+      iconWorkflow: { ...iconWorkflowAdapter, createResolutionSession: createBundledIconResolutionSession },
     });
     expect(formal.kind).toBe('item');
     expect(formal.status).toBe('accepted');
@@ -134,7 +138,7 @@ describe('browser Forge Item runtime', () => {
     expect(decoded.value.result.target.systemVersionObserved).toBe(systemVersion);
     expect(JSON.stringify(browserResponse)).not.toMatch(/sourcePath|localCache|workflow|canonical|dnd5eRepo|reference/u);
     const bash = Object.values(((normalized.system as JsonObject).activities as JsonObject))
-      .find((entry) => (entry as JsonObject).name === '强力猛击 (Forceful Bash)') as JsonObject;
+      .find((entry) => (entry as JsonObject).name === '强力猛击 Forceful Bash') as JsonObject;
     if (workflowTarget === '14') {
       expect(bash.activation).toEqual({ type: 'action', override: false });
       expect(bash.range).toEqual({ override: true, value: '5', units: 'ft', special: '' });
@@ -208,7 +212,7 @@ describe('browser Forge Item runtime', () => {
     });
     const bashArtifact = Object.values(
       ((response.result.artifact.system as JsonObject).activities as JsonObject),
-    ).find((entry) => (entry as JsonObject).name === '强力猛击 (Forceful Bash)') as JsonObject;
+    ).find((entry) => (entry as JsonObject).name === '强力猛击 Forceful Bash') as JsonObject;
     expect(bashArtifact.range).toEqual({ override: true, value: '5', units: 'ft', special: '' });
     expect(bashArtifact.activation).toEqual({ type: 'action', override: false });
     expect(bash?.effectIds).toHaveLength(1);

@@ -1,0 +1,5112 @@
+{
+  "version": 1,
+  "scope": "Offline source -> injected model reply -> anchor -> validator -> renderer -> V14/core workflow -> verifier and independent semantic assertions. No default hook/gate change, network AI or runtime acceptance.",
+  "srdAttribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.",
+  "cases": [
+    {
+      "id": "control-sentinel",
+      "label": "第二种生物的清楚写法",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/56"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "control-watcher",
+      "label": "清楚写法对照",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/56"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "feet-word",
+      "label": "feet 全拼",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/56"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 feet, one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 feet, one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "reach",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "attack",
+            "reach"
+          ],
+          "value": 50
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 feet, one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 feet, one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "damage-linebreak",
+      "label": "平均伤害与骰式跨行",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/56"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4\n(1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4\n(1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dice",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "damage",
+            "0",
+            "formula"
+          ],
+          "value": "9d12"
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4\n(1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4\n(1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "ac-colon",
+      "label": "AC 冒号短标题",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/88"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "ac",
+          "path": [
+            "attributes",
+            "ac"
+          ],
+          "value": 20
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC: 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC: 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "vertical-abilities",
+      "label": "六项属性逐行列出",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/131"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dex",
+          "path": [
+            "abilities",
+            "dex"
+          ],
+          "value": 2
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR\n8 (-1)\nDEX\n14 (+2)\nCON\n12 (+1)\nINT\n11 (+0)\nWIS\n16 (+3)\nCHA\n13 (+1)\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR\n8 (-1)\nDEX\n14 (+2)\nCON\n12 (+1)\nINT\n11 (+0)\nWIS\n16 (+3)\nCHA\n13 (+1)\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "markdown-ability-table",
+      "label": "属性/数值/调整值 Markdown 表格",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/104"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dex",
+          "path": [
+            "abilities",
+            "dex"
+          ],
+          "value": 2
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\n| Ability | Score | Modifier |\n| --- | --- | --- |\n| Strength | 8 | -1 |\n| Dexterity | 14 | +2 |\n| Constitution | 12 | +1 |\n| Intelligence | 11 | +0 |\n| Wisdom | 16 | +3 |\n| Charisma | 13 | +1 |\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\n| Ability | Score | Modifier |\n| --- | --- | --- |\n| Strength | 8 | -1 |\n| Dexterity | 14 | +2 |\n| Constitution | 12 | +1 |\n| Intelligence | 11 | +0 |\n| Wisdom | 16 | +3 |\n| Charisma | 13 | +1 |\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "mod-save-three-columns",
+      "label": "MOD/SAVE 三组并排，豁免不等于调整值",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/132"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "str": -1,
+          "dex": 2,
+          "con": 1,
+          "int": 0,
+          "wis": 5,
+          "cha": 1
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "wis-save",
+          "path": [
+            "saves",
+            "wis"
+          ],
+          "value": 3
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nMOD SAVE MOD SAVE MOD SAVE\nStr 8 -1 -1 Dex 14 +2 +2 Con 12 +1 +1\nInt 11 +0 +0 Wis 16 +3 +5 Cha 13 +1 +1\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nMOD SAVE MOD SAVE MOD SAVE\nStr 8 -1 -1 Dex 14 +2 +2 Con 12 +1 +1\nInt 11 +0 +0 Wis 16 +3 +5 Cha 13 +1 +1\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "zero-speed-no-language",
+      "label": "速度为零、语言破折号",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/25"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 0
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": []
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "walk",
+          "path": [
+            "attributes",
+            "movement",
+            "walk"
+          ],
+          "value": 30
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 0 ft. Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages —\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 0 ft. Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages —\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "unicode-minus",
+      "label": "属性调整值用 Unicode 减号",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/25"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "str",
+          "path": [
+            "abilities",
+            "str"
+          ],
+          "value": 1
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 (−1) DEX 14 (+2) CON 12 (+1) INT 11 (+0) WIS 16 (+3) CHA 13 (+1)\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 (−1) DEX 14 (+2) CON 12 (+1) INT 11 (+0) WIS 16 (+3) CHA 13 (+1)\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "pdf-fly-ligature",
+      "label": "PDF 的 ﬂ 连字出现在 fly",
+      "sources": [
+        "https://github.com/Lavaeolous/PF1-StatBlock-Converter-Module/issues/405"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "fly",
+          "path": [
+            "attributes",
+            "movement",
+            "fly"
+          ],
+          "value": 90
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., ﬂy 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., ﬂy 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "pdf-fire-ligature",
+      "label": "PDF 的 ﬁ 连字出现在 fire",
+      "sources": [
+        "https://github.com/Lavaeolous/PF1-StatBlock-Converter-Module/issues/405"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "resist",
+          "path": [
+            "defenses",
+            "resistances"
+          ],
+          "value": [
+            "cold"
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances ﬁre\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances ﬁre\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "linked-sense-numeric-url",
+      "label": "感官为链接，URL 含无关数字",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/105"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "darkvision",
+          "path": [
+            "senses",
+            "darkvision"
+          ],
+          "value": 60
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses [Darkvision](https://example.invalid/rules/2024/60) 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses [Darkvision](https://example.invalid/rules/2024/60) 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "adjacent-headers",
+      "label": "免疫与被动察觉相邻",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/95"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "immune",
+          "path": [
+            "defenses",
+            "conditionImmunities"
+          ],
+          "value": [
+            "charmed",
+            "15"
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nSenses Darkvision 90 ft., Passive Perception 15\nCondition Immunities Charmed\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nSenses Darkvision 90 ft., Passive Perception 15\nCondition Immunities Charmed\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "vulnerability-header",
+      "label": "易伤独立标题",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/131"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [
+            "fire"
+          ],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "vulnerable",
+          "path": [
+            "defenses",
+            "vulnerabilities"
+          ],
+          "value": [
+            "cold"
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Vulnerabilities Fire\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Vulnerabilities Fire\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "flat-damage",
+      "label": "固定伤害没有骰式",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/89"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 3 piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "3",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 3 piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dice",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "damage",
+            "0",
+            "formula"
+          ],
+          "value": "1d6"
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 3 piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 3 piercing damage.\n"
+    },
+    {
+      "id": "dice-only-damage",
+      "label": "仅骰式，没有平均值",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/88"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dice",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "damage",
+            "0",
+            "formula"
+          ],
+          "value": "1d8+2"
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "missing-final-period",
+      "label": "第一项能力末尾没有句号",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/56"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "section": "action",
+          "name": "Watch",
+          "text": "Watch. The sentinel watches the northern passage.",
+          "operations": []
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "dropFeature": 1,
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Watch",
+          "text": "Watch. The sentinel watches the northern passage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage\nWatch. The sentinel watches the northern passage.\n"
+    },
+    {
+      "id": "recharge-action",
+      "label": "充能能力位于 action",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/108",
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/47"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Ash Strike",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ],
+          "recharge": [
+            4,
+            6
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "recharge",
+          "path": [
+            "actions",
+            "0",
+            "recharge"
+          ],
+          "value": [
+            6,
+            6
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nAsh Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "recharge-bonus",
+      "label": "充能能力位于 bonus",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/108",
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/47"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "bonus",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Ash Strike",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ],
+          "recharge": [
+            4,
+            6
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "recharge",
+          "path": [
+            "bonusActions",
+            "0",
+            "recharge"
+          ],
+          "value": [
+            6,
+            6
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "bonus",
+          "text": "Bonus Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "bonus",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nBonus Actions\nAsh Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "recharge-reaction",
+      "label": "充能能力位于 reaction",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/108",
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/47"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "reaction",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Ash Strike",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ],
+          "recharge": [
+            4,
+            6
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "recharge",
+          "path": [
+            "reactions",
+            "0",
+            "recharge"
+          ],
+          "value": [
+            6,
+            6
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "reaction",
+          "text": "Reactions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "reaction",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nReactions\nAsh Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "recharge-legendary",
+      "label": "充能能力位于 legendary",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/108",
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/47"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "legendary",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Ash Strike",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ],
+          "recharge": [
+            4,
+            6
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "recharge",
+          "path": [
+            "legendaryActions",
+            "0",
+            "recharge"
+          ],
+          "value": [
+            6,
+            6
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "legendary",
+          "text": "Legendary Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "legendary",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nLegendary Actions\nAsh Strike (Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "attack-follow-up-save",
+      "label": "命中后豁免和禁止反应",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/129"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. The target must make a DC 13 Constitution saving throw. Failure: The target cannot take reactions until the end of its next turn.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            },
+            {
+              "id": "follow-up",
+              "name": "Constitution Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "The target must make a DC 13 Constitution saving throw."
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dc",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "1",
+            "save",
+            "dc"
+          ],
+          "value": 19
+        }
+      ],
+      "dropText": "Failure: The target cannot take reactions until the end of its next turn.",
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. The target must make a DC 13 Constitution saving throw. Failure: The target cannot take reactions until the end of its next turn.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. The target must make a DC 13 Constitution saving throw. Failure: The target cannot take reactions until the end of its next turn.\n"
+    },
+    {
+      "id": "three-outcomes",
+      "label": "失败、成功、无论成败三个分支",
+      "sources": [
+        "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Cinder Pulse",
+          "text": "Cinder Pulse. Constitution Saving Throw: DC 13, each creature in a 10-foot Cone. Failure: 7 (2d6) fire damage, and the target is Slowed until the end of the watcher’s next turn. Success: Half damage. Failure or Success: A target underwater has Resistance to this damage.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Constitution Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "half"
+              },
+              "damage": [
+                {
+                  "formula": "2d6",
+                  "type": "fire",
+                  "relationship": "base"
+                }
+              ],
+              "aoe": {
+                "shape": "cone",
+                "radius": 10
+              },
+              "proof": {
+                "save": "Constitution Saving Throw: DC 13, each creature in a 10-foot Cone.",
+                "damage": [
+                  "Failure: 7 (2d6) fire damage, and the target is Slowed until the end of the watcher’s next turn."
+                ],
+                "aoe": "Constitution Saving Throw: DC 13, each creature in a 10-foot Cone."
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "dc",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "save",
+            "dc"
+          ],
+          "value": 19
+        }
+      ],
+      "dropText": "Failure or Success: A target underwater has Resistance to this damage.",
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Cinder Pulse",
+          "text": "Cinder Pulse. Constitution Saving Throw: DC 13, each creature in a 10-foot Cone. Failure: 7 (2d6) fire damage, and the target is Slowed until the end of the watcher’s next turn. Success: Half damage. Failure or Success: A target underwater has Resistance to this damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nCinder Pulse. Constitution Saving Throw: DC 13, each creature in a 10-foot Cone. Failure: 7 (2d6) fire damage, and the target is Slowed until the end of the watcher’s next turn. Success: Half damage. Failure or Success: A target underwater has Resistance to this damage.\n"
+    },
+    {
+      "id": "two-failures",
+      "label": "第一次、第二次失败的递进",
+      "sources": [
+        "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Stone Glance",
+          "text": "Stone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Wisdom Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "wis"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "Wisdom Saving Throw: DC 13, one creature within 30 feet."
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "dropText": "Second Failure: The target has the Petrified condition until freed by a restoration spell.",
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Stone Glance",
+          "text": "Stone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nStone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.\n"
+    },
+    {
+      "id": "two-failures-expanded-proof",
+      "label": "递进失败：AI 引用较长的完整证据",
+      "sources": [
+        "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Stone Glance",
+          "text": "Stone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Wisdom Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "wis"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition."
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "dropText": "Second Failure: The target has the Petrified condition until freed by a restoration spell.",
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Stone Glance",
+          "text": "Stone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nStone Glance. Wisdom Saving Throw: DC 13, one creature within 30 feet. First Failure: The target has the Restrained condition. It repeats the save at the end of its next turn. Second Failure: The target has the Petrified condition until freed by a restoration spell.\n"
+    },
+    {
+      "id": "conditional-physical-resistance",
+      "label": "非魔法伤害抗性以及银制例外",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/60"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable-or-review",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "Bludgeoning, Piercing, and Slashing from nonmagical attacks not made with silvered weapons"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "unqualified",
+          "path": [
+            "defenses",
+            "resistances"
+          ],
+          "value": [
+            "bludgeoning",
+            "piercing",
+            "slashing"
+          ]
+        }
+      ],
+      "headerFeatures": [
+        {
+          "name": "Damage Resistances",
+          "text": "Damage Resistances Bludgeoning, Piercing, and Slashing from nonmagical attacks not made with silvered weapons\n"
+        }
+      ],
+      "ordinaryCreature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Bludgeoning, Piercing, and Slashing from nonmagical attacks not made with silvered weapons\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Bludgeoning, Piercing, and Slashing from nonmagical attacks not made with silvered weapons\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "understands-cannot-speak",
+      "label": "听得懂但不能说",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/105"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [],
+          "custom": "understands Common but cannot speak"
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "speaking",
+          "path": [
+            "languages"
+          ],
+          "value": {
+            "values": [
+              "common"
+            ]
+          }
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages understands Common but cannot speak\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages understands Common but cannot speak\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "blind-beyond-radius",
+      "label": "震动感知带范围外失明限制",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/25"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable-or-review",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "tremorsense": 15,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "sense",
+          "path": [
+            "senses",
+            "tremorsense"
+          ],
+          "value": 60
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses tremorsense 15 ft. (blind beyond this radius), Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses tremorsense 15 ft. (blind beyond this radius), Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "alternative-xp-in-lair",
+      "label": "CR/XP 在巢穴中有另一数值",
+      "sources": [
+        "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable-or-review",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "xp",
+          "path": [
+            "attributes",
+            "xp"
+          ],
+          "value": 550
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nCR 2 (XP 450, or 550 in lair; PB +2)\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nCR 2 (XP 450, or 550 in lair; PB +2)\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "markdown-blockquote",
+      "label": "Markdown 引用和强调标题",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/35"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "> Dusk Watcher CR 1/2\n> AC 12\n> HP 22 (5d6 + 5) Size Small\n> Speed 25 ft., Fly 30 ft. (hover) Type Fey\n> STR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\n> Saving Throws Wis +5\n> Skills Perception +5\n> Damage Resistances Fire\n> Damage Immunities Cold\n> Condition Immunities Charmed\n> Senses Darkvision 90 ft., Passive Perception 15\n> Languages Sylvan\n> XP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "> Dusk Watcher CR 1/2\n> AC 12\n> HP 22 (5d6 + 5) Size Small\n> Speed 25 ft., Fly 30 ft. (hover) Type Fey\n> STR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\n> Saving Throws Wis +5\n> Skills Perception +5\n> Damage Resistances Fire\n> Damage Immunities Cold\n> Condition Immunities Charmed\n> Senses Darkvision 90 ft., Passive Perception 15\n> Languages Sylvan\n> XP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    },
+    {
+      "id": "wrapped-title",
+      "label": "充能标题括号跨行",
+      "sources": [
+        "https://github.com/EthanJWright/foundryvtt-importer/issues/47"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike\n(Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Ash Strike",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ],
+          "recharge": [
+            4,
+            6
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "recharge",
+          "path": [
+            "actions",
+            "0",
+            "recharge"
+          ],
+          "value": [
+            6,
+            6
+          ]
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Ash Strike (Recharge 4–6)",
+          "text": "Ash Strike\n(Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nAsh Strike\n(Recharge 4–6). Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "ocr-ambiguous-reach",
+      "label": "OCR 把 5 识别成 S",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/37"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "review-required",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach S ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach S ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach S ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach S ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "ocr-ambiguous-dice",
+      "label": "OCR 把 1d8 识别成 ld8",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/37"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "review-required",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (ld8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (ld8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (ld8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (ld8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "ocr-ambiguous-speed",
+      "label": "OCR 把 30 识别成 S0",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/37"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "review-required",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed S0 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed S0 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "ocr-ambiguous-score",
+      "label": "OCR 属性值变成单个 l",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/37"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "review-required",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Slam",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT l WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Slam",
+          "text": "Slam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+        }
+      ],
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT l WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n"
+    },
+    {
+      "id": "interleaved-columns",
+      "label": "PDF 两栏内容交错进属性行",
+      "sources": [
+        "https://github.com/jbhaywood/5e-statblock-importer/issues/37"
+      ],
+      "derivation": "Synthetic minimal example derived from the reported format; not a copied monster.",
+      "expectation": "usable",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "features": [
+        {
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Needle",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rwak",
+                "toHit": 4,
+                "range": 30,
+                "longRange": 60
+              },
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) piercing damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "mutations": [
+        {
+          "id": "hp",
+          "path": [
+            "attributes",
+            "hp",
+            "value"
+          ],
+          "value": 99
+        },
+        {
+          "id": "int",
+          "path": [
+            "abilities",
+            "int"
+          ],
+          "value": 3
+        }
+      ],
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12\nThe watcher has no shadow. INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "section": "action",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Needle",
+          "text": "Needle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+        }
+      ],
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12\nThe watcher has no shadow. INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n"
+    }
+  ]
+}

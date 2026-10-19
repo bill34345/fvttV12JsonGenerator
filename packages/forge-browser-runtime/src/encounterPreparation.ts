@@ -1,9 +1,12 @@
 import { hashArtifact, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
+import type { IconReviewReport } from '@fvtt-json-generator/contracts/icon-review';
 import { buildForgeActorRequest, convertFinalActorSource } from './index';
 import { decodeForgeEncounterPackageText, encounterPackageHash, type ForgeEncounterPackage } from './encounterPackage';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
 import { assertEncounterLocalizationIdentity, localizedEncounterPresentation } from './encounterLocalizationProjection';
 import type { ForgeEncounterPackageMacro } from './encounterPackage';
+import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
+import { actorRulePresentation } from './actorRulePresentationContext';
 
 export interface PreparedEncounterActor {
   key: string;
@@ -13,6 +16,9 @@ export interface PreparedEncounterActor {
   sourceHash: string;
   status: 'accepted' | 'needs_review';
   requirements: EncounterRequirement[];
+  iconReview?: IconReviewReport;
+  /** Regenerated locally; never decoded from a package or a Forge response field. */
+  rulePresentation?: RulePresentationPlan;
 }
 export interface EncounterRequirement {
   actorKey:string;actorName:string;mechanicId:string;name:string;mode:string;
@@ -47,7 +53,8 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
     signal?.throwIfAborted();
     const request = buildForgeActorRequest({ content: input.source, displayName: input.label,
       requestId: `encounter-${bundle.id}-${input.key}`, fvttVersion: bundle.target.foundry, systemVersion: bundle.target.systemVersion });
-    const response = await convertFinalActorSource(request, { reviewedLocalization: bundle.localization?.actors.find(actor => actor.key === input.key)?.translation });
+    const response = await convertFinalActorSource(request, { captureRulePresentation: true,
+      reviewedLocalization: bundle.localization?.actors.find(actor => actor.key === input.key)?.translation });
     signal?.throwIfAborted();
     if (!('result' in response)) throw new Error(`${input.label}：正式生成请求失败。`);
     const result = response.result;
@@ -74,6 +81,8 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
     if (result.status === 'needs_review' && !required.length) throw new Error(`${input.label}：未识别的待审核状态，不能通过整包导入绕过。`);
     actors.push({ key: input.key, name: String(result.artifact.name), artifact: result.artifact,
       artifactHash: hashArtifact(result.artifact), sourceHash: request.source.utf8Sha256, status: result.status,
+      ...(result.iconReview ? { iconReview: result.iconReview } : {}),
+      ...(actorRulePresentation(response) ? { rulePresentation: actorRulePresentation(response) } : {}),
       requirements: required.map(m => ({actorKey:input.key,actorName:String(artifact.name),mechanicId:m.id,
         name:m.name??m.id,mode:m.executionMode,gmSteps:[...(m.gmSteps??[])],conditions:[...(m.conditions??[])],
         trigger:m.trigger?{event:m.trigger.event,frequency:m.trigger.frequency,condition:m.trigger.condition??''}:null,

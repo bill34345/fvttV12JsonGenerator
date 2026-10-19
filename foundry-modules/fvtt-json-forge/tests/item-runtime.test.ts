@@ -111,7 +111,7 @@ describe('Forge world Item adapter', () => {
     delete readback.system.armor.magicalBonus;
 
     expect(projectForgeItemDocument(readback)).toEqual(projectForgeItemDocument(expected));
-    expect(projectForgeItemDocument(readback).activities[0]?.target).toMatchObject({
+    expect(projectForgeItemDocument(readback).activities.find(entry=>entry.id===activity._id)?.target).toMatchObject({
       override: false,
       affects: { type: 'self' },
     });
@@ -212,6 +212,21 @@ describe('Forge world Item adapter', () => {
     expect(world.deletedIds).not.toContain('preexisting-item');
   });
 
+  test.each(['item', 'activity'])('rejects lost %s artwork and deletes only this operation Item', async (scope) => {
+    const world = makeWorld();
+    const preexisting = world.addExisting({ _id: 'preexisting-item', name: 'Keep Me', flags: {} });
+    world.mutateCreated = (data) => {
+      const changed = clone(data) as Record<string, any>;
+      if (scope === 'item') changed.img = 'icons/svg/mystery-man.svg';
+      else (Object.values(changed.system.activities)[0] as Record<string, any>).img = 'icons/svg/mystery-man.svg';
+      return changed;
+    };
+    await expect(createAcceptedForgeItem({ game: world.game, response: acceptedResponse })).rejects.toThrow(/readback does not match generated icons/u);
+    expect(world.items).toEqual([preexisting]);
+    expect(world.deletedIds).toHaveLength(1);
+    expect(world.deletedIds).not.toContain('preexisting-item');
+  });
+
   test('rejects and cleans up newly created Items when Item or Activity descriptions drift', async () => {
     const mutations: Array<(data: Record<string, any>) => void> = [
       (data) => { data.system.description.value = 'Truncated Item description'; },
@@ -242,7 +257,7 @@ describe('Forge world Item adapter', () => {
     world.mutateCreated = (data) => {
       const changed = clone(data) as Record<string, any>;
       const bash = Object.values(changed.system.activities)
-        .find((activity: any) => activity.name === '强力猛击 (Forceful Bash)') as Record<string, any>;
+        .find((activity: any) => activity.name === '强力猛击 Forceful Bash') as Record<string, any>;
       bash.activation.type = 'reaction';
       bash.range.value = '10';
       return changed;

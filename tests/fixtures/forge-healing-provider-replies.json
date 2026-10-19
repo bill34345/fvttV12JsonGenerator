@@ -1,0 +1,901 @@
+{
+  "provenance": "First deepseek-flash replies 2026-10-19; original source and full private replies preserved in task .local. Frozen before repair replay.",
+  "ordinaryPeriaptFeature": {
+    "name": "Periapt of Health",
+    "englishName": "Periapt of Health",
+    "description": "Wondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant.",
+    "activityType": "utility",
+    "activationType": "action",
+    "uses": {
+      "max": 1,
+      "period": "dawn"
+    },
+    "evidence": [
+      {
+        "start": 343,
+        "end": 675,
+        "quote": "Periapt of Health\nWondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant."
+      }
+    ]
+  },
+  "stagedPeriapt": {
+    "schemaVersion": 1,
+    "unitId": "unit-2",
+    "mode": "native-with-gm",
+    "facts": {
+      "sourceOperations": [
+        {
+          "id": "regain-hit-points",
+          "name": "Regain Hit Points",
+          "type": "heal",
+          "relationship": "primary",
+          "healing": {
+            "formula": "2d4+2",
+            "type": "healing",
+            "target": {
+              "type": "self",
+              "count": 1,
+              "special": "While wearing this pendant"
+            }
+          },
+          "proof": {
+            "healing": "While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points."
+          }
+        }
+      ]
+    }
+  },
+  "stagedRegenerate": {
+    "schemaVersion": 1,
+    "unitId": "unit-2",
+    "mode": "native-with-gm",
+    "facts": {
+      "sourceOperations": [
+        {
+          "id": "healing-initial",
+          "name": "GM initial healing",
+          "type": "heal",
+          "relationship": "primary",
+          "healing": {
+            "formula": "4d8+15",
+            "type": "healing",
+            "target": {
+              "type": "creature",
+              "count": 1,
+              "special": "A creature you touch"
+            }
+          },
+          "proof": {
+            "healing": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points."
+          }
+        },
+        {
+          "id": "healing-follow-up",
+          "name": "GM subsequent healing",
+          "type": "heal",
+          "relationship": "follow-up",
+          "healing": {
+            "formula": "1",
+            "type": "healing",
+            "target": {
+              "type": "creature",
+              "count": 1,
+              "special": "the target"
+            }
+          },
+          "proof": {
+            "healing": "For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+          }
+        }
+      ]
+    }
+  },
+  "ordinaryPeriaptIr": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "5ec1295256aabdef513de05761c28739b24dfbfb7f0ea2dc72a0d2dd49295e9b",
+      "length": 676
+    },
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "englishName": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "acKind": "flat",
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "Common"
+        ]
+      },
+      "sourceResourcePools": [],
+      "traits": [
+        {
+          "name": "Periapt of Health",
+          "englishName": "Periapt of Health",
+          "description": "Wondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant.",
+          "activityType": "utility",
+          "activationType": "action",
+          "uses": {
+            "max": 1,
+            "period": "dawn"
+          },
+          "evidence": [
+            {
+              "start": 343,
+              "end": 675,
+              "quote": "Periapt of Health\nWondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant."
+            }
+          ]
+        }
+      ],
+      "actions": [],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": [],
+      "mythicActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 13,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 37,
+            "end": 48,
+            "quote": "Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 82,
+            "end": 96,
+            "quote": "Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 97,
+            "end": 136,
+            "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 14,
+            "end": 19,
+            "quote": "AC 15"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 20,
+            "end": 48,
+            "quote": "HP 30 (4d8 + 12) Size Medium"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 49,
+            "end": 96,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 13,
+            "quote": "Sentinel CR 2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 323,
+            "end": 335,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 323,
+            "end": 335,
+            "quote": "XP 450 PB +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 137,
+            "end": 157,
+            "quote": "Saving Throws Con +5"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 158,
+            "end": 178,
+            "quote": "Skills Perception +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 179,
+            "end": 257,
+            "quote": "Damage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 258,
+            "end": 305,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 12"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 306,
+            "end": 322,
+            "quote": "Languages Common"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 343,
+            "end": 675,
+            "quote": "Periapt of Health\nWondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant."
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 676,
+        "quote": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nPeriapt of Health\nWondrous Item, Uncommon (Requires Attunement) While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can’t be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/identity/size",
+          "/creature/identity/creatureType",
+          "/creature/abilities",
+          "/creature/attributes/ac",
+          "/creature/attributes/hp",
+          "/creature/attributes/movement",
+          "/creature/attributes/cr",
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus",
+          "/creature/saves",
+          "/creature/skills",
+          "/creature/defenses",
+          "/creature/senses",
+          "/creature/languages",
+          "/creature/traits/0"
+        ]
+      }
+    ],
+    "uncertainties": []
+  },
+  "ordinaryRegenerateRepairedIr": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "d6cadc0fa3c85e1decaffa993d692d7eca2519ce908d53e91f0868385b38d29b",
+      "length": 673
+    },
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "englishName": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "acKind": "flat",
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "common"
+        ]
+      },
+      "sourceResourcePools": [],
+      "traits": [
+        {
+          "name": "Regenerate",
+          "englishName": "Regenerate",
+          "description": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+          "activityType": "utility",
+          "executionMode": "native-with-gm",
+          "evidence": [
+            {
+              "start": 343,
+              "end": 672,
+              "quote": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+            }
+          ],
+          "sourceOperations": [
+            {
+              "id": "heal-initial",
+              "name": "Initial Healing",
+              "type": "heal",
+              "relationship": "primary",
+              "healing": {
+                "formula": "4d8 + 15",
+                "type": "healing",
+                "target": {
+                  "type": "creature",
+                  "count": 1,
+                  "special": "A creature you touch regains 4d8 + 15 Hit Points."
+                }
+              },
+              "proof": {
+                "healing": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points."
+              },
+              "sourceText": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+              "evidence": {
+                "start": 354,
+                "end": 672,
+                "quote": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+              }
+            },
+            {
+              "id": "heal-followup",
+              "name": "Ongoing Healing",
+              "type": "heal",
+              "relationship": "follow-up",
+              "healing": {
+                "formula": "1",
+                "type": "healing",
+                "target": {
+                  "type": "creature",
+                  "count": 1,
+                  "special": "For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+                }
+              },
+              "proof": {
+                "healing": "For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+              },
+              "sourceText": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+              "condition": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+              "evidence": {
+                "start": 354,
+                "end": 672,
+                "quote": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+              }
+            }
+          ],
+          "nativeRuleText": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+          "manualRemainder": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+        }
+      ],
+      "actions": [],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 8,
+            "quote": "Sentinel"
+          }
+        ],
+        "value": "Sentinel"
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 37,
+            "end": 48,
+            "quote": "Size Medium"
+          }
+        ],
+        "value": "medium"
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 82,
+            "end": 96,
+            "quote": "Type Construct"
+          }
+        ],
+        "value": "construct"
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 97,
+            "end": 136,
+            "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 14,
+            "end": 19,
+            "quote": "AC 15"
+          }
+        ],
+        "value": 15
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 20,
+            "end": 36,
+            "quote": "HP 30 (4d8 + 12)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 49,
+            "end": 81,
+            "quote": "Speed 30 ft., Fly 40 ft. (hover)"
+          }
+        ]
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 9,
+            "end": 13,
+            "quote": "CR 2"
+          }
+        ],
+        "value": 2
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 323,
+            "end": 329,
+            "quote": "XP 450"
+          }
+        ],
+        "value": 450
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 330,
+            "end": 335,
+            "quote": "PB +2"
+          }
+        ],
+        "value": 2
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 137,
+            "end": 157,
+            "quote": "Saving Throws Con +5"
+          },
+          {
+            "start": 151,
+            "end": 157,
+            "quote": "Con +5"
+          }
+        ]
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 158,
+            "end": 178,
+            "quote": "Skills Perception +2"
+          }
+        ]
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 179,
+            "end": 257,
+            "quote": "Damage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned"
+          }
+        ]
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 258,
+            "end": 305,
+            "quote": "Senses Darkvision 60 ft., Passive Perception 12"
+          }
+        ]
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 306,
+            "end": 322,
+            "quote": "Languages Common"
+          }
+        ]
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "confidence": "high",
+        "evidence": [
+          {
+            "start": 343,
+            "end": 673,
+            "quote": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.\n"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 14,
+        "quote": "Sentinel CR 2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": 14,
+        "end": 20,
+        "quote": "AC 15\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac"
+        ]
+      },
+      {
+        "start": 20,
+        "end": 49,
+        "quote": "HP 30 (4d8 + 12) Size Medium\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp",
+          "/creature/identity/size"
+        ]
+      },
+      {
+        "start": 49,
+        "end": 97,
+        "quote": "Speed 30 ft., Fly 40 ft. (hover) Type Construct\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType"
+        ]
+      },
+      {
+        "start": 97,
+        "end": 137,
+        "quote": "STR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities"
+        ]
+      },
+      {
+        "start": 137,
+        "end": 158,
+        "quote": "Saving Throws Con +5\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 158,
+        "end": 179,
+        "quote": "Skills Perception +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 179,
+        "end": 203,
+        "quote": "Damage Resistances Cold\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 203,
+        "end": 228,
+        "quote": "Damage Immunities Poison\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 228,
+        "end": 258,
+        "quote": "Condition Immunities Poisoned\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 258,
+        "end": 306,
+        "quote": "Senses Darkvision 60 ft., Passive Perception 12\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 306,
+        "end": 323,
+        "quote": "Languages Common\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 323,
+        "end": 336,
+        "quote": "XP 450 PB +2\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 336,
+        "end": 343,
+        "quote": "Traits\n",
+        "classification": "narrative",
+        "claimPaths": []
+      },
+      {
+        "start": 343,
+        "end": 354,
+        "quote": "Regenerate\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 354,
+        "end": 673,
+        "quote": "Level 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      }
+    ],
+    "uncertainties": []
+  }
+}

@@ -1,6 +1,7 @@
 import {
   hashManifest,
   hashResolutionConfiguration,
+  candidateMatchesRef,
   isValidManualReviewCandidate,
   isSpellResolutionConfiguration,
   logicalSpellRefKey,
@@ -19,6 +20,7 @@ import {
   type SpellResolutionConfiguration,
 } from '../../../src/core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash } from './cast-activity';
+import { isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import type { ResolverRuntimeApi } from './runtime-api';
 import {
   HydrationTransactionError,
@@ -76,14 +78,14 @@ export function createResolverEventCoordinator(options: ResolverEventCoordinator
     onActorEvent(actor, event) {
       const authority = options.authority();
       if (!authority.isGM || !authority.userId || event.resolverOwned) return 'ignored';
-      if (!isEligibleActor(actor) || !options.runtimeSupported() || options.isActive(actor) || options.isAlreadyApplied(actor)) {
+      if (isRecoveryRequired(actor) || isForgeSpellImportPending(actor) || !isEligibleActor(actor) || !options.runtimeSupported() || options.isActive(actor) || options.isAlreadyApplied(actor)) {
         return 'ignored';
       }
       if (queued.has(actor)) return 'coalesced';
       queued.add(actor);
       options.schedule(async () => {
         queued.delete(actor);
-        if (options.isActive(actor)) return;
+        if (isRecoveryRequired(actor)||isForgeSpellImportPending(actor)||options.isActive(actor)) return;
         await options.process(actor);
       });
       return 'scheduled';
@@ -240,6 +242,10 @@ function isEligibleActor(actor: any): boolean {
   return validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest).ok;
 }
 
+function isRecoveryRequired(actor:any):boolean {
+  return actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.status==='failed-recovery-required';
+}
+
 function isResolverFlaggedActor(actor: any): boolean {
   return actor?.documentName === 'Actor'
     && isRecord(actor.flags?.[RESOLVER_MODULE_ID])
@@ -337,6 +343,11 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     },
     async resolve(actor) { await service.processActor(actor, { explicit: true }); },
     async processActor(actor, options = {}) {
+      if(isRecoveryRequired(actor)){
+        if(options.explicit)dependencies.notify('warn',localizedNotice(dependencies,'FVTTJSONSPELL.Notification.RecoveryRequired'));
+        return;
+      }
+      if(isForgeSpellImportPending(actor))return;
       if (!actor || typeof actor !== 'object' || active.has(actor)) return;
       const validation = validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
       if (!validation.ok) {
@@ -775,14 +786,12 @@ function validateSelectedSpellFacts(
       throw new SelectedSpellValidationError(selection.logicalRefKey, `Selected Spell ${key} changed after indexing: ${selection.uuid}`);
     }
   }
-  const refKeys = [ref.identifier, ref.originalName, ref.englishName, ref.chineseName, ...ref.aliases]
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map(normalizeSpellIdentity);
-  const fullKeys = [full.identifier, full.name].filter((entry): entry is string => typeof entry === 'string').map(normalizeSpellIdentity);
   const indexedCandidates = dependencies.getRuntime()?.sourceIndex?.candidates ?? [];
   const identityAndConstraintsValid = selection.selectionOrigin === 'manual-review'
     ? isValidManualReviewCandidate(candidate, indexedCandidates, ref)
-    : fullKeys.some((entry) => refKeys.includes(entry))
+    // The six full-document fields above are already exactly equal to this
+    // candidate. Use the selection layer's same exact identity contract.
+    : candidateMatchesRef(candidate, ref,indexedCandidates)
       && (ref.sourceBookHint === undefined || normalizeSpellIdentity(full.sourceBook ?? '') === normalizeSpellIdentity(ref.sourceBookHint))
       && (ref.expectedLevel === undefined || full.level === ref.expectedLevel)
       && (ref.expectedSchool === undefined || normalizeSpellIdentity(full.school ?? '') === normalizeSpellIdentity(ref.expectedSchool));

@@ -1,0 +1,53 @@
+{
+  "origin": {
+    "file": ".local/forge-ai-handoff-20261012/fresh-attempt-1/failure-analysis.json",
+    "sha256": "f4cc9c52374017d6f8653879bb23dd35319928e1588907504f90734ef7f53c9d",
+    "absentRejectedConfigurationPayloads": "UNKNOWN"
+  },
+  "failedFields": [
+    {
+      "id": "text-79b7eeb39bcf2aa085436a6a",
+      "source": "<ul><li>The target must make a STRENGTH SAVING THROW: DC 12. FAILURE: The target is pushed 25 (1d10 x 5) feet away from the gazer.</li></ul>",
+      "translation": "<ul><li>目标必须进行一次力量豁免检定：DC 12。失败：目标被推离凝视者25（1d10 x 5）尺。</li></ul>",
+      "sourceFormulas": [
+        "1d10 x 5"
+      ],
+      "translationFormulas": [
+        "1d10 x 5"
+      ],
+      "identicalFormulaSequence": true,
+      "status": "REJECTED",
+      "error": "译文未完成中文化：text-79b7eeb39bcf2aa085436a6a；残留英文：x"
+    },
+    {
+      "id": "text-0b6777a266e749a6fec523ca",
+      "source": "The target must make a STRENGTH SAVING THROW: DC 12. FAILURE: The target is pushed 25 (1d10 x 5) feet away from the gazer.",
+      "translation": "目标必须进行一次力量豁免检定：DC 12。失败：目标被推离凝视者25（1d10 x 5）尺。",
+      "sourceFormulas": [
+        "1d10 x 5"
+      ],
+      "translationFormulas": [
+        "1d10 x 5"
+      ],
+      "identicalFormulaSequence": true,
+      "status": "REJECTED",
+      "error": "译文未完成中文化：text-0b6777a266e749a6fec523ca；残留英文：x"
+    },
+    {
+      "id": "text-c0f9cd2641825bdde8e3486c",
+      "source": "执行模式：gm-assisted\n操作：4. Force Ray. The target must make a\nSTRENGTH SAVING THROW: DC 12. FAILURE: The target is\npushed 25 (1d10 x 5) feet away from the gazer.\nGM 1：GM uses the native saving throw; token movement is manual.\nGM 2：The target must make a STRENGTH SAVING THROW: DC 12. FAILURE: The target is pushed 25 (1d10 x 5) feet away from the gazer.",
+      "translation": "执行模式：GM辅助处理\n操作：4。力场射线。目标必须进行一次\n力量豁免检定：DC 12。失败：目标被\n推离凝视者25（1d10 x 5）尺。\nGM 1：GM使用原生豁免检定；标记移动为手动。\nGM 2：目标必须进行一次力量豁免检定：DC 12。失败：目标被推离凝视者25（1d10 x 5）尺。",
+      "sourceFormulas": [
+        "1d10 x 5",
+        "1d10 x 5"
+      ],
+      "translationFormulas": [
+        "1d10 x 5",
+        "1d10 x 5"
+      ],
+      "identicalFormulaSequence": true,
+      "status": "REJECTED",
+      "error": "译文未完成中文化：text-c0f9cd2641825bdde8e3486c；残留英文：x x"
+    }
+  ]
+}

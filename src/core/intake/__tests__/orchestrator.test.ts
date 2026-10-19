@@ -852,17 +852,25 @@ describe('AI monster intake orchestrator', () => {
   });
 
   test('normalizes source-proven statblock conventions instead of retaining false AI ambiguities', () => {
-    const hybrid = 'Dagger. Melee or Ranged Weapon Attack: reach 5 ft. or range 20/60 ft.';
+    const hybrid = 'Dagger. Melee or Ranged Weapon Attack: reach 5 ft. or range 20/60 ft. Hit: 4 (1d4+2) piercing damage.';
     const zone = 'Zone of Calamity (Costs 2 Actions). Creatures are affected (save DC 12).';
     const mace = 'Mace. Hit: 3 (1d6) bludgeoning damage.';
     const race = 'Medium humanoid (any race), any alignment.';
     const source = `${LURKER_SOURCE}\n${hybrid}\n${zone}\n${mace}\n${race}`;
     const ir = buildValidLurkerIr() as any;
     Object.assign(ir.creature.actions[1], {
-      name: 'Dagger', description: hybrid,
+      name: 'Dagger', englishName: 'Dagger', description: hybrid, appliedConditions: [],
       attack: { type: 'mwak', toHit: 4, reach: 5, range: 20, longRange: 60 },
       damage: [{ formula: '1d4+2', type: 'piercing', relationship: 'base' }],
     });
+    // This synthetic replacement must be evidenced by its new Dagger source,
+    // not the old Claw claim (whose different damage is a real conflict).
+    const daggerStart = source.indexOf(hybrid);
+    const daggerEvidence = { start: daggerStart, end: daggerStart + hybrid.length, quote: hybrid };
+    expect(source.slice(daggerEvidence.start, daggerEvidence.end)).toBe(hybrid);
+    for (const claim of ir.claims) if (claim.path === '/creature/actions/1' || claim.path.startsWith('/creature/actions/1/')) {
+      claim.evidence = [daggerEvidence];
+    }
     ir.creature.actions.push({
       name: 'Mace', description: mace, activityType: 'attack',
       attack: { type: 'mwak', toHit: 2, reach: 5 },
@@ -1615,6 +1623,81 @@ describe('AI monster intake orchestrator', () => {
     expect(provider.reviewCalls).toBe(2);
     expect(provider.repairCalls).toBe(1);
     expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+  });
+
+  test('retains a complete source-backed GM spell group when a later repair drops it', async () => {
+    const original = buildRatWarlockIr();
+    const group = original.creature.spellcasting![0]!;
+    group.manualGrants = group.usageGroups.flatMap((usage) => structuredClone(usage.evidence));
+    group.usageGroups = [];
+    const provider = new RatWarlockProvider();
+    provider.extract = async () => structuredClone(original);
+    let reviews = 0;
+    provider.review = async () => ({
+      schemaVersion: 1,
+      verdict: reviews++ === 0 ? 'revise' : 'accepted',
+      findings: reviews === 1 ? [{
+        id: 'biography-review', code: 'BIOGRAPHY_REVIEW', path: '/creature/biography',
+        message: 'Review the biography.', blocking: true, origin: 'ai-review',
+      }] : [],
+    });
+    provider.repair = async () => {
+      const repaired = structuredClone(original);
+      delete repaired.creature.spellcasting;
+      return repaired;
+    };
+    const result = await runMonsterIntake({
+      source: RAT_WARLOCK_SOURCE, sourceName: 'manual-spells-repair.txt',
+      fvttVersion: '14', effectProfile: 'core', ...roots(),
+    }, provider);
+    const creature = result.creatures[0]!;
+    expect(creature.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+    const saved = JSON.parse(readFileSync(join(creature.bundlePath, 'intake-ir.json'), 'utf8'));
+    expect(saved.creature.spellcasting).toEqual(original.creature.spellcasting);
+    expect(creature.spellResolution.required).toBe(false);
+    expect(result.status).toBe('succeeded');
+    const actor = JSON.parse(readFileSync(creature.actorPath!, 'utf8'));
+    const spellFeature = actor.items.find((item: { name: string }) => item.name.includes('天生施法'));
+    expect(spellFeature.system.description.value).toContain('魔能爆');
+    expect(actor.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest).toBeUndefined();
+    expect(spellFeature.flags?.fvttJsonGenerator?.spellcastingFeatureKey).toBeUndefined();
+  });
+
+  test.each([false, true])('retains the complete GM remainder of a mixed spell group after repair (narrowed=%s)', async (narrowed) => {
+    const original = buildRatWarlockIr();
+    const group = original.creature.spellcasting![0]!;
+    group.manualGrants = structuredClone(group.usageGroups[0]!.evidence);
+    group.usageGroups = group.usageGroups.slice(1);
+    const provider = new RatWarlockProvider();
+    provider.extract = async () => structuredClone(original);
+    let reviews = 0;
+    provider.review = async () => ({ schemaVersion: 1,
+      verdict: reviews++ === 0 ? 'revise' : 'accepted',
+      findings: reviews === 1 ? [{ id: 'biography-review', code: 'BIOGRAPHY_REVIEW',
+        path: '/creature/biography', message: 'Review the biography.', blocking: true, origin: 'ai-review' }] : [],
+    });
+    provider.repair = async () => {
+      const repaired = structuredClone(original);
+      const next = repaired.creature.spellcasting![0]!;
+      delete next.manualGrants;
+      if (narrowed) { next.description = next.usageGroups[0]!.evidence[0]!.quote; next.evidence = structuredClone(next.usageGroups[0]!.evidence); }
+      return repaired;
+    };
+    const result = await runMonsterIntake({ source: RAT_WARLOCK_SOURCE,
+      sourceName: 'mixed-spells-repair.txt', fvttVersion: '14', effectProfile: 'core', ...roots() }, provider);
+    const creature = result.creatures[0]!;
+    expect(creature.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+    const saved = JSON.parse(readFileSync(join(creature.bundlePath, 'intake-ir.json'), 'utf8'));
+    expect(saved.creature.spellcasting[0].manualGrants).toEqual(group.manualGrants);
+    expect(saved.creature.spellcasting[0].description).toBe(group.description);
+    expect(saved.creature.spellcasting[0].evidence).toEqual(group.evidence);
+    expect(saved.creature.spellcasting[0].usageGroups).toEqual(group.usageGroups);
+    const actor = JSON.parse(readFileSync(join(creature.bundlePath, 'candidate-actor.json'), 'utf8'));
+    const manifest = actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
+    expect(manifest.spellcastingGroups[0].spellRefs).toHaveLength(6);
+    const spellFeature = actor.items.find((item: { name: string }) => item.name.includes('天生施法'));
+    expect(spellFeature.system.description.value).toContain('2条射线');
+    expect(spellFeature.system.description.value).toContain('GM');
   });
 
   test('retains a corrected repair ledger when exact source spans originally have missing coverage bindings', async () => {

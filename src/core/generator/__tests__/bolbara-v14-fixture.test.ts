@@ -22,13 +22,13 @@ describe('Bolbara v14 structured fixture', () => {
 
     const dagger = actor.items.find((item: any) => item.name.includes('Dagger'));
     const daggerActivity = Object.values(dagger.system.activities)[0] as any;
-    expect(daggerActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'mwak' } });
+    expect(daggerActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'melee', classification: 'weapon' } });
     expect(daggerActivity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
     expect(daggerActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 4, bonus: '2', types: ['piercing'] });
 
     const blast = actor.items.find((item: any) => item.name.includes('Eldritch Blast'));
     const blastActivity = Object.values(blast.system.activities)[0] as any;
-    expect(blastActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'rsak' } });
+    expect(blastActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'ranged', classification: 'spell' } });
     expect(blastActivity.range).toMatchObject({ value: 120, long: null, units: 'ft' });
     expect(blastActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 10, bonus: '2', types: ['force'] });
 

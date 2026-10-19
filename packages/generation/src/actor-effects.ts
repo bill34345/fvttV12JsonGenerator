@@ -1,4 +1,5 @@
 import type { Damage, ActionData } from '@fvtt-json-generator/models/action';
+import { displayName } from '@fvtt-json-generator/models/display-name';
 
 // Effect construction is owned by the generation package.
 import {
@@ -11,6 +12,127 @@ import { buildConditionFlag, createConditionInstance, getConditionDefinition, pr
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { extractBurningSpec } from './burning';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
+import { NATIVE_LIFECYCLE_STATUS_DEFINITIONS, nativeLifecycleStatusLabel } from '@fvtt-json-generator/contracts/status-lifecycle';
+
+/** Only an exact numeric interval can become an ordinary native Effect clock. */
+export function simpleConditionDuration(source: string | undefined): { seconds?: number; rounds?: number } | undefined {
+  const match = source?.normalize('NFKC').trim().match(/^(?:for\s+|持续\s*)?(\d+)\s*(rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日)$/iu);
+  if (!match) return undefined;
+  const value = Number(match[1]), unit = match[2]!.toLowerCase();
+  if (!Number.isSafeInteger(value) || value <= 0) return undefined;
+  return unit === '轮' || unit.startsWith('round') ? { rounds: value }
+    : { seconds: value * (unit === '分钟' || unit.startsWith('minute') ? 60 : unit === '小时' || unit.startsWith('hour') ? 3600 : 86400) };
+}
+
+export interface ConditionLifecycleProjection { mode: 'native' | 'gm'; duration?: { seconds?: number; rounds?: number }; }
+
+/** Inspect the complete source consequence, including subsequent sentences.
+ * A numeric maximum alone does not implement repeat Saves or early endings.
+ * Custom-condition/module executors are selected separately by their owners.
+ */
+export function sourceConditionLifecycle(source: string, status: string, declaredDuration?: string): ConditionLifecycleProjection {
+  const pattern = EXPLICIT_STATUS_PATTERNS.find(entry => entry.status === status)?.pattern;
+  const normalized = source.replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ').replace(/\s+/gu, ' ').trim();
+  const found = pattern?.exec(normalized);
+  const start = found?.index ?? 0;
+  const sentenceStart = Math.max(normalized.lastIndexOf('.', start - 1), normalized.lastIndexOf('。', start - 1), normalized.lastIndexOf(';', start - 1)) + 1;
+  // A later independently applied status owns its own lifecycle. Mere mentions
+  // of another status do not split this consequence (e.g. immunity/termination).
+  let end = normalized.length;
+  for (const entry of EXPLICIT_STATUS_PATTERNS) {
+    if (entry.status === status) continue;
+    for (const match of normalized.matchAll(new RegExp(entry.pattern.source, 'giu'))) {
+      if (match.index <= start || match.index >= end) continue;
+      const before = normalized.slice(0, match.index);
+      const application = /\b(?:is|are|becomes?|be|falls?)\s+(?:also\s+)?$|(?:陷入|变为|成为|受到)\s*$/iu.exec(before);
+      if (application) {
+        const boundary = Math.max(before.lastIndexOf('.'), before.lastIndexOf('。'), before.lastIndexOf(';'), before.lastIndexOf('；'));
+        end = Math.max(start + (found?.[0].length ?? 0), boundary >= start ? boundary : match.index - application[0].length);
+      }
+    }
+  }
+  const scope = normalized.slice(start, end), prefix = normalized.slice(sentenceStart, start);
+  const statusClause = scope.split(/[.!?。；;]/u)[0] ?? '';
+  const statusBranch = scope.slice(statusClause.length).split(/[.!?。；;]/u).some(sentence =>
+    /\b(?:if|when|unless|while)\b|若|如果|当|仅当|只有/iu.test(sentence) && pattern?.test(sentence));
+  const hasLifecycle = /\b(?:until|unless|while|ends?|expires?|repeat(?:s|ed)?|again)\b|直到|直至|重复|再次|结束|解除|终止|挣脱|脱离/iu.test(scope)
+    || statusBranch
+    || /\b(?:if|when|whenever|provided|only\s+when)\b|若|如果|当|每当|仅当|只有/iu.test(statusClause)
+    || /\b(?:if|unless|while|provided|only\s+when)\b|若|如果|仅当|只有/iu.test(prefix);
+  if (hasLifecycle || declaredDuration?.trim() && !simpleConditionDuration(declaredDuration)) return { mode: 'gm' };
+  // Bind a source interval to this status, never to an attack range or another
+  // number elsewhere in the feature. Structured duration cannot override it.
+  let afterStatus = normalized.slice(start + (found?.[0].length ?? 0), end);
+  const alias = /^\s*[（(]([^）)]+)[）)]/u.exec(afterStatus);
+  if (alias && pattern?.test(alias[1]!)) afterStatus = afterStatus.slice(alias[0].length);
+  // Coordinated adjectives share the trailing interval of their one applying
+  // predicate. A bare conjunction is not a new operation owner.
+  if (/\bor\s*$|或\s*$/iu.test(prefix)) return { mode: 'gm' };
+  while (true) {
+    const separator = /^\s*(?:,\s*(?:(?:and|or)\s+)?|\b(?:and|or)\s+|[、和及且或])\s*/iu.exec(afterStatus);
+    if (!separator) break;
+    const nextText = afterStatus.slice(separator[0].length);
+    const next = EXPLICIT_STATUS_PATTERNS.map(entry => ({ entry, match: entry.pattern.exec(nextText) })).find(candidate => candidate.match?.index === 0);
+    if (!next?.match) break;
+    if (/\bor\b|或/iu.test(separator[0])) return { mode: 'gm' };
+    afterStatus = nextText.slice(next.match[0].length);
+    const nextAlias = /^\s*[（(]([^）)]+)[）)]/u.exec(afterStatus);
+    if (nextAlias && next.entry.pattern.test(nextAlias[1]!)) afterStatus = afterStatus.slice(nextAlias[0].length);
+  }
+  const after = /^\s*(?:状态)?[,，]?\s*(?:for\s+|持续\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
+  const before = /(\d+\s*(?:轮|分钟|小时|天|日))(?:的)?\s*$/u.exec(prefix);
+  const sourceDuration = simpleConditionDuration(after?.[1] ?? before?.[1]);
+  const explicit = simpleConditionDuration(declaredDuration);
+  if (!sourceDuration && (/^\s*(?:状态)?[,，]?\s*(?:for\b|持续|维持|lasting\b|lasts?\b)/iu.test(afterStatus)
+    || /[一二三四五六七八九十百半]+\s*(?:轮|分钟|小时|天|日)(?:的)?\s*$/u.test(prefix)
+    || /\b(?:this|the|that)\s+(?:condition|effect)\s+lasts?\b|(?:该|此)(?:状态|效果)(?:持续|维持)/iu.test(scope))) return { mode: 'gm' };
+  if (sourceDuration && explicit && JSON.stringify(sourceDuration) !== JSON.stringify(explicit)) return { mode: 'gm' };
+  return { mode: 'native', ...(sourceDuration ?? explicit ? { duration: sourceDuration ?? explicit } : {}) };
+}
+
+/** V14 core has no executor for these source lifecycles. Remove only status
+ * Effects and their links; AC, passive and custom-condition Effects stay owned
+ * by their existing projection. The complete rule and basic Activities remain.
+ */
+export function enforceCoreConditionLifecycles(actor: any, sourceByItem?: ReadonlyMap<number, string>): void {
+  for (const [index, item] of (actor.items ?? []).entries()) {
+    // These paths already prove each native failure state from its own source
+    // operation and exclude complex lifecycles before constructing the Effect.
+    if (item.flags?.fvttJsonGenerator?.manualRule) continue;
+    const sourceText = sourceByItem?.get(index) ?? String(item.system?.description?.value ?? '').replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ').trim();
+    const removed = new Set<string>(), statuses = new Set<string>();
+    for (const effect of item.effects ?? []) {
+      if (readConditionInstance(effect) || effect.transfer === true) continue;
+      const nativeStatuses: string[] = effect.statuses ?? [];
+      if (!nativeStatuses.length) continue;
+      const manual = new Set<string>();
+      const nativeDurations: Array<{ seconds?: number; rounds?: number } | undefined> = [];
+      for (const status of nativeStatuses) {
+        const lifecycle = sourceConditionLifecycle(sourceText, status, effect.flags?.fvttJsonGenerator?.sourceDuration ?? undefined);
+        if (lifecycle.mode === 'gm') { manual.add(status); statuses.add(status); }
+        else nativeDurations.push(lifecycle.duration);
+      }
+      if (manual.size === nativeStatuses.length) removed.add(effect._id);
+      else {
+        if (manual.size && effect.changes?.length || new Set(nativeDurations.map(value => JSON.stringify(value ?? null))).size > 1) {
+          throw new Error('ConditionLifecycleAmbiguous: a shared Effect cannot represent different native status lifecycles.');
+        }
+        if (manual.size) effect.statuses = nativeStatuses.filter(status => !manual.has(status));
+        if (nativeDurations[0]) effect.duration = { ...effect.duration, ...nativeDurations[0] };
+      }
+    }
+    if (!statuses.size) continue;
+    item.effects = item.effects.filter((effect: any) => !removed.has(effect._id));
+    for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
+      if (Array.isArray(activity.effects)) activity.effects = activity.effects.filter((link: any) => !removed.has(link._id));
+      activity.description ??= {};
+      activity.description.chatFlavor = String(activity.description.chatFlavor ?? '') + '<p>GM：按完整原文处理状态后果；这些状态不会由活动自动施加。</p>';
+    }
+    item.flags ??= {}; item.flags.fvttJsonGenerator ??= {};
+    item.flags.fvttJsonGenerator.conditionLifecycle = { version: 1, mode: 'gm', sourceText, statuses: [...statuses] };
+    item.system.description.value += '<p>GM：按完整原文处理以上状态的期限、提前结束与再次豁免；这些状态不会由活动自动施加。</p>';
+  }
+}
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -331,7 +453,7 @@ export function generateConditionEffects(desc: string, activities: any, actionNa
           : {};
       effects.push({
         _id: generateId(),
-        name: `${cn} (${info.enLabel})`,
+        name: cn.toLowerCase()===info.enLabel.toLowerCase()?cn:`${cn} ${info.enLabel}`,
         type: 'base',
         system: {},
         changes: [],
@@ -367,6 +489,7 @@ export function generateEnhancedConditionEffects(
   activities: any,
   actionName?: string,
   sourceLogicalPath?: string,
+  v14 = false,
 ): any[] {
   const effects: any[] = [];
   if (!desc) return effects;
@@ -473,7 +596,9 @@ export function generateEnhancedConditionEffects(
 
     effects.push({
       _id: generateId(entry.en),
-      name: `${hasEnglishStatus && !hasLocalizedLabel ? (englishOnlyStatusLabels[entry.en] ?? entry.cn) : entry.cn} (${entry.label})`,
+      name: v14 && Object.hasOwn(NATIVE_LIFECYCLE_STATUS_DEFINITIONS, entry.en)
+        ? displayName(nativeLifecycleStatusLabel(entry.en),entry.label)
+        : displayName(hasEnglishStatus && !hasLocalizedLabel ? (englishOnlyStatusLabels[entry.en] ?? entry.cn) : entry.cn,entry.label),
       type: 'base',
       system: {},
       changes: [],

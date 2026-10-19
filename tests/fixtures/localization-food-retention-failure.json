@@ -1,0 +1,28 @@
+{
+  "origin": "Exact unmodified source/translation field pair from the first fresh candidate whose food-retention meaning failed source review.",
+  "resultSha256": "a81f642db1079b46a9630e792af123e764e38f62faea948a2f5aae2ecfd8b022",
+  "originalRequestHash": "f5174c62d61ece7d045b2253338d3aa7f45a19dbb46224546af98771db30f0c2",
+  "request": {
+    "version": 1,
+    "language": "zh-CN",
+    "policy": "zh-CN-space-separated-titles-v2",
+    "terminology": "5echm-phb2024-project-20261007-v2",
+    "terminologyHash": "ae9d2067455dcccf9a8486bfbc68042631a29d661dbb5292cb50d5a695b3cd46",
+    "sourceHash": "4a1c46bbd6633c6d626647c2f792409c9ce18ebfaebde7693a841b42477c6399",
+    "texts": [
+      {
+        "id": "text-d49b94fd9fe2443ee13c969f",
+        "kind": "body",
+        "source": "<ul><li>Hag Debts</li><li>A creature that has made an unfulfilled promise to a hag, or</li><li>one that removes a Curse created by a hag, becomes</li><li>Indebted to the hag.</li><li>A creature Indebted to a hag becomes psychically</li><li>connected to it. The hag can telepathically communicate</li><li>with it over any distance and can choose to perceive through</li><li>its senses at will. Once per day, the hag can force an</li><li>indebted creature to reroll d20 Test, taking the second result.</li><li>Merthirst</li><li>A creature infected with merthirst loses all appetite, its eyes</li><li>become bloodshot, and a crust of pale salt gradually</li><li>accumulates around its nose and lips. It can keep solid food</li><li>down only if washed down with sea water.</li><li>护甲等级：15（天生护甲）</li></ul>"
+      }
+    ]
+  },
+  "draft": {
+    "texts": [
+      {
+        "id": "text-d49b94fd9fe2443ee13c969f",
+        "text": "<ul><li>鬼婆债务</li><li>对鬼婆许下未兑现承诺的生物，或</li><li>移除鬼婆所造诅咒的生物，会</li><li>对鬼婆负债。</li><li>对鬼婆负债的生物会在心灵上与它</li><li>连接。鬼婆可在任意距离</li><li>与其心灵感应交流，并可随意选择通过</li><li>其感官进行感知。每日一次，鬼婆可迫使一个</li><li>负债生物重掷d20检定，采用第二个结果。</li><li>海渴症</li><li>感染海渴症的生物会丧失全部食欲，其眼睛</li><li>会充血，且鼻与唇周围逐渐</li><li>积聚一层苍白盐壳。它只有用海水送服才能</li><li>咽下固体食物。</li><li>护甲等级：15（天生护甲）</li></ul>"
+      }
+    ]
+  }
+}

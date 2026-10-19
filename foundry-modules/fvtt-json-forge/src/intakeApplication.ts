@@ -1,4 +1,5 @@
 import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { iconReviewPresentation } from './iconReviewPresentation';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import {
   BROWSER_GENERATOR_VERSION,
@@ -410,6 +411,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           content: `<p>当前请求已等待 ${elapsed}，完成 ${status.completedCycles} 个 180 秒观察周期（第 ${status.decisionRound} 次人工确认）。</p>
             <p><strong>请求状态：</strong>${httpState}</p>
             <p><strong>最近可观察进展：</strong>${sinceProgress} 前。</p>
+            <p>已接收 ${status.receivedBytes ?? 0} 字节；维持连接信号 ${status.keepAliveCount ?? 0} 次。${status.lastDataAtMs === undefined ? '尚未观察到回复数据。' : '收到数据只表示连接有活动，不能证明模型已经开始生成。'}</p>
             <p><strong>连接状态：</strong>${transportMessage}浏览器无法证明底层 TCP 一直存活。</p>
             <p><strong>Provider 活动：</strong>${activityMessage}浏览器无法证明远端模型是否仍在思考。${status.lastEventType ? ` 最近事件：${escapeHtml(status.lastEventType)}。` : ''}</p>
             <p>继续等待会保留同一个请求，不会重发。只有明确选择“结束请求”才会取消。</p>`,
@@ -1679,6 +1681,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         ? '状态：正在提交并重新读取核对（不可取消）。'
         : this.providerActivity?.phase === 'stopped' ? `请求已停止 · ${reviewStatusLabel(this.status)}` : reviewStatusLabel(this.status));
       text(root, 'human-summary', humanSummary(this.status, this.analysis, this.generation, previewResponse, this.isApplyable(root)));
+      text(root, 'icon-review', responseResult ? iconReviewPresentation([responseResult.iconReview]) : '');
       html(root, 'stages', stageList(this.analysis, this.generation, this.stageProgress).map((entry: any) => `<li>${escapeHtml(entry.stage)}：${escapeHtml(entry.status)}${entry.message ? ` — ${escapeHtml(entry.message)}` : ''}</li>`).join(''));
       const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
       const modelReviewError = (this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.modelReviewError;
@@ -1701,6 +1704,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         repairCount: (this.analysis as any)?.repairCount ?? 0,
         reviewVerdict: (this.generation as any)?.review?.verdict,
         modelReviewStatus: (this.generation as any)?.modelReviewStatus ?? 'not_requested',
+        providerObservation: this.providerActivity,
         gmApproval: (this.generation as any)?.gmApproval,
         history: this.history,
       }, null, 2));
@@ -1718,8 +1722,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (this.providerActivity) {
         const activity = this.providerActivity;
         const activityLabel = providerActivityLabel(activity);
-        text(root, 'activity-summary', `${activityLabel} · ${activity.transport === 'stream_open' ? 'SSE stream 已打开' : activity.transport} · 已等待 ${formatDuration(activity.elapsedMs)}`);
-        text(root, 'activity-detail', `${activity.lastEventType ? `最近事件：${activity.lastEventType}。` : '尚未收到语义事件。'} 最近活动距今 ${formatDuration(Math.max(0, Date.now() - activity.lastEventAtMs))}。输出字符 ${activity.outputCharactersReceived}。${activity.providerActivity === 'reported_reasoning' ? ' Provider 报告正在推理；原始 reasoning 不会显示或保存。' : ''}`);
+        text(root, 'activity-summary', `${activityLabel} · 已等待 ${formatDuration(activity.elapsedMs)}`);
+        text(root, 'activity-detail', providerObservationText(activity));
       } else {
         text(root, 'activity-summary', this.controller ? '正在处理资料…' : '尚未开始请求。');
         text(root, 'activity-detail', '');
@@ -1895,6 +1899,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
 
     private renderImportedReview(root: HTMLElement, form: ReturnType<typeof readForm>): void {
       const imported = this.importedReview!;
+      text(root, 'icon-review', iconReviewPresentation([]));
       const bundle = imported.bundle;
       const compatible = importedTargetCompatible(imported);
       const connectionSummary = root.querySelector('[data-connection-summary]') as HTMLElement | null;
@@ -2426,7 +2431,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             systemVersion: result.target.systemVersionObserved,
             generatorProfile: 'v14',
             effectProfile: 'core',
-            iconMode: 'off',
+            iconMode: result.target.iconMode,
           },
         });
       }
@@ -2935,7 +2940,7 @@ function makeSnapshot(form: ReturnType<typeof readForm>, game: any): ForgeIntake
     fvttVersion: game.version,
     systemVersion: game.system.version,
     effectProfile: 'core',
-    iconMode: 'off',
+    iconMode: 'safe',
   });
 }
 
@@ -3010,6 +3015,8 @@ function formatDuration(milliseconds: number): string {
   return `${minutes} 分 ${seconds} 秒`;
 }
 function providerActivityLabel(activity: IntakeProviderActivity): string {
+  if (activity.failureReason) return requestFailureLabel(activity.failureReason);
+  if (activity.phase === 'receiving_response') return '已经接通，正在接收回复';
   if (activity.phase === 'streaming_reasoning') return 'Provider 报告正在推理';
   if (activity.phase === 'streaming_output') return 'Provider 报告正在输出';
   if (activity.phase === 'completed') return 'Provider 已完成响应';
@@ -3017,6 +3024,23 @@ function providerActivityLabel(activity: IntakeProviderActivity): string {
   if (activity.phase === 'stopped') return '请求已由用户结束';
   if (activity.phase === 'validating') return '正在验证最终结构化响应';
   return '请求已发送，等待 Provider 活动';
+}
+function requestFailureLabel(reason: NonNullable<IntakeProviderActivity['failureReason']>): string {
+  return ({ deadline_exceeded:'达到明确设置的等待上限', user_cancelled:'请求已主动取消',
+    connection_failed:'尚未接通，连接失败', response_interrupted:'回复接收中断，未拿到完整答案',
+    provider_incomplete:'服务端表示答案尚未完成', invalid_json:'回信格式无法读取', invalid_encoding:'回信文字编码无法读取',
+    empty_response:'回信没有答案内容',unexpected_response:'回信结构无法识别',provider_error:'服务端返回了错误信息',http_error:'服务端拒绝或未能处理请求' })[reason];
+}
+function providerObservationText(activity: IntakeProviderActivity): string {
+  const parts = [activity.responseHeadersAtMs ? '已经收到服务端回应。' : '还在等待服务端回应。'];
+  if (activity.lastDataAtMs !== undefined) parts.push(`最后收到数据是在 ${formatDuration(Math.max(0, Date.now()-activity.lastDataAtMs))} 前；累计 ${activity.receivedBytes ?? 0} 字节。`);
+  else parts.push('尚未观察到回复数据。');
+  if (activity.keepAliveCount) parts.push(`收到 ${activity.keepAliveCount} 次维持连接的信号；这不能证明模型已开始生成。`);
+  if (activity.bodyCompletedAtMs !== undefined) parts.push('回复接收已结束。');
+  if (activity.providerActivity === 'reported_reasoning') parts.push('服务端报告正在推理；不显示或保存推理正文。');
+  if (activity.failureReason) parts.push(requestFailureLabel(activity.failureReason)+'。');
+  if (activity.failureEvidenceStatus) parts.push(({saved:'失败回信现场已保存。',metadata_only:'仅保存错误信息；适配器未提供回复正文。',save_failed:'失败现场保存失败；不要把当前记录当作完整现场。',not_configured:'未配置私有回信保存器，回复正文未保存。'})[activity.failureEvidenceStatus]);
+  return parts.join(' ');
 }
 function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis | undefined, generation: IntakeGeneration | undefined, response: IntakeResponse | undefined, applyable: boolean): string {
   if (!analysis && status === 'empty') return '输入资料后点击“分析资料”。AI 模式需要先配置并测试 AI 连接。';
@@ -3138,7 +3162,7 @@ function importedTargetCompatible(imported: ImportedForgeIntakeReviewRecord): bo
     && target.systemVersion === EXPECTED_SYSTEM_VERSION
     && target.generatorProfile === 'v14'
     && target.effectProfile === 'core'
-    && target.iconMode === 'off');
+    && (target.iconMode === 'off' || target.iconMode === 'safe'));
 }
 
 async function readReviewBundleFile(file: File): Promise<string> {

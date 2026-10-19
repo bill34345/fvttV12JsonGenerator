@@ -1,0 +1,887 @@
+{
+  "origin": {
+    "file": ".local/forge-contract-repair-20261013/fresh-generation-1/result.json",
+    "sha256": "9716d170065710d4455ed45dcbb810acd72ef181c1c06dafbcc4bfa260f3565a",
+    "failureKind": "recorded-2026-10-13-shred-translation"
+  },
+  "source": "MEZZOLOTH SELLBLADE CR 5\nThe hulking, beetle-like fiend moves in sharp twitches, its\npupilless eyes pivoting with ceaseless, nervous energy.\nAC 18 (natural armor) Initiative +3 (13)\nHP 75 (10d8 + 30) Size Medium (7 ft. tall)\nSpeed 40 ft. Type Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nSkills Perception +5\nResistances Fire\nImmunities Acid, Poison; Poisoned\nSenses Blindsight 60 ft., Passive Perception 15\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 1,800 Proficiency Bonus +3\nTraits\nConniving Resistance. The mezzoloth has Advantage on\nSaving Throws against spells and other magical effects.\nWhen the mezzoloth succeeds on a saving throw against\na spell, it can choose to fail. If it does, it can end the\nspell’s effect at any time, with no action required.\nActions\nMultiattack. The mezzoloth makes two attacks.\nSpindletip Claws. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage and the target is Grappled\n(escape DC 15).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Barb. Ranged Attack Roll: +7, range 20/60 ft. Hit:\n7 (1d6 + 4) Piercing plus 5 (1d10) Necrotic damage. Hit\nor Miss: The mezzoloth can end one spell of Level 2 or\nbelow affecting the target.\nToxic Emission. A cloud of stinging gas hisses from the\nmezzoloth, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 14. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn SUCCESS: Half damage.\nBonus Actions\nShred. One creature Grappled by the mezzoloth takes 9\n(2d8) Slashing damage, or half as much if it is wearing\nHeavy Armor.\nDivergent Dark (Level 3 Spell). The mezzoloth creates two\n5-foot diameter Spheres of Magical Darkness within 30\nfeet, then can teleport to an unoccupied space not\nilluminated by Bright Light within 30 feet.\nThis darkness clears at the start of the mezzoloth’s next\nturn, or if a creature within it takes or deals any damage.",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "2c93b830d3814fdc9ddd6bb255699a9bd28edbcf118bda1900fa6fa992bf0562",
+      "length": 2085
+    },
+    "creature": {
+      "identity": {
+        "name": "Mezzoloth Sellblade",
+        "englishName": "Mezzoloth Sellblade",
+        "size": "medium",
+        "creatureType": "fiend",
+        "creatureTypeCustom": "Yugoloth"
+      },
+      "abilities": {
+        "str": 18,
+        "dex": 11,
+        "con": 16,
+        "int": 7,
+        "wis": 14,
+        "cha": 10
+      },
+      "attributes": {
+        "ac": 18,
+        "acKind": "natural",
+        "initiative": 3,
+        "hp": {
+          "value": 75,
+          "formula": "10d8 + 30"
+        },
+        "movement": {
+          "walk": 40
+        },
+        "cr": 5,
+        "xp": 1800,
+        "proficiencyBonus": 3
+      },
+      "saves": {
+        "str": 4,
+        "dex": 0,
+        "con": 3,
+        "int": -2,
+        "wis": 2,
+        "cha": 0
+      },
+      "skills": {
+        "perception": 5
+      },
+      "defenses": {
+        "resistances": [
+          "Fire"
+        ],
+        "immunities": [
+          "Acid",
+          "Poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "Poisoned"
+        ]
+      },
+      "senses": {
+        "blindsight": 60,
+        "passivePerception": 15
+      },
+      "languages": {
+        "values": [
+          "Abyssal",
+          "Infernal"
+        ],
+        "custom": "Telepathy 60 ft."
+      },
+      "biography": "The hulking, beetle-like fiend moves in sharp twitches, its pupilless eyes pivoting with ceaseless, nervous energy. Drives: Advertise Services, Collect Loot, Escalate Conflict.",
+      "traits": [
+        {
+          "name": "Conniving Resistance",
+          "englishName": "Conniving Resistance",
+          "description": "Conniving Resistance. The mezzoloth has Advantage on Saving Throws against spells and other magical effects. When the mezzoloth succeeds on a saving throw against a spell, it can choose to fail. If it does, it can end the spell’s effect at any time, with no action required.",
+          "activityType": "utility"
+        }
+      ],
+      "actions": [
+        {
+          "name": "Multiattack",
+          "englishName": "Multiattack",
+          "description": "Multiattack. The mezzoloth makes two attacks.",
+          "activityType": "utility",
+          "activationType": "action"
+        },
+        {
+          "name": "Spindletip Claws",
+          "englishName": "Spindletip Claws",
+          "description": "Spindletip Claws. Melee Attack Roll: +7, reach 5 ft. Hit: 13 (2d8 + 4) Slashing damage and the target is Grappled (escape DC 15). A creature Grappled in this way can attempt to escape as a Bonus Action.",
+          "activityType": "attack",
+          "activationType": "action",
+          "attack": {
+            "type": "mwak",
+            "toHit": 7,
+            "reach": 5
+          },
+          "damage": [
+            {
+              "formula": "2d8 + 4",
+              "type": "Slashing",
+              "relationship": "base"
+            }
+          ],
+          "appliedConditions": [
+            {
+              "statuses": [
+                "Grappled"
+              ],
+              "escapeDc": 15,
+              "condition": "Grappled (escape DC 15). A creature Grappled in this way can attempt to escape as a Bonus Action."
+            }
+          ]
+        },
+        {
+          "name": "Weaverot Barb",
+          "englishName": "Weaverot Barb",
+          "description": "Weaverot Barb. Ranged Attack Roll: +7, range 20/60 ft. Hit: 7 (1d6 + 4) Piercing plus 5 (1d10) Necrotic damage. Hit or Miss: The mezzoloth can end one spell of Level 2 or below affecting the target.",
+          "activityType": "attack",
+          "activationType": "action",
+          "attack": {
+            "type": "rwak",
+            "toHit": 7,
+            "range": 20,
+            "longRange": 60
+          },
+          "damage": [
+            {
+              "formula": "1d6 + 4",
+              "type": "Piercing",
+              "relationship": "base"
+            },
+            {
+              "formula": "1d10",
+              "type": "Necrotic",
+              "relationship": "additional"
+            }
+          ]
+        },
+        {
+          "name": "Toxic Emission",
+          "englishName": "Toxic Emission",
+          "description": "Toxic Emission. A cloud of stinging gas hisses from the mezzoloth, forcing each creature within 10 feet of it to make a CONSTITUTION SAVING THROW: DC 14. FAILURE: 18 (4d8) Poison damage and the creature is Blinded until the end of its next turn SUCCESS: Half damage.",
+          "activityType": "save",
+          "activationType": "action",
+          "aoe": {
+            "shape": "sphere",
+            "radius": 10
+          },
+          "save": {
+            "dc": 14,
+            "ability": "con"
+          },
+          "damage": [
+            {
+              "formula": "4d8",
+              "type": "Poison",
+              "relationship": "base"
+            }
+          ],
+          "appliedConditions": [
+            {
+              "statuses": [
+                "Blinded"
+              ],
+              "duration": "until the end of its next turn",
+              "condition": "Blinded until the end of its next turn"
+            }
+          ]
+        }
+      ],
+      "bonusActions": [
+        {
+          "name": "Shred",
+          "englishName": "Shred",
+          "description": "Shred. One creature Grappled by the mezzoloth takes 9 (2d8) Slashing damage, or half as much if it is wearing Heavy Armor.",
+          "activityType": "damage",
+          "activationType": "bonus",
+          "damage": [
+            {
+              "formula": "2d8",
+              "type": "Slashing",
+              "relationship": "base"
+            }
+          ]
+        },
+        {
+          "name": "Divergent Dark",
+          "englishName": "Divergent Dark",
+          "description": "Divergent Dark (Level 3 Spell). The mezzoloth creates two 5-foot diameter Spheres of Magical Darkness within 30 feet, then can teleport to an unoccupied space not illuminated by Bright Light within 30 feet. This darkness clears at the start of the mezzoloth’s next turn, or if a creature within it takes or deals any damage.",
+          "activityType": "utility",
+          "activationType": "bonus"
+        }
+      ],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [
+      {
+        "path": "/creature/identity/name",
+        "valueKind": "explicit",
+        "value": "Mezzoloth Sellblade",
+        "evidence": [
+          {
+            "start": 0,
+            "end": 19,
+            "quote": "MEZZOLOTH SELLBLADE"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/size",
+        "valueKind": "explicit",
+        "value": "medium",
+        "evidence": [
+          {
+            "start": 200,
+            "end": 224,
+            "quote": "Size Medium (7 ft. tall)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/creatureType",
+        "valueKind": "explicit",
+        "value": "fiend",
+        "evidence": [
+          {
+            "start": 238,
+            "end": 259,
+            "quote": "Type Fiend (Yugoloth)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/identity/creatureTypeCustom",
+        "valueKind": "explicit",
+        "value": "Yugoloth",
+        "evidence": [
+          {
+            "start": 238,
+            "end": 259,
+            "quote": "Type Fiend (Yugoloth)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/abilities",
+        "valueKind": "explicit",
+        "value": {
+          "str": 18,
+          "dex": 11,
+          "con": 16,
+          "int": 7,
+          "wis": 14,
+          "cha": 10
+        },
+        "evidence": [
+          {
+            "start": 287,
+            "end": 363,
+            "quote": "STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/ac",
+        "valueKind": "explicit",
+        "value": 18,
+        "evidence": [
+          {
+            "start": 141,
+            "end": 162,
+            "quote": "AC 18 (natural armor)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/initiative",
+        "valueKind": "explicit",
+        "value": 3,
+        "evidence": [
+          {
+            "start": 163,
+            "end": 181,
+            "quote": "Initiative +3 (13)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/hp",
+        "valueKind": "explicit",
+        "value": {
+          "value": 75,
+          "formula": "10d8 + 30"
+        },
+        "evidence": [
+          {
+            "start": 182,
+            "end": 199,
+            "quote": "HP 75 (10d8 + 30)"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/movement",
+        "valueKind": "explicit",
+        "value": {
+          "walk": 40
+        },
+        "evidence": [
+          {
+            "start": 225,
+            "end": 237,
+            "quote": "Speed 40 ft."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/cr",
+        "valueKind": "explicit",
+        "value": 5,
+        "evidence": [
+          {
+            "start": 0,
+            "end": 24,
+            "quote": "MEZZOLOTH SELLBLADE CR 5"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/xp",
+        "valueKind": "explicit",
+        "value": 1800,
+        "evidence": [
+          {
+            "start": 589,
+            "end": 597,
+            "quote": "XP 1,800"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/attributes/proficiencyBonus",
+        "valueKind": "explicit",
+        "value": 3,
+        "evidence": [
+          {
+            "start": 598,
+            "end": 618,
+            "quote": "Proficiency Bonus +3"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/saves",
+        "valueKind": "explicit",
+        "value": {
+          "str": 4,
+          "dex": 0,
+          "con": 3,
+          "int": -2,
+          "wis": 2,
+          "cha": 0
+        },
+        "evidence": [
+          {
+            "start": 260,
+            "end": 363,
+            "quote": "MOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0"
+          },
+          {
+            "start": 287,
+            "end": 299,
+            "quote": "STR 18 +4 +4"
+          },
+          {
+            "start": 300,
+            "end": 312,
+            "quote": "DEX 11 +0 +0"
+          },
+          {
+            "start": 313,
+            "end": 325,
+            "quote": "CON 16 +3 +3"
+          },
+          {
+            "start": 326,
+            "end": 337,
+            "quote": "INT 7 -2 -2"
+          },
+          {
+            "start": 338,
+            "end": 350,
+            "quote": "WIS 14 +2 +2"
+          },
+          {
+            "start": 351,
+            "end": 363,
+            "quote": "CHA 10 +0 +0"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/skills",
+        "valueKind": "explicit",
+        "value": {
+          "perception": 5
+        },
+        "evidence": [
+          {
+            "start": 364,
+            "end": 384,
+            "quote": "Skills Perception +5"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/defenses",
+        "valueKind": "explicit",
+        "value": {
+          "resistances": [
+            "Fire"
+          ],
+          "immunities": [
+            "Acid",
+            "Poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "Poisoned"
+          ]
+        },
+        "evidence": [
+          {
+            "start": 385,
+            "end": 401,
+            "quote": "Resistances Fire"
+          },
+          {
+            "start": 402,
+            "end": 435,
+            "quote": "Immunities Acid, Poison; Poisoned"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/senses",
+        "valueKind": "explicit",
+        "value": {
+          "blindsight": 60,
+          "passivePerception": 15
+        },
+        "evidence": [
+          {
+            "start": 436,
+            "end": 483,
+            "quote": "Senses Blindsight 60 ft., Passive Perception 15"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/languages",
+        "valueKind": "explicit",
+        "value": {
+          "values": [
+            "Abyssal",
+            "Infernal"
+          ],
+          "custom": "Telepathy 60 ft."
+        },
+        "evidence": [
+          {
+            "start": 484,
+            "end": 529,
+            "quote": "Languages Abyssal, Infernal, Telepathy 60 ft."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/biography",
+        "valueKind": "explicit",
+        "value": "The hulking, beetle-like fiend moves in sharp twitches, its pupilless eyes pivoting with ceaseless, nervous energy. Drives: Advertise Services, Collect Loot, Escalate Conflict.",
+        "evidence": [
+          {
+            "start": 25,
+            "end": 140,
+            "quote": "The hulking, beetle-like fiend moves in sharp twitches, its\npupilless eyes pivoting with ceaseless, nervous energy."
+          },
+          {
+            "start": 530,
+            "end": 588,
+            "quote": "Drives Advertise Services, Collect Loot, Escalate Conflict"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/traits/0",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Conniving Resistance"
+        },
+        "evidence": [
+          {
+            "start": 626,
+            "end": 900,
+            "quote": "Conniving Resistance. The mezzoloth has Advantage on\nSaving Throws against spells and other magical effects.\nWhen the mezzoloth succeeds on a saving throw against\na spell, it can choose to fail. If it does, it can end the\nspell’s effect at any time, with no action required."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/0",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Multiattack"
+        },
+        "evidence": [
+          {
+            "start": 909,
+            "end": 954,
+            "quote": "Multiattack. The mezzoloth makes two attacks."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/1",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Spindletip Claws"
+        },
+        "evidence": [
+          {
+            "start": 955,
+            "end": 1157,
+            "quote": "Spindletip Claws. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage and the target is Grappled\n(escape DC 15).\nA creature Grappled in this way can attempt to escape as\na Bonus Action."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/2",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Weaverot Barb"
+        },
+        "evidence": [
+          {
+            "start": 1158,
+            "end": 1356,
+            "quote": "Weaverot Barb. Ranged Attack Roll: +7, range 20/60 ft. Hit:\n7 (1d6 + 4) Piercing plus 5 (1d10) Necrotic damage. Hit\nor Miss: The mezzoloth can end one spell of Level 2 or\nbelow affecting the target."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/actions/3",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Toxic Emission"
+        },
+        "evidence": [
+          {
+            "start": 1357,
+            "end": 1623,
+            "quote": "Toxic Emission. A cloud of stinging gas hisses from the\nmezzoloth, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 14. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn SUCCESS: Half damage."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/bonusActions/0",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Shred"
+        },
+        "evidence": [
+          {
+            "start": 1638,
+            "end": 1760,
+            "quote": "Shred. One creature Grappled by the mezzoloth takes 9\n(2d8) Slashing damage, or half as much if it is wearing\nHeavy Armor."
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "path": "/creature/bonusActions/1",
+        "valueKind": "explicit",
+        "value": {
+          "name": "Divergent Dark"
+        },
+        "evidence": [
+          {
+            "start": 1761,
+            "end": 2085,
+            "quote": "Divergent Dark (Level 3 Spell). The mezzoloth creates two\n5-foot diameter Spheres of Magical Darkness within 30\nfeet, then can teleport to an unoccupied space not\nilluminated by Bright Light within 30 feet.\nThis darkness clears at the start of the mezzoloth’s next\nturn, or if a creature within it takes or deals any damage."
+          }
+        ],
+        "confidence": "high"
+      }
+    ],
+    "coverage": [
+      {
+        "start": 0,
+        "end": 25,
+        "quote": "MEZZOLOTH SELLBLADE CR 5\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/identity/name",
+          "/creature/attributes/cr"
+        ]
+      },
+      {
+        "start": 25,
+        "end": 141,
+        "quote": "The hulking, beetle-like fiend moves in sharp twitches, its\npupilless eyes pivoting with ceaseless, nervous energy.\n",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 141,
+        "end": 182,
+        "quote": "AC 18 (natural armor) Initiative +3 (13)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/ac",
+          "/creature/attributes/initiative"
+        ]
+      },
+      {
+        "start": 182,
+        "end": 225,
+        "quote": "HP 75 (10d8 + 30) Size Medium (7 ft. tall)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/hp",
+          "/creature/identity/size"
+        ]
+      },
+      {
+        "start": 225,
+        "end": 260,
+        "quote": "Speed 40 ft. Type Fiend (Yugoloth)\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/movement",
+          "/creature/identity/creatureType",
+          "/creature/identity/creatureTypeCustom"
+        ]
+      },
+      {
+        "start": 260,
+        "end": 287,
+        "quote": "MOD SAVE MOD SAVE MOD SAVE\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 287,
+        "end": 364,
+        "quote": "STR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/abilities",
+          "/creature/saves"
+        ]
+      },
+      {
+        "start": 364,
+        "end": 385,
+        "quote": "Skills Perception +5\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/skills"
+        ]
+      },
+      {
+        "start": 385,
+        "end": 402,
+        "quote": "Resistances Fire\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 402,
+        "end": 436,
+        "quote": "Immunities Acid, Poison; Poisoned\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/defenses"
+        ]
+      },
+      {
+        "start": 436,
+        "end": 484,
+        "quote": "Senses Blindsight 60 ft., Passive Perception 15\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/senses"
+        ]
+      },
+      {
+        "start": 484,
+        "end": 530,
+        "quote": "Languages Abyssal, Infernal, Telepathy 60 ft.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/languages"
+        ]
+      },
+      {
+        "start": 530,
+        "end": 589,
+        "quote": "Drives Advertise Services, Collect Loot, Escalate Conflict\n",
+        "classification": "narrative",
+        "claimPaths": [
+          "/creature/biography"
+        ]
+      },
+      {
+        "start": 589,
+        "end": 619,
+        "quote": "XP 1,800 Proficiency Bonus +3\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/attributes/xp",
+          "/creature/attributes/proficiencyBonus"
+        ]
+      },
+      {
+        "start": 619,
+        "end": 626,
+        "quote": "Traits\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 626,
+        "end": 901,
+        "quote": "Conniving Resistance. The mezzoloth has Advantage on\nSaving Throws against spells and other magical effects.\nWhen the mezzoloth succeeds on a saving throw against\na spell, it can choose to fail. If it does, it can end the\nspell’s effect at any time, with no action required.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/traits/0"
+        ]
+      },
+      {
+        "start": 901,
+        "end": 955,
+        "quote": "Actions\nMultiattack. The mezzoloth makes two attacks.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/0"
+        ]
+      },
+      {
+        "start": 955,
+        "end": 1085,
+        "quote": "Spindletip Claws. Melee Attack Roll: +7, reach 5 ft. Hit: 13\n(2d8 + 4) Slashing damage and the target is Grappled\n(escape DC 15).\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/1"
+        ]
+      },
+      {
+        "start": 1085,
+        "end": 1158,
+        "quote": "A creature Grappled in this way can attempt to escape as\na Bonus Action.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/1"
+        ]
+      },
+      {
+        "start": 1158,
+        "end": 1357,
+        "quote": "Weaverot Barb. Ranged Attack Roll: +7, range 20/60 ft. Hit:\n7 (1d6 + 4) Piercing plus 5 (1d10) Necrotic damage. Hit\nor Miss: The mezzoloth can end one spell of Level 2 or\nbelow affecting the target.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/2"
+        ]
+      },
+      {
+        "start": 1357,
+        "end": 1624,
+        "quote": "Toxic Emission. A cloud of stinging gas hisses from the\nmezzoloth, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 14. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn SUCCESS: Half damage.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/actions/3"
+        ]
+      },
+      {
+        "start": 1624,
+        "end": 1638,
+        "quote": "Bonus Actions\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/0"
+        ]
+      },
+      {
+        "start": 1638,
+        "end": 1761,
+        "quote": "Shred. One creature Grappled by the mezzoloth takes 9\n(2d8) Slashing damage, or half as much if it is wearing\nHeavy Armor.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/0"
+        ]
+      },
+      {
+        "start": 1761,
+        "end": 1968,
+        "quote": "Divergent Dark (Level 3 Spell). The mezzoloth creates two\n5-foot diameter Spheres of Magical Darkness within 30\nfeet, then can teleport to an unoccupied space not\nilluminated by Bright Light within 30 feet.\n",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/1"
+        ]
+      },
+      {
+        "start": 1968,
+        "end": 2085,
+        "quote": "This darkness clears at the start of the mezzoloth’s next\nturn, or if a creature within it takes or deals any damage.",
+        "classification": "mechanical",
+        "claimPaths": [
+          "/creature/bonusActions/1"
+        ]
+      }
+    ],
+    "uncertainties": []
+  },
+  "recordedFailure": {
+    "status": "needs_review",
+    "policy": "zh-CN-space-separated-titles-v2",
+    "fields": [
+      {
+        "id": "text-afe39999667ac8a24ee2e33c",
+        "source": "<ul><li>Shred. One creature Grappled by the mezzoloth takes 9 (2d8) Slashing damage, or half as much if it is wearing Heavy Armor.</li></ul>",
+        "recordedFailedTranslation": "<ul><li>撕碎。一个处于梅佐罗斯造成的受擒状态的生物受到 9（2d8）挥砍伤害，或减半 如果该生物穿着重甲。</li></ul>"
+      },
+      {
+        "id": "text-d5b68f68d43c16f53c727533",
+        "source": "Shred. One creature Grappled by the mezzoloth takes 9 (2d8) Slashing damage, or half as much if it is wearing Heavy Armor.",
+        "recordedFailedTranslation": "撕碎。一个处于梅佐罗斯造成的受擒状态的生物受到 9（2d8）挥砍伤害，或减半 如果该生物穿着重甲。"
+      }
+    ],
+    "findings": [
+      "text-afe39999667ac8a24ee2e33c：译文改变重甲条件的肯定或否定：text-afe39999667ac8a24ee2e33c",
+      "text-d5b68f68d43c16f53c727533：译文改变重甲条件的肯定或否定：text-d5b68f68d43c16f53c727533"
+    ]
+  }
+}

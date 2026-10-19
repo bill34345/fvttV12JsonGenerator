@@ -1,0 +1,148 @@
+{
+  "attribution": "Existing SRD 5.2.1 CC-BY-4.0 complete parent; unchanged source carried by the existing synthetic base. Not spell granting or full equipped Item import.",
+  "parentSha256": "c8d987eef41007edf55eb4af31feca0b4c20bc54a9b94cb9c2658843a7e8181a",
+  "case": {
+    "id": "r21r-regenerate",
+    "label": "Existing complete Regenerate parent",
+    "creature": {
+      "identity": {
+        "name": "Sentinel",
+        "size": "medium",
+        "creatureType": "construct"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 10,
+        "con": 16,
+        "int": 3,
+        "wis": 10,
+        "cha": 1
+      },
+      "attributes": {
+        "ac": 15,
+        "hp": {
+          "value": 30,
+          "formula": "4d8 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "fly": 40,
+          "hover": true
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "con": 5
+      },
+      "skills": {
+        "perception": 2
+      },
+      "defenses": {
+        "resistances": [
+          "cold"
+        ],
+        "immunities": [
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "poisoned"
+        ]
+      },
+      "senses": {
+        "darkvision": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "common"
+        ]
+      }
+    },
+    "features": [
+      {
+        "name": "Regenerate",
+        "section": "trait",
+        "text": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+        "operations": [],
+        "legacy": {
+          "executionMode": "native-with-gm",
+          "activityType": "heal",
+          "nativeRuleText": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+          "manualRemainder": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.",
+          "healing": {
+            "formula": "4d8 + 15",
+            "type": "healing",
+            "target": {
+              "type": "creature",
+              "count": 1,
+              "special": "A creature you touch regains 4d8 + 15 Hit Points."
+            }
+          }
+        }
+      }
+    ],
+    "units": [
+      {
+        "destination": "base",
+        "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+      },
+      {
+        "destination": "context",
+        "text": "Traits\n"
+      },
+      {
+        "destination": "feature",
+        "section": "trait",
+        "name": "Regenerate",
+        "text": "Regenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.\n"
+      }
+    ],
+    "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nTraits\nRegenerate\nLevel 7 Transmutation (Bard, Cleric, Druid) Casting Time: 1 minute Range: Touch Components: V, S, M (a prayer wheel) Duration: 1 hour A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.\n",
+    "checks": {
+      "noHeal": false,
+      "noAutomaticStatuses": true,
+      "requiredHealing": [
+        {
+          "feature": 0,
+          "formula": "4d8 + 15",
+          "type": "healing",
+          "target": {
+            "type": "creature",
+            "count": 1,
+            "special": "A creature you touch regains 4d8 + 15 Hit Points."
+          }
+        },
+        {
+          "feature": 0,
+          "formula": "1",
+          "type": "healing",
+          "target": {
+            "type": "creature",
+            "count": 1,
+            "special": "For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "edition": "SRD5.2.1 CC,2024rules",
+      "url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+      "pdfSha256": "8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+      "pages": [
+        {
+          "page": 158,
+          "column": "left"
+        }
+      ],
+      "extraction": "Exact native PDF column spans, mechanically reflowed body/NFKC/discretionarylinehyphen; raw original spans authoritative. Real physical title/newline, no added period/word or changed singular Component label. Whole tables/branches/tails retained. Upstream official capture reused without another wholePDF download.",
+      "packUrl": null,
+      "packRevision": "965ad2d0cf5d063dac675ba078b5bd3c3c0dd449",
+      "capturedFile": "../../round-11/research-rules/srd52-rule-columns.json",
+      "capturedSha256": "62ec9a76d28ad24661f2f0fd3528151a9d92ae5517a67f8b0afefd39e3fe8625",
+      "packRole": "Fixed Foundry14.364/dnd5e5.3.3 target unchanged; PDF rules are oracle, no assumption2024spell exists in native2014pack."
+    }
+  }
+}

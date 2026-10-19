@@ -131,7 +131,7 @@ describe('JsonTranslationSyncWorkflow', () => {
         _stats: { name: string };
       }>;
     };
-    expect(translated.name).toBe('译 (Sir Pelliton)');
+    expect(translated.name).toBe('译 Sir Pelliton');
     expect(translated.system.description.value.includes('<p>')).toBe(true);
     expect(translated.system.description.chat.startsWith('译:')).toBe(true);
     expect(translated.system.source.book).toBe('MCDM Monstrous Bundle');
@@ -140,7 +140,7 @@ describe('JsonTranslationSyncWorkflow', () => {
     if (!firstItem) {
       throw new Error('Expected at least one item in translated fixture');
     }
-    expect(firstItem.name).toBe('译 (Multiattack)');
+    expect(firstItem.name).toBe('译 Multiattack');
     expect(firstItem.system.identifier).toBe('multiattack');
     expect(firstItem.system.description.value).toBe('<p>Already 中文</p>');
     expect(firstItem._stats.name).toBe('Do Not Touch');
@@ -218,7 +218,7 @@ describe('JsonTranslationSyncWorkflow', () => {
       items: Array<{ name: string }>;
     };
 
-    expect(translated.name).toBe('佩利顿爵士 (Sir Pelliton)');
-    expect(translated.items[0]?.name).toBe('多重攻击 (Multiattack)');
+    expect(translated.name).toBe('佩利顿爵士 Sir Pelliton');
+    expect(translated.items[0]?.name).toBe('多重攻击 Multiattack');
   });
 });

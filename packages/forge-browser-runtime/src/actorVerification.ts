@@ -1,3 +1,4 @@
+import {sourceMentionsDisplayName as sourceMentionsItem} from '@fvtt-json-generator/models/display-name';
 import { extractSourceDerivedAcEffect } from '@fvtt-json-generator/generation/ac-effect-extraction';
 
 export interface BrowserActorVerificationSummary {
@@ -5,6 +6,7 @@ export interface BrowserActorVerificationSummary {
     name: string;
     type: string;
     creatureType?: string;
+    swarmSize?: string;
     hp?: unknown;
     ac?: unknown;
     cr?: unknown;
@@ -74,6 +76,7 @@ export function buildBrowserActorVerificationSummary(
       name: String(actor.name ?? ''),
       type: String(actor.type ?? ''),
       ...(creatureType === undefined ? {} : { creatureType: String(creatureType) }),
+      ...(getRecord(details.type).swarm?{swarmSize:String(getRecord(details.type).swarm)}:{}),
       ...(attributes.hp === undefined ? {} : { hp: attributes.hp }),
       ...(attributes.ac === undefined ? {} : { ac: attributes.ac }),
       ...(details.cr === undefined ? {} : { cr: details.cr }),
@@ -130,26 +133,6 @@ function inferFoundryMajor(actor: RecordLike): '12' | '14' | undefined {
   return undefined;
 }
 
-function sourceMentionsItem(source: string, itemName: string): boolean {
-  const candidates = new Set<string>([itemName]);
-  const localizedName = itemName.match(/（(.+)）$/u)?.[1];
-  if (localizedName) candidates.add(localizedName);
-  const spacedName = itemName.match(/^[\u3400-\u9fff][^A-Za-z]*\s+([A-Za-z][\s\S]*)$/u)?.[1];
-  if (spacedName) candidates.add(spacedName);
-  const bilingualMatch = itemName.match(/\(([^)]+)\)/u);
-  if (bilingualMatch?.[1]) candidates.add(bilingualMatch[1]);
-  const withoutParen = itemName.replace(/\s*\([^)]*\)\s*/gu, '').trim();
-  if (withoutParen) candidates.add(withoutParen);
-  const normalizedSource = normalizeSearchText(source);
-  return [...candidates].some((candidate) => {
-    const normalizedCandidate = normalizeSearchText(candidate);
-    return normalizedCandidate.length > 0 && normalizedSource.includes(normalizedCandidate);
-  });
-}
-
-function normalizeSearchText(value: string): string {
-  return value.toLowerCase().replace(/\s+/gu, ' ').trim();
-}
 
 type RecordLike = Record<string, unknown>;
 

@@ -1,0 +1,24 @@
+{
+  "skillTotals": { "athletics": -1, "acrobatics": 0, "arcana": 1, "deception": 2, "perception": 3, "stealth": 4, "survival": 9 },
+  "cases": [
+    {
+      "name": "Skill Ledger",
+      "source": "Skill Ledger CR 1\nSize Medium Type Humanoid\nAC 12\nHP 22 (4d8 + 4)\nSpeed 30 ft.\nSTR 8 DEX 12 CON 12 INT 14 WIS 10 CHA 16\nSkills Athletics -1, Acrobatics +0, Arcana +1, Deception +2, Perception +3, Stealth +4, Survival +9\nLanguages Common\nChallenge 1 (200 XP)\nProficiency Bonus +2\n",
+      "abilities": { "str": 8, "dex": 12, "con": 12, "int": 14, "wis": 10, "cha": 16 },
+      "cr": 1, "xp": 200, "proficiencyBonus": 2
+    },
+    {
+      "name": "Skill Ledger Veteran",
+      "source": "Skill Ledger Veteran CR 5\nSize Medium Type Humanoid\nAC 12\nHP 22 (4d8 + 4)\nSpeed 30 ft.\nSTR 14 DEX 8 CON 12 INT 10 WIS 14 CHA 8\nSkills Athletics -1, Acrobatics +0, Arcana +1, Deception +2, Perception +3, Stealth +4, Survival +9\nLanguages Common\nChallenge 5 (1800 XP)\nProficiency Bonus +3\n",
+      "abilities": { "str": 14, "dex": 8, "con": 12, "int": 10, "wis": 14, "cha": 8 },
+      "cr": 5, "xp": 1800, "proficiencyBonus": 3
+    },
+    {
+      "name": "Skill Ledger Master",
+      "source": "Skill Ledger Master CR 9\nSize Medium Type Humanoid\nAC 12\nHP 22 (4d8 + 4)\nSpeed 30 ft.\nSTR 18 DEX 14 CON 12 INT 8 WIS 8 CHA 10\nSkills Athletics -1, Acrobatics +0, Arcana +1, Deception +2, Perception +3, Stealth +4, Survival +9\nLanguages Common\nChallenge 9 (5000 XP)\nProficiency Bonus +4\n",
+      "abilities": { "str": 18, "dex": 14, "con": 12, "int": 8, "wis": 8, "cha": 10 },
+      "cr": 9, "xp": 5000, "proficiencyBonus": 4
+    }
+  ],
+  "legacyYaml": "---\n名称: Legacy Skill Ledger\n类型: npc\n体型: 中型\n生物类型: 类人生物\n能力:\n  力量: 14\n  敏捷: 12\n  体质: 12\n  智力: 14\n  感知: 10\n  魅力: 16\n护甲等级: 12\n生命值: 22 (4d8 + 4)\n速度: 30尺\n挑战等级: 1\n熟练加值: 2\n技能:\n  运动: 1\n  特技: 2\n  奥秘: 熟练\n  欺瞒: 专精\n  察觉: 0.5\n  隐匿: 半熟练\n  求生: 0\n---\n"
+}

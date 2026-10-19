@@ -1,11 +1,17 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
+import {sourceOperationErrors,sourceOperationTargetType,sourceOperationSelfTarget,sourceOperationSelfArea} from '@fvtt-json-generator/models/source-operations';
+import {applySourceAttackDamageModes} from './source-attack-modes';
 import { ActionParser } from '@fvtt-json-generator/parser/action';
 import { isConditionId, projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
-import type { ActionData, Damage, StructuredActionData } from '@fvtt-json-generator/models/action';
+import type { ActionData, Damage, StructuredActionData, SourceRuleFact } from '@fvtt-json-generator/models/action';
 import { EnglishActionParser } from '@fvtt-json-generator/parser/english-action';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import { ActivityGenerator, type ActivityGenerationContext } from './activity';
+import { conditionalAttackSaveTrigger, normalizedSourceDamageParts } from './save-outcome';
 import type { AttackAbility } from './attack-ability';
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
+import { composeSourceTextPresentation, decodeSourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
+import {sourceManualSpellUses,sourceGmTriggeredSave,sourceFailedSaveStatuses,SOURCE_NATIVE_FAILURE_LABELS} from '@fvtt-json-generator/models/source-rule-facts';
 import { spellsMapper } from './spellsMapper';
 import { i18n } from '@fvtt-json-generator/parser/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';
@@ -44,6 +50,9 @@ import {
   extractTargetCondition,
   extractSemanticDescription,
   extractInlineFeatureLinesFromBiography,
+  formatLiteralHtml,
+  formatManualRuleHtml,
+  formatMixedRuleHtml,
   formatStructuredHtml,
   splitStructuredSegments,
   cleanDescriptionSegment,
@@ -56,11 +65,13 @@ import {
 import {
   generateConditionEffects,
   generateEnhancedConditionEffects,
+  extractExplicitlyInflictedStatuses,
   createCustomEffect as createCustomEffectExt,
   createRandomId as createRandomIdExt,
   extractSwallowDamage as extractSwallowDamageExt,
   statusIconPath,
   suppressEncounterStagedInferredEffects,
+  enforceCoreConditionLifecycles,
 } from './actor-effects';
 import { buildBleedingFlag, extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 import {
@@ -111,6 +122,7 @@ import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
 import type { GenerationIconResolver } from './ports';
 import { projectWeaponProperties } from './weapon-properties';
+import { createRulePresentationPlan, type ConsumedRuleAction, type RulePresentationPlan } from './rule-presentation';
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -120,6 +132,10 @@ export interface ActorGeneratorOptions {
   effectProfile?: EffectProfile;
   resources?: GenerationResources;
   iconResolver?: GenerationIconResolver;
+  /** Internal Forge v14 capture. No plan is serialized into the Actor. */
+  onRulePresentationPlan?: (plan: RulePresentationPlan) => void;
+  rulePresentationSource?: string;
+  rulePresentationActorNormalizer?: (actor: any) => any;
 }
 
 interface GenerateOptions {
@@ -178,6 +194,16 @@ const LANGUAGE_CODE_MAP: Record<string, string> = {
   '无': '',
   // 英文 → Foundry code (pass-through)
   'common': 'common',
+  'abyssal': 'abyssal',
+  'aarakocra': 'aarakocra',
+  'cant': 'cant',
+  'druidic': 'druidic',
+  'gith': 'gith',
+  'gnoll': 'gnoll',
+  'sign': 'sign',
+  'gnomish': 'gnomish',
+  'halfling': 'halfling',
+  'primordial': 'primordial',
   'draconic': 'draconic',
   'elvish': 'elvish',
   'dwarvish': 'dwarvish',
@@ -193,6 +219,14 @@ const LANGUAGE_CODE_MAP: Record<string, string> = {
   'auran': 'auran',
   'ignan': 'ignan',
   'terran': 'terran',
+};
+
+const V14_LANGUAGE_ALIASES: Record<string, string> = {
+  深渊语: 'abyssal', 深渊: 'abyssal', 深渊魔语: 'abyssal', 深渊魔: 'abyssal',
+  深语: 'deep', 侏儒语: 'gnomish', 原初语: 'primordial',
+  通用手语: 'sign', 手语: 'sign', 盗贼黑话: 'cant', 德鲁伊语: 'druidic',
+  吉斯语: 'gith', 豺狼人语: 'gnoll', 鸟人语: 'aarakocra',
+  'deep speech': 'deep', dwarven: 'dwarvish',
 };
 
 const SKILL_ABILITIES: Record<string, string> = {
@@ -249,6 +283,12 @@ export class ActorGenerator {
   private route: ParserRoute = 'chinese';
   private effectProfileApplier = new EffectProfileApplier();
   private iconResolver?: GenerationIconResolver;
+  private onRulePresentationPlan?: (plan: RulePresentationPlan) => void;
+  private rulePresentationSource?: string;
+  private rulePresentationActorNormalizer?: (actor: any) => any;
+  private consumedRuleActions: ConsumedRuleAction[] = [];
+  private biographyRuleFacts: SourceRuleFact[] = [];
+  private deferRulePresentation = false;
 
   constructor(options: ActorGeneratorOptions = {}) {
     this.translationService = options.translationService ?? undefined;
@@ -256,18 +296,28 @@ export class ActorGenerator {
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
     this.iconResolver = options.iconResolver;
+    this.onRulePresentationPlan = options.onRulePresentationPlan;
+    this.rulePresentationSource = options.rulePresentationSource;
+    this.rulePresentationActorNormalizer = options.rulePresentationActorNormalizer;
     assertEffectProfileForTarget(this.fvttVersion, this.effectProfile);
     const resources = resolveGenerationResources(options.resources);
     this.goldenMaster = loadOptionalGoldenMaster(resources);
   }
 
   public async generateForRoute(parsed: ParsedNPC, route: ParserRoute): Promise<any> {
-    const actor = this.generate(parsed, {
-      resetDefaults: route === 'english',
-      spellcastingMode: route === 'english' ? 'description' : 'legacy',
-      route,
-    });
+    this.deferRulePresentation = true;
+    let actor: any;
+    try {
+      actor = this.generate(parsed, {
+        resetDefaults: route === 'english',
+        spellcastingMode: route === 'english' ? 'description' : 'legacy',
+        route,
+      });
+    } finally {
+      this.deferRulePresentation = false;
+    }
     if (route !== 'english') {
+      this.emitRulePresentation(actor);
       return actor;
     }
 
@@ -276,10 +326,13 @@ export class ActorGenerator {
       route,
     }).localize(actor);
     assertPortableActorHasNoTargetWorldIdentifiers(localizedActor);
+    this.emitRulePresentation(localizedActor);
     return localizedActor;
   }
 
   public generate(parsed: ParsedNPC, options: GenerateOptions = {}): any {
+    this.consumedRuleActions = [];
+    this.biographyRuleFacts = (parsed.biographyRuleFacts ?? []).filter(fact => parsed.biographyMode !== 'literal' || fact.kind === 'food-retention');
     assertSpellManifestTarget(parsed.spellManifest, this.fvttVersion);
     this.route = options.route ?? 'chinese';
     // Clone Base
@@ -292,6 +345,8 @@ export class ActorGenerator {
     this.resetActorDefaults(actor);
 
     // Patch Core Fields
+    // The Actor title is already rendered. Parentheses present in that source
+    // title belong to its name; only explicit aliases are joined by renderers.
     actor.name = parsed.name || actor.name;
     if (typeof parsed.img === 'string' && parsed.img.trim()) {
       actor.img = parsed.img.trim();
@@ -395,6 +450,10 @@ export class ActorGenerator {
       if (parsed.details.creatureTypeSubtype) {
         actor.system.details.type.subtype = parsed.details.creatureTypeSubtype;
       }
+      if(parsed.details.swarmSize){
+        actor.system.details.type??={};
+        actor.system.details.type.swarm=({tiny:'tiny',small:'sm',medium:'med',large:'lg',huge:'huge',gargantuan:'grg'} as const)[parsed.details.swarmSize];
+      }
       if (parsed.details.biography) actor.system.details.biography.value = parsed.details.biography;
       
       actor.system.details.habitat = { value: [], custom: "" };
@@ -421,7 +480,9 @@ export class ActorGenerator {
       actor.system.traits.languages = {
         // schema-derived: dnd5e 5.3.3 prepareLanguages recognizes the special ALL key.
         value: (parsed.traits.languages || []).map((lang: string) => {
-          const code = LANGUAGE_CODE_MAP[lang] || lang;
+          // schema-derived: v14 language labels use case-sensitive system keys; normalize known English aliases only.
+          const v14Alias = this.isV14() ? V14_LANGUAGE_ALIASES[lang.toLowerCase()] : undefined;
+          const code = v14Alias || LANGUAGE_CODE_MAP[lang] || (this.isV14() ? LANGUAGE_CODE_MAP[lang.toLowerCase()] : undefined) || lang;
           return this.isV14() && /^all$/iu.test(code) ? 'ALL' : code;
         }).filter((lang: string) => lang !== ''),
         custom: parsed.traits.languagesCustom || '',
@@ -489,8 +550,21 @@ export class ActorGenerator {
     // Generate Items (Actions)
     const newItems: any[] = [];
 
-    const extracted = this.extractInlineFeatureLinesFromBiography(actor.system?.details?.biography?.value);
-    actor.system.details.biography.value = this.formatStructuredHtml(extracted.biography);
+    const extracted = parsed.biographyMode === 'literal'
+      ? { biography: actor.system?.details?.biography?.value ?? '', features: [] }
+      : this.extractInlineFeatureLinesFromBiography(actor.system?.details?.biography?.value);
+    actor.system.details.biography.value = parsed.biographyMode === 'literal'
+      ? formatLiteralHtml(extracted.biography)
+      : this.formatStructuredHtml(extracted.biography);
+    if (parsed.biographyPresentation) {
+      const presentation = decodeSourceTextPresentation(parsed.biographyPresentation);
+      if (parsed.biographyMode !== 'literal' || composeSourceTextPresentation(presentation) !== extracted.biography) {
+        throw new Error('InvalidIntakeBiographyPresentation');
+      }
+      actor.flags ??= {};
+      actor.flags.fvttJsonGenerator ??= {};
+      actor.flags.fvttJsonGenerator.biographyPresentation = presentation;
+    }
     this.appendActionItems(newItems, extracted.features, 'passive');
 
     const activityContext = this.createActivityGenerationContext(parsed);
@@ -568,6 +642,7 @@ export class ActorGenerator {
       assertNoOrphanedSpellcastingFeatureLinks(actor);
     }
     this.applyTemporaryOverrideTargetEffects(actor);
+    if (this.isV14() && this.effectProfile === 'core') enforceCoreConditionLifecycles(actor, new Map(this.consumedRuleActions.map(entry => [entry.itemIndex, entry.sourceStructured?.describe ?? entry.action.desc ?? ''])));
     this.effectProfileApplier.apply(actor, this.effectProfile);
 
     this.applyTokenSize(actor);
@@ -575,7 +650,19 @@ export class ActorGenerator {
     this.iconResolver?.resolveActor(actor);
     assertPortableActorHasNoTargetWorldIdentifiers(actor);
 
+    if (!this.deferRulePresentation) this.emitRulePresentation(actor);
     return actor;
+  }
+
+  private emitRulePresentation(actor: any): void {
+    if (this.fvttVersion !== '14' || !this.onRulePresentationPlan || !this.rulePresentationSource) return;
+    this.onRulePresentationPlan(createRulePresentationPlan({
+      sourceActor: actor,
+      sourceIdentity: this.rulePresentationSource,
+      consumedActions: this.consumedRuleActions,
+      biographyFacts: this.biographyRuleFacts,
+      actorNormalizer: this.rulePresentationActorNormalizer,
+    }));
   }
 
   private applyTokenSize(actor: any): void {
@@ -732,6 +819,7 @@ export class ActorGenerator {
       if (details.type && typeof details.type === 'object') {
         details.type.value = '';
         details.type.custom = '';
+        details.type.swarm = '';
       }
       details.cr = 0;
       if (details.xp && typeof details.xp === 'object') {
@@ -848,6 +936,10 @@ export class ActorGenerator {
       const activities = this.activityGenerator.generate(actionData, activityContext);
       
       const item = this.createItemFromAction(actionData, activities, isPassive ? '' : activationType);
+      this.consumedRuleActions.push({
+        logicalPath: 'legacy/' + activationType + '/' + items.length,
+        itemIndex: items.length, action: actionData,
+      });
       items.push(item);
     }
   }
@@ -877,6 +969,7 @@ export class ActorGenerator {
       if (!actions || !Array.isArray(actions)) continue;
 
       for (const [index, action] of actions.entries()) {
+        const itemStart=items.length;
         this.appendSingleStructuredAction(
           items,
           action,
@@ -885,6 +978,10 @@ export class ActorGenerator {
           `structuredActions/${key}/${index}/${action.name}`,
           sectionOverride,
         );
+        if(action.sourceFeatureId){
+          if(items.length!==itemStart+1)throw new Error('SourceFeatureIdentityRequiresOneItem');
+          const item=items[itemStart];item.flags??={};item.flags.fvttJsonGenerator??={};item.flags.fvttJsonGenerator.sourceFeatureId=action.sourceFeatureId;
+        }
       }
     }
   }
@@ -897,23 +994,215 @@ export class ActorGenerator {
     logicalPath: string,
     sectionOverride?: string,
   ): void {
-    if (action.spellcastingFeatureKey && activationType !== 'passive') {
+    if(action.sourceOperations){
+      if(!this.isV14()||action.executionMode!=='native-with-gm'||sourceOperationErrors(action.describe??'',action.sourceOperations,action.sourceContext).length)throw new Error('InvalidSourceOperations');
+      if(action.attackType||action.DC!==undefined||action.damage?.length||action.embeddedEffects?.length||action.subActions?.length||action.gmTriggeredSave||action.nativeFailureStatuses)throw new Error('ConflictingSourceOperations');
+      // Build the existing resource/section carrier without feeding any rule
+      // prose into legacy inference. Each child is an explicit clickable roll.
+      const safe:StructuredActionData={...action,sourceOperations:undefined,sourceContext:undefined,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,describe:'',sourceRuleFacts:[]};
+      this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
+      const item=items.at(-1)!,base=Object.values(item.system.activities)[0] as any;
+      item.system.activities={};item.effects=[];
+      const operationKinds=[...new Set(action.sourceOperations.flatMap(op=>[op.type,...(op.damage?.length?['damage']:[])]))];
+      if(action.uses||action.recharge)operationKinds.push('resource');
+      const sourceText=action.describe??'',contextText=(action.sourceContext??[]).join('\n');
+      for(const op of action.sourceOperations){
+        const recipientType=sourceOperationTargetType(sourceText,op)??'creature';
+        const damage=(op.damage??[]).map(part=>({formula:part.formula,type:part.type,...(part.types?{types:part.types}:{})}));
+        const range=op.attack?.range!==undefined?`${op.attack.range}${op.attack.longRange?'/'+op.attack.longRange:''} ft.`:op.attack?.reach!==undefined?`reach ${op.attack.reach} ft.`:'';
+        const data:ActionData={name:op.name,type:op.type,logicalPath:logicalPath+'/source-operation/'+op.id,desc:'',damage,
+          ...(op.healing?{healing:op.healing}:{}),
+          ...(op.attack?{attack:{...op.attack,range,reach:op.attack.reach===undefined?undefined:String(op.attack.reach),damage}}:{}),
+          ...(op.save?{save:{dc:op.save.dc,ability:op.save.abilities[0]!,dcSourceKind:'literal',outcome:op.save.outcome}}:{})};
+        // Literal printed values must not be reinterpreted as ability-derived
+        // bonuses. They have already passed their own source proof.
+        const activities=this.activityGenerator.generate(data,{});
+        for(const activity of Object.values(activities) as any[]){
+          activity.name=op.name;
+          const condition=[contextText,op.condition,sourceText].filter(Boolean).join('\n');
+          activity.activation=op.relationship==='follow-up'?{type:'special',value:null,override:true,condition}:{...base.activation,condition};
+          activity.consumption=op.relationship==='follow-up'?{targets:[],spellSlot:false,scaling:{allowed:false,max:''}}:structuredClone(base.consumption??{targets:[],spellSlot:false,scaling:{allowed:false,max:''}});
+          if((action.uses||action.recharge)&&op.relationship!=='follow-up')activity.consumption={targets:[{type:'itemUses',target:'',value:'1',scaling:{mode:'',formula:''}}],spellSlot:false,scaling:{allowed:false,max:''}};
+          activity.effects=[];
+          if(op.proof.upgrade)activity.target={override:true,prompt:true,template:{type:'',size:'',units:'ft'},affects:{count:'1',type:'creature',choice:false,special:op.proof.damage![0]}};
+          for(const status of op.failureStatuses??[]){
+            const id=createStableDocumentId({kind:'effect',path:logicalPath+'/source-operation/'+op.id+'/'+status});
+            item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:op.sourceText});
+            activity.effects.push({_id:id,onSave:false});
+          }
+          if(op.save)activity.save.ability=[...op.save.abilities];
+          // Schema-derived: dnd5e 5.3.3 defines includeBase only on Attack.
+          // Save/Damage roll their explicit parts; unsupported fields are
+          // discarded by the native DataModel and cannot be emitted here.
+          if(activity.damage&&op.type==='attack')activity.damage.includeBase=false;
+          if(op.range!==undefined)activity.range={override:true,value:op.range,units:'ft',special:''};
+          if(op.aoe){
+            // schema-derived: 5.3.3 names the square template square; explicit
+            // line width/cylinder height must override its default 5 feet.
+            activity.target={override:true,prompt:true,template:{type:op.aoe.shape==='rectangle'?'square':op.aoe.shape,size:String(op.aoe.radius),...(op.aoe.width!==undefined?{width:String(op.aoe.width)}:{}),...(op.aoe.height!==undefined?{height:String(op.aoe.height)}:{}),units:'ft'},affects:{count:'',type:recipientType,choice:false,special:op.targetSpecial??''}};
+          }
+          // RangeField defaults to Self in 5.3.3, even for Save/Damage.
+          // Only a source-proven recipient or area origin may retain Self;
+          // an unknown or external location stays an explicit GM range.
+          if(!op.attack&&op.range===undefined){
+            const self=sourceOperationSelfTarget(sourceText,op)||sourceOperationSelfArea(sourceText,op,activityContext.sourceActorName);
+            activity.range={override:true,units:self?'self':'spec',special:self?'':'GM 按原文目标或效应位置确定范围。'};
+          }
+          if(op.healing){
+            activity.range={override:true,units:op.healing.target.type==='self'?'self':'spec',special:op.healing.target.type==='self'?'':'GM 按原文目标或效应位置确定范围。'};
+            activity.target.override=true;
+          }
+          if(op.targetSpecial){activity.target??={override:true,prompt:true,template:{type:'',units:'ft'},affects:{count:'',type:recipientType,choice:false,special:''}};activity.target.affects.type=recipientType;activity.target.affects.special=op.targetSpecial;activity.target.override=true;}
+          if(op.attack){
+            activity.attack.type.value=op.attack.type.startsWith('r')?'ranged':'melee';
+            activity.range={override:true,units:'ft',value:op.attack.range??op.attack.reach??null,...(op.attack.longRange?{long:op.attack.longRange}:{}),special:''};
+          }
+          activity.description={chatFlavor:formatMixedRuleHtml([contextText,sourceText].filter(Boolean).join('\n\n'),false,operationKinds)};
+          activity.flags={fvttJsonGenerator:{sourceLogicalPath:logicalPath+'/source-operation/'+op.id,sourceOperation:{id:op.id,relationship:op.relationship,sourceText:op.sourceText}}};
+          item.system.activities[activity._id]=activity;
+          if(op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m')){
+            activity.name=op.name+' (近战)';activity.range={override:true,units:'ft',value:op.attack.reach,special:''};
+            const ranged=structuredClone(activity);ranged._id=createStableDocumentId({kind:'activity',path:logicalPath+'/source-operation/'+op.id+'/ranged'});
+            ranged.name=op.name+' (远程)';ranged.attack.type.value='ranged';ranged.range={override:true,units:'ft',value:op.attack.range,...(op.attack.longRange?{long:op.attack.longRange}:{}),special:''};
+            item.system.activities[ranged._id]=ranged;
+          }
+        }
+      }
+      applySourceAttackDamageModes(item,sourceText,action.sourceOperations,action.name,logicalPath,part=>this.activityGenerator.formatDamage(part));
+      item.system.description={value:formatMixedRuleHtml([contextText,sourceText].filter(Boolean).join('\n\n'),true,operationKinds),chat:''};
+      item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations:operationKinds,sourceOperations:action.sourceOperations,sourceContext:action.sourceContext??[],logicalPath};
+      const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured=action;
+      return;
+    }
+    if(action.executionMode==='native-with-gm'){
+      if(!this.isV14())throw new Error('MixedFeatureTargetUnsupported');
+      const sourceText=action.describe??'';
+      if(!sourceText.trim()||!action.nativeRuleText?.trim()||!action.manualRemainder?.trim()||action.embeddedEffects?.length||action.subActions?.length||action.failEffects?.length)
+        throw new Error('InvalidMixedFeatureBoundary');
+      // Only the verified primary text enters any legacy semantic fallbacks.
+      // The full description is restored after all executable fields are built.
+      const safe={...action,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:action.nativeRuleText,sourceRuleFacts:[]};
+      this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
+      const item=items.at(-1)!;
+      if(item.effects?.length)throw new Error('MixedFeatureUnexpectedEffects');
+      if(action.nativeFailureStatuses){
+        const dcText=sourceText.replace(/[*_]/gu,'').replace(/\s+/gu,' '),saveClause=/\b(?:DC\s*\d+\s+(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw|(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+Saving Throw:\s*DC\s*\d+)/iu.exec(dcText);
+        const expected=saveClause?sourceFailedSaveStatuses(dcText.slice(saveClause.index+saveClause[0].length)):[];
+        if(action.type!=='save'||!expected.length||JSON.stringify(action.nativeFailureStatuses)!==JSON.stringify(expected))throw new Error('InvalidNativeFailureStatusesSource');
+        const activity=Object.values(item.system.activities)[0] as any;activity.effects=[];
+        for(const status of expected){const id=createStableDocumentId({kind:'effect',path:logicalPath+'/failure/'+status});item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:sourceText});activity.effects.push({_id:id,onSave:false});}
+      }
+      // The existing common attack contract carries both source distances.
+      // When they are explicitly rendered as alternatives, expose two modes
+      // on the same Item; neither a thrown property nor a second attack use is
+      // inferred. Differently-valued attack profiles remain unsupported.
+      const dual=(action.attackType==='mwak'||action.attackType==='msak')&&action.range?.match(/^触及\s*(\d+)\s*尺或射程\s*(\d+)(?:\/(\d+))?\s*尺$/u);
+      if(dual){
+        const [primary]=Object.values(item.system.activities) as any[];
+        if(!primary||primary.type!=='attack'||Object.keys(item.system.activities).length!==1)throw new Error('MixedAttackModesRequireOnePrimary');
+        item.system.range={value:Number(dual[2]),long:dual[3]?Number(dual[3]):null,reach:Number(dual[1]),units:'ft'};
+        primary.name='近战';primary.attack.type.value='melee';primary.range={override:false,units:'ft',special:''};
+        const ranged=structuredClone(primary);ranged._id=createStableDocumentId({kind:'activity',path:logicalPath+'/ranged-mode'});ranged.name='远程';ranged.attack.type.value='ranged';ranged.range={override:true,value:Number(dual[2]),units:'ft',special:''};
+        item.system.activities[ranged._id]=ranged;
+      }
+      if(action.spellUseRecords){
+        const expected=sourceManualSpellUses(sourceText);
+        if(action.type!=='utility'||action.uses||action.recharge||!expected||JSON.stringify(action.spellUseRecords)!==JSON.stringify(expected.records)||action.nativeRuleText!==expected.ruleText)
+          throw new Error('InvalidManualSpellUsesSource');
+        const [base]=Object.values(item.system.activities) as any[];
+        if(!base||base.type!=='utility'||Object.keys(item.system.activities).length!==1)throw new Error('ManualSpellUsesRequireUtility');
+        item.system.activities={};delete item.system.uses;
+        for(const [index,record] of expected.records.entries()){
+          const activity=structuredClone(base);activity._id=createStableDocumentId({kind:'activity',path:logicalPath+'/gm-spell-use/'+index});
+          activity.name=`GM施法记录：${record.name}（${record.max}/日）`;
+          activity.uses={spent:0,max:String(record.max),recovery:[{period:'day',type:'recoverAll'}]};
+          activity.consumption={targets:[{type:'activityUses',target:'',value:'1',scaling:{mode:'',formula:''}}],scaling:{allowed:false,max:''},spellSlot:false};
+          item.system.activities[activity._id]=activity;
+        }
+      }
+      if(action.gmTriggeredSave){
+        const save=sourceGmTriggeredSave(sourceText);
+        if(action.type!=='attack'||!save||JSON.stringify(save)!==JSON.stringify(action.gmTriggeredSave))throw new Error('InvalidGmTriggeredSaveSource');
+        const abilities={str:'力量',dex:'敏捷',con:'体质',int:'智力',wis:'感知',cha:'魅力'};
+        const generated=this.activityGenerator.generate({name:`GM触发 ${abilities[save.ability]}豁免`,type:'save',logicalPath:logicalPath+'/gm-save',desc:save.sourceText,save:{dc:save.dc,ability:save.ability,dcSourceKind:'literal',outcome:'none'}},activityContext);
+        const activity=Object.values(generated)[0] as any;
+        activity.activation={type:'special',value:null,override:true,condition:save.trigger};
+        activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};
+        activity.range={override:true,units:'spec',special:save.trigger};
+        activity.target={override:true,prompt:true,template:{type:'',units:'ft'},affects:{count:'1',type:'creature',choice:false,special:save.trigger}};
+        activity.effects=[];
+        for(const status of save.failureStatuses){
+          const id=createStableDocumentId({kind:'effect',path:logicalPath+'/gm-save/'+status});
+          item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:save.sourceText});
+          activity.effects.push({_id:id,onSave:false});
+        }
+        item.system.activities[activity._id]=activity;
+      }
+      const operations=[action.type==='attack'?'attack':'',action.DC!==undefined||action.gmTriggeredSave?'save':'',action.damage?.length?'damage':'',action.uses||action.recharge||action.spellUseRecords?'resource':'',action.aoe?'area':''].filter(Boolean);
+      item.system.description={value:formatMixedRuleHtml(sourceText,true,operations),chat:''};
+      for(const activity of Object.values(item.system.activities) as any[])activity.description={chatFlavor:formatMixedRuleHtml(sourceText,false,operations)};
+      item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations,logicalPath};
+      const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured=action;
+      return;
+    }
+    if (action.executionMode === 'gm-manual') {
+      // Source-derived explicit boundary: the complete rule is readable, but
+      // its prose never enters native damage/save/effect inference.
+      if (action.type !== 'utility' || !action.describe?.trim() || action.attackType || action.toHit !== undefined
+        || action.damage?.length || action.sourceDamageParts?.length || action.healing || action.DC !== undefined
+        || action.ability || action.aoe || action.target || action.embeddedEffects?.length || action.subActions?.length
+        || action.failEffects?.length || action.sourceRuleFacts?.length || action.weaponConfiguration || action.nativeMastery) {
+        throw new Error('ManualFeatureContainsExecutableMechanics');
+      }
+      const activation = action.activation?.explicit ? action.activation.type : activationType === 'passive' ? '' : activationType;
+      const cost = activation === 'legendary' ? action.legendaryCost ?? 1 : activation && activation !== 'special' ? 1 : null;
+      const activities = this.activityGenerator.generate({name:action.name,type:'utility',desc:'',logicalPath}, {});
+      for (const activity of Object.values(activities) as any[]) {
+        activity.activation = {type:activation,value:cost,override:false,condition:action.activation?.condition ?? ''};
+        activity.description = {chatFlavor:formatManualRuleHtml(action.describe, false)};
+      }
+      const item:any = {
+        name:displayName(action.name, action.englishName),
+        type:'feat',img:'icons/svg/mystery-man.svg',
+        system:{description:{value:formatManualRuleHtml(action.describe, true),chat:''},
+          source:{custom:'Imported'},type:{value:'monster',subtype:activation==='legendary'?'legendary':''},
+          activation:{type:activation,cost,condition:action.activation?.condition ?? ''},activities},
+        effects:[],flags:this.buildItemSectionFlags(activation,activation==='',sectionOverride),
+      };
+      item.flags.fvttJsonGenerator.manualRule={version:1,mode:'gm-manual',sourceText:action.describe,logicalPath};
+      if (action.uses) {
+        const periods={day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'};
+        item.system.uses={spent:0,max:String(action.uses.max),recovery:[{period:periods[action.uses.period],type:'recoverAll'}]};
+      } else if (action.recharge) {
+        item.system.uses={spent:0,max:'1',recovery:[{period:'recharge',type:'recoverAll',formula:String(action.recharge[0])}]};
+      }
+      items.push(item);
+      return;
+    }
+    if (action.spellcastingFeatureKey && !['passive','action','bonus','reaction'].includes(activationType)) {
       throw new ActorSpellManifestError(
         'SPELL_FEATURE_LINK_INVALID_SECTION',
-        'spellcastingFeatureKey is allowed only on a passive trait item.',
+        'Expected a trait, action, bonus action or reaction for the spellcasting feature.',
       );
     }
     const effectiveActivationType = action.activation?.explicit ? action.activation.type : activationType;
-    if (action.spellcastingFeatureKey && effectiveActivationType !== 'passive') {
+    if (action.spellcastingFeatureKey && !['passive','action','bonus','reaction'].includes(effectiveActivationType)) {
       throw new ActorSpellManifestError(
         'SPELL_FEATURE_LINK_INVALID_ACTIVATION',
-        'Linked spellcasting features must remain passive.',
+        'Unsupported linked spellcasting activation.',
       );
     }
     const activityData = {
       ...this.structuredActionToActivityData(action),
       logicalPath,
     };
+    if (this.isV14() && action.sourceDamageParts) {
+      const unconditional = normalizedSourceDamageParts(activityData)!
+        .filter(part => (part.relationship === 'base' || part.relationship === 'additional') && !part.condition)
+        .map(part => ({ formula: part.formula, type: part.type, ...(part.types ? { types: part.types } : {}) }));
+      if (activityData.attack) activityData.attack.damage = unconditional;
+      else activityData.damage = unconditional;
+    }
     const activities = this.activityGenerator.generate(activityData, {
       ...activityContext,
       weaponConfiguration: action.weaponConfiguration ?? activityContext.weaponConfiguration,
@@ -951,6 +1240,34 @@ export class ActorGenerator {
 
     if (action.embeddedEffects && action.embeddedEffects.length > 0) {
       this.attachEmbeddedEffects(item, action.embeddedEffects);
+    }
+    const conditionalSaveTrigger = this.isV14() ? conditionalAttackSaveTrigger(action) : undefined;
+    if (conditionalSaveTrigger) {
+      // Source-derived: the proven 0HP save and its ordinary Failure clause
+      // identify delayed effects even when redundant structured fields are absent.
+      const source = String(action.describe ?? '').replace(/\s+/gu, ' ');
+      const triggerStart = source.indexOf(conditionalSaveTrigger);
+      const failure = /\bFailure\s*:\s*([\s\S]*?)(?=\bSuccess\s*:|$)/iu.exec(source.slice(triggerStart))?.[1]?.trim() ?? '';
+      const projectStatus = (status: string) => isConditionId(status) ? projectedConditionStatusId(status) : status;
+      const delayed = new Set(extractExplicitlyInflictedStatuses(failure).map(projectStatus));
+      const immediate = new Set(extractExplicitlyInflictedStatuses(source.slice(0, triggerStart)).map(projectStatus));
+      const ids = new Set<string>();
+      for (const effect of item.effects as any[]) {
+        const statuses = Array.isArray(effect.statuses) ? effect.statuses as string[] : [];
+        if (statuses.some(status => delayed.has(status))) {
+          if (statuses.some(status => immediate.has(status) || !delayed.has(status))) {
+            throw new Error('ConditionalAttackSaveEffectAmbiguous: immediate and delayed effects cannot share one application.');
+          }
+          ids.add(effect._id);
+        } else if (effect.name?.replace(/\s+/gu, ' ').trim() === failure
+          || effect.flags?.fvttJsonGenerator?.sourceDerivedEmbeddedEffect
+            && effect.description?.replace(/\s+/gu, ' ').trim() === failure) {
+          ids.add(effect._id);
+        }
+      }
+      for (const activity of Object.values(item.system.activities) as any[]) {
+        if (activity.type === 'attack' && activity.effects) activity.effects = activity.effects.filter((link: any) => !ids.has(link._id));
+      }
     }
 
     if (action.recharge) {
@@ -994,9 +1311,22 @@ export class ActorGenerator {
     }
 
     if (action.spellcastingFeatureKey) {
-      markSpellcastingFeatureItem(item, action.spellcastingFeatureKey);
+      // Keep the original source action while the manifest is pending. It is
+      // labelled as a rule reader; hydration adds actual owned Casts with
+      // their spell data and consumption, never Utility spell-use counters.
+      for(const activity of Object.values(item.system.activities) as any[]){
+        activity.name='规则说明';
+        // Schema-derived: native StringField trims outer whitespace. Emit
+        // complete literal HTML, like the Item description, before readback.
+        activity.description={chatFlavor:formatLiteralHtml(action.describe??'')};
+      }
+      item.effects=[];
+      item.system.description={value:formatLiteralHtml(action.describe??''),chat:''};
+      markSpellcastingFeatureItem(item, action.spellcastingFeatureKey,action.activation?.explicit?action.activation.type:undefined);
     }
 
+    this.consumedRuleActions.push({ logicalPath, itemIndex: items.length,
+      action: activityData as ActionData, sourceStructured: action });
     items.push(item);
   }
 
@@ -1101,14 +1431,19 @@ export class ActorGenerator {
     const passiveTraits = ['两栖', '感知魔法', '反魔场光环', 'Amphibious', 'Sense Magic', 'Antimagic Aura'];
     const isPassive = activationType === '' || passiveTraits.some(t => action.name.includes(t));
     const isNonWeaponActivation = activationType === 'bonus' || activationType === 'reaction';
+    // Schema-derived: dnd5e 5.3.3 Activity RangeField has no long range. A
+    // native ability-based attack needs the weapon parent to retain that value,
+    // even when its source activation is a reaction or bonus action. Its native
+    // base damage already supplies the supported weapon representation.
+    const nativeLongRange = this.fvttVersion === '14' && !!action.attack && !isPassive
+      && isNonWeaponActivation && Boolean(this.extractNativeBaseDamage(activities))
+      && Number(this.buildItemRange(action).long) > 0;
     const isWeapon = !!action.attack && ((!isNonWeaponActivation && !isPassive)
-      || Boolean(action.weaponConfiguration || action.nativeMastery));
+      || Boolean(action.weaponConfiguration || action.nativeMastery) || nativeLongRange);
     const semanticDesc = this.extractSemanticDescription(action);
     const activationCondition = this.extractActivationCondition(semanticDesc);
 
-    let itemName = action.englishName
-      ? `${action.name} (${action.englishName})`
-      : action.name || '';
+    let itemName = displayName(action.name || '', action.englishName);
 
     let uses = null;
     const usesMatch = itemName.match(/\s*\[(\d+)\/(?:日|Day)\]/);
@@ -1197,7 +1532,11 @@ export class ActorGenerator {
       abilities: parsed.abilities,
       ...(proficiencyBonus !== undefined ? { proficiencyBonus } : {}),
       ...(spellcastingAbility ? { spellcastingAbility } : {}),
-      preferNativeWeaponRolls: true,
+      // Source-derived Intake totals remain literal; the synthetic or real
+      // Actor's matching scores cannot prove an unstated attack ability.
+      // Unmarked CLI input retains its existing native inference policy.
+      preferNativeWeaponRolls: parsed.biographyMode !== 'literal',
+      sourceActorName: parsed.name,
     };
   }
 
@@ -2459,7 +2798,7 @@ export class ActorGenerator {
       const bleedingSpec = bleedingBranch?.[1]?.flags?.fvttJsonGenerator?.bleeding;
       if (bleedingBranch && bleedingSpec) {
         const effect = this.createCustomEffect({
-          name: '流血 (Bleeding)',
+          name: '流血 Bleeding',
           img: statusIconPath('bleeding'),
           statuses: [projectedConditionStatusId('bleeding')],
           showIcon: 2,
@@ -2777,7 +3116,7 @@ export class ActorGenerator {
   private createSegmentEffect(text: string): any | null {
     if (/(?:中毒|Poisoned)/i.test(text)) {
       return this.createCustomEffect({
-        name: '中毒 (Poisoned)',
+        name: '中毒 Poisoned',
         statuses: ['poisoned'],
         img: statusIconPath('poisoned'),
       });
@@ -2786,7 +3125,7 @@ export class ActorGenerator {
     if (/(?:流血|Bleeding|Bleed)/i.test(text)) {
       const bleedingSpec = extractBleedingSpec(text);
       return this.createCustomEffect({
-        name: '流血 (Bleeding)',
+        name: '流血 Bleeding',
         statuses: [projectedConditionStatusId('bleeding')],
         img: statusIconPath('bleeding'),
         showIcon: 2,
@@ -2821,7 +3160,7 @@ export class ActorGenerator {
     }
 
     const effect = this.createCustomEffect({
-      name: action.englishName ? `${action.name} (${action.englishName})` : action.name,
+      name: displayName(action.name, action.englishName),
       img: parsed.kind === 'flat'
         ? 'systems/dnd5e/icons/svg/statuses/downgrade.svg'
         : 'systems/dnd5e/icons/svg/statuses/shield.svg',
@@ -2940,7 +3279,7 @@ export class ActorGenerator {
   }
 
   private generateEnhancedConditionEffects(desc: string, activities: any, actionName?: string): any[] {
-    return generateEnhancedConditionEffects(desc, activities, actionName);
+    return generateEnhancedConditionEffects(desc, activities, actionName, undefined, this.isV14());
   }
 
   private applyActivityMetadata(
@@ -3254,7 +3593,7 @@ export class ActorGenerator {
     };
 
     const bilingual = out.name.match(/^(.+?)\s*\((.+)\)\s*$/);
-    if (bilingual?.[1] && bilingual[2]) {
+    if (bilingual?.[1] && bilingual[2] && /\p{Script=Han}/u.test(bilingual[1])) {
       const chineseName = bilingual[1].trim();
       const segments = bilingual[2]
         .split(',')

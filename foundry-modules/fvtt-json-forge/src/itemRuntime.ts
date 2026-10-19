@@ -265,6 +265,18 @@ function assertItemReadback(
   if (stableJson(actualSummary) !== stableJson(expectedSummary)) {
     throw new Error(`Foundry Item readback does not match generated semantics at ${firstDifferencePath(actualSummary, expectedSummary) ?? 'unknown'}.`);
   }
+  const actualItem = asRecord(readback);
+  if (typeof expectedArtifact.img === 'string' && actualItem.img !== expectedArtifact.img) {
+    throw new Error('Foundry Item readback does not match generated icons at img.');
+  }
+  const expectedActivities = asRecord(asRecord(expectedArtifact.system).activities);
+  const actualActivities = asRecord(asRecord(actualItem.system).activities);
+  for (const [id, expectedActivity] of Object.entries(expectedActivities)) {
+    const expectedImage = asRecord(expectedActivity).img;
+    if (typeof expectedImage === 'string' && asRecord(actualActivities[id]).img !== expectedImage) {
+      throw new Error(`Foundry Item readback does not match generated icons at system.activities.${id}.img.`);
+    }
+  }
   const actualIdentity = readForgeItemIdentity(readback);
   if (
     actualIdentity?.protocolVersion !== identity.protocolVersion

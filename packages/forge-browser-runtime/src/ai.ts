@@ -21,10 +21,12 @@ import type {
   IntakeTransportProtocol,
 } from '@fvtt-json-generator/intake-ai/transport';
 export type { IntakeProviderActivity, IntakeRequestWaitStatus } from '@fvtt-json-generator/intake-ai/transport';
+import { createContinuousIntakeWaitPolicy } from '@fvtt-json-generator/intake-ai/transport';
 import {
   chunkSource,
   normalizeDiscovery,
   partitionDiscoveryCandidates,
+  singleCreatureSourceCandidate,
 } from '@fvtt-json-generator/intake-ai/discovery';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
@@ -131,6 +133,7 @@ export interface BrowserAiProviderOptions {
   audit?: OpenAICompatibleMonsterIntakeOptions['audit'];
   waitPolicy?: IntakeRequestWaitPolicy;
   onActivity?: (activity: IntakeProviderActivity) => void;
+  responseEvidence?: OpenAICompatibleMonsterIntakeOptions['responseEvidence'];
   /** Local Encounter bridge only; ordinary provider calls ignore this callback. */
   onRetry?: (metadata: EncounterRetryMetadata) => void;
   /** Testable total budget shared by the two local Encounter bridge attempts. */
@@ -209,6 +212,8 @@ export function createBrowserAiProvider(
   assertHttpsEndpoint(options.baseUrl);
   const provider = new OpenAICompatibleMonsterIntakeProvider({
     authMode: 'api-key',
+    signal,
+    maxAttempts: 1,
     apiKey: options.apiKey,
     baseUrl: options.baseUrl,
     model: options.model,
@@ -225,7 +230,8 @@ export function createBrowserAiProvider(
       ...(options.protocol === 'openai-responses' ? { stream: true } : {}),
     },
     audit: options.audit,
-    waitPolicy: options.waitPolicy,
+    responseEvidence:options.responseEvidence,
+    waitPolicy: options.waitPolicy ?? (options.timeoutMs === undefined && options.repairTimeoutMs === undefined ? createContinuousIntakeWaitPolicy() : undefined),
     onActivity: options.onActivity,
     httpClient: (url, init) => fetchWithCallerAbort(url, init, signal),
   });
@@ -258,16 +264,16 @@ function fetchWithCallerAbort(
       response,
       callerSignal,
       () => new MonsterIntakeProviderError(
-        'network',
-        'AI monster intake request was cancelled.',
+        callerSignal?.reason?.name === 'TimeoutError' ? 'timeout' : 'network',
+        callerSignal?.reason?.name === 'TimeoutError' ? 'AI monster intake request exceeded its configured deadline.' : 'AI monster intake request was cancelled.',
         { retryable: false },
       ),
     ))
     .catch((error: unknown) => {
       if (callerSignal?.aborted) {
         throw new MonsterIntakeProviderError(
-          'network',
-          'AI monster intake request was cancelled.',
+          callerSignal.reason?.name === 'TimeoutError' ? 'timeout' : 'network',
+          callerSignal.reason?.name === 'TimeoutError' ? 'AI monster intake request exceeded its configured deadline.' : 'AI monster intake request was cancelled.',
           { retryable: false },
         );
       }
@@ -340,7 +346,8 @@ export async function analyzeBrowserActorSourceWithAi(
     report('finalize', errorCode === 'cancelled' ? 'skipped' : 'failed', message);
     return {
       status: 'failed', attemptId, rawSourceHash, candidates: [],
-      findings: [boundedFinding(`ANALYSIS_${String(errorCode ?? 'provider_failure').toUpperCase()}`, message)], stages,
+      findings: [boundedFinding(`ANALYSIS_${String(errorCode ?? 'provider_failure').toUpperCase()}`, message,
+        error instanceof MonsterIntakeProviderError ? error.stagedDiagnostic?.path : undefined)], stages,
       provider: identity, calls, repairCount: 0, ...(errorCode ? { errorCode } : {}),
     };
   }
@@ -361,7 +368,7 @@ function isExactBareMonsterSectionHeading(source: string, candidate: DiscoveryCa
     || entry.start < candidate.start || entry.end > candidate.end || entry.end <= entry.start
     || source.slice(entry.start, entry.end) !== entry.quote
     || (entry.start > 0 && source[entry.start - 1] !== '\n')) return false;
-  const quotedLine = entry.quote.replace(/\r?\n$/u, '');
+  const quotedLine = entry.quote.trimEnd();
   if (entry.end < source.length && !entry.quote.endsWith('\n')) return false;
   return BARE_MONSTER_SECTION_HEADING.test(quotedLine);
 }
@@ -831,11 +838,11 @@ function isGenerationResult(
   return 'analysis' in value;
 }
 
-function boundedFinding(code: string, message: string): IntakeFinding {
+function boundedFinding(code: string, message: string, path = '/intake'): IntakeFinding {
   return {
     id: `forge-browser:${code}`,
     code,
-    path: '/intake',
+    path,
     message,
     blocking: true,
     origin: 'semantic',
@@ -961,6 +968,8 @@ async function runDiscovery(
   signal?: AbortSignal,
 ): Promise<DiscoveryCandidate[]> {
   report('discover', 'running');
+  const single = singleCreatureSourceCandidate(source);
+  if (single) { report('discover', 'completed', '本地确认唯一完整生物数据，保留全部来源，省略模型发现请求。'); return [single]; }
   const candidates: DiscoveryCandidate[] = [];
   for (const chunk of chunkSource(source)) {
     throwIfAborted(signal);
@@ -1111,10 +1120,18 @@ function safeProviderMessage(error: unknown): string {
     return 'The browser could not complete the AI provider request. The endpoint may be unreachable or blocked by CORS.';
   }
   if (error instanceof MonsterIntakeProviderError) {
+    if (error.stagedDiagnostic) return `${error.stagedDiagnostic.stage === 'source' ? '来源处理失败' : '提取结果校验失败'}：${error.diagnosticMessage}。`;
+    if(error.transportFailure){
+      const detail=error.transportFailure;
+      const reason:Record<string,string>={provider_error:'AI service returned an error instead of an answer.',invalid_json:'AI reply could not be parsed as JSON.',
+        invalid_encoding:'AI reply encoding could not be read.',empty_response:'AI service returned no answer content.',unexpected_response:'AI reply envelope was not recognized.',
+        response_interrupted:'AI reply was interrupted before completion.'};
+      if(reason[detail.reason])return reason[detail.reason]!;
+    }
     if (error.code === 'rate_limited') return 'AI provider rate limited the request.';
     if (error.code === 'timeout') return 'AI provider request timed out.';
     if (error.code === 'http_error') return `AI provider rejected the request with HTTP ${error.status ?? 'unknown'}.`;
-    if (error.code === 'invalid_response') return 'AI provider returned an invalid schema response.';
+    if (error.code === 'invalid_response') return `AI provider returned an invalid schema response.${error.diagnosticMessage ? ` ${error.diagnosticMessage}.` : ''}`;
     if (error.code === 'network') return 'AI provider network request failed.';
     return 'AI provider configuration is invalid.';
   }
@@ -1141,9 +1158,10 @@ async function classifyBrowserProviderCall<T>(
   try {
     return await promise;
   } catch (error) {
-    if (signal?.aborted) throwIfAborted(signal);
+    if (signal?.aborted && signal.reason?.name !== 'TimeoutError') throwIfAborted(signal);
     if (isAbortError(error)) throw error;
     if (!(error instanceof MonsterIntakeProviderError) || error.code !== 'network') throw error;
+    if(error.transportFailure?.reason==='response_interrupted')throw error;
     throw new BrowserAiTransportError(error);
   }
 }

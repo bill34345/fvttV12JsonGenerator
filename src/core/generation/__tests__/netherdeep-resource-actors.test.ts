@@ -33,9 +33,9 @@ async function generate(name: string, target: '12' | '14'): Promise<any> {
 describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', (target) => {
   it('keeps Tainted Shellcreeper overload visible, spendable, scalable, and linked to AC 11 cracking', async () => {
     const actor = await generate('tainted-shellcreeper', target);
-    const carrier = item(actor, '反魔法甲壳 (Antimagic Shell)');
-    const reverberations = item(actor, '心灵回震 (Psychic Reverberations)');
-    const crack = item(actor, '击穿过载 (Crack the Overload)');
+    const carrier = item(actor, '反魔法甲壳 Antimagic Shell');
+    const reverberations = item(actor, '心灵回震 Psychic Reverberations');
+    const crack = item(actor, '击穿过载 Crack the Overload');
 
     expect(carrier.system.uses).toEqual({ spent: 2, max: '2', recovery: [] });
     expect(activities(carrier).some((activity) =>
@@ -64,16 +64,16 @@ describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', 
 
   it('keeps all twelve Urchin spikes, native costs, long-rest recovery, and exact AC tiers', async () => {
     const actor = await generate('urchin-spikeshooter', target);
-    const carrier = item(actor, '消耗棘刺 (Depleting Spikes)');
+    const carrier = item(actor, '消耗棘刺 Depleting Spikes');
     expect(carrier.system.uses).toEqual({
       spent: 0,
       max: '12',
       recovery: [{ period: 'lr', type: 'recoverAll' }],
     });
     const costs = [
-      ['棘刺 (Spike)', 'spike-cost', '1'],
-      ['钉刺齐射 (Pinning Volley)', 'pinning-volley-cost', '3'],
-      ['反冲漂移 (Recoil Drift)', 'recoil-drift-cost', '1'],
+      ['棘刺 Spike', 'spike-cost', '1'],
+      ['钉刺齐射 Pinning Volley', 'pinning-volley-cost', '3'],
+      ['反冲漂移 Recoil Drift', 'recoil-drift-cost', '1'],
     ] as const;
     for (const [name, id, value] of costs) {
       const consumer = item(actor, name);
@@ -103,12 +103,12 @@ describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', 
 
   it('keeps Caelian Shell Resonance at one and charges every declared spender', async () => {
     const actor = await generate('caelian-sea-snail', target);
-    const carrier = item(actor, '反魔法甲壳 (Antimagic Shell)');
+    const carrier = item(actor, '反魔法甲壳 Antimagic Shell');
     expect(carrier.system.uses).toEqual({ spent: 1, max: '1', recovery: [] });
     for (const [name, id] of [
-      ['耀目折光 (Dazzling Refraction)', 'dazzling-refraction-cost'],
-      ['流光加速 (Iridescent Haste)', 'iridescent-haste-cost'],
-      ['力场谐振 (Force Resonance)', 'force-resonance-cost'],
+      ['耀目折光 Dazzling Refraction', 'dazzling-refraction-cost'],
+      ['流光加速 Iridescent Haste', 'iridescent-haste-cost'],
+      ['力场谐振 Force Resonance', 'force-resonance-cost'],
     ] as const) {
       const consumer = item(actor, name);
       const activity = activities(consumer).find((entry) =>
@@ -122,8 +122,8 @@ describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', 
 
   it('keeps Red Kelp gain/loss, optional radius spend, and three-for-one Bloom recovery', async () => {
     const actor = await generate('red-kelp', target);
-    const carrier = item(actor, '奥术滋养 (Arcane Feeding)');
-    const bloom = item(actor, '藻华 (Algal Bloom)');
+    const carrier = item(actor, '奥术滋养 Arcane Feeding');
+    const bloom = item(actor, '藻华 Algal Bloom');
     expect(carrier.system.uses).toEqual({ spent: 3, max: '3', recovery: [] });
     expect(activities(carrier).filter((activity) =>
       activity.flags?.fvttJsonGenerator?.resourceOperation)).toHaveLength(2);

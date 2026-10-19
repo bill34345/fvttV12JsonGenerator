@@ -1,9 +1,11 @@
 /** Source-derived actor resource semantics shared by parsing and generation. */
-export type ActorResourceSection = '特性' | '动作' | '附赠动作' | '反应' | '传奇动作';
+export type ActorResourceSection = '特性' | '动作' | '附赠动作' | '反应' | '传奇动作' | '神话动作';
 export type ActorResourceActivation = 'special' | 'action' | 'bonus' | 'reaction';
-export type ActorResourceRecovery = 'none' | 'lr' | 'sr' | 'day';
+export type ActorResourceRecovery = 'none' | 'lr' | 'sr' | 'day' | 'dawn';
 
 export interface ActorResourceItemRef {
+  /** Exact source identity for the bounded Intake shared-pool bridge. */
+  sourceFeatureId?:string;
   section: ActorResourceSection;
   name: string;
 }

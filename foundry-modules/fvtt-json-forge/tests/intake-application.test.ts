@@ -933,6 +933,33 @@ describe('Forge Intake Application review workspace', () => {
     expect(root.create.disabled).toBe(true);
   });
 
+  test('renders safe response observation and distinct termination causes in its actual report and activity card', () => {
+    const {application,root}=makeApplication();
+    const activity={phase:'receiving_response',transport:'body_open',providerActivity:'unknown',elapsedMs:300013,
+      lastEventAtMs:Date.now(),outputCharactersReceived:0,responseHeadersAtMs:Date.now()-300000,
+      firstDataAtMs:Date.now()-5,lastDataAtMs:Date.now(),receivedBytes:12,keepAliveCount:2};
+    (application as any).providerActivity=activity;
+    (application as any).renderResult(root);
+    expect(root.activitySummary.textContent).toContain('已经接通');
+    expect(root.activityDetail.textContent).toContain('12 字节');
+    expect(root.activityDetail.textContent).toContain('不能证明模型已开始生成');
+    expect(JSON.parse(root.metadata.textContent).providerObservation.receivedBytes).toBe(12);
+    for(const [failureReason,label] of [['deadline_exceeded','等待上限'],['user_cancelled','主动取消'],
+      ['connection_failed','连接失败'],['response_interrupted','回复接收中断'],['provider_incomplete','尚未完成'],['invalid_json','格式无法读取'],
+      ['provider_error','错误信息'],['unexpected_response','结构无法识别'],['empty_response','没有答案'],['invalid_encoding','编码无法读取']]){
+      (application as any).providerActivity={...activity,phase:'failed',failureReason};
+      (application as any).renderResult(root);
+      expect(root.activitySummary.textContent).toContain(label);
+      expect(JSON.parse(root.metadata.textContent).providerObservation.failureReason).toBe(failureReason);
+    }
+    for(const [failureEvidenceStatus,label]of [['saved','现场已保存'],['save_failed','现场保存失败'],['not_configured','正文未保存'],['metadata_only','未提供回复正文']]){
+      (application as any).providerActivity={...activity,phase:'failed',failureReason:'provider_error',failureEvidenceStatus};
+      (application as any).renderResult(root);
+      expect(root.activityDetail.textContent).toContain(label);
+      expect(JSON.parse(root.metadata.textContent).providerObservation.failureEvidenceStatus).toBe(failureEvidenceStatus);
+    }
+  });
+
   test('defaults a dismissed wait dialog to continue and cancels only after explicit user choice', async () => {
     const dialogs: any[] = [];
     let providerOptions: any;
@@ -1082,7 +1109,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(bundle.provider).toMatchObject({ name: 'fake-monster', extractionModel: 'extract', reviewModel: 'review' });
     expect(bundle.target).toMatchObject({
       generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
-      generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off',
+      generatorProfile: 'v14', effectProfile: 'core', iconMode: 'safe',
     });
     expect(exported).not.toMatch(/must-not-export|query-secret|Authorization|rawResponse|endpoint/iu);
     expect(exported.endsWith('\n')).toBe(true);
@@ -2186,7 +2213,7 @@ function currentSnapshot(_application: any, root: FakeRoot): any {
     endpoint: root.mode.value === 'plaintext-actor' ? '' : root.endpoint.value,
     model: root.mode.value === 'plaintext-actor' ? '' : root.model.value,
     reviewModel: root.mode.value === 'plaintext-actor' ? '' : root.reviewModel.value || root.model.value,
-    fvttVersion: '14.364', systemVersion: '5.3.3', effectProfile: 'core', iconMode: 'off',
+    fvttVersion: '14.364', systemVersion: '5.3.3', effectProfile: 'core', iconMode: 'safe',
   });
 }
 
@@ -2225,6 +2252,7 @@ class FakeRoot {
   workspace = control('', 'section'); inputStep = control('', 'section'); reviewStep = control('', 'section'); createdStep = control('', 'section');
   inputIndicator = control('', 'li'); reviewIndicator = control('', 'li'); createdIndicator = control('', 'li');
   workspaceScroll = control('', 'section'); advancedWorkspace = control('', 'details'); workspaceMore = control('', 'details'); workspaceHint = control('');
+  activitySummary = control(''); activityDetail = control('');
   querySelector(selector: string): any {
     const fields = ({
       '[name="mode"]': this.mode, '[name="source"]': this.source, '[name="displayName"]': this.displayName, '[name="provider"]': this.provider, '[name="endpoint"]': this.endpoint,
@@ -2244,6 +2272,7 @@ class FakeRoot {
       '[data-action="batch-refresh"]': this.batchRefresh, '[data-action="batch-import"]': this.batchImport, '[data-action="batch-export"]': this.batchExport, '[data-action="batch-run"]': this.batchRun, '[data-action="batch-stop"]': this.batchStop, '[data-action="batch-apply"]': this.batchApply,
       '[data-status]': this.status, '[data-stages]': this.stages, '[data-diagnostics]': this.diagnostics, '[data-diagnostic-list]': this.diagnosticList,
       '[data-human-summary]': this.humanSummary, '[data-activity-card]': this.activityCard,
+      '[data-activity-summary]': this.activitySummary, '[data-activity-detail]': this.activityDetail,
       '[data-preview-section]': this.previewSection, '[data-candidate]': this.candidate, '[data-evidence]': this.evidence, '[data-metadata]': this.metadata,
       '[data-canonical]': this.canonical, '[data-raw-source]': this.rawSource, '[data-preview]': this.preview, '[data-json]': this.json,
       '.forge-workspace': this.workspace, '[data-step="input"]': this.inputStep, '[data-step="review"]': this.reviewStep, '[data-step="created"]': this.createdStep,

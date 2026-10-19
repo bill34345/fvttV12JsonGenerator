@@ -1,0 +1,11 @@
+{
+  "source": "Archivist Grim V8 single post-repair retest, 2026-10-15",
+  "receiptSha256": "27f2ca856c145095921db65b39782b247d6f2e10678e778b9dae617dbe53c15b",
+  "actualRequests": 1,
+  "httpHeadersStatus": 200,
+  "durationMs": 300012,
+  "completeProviderReplyAvailable": false,
+  "oldFinding": "ANALYSIS_NETWORK",
+  "knownOuterDeadlineMs": 300000,
+  "queueOrInferenceState": "UNKNOWN"
+}

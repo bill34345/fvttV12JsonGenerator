@@ -15,6 +15,45 @@ function keyFor(internalKey: string): string {
 describe('YamlParser', () => {
   const parser = new YamlParser();
 
+  it.each(['false', 'null', 'literal-v2', '{}', '[]'])('rejects invalid canonical biography mode %s', (value) => {
+    expect(() => parser.parse(`名称: Literal\nintake-biography-mode: ${value}\n`)).toThrow('InvalidIntakeBiographyMode');
+  });
+
+  it('rejects canonical literal mode on mixed body content instead of silently interpreting it', () => {
+    expect(() => parser.parse('---\n名称: Literal\nintake-biography-mode: literal-v1\n---\n# Actions\nExtra rule.')).toThrow('InvalidIntakeBiographyMode');
+  });
+
+  it.each(['\n','\r\n'])('keeps authored biography and program notes separate with %j line endings', (eol) => {
+    const sourceText = `Author note: 护甲等级：14。${eol}Keep every author line.`;
+    const programNotes = ['护甲等级：14（Natural Armor）'];
+    const presentation = {version:1 as const, sourceText, programNotes};
+    const document = ['名称: Binder','intake-biography-mode: literal-v1',
+      '传记: ' + JSON.stringify(sourceText + '\n\n' + programNotes[0]),
+      'intake-biography-presentation: ' + JSON.stringify({version:1, sourceLength:sourceText.length, programNotes})].join(eol);
+    const parsed = parser.parse(document);
+    expect(parsed.biographyPresentation).toEqual(presentation);
+    expect(parsed.details.biography).toBe(sourceText + '\n\n' + programNotes[0]);
+  });
+
+  it.each([
+    {version:2,sourceLength:7,programNotes:['Program.']},
+    {version:1,sourceLength:1,programNotes:['Program.']},
+    {version:1,sourceLength:7,programNotes:[{text:'Program.'}]},
+    {version:1,sourceLength:7,programNotes:['Program.'],unexpected:true},
+  ])('rejects inconsistent or unsupported biography provenance %j', (presentation) => {
+    expect(() => parser.parse(['名称: Binder','intake-biography-mode: literal-v1',
+      '传记: "Author.\\n\\nProgram."',
+      'intake-biography-presentation: ' + JSON.stringify(presentation)].join('\n'))).toThrow();
+  });
+
+  it('does not treat ordinary authored annotation-like prose as program content', () => {
+    const parsed = parser.parse('名称: Binder\n传记: "Author. 护甲等级：14。"');
+    expect(parsed.details.biography).toBe('Author. 护甲等级：14。');
+    expect(parsed.biographyPresentation).toBeUndefined();
+    expect(() => parser.parse('名称: Binder\n传记: Author.\nintake-biography-presentation: {version: 1, sourceLength: 7, programNotes: []}'))
+      .toThrow('literal mode required');
+  });
+
   it('should parse valid NPC YAML', () => {
     const yaml = `
 ${keyFor('name')}: Adult Red Dragon
@@ -240,14 +279,18 @@ ${keyFor('cr')}: "1/4 (50 XP)"
   });
 
   it.each([
-    ['a non-trait section', (markdown: string) => markdown.replace('特性:', '动作:'), 'InvalidSpellcastingFeatureLinkSection'],
-    ['an explicitly active trait', (markdown: string) => markdown.replace(
+    ['a legendary section', (markdown: string) => markdown.replace('特性:', '传奇动作:'), 'InvalidSpellcastingFeatureLinkSection'],
+    ['an unsupported special activation', (markdown: string) => markdown.replace(
       'spellcastingFeatureKey: innate-wisdom-feature',
-      'spellcastingFeatureKey: innate-wisdom-feature\n    activationType: action',
+      'spellcastingFeatureKey: innate-wisdom-feature\n    activationType: special',
     ), 'InvalidSpellcastingFeatureActivation'],
   ])('rejects spellcasting linkage on %s', (_label, mutate, code) => {
     const markdown = mutate(readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8'));
 
     expect(() => parser.parse(markdown)).toThrow(code);
+  });
+  it.each([['动作','action'],['附赠动作','bonus'],['反应','reaction']] as const)('retains source spellcasting linkage in %s', (section, activation) => {
+    const markdown=readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md','utf-8').replace('特性:',section+':');
+    const parsed=parser.parse(markdown);expect(parsed.structuredActions![section]!.find(entry=>entry.spellcastingFeatureKey)!.activation?.type).toBe(activation);
   });
 });

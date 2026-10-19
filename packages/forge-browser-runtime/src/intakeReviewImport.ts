@@ -389,7 +389,8 @@ function decodeTarget(value: unknown, path: string): NonNullable<ForgeIntakeRevi
     iconMode: requireString(record.iconMode, `${path}.iconMode`, MAX_LABEL_LENGTH, true),
   };
   if (target.systemId !== 'dnd5e' || !['v12', 'v14'].includes(target.generatorProfile)
-    || target.effectProfile !== 'core' || target.iconMode !== 'off') {
+    || target.effectProfile !== 'core' || !['off', 'safe'].includes(target.iconMode)
+    || (target.iconMode === 'safe' && target.generatorProfile !== 'v14')) {
     throw new TypeError('Forge Intake review bundle target is outside the supported safe target boundary.');
   }
   return target;

@@ -14,6 +14,38 @@ async function generated(languages:string[]){
 }
 
 describe('locked v14 all-language schema key',()=>{
+  test('normalizes known English language labels in source casing through the formal v14 workflow',async()=>{
+    for(const [source,codes] of [
+      [['Aquan','Common','Giant'],['aquan','common','giant']],
+      [['AURAN','IGNAN','TERRAN'],['auran','ignan','terran']],
+      [['通用语','DrAcOnIc','水族语'],['common','draconic','aquan']],
+    ]){
+      const actor=await generated(source!);
+      const baseline=await generated(codes!);
+      expect(actor.system.traits.languages).toEqual({value:codes,custom:''});
+      expect(actor).toEqual(baseline);
+    }
+  });
+  test('maps every supported v14 code and known aliases without altering the Actor shape', async () => {
+    // The complete leaf/code set in locked dnd5e 5.3.3 module/config.mjs.
+    const codes = ['aarakocra','abyssal','aquan','auran','cant','celestial','common','deep','draconic','druidic','dwarvish','elvish','giant','gith','gnoll','gnomish','goblin','halfling','ignan','infernal','orc','primordial','sign','sylvan','terran','undercommon'];
+    const actor = await generated(codes.map(code => code.toUpperCase()));
+    const baseline = await generated(codes);
+    expect(actor.system.traits.languages).toEqual({ value: codes, custom: '' });
+    expect(actor).toEqual(baseline);
+    const aliases = await generated(['Abyssal','深渊语','深语','Deep Speech','Dwarven','侏儒语','原初语']);
+    expect(aliases.system.traits.languages.value).toEqual(['abyssal','abyssal','deep','deep','dwarvish','gnomish','primordial']);
+    expect(aliases).toEqual(await generated(['abyssal','abyssal','deep','deep','dwarvish','gnomish','primordial']));
+    const rareAliases = await generated(['手语','盗贼黑话','德鲁伊语','吉斯语','豺狼人语','鸟人语']);
+    expect(rareAliases.system.traits.languages.value).toEqual(['sign','cant','druidic','gith','gnoll','aarakocra']);
+  });
+  test('preserves similar unknown phrases and every unrelated actor field',async()=>{
+    const actor=await generated(['Aquan signs','All but Draconic']);
+    expect(actor.system.traits.languages).toEqual({value:['Aquan signs','All but Draconic'],custom:''});
+    const baseline=await generated([]);
+    const normalized=structuredClone(actor);normalized.system.traits.languages.value=[];
+    expect(normalized).toEqual(baseline);
+  });
   test('maps the source word, the canonical code and the existing Chinese label to ALL through the formal workflow',async()=>{
     const baseline=await generated(['ALL']);
     for(const source of ['All','all','ALL','泛语言']){
@@ -31,7 +63,7 @@ describe('locked v14 all-language schema key',()=>{
   });
   test('leaves the legacy target language mapping unchanged',()=>{
     const actor=new ActorGenerator({fvttVersion:'12'}).generate({name:'Legacy language fixture',type:'npc',abilities:{},attributes:{},details:{},
-      traits:{languages:['泛语言','All']},skills:{},saves:[],items:[]} as any);
-    expect(actor.system.traits.languages.value).toEqual(['all','All']);
+      traits:{languages:['泛语言','All','Aquan']},skills:{},saves:[],items:[]} as any);
+    expect(actor.system.traits.languages.value).toEqual(['all','All','Aquan']);
   });
 });

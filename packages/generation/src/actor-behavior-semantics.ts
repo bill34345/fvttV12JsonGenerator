@@ -1,3 +1,4 @@
+import { displayName, splitBilingualName } from '@fvtt-json-generator/models/display-name';
 import type {
   ActorBehaviorMechanic,
   ActorBehaviorOperation,
@@ -10,9 +11,7 @@ import { createStableDocumentId } from './stableId';
 
 const FLAG_SCOPE = 'fvttJsonGenerator';
 
-function bilingualName(name: string, englishName?: string): string {
-  return englishName ? `${name} (${englishName})` : name;
-}
+
 
 function itemSection(item: any): string {
   return String(item?.flags?.['tidy5e-sheet']?.section ?? '');
@@ -24,8 +23,10 @@ function sectionMatches(actual: string, expected: string): boolean {
 }
 
 function findItem(actor: any, ref: ActorResourceItemRef): any {
-  const matches = (actor.items ?? []).filter((item: any) =>
-    item?.name === ref.name && sectionMatches(itemSection(item), ref.section));
+  const names=splitBilingualName(ref.name),name=displayName(names.name,names.englishName);
+  const exact=(actor.items??[]).filter((item:any)=>item?.name===ref.name&&sectionMatches(itemSection(item),ref.section));
+  const matches = exact.length?exact:(actor.items ?? []).filter((item: any) =>
+    item?.name === name && sectionMatches(itemSection(item), ref.section));
   if (matches.length !== 1) {
     throw new Error(
       `BehaviorProjection: expected exactly one Item "${ref.name}" in section "${ref.section}", found ${matches.length}.`,
@@ -38,7 +39,7 @@ function ensureItemId(actorName: string, item: any, ref: ActorResourceItemRef): 
   const expected = createStableDocumentId({
     actor: actorName,
     section: ref.section,
-    name: ref.name,
+    name: item.name,
   });
   if (item._id && item._id !== expected) {
     throw new Error(`BehaviorProjection: Item "${ref.name}" already has a conflicting _id.`);
@@ -149,7 +150,7 @@ function stateEffect(
   const id = createStableDocumentId({ actor: actorName, behavior: mechanic.id, state: state.id });
   return {
     _id: id,
-    name: bilingualName(state.name, state.englishName),
+    name: displayName(state.name, state.englishName),
     type: 'base',
     system: {},
     changes: state.changes.map((change) => effectChange(change, target)),
@@ -284,7 +285,7 @@ function appendMechanic(
     }
     carrier.system.activities[id] = utilityActivity({
       id,
-      name: bilingualName(operation.name, operation.englishName),
+      name: displayName(operation.name, operation.englishName),
       operation,
       description: mechanicDescription(mechanic, operation),
       effects,
@@ -314,8 +315,8 @@ function behaviorAuxiliaryItem(
   const item = {
     _id: id,
     name: kind === 'capacity'
-      ? `容量：${bilingualName(mechanic.name, mechanic.englishName)}`
-      : `选择池：${bilingualName(mechanic.name, mechanic.englishName)}`,
+      ? `容量：${displayName(mechanic.name, mechanic.englishName)}`
+      : `选择池：${displayName(mechanic.name, mechanic.englishName)}`,
     type: 'feat',
     img: kind === 'capacity' ? 'icons/svg/anchor.svg' : 'icons/svg/dice-target.svg',
     system: {
@@ -323,7 +324,7 @@ function behaviorAuxiliaryItem(
         value: kind === 'capacity'
           ? `${mechanic.capacity!.acquire}\n${mechanic.capacity!.release}`
           : mechanic.choicePool!.options.map((option) =>
-            `${bilingualName(option.name, option.englishName)}：${option.description}`).join('\n'),
+            `${displayName(option.name, option.englishName)}：${option.description}`).join('\n'),
         chat: '',
       },
       source: '',
@@ -380,7 +381,7 @@ function appendCapacityAuxiliary(actor: any, actorName: string, mechanic: ActorB
     });
     item.system.activities[activityId] = utilityActivity({
       id: activityId,
-      name: bilingualName(operation.name, operation.englishName),
+      name: displayName(operation.name, operation.englishName),
       operation,
       description: mechanicDescription(mechanic, operation),
       effects: [],
@@ -436,7 +437,7 @@ function appendChoicePoolAuxiliary(
     });
     item.system.activities[activityId] = utilityActivity({
       id: activityId,
-      name: bilingualName(operation.name, operation.englishName),
+      name: displayName(operation.name, operation.englishName),
       operation,
       description: mechanicDescription(mechanic, operation),
       effects: [{ _id: effect._id }],
@@ -472,7 +473,7 @@ function appendChoicePoolAuxiliary(
   });
   item.system.activities[resetId] = utilityActivity({
     id: resetId,
-    name: bilingualName(resetOperation.name, resetOperation.englishName),
+    name: displayName(resetOperation.name, resetOperation.englishName),
     operation: resetOperation,
     description: mechanicDescription(mechanic, resetOperation),
     effects: [],

@@ -1,0 +1,54 @@
+{
+  "provenance": "Two deliberately synthetic, non-spellcasting stat blocks. Expected facts are stated separately from the literal sources. Local fake-provider replies only.",
+  "seeds": [
+    {
+      "id": "sentinel",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nSlam. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage.\n",
+      "creature": {
+        "identity": {"name":"Sentinel","size":"medium","creatureType":"construct"},
+        "abilities": {"str":14,"dex":10,"con":16,"int":3,"wis":10,"cha":1},
+        "attributes": {"ac":15,"hp":{"value":30,"formula":"4d8 + 12"},"movement":{"walk":30,"fly":40,"hover":true},"cr":2,"xp":450,"proficiencyBonus":2},
+        "saves":{"con":5},"skills":{"perception":2},
+        "defenses":{"resistances":["cold"],"immunities":["poison"],"vulnerabilities":[],"conditionImmunities":["poisoned"]},
+        "senses":{"darkvision":60,"passivePerception":12},"languages":{"values":["common"]}
+      }
+    },
+    {
+      "id": "dusk-watcher",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nNeedle. Ranged Weapon Attack: +4 to hit, range 30/60 ft., one creature. Hit: 4 (1d4 + 2) piercing damage.\n",
+      "creature": {
+        "identity":{"name":"Dusk Watcher","size":"small","creatureType":"fey"},
+        "abilities":{"str":8,"dex":14,"con":12,"int":11,"wis":16,"cha":13},
+        "attributes":{"ac":12,"hp":{"value":22,"formula":"5d6 + 5"},"movement":{"walk":25,"fly":30,"hover":true},"cr":0.5,"xp":100,"proficiencyBonus":2},
+        "saves":{"wis":5},"skills":{"perception":5},
+        "defenses":{"resistances":["fire"],"immunities":["cold"],"vulnerabilities":[],"conditionImmunities":["charmed"]},
+        "senses":{"darkvision":90,"passivePerception":15},"languages":{"values":["sylvan"]}
+      }
+    }
+  ],
+  "mutations": [
+    {"id":"name","category":"身份","path":["identity","name"],"value":"Other Creature"},
+    {"id":"size","category":"体型","path":["identity","size"],"value":"large"},
+    {"id":"type","category":"生物类型","path":["identity","creatureType"],"value":"fiend"},
+    {"id":"ac","category":"护甲","path":["attributes","ac"],"value":19},
+    {"id":"hp-value","category":"生命值","path":["attributes","hp","value"],"value":99},
+    {"id":"hp-formula","category":"生命骰公式","path":["attributes","hp","formula"],"value":"8d12+16"},
+    {"id":"str","category":"六项属性","path":["abilities","str"],"value":20},
+    {"id":"dex","category":"六项属性","path":["abilities","dex"],"value":18},
+    {"id":"walk","category":"移动速度","path":["attributes","movement","walk"],"value":60},
+    {"id":"fly","category":"移动方式","path":["attributes","movement","fly"],"value":120},
+    {"id":"hover","category":"移动限定","path":["attributes","movement","hover"],"value":false},
+    {"id":"saves","category":"豁免加值","path":["saves"],"value":{"con":9}},
+    {"id":"skills","category":"技能加值","path":["skills","perception"],"value":9},
+    {"id":"resistance","category":"伤害抗性","path":["defenses","resistances"],"value":["lightning"]},
+    {"id":"immunity","category":"伤害免疫","path":["defenses","immunities"],"value":["acid"]},
+    {"id":"vulnerability","category":"伤害易伤","path":["defenses","vulnerabilities"],"value":["thunder"]},
+    {"id":"condition-immunity","category":"状态免疫","path":["defenses","conditionImmunities"],"value":["frightened"]},
+    {"id":"darkvision","category":"感官距离","path":["senses","darkvision"],"value":120},
+    {"id":"passive","category":"被动察觉","path":["senses","passivePerception"],"value":19},
+    {"id":"language","category":"语言","path":["languages","values"],"value":["abyssal"]},
+    {"id":"cr","category":"挑战等级","path":["attributes","cr"],"value":5},
+    {"id":"xp","category":"经验值","path":["attributes","xp"],"value":1800},
+    {"id":"proficiency","category":"熟练加值","path":["attributes","proficiencyBonus"],"value":4}
+  ]
+}

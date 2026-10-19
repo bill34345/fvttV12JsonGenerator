@@ -1,4 +1,6 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
 import yaml from 'js-yaml';
+import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
 import type {
   AbilityKey,
   CanonicalFeature,
@@ -35,16 +37,26 @@ const CONDITION_ZH: Record<string, string> = {
   prone: '倒地', restrained: '束缚', stunned: '震慑', unconscious: '昏迷', exhausted: '力竭',
 };
 const AOE_ZH: Record<NonNullable<CanonicalFeature['aoe']>['shape'], string> = {
-  sphere: '球形', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形',
+  sphere: '球形', radius: '半径', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形',
 };
 
 export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
   const creature = ir.creature;
   const prepared = renderPreparedSpellcastingProfile(creature);
+  const castingAbilities=[...new Set((creature.spellcasting??[]).map(g=>g.ability))];
+  const castingFeatures=(activation?:CanonicalSpellcastingGroup['activationType'])=>(creature.spellcasting??[]).filter(g=>g.activationType===activation).map(renderSpellcastingFeature);
+  const biography = renderBiography(creature);
+  const sharedIds=new Set(creature.sourceResourcePools?.flatMap(pool=>pool.members.map(member=>member.featureId))??[]);
+  const featureEntry=(feature:CanonicalFeature,section:string)=>renderFeature(feature,section,sharedIds.has(feature.sourceFeatureId??''));
   const data: Record<string, unknown> = {
+    // Source-derived boundary: the complete canonical ability inventory is
+    // rendered below; biography is literal narrative, not another rule input.
+    'intake-biography-mode': 'literal-v1',
+    ...(biography ? {'intake-biography-presentation':sourceTextPresentationBoundary(biography)} : {}),
     名称: displayName(creature.identity.name, creature.identity.englishName),
     类型: 'npc',
     体型: SIZE_ZH[creature.identity.size],
+    集群个体体型: creature.identity.swarmSize ? SIZE_ZH[creature.identity.swarmSize] : undefined,
     生物类型: TYPE_ZH[creature.identity.creatureType.toLowerCase()] ?? creature.identity.creatureTypeCustom ?? creature.identity.creatureType,
     生物类型备注: creature.identity.creatureTypeCustom,
     阵营: creature.identity.alignment ? ALIGNMENT_ZH[creature.identity.alignment.toLowerCase()] ?? creature.identity.alignment : undefined,
@@ -67,21 +79,22 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     感官: renderSenses(creature),
     语言: creature.languages.values.map((value) => languageZh(value)),
     语言备注: creature.languages.custom,
-    传记: renderBiography(creature),
+    传记: biography ? composeSourceTextPresentation(biography) : undefined,
     传奇动作次数: creature.legendary?.max,
-    施法属性: prepared?.ability,
+    施法属性: prepared?.ability??(castingAbilities.length===1?castingAbilities[0]:undefined),
     施法者等级: prepared?.casterLevel,
     法术位: prepared?.slots,
     法术清单: renderSpellManifest(ir),
+    资源机制:renderSourceResourcePools(creature),
     特性: [
-      ...(creature.spellcasting ?? []).map((group) => renderSpellcastingFeature(group)),
-      ...creature.traits.map((feature) => renderFeature(feature, 'trait')),
+      ...castingFeatures(),
+      ...creature.traits.map((feature) => featureEntry(feature, 'trait')),
     ],
-    动作: creature.actions.map((feature) => renderFeature(feature, 'action')),
-    附赠动作: creature.bonusActions.map((feature) => renderFeature(feature, 'bonus')),
-    反应: creature.reactions.map((feature) => renderFeature(feature, 'reaction')),
-    传奇动作: creature.legendaryActions.map((feature) => renderFeature(feature, 'legendary')),
-    神话动作: (creature.mythicActions ?? []).map((feature) => renderFeature(feature, 'mythic')),
+    动作: [...castingFeatures('action'),...creature.actions.map((feature) => featureEntry(feature, 'action'))],
+    附赠动作: [...castingFeatures('bonus'),...creature.bonusActions.map((feature) => featureEntry(feature, 'bonus'))],
+    反应: [...castingFeatures('reaction'),...creature.reactions.map((feature) => featureEntry(feature, 'reaction'))],
+    传奇动作: creature.legendaryActions.map((feature) => featureEntry(feature, 'legendary')),
+    神话动作: (creature.mythicActions ?? []).map((feature) => featureEntry(feature, 'mythic')),
   };
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (isRecord(value) && Object.keys(value).length === 0)) {
@@ -93,7 +106,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
 }
 
 function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | undefined {
-  const groups = ir.creature.spellcasting;
+  const groups = ir.creature.spellcasting?.filter(group=>group.usageGroups.some(usage=>usage.spellRefs.length));
   if (!groups?.length) return undefined;
   return {
     schemaVersion: 1,
@@ -118,13 +131,24 @@ function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | und
           : usageGroup.usage === 'prepared-slots' ? 'prepared' : 'innate',
         ...(usageGroup.usage === '1/day-each'
           ? { uses: { value: 1, recovery: 'day', shared: false } }
-          : {}),
+          : usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?{uses:{value:usageGroup.count,recovery:'day',shared:usageGroup.usage==='daily-shared'}}:{}),
         ...(usageGroup.usage === 'prepared-slots' ? { castingLevel: usageGroup.level } : {}),
         ignoresMaterialComponents: group.componentWaivers.some((waiver) => waiver.component === 'material'),
         restrictions: ref.restrictions,
         evidence: ref.evidence,
       }))),
     })),
+  };
+}
+
+function renderSourceResourcePools(creature:CanonicalMonster):Record<string,unknown>|undefined{
+  if(!creature.sourceResourcePools?.length)return;
+  const sections={traits:'特性',actions:'动作',bonusActions:'附赠动作',reactions:'反应',legendaryActions:'传奇动作',mythicActions:'神话动作'};
+  const reference=(member:NonNullable<CanonicalMonster['sourceResourcePools']>[number]['members'][number])=>({分区:sections[member.collection],名称:renderMonsterFeatureName(creature[member.collection]![member.index]!),sourceFeatureId:member.featureId});
+  return{
+    资源:creature.sourceResourcePools.map(pool=>({ID:pool.id,名称:pool.name,载体:reference(pool.members[0]!),初始:pool.max,最大:pool.max,恢复:({day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'} as const)[pool.period],操作:[],派生:[]})),
+    消费:creature.sourceResourcePools.flatMap(pool=>pool.members.map(member=>({ID:pool.id+'-'+member.featureId,资源:pool.id,来源:reference(member),模式:'fixed',数量:member.cost}))),
+    转换:[],
   };
 }
 
@@ -174,33 +198,64 @@ function stableIdPart(value: string): string {
 }
 
 function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<string, unknown> {
+  const native=group.usageGroups.length>0,manual=group.manualGrants?.map(ref=>ref.quote).join('\n');
   return {
     ...renderFeature({
       name: group.featureName,
       englishName: group.featureEnglishName,
       description: group.description,
       activityType: 'utility',
+      ...(manual?{executionMode:native?'native-with-gm' as const:'gm-manual' as const,...(native?{nativeRuleText:group.usageGroups.flatMap(g=>g.evidence.map(ref=>ref.quote)).join('\n'),manualRemainder:manual}:{})}:{}),
+      ...(group.activationType?{activationType:group.activationType}:{}),
     }, 'trait'),
     // Source-derived machine linkage; it does not alter the visible description.
-    spellcastingFeatureKey: group.groupId,
+    ...(native?{spellcastingFeatureKey: group.groupId}:{}),
   };
 }
 
-function renderFeature(feature: CanonicalFeature, section: string): Record<string, unknown> {
-  const baseName = displayName(feature.name, feature.englishName);
+/** The YAML title and its exact GM carrier reference must use one presentation. */
+export function renderMonsterFeatureName(feature: Pick<CanonicalFeature, 'name'|'englishName'|'sourceQualifier'>): string {
+  const englishName = feature.englishName?.trim();
+  const repeatedBase = englishName
+    && englishName.slice(0, feature.name.length).toLocaleLowerCase('en-US') === feature.name.toLocaleLowerCase('en-US')
+    && /^\s*\(/u.test(englishName.slice(feature.name.length));
+  const baseName = repeatedBase ? englishName : displayName(feature.name, englishName);
   const qualifier = feature.sourceQualifier?.trim();
+  return qualifier && !baseName.includes(qualifier) ? `${baseName} ${qualifier}` : baseName;
+}
+
+function renderFeature(feature: CanonicalFeature, section: string,sharedPool=false): Record<string, unknown> {
   const result: Record<string, unknown> = {
-    名称: qualifier && !baseName.includes(`(${qualifier})`) ? `${baseName} (${qualifier})` : baseName,
+    名称: renderMonsterFeatureName(feature),
+    // Canonical names/aliases have already been rendered. Do not let the
+    // legacy bilingual YAML grammar reinterpret an authored (Prototype).
+    literalName: true,
     类型: feature.attack ? 'attack' : feature.save ? 'save' : feature.activityType ?? 'utility',
     激活: feature.activationType,
     描述: feature.description,
   };
+  if(feature.sourceFeatureId)result.sourceFeatureId=feature.sourceFeatureId;
+  if (feature.executionMode === 'gm-manual') {
+    result['执行模式'] = 'gm-manual';
+    result['类型'] = 'utility';
+  }
+  if(feature.executionMode==='native-with-gm'){
+    result['执行模式']='native-with-gm';result.nativeRuleText=feature.nativeRuleText;result.manualRemainder=feature.manualRemainder;
+    if(feature.spellUseRecords)result.spellUseRecords=feature.spellUseRecords;
+    if(feature.gmTriggeredSave)result.gmTriggeredSave=feature.gmTriggeredSave;
+    if(feature.nativeFailureStatuses)result.nativeFailureStatuses=feature.nativeFailureStatuses;
+    if(feature.sourceOperations)result.sourceOperations=feature.sourceOperations;
+    if(feature.sourceContext)result.sourceContext=feature.sourceContext;
+  }
   if (!result.激活) delete result.激活;
+  if (feature.activationCondition) result.activation = { condition: feature.activationCondition };
+  if (feature.range !== undefined) result.范围 = `${feature.range} 尺`;
+  if (feature.targetSpecial) result.targetSpecial = feature.targetSpecial;
   if (feature.attack) {
     result.攻击类型 = feature.attack.type;
     result.命中 = feature.attack.toHit;
-    const reach = feature.attack.reach ? `触及 ${feature.attack.reach} 尺` : undefined;
-    const range = feature.attack.range
+    const reach = feature.attack.reach !== undefined ? `触及 ${feature.attack.reach} 尺` : undefined;
+    const range = feature.attack.range !== undefined
       ? `${feature.attack.range}${feature.attack.longRange ? `/${feature.attack.longRange}` : ''} 尺`
       : undefined;
     result.范围 = reach && range ? `${reach}或射程 ${range}` : reach ?? range;
@@ -210,6 +265,7 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
     result.伤害 = structuredDamage.map((damage) => ({
       公式: normalizeDice(damage.formula),
       类型: canonicalDamageType(damage.type),
+      ...(damage.types?{类型选项:damage.types.map(canonicalDamageType)}:{}),
       关系: damage.relationship,
       条件: damage.condition,
     }));
@@ -218,12 +274,15 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
     result['\u6cbb\u7597'] = {
       '\u516c\u5f0f': normalizeDice(feature.healing.formula),
       '\u7c7b\u578b': feature.healing.type,
+      ...(feature.healing.target?{target:feature.healing.target}:{}),
     };
   }
   if (feature.save) {
     result.DC = feature.save.dc;
     result.属性 = ABILITY_ZH[feature.save.ability];
     result.dcSourceKind = feature.save.dcSourceKind ?? 'literal';
+    if(feature.save.outcome)result.saveOutcome=feature.save.outcome;
+    if (feature.save.condition) result.豁免条件 = feature.save.condition;
   }
   if (feature.aoe) result.AoE = { 形状: AOE_ZH[feature.aoe.shape], 范围: feature.aoe.radius };
   if (feature.appliedConditions?.length) {
@@ -233,6 +292,8 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
         类型: type,
         描述: feature.description,
         持续: applied.duration,
+        逃脱DC: applied.escapeDc,
+        阶段: applied.staged,
       }));
     });
     result.失败效果 = feature.appliedConditions.map((applied) => ({
@@ -240,23 +301,27 @@ function renderFeature(feature: CanonicalFeature, section: string): Record<strin
     }));
   }
   if (feature.recharge) result.充能 = `${feature.recharge[0]}-${feature.recharge[1]}`;
-  if (feature.uses) result.使用次数 = {max:feature.uses.max,period:feature.uses.period};
+  if (feature.uses&&!sharedPool) result.使用次数 = {max:feature.uses.max,period:feature.uses.period};
   if (feature.activationCondition && /concentration|专注/iu.test(feature.activationCondition)) result['\u9700\u4e13\u6ce8'] = true;
   if ((section === 'legendary' || section === 'mythic') && feature.legendaryCost) result.传奇动作消耗 = feature.legendaryCost;
   return result;
 }
 
-function renderBiography(creature: CanonicalMonster): string | undefined {
+function renderBiography(creature: CanonicalMonster): SourceTextPresentation | undefined {
   const parts = creature.biography?.trim() ? [creature.biography.trim()] : [];
-  if (creature.legendary?.preamble.trim()) parts.push(creature.legendary.preamble.trim());
+  const programNotes: string[] = [];
+  if (creature.legendary?.preamble.trim()&&!creature.biography?.includes(creature.legendary.preamble.trim())) parts.push(creature.legendary.preamble.trim());
   const acNote = creature.attributes.acNote?.trim()
     || (creature.attributes.acKind === 'natural' ? '天生护甲' : '');
   if (acNote) {
     const note = acNote;
     const literalNote = /^[（(]/u.test(note) ? note : `（${note}）`;
-    parts.push(`护甲等级：${creature.attributes.ac}${literalNote}`);
+    programNotes.push(`护甲等级：${creature.attributes.ac}${literalNote}`);
   }
-  return parts.length > 0 ? parts.join('\n\n') : undefined;
+  if (creature.identity.sourceSize) {
+    programNotes.push(`原文尺寸：${creature.identity.sourceSize}。角色卡使用最大原生尺寸 gargantuan（超巨型）；尺寸相关规则由 GM 手动判断。`);
+  }
+  return parts.length || programNotes.length ? {version:1, sourceText:parts.join('\n\n'), programNotes} : undefined;
 }
 
 function canonicalDamageType(value: string): string {
@@ -288,14 +353,16 @@ function mapRecord(record: Partial<Record<AbilityKey, number>>, labels: Record<A
   return Object.fromEntries(Object.entries(record).map(([key, value]) => [labels[key as AbilityKey], value as number]));
 }
 
-function mapSkills(skills: Record<string, number>): Record<string, number> {
+function mapSkills(skills: Record<string, number>): Record<string, { 总加值: number }> {
   const names: Record<string, string> = {
     deception: '欺瞒', intimidation: '威吓', perception: '察觉', stealth: '隐匿', athletics: '运动',
-    acrobatics: '体操', insight: '洞悉', investigation: '调查', arcana: '奥秘', history: '历史',
+    acrobatics: '特技', insight: '洞悉', investigation: '调查', arcana: '奥秘', history: '历史',
     nature: '自然', religion: '宗教', survival: '求生', medicine: '医药', persuasion: '游说',
-    performance: '表演', 'sleight-of-hand': '巧手', animalHandling: '驯兽',
+    performance: '表演', 'sleight-of-hand': '巧手', sleightofhand: '巧手', animalHandling: '驯兽', animalhandling: '驯兽',
   };
-  return Object.fromEntries(Object.entries(skills).map(([key, value]) => [names[key] ?? key, value]));
+  // Intake stores source TOTAL modifiers. Bare 1/2 in legacy YAML means
+  // proficiency/expertise, so keep this source-derived meaning explicit.
+  return Object.fromEntries(Object.entries(skills).map(([key, value]) => [names[key] ?? names[key.toLowerCase()] ?? key, { 总加值: value }]));
 }
 
 function mapList(values: string[], labels: Record<string, string>): string[] {
@@ -306,9 +373,7 @@ function languageZh(value: string): string {
   return ({ common: '通用语', dwarvish: '矮人语', elvish: '精灵语', giant: '巨人语', goblin: '地精语' } as Record<string, string>)[value.toLowerCase()] ?? value;
 }
 
-function displayName(name: string, englishName?: string): string {
-  return englishName && !name.toLowerCase().includes(englishName.toLowerCase()) ? `${name} (${englishName})` : name;
-}
+
 
 function normalizeDice(value: string): string {
   return value.replace(/\s+/g, ' ').replace(/\s*([+-])\s*/g, ' $1 ').trim();

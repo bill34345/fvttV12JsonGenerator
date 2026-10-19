@@ -99,5 +99,6 @@
   "FVTTJSONSPELL.Finding.MALFORMED_PREFLIGHT_INPUT": "预检元数据格式不正确。",
   "FVTTJSONSPELL.Finding.INVALID_MANUAL_DECISION_TARGET": "人工决定指向了未声明的冲突。",
   "FVTTJSONSPELL.Finding.DUPLICATE_PREFLIGHT_KEY": "预检中包含重复法术引用。",
-  "FVTTJSONSPELL.Finding.UNKNOWN_PREFLIGHT_KEY": "预检中包含未知法术引用。"
+  "FVTTJSONSPELL.Finding.UNKNOWN_PREFLIGHT_KEY": "预检中包含未知法术引用。",
+  "FVTTJSONSPELL.Notification.RecoveryRequired": "法术水合仍有未解决的恢复数据。请保留并查看报告，经归属核对后再受控恢复；普通重新解析和自动重试已阻止。"
 }

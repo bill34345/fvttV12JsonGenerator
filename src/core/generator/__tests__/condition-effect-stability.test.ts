@@ -167,7 +167,7 @@ describe('generated condition Effect IDs', () => {
     expect(new Set(effectIds).size).toBe(2);
     for (const id of effectIds) expect(id).toMatch(/^[a-f0-9]{16}$/u);
     for (const effect of effects) {
-      expect(effect.name).toBe('Jinxed (Jinxed)');
+      expect(effect.name).toBe('Jinxed');
       expect(effect.flags?.['fvtt-custom-conditions']?.condition?.params).toEqual({ formula: '1d6' });
     }
 

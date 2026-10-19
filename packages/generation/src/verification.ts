@@ -2,6 +2,8 @@ import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
+import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses } from './actor-effects';
+import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import {
   WEAPON_PROPERTIES_MODULE_ID,
   parseWeaponConfiguration,
@@ -56,7 +58,7 @@ export function verifyGeneratedDocument(
 
   for (const [documentIndex, document] of documents.entries()) {
     verifyIdsAndLinks(document, documentIndex, diagnostics);
-    verifyDnd5eDocumentSchema(document, documentIndex, diagnostics);
+    verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target);
   }
   if (options.canonical.kind === 'actor') {
     verifyActorResourceLinks(options.output, diagnostics);
@@ -94,6 +96,7 @@ function verifyDnd5eDocumentSchema(
   document: any,
   documentIndex: number,
   diagnostics: GenerationDiagnostic[],
+  target: FvttTargetVersion,
 ): void {
   if (document?.system?.activation !== undefined) {
     diagnostics.push(error(
@@ -107,6 +110,9 @@ function verifyDnd5eDocumentSchema(
 
   const activities = document?.system?.activities ?? {};
   for (const [key, activity] of Object.entries(activities) as Array<[string, any]>) {
+    if (target === '14' && activity?.type === 'attack' && (!['melee', 'ranged'].includes(activity.attack?.type?.value) || !['weapon', 'spell'].includes(activity.attack?.type?.classification))) {
+      diagnostics.push(error('GEN_V14_ATTACK_TYPE_INVALID', 'semantic', `documents/${documentIndex}/system/activities/${key}/attack/type`, 'V14 Attack requires native melee/ranged and weapon/spell, not a legacy actionType enum.'));
+    }
     if (!/^[A-Za-z0-9]{16}$/.test(key) || activity?._id !== key) {
       diagnostics.push(error(
         'GEN_INVALID_ACTIVITY_ID',
@@ -438,12 +444,18 @@ function verifyMechanicCoverage(
       const primary = activities[0];
       const costs = primary?.consumption?.targets ?? [];
       const expectedPeriod = mapStructuredUsesPeriod(structuredUses.period);
+      const value=mechanic.value as {executionMode?:string;sourceText?:string};
+      const marker=document?.flags?.fvttJsonGenerator?.manualRule;
+      const manual=value.executionMode==='gm-manual'&&marker?.version===1&&marker.mode==='gm-manual'
+        &&typeof marker.logicalPath==='string'&&marker.logicalPath.startsWith(mechanic.path.replace(/^actor\//u,'').replace(/\/uses$/u,'/'))
+        &&marker.sourceText===value.sourceText&&activities.length===1&&primary?.type==='utility'
+        &&!primary.damage&&!primary.attack&&!primary.save&&!(primary.effects?.length)&&!(document.effects?.length)&&costs.length===0;
       if (String(uses?.max) === String(structuredUses.max)
         && uses?.recovery?.length === 1
         && uses.recovery[0]?.period === expectedPeriod
         && uses.recovery[0]?.type === 'recoverAll'
-        && primary?.consumption?.spellSlot === false
-        && costs.length === 1 && costs[0]?.type === 'itemUses' && costs[0]?.target === '' && String(costs[0]?.value) === '1') {
+        && (manual || primary?.consumption?.spellSlot === false
+        && costs.length === 1 && costs[0]?.type === 'itemUses' && costs[0]?.target === '' && String(costs[0]?.value) === '1')) {
         outputPaths.push(`documents/${documentIndex}/system/uses`);
       }
       continue;
@@ -465,6 +477,12 @@ function verifyMechanicCoverage(
         outputPaths.push(`documents/${documentIndex}/system/activities/${activityIndex}`);
         if (target === '14' && mechanic.kind === 'attack') {
           verifyV14DynamicWeaponDamage(mechanic, activity, document, diagnostics);
+          const expectedType = (mechanic.value as { type?: string })?.type;
+          if (expectedType && /^(?:mwak|rwak|msak|rsak)$/u.test(expectedType)
+            && (activities.filter(entry => entry.type === 'attack').length === 1 && activity.attack?.type?.value !== (expectedType.startsWith('r') ? 'ranged' : 'melee')
+              || activity.attack?.type?.classification !== (expectedType.endsWith('sak') ? 'spell' : 'weapon'))) {
+            diagnostics.push(error('GEN_V14_ATTACK_TYPE_MISMATCH', 'semantic', mechanic.path, 'Native Attack mode/classification differs from its source attack type.'));
+          }
         }
         if (mechanic.kind === 'save') {
           verifySaveOutcome(mechanic, activity, diagnostics);
@@ -478,8 +496,32 @@ function verifyMechanicCoverage(
     ) {
       outputPaths.push(`documents/${documentIndex}/system/damage/base`);
     }
-    if (mechanic.kind === 'effect' && (document?.effects?.length ?? 0) > 0) {
-      outputPaths.push(`documents/${documentIndex}/effects`);
+    if (mechanic.kind === 'effect') {
+      const value = mechanic.value as { type?: string; duration?: string; sourceText?: string } | undefined;
+      const statuses = value?.type ? extractExplicitlyInflictedStatuses(`The target is ${value.type}.`) : [];
+      const source = value?.sourceText;
+      const applies = target === '14' && effectProfile === 'core' && statuses.length > 0 && typeof source === 'string' && activities.length > 0;
+      const marker = document?.flags?.fvttJsonGenerator?.conditionLifecycle;
+      const effects = document?.effects ?? [];
+      const lifecycle = statuses.map(status => sourceConditionLifecycle(source ?? '', status, value?.duration));
+      if (applies && lifecycle.some(entry => entry.mode === 'gm') && !effects.some((effect: any) => statuses.includes(readConditionInstance(effect)?.conditionId ?? ''))) {
+        const retained = marker?.version === 1 && marker.mode === 'gm'
+          && String(marker.sourceText).replace(/\s/gu, '') === source.replace(/\s/gu, '')
+          && statuses.every(status => marker.statuses?.includes(status))
+          && !effects.some((effect: any) => effect.statuses?.some((status: string) => statuses.includes(status)))
+          && String(document.system?.description?.value).includes('GM')
+          && String(document.system?.description?.value).replace(/<[^>]*>/gu, '').replace(/\s/gu, '').includes(source.replace(/\s/gu, ''));
+        if (retained) outputPaths.push(`documents/${documentIndex}/system/activities/${allActivities.indexOf(activities[0])}`);
+        else diagnostics.push(error('GEN_CONDITION_LIFECYCLE_INVALID', 'semantic', mechanic.path, 'Source lifecycle requires the complete GM-only rule with no executable status Effect.'));
+      } else if ((document?.effects?.length ?? 0) > 0) {
+        if (applies) for (const [index, status] of statuses.entries()) {
+          const expected = lifecycle[index]?.duration;
+          if (expected && effects.some((effect: any) => effect.statuses?.includes(status) && (effect.duration?.seconds !== (expected.seconds ?? null) || effect.duration?.rounds !== (expected.rounds ?? null) || effect.duration?.turns != null))) {
+            diagnostics.push(error('GEN_CONDITION_DURATION_INVALID', 'semantic', mechanic.path, 'Native status duration differs from its complete source interval.'));
+          }
+        }
+        outputPaths.push(`documents/${documentIndex}/effects`);
+      }
     }
     if (mechanic.kind === 'uses' && document?.system?.uses) {
       outputPaths.push(`documents/${documentIndex}/system/uses`);

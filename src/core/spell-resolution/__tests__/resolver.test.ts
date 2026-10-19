@@ -5,6 +5,7 @@ import {
   DEFAULT_SPELL_RESOLUTION_CONFIGURATION,
   logicalSpellRefKey,
   resolveSpellRef,
+  isValidManualReviewCandidate,
   type PortableSpellRef,
   type SavedSpellMapping,
   type SpellCandidateMetadata,
@@ -78,6 +79,86 @@ describe('deterministic destination spell resolver', () => {
 
     expect(result.status).toBe('missing');
     expect(result.trace.map((entry) => entry.code)).toContain('NO_EXACT_MATCH');
+  });
+
+  test('matches complete Chinese identifiers only through candidate bilingual names whose full English side proves their identifier', () => {
+    for (const [chinese, english, identifier, name] of [
+      ['火焰护盾', 'Flame Ward', 'flame-ward', '火焰护盾 Flame Ward'],
+      ['幽影通道', 'Shadow Passage', 'shadow-passage', '幽影通道Shadow Passage'],
+      ['星光帷幕', 'Stellar Veil', 'stellar-veil', '星光帷幕（Stellar Veil）'],
+    ]) {
+      const selected = candidate({ name, identifier });
+      const result = resolve([selected], { ref: ref({ identifier: chinese, englishName: undefined, aliases: [] }) });
+      expect(result.status).toBe('resolved');
+      expect(result.status === 'resolved' && result.selected.uuid).toBe(selected.uuid);
+      expect(resolve([selected], { ref: ref({ identifier, englishName: english, aliases: [] }) }).status).toBe('resolved');
+    }
+  });
+
+  test('never guesses bilingual aliases from partial names, unproved English, or ref display fields', () => {
+    const chinese = ref({ identifier: '火焰护盾', englishName: undefined, aliases: [] });
+    for (const source of [
+      candidate({ name: '火焰护盾 Flame Ward', identifier: undefined }),
+      candidate({ name: '火焰护盾 Flame Ward', identifier: 'shadow-ward' }),
+      candidate({ name: '火焰护盾 Greater Flame Ward', identifier: 'flame-ward' }),
+      candidate({ name: '火焰护盾 Flame Ward Extra', identifier: 'flame-ward' }),
+      candidate({ name: '火焰护盾 or Shadow Ward Flame Ward', identifier: 'flame-ward' }),
+      candidate({ name: '高等火焰护盾 Flame Ward', identifier: 'flame-ward' }),
+    ]) expect(resolve([source], { ref: chinese }).status).not.toBe('resolved');
+    const selected = candidate({ name: '火焰护盾 Flame Ward', identifier: 'flame-ward' });
+    expect(resolve([selected], { ref: ref({ refId: '火焰护盾', identifier: '未知法术', englishName: undefined, aliases: [], originalName: '火焰护盾', chineseName: '火焰护盾' }) }).status).not.toBe('resolved');
+    expect(resolve([selected], { ref: ref({ identifier: '火焰护盾', englishName: 'Shadow Ward', aliases: [] }) }).status).not.toBe('resolved');
+  });
+
+  test('keeps explicit English identity ahead of a colliding localized display name', () => {
+    const selected = candidate({ name: 'Flame Ward', identifier: 'flame-ward', packageId: 'other', uuid: 'Compendium.other.spells.Item.flamewardenglish' });
+    const translated = candidate({ name: '火焰护盾 Shadow Ward', identifier: 'shadow-ward' });
+    const result = resolve([translated, selected], { ref: ref({ identifier: '火焰护盾', englishName: 'Flame Ward', aliases: [] }) });
+    expect(result.status === 'resolved' && result.selected.uuid).toBe(selected.uuid);
+    expect(resolve([candidate({ name: 'Unrelated', identifier: 'unrelated' })]).status).not.toBe('resolved');
+  });
+
+  test('confirms Chinese through indexed bilingual metadata then reuses English lookup and current source priority',()=>{
+    const proof=candidate({name:'火焰护盾 Flame Ward',identifier:'flame-ward',rules:'2014',packageId:'legacy',uuid:'Compendium.legacy.spells.Item.verifiedEnglish1'});
+    const current=candidate({name:'Flame Ward',identifier:'flame-ward'});
+    const result=resolve([proof,current],{ref:ref({identifier:'火焰护盾',englishName:undefined,aliases:[]})});
+    expect(result.status==='resolved'&&result.selected.uuid).toBe(current.uuid);
+    expect(result.trace.map(entry=>entry.code)).toContain('CONFIRM_ENGLISH_IDENTITY');
+    const sourceRef=ref({identifier:'火焰护盾',englishName:undefined,aliases:[]}),candidates=[proof,current];
+    const savedMapping:SavedSpellMapping={logicalRefKey:logicalSpellRefKey('caster-v1','prepared-spells',sourceRef.refId),selectedUuid:current.uuid,rules:'2024',sourceInventoryHash:hashSourceInventoryMetadata(candidates),candidateMetadataHash:hashSourceInventoryMetadata(candidates),resolutionConfigHash:hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),selectionOrigin:'automatic-2024'};
+    const reused=resolve(candidates,{ref:sourceRef,savedMapping});
+    expect(reused.status==='resolved'&&reused.selected.uuid).toBe(current.uuid);
+    expect(reused.trace.map(entry=>entry.code)).toContain('REUSE_SAVED_MAPPING');
+    expect(isValidManualReviewCandidate(current,candidates,sourceRef)).toBe(true);
+  });
+  test('cannot choose between two English identities with the same verified Chinese name',()=>{
+    const result=resolve([
+      candidate({name:'火焰护盾 Flame Ward',identifier:'flame-ward'}),
+      candidate({name:'火焰护盾 Shadow Ward',identifier:'shadow-ward',rules:'2014',packageId:'legacy',uuid:'Compendium.legacy.spells.Item.differentEnglish1'}),
+    ],{ref:ref({identifier:'火焰护盾',englishName:undefined,aliases:[]})});
+    expect(result.status).toBe('needs_review');expect(result.findings.some(finding=>finding.code==='AMBIGUOUS_EXACT_MATCH')).toBe(true);
+  });
+  test('rechecks source priority for an old automatic Chinese mapping after confirming its English identity',()=>{
+    const proof=candidate({name:'火焰护盾 Flame Ward',identifier:'flame-ward',packageId:'other',uuid:'Compendium.other.spells.Item.oldChineseChoice'});
+    const preferred=candidate({name:'Flame Ward',identifier:'flame-ward'}),candidates=[proof,preferred],sourceRef=ref({identifier:'火焰护盾',englishName:undefined,aliases:[]});
+    const savedMapping:SavedSpellMapping={logicalRefKey:logicalSpellRefKey('caster-v1','prepared-spells',sourceRef.refId),selectedUuid:proof.uuid,rules:'2024',sourceInventoryHash:hashSourceInventoryMetadata(candidates),candidateMetadataHash:hashSourceInventoryMetadata(candidates),resolutionConfigHash:hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),selectionOrigin:'automatic-2024'};
+    const result=resolve(candidates,{ref:sourceRef,savedMapping});
+    expect(result.status).toBe('needs_review');expect(result.findings.some(finding=>finding.code==='INVALID_SAVED_MAPPING')).toBe(true);
+  });
+
+  test('localized exact candidates retain rules, source, fact, ambiguity and saved fallback guards', () => {
+    const chinese = ref({ identifier: '火焰护盾', englishName: undefined, aliases: [] });
+    const modern = candidate({ name: '火焰护盾 Flame Ward', identifier: 'flame-ward' });
+    const legacy = candidate({ name: '火焰护盾', identifier: 'flame-ward', rules: '2014', packageId: 'legacy', uuid: 'Compendium.legacy.spells.Item.flamewardlegacy1' });
+    const result = resolve([legacy, modern], { ref: chinese });
+    expect(result.status === 'resolved' && result.origin).toBe('automatic-2024');
+    expect(resolve([modern, { ...modern, id: 'duplicate', uuid: 'Compendium.dnd-players-handbook.spells.Item.flamewardsecond1' }], { ref: chinese }).findings.some(finding => finding.code === 'AMBIGUOUS_EXACT_MATCH')).toBe(true);
+    expect(resolve([{ ...modern, rules: undefined }], { ref: chinese }).findings.some(finding => finding.code === 'MISSING_RULES_METADATA')).toBe(true);
+    expect(resolve([{ ...modern, level: 4 }], { ref: chinese }).findings.some(finding => finding.code === 'CONTRADICTORY_2024_CANDIDATE')).toBe(true);
+    expect(resolve([modern], { ref: { ...chinese, sourceBookHint: 'Other Book' } }).findings.some(finding => finding.code === 'SOURCE_BOOK_HINT_UNSATISFIED')).toBe(true);
+    const candidates = [legacy, modern];
+    const savedMapping: SavedSpellMapping = { logicalRefKey: logicalSpellRefKey('caster-v1', 'prepared-spells', chinese.refId), selectedUuid: legacy.uuid, rules: '2014', sourceInventoryHash: hashSourceInventoryMetadata(candidates), candidateMetadataHash: hashSourceInventoryMetadata(candidates), resolutionConfigHash: hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION), selectionOrigin: 'fallback-2014' };
+    expect(resolve(candidates, { ref: chinese, savedMapping }).findings.some(finding => finding.code === 'INVALID_SAVED_MAPPING')).toBe(true);
   });
 
   test('prefers explicit source book, then PHB, then dnd5e.spells24', () => {

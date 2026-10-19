@@ -1,0 +1,7 @@
+{
+  "attack": "Barbed Spear (3/Day). Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 7 (1d8+3) piercing damage plus 3 (1d6) fire damage. The target must make a DC 14 Constitution saving throw. Failure: The target cannot recover until its next turn.",
+  "choice": "Memory Flare (Recharge 5-6). Each creature in a 30-foot cone must make a DC 16 Intelligence or Wisdom saving throw (the target chooses). A creature takes 7 (2d6) psychic damage on a failed save, or half as much damage on a successful one. Unusual memories are adjudicated by the GM.",
+  "conditional": "Cold Touch. Melee Spell Attack: +5 to hit, reach 5 ft., one creature. Hit: 3 (1d6) radiant damage. If the target is prone, it takes 7 (2d6) cold damage. Its appearance changes until dawn.",
+  "fixed": "Dull Tap. Melee Weapon Attack: +4 to hit, reach 0 ft., one creature. Hit: 1 bludgeoning damage.",
+  "unrelated": "Quiet Gaze. The creature observes nearby objects and makes no attack."
+}

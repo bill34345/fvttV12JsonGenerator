@@ -67,7 +67,7 @@ describe('shared Item generation workflow', () => {
     expect(artifacts).toHaveLength(2);
     expect(artifacts.map((entry) => entry.item.system.uses.max)).toEqual(['2', '4']);
     expect(artifacts[0]?.item.name).toBe('Source Staged Shield');
-    expect(artifacts[1]?.item.name).toBe('Source Staged Shield (Awakened)');
+    expect(artifacts[1]?.item.name).toBe('Source Staged Shield Awakened');
     expect(artifacts.map((entry) => entry.item.flags?.fvttJsonGenerator?.stage.name))
       .toEqual(['Dormant', 'Awakened']);
     expect(JSON.stringify(artifacts)).not.toContain('"max":"3"');

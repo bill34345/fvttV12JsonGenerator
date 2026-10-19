@@ -46,15 +46,18 @@ function readyPlan(
   actor?: TransactionActor,
   decision?: 'keep' | 'overwrite',
   lightId = 'aaaaaaaaaaaaaaaa',
+  inputManifest = manifest(),
 ): SpellHydrationPlan {
   const candidates: SpellCandidateMetadata[] = [
-    { id: lightId, uuid: `Compendium.dnd5e.spells24.Item.${lightId}`, packageId: 'dnd5e', packId: 'spells24', name: 'Light', identifier: 'light', rules: '2024' },
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.identifier === 'disguise-self'
+      ? { id: 'phbsplDisguiseSe', uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe', packageId: 'dnd-players-handbook', packId: 'spells', name: 'Disguise Self', identifier: 'disguise-self', rules: '2024' }
+      : { id: lightId, uuid: `Compendium.dnd5e.spells24.Item.${lightId}`, packageId: 'dnd5e', packId: 'spells24', name: 'Light', identifier: 'light', rules: '2024' },
     { id: 'bbbbbbbbbbbbbbbb', uuid: 'Compendium.dnd5e.spells24.Item.bbbbbbbbbbbbbbbb', packageId: 'dnd5e', packId: 'spells24', name: 'Darkness', identifier: 'darkness', rules: '2024' },
   ];
   const currentManagedProjection = actor ? projectCurrentManagedContent(actor, manifest().manifestId) : [];
   const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
   const result = planSpellHydration({
-    manifest: manifest(), candidates, sourceInventoryHash: (lightId === 'aaaaaaaaaaaaaaaa' ? 'd' : 'e').repeat(64),
+    manifest: inputManifest, candidates, sourceInventoryHash: (lightId === 'aaaaaaaaaaaaaaaa' ? 'd' : 'e').repeat(64),
     currentManagedProjection: currentManagedProjection.map((entry) => entry.logicalRefKey === lightKey && decision
       ? { ...entry, manualConflict: true }
       : entry),
@@ -260,6 +263,40 @@ describe('Actor-local atomic hydration transaction', () => {
     expect(actor.fullProjection()).toEqual(before);
     expect(actor.rawItemProjection()).toEqual(rawItemsBefore);
     expect(actor.foreignProjection()).toEqual(foreignBefore);
+  });
+
+  test.each([false, true])('an adapted source effect duration remains atomic on later failure, native auto-cache=%s', async autoCache => {
+    const actor = new TransactionActor(autoCache); actor.withDurationEffect = true;
+    const inputManifest = manifest();
+    Object.assign(inputManifest.spellcastingGroups[0]!.spellRefs[0]!, { identifier: 'disguise-self', originalName: 'Disguise Self', englishName: 'Disguise Self' });
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions = [{ kind: 'casting', text: '持续24小时', value: 24, evidence: [{ start: 0, end: 6, quote: '持续24小时' }] }];
+    actor.flags[RESOLVER_MODULE_ID].spellManifest = inputManifest;
+    const before = actor.fullProjection(), rawBefore = actor.rawItemProjection();
+    let sawAdaptedCache = false;
+    await expect(executeHydrationTransaction({
+      actor, manifest: inputManifest, plan: readyPlan(actor, undefined, undefined, inputManifest),
+      failureInjector(stage) {
+        if (stage !== 'after-partial-cache-creation') return;
+        const spell = actor.items.find(item => item.type === 'spell');
+        expect(spell?.effects.find((effect: any) => effect._id === 'SrIb7dbaZs5F4zi9')?.duration.value).toBe(86400);
+        sawAdaptedCache = true;
+        throw Error('fail after source duration adaptation');
+      },
+    })).rejects.toMatchObject({ rollbackSucceeded: true, residualDifferences: [] });
+    expect(sawAdaptedCache).toBe(true);
+    expect(actor.fullProjection()).toEqual(before); expect(actor.rawItemProjection()).toEqual(rawBefore);
+  });
+
+  test.each(['before', 'after'] as const)('source effect duration public write rejection %s commit restores the complete prior Actor', async failure => {
+    const actor = new TransactionActor(true); actor.withDurationEffect = true; actor.durationWriteFailure = failure;
+    const inputManifest = manifest();
+    Object.assign(inputManifest.spellcastingGroups[0]!.spellRefs[0]!, { identifier: 'disguise-self', originalName: 'Disguise Self', englishName: 'Disguise Self' });
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions = [{ kind: 'casting', text: '持续24小时', value: 24, evidence: [{ start: 0, end: 6, quote: '持续24小时' }] }];
+    actor.flags[RESOLVER_MODULE_ID].spellManifest = inputManifest;
+    const before = actor.fullProjection(), rawBefore = actor.rawItemProjection();
+    await expect(executeHydrationTransaction({ actor, manifest: inputManifest, plan: readyPlan(actor, undefined, undefined, inputManifest) }))
+      .rejects.toMatchObject({ rollbackSucceeded: true, residualDifferences: [] });
+    expect(actor.fullProjection()).toEqual(before); expect(actor.rawItemProjection()).toEqual(rawBefore);
   });
 
   test('waits for delayed public createItem completion while restoring snapshot Activities during rollback', async () => {
@@ -727,6 +764,8 @@ class TransactionActor {
   stripNextSpellOwnership = false;
   lifecycleHooks?: TransactionHookBus;
   nativeCreateDelayMs = 0;
+  withDurationEffect = false;
+  durationWriteFailure?: 'before' | 'after';
   private activeMutations = 0;
   private nativeCacheSequence = 0;
   constructor(private readonly autoCache = false, private readonly nativeEffectLayout: 'legacy' | 'system' = 'legacy') {
@@ -929,8 +968,10 @@ class TransactionActor {
             refId: source.flags[RESOLVER_MODULE_ID].refId,
             featureId: feature.id,
           }, 'spell'),
-          name: source.name, type: 'spell', system: { sourceItem: 'feat:innate-feature', uses: { spent: 0 } },
-          effects: [actor.nativeEffectLayout === 'system'
+          name: source.name, type: 'spell', system: { sourceItem: 'feat:innate-feature', uses: { spent: 0 }, ...(actor.withDurationEffect ? {
+            identifier: 'disguise-self', duration: { value: '1', units: 'hour' }, activities: { utility: { type: 'utility', effects: [{ _id: 'SrIb7dbaZs5F4zi9' }] } },
+          } : {}) },
+          effects: [...(actor.withDurationEffect ? [{ _id: 'SrIb7dbaZs5F4zi9', type: 'base', transfer: false, duration: { value: 3600, units: 'seconds' } }] : []), actor.nativeEffectLayout === 'system'
             ? { _id: 'dnd5espellchang', type: 'enchantment', system: { origin: { activity: activity.relativeUUID }, changes: [] }, transfer: true }
             : { _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] }],
           flags: { dnd5e: { cachedFor: activity.relativeUUID } }, _stats: { compendiumSource: source.spell.uuid },
@@ -947,6 +988,7 @@ class TransactionActor {
   }
 
   private refreshSourcedItems() {
+    for (const item of this.items) if (item.type === 'spell') exposeFakeEffectApi(this, item);
     const map = new Map<string, any[]>();
     for (const item of this.items) {
       const uuid = item._stats?.compendiumSource;
@@ -1028,3 +1070,19 @@ function canonicalPlan(plan: SpellHydrationPlan): string {
 
 expect(hashManagedProjection({ uses: { spent: 0, max: '1' } }))
   .toBe(hashManagedProjection({ uses: { spent: 1, max: '1' } }));
+
+
+function exposeFakeEffectApi(actor: any, item: any) {
+  Object.defineProperty(item, 'updateEmbeddedDocuments', { configurable: true, value: async (type: string, updates: any[]) => {
+    if (type !== 'ActiveEffect') throw Error('Expected targeted ActiveEffect update');
+    actor.calls.push(['targetedEffectUpdate', item.id, structuredClone(updates)]);
+    if (actor.durationWriteFailure === 'before') { actor.durationWriteFailure = undefined; throw Error('duration write rejected before commit'); }
+    for (const update of updates) {
+      const effect = item.effects.find((entry: any) => entry._id === update._id);
+      if (!effect || Object.keys(update).some(key => !['_id', 'duration.value'].includes(key))) throw Error('Unexpected targeted effect update');
+      effect.duration.value = update['duration.value'];
+    }
+    if (actor.durationWriteFailure === 'after') { actor.durationWriteFailure = undefined; throw Error('duration write rejected after commit'); }
+    return updates;
+  } });
+}

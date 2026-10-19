@@ -1,0 +1,77 @@
+{
+  "provenance": {
+    "reportSha256": "ef05e4d212ed3d1331770dc7e3722b3afaadbcf412108abdd98c9d564f0c1281",
+    "modelResponseSha256": "250db3e34bfe06bf89b8381970f6abce56d25fcc77fcd3c5d3903dea679e2142",
+    "normalUiGenerationAttempts": 1,
+    "failure": "UNSUPPORTED_STATIC_FACT identity/creatureType",
+    "modelCreatureTypeCorrect": true,
+    "noManualChanges": true
+  },
+  "source": "**吉斯泽莱开悟者 Githzerai Enlightened**\n\n吉斯泽莱人花费大量的精力进行冥想，以此超越形体的局限，领悟现实的本质。完成了进阶修行的泽锡修士会被称为开悟者。\n\n**吉斯泽莱开悟者Githzerai Enlightened**\n中型类人（吉斯人），任意阵营\n护甲等级：18（灵能护体）\n生命值：112（15d8+45）\n速度：40 尺\n力量14（+2） 敏捷19（+4） 体质16（+3）\n智力17（+3） 感知19（+4） 魅力13（+1）\n豁免：力量+6，敏捷+8，智力+7，感知+8\n技能：奥秘+7，洞悉+8，察觉+8\n感官：被动察觉18\n语言：吉斯语\n挑战等级：10（5,900 XP） 熟练加值+4\n\n**灵能护体Psychic Defense。**当开悟者未着装任何护甲也未持用任何盾牌时，它的AC将加上它的感知调整值。\n**动作Actions**\n**多重攻击Multiattack。**开悟者发动三次徒手打击。\n**徒手打击Unarmed Strike。**近战武器攻击：命中+8，触及5 尺，单一目标。命中：13（2d8+4）的钝击伤害外加18（4d8）的心灵伤害。\n**时光打击Temporal Strike（充能6）。**近战武器攻击：命中+8，触及5 \r\n尺，单一生物。命中：13（2d8+4）的钝击伤害外加52（8d12）的心灵伤害。该目标须进行一次DC \r\n16的感知豁免，失败则其向未来穿越1轮。穿越时光的目标在效应持续时间内消失。当效应终止时，目标会重新出现在其离开时的位置，若该位置已被占据，则它出现在最近的未被占据的位置上。\n**施法Spellcasting（灵能Psionics）。**开悟者施展以下法术之一，使用感知作为施法属性且不需要法术成分（法术豁免DC \r\n16）：\n随意：法师之手mage hand（生成隐形的手）\n每项3/日：识破隐形see invisibility\n每项1/日：位面转移plane shift，传送术teleport\n**反应Reactions**\n**轻身坠Slow Fall。**当开悟者要承受坠地伤害时，其可以使用反应将伤害减少50点。\n",
+  "candidate": {
+    "id": "githzerai-enlightened",
+    "label": "吉斯泽莱开悟者 Githzerai Enlightened",
+    "start": 0,
+    "end": 917,
+    "quote": "**吉斯泽莱开悟者 Githzerai Enlightened**\n\n吉斯泽莱人花费大量的精力进行冥想，以此超越形体的局限，领悟现实的本质。完成了进阶修行的泽锡修士会被称为开悟者。\n\n**吉斯泽莱开悟者Githzerai Enlightened**\n中型类人（吉斯人），任意阵营\n护甲等级：18（灵能护体）\n生命值：112（15d8+45）\n速度：40 尺\n力量14（+2） 敏捷19（+4） 体质16（+3）\n智力17（+3） 感知19（+4） 魅力13（+1）\n豁免：力量+6，敏捷+8，智力+7，感知+8\n技能：奥秘+7，洞悉+8，察觉+8\n感官：被动察觉18\n语言：吉斯语\n挑战等级：10（5,900 XP） 熟练加值+4\n\n**灵能护体Psychic Defense。**当开悟者未着装任何护甲也未持用任何盾牌时，它的AC将加上它的感知调整值。\n**动作Actions**\n**多重攻击Multiattack。**开悟者发动三次徒手打击。\n**徒手打击Unarmed Strike。**近战武器攻击：命中+8，触及5 尺，单一目标。命中：13（2d8+4）的钝击伤害外加18（4d8）的心灵伤害。\n**时光打击Temporal Strike（充能6）。**近战武器攻击：命中+8，触及5 \r\n尺，单一生物。命中：13（2d8+4）的钝击伤害外加52（8d12）的心灵伤害。该目标须进行一次DC \r\n16的感知豁免，失败则其向未来穿越1轮。穿越时光的目标在效应持续时间内消失。当效应终止时，目标会重新出现在其离开时的位置，若该位置已被占据，则它出现在最近的未被占据的位置上。\n**施法Spellcasting（灵能Psionics）。**开悟者施展以下法术之一，使用感知作为施法属性且不需要法术成分（法术豁免DC \r\n16）：\n随意：法师之手mage hand（生成隐形的手）\n每项3/日：识破隐形see invisibility\n每项1/日：位面转移plane shift，传送术teleport\n**反应Reactions**\n**轻身坠Slow Fall。**当开悟者要承受坠地伤害时，其可以使用反应将伤害减少50点。\n"
+  },
+  "baseResponse": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {
+        "name": "吉斯泽莱开悟者",
+        "size": "medium",
+        "creatureType": "humanoid",
+        "englishName": "Githzerai Enlightened",
+        "alignment": "任意阵营"
+      },
+      "abilities": {
+        "str": 14,
+        "dex": 19,
+        "con": 16,
+        "int": 17,
+        "wis": 19,
+        "cha": 13
+      },
+      "attributes": {
+        "ac": 18,
+        "hp": {
+          "value": 112,
+          "formula": "15d8+45"
+        },
+        "movement": {
+          "walk": 40
+        },
+        "cr": 10,
+        "acNote": "灵能护体",
+        "xp": 5900,
+        "proficiencyBonus": 4
+      },
+      "saves": {
+        "str": 6,
+        "dex": 8,
+        "int": 7,
+        "wis": 8
+      },
+      "skills": {
+        "arcana": 7,
+        "insight": 8,
+        "perception": 8
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "passivePerception": 18
+      },
+      "languages": {
+        "values": [],
+        "custom": "吉斯语"
+      }
+    },
+    "uncertainties": []
+  }
+}

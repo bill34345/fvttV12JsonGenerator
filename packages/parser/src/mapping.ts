@@ -1,7 +1,9 @@
-import type { StructuredActionData } from '@fvtt-json-generator/models/action';
+import type {CreatureSize} from '@fvtt-json-generator/models/canonical-monster';
+import type { StructuredActionData, SourceRuleFact } from '@fvtt-json-generator/models/action';
 import type { ActorBehaviorSemantics } from '@fvtt-json-generator/models/behavior';
 import type { ActorResourceSemantics } from '@fvtt-json-generator/models/resource';
 import type { PortableSpellManifest } from "@fvtt-json-generator/spell-manifest-contracts";
+import type { SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
 
 export interface FieldDefinition {
   key: string;       // Internal simplified key (e.g., "str", "hp")
@@ -18,6 +20,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "名称": { key: "name", path: "name", type: "string", required: true },
   "类型": { key: "type", path: "type", type: "string", required: true },
   "体型": { key: "size", path: "system.traits.size", type: "string" },
+  "集群个体体型": { key: "swarmSize", path: "system.details.type.swarm", type: "string" },
   "生物类型": { key: "creatureType", path: "system.details.type.value", type: "string" },
   "生物类型备注": { key: "creatureTypeCustom", path: "system.details.type.custom", type: "string" },
   "阵营": { key: "alignment", path: "system.details.alignment", type: "string" },
@@ -108,10 +111,16 @@ export interface ParsedNPC {
     biography?: string;
     alignment?: string;
     creatureType?: string;
+    swarmSize?: CreatureSize;
     creatureTypeCustom?: string;
     creatureTypeSubtype?: string;
     spellLevel?: number;
   };
+  /** Complete source rule facts from biography prose, before display formatting. */
+  biographyRuleFacts?: SourceRuleFact[];
+  /** Internal canonical Intake boundary; explicit features own all mechanics. */
+  biographyMode?: 'literal';
+  biographyPresentation?: SourceTextPresentation;
 
   traits: {
     size?: string;

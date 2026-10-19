@@ -1,0 +1,77 @@
+{
+  "provenance": "User requested local CHM26.08.06 Angel; saved actualDeepSeek base reply for deterministic current-source replay, not a fresh model success",
+  "source": "# 死亡天使 Angel of Death\n\n**栖息地：** 任意； **宝藏：** 武备\n\n死亡天使，亦被称为**卡佩里Carperi**。对于某些被诸神视作珍贵、或为其所渴求的灵魂，若神圣力量不愿见这些灵魂迷失或被半途拦截，便会派遣死亡天使前去收割。\n当某位神祇认为一个凡人凭借好运、不被允许的神圣干预，或复活魔法而逃脱了本应降临的死亡时，死亡天使便会被派往凡世。于是，在那些有人奇迹般生还的灾祸与事故之后，人们偶尔便会目击这些天使的身影。\n死亡天使极具耐心，它们可能会长久监视一名命定将死之人，数日、数周，乃至更久，只为静候那致命时刻的到来。那些被死亡盯上的生物，偶尔会从余光中瞥见潜伏暗处、披着魔法伪装的天使；然而当他们真正试图寻找时，那身影却又早已消失无踪。如果一名死亡天使未能成功收割既定目标的灵魂，它便会展开永无止境的追杀，直到猎物殒命，或是自己被彻底击溃为止。\n死亡天使是一种身高约六尺的双足生物，顶着一颗骷髅头颅，身躯如丧尸般干瘪。细长而枯槁的四肢从破旧罩袍与污秽的马裤中探出。一双利爪般的手紧握着一柄巨型镰刀。那颗骷髅头颅覆盖着一张面具，面具刻画着猎物同族的模样，嘴角挂着令人毛骨悚然的微笑。死亡天使经常将自己伪装成一名穿着朴素农服、手持简陋农具的类人生物。\n（译注：Carperi，词源拉丁语Carpere，意为采摘、收割）\n\n##### 死亡天使Angel of Death\n\n中型天族，中立\n\n**AC**19\t**先攻**+11（21）\n**HP**187（25d8+75）\n**速度**40尺，飞行40尺\n\n\t\t调整\t豁免\t\t\t\t调整\t豁免\t\t\t\t调整\t豁免\n**力量**\t22\t+6\t+6\t\t**敏捷**\t22\t+6\t+11\t\t**体质**\t17\t+3\t+3\n**智力**\t16\t+3\t+3\t\t**感知**\t20\t+5\t+10\t\t**魅力**\t15\t+2\t+2\n\n**技能**洞悉+10，察觉+10\n**抗性**钝击，穿刺，挥砍\n**免疫**暗蚀，光耀；力竭\n**感官**真实视觉120尺；被动察觉20\n**语言**所有语言；心灵感应120尺\n**CR**14（XP11500；PB+5）\n\n###### 特质 Traits\n\n**魔法抗性Magic Resistance。**天使对抗法术和其他魔法效应时进行的豁免检定具有优势。\n\n###### 动作 Actions\n\n**多重攻击Multiattack。**天使发动三次刈魂之镰攻击。\n **刈魂之镰Soul Scythe。**近战或远程攻击检定：+11，触及10尺或射程120尺。命中：15（2d8+6）挥砍伤害，外加13（3d8）暗蚀或光耀伤害（由天使选择）。如果目标因此攻击生命值降至0，其承受以下效应。\n体质豁免：DC18。失败：目标立即死亡，并且其灵魂被困在天使的镰刀之中。在天使被摧毁并释放镰刀中困住的所有灵魂之前，该目标无法死而复生。\n **施法Spellcasting。**天使施展以下一道法术，无需材料成分并使用感知作为施法属性（法术豁免DC18）：。\n **随意：** 易容术Disguise Self（持续24小时）， 生物定位术Locate Creature\n **每项1/日：**死亡法阵Circle of Death，位面转移Plane Shift，律令死亡Power Word Kill\n\n###### 附赠动作 Bonus Actions\n\n**迷踪步Misty Step。**天使施展迷踪步Misty Step，无须任何法术成分，且使用与施法动作相同的施法属性。\n",
+  "baseResponse": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {
+        "name": "死亡天使",
+        "englishName": "Angel of Death",
+        "size": "medium",
+        "creatureType": "celestial",
+        "alignment": "中立"
+      },
+      "abilities": {
+        "str": 22,
+        "dex": 22,
+        "con": 17,
+        "int": 16,
+        "wis": 20,
+        "cha": 15
+      },
+      "attributes": {
+        "ac": 19,
+        "hp": {
+          "value": 187,
+          "formula": "25d8+75"
+        },
+        "movement": {
+          "walk": 40,
+          "fly": 40
+        },
+        "cr": 14,
+        "initiative": 11,
+        "xp": 11500,
+        "proficiencyBonus": 5
+      },
+      "saves": {
+        "str": 6,
+        "dex": 11,
+        "con": 3,
+        "int": 3,
+        "wis": 10,
+        "cha": 2
+      },
+      "skills": {
+        "insight": 10,
+        "perception": 10
+      },
+      "defenses": {
+        "resistances": [
+          "bludgeoning",
+          "piercing",
+          "slashing"
+        ],
+        "immunities": [
+          "necrotic",
+          "radiant"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "exhaustion"
+        ]
+      },
+      "senses": {
+        "truesight": 120,
+        "passivePerception": 20
+      },
+      "languages": {
+        "values": [
+          "all"
+        ],
+        "custom": "心灵感应120尺"
+      }
+    },
+    "uncertainties": []
+  }
+}

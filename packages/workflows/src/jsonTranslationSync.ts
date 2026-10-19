@@ -246,7 +246,7 @@ export class JsonTranslationSyncWorkflow {
       return source;
     }
 
-    return `${chinese} (${source})`;
+    return `${chinese} ${source}`;
   }
 
   private formatBilingualNameFromChinese(sourceChinese: string, translated: string): string {
@@ -260,7 +260,7 @@ export class JsonTranslationSyncWorkflow {
       return source;
     }
 
-    return `${source} (${english})`;
+    return `${source} ${english}`;
   }
 
   private extractChineseNameCandidate(translated: string, sourceEnglish: string): string {

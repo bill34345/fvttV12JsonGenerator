@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
+import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -117,6 +119,8 @@ describe('browser Forge Actor runtime', () => {
       content: finalSource,
       fvttVersion: workflowTarget,
       effectProfile: 'core',
+      iconOptions: { mode: request.resolvedTarget.iconMode },
+      iconWorkflow: { ...iconWorkflowAdapter, createResolutionSession: createBundledIconResolutionSession },
     });
     expect(nodeResult.status).toBe('accepted');
     const normalizedNodeArtifact = normalizeForgeActorArtifact(nodeResult.rawJson, workflowTarget);
@@ -569,7 +573,7 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
       end: 285, quote: 'Actions\n', classification: 'narrative', claimPaths: [],
     });
-    expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(analysis.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     expect(calls).toEqual({ repair: 0, review: 0 });
   });
 
@@ -583,7 +587,7 @@ describe('browser Forge Actor runtime', () => {
       expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
         quote: heading, classification: 'narrative', claimPaths: [],
       });
-      expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+      expect(analysis.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     },
   );
 
@@ -626,7 +630,7 @@ describe('browser Forge Actor runtime', () => {
       })}`);
     }
     expect(candidate.modelReviewStatus).toBe('not_requested');
-    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(candidate.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     const formal = candidate.candidateResponse;
     if (!formal || !('result' in formal) || formal.result.status !== 'accepted') {
       throw new Error('R2 Guard is missing an accepted formal response.');
@@ -665,7 +669,7 @@ describe('browser Forge Actor runtime', () => {
       expect(analysis.status).toBe('ready_to_generate');
       const candidate = await bundled.generateBrowserActorIntakeCandidate(input, analysis, provider);
       expect(candidate.status).toBe('ready_for_gm_review');
-      expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+      expect(candidate.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     } finally {
       await rm(outdir, { recursive: true });
     }
@@ -682,7 +686,7 @@ describe('browser Forge Actor runtime', () => {
     const candidate = await generateBrowserActorIntakeCandidate(input, analysis, provider);
     expect(candidate.status).toBe('failed');
     expect(candidate.candidateResponse).toBeUndefined();
-    expect(candidate.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
+    expect(candidate.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
   });
 
   test('keeps an absent feature section and parent coverage without exact child claims fail-closed', async () => {
@@ -1126,7 +1130,7 @@ describe('browser Forge Actor runtime', () => {
       }));
       expect(invalid.status).toBe('failed');
       expect(invalid.errorCode).toBe('invalid_response');
-      expect(invalid.stages.at(-1)?.message).toMatch(/invalid schema/u);
+      expect(invalid.stages.at(-1)?.message).toMatch(/no answer content/u);
 
       let transportCalls = 0;
       globalThis.fetch = (async () => {
@@ -1147,7 +1151,7 @@ describe('browser Forge Actor runtime', () => {
       expect(transport.status).toBe('failed');
       expect(transport.errorCode).toBe('browser_transport');
       expect(transport.stages.at(-1)?.message).toMatch(/unreachable or blocked by CORS/u);
-      expect(transportCalls).toBe(2);
+      expect(transportCalls).toBe(1);
       expect(JSON.stringify(transport)).not.toContain('secret-key');
 
       globalThis.fetch = ((_request: RequestInfo | URL, init?: RequestInit) => new Promise<never>((_resolve, reject) => {
@@ -1210,6 +1214,8 @@ describe('browser Forge Actor runtime', () => {
     const controller = new AbortController();
     let calls = 0;
     let bodyAborted = false;
+    let markBodyStarted!: () => void;
+    const bodyStarted = new Promise<void>(resolve => { markBodyStarted = resolve; });
     try {
       globalThis.fetch = ((_request: RequestInfo | URL, init?: RequestInit) => {
         calls += 1;
@@ -1217,6 +1223,7 @@ describe('browser Forge Actor runtime', () => {
           ok: true,
           status: 200,
           json: () => new Promise((_resolve, reject) => {
+            markBodyStarted();
             const rejectAborted = () => {
               bodyAborted = true;
               reject(new DOMException('The response body was aborted.', 'AbortError'));
@@ -1238,8 +1245,7 @@ describe('browser Forge Actor runtime', () => {
         chunkStart: 0,
         chunkEnd: RAT_WARLOCK_SOURCE.length,
       });
-      await Promise.resolve();
-      await Promise.resolve();
+      await bodyStarted;
       controller.abort();
       await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
       expect(calls).toBe(1);

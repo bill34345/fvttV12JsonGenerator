@@ -1,3 +1,4 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
 import { hashSource, type Sha256 } from '@fvtt-json-generator/forge-gateway-protocol';
 import {
   normalizeBlock,
@@ -62,7 +63,7 @@ export function analyzePlaintextActorSource(source: string): BrowserPlaintextAct
   const blocks = splitCollection(source);
   const candidates = blocks.map((entry, index) => ({
     id: `plaintext-${index + 1}`,
-    label: entry.englishName ? `${entry.chineseName} (${entry.englishName})` : entry.chineseName,
+    label: displayName(entry.chineseName, entry.englishName),
     start: entry.start,
     end: entry.end,
     quote: entry.quote,

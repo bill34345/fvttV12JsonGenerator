@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@fvtt-json-generator/contracts": "workspace:*",
-    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*"
+    "@fvtt-json-generator/spell-manifest-contracts": "workspace:*",
+    "parse5": "7.3.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

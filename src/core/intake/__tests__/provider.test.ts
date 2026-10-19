@@ -180,7 +180,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v22');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v28-source-identities');
     expect(prompt).toContain('feature.save is only for a source-explicit initial saving throw');
     expect(prompt).toContain('never copy the repeat-save DC into escapeDc');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
@@ -256,7 +256,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v27');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v28-source-identities');
     expect(prompt).toContain('A saving throw repeated at the end of each target turn');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
@@ -322,7 +322,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v22');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v29-source-identities');
     expect(prompt).toContain('remove wrong save/escapeDc');
     expect(prompt).toContain('Never remove a required empty array in repair');
     expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
@@ -458,6 +458,30 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     await expect(provider.repair({ stage: 'deterministic-validation', source: '', ir, deterministicFindings: [] } as never))
       .rejects.toMatchObject({ code: 'invalid_response', retryable: true });
+  });
+
+  test('repair failures retain safe JSON/schema paths without model values', async () => {
+    const ir = {schemaVersion: 1, creature: {}, claims: [], coverage: [], uncertainties: []};
+    const cases = [
+      { content: '{"secret-value":', stage: 'json', path: '/', expected: 'object' },
+      { content: JSON.stringify({schemaVersion: 1, operations: 'secret-value'}), stage: 'repair-envelope', path: '/operations', expected: 'array<=64' },
+      { content: JSON.stringify({schemaVersion: 1, operations: [{op: 'secret-value', path: '/creature/name'}]}), stage: 'repair-operation', path: '/operations/0/op', expected: 'patch-op' },
+      { content: JSON.stringify({schemaVersion: 1, operations: [{op: 'replace', path: '/secret-value', value: 'secret-value'}]}), stage: 'repair-operation', path: '/operations/0/path', expected: 'allowed-path' },
+      { content: JSON.stringify({schemaVersion: 1, operations: [{op: 'add', path: '/creature/name'}]}), stage: 'repair-operation', path: '/operations/0/value', expected: 'present' },
+      { content: JSON.stringify({schemaVersion: 1, operations: [{op: 'replace', path: '/claims', value: 'secret-value'}]}), stage: 'repair-operation', path: '/operations/0/path', expected: 'allowed-path' },
+    ];
+    for (const entry of cases) {
+      const audit: IntakeProviderAuditEvent[] = [];
+      const provider = makeProvider(async () => response(200, entry.content), audit);
+      let caught: MonsterIntakeProviderError | undefined;
+      try { await provider.repair({stage: 'deterministic-validation', source: '', ir, deterministicFindings: []} as never); }
+      catch (error) { caught = error as MonsterIntakeProviderError; }
+      expect(caught?.code).toBe('invalid_response');
+      expect(caught?.diagnostic).toMatchObject({stage: entry.stage, path: entry.path, expected: entry.expected});
+      expect(caught?.diagnosticMessage).not.toContain('secret-value');
+      expect(JSON.stringify(audit)).not.toContain('secret-value');
+      expect(audit.at(-1)?.diagnostic).toEqual(caught?.diagnostic);
+    }
   });
 
   test('rejects a review finding that omits the required schema fields', async () => {

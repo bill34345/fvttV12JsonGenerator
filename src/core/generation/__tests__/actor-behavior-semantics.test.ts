@@ -95,13 +95,13 @@ describe('source-derived Actor behavior semantics', () => {
       });
       expect(result.status).toBe('needs_review');
       const actor = result.rawJson as any;
-      const control = item(actor, '控制节点 (Control Node)');
+      const control = item(actor, '控制节点 Control Node');
       const mechanics = control.flags.fvttJsonGenerator.behaviorMechanics;
       expect(mechanics).toHaveLength(4);
       expect(mechanics.find((entry: any) => entry.id === 'next-hit-force').references[0].itemId)
         .toMatch(/^[A-Za-z0-9]{16}$/);
 
-      const shell = item(actor, '甲壳防护 (Shell Guard)');
+      const shell = item(actor, '甲壳防护 Shell Guard');
       const shellEffect = shell.effects.find((effect: any) =>
         effect.flags?.fvttJsonGenerator?.behaviorState?.stateId === 'shell-guard-ac');
       expect(shellEffect).toBeDefined();
@@ -112,7 +112,7 @@ describe('source-derived Actor behavior semantics', () => {
         activity.flags?.fvttJsonGenerator?.behaviorOperation?.operationId === 'apply-shell-guard') as any;
       expect(applyShell.effects).toEqual([{ _id: shellEffect._id }]);
 
-      const capacity = item(actor, '容量：双爪容量 (Twin Claw Capacity)');
+      const capacity = item(actor, '容量：双爪容量 Twin Claw Capacity');
       expect(capacity.system.uses).toEqual({ spent: 0, max: '2', recovery: [] });
       expect(Object.values(capacity.system.activities).map((activity: any) =>
         activity.consumption.targets[0]?.value)).toEqual(expect.arrayContaining([
@@ -120,13 +120,13 @@ describe('source-derived Actor behavior semantics', () => {
         '-min(1, @item.uses.spent)',
       ]));
 
-      const pool = item(actor, '选择池：位面选择 (Planar Choices)');
+      const pool = item(actor, '选择池：位面选择 Planar Choices');
       expect(pool.system.uses).toEqual({ spent: 0, max: '2', recovery: [] });
       expect(pool.effects).toHaveLength(3);
       expect(Object.values(pool.system.activities).filter((activity: any) =>
         activity.flags?.fvttJsonGenerator?.behaviorChoiceOperation?.optionId)).toHaveLength(3);
 
-      const undertow = item(actor, '暗流 (Undertow)');
+      const undertow = item(actor, '暗流 Undertow');
       const place = Object.values(undertow.system.activities).find((activity: any) =>
         activity.flags?.fvttJsonGenerator?.behaviorOperation?.operationId === 'place-undertow') as any;
       expect(place.target.template).toMatchObject({

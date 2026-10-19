@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./reviewed-localization": "./src/reviewed-localization.ts",
+    "./rule-presentation": "./src/rule-presentation.ts",
+    "./structured-rule-summary": "./src/structured-rule-summary.ts",
     ".": "./src/index.ts",
     "./ac-effect-extraction": "./src/acEffectExtraction.ts",
     "./activity": "./src/activity.ts",

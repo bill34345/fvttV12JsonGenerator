@@ -36,6 +36,33 @@ function selection(): SpellHydrationSelection {
 }
 
 describe('prepared Activity eager cache hydration', () => {
+  test('a shared daily manifest cannot hydrate against an absent source pool, without any writes',async()=>{
+    const actor=new FakeActor(false),manifest=oneSpellManifest(),group=manifest.spellcastingGroups[0]!;
+    const first=group.spellRefs[0]!;first.method='innate';first.uses={value:2,recovery:'day',shared:true};
+    group.spellRefs.push({...structuredClone(first),refId:'blur-ref',identifier:'blur',originalName:'Blur',englishName:'Blur'});
+    actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    await expect(hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'SharedPool000001',journal:createHydrationJournal(actor)})).rejects.toThrow('source-generated feature pool');
+    expect(actor.calls).toEqual([]);expect(actor.items).toHaveLength(1);
+  });
+  test.each([false, true])('source duration survives public native cache creation and ownership hashing with auto-cache=%s', async autoCache => {
+    const actor = new FakeActor(autoCache); actor.withDurationEffect = true;
+    const manifest = oneSpellManifest();
+    Object.assign(manifest.spellcastingGroups[0]!.spellRefs[0]!, { identifier: 'disguise-self', originalName: 'Disguise Self', englishName: 'Disguise Self' });
+    manifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions = [{ kind: 'casting', text: '持续24小时', value: 24, evidence: [{ start: 0, end: 6, quote: '持续24小时' }] }];
+    actor.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
+    const result = await hydrateManagedSelection({ actor, manifest, selection: { ...selection(), uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe' }, transactionId: 'DurationTest0001', journal: createHydrationJournal(actor) });
+    expect(result.cache.effects.find((effect: any) => effect._id === 'SrIb7dbaZs5F4zi9').duration)
+      .toEqual({ value: 86400, units: 'seconds', expiry: 'turnStart', expired: false });
+    expect(result.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(preparedDocumentSource(result.cache)));
+    expect(actor.items.filter(item => item.type === 'spell')).toHaveLength(1);
+    const kept = structuredClone(result.cache.effects); kept[0].duration.value = 7200;
+    result.cache.effects = kept;
+    const preserve = await hydrateManagedSelection({ actor, manifest, selection: { ...selection(), uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe' }, transactionId: 'DurationTest0002', journal: createHydrationJournal(actor), preserveExisting: true });
+    expect(preserve.cache.effects[0].duration.value).toBe(7200);
+    const replace = await hydrateManagedSelection({ actor, manifest, selection: { ...selection(), uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe' }, transactionId: 'DurationTest0003', journal: createHydrationJournal(actor) });
+    expect(replace.cache.effects[0].duration.value).toBe(86400);
+    expect(replace.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(preparedDocumentSource(replace.cache)));
+  });
   test('fails closed in a Foundry runtime when the public Hook bus is unavailable', () => {
     const gameDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'game');
     const hooksDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'Hooks');
@@ -49,6 +76,30 @@ describe('prepared Activity eager cache hydration', () => {
       if (hooksDescriptor) Object.defineProperty(globalThis, 'Hooks', hooksDescriptor);
       else delete (globalThis as any).Hooks;
     }
+  });
+
+  test('an unreviewed equal-duration linked effect remains intact with an explicit GM restriction report', async () => {
+    const actor = new FakeActor(true); actor.withDurationEffect = true;
+    const manifest = oneSpellManifest();
+    manifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions = [{ kind: 'casting', text: '持续24小时', value: 24, evidence: [{ start: 0, end: 6, quote: '持续24小时' }] }];
+    actor.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
+    const result = await hydrateManagedSelection({ actor, manifest, selection: selection(), transactionId: 'DurationTest0004', journal: createHydrationJournal(actor) });
+    expect(result.cache.effects[0].duration.value).toBe(3600);
+    expect(result.literalRestrictions).toEqual([expect.objectContaining({ status: 'literal-unsupported', text: expect.stringContaining('需GM核对') })]);
+    expect(actor.calls.filter(call => call[0] === 'targetedEffectUpdate')).toHaveLength(0);
+  });
+
+  test('a concurrent edit to another effect is preserved and fails final projection, never overwritten by an effects array', async () => {
+    const actor = new FakeActor(true); actor.withDurationEffect = true;
+    const manifest = oneSpellManifest();
+    Object.assign(manifest.spellcastingGroups[0]!.spellRefs[0]!, { identifier: 'disguise-self', originalName: 'Disguise Self', englishName: 'Disguise Self' });
+    manifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions = [{ kind: 'casting', text: '持续24小时', value: 24, evidence: [{ start: 0, end: 6, quote: '持续24小时' }] }];
+    actor.flags[RESOLVER_MODULE_ID].spellManifest = manifest;
+    actor.concurrentEffectEdit = true;
+    await expect(hydrateManagedSelection({ actor, manifest, selection: { ...selection(), uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe' }, transactionId: 'DurationTest0005', journal: createHydrationJournal(actor) })).rejects.toThrow(/projection/i);
+    const cache = actor.items.find(item => item.type === 'spell');
+    expect(cache.effects.find((effect: any) => effect._id === 'IndependentAE001').name).toBe('Concurrent GM edit');
+    expect(actor.calls.find(call => call[0] === 'targetedEffectUpdate')?.[2]).toEqual([{ _id: 'SrIb7dbaZs5F4zi9', 'duration.value': 86400 }]);
   });
 
   test.each([false, true])('uses public prepared getter without duplicate caches when native auto-cache=%s', async (autoCache) => {
@@ -439,6 +490,8 @@ class FakeActor {
   readonly type = 'npc';
   readonly calls: unknown[][] = [];
   getterCalls = 0;
+  withDurationEffect = false;
+  concurrentEffectEdit = false;
   replaceCacheBeforeFullUpdate = false;
   delayReplacementBeforeFullUpdate = false;
   duplicateNativeCacheOnHashWrite = false;
@@ -511,6 +564,7 @@ class FakeActor {
         if (resolverFlags) item.flags[RESOLVER_MODULE_ID] = structuredClone(resolverFlags);
         const preparedHash = update[`flags.${RESOLVER_MODULE_ID}.generatedContentHash`];
         if (preparedHash) item.flags[RESOLVER_MODULE_ID].generatedContentHash = preparedHash;
+        if (update.effects) item.effects = structuredClone(update.effects);
         if (update.type === 'spell') {
           const prepared = {
             ...structuredClone(update),
@@ -647,9 +701,14 @@ class FakeActor {
   private cacheSource(activity: any, id: string): any {
     return {
       _id: id, id, name: 'Light', type: 'spell',
-      system: { sourceItem: 'feat:innate-feature', properties: ['vocal', 'somatic', 'material'] },
+      system: { sourceItem: 'feat:innate-feature', properties: ['vocal', 'somatic', 'material'], ...(this.withDurationEffect ? {
+        identifier: 'disguise-self', duration: { value: '1', units: 'hour' }, activities: { utility: { type: 'utility', effects: [{ _id: 'SrIb7dbaZs5F4zi9' }] } },
+      } : {}) },
       effects: [
-        { _id: 'SourceEffect0001', name: 'Source effect' },
+        { _id: this.withDurationEffect ? 'SrIb7dbaZs5F4zi9' : 'SourceEffect0001', name: 'Source effect', ...(this.withDurationEffect ? {
+          type: 'base', transfer: false, duration: { value: 3600, units: 'seconds', expiry: 'turnStart', expired: false },
+        } : {}) },
+        ...(this.withDurationEffect ? [{ _id: 'IndependentAE001', name: 'Independent effect', type: 'base', transfer: false, duration: { value: 60, units: 'seconds' } }] : []),
         ...(this.withSourceEnchantment ? [this.nativeEffectLayout === 'system'
           ? { _id: 'SourceEnchant001', type: 'enchantment', system: { changes: [{ key: 'flags.source.owned', mode: 5, value: 'source' }] } }
           : { _id: 'SourceEnchant001', type: 'enchantment', changes: [{ key: 'flags.source.owned', mode: 5, value: 'source' }] }] : []),
@@ -693,6 +752,7 @@ class FakeActor {
   }
 
   private refreshSourcedItems() {
+    for (const item of this.items) if (item.type === 'spell') exposeFakeEffectApi(this, item);
     this.sourcedItems = new Map([[selection().uuid, this.items.filter((item) => item._stats?.compendiumSource === selection().uuid)]]);
   }
 }
@@ -702,4 +762,22 @@ function preparedDocumentSource(document: any): Record<string, any> {
     .filter(([key, value]) => !['parent', 'actor', 'item', 'id', 'relativeUUID', 'cachedSpell'].includes(key)
       && typeof value !== 'function')
     .map(([key, value]) => [key, structuredClone(value)]));
+}
+
+
+function exposeFakeEffectApi(actor: any, item: any) {
+  Object.defineProperty(item, 'updateEmbeddedDocuments', { configurable: true, value: async (type: string, updates: any[]) => {
+    if (type !== 'ActiveEffect') throw Error('Expected targeted ActiveEffect update');
+    actor.calls.push(['targetedEffectUpdate', item.id, structuredClone(updates)]);
+    if (actor.concurrentEffectEdit) {
+      actor.concurrentEffectEdit = false;
+      item.effects.find((effect: any) => effect._id === 'IndependentAE001').name = 'Concurrent GM edit';
+    }
+    for (const update of updates) {
+      const effect = item.effects.find((entry: any) => entry._id === update._id);
+      if (!effect || Object.keys(update).some(key => !['_id', 'duration.value'].includes(key))) throw Error('Unexpected targeted effect update');
+      effect.duration.value = update['duration.value'];
+    }
+    return updates;
+  } });
 }

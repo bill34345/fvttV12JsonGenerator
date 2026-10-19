@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import savedUsesFailure from '../../../../tests/fixtures/forge-gith-resolver-uses-failure.json';
 import { createHash } from 'node:crypto';
 import {
   hashSourceInventoryMetadata,
@@ -75,6 +76,32 @@ function plan(input: Omit<Parameters<typeof planSpellHydration>[0], 'sourceInven
 }
 
 describe('all-or-nothing hydration preflight', () => {
+  for (const key of ['githManifest', 'sharedManifest'] as const) test(`the saved ${key} reaches a complete plan without narrowing source daily uses`, () => {
+    const sourceManifest = structuredClone(savedUsesFailure[key]) as PortableSpellManifest;
+    const candidates = sourceManifest.spellcastingGroups.flatMap(group => group.spellRefs.map(ref => spell(ref.identifier!, {
+      name: ref.englishName!, identifier: ref.identifier!,
+    })));
+    const before = structuredClone(sourceManifest);
+    const result = requireReady(plan({ manifest: sourceManifest, candidates }));
+    expect(result.plan.selections).toHaveLength(candidates.length);
+    expect(result.report.findings).toEqual([]);
+    expect(sourceManifest).toEqual(before);
+  });
+
+  test.each([1, 2, 7])('accepts source-supported independent daily count %s', value => {
+    const sourceManifest = manifest(), ref = sourceManifest.spellcastingGroups[0]!.spellRefs[0]!;
+    ref.method = 'innate'; ref.uses = { value, recovery: 'day', shared: false };
+    expect(plan({ manifest: sourceManifest, candidates: [spell('fireball'), spell('cure-wounds')] }).status).toBe('ready');
+  });
+
+  test('a conflicting shared pool withholds the entire plan before matching or writes', () => {
+    const sourceManifest = structuredClone(savedUsesFailure.sharedManifest) as PortableSpellManifest;
+    const refs = sourceManifest.spellcastingGroups[0]!.spellRefs.filter(ref => ref.uses?.shared);
+    expect(refs).toHaveLength(2); refs[1]!.uses!.value++;
+    const result = requireBlocked(plan({ manifest: sourceManifest, candidates: [] }));
+    expect(result.findings.some(finding => finding.code === 'INVALID_SHARED_USE')).toBe(true);
+    expect('plan' in result).toBe(false);
+  });
   test('accepts a source-leveled prepared Cast ref and keeps pact unsupported', () => {
     const prepared = manifest();
     prepared.spellcastingGroups[0]!.spellRefs[0]!.method = 'prepared';
@@ -117,22 +144,15 @@ describe('all-or-nothing hydration preflight', () => {
   test.each([
     ['at-will with uses', 'at-will', { value: 1, recovery: 'day', shared: false }],
     ['innate without uses', 'innate', undefined],
-    ['two uses', 'innate', { value: 2, recovery: 'day', shared: false }],
+    ['unsafe integer uses', 'innate', { value: Number.MAX_SAFE_INTEGER + 1, recovery: 'day', shared: false }],
     ['short-rest recovery', 'innate', { value: 1, recovery: 'shortRest', shared: false }],
     ['long-rest recovery', 'innate', { value: 1, recovery: 'longRest', shared: false }],
-    ['shared uses', 'innate', { value: 1, recovery: 'day', shared: true }],
   ] as const)('fails incompatible before planning unsupported uses contract: %s', (_label, method, uses) => {
     const unsupported = manifest();
     const ref = unsupported.spellcastingGroups[0]!.spellRefs[0]!;
     ref.method = method;
     if (uses === undefined) delete ref.uses;
     else ref.uses = { value: uses.value, recovery: uses.recovery, shared: uses.shared };
-    if (_label === 'shared uses') {
-      if (uses === undefined) throw new Error('Shared-uses fixture requires an explicit use contract.');
-      const poolMate = unsupported.spellcastingGroups[0]!.spellRefs[1]!;
-      poolMate.method = 'innate';
-      poolMate.uses = { value: uses.value, recovery: uses.recovery, shared: uses.shared };
-    }
 
     const result = plan({ manifest: unsupported, candidates: [spell('fireball'), spell('cure-wounds')] });
 

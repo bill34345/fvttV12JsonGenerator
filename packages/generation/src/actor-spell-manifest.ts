@@ -8,6 +8,7 @@ import {
 } from '@fvtt-json-generator/spell-manifest-contracts';
 
 const featureKeys = new WeakMap<object, string>();
+const featureActivations=new WeakMap<object,'action'|'bonus'|'reaction'>();
 
 export const SPELL_MANIFEST_UNSUPPORTED_TARGET = 'SPELL_MANIFEST_UNSUPPORTED_TARGET' as const;
 
@@ -18,8 +19,9 @@ export class ActorSpellManifestError extends Error {
   }
 }
 
-export function markSpellcastingFeatureItem(item: object, featureItemKey: string): void {
+export function markSpellcastingFeatureItem(item: object, featureItemKey: string, activationType?:string): void {
   featureKeys.set(item, featureItemKey);
+  if(activationType==='action'||activationType==='bonus'||activationType==='reaction')featureActivations.set(item,activationType);
 }
 
 export function assertNoOrphanedSpellcastingFeatureLinks(actor: Record<string, any>): void {
@@ -113,12 +115,24 @@ export function buildActorSpellManifest(
       throw new ActorSpellManifestError('SPELL_FEATURE_LINK_DUPLICATE', `Feature key ${group.featureItemKey} matched ${linked.length} generated items.`);
     }
     const item = linked[0]!;
+    const shared=group.spellRefs.filter(ref=>ref.uses?.shared);
+    if(shared.length){
+      const value=shared[0]!.uses!.value;
+      if(shared.some(ref=>ref.uses!.value!==value||ref.uses!.recovery!=='day'))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','Shared spell pools must agree on count and daily recovery.');
+      const previous=item.system?.uses;
+      if(previous?.max&&String(previous.max)!==String(value))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','An existing feature counter cannot be overwritten by a different shared spell pool.');
+      item.system??={};
+      // schema-derived: itemUses consumes this one feature pool; independent
+      // uses remain on their own Cast Activities. No extra placeholder Item.
+      item.system.uses={spent:0,max:String(value),recovery:[{period:'day',type:'recoverAll'}]};
+    }
     item.flags = item.flags ?? {};
     // source-derived: this stable project-owned marker preserves the exact
     // structured feature key independently of display names and descriptions.
     item.flags.fvttJsonGenerator = {
       ...(item.flags.fvttJsonGenerator ?? {}),
       spellcastingFeatureKey: group.featureItemKey,
+      ...(featureActivations.has(item)?{spellcastingActivationType:featureActivations.get(item)}:{}),
     };
     item.flags[RESOLVER_MODULE_ID] = {
       featureItemKey: group.featureItemKey,

@@ -12,6 +12,7 @@ import { computeManagedSourceHash, generatedResolverDocumentId, type LiteralRest
 import { createHydrationJournal, hydrateManagedSelection, type HydrationJournal } from './hydrator';
 import {
   assertNativeCacheProjectionMatches,
+  assertOwnedJournalCacheProjection,
   captureNativeCacheProjection,
   NativeCacheLifecycleCapture,
   resolverDocumentHooks,
@@ -406,7 +407,7 @@ async function rollback(
       assertResolverDocumentOwnership(input.actor, activityEntry.feature, activityEntry.activity, identity, 'activity');
       assertResolverDocumentOwnership(input.actor, activityEntry.feature, spell, identity, 'spell', activityEntry.activity.relativeUUID);
       const nativeEntry = journal.nativeCaches.find((entry) => entry.id === documentId(spell));
-      if (nativeEntry) assertNativeCacheProjectionMatches(nativeEntry.nativeProjection, spell);
+      if (nativeEntry) assertOwnedJournalCacheProjection(nativeEntry, spell);
       await requireApi(input.actor, 'deleteEmbeddedDocuments')('Item', [documentId(spell)]);
     }, rollbackErrors);
   }
@@ -435,7 +436,7 @@ async function rollback(
       }
       const owned = findItem(input.actor, entry.id);
       assertResolverDocumentOwnership(input.actor, feature, owned, entry.identity, 'spell', activity.relativeUUID);
-      assertNativeCacheProjectionMatches(entry.nativeProjection, owned);
+      assertOwnedJournalCacheProjection(entry, owned);
       await requireApi(input.actor, 'deleteEmbeddedDocuments')('Item', [entry.id]);
     }, rollbackErrors);
   }

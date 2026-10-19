@@ -13,6 +13,8 @@ import {
 } from '@fvtt-json-generator/forge-browser-runtime';
 
 import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { FORGE_SPELL_IMPORT_PHASE, isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
+import { RESOLVER_MODULE_ID } from '@fvtt-json-generator/spell-manifest-contracts';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
 export const EXPECTED_FOUNDRY_VERSION = '14.364' as const;
@@ -24,6 +26,7 @@ export interface ForgeGameLike {
   system?: { id?: string; version?: string };
   user?: { id?: string; isGM?: boolean };
   actors?: ForgeActorCollectionLike;
+  modules?: {get(id:string):{active?:boolean;version?:string}|undefined};
 }
 
 export interface ForgeActorLike {
@@ -33,6 +36,7 @@ export interface ForgeActorLike {
   flags?: Record<string, unknown>;
   delete(): Promise<unknown>;
   toObject(): unknown;
+  update?(changes: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface ForgeActorCollectionLike {
@@ -96,7 +100,7 @@ export async function createAcceptedForgeActor(
 
   const collection = input.game.actors;
   if (!collection) throw new Error('Foundry world Actor collection is unavailable.');
-  const importArtifact = prepareFoundryImportArtifact(result.artifact);
+  const importArtifact = prepareFoundryImportArtifact(result.artifact,input.game);
   const documentId = forgeActorDocumentId(result.sourceIdentity.sourceId);
   const identity = {
     protocolVersion: 1,
@@ -106,10 +110,10 @@ export async function createAcceptedForgeActor(
     ...(input.rawSourceHash ? { rawSourceHash: input.rawSourceHash } : {}),
     artifactHash: result.artifactHash,
   } as const;
-  // Document.create() is the single world write and receives the complete,
-  // already-verified Actor plus Forge identity. If the browser dies after the
-  // server commits this write, the complete Actor may remain. Cancellation is
-  // honored before submission; ordinary readback failures attempt rollback.
+  // Document.create() receives the complete verified Actor plus Forge identity.
+  // A portable caster's phase-only update follows successful readback to release
+  // hydration. A crash after create may leave the complete pending Actor.
+  // Cancellation is honored before submission; readback failures roll back.
   const worldCreateData = prepareWorldCreateData(importArtifact, identity, documentId);
   const existing = findActors(collection, result.sourceIdentity.sourceId);
   const conflicting = existing.filter((actor) => getForgeIdentity(actor)?.artifactHash !== result.artifactHash);
@@ -175,11 +179,16 @@ export async function createAcceptedForgeActor(
       result.artifactHash,
       input.rawSourceHash,
     );
+    const uuid=requireActorUuid(actor);
     cleanupRequired = false;
+    // Readback is committed before publishing completion. A failed phase
+    // update leaves the verified Actor in place; it must not race hydration
+    // with the importer's document rollback.
+    await completeForgeSpellImport(actor);
     return {
       status: 'created',
       actor,
-      uuid: requireActorUuid(actor),
+      uuid,
       sourceId: result.sourceIdentity.sourceId,
       artifactHash: result.artifactHash,
     };
@@ -210,12 +219,41 @@ function prepareWorldCreateData(
   const flags = getRecord(copy.flags);
   copy._id = documentId;
   copy.flags = { ...flags, [MODULE_ID]: { ...identity } };
+  markForgeSpellImportPending(copy);
   return copy;
 }
 
-export function prepareFoundryImportArtifact(artifact: JsonObject): JsonObject {
+export function markForgeSpellImportPending(data: any): void {
+  if(!data?.flags?.[RESOLVER_MODULE_ID]?.spellManifest)return;
+  data.flags[MODULE_ID]??={};data.flags[MODULE_ID][FORGE_SPELL_IMPORT_PHASE]='pending';
+}
+
+export async function completeForgeSpellImport(actor: ForgeActorLike): Promise<void> {
+  if(!isForgeSpellImportPending(actor.toObject()))return;
+  try{
+    if(typeof actor.update!=='function')throw Error('Actor.update is unavailable');
+    await actor.update({[`flags.${MODULE_ID}.${FORGE_SPELL_IMPORT_PHASE}`]:'verified'},{render:false});
+    const phase=getRecord(getRecord(getRecord(actor.toObject()).flags)[MODULE_ID])[FORGE_SPELL_IMPORT_PHASE];
+    if(phase!=='verified')throw Error('Import phase was not persisted');
+  }catch(cause){
+    let phase:unknown='unavailable';try{phase=getRecord(getRecord(getRecord(actor.toObject()).flags)[MODULE_ID])[FORGE_SPELL_IMPORT_PHASE]??'missing';}catch{}
+    throw new Error(`Forge Actor ${actor.uuid??actor.id} passed import readback and remains in the world, but spell-resolution release was not confirmed (local phase: ${String(phase)}); read the persisted Actor and resolver status before retrying.`,{cause});
+  }
+}
+
+export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<ForgeGameLike,'modules'>): JsonObject {
   const copy = JSON.parse(JSON.stringify(artifact)) as JsonObject;
   if (!Array.isArray(copy.items)) return copy;
+  const independent=sourceOperationActivityGroups(copy),midi=game?.modules?.get('midi-qol');
+  if(independent.length&&midi?.active){
+    if(midi.version!=='14.0.11')throw new Error('Independent sourceOperations require the verified midi-qol14.0.11 import adapter. Active unverified Midi version: stop before world writes.');
+    for(const group of independent)for(const{activity}of group.activities){
+      activity.midiProperties={...getRecord(activity.midiProperties),otherActivityCompatible:false,triggeredActivityId:'none'};
+      // Midi14.0.11 defines otherActivityId on Attack. Damage has no such
+      // field. Empty Attack IDs otherwise auto-select a compatible sibling.
+      if(activity.type==='attack')activity.otherActivityId='none';
+    }
+  }
 
   for (const itemValue of copy.items) {
     const item = getRecord(itemValue);
@@ -237,6 +275,43 @@ export function prepareFoundryImportArtifact(artifact: JsonObject): JsonObject {
   }
 
   return copy;
+}
+
+/** The accepted artifact already carries exact source-operation identities.
+ * Do not classify by names, activation labels or a coincidental sibling type. */
+function sourceOperationActivityGroups(artifact:unknown):Array<{index:number;activities:Array<{key:string;activity:Record<string,any>}>}>{
+  const groups:Array<{index:number;activities:Array<{key:string;activity:Record<string,any>}>}>=[];
+  const items=getRecord(artifact).items;if(!Array.isArray(items))return groups;
+  for(const[index,item]of items.entries()){
+    const rule=getRecord(getRecord(getRecord(item).flags).fvttJsonGenerator).manualRule;
+    if(!Array.isArray(rule?.sourceOperations))continue;
+    const operations=rule.sourceOperations;
+    if(rule.mode!=='native-with-gm'||typeof rule.sourceText!=='string'||!operations.length)throw new Error('Unbound sourceOperations cannot enter the independent-activity import adapter.');
+    const activities=Object.entries(getRecord(getRecord(getRecord(item).system).activities)).map(([key,value])=>({key,activity:getRecord(value)}));
+    if(!activities.length||activities.some(({activity})=>{
+      const marker=getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation;
+      const matches=operations.filter((op:any)=>op?.id===marker?.id);
+      return matches.length!==1||matches[0].sourceText!==rule.sourceText||marker.sourceText!==rule.sourceText||marker.relationship!==matches[0].relationship||activity.type!==matches[0].type;
+    }))throw new Error('Unbound source-operation Activity cannot enter the independent-activity import adapter.');
+    groups.push({index,activities});
+  }
+  return groups;
+}
+
+/** These are safety fields, not Document noise. Check native defaults as well
+ * as prepared expectations so the real r4 unsafe Doc fails even against core. */
+function assertSourceOperationMidiSafety(artifact:unknown,readback:unknown):void{
+  const items=getRecord(readback).items;
+  for(const group of sourceOperationActivityGroups(artifact))for(const{key,activity:expected}of group.activities){
+    const actual=getRecord(getRecord(getRecord(Array.isArray(items)?items[group.index]:undefined).system).activities)[key];
+    if(expected.midiProperties===undefined&&actual?.midiProperties===undefined)continue;
+    const midi=getRecord(actual?.midiProperties);
+    if(midi.otherActivityCompatible!==false||midi.triggeredActivityId!=='none'
+      ||expected.type==='attack'&&actual?.otherActivityId!=='none'
+      ||expected.type!=='attack'&&actual?.otherActivityId!==undefined&&actual.otherActivityId!=='none'){
+      throw new Error('Foundry Actor semantics failed independent source-operation Midi safety readback. Missing or changed safety fields; use a new Forge source/package identity for unsafe existing Actors, which are not migrated.');
+    }
+  }
 }
 
 export function assertGm(game: ForgeGameLike): void {
@@ -267,7 +342,6 @@ export function assertResponseTarget(
     systemId: EXPECTED_SYSTEM_ID,
     systemVersionObserved: EXPECTED_SYSTEM_VERSION,
     effectProfile: 'core',
-    iconMode: 'off',
   } as const;
   const actual = {
     fvttRuntimeVersion: target.fvttRuntimeVersion,
@@ -275,8 +349,10 @@ export function assertResponseTarget(
     systemId: target.systemId,
     systemVersionObserved: target.systemVersionObserved,
     effectProfile: target.effectProfile,
-    iconMode: target.iconMode,
   };
+  if (target.iconMode !== 'off' && target.iconMode !== 'safe') {
+    throw new Error('Forge Actor response target has an unsupported iconMode.');
+  }
   for (const key of Object.keys(expected) as Array<keyof typeof expected>) {
     if (actual[key] !== expected[key]) {
       throw new Error(`Forge Actor response target does not match the supported Foundry runtime at ${key}.`);
@@ -311,6 +387,7 @@ function assertReadback(
 }
 
 export function assertActorSemantics(artifact: JsonObject, readback: unknown): void {
+  assertSourceOperationMidiSafety(artifact,readback);
   const actual = actorSemantics(readback, 'readback');
   const expected = actorSemantics(artifact, 'artifact');
   const projected = projectReadbackToExpected(actual, expected);
@@ -327,6 +404,7 @@ function verifyReusableActor(
   sourceHash: Sha256,
   artifactHash: Sha256,
 ): ForgeActorCreateResult {
+  if(isForgeSpellImportPending(actor.toObject()))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
   try {
     const readback = actor.toObject();
     assertActorSemantics(artifact, readback);
@@ -341,7 +419,7 @@ function verifyReusableActor(
       throw new Error('Existing Actor does not preserve the expected Forge source identity.');
     }
   } catch (cause) {
-    throw new Error('Existing Forge Actor failed readback verification and was not changed.', { cause });
+    throw new Error('Existing Forge Actor failed readback verification and was not changed. Use a new Forge source/package identity; existing Actors are not migrated.', { cause });
   }
   return {
     status: 'existing',
@@ -403,6 +481,7 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): 
     ac: attributes.ac,
     cr: details.cr,
     creatureType: details.type,
+    size: traits.size,
     senses: attributes.senses ?? traits.senses,
     abilities: system.abilities,
     items,
@@ -418,12 +497,17 @@ function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): u
     id,
     value: projectActivityReadback(activity, itemRange),
   }));
+  // The native Versatile roll reads Item damage/properties as well as the
+  // Attack activity. Losing either during import must fail readback too.
+  const nativeVersatile=item.type==='weapon'&&Object.values(getRecord(system.activities)).some(activity=>getRecord(getRecord(getRecord(getRecord(activity).flags).fvttJsonGenerator).sourceOperation).damageMode==='versatile');
   return {
     name: item.name,
     type: item.type,
+    img: item.img,
     activation: system.activation,
     uses: system.uses,
     ...(itemRange === undefined ? {} : { range: itemRange }),
+    ...(nativeVersatile?{nativeWeapon:{type:system.type,properties:system.properties,damage:system.damage}}:{}),
     activities,
     effects: Array.isArray(item.effects) ? item.effects.map((effect) => effectSemantics(effect, effectSource)) : [],
   };
@@ -431,6 +515,11 @@ function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): u
 
 function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   const activity = getRecord(stripDocumentNoise(value));
+  // Schema-derived: 5.3.3 Save/Damage have no includeBase field. Reject an
+  // explicit value on either side, rather than dropping it as Doc noise.
+  if((activity.type==='save'||activity.type==='damage')&&Object.hasOwn(getRecord(activity.damage),'includeBase')){
+    throw new Error('Foundry Actor semantics contain unsupported non-Attack damage.includeBase. Regenerate the source for the locked native schema.');
+  }
   normalizeLegacySpellReferenceForComparison(activity);
   normalizeInactiveActivityTemplateForComparison(activity);
   const activityRange = getRecord(activity.range);

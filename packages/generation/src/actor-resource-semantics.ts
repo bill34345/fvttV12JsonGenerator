@@ -1,3 +1,4 @@
+import { displayName, splitBilingualName } from '@fvtt-json-generator/models/display-name';
 import type {
   ActorResourceBinding,
   ActorResourceDefinition,
@@ -11,21 +12,27 @@ import { createStableDocumentId } from './stableId';
 
 const FLAG_SCOPE = 'fvttJsonGenerator';
 
-function bilingualName(name: string, englishName?: string): string {
-  return englishName ? `${name} (${englishName})` : name;
-}
+
 
 function itemSection(item: any): string {
   return String(item?.flags?.['tidy5e-sheet']?.section ?? '');
 }
 
 function itemKey(ref: ActorResourceItemRef): string {
+  if(ref.sourceFeatureId)return `${ref.section}\u0000${ref.sourceFeatureId}`;
   return `${ref.section}\u0000${ref.name}`;
 }
 
 function findItem(actor: any, ref: ActorResourceItemRef): any {
-  const matches = (actor.items ?? []).filter((item: any) =>
-    item?.name === ref.name && itemSection(item) === ref.section);
+  if(ref.sourceFeatureId){
+    const matches=(actor.items??[]).filter((item:any)=>itemSection(item)===ref.section&&item?.flags?.fvttJsonGenerator?.sourceFeatureId===ref.sourceFeatureId&&item.name===ref.name);
+    if(matches.length!==1)throw new Error(`ResourceProjection: source feature ${ref.sourceFeatureId} must identify exactly one source Item.`);
+    return matches[0];
+  }
+  const names=splitBilingualName(ref.name),name=displayName(names.name,names.englishName);
+  const exact=(actor.items??[]).filter((item:any)=>item?.name===ref.name&&itemSection(item)===ref.section);
+  const matches = exact.length?exact:(actor.items ?? []).filter((item: any) =>
+    item?.name === name && itemSection(item) === ref.section);
   if (matches.length !== 1) {
     throw new Error(
       `ResourceProjection: expected exactly one Item "${ref.name}" in section "${ref.section}", found ${matches.length}.`,
@@ -38,7 +45,7 @@ function ensureItemId(actorName: string, item: any, ref: ActorResourceItemRef, i
   const expected = createStableDocumentId({
     actor: actorName,
     section: ref.section,
-    name: ref.name,
+    name: item.name,
   });
   if (item._id && item._id !== expected) {
     throw new Error(`ResourceProjection: Item "${ref.name}" already has a conflicting _id.`);
@@ -144,7 +151,7 @@ function appendOperation(
   }
   item.system.activities[id] = utilityActivity({
     id,
-    name: bilingualName(operation.name, operation.englishName),
+    name: displayName(operation.name, operation.englishName),
     activation: operation.activation,
     condition: operation.condition,
     targets: [consumptionTarget('', operationFormula(operation))],
@@ -233,7 +240,7 @@ function appendTiers(
       });
       item.system.activities[activityId] = utilityActivity({
         id: activityId,
-        name: `应用 ${resource.name} ${tier.min}-${tier.max} 档 (Apply ${resource.englishName ?? resource.name} Tier)`,
+        name: `应用 ${resource.name} ${tier.min}-${tier.max} 档 Apply ${resource.englishName ?? resource.name} Tier`,
         activation: 'special',
         condition: `仅当资源剩余 ${tier.min}-${tier.max}；应用前移除其他 ${derived.id} 档位效果。`,
         targets: [],
@@ -262,6 +269,24 @@ function firstActivity(item: any, context: string): any {
 }
 
 function appendFixedBinding(item: any, resourceItemId: string, binding: ActorResourceBinding): void {
+  if(binding.source.sourceFeatureId){
+    const rule=item.flags?.fvttJsonGenerator?.manualRule;
+    if(rule?.mode==='native-with-gm'&&Array.isArray(rule.operations)&&!rule.operations.includes('resource'))rule.operations.push('resource');
+    const activities=Object.values(item.system.activities??{}) as any[];
+    const marked=activities.filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation);
+    if(marked.length){
+      if(marked.length!==activities.length)throw new Error('ResourceProjection: source-operation roles must cover every member Activity.');
+      const primary=marked.filter(activity=>['primary','alternative'].includes(activity.flags.fvttJsonGenerator.sourceOperation.relationship));
+      if(!primary.length||marked.some(activity=>!['primary','alternative','follow-up'].includes(activity.flags.fvttJsonGenerator.sourceOperation.relationship)))throw new Error('ResourceProjection: unsupported source-operation role.');
+      for(const activity of marked){
+        if((activity.consumption?.targets??[]).length)throw new Error('ResourceProjection: shared source member already has independent consumption.');
+        if(activity.flags.fvttJsonGenerator.sourceOperation.relationship==='follow-up')continue;
+        activity.consumption={targets:[consumptionTarget(resourceItemId,String(binding.amount))],spellSlot:false,scaling:{allowed:false,max:''}};
+        activity.flags.fvttJsonGenerator.resourceConsumption={id:binding.id,resourceId:binding.resourceId,mode:binding.mode,amount:binding.amount};
+      }
+      return;
+    }
+  }
   const activity = firstActivity(item, binding.id);
   activity.consumption ??= {
     targets: [],
@@ -302,7 +327,7 @@ function appendVariableBinding(
   });
   const activity = structuredClone(original);
   activity._id = id;
-  activity.name = bilingualName(
+  activity.name = displayName(
     binding.supplementalActivity?.name ?? item.name,
     binding.supplementalActivity?.englishName,
   );
@@ -401,7 +426,7 @@ function appendTransition(
   host.system.activities ??= {};
   host.system.activities[id] = utilityActivity({
     id,
-    name: bilingualName(transition.name, transition.englishName),
+    name: displayName(transition.name, transition.englishName),
     activation: transition.activation,
     condition: transition.condition,
     targets,

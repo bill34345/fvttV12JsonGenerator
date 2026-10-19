@@ -1,0 +1,14 @@
+[
+  {
+    "provenance": "Exact Senmurv Maverick Taloned Paws rule from the preserved V3 first-attempt source; printable line wrap retained.",
+    "rule": "Taloned Paws. Melee Attack Roll: +7, reach 5 ft. Hit: 8 (1d6\n+ 5) Slashing damage.\nThis attack has Disadvantage if the senmurv is not\nFlying."
+  },
+  {
+    "provenance": "Synthetic regression for negative formulas and literal list markers.",
+    "rule": "Fading Echo. Subtract 2 (1d4\n- 1) from the result.\n- Keep this entire instruction.\n+ Keep the alternative instruction.\n* Keep this final instruction."
+  },
+  {
+    "provenance": "Synthetic regression for source tags, ampersands and single-pass entity escaping.",
+    "rule": "Written Warning. Read <b>this sign</b> & say \"stop\"; keep 'all' of it. The literal text &lt;stay&gt; also remains visible."
+  }
+]

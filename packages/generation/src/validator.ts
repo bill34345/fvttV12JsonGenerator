@@ -6,8 +6,9 @@ export class ActorValidator {
   public validate(parsed: ParsedNPC, actor: any): string[] {
     const warnings: string[] = [];
 
-    if (actor.name !== parsed.name && parsed.name) {
-      warnings.push(`Name mismatch: Expected '${parsed.name}', got '${actor.name}'`);
+    const expectedName=parsed.name;
+    if (actor.name !== expectedName && parsed.name) {
+      warnings.push(`Name mismatch: Expected '${expectedName}', got '${actor.name}'`);
     }
 
     if (parsed.attributes.hp) {

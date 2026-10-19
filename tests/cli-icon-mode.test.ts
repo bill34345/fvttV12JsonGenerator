@@ -49,12 +49,12 @@ describe('CLI v14 safe icon mode', () => {
         !['icons/svg/mystery-man.svg', 'icons/svg/sword.svg', 'icons/svg/item-bag.svg'].includes(item.img)))
         .toBe(true);
       expect(report.summary).toEqual({
-        total: 6,
+        total: 12,
         override: 0,
         existing: 0,
-        exact: 3,
-        semantic: 0,
-        fallback: 3,
+        exact: 4,
+        semantic: 4,
+        fallback: 4,
       });
       expect(report.entries.find((entry) => entry.englishName === 'Flyby')).toMatchObject({
         source: 'compendium-exact',

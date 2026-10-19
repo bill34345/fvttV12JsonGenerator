@@ -1,0 +1,194 @@
+{
+  "provenance": "Exact safety-field projection of task browser-native-r1/010-native-readback.json sourceOperations. Full native failure retained separately; no ownership/session data.",
+  "foundry": "14.368",
+  "system": "5.3.3",
+  "midiVersion": "14.0.11",
+  "midiScriptSha256": "ca530b51fc4883067c5571f1d985931087c09bb21887f9a24c3ab95d48f3a966",
+  "rows": [
+    {
+      "logicalPath": "structuredActions/动作/0/Force Pulse (3/Day)",
+      "operationId": "force-pulse-save",
+      "relationship": "primary",
+      "name": "Force Pulse",
+      "type": "save",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "action",
+        "value": null,
+        "override": false,
+        "condition": "Actions\n\nForce Pulse (3/Day). Each creature in a 15-foot cone must make a DC 16 Strength saving throw. Failure: 10 (3d6) force damage. Success: Half damage. Force Pulse and Soul Mark share these 3 daily uses."
+      },
+      "consumption": {
+        "targets": [
+          {
+            "type": "itemUses",
+            "target": "b46002024839d928",
+            "value": "1",
+            "scaling": {
+              "mode": "",
+              "formula": ""
+            }
+          }
+        ],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      },
+      "otherActivityId": "none"
+    },
+    {
+      "logicalPath": "structuredActions/动作/1/Soul Mark (3/Day)",
+      "operationId": "attack",
+      "relationship": "primary",
+      "name": "Melee Spell Attack",
+      "type": "attack",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "action",
+        "value": null,
+        "override": false,
+        "condition": "Actions\n\nSoul Mark (3/Day). Melee Spell Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (2d6) necrotic damage. The target must succeed on a DC 14 Constitution saving throw. Failure: The target cannot regain hit points until the start of its next turn. Force Pulse and Soul Mark share these 3 daily uses."
+      },
+      "consumption": {
+        "targets": [
+          {
+            "type": "itemUses",
+            "target": "b46002024839d928",
+            "value": "1",
+            "scaling": {
+              "mode": "",
+              "formula": ""
+            }
+          }
+        ],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      },
+      "otherActivityId": ""
+    },
+    {
+      "logicalPath": "structuredActions/动作/1/Soul Mark (3/Day)",
+      "operationId": "save",
+      "relationship": "follow-up",
+      "name": "Constitution Saving Throw",
+      "type": "save",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "special",
+        "value": null,
+        "override": true,
+        "condition": "Actions\n\nSoul Mark (3/Day). Melee Spell Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (2d6) necrotic damage. The target must succeed on a DC 14 Constitution saving throw. Failure: The target cannot regain hit points until the start of its next turn. Force Pulse and Soul Mark share these 3 daily uses.\nSoul Mark (3/Day). Melee Spell Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (2d6) necrotic damage. The target must succeed on a DC 14 Constitution saving throw. Failure: The target cannot regain hit points until the start of its next turn. Force Pulse and Soul Mark share these 3 daily uses."
+      },
+      "consumption": {
+        "targets": [],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      },
+      "otherActivityId": "none"
+    },
+    {
+      "logicalPath": "structuredActions/动作/2/Prismatic Gaze (Recharge 5-6)",
+      "operationId": "prismatic-gaze-save",
+      "relationship": "primary",
+      "name": "Prismatic Gaze",
+      "type": "save",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "action",
+        "value": null,
+        "override": false,
+        "condition": "Actions\n\nPrismatic Gaze (Recharge 5-6). Each creature in a 30-foot cone must make a DC 16 Intelligence or Wisdom saving throw (target's choice). Failure: 7 (2d6) psychic damage. Success: Half damage. On a failed save, the target is moved up to 10 feet to a legal space chosen by the GM."
+      },
+      "consumption": {
+        "targets": [
+          {
+            "type": "itemUses",
+            "target": "",
+            "value": "1",
+            "scaling": {
+              "mode": "",
+              "formula": ""
+            }
+          }
+        ],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      },
+      "otherActivityId": "none"
+    },
+    {
+      "logicalPath": "structuredActions/动作/3/Spined Strike",
+      "operationId": "spined-strike-attack",
+      "relationship": "primary",
+      "name": "Spined Strike",
+      "type": "attack",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "action",
+        "value": null,
+        "override": false,
+        "condition": "Actions\n\nSpined Strike. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) piercing damage. If the target is prone, it takes an extra 7 (2d6) cold damage."
+      },
+      "consumption": {
+        "targets": [],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      },
+      "otherActivityId": ""
+    },
+    {
+      "logicalPath": "structuredActions/动作/3/Spined Strike",
+      "operationId": "spined-strike-prone-cold",
+      "relationship": "follow-up",
+      "name": "Cold Damage (if prone)",
+      "type": "damage",
+      "midiProperties": {
+        "otherActivityCompatible": true,
+        "triggeredActivityId": "none"
+      },
+      "activation": {
+        "type": "special",
+        "value": null,
+        "override": true,
+        "condition": "Actions\n\nSpined Strike. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) piercing damage. If the target is prone, it takes an extra 7 (2d6) cold damage.\nSpined Strike. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) piercing damage. If the target is prone, it takes an extra 7 (2d6) cold damage."
+      },
+      "consumption": {
+        "targets": [],
+        "spellSlot": false,
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        }
+      }
+    }
+  ]
+}

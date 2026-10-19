@@ -1,3 +1,4 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
 import type { ParsedItem, ItemType, ActivityData } from '@fvtt-json-generator/models/item';
 import { ActivityGenerator } from './activity';
 import { generateEnhancedConditionEffects } from './actor-effects';
@@ -212,11 +213,9 @@ export class ItemGenerator {
    * Patch basic fields on the item document
    */
   private patchBasicFields(item: ItemDocument, parsed: ParsedItem): void {
-    // Name (append englishName in parentheses if present)
+    // Name presentation shares the Actor/manifest contract.
     if (parsed.name) {
-      item.name = parsed.englishName
-        ? `${parsed.name} (${parsed.englishName})`
-        : parsed.name;
+      item.name = displayName(parsed.name, parsed.englishName);
       item.system.identifier = this.sanitizeIdentifier(parsed.name);
     }
 
@@ -461,15 +460,14 @@ export class ItemGenerator {
             activities,
             action.name,
             action.logicalPath,
+            this.isV14(),
           );
           for (const conditionEffect of conditionEffects) {
             conditionEffect.origin = `Item.${item._id}`;
             item.effects.push(conditionEffect);
           }
           for (const [id, activity] of Object.entries(activities)) {
-            const actionName = action.englishName
-              ? `${action.name} (${action.englishName})`
-              : action.name;
+            const actionName = displayName(action.name, action.englishName);
             ActivityGenerator.mergeUnique(item.system.activities, { [id]: {
               ...activity,
               name: (activity as ActivityData).name || actionName,

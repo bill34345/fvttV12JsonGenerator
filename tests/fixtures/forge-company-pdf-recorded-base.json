@@ -1,0 +1,82 @@
+{
+  "source": "MEZZOLOTH COMPANY CR 20\nA clacking horde of insectile mercenaries, reeking of\nbrimstone with an undertone of something worse beneath.\nAC 18 (natural armor)\nHP 225 (30d8 + 90)\nSpeed 40 ft.\nInitiative +6 (16)\nSize Huge (Swarm of\nMedium)\nType Fiend (Yugoloth)\nMOD SAVE MOD SAVE MOD SAVE\nSTR 18 +4 +4 DEX 11 +0 +0 CON 16 +3 +3\nINT 7 -2 -2 WIS 14 +2 +2 CHA 10 +0 +0\nResistances Fire; Damage from Attacks\nImmunities Acid, Poison; Charmed, Frightened, Grappled,\nParalyzed, Petrified, Poisoned, Prone, Restrained, Stunned\nSenses Blindsight 60 ft., Passive Perception 12\nLanguages Abyssal, Infernal, Telepathy 60 ft.\nDrives Advertise Services, Collect Loot, Escalate Conflict\nXP 25,000 Proficiency Bonus +6\nTraits\nConniving Resistance. The company has Advantage on\nSaving Throws against spells and other magical effects.\nIt always appears to fail any Intelligence or Wisdom\nSaving Throws.\nSwarm. The company can occupy another creature’s\nspace and vice versa, and can move through any opening\nlarge enough for a single mezzoloth.\nActions\nMultiattack. The company makes one attack and uses its\nWeaverot Volley.\nSpindly Shred. Melee Attack Roll: +10, reach 0 ft. Hit: 49\n(10d8 + 4) Slashing damage, or half as much damage if\nthe company is Bloodied, and the target is Grappled\n(escape DC 18).\nA creature Grappled in this way can attempt to escape as\na Bonus Action.\nWeaverot Volley. A volley of barbed spines sails forth,\nleaving trails of ruined magic in their wake.\nEach creature in a 15-foot radius Sphere within 60 feet\nmust make a DEXTERITY SAVING THROW: DC 18. FAILURE: 14\n(4d6) Piercing damage plus 11 (2d10) Necrotic damage.\nSUCCESS OR FAILURE: Each spell of Level 2 or below affecting\nthe creature ends.\nBonus Actions\nToxic Emission. Clouds of stinging gas hiss from the\ncompany, forcing each creature within 10 feet of it to\nmake a CONSTITUTION SAVING THROW: DC 17. FAILURE: 18 (4d8)\nPoison damage and the creature is Blinded until the end\nof its next turn. SUCCESS: Half damage.\nStrike-Gate (1/Day). The company teleports to a space\nwithin 120 feet. Any creature Grappled by it must make a\nCHARISMA SAVING THROW: DC 16. FAILURE: The creature\nteleports with the company.\n",
+  "recordedBase": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {
+        "name": "Mezzoloth Company",
+        "size": "huge",
+        "creatureType": "fiend",
+        "creatureTypeCustom": "Yugoloth"
+      },
+      "abilities": {
+        "str": 18,
+        "dex": 11,
+        "con": 16,
+        "int": 7,
+        "wis": 14,
+        "cha": 10
+      },
+      "attributes": {
+        "ac": 18,
+        "hp": {
+          "value": 225,
+          "formula": "30d8 + 90"
+        },
+        "movement": {
+          "walk": 40
+        },
+        "cr": 20,
+        "acKind": "natural",
+        "acNote": "natural armor",
+        "initiative": 6,
+        "xp": 25000,
+        "proficiencyBonus": 6
+      },
+      "saves": {
+        "str": 4,
+        "dex": 0,
+        "con": 3,
+        "int": -2,
+        "wis": 2,
+        "cha": 0
+      },
+      "skills": {},
+      "defenses": {
+        "resistances": [
+          "fire",
+          "Damage from Attacks"
+        ],
+        "immunities": [
+          "acid",
+          "poison"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": [
+          "charmed",
+          "frightened",
+          "grappled",
+          "paralyzed",
+          "petrified",
+          "poisoned",
+          "prone",
+          "restrained",
+          "stunned"
+        ]
+      },
+      "senses": {
+        "blindsight": 60,
+        "passivePerception": 12
+      },
+      "languages": {
+        "values": [
+          "abyssal",
+          "infernal"
+        ],
+        "custom": "Telepathy 60 ft."
+      }
+    },
+    "uncertainties": []
+  },
+  "provenance": "Mezzoloths.pdf c33b74... page2 right column; actual DeepSeek run2 base reply; body unchanged from first source; layout proof in task evidence"
+}

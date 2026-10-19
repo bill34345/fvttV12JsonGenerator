@@ -19,6 +19,8 @@ export interface ActivityGenerationContext {
   spellcastingAbility?: AttackAbility;
   dcSourceKind?: DcSourceKind;
   preferNativeWeaponRolls?: boolean;
+  /** Source actor identity for proving an own-origin SourceOP template. */
+  sourceActorName?: string;
   /** Source Item Effect to be applied by an Activity (for example, token light). */
   appliedEffectId?: string;
   /** Explicit weapon configuration supplied by the source. */
@@ -91,7 +93,7 @@ export class ActivityGenerator {
           bonus: nativeRoll || explicitAbility ? '' : `${action.attack.toHit}`,
           flat: !(nativeRoll || explicitAbility),
           type: {
-            value: this.isV14() && context.weaponConfiguration?.enabled
+            value: this.isV14()
               ? action.attack.type.startsWith('r') ? 'ranged' : 'melee'
               : action.attack.type,
             classification: action.attack.type.endsWith('sak') ? 'spell' : 'weapon'
@@ -201,6 +203,7 @@ export class ActivityGenerator {
           parts: (action.damage || []).map(d => this.formatDamage(d))
         },
         ...(action.aoe?.template ? {
+          ...(action.aoe.template.type==='radius'?{range:{units:'self',override:false}}:{}),
           target: {
             prompt: true,
             override: false,
@@ -218,15 +221,20 @@ export class ActivityGenerator {
         } : {}),
       };
     } else if (action.type === 'heal' && action.healing) {
+      const recipient=action.healing.target;
       activities[id] = {
         _id: id,
         type: 'heal',
         healing: this.formatHealing(action.healing),
+        // schema-derived: missing range defaults to self in dnd5e 5.3.3.
+        // A source-qualified creature recipient has special range, never a
+        // guessed distance or an implicit self-only range.
+        ...(recipient?.type==='creature'?{range:{units:'spec',special:recipient.special,override:false}}:{}),
         target: {
           override: false,
-          prompt: false,
+          prompt: recipient?.type==='creature',
           template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: 'ft' },
-          affects: { count: '1', type: 'self', choice: false, special: '' },
+          affects: { count: '1', type: recipient?.type??'self', choice: false, special: recipient?.special??'' },
         },
       };
     } else if (action.damage && action.damage.length > 0) {
@@ -439,6 +447,10 @@ export class ActivityGenerator {
       };
     }
 
+    if (action.activity?.targetSpecial) {
+      const target=activities[id].target??this.buildTargetSchema();
+      activities[id].target={...target,affects:{...target.affects,special:action.activity.targetSpecial}};
+    }
     if (action.targetAffected) {
       const target = activities[id].target ?? this.buildTargetSchema();
       const existingAffects = target.affects ?? {};

@@ -1,0 +1,2805 @@
+{
+  "version": 1,
+  "scope": "Second expansion: 24 provenance-backed synthetic semantic cases, ordinary injected IR and staged auto. Offline diagnostic only; not a new CI or hook. Complete GM handling or explicit review is allowed for advanced mechanics. No real AI or runtime claim.",
+  "attribution": "This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.",
+  "cases": [
+    {
+      "id": "half-hp-replacement",
+      "label": "半血时替换伤害，不是两份相加",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nBites. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the creature has half of its hit points or fewer.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Bites",
+          "text": "Bites. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the creature has half of its hit points or fewer.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Bites",
+          "section": "action",
+          "text": "Bites. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the creature has half of its hit points or fewer.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target."
+              }
+            },
+            {
+              "id": "ordinary-damage",
+              "name": "Ordinary Damage",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "4d4",
+                  "type": "piercing",
+                  "relationship": "conditional"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the creature has half of its hit points or fewer."
+                ]
+              }
+            },
+            {
+              "id": "conditional-damage",
+              "name": "Conditional Damage",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "2d4",
+                  "type": "piercing",
+                  "relationship": "replacement"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the creature has half of its hit points or fewer."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "390 left, Swarm of Insects",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "if the creature has half of its hit points or fewer",
+      "checks": {
+        "replacement": "2d4",
+        "conditionalRolls": [
+          "4d4",
+          "2d4"
+        ]
+      },
+      "mutations": []
+    },
+    {
+      "id": "two-handed-replacement",
+      "label": "双手握持时换骰，不是额外伤害",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nLongblade. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) slashing damage, or 7 (1d10 + 2) slashing damage if used with two hands.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Longblade",
+          "text": "Longblade. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) slashing damage, or 7 (1d10 + 2) slashing damage if used with two hands.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Longblade",
+          "section": "action",
+          "text": "Longblade. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) slashing damage, or 7 (1d10 + 2) slashing damage if used with two hands.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target."
+              }
+            },
+            {
+              "id": "ordinary-damage",
+              "name": "Ordinary Damage",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "slashing",
+                  "relationship": "conditional"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Hit: 6 (1d8 + 2) slashing damage, or 7 (1d10 + 2) slashing damage if used with two hands."
+                ]
+              }
+            },
+            {
+              "id": "conditional-damage",
+              "name": "Conditional Damage",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "1d10+2",
+                  "type": "slashing",
+                  "relationship": "replacement"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "Hit: 6 (1d8 + 2) slashing damage, or 7 (1d10 + 2) slashing damage if used with two hands."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "304 right, Drow",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "if used with two hands",
+      "checks": {
+        "replacement": "1d10+2",
+        "conditionalRolls": [
+          "1d8+2",
+          "1d10+2"
+        ]
+      },
+      "mutations": []
+    },
+    {
+      "id": "arithmetic-save-dc",
+      "label": "豁免难度随伤害变化，带两种例外",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nStubborn Life. If damage reduces the creature to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken, unless the damage is radiant or from a critical hit. On a success, the creature drops to 1 hit point instead.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Stubborn Life",
+          "text": "Stubborn Life. If damage reduces the creature to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken, unless the damage is radiant or from a critical hit. On a success, the creature drops to 1 hit point instead.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Stubborn Life",
+          "section": "trait",
+          "text": "Stubborn Life. If damage reduces the creature to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken, unless the damage is radiant or from a critical hit. On a success, the creature drops to 1 hit point instead.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "357 left, Zombie",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "unless the damage is radiant or from a critical hit",
+      "checks": {
+        "noFixedSave": true
+      },
+      "mutations": [
+        {
+          "id": "invent-fixed-dc-5",
+          "feature": 0,
+          "operations": [
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 5,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "If damage reduces the creature to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken, unless the damage is radiant or from a critical hit."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "regeneration-suppressed",
+      "label": "酸或火伤害后暂停再生",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nRegeneration. The creature regains 8 hit points at the start of its turn. If it takes acid or fire damage, this trait does not function at the start of its next turn. It dies only if it starts its turn with 0 hit points and does not regenerate.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Regeneration",
+          "text": "Regeneration. The creature regains 8 hit points at the start of its turn. If it takes acid or fire damage, this trait does not function at the start of its next turn. It dies only if it starts its turn with 0 hit points and does not regenerate.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Regeneration",
+          "section": "trait",
+          "text": "Regeneration. The creature regains 8 hit points at the start of its turn. If it takes acid or fire damage, this trait does not function at the start of its next turn. It dies only if it starts its turn with 0 hit points and does not regenerate.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "351 right, Troll",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "If it takes acid or fire damage, this trait does not function at the start of its next turn.",
+      "checks": {
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "regeneration-reduced",
+      "label": "再生减半，不等于完全停止",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nRegeneration. The creature regains 10 hit points at the start of its turn. If it takes acid or fire damage, it regains only 5 hit points at the start of its next turn.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Regeneration",
+          "text": "Regeneration. The creature regains 10 hit points at the start of its turn. If it takes acid or fire damage, it regains only 5 hit points at the start of its next turn.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Regeneration",
+          "section": "trait",
+          "text": "Regeneration. The creature regains 10 hit points at the start of its turn. If it takes acid or fire damage, it regains only 5 hit points at the start of its next turn.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/43",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "If it takes acid or fire damage, it regains only 5 hit points at the start of its next turn.",
+      "checks": {
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "failure-margin-five",
+      "label": "失败差五点才立即石化",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nJudging Gaze. When a creature starts its turn within 30 feet and both creatures can see each other, it must make a DC 13 Constitution saving throw unless the guardian is incapacitated. If the saving throw fails by 5 or more, the target is petrified. Otherwise, on a failed save it is restrained. The restrained target repeats the save at the end of its next turn, becoming petrified on a failure or ending the effect on a success.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Judging Gaze",
+          "text": "Judging Gaze. When a creature starts its turn within 30 feet and both creatures can see each other, it must make a DC 13 Constitution saving throw unless the guardian is incapacitated. If the saving throw fails by 5 or more, the target is petrified. Otherwise, on a failed save it is restrained. The restrained target repeats the save at the end of its next turn, becoming petrified on a failure or ending the effect on a success.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Judging Gaze",
+          "section": "trait",
+          "text": "Judging Gaze. When a creature starts its turn within 30 feet and both creatures can see each other, it must make a DC 13 Constitution saving throw unless the guardian is incapacitated. If the saving throw fails by 5 or more, the target is petrified. Otherwise, on a failed save it is restrained. The restrained target repeats the save at the end of its next turn, becoming petrified on a failure or ending the effect on a success.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "When a creature starts its turn within 30 feet and both creatures can see each other, it must make a DC 13 Constitution saving throw unless the guardian is incapacitated."
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "330 left, Medusa",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "If the saving throw fails by 5 or more, the target is petrified.",
+      "checks": {
+        "noAutomaticStatus": [
+          "petrified"
+        ],
+        "followupOnly": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "repeat-save-next-turn",
+      "label": "下一回合结束重投，成功解除",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nSlow Gaze. When a creature starts its turn within 30 feet and can see the guardian, the guardian can force it to make a DC 13 Constitution saving throw if the guardian can see it and is not incapacitated. On a failure, the target is restrained. It must repeat the saving throw at the end of its next turn. On a success, the effect ends; on a failure, the target is petrified. Unless surprised, a target can avert its eyes to avoid the initial save, but cannot see the guardian until its next turn.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Slow Gaze",
+          "text": "Slow Gaze. When a creature starts its turn within 30 feet and can see the guardian, the guardian can force it to make a DC 13 Constitution saving throw if the guardian can see it and is not incapacitated. On a failure, the target is restrained. It must repeat the saving throw at the end of its next turn. On a success, the effect ends; on a failure, the target is petrified. Unless surprised, a target can avert its eyes to avoid the initial save, but cannot see the guardian until its next turn.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Slow Gaze",
+          "section": "trait",
+          "text": "Slow Gaze. When a creature starts its turn within 30 feet and can see the guardian, the guardian can force it to make a DC 13 Constitution saving throw if the guardian can see it and is not incapacitated. On a failure, the target is restrained. It must repeat the saving throw at the end of its next turn. On a success, the effect ends; on a failure, the target is petrified. Unless surprised, a target can avert its eyes to avoid the initial save, but cannot see the guardian until its next turn.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "When a creature starts its turn within 30 feet and can see the guardian, the guardian can force it to make a DC 13 Constitution saving throw if the guardian can see it and is not incapacitated."
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "265 right, Basilisk",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "at the end of its next turn",
+      "checks": {
+        "noAutomaticStatus": [
+          "petrified"
+        ],
+        "followupOnly": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "death-trigger-save",
+      "label": "死亡才触发的爆发",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nDeath Burst. When the creature dies, each creature within 5 feet of it must succeed on a DC 13 Constitution saving throw or be blinded for 1 minute. A blinded creature can repeat the saving throw on each of its turns, ending the effect on itself on a success.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Death Burst",
+          "text": "Death Burst. When the creature dies, each creature within 5 feet of it must succeed on a DC 13 Constitution saving throw or be blinded for 1 minute. A blinded creature can repeat the saving throw on each of its turns, ending the effect on itself on a success.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Death Burst",
+          "section": "trait",
+          "text": "Death Burst. When the creature dies, each creature within 5 feet of it must succeed on a DC 13 Constitution saving throw or be blinded for 1 minute. A blinded creature can repeat the saving throw on each of its turns, ending the effect on itself on a success.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "When the creature dies, each creature within 5 feet of it must succeed on a DC 13 Constitution saving throw or be blinded for 1 minute."
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "330 right, Dust Mephit",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "When the creature dies, ",
+      "checks": {
+        "noOrdinaryActivation": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "digest-owner-turn",
+      "label": "消化伤害在吞食者回合触发",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nDigest. A swallowed creature is blinded and restrained, has total cover against attacks and other effects outside the creature, and takes 7 (2d6) acid damage at the start of each of the swallowing creature's turns. If the swallowing creature takes 12 damage or more on a single turn from a creature inside it, it must succeed on a DC 13 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone within 10 feet of it.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Digest",
+          "text": "Digest. A swallowed creature is blinded and restrained, has total cover against attacks and other effects outside the creature, and takes 7 (2d6) acid damage at the start of each of the swallowing creature's turns. If the swallowing creature takes 12 damage or more on a single turn from a creature inside it, it must succeed on a DC 13 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone within 10 feet of it.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Digest",
+          "section": "trait",
+          "text": "Digest. A swallowed creature is blinded and restrained, has total cover against attacks and other effects outside the creature, and takes 7 (2d6) acid damage at the start of each of the swallowing creature's turns. If the swallowing creature takes 12 damage or more on a single turn from a creature inside it, it must succeed on a DC 13 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone within 10 feet of it.",
+          "operations": [
+            {
+              "id": "conditional-damage",
+              "name": "Conditional Damage",
+              "type": "damage",
+              "relationship": "follow-up",
+              "damage": [
+                {
+                  "formula": "2d6",
+                  "type": "acid",
+                  "relationship": "conditional"
+                }
+              ],
+              "proof": {
+                "damage": [
+                  "A swallowed creature is blinded and restrained, has total cover against attacks and other effects outside the creature, and takes 7 (2d6) acid damage at the start of each of the swallowing creature's turns."
+                ]
+              }
+            },
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "If the swallowing creature takes 12 damage or more on a single turn from a creature inside it, it must succeed on a DC 13 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone within 10 feet of it."
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "341 left, Purple Worm",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "at the start of each of the swallowing creature's turns",
+      "checks": {
+        "followupOnly": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "escape-dc-not-save",
+      "label": "挣脱难度不能变成命中后的豁免",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nGrasp. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13). Until the grapple ends, the target is restrained. The creature cannot use this grasp on another target.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Grasp",
+          "text": "Grasp. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13). Until the grapple ends, the target is restrained. The creature cannot use this grasp on another target.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Grasp",
+          "section": "action",
+          "text": "Grasp. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13). Until the grapple ends, the target is restrained. The creature cannot use this grasp on another target.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13)."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "272 left, Marilith Tail",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "a Medium or smaller target",
+      "checks": {
+        "noSave": true
+      },
+      "mutations": [
+        {
+          "id": "escape-dc-as-save",
+          "feature": 0,
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13)."
+                ]
+              }
+            },
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "Hit: 6 (1d8 + 2) bludgeoning damage, and a Medium or smaller target is grappled (escape DC 13)."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "size-gated-save",
+      "label": "只让特定体型目标豁免",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nShield Strike. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. If the target is a Medium or smaller creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Shield Strike",
+          "text": "Shield Strike. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. If the target is a Medium or smaller creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Shield Strike",
+          "section": "action",
+          "text": "Shield Strike. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) bludgeoning damage. If the target is a Medium or smaller creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "bludgeoning",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) bludgeoning damage."
+                ]
+              }
+            },
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "str"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "If the target is a Medium or smaller creature, it must succeed on a DC 13 Strength saving throw or be knocked prone."
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "399 right, Gladiator; issue #106 independently reports identity pollution",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "If the target is a Medium or smaller creature, ",
+      "checks": {
+        "followupSave": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "redirect-healing",
+      "label": "别人的治疗归零，改由自己回血",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nReactions\nStolen Recovery. When another creature within 30 feet regains hit points, the guardian can use its reaction to reduce the hit points regained by that creature to 0 and regain 9 (2d8) hit points itself instead.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Reactions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "reaction",
+          "name": "Stolen Recovery",
+          "text": "Stolen Recovery. When another creature within 30 feet regains hit points, the guardian can use its reaction to reduce the hit points regained by that creature to 0 and regain 9 (2d8) hit points itself instead.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Stolen Recovery",
+          "section": "reaction",
+          "text": "Stolen Recovery. When another creature within 30 feet regains hit points, the guardian can use its reaction to reduce the hit points regained by that creature to 0 and regain 9 (2d8) hit points itself instead.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/123",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "reduce the hit points regained by that creature to 0 and ",
+      "checks": {
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "rejuvenation-unless-wish",
+      "label": "死亡数日后复活，但有阻止办法",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nRejuvenation. If the creature dies, it returns to life in 1d6 days and regains all its hit points. Only a wish spell can prevent this trait from functioning.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Rejuvenation",
+          "text": "Rejuvenation. If the creature dies, it returns to life in 1d6 days and regains all its hit points. Only a wish spell can prevent this trait from functioning.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Rejuvenation",
+          "section": "trait",
+          "text": "Rejuvenation. If the creature dies, it returns to life in 1d6 days and regains all its hit points. Only a wish spell can prevent this trait from functioning.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "335 left, Naga",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "Only a wish spell can prevent this trait from functioning.",
+      "checks": {
+        "noDailyUses": true,
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "magic-immunity-willing-exception",
+      "label": "法术等级限制，还允许自愿接受",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nSelective Magic Immunity. The creature cannot be affected or detected by spells of 6th level or lower unless it wishes to be. It has advantage on saving throws against all other spells and magical effects.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Selective Magic Immunity",
+          "text": "Selective Magic Immunity. The creature cannot be affected or detected by spells of 6th level or lower unless it wishes to be. It has advantage on saving throws against all other spells and magical effects.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Selective Magic Immunity",
+          "section": "trait",
+          "text": "Selective Magic Immunity. The creature cannot be affected or detected by spells of 6th level or lower unless it wishes to be. It has advantage on saving throws against all other spells and magical effects.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "341 right, Rakshasa",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "unless it wishes to be",
+      "checks": {
+        "noGlobalMagicImmunity": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "reaction-every-turn",
+      "label": "每个回合能反应，不是每轮一次",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nReactive. The creature can take one reaction on every turn in a combat.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Reactive",
+          "text": "Reactive. The creature can take one reaction on every turn in a combat.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Reactive",
+          "section": "trait",
+          "text": "Reactive. The creature can take one reaction on every turn in a combat.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "272 left, Marilith",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "on every turn in a combat",
+      "checks": {
+        "noDailyUses": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "split-rounded-hp",
+      "label": "分裂要看伤害、血量、体型，并向下取整",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nReactions\nSplit. When a creature that is Medium or larger is subjected to lightning or slashing damage, it splits into two new creatures if it has at least 10 hit points. Each new creature has hit points equal to half the original creature's hit points, rounded down. Each new creature is one size smaller than the original creature.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Reactions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "reaction",
+          "name": "Split",
+          "text": "Split. When a creature that is Medium or larger is subjected to lightning or slashing damage, it splits into two new creatures if it has at least 10 hit points. Each new creature has hit points equal to half the original creature's hit points, rounded down. Each new creature is one size smaller than the original creature.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Split",
+          "section": "reaction",
+          "text": "Split. When a creature that is Medium or larger is subjected to lightning or slashing damage, it splits into two new creatures if it has at least 10 hit points. Each new creature has hit points equal to half the original creature's hit points, rounded down. Each new creature is one size smaller than the original creature.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "337 right, Black Pudding",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "if it has at least 10 hit points",
+      "checks": {
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "single-ranged-spell-range",
+      "label": "远程攻击只有一个射程值",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nForce Spark. Ranged Spell Attack: +4 to hit, range 60 ft., one target. Hit: 4 (1d4 + 2) force damage.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Force Spark",
+          "text": "Force Spark. Ranged Spell Attack: +4 to hit, range 60 ft., one target. Hit: 4 (1d4 + 2) force damage.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Force Spark",
+          "section": "action",
+          "text": "Force Spark. Ranged Spell Attack: +4 to hit, range 60 ft., one target. Hit: 4 (1d4 + 2) force damage.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "rsak",
+                "toHit": 4,
+                "range": 60
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "1d4+2",
+                  "type": "force",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Ranged Spell Attack: +4 to hit, range 60 ft., one target.",
+                "target": "Ranged Spell Attack: +4 to hit, range 60 ft., one target.",
+                "damage": [
+                  "Hit: 4 (1d4 + 2) force damage."
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/87",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "range 60 ft., ",
+      "checks": {
+        "range": 60,
+        "noLongRange": true
+      },
+      "mutations": [
+        {
+          "id": "invent-long-range",
+          "path": [
+            "actions",
+            "0",
+            "sourceOperations",
+            "0",
+            "attack",
+            "longRange"
+          ],
+          "value": 120
+        }
+      ]
+    },
+    {
+      "id": "lair-initiative-twenty",
+      "label": "巢穴事件在固定先攻触发",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nLair Pulse. On initiative count 20 (losing initiative ties), the guardian causes the ground within 30 feet to tremble. Creatures of its choice cannot take reactions until initiative count 20 on the next round.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Lair Pulse",
+          "text": "Lair Pulse. On initiative count 20 (losing initiative ties), the guardian causes the ground within 30 feet to tremble. Creatures of its choice cannot take reactions until initiative count 20 on the next round.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Lair Pulse",
+          "section": "trait",
+          "text": "Lair Pulse. On initiative count 20 (losing initiative ties), the guardian causes the ground within 30 feet to tremble. Creatures of its choice cannot take reactions until initiative count 20 on the next round.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/45",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "On initiative count 20 (losing initiative ties), ",
+      "checks": {
+        "noOrdinaryActivation": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "zero-hp-next-form",
+      "label": "零血换形态，先攻顺序保持",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nSecond Form. When the guardian drops to 0 hit points, its current body dies and its second form emerges in the same space. Its initiative count does not change.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Second Form",
+          "text": "Second Form. When the guardian drops to 0 hit points, its current body dies and its second form emerges in the same space. Its initiative count does not change.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Second Form",
+          "section": "trait",
+          "text": "Second Form. When the guardian drops to 0 hit points, its current body dies and its second form emerges in the same space. Its initiative count does not change.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/123",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "Its initiative count does not change.",
+      "checks": {
+        "noHealingButton": true
+      },
+      "mutations": []
+    },
+    {
+      "id": "per-target-immunity",
+      "label": "成功抵抗后的免疫属于目标",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nFear Light. Each creature within 15 feet that can see the light must succeed on a DC 13 Wisdom saving throw or be frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If its saving throw is successful or the effect ends for it, that creature is immune to this Fear Light for the next 24 hours.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Fear Light",
+          "text": "Fear Light. Each creature within 15 feet that can see the light must succeed on a DC 13 Wisdom saving throw or be frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If its saving throw is successful or the effect ends for it, that creature is immune to this Fear Light for the next 24 hours.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Fear Light",
+          "section": "action",
+          "text": "Fear Light. Each creature within 15 feet that can see the light must succeed on a DC 13 Wisdom saving throw or be frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If its saving throw is successful or the effect ends for it, that creature is immune to this Fear Light for the next 24 hours.",
+          "operations": [
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "wis"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "proof": {
+                "save": "Each creature within 15 feet that can see the light must succeed on a DC 13 Wisdom saving throw or be frightened for 1 minute.",
+                "range": "Each creature within 15 feet that can see the light must succeed on a DC 13 Wisdom saving throw or be frightened for 1 minute."
+              },
+              "range": 15
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "272 right and 273 left, Nalfeshnee",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "that creature is immune to this Fear Light for the next 24 hours.",
+      "checks": {
+        "noDailyUses": true,
+        "noAutomaticStatus": [
+          "frightened"
+        ]
+      },
+      "mutations": []
+    },
+    {
+      "id": "shapechange-keeps-base-size",
+      "label": "变形体型不能覆盖本体体型",
+      "source": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nActions\nBorrowed Shape. As an action, the guardian can appear as a Tiny beast for 1 hour or return to its true form. Its statistics are otherwise unchanged.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "construct"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft., Fly 40 ft. (hover) Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Borrowed Shape",
+          "text": "Borrowed Shape. As an action, the guardian can appear as a Tiny beast for 1 hour or return to its true form. Its statistics are otherwise unchanged.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Borrowed Shape",
+          "section": "action",
+          "text": "Borrowed Shape. As an action, the guardian can appear as a Tiny beast for 1 hour or return to its true form. Its statistics are otherwise unchanged.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/106",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "Its statistics are otherwise unchanged.",
+      "checks": {},
+      "mutations": [
+        {
+          "id": "form-size-as-base",
+          "path": [
+            "identity",
+            "size"
+          ],
+          "value": "tiny"
+        }
+      ]
+    },
+    {
+      "id": "temporary-parry-ac",
+      "label": "一次攻击的临时护甲不能覆盖基础护甲",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nReactions\nParry. The guardian adds 3 to its AC against one melee attack that would hit it. To do so, it must see the attacker and be wielding a melee weapon.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Reactions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "reaction",
+          "name": "Parry",
+          "text": "Parry. The guardian adds 3 to its AC against one melee attack that would hit it. To do so, it must see the attacker and be wielding a melee weapon.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Parry",
+          "section": "reaction",
+          "text": "Parry. The guardian adds 3 to its AC against one melee attack that would hit it. To do so, it must see the attacker and be wielding a melee weapon.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "399 right, Gladiator",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "against one melee attack that would hit it",
+      "checks": {},
+      "mutations": [
+        {
+          "id": "parry-as-base-ac",
+          "path": [
+            "attributes",
+            "ac"
+          ],
+          "value": 15
+        }
+      ]
+    },
+    {
+      "id": "swarm-individual-size",
+      "label": "中型虫群由微型个体组成",
+      "source": "Sentinel CR 2\nMedium swarm of Tiny beasts, unaligned\nAC 15\nHP 30 (4d8 + 12)\nSpeed 30 ft., Fly 40 ft. (hover)\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\nSwarm. The swarm can occupy another creature's space and vice versa, and it can move through any opening large enough for a Tiny beast. The swarm cannot regain hit points or gain temporary hit points.\n",
+      "creature": {
+        "identity": {
+          "name": "Sentinel",
+          "size": "medium",
+          "creatureType": "beast"
+        },
+        "abilities": {
+          "str": 14,
+          "dex": 10,
+          "con": 16,
+          "int": 3,
+          "wis": 10,
+          "cha": 1
+        },
+        "attributes": {
+          "ac": 15,
+          "hp": {
+            "value": 30,
+            "formula": "4d8 + 12"
+          },
+          "movement": {
+            "walk": 30,
+            "fly": 40,
+            "hover": true
+          },
+          "cr": 2,
+          "xp": 450,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "con": 5
+        },
+        "skills": {
+          "perception": 2
+        },
+        "defenses": {
+          "resistances": [
+            "cold"
+          ],
+          "immunities": [
+            "poison"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "poisoned"
+          ]
+        },
+        "senses": {
+          "darkvision": 60,
+          "passivePerception": 12
+        },
+        "languages": {
+          "values": [
+            "common"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Sentinel CR 2\nMedium swarm of Tiny beasts, unaligned\nAC 15\nHP 30 (4d8 + 12)\nSpeed 30 ft., Fly 40 ft. (hover)\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nSaving Throws Con +5\nSkills Perception +2\nDamage Resistances Cold\nDamage Immunities Poison\nCondition Immunities Poisoned\nSenses Darkvision 60 ft., Passive Perception 12\nLanguages Common\nXP 450 PB +2\n"
+        },
+        {
+          "destination": "feature",
+          "section": "trait",
+          "name": "Swarm",
+          "text": "Swarm. The swarm can occupy another creature's space and vice versa, and it can move through any opening large enough for a Tiny beast. The swarm cannot regain hit points or gain temporary hit points.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Swarm",
+          "section": "trait",
+          "text": "Swarm. The swarm can occupy another creature's space and vice versa, and it can move through any opening large enough for a Tiny beast. The swarm cannot regain hit points or gain temporary hit points.",
+          "operations": []
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://github.com/jbhaywood/5e-statblock-importer/issues/76",
+        "edition": "user-reported text; not current compatibility proof",
+        "locator": "Original issue body and maintainer follow-up",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "The swarm cannot regain hit points or gain temporary hit points.",
+      "checks": {},
+      "mutations": [
+        {
+          "id": "individual-size-as-actor",
+          "path": [
+            "identity",
+            "size"
+          ],
+          "value": "tiny"
+        }
+      ]
+    },
+    {
+      "id": "attack-plus-poison-save-half",
+      "label": "攻击伤害照常，毒素另作减半豁免",
+      "source": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\nActions\nVenom Stinger. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage. The target must make a DC 13 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one.\n",
+      "creature": {
+        "identity": {
+          "name": "Dusk Watcher",
+          "size": "small",
+          "creatureType": "fey"
+        },
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 12,
+          "int": 11,
+          "wis": 16,
+          "cha": 13
+        },
+        "attributes": {
+          "ac": 12,
+          "hp": {
+            "value": 22,
+            "formula": "5d6 + 5"
+          },
+          "movement": {
+            "walk": 25,
+            "fly": 30,
+            "hover": true
+          },
+          "cr": 0.5,
+          "xp": 100,
+          "proficiencyBonus": 2
+        },
+        "saves": {
+          "wis": 5
+        },
+        "skills": {
+          "perception": 5
+        },
+        "defenses": {
+          "resistances": [
+            "fire"
+          ],
+          "immunities": [
+            "cold"
+          ],
+          "vulnerabilities": [],
+          "conditionImmunities": [
+            "charmed"
+          ]
+        },
+        "senses": {
+          "darkvision": 90,
+          "passivePerception": 15
+        },
+        "languages": {
+          "values": [
+            "sylvan"
+          ]
+        }
+      },
+      "units": [
+        {
+          "destination": "base",
+          "text": "Dusk Watcher CR 1/2\nAC 12\nHP 22 (5d6 + 5) Size Small\nSpeed 25 ft., Fly 30 ft. (hover) Type Fey\nSTR 8 DEX 14 CON 12 INT 11 WIS 16 CHA 13\nSaving Throws Wis +5\nSkills Perception +5\nDamage Resistances Fire\nDamage Immunities Cold\nCondition Immunities Charmed\nSenses Darkvision 90 ft., Passive Perception 15\nLanguages Sylvan\nXP 100 PB +2\n"
+        },
+        {
+          "destination": "context",
+          "text": "Actions\n"
+        },
+        {
+          "destination": "feature",
+          "section": "action",
+          "name": "Venom Stinger",
+          "text": "Venom Stinger. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage. The target must make a DC 13 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one.\n"
+        }
+      ],
+      "features": [
+        {
+          "name": "Venom Stinger",
+          "section": "action",
+          "text": "Venom Stinger. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage. The target must make a DC 13 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one.",
+          "operations": [
+            {
+              "id": "attack",
+              "name": "Attack",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "mwak",
+                "toHit": 4,
+                "reach": 5
+              },
+              "targetSpecial": "one target",
+              "damage": [
+                {
+                  "formula": "1d8+2",
+                  "type": "piercing",
+                  "relationship": "base"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "target": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+                "damage": [
+                  "Hit: 6 (1d8 + 2) piercing damage."
+                ]
+              }
+            },
+            {
+              "id": "save",
+              "name": "Save",
+              "type": "save",
+              "relationship": "follow-up",
+              "save": {
+                "dc": 13,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "half"
+              },
+              "proof": {
+                "save": "The target must make a DC 13 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one.",
+                "damage": [
+                  "The target must make a DC 13 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one."
+                ]
+              },
+              "damage": [
+                {
+                  "formula": "2d8",
+                  "type": "poison",
+                  "relationship": "base"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expectation": "usable-or-review",
+      "provenance": {
+        "url": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+        "edition": "SRD 5.1 / 2014 rules; physical PDF page",
+        "locator": "341 left, Purple Worm Tail Stinger",
+        "adaptation": "Synthetic creature and values; preserves the cited rule structure."
+      },
+      "dropText": "or half as much damage on a successful one",
+      "checks": {
+        "followupSave": true,
+        "baseDamage": "1d8+2",
+        "saveDamage": "2d8",
+        "saveOutcome": "half"
+      },
+      "mutations": []
+    }
+  ]
+}

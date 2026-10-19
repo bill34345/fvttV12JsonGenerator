@@ -108,6 +108,7 @@ export function assertBrowserBundleSafe(bundle: string): void {
 
 async function loadWorkspaceAliases(): Promise<Map<string, string>> {
   const packageNames = [
+    'assets-icons',
     'contracts',
     'forge-browser-runtime',
     'forge-gateway-protocol',
