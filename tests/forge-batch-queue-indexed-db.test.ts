@@ -1,4 +1,30 @@
 import { describe, expect, test } from 'bun:test';
+import { IndexedDbIntakeCandidateStore, INTAKE_CANDIDATE_MAX_BYTES } from '../foundry-modules/fvtt-json-forge/src/intakeCandidateRecovery';
+
+describe('complete candidate IndexedDB persistence', () => {
+  test('preserves previous data on quota, stale-window conflict and revoked authority; isolates GM scopes', async () => {
+    const factory = new FakeIndexedDbFactory(), db = factory as unknown as IDBFactory;
+    const first = new IndexedDbIntakeCandidateStore('world:gm', db), peer = new IndexedDbIntakeCandidateStore('world:gm', db);
+    await first.load(); await peer.load();
+    await first.put('single', { checksum: 'first' } as any);
+    await expect(peer.put('single', { checksum: 'stale' } as any)).rejects.toThrow(/另一窗口/u);
+    expect((await peer.load()).single.checksum).toBe('first');
+    factory.failNextPutWithQuota = true;
+    await expect(first.put('single', { checksum: 'quota' } as any)).rejects.toThrow(/Quota/u);
+    await expect(first.put('single', { checksum: 'revoked' } as any, () => { throw Error('revoked GM'); })).rejects.toThrow(/revoked/u);
+    await expect(first.put('single', { checksum: 'x'.repeat(INTAKE_CANDIDATE_MAX_BYTES) } as any)).rejects.toThrow(/8MiB/u);
+    expect((await first.load()).single.checksum).toBe('first');
+    expect(await new IndexedDbIntakeCandidateStore('world:other', db).load()).toEqual({});
+    expect(factory.closedDatabases).toBe(factory.openDatabases);
+  });
+
+  test('exposes corrupt storage without erasing it and permits explicit scoped reset', async () => {
+    const factory = new FakeIndexedDbFactory(), store = new IndexedDbIntakeCandidateStore('world:gm', factory as unknown as IDBFactory);
+    factory.values.set('world:gm', 'broken'); factory.values.set('world:other', 'untouched');
+    await expect(store.load()).rejects.toThrow(); expect(factory.values.get('world:gm')).toBe('broken');
+    await store.reset(); expect(await store.load()).toEqual({}); expect(factory.values.get('world:other')).toBe('untouched');
+  });
+});
 import { ForgeBatchQueueConflictError, emptyForgeBatchQueue, type ForgeBatchQueueV1 } from '@fvtt-json-generator/forge-browser-runtime/batch-queue';
 import { IndexedDbForgeBatchQueueStore } from '@fvtt-json-generator/forge-browser-runtime/batch-queue-indexed-db';
 

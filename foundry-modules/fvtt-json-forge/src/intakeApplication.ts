@@ -1,5 +1,7 @@
 import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
 import { iconReviewPresentation } from './iconReviewPresentation';
+import { captureIntakeCandidate, revalidateIntakeCandidate, IndexedDbIntakeCandidateStore,
+  type IntakeCandidateRecord, type IntakeCandidateStore } from './intakeCandidateRecovery';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import {
   BROWSER_GENERATOR_VERSION,
@@ -178,6 +180,7 @@ export interface ForgeIntakeApplicationEnvironment {
   openStructuredImport?: () => unknown;
   sourceLibrary?: ManagedForgeSourceLibrary;
   batchQueue?: ManagedForgeBatchQueue;
+  candidateStore?: IntakeCandidateStore;
 }
 
 export interface ForgeIntakeApplicationServices {
@@ -288,6 +291,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private activeBatchJobId?: string;
     private batchUnsubscribe?: () => void;
     private readonly batchResponses = new Map<string, { mode: ForgeIntakeMode; rawSourceHash: ForgeIntakeSnapshot['rawSourceHash']; response?: IntakeResponse; candidate?: BrowserActorGenerationResult | BrowserItemGenerationResult; input?: ReturnType<typeof actorInput> }>();
+    private readonly candidateStore = environment.candidateStore ?? new IndexedDbIntakeCandidateStore(sourceLibraryScope(environment.game));
+    private recoveryLoad?: Promise<void>;
+    private savedCandidates: Record<string, IntakeCandidateRecord> = {};
+    private recoveryBusy = false;
     private readonly hasDirectoryContext = environment.directoryKind !== undefined;
     private readonly directoryKind: 'Actor' | 'Item' = environment.directoryKind === 'Item' ? 'Item' : 'Actor';
     private readonly initialMode: ForgeIntakeMode = resolveDirectoryMode(environment.initialMode, this.directoryKind);
@@ -544,6 +551,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.bind(root, 'batch-run', () => void this.runBatch(root));
       this.bind(root, 'batch-stop', () => this.stopBatch());
       this.bind(root, 'batch-apply', () => void this.applyBatch(root));
+      this.bind(root, 'restore-candidate', () => void this.restoreSingleCandidate(root));
+      this.bind(root, 'clear-candidate-cache', () => void this.clearCandidateCache(root));
       const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
       if (importFile) importFile.onchange = () => this.renderResult(root);
       const libraryFile = root.querySelector('[name="sourceLibraryFile"]') as HTMLInputElement | null;
@@ -795,6 +804,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.response = nextGeneration.response;
         this.status = transitionForgeIntakeReviewStatus(this.status,
           nextGeneration.status === 'ready_for_gm_review' ? 'generation_ready_for_gm_review' : nextGeneration.status === 'accepted' ? 'generation_accepted' : nextGeneration.status === 'needs_review' ? 'generation_needs_review' : 'generation_failed');
+        if (!fromBatch) await this.saveCandidate(root, 'single');
       } catch (error) {
         if (!controller.signal.aborted && this.isCurrent(controller, revision)) {
           this.status = transitionForgeIntakeReviewStatus(this.status, 'generation_failed');
@@ -844,6 +854,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.response = reviewed.response;
         this.status = reviewed.status === 'ready_for_gm_review'
           ? 'ready_for_gm_review' : reviewed.status === 'accepted' ? 'accepted' : 'needs_review';
+        await this.saveCandidate(root, 'single');
       } catch (error) {
         if (!controller.signal.aborted && this.isCurrent(controller, revision)) {
           this.notify('error', messageOf(error));
@@ -914,6 +925,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       }
       this.cancel();
       this.status = this.status === 'committing_and_reading_back' ? this.status : transitionForgeIntakeReviewStatus(this.status, 'clear');
+      void this.forgetCandidate('single');
       this.analysis = undefined;
       this.generation = undefined;
       this.response = undefined;
@@ -1422,6 +1434,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           this.createdDocument = { objectKind: 'actor', uuid: result.uuid, document: result.actor, status: result.status };
           this.notify('info', result.status === 'existing' ? `已复用 Actor：${result.uuid}` : `Actor 创建并回读成功：${result.uuid}`);
         }
+        await this.forgetCandidate('single');
       } catch (error) {
         this.notify('error', messageOf(error));
       } finally {
@@ -1681,6 +1694,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private renderResult(root: HTMLElement): void {
+      this.renderRecovery(root);
       root = (this.element as HTMLElement | undefined) ?? root;
       environment.pane?.changed();
       this.renderLibrary(root);
@@ -2060,6 +2074,81 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       }
     }
 
+    private loadCandidates(): Promise<void> {
+      return this.recoveryLoad ??= this.candidateStore.load().then(records => { this.savedCandidates = records; })
+        .catch(error => { this.notify('info', `完整候选恢复不可用：${safeLibraryMessage(error)} 可继续使用当前结果，或清除本地恢复副本后重新准备。`); });
+    }
+
+    private async saveCandidate(root: HTMLElement, key: string): Promise<void> {
+      const form = readForm(root), generation = this.generation;
+      if (form.mode === 'plaintext-actor' || generation?.status !== 'ready_for_gm_review' || !this.snapshotCurrent(root)) return;
+      const revision = this.revision;
+      try {
+        const record = captureIntakeCandidate(form.mode === 'ai-item' ? itemInput(form, this.requestId, environment.game)
+          : actorInput(form, this.requestId, environment.game), form.mode, this.buildBundle(form), generation, [form.apiKey, form.endpoint], Date.now(),
+          key === 'single' ? undefined : this.batchState?.jobs.find(job => job.id === key)?.attemptCount);
+        await this.loadCandidates();
+        await this.candidateStore.put(key, record, () => {
+          this.assertLibraryAuthority();
+          if (this.revision !== revision || !this.snapshotCurrent(root)) throw Error('候选已变更，未保存旧恢复副本。');
+        });
+        this.savedCandidates[key] = record;
+      } catch (error) { this.notify('info', `完整候选未保存：${safeLibraryMessage(error)} 当前页面候选仍可使用。`); }
+      this.renderRecovery(root);
+    }
+
+    private async forgetCandidate(key: string): Promise<void> {
+      try { await this.loadCandidates(); await this.candidateStore.clear(key, () => this.assertLibraryAuthority()); delete this.savedCandidates[key]; }
+      catch (error) { this.notify('info', `清除候选恢复副本失败：${safeLibraryMessage(error)}`); }
+    }
+
+    private renderRecovery(root: HTMLElement): void {
+      const restore = root.querySelector('[data-action="restore-candidate"]') as HTMLButtonElement | null;
+      if (restore) restore.disabled = this.recoveryBusy || !this.savedCandidates.single || !this.isDirectoryMode(this.savedCandidates.single.mode)
+        || !this.libraryWorkspaceEmpty(root) || this.busy() || this.batchRunning || this.batchApplying;
+      const clear = root.querySelector('[data-action="clear-candidate-cache"]') as HTMLButtonElement | null;
+      if (clear) clear.disabled = this.recoveryBusy || this.busy() || this.batchRunning || this.batchApplying;
+    }
+
+    private async restoreSingleCandidate(root: HTMLElement): Promise<void> {
+      if (this.recoveryBusy || this.busy() || this.batchRunning || this.batchApplying || !this.libraryWorkspaceEmpty(root)) return;
+      this.recoveryBusy = true; this.renderRecovery(root);
+      const revision = this.revision;
+      try {
+        this.assertLibraryAuthority(); await this.loadCandidates();
+        const saved = this.savedCandidates.single;
+        if (!saved || !this.isDirectoryMode(saved.mode)) throw Error('当前工作台没有可恢复的单条候选。');
+        const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version });
+        this.assertLibraryAuthority();
+        if (this.revision !== revision || !this.libraryWorkspaceEmpty(root)) throw Error('工作区已改变，未覆盖当前草稿。');
+        for (const [name, value] of Object.entries({ mode: record.mode, source: record.input.source, displayName: record.input.displayName ?? '' })) {
+          const field = root.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
+          if (field) field.value = value;
+        }
+        this.analysis = record.candidate.analysis; this.generation = record.candidate; this.response = undefined;
+        this.requestId = record.input.requestId; this.attemptId = record.bundle.attemptId;
+        this.reviewSource = record.input.source; this.snapshot = makeSnapshot(readForm(root), environment.game);
+        this.status = 'ready_for_gm_review'; this.modelReviewCredentialRevision = this.connectionCredentialRevision;
+        this.history = [...record.bundle.history]; this.editingSource = false;
+        this.refreshAiVisibility(root); this.renderResult(root);
+        this.notify('info', '完整候选已通过当前代码本地重验；未请求模型，仍须 GM 重新确认。');
+      } catch (error) { this.notify('error', `候选未恢复：${safeLibraryMessage(error)}`); }
+      finally { this.recoveryBusy = false; this.renderRecovery(root); }
+    }
+
+    private async clearCandidateCache(root: HTMLElement): Promise<void> {
+      if (this.recoveryBusy || this.busy() || this.batchRunning || this.batchApplying) return;
+      this.recoveryBusy = true; this.renderRecovery(root);
+      try {
+        this.assertLibraryAuthority();
+        const confirm = foundryGlobal?.applications?.api?.DialogV2?.confirm;
+        if (!confirm || !await confirm({ window: { title: '清除候选恢复副本' }, content: '<p>清除当前世界、当前 GM 的单条及批量候选恢复副本？来源库、队列和世界文档仍保留。刷新后需显式重新准备。</p>' })) return;
+        await this.loadCandidates(); await this.candidateStore.reset(() => this.assertLibraryAuthority()); this.savedCandidates = {};
+        this.notify('info', '本地候选恢复副本已清除。');
+      } catch (error) { this.notify('error', safeLibraryMessage(error)); }
+      finally { this.recoveryBusy = false; this.renderRecovery(root); }
+    }
+
     private async refreshBatch(root: HTMLElement, notify: boolean): Promise<void> {
       if (this.batchLoading || this.batchMutation || this.batchRunning || this.batchApplying) return;
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) {
@@ -2075,6 +2164,21 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.assertLibraryAuthority();
         this.batchState = loaded;
         this.batchRecovered = true;
+        await this.loadCandidates();
+        for (const job of loaded.jobs) {
+          const saved = this.savedCandidates[job.id];
+          if (!saved || this.batchResponses.has(job.id) || !['ready_for_gm_review','accepted','reviewed_candidate','interrupted','apply_failed'].includes(job.status)) continue;
+          try {
+            if (!this.directoryEntryAllowed(batchQueueEntry(this.batchState!, job))) continue;
+            if (saved.queueAttempt !== job.attemptCount) throw Error('保存候选属于旧 attempt；请显式重新准备。');
+            const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version });
+            this.assertLibraryAuthority();
+            this.batchState = await this.batchQueue.restoreReadyJob(job.id, record.bundle, record.queueAttempt!, () => this.assertLibraryAuthority());
+            this.batchResponses.set(job.id, { mode: record.mode, rawSourceHash: record.bundle.rawSourceHash,
+              candidate: record.candidate, input: record.input });
+          } catch (error) { this.notify('info', `完整候选未恢复：${safeLibraryMessage(error)} 原来源和队列仍保留；没有自动请求模型。`); }
+        }
+        this.renderRecovery(root);
         if (notify) this.notify('info', 'Batch queue 已从当前 world/GM scope 重新加载；未自动重发任何 Provider 请求。');
       } catch (error) {
         this.notify('error', safeLibraryMessage(error));
@@ -2233,6 +2337,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
                     ? itemInput(currentForm, this.requestId, environment.game)
                     : actorInput(currentForm, this.requestId, environment.game) } : {}),
             });
+            await this.saveCandidate(root, job.id);
           } else this.batchResponses.delete(job.id);
           try {
             this.libraryState = await this.sourceLibrary.saveReview(imported, entry.sourceLabel, [currentForm.apiKey, currentForm.endpoint], () => this.assertLibraryAuthority());
@@ -2318,6 +2423,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       try {
         this.batchState = await this.batchQueue.cancelJob(id, () => this.assertLibraryAuthority());
         this.batchResponses.delete(id);
+        await this.forgetCandidate(id);
         this.notify('info', 'Job 已取消；不会参与 runner，除非 GM 显式恢复为 pending。');
       } catch (error) { this.notify('error', safeLibraryMessage(error)); }
       finally { this.batchMutation = false; this.renderBatch(root); }
@@ -2343,8 +2449,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (!await this.confirmLibraryDelete(`删除 collection “${collection.label || collection.id}”及其 ${count} 个 queue job？该 client-local 删除不可恢复。`)) return;
       this.batchMutation = true;
       try {
+        const removedJobs = this.batchState?.jobs.filter(job => job.collectionId === id).map(job => job.id) ?? [];
         this.batchState = await this.batchQueue.removeCollection(id, () => this.assertLibraryAuthority());
         for (const job of [...this.batchResponses.keys()]) if (!this.batchState.jobs.some((entry) => entry.id === job)) this.batchResponses.delete(job);
+        for (const job of removedJobs) await this.forgetCandidate(job);
         this.notify('info', 'Collection 与其 queue job 已删除。');
       } catch (error) { this.notify('error', safeLibraryMessage(error)); }
       finally { this.batchMutation = false; this.renderBatch(root); }
@@ -2416,6 +2524,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
               artifactHash: candidate.artifactHash,
             }, () => this.assertLibraryAuthority());
             completed += 1;
+            await this.forgetCandidate(candidate.jobId);
           } catch (error) {
             if (began) {
               try { this.batchState = await this.batchQueue.finishApply(candidate.jobId, { status: 'failed', objectKind: candidate.objectKind, message: safeLibraryMessage(error) }, () => this.assertLibraryAuthority()); }

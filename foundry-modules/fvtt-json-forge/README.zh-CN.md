@@ -215,7 +215,7 @@ API Key 默认只存在当前页面内存。只有显式勾选持久化时才会
 
 Forge Intake 可以导入 mixed Actor/Item Collection JSON 或标准 ZIP。每项拥有独立 source、kind/mode、identity、attempt、status 和 review；输入顺序保留，单项失败不会让其他项升级为 accepted。
 
-Runner 固定 concurrency `1`，只有 GM 显式点击“开始／继续批量处理”才运行。刷新或关闭页面时，`running` / `applying` 项变为 `interrupted`，不会自动重发可能计费的 Provider 请求。普通批量队列只保存来源和只读 review，不保存完整 response/artifact；刷新后，`accepted`、`ready_for_gm_review` 或 `reviewed_candidate` 项缺少当前页面候选时，可用该按钮显式重新准备新候选。AI 项须先确认当前连接，新 attempt 可能产生 API 费用；不会沿用旧 GM 确认或直接从历史记录创建。战斗包自身的持久化续跑机制与此不同。
+Runner 固定 concurrency `1`，只在 GM 显式点击“开始／继续批量处理”后运行。刷新或关闭页面时，`running` / `applying` 会标为 `interrupted`，不会自动重发 Provider 请求。队列及 portable review 只保存安全审阅摘要；独立的本机完整候选存储按世界／GM隔离，恢复有效期7天，总额度8 MiB，包含来源、IR、正式产物和真实诊断，不保存API Key、endpoint、原HTTP回复或GM批准。普通AI单条在空白工作区展开“更多工具→批量处理”，点击“恢复上次单条候选”；普通批量重开时自动进行纯本地重验，来源、attempt、目标、当前生成器结果和问题清单均须一致，通过后仍由GM本次确认。重验不请求模型、不增加attempt。损坏、过期、目标或结果变化、额度或存储失败时保留来源与队列，可显式重新准备；AI重新准备可能产生费用且须当前有效连接。到期仅禁止恢复，不自动删除副本；可手动清理腾出额度。“清除本地恢复副本”只清除当前世界／GM的这些副本，不删除来源库、队列或世界文档。历史导出仍只读，不成为可直接创建的完整候选。
 
 批量 Apply 使用当前页面仍持有的完整有效候选。普通 AI Actor 的可用语义待审候选可由 GM 明确采用，队列记为 `reviewed_candidate`，保留原 `needs_review`／`failed`、完整来源及问题；Item 仍要求正式 `accepted`。确认框列出正式检查结论、问题、Document ID 及 source/artifact hash，确认后重新核对当前候选和队列身份；结构／解析错误、来源／产物失配、权限及目标版本变化仍拒绝。Actor 与 Item 继续走各自 adapter 和创建读回。多 Document 操作不是原子事务，部分成功/失败会逐项报告，不会伪装为全成功或回滚已完成的其他 Document。导入历史记录时，摘要分别显示流程状态和正式检查结论，GM 采用或 `committing_and_reading_back` 不等于正式 `accepted`。
 

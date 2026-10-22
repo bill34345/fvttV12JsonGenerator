@@ -191,6 +191,8 @@ export async function reviewBrowserItemIntakeCandidate(
   }
 }
 
+export { assertCurrentItemCandidate as assertCurrentBrowserItemIntakeCandidate };
+
 export function approveBrowserItemIntakeCandidateForGm(
   input: BrowserItemIntakeInput,
   candidate: BrowserItemGenerationResult,

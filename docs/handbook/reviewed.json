@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "65de3669ce7e601f6a7731174e8092414518929fdc18bd75897501214e4c7df2",
+    "fingerprint": "adf297b76fb3fbe95dd2c42e8fa19ede02cf66f9fbe64446445d899a15234722",
     "reviewedOn": "2026-10-22",
-    "note": "人工核对本批三处修复：普通批量Actor可采用并保留原判定，Item仍accepted；刷新需显式新attempt，不持久化完整候选、不继承GM确认；历史分开显示流程和正式结论。新增命令仅选择既有队列/IndexedDB/Application检查并复用隔离运行器。human-encounter-intake仅受共享目录watch触发，战斗包入口、输入输出、玩法及续跑策略无变化。"
+    "note": "已核共享runtime差异：仅Item候选身份断言导出与普通批量恢复状态转移；现有检查命令、CLI/人类战斗包输入输出、支持版本及安全限制不变，两个条目无需改写"
   },
   "human-encounter-intake": {
-    "fingerprint": "9f3326451882cfb4c517f876733768aaf551294caa6d60b0c6ba13fd9e579ccf",
+    "fingerprint": "dc7160995c852dd87810842d73ddb66ca5f99113aa229a3a29719b7205ac0d87",
     "reviewedOn": "2026-10-22",
-    "note": "人工核对本批三处修复：普通批量Actor可采用并保留原判定，Item仍accepted；刷新需显式新attempt，不持久化完整候选、不继承GM确认；历史分开显示流程和正式结论。新增命令仅选择既有队列/IndexedDB/Application检查并复用隔离运行器。human-encounter-intake仅受共享目录watch触发，战斗包入口、输入输出、玩法及续跑策略无变化。"
+    "note": "已核共享runtime差异：仅Item候选身份断言导出与普通批量恢复状态转移；现有检查命令、CLI/人类战斗包输入输出、支持版本及安全限制不变，两个条目无需改写"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "d357573562292239386a63f1ac9dcb25649c9f52fa011a868ab4d821d0b4a468",
+    "fingerprint": "fb3b4716febe31a5905fd928a7c31f3a8ea3ae147bc57c26442ae981bd8a347c",
     "reviewedOn": "2026-10-22",
-    "note": "本地提交前人工核对：普通批量候选、刷新显式新attempt、GM采用保留needs_review/11问题与两种历史摘要的实机范围保持；仅补充后续本地提交授权及验收当时c6263af/未提交的历史说明。代码与原实机收据哈希一致，不重跑有效业务，不修改旧原件、hook或支持范围。"
+    "note": "已核单条/批量完整候选恢复与实机证据，补充7天是恢复有效期、过期副本不自动删除，可按当前world/GM清理；历史导出仍只读，Item实机覆盖不扩大"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

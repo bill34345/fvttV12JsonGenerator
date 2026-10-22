@@ -1,4 +1,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
+import { MemoryIntakeCandidateStore, captureIntakeCandidate, revalidateIntakeCandidate, INTAKE_CANDIDATE_MAX_AGE_MS } from '../src/intakeCandidateRecovery';
+import { LURKER_SOURCE, buildValidLurkerIr } from '../../../src/core/intake/__tests__/fixtures/lurker';
+import { JEWEL_OF_THREE_PRAYERS_SOURCE, jewelCandidate, buildJewelOfThreePrayersIr } from '../../../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
 import { readFileSync } from 'node:fs';
 import {
   buildForgeActorRequest,
@@ -1905,7 +1908,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(after.latestReview?.attemptId).not.toBe(before.latestReview?.attemptId);
     expect(after.latestReview?.gmApproval).toBeUndefined();
     expect(fixture.counts.analyses).toBe(2);
-    expect(second.root.batchApply.disabled).toBe(false);
+    expect(second.root.batchApply.disabled, JSON.stringify(second.notifications)).toBe(false);
     await second.application.applyBatch(second.root);
     expect((await queue.load()).jobs[0]?.status).toBe('applied');
     expect(fixture.counts.strictCreates).toBe(1);
@@ -2189,7 +2192,7 @@ describe('Forge Intake Application review workspace', () => {
     const rerun = await batchQueue.load();
     expect(rerun.jobs[0]!.status).toBe('accepted');
     expect(rerun.jobs[0]!.attemptCount).toBe(2);
-    expect(second.root.batchApply.disabled).toBe(false);
+    expect(second.root.batchApply.disabled, JSON.stringify(second.notifications)).toBe(false);
     expect((await sourceLibrary.load()).reviews).toHaveLength(2);
     expect(analyses).toBe(2);
     expect(creates).toBe(0);
@@ -2265,6 +2268,114 @@ describe('Forge Intake Application review workspace', () => {
   });
 });
 
+describe('complete ordinary candidate refresh recovery', () => {
+  function fixture(mode: 'ai-monster' | 'ai-item') {
+    const counts = { discover: 0, extract: 0, create: 0 };
+    const source = mode === 'ai-item' ? JEWEL_OF_THREE_PRAYERS_SOURCE : LURKER_SOURCE;
+    const provider = { providerName: 'fixed-recovery', extractionModel: 'fixed', reviewModel: 'fixed',
+      discover: async () => { counts.discover++; return { schemaVersion: 1, candidates: [mode === 'ai-item' ? jewelCandidate()
+        : { id: 'lurker', label: '暗影潜妖', start: 0, end: source.length, quote: source }] }; },
+      extract: async () => { counts.extract++; return mode === 'ai-item' ? buildJewelOfThreePrayersIr() : buildValidLurkerIr(); },
+      review: async () => { throw Error('Unexpected review'); }, repair: async () => { throw Error('Unexpected repair'); } };
+    const create = async ({ response }: any) => { counts.create++; return { ...(mode === 'ai-item' ? itemCreateResult() : actorCreateResult()),
+      uuid: `${mode === 'ai-item' ? 'Item' : 'Actor'}.${hashArtifact({ sourceId: response.result.sourceIdentity.sourceId }).slice(0, 16)}` }; };
+    return { source, counts, services: { createBrowserAiProvider: (() => provider) as any, createBrowserItemAiProvider: (() => provider) as any,
+      createAcceptedForgeActor: create as any, createReviewedForgeActorCandidate: create as any, createAcceptedForgeItem: create as any } };
+  }
+
+  test.each(['ai-monster','ai-item'] as const)('single %s restores exact formal candidate without model calls or old approval', async mode => {
+    const f = fixture(mode), store = new MemoryIntakeCandidateStore();
+    const first = makeApplication(f.services, undefined, undefined, undefined, undefined, { candidateStore: store });
+    await settleBatch(first.application, first.root);
+    setAiForm(first.application, first.root, mode, f.source);
+    await first.application.runAnalysis(first.root, false); await first.application.generate(first.root);
+    const record = (await store.load()).single!;
+    expect(record, JSON.stringify(first.notifications)).toBeDefined(); expect(record.candidate.gmApproval).toBeUndefined();
+    expect(JSON.stringify(record)).not.toContain('transient'); expect(JSON.stringify(record)).not.toContain('https://provider.example');
+    const originalHash = record.candidate.candidateHash;
+    await first.application.close();
+    const second = makeApplication(f.services, undefined, undefined, undefined, undefined, { candidateStore: store });
+    await settleBatch(second.application, second.root);
+    await second.application.restoreSingleCandidate(second.root);
+    expect(second.application.status, JSON.stringify(second.notifications)).toBe('ready_for_gm_review');
+    expect(second.application.generation.candidateHash).toBe(originalHash);
+    expect(second.application.generation.gmApproval).toBeUndefined(); expect(second.application.response).toBeUndefined();
+    expect(second.application.generation.findings).toEqual(record.candidate.findings);
+    expect(f.counts).toEqual({ discover: 1, extract: 1, create: 0 });
+    expect(second.root.create.disabled).toBe(false);
+    await second.application.create(second.root);
+    expect(f.counts.create).toBe(1); expect((await store.load()).single).toBeUndefined();
+    expect(second.notifications.errors).toEqual([]); await second.application.close();
+  });
+
+  test.each(['ai-monster','ai-item'] as const)('batch %s refresh reattaches candidate with the same attempt and fresh GM confirmation', async mode => {
+    const f = fixture(mode), store = new MemoryIntakeCandidateStore(), queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    const first = makeApplication(f.services, undefined, undefined, async () => true, queue, { candidateStore: store });
+    await settleBatch(first.application, first.root); setAiForm(first.application, first.root, mode, '');
+    await queue.importCollection(createForgeBatchCollection({ label: 'recovery', entries: [{ objectKind: mode === 'ai-item' ? 'item' : 'actor', mode,
+      sourceLabel: 'Refresh recovery', rawSource: f.source }] }));
+    await first.application.refreshBatch(first.root, false); await first.application.runBatch(first.root);
+    const before = (await queue.load()).jobs[0]!;
+    expect((await store.load())[before.id], JSON.stringify(first.notifications)).toBeDefined(); await first.application.close();
+    const second = makeApplication(f.services, undefined, undefined, async () => true, queue, { candidateStore: store });
+    await second.application.refreshBatch(second.root, false);
+    while (second.application.batchLoading) await new Promise(resolve => setTimeout(resolve, 1));
+    const after = (await queue.load()).jobs[0]!;
+    expect(after.attemptCount).toBe(1); expect(after.latestReview?.attemptId).toBe(before.latestReview?.attemptId);
+    expect(after.latestReview?.gmApproval).toBeUndefined(); expect(second.root.batchApply.disabled, JSON.stringify(second.notifications)).toBe(false);
+    expect(second.root.batchRun.disabled).toBe(true); expect(f.counts).toEqual({ discover: 1, extract: 1, create: 0 });
+    await second.application.applyBatch(second.root);
+    expect(f.counts.create).toBe(1); expect((await queue.load()).jobs[0]?.status).toBe('applied');
+    expect((await store.load())[before.id]).toBeUndefined(); expect(second.notifications.errors).toEqual([]); await second.application.close();
+  });
+
+  test.each(['old-attempt','apply-failed'] as const)('refresh handles %s without inheriting prior GM approval', async scenario => {
+    const f = fixture('ai-item'), store = new MemoryIntakeCandidateStore(), queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    if (scenario === 'apply-failed') f.services.createAcceptedForgeItem = (async () => { throw Error('Readback failure fixture'); }) as any;
+    const first = makeApplication(f.services, undefined, undefined, async () => true, queue, { candidateStore: store });
+    await settleBatch(first.application, first.root); setAiForm(first.application, first.root, 'ai-item', '');
+    await queue.importCollection(createForgeBatchCollection({ label: 'failed apply recovery', entries: [{ objectKind: 'item', mode: 'ai-item', sourceLabel: 'Item', rawSource: f.source }] }));
+    await first.application.refreshBatch(first.root, false); await first.application.runBatch(first.root);
+    const job = (await queue.load()).jobs[0]!;
+    if (scenario === 'apply-failed') {
+      await first.application.applyBatch(first.root);
+      expect((await queue.load()).jobs[0]?.status).toBe('apply_failed');
+      expect((await queue.load()).jobs[0]?.latestReview?.gmApproval).toBeDefined();
+    } else { await queue.startJob(job.id); await queue.interruptJob(job.id); }
+    await first.application.close();
+    const second = makeApplication(f.services, undefined, undefined, async () => true, queue, { candidateStore: store });
+    while (second.application.batchLoading) await new Promise(resolve => setTimeout(resolve, 1));
+    const current = (await queue.load()).jobs[0]!;
+    if (scenario === 'apply-failed') {
+      expect(current.status).toBe('ready_for_gm_review'); expect(current.latestReview?.gmApproval).toBeUndefined();
+      expect(second.application.batchResponses.get(job.id).candidate.gmApproval).toBeUndefined(); expect(second.root.batchApply.disabled).toBe(false);
+    } else { expect(current.status).toBe('interrupted'); expect(second.application.batchResponses.size).toBe(0); expect(second.root.batchRun.disabled).toBe(false); }
+    expect(f.counts).toEqual({ discover: 1, extract: 1, create: 0 }); await second.application.close();
+  });
+
+  test('rejects damaged, expired, changed-target and changed-current-generation records without modifying the original', async () => {
+    const f = fixture('ai-monster'), store = new MemoryIntakeCandidateStore();
+    const first = makeApplication(f.services, undefined, undefined, undefined, undefined, { candidateStore: store });
+    await settleBatch(first.application, first.root); setAiForm(first.application, first.root, 'ai-monster', f.source);
+    await first.application.runAnalysis(first.root, false); await first.application.generate(first.root);
+    const record = (await store.load()).single!, baseline = JSON.stringify(record), target = { fvttVersion: '14.364', systemVersion: '5.3.3' };
+    await expect(revalidateIntakeCandidate({ ...record, checksum: 'bad' }, target)).rejects.toThrow(/损坏/u);
+    await expect(revalidateIntakeCandidate(record, target, Date.parse(record.savedAt) + INTAKE_CANDIDATE_MAX_AGE_MS + 1)).rejects.toThrow(/过期/u);
+    await expect(revalidateIntakeCandidate(record, { ...target, systemVersion: '6.0.0' })).rejects.toThrow(/目标/u);
+    const changed = structuredClone(record); changed.candidate.deterministicFindings = [...(record.candidate.deterministicFindings ?? []),
+      { id: 'changed', code: 'NOT_REPRODUCIBLE_BY_CURRENT_VALIDATOR', path: '/', message: 'Changed local finding', blocking: true, origin: 'semantic' }];
+    // Recompute the corruption checksum: current workflow still must reproduce all local findings.
+    const { checksum, ...body } = changed; changed.checksum = hashSource(JSON.stringify(body));
+    await expect(revalidateIntakeCandidate(changed, target)).rejects.toThrow(/重验/u);
+    expect(() => captureIntakeCandidate(record.input, record.mode, record.bundle, { ...record.candidate, apiKey: 'must-not-persist' } as any)).toThrow(/凭据/u);
+    const approved = { ...record.candidate, gmApproval: { gmId: 'old' } } as any;
+    const recaptured = captureIntakeCandidate(record.input, record.mode, record.bundle, approved);
+    expect(recaptured.candidate.gmApproval).toBeUndefined(); expect(recaptured.bundle.gmApproval).toBeUndefined();
+    expect(JSON.stringify(record)).toBe(baseline); expect(f.counts).toEqual({ discover: 1, extract: 1, create: 0 });
+    await first.application.close();
+  });
+});
+
 function makeApplication(
   services: Partial<ForgeIntakeApplicationServices> = {},
   dialogWait?: (config: any) => Promise<unknown>,
@@ -2300,6 +2411,7 @@ function makeApplication(
     services,
     sourceLibrary,
     batchQueue,
+    candidateStore: new MemoryIntakeCandidateStore(),
     ...applicationOptions,
   };
   const Application = createForgeIntakeApplicationClass(environment);

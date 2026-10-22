@@ -246,6 +246,22 @@ export class ManagedForgeBatchQueue {
     }, { forbiddenValues, beforeCommit });
   }
 
+  /** Reattach a locally revalidated full candidate, discarding any previous GM approval. */
+  async restoreReadyJob(id: string, bundle: ForgeIntakeReviewBundleV2, attemptCount: number, beforeCommit?: ForgeBatchQueueCommitGuard): Promise<Readonly<ForgeBatchQueueV1>> {
+    const ready = decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(bundle)).bundle;
+    return await this.updateJob(id, (job, entry, timestamp) => {
+      const prior = job.latestReview;
+      if (!['ready_for_gm_review', 'accepted', 'reviewed_candidate', 'interrupted', 'apply_failed'].includes(job.status)
+        || job.attemptCount !== attemptCount
+        || ready.status !== 'ready_for_gm_review' || ready.gmApproval || !ready.candidateHash || !prior
+        || stableStringify({ ...prior, status: ready.status, gmApproval: undefined }) !== stableStringify(ready)) {
+        throw new TypeError('保存候选与队列当前待审记录不一致；请显式重新准备。');
+      }
+      assertReviewEntry(ready, entry, `job ${id}`);
+      return { ...job, status: 'ready_for_gm_review', latestReview: ready, applyResult: undefined, lastError: undefined, updatedAt: timestamp };
+    }, { beforeCommit });
+  }
+
   /** Promote only this job's volatile current candidate after the GM has approved it. */
   async approveReadyJob(
     id: string,
