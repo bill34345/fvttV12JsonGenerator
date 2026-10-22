@@ -1830,6 +1830,116 @@ describe('Forge Intake Application review workspace', () => {
     expect(notifications.errors).toEqual([]);
   });
 
+  test.each(['needs_review', 'failed'] as const)('batch adopts a usable Actor with strict %s without claiming acceptance', async (strictStatus) => {
+    const fixture = batchCandidateFixture('ai-monster', strictStatus);
+    const queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    const { application, root, notifications } = makeApplication(fixture.services, undefined, undefined, async (dialog) => {
+      expect(dialog.content).toContain(`正式检查：${strictStatus}`);
+      expect(dialog.content).toContain('SOURCE_REVIEW_REQUIRED');
+      expect(dialog.content).toContain('不会标为 accepted');
+      return true;
+    }, queue);
+    await settleBatch(application, root);
+    setAiForm(application, root, 'ai-monster', '');
+    await queue.importCollection(createForgeBatchCollection({ label: 'Reviewed Actor batch', entries: [
+      { objectKind: 'actor', mode: 'ai-monster', sourceLabel: 'Actor', rawSource: 'complete source needing GM review' },
+    ] }));
+    await application.refreshBatch(root, false);
+    await application.runBatch(root);
+    const pending = (await queue.load()).jobs[0]!;
+    expect(pending.status).toBe('ready_for_gm_review');
+    expect(pending.latestReview?.candidateResponse?.status).toBe(strictStatus);
+    expect(root.batchApply.disabled).toBe(false);
+    expect(root.batchRun.disabled).toBe(true);
+    expect(fixture.counts.reviewedCreates).toBe(0);
+    await application.applyBatch(root);
+    const applied = (await queue.load()).jobs[0]!;
+    expect(applied.status).toBe('applied');
+    expect(applied.latestReview?.status).toBe('reviewed_candidate');
+    expect(applied.latestReview?.candidateResponse?.status).toBe(strictStatus);
+    expect(applied.latestReview?.deterministicFindings.some((finding) => finding.blocking)).toBe(true);
+    expect(applied.latestReview?.gmApproval?.gmId).toBe('test-user');
+    expect(fixture.counts).toEqual({ analyses: 1, generations: 1, reviewedCreates: 1, strictCreates: 0 });
+    expect(notifications.errors).toEqual([]);
+    for (const status of ['reviewed_candidate', 'committing_and_reading_back']) {
+      root.reviewBundleFile.files = [reviewBundleFile(JSON.stringify({ ...applied.latestReview, status }))];
+      await application.importBundle(root);
+      expect(root.humanSummary.textContent).toContain(`历史流程状态：${status}`);
+      expect(root.humanSummary.textContent).toContain(`正式检查结论：${strictStatus}`);
+      expect(root.humanSummary.textContent).not.toContain('显示 accepted');
+      expect(root.create.disabled).toBe(true);
+      await application.create(root);
+    }
+    expect(fixture.counts.reviewedCreates).toBe(1);
+    await application.close();
+  });
+
+  test.each(['ai-monster', 'ai-item'] as const)('explicitly prepares a fresh %s candidate after reload without reusing old approval', async (mode) => {
+    const fixture = batchCandidateFixture(mode, 'accepted');
+    const queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    const first = makeApplication(fixture.services, undefined, undefined, async () => true, queue);
+    await settleBatch(first.application, first.root);
+    setAiForm(first.application, first.root, mode, '');
+    await queue.importCollection(createForgeBatchCollection({ label: 'Pending review reload', entries: [
+      { objectKind: mode === 'ai-item' ? 'item' : 'actor', mode, sourceLabel: 'Reload', rawSource: 'pending review source' },
+    ] }));
+    await first.application.refreshBatch(first.root, false);
+    await first.application.runBatch(first.root);
+    const before = (await queue.load()).jobs[0]!;
+    expect(before.status).toBe('ready_for_gm_review');
+    expect(first.root.batchApply.disabled).toBe(false);
+    await first.application.close();
+    const second = makeApplication(fixture.services, undefined, undefined, async () => true, queue);
+    await settleBatch(second.application, second.root);
+    expect(fixture.counts.analyses).toBe(1);
+    expect(second.root.batchApply.disabled).toBe(true);
+    expect(second.root.batchRun.disabled).toBe(false);
+    expect(second.root.batchSummary.textContent).toContain('不会自动请求模型');
+    await second.application.applyBatch(second.root);
+    expect(fixture.counts.strictCreates).toBe(0);
+    setAiForm(second.application, second.root, mode, '');
+    await second.application.runBatch(second.root);
+    const after = (await queue.load()).jobs[0]!;
+    expect(after.status).toBe('ready_for_gm_review');
+    expect(after.attemptCount).toBe(2);
+    expect(after.latestReview?.attemptId).not.toBe(before.latestReview?.attemptId);
+    expect(after.latestReview?.gmApproval).toBeUndefined();
+    expect(fixture.counts.analyses).toBe(2);
+    expect(second.root.batchApply.disabled).toBe(false);
+    await second.application.applyBatch(second.root);
+    expect((await queue.load()).jobs[0]?.status).toBe('applied');
+    expect(fixture.counts.strictCreates).toBe(1);
+    expect(second.notifications.errors).toHaveLength(1); // explicit apply of history was rejected
+    await second.application.close();
+  });
+
+  test.each(['artifact', 'source', 'parsing'] as const)('batch rejects an Actor candidate changed at %s after GM sees the confirmation', async (mutation) => {
+    const fixture = batchCandidateFixture('ai-monster', 'failed');
+    const queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    let application: any;
+    const current = makeApplication(fixture.services, undefined, undefined, async () => {
+      const candidate = [...application.batchResponses.values()][0] as any;
+      if (mutation === 'source') candidate.input.source += ' changed';
+      if (mutation === 'artifact') candidate.candidate.candidateResponse.result.artifact.name = 'changed';
+      if (mutation === 'parsing') candidate.candidate.candidateResponse.result.diagnostics[0].stage = 'parse';
+      return true;
+    }, queue);
+    application = current.application;
+    await settleBatch(application, current.root);
+    setAiForm(application, current.root, 'ai-monster', '');
+    await queue.importCollection(createForgeBatchCollection({ label: 'Changed candidate', entries: [
+      { objectKind: 'actor', mode: 'ai-monster', sourceLabel: 'Actor', rawSource: 'unchanged source' },
+    ] }));
+    await application.refreshBatch(current.root, false);
+    await application.runBatch(current.root);
+    expect(current.root.batchApply.disabled).toBe(false);
+    await application.applyBatch(current.root);
+    expect(fixture.counts.reviewedCreates + fixture.counts.strictCreates).toBe(0);
+    expect((await queue.load()).jobs[0]?.status).toBe('ready_for_gm_review');
+    expect(current.notifications.errors.at(-1)).toContain('当前候选与确认清单已不一致');
+    await application.close();
+  });
+
   test('excludes a cancelled job until GM explicitly restores it to pending', async () => {
     const analyzed: string[] = [];
     let creates = 0;
@@ -2236,6 +2346,76 @@ function readyItemAnalysis(source: string): any {
     provider: { providerName: 'fake-item', extractionModel: 'extract', reviewModel: 'review', promptVersions: { discover: 'd', extract: 'e', review: 'v', repair: 'r' } },
     calls: { discovery: 1, extraction: 1, review: 0, repair: 0 }, repairCount: 0,
   };
+}
+
+/** Local formal conversion only; every AI stage is fixed and unexpected review/repair fails. */
+function batchCandidateFixture(mode: 'ai-monster' | 'ai-item', strictStatus: 'accepted' | 'needs_review' | 'failed') {
+  const counts = { analyses: 0, generations: 0, reviewedCreates: 0, strictCreates: 0 };
+  const analyze = async (input: any) => {
+    counts.analyses += 1;
+    const analysis = mode === 'ai-item' ? readyItemAnalysis(input.source) : readyActorAnalysis(input.source);
+    if (strictStatus !== 'accepted') {
+      const finding = { ...blocking('SOURCE_REVIEW_REQUIRED'), origin: 'semantic', path: '/creature/actions/0' };
+      analysis.status = 'needs_review'; analysis.findings = [finding];
+      analysis.validation = { findings: [finding], blocking: [finding], warnings: [] };
+    }
+    return analysis;
+  };
+  const generate = async (input: any, analysis: any) => {
+    counts.generations += 1;
+    const request = (mode === 'ai-item' ? buildForgeItemRequest : buildForgeActorRequest)({
+      content: mode === 'ai-item' ? ITEM_SOURCE : ACTOR_SOURCE, displayName: input.displayName,
+      requestId: input.requestId, fvttVersion: input.fvttVersion, systemVersion: input.systemVersion,
+    });
+    const response: any = await (mode === 'ai-item' ? convertFinalItemSource : convertFinalActorSource)(request as any);
+    if (response.result.status !== 'accepted') throw new Error('Local formal fixture failed.');
+    if (strictStatus !== 'accepted') {
+      delete response.result.artifactHash;
+      response.result.status = strictStatus;
+      response.result.verification.status = strictStatus;
+      response.result.diagnostics = [{ code: 'SOURCE_REVIEW_REQUIRED', severity: strictStatus === 'failed' ? 'error' : 'warning', stage: 'semantic',
+        path: 'actor', message: 'The complete source rule still needs GM review.' }];
+    }
+    return { status: 'ready_for_gm_review', candidateAvailable: true, analysis, rawSourceHash: hashSource(input.source),
+      finalSource: request.source.content, finalSourceHash: request.source.utf8Sha256,
+      candidateResponse: response, candidateHash: hashSource(JSON.stringify({ rawSourceHash: analysis.rawSourceHash,
+        ir: analysis.ir, finalSourceHash: request.source.utf8Sha256, response })),
+      actorProjection: response.result.artifact, itemProjection: response.result.artifact,
+      formalStatus: strictStatus, intakeVerificationStatus: strictStatus === 'accepted' ? 'accepted' : 'needs_review',
+      modelReviewStatus: 'not_requested', deterministicFindings: analysis.findings, findings: analysis.findings,
+      stages: [], provider: analysis.provider, calls: analysis.calls };
+  };
+  const strictCreate = async ({ response }: any) => {
+    counts.strictCreates += 1;
+    expect(response.result.status).toBe('accepted');
+    return { ...(mode === 'ai-item' ? itemCreateResult() : actorCreateResult()),
+      uuid: `${mode === 'ai-item' ? 'Item' : 'Actor'}.${hashArtifact({ sourceId: response.result.sourceIdentity.sourceId }).slice(0, 16)}` };
+  };
+  const unexpected = async () => { throw new Error('Unexpected model review or correction.'); };
+  const services: Partial<ForgeIntakeApplicationServices> = {
+    createBrowserAiProvider: (() => ({})) as any, createBrowserItemAiProvider: (() => ({})) as any,
+    analyzeBrowserActorSourceWithAi: analyze as any, analyzeBrowserItemSourceWithAi: analyze as any,
+    generateBrowserActorIntakeCandidate: generate as any, generateBrowserItemIntakeCandidate: generate as any,
+    reviewBrowserActorIntakeCandidate: unexpected as any, reviewBrowserItemIntakeCandidate: unexpected as any,
+    repairBrowserActorIntake: unexpected as any, repairBrowserItemIntake: unexpected as any,
+    approveBrowserItemIntakeCandidateForGm: ((input: any, candidate: any, gmId: string) => ({
+      ...candidate, status: 'accepted', response: candidate.candidateResponse,
+      gmApproval: { gmId, sourceHash: hashSource(input.source), finalSourceHash: candidate.finalSourceHash,
+        artifactHash: hashArtifact(candidate.candidateResponse.result.artifact), candidateHash: candidate.candidateHash,
+        targetHash: forgeGmTargetHash(candidate.candidateResponse.result.target), modelReviewStatus: 'not_requested',
+        modelFindingsHash: forgeGmModelFindingsHash([]) },
+    })) as any,
+    createAcceptedForgeActor: strictCreate as any, createAcceptedForgeItem: strictCreate as any,
+    createReviewedForgeActorCandidate: (async (input: any) => {
+      counts.reviewedCreates += 1;
+      expect(input.response.result.status).toBe(strictStatus);
+      expect(input.reviewApproval.gmId).toBe('test-user');
+      expect(input.reviewApproval.artifactHash).toBe(hashArtifact(input.response.result.artifact));
+      expect(input.reviewApproval.findingsHash).toMatch(/^[a-f0-9]{64}$/u);
+      return { ...actorCreateResult(), uuid: `Actor.${hashArtifact({ sourceId: input.response.result.sourceIdentity.sourceId }).slice(0, 16)}` };
+    }) as any,
+  };
+  return { counts, services };
 }
 
 function blocking(code: string) { return { id: code, code, path: '/', message: code, blocking: true, origin: 'evidence' }; }

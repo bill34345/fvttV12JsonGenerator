@@ -215,9 +215,11 @@ API Key 默认只存在当前页面内存。只有显式勾选持久化时才会
 
 Forge Intake 可以导入 mixed Actor/Item Collection JSON 或标准 ZIP。每项拥有独立 source、kind/mode、identity、attempt、status 和 review；输入顺序保留，单项失败不会让其他项升级为 accepted。
 
-Runner 固定 concurrency `1`，只有 GM 显式点击才运行。刷新或关闭页面时，`running` / `applying` 项变为 `interrupted`，不会自动重发可能计费的 Provider 请求。跨会话恢复的历史 accepted review 不含完整 response，必须显式 fresh run 后才能重新进入 apply manifest。
+Runner 固定 concurrency `1`，只有 GM 显式点击“开始／继续批量处理”才运行。刷新或关闭页面时，`running` / `applying` 项变为 `interrupted`，不会自动重发可能计费的 Provider 请求。普通批量队列只保存来源和只读 review，不保存完整 response/artifact；刷新后，`accepted`、`ready_for_gm_review` 或 `reviewed_candidate` 项缺少当前页面候选时，可用该按钮显式重新准备新候选。AI 项须先确认当前连接，新 attempt 可能产生 API 费用；不会沿用旧 GM 确认或直接从历史记录创建。战斗包自身的持久化续跑机制与此不同。
 
-批量 Apply 只接受当前页面仍持有完整 accepted response 的项目。确认框会列出 immutable manifest、Document ID、source/artifact hash 和 target；Actor 与 Item 继续走各自 adapter。多 Document 操作不是原子事务，部分成功/失败会逐项报告，不会伪装为全成功或回滚已完成的其他 Document。
+批量 Apply 使用当前页面仍持有的完整有效候选。普通 AI Actor 的可用语义待审候选可由 GM 明确采用，队列记为 `reviewed_candidate`，保留原 `needs_review`／`failed`、完整来源及问题；Item 仍要求正式 `accepted`。确认框列出正式检查结论、问题、Document ID 及 source/artifact hash，确认后重新核对当前候选和队列身份；结构／解析错误、来源／产物失配、权限及目标版本变化仍拒绝。Actor 与 Item 继续走各自 adapter 和创建读回。多 Document 操作不是原子事务，部分成功/失败会逐项报告，不会伪装为全成功或回滚已完成的其他 Document。导入历史记录时，摘要分别显示流程状态和正式检查结论，GM 采用或 `committing_and_reading_back` 不等于正式 `accepted`。
+
+2026-10-23限定实机已验证：固定Mage待审任务整页刷新后无自动请求，显式继续产生新attempt；GM正常批量采用创建／读回，11项问题及原needs_review保留，已采用／提交中历史只读摘要正确。该证据来自当前本地Mirror14.368／dnd5e5.3.3，0真实模型调用，不推广任意来源或完整玩法。[本批记录与清理](../../docs/acceptance/2026-10-23-forge-batch-runtime.md)。
 
 ## 明确限制
 
@@ -266,7 +268,7 @@ Macro创建与执行是两个动作。脚本仍在GM客户端权限下运行；�
 
 本批测试对象、控制／玩家／审计宏和116个测试消息／通知已精确清理，最后审计宏删除后独立读回九类集合：原成员、设置和视图恢复；一个旧战斗的修改时间在原生恢复路径中变化，已保留并记录，未伪造stats。原服务常驻且禁止备份。样本、原始失败与范围证据见[特殊机制接受记录](../../docs/reviews/2026-10-06-forge-special-mechanics-routing.md)，不推广为生产或全部规则组合接受。
 
-明确的GM辅助/外部规则只在新整包路径中进入显式审核，且必须各自关联一份有正确Actor绑定的宏。原有单Actor/Item accepted-only路径不变；失败来源、未知诊断或缺失覆盖不能借宏包绕过。
+明确的GM辅助/外部规则只在新整包路径中进入显式审核，且必须各自关联一份有正确Actor绑定的宏。严格accepted的Actor／Item创建接口保持独立；普通AI Actor另按本页候选采用规则处理。失败来源、未知诊断或缺失覆盖不能借宏包伪称正式accepted。
 
 多文档导入不保证跨浏览器原子事务。普通失败清理本次新建文档并检查结果；无法清理时列出准确UUID。既有文档不会被覆盖。已上传的内容寻址图片可能保留供重试，图片不同则拒绝覆盖。已在游戏中改变过的角色再次导入可能报告冲突，这是避免覆盖当前状态的预期行为。
 

@@ -14,6 +14,7 @@ import {
   generateBrowserActorIntakeCandidate,
   reviewBrowserActorIntakeCandidate,
   approveBrowserActorIntakeCandidateForGm,
+  assertCurrentBrowserActorIntakeCandidate,
   repairBrowserActorIntake,
   type BrowserActorGenerationResult,
   type BrowserActorIntakeInput,
@@ -86,6 +87,7 @@ import {
   decodeForgeItemResponse,
   hashArtifact,
   hashSource,
+  isUsableActorCandidateArtifact,
   type ForgeActorResponse,
   type ForgeItemResponse,
 } from '@fvtt-json-generator/forge-gateway-protocol';
@@ -1927,9 +1929,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const connectionSummary = root.querySelector('[data-connection-summary]') as HTMLElement | null;
       if (connectionSummary) connectionSummary.textContent = '历史审核记录 · 只读';
       text(root, 'status', `导入的只读历史状态：${bundle.status}`);
-      text(root, 'human-summary', bundle.status === 'accepted' || bundle.status === 'committing_and_reading_back'
-        ? '历史记录显示 accepted，但不含可提交的完整 response/artifact，不能直接 Confirm Create。请显式开启新 attempt 并重新 Analyze、Generate 与验证。'
-        : `历史记录显示 ${bundle.status}。这是只读证据，不会恢复旧请求、自动调用 Provider 或写世界 Document。`);
+      text(root, 'human-summary', `历史流程状态：${bundle.status}。${bundle.candidateResponse ? `正式检查结论：${bundle.candidateResponse.status}。` : ''}${bundle.gmApproval ? '保留 GM 本次采用记录；采用不改变正式检查结论。' : ''}这是只读证据，不含可提交的完整 response/artifact，不能直接 Confirm Create。请显式开启新 attempt 并重新 Analyze、Generate 与验证；不会自动调用 Provider 或写世界 Document。`);
       html(root, 'stages', '');
       const importedFindings = [...bundle.deterministicFindings, ...bundle.aiReviewFindings];
       const responseDiagnostics = bundle.candidateResponse?.diagnostics ?? [];
@@ -2156,7 +2156,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private batchJobRunnable(job: Readonly<ForgeBatchJobV1>): boolean {
       if (!this.batchJobDirectoryAllowed(job)) return false;
       return ['pending', 'interrupted', 'needs_review', 'failed', 'rejected', 'apply_failed'].includes(job.status)
-        || (job.status === 'accepted' && !this.batchResponses.has(job.id));
+        || (['accepted', 'ready_for_gm_review', 'reviewed_candidate'].includes(job.status) && !this.batchResponses.has(job.id));
     }
 
     private batchJobDirectoryAllowed(job: Readonly<ForgeBatchJobV1>): boolean {
@@ -2174,7 +2174,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private batchJobCancellable(job: Readonly<ForgeBatchJobV1>): boolean {
-      return ['pending', 'interrupted', 'ready_for_gm_review', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status);
+      return ['pending', 'interrupted', 'ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status);
     }
 
     private async runBatch(root: HTMLElement): Promise<void> {
@@ -2211,7 +2211,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             this.batchResponses.delete(job.id);
             break;
           }
-          if (this.status === 'ready_to_generate') await this.generate(root, true);
+          if (this.status === 'ready_to_generate' || (this.status === 'needs_review' && form.mode === 'ai-monster'
+            && !!(this.analysis as BrowserActorIntakeAnalysis).ir)) await this.generate(root, true);
           if (this.batchStopRequested) {
             this.batchState = await this.batchQueue.interruptJob(job.id, 'GM 停止了 batch runner；不会自动重发 Provider 请求。', () => this.assertLibraryAuthority());
             this.batchResponses.delete(job.id);
@@ -2372,16 +2373,21 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           try {
             const latest = await this.batchQueue.load();
             this.assertLibraryAuthority();
+            if (!this.batchApplyCandidates(latest, candidate.jobId).some((current) => JSON.stringify(current) === JSON.stringify(candidate))) {
+              throw new Error('当前候选与确认清单已不一致，必须重新准备并确认。');
+            }
             const queued = latest.jobs.find((entry) => entry.id === candidate.jobId);
             if (queued?.status === 'ready_for_gm_review') {
               if (!volatile.candidate || !volatile.input) throw new Error('缺少当前 session 的完整候选；历史记录不可直接创建。');
               const approved = volatile.mode === 'ai-item'
                 ? this.services.approveBrowserItemIntakeCandidateForGm(volatile.input, volatile.candidate as BrowserItemGenerationResult, environment.game.user.id)
                 : this.services.approveBrowserActorIntakeCandidateForGm(volatile.input, volatile.candidate as BrowserActorGenerationResult, environment.game.user.id);
-              if (approved.status !== 'accepted' || !approved.response) throw new Error('Batch 候选未通过本地 GM 确认门禁。');
+              if (!approved.response || (approved.status !== 'accepted' && (volatile.mode !== 'ai-monster' || !approved.gmApproval))) throw new Error('Batch 候选未通过本地 GM 确认门禁。');
               if (!queued.latestReview || !approved.gmApproval) throw new Error('缺少当前候选的来源记录或 GM 审批证明。');
-              const acceptedBundle = { ...queued.latestReview, status: 'accepted' as const, gmApproval: approved.gmApproval };
-              const imported = decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(acceptedBundle));
+              const approvedBundle = { ...queued.latestReview,
+                status: approved.status === 'accepted' ? 'accepted' as const : 'reviewed_candidate' as const,
+                gmApproval: approved.gmApproval };
+              const imported = decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(approvedBundle));
               const currentForm = readForm(root);
               this.batchState = await this.batchQueue.approveReadyJob(candidate.jobId, imported,
                 [currentForm.apiKey, currentForm.endpoint], () => this.assertLibraryAuthority());
@@ -2391,9 +2397,16 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             createForgeBatchApplyManifest(await this.batchQueue.load(), [candidate]);
             this.batchState = await this.batchQueue.beginApply(candidate.jobId, () => this.assertLibraryAuthority());
             began = true;
+            const reviewed = volatile.candidate?.gmApproval;
+            const actorResponse = volatile.response as ForgeActorResponse;
             const result = volatile.mode === 'ai-item'
               ? await this.services.createAcceptedForgeItem({ game: environment.game, response: volatile.response as ForgeItemResponse })
-              : await this.services.createAcceptedForgeActor({ game: environment.game, response: volatile.response as ForgeActorResponse, ...(volatile.mode === 'ai-monster' ? { rawSourceHash: volatile.rawSourceHash } : {}) });
+              : reviewed && 'result' in actorResponse && actorResponse.result.status !== 'accepted'
+                ? await this.services.createReviewedForgeActorCandidate({ game: environment.game, response: actorResponse,
+                  rawSourceHash: volatile.rawSourceHash, reviewApproval: { gmId: reviewed.gmId,
+                    sourceHash: reviewed.finalSourceHash, artifactHash: reviewed.artifactHash,
+                    findingsHash: forgeActorCandidateReviewHash(actorResponse) } })
+                : await this.services.createAcceptedForgeActor({ game: environment.game, response: actorResponse, ...(volatile.mode === 'ai-monster' ? { rawSourceHash: volatile.rawSourceHash } : {}) });
             this.batchState = await this.batchQueue.finishApply(candidate.jobId, {
               status: result.status,
               objectKind: candidate.objectKind,
@@ -2419,16 +2432,17 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.notify('info', `Batch apply 已逐项结算 ${completed}/${confirmation.items.length}；没有宣称多 Document 原子事务。`);
     }
 
-    private batchApplyCandidates(state: Readonly<ForgeBatchQueueV1>): ForgeBatchApplyCandidate[] {
+    private batchApplyCandidates(state: Readonly<ForgeBatchQueueV1>, onlyJobId?: string): ForgeBatchApplyCandidate[] {
       const candidates: ForgeBatchApplyCandidate[] = [];
       for (const job of state.jobs) {
+        if (onlyJobId && job.id !== onlyJobId) continue;
         const volatile = this.batchResponses.get(job.id);
-        if (!volatile || !['accepted', 'ready_for_gm_review'].includes(job.status)
+        if (!volatile || !['accepted', 'ready_for_gm_review', 'reviewed_candidate'].includes(job.status)
           || !job.latestReview || job.latestReview.status !== job.status) continue;
         let source: Readonly<ForgeBatchCollectionV1['entries'][number]>;
         try { source = batchQueueEntry(state, job); } catch { continue; }
         if (!this.directoryEntryAllowed(source)) continue;
-        if (volatile.rawSourceHash !== source.rawSourceHash || job.latestReview.rawSourceHash !== source.rawSourceHash) continue;
+        if (volatile.mode !== source.mode || volatile.rawSourceHash !== source.rawSourceHash || job.latestReview.rawSourceHash !== source.rawSourceHash) continue;
         if (job.status === 'ready_for_gm_review' && (!volatile.candidate || !volatile.input
           || volatile.candidate.status !== 'ready_for_gm_review'
           || volatile.input.source !== source.rawSource
@@ -2438,14 +2452,30 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         const decoded = volatile.mode === 'ai-item'
           ? decodeForgeItemResponse(response as ForgeItemResponse)
           : decodeForgeActorResponse(response as ForgeActorResponse);
-        if (!decoded.ok || !('result' in decoded.value) || decoded.value.result.status !== 'accepted' || !decoded.value.result.artifactHash) continue;
+        if (!decoded.ok || !('result' in decoded.value)) continue;
         const result = decoded.value.result;
+        const artifact = 'artifact' in result ? result.artifact : undefined;
+        const artifactHash = artifact ? hashArtifact(artifact) : undefined;
+        if (!artifactHash) continue;
+        if (result.status === 'accepted') {
+          if (result.artifactHash !== artifactHash) continue;
+        } else {
+          if (volatile.mode !== 'ai-monster' || !volatile.candidate || !volatile.input
+            || !isUsableActorCandidateArtifact(artifact)
+            || result.diagnostics.some((diagnostic) => diagnostic.severity === 'error' && diagnostic.stage !== 'semantic')) continue;
+          try { assertCurrentBrowserActorIntakeCandidate(volatile.input, volatile.candidate as BrowserActorGenerationResult); }
+          catch { continue; }
+        }
+        const proof = job.latestReview;
+        if (proof.candidateResponse?.artifactHash !== artifactHash || proof.candidateResponse.status !== result.status
+          || proof.sourceIdentity?.sourceId !== result.sourceIdentity.sourceId
+          || proof.sourceIdentity.finalSourceHash !== result.sourceIdentity.sourceHash) continue;
         candidates.push({
           jobId: job.id,
           objectKind: volatile.mode === 'ai-item' ? 'item' : 'actor',
           sourceId: result.sourceIdentity.sourceId,
           sourceHash: result.sourceIdentity.sourceHash,
-          artifactHash: result.artifactHash,
+          artifactHash,
           documentId: hashArtifact({ sourceId: result.sourceIdentity.sourceId }).slice(0, 16),
           target: {
             fvttVersion: result.target.fvttRuntimeVersion,
@@ -2462,12 +2492,19 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
 
     private async confirmBatchApply(manifest: Readonly<{ id: string; items: readonly ForgeBatchApplyCandidate[] }>): Promise<boolean> {
       const dialog = foundryGlobal?.applications?.api?.DialogV2;
-      const summary = manifest.items.map((item) => `<li>${escapeHtml(item.objectKind)} · ${escapeHtml(item.sourceId)} → ${escapeHtml(item.documentId)} · ${escapeHtml(item.artifactHash)}</li>`).join('');
+      const summary = manifest.items.map((item) => {
+        const review = this.batchState?.jobs.find((job) => job.id === item.jobId)?.latestReview;
+        const findings = [...(review?.deterministicFindings ?? []), ...(review?.aiReviewFindings ?? []),
+          ...(review?.candidateResponse?.diagnostics ?? [])];
+        return `<li>${escapeHtml(item.objectKind)} · ${escapeHtml(item.sourceId)} → ${escapeHtml(item.documentId)} · ${escapeHtml(item.artifactHash)}
+          <strong>正式检查：${escapeHtml(review?.candidateResponse?.status ?? 'unknown')}</strong>
+          ${findings.length ? `<ul>${findings.map((finding) => `<li>${escapeHtml(finding.code)}：${escapeHtml(finding.message)}</li>`).join('')}</ul>` : ''}</li>`;
+      }).join('');
       if (!dialog?.confirm) return false;
       try {
         return await dialog.confirm({
           window: { title: 'GM 确认批量创建' },
-          content: `<p>候选清单 <code>${escapeHtml(manifest.id)}</code> 包含 ${manifest.items.length} 项。GM 将逐项进行本地来源、目标与候选哈希复核，再调用 Actor/Item 创建接口；这不是跨 Document 原子事务，也不会请求付费模型审核。</p><ol>${summary}</ol>`,
+          content: `<p>候选清单 <code>${escapeHtml(manifest.id)}</code> 包含 ${manifest.items.length} 项。请核对下列正式结论和问题；确认采用待审 Actor 会保留原检查结论，不会标为 accepted。Item 仍须正式 accepted。GM 将逐项进行本地来源、目标与候选哈希复核，再调用 Actor/Item 创建接口；这不是跨 Document 原子事务，也不会请求付费模型审核。</p><ol>${summary}</ol>`,
           modal: true,
         }) === true;
       } catch { return false; }
@@ -2490,7 +2527,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (summary) summary.textContent = this.batchLoading
         ? 'Batch queue 加载中…'
         : state
-          ? `client-local · revision ${state.revision} · ${state.collections.length} collections · ${state.jobs.length} jobs · running/applying 重开后会变为 interrupted`
+          ? `client-local · revision ${state.revision} · ${state.collections.length} collections · ${state.jobs.length} jobs · running/applying 重开后会变为 interrupted；缺少本地候选的待审任务需点击“开始／继续批量处理”重新准备，不会自动请求模型`
           : 'Batch queue 尚未加载。';
       if (list) {
         if (!state || state.collections.length === 0) list.innerHTML = '<p>暂无 Collection 或 queue job。</p>';

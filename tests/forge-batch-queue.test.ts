@@ -27,6 +27,59 @@ const TIMES = [
 ];
 
 describe('Forge browser-local batch queue core', () => {
+  test('keeps reviewed Actor adoption distinct from accepted through manifest, apply, and reload', async () => {
+    const queue = manager(new MemoryForgeBatchQueueStore());
+    let state = await queue.importCollection(createForgeBatchCollection({ label: 'Actor candidate', entries: [
+      { objectKind: 'actor', mode: 'ai-monster', rawSource: 'Actor source', sourceLabel: 'Actor' },
+    ] }));
+    const id = state.jobs[0]!.id;
+    await queue.startJob(id);
+    await queue.settleJob(id, gmActorReview('ready_for_gm_review'));
+    await expect(queue.beginApply(id)).rejects.toThrow(/accepted proof/u);
+    const adopted = gmActorReview('reviewed_candidate');
+    const altered = structuredClone(adopted.bundle);
+    altered.deterministicFindings[0]!.message = 'Silently changed prior finding';
+    await expect(queue.approveReadyJob(id, decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(altered))))
+      .rejects.toThrow(/不一致/u);
+    state = await queue.approveReadyJob(id, adopted);
+    expect(state.jobs[0]!.status).toBe('reviewed_candidate');
+    const proof = state.jobs[0]!.latestReview!;
+    const candidate = { jobId: id, objectKind: 'actor' as const, sourceId: proof.sourceIdentity!.sourceId,
+      sourceHash: proof.sourceIdentity!.finalSourceHash, artifactHash: proof.candidateResponse!.artifactHash!,
+      documentId: hashArtifact({ sourceId: proof.sourceIdentity!.sourceId }).slice(0, 16),
+      target: { fvttVersion: '14.364', systemId: 'dnd5e' as const, systemVersion: '5.3.3',
+        generatorProfile: 'v14' as const, effectProfile: 'core' as const, iconMode: 'off' as const } };
+    expect(createForgeBatchApplyManifest(state, [candidate]).items).toEqual([candidate]);
+    await queue.beginApply(id);
+    await expect(queue.finishApply(id, { status: 'created', objectKind: 'actor', uuid: `Actor.${candidate.documentId}`,
+      sourceId: candidate.sourceId, sourceHash: candidate.sourceHash, artifactHash: hashSource('wrong') })).rejects.toThrow(/identity/u);
+    state = await queue.finishApply(id, { status: 'created', objectKind: 'actor', uuid: `Actor.${candidate.documentId}`,
+      sourceId: candidate.sourceId, sourceHash: candidate.sourceHash, artifactHash: candidate.artifactHash });
+    const reloaded = decodeForgeBatchQueueText(serializeForgeBatchQueue(state)).jobs[0]!;
+    expect(reloaded.status).toBe('applied');
+    expect(reloaded.latestReview?.status).toBe('reviewed_candidate');
+    expect(reloaded.latestReview?.candidateResponse?.status).toBe('needs_review');
+    expect(reloaded.latestReview?.deterministicFindings).toEqual(proof.deterministicFindings);
+    const itemAdoption = { ...proof, objectKind: 'item', mode: 'ai-item' };
+    expect(() => decodeForgeIntakeReviewBundleText(JSON.stringify(itemAdoption))).toThrow();
+  });
+
+  test('explicitly restarts a ready job with a new attempt while keeping old review as history', async () => {
+    const queue = manager(new MemoryForgeBatchQueueStore());
+    let state = await queue.importCollection(collection());
+    const id = state.jobs[1]!.id;
+    await queue.startJob(id);
+    state = await queue.settleJob(id, gmItemReview('ready_for_gm_review'));
+    const proof = state.jobs[1]!.latestReview;
+    state = await queue.recoverInterrupted();
+    expect(state.jobs[1]!.status).toBe('ready_for_gm_review');
+    state = await queue.startJob(id);
+    expect(state.jobs[1]!.status).toBe('running');
+    expect(state.jobs[1]!.attemptCount).toBe(2);
+    expect(state.jobs[1]!.latestReview).toEqual(proof);
+    await expect(queue.beginApply(id)).rejects.toThrow(/accepted proof/u);
+  });
+
   test('keeps a local-valid Item pending until this GM approves its exact volatile candidate', async () => {
     const queue = manager(new MemoryForgeBatchQueueStore());
     let state = await queue.importCollection(collection());
@@ -339,6 +392,29 @@ function importedReview(rawSource: string, mode: 'plaintext-actor' | 'ai-item', 
     ...(accepted ? { canonicalSource, sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) } } : {}),
     target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     ...(accepted ? { candidateResponse: { requestId, status: 'accepted' as const, artifactHash: hashSource(`${objectKind} artifact`), verificationStatus: 'accepted' as const, diagnostics: [] } } : {}),
+    history: [],
+  })));
+}
+
+function gmActorReview(status: 'ready_for_gm_review' | 'reviewed_candidate') {
+  const rawSource = 'Actor source', sourceId = 'actor:v1:123e4567-e89b-42d3-a456-426614174000';
+  const canonicalSource = `---\nforge-source-id: ${sourceId}\n---\ncanonical actor source`;
+  const candidateHash = hashSource('current Actor candidate'), artifactHash = hashSource('Actor artifact');
+  const target = { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+    generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' };
+  return decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(buildForgeIntakeReviewBundleV2({
+    objectKind: 'actor', mode: 'ai-monster', requestId: 'queue-actor', attemptId: 'queue-actor:attempt-1',
+    status, rawSource, rawSourceHash: hashSource(rawSource), canonicalSource,
+    sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) }, target,
+    deterministicFindings: [{ id: 'semantic', code: 'SOURCE_REVIEW_REQUIRED', path: 'actor',
+      message: 'The source needs GM review.', blocking: true, origin: 'semantic', evidence: [] }],
+    aiReviewFindings: [], modelReviewStatus: 'not_requested', candidateHash,
+    calls: { discovery: 1, extraction: 1, review: 0, repair: 0 }, repairCount: 0,
+    candidateResponse: { requestId: 'queue-actor', status: 'needs_review', artifactHash,
+      verificationStatus: 'needs_review', diagnostics: [{ severity: 'warning', code: 'SOURCE_REVIEW_REQUIRED', message: 'Review needed.' }] },
+    ...(status === 'reviewed_candidate' ? { gmApproval: { gmId: 'gm', sourceHash: hashSource(rawSource),
+      finalSourceHash: hashSource(canonicalSource), artifactHash, targetHash: forgeGmTargetHash(target), candidateHash,
+      modelReviewStatus: 'not_requested' as const, modelFindingsHash: forgeGmModelFindingsHash([]) } } : {}),
     history: [],
   })));
 }

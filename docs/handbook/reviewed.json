@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "95ad8abd3e6491f6efbad65012d5c6e4cad41c91fd4c8e1db386335c62433541",
+    "fingerprint": "65de3669ce7e601f6a7731174e8092414518929fdc18bd75897501214e4c7df2",
     "reviewedOn": "2026-10-22",
-    "note": "核对摆放Hook、3次位置DTO及payload、两次真实攻击和可见性修正、刷新及精确key补证；只修取证层不重做有效业务，现有安全检查入口和版本边界保留。"
+    "note": "人工核对本批三处修复：普通批量Actor可采用并保留原判定，Item仍accepted；刷新需显式新attempt，不持久化完整候选、不继承GM确认；历史分开显示流程和正式结论。新增命令仅选择既有队列/IndexedDB/Application检查并复用隔离运行器。human-encounter-intake仅受共享目录watch触发，战斗包入口、输入输出、玩法及续跑策略无变化。"
   },
   "human-encounter-intake": {
-    "fingerprint": "c842b293abe6cb703060ad52fd3676b4a03b5cdf245ed7f2f8d9578e0ae50dc4",
+    "fingerprint": "9f3326451882cfb4c517f876733768aaf551294caa6d60b0c6ba13fd9e579ccf",
     "reviewedOn": "2026-10-22",
-    "note": "已对照最后落盘的两README及新acceptance：有限JSON尾符本地整理不改原回复字符串、不增加模型请求；启用现有可选私有响应诊断时才可保存原文/hash/整理依据，公开审核文件不默认含原回复。catalog同义对齐；已有部分Actor逐只交付/全员整包/续跑复用/独立审核及实机待验说明保持。"
+    "note": "人工核对本批三处修复：普通批量Actor可采用并保留原判定，Item仍accepted；刷新需显式新attempt，不持久化完整候选、不继承GM确认；历史分开显示流程和正式结论。新增命令仅选择既有队列/IndexedDB/Application检查并复用隔离运行器。human-encounter-intake仅受共享目录watch触发，战斗包入口、输入输出、玩法及续跑策略无变化。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "3ac8b1c59390edb2749d1da0237c0e4f8a1e217649bd825586663bc85b4ffc66",
+    "fingerprint": "d357573562292239386a63f1ac9dcb25649c9f52fa011a868ab4d821d0b4a468",
     "reviewedOn": "2026-10-22",
-    "note": "从23416c5核对：仅修局部代理指令的候选职责、精确版本及按变化选择验收；Forge用户步骤已区分可用AI Actor候选显式GM采用与Item accepted门禁，Resolver的来源选择、owned缓存、Apply/Undo及原生Cast边界说明正确。入口、结果和限制未变，保留现有用户文字；不新增玩法测试或扩展运行时通过范围。"
+    "note": "本地提交前人工核对：普通批量候选、刷新显式新attempt、GM采用保留needs_review/11问题与两种历史摘要的实机范围保持；仅补充后续本地提交授权及验收当时c6263af/未提交的历史说明。代码与原实机收据哈希一致，不重跑有效业务，不修改旧原件、hook或支持范围。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

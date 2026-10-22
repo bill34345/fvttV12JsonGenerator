@@ -258,6 +258,8 @@
     "test:forge-resolver-final-artifacts:raw": "bun test tests/forge-resolver-final-artifacts.test.ts --max-concurrency 1",
     "forge:offline-followup:verify": "bun run src/tools/runHermeticFoundryScript.ts forge:offline-followup:verify:raw",
     "forge:offline-followup:verify:raw": "bun run tests/diagnostics/forge-offline-followup-replay.ts",
+    "test:forge-batch-queue": "bun run src/tools/runHermeticFoundryScript.ts test:forge-batch-queue:raw",
+    "test:forge-batch-queue:raw": "bun test tests/forge-batch-queue.test.ts tests/forge-batch-queue-indexed-db.test.ts foundry-modules/fvtt-json-forge/tests/intake-application.test.ts --max-concurrency 1",
     "test:forge-candidate-ui": "bun run src/tools/runHermeticFoundryScript.ts test:forge-candidate-ui:raw",
     "test:forge-candidate-ui:raw": "bun test tests/forge-browser-runtime.test.ts tests/forge-encounter-preparation.test.ts tests/forge-encounter-intake.test.ts foundry-modules/fvtt-json-forge/tests/intake-application.test.ts foundry-modules/fvtt-json-forge/tests/encounter-application.test.ts foundry-modules/fvtt-json-forge/tests/encounter-runtime.test.ts foundry-modules/fvtt-json-forge/tests/connection-application.test.ts foundry-modules/fvtt-json-forge/tests/settings.test.ts --max-concurrency 1",
     "test:forge-candidate-output:raw": "bun test tests/forge-candidate-output.test.ts tests/forge-staged-candidate.test.ts packages/forge-gateway-protocol/src/__tests__/schema.test.ts foundry-modules/fvtt-json-forge/tests/runtime.test.ts --max-concurrency 1",

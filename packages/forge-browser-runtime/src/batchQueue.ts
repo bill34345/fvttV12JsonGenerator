@@ -25,7 +25,7 @@ export const FORGE_BATCH_APPLY_MANIFEST_SCHEMA = 'fvtt-json-forge-batch-apply-ma
 const QUEUE_KEYS = new Set(['schema', 'version', 'revision', 'updatedAt', 'collections', 'jobs']);
 const JOB_KEYS = new Set(['schema', 'version', 'id', 'collectionId', 'entryId', 'ordinal', 'status', 'attemptCount', 'updatedAt', 'latestReview', 'lastError', 'applyResult']);
 const APPLY_RESULT_KEYS = new Set(['status', 'objectKind', 'uuid', 'sourceId', 'sourceHash', 'artifactHash', 'message', 'at']);
-const STATUSES = ['pending', 'running', 'interrupted', 'ready_for_gm_review', 'accepted', 'needs_review', 'failed', 'rejected', 'cancelled', 'applying', 'applied', 'apply_failed'] as const;
+const STATUSES = ['pending', 'running', 'interrupted', 'ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected', 'cancelled', 'applying', 'applied', 'apply_failed'] as const;
 const ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const JOB_ID_PATTERN = /^job:v1:[0-9a-f]{64}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -130,7 +130,7 @@ export class ManagedForgeBatchQueue {
         status: 'interrupted' as const,
         updatedAt: timestamp,
         lastError: job.status === 'applying'
-          ? '页面在 apply 结算前关闭；请检查确定性世界 identity，并在重新生成当前 accepted response 后显式重试。'
+          ? '页面在 apply 结算前关闭；请检查确定性世界 identity，显式重新准备当前候选并确认后重试。'
           : '页面关闭或刷新中断了当前任务；不会自动重发 Provider 请求。',
       } : job),
     }), { beforeCommit });
@@ -189,7 +189,7 @@ export class ManagedForgeBatchQueue {
       const index = current.jobs.findIndex((job) => job.id === id);
       if (index < 0) throw new TypeError(`Batch job ${id} was not found.`);
       const job = current.jobs[index]!;
-      if (!['pending', 'interrupted', 'accepted', 'needs_review', 'failed', 'rejected', 'cancelled', 'apply_failed'].includes(job.status)) throw new TypeError(`Job ${id} cannot start from ${job.status}.`);
+      if (!['pending', 'interrupted', 'ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected', 'cancelled', 'apply_failed'].includes(job.status)) throw new TypeError(`Job ${id} cannot start from ${job.status}.`);
       const jobs = [...current.jobs];
       jobs[index] = {
         ...job,
@@ -206,7 +206,7 @@ export class ManagedForgeBatchQueue {
   async cancelJob(id: string, beforeCommit?: ForgeBatchQueueCommitGuard): Promise<Readonly<ForgeBatchQueueV1>> {
     return await this.updateJob(id, (job, _entry, timestamp) => {
       if (job.status === 'cancelled') return job;
-      if (!['pending', 'interrupted', 'ready_for_gm_review', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status)) {
+      if (!['pending', 'interrupted', 'ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status)) {
         throw new TypeError(`Job ${id} cannot be cancelled from ${job.status}.`);
       }
       return {
@@ -254,17 +254,18 @@ export class ManagedForgeBatchQueue {
     beforeCommit?: ForgeBatchQueueCommitGuard,
   ): Promise<Readonly<ForgeBatchQueueV1>> {
     const approved = decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(imported.bundle)).bundle;
-    if (approved.status !== 'accepted' || !approved.gmApproval) throw new TypeError('Batch GM确认缺少正式 accepted 证据。');
+    if (!hasApplyProof(approved) || !approved.gmApproval) throw new TypeError('Batch GM确认缺少 accepted 或 Actor 候选采用证据。');
     return await this.updateJob(id, (job, entry, timestamp) => {
       const prior = job.latestReview;
       if (job.status !== 'ready_for_gm_review' || prior?.status !== 'ready_for_gm_review'
         || !prior.candidateHash || approved.candidateHash !== prior.candidateHash
         || approved.rawSourceHash !== prior.rawSourceHash || approved.attemptId !== prior.attemptId
-        || approved.gmApproval?.candidateHash !== prior.candidateHash) {
+        || approved.gmApproval?.candidateHash !== prior.candidateHash
+        || stableStringify({ ...approved, status: prior.status, gmApproval: undefined }) !== stableStringify(prior)) {
         throw new TypeError(`Job ${id} 的GM确认与当前待审候选不一致。`);
       }
       assertReviewEntry(approved, entry, `job ${id}`);
-      return { ...job, status: 'accepted', latestReview: approved, updatedAt: timestamp, lastError: undefined };
+      return { ...job, status: reviewStatus(approved), latestReview: approved, updatedAt: timestamp, lastError: undefined };
     }, { forbiddenValues, beforeCommit });
   }
 
@@ -277,14 +278,14 @@ export class ManagedForgeBatchQueue {
 
   async beginApply(id: string, beforeCommit?: ForgeBatchQueueCommitGuard): Promise<Readonly<ForgeBatchQueueV1>> {
     return await this.updateJob(id, (job, _entry, timestamp) => {
-      if (job.status !== 'accepted' || job.latestReview?.status !== 'accepted') throw new TypeError(`Job ${id} has no persisted accepted proof.`);
+      if (!['accepted', 'reviewed_candidate'].includes(job.status) || !hasApplyProof(job.latestReview)) throw new TypeError(`Job ${id} has no persisted accepted proof or reviewed Actor adoption.`);
       return { ...job, status: 'applying', updatedAt: timestamp, lastError: undefined, applyResult: undefined };
     }, { beforeCommit });
   }
 
   async finishApply(id: string, result: Omit<ForgeBatchApplyResultV1, 'at'>, beforeCommit?: ForgeBatchQueueCommitGuard): Promise<Readonly<ForgeBatchQueueV1>> {
     return await this.updateJob(id, (job, entry, timestamp) => {
-      if (job.status !== 'applying' || job.latestReview?.status !== 'accepted') throw new TypeError(`Job ${id} is not applying from accepted proof.`);
+      if (job.status !== 'applying' || !hasApplyProof(job.latestReview)) throw new TypeError(`Job ${id} is not applying from accepted proof or reviewed Actor adoption.`);
       if (result.objectKind !== entry.objectKind) throw new TypeError('Apply result object kind does not match the queue entry.');
       const proof = job.latestReview;
       if (result.status !== 'failed' && (
@@ -399,11 +400,11 @@ export function decodeForgeBatchQueueText(text: string, forbiddenValues: readonl
     const entry = collection?.entries[job.ordinal];
     if (!entry || entry.id !== job.entryId || job.id !== jobId(job.collectionId, job.entryId)) throw new TypeError(`Job ${job.id} does not match its collection entry.`);
     if (job.latestReview) assertReviewEntry(job.latestReview, entry, `job ${job.id}`);
-    if (['ready_for_gm_review', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status) && (!job.latestReview || reviewStatus(job.latestReview) !== job.status)) {
+    if (['ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected'].includes(job.status) && (!job.latestReview || reviewStatus(job.latestReview) !== job.status)) {
       throw new TypeError(`Settled job ${job.id} does not match its latest review status.`);
     }
     if (job.status === 'accepted' && job.latestReview?.status !== 'accepted') throw new TypeError(`Accepted job ${job.id} lacks accepted proof.`);
-    if (['applying', 'applied', 'apply_failed'].includes(job.status) && job.latestReview?.status !== 'accepted') throw new TypeError(`Apply job ${job.id} lacks accepted proof.`);
+    if (['applying', 'applied', 'apply_failed'].includes(job.status) && !hasApplyProof(job.latestReview)) throw new TypeError(`Apply job ${job.id} lacks accepted proof or reviewed Actor adoption.`);
     if (!['applied', 'apply_failed'].includes(job.status) && job.applyResult) throw new TypeError(`Non-final apply job ${job.id} cannot have an apply result.`);
     if (job.status === 'applied' && !['created', 'existing'].includes(job.applyResult?.status ?? '')) throw new TypeError(`Apply result for ${job.id} is inconsistent.`);
     if (job.status === 'apply_failed' && job.applyResult?.status !== 'failed') throw new TypeError(`Apply result for ${job.id} is inconsistent.`);
@@ -444,7 +445,7 @@ export function createForgeBatchApplyManifest(
   const items = candidates.map((candidate, index) => {
     const path = `$manifest/items/${index}`;
     const job = validatedQueue.jobs.find((entry) => entry.id === candidate.jobId);
-    if (!job || job.status !== 'accepted' || job.latestReview?.status !== 'accepted') throw new TypeError(`${path} has no current accepted queue proof.`);
+    if (!job || !['accepted', 'reviewed_candidate'].includes(job.status) || !hasApplyProof(job.latestReview)) throw new TypeError(`${path} has no current accepted queue proof or reviewed Actor adoption.`);
     const source = batchQueueEntry(validatedQueue, job);
     const proof = job.latestReview;
     if (candidate.objectKind !== source.objectKind
@@ -531,10 +532,16 @@ function decodeApplyResult(value: unknown, path: string): ForgeBatchApplyResultV
 
 function reviewStatus(review: Readonly<ForgeIntakeReviewBundleV2>): ForgeBatchJobStatus {
   if (review.status === 'ready_for_gm_review') return 'ready_for_gm_review';
+  if (review.status === 'reviewed_candidate') return 'reviewed_candidate';
   if (review.status === 'accepted') return 'accepted';
   if (review.status === 'failed') return 'failed';
   if (review.status === 'rejected') return 'rejected';
   return 'needs_review';
+}
+
+function hasApplyProof(review: Readonly<ForgeIntakeReviewBundleV2> | undefined): review is Readonly<ForgeIntakeReviewBundleV2> {
+  return review?.status === 'accepted' || (review?.status === 'reviewed_candidate'
+    && review.objectKind === 'actor' && review.mode === 'ai-monster' && !!review.gmApproval);
 }
 
 function assertReviewEntry(review: Readonly<ForgeIntakeReviewBundleV2>, entry: Readonly<ForgeBatchCollectionEntryV1>, label: string): void {
