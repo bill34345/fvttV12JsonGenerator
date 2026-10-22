@@ -1,4 +1,5 @@
 import {describe,test,expect} from 'bun:test';
+import {existsSync,readFileSync} from 'node:fs';
 import {bindSourceOperations,sourceOperationClauses,sourceOperationErrors,sourceFeatureResources} from '@fvtt-json-generator/models/source-operations';
 import {sourceSingleSpellAction} from '@fvtt-json-generator/models/source-rule-facts';
 import {isSourceCandidateReview,isSourceCandidateCounters} from '@fvtt-json-generator/models/source-operations';
@@ -7,6 +8,38 @@ import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator'
 import {buildRatWarlockIr,RAT_WARLOCK_SOURCE} from '../src/core/intake/__tests__/fixtures/rat-warlock';
 
 const review=()=>({version:1 as const,findings:[{code:'UNRESOLVED_SOURCE',path:'/feature',message:'The original proposal still needs review.'}],proposal:{original:true}});
+
+const mageSeed='.local/forge-candidate-followup-20261022/candidate-seed.json';
+test.skipIf(!existsSync(mageSeed))('frozen Mage findings distinguish malformed proposal from a separately source-proven revision',()=>{
+  const original=readFileSync(mageSeed,'utf8'),seed=JSON.parse(original),source=seed.source;
+  const raw=validateMonsterIntakeIR(source,seed.ir);
+  expect(raw.blocking.filter(f=>f.path.startsWith('/creature/actions/1'))).toHaveLength(6);
+  expect(seed.ir.creature.actions[1].candidateReview.findings[0].code).toBe('V2_ATTACK_MODE_CONFLICT');
+  expect(raw.blocking.filter(f=>f.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toHaveLength(2);
+  // Counterfactual validator fixture only. This is not an edit/regrade of the
+  // saved reply, a new model result or a generated Actor delivered to a user.
+  const revised=structuredClone(seed.ir),feature=revised.creature.actions[1];
+  const quote=sourceOperationClauses(feature.description).find((q:string)=>q.includes('Attack Roll:'))!;
+  const common={name:feature.name,type:'attack' as const,condition:feature.description.trim(),
+    damage:[{formula:'3d8+3',type:'force',relationship:'base' as const}],proof:{attack:quote,damage:[quote]}};
+  feature.sourceOperations=bindSourceOperations(feature.description,[
+    {...common,id:'near',relationship:'primary',attack:{type:'melee',toHit:6,reach:5}},
+    {...common,id:'far',relationship:'alternative',attack:{type:'ranged',toHit:6,range:120}},
+  ],feature.evidence[0].start);
+  delete feature.candidateReview;
+  const dcEvidence=revised.creature.spellcasting[0].saveDcEvidence;
+  expect(revised.creature.spellcasting[0].saveDc).toBe(14);
+  for(const child of revised.creature.spellcasting.slice(1)){child.saveDc=14;child.saveDcEvidence=structuredClone(dcEvidence);}
+  // Fixing source facts in a separate proposal does not erase the original
+  // top-level unresolved review note or silently promote it to accepted.
+  expect(validateMonsterIntakeIR(source,revised).blocking.map(f=>f.code)).toEqual(['V2_ATTACK_MODE_CONFLICT']);
+  const wrong=structuredClone(revised);wrong.creature.spellcasting[1].saveDc=99;
+  expect(validateMonsterIntakeIR(source,wrong).blocking.some(f=>f.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toBe(true);
+  const omitted=structuredClone(revised);omitted.creature.actions[1].sourceOperations.pop();
+  expect(validateMonsterIntakeIR(source,omitted).blocking.some(f=>f.code==='SOURCE_BASIC_OPERATION_OMITTED')).toBe(true);
+  expect(readFileSync(mageSeed,'utf8')).toBe(original);
+  expect(validateMonsterIntakeIR(source,seed.ir).blocking).toEqual(raw.blocking);
+});
 
 describe('source proof and inert candidate review are independent',()=>{
   for(const [name,kind,bonus,dice,damage] of [['Chill','Melee',5,'2d6','Cold'],['Spark','Ranged',7,'1d8+3','Fire'],['Knock','Melee',4,'1d4+2','Bludgeoning']] as const){
