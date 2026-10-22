@@ -21,17 +21,17 @@
 - 本地 Lab 安装与短时测试可在完成 PID、端口、路径和运行者预检，且确认 mirror 未被他人占用后自主执行；若被占用则等待协调或释放，不得自行停止、复用或替换该环境。
 - 本地事务测试只能使用停止状态的一次性测试世界，保留 hash、锁和清理证据，遵守根级无备份规则；事务的运行时补偿契约仍须验证。会故意损坏、删除、链接、锁定或替换路径的 fixture 必须使用随机临时根；只能从 F 盘只读加载匹配 14.364 的 `classic-level`。
 - Foundry/dnd5e hook、Activity 和 Item 结构必须对照锁定版本资料，不得凭最新版或记忆实现。
-- 历史 ServerNext `14.368` / dnd5e `6.0.2` 的 Rat Warlock 水合与指定 Cast 场景在 `0.1.6` 上通过，但一次 Undo 与补偿真实失败，出现无归属缓存；已装 `0.1.7` 的新任务怪物经正常 GM 界面十法术水合、单次 Undo 回到 pending/0 缓存，并在整页重载后保持。故意失败补偿只通过离线测试，未在运行中世界注入；不要把它写成运行时已验。`14.368` / `6.0.5` 已核对固定源码并纳入精确版本门禁，2026-10-01独立通过十法术自动 hydration 完整归属、一次普通UI Undo、重载后pending／0缓存和精确清理；本轮未点击Review／Apply，完整native Cast矩阵仍未执行。旧 `14.364` / `5.3.3` 仍是 manifest 的 verified 组合。运行时只放行 `14.364/5.3.3`、`14.368/6.0.2` 和 `14.368/6.0.5`，交叉及未列版本拒绝；现有 mirror 专用安装器不可直接用于 server-next。
+- 历史 ServerNext `14.368` / dnd5e `6.0.2` 的 Rat Warlock 水合与指定 Cast 场景在 `0.1.6` 上通过，但一次 Undo 与补偿真实失败，出现无归属缓存；已装 `0.1.7` 的新任务怪物经正常 GM 界面十法术水合、单次 Undo 回到 pending/0 缓存，并在整页重载后保持。故意失败补偿只通过离线测试，未在运行中世界注入；不要把它写成运行时已验。`14.368` / `6.0.5` 已核对固定源码并纳入精确版本门禁，2026-10-01独立通过十法术自动 hydration 完整归属、一次普通UI Undo、重载后pending／0缓存和精确清理；本轮未点击Review／Apply，完整native Cast矩阵仍未执行。旧 `14.364` / `5.3.3` 仍是 manifest 的 verified 组合。运行时只放行 `14.364/5.3.3`、`14.368/5.3.3`、`14.368/6.0.2` 和 `14.368/6.0.5`，交叉及未列版本拒绝；现有 mirror 专用安装器不可直接用于 server-next。
 - 请求 Compendium Item 索引字段前，按目标 pack 的 `indexFields` 去除已由默认父字段覆盖的子字段；`getIndex` 会合并默认与请求字段。dnd5e `6.0.2` 默认 `system.source`，`5.3.3` 不默认该字段；固定 `6.0.5` 发布源码未改变该默认字段契约。三版均须保留准确的 `system.source.rules/book` 候选值和 fail-closed 规则判断。
 - View Report 的顶层状态必须由当前运行时、manifest 和严格管理文档决定，不得仅因持久化 `hydrated` 就宣告当前水合；历史提交报告需与当前 manifest 哈希及完整唯一逻辑引用集合绑定后才可显示，且与无决策预检分区。DialogV2 的 Apply 回调须再次读取当前表单值。
 
 ## 验证
 
-- `bun run test:spell-resolver`
-- `bun run build:spell-resolver`
-- 同时运行 spell manifest contract 测试和受影响 generator manifest 测试。
-- 运行时变化先在项目本地 Foundry mirror 验证：eligible/ineligible Actor、全部成功、部分失败回滚、Keep/Overwrite/Cancel 和关闭即取消。
-- hydration 验收后仍须把 native Cast 的真实使用作为单独 runtime 层：检查攻击、豁免、目标限制、消耗与 resolver 禁用后的缓存可用性；本地 runtime 与生产接受分别记录。
+- 按本次变化选择现有检查；需要对应逻辑／构建验证时使用 `bun run test:spell-resolver`、`bun run build:spell-resolver`。manifest 契约或producer变化再补受影响 contract／generator 检查，相关输入未变的有效结果继续复用。
+- hydration 运行时变化在本地 mirror 窄验受影响路径：资格、owned 文档、成功写入、失败补偿或 Keep／Overwrite／Cancel／关闭即取消，依具体改动选取。纯说明／指令修改只核文义、引用、作用域及生成一致性。
+- native Cast 是独立证据层，验证本模块负责的来源、缓存、参数交接、资源消费／持久化及自有适配；hydration成功不替代这些真实使用证据。攻击、豁免、目标限制、禁用后缓存可用性按受影响行为或已知故障选择，不在每次续接重新执行完整矩阵。
+- 原生交接已证明后，系统／第三方法术的通用召唤、移动、攻击、专注及到期不自动成为本模块待办。我方改动了相应缓存／效果投影、出现实际异常或用户明确另设目标时，仍验证对应后果。例如修改Geas条件伤害拆分须查实际施法与独立GM入口；仅链接灵体武器不顺带要求全部生命周期验收。
+- 复用根约定及[现有检查选择](../../docs/runbooks/development-feedback-loop.md#本批先选范围再运行前置检查)，在已有记录说明缺口和最小检查；先核fixture身份／版本／可见性及正常提交，再区分前置、工具、产品失败。所选证据充分即停止，本地runtime与生产接受分别报告；未验限制不伪称通过，也不自动阻挡独立工作。
 
 ## 完成标准
 

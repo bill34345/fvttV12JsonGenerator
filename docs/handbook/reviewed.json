@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "18791bf5ba0cdf3083b36473051bfef654b8ed4b82b5d77caf4d488637eb8a36",
+    "fingerprint": "3ac8b1c59390edb2749d1da0237c0e4f8a1e217649bd825586663bc85b4ffc66",
     "reviewedOn": "2026-10-22",
-    "note": "核对N2原包正常导入、独立武器来源绑定、仅一次施法及移动攻击不重复扣次；首轮miss和输入失败均保留，手册注明键盘路径及GM20尺/动作时机边界，无新模型或生产推广。"
+    "note": "从23416c5核对：仅修局部代理指令的候选职责、精确版本及按变化选择验收；Forge用户步骤已区分可用AI Actor候选显式GM采用与Item accepted门禁，Resolver的来源选择、owned缓存、Apply/Undo及原生Cast边界说明正确。入口、结果和限制未变，保留现有用户文字；不新增玩法测试或扩展运行时通过范围。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
@@ -135,9 +135,9 @@
     "note": "框选同步0.2.0精确Next配对与各Actor增减一级语义、首次安装/权限限制一致，构建5文件与现装一致，复用原限定HUD接受。WMP真实Cleave事件先后缺口已定点修补并276回归通过，已装新build而实机复验待收据，仍不扩大完整八精通。"
   },
   "monster-spell-resolver": {
-    "fingerprint": "691830afc8ed6afd69e9033842fd69b40475754d7623f52363bc607d3b9dbb12",
+    "fingerprint": "247ef23a69312eec143495d6f0e6f205e1e95ff5a05565f6a8689d6f9452d36b",
     "reviewedOn": "2026-10-22",
-    "note": "对照正常召唤摆放、Core14 WASD15尺移动和T目标、+4命中14与9Force/HP40到31、剩余1/2及刷新；更新README和操控步骤，视野照明为正常前置，未验自动限速/回合费用/专注期限回收，不扩到其它来源或6.x。"
+    "note": "从23416c5核对：仅修局部代理指令的候选职责、精确版本及按变化选择验收；Forge用户步骤已区分可用AI Actor候选显式GM采用与Item accepted门禁，Resolver的来源选择、owned缓存、Apply/Undo及原生Cast边界说明正确。入口、结果和限制未变，保留现有用户文字；不新增玩法测试或扩展运行时通过范围。"
   },
   "open-session-deck": {
     "fingerprint": "136bb0745de37ef6c710902f47f48710e5b9c0589fe8bffe5dc4c106b08a4505",
